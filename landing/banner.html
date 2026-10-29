@@ -1,0 +1,109 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css?v=2">
+<link rel="stylesheet" href="css/page.css?v=2">
+<style>
+  html, body { margin: 0; }
+  .banner {
+    position: relative;
+    width: 1280px;
+    height: 640px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .banner .scene { position: absolute; }
+  .banner .scene-glow {
+    background:
+      radial-gradient(ellipse at 50% 30%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 55%),
+      radial-gradient(ellipse at 50% 115%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 60%);
+    animation: none;
+  }
+  .banner .scene-dots { opacity: 0.09; }
+  .banner-in {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0;
+  }
+  .banner-brand {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 18px;
+  }
+  .banner-brand img { width: 64px; height: 64px; }
+  .banner-brand span {
+    font-family: "Schibsted Grotesk", sans-serif;
+    font-weight: 700;
+    font-size: 76px;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .banner-kicker {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 21px;
+    color: var(--accent);
+    margin: 0 0 22px;
+  }
+  .banner-line {
+    width: 96px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    margin-bottom: 22px;
+  }
+  .banner-sub {
+    font-family: "Schibsted Grotesk", sans-serif;
+    font-size: 27px;
+    color: var(--ink-2);
+    max-width: 820px;
+    line-height: 1.45;
+  }
+  .banner-sub em { font-style: normal; color: var(--ink); font-weight: 500; }
+  .banner-chips {
+    display: flex;
+    gap: 10px;
+    margin-top: 30px;
+  }
+  .banner-chip {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 15px;
+    color: var(--ink-2);
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--bg-raise) 70%, transparent);
+    border-radius: 999px;
+    padding: 7px 16px;
+  }
+  .banner-chip b { color: var(--accent); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="banner" id="banner">
+  <div class="scene" aria-hidden="true">
+    <div class="scene-glow"></div>
+    <div class="scene-dots"></div>
+  </div>
+  <div class="banner-in">
+    <div class="banner-brand">
+      <img src="public/icon.svg" alt="">
+      <span>Harnesys</span>
+    </div>
+    <p class="banner-kicker">self-hosted &middot; open development</p>
+    <div class="banner-line"></div>
+    <p class="banner-sub">A control plane for your AI agent team &mdash; agents do the work, <em>you keep the controls</em>.</p>
+    <div class="banner-chips">
+      <span class="banner-chip"><b>20</b> model providers</span>
+      <span class="banner-chip"><b>5</b> permission gates</span>
+      <span class="banner-chip"><b>100%</b> self-hosted</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>
