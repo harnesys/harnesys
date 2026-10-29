@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Harnesys: a control plane for your AI agent team</title>
+  <meta name="description" content="Harnesys is a self-hosted control plane for teams of AI agents: threads, tools, schedules, approvals and memory on your own machines, supervised from one desk.">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Harnesys">
+  <meta property="og:title" content="Harnesys: a control plane for your AI agent team">
+  <meta property="og:description" content="Run a team of AI agents on your own machines. Every run in front of you, every sensitive step waiting for your approval. One desk, one fleet.">
+  <meta property="og:url" content="https://harnesys.github.io/harnesys/">
+  <meta property="og:image" content="https://harnesys.github.io/harnesys/assets/automations.png">
+  <meta property="og:image:width" content="1600">
+  <meta property="og:image:height" content="1000">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Harnesys: a control plane for your AI agent team">
+  <meta name="twitter:description" content="Run a team of AI agents on your own machines. Every run in front of you, every sensitive step waiting for your approval. One desk, one fleet.">
+  <meta name="twitter:image" content="https://harnesys.github.io/harnesys/assets/automations.png">
+
+  <link rel="icon" type="image/png" href="public/favicon-96x96.png" sizes="96x96" />
+  <link rel="icon" type="image/svg+xml" href="public/favicon.svg" />
+  <link rel="shortcut icon" href="favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="public/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-title" content="Harnesys" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400;0,500;0,700;1,700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/page.css">
+
+  <script>document.documentElement.classList.add("js")</script>
+</head>
+<body>
+
+<div class="scene" aria-hidden="true">
+  <div class="scene-glow"></div>
+  <div class="scene-dots"></div>
+</div>
+
+<header class="top">
+  <div class="wrap top-in">
+    <a class="brand" href="#"><img class="brand-mark" src="public/icon.svg" alt="" width="26" height="26">Harnesys</a>
+    <nav class="top-nav" aria-label="Main">
+      <a href="#get">What you get</a>
+      <a href="#agents">Agents</a>
+      <a href="#desk">Workspace</a>
+      <a href="#quickstart">Quick start</a>
+      <a href="https://github.com/harnesys/harnesys">GitHub</a>
+      <a class="btn btn-amber btn-sm" href="https://github.com/harnesys/harnesys/releases"><i data-lucide="download"></i>Download</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <section class="hero">
+    <div class="wrap hero-in">
+      <p class="kicker mono reveal">A control plane for your agent team</p>
+      <h1 class="reveal">Agents do the work. <em>You</em> keep the controls.</h1>
+      <p class="hero-sub reveal">
+        Harnesys runs a team of AI agents on your own machines and gives you one
+        desk to supervise them: every run in front of you, every sensitive step
+        waiting for your decision.
+      </p>
+      <p class="hero-trust mono reveal">Every tool call lands in the transcript. File writes, shell and network wait at permission gates &mdash; allow once, for the run, or always.</p>
+      <div class="hero-cta reveal">
+        <a class="btn btn-amber" href="https://github.com/harnesys/harnesys/releases"><i data-lucide="download"></i>Download &middot; all platforms</a>
+        <a class="btn btn-ghost" href="https://github.com/harnesys/harnesys"><i data-lucide="github"></i>View on GitHub</a>
+      </div>
+      <div class="cmd reveal">
+        <button class="copy" type="button" data-copy="https://github.com/harnesys/harnesys/releases">Copy</button>
+        <pre class="cmd-body"><code># Download the desktop app for your platform
+# macOS DMG &middot; Windows NSIS &middot; Linux AppImage / .deb
+https://github.com/harnesys/harnesys/releases</code></pre>
+      </div>
+      <div class="chips reveal">
+        <div class="chip"><span class="chip-num">20</span><span class="chip-label">model providers</span></div>
+        <div class="chip"><span class="chip-num">13</span><span class="chip-label">config categories</span></div>
+        <div class="chip"><span class="chip-num">5</span><span class="chip-label">permission gates</span></div>
+        <div class="chip"><span class="chip-num">100%</span><span class="chip-label">self-hosted</span></div>
+      </div>
+      <figure class="shot shot-hero reveal">
+        <img src="assets/automations.png" alt="A scheduled Harnesys run drafts an ops digest from the issue board, then stops and asks the owner to approve, trim or extend it" width="1600" height="1000">
+        <figcaption>A scheduled run drafts today&rsquo;s ops digest from the board, stops, and asks you to approve, trim or extend. The full tool trace stays one click away.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="sec" id="network">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2>How it fits together</h2>
+        <p>Projects live on separate machines and pair into one fleet. A coordinator agent assigns the work, and decisions come back to you as cards. Journal, gates and inbox are shared across the whole fleet.</p>
+      </div>
+      <figure class="net-diagram reveal">
+        <div class="dg-you">
+          <span class="dg-ring"><i data-lucide="user-round"></i></span>
+          <span class="dg-label">You</span>
+        </div>
+        <div class="dg-flows">
+          <div class="flow f-up">
+            <i data-lucide="arrow-up"></i>
+            <span class="f-line"></span>
+            <i data-lucide="file-text"></i>
+            <span class="f-cap">decisions</span>
+          </div>
+          <div class="flow f-down">
+            <i data-lucide="check"></i>
+            <span class="f-line"></span>
+            <i data-lucide="arrow-down"></i>
+            <span class="f-cap">approvals</span>
+          </div>
+        </div>
+        <div class="dg-coord">
+          <span class="dg-ring dg-ring-soft"><i data-lucide="bot"></i></span>
+          <span class="dg-label">Coordinator</span>
+        </div>
+        <div class="dg-split">
+          <span class="v-line"></span><span class="v-line"></span><span class="v-line"></span>
+        </div>
+        <div class="dg-machines">
+          <div class="machine">
+            <span class="m-icon"><i data-lucide="laptop"></i></span>
+            <span class="m-name mono">MacBook</span>
+            <span class="m-role mono">relay</span>
+            <div class="proj">
+              <span class="p-name"><i data-lucide="briefcase"></i>Product A</span>
+              <span class="p-agents">
+                <i data-lucide="bot" class="lead"></i>
+                <i data-lucide="bot"></i>
+                <i data-lucide="bot"></i>
+                <i data-lucide="bot"></i>
+              </span>
+            </div>
+          </div>
+          <div class="machine">
+            <span class="m-icon"><i data-lucide="monitor"></i></span>
+            <span class="m-name mono">Home PC</span>
+            <span class="m-role mono">worker</span>
+            <div class="proj">
+              <span class="p-name"><i data-lucide="briefcase"></i>Product B</span>
+              <span class="p-agents">
+                <i data-lucide="bot" class="lead"></i>
+                <i data-lucide="bot"></i>
+                <i data-lucide="bot"></i>
+              </span>
+            </div>
+          </div>
+          <div class="machine">
+            <span class="m-icon"><i data-lucide="server"></i></span>
+            <span class="m-name mono">VPS</span>
+            <span class="m-role mono">night runs</span>
+            <div class="proj">
+              <span class="p-name"><i data-lucide="briefcase"></i>Product C</span>
+              <span class="p-agents">
+                <i data-lucide="bot" class="lead"></i>
+                <i data-lucide="bot"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-split">
+          <span class="v-line"></span><span class="v-line"></span><span class="v-line"></span>
+        </div>
+        <div class="dg-mesh"></div>
+        <div class="dg-mesh-label mono">one fleet &middot; paired hosts</div>
+        <div class="dg-shared">
+          <span class="chip2"><i data-lucide="file-text"></i><span>journal</span></span>
+          <span class="chip2"><i data-lucide="shield"></i><span>gates</span></span>
+          <span class="chip2"><i data-lucide="inbox"></i><span>inbox</span></span>
+          <span class="chip2"><i data-lucide="globe"></i><span>browser &middot; remote</span></span>
+        </div>
+        <figcaption>Your MacBook runs the relay, a home PC and a VPS enroll as workers, the desk opens in any browser. Agents stay on their machines; the fleet stays <em>yours</em>.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="sec" id="get">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2>What you get on day one</h2>
+        <p>A working desk where your agent team shares the same files, the same shell and the same board.</p>
+      </div>
+      <div class="cards">
+        <article class="card reveal">
+          <span class="icon-tile"><i data-lucide="message-square-more"></i></span>
+          <h3>Runs you can audit</h3>
+          <p>
+            Every tool call with its input and exit code, per-turn token counts,
+            attachments, and question cards when an agent needs your call.
+            Nothing happens off the record.
+          </p>
+        </article>
+        <article class="card reveal">
+          <span class="icon-tile"><i data-lucide="workflow"></i></span>
+          <h3>Agents you can shape</h3>
+          <p>
+            Presets for agents and whole teams, a visual graph editor, and a
+            config dialog with thirteen categories: model, limits, compaction,
+            memory, subagents, hooks, modes. Budgets cap steps and tokens
+            before a run goes sideways.
+          </p>
+        </article>
+        <article class="card reveal">
+          <span class="icon-tile"><i data-lucide="square-terminal"></i></span>
+          <h3>A workspace built in</h3>
+          <p>
+            When the work is code, files, editor, git and real PTY terminals
+            sit next to the chat &mdash; the agent edits the same files you see.
+            When it isn&rsquo;t, you never have to open them.
+          </p>
+        </article>
+        <article class="card reveal">
+          <span class="icon-tile"><i data-lucide="calendar-clock"></i></span>
+          <h3>Work while you sleep</h3>
+          <p>
+            Cron schedules, webhook triggers, and label rules on the issue
+            board that hand new work to the right agent. Anything that needs a
+            decision waits in the inbox.
+          </p>
+        </article>
+        <article class="card reveal">
+          <span class="icon-tile"><i data-lucide="brain"></i></span>
+          <h3>Memory that persists</h3>
+          <p>
+            Pins keep rules in context, facts are promoted from episode logs,
+            and knowledge roots get hybrid full-text and vector search.
+            Agents remember between runs.
+          </p>
+        </article>
+        <article class="card reveal">
+          <span class="icon-tile"><i data-lucide="puzzle"></i></span>
+          <h3>Extend everything</h3>
+          <p>
+            Skills load on demand and agents can author their own. Plugins
+            install from git and npm. MCP servers plug in per org or per
+            project from a standard <code>mcp.json</code>. Hooks fire on 19
+            agent lifecycle events.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="agents">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2>Agents are graphs, not vibes</h2>
+        <p>Draw the pipeline on a canvas: LLM steps, tool calls, spawn and handoff between agents, map fan-outs with parallel or sequential concurrency, and interrupts where a human answers. Thirteen config categories sit behind every agent &mdash; from identity to permission modes.</p>
+      </div>
+      <div class="duo">
+        <figure class="shot reveal">
+          <img src="assets/agent-graph.png" alt="Visual graph editor of a ReAct agent: start, think, act, spawn, handoff and end nodes with a node palette and inspector" width="1600" height="1000">
+          <figcaption>A ReAct agent with a spawn node. The inspector edits the call expression, concurrency and timeout per node.</figcaption>
+        </figure>
+        <figure class="shot reveal">
+          <img src="assets/agent-config.png" alt="Agent configuration dialog: memory section with embedding and decision models, background pass, and context projection settings" width="1600" height="1000">
+          <figcaption>The same agent as configuration: memory models, a background consolidation pass, and projection into the context window before each run.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="desk">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2>The desk carries a workspace</h2>
+        <p>One of the built-in mechanisms, there when you need it: a file explorer with per-line git status, an editor with LSP, commit diffs, and real PTY terminals you can type into. The agent sees the same files &mdash; and asks before writing.</p>
+      </div>
+      <div class="duo">
+        <figure class="shot reveal">
+          <img src="assets/ide-editor.png" alt="Monaco editor with a file open on the left and an agent review on the right, ending in a question card with fixed options" width="1600" height="1000">
+          <figcaption>The agent reviews a file in chat while you keep the editor open; the question card offers fixed options or your own answer.</figcaption>
+        </figure>
+        <figure class="shot reveal">
+          <img src="assets/ide-terminal.png" alt="PTY terminal running bun install next to the source file the agent is editing" width="1600" height="1000">
+          <figcaption>Same workspace, same shell: terminals are live PTY sessions, not screenshots.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="automations">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2>The fleet keeps working when you&rsquo;re away</h2>
+        <p>Cron schedules bind an agent, a thread and a permission mode. Webhooks wake threads over HTTP. On the issue board, a label rule hands new work to the right agent &mdash; docs to one, QA to another &mdash; and column moves fire assignments on their own.</p>
+      </div>
+      <figure class="shot shot-wide reveal">
+        <img src="assets/chat-confirm.png" alt="Release Readiness issue board with columns, label dispatch rules and agents assigned to every card" width="1600" height="1000">
+        <figcaption>The Release Readiness board: label dispatch routes cards to agents, column moves fire by rule, attachments and comments stay on the card.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="sec sec-tint" id="quickstart">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2>Running in five steps</h2>
+        <p>No cloud account, no prerequisites. One download, one model key, first agent in minutes.</p>
+      </div>
+      <ol class="steps">
+        <li class="step reveal">
+          <div class="step-body">
+            <h3>Install</h3>
+            <p>
+              Grab the macOS DMG (Apple silicon and Intel), Windows NSIS (x64 /
+              ARM64), or Linux AppImage / .deb from
+              <a href="https://github.com/harnesys/harnesys/releases">GitHub Releases</a>.
+              The host ships as a sidecar inside the desktop app. First launch
+              on macOS: right-click the app and choose Open; the build is not
+              notarized.
+            </p>
+          </div>
+          <pre class="step-code"><code>https://github.com/harnesys/harnesys/releases</code></pre>
+        </li>
+        <li class="step reveal">
+          <div class="step-body">
+            <h3>Open the desk</h3>
+            <p>The app starts a local host on loopback and opens the desk UI. Your data stays in your home directory.</p>
+          </div>
+          <pre class="step-code"><code>Open Harnesys &rarr; host on 127.0.0.1:47474</code></pre>
+        </li>
+        <li class="step reveal">
+          <div class="step-body">
+            <h3>Add a model</h3>
+            <p>Pick a provider from the catalog &mdash; OpenAI, Anthropic, Google, OpenRouter, Groq, a local Ollama and more &mdash; or point at any OpenAI-compatible endpoint.</p>
+          </div>
+          <pre class="step-code"><code>Settings &rarr; Models &rarr; Add provider</code></pre>
+        </li>
+        <li class="step reveal">
+          <div class="step-body">
+            <h3>Give an agent a task</h3>
+            <p>Pick a preset or draw a graph, write the task in chat, and approve the steps you care about. Gates go from allow to deny per operation: file writes, shell, network, MCP, agents.</p>
+          </div>
+          <pre class="step-code"><code>mode: ask &middot; fs.write: ask &middot; process: ask</code></pre>
+        </li>
+        <li class="step reveal">
+          <div class="step-body">
+            <h3>Grow into a fleet</h3>
+            <p>Pair more machines with the CLI, or run the server and web UI in Docker. Schedules and label rules take over the routine; the inbox collects what needs you.</p>
+          </div>
+          <pre class="step-code"><code>harnesys host invite &rarr; harnesys host enroll</code></pre>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="sec" id="install">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2>Install paths</h2>
+        <p>Desktop apps for macOS (Apple silicon &amp; Intel), Windows (x64 &amp; ARM64) and Linux. Server binaries and the web UI for headless setups.</p>
+      </div>
+      <div class="install-panel reveal">
+        <div class="panel-tabs" role="tablist" aria-label="Install methods">
+          <span class="panel-label mono">Install</span>
+          <button class="ptab is-active" type="button" data-tab="apps" role="tab" aria-selected="true" aria-controls="pane-apps">Apps</button>
+          <button class="ptab" type="button" data-tab="cli" role="tab" aria-selected="false" aria-controls="pane-cli">CLI &amp; server</button>
+          <button class="ptab" type="button" data-tab="docker" role="tab" aria-selected="false" aria-controls="pane-docker">Docker</button>
+        </div>
+        <div class="ptab-pane is-active" id="pane-apps" data-pane="apps" role="tabpanel">
+          <div class="dl-grid">
+            <article class="dl-card is-primary">
+              <h3>macOS</h3>
+              <p class="dl-meta mono">Apple silicon &amp; Intel &middot; <span data-rel-version>latest</span></p>
+              <div class="dl-stack">
+                <a class="btn btn-amber" href="https://github.com/harnesys/harnesys/releases/latest/download/Harnesys_aarch64.dmg"><i data-lucide="download"></i>Download Apple silicon</a>
+                <a class="btn btn-ghost" href="https://github.com/harnesys/harnesys/releases/latest/download/Harnesys_x64.dmg"><i data-lucide="download"></i>Download Intel</a>
+              </div>
+            </article>
+            <article class="dl-card">
+              <h3>Windows</h3>
+              <p class="dl-meta mono">x64 or ARM64 &middot; <span data-rel-version>latest</span></p>
+              <div class="dl-stack">
+                <a class="btn btn-amber" href="https://github.com/harnesys/harnesys/releases/latest/download/Harnesys_x64-setup.exe"><i data-lucide="download"></i>Download x64</a>
+                <a class="btn btn-ghost" href="https://github.com/harnesys/harnesys/releases/latest/download/Harnesys_arm64-setup.exe"><i data-lucide="download"></i>Download ARM64</a>
+              </div>
+            </article>
+            <article class="dl-card">
+              <h3>Linux</h3>
+              <p class="dl-meta mono">x64 &middot; AppImage or .deb &middot; <span data-rel-version>latest</span></p>
+              <div class="dl-stack">
+                <a class="btn btn-amber" href="https://github.com/harnesys/harnesys/releases/latest/download/Harnesys_amd64.AppImage"><i data-lucide="download"></i>Download AppImage</a>
+                <a class="btn btn-ghost" href="https://github.com/harnesys/harnesys/releases/latest/download/Harnesys_amd64.deb"><i data-lucide="download"></i>Download .deb</a>
+              </div>
+            </article>
+          </div>
+        </div>
+        <div class="ptab-pane" id="pane-cli" data-pane="cli" role="tabpanel" hidden>
+          <div class="pane-doc">
+            <div class="cmd full">
+              <button class="copy" type="button" data-copy="harnesys login <relayUrl>&#10;harnesys owner init&#10;harnesys host invite --org <orgId> --name <nodeName>&#10;harnesys host enroll <relayUrl> <code> --org <orgId> --name <nodeName>">Copy</button>
+              <pre class="cmd-body full"><code># Pair a worker machine with your relay
+harnesys login &lt;relayUrl&gt;
+harnesys owner init
+harnesys host invite --org &lt;orgId&gt; --name &lt;nodeName&gt;
+harnesys host enroll &lt;relayUrl&gt; &lt;code&gt; --org &lt;orgId&gt; --name &lt;nodeName&gt;
+
+# Diagnostics and relay maintenance
+harnesys host doctor
+harnesys host retarget --org &lt;orgId&gt; &lt;newRelayUrl&gt;</code></pre>
+            </div>
+            <p>
+              Static CLI and server binaries (<span class="mono">harnesys</span>,
+              <span class="mono">harnesys-host</span>,
+              <span class="mono">harnesys-web</span>) for Linux and macOS, x64
+              and arm64, are on the
+              <a href="https://github.com/harnesys/harnesys/releases">Releases page</a>,
+              together with <span class="mono">client-dist.zip</span> for
+              serving the web UI yourself. Relay-to-worker role transfer is
+              built in: <span class="mono">host promote</span>.
+            </p>
+          </div>
+        </div>
+        <div class="ptab-pane" id="pane-docker" data-pane="docker" role="tabpanel" hidden>
+          <div class="pane-doc">
+            <div class="cmd">
+              <button class="copy" type="button" data-copy="docker compose -f deploy/docker-compose.yml up -d">Copy</button>
+              <pre class="cmd-body"><code>docker compose -f deploy/docker-compose.yml up -d</code></pre>
+            </div>
+            <p>
+              Host and web UI in two containers over one volume. An optional
+              SearXNG profile keeps <span class="mono">web_search</span>
+              queries on your own infrastructure.
+            </p>
+          </div>
+        </div>
+      </div>
+      <p class="install-note reveal">
+        Desktop apps run the host as a sidecar behind the UI and auto-update
+        via signed releases. Everything else &mdash; CLI, server binaries,
+        client bundle &mdash; is on the
+        <a href="https://github.com/harnesys/harnesys/releases">Releases page</a>.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <div>
+      <span class="brand"><img class="brand-mark" src="public/icon.svg" alt="" width="26" height="26">Harnesys</span>
+      <p class="foot-note">
+        Early software. The macOS build is not notarized.
+        Licensed for internal use: run and modify it inside your organization.
+      </p>
+      <p class="foot-copy">&copy; 2026 Harnesys</p>
+    </div>
+    <nav class="foot-nav" aria-label="Footer">
+      <a href="https://github.com/harnesys/harnesys">GitHub</a>
+      <a href="https://github.com/harnesys/harnesys/releases">Releases</a>
+      <a href="https://github.com/harnesys/harnesys#readme">Docs</a>
+      <a href="https://github.com/harnesys/harnesys/blob/main/LICENSE">License</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="js/site.js"></script>
+</body>
+</html>
