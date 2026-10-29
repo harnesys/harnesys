@@ -1,0 +1,17 @@
+export const SHELL_FLOOR_PATTERNS: readonly string[] = [
+  'rm -rf /*',
+  'rm -rf ~*',
+  'mkfs*',
+  'dd *of=/dev/*',
+  ':(){ :|:& };:',
+  'chmod -R 777 /*',
+  '*~/.ssh/*',
+  'curl *| sh',
+  'wget *| sh',
+  'sudo rm -rf /*',
+  'mkswap *',
+  'shutdown*',
+  'reboot*',
+  'poweroff*',
+  'halt*',
+];

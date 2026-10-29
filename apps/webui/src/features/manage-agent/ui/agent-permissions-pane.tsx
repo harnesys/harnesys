@@ -1,0 +1,124 @@
+import type { ModeOp } from '@harnesys/studio-shared';
+import type { PermissionGate, PermissionMap } from 'harnesys';
+import { BotIcon, FilePenIcon, GlobeIcon, PlugIcon, TerminalIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { Pane, RowList } from '@/shared/ui/capability-rows';
+import { ToggleGroup, ToggleGroupItem } from '@/shared/ui/toggle-group';
+import { PERM_OPS } from '../model/agent-permissions';
+
+interface PermissionRowSpec {
+  op: ModeOp;
+  label: string;
+  description: string;
+  icon: ReactNode;
+}
+const PERMISSION_ROWS: PermissionRowSpec[] = [
+  {
+    op: 'fs.write',
+    label: 'File writes',
+    description: 'Allows writes only where source access is set to Write',
+    icon: <FilePenIcon />,
+  },
+  {
+    op: 'process',
+    label: 'Shell',
+    description: 'Run commands within the selected execution environment',
+    icon: <TerminalIcon />,
+  },
+  {
+    op: 'network',
+    label: 'Network',
+    description: 'Fetch pages and call APIs',
+    icon: <GlobeIcon />,
+  },
+  {
+    op: 'mcp',
+    label: 'MCP tools',
+    description: 'Tools from connected MCP servers',
+    icon: <PlugIcon />,
+  },
+  {
+    op: 'agents',
+    label: 'Create agents',
+    description: 'Add agents and subagents to the project',
+    icon: <BotIcon />,
+  },
+];
+interface AgentPermissionsPaneProps {
+  value: PermissionMap | null;
+  onChange: (next: PermissionMap) => void;
+  isDelegate: boolean;
+}
+export function AgentPermissionsPane({ value, onChange, isDelegate }: AgentPermissionsPaneProps) {
+  const rows = isDelegate
+    ? PERMISSION_ROWS.filter((row) => PERM_OPS.includes(row.op))
+    : PERMISSION_ROWS;
+  const current = (op: ModeOp): PermissionGate => value?.[op] ?? 'ask';
+  return (
+    <Pane
+      testId="agent-permissions-pane"
+      label="Tool permissions"
+      description="Whether available actions run right away. Run modes may restrict them further."
+    >
+      {isDelegate ? (
+        <p className="px-1 pb-2 text-muted-foreground text-xs">
+          Subagents are capped further by the parent's run rights. “Ask” becomes “Deny” in spawn:
+          nobody to ask.
+        </p>
+      ) : null}
+      <RowList>
+        {rows.map((row) => (
+          <PermissionRow
+            key={row.op}
+            spec={row}
+            gate={current(row.op)}
+            onGateChange={(gate) => onChange({ ...(value ?? {}), [row.op]: gate })}
+          />
+        ))}
+      </RowList>
+    </Pane>
+  );
+}
+function PermissionRow({
+  spec,
+  gate,
+  onGateChange,
+}: {
+  spec: PermissionRowSpec;
+  gate: PermissionGate;
+  onGateChange: (gate: PermissionGate) => void;
+}) {
+  const { op, label, description, icon } = spec;
+  return (
+    <div className="flex items-center gap-2 py-2" data-testid={`perm-row-${op}`}>
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-baseline gap-2">
+          {icon ? (
+            <span className="shrink-0 self-center text-muted-foreground [&_svg]:size-3.5">
+              {icon}
+            </span>
+          ) : null}
+          <span className="truncate font-medium text-sm">{label}</span>
+        </div>
+        <p className="text-muted-foreground text-xs leading-4">{description}</p>
+      </div>
+      <ToggleGroup
+        variant="segment"
+        value={[gate]}
+        onValueChange={(next) => {
+          const value = next[0];
+          if (isGate(value)) {
+            onGateChange(value);
+          }
+        }}
+      >
+        <ToggleGroupItem value="allow">Allow</ToggleGroupItem>
+        <ToggleGroupItem value="ask">Ask</ToggleGroupItem>
+        <ToggleGroupItem value="deny">Deny</ToggleGroupItem>
+      </ToggleGroup>
+    </div>
+  );
+}
+function isGate(value: string | undefined): value is PermissionGate {
+  return value === 'allow' || value === 'ask' || value === 'deny';
+}

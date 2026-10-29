@@ -1,0 +1,17 @@
+# Keep images clean: no local env, no build output, no VCS noise.
+.git
+.env
+.env.*
+!.env.example
+node_modules
+dist
+build
+out
+coverage
+temp
+.superpowers
+.harnesys
+docs
+landing
+apps/desktop/src-tauri/target
+skills-lock.json

@@ -1,0 +1,62 @@
+import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
+import { cn } from '@/shared/lib/utils';
+
+function Popover({ ...props }: PopoverPrimitive.Root.Props) {
+  return <PopoverPrimitive.Root data-slot="popover" {...props} />;
+}
+function PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props) {
+  return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
+}
+function PopoverPortal({ ...props }: PopoverPrimitive.Portal.Props) {
+  return <PopoverPrimitive.Portal data-slot="popover-portal" {...props} />;
+}
+function PopoverContent({
+  className,
+  align = 'center',
+  alignOffset = 0,
+  side = 'bottom',
+  sideOffset = 4,
+  ...props
+}: PopoverPrimitive.Popup.Props &
+  Pick<PopoverPrimitive.Positioner.Props, 'align' | 'alignOffset' | 'side' | 'sideOffset'>) {
+  return (
+    <PopoverPrimitive.Portal>
+      <PopoverPrimitive.Positioner
+        align={align}
+        alignOffset={alignOffset}
+        side={side}
+        sideOffset={sideOffset}
+        className="isolate z-50 outline-none"
+      >
+        <PopoverPrimitive.Popup
+          data-slot="popover-content"
+          className={cn(
+            'data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 z-50 max-h-(--available-height) min-w-32 origin-(--transform-origin) overflow-y-auto overflow-x-hidden rounded-lg bg-popover p-2 text-popover-foreground shadow-md outline-none ring-1 ring-foreground/10 duration-100 data-closed:animate-out data-open:animate-in',
+            className,
+          )}
+          {...props}
+        />
+      </PopoverPrimitive.Positioner>
+    </PopoverPrimitive.Portal>
+  );
+}
+function PopoverTitle({ className, ...props }: PopoverPrimitive.Title.Props) {
+  return (
+    <PopoverPrimitive.Title
+      data-slot="popover-title"
+      className={cn('font-medium text-sm', className)}
+      {...props}
+    />
+  );
+}
+function PopoverDescription({ className, ...props }: PopoverPrimitive.Description.Props) {
+  return (
+    <PopoverPrimitive.Description
+      data-slot="popover-description"
+      className={cn('text-muted-foreground text-sm', className)}
+      {...props}
+    />
+  );
+}
+
+export { Popover, PopoverContent, PopoverDescription, PopoverPortal, PopoverTitle, PopoverTrigger };

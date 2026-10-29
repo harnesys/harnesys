@@ -1,0 +1,129 @@
+import { DENIED_TOOLS_KEY, NODE_CHECKPOINT_KEY, RUN_OP_GRANTS_KEY } from '../constants.ts';
+import type { ToolCallResult } from './tool-call.ts';
+
+export { DENIED_TOOLS_KEY, NODE_CHECKPOINT_KEY, RUN_OP_GRANTS_KEY };
+export interface DeniedToolEntry {
+  tool: string;
+  reason: string;
+}
+export interface NodeCheckpoint {
+  completed: Record<number, ToolCallResult>;
+  granted?: Record<string, true>;
+}
+export interface ValidCheckpointEntry {
+  idx: number;
+  result: ToolCallResult;
+}
+function key(nodeId: string): string {
+  return NODE_CHECKPOINT_KEY + nodeId;
+}
+export function loadCheckpoint(
+  state: Record<string, unknown>,
+  nodeId: string,
+): NodeCheckpoint | undefined {
+  const saved = state[key(nodeId)] as NodeCheckpoint | undefined;
+  if (
+    !saved ||
+    typeof saved !== 'object' ||
+    !saved.completed ||
+    typeof saved.completed !== 'object'
+  ) {
+    return undefined;
+  }
+  return saved;
+}
+export function validCheckpointEntries(
+  saved: NodeCheckpoint,
+  calls: {
+    id: string;
+  }[],
+): ValidCheckpointEntry[] {
+  const entries: ValidCheckpointEntry[] = [];
+  for (const [k, v] of Object.entries(saved.completed)) {
+    const idx = Number(k);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= calls.length) {
+      continue;
+    }
+    const call = calls[idx];
+    if (!call || !v || typeof v !== 'object') {
+      continue;
+    }
+    const result = v as ToolCallResult;
+    if (result.id !== call.id) {
+      continue;
+    }
+    entries.push({ idx, result });
+  }
+  return entries;
+}
+export function recordCompleted(
+  state: Record<string, unknown>,
+  nodeId: string,
+  idx: number,
+  result: ToolCallResult,
+): void {
+  const saved = loadCheckpoint(state, nodeId) ?? { completed: {} };
+  saved.completed[idx] = result;
+  state[key(nodeId)] = saved;
+}
+export function recordGranted(
+  state: Record<string, unknown>,
+  nodeId: string,
+  callId: string,
+): void {
+  const saved = loadCheckpoint(state, nodeId) ?? { completed: {} };
+  saved.granted = { ...saved.granted, [callId]: true };
+  state[key(nodeId)] = saved;
+}
+export function recordDenied(
+  state: Record<string, unknown>,
+  toolCallId: string,
+  entry: DeniedToolEntry,
+): void {
+  const cur = state[DENIED_TOOLS_KEY];
+  const rec =
+    cur && typeof cur === 'object' && !Array.isArray(cur)
+      ? (cur as Record<string, DeniedToolEntry>)
+      : {};
+  state[DENIED_TOOLS_KEY] = { ...rec, [toolCallId]: entry };
+}
+export function recordRunOpGrant(state: Record<string, unknown>, op: string): void {
+  const cur = state[RUN_OP_GRANTS_KEY];
+  const rec =
+    cur && typeof cur === 'object' && !Array.isArray(cur) ? (cur as Record<string, true>) : {};
+  state[RUN_OP_GRANTS_KEY] = { ...rec, [op]: true };
+}
+export function loadRunOpGrant(state: Record<string, unknown>, op: string): boolean {
+  const cur = state[RUN_OP_GRANTS_KEY];
+  if (!cur || typeof cur !== 'object' || Array.isArray(cur)) {
+    return false;
+  }
+  return (cur as Record<string, unknown>)[op] === true;
+}
+export function deniedToolsList(state: Record<string, unknown>): DeniedToolEntry[] {
+  const cur = state[DENIED_TOOLS_KEY];
+  if (!cur || typeof cur !== 'object' || Array.isArray(cur)) {
+    return [];
+  }
+  const out: DeniedToolEntry[] = [];
+  for (const v of Object.values(cur as Record<string, unknown>)) {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) {
+      continue;
+    }
+    const row = v as Record<string, unknown>;
+    if (typeof row.tool === 'string' && typeof row.reason === 'string') {
+      out.push({ tool: row.tool, reason: row.reason });
+    }
+  }
+  return out;
+}
+export function saveCheckpoint(
+  state: Record<string, unknown>,
+  nodeId: string,
+  checkpoint: NodeCheckpoint,
+): void {
+  state[key(nodeId)] = checkpoint;
+}
+export function clearCheckpoint(state: Record<string, unknown>, nodeId: string): void {
+  delete state[key(nodeId)];
+}

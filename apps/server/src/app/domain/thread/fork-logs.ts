@@ -1,0 +1,103 @@
+import type { SessionEvent } from 'harnesys';
+
+export interface SeedMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  attachments?: unknown[];
+  origin?: string;
+}
+
+export interface BranchThreadRef {
+  id: string;
+  parentThreadId: string | null;
+  forkAt: string | null;
+}
+
+const MAX_BRANCH_DEPTH = 8;
+
+function eventIdOf(event: SessionEvent): string | undefined {
+  return 'id' in event ? event.id : undefined;
+}
+
+function clientEventIdOf(event: SessionEvent): string | undefined {
+  return 'clientEventId' in event ? event.clientEventId : undefined;
+}
+
+export function cutParentEvents(events: SessionEvent[], forkAt: string): SessionEvent[] {
+  let runEnd = -1;
+  for (let i = 0; i < events.length; i += 1) {
+    if (events[i]?.runId === forkAt) {
+      runEnd = i;
+    }
+  }
+  if (runEnd !== -1) {
+    return events.slice(0, runEnd + 1);
+  }
+  for (let i = 0; i < events.length; i += 1) {
+    const event = events[i];
+    if (!event) {
+      continue;
+    }
+    if (eventIdOf(event) === forkAt || clientEventIdOf(event) === forkAt) {
+      return events.slice(0, i + 1);
+    }
+  }
+  return [];
+}
+
+export function seedMessagesFromEvents(events: SessionEvent[]): SeedMessage[] {
+  const messages: SeedMessage[] = [];
+  let run: { runId: string; text: string } | null = null;
+  const flushRun = () => {
+    if (run && run.text.length > 0) {
+      messages.push({ role: 'assistant', content: run.text });
+    }
+    run = null;
+  };
+  for (const event of events) {
+    if (event.type === 'user') {
+      flushRun();
+      const message: SeedMessage = { role: 'user', content: event.text };
+      if (event.attachments) {
+        message.attachments = event.attachments;
+      }
+      if (event.origin) {
+        message.origin = event.origin;
+      }
+      messages.push(message);
+      continue;
+    }
+    if (event.type !== 'text-delta') {
+      continue;
+    }
+    const runId = event.runId ?? '';
+    if (!run || run.runId !== runId) {
+      flushRun();
+      run = { runId, text: event.text };
+      continue;
+    }
+    run.text += event.text;
+  }
+  flushRun();
+  return messages;
+}
+
+export async function collectInheritedEvents(
+  listByThread: (threadId: string) => Promise<SessionEvent[]>,
+  findThread: (threadId: string) => BranchThreadRef | undefined,
+  thread: BranchThreadRef,
+  depth = 0,
+): Promise<SessionEvent[]> {
+  if (!thread.parentThreadId || !thread.forkAt || depth >= MAX_BRANCH_DEPTH) {
+    return [];
+  }
+  const parent = findThread(thread.parentThreadId);
+  if (!parent) {
+    return [];
+  }
+  const [parentOwn, upper] = await Promise.all([
+    listByThread(parent.id),
+    collectInheritedEvents(listByThread, findThread, parent, depth + 1),
+  ]);
+  return [...upper, ...cutParentEvents(parentOwn, thread.forkAt)];
+}

@@ -1,0 +1,98 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "root": false,
+  "extends": "//",
+  "files": {
+    "includes": [
+      "src/**",
+      "tests/**",
+      "*.ts",
+      "*.json",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/out",
+      "!**/coverage",
+      "!**/temp",
+      "!bun.lock"
+    ]
+  },
+  "linter": {
+    "rules": {
+      "suspicious": {
+        "noConsole": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["src/app/api/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "warn",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/infra/**"],
+                    "message": "api must not import infra"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/app/api/api.module.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/app/application/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/*.adapter", "**/*.adapter.ts"],
+                    "message": "application must not import concrete adapters"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/app/infra/knowledge/knowledge-index-file.ts",
+        "src/app/infra/knowledge/knowledge-indexer-full.ts",
+        "src/app/infra/knowledge/knowledge-indexer-watch.ts",
+        "src/app/infra/files-watcher/files-watcher.adapter.ts"
+      ],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noExcessiveCognitiveComplexity": {
+              "level": "warn",
+              "options": {
+                "maxAllowedComplexity": 45
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

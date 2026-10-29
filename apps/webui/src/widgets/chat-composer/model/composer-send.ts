@@ -1,0 +1,32 @@
+import type { ThreadAttachment } from '@harnesys/studio-shared';
+import { sendMessage } from '@/features/send-message';
+import { uploadThreadAttachment } from '@/shared/api';
+import type { ComposerMode } from './composer-mode';
+export interface UploadAndSendOptions {
+  threadId: string;
+  content: string;
+  effort: string | undefined;
+  files: File[];
+  mode: ComposerMode;
+  skills: string[];
+}
+export async function uploadAndSend(options: UploadAndSendOptions): Promise<void> {
+  const { threadId, content, effort, files, mode, skills } = options;
+  const uploaded: ThreadAttachment[] = [];
+  for (const file of files) {
+    uploaded.push(await uploadThreadAttachment(threadId, file));
+  }
+  await sendMessage({ threadId, content, effort, attachments: uploaded, mode, skills });
+}
+export function filesFromClipboard(data: DataTransfer): File[] {
+  const fromFiles = Array.from(data.files);
+  if (fromFiles.length > 0) {
+    return fromFiles;
+  }
+  return Array.from(data.items)
+    .filter((item) => item.kind === 'file')
+    .flatMap((item) => {
+      const file = item.getAsFile();
+      return file ? [file] : [];
+    });
+}

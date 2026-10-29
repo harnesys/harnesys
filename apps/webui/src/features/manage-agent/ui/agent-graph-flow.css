@@ -1,0 +1,16 @@
+.agent-graph-flow .react-flow__edge-path {
+  stroke: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
+}
+
+.agent-graph-flow .react-flow__attribution {
+  display: none;
+}
+
+.agent-graph-inspector [data-slot="field-label"] {
+  font-size: 11px;
+}
+
+.agent-graph-inspector textarea {
+  min-height: 4.5rem;
+  font-size: 12px;
+}

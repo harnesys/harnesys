@@ -1,0 +1,31 @@
+import { env } from '@/shared/config/env';
+export function trace(scope: string, message: string, extra?: unknown): void {
+  if (!env.trace) {
+    return;
+  }
+  const line = `[harnesys:trace] ${new Date().toISOString()} ${scope} ${message}`;
+  if (extra === undefined) {
+    return;
+  }
+  traceSink(line, extra);
+}
+function traceSink(line: string, extra: unknown): void {
+  preview(extra);
+  if (line.length === 0) {
+    return;
+  }
+}
+export function preview(value: unknown, limit = 240): string {
+  if (typeof value === 'string') {
+    return value.length <= limit ? value : `${value.slice(0, limit)}…`;
+  }
+  try {
+    const text = JSON.stringify(value);
+    if (!text) {
+      return String(value);
+    }
+    return text.length <= limit ? text : `${text.slice(0, limit)}…`;
+  } catch {
+    return String(value);
+  }
+}

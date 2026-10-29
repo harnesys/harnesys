@@ -1,0 +1,101 @@
+import type {
+  KnowledgeFileRecord,
+  KnowledgeFileStatus,
+  KnowledgeFilesByStatus,
+} from '@harnesys/studio-shared';
+import { Badge } from '@/shared/ui/badge';
+import { FieldLabel, FieldSet } from '@/shared/ui/field';
+import { FileTypeIcon } from '@/shared/ui/icons';
+import { RowListSkeleton, SettingsEmpty } from '@/shared/ui/settings-kit';
+import { ToggleGroup, ToggleGroupItem } from '@/shared/ui/toggle-group';
+
+const FILE_FILTERS = [
+  'indexed',
+  'skipped',
+  'error',
+  'pending',
+] as const satisfies readonly KnowledgeFileStatus[];
+const FILTER_LABELS: Record<KnowledgeFileStatus, string> = {
+  indexed: 'Indexed',
+  skipped: 'Skipped',
+  error: 'Error',
+  pending: 'Pending',
+};
+interface KnowledgeFilesPanelProps {
+  status: KnowledgeFileStatus;
+  onStatusChange: (status: KnowledgeFileStatus) => void;
+  files: KnowledgeFileRecord[];
+  counts?: KnowledgeFilesByStatus;
+  loading?: boolean;
+}
+export function KnowledgeFilesPanel({
+  status,
+  onStatusChange,
+  files,
+  counts,
+  loading,
+}: KnowledgeFilesPanelProps) {
+  return (
+    <FieldSet data-testid="knowledge-files-panel">
+      <div className="flex h-8 items-center gap-2">
+        <FieldLabel>Files</FieldLabel>
+        <ToggleGroup
+          className="ml-auto"
+          variant="segment"
+          value={[status]}
+          onValueChange={(value) => {
+            const next = value[0];
+            if (isFileStatus(next)) {
+              onStatusChange(next);
+            }
+          }}
+        >
+          {FILE_FILTERS.map((item) => (
+            <ToggleGroupItem key={item} value={item} className="min-w-[64px] px-2 text-xs">
+              {FILTER_LABELS[item]}
+              <span className="ml-1 text-muted-foreground tabular-nums">{counts?.[item] ?? 0}</span>
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      </div>
+
+      {loading ? <RowListSkeleton testId="knowledge-files-loading" /> : null}
+      {!loading && files.length === 0 ? (
+        <SettingsEmpty
+          title={`No ${FILTER_LABELS[status].toLowerCase()} files`}
+          description="Run reindex to populate the inventory."
+        />
+      ) : null}
+      {!loading && files.length > 0 ? (
+        <div className="flex max-h-56 flex-col gap-1 overflow-y-auto">
+          {files.map((file) => (
+            <div
+              key={file.uri}
+              className="flex items-center gap-1.5 rounded-md px-2 py-1.5 hover:bg-muted/60"
+              data-testid={`knowledge-file-${file.uri}`}
+              title={file.lastError ?? file.skipReason ?? undefined}
+            >
+              <span className="flex size-3.5 shrink-0 items-center justify-center [&>svg]:size-3.5">
+                <FileTypeIcon name={file.uri} size="xs" className="opacity-70" />
+              </span>
+              <span className="min-w-0 flex-1 truncate font-mono text-xs leading-4">
+                {file.uri}
+              </span>
+              {file.skipReason || file.lastError ? (
+                <span className="max-w-[40%] truncate text-[11px] text-muted-foreground">
+                  {file.lastError ?? file.skipReason}
+                </span>
+              ) : null}
+              <Badge variant="secondary" className="h-4 shrink-0 px-1 text-[10px] leading-none">
+                {file.chunkCount}
+              </Badge>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </FieldSet>
+  );
+}
+function isFileStatus(value: string | undefined): value is KnowledgeFileStatus {
+  return value === 'indexed' || value === 'skipped' || value === 'error' || value === 'pending';
+}

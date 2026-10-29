@@ -1,0 +1,35 @@
+{
+  "name": "@harnesys/server",
+  "version": "0.7.0",
+  "module": "src/main.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun --watch src/main.ts",
+    "start": "bun src/main.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "3.0.90",
+    "@ai-sdk/openai-compatible": "3.0.30",
+    "@harnesys/brix": "workspace:*",
+    "@harnesys/contracts": "workspace:*",
+    "@harnesys/studio-shared": "workspace:*",
+    "ai": "7.0.47",
+    "croner": "^10.0.1",
+    "drizzle-orm": "^0.45.2",
+    "harnesys": "workspace:*",
+    "hono": "^4.13.2",
+    "ignore": "^7.0.6",
+    "reflect-metadata": "^0.2.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.14",
+    "@types/bun": "^1.4.2",
+    "drizzle-kit": "^0.31.10"
+  },
+  "peerDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

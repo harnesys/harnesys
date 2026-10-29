@@ -1,0 +1,280 @@
+import { realpathSync } from 'node:fs';
+import { isAbsolute, resolve, sep } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import type { LspDiagnostic, LspHover, LspLocation, LspServerSpec } from 'harnesys';
+import { LspDocuments } from './lsp-documents.ts';
+import { isRecord, normalizeHover, normalizeLocations, toDiagnostic } from './lsp-messages.ts';
+import { LspStdioTransport } from './lsp-stdio-transport.ts';
+import { resolveTsserverJs } from './resolve-tsserver.ts';
+import { lspServerRoot, spawnServer } from './spawn-lsp-server.ts';
+
+const DEFAULT_REQUEST_TIMEOUT_MS = 20000;
+const DEFAULT_SHUTDOWN_TIMEOUT_MS = 5000;
+interface Pending {
+  resolve: (value: unknown) => void;
+  reject: (error: Error) => void;
+}
+type MessageListener = (message: Record<string, unknown>) => void;
+export class StdioLspSession {
+  private readonly proc: ReturnType<typeof Bun.spawn>;
+  private readonly pending = new Map<number, Pending>();
+  private readonly listeners = new Set<MessageListener>();
+  private readonly documents: LspDocuments;
+  private readonly transport: LspStdioTransport;
+  private nextId = 1;
+  private initialized = false;
+  private constructor(
+    proc: ReturnType<typeof Bun.spawn>,
+    readonly config: LspServerSpec,
+    readonly projectRoot: string,
+    private readonly allowedRoots: string[],
+  ) {
+    this.proc = proc;
+    this.documents = new LspDocuments(config, (message) => this.notifyMessage(message));
+    this.exited = proc.exited.then((code) => {
+      this.dead = true;
+      return code;
+    });
+    this.transport = new LspStdioTransport(proc, (message) => this.handleMessage(message));
+  }
+  readonly exited: Promise<number | null>;
+  private dead = false;
+  get alive(): boolean {
+    return !this.dead;
+  }
+  private requireAlive(): void {
+    if (this.dead) {
+      throw new Error(`LSP server "${this.config.serverId}" has exited`);
+    }
+  }
+  static async start(
+    config: LspServerSpec,
+    projectRoot: string,
+    allowedRoots: string[] = [],
+  ): Promise<StdioLspSession> {
+    const root = realpathSync(lspServerRoot(config, projectRoot));
+    const proc = spawnServer(config, root);
+    const session = new StdioLspSession(proc, config, root, allowedRoots.map(realpathOrSelf));
+    try {
+      await session.initialize();
+    } catch (error) {
+      try {
+        proc.kill();
+      } catch {}
+      const detail = error instanceof Error ? error.message : String(error);
+      const stderr = session.transport.stderrText.trim();
+      throw new Error(stderr.length > 0 ? `${detail} (${stderr.slice(0, 400)})` : detail);
+    }
+    return session;
+  }
+  supportsPath(filePath: string): boolean {
+    return this.documents.supportsPath(filePath);
+  }
+  onMessage(listener: MessageListener): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+  sendRaw(message: Record<string, unknown>): void {
+    this.requireAlive();
+    this.documents.normalizeOutgoingDidChange(message);
+    this.transport.write(message);
+  }
+  diagnostics(filePath: string): Promise<LspDiagnostic[]> {
+    this.requireAlive();
+    return this.documents.diagnostics(this.resolvePath(filePath));
+  }
+  async syncPath(absPath: string): Promise<void> {
+    try {
+      this.requireAlive();
+      await this.documents.syncIfOpened(this.resolvePath(absPath));
+    } catch {}
+  }
+  closePath(absPath: string): void {
+    try {
+      this.requireAlive();
+      this.documents.closeIfOpened(this.resolvePath(absPath));
+    } catch {}
+  }
+  definition(filePath: string, line: number, character: number): Promise<LspLocation[]> {
+    return this.positional(
+      this.resolvePath(filePath),
+      'textDocument/definition',
+      { position: { line, character } },
+      (result) => normalizeLocations(result, this.projectRoot),
+    );
+  }
+  references(filePath: string, line: number, character: number): Promise<LspLocation[]> {
+    return this.positional(
+      this.resolvePath(filePath),
+      'textDocument/references',
+      {
+        position: { line, character },
+        context: { includeDeclaration: true },
+      },
+      (result) => normalizeLocations(result, this.projectRoot),
+    );
+  }
+  hover(filePath: string, line: number, character: number): Promise<LspHover | null> {
+    return this.positional(
+      this.resolvePath(filePath),
+      'textDocument/hover',
+      { position: { line, character } },
+      (result) => normalizeHover(result),
+    );
+  }
+  async dispose(): Promise<void> {
+    const shutdownTimeoutMs = this.config.shutdownTimeoutMs ?? DEFAULT_SHUTDOWN_TIMEOUT_MS;
+    try {
+      await this.request('shutdown', null, shutdownTimeoutMs);
+      this.notifyMessage({ jsonrpc: '2.0', method: 'exit' });
+    } catch {}
+    try {
+      this.proc.kill();
+    } catch {}
+  }
+  private async ensureOpen(absPath: string): Promise<string> {
+    this.requireAlive();
+    if (!this.initialized) {
+      throw new Error('LSP session not initialized');
+    }
+    await this.documents.ensureOpen(absPath);
+    return absPath;
+  }
+  private async positional<T>(
+    absPath: string,
+    method: 'textDocument/definition' | 'textDocument/references' | 'textDocument/hover',
+    params: Record<string, unknown>,
+    normalize: (result: unknown) => T,
+  ): Promise<T> {
+    this.requireAlive();
+    await this.documents.syncIfChangedOnDisk(await this.ensureOpen(absPath));
+    const result = await this.request(method, {
+      textDocument: { uri: pathToFileURL(absPath).href },
+      ...params,
+    });
+    return normalize(result);
+  }
+  private async initialize(): Promise<void> {
+    const rootUri = pathToFileURL(this.projectRoot).href;
+    await this.request(
+      'initialize',
+      {
+        processId: process.pid,
+        rootUri,
+        capabilities: {
+          textDocument: {
+            synchronization: { didSave: true },
+            hover: { contentFormat: ['markdown', 'plaintext'] },
+            definition: { linkSupport: true },
+            references: {},
+            publishDiagnostics: {},
+          },
+          project: { projectFolders: true },
+        },
+        projectFolders: [{ uri: rootUri, name: 'project' }],
+        initializationOptions: enrichInitializationOptions(this.config),
+      },
+      this.config.startupTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
+    );
+    this.notifyMessage({ jsonrpc: '2.0', method: 'initialized', params: {} });
+    if (this.config.settings !== undefined) {
+      this.notifyMessage({
+        jsonrpc: '2.0',
+        method: 'project/didChangeConfiguration',
+        params: { settings: this.config.settings },
+      });
+    }
+    this.initialized = true;
+  }
+  private resolvePath(filePath: string): string {
+    const abs = isAbsolute(filePath) ? resolve(filePath) : resolve(this.projectRoot, filePath);
+    const candidates = new Set([abs]);
+    try {
+      candidates.add(realpathSync(abs));
+    } catch {}
+    for (const root of [this.projectRoot, ...this.allowedRoots]) {
+      for (const candidate of candidates) {
+        if (candidate === root || candidate.startsWith(`${root}${sep}`)) {
+          return abs;
+        }
+      }
+    }
+    throw new Error(`path outside project: ${filePath}`);
+  }
+  private request(method: string, params: unknown, timeoutMs?: number): Promise<unknown> {
+    const id = this.nextId;
+    this.nextId += 1;
+    return new Promise((resolvePromise, reject) => {
+      this.pending.set(id, { resolve: resolvePromise, reject });
+      this.transport.write({ jsonrpc: '2.0', id, method, params });
+      setTimeout(() => {
+        if (this.pending.has(id)) {
+          this.pending.delete(id);
+          reject(new Error(`LSP timeout: ${method}`));
+        }
+      }, timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS);
+    });
+  }
+  private notifyMessage(message: object): void {
+    this.transport.write(message);
+  }
+  private handleMessage(message: Record<string, unknown>): void {
+    if (typeof message.id === 'number') {
+      const pending = this.pending.get(message.id);
+      if (pending) {
+        this.pending.delete(message.id);
+        if (message.error) {
+          pending.reject(new Error(JSON.stringify(message.error)));
+          return;
+        }
+        pending.resolve(message.result);
+        return;
+      }
+    }
+    if (
+      message.method === 'textDocument/publishDiagnostics' &&
+      isRecord(message.params) &&
+      typeof message.params.uri === 'string'
+    ) {
+      const uri = message.params.uri;
+      const list = Array.isArray(message.params.diagnostics) ? message.params.diagnostics : [];
+      this.documents.publish(uri, list, (raw, docUri) =>
+        toDiagnostic(raw, docUri, this.projectRoot),
+      );
+    }
+    this.emit(message);
+  }
+  private emit(message: Record<string, unknown>): void {
+    for (const listener of this.listeners) {
+      try {
+        listener(message);
+      } catch {}
+    }
+  }
+}
+function realpathOrSelf(target: string): string {
+  try {
+    return realpathSync(target);
+  } catch {
+    return target;
+  }
+}
+function enrichInitializationOptions(config: LspServerSpec): unknown {
+  const base = isRecord(config.initializationOptions) ? { ...config.initializationOptions } : {};
+  if (config.command !== 'typescript-language-server') {
+    return base;
+  }
+  const tsserver = isRecord(base.tsserver) ? { ...base.tsserver } : {};
+  if (typeof tsserver.path === 'string' || typeof tsserver.fallbackPath === 'string') {
+    base.tsserver = tsserver;
+    return base;
+  }
+  const fallbackPath = resolveTsserverJs();
+  if (fallbackPath !== undefined) {
+    tsserver.fallbackPath = fallbackPath;
+  }
+  base.tsserver = tsserver;
+  return base;
+}

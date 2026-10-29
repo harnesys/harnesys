@@ -1,0 +1,117 @@
+import type { KnowledgeFileStatus, KnowledgeStats } from '@harnesys/studio-shared';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
+import {
+  knowledgeFilesQueryKey,
+  knowledgeStatsQueryKey,
+  watchKnowledgeIndexState,
+} from '@/shared/api';
+import { FieldGroup, FieldLabel, FieldSet } from '@/shared/ui/field';
+import { toast } from '@/shared/ui/toast';
+import { patchKnowledgeIndexState } from '../model/patch-knowledge-index-state';
+import { useKnowledgeIndex } from '../model/use-knowledge-index';
+import { KnowledgeFilesPanel } from './knowledge-files-panel';
+import { KnowledgeIndexStatus } from './knowledge-index-status';
+import { KnowledgeSearchPanel } from './knowledge-search-panel';
+import { KnowledgeSettingsFields } from './knowledge-settings-fields';
+
+export function KnowledgeIndexPane({ orgId, sourceId }: { orgId: string; sourceId: string }) {
+  const [fileStatus, setFileStatus] = useState<KnowledgeFileStatus>('indexed');
+  const {
+    settingsQuery,
+    rootsQuery,
+    statsQuery,
+    indexStateQuery,
+    filesQuery,
+    saveSettings,
+    upsertRoot,
+    removeRoot,
+    reindex,
+    cancel,
+    invalidateAll,
+  } = useKnowledgeIndex(orgId, sourceId, fileStatus);
+  const settings = settingsQuery.data;
+  const busy = saveSettings.isPending || upsertRoot.isPending || removeRoot.isPending;
+  const indexStatus = indexStateQuery.data?.status;
+  const prevStatus = useRef(indexStatus);
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (prevStatus.current === 'running' && indexStatus && indexStatus !== 'running') {
+      void (async () => {
+        await invalidateAll();
+        if (!(orgId && sourceId)) {
+          return;
+        }
+        const stats = qc.getQueryData<KnowledgeStats>(knowledgeStatsQueryKey(orgId, sourceId));
+        if (!stats) {
+          return;
+        }
+        const { indexed, skipped, error, pending } = stats.filesByStatus;
+        const failed = error > 0;
+        toast.add({
+          type: failed ? 'warning' : 'success',
+          title: failed ? 'Indexing finished with errors' : 'Indexing finished',
+          description: `${indexed} indexed · ${skipped} skipped · ${error} error · ${pending} pending`,
+        });
+      })();
+    }
+    prevStatus.current = indexStatus;
+  }, [indexStatus, invalidateAll, qc, orgId, sourceId]);
+  useEffect(() => {
+    if (!(orgId && sourceId)) {
+      return;
+    }
+    return watchKnowledgeIndexState(orgId, sourceId, (state) => {
+      patchKnowledgeIndexState(qc, orgId, sourceId, state);
+      void qc.invalidateQueries({ queryKey: knowledgeStatsQueryKey(orgId, sourceId) });
+      void qc.invalidateQueries({
+        queryKey: knowledgeFilesQueryKey(orgId, sourceId, fileStatus),
+      });
+    });
+  }, [orgId, sourceId, qc, fileStatus]);
+  return (
+    <FieldGroup className="gap-6" data-testid="memory-pane">
+      <FieldSet>
+        <FieldLabel>Knowledge index</FieldLabel>
+        {settingsQuery.isPending || !settings ? (
+          <p className="text-muted-foreground text-sm">Loading settings…</p>
+        ) : (
+          <KnowledgeSettingsFields
+            orgId={orgId}
+            sourceId={sourceId}
+            settings={settings}
+            disabled={!sourceId || busy}
+            roots={rootsQuery.data ?? []}
+            rootsLoading={rootsQuery.isPending}
+            onUpsertRoot={(body) => upsertRoot.mutate(body)}
+            onRemoveRoot={(path) => removeRoot.mutate(path)}
+            onPatch={(patch) => saveSettings.mutate(patch)}
+          />
+        )}
+      </FieldSet>
+
+      <FieldSet>
+        <FieldLabel>Status</FieldLabel>
+        <KnowledgeIndexStatus
+          state={indexStateQuery.data}
+          stats={statsQuery.data}
+          disabled={!sourceId}
+          reindexPending={reindex.isPending}
+          cancelPending={cancel.isPending}
+          onReindex={() => reindex.mutate()}
+          onCancel={() => cancel.mutate()}
+        />
+      </FieldSet>
+
+      <KnowledgeFilesPanel
+        status={fileStatus}
+        onStatusChange={setFileStatus}
+        files={filesQuery.data ?? []}
+        counts={statsQuery.data?.filesByStatus}
+        loading={filesQuery.isPending}
+      />
+
+      <KnowledgeSearchPanel orgId={orgId} sourceId={sourceId} />
+    </FieldGroup>
+  );
+}

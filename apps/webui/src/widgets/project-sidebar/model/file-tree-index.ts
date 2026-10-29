@@ -1,0 +1,37 @@
+import type { ProjectFileEntry } from '@harnesys/studio-shared';
+export function parentDir(path: string): string {
+  const index = path.lastIndexOf('/');
+  return index === -1 ? '' : path.slice(0, index);
+}
+export function indexFileTree(entries: ProjectFileEntry[]): Map<string, ProjectFileEntry[]> {
+  const map = new Map<string, ProjectFileEntry[]>();
+  for (const entry of entries) {
+    const parent = parentDir(entry.path);
+    const list = map.get(parent);
+    if (list) {
+      list.push(entry);
+    } else {
+      map.set(parent, [entry]);
+    }
+  }
+  for (const list of map.values()) {
+    list.sort((a, b) => {
+      if (a.kind !== b.kind) {
+        return a.kind === 'dir' ? -1 : 1;
+      }
+      return a.name.localeCompare(b.name);
+    });
+  }
+  return map;
+}
+export function childrenOf(
+  index: Map<string, ProjectFileEntry[]>,
+  parentPath: string,
+  showHidden: boolean,
+): ProjectFileEntry[] {
+  const list = index.get(parentPath) ?? [];
+  if (showHidden) {
+    return list;
+  }
+  return list.filter((entry) => !entry.name.startsWith('.'));
+}

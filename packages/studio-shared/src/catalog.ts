@@ -1,0 +1,110 @@
+import type { Driver, ModelKind } from 'harnesys/domain';
+
+export type { CapabilityMechanism, Driver, ModelKind } from 'harnesys/domain';
+export {
+  DRIVERS,
+  driverMechanism,
+  isDriver,
+  isModelKind,
+  isModelKindSupported,
+  MODEL_KINDS,
+  modelKindFromOutputModalities,
+  SUPPORTED_MODEL_KINDS,
+} from 'harnesys/domain';
+export interface DriverEndpoint {
+  id: string;
+  label: string;
+  apiUrl: string;
+  group?: string;
+}
+export interface CatalogDriver {
+  id: Driver;
+  defaultUrl: string;
+  endpoints: DriverEndpoint[];
+}
+export interface StudioCatalog {
+  drivers: CatalogDriver[];
+}
+export const EFFORTS = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const;
+export type Effort = (typeof EFFORTS)[number];
+export const MODALITIES = ['text', 'audio', 'image', 'video', 'file'] as const;
+export type Modality = (typeof MODALITIES)[number];
+export const MODEL_FEATURES = ['tools', 'structured', 'streaming', 'reasoning', 'cache'] as const;
+export type ModelFeature = (typeof MODEL_FEATURES)[number];
+export type ModelOrigin = 'local' | 'remote';
+export interface ModelPricingOverride {
+  minPromptTokens: number;
+  prompt?: string;
+  completion?: string;
+  input_cache_read?: string;
+  input_cache_write?: string;
+  image?: string;
+  request?: string;
+}
+export interface ModelPricing {
+  prompt: string;
+  completion: string;
+  image?: string;
+  request?: string;
+  input_cache_read?: string;
+  input_cache_write?: string;
+  overrides?: ModelPricingOverride[];
+}
+export interface ModelArchitecture {
+  modality?: string;
+  input_modalities?: Modality[];
+  output_modalities?: Modality[];
+  tokenizer?: string;
+  instruct_type?: string | null;
+}
+export interface ModelTopProvider {
+  context_length?: number;
+  max_completion_tokens?: number;
+  is_moderated?: boolean;
+}
+export interface ModelFields {
+  id?: string;
+  name?: string;
+  description?: string;
+  kind?: ModelKind;
+  context_length?: number;
+  architecture?: ModelArchitecture;
+  pricing?: ModelPricing;
+  top_provider?: ModelTopProvider;
+  supported_parameters?: string[];
+  effort?: Effort[];
+  defaultEffort?: Effort;
+  reasoningMandatory?: boolean;
+}
+export type ModelRecord = ModelFields & {
+  name: string;
+  origin?: ModelOrigin;
+  host?: ModelFields;
+};
+export type DiscoveredModel = ModelFields & {
+  name: string;
+  deprecated?: boolean;
+  raw?: unknown;
+};
+export const INCOMPLETE_FIELDS = ['context_length', 'pricing'] as const;
+export type IncompleteField = (typeof INCOMPLETE_FIELDS)[number];
+export interface ModelHints {
+  missing: IncompleteField[];
+  verified: boolean;
+  efforts: Effort[];
+  contextWindow?: number;
+  unitCost?: {
+    input: number;
+    output: number;
+    cacheRead?: number;
+    cacheWrite?: number;
+  };
+}
+export type StudioModel = ModelRecord & {
+  id: string;
+};
+export type StudioModelView = StudioModel & ModelHints;
+export type DiscoveredModelView = DiscoveredModel & ModelHints;
+export function isEffort(value: string): value is Effort {
+  return (EFFORTS as readonly string[]).includes(value);
+}

@@ -1,0 +1,203 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "**/src/**",
+      "**/tests/**",
+      "apps/**/*.ts",
+      "apps/**/*.tsx",
+      "packages/**/*.ts",
+      "*.ts",
+      "*.json",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/out",
+      "!**/coverage",
+      "!**/temp",
+      "!tests/max-params-fixture.ts",
+      "!bun.lock"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "lineWidth": 100
+  },
+  "plugins": [
+    "./lint/plugins/no-indexed-access-type.grit",
+    "./lint/plugins/no-dynamic-import-type.grit",
+    "./lint/plugins/no-as-unknown-as.grit",
+    "./lint/plugins/max-params-ignore-constructors.grit"
+  ],
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "a11y": {
+        "noStaticElementInteractions": "warn"
+      },
+      "complexity": {
+        "noBannedTypes": "error",
+        "noExcessiveCognitiveComplexity": {
+          "level": "error",
+          "options": {
+            "maxAllowedComplexity": 15
+          }
+        },
+        "noForEach": "off",
+        "noUselessEmptyExport": "error",
+        "useMaxParams": "off",
+        "noStaticOnlyClass": "off"
+      },
+      "correctness": {
+        "noUnusedFunctionParameters": "error",
+        "noUnusedImports": "error",
+        "noUnusedPrivateClassMembers": "error",
+        "noUnusedVariables": "error"
+      },
+      "performance": {
+        "noAccumulatingSpread": "error"
+      },
+      "security": {
+        "noDangerouslySetInnerHtml": "off"
+      },
+      "style": {
+        "noDefaultExport": "error",
+        "noEnum": "error",
+        "noExcessiveLinesPerFile": {
+          "level": "error",
+          "options": {
+            "maxLines": 350
+          }
+        },
+        "noNestedTernary": "error",
+        "noNonNullAssertion": "error",
+        "noParameterAssign": "error",
+        "noUselessElse": "error",
+        "useAsConstAssertion": "error",
+        "useBlockStatements": "error",
+        "useConst": "error",
+        "useExportType": "error",
+        "useFilenamingConvention": {
+          "level": "error",
+          "options": {
+            "filenameCases": ["kebab-case"],
+            "requireAscii": true,
+            "strictCase": true
+          }
+        },
+        "useImportType": "off",
+        "useSelfClosingElements": "error",
+        "useTemplate": "error",
+        "useConsistentTypeDefinitions": {
+          "level": "error",
+          "options": {
+            "style": "interface"
+          }
+        }
+      },
+      "suspicious": {
+        "noAlert": "error",
+        "noArrayIndexKey": "off",
+        "noConfusingVoidType": "error",
+        "noConsole": "error",
+        "noDebugger": "error",
+        "noExplicitAny": "error",
+        "noExtraNonNullAssertion": "error",
+        "noImportCycles": "warn",
+        "noNonNullAssertedOptionalChain": "error",
+        "noTsIgnore": "error",
+        "noUnsafeDeclarationMerging": "error",
+        "useAwait": "off"
+      },
+      "nursery": {
+        "noFloatingPromises": "error",
+        "useExhaustiveSwitchCases": "error",
+        "useSortedClasses": {
+          "level": "error",
+          "options": {
+            "attributes": ["classList"],
+            "functions": ["clsx", "cn", "cva", "tw", "tw.*"]
+          }
+        }
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "always",
+      "trailingCommas": "all",
+      "arrowParentheses": "always"
+    },
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["**/application/plugins/schemas/**"],
+      "linter": {
+        "enabled": false
+      },
+      "formatter": {
+        "enabled": false
+      }
+    },
+    {
+      "includes": ["**/tests/**"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noExcessiveCognitiveComplexity": {
+              "level": "error",
+              "options": {
+                "maxAllowedComplexity": 20
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/**"],
+      "linter": {
+        "rules": {}
+      }
+    },
+    {
+      "includes": ["**/*.d.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noDefaultExport": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/shared/api/blob-url.ts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "useExhaustiveDependencies": "off"
+          }
+        }
+      }
+    }
+  ]
+}

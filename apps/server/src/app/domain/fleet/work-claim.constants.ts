@@ -1,0 +1,3 @@
+export const WORK_CLAIM_LEASE_SEC = 900;
+export const NODE_COMMANDS_TTL_SEC = 86_400;
+export const NODE_COMMANDS_MAX_PER_NODE = 100;

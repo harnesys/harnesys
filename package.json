@@ -1,0 +1,33 @@
+{
+  "name": "harnesys",
+  "type": "module",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "bun run scripts/dev.ts",
+    "dev:server": "bun run --cwd apps/server dev",
+    "dev:webui": "bun run --cwd apps/webui dev",
+    "dev:desktop": "bun run scripts/dev-desktop.ts",
+    "build:host": "bun build --compile apps/server/src/main.ts --outfile build/harnesys-host && rm -rf build/assets && mkdir -p build/assets && cp -R apps/server/assets/. build/assets/",
+    "build:web": "bun build --compile apps/webui/server/index.ts --outfile build/harnesys-web",
+    "build:cli": "bun build --compile apps/cli/src/index.ts --outfile build/harnesys",
+    "build:client": "bun run --cwd apps/webui build",
+    "build:desktop": "bun run scripts/build-desktop.ts",
+    "release": "bun run scripts/release.ts",
+    "icon:desktop": "bash scripts/icons-desktop.sh",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write --unsafe .",
+    "test": "bun test",
+    "typecheck": "bun run --cwd packages/brix typecheck && bun run --cwd packages/contracts typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/webui typecheck && bun run --cwd apps/cli typecheck"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.14",
+    "@types/bun": "^1.4.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

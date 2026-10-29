@@ -1,0 +1,36 @@
+environment: ${NODE_ENV:-local}
+
+app:
+  name: ${APP_NAME:-Harnesys}
+  description: ${APP_DESCRIPTION:-Harness fleet control plane}
+  version: ${APP_VERSION:-0.1.0}
+
+# Process secrets live in apps/server/.env; this file only substitutes them.
+# Quoted so empty defaults stay "" (bare empty YAML values become null).
+harnesys:
+  home: "${HARNESYS_HOME:-}"
+  masterKey: "${HARNESYS_MASTER_KEY:-}"
+  publicUrl: "${PUBLIC_URL:-}"
+
+githubApp:
+  appId: "${HARNESYS_GITHUB_APP_APP_ID:-}"
+  privateKey: "${HARNESYS_GITHUB_APP_PRIVATE_KEY:-}"
+  clientId: "${HARNESYS_GITHUB_APP_CLIENT_ID:-}"
+  clientSecret: "${HARNESYS_GITHUB_APP_CLIENT_SECRET:-}"
+  webhookSecret: "${HARNESYS_GITHUB_APP_WEBHOOK_SECRET:-}"
+  appSlug: "${HARNESYS_GITHUB_APP_SLUG:-}"
+
+server:
+  host: ${SERVER_HOST:-0.0.0.0}
+  port: ${SERVER_PORT:-47474}
+  api:
+    prefix: api
+    version:
+
+logging:
+  level: info # fatal | error | warn | info | debug | trace | silent
+  pretty: true # false in production by default, where output is JSON lines
+  file:
+    path: logs/app.log
+    maxSizeBytes: 10485760
+    maxFiles: 5

@@ -1,0 +1,71 @@
+import { definePack } from '../../domain/pack.ts';
+import type { AgentsCatalogPort } from '../../ports/agents-catalog.ts';
+import { createAgentLifecycleTools } from './create-agent-lifecycle-tools.ts';
+import { createAgentsHandoffTool } from './create-agents-handoff-tool.ts';
+import { createAgentsTools } from './create-agents-tools.ts';
+export interface AgentsCapabilityPorts {
+  agents: AgentsCatalogPort;
+}
+export const agentsCapability = definePack<AgentsCapabilityPorts, Record<string, unknown>>({
+  name: 'agents',
+  version: '1.0.0',
+  description:
+    'Agent catalog: agents_list / agents_create / agents_create_subagent / agents_spawn / agents_handoff / agents_update / agents_delete',
+  icon: 'agents',
+  meta: {
+    tools: [
+      {
+        name: 'agents_list',
+        description:
+          'List agents in this project (id, name, role, instructions, packs, model). Optional role/name filters; role is not unique. packs lists enabled source assignments per agent; tool availability derives from those sources, not from a stored tool-name list. Prefer reuse via agents_list before agents_create. Spawned children are one-shot with no interactive user: judge fit by packs/model before agents_spawn.',
+      },
+      {
+        name: 'agents_create',
+        description:
+          'Create an agent in this project. Returns { id, name }. Before creating, load_skill("agent-creator") for graphs, packs, budget, and HITL. Omit graph to let the host build a default ReAct graph; when budget is omitted the host stores { maxSteps: 50, policy: "ask" }. budget.policy is ask|error. Call agents_list first to reuse an existing agent when possible.',
+      },
+      {
+        name: 'agents_create_subagent',
+        description:
+          'Create a one-shot delegate under the calling agent. Returns { id, name }. The delegate is a spawn target, cannot ask the user, and cannot enable the agents pack; use agents_create for a standalone project agent.',
+      },
+      {
+        name: 'agents_spawn',
+        description:
+          'Queue one-shot subcontracts: the graph then runs control:spawn. calls is [{ agentId, input, budget?, permissions? }]. input is usually { messages: [{ role: "user", content: "<task>" }] }. Children cannot ask questions back (permission/approval/input tools are denied in child context); pre-approve gates with per-call permissions, or provide everything upfront. agentId accepts an exact id, a unique id prefix (8+ chars), or a name — unknown/ambiguous targets fail here with the agent list. Prefer agents_list (reuse) before agents_create. This is not the tool name control:spawn.',
+      },
+      {
+        name: 'agents_handoff',
+        description:
+          'Pass this thread to another agent (current speaker changes, origin stays). The graph then runs control:handoff. agentId from agents_list or agents_create. This is not the tool name control:handoff. Top-level agents only; delegates must be run via agents_spawn.',
+      },
+      {
+        name: 'agents_update',
+        description:
+          'Patch name/role/instructions/budget of your own delegate; graph and packs are owner-only (tools removed; use sources). budget replaces the stored budget (omitted fields drop out): maxSteps/maxTokens/deadlineMs (integers >= 1) and policy ask|error, same shape as agents_create, at least one field required. Returns { agentId }. agentId accepts an exact id, a unique id prefix (8+ chars), or a name.',
+      },
+      {
+        name: 'agents_delete',
+        description:
+          'Remove your own delegate that is not running anywhere; project UI manages top-level agents. Returns { removed, name }. agentId accepts an exact id, a unique id prefix (8+ chars), or a name.',
+      },
+    ],
+    skills: [],
+    hasSettings: false,
+  },
+  create: (ctx) => ({
+    tools: [
+      ...createAgentsTools({ agents: ctx.ports.agents, resolveScope: () => ctx.scope }),
+      createAgentsHandoffTool({ agents: ctx.ports.agents, resolveScope: () => ctx.scope }),
+      ...createAgentLifecycleTools({ agents: ctx.ports.agents, resolveScope: () => ctx.scope }),
+    ],
+    notes: () => [
+      {
+        tag: 'agent-tools',
+        text:
+          'Check the existing roster before creating an agent and reuse a suitable agent when possible. Spawned delegates are one-shot and cannot ask the user questions; include their complete bounded task and needed context in the spawn request. ' +
+          'A delegate can be pre-approved with permissions on the spawn call or its definition, but never past a gate its parent holds as deny. Verify the returned result before relying on it. Use agents_handoff only to transfer a top-level thread to another top-level agent.',
+      },
+    ],
+  }),
+});

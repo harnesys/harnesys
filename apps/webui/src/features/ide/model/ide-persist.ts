@@ -1,0 +1,131 @@
+import type { PersistedIdeWorkspace } from '@harnesys/studio-shared';
+import { schedulePersistDeskChrome } from '@/features/desk';
+import type { IdeTab, IdeTabKind } from './ide.store';
+import {
+  collapseLayout,
+  createEmptyWorkspace,
+  type IdeGroup,
+  type IdeSplitNode,
+  type IdeWorkspaceState,
+} from './ide-layout';
+export function tabIdFor(kind: IdeTabKind, projectId: string, key: string): string {
+  return `${kind}:${projectId}:${key}`;
+}
+
+export function fileTabKey(path: string, worktreeId?: string | null): string {
+  const normalized = normalizeIdeFilePath(path);
+  return worktreeId ? `wt:${worktreeId}:${normalized}` : normalized;
+}
+export function normalizeIdeFilePath(path: string): string {
+  return path.replace(/^\/+/, '');
+}
+function normalizeIdeFileTab(tab: IdeTab): IdeTab {
+  if (tab.kind !== 'file' || !tab.path) {
+    return tab;
+  }
+  const path = normalizeIdeFilePath(tab.path);
+  return { ...tab, path, id: tabIdFor('file', tab.projectId, fileTabKey(path, tab.worktreeId)) };
+}
+export function sanitizeWorkspace(ws: IdeWorkspaceState): IdeWorkspaceState | null {
+  const remapped = new Map<string, string>();
+  const tabs = dedupeTabs(
+    ws.tabs.map((tab) => {
+      const normalized = normalizeIdeFileTab(tab);
+      if (normalized.id !== tab.id) {
+        remapped.set(tab.id, normalized.id);
+      }
+      return normalized;
+    }),
+  );
+  const remapId = (id: string): string => remapped.get(id) ?? id;
+  const groups = ws.groups.map((group) => ({
+    ...group,
+    tabIds: [...new Set(group.tabIds.map(remapId))],
+    activeId: group.activeId ? remapId(group.activeId) : null,
+  }));
+  const normalized: IdeWorkspaceState = {
+    ...ws,
+    tabs,
+    groups,
+    activeId: ws.activeId ? remapId(ws.activeId) : null,
+  };
+  const alive = new Set(
+    tabs
+      .filter(
+        (t) =>
+          t.kind === 'thread' ||
+          t.kind === 'file' ||
+          t.kind === 'spawn' ||
+          t.kind === 'diff' ||
+          t.kind === 'schedule' ||
+          t.kind === 'webhook' ||
+          t.kind === 'terminal' ||
+          t.kind === 'board' ||
+          t.kind === 'attachment' ||
+          t.kind === 'thread-file',
+      )
+      .map((t) => t.id),
+  );
+  if (alive.size === tabs.length && groups.every((g) => g.tabIds.every((id) => alive.has(id)))) {
+    return normalized;
+  }
+  let layout = normalized.layout;
+  const kept: IdeGroup[] = [];
+  for (const group of groups) {
+    const tabIds = group.tabIds.filter((id) => alive.has(id));
+    if (tabIds.length === 0) {
+      if (layout) {
+        layout = collapseLayout(layout, group.id);
+      }
+      continue;
+    }
+    kept.push({
+      ...group,
+      tabIds,
+      activeId:
+        group.activeId && alive.has(group.activeId)
+          ? group.activeId
+          : (tabIds[tabIds.length - 1] ?? null),
+    });
+  }
+  const aliveTabs = tabs.filter((t) => alive.has(t.id));
+  if (kept.length === 0) {
+    return null;
+  }
+  const activeId =
+    normalized.activeId && alive.has(normalized.activeId) ? normalized.activeId : null;
+  const activeGroupId =
+    normalized.activeGroupId && kept.some((g) => g.id === normalized.activeGroupId)
+      ? normalized.activeGroupId
+      : (kept[0]?.id ?? null);
+  return { tabs: aliveTabs, activeId, activeGroupId, groups: kept, layout };
+}
+function dedupeTabs(tabs: IdeTab[]): IdeTab[] {
+  const seen = new Set<string>();
+  return tabs.filter((tab) => {
+    if (seen.has(tab.id)) {
+      return false;
+    }
+    seen.add(tab.id);
+    return true;
+  });
+}
+export function workspaceFromPersisted(persisted: PersistedIdeWorkspace | null): IdeWorkspaceState {
+  if (!persisted || typeof persisted !== 'object' || !Array.isArray(persisted.tabs)) {
+    return createEmptyWorkspace();
+  }
+  const sanitized = sanitizeWorkspace({
+    tabs: persisted.tabs as IdeTab[],
+    activeId: persisted.activeId ?? null,
+    activeGroupId: persisted.activeGroupId ?? null,
+    groups: Array.isArray(persisted.groups) ? persisted.groups : [],
+    layout: (persisted.layout ?? null) as IdeSplitNode | null,
+  });
+  return sanitized ?? createEmptyWorkspace();
+}
+export function loadPersisted(): IdeWorkspaceState {
+  return createEmptyWorkspace();
+}
+export function persist(_workspace: IdeWorkspaceState) {
+  schedulePersistDeskChrome();
+}

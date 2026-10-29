@@ -1,0 +1,70 @@
+import type { AgentDefinition } from '../domain/agent-definition.ts';
+import type { HookBinding } from '../domain/hook.ts';
+import type { PackRegistration } from '../domain/pack.ts';
+import type { ProcessJobTarget } from '../domain/process-job.ts';
+import type { AgentsResolve } from '../ports/create-runtime.ts';
+import type { FileAccessPolicy } from '../ports/file-access.ts';
+import type { Logger } from '../ports/logger.ts';
+import type { ModelsPort, ProviderConfig } from '../ports/models.ts';
+import type { PathsConfig } from '../ports/paths.ts';
+import type { PermissionMap } from '../ports/permissions.ts';
+import type { RunEventStore } from '../ports/run-event-store.ts';
+import type { RunLifecycleStore } from '../ports/run-lifecycle-store.ts';
+import type { RuntimePromptInfo } from '../ports/runtime-prompt.ts';
+import type { RuntimeState } from '../ports/runtime-state.ts';
+import type { SkillRegistry } from '../ports/skills.ts';
+import type { ToolDefinition } from '../ports/tools.ts';
+import type { CapabilitySet, CapabilityUniverse } from './capability-set.ts';
+import type { ChildRunner } from './graph-spawn.ts';
+import type { SteerMessage } from './graph-steer.ts';
+import type { HookRunReport } from './hooks/bus.ts';
+import type { HookEmitCtx } from './hooks/emit-hook.ts';
+import type { LlmNoteProvider } from './llm-notes.ts';
+import type { RunEventFeed } from './run-event-feed.ts';
+export interface RunEngineDeps {
+  lifecycle: RunLifecycleStore;
+  events: RunEventStore;
+  feed: RunEventFeed;
+  instanceId: string;
+  leaseTtlMs?: number;
+  renewMs?: number;
+  models: ProviderConfig[] | ModelsPort;
+  toolRegistry: Map<string, ToolDefinition>;
+  toolMessages: 'barrier' | 'ordered';
+  mergeState?: (key: string, a: unknown, b: unknown) => unknown;
+  packRegistrations?: PackRegistration[];
+  skills?: SkillRegistry;
+  agents: AgentsResolve;
+  hooks?: HookBinding[];
+  childRunner?: ChildRunner;
+  logger?: Logger;
+}
+export interface RunTargetOpts {
+  state: RuntimeState;
+  agent: AgentDefinition;
+  permissions?: PermissionMap;
+  paths?: PathsConfig;
+  notes?: LlmNoteProvider[];
+  packs?: PackRegistration[];
+  capabilitySet?: CapabilitySet;
+  universe?: CapabilityUniverse;
+  skills?: SkillRegistry;
+  hooks?: HookBinding[];
+  hooksEmit?: HookEmitCtx;
+  hookReport?: (report: HookRunReport) => void;
+  binDirs?: string[];
+  channelNote?: string;
+  process?: ProcessJobTarget;
+  fileAccess?: FileAccessPolicy;
+  fileAccessFor?: (agent: AgentDefinition) => FileAccessPolicy;
+  runtime?: RuntimePromptInfo;
+  steerMessages?: () => Promise<SteerMessage[]>;
+  ackSteerMessages?: (itemIds: string[]) => Promise<void>;
+}
+export interface RunEngine {
+  execute(runId: string, opts: RunTargetOpts): Promise<void>;
+  abort(runId: string): void;
+  stop(): void;
+  whenIdle(): Promise<void>;
+  close(): void;
+}

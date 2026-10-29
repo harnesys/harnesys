@@ -1,0 +1,57 @@
+import { type ToolDefinition, tool } from '../../ports/tools.ts';
+import type { CreateAgentsToolsParams } from './create-agents-tools.ts';
+import { resolveHandoffTarget } from './handoff-target.ts';
+import { scopeFor } from './scope-for.ts';
+
+async function runGuard<T>(fn: () => Promise<T>): Promise<
+  | T
+  | {
+      error: string;
+    }
+> {
+  try {
+    return await fn();
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : String(err) };
+  }
+}
+export function createAgentsHandoffTool(deps: CreateAgentsToolsParams): ToolDefinition {
+  return tool('agents_handoff', {
+    group: 'agents',
+    sideEffect: 'write',
+    description:
+      'Pass this thread to another agent (current speaker changes, origin stays). The graph then runs control:handoff. agentId from agents_list or agents_create. This is not the tool name control:handoff. Top-level agents only; delegates must be run via agents_spawn.',
+    input: {
+      type: 'object',
+      properties: {
+        agentId: { type: 'string', description: 'Target agent id' },
+      },
+      required: ['agentId'],
+    },
+    execute: async (raw, execCtx) =>
+      runGuard(async () => {
+        const id = (
+          (raw ?? {}) as {
+            agentId?: unknown;
+          }
+        ).agentId;
+        if (typeof id !== 'string' || !id) {
+          return { error: 'agentId must be a non-empty string' };
+        }
+        const scope = scopeFor(deps, execCtx);
+        const rows = (await deps.agents.list(scope)).filter((row) => !row.plugin);
+        const target = resolveHandoffTarget(id, rows, scope.agentId);
+        if ('error' in target) {
+          return target;
+        }
+        const def = await deps.agents.get(scope, target.agentId);
+        if (def && !def.model && !def.models) {
+          const name = rows.find((row) => row.id === target.agentId)?.name ?? target.agentId;
+          return {
+            error: `"${name}" has no model configured; handoff would strand the thread. Set its model in the project UI first.`,
+          };
+        }
+        return target;
+      }),
+  });
+}

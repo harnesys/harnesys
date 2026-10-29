@@ -1,0 +1,17 @@
+{
+  "name": "@harnesys/desktop",
+  "private": true,
+  "version": "0.7.0",
+  "description": "Harnesys desktop: Tauri shell around @harnesys/webui",
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "build:dmg": "tauri build --bundles dmg",
+    "tauri": "tauri",
+    "signer:generate": "tauri signer generate"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

@@ -1,0 +1,33 @@
+engine biome(1.0)
+language js(typescript, jsx)
+
+// Replacement for lint/complexity/useMaxParams (max: 5): flags functions,
+// class methods and arrow functions with more than 5 parameters.
+// Class constructors are intentionally ignored — DI port injection lists
+// (JsConstructorClassMember is a separate node and never matches here).
+or {
+    JsFunctionDeclaration(parameters = $params) as $m where {
+        $params <: `($p1, $p2, $p3, $p4, $p5, $p6, $...)`,
+        register_diagnostic(
+            span = $m,
+            message = "Function has more than 5 parameters.",
+            severity = "warn"
+        )
+    },
+    JsMethodClassMember(parameters = $params) as $m where {
+        $params <: `($p1, $p2, $p3, $p4, $p5, $p6, $...)`,
+        register_diagnostic(
+            span = $m,
+            message = "Method has more than 5 parameters.",
+            severity = "warn"
+        )
+    },
+    JsArrowFunctionExpression(parameters = $params) as $m where {
+        $params <: `($p1, $p2, $p3, $p4, $p5, $p6, $...)`,
+        register_diagnostic(
+            span = $m,
+            message = "Function has more than 5 parameters.",
+            severity = "warn"
+        )
+    }
+}

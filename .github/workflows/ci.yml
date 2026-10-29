@@ -1,0 +1,29 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: bun test
+      - name: Compile Linux smoke binaries
+        run: |
+          bun run build:host
+          bun run build:web
+          bun run build:cli
+          test -x build/harnesys-host
+          test -x build/harnesys-web
+          test -x build/harnesys

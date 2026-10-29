@@ -1,0 +1,21 @@
+{
+  "name": "@harnesys/studio-shared",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": "./types.ts"
+  },
+  "scripts": {
+    "typecheck": "bunx tsc -p tsconfig.json --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write --unsafe ."
+  },
+  "dependencies": {
+    "@harnesys/contracts": "workspace:*",
+    "harnesys": "workspace:*"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.6"
+  }
+}

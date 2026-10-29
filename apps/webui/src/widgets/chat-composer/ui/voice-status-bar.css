@@ -1,0 +1,54 @@
+.voice-wave {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 14px;
+}
+
+.voice-wave i {
+  display: inline-block;
+  width: 3px;
+  border-radius: 9999px;
+  background: currentColor;
+  transform-origin: center;
+  animation: voice-wave-bounce 1s ease-in-out infinite;
+}
+
+.voice-wave i:nth-child(1) {
+  height: 60%;
+  animation-delay: 0ms;
+}
+
+.voice-wave i:nth-child(2) {
+  height: 100%;
+  animation-delay: 120ms;
+}
+
+.voice-wave i:nth-child(3) {
+  height: 75%;
+  animation-delay: 240ms;
+}
+
+.voice-wave i:nth-child(4) {
+  height: 100%;
+  animation-delay: 360ms;
+}
+
+.voice-wave i:nth-child(5) {
+  height: 60%;
+  animation-delay: 480ms;
+}
+
+.voice-wave[data-paused="true"] i {
+  animation-play-state: paused;
+}
+
+@keyframes voice-wave-bounce {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}

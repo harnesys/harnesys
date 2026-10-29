@@ -1,0 +1,392 @@
+import type { AskPayload } from '@harnesys/studio-shared';
+import { useEffect, useRef, useState } from 'react';
+import { DelegateBadge } from '@/entities/approval';
+import { notifyApprovalRequested, useSelectedThread, useThreadEvents } from '@/features/desk';
+import { cn } from '@/shared/lib/utils';
+import { Button } from '@/shared/ui/button';
+import { InputGroupAddon, InputGroupTextarea } from '@/shared/ui/input-group';
+import { Label } from '@/shared/ui/label';
+import { Markdown } from '@/shared/ui/markdown';
+import { RadioGroup, RadioGroupItem } from '@/shared/ui/radio-group';
+import { toast } from '@/shared/ui/toast';
+import { rejectAsk, respondToAsk } from '../model/hitl-actions';
+import { type PendingHitl, pendingHitl } from '../model/pending-hitl';
+import { summarizeToolInput } from '../model/tool-input-summary';
+import { HitlPreview } from './hitl-preview';
+import { HitlShell } from './hitl-shell';
+import { FileConfirmCard, isFileToolAsk, ShellConfirmCard } from './hitl-shell-confirm';
+export function HitlPrompt() {
+  const thread = useSelectedThread();
+  const events = useThreadEvents(thread?.id ?? null);
+  const pending = pendingHitl(events);
+  const shellRef = useRef<HTMLDivElement | null>(null);
+  const askId = pending?.askId;
+  useEffect(() => {
+    if (!askId) {
+      return;
+    }
+    notifyApprovalRequested(`hitl-${askId}`);
+    shellRef.current?.querySelector('textarea')?.focus();
+  }, [askId]);
+  if (!pending) {
+    return null;
+  }
+  if (pending.source === 'budget') {
+    return (
+      <div ref={shellRef} className="mx-auto w-full max-w-3xl px-4 pb-2" data-testid="hitl-prompt">
+        <BudgetCard pending={pending} threadId={thread?.id ?? ''} />
+      </div>
+    );
+  }
+  const isConfirm = pending.source === 'permission' || pending.source === 'approve';
+  const threadId = thread?.id ?? '';
+  let card = <AskCard key={pending.askId} pending={pending} threadId={threadId} />;
+  if (isConfirm && pending.tool?.name === 'shell') {
+    card = <ShellConfirmCard key={pending.askId} pending={pending} threadId={threadId} />;
+  } else if (isConfirm && isFileToolAsk(pending.tool?.name)) {
+    card = <FileConfirmCard key={pending.askId} pending={pending} threadId={threadId} />;
+  } else if (isConfirm) {
+    card = <ConfirmCard key={pending.askId} pending={pending} threadId={threadId} />;
+  }
+  return (
+    <div ref={shellRef} className="mx-auto w-full max-w-3xl px-4 pb-2" data-testid="hitl-prompt">
+      {card}
+    </div>
+  );
+}
+function ConfirmCard({ pending, threadId }: { pending: PendingHitl; threadId: string }) {
+  const [busy, setBusy] = useState(false);
+  const [reason, setReason] = useState('');
+  const name = pending.tool?.name ?? 'tool';
+  let inputStr = '';
+  if (pending.tool?.input != null) {
+    inputStr =
+      typeof pending.tool.input === 'string'
+        ? pending.tool.input
+        : JSON.stringify(pending.tool.input);
+  }
+  const summary = summarizeToolInput(name, inputStr);
+  const pathLine = summary.lines.find((line) => line.label === 'path')?.value;
+  const detailLines = summary.lines.filter((line) => line.label !== 'path');
+  const scoped = pending.source === 'permission';
+  const delegatedOnly = pending.tool == null && pending.delegated != null;
+  const promptLine = delegatedOnly && pending.prompt ? truncateText(pending.prompt, 200) : null;
+  const decide = async (payload: Record<string, unknown>, allow: boolean) => {
+    if (busy) {
+      return;
+    }
+    setBusy(true);
+    try {
+      await respondToAsk(threadId, pending.askId, {
+        ...payload,
+        reason: allow ? undefined : reason.trim() || undefined,
+      });
+    } catch (error) {
+      toast.add({
+        title: allow ? 'Could not allow' : 'Could not deny',
+        description: error instanceof Error ? error.message : 'Confirm failed',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <HitlShell>
+      <div className="flex flex-col gap-1 px-3 pt-2.5">
+        <div className="flex min-w-0 items-baseline gap-2">
+          <p className="shrink-0 font-medium text-sm">
+            Allow {delegatedOnly ? 'delegated action' : summary.title}?
+          </p>
+          {pathLine ? (
+            <p className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">
+              {pathLine}
+            </p>
+          ) : null}
+        </div>
+        <DelegateBadge delegated={pending.delegated} />
+        {promptLine ? (
+          <p className="whitespace-pre-wrap break-words font-mono text-[11px] text-muted-foreground">
+            {promptLine}
+          </p>
+        ) : null}
+        {detailLines.length > 0 ? (
+          <div className="flex min-w-0 flex-col gap-0.5">
+            {detailLines.map((line, index) => (
+              <p
+                key={`${line.label}-${index}`}
+                className="truncate font-mono text-[11px] text-muted-foreground"
+              >
+                {line.label} {line.value}
+              </p>
+            ))}
+          </div>
+        ) : null}
+        {summary.preview ? <HitlPreview preview={summary.preview} /> : null}
+        {!pathLine && !promptLine && detailLines.length === 0 && !summary.preview ? (
+          <p className="text-[11px] text-muted-foreground">No input parameters.</p>
+        ) : null}
+      </div>
+
+      <InputGroupTextarea
+        value={reason}
+        onChange={(event) => setReason(event.target.value)}
+        placeholder="Deny reason (optional)"
+        disabled={busy}
+        rows={1}
+        className="min-h-0 py-1.5 text-sm"
+      />
+
+      <InputGroupAddon align="block-end" className="justify-end gap-1 px-2 pb-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={busy}
+          className="h-7 text-muted-foreground hover:bg-muted hover:text-foreground"
+          onClick={() => void decide({ approved: false }, false)}
+        >
+          Deny
+        </Button>
+        {scoped ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              className="h-7"
+              onClick={() => void decide({ approved: true, scope: 'once' }, true)}
+            >
+              Allow once
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              className="h-7"
+              onClick={() => void decide({ approved: true, scope: 'run' }, true)}
+            >
+              Allow this run
+            </Button>
+          </>
+        ) : null}
+        <Button
+          type="button"
+          size="sm"
+          disabled={busy}
+          className="h-7"
+          onClick={() =>
+            void decide(scoped ? { approved: true, scope: 'always' } : { approved: true }, true)
+          }
+        >
+          {scoped ? 'Always allow' : 'Allow'}
+        </Button>
+      </InputGroupAddon>
+    </HitlShell>
+  );
+}
+function BudgetCard({ pending, threadId }: { pending: PendingHitl; threadId: string }) {
+  const [busy, setBusy] = useState(false);
+  const decide = async (continueRun: boolean) => {
+    if (busy) {
+      return;
+    }
+    setBusy(true);
+    try {
+      if (continueRun) {
+        await respondToAsk(threadId, pending.askId, { approved: true });
+      } else {
+        await rejectAsk(threadId, pending.askId);
+      }
+    } catch (error) {
+      toast.add({
+        title: continueRun ? 'Could not continue' : 'Could not stop',
+        description: error instanceof Error ? error.message : 'Budget confirm failed',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <HitlShell>
+      <div className="flex flex-col gap-1 px-3 pt-2.5">
+        <p className="font-medium text-sm">Budget limit reached</p>
+        {pending.prompt ? (
+          <Markdown text={pending.prompt} className="px-0 text-[11px] text-muted-foreground" />
+        ) : null}
+      </div>
+      <InputGroupAddon align="block-end" className="justify-end gap-1 px-2 pb-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={busy}
+          className="h-7 text-muted-foreground hover:bg-muted hover:text-foreground"
+          onClick={() => void decide(false)}
+        >
+          Stop
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          disabled={busy}
+          className="h-7"
+          onClick={() => void decide(true)}
+        >
+          Continue
+        </Button>
+      </InputGroupAddon>
+    </HitlShell>
+  );
+}
+function AskCard({ pending, threadId }: { pending: PendingHitl; threadId: string }) {
+  const schema = pending.schema as Record<string, unknown> | undefined;
+  const options =
+    (schema?.options as Array<{
+      id: string;
+      label: string;
+    }>) ?? [];
+  const multi = Boolean(schema?.multi);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const toggle = (id: string) => {
+    setSelected((prev) => {
+      if (multi) {
+        return prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id];
+      }
+      return prev.includes(id) ? [] : [id];
+    });
+  };
+  const submit = async () => {
+    if (busy) {
+      return;
+    }
+    const trimmed = text.trim();
+    const payload: AskPayload = {};
+    if (selected.length > 0) {
+      payload.optionIds = selected;
+    }
+    if (trimmed) {
+      payload.text = trimmed;
+    }
+    if (!payload.optionIds && !payload.text) {
+      return;
+    }
+    setBusy(true);
+    try {
+      await respondToAsk(threadId, pending.askId, payload);
+    } catch (error) {
+      toast.add({
+        title: 'Could not answer',
+        description: error instanceof Error ? error.message : 'Answer failed',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+  const canSubmit = selected.length > 0 || text.trim().length > 0;
+  return (
+    <HitlShell>
+      <div className="flex flex-col gap-1 px-3 pt-2.5">
+        {pending.prompt ? <Markdown text={pending.prompt} className="px-0 text-sm" /> : null}
+        {options.length > 0 &&
+          (multi ? (
+            <div className="flex flex-col gap-0.5 py-0.5">
+              {options.map((option) => {
+                const active = selected.includes(option.id);
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => toggle(option.id)}
+                    className={cn(
+                      'flex items-center gap-2 rounded-md px-1.5 py-1 text-left text-sm transition-colors',
+                      active ? 'bg-muted text-foreground' : 'hover:bg-muted/60',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'flex size-3.5 shrink-0 items-center justify-center rounded-sm border text-[9px]',
+                        active ? 'border-foreground bg-foreground text-background' : 'border-input',
+                      )}
+                    >
+                      {active ? '✓' : null}
+                    </span>
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <RadioGroup
+              value={selected[0] ?? ''}
+              disabled={busy}
+              onValueChange={(value) => {
+                if (typeof value === 'string') {
+                  setSelected(value ? [value] : []);
+                }
+              }}
+              className="gap-0.5 py-0.5"
+            >
+              {options.map((option) => (
+                <Label
+                  key={option.id}
+                  htmlFor={`hitl-opt-${option.id}`}
+                  className={cn(
+                    'flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 font-normal transition-colors',
+                    selected[0] === option.id ? 'bg-muted' : 'hover:bg-muted/60',
+                  )}
+                >
+                  <RadioGroupItem
+                    id={`hitl-opt-${option.id}`}
+                    value={option.id}
+                    className="data-checked:border-live data-checked:bg-live data-checked:text-white dark:data-checked:bg-live"
+                  />
+                  <span className="text-sm">{option.label}</span>
+                </Label>
+              ))}
+            </RadioGroup>
+          ))}
+      </div>
+
+      <InputGroupTextarea
+        id="hitl-ask-custom"
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        placeholder={options.length > 0 ? 'Or type your own answer…' : 'Your answer…'}
+        disabled={busy}
+        rows={1}
+        className="min-h-0 py-1.5 text-sm"
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && !event.shiftKey && canSubmit) {
+            event.preventDefault();
+            void submit();
+          }
+        }}
+      />
+
+      <InputGroupAddon align="block-end" className="justify-end gap-1 px-2 pb-2">
+        <Button
+          type="button"
+          size="sm"
+          disabled={busy || !canSubmit}
+          className="h-7"
+          onClick={() => void submit()}
+        >
+          Submit
+        </Button>
+      </InputGroupAddon>
+    </HitlShell>
+  );
+}
+
+function truncateText(text: string, max: number): string {
+  const compact = text.trim();
+  if (compact.length <= max) {
+    return compact;
+  }
+  return `${compact.slice(0, Math.max(0, max - 1))}…`;
+}

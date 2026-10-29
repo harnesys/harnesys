@@ -1,0 +1,460 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`media insert wire shapes wire shape for openai: openai wire shape 1`] = `
+{
+  "driver": "openai",
+  "messages": [
+    {
+      "content": "look at this",
+      "role": "user",
+    },
+    {
+      "content": [
+        {
+          "input": {},
+          "toolCallId": "t1",
+          "toolName": "file_read_image",
+          "type": "tool-call",
+        },
+      ],
+      "role": "assistant",
+    },
+    {
+      "content": [
+        {
+          "output": {
+            "type": "text",
+            "value": "{"ok":true}",
+          },
+          "toolCallId": "t1",
+          "toolName": "file_read_image",
+          "type": "tool-result",
+        },
+      ],
+      "role": "tool",
+    },
+    {
+      "content": [
+        {
+          "text": "[image from file_read_image (call t1) thread:attachments/a/pic.png]",
+          "type": "text",
+        },
+        {
+          "data": "aGVsbG8=",
+          "mediaType": "image/png",
+          "type": "file",
+        },
+      ],
+      "role": "user",
+    },
+  ],
+}
+`;
+
+exports[`media insert wire shapes wire shape for anthropic: anthropic wire shape 1`] = `
+{
+  "driver": "anthropic",
+  "messages": [
+    {
+      "content": "look at this",
+      "role": "user",
+    },
+    {
+      "content": [
+        {
+          "input": {},
+          "toolCallId": "t1",
+          "toolName": "file_read_image",
+          "type": "tool-call",
+        },
+      ],
+      "role": "assistant",
+    },
+    {
+      "content": [
+        {
+          "output": {
+            "type": "text",
+            "value": "{"ok":true}",
+          },
+          "toolCallId": "t1",
+          "toolName": "file_read_image",
+          "type": "tool-result",
+        },
+      ],
+      "role": "tool",
+    },
+    {
+      "content": [
+        {
+          "text": "[image from file_read_image (call t1) thread:attachments/a/pic.png]",
+          "type": "text",
+        },
+        {
+          "data": "aGVsbG8=",
+          "mediaType": "image/png",
+          "type": "file",
+        },
+      ],
+      "role": "user",
+    },
+  ],
+}
+`;
+
+exports[`media insert wire shapes wire shape for google: google wire shape 1`] = `
+{
+  "driver": "google",
+  "messages": [
+    {
+      "content": "look at this",
+      "role": "user",
+    },
+    {
+      "content": [
+        {
+          "input": {},
+          "toolCallId": "t1",
+          "toolName": "file_read_image",
+          "type": "tool-call",
+        },
+      ],
+      "role": "assistant",
+    },
+    {
+      "content": [
+        {
+          "output": {
+            "type": "text",
+            "value": "{"ok":true}",
+          },
+          "toolCallId": "t1",
+          "toolName": "file_read_image",
+          "type": "tool-result",
+        },
+      ],
+      "role": "tool",
+    },
+    {
+      "content": [
+        {
+          "text": "[image from file_read_image (call t1) thread:attachments/a/pic.png]",
+          "type": "text",
+        },
+        {
+          "data": "aGVsbG8=",
+          "mediaType": "image/png",
+          "type": "file",
+        },
+      ],
+      "role": "user",
+    },
+  ],
+}
+`;
+
+exports[`media insert wire shapes wire shape for minimax: minimax wire shape 1`] = `
+{
+  "driver": "minimax",
+  "messages": [
+    {
+      "content": "look at this",
+      "role": "user",
+    },
+    {
+      "content": [
+        {
+          "input": {},
+          "toolCallId": "t1",
+          "toolName": "file_read_image",
+          "type": "tool-call",
+        },
+      ],
+      "role": "assistant",
+    },
+    {
+      "content": [
+        {
+          "output": {
+            "type": "text",
+            "value": "{"ok":true}",
+          },
+          "toolCallId": "t1",
+          "toolName": "file_read_image",
+          "type": "tool-result",
+        },
+      ],
+      "role": "tool",
+    },
+    {
+      "content": [
+        {
+          "text": "[image from file_read_image (call t1) thread:attachments/a/pic.png]",
+          "type": "text",
+        },
+        {
+          "data": "aGVsbG8=",
+          "mediaType": "image/png",
+          "type": "file",
+        },
+      ],
+      "role": "user",
+    },
+  ],
+}
+`;
+
+exports[`media insert wire shapes wire shape for openai-compatible: openai-compatible wire shape 1`] = `
+{
+  "driver": "openai-compatible",
+  "messages": [
+    {
+      "content": "look at this",
+      "role": "user",
+    },
+    {
+      "content": [
+        {
+          "input": {},
+          "toolCallId": "t1",
+          "toolName": "file_read_image",
+          "type": "tool-call",
+        },
+      ],
+      "role": "assistant",
+    },
+    {
+      "content": [
+        {
+          "output": {
+            "type": "text",
+            "value": "{"ok":true}",
+          },
+          "toolCallId": "t1",
+          "toolName": "file_read_image",
+          "type": "tool-result",
+        },
+      ],
+      "role": "tool",
+    },
+    {
+      "content": [
+        {
+          "text": "[image from file_read_image (call t1) thread:attachments/a/pic.png]",
+          "type": "text",
+        },
+        {
+          "data": "aGVsbG8=",
+          "mediaType": "image/png",
+          "type": "file",
+        },
+      ],
+      "role": "user",
+    },
+  ],
+}
+`;
+
+exports[`media insert wire shapes wire shape for mistral: mistral wire shape 1`] = `
+{
+  "driver": "mistral",
+  "messages": [
+    {
+      "content": "look at this",
+      "role": "user",
+    },
+    {
+      "content": [
+        {
+          "input": {},
+          "toolCallId": "t1",
+          "toolName": "file_read_image",
+          "type": "tool-call",
+        },
+      ],
+      "role": "assistant",
+    },
+    {
+      "content": [
+        {
+          "output": {
+            "type": "text",
+            "value": "{"ok":true}",
+          },
+          "toolCallId": "t1",
+          "toolName": "file_read_image",
+          "type": "tool-result",
+        },
+      ],
+      "role": "tool",
+    },
+    {
+      "content": [
+        {
+          "text": "[image from file_read_image (call t1) thread:attachments/a/pic.png]",
+          "type": "text",
+        },
+        {
+          "data": "aGVsbG8=",
+          "mediaType": "image/png",
+          "type": "file",
+        },
+      ],
+      "role": "user",
+    },
+  ],
+}
+`;
+
+exports[`media insert wire shapes wire shape for xai: xai wire shape 1`] = `
+{
+  "driver": "xai",
+  "messages": [
+    {
+      "content": "look at this",
+      "role": "user",
+    },
+    {
+      "content": [
+        {
+          "input": {},
+          "toolCallId": "t1",
+          "toolName": "file_read_image",
+          "type": "tool-call",
+        },
+      ],
+      "role": "assistant",
+    },
+    {
+      "content": [
+        {
+          "output": {
+            "type": "text",
+            "value": "{"ok":true}",
+          },
+          "toolCallId": "t1",
+          "toolName": "file_read_image",
+          "type": "tool-result",
+        },
+      ],
+      "role": "tool",
+    },
+    {
+      "content": [
+        {
+          "text": "[image from file_read_image (call t1) thread:attachments/a/pic.png]",
+          "type": "text",
+        },
+        {
+          "data": "aGVsbG8=",
+          "mediaType": "image/png",
+          "type": "file",
+        },
+      ],
+      "role": "user",
+    },
+  ],
+}
+`;
+
+exports[`media insert wire shapes wire shape for alibaba: alibaba wire shape 1`] = `
+{
+  "driver": "alibaba",
+  "messages": [
+    {
+      "content": "look at this",
+      "role": "user",
+    },
+    {
+      "content": [
+        {
+          "input": {},
+          "toolCallId": "t1",
+          "toolName": "file_read_image",
+          "type": "tool-call",
+        },
+      ],
+      "role": "assistant",
+    },
+    {
+      "content": [
+        {
+          "output": {
+            "type": "text",
+            "value": "{"ok":true}",
+          },
+          "toolCallId": "t1",
+          "toolName": "file_read_image",
+          "type": "tool-result",
+        },
+      ],
+      "role": "tool",
+    },
+    {
+      "content": [
+        {
+          "text": "[image from file_read_image (call t1) thread:attachments/a/pic.png]",
+          "type": "text",
+        },
+        {
+          "data": "aGVsbG8=",
+          "mediaType": "image/png",
+          "type": "file",
+        },
+      ],
+      "role": "user",
+    },
+  ],
+}
+`;
+
+exports[`media insert wire shapes wire shape for moonshotai: moonshotai wire shape 1`] = `
+{
+  "driver": "moonshotai",
+  "messages": [
+    {
+      "content": "look at this",
+      "role": "user",
+    },
+    {
+      "content": [
+        {
+          "input": {},
+          "toolCallId": "t1",
+          "toolName": "file_read_image",
+          "type": "tool-call",
+        },
+      ],
+      "role": "assistant",
+    },
+    {
+      "content": [
+        {
+          "output": {
+            "type": "text",
+            "value": "{"ok":true}",
+          },
+          "toolCallId": "t1",
+          "toolName": "file_read_image",
+          "type": "tool-result",
+        },
+      ],
+      "role": "tool",
+    },
+    {
+      "content": [
+        {
+          "text": "[image from file_read_image (call t1) thread:attachments/a/pic.png]",
+          "type": "text",
+        },
+        {
+          "data": "aGVsbG8=",
+          "mediaType": "image/png",
+          "type": "file",
+        },
+      ],
+      "role": "user",
+    },
+  ],
+}
+`;

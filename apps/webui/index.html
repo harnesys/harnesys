@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en" class="dark" data-scale="middle" data-accent="orange" data-chat-font="medium">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Harnesys</title>
+    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Harnesys" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <style>
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        transition: opacity 240ms ease;
+        z-index: 9999;
+      }
+      html.dark #app-splash {
+        background: #0f1114;
+        color: #8a9098;
+      }
+      html:not(.dark) #app-splash {
+        background: #f4f5f6;
+        color: #667078;
+      }
+      #app-splash.is-done {
+        opacity: 0;
+      }
+      #app-splash::before,
+      #app-splash svg {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        translate: -50% -50%;
+      }
+      #app-splash::before {
+        content: "";
+        translate: -50% calc(-50%);
+        width: 680px;
+        height: 680px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle closest-side,
+          rgba(196, 98, 45, 0.1),
+          rgba(196, 98, 45, 0.04) 45%,
+          transparent 100%
+        );
+        animation: app-logo-aura 3.6s ease-in-out infinite;
+      }
+      html:not(.dark) #app-splash::before {
+        background: radial-gradient(
+          circle closest-side,
+          rgba(196, 98, 45, 0.07),
+          rgba(196, 98, 45, 0.025) 45%,
+          transparent 100%
+        );
+      }
+      #app-splash svg {
+        animation:
+          app-logo-breathe 3.6s ease-in-out 1.2s infinite,
+          app-logo-grayscale 6s ease-in-out 1.6s forwards;
+      }
+      @keyframes app-logo-grayscale {
+        from {
+          filter: grayscale(0);
+        }
+        to {
+          filter: grayscale(1);
+        }
+      }
+      @keyframes app-logo-aura {
+        0%,
+        100% {
+          opacity: 0.6;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.06);
+        }
+      }
+      @keyframes app-logo-breathe {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+      }
+      @keyframes app-splash-bracket-left {
+        0% {
+          transform: translateX(0);
+          animation-timing-function: ease-in-out;
+        }
+        45% {
+          transform: translateX(-58px);
+          animation-timing-function: cubic-bezier(0.3, 0.7, 0.4, 1);
+        }
+        60% {
+          transform: translateX(12px);
+        }
+        74% {
+          transform: translateX(-5px);
+        }
+        84% {
+          transform: translateX(0);
+        }
+      }
+      @keyframes app-splash-bracket-right {
+        0% {
+          transform: translateX(0);
+          animation-timing-function: ease-in-out;
+        }
+        45% {
+          transform: translateX(58px);
+          animation-timing-function: cubic-bezier(0.3, 0.7, 0.4, 1);
+        }
+        60% {
+          transform: translateX(-12px);
+        }
+        74% {
+          transform: translateX(5px);
+        }
+        84% {
+          transform: translateX(0);
+        }
+      }
+      #app-splash .bracket-left {
+        animation: app-splash-bracket-left 1.2s 400ms;
+      }
+      #app-splash .bracket-right {
+        animation: app-splash-bracket-right 1.2s 400ms;
+      }
+      @keyframes app-splash-core-pulse {
+        0%,
+        45% {
+          transform: scale(1);
+        }
+        58% {
+          transform: scale(1.4);
+        }
+        84%,
+        100% {
+          transform: scale(1);
+        }
+      }
+      #app-splash .core {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: app-splash-core-pulse 1.2s 400ms;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #app-splash::before,
+        #app-splash svg,
+        #app-splash .bracket-left,
+        #app-splash .bracket-right,
+        #app-splash .core {
+          animation: none;
+        }
+      }
+    </style>
+    <script>
+      (function () {
+        try {
+          var root = document.documentElement
+          var appearanceRaw = localStorage.getItem("harnesys.appearance")
+          var theme = null
+          var scale = null
+          var accent = null
+          if (appearanceRaw) {
+            var appearance = JSON.parse(appearanceRaw)
+            theme = appearance && appearance.theme
+            scale = appearance && appearance.scale
+            accent = appearance && appearance.accent
+          }
+          if (theme !== "light" && theme !== "dark" && theme !== "system") {
+            theme = localStorage.getItem("theme")
+          }
+          var resolved =
+            theme === "light" || theme === "dark"
+              ? theme
+              : window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light"
+          root.classList.remove("light", "dark")
+          root.classList.add(resolved)
+          if (scale !== "small" && scale !== "middle" && scale !== "large" && scale !== "extra") {
+            scale = localStorage.getItem("ui-scale")
+          }
+          if (scale === "small" || scale === "middle" || scale === "large" || scale === "extra") {
+            root.dataset.scale = scale
+          }
+          if (
+            accent !== "red" &&
+            accent !== "orange" &&
+            accent !== "yellow" &&
+            accent !== "green" &&
+            accent !== "iris" &&
+            accent !== "indigo" &&
+            accent !== "violet"
+          ) {
+            accent = localStorage.getItem("ui-accent")
+          }
+          if (
+            accent === "red" ||
+            accent === "orange" ||
+            accent === "yellow" ||
+            accent === "green" ||
+            accent === "iris" ||
+            accent === "indigo" ||
+            accent === "violet"
+          ) {
+            root.dataset.accent = accent
+          }
+          var chatPrefs = localStorage.getItem("studio-chat-preferences")
+          if (chatPrefs) {
+            var chatFont = JSON.parse(chatPrefs).state.chatFontSize
+            if (
+              chatFont === "small" ||
+              chatFont === "medium" ||
+              chatFont === "large" ||
+              chatFont === "xl"
+            ) {
+              root.dataset.chatFont = chatFont
+            }
+          }
+        } catch (error) {}
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="app-splash" aria-hidden="true">
+      <svg viewBox="0 0 512 512" fill="none" width="64" height="64" style="opacity: 0.9;">
+        <defs>
+          <linearGradient id="splash-bg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#d4763c"/>
+            <stop offset="1" stop-color="#a9521f"/>
+          </linearGradient>
+        </defs>
+        <rect width="512" height="512" rx="115" fill="url(#splash-bg)"/>
+        <g fill="none" stroke="#f6f7f8" stroke-width="46">
+          <path class="bracket-left" d="M 188 188 A 28 28 0 0 0 160 160 H 116 A 28 28 0 0 0 88 188 V 324 A 28 28 0 0 0 116 352 H 160 A 28 28 0 0 0 188 324"/>
+          <path class="bracket-right" d="M 324 188 A 28 28 0 0 1 352 160 H 396 A 28 28 0 0 1 424 188 V 324 A 28 28 0 0 1 396 352 H 352 A 28 28 0 0 1 324 324"/>
+          <line class="core" x1="195" y1="256" x2="317" y2="256" stroke-linecap="round"/>
+        </g>
+      </svg>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

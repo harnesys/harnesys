@@ -1,0 +1,157 @@
+.tiptap-content-area {
+  padding: 4px;
+}
+
+.tiptap-editor-content {
+  outline: none;
+  min-height: 2rem;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: var(--foreground);
+  caret-color: var(--primary);
+}
+
+.tiptap-editor-content p.is-editor-empty:first-child::before,
+.tiptap-editor-content .is-empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted-foreground);
+  opacity: 0.5;
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
+.tiptap-editor-content h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-bottom: 0.4em;
+}
+
+.tiptap-editor-content h2 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-top: 1em;
+  margin-bottom: 0.35em;
+}
+
+.tiptap-editor-content h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-top: 0.9em;
+  margin-bottom: 0.3em;
+}
+
+.tiptap-editor-content p {
+  margin: 0;
+}
+
+.tiptap-editor-content code {
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  padding: 0.1em 0.35em;
+  font-size: 0.82em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--primary);
+}
+
+.tiptap-editor-content pre {
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.85rem 1rem;
+  overflow-x: auto;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  margin: 0.75em 0;
+}
+
+.tiptap-editor-content pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--foreground);
+  font-size: inherit;
+}
+
+.tiptap-editor-content blockquote {
+  border-left: 3px solid var(--primary);
+  padding-left: 1rem;
+  margin: 0.75em 0;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.tiptap-editor-content ul,
+.tiptap-editor-content ol {
+  padding-left: 1.4em;
+  margin: 0.4em 0;
+}
+
+.tiptap-editor-content li + li {
+  margin-top: 0.2em;
+}
+
+.tiptap-editor-content ul {
+  list-style-type: disc;
+}
+
+.tiptap-editor-content ol {
+  list-style-type: decimal;
+}
+
+.tiptap-editor-content ul[data-type="taskList"],
+.tiptap-editor-content ul.tiptap-task-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.tiptap-editor-content ul[data-type="taskList"] li,
+.tiptap-editor-content ul.tiptap-task-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5em;
+}
+
+.tiptap-editor-content ul[data-type="taskList"] li > label,
+.tiptap-editor-content ul.tiptap-task-list li > label {
+  flex-shrink: 0;
+  padding-top: 0.1em;
+  user-select: none;
+}
+
+.tiptap-editor-content ul[data-type="taskList"] li > label input[type="checkbox"],
+.tiptap-editor-content ul.tiptap-task-list li > label input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 1em;
+  height: 1em;
+  cursor: pointer;
+}
+
+.tiptap-editor-content ul[data-type="taskList"] li > div,
+.tiptap-editor-content ul.tiptap-task-list li > div {
+  flex: 1;
+}
+
+.tiptap-editor-content hr {
+  border: none;
+  border-top: 1px solid var(--border);
+}
+
+.tiptap-editor-content a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.tiptap-editor-content mark {
+  background: var(--accent);
+  border-radius: 0.15em;
+  padding: 0 0.15em;
+}
+
+.tiptap-editor-content ::selection {
+  background: color-mix(in srgb, var(--primary) 30%, transparent);
+}
