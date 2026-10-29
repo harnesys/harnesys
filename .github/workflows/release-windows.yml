@@ -35,9 +35,6 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          HARNESYS_GOOGLE_CLIENT_ID: ${{ secrets.HARNESYS_GOOGLE_CLIENT_ID }}
-          HARNESYS_GOOGLE_API_KEY: ${{ secrets.HARNESYS_GOOGLE_API_KEY }}
-          HARNESYS_GOOGLE_APP_ID: ${{ secrets.HARNESYS_GOOGLE_APP_ID }}
         run: bun run build:desktop --target ${{ matrix.target }}
       - uses: actions/upload-artifact@v7
         with:
