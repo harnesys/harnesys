@@ -1,0 +1,78 @@
+{
+  "name": "Tester",
+  "role": "tester",
+  "budget": {
+    "maxSteps": 150,
+    "deadlineMs": 1800000,
+    "policy": "ask"
+  },
+  "capabilities": {
+    "files": {},
+    "shell": {
+      "spec": {
+        "blocklist": [
+          "sudo *",
+          "rm -rf ~",
+          "git push --force",
+          "kubectl delete *",
+          "docker rm -f *",
+          "shutdown",
+          "reboot",
+          "crontab -r",
+          "npm publish"
+        ]
+      }
+    },
+    "plan": {},
+    "core": {}
+  },
+  "permissions": {
+    "fs.write": "ask",
+    "process": "ask",
+    "network": "ask",
+    "mcp": "ask"
+  },
+  "graph": {
+    "nodes": {
+      "start": {
+        "type": "core:start"
+      },
+      "think": {
+        "type": "llm:generate",
+        "prompt": "main",
+        "messages": "$state.messages"
+      },
+      "act": {
+        "type": "tool:call",
+        "calls": "$output.toolCalls",
+        "concurrency": "parallel",
+        "barrier": {
+          "policy": "all"
+        }
+      },
+      "end": {
+        "type": "core:end"
+      }
+    },
+    "edges": [
+      {
+        "from": "start",
+        "to": "think"
+      },
+      {
+        "from": "think",
+        "to": "act",
+        "when": "$output.finishReason = \"tool-calls\""
+      },
+      {
+        "from": "think",
+        "to": "end"
+      },
+      {
+        "from": "act",
+        "to": "think"
+      }
+    ]
+  },
+  "color": "orange"
+}

@@ -108,13 +108,13 @@ export function systemPresetsSeed(opts: {
 
 export function readBundledPresets(log: Logger): PresetRecord[] {
   const records: PresetRecord[] = [];
-  for (const file of listAssetFiles(bundledPresetsPath('agents'))) {
-    const record = readAgentAsset(file, log);
+  for (const name of listAgentPresetDirs(bundledPresetsPath('agents'))) {
+    const record = readAgentAsset(name, log);
     if (record !== null) {
       records.push(record);
     }
   }
-  for (const file of listAssetFiles(join(bundledAssetsRoot(), 'presets', 'teams'))) {
+  for (const file of listTeamAssetFiles(join(bundledAssetsRoot(), 'presets', 'teams'))) {
     const record = readTeamAsset(file, log);
     if (record !== null) {
       records.push(record);
@@ -123,26 +123,33 @@ export function readBundledPresets(log: Logger): PresetRecord[] {
   return records;
 }
 
-function listAssetFiles(dir: string): string[] {
+function listAgentPresetDirs(dir: string): string[] {
   if (!existsSync(dir)) {
     return [];
   }
-  return readdirSync(dir)
-    .filter((name) => name.endsWith('.json'))
-    .filter((name) => PRESET_ID_RE.test(name.slice(0, -'.json'.length)))
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .filter((entry) => PRESET_ID_RE.test(entry.name))
+    .map((entry) => entry.name)
     .sort();
 }
 
-function readAgentAsset(file: string, log: Logger): PresetRecord | null {
-  const path = join(bundledPresetsPath('agents'), file);
-  const parsed = agentAssetSchema.safeParse(readJson(path));
+function readAgentAsset(name: string, log: Logger): PresetRecord | null {
+  const dir = join(bundledPresetsPath('agents'), name);
+  const config = readJson(join(dir, 'config.json'));
+  const instructions = readText(join(dir, 'instructions.md'));
+  if (config === null || instructions === null) {
+    log.warn({ path: dir }, 'system agent preset skipped');
+    return null;
+  }
+  const parsed = agentAssetSchema.safeParse({ ...config, instructions });
   if (!parsed.success) {
-    log.warn({ path, issues: parsed.error.issues }, 'system agent preset skipped');
+    log.warn({ path: dir, issues: parsed.error.issues }, 'system agent preset skipped');
     return null;
   }
   const { description, tags, ...body } = parsed.data;
   return {
-    id: `${SYSTEM_OWNER}/${stemOf(file)}`,
+    id: `${SYSTEM_OWNER}/${name}`,
     kind: 'agent',
     origin: 'system',
     version: SYSTEM_VERSION,
@@ -155,6 +162,16 @@ function readAgentAsset(file: string, log: Logger): PresetRecord | null {
     createdAt: '',
     updatedAt: '',
   };
+}
+
+function listTeamAssetFiles(dir: string): string[] {
+  if (!existsSync(dir)) {
+    return [];
+  }
+  return readdirSync(dir)
+    .filter((name) => name.endsWith('.json'))
+    .filter((name) => PRESET_ID_RE.test(name.slice(0, -'.json'.length)))
+    .sort();
 }
 
 function readTeamAsset(file: string, log: Logger): PresetRecord | null {
@@ -184,6 +201,14 @@ function readTeamAsset(file: string, log: Logger): PresetRecord | null {
 function readJson(path: string): unknown {
   try {
     return JSON.parse(readFileSync(path, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function readText(path: string): string | null {
+  try {
+    return readFileSync(path, 'utf8');
   } catch {
     return null;
   }

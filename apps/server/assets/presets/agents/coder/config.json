@@ -1,0 +1,87 @@
+{
+  "name": "Coder",
+  "role": "coder",
+  "skills": [
+    "issue-ops"
+  ],
+  "budget": {
+    "maxSteps": 300,
+    "deadlineMs": 2700000,
+    "policy": "ask"
+  },
+  "toolOutput": {
+    "redactSecrets": true
+  },
+  "capabilities": {
+    "files": {},
+    "shell": {
+      "spec": {
+        "blocklist": [
+          "sudo *",
+          "rm -rf ~",
+          "git push *",
+          "kubectl delete *",
+          "docker rm -f *",
+          "shutdown",
+          "reboot",
+          "crontab -r",
+          "npm publish"
+        ]
+      }
+    },
+    "issues": {},
+    "lsp": {},
+    "plan": {},
+    "pin-memory": {},
+    "core": {}
+  },
+  "permissions": {
+    "fs.write": "allow",
+    "process": "allow",
+    "network": "ask",
+    "mcp": "ask"
+  },
+  "graph": {
+    "nodes": {
+      "start": {
+        "type": "core:start"
+      },
+      "think": {
+        "type": "llm:generate",
+        "prompt": "main",
+        "messages": "$state.messages"
+      },
+      "act": {
+        "type": "tool:call",
+        "calls": "$output.toolCalls",
+        "concurrency": "parallel",
+        "barrier": {
+          "policy": "all"
+        }
+      },
+      "end": {
+        "type": "core:end"
+      }
+    },
+    "edges": [
+      {
+        "from": "start",
+        "to": "think"
+      },
+      {
+        "from": "think",
+        "to": "act",
+        "when": "$output.finishReason = \"tool-calls\""
+      },
+      {
+        "from": "think",
+        "to": "end"
+      },
+      {
+        "from": "act",
+        "to": "think"
+      }
+    ]
+  },
+  "color": "green"
+}

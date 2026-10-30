@@ -11,8 +11,9 @@ On every server start (`apps/server/src/main.ts`):
 1. `seedSystemSkills` copies `apps/server/assets/skills/*` into `~/.harnesys/skills/` (existing dirs
    are not overwritten; hash ledger in `.harnesys-seed.json`). Bundled skills today: `find-skills`,
    `issue-ops`, `workspace-ops`, `agent-creator`.
-2. `systemPresetsSeed` reads `apps/server/assets/presets/agents/*.json` and
-   `assets/presets/teams/*.json` into the machine-level `presets` table with origin `system`, id
+2. `systemPresetsSeed` reads `apps/server/assets/presets/agents/<name>/` (each preset is a folder:
+   `config.json` with all body fields except `instructions`, plus `instructions.md` with the prompt)
+   and `assets/presets/teams/*.json` into the machine-level `presets` table with origin `system`, id
    `harnesys/<file-stem>` (`apps/server/src/app/infra/presets/system-presets-seed.ts`). System rows
    that are no longer in the bundle are deleted on boot.
 3. `importLegacyUserPresets` imports legacy `~/.harnesys/presets/agents/*.json` as `local/<stem>`
@@ -175,7 +176,9 @@ Team presets (`TeamPresetBodySchema`): roles reference agent presets by `agentRe
 
 1. Naming tools that the agent's `capabilities` do not provide. Tool availability derives from
    packs, not from instruction text; the tools section and the wire schema are the only truth.
-2. Assuming `fetch` / `web_search` are separate packs. They normalize into `web`.
+2. Assuming `fetch` / `web_search` are separate packs. They are legacy aliases that normalize into
+   `web` (`packs/web/pack-aliases.ts`); bundled presets declare `web` directly, the alias path
+   exists for agents stored before the migration.
 3. Assuming bundled skills are available without listing them in `skills`.
 4. Assuming `issue_comment` does not exist (it does), or that agents can move their own issues to
    `done` freely (board rules and reviewer workflow own that transition).
