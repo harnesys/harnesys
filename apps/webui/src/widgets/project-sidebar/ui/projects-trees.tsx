@@ -10,9 +10,9 @@ import {
   setMoveDrag,
   useMoveProjectFiles,
 } from '@/features/move-project-files';
-import { getActiveOrgId } from '@/shared/api/active-org';
 import { selfNodeCached } from '@/shared/api/fleet';
 import type { BridgedProject } from '@/shared/api/projects';
+import { useOrgId } from '@/shared/config/location';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { useExplorerExpandStore } from '../model/explorer-expand.store';
@@ -154,7 +154,7 @@ function ProjectRoot({
   );
 }
 export function ProjectsTrees({ projectIds }: { projectIds: string[] }) {
-  const orgId = getActiveOrgId() ?? '';
+  const orgId = useOrgId() ?? '';
   const projectQuery = useProjects();
   const projects = projectQuery.data ?? [];
   const toggleRoot = useExplorerExpandStore((s) => s.toggleRoot);

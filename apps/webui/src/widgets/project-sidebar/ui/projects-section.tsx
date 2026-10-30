@@ -4,8 +4,8 @@ import { useEffect } from 'react';
 import { useProjects } from '@/entities/project';
 import { openAddSourceDialog } from '@/features/attach-source';
 import { patchKnowledgeIndexState } from '@/features/manage-knowledge-index/model/patch-knowledge-index-state';
-import { getActiveOrgId } from '@/shared/api/active-org';
 import { watchKnowledgeIndexStates } from '@/shared/api/events';
+import { useOrgId } from '@/shared/config/location';
 import { selfNodeCached } from '@/shared/api/fleet';
 import {
   knowledgeIndexStateQueryKey,
@@ -24,7 +24,7 @@ import { SectionMenu } from './section-menu';
 import { SourceRootIcon } from './source-root-icon';
 
 export function ProjectsTitle() {
-  const orgId = getActiveOrgId() ?? '';
+  const orgId = useOrgId() ?? '';
   const queryClient = useQueryClient();
   const { data: indexStates } = useQuery({
     ...knowledgeIndexStatesQuery(orgId),
@@ -61,7 +61,7 @@ export function ProjectsTitle() {
   );
 }
 export function ProjectsActions() {
-  const orgId = getActiveOrgId() ?? '';
+  const orgId = useOrgId() ?? '';
   const showHidden = useExplorerHiddenStore((state) => state.showHidden);
   const setShowHidden = useExplorerHiddenStore((state) => state.setShowHidden);
   const { data: projects } = useProjects();

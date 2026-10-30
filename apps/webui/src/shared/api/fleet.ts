@@ -9,6 +9,7 @@ import {
 import { queryOptions } from '@tanstack/react-query';
 import { getActiveOrgId } from './active-org';
 import { apiUrl } from './client';
+import { selfNodeCached } from './self-node';
 import { authenticatedFetch } from './session';
 
 export type { ExecutionProfile, ExecutionProfileDetail, ExecutionProfilesResponse, FleetNode };
@@ -307,32 +308,13 @@ export function removeNode(orgId: string, nodeId: string): Promise<void> {
   });
 }
 
-const projectNodeCache = new Map<string, string>();
-let selfNodeCache: string | null = null;
-
-export function rememberProjectNode(projectId: string, nodeId: string): void {
-  projectNodeCache.set(projectId, nodeId);
-}
-
-export function rememberSelfNode(nodeId: string): void {
-  selfNodeCache = nodeId;
-}
-
-export function projectNodeCached(projectId: string): string | null {
-  return projectNodeCache.get(projectId) ?? null;
-}
-
-export function selfNodeCached(): string | null {
-  return selfNodeCache;
-}
-
-export function isRemoteProjectCached(projectId: string): boolean {
-  if (selfNodeCache === null) {
-    return false;
-  }
-  const node = projectNodeCache.get(projectId);
-  return node !== undefined && node !== selfNodeCache;
-}
+export {
+  isRemoteProjectCached,
+  projectNodeCached,
+  rememberProjectNode,
+  rememberSelfNode,
+  selfNodeCached,
+} from './self-node';
 
 export function useIsRemoteProject(_projectId: string | null | undefined): boolean {
   return false;

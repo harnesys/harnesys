@@ -71,7 +71,7 @@ function toBridgedProject(source: Source): BridgedProject {
 export async function listProjects(): Promise<BridgedProject[]> {
   const orgId = getActiveOrgId();
   if (!orgId) {
-    return [];
+    throw new ApiError(503, 'Organization is not activated yet');
   }
   const { sources } = await listSources(orgId);
   return sources.map(toBridgedProject);

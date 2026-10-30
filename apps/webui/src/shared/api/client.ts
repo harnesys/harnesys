@@ -1,6 +1,7 @@
 import type { StudioErrorBody } from '@harnesys/studio-shared';
 import { env } from '@/shared/config/env';
 import { getActiveOrgId } from './active-org';
+import { selfNodeCached } from './self-node';
 import { authenticatedFetch } from './session';
 
 export class ApiError extends Error {
@@ -37,6 +38,10 @@ function applyAuthHeaders(headers: Headers, path: string): void {
   const orgId = getActiveOrgId();
   if (orgId && !headers.has('X-Org-Id') && !isMachineOrgsPath(path)) {
     headers.set('X-Org-Id', orgId);
+  }
+  const surfaceHostId = selfNodeCached();
+  if (surfaceHostId && !headers.has('X-Surface-Host-Id')) {
+    headers.set('X-Surface-Host-Id', surfaceHostId);
   }
 }
 

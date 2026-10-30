@@ -65,7 +65,15 @@ export async function listSourceFilesTree(
   },
 ): Promise<ProjectFileEntry[]> {
   const orgId = requireOrgId();
-  const tree = await listContentTree(orgId, projectId, '', options?.worktreeId);
+  let tree: ContentTreeResponse;
+  try {
+    tree = await listContentTree(orgId, projectId, '', options?.worktreeId);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return [];
+    }
+    throw error;
+  }
   return tree.entries
     .filter((entry) => options?.includeHidden || !entry.name.startsWith('.'))
     .map((entry) => toEntry(entry, entry.type === 'dir'));

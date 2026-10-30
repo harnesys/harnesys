@@ -1,11 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useLayoutEffect, useMemo } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { useAgentStore } from '@/entities/agent';
 import { useActiveOrgStore, useOrgActivityStore } from '@/entities/org-machine';
 import { useProjects } from '@/entities/project';
 import { toClientThread, useThreadStore } from '@/entities/thread';
 import { appMetaQuery, listThreads, watchDeskEvents, watchThreadErrors } from '@/shared/api';
+import { projectQueryKey } from '@/shared/api/project-base';
 import { watchApprovalEvents, watchSourceChanges } from '@/shared/api/events';
 import { sourceFilesTreeQueryKey } from '@/shared/api/files';
 import { rememberProjectNode, rememberSelfNode } from '@/shared/api/fleet';
@@ -26,6 +27,7 @@ export function DeskSync() {
   const storeOrgId = useActiveOrgStore((state) => state.orgId);
   const projectId = studioFocusProjectId(focus);
   const projectQuery = useProjects();
+  const lastSelfNodeRef = useRef<string | null>(null);
   const projectIds = useMemo(
     () => projectQuery.data?.map((item) => item.id) ?? [],
     [projectQuery.data],
@@ -47,7 +49,13 @@ export function DeskSync() {
   }, [meta, projectQuery.data]);
   useEffect(() => {
     if (meta?.nodeId) {
+      const firstKnown = lastSelfNodeRef.current !== meta.nodeId;
+      lastSelfNodeRef.current = meta.nodeId;
       rememberSelfNode(meta.nodeId);
+      if (firstKnown) {
+        void queryClient.invalidateQueries({ queryKey: ['sources'] });
+        void queryClient.invalidateQueries({ queryKey: projectQueryKey });
+      }
     }
     if (projectQuery.data) {
       for (const item of projectQuery.data) {
@@ -56,7 +64,7 @@ export function DeskSync() {
         }
       }
     }
-  }, [meta, projectQuery.data]);
+  }, [meta, projectQuery.data, queryClient]);
   useLayoutEffect(() => {
     const activeOrgId = orgId ?? storeOrgId;
     if (!activeOrgId) {

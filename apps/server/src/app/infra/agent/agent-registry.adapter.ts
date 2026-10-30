@@ -13,7 +13,8 @@ import type { AgentPatch, AgentRecord } from '../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
-import { withOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
+import { sources } from '../org-sqlite/org.schema.ts';
+import { type OrgSqliteDb, withOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 import { type AgentRow, agentsTable } from '../org-sqlite/schema/index.ts';
 
 const CONFIG_SKILLS = 'skills';
@@ -37,7 +38,13 @@ export class AgentRegistryAdapter extends AgentRegistryPort {
 
   list(orgId: string): AgentRecord[] {
     return withOrgSqlite(this.layout, orgId, (db) =>
-      db.select().from(agentsTable).where(eq(agentsTable.orgId, orgId)).all().map(toRecord),
+      db
+        .select()
+        .from(agentsTable)
+        .where(eq(agentsTable.orgId, orgId))
+        .all()
+        .map(toRecord)
+        .map((record) => pruneUnknownSources(db, orgId, record)),
     );
   }
 
@@ -48,7 +55,7 @@ export class AgentRegistryAdapter extends AgentRegistryPort {
         .from(agentsTable)
         .where(and(eq(agentsTable.orgId, orgId), eq(agentsTable.id, id)))
         .get();
-      return row ? toRecord(row) : undefined;
+      return row ? pruneUnknownSources(db, orgId, toRecord(row)) : undefined;
     });
   }
 
@@ -59,7 +66,7 @@ export class AgentRegistryAdapter extends AgentRegistryPort {
         .from(agentsTable)
         .where(and(eq(agentsTable.orgId, orgId), eq(agentsTable.name, name)))
         .get();
-      return row ? toRecord(row) : undefined;
+      return row ? pruneUnknownSources(db, orgId, toRecord(row)) : undefined;
     });
   }
 
@@ -67,7 +74,7 @@ export class AgentRegistryAdapter extends AgentRegistryPort {
     return withOrgSqlite(this.layout, rec.orgId, (db) => {
       try {
         const row = db.insert(agentsTable).values(toInsert(rec)).returning().get();
-        const record = toRecord(row);
+        const record = pruneUnknownSources(db, rec.orgId, toRecord(row));
         this.deskEvents.emit(rec.orgId, { type: 'agent', agent: toAgentPublic(record) });
         return record;
       } catch (err) {
@@ -97,7 +104,7 @@ export class AgentRegistryAdapter extends AgentRegistryPort {
         if (!row) {
           throw new AgentNotFoundException(id);
         }
-        const record = toRecord(row);
+        const record = pruneUnknownSources(db, orgId, toRecord(row));
         this.deskEvents.emit(orgId, { type: 'agent', agent: toAgentPublic(record) });
         return record;
       } catch (err) {
@@ -114,6 +121,27 @@ export class AgentRegistryAdapter extends AgentRegistryPort {
     });
     this.deskEvents.emit(orgId, { type: 'agent-deleted', id });
   }
+}
+
+function pruneUnknownSources(db: OrgSqliteDb, orgId: string, record: AgentRecord): AgentRecord {
+  if (record.sharedSourceIds.length === 0 && Object.keys(record.sourceLevels).length === 0) {
+    return record;
+  }
+  const known = new Set(
+    db
+      .select({ id: sources.id })
+      .from(sources)
+      .where(eq(sources.orgId, orgId))
+      .all()
+      .map((row) => row.id),
+  );
+  return {
+    ...record,
+    sharedSourceIds: record.sharedSourceIds.filter((id) => known.has(id)),
+    sourceLevels: Object.fromEntries(
+      Object.entries(record.sourceLevels).filter(([id]) => known.has(id)),
+    ),
+  };
 }
 
 function toInsert(rec: AgentRecord) {
