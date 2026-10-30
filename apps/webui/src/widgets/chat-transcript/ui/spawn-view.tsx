@@ -10,6 +10,7 @@ import { useOpenSpawnTab } from '@/features/ide';
 import { cn } from '@/shared/lib/utils';
 import { RunAttributionBadge } from '@/shared/ui/run-attribution-badge';
 import { StatusDot } from '@/shared/ui/status-dot';
+import { ThreadDock } from '@/widgets/thread-dock';
 import { agentFallbackName } from '../model/agent-label';
 import { useSpawnStream } from '../model/use-spawn-stream';
 import { RunTurn } from './run-turn';
@@ -83,23 +84,6 @@ export function SpawnView({
   const runs = splitRuns(childEvents);
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-spawn">
-      <div className="flex h-9 shrink-0 items-center gap-2 border-border/60 border-b px-3">
-        <StatusDot tone={DOT_TONE[spawn.status]} />
-        <span
-          aria-hidden
-          className={cn('size-2 shrink-0 rounded-full', agentColorClass(agent?.color ?? null))}
-        />
-        <span
-          className="truncate font-medium text-[12px] text-foreground leading-none"
-          title={spawn.agentId}
-        >
-          {agent?.name ?? agentFallbackName(spawn.agentId)}
-        </span>
-        <span className="text-[11px] text-muted-foreground leading-none">
-          {STATUS_LABEL[spawn.status]}
-        </span>
-        {running ? <RunAttributionBadge run={activeRun} /> : null}
-      </div>
       {spawnedTask ? (
         <div className="shrink-0 border-border/60 border-b px-3 py-2" data-testid="ide-spawn-task">
           <div className="mx-auto w-full max-w-3xl">
@@ -136,6 +120,29 @@ export function SpawnView({
           ))}
         </div>
       </div>
+      <ThreadDock
+        identity={{
+          icon: <StatusDot tone={DOT_TONE[spawn.status]} className="size-2" />,
+          title: (
+            <span className="inline-flex items-center gap-1.5" title={spawn.agentId}>
+              <span
+                aria-hidden
+                className={cn(
+                  'size-2 shrink-0 rounded-full',
+                  agentColorClass(agent?.color ?? null),
+                )}
+              />
+              {agent?.name ?? agentFallbackName(spawn.agentId)}
+            </span>
+          ),
+          meta: (
+            <>
+              {STATUS_LABEL[spawn.status]}
+              {running ? <RunAttributionBadge run={activeRun} /> : null}
+            </>
+          ),
+        }}
+      />
     </div>
   );
 }

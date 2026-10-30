@@ -22,8 +22,8 @@ import {
   TextEditor,
 } from '@/widgets/file-pane';
 import { TerminalView } from '@/widgets/terminal-pane';
+import { ThreadTriggerDock } from '@/widgets/thread-dock';
 import { ThreadJournal } from '@/widgets/thread-journal';
-import { ThreadRunStatusBar } from '@/widgets/thread-run-status';
 import { ScheduleSurface, WebhookSurface } from './automation-surface';
 import { ThreadFileTabContent } from './thread-file-tab';
 
@@ -150,7 +150,7 @@ function ThreadTabContent({
     <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-thread">
       <ThreadJournal threadId={thread.id} agent={agent} kind={thread.kind} />
       <HitlPrompt />
-      <ThreadRunStatusBar threadId={thread.id} issueId={thread.issueId} />
+      <ThreadTriggerDock threadId={thread.id} projectId={tab.projectId} issueId={thread.issueId} />
     </div>
   );
 }

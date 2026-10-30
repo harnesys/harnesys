@@ -13,7 +13,6 @@ import { useThreadStore } from '@/entities/thread';
 import { retryRun } from '@/features/send-message';
 import { cancelRun, nudgeIssueRecord } from '@/shared/api';
 import { useOrgId } from '@/shared/config/location';
-import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { RunAttributionBadge } from '@/shared/ui/run-attribution-badge';
 import { toast } from '@/shared/ui/toast';
@@ -132,7 +131,7 @@ export function ThreadRunStatusBar({ threadId, issueId }: ThreadRunStatusBarProp
   const [busy, setBusy] = useState<BusyAction>(null);
   const actions = { threadId, orgId, issueId, setBusy, busy };
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 pb-3" data-testid="thread-run-status-bar">
+    <div data-testid="thread-run-status-bar">
       {retry && bar.mode === 'running' ? <RetryBanner threadId={threadId} /> : null}
       {bar.mode === 'running' && bar.runId ? (
         <RunningBar
@@ -163,11 +162,7 @@ interface BarActions {
 }
 
 function BarShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-2 rounded-lg border border-border/40 bg-background px-3 py-1.5">
-      {children}
-    </div>
-  );
+  return <div className="flex items-center justify-between gap-2 px-3 py-1.5">{children}</div>;
 }
 
 function RunningBar({
@@ -223,7 +218,7 @@ function FailedBar({
 }: BarActions & { text: string; runId: string | null }) {
   const { threadId, issueId, orgId, busy, setBusy } = actions;
   return (
-    <div className="flex items-center justify-between gap-2 rounded-lg border border-destructive/35 bg-destructive/5 px-3 py-1.5">
+    <div className="flex items-center justify-between gap-2 bg-destructive/5 px-3 py-1.5">
       <div className="flex min-w-0 items-center gap-2 text-xs">
         <AlertCircleIcon className="size-3 shrink-0 text-destructive" />
         <span className="truncate font-mono text-destructive" title={text}>
@@ -277,12 +272,7 @@ function IdleBar({
 function EmptyBar(actions: BarActions) {
   const { threadId, issueId, orgId, busy, setBusy } = actions;
   return (
-    <div
-      className={cn(
-        'flex items-center justify-between gap-2 rounded-lg border border-border/40',
-        'bg-background px-3 py-1.5',
-      )}
-    >
+    <div className="flex items-center justify-between gap-2 px-3 py-1.5">
       <div className="flex min-w-0 items-center gap-2 text-muted-foreground text-xs">
         <CircleCheckIcon className="size-3 shrink-0" />
         <span className="truncate">No runs yet</span>
