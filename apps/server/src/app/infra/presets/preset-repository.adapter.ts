@@ -40,6 +40,19 @@ export class PresetRepositoryAdapter extends PresetLibraryPort implements Preset
     );
   }
 
+  listDetailed(filter?: PresetCatalogFilter): PresetDetail[] {
+    return withMachineSqlite(this.layout, (db) =>
+      db
+        .select()
+        .from(presetsTable)
+        .all()
+        .filter((row) => filter?.kind === undefined || row.kind === filter.kind)
+        .filter((row) => filter?.origin === undefined || row.origin === filter.origin)
+        .map(toRecord)
+        .map((record) => toPresetDetail(record)),
+    );
+  }
+
   get(kind: PresetKind, id: string): PresetDetail | null {
     const record = this.findById(kind, id);
     return record === null ? null : toPresetDetail(record);

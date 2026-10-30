@@ -115,7 +115,7 @@ export function OrgHeader({ inboxCount }: { inboxCount?: number }) {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={() => {
-              void navigate(studioPath.create, { state: { from: location.pathname } });
+              void navigate(studioPath.onboardingCreate);
             }}
           >
             <PlusIcon className="size-4" />
@@ -124,7 +124,7 @@ export function OrgHeader({ inboxCount }: { inboxCount?: number }) {
           <DropdownMenuItem
             data-testid="org-join-open"
             onClick={() => {
-              void navigate(studioPath.join, { state: { from: location.pathname } });
+              void navigate(studioPath.onboardingJoin);
             }}
           >
             <LogInIcon className="size-4" />

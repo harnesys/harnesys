@@ -1,9 +1,12 @@
 import type { DiscoveredModelView, ProviderPublic } from '@harnesys/studio-shared';
+import { CheckIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { isSupportedKind } from '@/features/manage-model';
 import { Button } from '@/shared/ui/button';
 import { RowChip } from '@/shared/ui/capability-rows';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
+import { Skeleton } from '@/shared/ui/skeleton';
 import {
   ONBOARDING_BACK,
   PROVIDER_ATTACHED,
@@ -48,9 +51,67 @@ export function OnboardingProviderModels({
   const attachedNames = new Set(provider.models.map((item) => item.name));
   const available = (found ?? []).filter((item) => !attachedNames.has(item.name));
   const canContinue = provider.models.length > 0;
+  const discovering = busy && found === null;
+
+  let availableBody: ReactNode = null;
+  if (discovering) {
+    availableBody = (
+      <div className="mt-5 flex flex-col gap-1" data-testid="onboarding-provider-discovering">
+        <p className="font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
+          {PROVIDER_DISCOVERING}
+        </p>
+        {[0, 1, 2].map((key) => (
+          <Skeleton key={key} className="h-9 w-full rounded-md" />
+        ))}
+      </div>
+    );
+  } else if (available.length > 0) {
+    availableBody = (
+      <div className="mt-5 flex flex-col gap-1">
+        <p className="font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
+          {PROVIDER_AVAILABLE}
+          <span className="ml-2 font-mono normal-case">{available.length}</span>
+        </p>
+        {available.map((item) => {
+          const supported = isSupportedKind(item.kind);
+          return (
+            <div
+              key={item.name}
+              className="flex min-h-9 items-center gap-2 rounded-md px-2 hover:bg-muted/50"
+            >
+              <span className="min-w-0 flex-1 truncate font-mono text-sm">{item.name}</span>
+              {item.kind !== 'chat' ? (
+                <RowChip tone={supported ? 'accent' : 'neutral'}>{item.kind}</RowChip>
+              ) : null}
+              {item.kind !== 'chat' && !supported ? <RowChip tone="neutral">soon</RowChip> : null}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={attaching === item.name || !supported}
+                title={supported ? undefined : 'Not supported yet'}
+                onClick={() => onAttachFound(item)}
+                data-testid={`onboarding-attach-${item.name}`}
+              >
+                {attaching === item.name ? '…' : attachButtonLabel(supported)}
+              </Button>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <>
+      <button
+        type="button"
+        onClick={onBack}
+        className="mb-8 font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+        data-testid="onboarding-back"
+      >
+        ← {ONBOARDING_BACK}
+      </button>
       <h1 className="font-semibold text-2xl tracking-[-0.03em] sm:text-3xl">
         {PROVIDER_MODELS_TITLE}
       </h1>
@@ -81,40 +142,7 @@ export function OnboardingProviderModels({
         <ModelList label={PROVIDER_ATTACHED} names={provider.models.map((item) => item.name)} />
       ) : null}
 
-      {available.length > 0 ? (
-        <div className="mt-5 flex flex-col gap-1">
-          <p className="font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
-            {PROVIDER_AVAILABLE}
-            <span className="ml-2 font-mono normal-case">{available.length}</span>
-          </p>
-          {available.map((item) => {
-            const supported = isSupportedKind(item.kind);
-            return (
-              <div
-                key={item.name}
-                className="flex min-h-9 items-center gap-2 rounded-md px-2 hover:bg-muted/50"
-              >
-                <span className="min-w-0 flex-1 truncate font-mono text-sm">{item.name}</span>
-                {item.kind !== 'chat' ? (
-                  <RowChip tone={supported ? 'accent' : 'neutral'}>{item.kind}</RowChip>
-                ) : null}
-                {item.kind !== 'chat' && !supported ? <RowChip tone="neutral">soon</RowChip> : null}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  disabled={attaching === item.name || !supported}
-                  title={supported ? undefined : 'Not supported yet'}
-                  onClick={() => onAttachFound(item)}
-                  data-testid={`onboarding-attach-${item.name}`}
-                >
-                  {attaching === item.name ? '…' : attachButtonLabel(supported)}
-                </Button>
-              </div>
-            );
-          })}
-        </div>
-      ) : null}
+      {availableBody}
 
       <div className="mt-6 flex flex-col gap-2 border-border/70 border-t pt-5">
         <Label htmlFor="onboarding-manual-model">{PROVIDER_MANUAL_LABEL}</Label>
@@ -145,18 +173,8 @@ export function OnboardingProviderModels({
       <div className="mt-8 flex items-center gap-2">
         <Button
           type="button"
-          variant="outline"
-          size="lg"
-          onClick={onBack}
-          data-testid="onboarding-provider-back"
-        >
-          {ONBOARDING_BACK}
-        </Button>
-        <Button
-          type="button"
-          size="lg"
+          className="flex-1"
           disabled={!canContinue}
-          className="flex-1 disabled:opacity-50"
           onClick={onContinue}
           data-testid="onboarding-provider-continue"
         >
@@ -181,7 +199,9 @@ function ModelList({ label, names }: { label: string; names: string[] }) {
       {names.map((name) => (
         <div key={name} className="flex min-h-9 items-center gap-2 rounded-md px-2">
           <span className="min-w-0 flex-1 truncate font-mono text-sm">{name}</span>
-          <span className="font-mono text-[10px] text-muted-foreground uppercase">saved</span>
+          <span className="text-live" title="Saved">
+            <CheckIcon className="size-4" aria-hidden="true" />
+          </span>
         </div>
       ))}
     </div>

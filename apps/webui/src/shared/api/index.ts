@@ -108,6 +108,7 @@ export {
   exportPresetDownload,
   getPreset,
   importPresets,
+  listPresetDetails,
   listPresets,
   presetsQuery,
   presetsQueryKey,

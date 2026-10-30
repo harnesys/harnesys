@@ -113,7 +113,7 @@ export function OnboardingJoinPanel({
             testId="join-node-name"
           />
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
-          <Button type="submit" size="lg" disabled={busy} data-testid="join-org-submit">
+          <Button type="submit" className="w-full" disabled={busy} data-testid="join-org-submit">
             {busy ? 'Joining…' : JOIN_SUBMIT}
           </Button>
         </form>

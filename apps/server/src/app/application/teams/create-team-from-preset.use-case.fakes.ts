@@ -23,6 +23,10 @@ export class FakePresetCatalog extends PresetCatalogPort {
     return [...this.items.values()].map((detail) => detail);
   }
 
+  listDetailed(): PresetDetail[] {
+    return [...this.items.values()];
+  }
+
   get(kind: PresetKind, id: string): PresetDetail | null {
     const found = this.items.get(id);
     return found && found.kind === kind ? found : null;

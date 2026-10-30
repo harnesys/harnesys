@@ -30,8 +30,11 @@ export type StudioFocus =
   | { kind: 'attachment'; projectId: string; issueId: string; attachmentId: string };
 
 export const studioPath = {
-  create: '/create',
-  join: '/join',
+  onboardingChoose: '/onboarding/choose',
+  onboardingCreate: '/onboarding/create',
+  onboardingProvider: (orgId: string) => `/onboarding/provider/${orgId}`,
+  onboardingModels: (orgId: string) => `/onboarding/models/${orgId}`,
+  onboardingPresets: (orgId: string) => `/onboarding/presets/${orgId}`,
   desk: (orgId: string) => `/o/${orgId}/`,
   org: (orgId: string) => `/o/${orgId}/settings/fleet`,
   fleet: (orgId: string) => `/o/${orgId}/settings/fleet`,

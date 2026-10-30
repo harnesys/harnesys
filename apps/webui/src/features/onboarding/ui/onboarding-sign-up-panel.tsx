@@ -93,7 +93,12 @@ export function OnboardingSignUpPanel({ onReady }: { onReady: () => void }) {
               {error}
             </p>
           ) : null}
-          <Button type="submit" size="lg" disabled={busy} data-testid="session-signup-submit">
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={busy}
+            data-testid="session-signup-submit"
+          >
             {busy ? 'Creating owner…' : SIGN_UP_SUBMIT}
           </Button>
         </form>

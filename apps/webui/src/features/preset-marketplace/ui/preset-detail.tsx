@@ -264,7 +264,7 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
       <span className="shrink-0 text-muted-foreground text-xs">{label}</span>
-      <span className="min-w-0 truncate text-right font-mono text-xs">{value}</span>
+      <span className="min-w-0 break-words text-right font-mono text-xs">{value}</span>
     </div>
   );
 }
@@ -280,7 +280,11 @@ function Section({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-function AgentPresetSummary({ detail }: { detail: Extract<PresetDetail, { kind: 'agent' }> }) {
+export function AgentPresetSummary({
+  detail,
+}: {
+  detail: Extract<PresetDetail, { kind: 'agent' }>;
+}) {
   const body = detail.body;
   const capabilities = presetCapabilityNames(body);
   return (

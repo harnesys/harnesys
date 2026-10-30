@@ -1,6 +1,7 @@
 import type {
   CatalogItem,
   ImportPresetsResponse,
+  ListPresetDetailsResponse,
   ListPresetsQuery,
   ListPresetsResponse,
   PresetDetail,
@@ -26,6 +27,9 @@ function presetsUrl(query?: ListPresetsQuery): string {
   if (query?.origin) {
     params.set('origin', query.origin);
   }
+  if (query?.expand) {
+    params.set('expand', query.expand);
+  }
   const suffix = params.toString();
   return suffix ? `/api/presets?${suffix}` : '/api/presets';
 }
@@ -33,6 +37,12 @@ function presetsUrl(query?: ListPresetsQuery): string {
 export async function listPresets(query?: ListPresetsQuery): Promise<CatalogItem[]> {
   const response = await apiJson<ListPresetsResponse>(presetsUrl(query));
   return response.items;
+}
+
+export function listPresetDetails(query?: ListPresetsQuery): Promise<PresetDetail[]> {
+  return apiJson<ListPresetDetailsResponse>(presetsUrl({ ...query, expand: 'body' })).then(
+    (response) => response.items,
+  );
 }
 
 export function getPreset(kind: PresetKind, id: string): Promise<PresetDetail> {

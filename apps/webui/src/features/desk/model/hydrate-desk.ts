@@ -48,13 +48,10 @@ export function hydrateDesk(scopeId: string): Promise<void> {
 }
 
 async function loadDesk(scopeId: string): Promise<void> {
-  const orgId = getActiveOrgId();
-  if (orgId && scopeId === orgId) {
-    await loadOrgDesk(orgId);
-    return;
-  }
-  // Source-scoped hydrate is a no-op for network: agents / threads / schedules /
-  // webhooks are organization-native and loaded once via hydrateOrgDesk.
+  // Hydrate is always called with an explicit org/project id, so load it
+  // directly; gating on the module-level active org races with OrgScopeSync
+  // and used to mark the scope ready with empty stores.
+  await loadOrgDesk(scopeId);
 }
 
 async function loadOrgDesk(orgId: string): Promise<void> {

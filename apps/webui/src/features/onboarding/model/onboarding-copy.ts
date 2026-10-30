@@ -67,6 +67,9 @@ export const PROVIDER_KEY_LABEL = 'API key';
 export const PROVIDER_KEY_HINT =
   'Stored in the org vault. Leave empty for local runtimes that do not need a key.';
 export const PROVIDER_CONNECT_SUBMIT = 'Connect and discover';
+export const PROVIDER_CONNECTED_ANOTHER =
+  'Already connected. Connect another provider, or continue.';
+export const PROVIDER_CONNECTED_CONTINUE = 'Continue';
 export const PROVIDER_MODELS_TITLE = 'Attach models';
 export const PROVIDER_MODELS_BODY =
   'Pick the models this org can use. Attach at least one to continue.';
@@ -97,3 +100,5 @@ export const CHOOSE_JOIN_HINT = 'Use this if another machine already runs the re
 export const CHOOSE_BACK = 'Back';
 
 export const ONBOARDING_FOOTER = 'Data stays on your hosts. Secrets live in the org vault.';
+
+export const ONBOARDING_STEP_LABELS = ['Organization', 'Provider', 'Models', 'Agents'] as const;

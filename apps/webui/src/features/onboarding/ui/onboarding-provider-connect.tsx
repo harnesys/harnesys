@@ -1,5 +1,6 @@
-import type { Driver, StudioCatalog } from '@harnesys/studio-shared';
+import type { Driver, ProviderPublic, StudioCatalog } from '@harnesys/studio-shared';
 import { isDriver } from '@harnesys/studio-shared';
+import { CheckIcon } from 'lucide-react';
 import { DRIVER_ITEMS } from '@/features/manage-project-settings/ui/driver-items';
 import { ProviderEndpointFields } from '@/features/manage-project-settings/ui/provider-endpoint';
 import { Button } from '@/shared/ui/button';
@@ -14,7 +15,10 @@ import {
   SelectValue,
 } from '@/shared/ui/select';
 import {
+  ONBOARDING_BACK,
   PROVIDER_CONNECT_SUBMIT,
+  PROVIDER_CONNECTED_ANOTHER,
+  PROVIDER_CONNECTED_CONTINUE,
   PROVIDER_KEY_HINT,
   PROVIDER_KEY_LABEL,
   PROVIDER_NAME_HINT,
@@ -32,26 +36,71 @@ export interface ProviderConnectDraft {
 
 export function OnboardingProviderConnect({
   catalog,
+  connected,
   draft,
   busy,
   error,
   onChange,
   onSubmit,
+  onContinue,
+  onBack,
 }: {
   catalog: StudioCatalog | undefined;
+  connected?: ProviderPublic | null;
   draft: ProviderConnectDraft;
   busy: boolean;
   error: string | null;
   onChange: (patch: Partial<ProviderConnectDraft>) => void;
   onSubmit: () => void;
+  onContinue?: () => void;
+  onBack: () => void;
 }) {
   const selected = catalog?.drivers.find((item) => item.id === draft.driver);
   return (
     <>
+      <button
+        type="button"
+        onClick={onBack}
+        className="mb-8 font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+        data-testid="onboarding-back"
+      >
+        ← {ONBOARDING_BACK}
+      </button>
       <h1 className="font-semibold text-2xl tracking-[-0.03em] sm:text-3xl">
         {PROVIDER_PANEL_TITLE}
       </h1>
-      <p className="mt-3 text-muted-foreground text-sm leading-relaxed">{PROVIDER_PANEL_BODY}</p>
+      <p className="mt-3 text-muted-foreground text-sm leading-relaxed">
+        {connected ? PROVIDER_CONNECTED_ANOTHER : PROVIDER_PANEL_BODY}
+      </p>
+
+      {connected ? (
+        <div
+          className="mt-5 flex items-center gap-3 rounded-xl border px-3 py-3"
+          data-testid="onboarding-provider-connected"
+        >
+          <span className="text-live" title="Connected">
+            <CheckIcon className="size-4" aria-hidden="true" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-medium text-sm">{connected.name}</p>
+            <p className="truncate font-mono text-muted-foreground text-xs">
+              {connected.driver} · {connected.models.length}{' '}
+              {connected.models.length === 1 ? 'model' : 'models'}
+            </p>
+          </div>
+          {onContinue ? (
+            <Button
+              type="button"
+              size="sm"
+              onClick={onContinue}
+              data-testid="onboarding-provider-connected-continue"
+            >
+              {PROVIDER_CONNECTED_CONTINUE}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
       <form
         className="mt-8 flex flex-col gap-4"
         onSubmit={(event) => {
@@ -118,7 +167,12 @@ export function OnboardingProviderConnect({
           <p className="text-muted-foreground text-xs">{PROVIDER_KEY_HINT}</p>
         </div>
         {error ? <p className="text-destructive text-sm">{error}</p> : null}
-        <Button type="submit" size="lg" disabled={busy} data-testid="onboarding-provider-connect">
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={busy}
+          data-testid="onboarding-provider-connect"
+        >
           {busy ? 'Connecting…' : PROVIDER_CONNECT_SUBMIT}
         </Button>
       </form>

@@ -7,5 +7,6 @@ export interface PresetCatalogFilter {
 
 export abstract class PresetCatalogPort {
   abstract list(filter?: PresetCatalogFilter): CatalogItem[];
+  abstract listDetailed(filter?: PresetCatalogFilter): PresetDetail[];
   abstract get(kind: PresetKind, id: string): PresetDetail | null;
 }

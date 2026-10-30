@@ -75,7 +75,12 @@ export function OnboardingSignInPanel({ onReady }: { onReady: () => void }) {
               {error}
             </p>
           ) : null}
-          <Button type="submit" size="lg" disabled={busy} data-testid="session-login-submit">
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={busy}
+            data-testid="session-login-submit"
+          >
             {busy ? 'Signing in…' : SIGN_IN_SUBMIT}
           </Button>
         </form>

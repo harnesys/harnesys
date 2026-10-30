@@ -186,6 +186,7 @@ export type SavePresetBody = z.infer<typeof SavePresetBodySchema>;
 export const ListPresetsQuerySchema = z.object({
   kind: PresetKindSchema.optional(),
   origin: PresetOriginSchema.optional(),
+  expand: z.literal('body').optional(),
 });
 export type ListPresetsQuery = z.infer<typeof ListPresetsQuerySchema>;
 
@@ -193,6 +194,11 @@ export const ListPresetsResponseSchema = z.object({
   items: z.array(CatalogItemSchema),
 });
 export type ListPresetsResponse = z.infer<typeof ListPresetsResponseSchema>;
+
+export const ListPresetDetailsResponseSchema = z.object({
+  items: z.array(PresetDetailSchema),
+});
+export type ListPresetDetailsResponse = z.infer<typeof ListPresetDetailsResponseSchema>;
 
 export const EnvelopeAgentSchema = z.object({
   kind: z.literal('agent'),

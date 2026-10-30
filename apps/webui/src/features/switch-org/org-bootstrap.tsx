@@ -122,10 +122,10 @@ export function OrgBootstrap({ children }: { children: ReactNode }) {
     return (
       <OnboardingChoose
         onCreate={() => {
-          void navigate(studioPath.create);
+          void navigate(studioPath.onboardingCreate);
         }}
         onJoin={() => {
-          void navigate(studioPath.join);
+          void navigate(studioPath.onboardingJoin);
         }}
       />
     );

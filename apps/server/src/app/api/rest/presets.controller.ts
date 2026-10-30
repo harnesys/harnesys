@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } fr
 import type {
   ImportPresetsBody,
   ImportPresetsResponse,
+  ListPresetDetailsResponse,
   ListPresetsQuery,
   ListPresetsResponse,
   PresetDetail,
@@ -31,7 +32,7 @@ export class PresetsController {
   ) {}
 
   @Get()
-  list(@Query(ListPresetsQuerySchema) query: ListPresetsQuery): ListPresetsResponse {
+  list(@Query(ListPresetsQuerySchema) query: ListPresetsQuery): ListPresetsResponse | ListPresetDetailsResponse {
     return this.listPresets.execute(query);
   }
 

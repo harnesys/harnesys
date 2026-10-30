@@ -18,7 +18,7 @@ export function OnboardingChoose({
   onJoin: () => void;
 }) {
   return (
-    <OnboardingShell testId="first-run-gate" footer={<p>{ONBOARDING_FOOTER}</p>}>
+    <OnboardingShell testId="first-run-gate" width="wide" footer={<p>{ONBOARDING_FOOTER}</p>}>
       <div className="mx-auto grid w-full max-w-6xl gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-start lg:gap-16">
         <section className="flex flex-col gap-5">
           <h1 className="max-w-[22ch] font-semibold text-3xl tracking-[-0.03em] sm:text-4xl sm:leading-[1.1]">

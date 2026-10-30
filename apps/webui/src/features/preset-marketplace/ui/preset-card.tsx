@@ -13,11 +13,9 @@ export interface PresetCardProps {
   item: CatalogItem;
   onOpen: () => void;
   selected?: boolean;
-  /** Short highlight label rendered next to the name, e.g. "Default". */
-  badge?: string;
 }
 
-export function PresetCard({ item, onOpen, selected = false, badge }: PresetCardProps) {
+export function PresetCard({ item, onOpen, selected = false }: PresetCardProps) {
   const Icon = item.kind === 'team' ? UsersIcon : BotIcon;
   return (
     <button
@@ -43,11 +41,6 @@ export function PresetCard({ item, onOpen, selected = false, badge }: PresetCard
           <span className="block truncate font-medium text-sm">{item.name}</span>
           <span className="block truncate text-[11px] text-muted-foreground">{metaLine(item)}</span>
         </span>
-        {badge ? (
-          <span className="shrink-0 rounded-full bg-foreground/10 px-2 py-0.5 font-medium text-[10px] text-foreground">
-            {badge}
-          </span>
-        ) : null}
       </span>
       {item.description ? (
         <span className="line-clamp-2 text-muted-foreground text-xs">{item.description}</span>

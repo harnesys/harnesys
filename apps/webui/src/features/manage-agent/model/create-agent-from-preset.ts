@@ -5,14 +5,11 @@ import {
   toClientAgentFromPublic,
   useAgentStore,
 } from '@/entities/agent';
-import { useSessionStore } from '@/entities/session';
-import { type Thread, toClientThread, useThreadStore } from '@/entities/thread';
-import { createAgentFromPresetInOrg, createThreadRecord } from '@/shared/api';
+import { createAgentFromPresetInOrg } from '@/shared/api';
 import type { AgentPresetRecord } from '@/shared/api/agents';
 import { refreshOrgAgents } from './create-agent';
 export interface CreateAgentFromPresetResult {
   agent: Agent;
-  thread: Thread | null;
 }
 export function agentDraftFromPreset(preset: AgentPresetRecord): Agent {
   return {
@@ -72,12 +69,5 @@ export async function createAgentFromPreset(
   const agent = toClientAgentFromPublic(record);
   useAgentStore.getState().upsert(agent);
   await refreshOrgAgents(orgId);
-  if (agent.parentId) {
-    return { agent, thread: null };
-  }
-  const threadRecord = await createThreadRecord({ agentId: record.id });
-  const thread = toClientThread(threadRecord);
-  useThreadStore.getState().upsert(thread);
-  useSessionStore.getState().replaceEvents(threadRecord.id, threadRecord.events);
-  return { agent, thread };
+  return { agent };
 }

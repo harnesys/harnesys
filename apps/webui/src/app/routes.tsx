@@ -9,7 +9,14 @@ import { OrgScopeSync } from '@/features/switch-org/org-scope-sync';
 import { OrgTimeZoneProvider } from '@/features/switch-org/org-time-zone';
 import { AcceptInvitePage } from '@/pages/accept-invite';
 import { InboxPage } from '@/pages/inbox';
-import { CreateOrgPage, JoinOrgPage } from '@/pages/org-setup';
+import {
+  OnboardingChoosePage,
+  OnboardingCreatePage,
+  OnboardingJoinPage,
+  OnboardingModelsPage,
+  OnboardingPresetsPage,
+  OnboardingProviderPage,
+} from '@/pages/onboarding';
 import { ProjectPage } from '@/pages/project';
 import { ScrollProbePage } from '@/pages/scroll-probe';
 import { SettingsPage } from '@/pages/settings/settings-page';
@@ -99,12 +106,19 @@ export const routes: RouteObject[] = [
           </OrgBootstrap>
         ),
       },
-      { path: 'create', element: <CreateOrgPage /> },
-      { path: 'join', element: <JoinOrgPage /> },
+      { path: 'create', element: <Navigate to="/onboarding/create" replace /> },
+      { path: 'join', element: <Navigate to="/onboarding/join" replace /> },
       { path: 'login', element: <SignInPage /> },
       { path: 'signup', element: <SignUpPage /> },
       { path: 'accept', element: <AcceptInvitePage /> },
       { path: 'worker', element: <WorkerRelayPage /> },
+      { path: 'onboarding', element: <Navigate to="choose" replace /> },
+      { path: 'onboarding/choose', element: <OnboardingChoosePage /> },
+      { path: 'onboarding/create', element: <OnboardingCreatePage /> },
+      { path: 'onboarding/provider/:orgId', element: <OnboardingProviderPage /> },
+      { path: 'onboarding/models/:orgId', element: <OnboardingModelsPage /> },
+      { path: 'onboarding/presets/:orgId', element: <OnboardingPresetsPage /> },
+      { path: 'onboarding/join', element: <OnboardingJoinPage /> },
       {
         path: 'o/:orgId',
         element: <OrgLayout />,

@@ -4,9 +4,12 @@ export {
   catalogRoleLabel,
   catalogSearchText,
   localPresetId,
+  PRESET_KIND_COLORS,
+  PRESET_ORIGIN_COLORS,
   presetCapabilityNames,
   presetExcerpt,
   presetGraphSummary,
+  presetOriginLabel,
   presetSlug,
   roleKeyForAgent,
 } from './model/preset-mappers';
@@ -21,6 +24,10 @@ export {
   openMarketplace,
 } from './ui/marketplace-dialog';
 export { PresetCard, type PresetCardProps } from './ui/preset-card';
-export { PresetDetailPanel, type PresetDetailPanelProps } from './ui/preset-detail';
+export {
+  AgentPresetSummary,
+  PresetDetailPanel,
+  type PresetDetailPanelProps,
+} from './ui/preset-detail';
 export { openSavePresetDialog, type SavePresetDialogData } from './ui/save-preset-dialog';
 export { openTeamFromPresetDialog, type TeamFromPresetData } from './ui/team-from-preset-dialog';

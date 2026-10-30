@@ -21,6 +21,13 @@ export class FakePresetStore extends PresetLibraryPort implements PresetCatalogP
       .map(toCatalogItem);
   }
 
+  listDetailed(filter?: PresetCatalogFilter): PresetDetail[] {
+    return [...this.records.values()]
+      .filter((record) => filter?.kind === undefined || record.kind === filter.kind)
+      .filter((record) => filter?.origin === undefined || record.origin === filter.origin)
+      .map(toPresetDetail);
+  }
+
   get(kind: PresetKind, id: string): PresetDetail | null {
     const record = this.findById(kind, id);
     return record === null ? null : toPresetDetail(record);

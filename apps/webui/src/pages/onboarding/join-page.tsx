@@ -1,28 +1,18 @@
-import { useLocation, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 import { OnboardingJoinPanel } from '@/features/onboarding';
 import { useOrgStore } from '@/features/switch-org/org-context';
 import { activateOrg } from '@/shared/api/orgs';
 import { studioPath } from '@/shared/config/routes';
-import { readOrgSetupFromState, resolveOrgSetupBackPath } from './org-setup-navigation';
 
-export function JoinOrgPage() {
+export function OnboardingJoinPage() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { orgs, activeOrgId, upsertOrg, setActiveOrgId } = useOrgStore();
-
-  const goBack = () => {
-    void navigate(
-      resolveOrgSetupBackPath({
-        from: readOrgSetupFromState(location.state),
-        activeOrgId,
-        orgs,
-      }),
-    );
-  };
+  const { upsertOrg, setActiveOrgId } = useOrgStore();
 
   return (
     <OnboardingJoinPanel
-      onBack={goBack}
+      onBack={() => {
+        void navigate(studioPath.onboardingChoose, { replace: true });
+      }}
       onJoined={(entry) => {
         upsertOrg(entry);
         setActiveOrgId(entry.orgId);

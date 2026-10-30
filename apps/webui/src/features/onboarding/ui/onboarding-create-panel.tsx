@@ -5,7 +5,6 @@ import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { FolderBrowserDialog } from '@/widgets/folder-browser';
 import {
-  CHOOSE_BACK,
   CREATE_NAME_HINT,
   CREATE_NAME_LABEL,
   CREATE_PANEL_BODY,
@@ -13,6 +12,8 @@ import {
   CREATE_SUBMIT,
   CREATE_WORKSPACE_HINT,
   CREATE_WORKSPACE_LABEL,
+  ONBOARDING_BACK,
+  ONBOARDING_STEP_LABELS,
 } from '../model/onboarding-copy';
 import { OnboardingShell } from './onboarding-shell';
 
@@ -52,7 +53,7 @@ export function OnboardingCreatePanel({
   };
 
   return (
-    <OnboardingShell testId="onboarding-create">
+    <OnboardingShell testId="onboarding-create" steps={ONBOARDING_STEP_LABELS} currentStep={0}>
       <div className="mx-auto w-full max-w-lg">
         <button
           type="button"
@@ -60,7 +61,7 @@ export function OnboardingCreatePanel({
           className="mb-8 font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
           data-testid="onboarding-back"
         >
-          ← {CHOOSE_BACK}
+          ← {ONBOARDING_BACK}
         </button>
         <h1 className="font-semibold text-2xl tracking-[-0.03em] sm:text-3xl">
           {CREATE_PANEL_TITLE}
@@ -118,7 +119,7 @@ export function OnboardingCreatePanel({
             />
           ) : null}
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
-          <Button type="submit" size="lg" disabled={busy} data-testid="create-org-submit">
+          <Button type="submit" className="w-full" disabled={busy} data-testid="create-org-submit">
             {busy ? 'Creating…' : CREATE_SUBMIT}
           </Button>
         </form>

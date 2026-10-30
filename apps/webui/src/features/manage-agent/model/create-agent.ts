@@ -4,14 +4,11 @@ import {
   toClientAgentFromPublic,
   useAgentStore,
 } from '@/entities/agent';
-import { useSessionStore } from '@/entities/session';
-import { type Thread, toClientThread, useThreadStore } from '@/entities/thread';
-import { createAgentInOrg, createThreadRecord, fetchOrgAgents } from '@/shared/api';
+import { createAgentInOrg, fetchOrgAgents } from '@/shared/api';
 import { mergeAgentConfigFromDraft } from './agent-config-payload';
 
 export interface CreateAgentResult {
   agent: Agent;
-  thread: Thread | null;
 }
 
 export async function createAgent(
@@ -40,14 +37,7 @@ export async function createAgent(
   });
   const agent = toClientAgentFromPublic(record);
   useAgentStore.getState().upsert(agent);
-  if (agent.parentId) {
-    return { agent, thread: null };
-  }
-  const threadRecord = await createThreadRecord({ agentId: record.id });
-  const thread = toClientThread(threadRecord);
-  useThreadStore.getState().upsert(thread);
-  useSessionStore.getState().replaceEvents(threadRecord.id, threadRecord.events);
-  return { agent, thread };
+  return { agent };
 }
 
 export async function refreshOrgAgents(orgId: string): Promise<Agent[]> {
