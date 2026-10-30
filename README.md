@@ -51,7 +51,7 @@ First launch on macOS: right-click the app and choose **Open** — the build is 
 docker compose -f deploy/docker-compose.yml up -d
 ```
 
-Host and web UI in two containers over one volume; an optional SearXNG profile keeps `web_search` on your own infrastructure.
+Host and web UI in two containers over one volume; an optional SearXNG profile keeps `web_search` on your own infrastructure. Updates: `docker compose -f deploy/docker-compose.yml pull && docker compose -f deploy/docker-compose.yml up -d` — the desk shows a toast and a Settings → Updates entry when a newer release exists.
 
 ### Server binaries and CLI
 
@@ -64,6 +64,7 @@ harnesys host invite --org <orgId> --name <nodeName>
 harnesys host enroll <relayUrl> <code> --org <orgId> --name <nodeName>
 harnesys host doctor          # diagnostics
 harnesys host promote ...     # live relay-role transfer
+harnesys update               # self-update host/web binaries from the latest release
 ```
 
 ## Quick start

@@ -14,3 +14,9 @@ replace its binary. Browser builds are a no-op (`isDesktop()`).
 Endpoint and signing: `apps/desktop/src-tauri/tauri.conf.json`, artifacts and
 `latest.json` are produced by `.github/workflows/release.yml`. deb installs are
 not covered by the Tauri updater.
+
+Server installs (VPS / Docker) cannot self-update from the browser:
+`ServerUpdateToaster` compares the host version (`active-host`) with that same
+`latest.json` once per mount and shows a persistent toast pointing at the
+release; `UpdatePane` renders a server variant with a manual check. Binary
+installs update via `harnesys update`, Docker via `docker compose pull`.

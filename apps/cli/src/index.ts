@@ -6,6 +6,7 @@ import { commandPromote } from './host-promote.ts';
 import { commandRetarget } from './host-retarget.ts';
 import { commandLogin } from './login.ts';
 import { commandOwnerInit } from './owner-init.ts';
+import { commandUpdate } from './update.ts';
 
 export type CliMode =
   | 'help'
@@ -17,6 +18,7 @@ export type CliMode =
   | 'host-retarget'
   | 'host-promote'
   | 'host-doctor'
+  | 'update'
   | 'unknown';
 
 export interface CliArgs {
@@ -27,6 +29,7 @@ export interface CliArgs {
   ttlMin?: number;
   relayUrl?: string;
   code?: string;
+  repo?: string;
   targetNodeId?: string;
   newRelayUrl?: string;
   accept?: boolean;
@@ -56,6 +59,9 @@ export function parseArgs(argv: string[]): CliArgs {
     }
     return { mode: 'unknown', detail: `owner ${sub}` };
   }
+  if (cmd === 'update') {
+    return { mode: 'update', repo: readFlag(argv, '--repo') };
+  }
   if (cmd !== 'host') {
     return { mode: 'unknown', detail: cmd };
   }
@@ -63,6 +69,11 @@ export function parseArgs(argv: string[]): CliArgs {
     return { mode: 'help' };
   }
   return parseHostSubcommand(sub, rest);
+}
+
+function readFlag(argv: string[], flag: string): string | undefined {
+  const index = argv.indexOf(flag);
+  return index >= 0 ? argv[index + 1] : undefined;
 }
 
 function parseHostSubcommand(sub: string, rest: string[]): CliArgs {
@@ -184,6 +195,7 @@ usage:
   harnesys host promote --org <orgId> --target-node <nodeId> --relay-url <url>
   harnesys host promote --org <orgId> --accept --from <url> --token <token>
   harnesys host doctor
+  harnesys update [--repo <owner/name>]
 `;
 
 const HOST_HANDLERS: Record<
@@ -216,6 +228,7 @@ const HOST_HANDLERS: Record<
       token: args.token,
     }),
   'host-doctor': () => commandDoctor(),
+  update: (args) => commandUpdate(args.repo),
 };
 
 async function main(): Promise<void> {

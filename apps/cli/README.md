@@ -22,6 +22,7 @@ harnesys host retarget --org <orgId> <newRelayUrl>
 harnesys host promote --org <orgId> --target-node <nodeId> --relay-url <url>
 harnesys host promote --org <orgId> --accept --from <url> --token <token>
 harnesys host doctor
+harnesys update [--repo <owner/name>]
 ```
 
 `host *` commands require a session (`Authorization: Bearer` from `~/.harnesys/session.json`); on `401` the CLI refreshes the session once via `POST /api/session/refresh` and retries.
@@ -35,6 +36,7 @@ harnesys host doctor
 | `host retarget` | point a worker at a new relay URL |
 | `host promote` | start relay-role transfer (`--target-node`) or accept it (`--accept`) |
 | `host doctor` | inspect machine home, file permissions, org data, and relay reachability |
+| `update` | compare the CLI version with the latest GitHub release, download `harnesys-host`/`harnesys-web` into staging next to the installed binaries, atomically replace them, and restart `systemctl --user` units when they are active |
 
 Errors are printed as `errorCode — message` from the common contract (`{statusCode, errorCode, message, path, timestamp, traceId?}`).
 
@@ -48,6 +50,8 @@ Everything lives under `HARNESYS_HOME` (default `~/.harnesys`):
 | `config.json` | host public origin / listen address for local calls |
 | `machine.json` | `{orgs, activeOrgId}` machine membership |
 | `nodes/<orgId>.json` | worker identity `{relayUrl?, token?, ticketKey?}` (written by the server) |
+
+`update` runs only from a compiled binary (or with `HARNESYS_BIN_DIR` pointing at the install directory). Environment: `HARNESYS_REPO` (default `harnesys/harnesys`), `HARNESYS_BIN_DIR`.
 
 No other environment variables are read.
 
