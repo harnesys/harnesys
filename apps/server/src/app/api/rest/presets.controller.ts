@@ -32,7 +32,9 @@ export class PresetsController {
   ) {}
 
   @Get()
-  list(@Query(ListPresetsQuerySchema) query: ListPresetsQuery): ListPresetsResponse | ListPresetDetailsResponse {
+  list(
+    @Query(ListPresetsQuerySchema) query: ListPresetsQuery,
+  ): ListPresetsResponse | ListPresetDetailsResponse {
     return this.listPresets.execute(query);
   }
 

@@ -4,13 +4,14 @@ import { toClientAgentFromPublic, useAgentStore } from '@/entities/agent';
 import { toClientThread, useThreadStore } from '@/entities/thread';
 import { useDeskStore } from '@/features/desk';
 import { GitCommitDiffView } from '@/features/git-commit';
-import type { IdeTab } from '@/features/ide';
+import { type IdeTab, useIdeStore } from '@/features/ide';
 import { agentConnectorsQuery } from '@/features/manage-agent/model/connector-api';
 import { BoardSurface } from '@/features/manage-issues';
 import { openFileKind } from '@/features/open-file';
 import { HitlPrompt } from '@/features/send-message';
 import { ApiError, getOrgAgent, getThread } from '@/shared/api';
 import { useOrgId } from '@/shared/config/location';
+import { useStudioNavigation } from '@/shared/config/navigation';
 import { ChatComposer } from '@/widgets/chat-composer';
 import { SpawnView, ThreadPanel } from '@/widgets/chat-transcript';
 import {
@@ -56,6 +57,21 @@ function isNotFound(error: Error | null): boolean {
   return error instanceof ApiError && error.status === 404;
 }
 
+function useCloseMissingTab(tabId: string, isMissing: boolean): void {
+  const { openDesk } = useStudioNavigation();
+  useEffect(() => {
+    if (!isMissing) {
+      return;
+    }
+    const { workspace, closeTab } = useIdeStore.getState();
+    const wasActive = workspace.activeId === tabId;
+    closeTab(tabId);
+    if (wasActive) {
+      openDesk();
+    }
+  }, [isMissing, openDesk, tabId]);
+}
+
 function ThreadTabContent({
   tab,
   threadId,
@@ -83,6 +99,9 @@ function ThreadTabContent({
     enabled: agentId !== null && !agent,
     retry: false,
   });
+  const isMissing =
+    (!thread && isNotFound(threadQuery.error)) || (!agent && isNotFound(agentQuery.error));
+  useCloseMissingTab(tab.id, isMissing);
   useEffect(() => {
     if (threadQuery.data) {
       useThreadStore.getState().upsert(toClientThread(threadQuery.data));
@@ -94,7 +113,7 @@ function ThreadTabContent({
     }
   }, [agentQuery.data]);
   if (!thread || !agent) {
-    if ((!thread && isNotFound(threadQuery.error)) || (!agent && isNotFound(agentQuery.error))) {
+    if (isMissing) {
       return (
         <div
           className="flex flex-1 items-center justify-center text-muted-foreground text-sm"

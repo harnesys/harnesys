@@ -1,5 +1,5 @@
 import type { PersistedIdeWorkspace } from '@harnesys/studio-shared';
-import { schedulePersistDeskChrome } from '@/features/desk';
+import { schedulePersistDeskChrome } from '@/features/desk/model/desk-chrome';
 import type { IdeTab, IdeTabKind } from './ide.store';
 import {
   collapseLayout,

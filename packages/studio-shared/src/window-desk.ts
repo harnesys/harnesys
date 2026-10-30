@@ -22,7 +22,17 @@ export interface ProjectRecord {
   color?: string | null;
   status?: HostNodeStatus;
 }
-export type IdeTabKind = 'thread' | 'file' | 'spawn' | 'diff' | 'schedule' | 'webhook' | 'terminal';
+export type IdeTabKind =
+  | 'thread'
+  | 'file'
+  | 'spawn'
+  | 'diff'
+  | 'schedule'
+  | 'webhook'
+  | 'terminal'
+  | 'board'
+  | 'attachment'
+  | 'thread-file';
 export interface PersistedIdeTab {
   id: string;
   kind: IdeTabKind;
@@ -33,7 +43,13 @@ export interface PersistedIdeTab {
   scheduleId?: string;
   webhookId?: string;
   terminalSessionId?: string;
+  boardId?: string;
+  issueId?: string;
+  attachmentId?: string;
+  mediaType?: string;
   path?: string;
+  worktreeId?: string;
+  worktreeBranch?: string;
   dirty?: boolean;
 }
 export interface PersistedIdeGroup {

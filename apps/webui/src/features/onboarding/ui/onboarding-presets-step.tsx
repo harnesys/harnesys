@@ -40,7 +40,7 @@ export function OnboardingPresetsStep({
     queryKey: ['presets', 'agent-details', orgId],
     queryFn: async (): Promise<AgentPresetDetail[]> => {
       const list = await listPresetDetails({ kind: 'agent' });
-      return list;
+      return list.filter((item): item is AgentPresetDetail => item.kind === 'agent');
     },
   });
   const details = sortDefaultFirst(detailsQuery.data ?? []);

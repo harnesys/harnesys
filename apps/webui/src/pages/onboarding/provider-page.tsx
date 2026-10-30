@@ -1,7 +1,7 @@
 import type { Driver } from '@harnesys/studio-shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { Navigate, useNavigate, useParams } from 'react-router';
 import { persistedApiUrl } from '@/features/manage-project-settings/ui/provider-endpoint';
 import { OnboardingProviderConnect } from '@/features/onboarding';
 import { ONBOARDING_STEP_LABELS } from '@/features/onboarding/model/onboarding-copy';
@@ -30,6 +30,10 @@ export function OnboardingProviderPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const selected = catalog?.drivers.find((item) => item.id === draft.driver);
+
+  if (!orgId) {
+    return <Navigate to={studioPath.onboardingChoose} replace />;
+  }
 
   const connect = async () => {
     if (connected) {

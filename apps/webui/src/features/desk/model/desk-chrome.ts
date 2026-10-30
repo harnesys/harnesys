@@ -12,6 +12,7 @@ let loadPromise: Promise<void> | null = null;
 let activeOrgId: string | null = null;
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
 let ready = false;
+let hydratedOrgId: string | null = null;
 export function setDeskWorkspaceReader(reader: WorkspaceReader): void {
   workspaceReader = reader;
 }
@@ -62,8 +63,11 @@ function emptyDeskSlice(): WindowDesk {
 async function runHydrate(orgId: string): Promise<void> {
   activeOrgId = orgId;
   await ensureDesksLoaded();
-  const desk = desksCache[orgId] ?? emptyDeskSlice();
-  workspaceWriter(desk.workspace);
+  if (hydratedOrgId !== orgId) {
+    const desk = desksCache[orgId] ?? emptyDeskSlice();
+    workspaceWriter(desk.workspace);
+    hydratedOrgId = orgId;
+  }
   ready = true;
 }
 async function ensureDesksLoaded(): Promise<void> {

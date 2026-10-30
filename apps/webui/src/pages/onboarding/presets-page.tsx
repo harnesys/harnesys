@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router';
+import { Navigate, useNavigate, useParams } from 'react-router';
 import { OnboardingPresetsStep } from '@/features/onboarding';
 import { ONBOARDING_STEP_LABELS } from '@/features/onboarding/model/onboarding-copy';
 import { OnboardingShell } from '@/features/onboarding/ui/onboarding-shell';
@@ -10,6 +10,10 @@ export function OnboardingPresetsPage() {
   const { orgId } = useParams();
   const navigate = useNavigate();
   const { setActiveOrgId } = useOrgStore();
+
+  if (!orgId) {
+    return <Navigate to={studioPath.onboardingChoose} replace />;
+  }
 
   const enterOrg = () => {
     if (!orgId) {

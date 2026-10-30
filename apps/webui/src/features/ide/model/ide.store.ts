@@ -1,5 +1,6 @@
 import type { ProjectMoveItem } from '@harnesys/studio-shared';
 import { create } from 'zustand';
+import { setDeskWorkspaceReader, setDeskWorkspaceWriter } from '@/features/desk/model/desk-chrome';
 import { randomUUID } from '@/shared/lib/random-uuid';
 import {
   closeGroupState,
@@ -15,7 +16,14 @@ import {
   withActiveTabState,
 } from './ide-layout';
 import { remapProjectPaths } from './ide-path-remap';
-import { fileTabKey, loadPersisted, normalizeIdeFilePath, persist, tabIdFor } from './ide-persist';
+import {
+  fileTabKey,
+  loadPersisted,
+  normalizeIdeFilePath,
+  persist,
+  tabIdFor,
+  workspaceFromPersisted,
+} from './ide-persist';
 
 export { firstGroupOfLayout, type IdeSplitNode, lastGroupOfLayout } from './ide-tree';
 export type IdeTabKind =
@@ -274,6 +282,10 @@ export const useIdeStore = create<IdeStore>((set) => ({
     set((state) => withWs(state, setSplitRatioState(state.workspace, splitId, ratio))),
 }));
 useIdeStore.subscribe((state) => persist(state.workspace));
+setDeskWorkspaceReader(() => useIdeStore.getState().workspace);
+setDeskWorkspaceWriter((persisted) => {
+  useIdeStore.setState({ workspace: workspaceFromPersisted(persisted) });
+});
 export function useIdeTabs(): IdeWorkspaceState {
   return useIdeStore((state) => state.workspace);
 }
