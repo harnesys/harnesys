@@ -10,6 +10,8 @@ import { toast } from '@/shared/ui/toast';
 import {
   ONBOARDING_BACK,
   PRESETS_CREATE,
+  PRESETS_DEFAULT_BADGE,
+  PRESETS_DEFAULT_PRESET_ID,
   PRESETS_MODEL_HINT,
   PRESETS_MODEL_LABEL,
   PRESETS_SKIP,
@@ -35,7 +37,13 @@ export function OnboardingPresetsStep({
   });
   const items = (presetsQuery.data ?? []).filter(isAgentPreset);
 
+  const isDefault = (id: string) => id === PRESETS_DEFAULT_PRESET_ID;
+  const isPicked = (id: string) => isDefault(id) || selectedIds.includes(id);
+
   const toggle = (id: string) => {
+    if (isDefault(id)) {
+      return;
+    }
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
@@ -44,11 +52,8 @@ export function OnboardingPresetsStep({
   const create = async () => {
     setBusy(true);
     const trimmedModelId = modelId.trim();
-    for (const id of selectedIds) {
-      const item = items.find((entry) => entry.id === id);
-      if (!item) {
-        continue;
-      }
+    const picked = items.filter((item) => isPicked(item.id));
+    for (const item of picked) {
       try {
         await createAgentFromPreset(orgId, item.id, {
           ...(trimmedModelId ? { modelId: trimmedModelId } : {}),
@@ -87,7 +92,8 @@ export function OnboardingPresetsStep({
           <PresetCard
             key={item.id}
             item={item}
-            selected={selectedIds.includes(item.id)}
+            badge={isDefault(item.id) ? PRESETS_DEFAULT_BADGE : undefined}
+            selected={isPicked(item.id)}
             onOpen={() => toggle(item.id)}
           />
         ))}
@@ -103,7 +109,7 @@ export function OnboardingPresetsStep({
         <Button
           type="button"
           size="sm"
-          disabled={busy || selectedIds.length === 0}
+          disabled={busy || !items.some(isPicked)}
           data-testid="onboarding-presets-create"
           onClick={() => {
             void create();

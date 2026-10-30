@@ -45,7 +45,7 @@ describe('rolePresetContract', () => {
   });
 
   test('non-role presets have no contract', () => {
-    expect(rolePresetContract('harnesys/assistant', fixture())).toEqual([]);
+    expect(rolePresetContract('harnesys/genie', fixture())).toEqual([]);
   });
 
   test('flags missing required capability', () => {

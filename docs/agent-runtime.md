@@ -166,9 +166,8 @@ file from the skill directory (`create-load-skill-tool.ts`).
 - No budget in config → `{ maxSteps: 50, policy: "ask" }`. `policy` is what happens on
   exhaustion: `ask` (HITL) or `error` (fail the run).
 - Creating an agent from a preset creates exactly that one agent — no implicit companions
-  (`create-agent-from-preset.use-case.ts`). Org creation additionally seeds one top-level
-  `harnesys/assistant` agent when that preset exists (`create-relay-org.use-case.ts`,
-  silent skip when absent; failure to seed never fails org creation).
+  (`create-agent-from-preset.use-case.ts`). Org creation no longer seeds a default agent;
+  the onboarding presets step preselects `harnesys/genie` and locks the selection.
 
 Team presets (`TeamPresetBodySchema`): roles reference agent presets by `agentRef`, plus a board
 (columns, dispatch rules) and a digest schedule (`compose-team-plan.ts`,

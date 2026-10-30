@@ -81,7 +81,9 @@ export const PROVIDER_AVAILABLE = 'From provider';
 
 export const PRESETS_STEP_TITLE = 'Add agents';
 export const PRESETS_STEP_BODY =
-  'Pick presets from the library to create agents. You can change anything later.';
+  'Genie is created by default and always selected. Pick more presets from the library; you can change anything later.';
+export const PRESETS_DEFAULT_BADGE = 'Default';
+export const PRESETS_DEFAULT_PRESET_ID = 'harnesys/genie';
 export const PRESETS_MODEL_LABEL = 'Model for all';
 export const PRESETS_MODEL_HINT = 'Used for every agent you create below.';
 export const PRESETS_SKIP = 'Skip for now';
