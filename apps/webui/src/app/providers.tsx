@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 import { QueryProvider } from '@/app/query-provider';
 import { SessionGate } from '@/app/session-gate';
+import { AppUpdateCheck } from '@/features/app-update/app-update-check';
 import { OrgProvider } from '@/features/switch-org/org-context';
 import { enableSystemNotifications } from '@/shared/lib/system-notification';
 import { ThemeProvider } from '@/shared/ui/theme-provider';
@@ -16,7 +17,10 @@ export function Providers({ children }: { children: ReactNode }) {
       <QueryProvider>
         <SessionGate>
           <OrgProvider>
-            <Toaster>{children}</Toaster>
+            <Toaster>
+              {children}
+              <AppUpdateCheck />
+            </Toaster>
           </OrgProvider>
         </SessionGate>
       </QueryProvider>

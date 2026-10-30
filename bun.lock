@@ -14,7 +14,7 @@
     },
     "apps/cli": {
       "name": "@harnesys/cli",
-      "version": "0.1.0",
+      "version": "0.7.0",
       "devDependencies": {
         "@types/bun": "^1.4.2",
         "typescript": "^5.9.3",
@@ -22,14 +22,14 @@
     },
     "apps/desktop": {
       "name": "@harnesys/desktop",
-      "version": "0.1.0",
+      "version": "0.7.0",
       "devDependencies": {
         "@tauri-apps/cli": "^2",
       },
     },
     "apps/server": {
       "name": "@harnesys/server",
-      "version": "0.1.0",
+      "version": "0.7.0",
       "dependencies": {
         "@ai-sdk/openai": "3.0.90",
         "@ai-sdk/openai-compatible": "3.0.30",
@@ -56,7 +56,7 @@
     },
     "apps/webui": {
       "name": "@harnesys/webui",
-      "version": "0.1.0",
+      "version": "0.7.0",
       "dependencies": {
         "@base-ui/react": "^1.7.0",
         "@floating-ui/dom": "^1.6.0",
@@ -71,6 +71,8 @@
         "@tanstack/react-query": "^5.90.2",
         "@tauri-apps/api": "^2",
         "@tauri-apps/plugin-opener": "^2",
+        "@tauri-apps/plugin-process": "^2",
+        "@tauri-apps/plugin-updater": "^2",
         "@tiptap/core": "^3.31.3",
         "@tiptap/extension-code-block-lowlight": "^3.31.4",
         "@tiptap/extension-document": "^3.31.3",
@@ -595,6 +597,10 @@
     "@tauri-apps/cli-win32-x64-msvc": ["@tauri-apps/cli-win32-x64-msvc@2.12.1", "", { "os": "win32", "cpu": "x64" }, "sha512-dIFaKslrzcbesb+bBh+E1R9km241pHyj32w6D9FPtvQeYpRUFbiCLEa/2S+S0UnIytfxepp4P+X8IerGqnXeYg=="],
 
     "@tauri-apps/plugin-opener": ["@tauri-apps/plugin-opener@2.7.0", "", { "dependencies": { "@tauri-apps/api": "^2.12.0" } }, "sha512-mBorYfVKh9Lt7s4ZFtKbMUTxBw+Y/sVmSlKCtkkoBgMTC/DIbt/kaPm67L/2djAUqDI1wbixy5OHHVmipjuGMw=="],
+
+    "@tauri-apps/plugin-process": ["@tauri-apps/plugin-process@2.4.0", "", { "dependencies": { "@tauri-apps/api": "^2.12.0" } }, "sha512-GddrmsSLAYrLa/yTXlXK/YRDzUgYeeOnUXTbiyvJWkmI424RmDPD3FVLeqcon7rv6O6ZfhBilcrHWnSo7o6hIQ=="],
+
+    "@tauri-apps/plugin-updater": ["@tauri-apps/plugin-updater@2.14.1", "", { "dependencies": { "@tauri-apps/api": "^2.12.0" } }, "sha512-Hr7nlBm1wT6xbwzjZ/S36YULazu8MNlj5vvOwMl47fXI7HTa5Bjl1PbDEwVHaZTAKzE1VZsUy35UqnbrQxmYQw=="],
 
     "@tiptap/core": ["@tiptap/core@3.31.4", "", { "peerDependencies": { "@tiptap/pm": "3.31.4" } }, "sha512-cIVUQYBycighzsk6GbmCef8ZiEDVxoT5EuAe4xg2q9dNkDqCXVqI4YGr9aavCQEiAS4uHiRwqvcsPqJHipFDfg=="],
 

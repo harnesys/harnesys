@@ -20,6 +20,7 @@ import { SetOrgSettingsUseCase } from '../../application/org-machine/set-org-set
 import { UpdateOrgUseCase } from '../../application/org-machine/update-org.use-case.ts';
 import { type UserPrincipal } from '../../domain/identity/principal.ts';
 import { SessionPrincipal } from '../guards/session.guard.ts';
+import { serverVersion } from './server-version.ts';
 
 @Controller('orgs')
 export class OrgsController {
@@ -38,8 +39,8 @@ export class OrgsController {
   activeHost(
     @Param('id') id: string,
     @SessionPrincipal() principal: UserPrincipal,
-  ): { hostId: string } {
-    return this.getActiveHost.execute({ orgId: id, principal });
+  ): { hostId: string; version: string } {
+    return { ...this.getActiveHost.execute({ orgId: id, principal }), version: serverVersion() };
   }
 
   @Get()

@@ -7,8 +7,10 @@ export interface AppMeta {
   nodeId: string | null;
 }
 
-export function getActiveHost(orgId: string): Promise<{ hostId: string }> {
-  return apiJson<{ hostId: string }>(`/api/orgs/${encodeURIComponent(orgId)}/active-host`);
+export function getActiveHost(orgId: string): Promise<{ hostId: string; version: string }> {
+  return apiJson<{ hostId: string; version: string }>(
+    `/api/orgs/${encodeURIComponent(orgId)}/active-host`,
+  );
 }
 
 export function getAppMeta(): Promise<AppMeta> {
@@ -17,7 +19,7 @@ export function getAppMeta(): Promise<AppMeta> {
     return Promise.resolve({ version: '0.0.0', nodeId: null });
   }
   return getActiveHost(orgId)
-    .then((response) => ({ version: '0.0.0', nodeId: response.hostId }))
+    .then((response) => ({ version: response.version, nodeId: response.hostId }))
     .catch(() => ({ version: '0.0.0', nodeId: null }));
 }
 

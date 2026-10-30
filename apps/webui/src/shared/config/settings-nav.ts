@@ -16,6 +16,7 @@ import {
   MessageSquareIcon,
   PackageIcon,
   PuzzleIcon,
+  RefreshCwIcon,
   ScrollTextIcon,
   ServerIcon,
   SunIcon,
@@ -45,6 +46,7 @@ export const WINDOW_SETTINGS_CATEGORIES = [
   'members',
   'usage',
   'audit',
+  'updates',
 ] as const;
 export type WindowSettingsCategory = (typeof WINDOW_SETTINGS_CATEGORIES)[number];
 
@@ -88,6 +90,12 @@ export const WINDOW_SETTINGS_GROUPS: SettingsNavGroup[] = [
         label: 'Notifications',
         description: 'Sound alerts for approval requests.',
         icon: BellIcon,
+      },
+      {
+        id: 'updates',
+        label: 'Updates',
+        description: 'Current version, release notes, and auto-update.',
+        icon: RefreshCwIcon,
       },
     ],
   },
