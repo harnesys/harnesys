@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { ExternalLinkIcon } from 'lucide-react';
 import { useEffect } from 'react';
+import { useParams } from 'react-router';
 import { appMetaQuery } from '@/shared/api';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
@@ -10,7 +11,7 @@ import { Progress } from '@/shared/ui/progress';
 import { Switch } from '@/shared/ui/switch';
 import { isDesktop, openReleaseNotes } from '../model/app-update';
 import { useAppUpdateStore } from '../model/app-update.store';
-import { isNewerVersion, latestReleaseQuery, releasePageUrl } from '../model/server-update';
+import { findRelease, isNewerVersion, releasePageUrl, releasesQuery } from '../model/server-update';
 
 export function UpdatePane() {
   const status = useAppUpdateStore((state) => state.status);
@@ -55,6 +56,7 @@ export function UpdatePane() {
           </button>
         </div>
       </Field>
+      <CurrentReleaseNotes version={currentVersion} />
       {showUpdateCard ? (
         <Field data-testid="update-card">
           <div className="flex items-center gap-2">
@@ -149,16 +151,20 @@ function UpdateCardFooter({
 
 /**
  * Server installs (VPS / Docker) have no in-app updater: the section reports
- * the host version and the latest GitHub release; installation stays with the
- * operator (`docker compose pull` or `harnesys update`).
+ * the host version, what shipped in it, and what ships next; installation
+ * stays with the operator (`docker compose pull` or `harnesys update`).
  */
 function ServerUpdateSection() {
-  const meta = useQuery(appMetaQuery);
-  const latest = useQuery(latestReleaseQuery);
+  const { orgId } = useParams();
+  const meta = useQuery(appMetaQuery(orgId));
+  const releases = useQuery(releasesQuery);
   const current = meta.data?.version ?? null;
-  const available = latest.data;
+  const latest = releases.data?.[0] ?? null;
+  const currentRelease = current !== null ? findRelease(releases.data ?? [], current) : null;
   const hasUpdate =
-    typeof current === 'string' && typeof available === 'string' && isNewerVersion(current, available);
+    typeof current === 'string' &&
+    typeof latest?.version === 'string' &&
+    isNewerVersion(current, latest.version);
 
   return (
     <FieldGroup className="gap-6">
@@ -173,7 +179,11 @@ function ServerUpdateSection() {
             className="flex cursor-pointer items-center gap-1 text-muted-foreground text-sm hover:text-foreground"
             data-testid="update-release-notes"
             onClick={() => {
-              window.open(releasePageUrl(hasUpdate ? available : current), '_blank', 'noreferrer');
+              window.open(
+                releasePageUrl(hasUpdate ? latest.version : current),
+                '_blank',
+                'noreferrer',
+              );
             }}
           >
             Release notes
@@ -181,17 +191,24 @@ function ServerUpdateSection() {
           </button>
         </div>
       </Field>
-      {hasUpdate ? (
+      {currentRelease?.notes ? (
+        <Field data-testid="current-release-notes">
+          <FieldLabel>What's in v{currentRelease.version}</FieldLabel>
+          <ReleaseNotes notes={currentRelease.notes} />
+        </Field>
+      ) : null}
+      {hasUpdate && latest ? (
         <Field data-testid="server-update-card">
           <div className="flex items-center gap-2">
-            <FieldLabel>Harnesys v{available}</FieldLabel>
+            <FieldLabel>Harnesys v{latest.version}</FieldLabel>
             <Badge variant="outline" className="text-[10px]">
               New version
             </Badge>
           </div>
+          <ReleaseNotes notes={latest.notes} />
           <FieldDescription>
-            Server installs update outside the app: run `docker compose pull && docker compose up
-            -d` or `harnesys update` on the host.
+            Server installs update outside the app: `docker compose pull && docker compose up -d` or
+            `harnesys update` on the host.
           </FieldDescription>
         </Field>
       ) : null}
@@ -199,18 +216,18 @@ function ServerUpdateSection() {
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
-            disabled={latest.isFetching}
-            onClick={() => void latest.refetch()}
+            disabled={releases.isFetching}
+            onClick={() => void releases.refetch()}
             data-testid="update-check"
           >
-            {latest.isFetching ? 'Checking…' : 'Check for updates'}
+            {releases.isFetching ? 'Checking…' : 'Check for updates'}
           </Button>
-          {latest.isError ? (
+          {releases.data !== undefined && releases.data.length === 0 ? (
             <FieldDescription data-testid="update-status">
               Could not reach GitHub Releases.
             </FieldDescription>
           ) : null}
-          {!latest.isFetching && !latest.isError && !hasUpdate && available !== null ? (
+          {!releases.isFetching && !hasUpdate && latest ? (
             <FieldDescription data-testid="update-status">
               You are on the latest version.
             </FieldDescription>
@@ -218,5 +235,34 @@ function ServerUpdateSection() {
         </div>
       </Field>
     </FieldGroup>
+  );
+}
+
+function CurrentReleaseNotes({ version }: { version: string | null }) {
+  const releases = useQuery(releasesQuery);
+  const currentRelease = version !== null ? findRelease(releases.data ?? [], version) : null;
+  if (!currentRelease?.notes) {
+    return null;
+  }
+  return (
+    <Field data-testid="current-release-notes">
+      <FieldLabel>What's in v{currentRelease.version}</FieldLabel>
+      <ReleaseNotes notes={currentRelease.notes} />
+    </Field>
+  );
+}
+
+function ReleaseNotes({ notes }: { notes: string | null }) {
+  if (!notes) {
+    return (
+      <FieldDescription className="text-muted-foreground">
+        No release notes for this version.
+      </FieldDescription>
+    );
+  }
+  return (
+    <div className="max-h-64 overflow-y-auto rounded-md border bg-muted/30 p-3">
+      <Markdown text={notes} className="text-sm" />
+    </div>
   );
 }

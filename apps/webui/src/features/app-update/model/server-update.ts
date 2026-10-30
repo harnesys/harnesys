@@ -1,7 +1,9 @@
 import { queryOptions } from '@tanstack/react-query';
 import { releaseUrl } from './app-update';
 
-const LATEST_JSON_URL = 'https://github.com/harnesys/harnesys/releases/latest/download/latest.json';
+const GH_API = 'https://api.github.com';
+const REPO = 'harnesys/harnesys';
+const PER_PAGE = 10;
 
 /** Numeric semver triple of "v1.2.3" / "1.2.3"; null when it does not parse. */
 export function parseVersion(tag: string): [number, number, number] | null {
@@ -27,35 +29,76 @@ export function isNewerVersion(current: string, latest: string): boolean {
   );
 }
 
-interface LatestRelease {
+/** "v1.2.3" -> "1.2.3"; null when the tag is not a semver release. */
+export function releaseVersionFromTag(tag: string): string | null {
+  const parts = parseVersion(tag);
+  return parts ? parts.join('.') : null;
+}
+
+export interface ReleaseInfo {
   version: string;
+  title: string | null;
+  notes: string | null;
+  prerelease: boolean;
+}
+
+interface GithubRelease {
+  tag_name?: string;
+  name?: string;
+  body?: string;
+  prerelease?: boolean;
+}
+
+function toReleaseInfo(raw: GithubRelease): ReleaseInfo | null {
+  const version = typeof raw.tag_name === 'string' ? releaseVersionFromTag(raw.tag_name) : null;
+  if (!version) {
+    return null;
+  }
+  return {
+    version,
+    title: typeof raw.name === 'string' && raw.name.length > 0 ? raw.name : null,
+    notes: typeof raw.body === 'string' && raw.body.length > 0 ? raw.body : null,
+    prerelease: raw.prerelease === true,
+  };
 }
 
 /**
- * One-off fetch of the Tauri `latest.json` published with each release.
- * Server installs (VPS / Docker) have no in-app updater; installation stays
- * with the operator (`docker compose pull` / `harnesys update`).
+ * Recent releases from the GitHub API (CORS-enabled, unlike the release
+ * asset URLs). Latest first, oldest trimmed. Server installs (VPS / Docker)
+ * cannot self-update from the browser; this only powers "what's new" views.
  */
-export async function fetchLatestReleaseVersion(): Promise<string | null> {
+export async function fetchReleases(): Promise<ReleaseInfo[]> {
   try {
-    const response = await fetch(LATEST_JSON_URL, { signal: AbortSignal.timeout(15000) });
+    const response = await fetch(`${GH_API}/repos/${REPO}/releases?per_page=${PER_PAGE}`, {
+      headers: { accept: 'application/vnd.github+json' },
+      signal: AbortSignal.timeout(15000),
+    });
     if (!response.ok) {
-      return null;
+      return [];
     }
-    const body = (await response.json()) as Partial<LatestRelease>;
-    return typeof body.version === 'string' ? body.version : null;
+    const body = (await response.json()) as GithubRelease[];
+    if (!Array.isArray(body)) {
+      return [];
+    }
+    return body.map(toReleaseInfo).filter((item): item is ReleaseInfo => item !== null);
   } catch {
-    return null;
+    return [];
   }
+}
+
+export function findRelease(releases: ReleaseInfo[], version: string): ReleaseInfo | null {
+  const parts = parseVersion(version);
+  const normalized = parts ? parts.join('.') : version;
+  return releases.find((item) => item.version === normalized) ?? null;
 }
 
 export function releasePageUrl(version: string | null): string {
   return releaseUrl(version);
 }
 
-export const latestReleaseQuery = queryOptions({
-  queryKey: ['latest-release'] as const,
-  queryFn: fetchLatestReleaseVersion,
+export const releasesQuery = queryOptions({
+  queryKey: ['releases'] as const,
+  queryFn: fetchReleases,
   staleTime: Number.POSITIVE_INFINITY,
   refetchOnWindowFocus: false,
   retry: false,

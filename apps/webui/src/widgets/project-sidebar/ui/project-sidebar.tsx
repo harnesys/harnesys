@@ -83,8 +83,8 @@ export function ProjectSidebar({
 }: {
   onResizeStart?: (event: ReactMouseEvent) => void;
 }) {
-  const { data: meta } = useQuery(appMetaQuery);
   const { orgId, focus } = useStudioLocation();
+  const { data: meta } = useQuery(appMetaQuery(orgId));
   const threadId = studioFocusThreadId(focus);
   const projectQuery = useProjects();
   const projectIds = (projectQuery.data ?? []).map((project) => project.id);

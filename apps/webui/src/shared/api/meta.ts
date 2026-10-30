@@ -13,18 +13,20 @@ export function getActiveHost(orgId: string): Promise<{ hostId: string; version:
   );
 }
 
-export function getAppMeta(): Promise<AppMeta> {
-  const orgId = getActiveOrgId();
-  if (!orgId) {
+export function getAppMeta(orgId?: string | null): Promise<AppMeta> {
+  const resolved = orgId ?? getActiveOrgId();
+  if (!resolved) {
     return Promise.resolve({ version: '0.0.0', nodeId: null });
   }
-  return getActiveHost(orgId)
+  return getActiveHost(resolved)
     .then((response) => ({ version: response.version, nodeId: response.hostId }))
     .catch(() => ({ version: '0.0.0', nodeId: null }));
 }
 
-export const appMetaQuery = queryOptions({
-  queryKey: ['app-meta'] as const,
-  queryFn: getAppMeta,
-  staleTime: Number.POSITIVE_INFINITY,
-});
+export function appMetaQuery(orgId?: string | null) {
+  return queryOptions({
+    queryKey: ['app-meta', orgId ?? null] as const,
+    queryFn: () => getAppMeta(orgId),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}

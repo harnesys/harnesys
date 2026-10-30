@@ -33,7 +33,7 @@ export function DeskSync() {
   const visibleReady = useDeskStore((state) =>
     projectId ? state.hydrated[projectId] === 'ready' : false,
   );
-  const { data: meta } = useQuery(appMetaQuery);
+  const { data: meta } = useQuery(appMetaQuery(orgId));
   const remoteProjects = useMemo(() => {
     const remote = new Set<string>();
     if (meta?.nodeId && projectQuery.data) {

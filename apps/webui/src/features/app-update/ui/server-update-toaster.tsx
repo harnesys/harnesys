@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
+import { useOrgStore } from '@/features/switch-org/org-context';
 import { appMetaQuery } from '@/shared/api';
 import { toast } from '@/shared/ui/toast';
 import { isDesktop } from '../model/app-update';
-import { isNewerVersion, latestReleaseQuery } from '../model/server-update';
+import { isNewerVersion, releasesQuery } from '../model/server-update';
 
 const TOAST_ID = 'server-update';
 
@@ -13,18 +14,24 @@ const TOAST_ID = 'server-update';
  * handled by AppUpdateToaster and skipped here.
  */
 export function ServerUpdateToaster() {
-  const meta = useQuery(appMetaQuery);
-  const latest = useQuery(latestReleaseQuery);
+  const { activeOrgId } = useOrgStore();
+  const meta = useQuery(appMetaQuery(activeOrgId));
+  const latest = useQuery(releasesQuery);
   const current = meta.data?.version;
-  const available = latest.data;
+  const available = latest.data?.[0];
 
   useEffect(() => {
-    if (isDesktop() || !current || !available || !isNewerVersion(current, available)) {
+    if (
+      isDesktop() ||
+      typeof current !== 'string' ||
+      typeof available?.version !== 'string' ||
+      !isNewerVersion(current, available.version)
+    ) {
       return;
     }
     toast.add({
       id: TOAST_ID,
-      title: `Harnesys ${available} is available`,
+      title: `Harnesys ${available.version} is available`,
       description:
         'Server installs update outside the app: `docker compose pull` or `harnesys update`.',
       timeout: 0,

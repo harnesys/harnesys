@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { isNewerVersion, parseVersion } from './server-update';
+import type { ReleaseInfo } from './server-update';
+import { findRelease, isNewerVersion, parseVersion, releaseVersionFromTag } from './server-update';
 
 describe('parseVersion', () => {
   test('accepts v-prefixed and bare triples', () => {
@@ -25,5 +26,29 @@ describe('isNewerVersion', () => {
   test('unparsable versions never trigger a banner', () => {
     expect(isNewerVersion('0.7.0', 'dev')).toBe(false);
     expect(isNewerVersion('unknown', '0.8.0')).toBe(false);
+  });
+});
+
+describe('releaseVersionFromTag', () => {
+  test('strips the v prefix', () => {
+    expect(releaseVersionFromTag('v0.7.0')).toBe('0.7.0');
+    expect(releaseVersionFromTag('0.7.0')).toBe('0.7.0');
+  });
+  test('null for non-release tags', () => {
+    expect(releaseVersionFromTag('nightly')).toBeNull();
+  });
+});
+
+describe('findRelease', () => {
+  const releases: ReleaseInfo[] = [
+    { version: '0.8.0', title: 'Next', notes: 'body-080', prerelease: false },
+    { version: '0.7.0', title: 'Current', notes: 'body-070', prerelease: false },
+  ];
+  test('matches by normalized version', () => {
+    expect(findRelease(releases, 'v0.7.0')?.notes).toBe('body-070');
+    expect(findRelease(releases, '0.8.0')?.title).toBe('Next');
+  });
+  test('null when the version has no release', () => {
+    expect(findRelease(releases, '0.9.9')).toBeNull();
   });
 });
