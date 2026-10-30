@@ -10,6 +10,7 @@ import type {
 import { createProcessJobRegistry } from 'harnesys';
 import type { AgentRecord } from '../../../domain/agent/agent.ts';
 import type { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
+import { DeskEventsPort } from '../../../domain/desk/desk-events.port.ts';
 import type { LspPort } from '../../../domain/lsp/lsp.port.ts';
 import type { HostFsLayoutPort } from '../../../domain/machine/host-fs-layout.port.ts';
 import type { ModePresetRegistryPort } from '../../../domain/mode-presets/mode-preset-registry.port.ts';
@@ -48,6 +49,7 @@ export interface WireOrgPacksDeps {
   threads?: ThreadRepositoryPort;
   schedules?: ScheduleRepositoryPort;
   webhooks?: WebhookRepositoryPort;
+  deskEvents?: DeskEventsPort;
   issues?: OrgIssueDeps;
   issueTracker?: IssueTrackerPort;
   manager?: OrgManagerDeps;
@@ -74,6 +76,7 @@ export interface WireOrgPackFilter {
   lsp?: LspPort;
   schedules?: ScheduleRepositoryPort;
   webhooks?: WebhookRepositoryPort;
+  deskEvents?: DeskEventsPort;
   issues?: OrgIssueDeps;
   issueTracker?: IssueTrackerPort;
   manager?: OrgManagerDeps;
@@ -122,6 +125,7 @@ export function orgPackInputs(
     modes: deps.modes,
     ...(deps.schedules ? { schedules: deps.schedules } : {}),
     ...(deps.webhooks ? { webhooks: deps.webhooks } : {}),
+    ...(deps.deskEvents ? { deskEvents: deps.deskEvents } : {}),
     ...(deps.secrets ? { secrets: deps.secrets } : {}),
     ...(deps.knowledge ? { knowledge: deps.knowledge } : {}),
     ...(deps.issues ? { issues: deps.issues } : {}),

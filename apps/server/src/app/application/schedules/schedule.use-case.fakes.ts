@@ -1,7 +1,9 @@
 import type { OrgSettings } from '@harnesys/contracts';
 import { OrgSettingsSchema } from '@harnesys/contracts';
+import type { DeskEvent } from '@harnesys/studio-shared';
 import type { AgentPatch, AgentRecord } from '../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
+import { type DeskEventListener, DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import type {
   ScheduleFireRecord,
   ScheduleInsert,
@@ -172,5 +174,17 @@ export class FakeOrgSettings extends OrgSettingsPort {
 
   set(_orgId: string, patch: Partial<OrgSettings>): OrgSettings {
     return OrgSettingsSchema.parse(patch);
+  }
+}
+
+export class FakeDeskEvents extends DeskEventsPort {
+  events: Array<{ orgId: string; event: DeskEvent }> = [];
+
+  override emit(orgId: string, event: DeskEvent): void {
+    this.events.push({ orgId, event });
+  }
+
+  override subscribe(_listener: DeskEventListener): () => void {
+    return () => {};
   }
 }

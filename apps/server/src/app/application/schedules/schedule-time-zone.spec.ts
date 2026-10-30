@@ -3,6 +3,7 @@ import type { AgentRecord } from '../../domain/agent/agent.ts';
 import { CreateScheduleUseCase } from './create-schedule.use-case.ts';
 import {
   FakeAgents,
+  FakeDeskEvents,
   FakeOrgSettings,
   FakeSchedules,
   FakeThreads,
@@ -58,8 +59,9 @@ function harness(timezone: string) {
   const orgSettings = new FakeOrgSettings();
   orgSettings.timezone = timezone;
   const agent = agents.insert(agentRecord());
-  const create = new CreateScheduleUseCase(schedules, threads, agents, orgSettings);
-  const update = new UpdateScheduleUseCase(schedules, threads, agents, orgSettings);
+  const deskEvents = new FakeDeskEvents();
+  const create = new CreateScheduleUseCase(schedules, threads, agents, orgSettings, deskEvents);
+  const update = new UpdateScheduleUseCase(schedules, threads, agents, orgSettings, deskEvents);
   return { schedules, threads, agents, orgSettings, agent, create, update };
 }
 

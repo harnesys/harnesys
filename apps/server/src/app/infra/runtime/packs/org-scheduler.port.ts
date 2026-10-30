@@ -14,8 +14,13 @@ import type {
 } from 'harnesys';
 import { PERMISSION_MODES } from 'harnesys';
 import { isValidCron, nextCronRunAt } from '../../../application/schedules/cron-next.ts';
+import {
+  toDeskScheduleDeletedEvent,
+  toDeskScheduleEvent,
+} from '../../../application/schedules/schedule.helpers.ts';
 import { AgentNotFoundException } from '../../../domain/agent/agent.error.ts';
 import type { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
+import { DeskEventsPort } from '../../../domain/desk/desk-events.port.ts';
 import {
   ScheduleNotFoundException,
   ScheduleValidationException,
@@ -34,6 +39,7 @@ export interface OrgSchedulerPortDeps {
   threads: ThreadRepositoryPort;
   agents: AgentRegistryPort;
   orgSettings: OrgSettingsPort;
+  deskEvents?: DeskEventsPort;
 }
 
 export class OrgSchedulerPort implements SchedulerPort {
@@ -113,6 +119,7 @@ export class OrgSchedulerPort implements SchedulerPort {
       createdAt: now,
       updatedAt: now,
     });
+    this.deps.deskEvents?.emit(scope.orgId, toDeskScheduleEvent(schedule));
     return Promise.resolve({
       schedule: toPortRecord(schedule),
       thread: { id: thread.id, title: thread.title, kind: thread.kind, agentId: thread.agentId },
@@ -135,6 +142,7 @@ export class OrgSchedulerPort implements SchedulerPort {
     if (patch.name !== undefined && patch.name !== current.name) {
       this.deps.threads.patch(scope.orgId, updated.threadId, { title: patch.name });
     }
+    this.deps.deskEvents?.emit(scope.orgId, toDeskScheduleEvent(updated));
     return Promise.resolve(toPortRecord(updated));
   }
 
@@ -145,6 +153,7 @@ export class OrgSchedulerPort implements SchedulerPort {
     if (thread?.kind === 'schedule') {
       this.deps.threads.delete(scope.orgId, thread.id);
     }
+    this.deps.deskEvents?.emit(scope.orgId, toDeskScheduleDeletedEvent(current.id));
     return Promise.resolve();
   }
 

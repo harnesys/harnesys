@@ -3,6 +3,7 @@ import type { CreateScheduleBody, CreateScheduleResponse } from '@harnesys/contr
 import { DEFAULT_MODE_ID } from '@harnesys/contracts';
 import { AgentNotFoundException } from '../../domain/agent/agent.error.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
+import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import { ScheduleValidationException } from '../../domain/schedule/schedule.error.ts';
 import { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repository.port.ts';
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
@@ -10,7 +11,7 @@ import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port
 import { toThreadPublic } from '../threads/thread.helpers.ts';
 import { requireBindableScheduleThread } from './bind-schedule-thread.ts';
 import { isValidCron, nextCronRunAt } from './cron-next.ts';
-import { toSchedulePublic } from './schedule.helpers.ts';
+import { toDeskScheduleEvent, toSchedulePublic } from './schedule.helpers.ts';
 
 export interface CreateScheduleRequest {
   orgId: string;
@@ -25,6 +26,7 @@ export class CreateScheduleUseCase {
     private readonly threads: ThreadRepositoryPort,
     private readonly agents: AgentRegistryPort,
     private readonly orgSettings: OrgSettingsPort,
+    private readonly deskEvents: DeskEventsPort,
   ) {}
 
   execute(request: CreateScheduleRequest): CreateScheduleResponse {
@@ -90,6 +92,7 @@ export class CreateScheduleUseCase {
       createdAt: now,
       updatedAt: now,
     });
+    this.deskEvents.emit(request.orgId, toDeskScheduleEvent(schedule));
     return {
       schedule: toSchedulePublic(schedule),
       thread: toThreadPublic({

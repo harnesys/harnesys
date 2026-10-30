@@ -7,6 +7,7 @@ import { AgentModule } from '../agent/agent.module.ts';
 import { HookRunModule } from '../agent/hook-run.module.ts';
 import { ApprovalModule } from '../approvals/approval.module.ts';
 import { BrowserModule } from '../browser/browser.module.ts';
+import { DeskModule } from '../desk/desk.module.ts';
 import { FileAccessModule } from '../file-access/file-access.module.ts';
 import { FleetHubModule } from '../fleet-hub/fleet-hub.module.ts';
 import { IssueInfraModule } from '../issues/issue.module.ts';
@@ -43,6 +44,7 @@ import { WaitTickerGateAdapter } from './wait-ticker-gate.adapter.ts';
     ApprovalModule,
     FileAccessModule,
     PlanModule,
+    DeskModule,
     ScheduleModule,
     WebhookModule,
     KnowledgeModule,

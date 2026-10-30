@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import type { ScheduleRecord } from '../../domain/schedule/schedule.ts';
-import { FakeOrgSettings, FakeSchedules } from '../schedules/schedule.use-case.fakes.ts';
+import {
+  FakeDeskEvents,
+  FakeOrgSettings,
+  FakeSchedules,
+} from '../schedules/schedule.use-case.fakes.ts';
 import { SetOrgSettingsUseCase } from './set-org-settings.use-case.ts';
 
 const ORG_ID = 'org-1';
@@ -32,7 +36,7 @@ describe('SetOrgSettingsUseCase', () => {
     const settings = new FakeOrgSettings();
     const schedules = new FakeSchedules();
     schedules.items.set('s-1', schedule('s-1', '0 9 * * *', '2026-10-22T09:00:00.000Z'));
-    const useCase = new SetOrgSettingsUseCase(settings, schedules);
+    const useCase = new SetOrgSettingsUseCase(settings, schedules, new FakeDeskEvents());
 
     useCase.execute({ orgId: ORG_ID, patch: { timezone: 'Europe/Moscow' } });
 
@@ -45,7 +49,7 @@ describe('SetOrgSettingsUseCase', () => {
     const settings = new FakeOrgSettings();
     const schedules = new FakeSchedules();
     schedules.items.set('s-1', schedule('s-1', '0 9 * * *', '2026-10-22T09:00:00.000Z'));
-    const useCase = new SetOrgSettingsUseCase(settings, schedules);
+    const useCase = new SetOrgSettingsUseCase(settings, schedules, new FakeDeskEvents());
 
     useCase.execute({ orgId: ORG_ID, patch: { skillsSourceAutoLoad: false } });
 

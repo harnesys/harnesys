@@ -2,11 +2,12 @@ import { Injectable } from '@harnesys/brix';
 import type { CreateWebhookBody, CreateWebhookResponse } from '@harnesys/contracts';
 import { AgentNotFoundException } from '../../domain/agent/agent.error.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
+import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { WebhookRepositoryPort } from '../../domain/webhook/webhook-repository.port.ts';
 import { toThreadPublic } from '../threads/thread.helpers.ts';
 import { requireBindableWebhookThread } from './bind-webhook-thread.ts';
-import { toWebhookPublic, webhookEndpointFor } from './webhook.helpers.ts';
+import { toDeskWebhookEvent, toWebhookPublic, webhookEndpointFor } from './webhook.helpers.ts';
 
 export interface CreateWebhookRequest {
   orgId: string;
@@ -20,6 +21,7 @@ export class CreateWebhookUseCase {
     private readonly webhooks: WebhookRepositoryPort,
     private readonly threads: ThreadRepositoryPort,
     private readonly agents: AgentRegistryPort,
+    private readonly deskEvents: DeskEventsPort,
   ) {}
 
   execute(request: CreateWebhookRequest): CreateWebhookResponse {
@@ -73,6 +75,7 @@ export class CreateWebhookUseCase {
       createdAt: now,
       updatedAt: now,
     });
+    this.deskEvents.emit(request.orgId, toDeskWebhookEvent(webhook));
     return {
       webhook: toWebhookPublic(webhook),
       thread: toThreadPublic({

@@ -2,6 +2,7 @@ import { Injectable } from '@harnesys/brix';
 import type { UpdateWebhookBody, WebhookPublic } from '@harnesys/contracts';
 import { AgentNotFoundException } from '../../domain/agent/agent.error.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
+import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import {
   WebhookNotFoundException,
@@ -11,7 +12,7 @@ import type { WebhookPatch } from '../../domain/webhook/webhook.ts';
 import { WebhookRepositoryPort } from '../../domain/webhook/webhook-repository.port.ts';
 import { recordOwnerOnWrite } from '../threads/run-attribution.ts';
 import { requireBindableWebhookThread } from './bind-webhook-thread.ts';
-import { toWebhookPublic } from './webhook.helpers.ts';
+import { toDeskWebhookEvent, toWebhookPublic } from './webhook.helpers.ts';
 
 export interface UpdateWebhookRequest {
   orgId: string;
@@ -26,6 +27,7 @@ export class UpdateWebhookUseCase {
     private readonly webhooks: WebhookRepositoryPort,
     private readonly threads: ThreadRepositoryPort,
     private readonly agents: AgentRegistryPort,
+    private readonly deskEvents: DeskEventsPort,
   ) {}
 
   execute(request: UpdateWebhookRequest): WebhookPublic {
@@ -74,6 +76,7 @@ export class UpdateWebhookUseCase {
     if (patch.name && patch.name !== current.name) {
       this.threads.patch(request.orgId, updated.threadId, { title: patch.name });
     }
+    this.deskEvents.emit(request.orgId, toDeskWebhookEvent(updated));
     return toWebhookPublic(updated);
   }
 }

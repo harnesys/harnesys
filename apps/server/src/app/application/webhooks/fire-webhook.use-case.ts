@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@harnesys/brix';
 import type { FireWebhookResponse } from '@harnesys/contracts';
 import { webhookTaskText } from '@harnesys/studio-shared';
+import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import {
   ThreadNotFoundException,
@@ -15,6 +16,7 @@ import {
 import { WebhookRepositoryPort } from '../../domain/webhook/webhook-repository.port.ts';
 import { mechanicalRunStart } from '../threads/run-attribution.ts';
 import { SendThreadRunUseCase } from '../threads/send-thread-run.use-case.ts';
+import { toDeskWebhookEvent } from './webhook.helpers.ts';
 
 export interface FireWebhookRequest {
   orgId: string;
@@ -32,6 +34,7 @@ export class FireWebhookUseCase {
     private readonly threadEvents: ThreadEventsPort,
     private readonly sendThreadRun: SendThreadRunUseCase,
     private readonly executor: LocalExecutorPort,
+    private readonly deskEvents: DeskEventsPort,
     logger: Logger,
   ) {
     this.log = logger.child('fire-webhook');
@@ -53,10 +56,11 @@ export class FireWebhookUseCase {
       return { status: 'queued-behind-active-run' };
     }
     const now = new Date().toISOString();
-    this.webhooks.update(request.orgId, webhook.id, {
+    const fired = this.webhooks.update(request.orgId, webhook.id, {
       lastFiredAt: now,
       updatedAt: now,
     });
+    this.deskEvents.emit(request.orgId, toDeskWebhookEvent(fired));
     try {
       const accepted = await this.sendThreadRun.execute({
         orgId: request.orgId,
@@ -77,10 +81,11 @@ export class FireWebhookUseCase {
         error instanceof ThreadNotFoundException ||
         (error instanceof ThreadValidationException && error.message === 'agent has no model')
       ) {
-        this.webhooks.update(request.orgId, webhook.id, {
+        const failed = this.webhooks.update(request.orgId, webhook.id, {
           status: 'failed',
           updatedAt: now,
         });
+        this.deskEvents.emit(request.orgId, toDeskWebhookEvent(failed));
       }
       this.log.warn(
         {

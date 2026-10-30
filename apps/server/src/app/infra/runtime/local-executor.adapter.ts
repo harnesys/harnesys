@@ -15,6 +15,7 @@ import { HookRunStorePort } from '../../domain/agent/hook-run-store.port.ts';
 import { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
 import { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
 import { BrowserHostPort } from '../../domain/browser/browser-host.port.ts';
+import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
 import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
 import { NodeCommandQueuePort } from '../../domain/fleet/node-command-queue.port.ts';
@@ -85,6 +86,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     private readonly approvalEvents: ApprovalEventsPort,
     private readonly planEvents: PlanEventsPort,
     private readonly threadEvents: ThreadEventsPort,
+    private readonly deskEvents: DeskEventsPort,
     private readonly schedules: ScheduleRepositoryPort,
     private readonly webhooks: WebhookRepositoryPort,
     private readonly knowledgeSearch: KnowledgeSearchPort,
@@ -171,6 +173,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       commands: this.commands,
       planEvents: this.planEvents,
       threadEvents: this.threadEvents,
+      deskEvents: this.deskEvents,
       schedules: this.schedules,
       webhooks: this.webhooks,
       knowledge: {

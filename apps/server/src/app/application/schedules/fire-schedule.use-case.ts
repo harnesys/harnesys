@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@harnesys/brix';
 import { scheduledTaskText } from '@harnesys/studio-shared';
+import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import type { ScheduleRecord } from '../../domain/schedule/schedule.ts';
 import { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repository.port.ts';
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
@@ -13,6 +14,7 @@ import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port
 import { mechanicalRunStart } from '../threads/run-attribution.ts';
 import { SendThreadRunUseCase } from '../threads/send-thread-run.use-case.ts';
 import { nextCronRunAt } from './cron-next.ts';
+import { toDeskScheduleEvent } from './schedule.helpers.ts';
 
 export type FireScheduleResult =
   | { status: 'fired'; runId: string }
@@ -39,6 +41,7 @@ export class FireScheduleUseCase {
     private readonly threadEvents: ThreadEventsPort,
     private readonly sendThreadRun: SendThreadRunUseCase,
     private readonly orgSettings: OrgSettingsPort,
+    private readonly deskEvents: DeskEventsPort,
     logger: Logger,
   ) {
     this.log = logger.child('fire-schedule');
@@ -70,10 +73,11 @@ export class FireScheduleUseCase {
       });
       this.schedules.recordFireRun(request.orgId, request.fireId, accepted.runId);
       const now = new Date().toISOString();
-      this.schedules.update(request.orgId, schedule.id, {
+      const fired = this.schedules.update(request.orgId, schedule.id, {
         lastFiredAt: now,
         updatedAt: now,
       });
+      this.deskEvents.emit(request.orgId, toDeskScheduleEvent(fired));
       this.clearThreadLaunchError(request.orgId, schedule.threadId, accepted.runId);
       this.threads.touch(request.orgId, schedule.threadId);
       return { status: 'fired', runId: accepted.runId };
@@ -109,19 +113,22 @@ export class FireScheduleUseCase {
       status = 'failed';
       this.log.warn({ orgId, scheduleId: schedule.id }, 'invalid cron, schedule failed');
     }
-    return this.schedules.update(orgId, schedule.id, {
+    const advanced = this.schedules.update(orgId, schedule.id, {
       nextRunAt,
       status,
       updatedAt: now.toISOString(),
     });
+    this.deskEvents.emit(orgId, toDeskScheduleEvent(advanced));
+    return advanced;
   }
 
   private disableSchedule(orgId: string, schedule: ScheduleRecord): void {
     try {
-      this.schedules.update(orgId, schedule.id, {
+      const failed = this.schedules.update(orgId, schedule.id, {
         status: 'failed',
         updatedAt: new Date().toISOString(),
       });
+      this.deskEvents.emit(orgId, toDeskScheduleEvent(failed));
     } catch {
       // ignore
     }

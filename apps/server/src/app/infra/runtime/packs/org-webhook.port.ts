@@ -7,9 +7,14 @@ import type {
   WebhookRecord,
   WebhookUpdateInput,
 } from 'harnesys';
-import { webhookEndpointFor } from '../../../application/webhooks/webhook.helpers.ts';
+import {
+  toDeskWebhookDeletedEvent,
+  toDeskWebhookEvent,
+  webhookEndpointFor,
+} from '../../../application/webhooks/webhook.helpers.ts';
 import { AgentNotFoundException } from '../../../domain/agent/agent.error.ts';
 import type { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
+import { DeskEventsPort } from '../../../domain/desk/desk-events.port.ts';
 import type { ThreadRecord } from '../../../domain/thread/thread.ts';
 import type { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
 import {
@@ -26,6 +31,7 @@ export interface OrgWebhookPortDeps {
   webhooks: WebhookRepositoryPort;
   threads: ThreadRepositoryPort;
   agents: AgentRegistryPort;
+  deskEvents?: DeskEventsPort;
 }
 
 export class OrgWebhookPort implements WebhookPort {
@@ -78,6 +84,7 @@ export class OrgWebhookPort implements WebhookPort {
       createdAt: now,
       updatedAt: now,
     });
+    this.deps.deskEvents?.emit(scope.orgId, toDeskWebhookEvent(webhook));
     return Promise.resolve({
       webhook: toPortRecord(webhook),
       thread: toPortThread(thread, agent.name),
@@ -95,6 +102,7 @@ export class OrgWebhookPort implements WebhookPort {
     if (patch.name !== undefined && patch.name !== current.name) {
       this.deps.threads.patch(scope.orgId, updated.threadId, { title: patch.name });
     }
+    this.deps.deskEvents?.emit(scope.orgId, toDeskWebhookEvent(updated));
     return Promise.resolve(toPortRecord(updated));
   }
 
@@ -105,6 +113,7 @@ export class OrgWebhookPort implements WebhookPort {
     if (thread?.kind === 'webhook') {
       this.deps.threads.delete(scope.orgId, thread.id);
     }
+    this.deps.deskEvents?.emit(scope.orgId, toDeskWebhookDeletedEvent(current.id));
     return Promise.resolve();
   }
 

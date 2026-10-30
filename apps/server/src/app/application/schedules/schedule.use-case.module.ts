@@ -1,6 +1,7 @@
 import { Module } from '@harnesys/brix';
 import { AgentModule } from '../../infra/agent/agent.module.ts';
 import { ApprovalModule } from '../../infra/approvals/approval.module.ts';
+import { DeskModule } from '../../infra/desk/desk.module.ts';
 import { ExecutionProfileModule } from '../../infra/execution-profile/execution-profile.module.ts';
 import { FleetHubModule } from '../../infra/fleet-hub/fleet-hub.module.ts';
 import { MachineHomeModule } from '../../infra/machine-home/machine-home.module.ts';
@@ -37,6 +38,7 @@ const useCases = [
     SourceModule,
     ExecutionProfileModule,
     ApprovalModule,
+    DeskModule,
   ],
   providers: [...useCases],
   exports: [...useCases],

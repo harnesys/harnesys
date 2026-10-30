@@ -2,6 +2,7 @@ import { Injectable } from '@harnesys/brix';
 import type { SchedulePublic, UpdateScheduleBody } from '@harnesys/contracts';
 import { AgentNotFoundException } from '../../domain/agent/agent.error.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
+import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import {
   ScheduleNotFoundException,
   ScheduleValidationException,
@@ -13,7 +14,7 @@ import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port
 import { recordOwnerOnWrite } from '../threads/run-attribution.ts';
 import { requireBindableScheduleThread } from './bind-schedule-thread.ts';
 import { isValidCron, nextCronRunAt } from './cron-next.ts';
-import { toSchedulePublic } from './schedule.helpers.ts';
+import { toDeskScheduleEvent, toSchedulePublic } from './schedule.helpers.ts';
 
 export interface UpdateScheduleRequest {
   orgId: string;
@@ -29,6 +30,7 @@ export class UpdateScheduleUseCase {
     private readonly threads: ThreadRepositoryPort,
     private readonly agents: AgentRegistryPort,
     private readonly orgSettings: OrgSettingsPort,
+    private readonly deskEvents: DeskEventsPort,
   ) {}
 
   execute(request: UpdateScheduleRequest): SchedulePublic {
@@ -57,6 +59,7 @@ export class UpdateScheduleUseCase {
     if (rename) {
       this.threads.patch(request.orgId, updated.threadId, { title: rename });
     }
+    this.deskEvents.emit(request.orgId, toDeskScheduleEvent(updated));
     return toSchedulePublic(updated);
   }
 }

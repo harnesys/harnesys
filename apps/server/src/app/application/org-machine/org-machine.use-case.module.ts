@@ -1,6 +1,7 @@
 import { Module } from '@harnesys/brix';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
+import { DeskModule } from '../../infra/desk/desk.module.ts';
 import { ExecutionProfileModule } from '../../infra/execution-profile/execution-profile.module.ts';
 import { FleetHubModule } from '../../infra/fleet-hub/fleet-hub.module.ts';
 import { IdentitySqliteModule } from '../../infra/identity-sqlite/identity-sqlite.module.ts';
@@ -25,6 +26,7 @@ import { UpdateOrgUseCase } from './update-org.use-case.ts';
     ScheduleModule,
     ExecutionProfileModule,
     FleetHubModule,
+    DeskModule,
   ],
   providers: [
     CreateRelayOrgUseCase,

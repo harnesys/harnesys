@@ -1,8 +1,10 @@
 import { Injectable } from '@harnesys/brix';
 import type { OrgSettings } from '@harnesys/contracts';
+import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repository.port.ts';
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
 import { nextCronRunAt } from '../schedules/cron-next.ts';
+import { toDeskScheduleEvent } from '../schedules/schedule.helpers.ts';
 
 export interface SetOrgSettingsRequest {
   orgId: string;
@@ -14,6 +16,7 @@ export class SetOrgSettingsUseCase {
   constructor(
     private readonly orgSettings: OrgSettingsPort,
     private readonly schedules: ScheduleRepositoryPort,
+    private readonly deskEvents: DeskEventsPort,
   ) {}
 
   execute(request: SetOrgSettingsRequest): OrgSettings {
@@ -33,7 +36,8 @@ export class SetOrgSettingsUseCase {
       } catch {
         continue;
       }
-      this.schedules.update(orgId, schedule.id, { nextRunAt });
+      const updated = this.schedules.update(orgId, schedule.id, { nextRunAt });
+      this.deskEvents.emit(orgId, toDeskScheduleEvent(updated));
     }
   }
 }

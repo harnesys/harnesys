@@ -19,6 +19,7 @@ import type { AgentRegistryPort } from '../../domain/agent/agent-registry.port.t
 import type { HookRunStorePort } from '../../domain/agent/hook-run-store.port.ts';
 import type { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
 import type { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
+import type { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import type { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
 import type { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
 import type { NodeCommandQueuePort } from '../../domain/fleet/node-command-queue.port.ts';
@@ -124,6 +125,7 @@ export interface OrgRuntimeDeps {
   commands?: NodeCommandQueuePort;
   planEvents?: PlanEventsPort;
   threadEvents?: ThreadEventsPort;
+  deskEvents?: DeskEventsPort;
   schedules?: ScheduleRepositoryPort;
   webhooks?: WebhookRepositoryPort;
   knowledge?: OrgKnowledgeDeps;

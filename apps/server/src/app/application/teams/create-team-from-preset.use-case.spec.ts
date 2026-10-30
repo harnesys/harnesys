@@ -6,7 +6,7 @@ import { CreateAgentUseCase } from '../agents/create-agent.use-case.ts';
 import { CreateIssueBoardUseCase } from '../issues/create-issue-board.use-case.ts';
 import { SaveBoardRuleUseCase } from '../issues/save-board-rule.use-case.ts';
 import { CreateScheduleUseCase } from '../schedules/create-schedule.use-case.ts';
-import { FakeOrgSettings } from '../schedules/schedule.use-case.fakes.ts';
+import { FakeDeskEvents, FakeOrgSettings } from '../schedules/schedule.use-case.fakes.ts';
 import {
   agentDetail,
   CODER_BODY,
@@ -78,7 +78,13 @@ function buildHarness(options?: {
     new CreateAgentUseCase(agents, new FakeModePresets(), profiles),
     new CreateIssueBoardUseCase(boards, new FakeEvents()),
     new SaveBoardRuleUseCase(boards, new FakeLabels(), agents, profiles, new FakeEvents()),
-    new CreateScheduleUseCase(schedules, new FakeThreads(), agents, orgSettings),
+    new CreateScheduleUseCase(
+      schedules,
+      new FakeThreads(),
+      agents,
+      orgSettings,
+      new FakeDeskEvents(),
+    ),
     orgSettings,
   );
   return { useCase, agents, boards, schedules, catalog };

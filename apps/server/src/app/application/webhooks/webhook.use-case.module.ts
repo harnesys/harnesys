@@ -1,5 +1,6 @@
 import { Module } from '@harnesys/brix';
 import { AgentModule } from '../../infra/agent/agent.module.ts';
+import { DeskModule } from '../../infra/desk/desk.module.ts';
 import { RuntimeModule } from '../../infra/runtime/runtime.module.ts';
 import { ThreadModule } from '../../infra/thread/thread.module.ts';
 import { WebhookModule } from '../../infra/webhooks/webhook.module.ts';
@@ -19,7 +20,14 @@ const useCases = [
 ];
 
 @Module({
-  imports: [WebhookModule, ThreadModule, AgentModule, ThreadUseCaseModule, RuntimeModule],
+  imports: [
+    WebhookModule,
+    ThreadModule,
+    AgentModule,
+    ThreadUseCaseModule,
+    RuntimeModule,
+    DeskModule,
+  ],
   providers: [...useCases],
   exports: [...useCases],
 })
