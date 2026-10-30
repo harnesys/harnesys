@@ -20,7 +20,7 @@ export function ProjectDetailsDialog({
   const project = data?.project ?? null;
   const editing = project !== null;
   const { data: nodes } = useQuery(fleetNodesQuery);
-  const { data: meta } = useQuery(appMetaQuery);
+  const { data: meta } = useQuery(appMetaQuery());
   const [nodeId, setNodeId] = useState<string | undefined>(undefined);
   const metaNodeId = meta?.nodeId;
   const selectedNodeId = nodeId ?? metaNodeId ?? nodes?.[0]?.id;

@@ -30,7 +30,7 @@ const visibilityItems = [
 export function AddSourceDialog({ onResolve }: DialogComponentProps<boolean>) {
   const queryClient = useQueryClient();
   const { data: nodes } = useQuery(fleetNodesQuery);
-  const { data: meta } = useQuery(appMetaQuery);
+  const { data: meta } = useQuery(appMetaQuery());
   const nodeItems = (nodes ?? []).map((node) => ({ value: node.id, label: node.name }));
   const showNodes = nodeItems.length > 1;
   const defaultHostId = meta?.nodeId ?? nodeItems[0]?.value;
