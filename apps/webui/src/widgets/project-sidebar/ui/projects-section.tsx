@@ -5,12 +5,12 @@ import { useProjects } from '@/entities/project';
 import { openAddSourceDialog } from '@/features/attach-source';
 import { patchKnowledgeIndexState } from '@/features/manage-knowledge-index/model/patch-knowledge-index-state';
 import { watchKnowledgeIndexStates } from '@/shared/api/events';
-import { useOrgId } from '@/shared/config/location';
 import { selfNodeCached } from '@/shared/api/fleet';
 import {
   knowledgeIndexStateQueryKey,
   knowledgeIndexStatesQuery,
 } from '@/shared/api/knowledge-index';
+import { useOrgId } from '@/shared/config/location';
 import {
   DropdownMenuGroup,
   DropdownMenuItem,

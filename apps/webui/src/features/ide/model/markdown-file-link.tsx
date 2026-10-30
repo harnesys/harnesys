@@ -54,15 +54,16 @@ export function useFileLinkComponents(): Components {
     abs: string,
   ): Promise<{ projectId: string; relPath: string } | null> {
     const located = await Promise.allSettled(
-      projects.map(async (project) => ({
-        projectId: project.id,
-        root: (
-          await queryClient.fetchQuery({
-            queryKey: sourceLocationQueryKey(project.id),
-            queryFn: () => getSourceLocation(project.id),
-          })
-        ).absoluteRoot,
-      })),
+      projects.map(async (project) => {
+        const location = await queryClient.fetchQuery({
+          queryKey: sourceLocationQueryKey(project.id),
+          queryFn: () => getSourceLocation(project.id),
+        });
+        if (!location) {
+          throw new Error(`Source location unavailable for project ${project.id}`);
+        }
+        return { projectId: project.id, root: location.absoluteRoot };
+      }),
     );
     let best: { projectId: string; root: string } | null = null;
     for (const item of located) {

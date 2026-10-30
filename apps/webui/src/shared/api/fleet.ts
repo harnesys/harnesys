@@ -9,7 +9,6 @@ import {
 import { queryOptions } from '@tanstack/react-query';
 import { getActiveOrgId } from './active-org';
 import { apiUrl } from './client';
-import { selfNodeCached } from './self-node';
 import { authenticatedFetch } from './session';
 
 export type { ExecutionProfile, ExecutionProfileDetail, ExecutionProfilesResponse, FleetNode };

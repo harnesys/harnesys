@@ -3,6 +3,7 @@ import { getActiveOrgId } from './active-org';
 import { ApiError, apiJson } from './client';
 import {
   type ContentEntry,
+  type ContentTreeResponse,
   downloadContentEntry,
   duplicateContentPath,
   fetchContentBlob,

@@ -265,7 +265,12 @@ export function ChatComposer() {
         queryKey: sourceLocationQueryKey(sourceId),
         queryFn: () => getSourceLocation(sourceId),
       })
-      .then((location) => location.absoluteRoot);
+      .then((location) => {
+        if (!location) {
+          throw new Error('Source location unavailable');
+        }
+        return location.absoluteRoot;
+      });
   }
   function attachDropPrompt() {
     if (!dropPrompt) {
