@@ -260,6 +260,7 @@ export class SqliteRunLifecycleStore implements RunLifecycleStore {
         .where(
           and(
             eq(runsTable.status, 'running'),
+            isNull(runsTable.parentRunId),
             sql`(${runsTable.leaseExpiresAt} IS NULL OR ${runsTable.leaseExpiresAt} < ${now - grace})`,
             lt(runsTable.updatedAt, cutoffIso),
           ),

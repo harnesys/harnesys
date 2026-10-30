@@ -2,6 +2,7 @@ import {
   DEFAULT_CLAIMABLE_LIMIT,
   DEFAULT_CLAIMER_SWEEP_MS,
   DEFAULT_LEASE_TTL_MS,
+  RUN_NON_TERMINAL,
 } from '../constants.ts';
 import type { RunLifecycleStore, RunRecord } from '../ports/run-lifecycle-store.ts';
 import type { RunTarget, RunTargets } from '../ports/run-targets.ts';
@@ -119,6 +120,24 @@ export function createRunClaimer(deps: {
       sweeping = false;
     }
   }
+  const CHILD_REAP_MESSAGE = 'parent run reaped';
+  async function failChildrenOf(parentRunId: string): Promise<void> {
+    const children = await deps.lifecycle.childrenByParent(parentRunId).catch(() => []);
+    for (const child of children) {
+      if (!RUN_NON_TERMINAL.includes(child.status)) {
+        continue;
+      }
+      await deps.lifecycle
+        .transition(child.runId, child.leaseEpoch, {
+          from: child.status,
+          to: 'failed',
+          interruptId: null,
+          waitFireAt: null,
+          events: [runFailedEvent(CHILD_REAP_MESSAGE)],
+        })
+        .catch(() => undefined);
+    }
+  }
   async function reapStaleRunning(): Promise<void> {
     const stale = await deps.lifecycle.listStaleRunning({ limit: DEFAULT_CLAIMABLE_LIMIT });
     for (const rec of stale) {
@@ -135,6 +154,7 @@ export function createRunClaimer(deps: {
           events: [runFailedEvent('orphaned run: lease expired without completion')],
         });
         finishWith(failed);
+        await failChildrenOf(rec.runId);
       } catch {
         // lost the race with a live executor re-claiming the run — leave it alone
       }

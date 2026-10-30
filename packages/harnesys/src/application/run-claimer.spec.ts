@@ -28,6 +28,8 @@ function runRecord(status: RunLifecycleStatus): RunRecord {
 
 class FakeLifecycle implements RunLifecycleStore {
   record: RunRecord = runRecord('queued');
+  children: RunRecord[] = [];
+  stale: RunRecord[] = [];
   failures: string[] = [];
 
   async create(input: RunCreateInput): Promise<RunRecord> {
@@ -40,8 +42,8 @@ class FakeLifecycle implements RunLifecycleStore {
   async activeByThread(): Promise<RunRecord | null> {
     return null;
   }
-  async childrenByParent(): Promise<RunRecord[]> {
-    return [];
+  async childrenByParent(parentRunId: string): Promise<RunRecord[]> {
+    return this.children.filter((child) => child.parentRunId === parentRunId);
   }
   async claim(): Promise<RunRecord | null> {
     if (this.record.status !== 'queued') {
@@ -55,11 +57,22 @@ class FakeLifecycle implements RunLifecycleStore {
     _expectedEpoch: number,
     patch: RunTransitionPatch,
   ): Promise<RunRecord> {
-    this.record = { ...this.record, status: patch.to };
+    let updated = this.record;
+    if (this.record.runId === runId) {
+      this.record = { ...this.record, status: patch.to };
+      updated = this.record;
+    }
+    this.children = this.children.map((child) => {
+      if (child.runId !== runId) {
+        return child;
+      }
+      updated = { ...child, status: patch.to };
+      return updated;
+    });
     if (patch.to === 'failed') {
       this.failures.push(runId);
     }
-    return this.record;
+    return updated;
   }
   async renewLease(): Promise<boolean> {
     return false;
@@ -71,7 +84,7 @@ class FakeLifecycle implements RunLifecycleStore {
     return [];
   }
   async listStaleRunning(): Promise<RunRecord[]> {
-    return [];
+    return this.stale;
   }
 }
 
@@ -153,5 +166,30 @@ describe('run claimer', () => {
     claimer.halt();
     expect(engineCalls).toEqual(['execute']);
     expect(lifecycle.failures).toEqual([]);
+  });
+
+  test('reaping a stale root fails its non-terminal children', async () => {
+    const lifecycle = new FakeLifecycle();
+    lifecycle.record = {
+      ...runRecord('running'),
+      leaseExpiresAt: Date.now() - 120_000,
+      updatedAt: new Date(Date.now() - 120_000).toISOString(),
+    };
+    lifecycle.stale = [lifecycle.record];
+    lifecycle.children = [
+      { ...runRecord('running'), runId: 'child-running', parentRunId: RUN_ID },
+      { ...runRecord('completed'), runId: 'child-done', parentRunId: RUN_ID },
+    ];
+    const claimer = createRunClaimer({
+      lifecycle,
+      targets: { resolve: () => Promise.resolve(null) },
+      engine: engineOf([]),
+      instanceId: 'i1',
+      sweepMs: 3_600_000,
+    });
+    claimer.kick();
+    await settle();
+    claimer.halt();
+    expect(lifecycle.failures).toEqual([RUN_ID, 'child-running']);
   });
 });

@@ -229,6 +229,7 @@ export class InMemoryRunLifecycleStore implements RunLifecycleStore {
     const grace = opts?.graceMs ?? DEFAULT_STALE_RUN_GRACE_MS;
     const cutoff = now - grace;
     const stale = (record: RunRecord): boolean =>
+      record.parentRunId === undefined &&
       record.status === 'running' &&
       (record.leaseExpiresAt === undefined || record.leaseExpiresAt < cutoff) &&
       Date.parse(record.updatedAt) < cutoff;
