@@ -7,9 +7,12 @@ import {
   useRef,
   useState,
 } from 'react';
+import { Link } from 'react-router';
 import { useIssueBoardStore } from '@/entities/issue';
 import { useProjects } from '@/entities/project';
 import { useThreadStore } from '@/entities/thread';
+import { isDesktop, useAppUpdateStore } from '@/features/app-update';
+import { isNewerVersion, releasesQuery } from '@/features/app-update/model/server-update';
 import {
   useAgentsInProjects,
   useDeskStore,
@@ -22,6 +25,7 @@ import { useIdeTabs } from '@/features/ide';
 import { OrgHeader } from '@/features/switch-org';
 import { appMetaQuery } from '@/shared/api';
 import { studioFocusThreadId, useStudioLocation } from '@/shared/config/location';
+import { studioPath } from '@/shared/config/routes';
 import { AppLogo } from '@/shared/ui/app-logo';
 import { Badge } from '@/shared/ui/badge.tsx';
 import { Resizer } from '@/shared/ui/resizer';
@@ -85,6 +89,17 @@ export function ProjectSidebar({
 }) {
   const { orgId, focus } = useStudioLocation();
   const { data: meta } = useQuery(appMetaQuery(orgId));
+  const releases = useQuery(releasesQuery);
+  const updateStatus = useAppUpdateStore((state) => state.status);
+  const latestRelease = releases.data?.[0];
+  const currentVersion = meta?.version;
+  const versionUpdatePending = isDesktop()
+    ? updateStatus === 'available' || updateStatus === 'downloading' || updateStatus === 'ready'
+    : Boolean(
+        typeof currentVersion === 'string' &&
+          typeof latestRelease?.version === 'string' &&
+          isNewerVersion(currentVersion, latestRelease.version),
+      );
   const threadId = studioFocusThreadId(focus);
   const projectQuery = useProjects();
   const projectIds = (projectQuery.data ?? []).map((project) => project.id);
@@ -339,10 +354,23 @@ export function ProjectSidebar({
               <AppLogo className="size-5" />
               <span className="flex items-center gap-1 font-medium text-sm tracking-tight group-data-[collapsible=icon]:hidden">
                 Harnesys
-                {meta ? (
-                  <Badge variant="secondary" className="text-muted-foreground">
-                    v{meta.version}
-                  </Badge>
+                {meta && orgId ? (
+                  <Link
+                    to={studioPath.settings(orgId, 'updates')}
+                    data-testid="app-version-badge"
+                    title="Open update settings"
+                    className="group/version-badge relative inline-flex cursor-pointer items-center"
+                  >
+                    <Badge
+                      variant="secondary"
+                      className="text-muted-foreground transition-colors group-hover/version-badge:bg-foreground/10"
+                    >
+                      v{meta.version}
+                    </Badge>
+                    {versionUpdatePending ? (
+                      <span className="absolute -top-0.5 -right-1 size-1.5 rounded-full bg-live" />
+                    ) : null}
+                  </Link>
                 ) : null}
               </span>
             </div>

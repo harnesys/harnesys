@@ -24,6 +24,7 @@ import { OrgMachineUseCaseModule } from '../application/org-machine/org-machine.
 import { PluginsUseCaseModule } from '../application/plugins/plugins.use-case.module.ts';
 import { PresetUseCaseModule } from '../application/presets/preset.use-case.module.ts';
 import { ProviderUseCaseModule } from '../application/providers/provider.use-case.module.ts';
+import { ReleaseUseCaseModule } from '../application/release/release.use-case.module.ts';
 import { ScheduleUseCaseModule } from '../application/schedules/schedule.use-case.module.ts';
 import { SkillsUseCaseModule } from '../application/skills/skills.use-case.module.ts';
 import { SourceUseCaseModule } from '../application/source/source.use-case.module.ts';
@@ -38,6 +39,7 @@ import { DeskModule } from '../infra/desk/desk.module.ts';
 import { FleetHubModule } from '../infra/fleet-hub/fleet-hub.module.ts';
 import { IssueInfraModule } from '../infra/issues/issue.module.ts';
 import { MachineHomeModule } from '../infra/machine-home/machine-home.module.ts';
+import { ReleaseModule } from '../infra/release/release.module.ts';
 import { RuntimeModule } from '../infra/runtime/runtime.module.ts';
 import { SkillsModule } from '../infra/skills/skills.module.ts';
 import { SourceWatchModule } from '../infra/source/source-watch.module.ts';
@@ -111,6 +113,8 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
 @Module({
   imports: [
     OrgMachineUseCaseModule,
+    ReleaseModule,
+    ReleaseUseCaseModule,
     FleetUseCaseModule,
     ExecutionProfileUseCaseModule,
     WorkerOrgOpsModule,

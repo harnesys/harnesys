@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { toast } from '@/shared/ui/toast';
 import { isDesktop } from '../model/app-update';
 import { useAppUpdateStore } from '../model/app-update.store';
+import { previewNotes } from '../model/server-update';
 
 const TOAST_ID = 'app-update';
 
@@ -17,7 +18,8 @@ export function AppUpdateToaster() {
       toast.add({
         id: TOAST_ID,
         title: `Harnesys ${availableVersion} is available`,
-        description: 'Download and install the update.',
+        description:
+          previewNotes(useAppUpdateStore.getState().notes) ?? 'Download and install the update.',
         timeout: 0,
         actionProps: {
           children: 'Update',

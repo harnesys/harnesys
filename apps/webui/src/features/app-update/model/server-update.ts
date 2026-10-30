@@ -1,32 +1,30 @@
+import { isNewerVersion, parseVersion } from '@harnesys/studio-shared';
 import { queryOptions } from '@tanstack/react-query';
 import { releaseUrl } from './app-update';
+
+export { isNewerVersion, parseVersion };
 
 const GH_API = 'https://api.github.com';
 const REPO = 'harnesys/harnesys';
 const PER_PAGE = 10;
 
-/** Numeric semver triple of "v1.2.3" / "1.2.3"; null when it does not parse. */
-export function parseVersion(tag: string): [number, number, number] | null {
-  const match = /^v?(\d+)\.(\d+)\.(\d+)$/.exec(tag.trim());
-  if (!match) {
+/** First meaningful markdown line, flattened to a one-line preview for toasts. */
+export function previewNotes(notes: string | null, max = 160): string | null {
+  if (!notes) {
     return null;
   }
-  return [Number(match[1]), Number(match[2]), Number(match[3])];
-}
-
-export function isNewerVersion(current: string, latest: string): boolean {
-  const currentParts = parseVersion(current);
-  const latestParts = parseVersion(latest);
-  if (!currentParts || !latestParts) {
-    return false;
+  const line = notes
+    .split('\n')
+    .map((row) => row.trim())
+    .find((row) => row.length > 0 && !/^[#>*-]/.test(row) && !/^\d+\./.test(row));
+  if (!line) {
+    return null;
   }
-  return (
-    latestParts[0] > currentParts[0] ||
-    (latestParts[0] === currentParts[0] && latestParts[1] > currentParts[1]) ||
-    (latestParts[0] === currentParts[0] &&
-      latestParts[1] === currentParts[1] &&
-      latestParts[2] > currentParts[2])
-  );
+  const flat = line
+    .replace(/[*`_[]]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return flat.length > max ? `${flat.slice(0, max - 1).trimEnd()}…` : flat;
 }
 
 /** "v1.2.3" -> "1.2.3"; null when the tag is not a semver release. */

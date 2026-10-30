@@ -5,6 +5,7 @@ import type {
   EventsWatchFleetFrame,
   EventsWatchIndexStateFrame,
   EventsWatchMaterializationFrame,
+  EventsWatchReleaseFrame,
   EventsWatchSkillsFrame,
   EventsWatchSourceChangeFrame,
   EventsWatchThreadErrorEvent,
@@ -69,6 +70,18 @@ export function watchSkillsChanged(onEvent: (frame: EventsWatchSkillsFrame) => v
   return watchEventSource(eventsWatchUrl, 'skills-changed', (data) => {
     try {
       onEvent(JSON.parse(data) as EventsWatchSkillsFrame);
+    } catch {
+      // ignore malformed frames
+    }
+  });
+}
+
+export function watchReleaseAvailable(
+  onEvent: (frame: EventsWatchReleaseFrame) => void,
+): () => void {
+  return watchEventSource(eventsWatchUrl, 'release-available', (data) => {
+    try {
+      onEvent(JSON.parse(data) as EventsWatchReleaseFrame);
     } catch {
       // ignore malformed frames
     }

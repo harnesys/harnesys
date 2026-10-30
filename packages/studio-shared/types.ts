@@ -74,6 +74,7 @@ export {
 export * from './src/desk-events.ts';
 export * from './src/discovery.ts';
 export * from './src/events-watch.ts';
+export * from './src/semver.ts';
 export type {
   GitBranch,
   GitCheckoutRequest,

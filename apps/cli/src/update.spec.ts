@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { assetNameFor, isNewerVersion, parseVersion } from './update.ts';
+import { assetNameFor, checksumHexFor, isNewerVersion, parseVersion, sha256Hex } from './update.ts';
 
 describe('assetNameFor', () => {
   test('includes platform and arch on supported platforms', () => {
@@ -7,6 +7,24 @@ describe('assetNameFor', () => {
     const name = assetNameFor('harnesys-host');
     expect(name.startsWith('harnesys-host-')).toBe(true);
     expect(name).not.toContain('unknown');
+  });
+});
+
+describe('sha256Hex', () => {
+  test('known vector', () => {
+    expect(sha256Hex(new TextEncoder().encode('abc'))).toBe(
+      'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+    );
+  });
+});
+
+describe('checksumHexFor', () => {
+  const sums = 'aaa111  harnesys-host-linux-x64\nbbb222  harnesys-web-linux-x64\n';
+  test('picks the row for the asset', () => {
+    expect(checksumHexFor(sums, 'harnesys-host-linux-x64')).toBe('aaa111');
+  });
+  test('null when asset missing', () => {
+    expect(checksumHexFor(sums, 'harnesys-host-darwin-arm64')).toBeNull();
   });
 });
 

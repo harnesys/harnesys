@@ -30,6 +30,13 @@ export interface EventsWatchFleetFrame {
   type: 'fleet-changed';
 }
 
+export interface EventsWatchReleaseFrame {
+  orgId: OrgId;
+  type: 'release-available';
+  currentVersion: string;
+  latestVersion: string;
+}
+
 export interface EventsWatchMaterializationFrame {
   orgId: OrgId;
   type: 'materialization-changed';

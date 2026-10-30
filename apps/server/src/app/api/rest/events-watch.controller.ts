@@ -7,6 +7,7 @@ import type {
   EventsWatchFleetFrame,
   EventsWatchIndexStateFrame,
   EventsWatchMaterializationFrame,
+  EventsWatchReleaseFrame,
   EventsWatchThreadErrorFrame,
 } from '@harnesys/studio-shared';
 import { SSE_KEEP_ALIVE_MS } from '../../../const.ts';
@@ -18,6 +19,7 @@ import type { IssueDomainEvent } from '../../domain/issue/issue-events.port.ts';
 import { IssueEventsPort } from '../../domain/issue/issue-events.port.ts';
 import { KnowledgeIndexEventsPort } from '../../domain/knowledge/knowledge-index-events.port.ts';
 import { PlanEventsPort } from '../../domain/plan/plan-events.port.ts';
+import { ReleaseEventsPort } from '../../domain/release/release-events.port.ts';
 import { SkillsEventsPort } from '../../domain/skills/skills-events.port.ts';
 import { MaterializationEventsPort } from '../../domain/source/materialization-events.port.ts';
 import { SourceWatchEventsPort } from '../../domain/source/source-watch-events.port.ts';
@@ -39,6 +41,7 @@ export class EventsWatchController {
     private readonly threadEvents: ThreadEventsPort,
     private readonly fleetEvents: FleetEventsPort,
     private readonly materializationEvents: MaterializationEventsPort,
+    private readonly releaseEvents: ReleaseEventsPort,
   ) {}
 
   @Get('events/watch')
@@ -54,6 +57,7 @@ export class EventsWatchController {
     const threadEvents = this.threadEvents;
     const fleetEvents = this.fleetEvents;
     const materializationEvents = this.materializationEvents;
+    const releaseEvents = this.releaseEvents;
     let keepAlive: ReturnType<typeof setInterval> | undefined;
     let unsubscribeIndex: (() => void) | undefined;
     let unsubscribeApprovals: (() => void) | undefined;
@@ -65,6 +69,7 @@ export class EventsWatchController {
     let unsubscribeThreadErrors: (() => void) | undefined;
     let unsubscribeFleet: (() => void) | undefined;
     let unsubscribeMaterialization: (() => void) | undefined;
+    let unsubscribeRelease: (() => void) | undefined;
     let releaseSourceWatches: (() => void) | undefined;
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
@@ -127,6 +132,9 @@ export class EventsWatchController {
           };
           write('materialization-changed', JSON.stringify(frame));
         });
+        unsubscribeRelease = releaseEvents.subscribe((frame: EventsWatchReleaseFrame) => {
+          write('release-available', JSON.stringify(frame));
+        });
         releaseSourceWatches = sourceWatchGate.acquire(orgId);
         keepAlive = setInterval(() => {
           try {
@@ -150,6 +158,7 @@ export class EventsWatchController {
         unsubscribeThreadErrors?.();
         unsubscribeFleet?.();
         unsubscribeMaterialization?.();
+        unsubscribeRelease?.();
         releaseSourceWatches?.();
       },
     });

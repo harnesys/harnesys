@@ -32,6 +32,9 @@ jobs:
           for bin in harnesys harnesys-host harnesys-web; do
             mv "$bin" "out/$bin-$suffix"
           done
+          for f in out/harnesys-$suffix out/harnesys-host-$suffix out/harnesys-web-$suffix; do
+            shasum -a 256 "$f" > "$f.sha256"
+          done
       - uses: actions/upload-artifact@v7
         with:
           name: server-${{ matrix.target }}

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { chmodSync, existsSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import packageJson from '../package.json' with { type: 'json' };
@@ -111,7 +112,81 @@ function findAsset(assets: ReleaseAsset[], name: string): ReleaseAsset {
   return asset;
 }
 
-async function download(url: string): Promise<Uint8Array> {
+export function sha256Hex(bytes: Uint8Array): string {
+  return createHash('sha256').update(bytes).digest('hex');
+}
+
+function checksumMatches(bytes: Uint8Array, expectedHex: string): boolean {
+  return sha256Hex(bytes) === expectedHex.trim().toLowerCase();
+}
+
+/** "<hex>  <filename>" lines from a .sha256 asset -> hex for the given asset name. */
+export function checksumHexFor(sums: string, assetName: string): string | null {
+  for (const line of sums.split('\n')) {
+    const [hex, name] = line.trim().split(/\s+/);
+    if (hex && name === assetName) {
+      return hex.toLowerCase();
+    }
+  }
+  return null;
+}
+
+const PROGRESS_STEP = 0.25;
+
+function progressLine(assetName: string, received: number, total: number | null): string {
+  if (total === null) {
+    return `downloading ${assetName} ${Math.round(received / 1024 / 1024)} MiB`;
+  }
+  const pct = Math.min(100, Math.round((received / total) * 100));
+  return `downloading ${assetName} ${pct}% (${Math.round(received / 1024 / 1024)}/${Math.round(total / 1024 / 1024)} MiB)`;
+}
+
+function mergeChunks(chunks: Uint8Array[], received: number): Uint8Array {
+  const merged = new Uint8Array(received);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return merged;
+}
+
+async function readBodyWithProgress(
+  assetName: string,
+  response: Response,
+  total: number | null,
+): Promise<Uint8Array> {
+  const reader = response.body?.getReader();
+  if (!reader) {
+    return new Uint8Array(await response.arrayBuffer());
+  }
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  let nextReport = total !== null ? Math.floor(total * PROGRESS_STEP) : Number.POSITIVE_INFINITY;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    if (!value) {
+      continue;
+    }
+    chunks.push(value);
+    received += value.length;
+    if (received < nextReport) {
+      continue;
+    }
+    const line = progressLine(assetName, received, total);
+    process.stdout.write(`${line}${process.stdout.isTTY ? '\r' : '\n'}`);
+    nextReport = received + Math.max(1, Math.floor((total ?? 0) * PROGRESS_STEP));
+  }
+  if (total !== null && process.stdout.isTTY) {
+    process.stdout.write('\n');
+  }
+  return mergeChunks(chunks, received);
+}
+
+async function download(assetName: string, url: string): Promise<Uint8Array> {
   const response = await fetch(url, {
     headers: { 'user-agent': 'harnesys-cli' },
     signal: AbortSignal.timeout(120000),
@@ -119,7 +194,24 @@ async function download(url: string): Promise<Uint8Array> {
   if (!response.ok) {
     throw new Error(`download failed with HTTP ${response.status}`);
   }
-  return new Uint8Array(await response.arrayBuffer());
+  const header = response.headers.get('content-length');
+  const total = header ? Number(header) : null;
+  return readBodyWithProgress(assetName, response, total);
+}
+
+async function fetchChecksum(asset: ReleaseAsset): Promise<string | null> {
+  try {
+    const response = await fetch(`${asset.browser_download_url}.sha256`, {
+      headers: { 'user-agent': 'harnesys-cli' },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!response.ok) {
+      return null;
+    }
+    return checksumHexFor(await response.text(), asset.name);
+  } catch {
+    return null;
+  }
 }
 
 function isUnitActive(unit: string): boolean {
@@ -175,10 +267,19 @@ export async function commandUpdate(repoFlag: string | undefined): Promise<void>
     for (const item of targets) {
       const asset = findAsset(release.assets, assetNameFor(item.bin));
       const staging = `${item.target}.update-${process.pid}`;
-      const bytes = await download(asset.browser_download_url);
+      const bytes = await download(asset.name, asset.browser_download_url);
+      const expected = await fetchChecksum(asset);
+      if (expected !== null && !checksumMatches(bytes, expected)) {
+        throw new Error(`sha256 mismatch for ${asset.name} — download corrupted or tampered`);
+      }
       writeFileSync(staging, bytes);
       chmodSync(staging, 0o755);
-      staged.push({ assetName: asset.name, staging, target: item.target, size: bytes.length });
+      staged.push({
+        assetName: asset.name,
+        staging,
+        target: item.target,
+        size: bytes.length,
+      });
     }
   } catch (error) {
     for (const item of staged) {
