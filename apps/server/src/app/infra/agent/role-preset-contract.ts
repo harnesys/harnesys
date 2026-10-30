@@ -9,13 +9,6 @@ interface RoleRule {
   maxSteps: number;
 }
 
-const JARVIS_RULE: RoleRule = {
-  requiredCapabilities: ['issues', 'threads', 'manager', 'plan', 'pin-memory', 'core'],
-  forbiddenCapabilities: ['files', 'shell', 'fetch', 'web'],
-  permissions: { 'fs.write': 'deny', process: 'deny', network: 'deny', mcp: 'deny' },
-  maxSteps: 40,
-};
-
 const CODER_RULE: RoleRule = {
   requiredCapabilities: ['files', 'shell', 'issues', 'lsp', 'plan', 'pin-memory', 'core'],
   forbiddenCapabilities: [],
@@ -31,7 +24,6 @@ const REVIEWER_RULE: RoleRule = {
 };
 
 const ROLE_RULES: Record<string, RoleRule> = {
-  'harnesys/jarvis': JARVIS_RULE,
   'harnesys/coder': CODER_RULE,
   'harnesys/reviewer': REVIEWER_RULE,
 };

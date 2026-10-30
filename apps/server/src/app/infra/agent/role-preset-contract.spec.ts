@@ -11,20 +11,6 @@ function fixture(overrides: Partial<AgentPresetBody> = {}): AgentPresetBody {
   };
 }
 
-const JARVIS_OK: Partial<AgentPresetBody> = {
-  role: 'manager',
-  budget: { maxSteps: 40 },
-  capabilities: {
-    issues: {},
-    threads: {},
-    manager: {},
-    plan: {},
-    'pin-memory': {},
-    core: {},
-  },
-  permissions: { 'fs.write': 'deny', process: 'deny', network: 'deny', mcp: 'deny' },
-};
-
 const CODER_OK: Partial<AgentPresetBody> = {
   role: 'coder',
   budget: { maxSteps: 300 },
@@ -54,7 +40,6 @@ const REVIEWER_OK: Partial<AgentPresetBody> = {
 
 describe('rolePresetContract', () => {
   test('accepts compliant role presets', () => {
-    expect(rolePresetContract('harnesys/jarvis', fixture(JARVIS_OK))).toEqual([]);
     expect(rolePresetContract('harnesys/coder', fixture(CODER_OK))).toEqual([]);
     expect(rolePresetContract('harnesys/reviewer', fixture(REVIEWER_OK))).toEqual([]);
   });
@@ -65,21 +50,11 @@ describe('rolePresetContract', () => {
 
   test('flags missing required capability', () => {
     const broken = fixture({
-      ...JARVIS_OK,
-      capabilities: { issues: {}, threads: {} },
+      ...CODER_OK,
+      capabilities: { files: {}, shell: {}, issues: {} },
     });
-    expect(rolePresetContract('harnesys/jarvis', broken)).toContain(
-      'harnesys/jarvis: missing capability manager',
-    );
-  });
-
-  test('flags forbidden capability', () => {
-    const broken = fixture({
-      ...JARVIS_OK,
-      capabilities: { ...JARVIS_OK.capabilities, files: {} },
-    });
-    expect(rolePresetContract('harnesys/jarvis', broken)).toContain(
-      'harnesys/jarvis: forbidden capability files',
+    expect(rolePresetContract('harnesys/coder', broken)).toContain(
+      'harnesys/coder: missing capability lsp',
     );
   });
 
@@ -104,9 +79,9 @@ describe('rolePresetContract', () => {
   });
 
   test('flags wrong maxSteps', () => {
-    const broken = fixture({ ...JARVIS_OK, budget: { maxSteps: 400 } });
-    expect(rolePresetContract('harnesys/jarvis', broken)).toContain(
-      'harnesys/jarvis: maxSteps must be 40',
+    const broken = fixture({ ...REVIEWER_OK, budget: { maxSteps: 400 } });
+    expect(rolePresetContract('harnesys/reviewer', broken)).toContain(
+      'harnesys/reviewer: maxSteps must be 120',
     );
   });
 

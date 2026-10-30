@@ -4,18 +4,18 @@ import { parseLegacyAgentPreset } from './legacy-user-presets.ts';
 describe('parseLegacyAgentPreset', () => {
   test('parses a valid legacy agent preset', () => {
     const record = parseLegacyAgentPreset(
-      'jarvis.json',
-      JSON.stringify({ name: 'Jarvis', role: 'Manager', instructions: 'coordinate' }),
+      'lead.json',
+      JSON.stringify({ name: 'Lead', role: 'Manager', instructions: 'coordinate' }),
     );
-    expect(record?.id).toBe('local/jarvis');
+    expect(record?.id).toBe('local/lead');
     expect(record?.kind).toBe('agent');
     expect(record?.origin).toBe('user');
     expect(record?.installedFrom).toBe('file');
-    expect(record?.name).toBe('Jarvis');
+    expect(record?.name).toBe('Lead');
   });
 
   test('rejects broken json and invalid bodies', () => {
-    expect(parseLegacyAgentPreset('jarvis.json', '{not json')).toBeNull();
-    expect(parseLegacyAgentPreset('jarvis.json', JSON.stringify({ name: '' }))).toBeNull();
+    expect(parseLegacyAgentPreset('lead.json', '{not json')).toBeNull();
+    expect(parseLegacyAgentPreset('lead.json', JSON.stringify({ name: '' }))).toBeNull();
   });
 });

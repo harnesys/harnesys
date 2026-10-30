@@ -10,7 +10,7 @@ import { FakeDeskEvents, FakeOrgSettings } from '../schedules/schedule.use-case.
 import {
   agentDetail,
   CODER_BODY,
-  JARVIS_BODY,
+  LEAD_BODY,
   REVIEWER_BODY,
   TEAM_BODY,
   teamDetail,
@@ -34,9 +34,9 @@ import {
 const ORG_ID = crypto.randomUUID();
 
 const BODY = {
-  presetId: 'harnesys/product-dev',
+  presetId: 'harnesys/dev-team',
   name: 'Alpha Team',
-  models: { jarvis: 'model-a', coder: 'model-b', reviewer: 'model-a' },
+  models: { lead: 'model-a', coder: 'model-b', reviewer: 'model-a' },
   digestCron: '0 9 * * *',
 };
 
@@ -50,10 +50,10 @@ interface Harness {
 
 function defaultCatalog(): FakePresetCatalog {
   const catalog = new FakePresetCatalog();
-  catalog.items.set('harnesys/jarvis', agentDetail('harnesys/jarvis', JARVIS_BODY));
+  catalog.items.set('harnesys/lead', agentDetail('harnesys/lead', LEAD_BODY));
   catalog.items.set('harnesys/coder', agentDetail('harnesys/coder', CODER_BODY));
   catalog.items.set('harnesys/reviewer', agentDetail('harnesys/reviewer', REVIEWER_BODY));
-  catalog.items.set('harnesys/product-dev', teamDetail('harnesys/product-dev', TEAM_BODY));
+  catalog.items.set('harnesys/dev-team', teamDetail('harnesys/dev-team', TEAM_BODY));
   return catalog;
 }
 
@@ -91,7 +91,7 @@ function buildHarness(options?: {
 }
 
 function withTeamBody(catalog: FakePresetCatalog, body: typeof TEAM_BODY): void {
-  catalog.items.set('harnesys/product-dev', teamDetail('harnesys/product-dev', body));
+  catalog.items.set('harnesys/dev-team', teamDetail('harnesys/dev-team', body));
 }
 
 describe('CreateTeamFromPresetUseCase', () => {
@@ -99,15 +99,15 @@ describe('CreateTeamFromPresetUseCase', () => {
     const h = buildHarness();
     const response = h.useCase.execute({ orgId: ORG_ID, body: { ...BODY } });
     expect(response.agents).toHaveLength(3);
-    const jarvis = response.agents.find((agent) => agent.name === 'Jarvis');
+    const lead = response.agents.find((agent) => agent.name === 'Lead');
     const coder = response.agents.find((agent) => agent.name === 'Coder');
     const reviewer = response.agents.find((agent) => agent.name === 'Reviewer');
-    if (!jarvis || !coder || !reviewer) {
+    if (!lead || !coder || !reviewer) {
       throw new Error('agents not created');
     }
-    expect(jarvis.role).toBe('manager');
-    expect(jarvis.config?.capabilitiesJson).toMatchObject({ manager: {} });
-    expect(jarvis.budgetUsdDaily).toBe(5);
+    expect(lead.role).toBe('manager');
+    expect(lead.config?.capabilitiesJson).toMatchObject({ manager: {} });
+    expect(lead.budgetUsdDaily).toBe(5);
     expect(coder.modelId).toBe('model-b');
     expect(coder.budgetUsdDaily).toBe(10);
     expect(reviewer.budgetUsdDaily).toBe(5);
@@ -133,7 +133,7 @@ describe('CreateTeamFromPresetUseCase', () => {
     if (!schedule) {
       throw new Error('schedule not created');
     }
-    expect(schedule.targetAgentId).toBe(jarvis.id);
+    expect(schedule.targetAgentId).toBe(lead.id);
     expect(schedule.cron).toBe('0 9 * * *');
     expect(schedule.detail).toBe(TEAM_BODY.digest.detail);
     expect(schedule.missPolicy).toBe('catch-up');
@@ -177,7 +177,7 @@ describe('CreateTeamFromPresetUseCase', () => {
     const h = buildHarness({ catalog });
     const response = h.useCase.execute({
       orgId: ORG_ID,
-      body: { ...BODY, models: { jarvis: 'model-a', coder: 'model-b' } },
+      body: { ...BODY, models: { lead: 'model-a', coder: 'model-b' } },
     });
     const reviewer = response.agents.find((agent) => agent.name === 'Reviewer');
     expect(reviewer?.modelId).toBe('stub');
@@ -208,7 +208,7 @@ describe('CreateTeamFromPresetUseCase', () => {
     const h = buildHarness();
     h.useCase.execute({ orgId: ORG_ID, body: { ...BODY } });
     const second = h.useCase.execute({ orgId: ORG_ID, body: { ...BODY } });
-    expect(second.agents.map((agent) => agent.name)).toEqual(['Jarvis 2', 'Coder 2', 'Reviewer 2']);
+    expect(second.agents.map((agent) => agent.name)).toEqual(['Lead 2', 'Coder 2', 'Reviewer 2']);
     expect(h.agents.list(ORG_ID)).toHaveLength(6);
   });
 

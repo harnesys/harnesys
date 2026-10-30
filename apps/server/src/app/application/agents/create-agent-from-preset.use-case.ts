@@ -9,7 +9,6 @@ import { DEFAULT_REACT_BUDGET } from './react-preset.ts';
 
 const PRESET_DELEGATES: Record<string, readonly string[]> = {
   'harnesys/assistant': ['harnesys/explorer', 'harnesys/general'],
-  'harnesys/orchestrator': ['harnesys/explorer', 'harnesys/general'],
 };
 
 export interface CreateAgentFromPresetRequest {

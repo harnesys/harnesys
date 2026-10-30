@@ -4,18 +4,18 @@ import { planSystemPresets } from './system-presets-seed.ts';
 
 describe('planSystemPresets', () => {
   test('upserts bundled rows and deletes vanished system rows', () => {
-    const bundle = [systemRecord('harnesys/jarvis')];
-    const existing = [systemRecord('harnesys/jarvis'), systemRecord('harnesys/gone')];
+    const bundle = [systemRecord('harnesys/lead')];
+    const existing = [systemRecord('harnesys/lead'), systemRecord('harnesys/gone')];
     const plan = planSystemPresets(bundle, existing);
-    expect(plan.upserts.map((record) => record.id)).toEqual(['harnesys/jarvis']);
+    expect(plan.upserts.map((record) => record.id)).toEqual(['harnesys/lead']);
     expect(plan.deletes).toEqual(['harnesys/gone']);
   });
 
   test('is idempotent', () => {
-    const bundle = [systemRecord('harnesys/jarvis')];
+    const bundle = [systemRecord('harnesys/lead')];
     const first = planSystemPresets(bundle, []);
     const second = planSystemPresets(bundle, first.upserts);
-    expect(second.upserts.map((record) => record.id)).toEqual(['harnesys/jarvis']);
+    expect(second.upserts.map((record) => record.id)).toEqual(['harnesys/lead']);
     expect(second.deletes).toEqual([]);
   });
 });

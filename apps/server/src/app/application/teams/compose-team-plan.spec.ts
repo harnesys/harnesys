@@ -6,9 +6,9 @@ import { composeTeamPlan } from './compose-team-plan.ts';
 const PRESET: TeamPresetBody = {
   roles: [
     {
-      roleKey: 'jarvis',
-      name: 'Jarvis',
-      agentRef: 'harnesys/jarvis',
+      roleKey: 'lead',
+      name: 'Lead',
+      agentRef: 'harnesys/lead',
       budgetUsdDaily: 5,
       requiresModel: true,
       capabilitiesExtra: ['manager'],
@@ -29,7 +29,7 @@ const PRESET: TeamPresetBody = {
     },
   ],
   board: {
-    name: 'Product Dev',
+    name: 'Dev Team',
     statuses: [
       { key: 'backlog', label: 'Backlog', category: 'backlog', order: 0, isEntry: true },
       { key: 'in_progress', label: 'In progress', category: 'started', order: 1, isEntry: false },
@@ -52,11 +52,11 @@ const PRESET: TeamPresetBody = {
       },
     ],
   },
-  digest: { cronDefault: '0 9 * * *', roleKey: 'jarvis', detail: 'Daily digest.' },
+  digest: { cronDefault: '0 9 * * *', roleKey: 'lead', detail: 'Daily digest.' },
 };
 
 const MODELS: Record<string, string> = {
-  jarvis: 'model-a',
+  lead: 'model-a',
   coder: 'model-b',
   reviewer: 'model-a',
 };
@@ -74,14 +74,14 @@ describe('composeTeamPlan', () => {
   test('composes one agent per role with model and top level', () => {
     const plan = compose(null);
     expect(plan.agents).toHaveLength(3);
-    expect(plan.agents.map((agent) => agent.roleKey)).toEqual(['jarvis', 'coder', 'reviewer']);
-    const jarvis = plan.agents.find((agent) => agent.roleKey === 'jarvis');
-    expect(jarvis?.body).toMatchObject({
-      name: 'Jarvis',
+    expect(plan.agents.map((agent) => agent.roleKey)).toEqual(['lead', 'coder', 'reviewer']);
+    const lead = plan.agents.find((agent) => agent.roleKey === 'lead');
+    expect(lead?.body).toMatchObject({
+      name: 'Lead',
       modelId: 'model-a',
       level: 'top',
     });
-    expect(jarvis?.capabilitiesExtra).toEqual(['manager']);
+    expect(lead?.capabilitiesExtra).toEqual(['manager']);
     expect(plan.agents.map((agent) => agent.body.budgetUsdDaily)).toEqual([5, 10, 5]);
     const coder = plan.agents.find((agent) => agent.roleKey === 'coder');
     expect(coder?.body).toMatchObject({ name: 'Coder', modelId: 'model-b' });
@@ -95,7 +95,7 @@ describe('composeTeamPlan', () => {
 
   test('board keeps the preset statuses', () => {
     const plan = compose(null);
-    expect(plan.board.name).toBe('Product Dev');
+    expect(plan.board.name).toBe('Dev Team');
     expect(plan.board.statuses).toHaveLength(3);
     expect(plan.board.statuses[0]?.key).toBe('backlog');
   });
@@ -114,7 +114,7 @@ describe('composeTeamPlan', () => {
   test('schedule binds digest to the preset digest role with cron and detail', () => {
     const plan = compose('30 8 * * 1-5');
     expect(plan.schedule).toEqual({
-      agentRoleKey: 'jarvis',
+      agentRoleKey: 'lead',
       name: 'Alpha Team',
       cron: '30 8 * * 1-5',
       detail: 'Daily digest.',
@@ -126,7 +126,7 @@ describe('composeTeamPlan', () => {
       composeTeamPlan({
         preset: PRESET,
         name: 'Alpha Team',
-        models: { jarvis: 'model-a', coder: 'model-b' },
+        models: { lead: 'model-a', coder: 'model-b' },
         digestCron: null,
       }),
     ).toThrow(TeamValidationException);
@@ -142,7 +142,7 @@ describe('composeTeamPlan', () => {
     const plan = composeTeamPlan({
       preset: optionalReviewer,
       name: 'Alpha Team',
-      models: { jarvis: 'model-a', coder: 'model-b' },
+      models: { lead: 'model-a', coder: 'model-b' },
       digestCron: null,
     });
     const reviewer = plan.agents.find((agent) => agent.roleKey === 'reviewer');

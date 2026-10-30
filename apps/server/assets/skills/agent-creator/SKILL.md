@@ -204,7 +204,7 @@ A delegate sees only its `instructions` and the spawn input. Both must carry eve
 - Output format the parent can parse (e.g. "last message: FINDINGS: ... / BLOCKERS: ...").
 - Budget awareness: when the budget note shows few steps left, close with an honest partial report.
 
-Reference examples live in `apps/server/assets/presets/agents/*.json` (researcher, coder, reviewer, tester, orchestrator). Copy their shape: title, method, runtime loop, tool etiquette, budget.
+Reference examples live in `apps/server/assets/presets/agents/*.json` (researcher, coder, reviewer, tester). Copy their shape: title, method, runtime loop, tool etiquette, budget.
 
 ## 9. Failure playbook
 

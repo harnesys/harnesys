@@ -89,19 +89,19 @@ describe('ImportPresetsUseCase', () => {
   test('rejects entries in the reserved harnesys namespace', () => {
     const store = new FakePresetStore();
     store.save({
-      id: 'harnesys/jarvis',
+      id: 'harnesys/lead',
       kind: 'agent',
       origin: 'system',
       version: '1.0.0',
-      name: 'Jarvis',
+      name: 'Lead',
       body: agentBody,
     });
     const useCase = new ImportPresetsUseCase(store);
     const envelope = envelopeOf([
-      { kind: 'agent', id: 'harnesys/jarvis', version: '2.0.0', name: 'Jarvis', body: agentBody },
+      { kind: 'agent', id: 'harnesys/lead', version: '2.0.0', name: 'Lead', body: agentBody },
     ]);
     expect(() => useCase.execute({ envelope })).toThrow(/PRESET_VALIDATION|reserved/);
-    expect(store.findById('agent', 'harnesys/jarvis')?.version).toBe('1.0.0');
-    expect(store.findById('agent', 'harnesys/jarvis')?.origin).toBe('system');
+    expect(store.findById('agent', 'harnesys/lead')?.version).toBe('1.0.0');
+    expect(store.findById('agent', 'harnesys/lead')?.origin).toBe('system');
   });
 });

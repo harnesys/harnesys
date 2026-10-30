@@ -6,8 +6,8 @@ import type {
 } from '@harnesys/contracts';
 import { BOARD_TEMPLATES } from '@harnesys/contracts';
 
-export const JARVIS_BODY: AgentPresetBody = {
-  name: 'Jarvis',
+export const LEAD_BODY: AgentPresetBody = {
+  name: 'Lead',
   role: 'manager',
   instructions: 'Coordinate the team.',
   budget: { maxSteps: 40 },
@@ -44,9 +44,9 @@ export const REVIEWER_BODY: AgentPresetBody = {
 export const TEAM_BODY: TeamPresetBody = {
   roles: [
     {
-      roleKey: 'jarvis',
-      name: 'Jarvis',
-      agentRef: 'harnesys/jarvis',
+      roleKey: 'lead',
+      name: 'Lead',
+      agentRef: 'harnesys/lead',
       budgetUsdDaily: 5,
       requiresModel: true,
       capabilitiesExtra: ['manager'],
@@ -67,7 +67,7 @@ export const TEAM_BODY: TeamPresetBody = {
     },
   ],
   board: {
-    name: 'Product Dev',
+    name: 'Dev Team',
     statuses: BOARD_TEMPLATES.dev.statuses,
     rules: [
       {
@@ -86,7 +86,7 @@ export const TEAM_BODY: TeamPresetBody = {
       },
     ],
   },
-  digest: { cronDefault: '0 9 * * *', roleKey: 'jarvis', detail: 'Daily digest.' },
+  digest: { cronDefault: '0 9 * * *', roleKey: 'lead', detail: 'Daily digest.' },
 };
 
 export function agentDetail(id: string, body: AgentPresetBody): AgentPresetDetail {
@@ -110,7 +110,7 @@ export function teamDetail(id: string, body: TeamPresetBody): TeamPresetDetail {
     id,
     origin: 'system',
     version: '1.0.0',
-    name: 'Product Dev',
+    name: 'Dev Team',
     tags: [],
     roles: body.roles.map((role) => ({ roleKey: role.roleKey, name: role.name })),
     createdAt: '2026-01-01T00:00:00.000Z',

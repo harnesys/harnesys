@@ -30,9 +30,9 @@ const teamBody: TeamPresetBody = {
       requiresModel: true,
     },
     {
-      roleKey: 'jarvis',
-      name: 'Jarvis',
-      agentRef: 'harnesys/jarvis',
+      roleKey: 'lead',
+      name: 'Lead',
+      agentRef: 'harnesys/lead',
       budgetUsdDaily: 5,
       requiresModel: true,
     },
@@ -44,7 +44,7 @@ const teamBody: TeamPresetBody = {
     ],
     rules: [],
   },
-  digest: { cronDefault: '0 9 * * *', roleKey: 'jarvis', detail: 'daily' },
+  digest: { cronDefault: '0 9 * * *', roleKey: 'lead', detail: 'daily' },
 };
 
 describe('preset envelope', () => {
@@ -82,7 +82,7 @@ describe('preset envelope', () => {
 
   test('missingAgentRefs lists absent references', () => {
     expect(missingAgentRefs(teamBody, () => true)).toEqual([]);
-    expect(missingAgentRefs(teamBody, (ref) => ref === 'harnesys/jarvis')).toEqual(['local/coder']);
+    expect(missingAgentRefs(teamBody, (ref) => ref === 'harnesys/lead')).toEqual(['local/coder']);
   });
 
   test('duplicateEnvelopeIds reports repeated ids', () => {
