@@ -1,7 +1,6 @@
 import { ArrowLeftIcon } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { UpdatePane } from '@/features/app-update';
-import { AppUpdateCheck } from '@/features/app-update/app-update-check';
 import { AppearancePane } from '@/features/appearance/appearance-pane';
 import { AccountPane } from '@/features/manage-account';
 import { OrgAuditPane } from '@/features/manage-audit';

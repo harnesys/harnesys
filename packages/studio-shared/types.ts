@@ -74,7 +74,6 @@ export {
 export * from './src/desk-events.ts';
 export * from './src/discovery.ts';
 export * from './src/events-watch.ts';
-export * from './src/semver.ts';
 export type {
   GitBranch,
   GitCheckoutRequest,
@@ -197,6 +196,7 @@ export {
   scheduledTaskText,
   visibleScheduledText,
 } from './src/schedule-prompt.ts';
+export * from './src/semver.ts';
 export type { TerminalSessionRecord } from './src/terminal.ts';
 export { isTextAttachment } from './src/text-attachment.ts';
 export type {
