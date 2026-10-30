@@ -86,7 +86,7 @@ export function OnboardingCreatePanel({
             <p className="text-muted-foreground text-xs">{CREATE_NAME_HINT}</p>
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="onboarding-org-workspace">{CREATE_WORKSPACE_LABEL}</Label>
+            <Label htmlFor="onboarding-org-workspace">{CREATE_WORKSPACE_LABEL} (optional)</Label>
             <div className="flex gap-2">
               <Input
                 id="onboarding-org-workspace"
