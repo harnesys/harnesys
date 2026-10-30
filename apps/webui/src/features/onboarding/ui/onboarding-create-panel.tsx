@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { FolderBrowserDialog } from '@/features/create-project/ui/folder-browser-dialog.tsx';
 import { createOrg, type MachineOrgEntry } from '@/shared/api/orgs';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
+import { FolderBrowserDialog } from '@/widgets/folder-browser';
 import {
   CHOOSE_BACK,
   CREATE_NAME_HINT,

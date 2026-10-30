@@ -17,7 +17,6 @@ import {
   loadRecentDirectories,
   rememberRecentDirectory,
 } from '@/entities/thread/model/thread-binding';
-import { DirectoryPicker } from '@/features/attach-source/ui/directory-picker';
 import { executionProfilesQuery, updateThreadBinding } from '@/shared/api';
 import { getSourceLocation, sourceLocationQueryKey } from '@/shared/api/source-location';
 import { listSources, type Source, sourceHasGitVcs } from '@/shared/api/sources';
@@ -32,6 +31,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { toast } from '@/shared/ui/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
+import { FolderBrowser } from '@/widgets/folder-browser';
 import { GitRepoMenuItems, useGitStatus } from '@/widgets/project-sidebar/ui/git-menu';
 
 const CHIP_TRIGGER_CLASS =
@@ -145,7 +145,7 @@ export function ThreadBindingBar({
         <PopoverContent align="start" className="w-96 p-2">
           {customOpen ? (
             <div className="flex flex-col gap-2">
-              <DirectoryPicker orgId={orgId ?? ''} value={customPath} onChange={setCustomPath} />
+              <FolderBrowser orgId={orgId ?? undefined} autoFocus onChange={setCustomPath} />
               <div className="flex items-center justify-end gap-1.5">
                 <Button
                   type="button"

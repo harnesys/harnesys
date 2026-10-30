@@ -13,6 +13,7 @@ import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { toast } from '@/shared/ui/toast';
+import { FolderBrowser } from '@/widgets/folder-browser';
 import {
   type AddSourceFieldsInput,
   type AddSourceFieldsOutput,
@@ -20,7 +21,6 @@ import {
   addSourceFieldsSchema,
   emptyAddSourceFields,
 } from '../model/add-source-fields';
-import { DirectoryPicker } from './directory-picker';
 
 const visibilityItems = [
   { value: 'org', label: 'Org' },
@@ -105,13 +105,14 @@ export function AddSourceDialog({ onResolve }: DialogComponentProps<boolean>) {
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid || undefined}>
                   <FieldLabel htmlFor="add-source-folder-path">Folder path</FieldLabel>
-                  <DirectoryPicker
+                  <FolderBrowser
                     key={hostId || 'local'}
-                    orgId={orgId ?? ''}
+                    orgId={orgId ?? undefined}
                     hostId={hostId || undefined}
-                    value={field.value}
-                    onChange={field.onChange}
+                    autoFocus
+                    inputId="add-source-folder-path"
                     invalid={fieldState.invalid || undefined}
+                    onChange={field.onChange}
                   />
                   <FieldDescription>
                     Browse the selected host and pick a folder, or type a path and press Apply.

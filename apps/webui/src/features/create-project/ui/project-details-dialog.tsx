@@ -5,8 +5,8 @@ import { appMetaQuery, fleetNodesQuery } from '@/shared/api';
 import type { DialogComponentProps } from '@/shared/services/overlay';
 import { Button } from '@/shared/ui/button';
 import { DialogFooter } from '@/shared/ui/dialog';
+import { FolderBrowserDialog } from '@/widgets/folder-browser';
 import { folderNameFromPath } from '../model/folder-name.ts';
-import { FolderBrowserDialog } from './folder-browser-dialog.tsx';
 import { ProjectFields } from './project-fields.tsx';
 export function ProjectDetailsDialog({
   onResolve,
@@ -68,7 +68,7 @@ export function ProjectDetailsDialog({
       />
       {browsing ? (
         <FolderBrowserDialog
-          nodeId={selectedNodeId}
+          hostId={selectedNodeId}
           nodeLabel={nodes?.find((node) => node.id === selectedNodeId)?.name}
           onResolve={(picked) => {
             setBrowsing(false);

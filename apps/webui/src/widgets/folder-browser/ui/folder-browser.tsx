@@ -1,63 +1,79 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { ArrowUpIcon, Loader2Icon, PlusIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { getActiveOrgId } from '@/shared/api/active-org';
 import { browseDirs, createDir } from '@/shared/api/host-fs';
+import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { FolderTypeIcon } from '@/shared/ui/icons';
 import { Input } from '@/shared/ui/input';
-import { toast } from '@/shared/ui/toast';
 
-interface DirectoryPickerProps {
-  orgId: string;
+export interface FolderBrowserProps {
+  orgId?: string;
   hostId?: string;
-  value: string;
-  onChange: (path: string) => void;
   invalid?: boolean;
+  autoFocus?: boolean;
+  inputId?: string;
+  className?: string;
+  listClassName?: string;
+  onChange?: (path: string) => void;
 }
 
-export function DirectoryPicker({ orgId, hostId, value, onChange, invalid }: DirectoryPickerProps) {
+export function FolderBrowser({
+  orgId,
+  hostId,
+  invalid,
+  autoFocus = false,
+  inputId,
+  className,
+  listClassName = 'h-48',
+  onChange,
+}: FolderBrowserProps) {
+  const resolvedOrgId = orgId ?? getActiveOrgId();
   const [dirPath, setDirPath] = useState<string | null>(null);
   const [pathInput, setPathInput] = useState('');
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
+  const [actionError, setActionError] = useState<string | null>(null);
+  const syncedPath = useRef<string | null>(null);
 
   const listingQuery = useQuery({
-    queryKey: ['host-dirs', orgId, hostId ?? null, dirPath],
+    queryKey: ['host-dirs', resolvedOrgId ?? '', hostId ?? null, dirPath],
     queryFn: () =>
-      browseDirs(orgId, {
+      browseDirs(resolvedOrgId ?? '', {
         ...(dirPath ? { path: dirPath } : {}),
         ...(hostId ? { hostId } : {}),
       }),
-    enabled: orgId.length > 0,
+    enabled: Boolean(resolvedOrgId),
   });
   const listing = listingQuery.data;
 
   useEffect(() => {
-    if (listing) {
+    if (listing && listing.path !== syncedPath.current) {
+      syncedPath.current = listing.path;
       setPathInput(listing.path);
-      if (listing.path !== value) {
-        onChange(listing.path);
-      }
+      onChange?.(listing.path);
     }
-  }, [listing, value, onChange]);
+  }, [listing, onChange]);
 
   useEffect(() => {
     if (listingQuery.error instanceof Error) {
-      toast.add({ title: 'Cannot open directory', description: listingQuery.error.message });
+      setActionError(listingQuery.error.message);
     }
   }, [listingQuery.error]);
 
   const createMutation = useMutation({
-    mutationFn: (path: string) => createDir(orgId, { path, ...(hostId ? { hostId } : {}) }),
+    mutationFn: (path: string) =>
+      createDir(resolvedOrgId ?? '', { path, ...(hostId ? { hostId } : {}) }),
     onSuccess: (result) => {
       setCreating(false);
       setNewName('');
+      setActionError(null);
       setDirPath(result.absolutePath);
-      onChange(result.absolutePath);
+      onChange?.(result.absolutePath);
     },
     onError: (err: unknown) => {
-      const msg = err instanceof Error ? err.message : 'Folder not created';
-      toast.add({ title: 'Cannot create folder', description: msg });
+      setActionError(err instanceof Error ? err.message : 'Folder not created');
     },
   });
 
@@ -66,28 +82,39 @@ export function DirectoryPicker({ orgId, hostId, value, onChange, invalid }: Dir
     if (trimmed.length === 0) {
       return;
     }
+    setActionError(null);
     setDirPath(trimmed);
-    onChange(trimmed);
+    onChange?.(trimmed);
   };
 
   const enter = (path: string) => {
+    setActionError(null);
     setDirPath(path);
+    onChange?.(path);
   };
 
   const submitCreate = () => {
     const name = newName.trim();
     const base = (pathInput.trim() || listing?.path || '').replace(/\/+$/, '');
-    if (name.length === 0 || base.length === 0) {
+    if (name.length === 0 || name.includes('/') || base.length === 0) {
       return;
     }
     createMutation.mutate(`${base}/${name}`);
   };
 
+  if (!resolvedOrgId) {
+    return (
+      <p className={cn('text-muted-foreground text-sm', className)}>
+        No active organization to browse folders on.
+      </p>
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-2">
+    <div className={cn('flex flex-col gap-2', className)}>
       <div className="flex items-center gap-2">
         <Input
-          id="add-source-folder-path"
+          id={inputId}
           value={pathInput}
           onChange={(event) => setPathInput(event.target.value)}
           onKeyDown={(event) => {
@@ -97,8 +124,9 @@ export function DirectoryPicker({ orgId, hostId, value, onChange, invalid }: Dir
             }
           }}
           placeholder="/home/user/work/app"
-          autoFocus
+          autoFocus={autoFocus}
           aria-invalid={invalid || undefined}
+          data-testid="folder-browser-path-input"
         />
         <Button type="button" variant="outline" size="sm" onClick={applyPath}>
           Apply
@@ -118,7 +146,10 @@ export function DirectoryPicker({ orgId, hostId, value, onChange, invalid }: Dir
           <ArrowUpIcon />
         </Button>
       </div>
-      <div className="flex h-48 flex-col gap-0.5 overflow-y-auto rounded-lg border p-1">
+      <div
+        className={cn('flex flex-col gap-0.5 overflow-y-auto rounded-lg border p-1', listClassName)}
+        data-testid="folder-browser-list"
+      >
         {listingQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 p-3 text-muted-foreground text-sm">
             <Loader2Icon className="size-4 animate-spin" />
@@ -144,6 +175,7 @@ export function DirectoryPicker({ orgId, hostId, value, onChange, invalid }: Dir
           <div className="p-3 text-center text-muted-foreground text-sm">No subfolders</div>
         ) : null}
       </div>
+      {actionError ? <p className="text-destructive text-sm">{actionError}</p> : null}
       {creating ? (
         <div className="flex items-center gap-2">
           <Input
@@ -157,6 +189,7 @@ export function DirectoryPicker({ orgId, hostId, value, onChange, invalid }: Dir
             }}
             placeholder="New folder name"
             autoFocus
+            data-testid="folder-browser-new-name"
           />
           <Button
             type="button"
@@ -164,7 +197,7 @@ export function DirectoryPicker({ orgId, hostId, value, onChange, invalid }: Dir
             disabled={createMutation.isPending || newName.trim().length === 0}
             onClick={submitCreate}
           >
-            Create
+            {createMutation.isPending ? 'Creating…' : 'Create'}
           </Button>
           <Button
             type="button"
@@ -184,7 +217,11 @@ export function DirectoryPicker({ orgId, hostId, value, onChange, invalid }: Dir
           variant="ghost"
           size="sm"
           className="self-start"
-          onClick={() => setCreating(true)}
+          onClick={() => {
+            setActionError(null);
+            setCreating(true);
+          }}
+          data-testid="folder-browser-create-toggle"
         >
           <PlusIcon data-icon="inline-start" />
           Create folder

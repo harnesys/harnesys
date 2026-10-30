@@ -10,7 +10,7 @@ import type {
 } from '@harnesys/studio-shared';
 import { queryOptions } from '@tanstack/react-query';
 import { getActiveOrgId } from './active-org';
-import { ApiError, apiJson } from './client';
+import { ApiError } from './client';
 import { projectQueryKey, resolveOrgId } from './project-base';
 import type { Source, SourceDistributionKind } from './sources';
 import {
@@ -77,57 +77,8 @@ export async function listProjects(): Promise<BridgedProject[]> {
   return sources.map(toBridgedProject);
 }
 
-export interface DirectoryEntry {
-  name: string;
-  path: string;
-}
-export interface DirectoryListing {
-  path: string;
-  parent: string | null;
-  entries: DirectoryEntry[];
-}
 export function pickProjectFolder(): Promise<{ path: string } | undefined> {
   return Promise.reject(new ApiError(501, 'Native folder picker not available yet'));
-}
-export function browseProjectDirs(input: {
-  path?: string;
-  nodeId?: string;
-  orgId?: string;
-}): Promise<DirectoryListing> {
-  const orgId = input.orgId ?? getActiveOrgId();
-  if (!orgId) {
-    return Promise.reject(new ApiError(400, 'No active org'));
-  }
-  return apiJson(`/api/orgs/${encodeURIComponent(orgId)}/browse-dirs`, {
-    method: 'POST',
-    body: JSON.stringify({
-      ...(input.path ? { path: input.path } : {}),
-      ...(input.nodeId ? { hostId: input.nodeId } : {}),
-    }),
-  });
-}
-export function browseProjectDirsQuery(input: { path?: string; nodeId?: string; orgId?: string }) {
-  return queryOptions({
-    queryKey: ['project-dirs', input.orgId ?? 'active', input.nodeId ?? 'self', input.path ?? ''],
-    queryFn: () => browseProjectDirs(input),
-  });
-}
-export function createProjectDir(input: {
-  path: string;
-  nodeId?: string;
-  orgId?: string;
-}): Promise<{ absolutePath: string }> {
-  const orgId = input.orgId ?? getActiveOrgId();
-  if (!orgId) {
-    return Promise.reject(new ApiError(400, 'No active org'));
-  }
-  return apiJson(`/api/orgs/${encodeURIComponent(orgId)}/create-dir`, {
-    method: 'POST',
-    body: JSON.stringify({
-      path: input.path,
-      ...(input.nodeId ? { hostId: input.nodeId } : {}),
-    }),
-  });
 }
 export async function createProject(input: {
   path?: string;

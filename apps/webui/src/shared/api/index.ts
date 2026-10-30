@@ -115,15 +115,10 @@ export {
   savePreset,
 } from './presets';
 export {
-  browseProjectDirs,
-  browseProjectDirsQuery,
   type CreateProjectSkillRequest,
   type CreateProjectSkillResponse,
   createProject,
-  createProjectDir,
   createProjectSkill,
-  type DirectoryEntry,
-  type DirectoryListing,
   deleteProject,
   deleteProjectMcpServer,
   listProjectCapabilities,
