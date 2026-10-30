@@ -135,5 +135,6 @@
         "to": "map_done"
       }
     ]
-  }
+  },
+  "color": "pink"
 }

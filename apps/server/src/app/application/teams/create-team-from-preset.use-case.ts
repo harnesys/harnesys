@@ -208,6 +208,7 @@ export class CreateTeamFromPresetUseCase {
         budgetJson: preset.budget ?? DEFAULT_REACT_BUDGET,
         capabilitiesJson: withCapabilitiesExtra(preset.capabilities, planAgent.capabilitiesExtra),
         ...(preset.permissions !== undefined ? { permissionsJson: preset.permissions } : {}),
+        ...(preset.color !== undefined ? { color: preset.color } : {}),
       },
     };
   }

@@ -79,13 +79,14 @@ export const PROVIDER_CONTINUE = 'Continue to desk';
 export const PROVIDER_ATTACHED = 'Attached';
 export const PROVIDER_AVAILABLE = 'From provider';
 
-export const PRESETS_STEP_TITLE = 'Add agents and a team';
+export const PRESETS_STEP_TITLE = 'Add agents';
 export const PRESETS_STEP_BODY =
-  'Pick presets from the library to create agents or a whole team. You can change anything later.';
+  'Pick presets from the library to create agents. You can change anything later.';
 export const PRESETS_MODEL_LABEL = 'Model for all';
-export const PRESETS_MODEL_HINT = 'Used for every agent and role you create below.';
+export const PRESETS_MODEL_HINT = 'Used for every agent you create below.';
 export const PRESETS_SKIP = 'Skip for now';
 export const PRESETS_CREATE = 'Create';
+export const ONBOARDING_BACK = 'Back';
 
 export const CHOOSE_CREATE_CTA = 'Create organization';
 export const CHOOSE_CREATE_HINT = 'Use this if you are starting the fleet on this machine.';

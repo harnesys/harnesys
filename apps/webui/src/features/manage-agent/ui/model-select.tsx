@@ -33,9 +33,11 @@ export function ModelSelect({
   placeholder = 'Select model',
   triggerClassName,
   size = 'default',
+  orgId: orgIdProp,
   emptyLabel,
 }: ModelSelectProps) {
-  const providers = useQuery(providersQuery(getActiveOrgId() ?? '')).data ?? [];
+  const orgId = orgIdProp ?? getActiveOrgId() ?? '';
+  const providers = useQuery(providersQuery(orgId)).data ?? [];
   const groups = modelGroups(providers);
   const items = modelOptions(groups);
   const hasEmptyOption = emptyLabel !== undefined;

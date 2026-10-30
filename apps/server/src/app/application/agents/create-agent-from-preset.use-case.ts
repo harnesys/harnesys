@@ -102,6 +102,7 @@ export class CreateAgentFromPresetUseCase {
         budgetJson: budget,
         ...(preset.capabilities !== undefined ? { capabilitiesJson: preset.capabilities } : {}),
         ...(preset.permissions !== undefined ? { permissionsJson: preset.permissions } : {}),
+        ...(preset.color !== undefined ? { color: preset.color } : {}),
       },
     };
   }

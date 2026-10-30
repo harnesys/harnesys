@@ -7,6 +7,7 @@ import {
   RuleTriggerSchema,
   SetStatusActionSchema,
 } from './boards.ts';
+import { EntityColorSchema } from './entity-colors.ts';
 import { PresetIdSchema } from './preset-id.ts';
 
 export type { PresetId } from './preset-id.ts';
@@ -28,6 +29,7 @@ export const AgentPresetBodySchema = z.object({
   name: z.string().trim().min(1),
   role: z.string().trim().min(1),
   instructions: z.string().trim().min(1),
+  color: EntityColorSchema.optional(),
   skills: z.array(z.string()).optional(),
   mcpServers: z.array(z.string()).optional(),
   budget: AgentPresetBudgetSchema.optional(),

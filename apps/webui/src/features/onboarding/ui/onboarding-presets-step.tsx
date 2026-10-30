@@ -1,14 +1,14 @@
 import type { CatalogItem } from '@harnesys/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { toClientAgentFromPublic, useAgentStore } from '@/entities/agent';
 import { createAgentFromPreset } from '@/features/manage-agent/model/create-agent-from-preset';
 import { ModelSelect } from '@/features/manage-agent/ui/model-select';
 import { PresetCard } from '@/features/preset-marketplace';
-import { createTeam, getPreset, listPresets } from '@/shared/api';
+import { listPresets } from '@/shared/api';
 import { Button } from '@/shared/ui/button';
 import { toast } from '@/shared/ui/toast';
 import {
+  ONBOARDING_BACK,
   PRESETS_CREATE,
   PRESETS_MODEL_HINT,
   PRESETS_MODEL_LABEL,
@@ -17,7 +17,15 @@ import {
   PRESETS_STEP_TITLE,
 } from '../model/onboarding-copy';
 
-export function OnboardingPresetsStep({ orgId, onDone }: { orgId: string; onDone: () => void }) {
+export function OnboardingPresetsStep({
+  orgId,
+  onBack,
+  onDone,
+}: {
+  orgId: string;
+  onBack: () => void;
+  onDone: () => void;
+}) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [modelId, setModelId] = useState('');
   const [busy, setBusy] = useState(false);
@@ -25,7 +33,7 @@ export function OnboardingPresetsStep({ orgId, onDone }: { orgId: string; onDone
     queryKey: ['presets'],
     queryFn: () => listPresets(),
   });
-  const items = presetsQuery.data ?? [];
+  const items = (presetsQuery.data ?? []).filter(isAgentPreset);
 
   const toggle = (id: string) => {
     setSelectedIds((prev) =>
@@ -35,13 +43,16 @@ export function OnboardingPresetsStep({ orgId, onDone }: { orgId: string; onDone
 
   const create = async () => {
     setBusy(true);
+    const trimmedModelId = modelId.trim();
     for (const id of selectedIds) {
       const item = items.find((entry) => entry.id === id);
       if (!item) {
         continue;
       }
       try {
-        await createFromPreset(orgId, item, modelId.trim());
+        await createAgentFromPreset(orgId, item.id, {
+          ...(trimmedModelId ? { modelId: trimmedModelId } : {}),
+        });
       } catch (error) {
         toast.add({
           title: error instanceof Error ? error.message : `Could not create ${item.name}`,
@@ -64,6 +75,7 @@ export function OnboardingPresetsStep({ orgId, onDone }: { orgId: string; onDone
         <ModelSelect
           value={modelId || null}
           onChange={(value) => setModelId(value ?? '')}
+          orgId={orgId}
           triggerClassName="w-full"
           size="sm"
         />
@@ -82,6 +94,9 @@ export function OnboardingPresetsStep({ orgId, onDone }: { orgId: string; onDone
       </div>
 
       <div className="mt-6 flex items-center gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={onBack}>
+          {ONBOARDING_BACK}
+        </Button>
         <Button type="button" variant="outline" size="sm" onClick={onDone}>
           {PRESETS_SKIP}
         </Button>
@@ -101,21 +116,6 @@ export function OnboardingPresetsStep({ orgId, onDone }: { orgId: string; onDone
   );
 }
 
-async function createFromPreset(orgId: string, item: CatalogItem, modelId: string): Promise<void> {
-  if (item.kind === 'agent') {
-    await createAgentFromPreset(orgId, item.id, { ...(modelId ? { modelId } : {}) });
-    return;
-  }
-  const detail = await getPreset('team', item.id);
-  if (detail.kind !== 'team') {
-    return;
-  }
-  const response = await createTeam(orgId, {
-    presetId: item.id,
-    models: Object.fromEntries(detail.body.roles.map((role) => [role.roleKey, modelId])),
-    digestCron: detail.body.digest.cronDefault,
-  });
-  for (const record of response.agents) {
-    useAgentStore.getState().upsert(toClientAgentFromPublic(record));
-  }
+function isAgentPreset(item: CatalogItem): boolean {
+  return item.kind === 'agent';
 }

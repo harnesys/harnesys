@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export type EntityColorName =
   | 'red'
   | 'orange'
@@ -8,6 +10,18 @@ export type EntityColorName =
   | 'magenta'
   | 'cyan'
   | 'pink';
+
+export const EntityColorSchema = z.enum([
+  'red',
+  'orange',
+  'yellow',
+  'green',
+  'blue',
+  'purple',
+  'magenta',
+  'cyan',
+  'pink',
+]);
 
 export const ENTITY_COLOR_NAMES: readonly EntityColorName[] = [
   'red',

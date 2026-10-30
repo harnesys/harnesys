@@ -142,6 +142,7 @@ export interface AgentPresetRecord {
   name: string;
   role: string;
   instructions: string;
+  color?: string | null;
   skills?: string[];
   mcpServers?: string[];
   budget?: AgentBudget | null;
@@ -160,6 +161,7 @@ export function toLegacyPresetRecord(detail: AgentPresetDetail): AgentPresetReco
     name: body.name,
     role: body.role,
     instructions: body.instructions,
+    color: body.color ?? null,
     skills: body.skills,
     mcpServers: body.mcpServers,
     budget: body.budget ?? null,

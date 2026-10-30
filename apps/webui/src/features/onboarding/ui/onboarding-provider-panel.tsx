@@ -150,7 +150,13 @@ export function OnboardingProviderPanel({ orgId, onDone }: { orgId: string; onDo
   return (
     <OnboardingShell testId="onboarding-provider">
       <div className="mx-auto w-full max-w-lg">
-        {phase === 'presets' ? <OnboardingPresetsStep orgId={orgId} onDone={onDone} /> : null}
+        {phase === 'presets' ? (
+          <OnboardingPresetsStep
+            orgId={orgId}
+            onBack={() => setPhase(provider ? 'models' : 'connect')}
+            onDone={onDone}
+          />
+        ) : null}
         {phase !== 'presets' && (phase === 'connect' || !provider) ? (
           <OnboardingProviderConnect
             catalog={catalog}
@@ -173,6 +179,7 @@ export function OnboardingProviderPanel({ orgId, onDone }: { orgId: string; onDo
             onDiscover={() => void rediscover()}
             onAttachFound={(item) => void attachFound(item)}
             onAttachManual={() => void attachManual()}
+            onBack={() => setPhase('connect')}
             onContinue={() => setPhase('presets')}
           />
         ) : null}

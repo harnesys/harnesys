@@ -5,6 +5,7 @@ import { RowChip } from '@/shared/ui/capability-rows';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import {
+  ONBOARDING_BACK,
   PROVIDER_ATTACHED,
   PROVIDER_AVAILABLE,
   PROVIDER_CONTINUE,
@@ -28,6 +29,7 @@ export function OnboardingProviderModels({
   onDiscover,
   onAttachFound,
   onAttachManual,
+  onBack,
   onContinue,
 }: {
   provider: ProviderPublic;
@@ -40,6 +42,7 @@ export function OnboardingProviderModels({
   onDiscover: () => void;
   onAttachFound: (item: DiscoveredModelView) => void;
   onAttachManual: () => void;
+  onBack: () => void;
   onContinue: () => void;
 }) {
   const attachedNames = new Set(provider.models.map((item) => item.name));
@@ -139,16 +142,27 @@ export function OnboardingProviderModels({
 
       {error ? <p className="mt-4 text-destructive text-sm">{error}</p> : null}
 
-      <Button
-        type="button"
-        size="lg"
-        disabled={!canContinue}
-        className="mt-8 w-full disabled:opacity-50"
-        onClick={onContinue}
-        data-testid="onboarding-provider-continue"
-      >
-        {PROVIDER_CONTINUE}
-      </Button>
+      <div className="mt-8 flex items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          onClick={onBack}
+          data-testid="onboarding-provider-back"
+        >
+          {ONBOARDING_BACK}
+        </Button>
+        <Button
+          type="button"
+          size="lg"
+          disabled={!canContinue}
+          className="flex-1 disabled:opacity-50"
+          onClick={onContinue}
+          data-testid="onboarding-provider-continue"
+        >
+          {PROVIDER_CONTINUE}
+        </Button>
+      </div>
     </>
   );
 }
