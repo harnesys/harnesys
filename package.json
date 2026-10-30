@@ -21,7 +21,8 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write --unsafe .",
     "test": "bun test",
-    "typecheck": "bun run --cwd packages/brix typecheck && bun run --cwd packages/contracts typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/webui typecheck && bun run --cwd apps/cli typecheck"
+    "typecheck": "bun run --cwd packages/brix typecheck && bun run --cwd packages/contracts typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/webui typecheck && bun run --cwd apps/cli typecheck",
+    "check": "bun run typecheck && bun run lint:fix && bun run test"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",

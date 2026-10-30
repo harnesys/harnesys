@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { SparklesIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
+import { ollamaModelInfo } from '@/shared/api/providers';
 import type { DialogComponentProps } from '@/shared/services/overlay';
 import { Button } from '@/shared/ui/button';
 import { DialogFooter } from '@/shared/ui/dialog';
@@ -21,6 +22,7 @@ import {
   modelFieldsSchema,
   toEditorDraft,
 } from '../model/model-fields';
+import { isOllamaDriver, ollamaFieldsFrom } from '../model/ollama-sync';
 import { syncModelFromOpenRouter } from '../model/openrouter-sync';
 import { mergePricingExtras, type PricingExtras, pricingExtrasFrom } from '../model/pricing-extras';
 import { ModelFields } from './model-fields';
@@ -70,6 +72,8 @@ export function EditModelDialog({
     orgId: string;
     modelId?: string;
     pricingExtras?: PricingExtras;
+    providerId?: string;
+    driver?: string;
   }
 >) {
   const form = useForm<ModelFieldsInput, unknown, ModelFieldsOutput>({
@@ -77,6 +81,7 @@ export function EditModelDialog({
     defaultValues: data?.initial ?? emptyModelFields(),
   });
   const [syncing, setSyncing] = useState(false);
+  const [ollamaSyncing, setOllamaSyncing] = useState(false);
   const [extras, setExtras] = useState<PricingExtras>(data?.pricingExtras ?? {});
   const [openRouterQuery, setOpenRouterQuery] = useState(data?.modelName?.trim() ?? '');
   const handleSync = async () => {
@@ -114,6 +119,25 @@ export function EditModelDialog({
       setSyncing(false);
     }
   };
+  const handleOllamaSync = async () => {
+    if (!data?.orgId || !data.providerId) {
+      return;
+    }
+    setOllamaSyncing(true);
+    try {
+      const info = await ollamaModelInfo(data.orgId, data.providerId, data.modelName ?? '');
+      form.reset(mergeSyncedFields(form.getValues(), ollamaFieldsFrom(info)));
+      toast.add({ title: 'Metadata synced from Ollama', description: data.modelName });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      toast.add({
+        title: 'Failed to fetch Ollama model info',
+        description: message,
+      });
+    } finally {
+      setOllamaSyncing(false);
+    }
+  };
   return (
     <form
       className="flex min-h-0 flex-col gap-4"
@@ -142,6 +166,23 @@ export function EditModelDialog({
           {syncing ? <Spinner className="size-3.5" /> : <SparklesIcon className="size-3.5" />}
           Autofill from OpenRouter
         </Button>
+        {isOllamaDriver(data?.driver) ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={ollamaSyncing}
+            onClick={handleOllamaSync}
+            className="shrink-0 gap-1.5 text-muted-foreground text-xs hover:text-foreground"
+          >
+            {ollamaSyncing ? (
+              <Spinner className="size-3.5" />
+            ) : (
+              <SparklesIcon className="size-3.5" />
+            )}
+            Autofill from Ollama
+          </Button>
+        ) : null}
       </div>
       <FieldGroup className="min-h-0 overflow-y-auto">
         <ModelFields control={form.control} />

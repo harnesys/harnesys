@@ -40,6 +40,7 @@ export function ProviderModelRow({
   row,
   orgId,
   providerId,
+  driver,
   onAttach,
   onPatchModel,
   onDetach,
@@ -47,6 +48,7 @@ export function ProviderModelRow({
   row: ModelRow;
   orgId: string;
   providerId: string;
+  driver: string;
   onAttach: (input: ModelAttachInput) => void;
   onPatchModel: (input: ModelPatchInput) => void;
   onDetach: (input: ModelDetachInput) => void;
@@ -104,7 +106,7 @@ export function ProviderModelRow({
         size="icon-xs"
         aria-label={`Edit ${row.name}`}
         onClick={() => {
-          void openEditModelDialog(row, orgId).then((draft) => {
+          void openEditModelDialog(row, orgId, { id: providerId, driver }).then((draft) => {
             if (!draft) {
               return;
             }

@@ -11,6 +11,7 @@ export function openEditModelDialog(
     found?: DiscoveredModel;
   },
   orgId: string,
+  provider?: { id: string; driver: string },
 ) {
   const modelName = row.stored?.name ?? row.found?.name ?? row.name ?? '';
   const initial = modelFieldsFrom(row);
@@ -28,6 +29,8 @@ export function openEditModelDialog(
       orgId,
       modelId: row.stored?.id,
       pricingExtras: pricingExtrasFrom(metadataFromModel(row.stored)?.pricing),
+      providerId: provider?.id,
+      driver: provider?.driver,
     },
   });
 }

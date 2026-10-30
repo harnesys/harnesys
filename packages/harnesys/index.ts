@@ -173,6 +173,8 @@ export {
   MEMORY_REFLECT_EPISODIC_LIMIT,
   MEMORY_REFLECT_FACTS_LIMIT,
   MEMORY_REFLECT_RUBRIC,
+  OLLAMA_CLOUD_DEFAULT_URL,
+  OLLAMA_DEFAULT_URL,
 } from './src/constants.ts';
 export type {
   AgentBudget,

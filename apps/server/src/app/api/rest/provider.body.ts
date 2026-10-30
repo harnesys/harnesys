@@ -51,3 +51,6 @@ export const updateProviderModelBody = z.object({
   kind: z.string().trim().min(1).optional(),
   metadata: z.unknown().optional(),
 });
+export const ollamaInfoBody = z.object({
+  name: z.string().trim().min(1),
+});

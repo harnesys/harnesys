@@ -130,6 +130,7 @@ export function ProviderModelsSection({
               orgId={orgId}
               rows={attached}
               providerId={selected.id}
+              driver={selected.driver}
               onAttach={onAttach}
               onPatchModel={onPatchModel}
               onDetach={onDetach}
@@ -141,6 +142,7 @@ export function ProviderModelsSection({
               orgId={orgId}
               rows={available}
               providerId={selected.id}
+              driver={selected.driver}
               onAttach={onAttach}
               onPatchModel={onPatchModel}
               onDetach={onDetach}
@@ -159,6 +161,7 @@ function ModelGroup({
   orgId,
   rows,
   providerId,
+  driver,
   onAttach,
   onPatchModel,
   onDetach,
@@ -167,6 +170,7 @@ function ModelGroup({
   orgId: string;
   rows: ModelRow[];
   providerId: string;
+  driver: string;
   onAttach: (input: ModelAttachInput) => void;
   onPatchModel: (input: ModelPatchInput) => void;
   onDetach: (input: ModelDetachInput) => void;
@@ -183,6 +187,7 @@ function ModelGroup({
           row={row}
           orgId={orgId}
           providerId={providerId}
+          driver={driver}
           onAttach={onAttach}
           onPatchModel={onPatchModel}
           onDetach={onDetach}

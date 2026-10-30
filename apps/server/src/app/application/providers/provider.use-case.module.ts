@@ -10,6 +10,7 @@ import { ExportProvidersUseCase } from './export-providers.use-case.ts';
 import { GetProviderUseCase } from './get-provider.use-case.ts';
 import { ImportProvidersUseCase } from './import-providers.use-case.ts';
 import { ListProvidersUseCase } from './list-providers.use-case.ts';
+import { OllamaModelInfoUseCase } from './ollama-model-info.use-case.ts';
 import { ProviderKeys } from './provider-keys.ts';
 import { UpdateProviderUseCase } from './update-provider.use-case.ts';
 import { UpdateProviderModelUseCase } from './update-provider-model.use-case.ts';
@@ -26,6 +27,7 @@ const useCases = [
   CreateProviderModelUseCase,
   UpdateProviderModelUseCase,
   DeleteProviderModelUseCase,
+  OllamaModelInfoUseCase,
 ];
 
 @Module({

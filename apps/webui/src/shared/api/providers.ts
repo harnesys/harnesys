@@ -32,6 +32,17 @@ export interface UpdateProviderModelInput {
   kind?: string;
   metadata?: unknown;
 }
+export interface OllamaThinkingInfo {
+  values: Array<string | boolean>;
+  default?: string | boolean;
+}
+export interface OllamaModelInfo {
+  context_length?: number;
+  capabilities: string[];
+  thinking?: OllamaThinkingInfo;
+  parameter_size?: string;
+  quantization_level?: string;
+}
 export const providersQueryKey = ['providers'] as const;
 export function providersQueryKeyFor(orgId: string) {
   return [...providersQueryKey, orgId] as const;
@@ -92,6 +103,12 @@ export function updateProviderModel(
   return apiJson<ProviderModelPublic>(`${providersBase(orgId)}/${providerId}/models/${modelId}`, {
     method: 'PATCH',
     body: JSON.stringify(input),
+  });
+}
+export function ollamaModelInfo(orgId: string, providerId: string, name: string) {
+  return apiJson<OllamaModelInfo>(`${providersBase(orgId)}/${providerId}/ollama-info`, {
+    method: 'POST',
+    body: JSON.stringify({ name }),
   });
 }
 export function detachProviderModel(orgId: string, providerId: string, modelId: string) {
