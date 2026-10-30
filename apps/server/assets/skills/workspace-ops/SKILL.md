@@ -45,24 +45,7 @@ When creating (`agents_create`) or reviewing an agent:
 - `mcpServers`: server IDs from `.harnesys/mcp.json`
 - `budget`: omit `graph` and the host builds the default ReAct loop with `budget: { maxSteps: 50, policy: "ask" }` when budget is omitted. Custom cyclic graphs require `maxSteps` or `deadlineMs`; `policy` is `ask` or `error`; subagents use `error`.
 
-Capability packs:
-
-| pack | tools |
-|---|---|
-| `files` | `read_file`, `write_file`, `edit_file`, `list_dir`, `glob`, `grep` |
-| `shell` | `shell` |
-| `fetch` | `fetch` |
-| `plan` | `plan_save`, `plan_item_update`, `plan_get` |
-| `agents` | `agents_list`, `agents_create`, `agents_create_subagent`, `agents_spawn`, `agents_handoff`, `agents_update`, `agents_delete` |
-| `threads` | `thread_list` |
-| `scheduler` | `schedule_list`, `schedule_peek`, `schedule_set`, `schedule_pause`, `schedule_delete` |
-| `webhook` | `webhook_list`, `webhook_set`, `webhook_delete` |
-| `episodic-memory` | `recall_search` |
-| `semantic-memory` | `memory_write`, `memory_list`, `memory_update`, `memory_delete` |
-| `knowledge-memory` | `knowledge_search`, `knowledge_read` |
-| `pin-memory` | `pin_set`, `pin_list`, `pin_remove` |
-
-Wrong pack names are rejected on save (`400`) and fail the run target at start; they never load silently.
+Capability packs: a pack is a bundle of tools; value shapes are `{}` (enabled with defaults), `{ spec: {...} }` (enabled with settings), absent/null (off) — booleans are rejected. The full pack→tool inventory is maintained in one place: the `harnesys-system` skill, `references/packs.md` (load with `load_skill`). Wrong pack names are rejected on save (`400`) and fail the run target at start; they never load silently.
 
 ## Memory and knowledge
 

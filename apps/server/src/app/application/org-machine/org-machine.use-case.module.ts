@@ -6,8 +6,10 @@ import { ExecutionProfileModule } from '../../infra/execution-profile/execution-
 import { FleetHubModule } from '../../infra/fleet-hub/fleet-hub.module.ts';
 import { IdentitySqliteModule } from '../../infra/identity-sqlite/identity-sqlite.module.ts';
 import { MachineHomeModule } from '../../infra/machine-home/machine-home.module.ts';
+import { PresetsModule } from '../../infra/presets/presets.module.ts';
 import { ScheduleModule } from '../../infra/schedules/schedule.module.ts';
 import { SkillsModule } from '../../infra/skills/skills.module.ts';
+import { AgentUseCaseModule } from '../agents/agent.use-case.module.ts';
 import { SourceUseCaseModule } from '../source/source.use-case.module.ts';
 import { ActivateOrgUseCase } from './activate-org.use-case.ts';
 import { CreateRelayOrgUseCase } from './create-relay-org.use-case.ts';
@@ -27,6 +29,8 @@ import { UpdateOrgUseCase } from './update-org.use-case.ts';
     ExecutionProfileModule,
     FleetHubModule,
     DeskModule,
+    AgentUseCaseModule,
+    PresetsModule,
   ],
   providers: [
     CreateRelayOrgUseCase,

@@ -50,25 +50,7 @@ Differences:
 
 ## 3. Packs
 
-A pack is a bundle of tools. Tool availability derives from packs (plus `mcpServers`, `skills`), never from a stored tool-name list.
-
-| Pack | Tools |
-|---|---|
-| `core` | `load_tools`, `load_skill` (runtime tool loading) |
-| `files` | `read_file`, `write_file`, `edit_file`, `list_dir`, `glob`, `grep` |
-| `shell` | `shell` |
-| `fetch` | `fetch` |
-| `web_search` | `web_search` |
-| `lsp` | LSP diagnostics tools |
-| `agents` | `agents_list`, `agents_create`, `agents_create_subagent`, `agents_spawn`, `agents_handoff`, `agents_update`, `agents_delete` |
-| `plan` | `plan_save`, `plan_item_update`, `plan_get` |
-| `threads` | `thread_list` |
-| `scheduler` | `schedule_*` |
-| `webhook` | `webhook_*` |
-| `issues` | `issue_board_list`, `board_create`, `issue_create`, `issue_move`, `issue_update`, `issue_nudge`, `issue_get`, `issue_list`, `issue_comment`, `issue_dependency`, `issue_attachment_add`, `label_list`, `label_create`, `label_delete` |
-| `manager` | `manager_pulse`, `usage_report` |
-| `pin-memory` / `semantic-memory` / `episodic-memory` / `knowledge-memory` | `pin_*` / `memory_*` / `recall_search` / `knowledge_*` |
-| `skills` | `search_skills` |
+A pack is a bundle of tools. Tool availability derives from packs (plus `mcpServers`, `skills`), never from a stored tool-name list. The full pack→tool inventory is maintained in one place: the `harnesys-system` skill, `references/packs.md` (load with `load_skill`); your own system prompt's Tools section always lists exactly what you have.
 
 Value shapes: `true` (defaults), `{ spec?, disabledTools?, exposure? }` (per-tool overrides; `exposure` maps tool names to `direct` or `deferred`), `null`/`false` (off). Wrong shapes fail at call time (`invalid packs: packs.X must be ...`) and an unknown pack name fails the run target at start, never silently.
 

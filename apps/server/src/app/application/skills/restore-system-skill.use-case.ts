@@ -15,7 +15,7 @@ import { SkillsTierCache } from '../../infra/skills/skills-tier-cache.ts';
 import {
   bundledSkillNames,
   readSeedMarker,
-  sha256File,
+  sha256SkillDir,
   writeSeedMarker,
 } from '../../infra/skills/system-skills-seed.ts';
 
@@ -96,7 +96,7 @@ export class RestoreSystemSkillUseCase {
   private refreshMarker(systemDir: string, name: string): void {
     const marker = readSeedMarker(systemDir);
     const now = new Date().toISOString();
-    const bundledHash = sha256File(join(bundledAssetsRoot(), 'skills', name, 'SKILL.md'));
+    const bundledHash = sha256SkillDir(join(bundledAssetsRoot(), 'skills', name));
     const entry = marker?.skills[name];
     writeSeedMarker(systemDir, {
       appVersion: marker?.appVersion ?? APP_VERSION,

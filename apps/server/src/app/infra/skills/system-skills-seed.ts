@@ -26,6 +26,35 @@ export function sha256File(path: string): string {
   return createHash('sha256').update(readFileSync(path)).digest('hex');
 }
 
+function listSkillFiles(root: string): string[] {
+  const files: string[] = [];
+  const walk = (dir: string, prefix: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    )) {
+      const rel = prefix === '' ? entry.name : `${prefix}/${entry.name}`;
+      if (entry.isDirectory()) {
+        walk(join(dir, entry.name), rel);
+      } else if (entry.isFile()) {
+        files.push(rel);
+      }
+    }
+  };
+  walk(root, '');
+  return files;
+}
+
+export function sha256SkillDir(dir: string): string {
+  const hash = createHash('sha256');
+  for (const rel of listSkillFiles(dir)) {
+    hash.update(rel);
+    hash.update('\0');
+    hash.update(readFileSync(join(dir, rel)));
+    hash.update('\0');
+  }
+  return hash.digest('hex');
+}
+
 export function readSeedMarker(targetDir: string): SeedMarker | undefined {
   try {
     const raw = readFileSync(join(targetDir, SEED_MARKER_FILE), 'utf8');
@@ -56,11 +85,11 @@ export function systemSkillUpdateAvailable(dir: string, marker: SeedMarker, name
   if (!entry) {
     return true;
   }
-  const skillMd = join(dir, name, 'SKILL.md');
-  if (!existsSync(skillMd)) {
+  const skillDir = join(dir, name);
+  if (!existsSync(join(skillDir, 'SKILL.md'))) {
     return true;
   }
-  return sha256File(skillMd) !== entry.bundledHash;
+  return sha256SkillDir(skillDir) !== entry.bundledHash;
 }
 
 export function seedSystemSkills(opts: {
@@ -88,7 +117,7 @@ export function seedSystemSkills(opts: {
     if (!previous?.skills[name]) {
       added.push(name);
     }
-    skills[name] = { bundledHash: sha256File(join(source, 'SKILL.md')), seededAt: now };
+    skills[name] = { bundledHash: sha256SkillDir(join(source)), seededAt: now };
   }
   writeSeedMarker(opts.targetDir, {
     appVersion: opts.appVersion,

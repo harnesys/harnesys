@@ -35,9 +35,6 @@ export { threadsCapability } from './threads/index.ts';
 export type { WebPackPorts, WebPackSpec } from './web/index.ts';
 export {
   BrowserEngineMissingError,
-  LEGACY_WEB_PACK_ALIASES,
-  normalizeLegacyWebPack,
-  WEB_PACK_NAME,
   webCapability,
 } from './web/index.ts';
 export type { WebSearchPackSpec } from './web/search.ts';

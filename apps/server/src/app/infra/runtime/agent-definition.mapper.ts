@@ -21,7 +21,7 @@ import type {
   ToolExposure,
   ToolOutputSettings,
 } from 'harnesys';
-import { normalizeLegacyWebPack, normalizePackAssignment } from 'harnesys';
+import { normalizePackAssignment } from 'harnesys';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
 import type { LlmModel, LlmProvider } from '../../domain/provider/llm-provider.port.ts';
 
@@ -222,7 +222,7 @@ export function packsFromConfig(config: Record<string, unknown>): AgentPacks {
   if (Object.keys(packs).length === 0) {
     return { core: true, files: true, shell: true };
   }
-  return normalizeLegacyWebPack(packs);
+  return packs;
 }
 
 export function modesFromConfig(config: Record<string, unknown>): AgentMode[] {

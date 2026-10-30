@@ -41,7 +41,6 @@ export {
   setEngineEnabled,
   writeAllowlist,
 } from './browser/engine-store.ts';
-export { LEGACY_WEB_PACK_ALIASES, normalizeLegacyWebPack, WEB_PACK_NAME } from './pack-aliases.ts';
 export { BrowserEngineMissingError };
 
 export interface WebPackSpec extends WebSearchPackSpec {
@@ -98,7 +97,6 @@ export const webCapability = definePack<WebPackPorts, WebPackSpec>({
         name: 'fetch',
         description: 'HTTP request (GET/POST/PUT/PATCH/DELETE/HEAD). Only http/https URLs.',
       },
-      { name: 'browser_fetch', description: 'One-shot page scrape to markdown.' },
       ...BROWSER_TOOL_META,
     ],
     skills: ['browser'],

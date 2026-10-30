@@ -9,8 +9,9 @@ code, code wins — fix the document.
 On every server start (`apps/server/src/main.ts`):
 
 1. `seedSystemSkills` copies `apps/server/assets/skills/*` into `~/.harnesys/skills/` (existing dirs
-   are not overwritten; hash ledger in `.harnesys-seed.json`). Bundled skills today: `find-skills`,
-   `issue-ops`, `workspace-ops`, `agent-creator`.
+   are not overwritten; hash ledger in `.harnesys-seed.json` covers every file in a skill dir, so
+   reference-file edits flag updates too — `sha256SkillDir` in `system-skills-seed.ts`). Bundled
+   skills today: `find-skills`, `issue-ops`, `workspace-ops`, `agent-creator`, `harnesys-system`.
 2. `systemPresetsSeed` reads `apps/server/assets/presets/agents/<name>/` (each preset is a folder:
    `config.json` with all body fields except `instructions`, plus `instructions.md` with the prompt)
    and `assets/presets/teams/*.json` into the machine-level `presets` table with origin `system`, id
@@ -90,9 +91,8 @@ Per run (`org-runtime-run-target.ts`):
 5. Permissions (`allow | ask | deny` per `fs.write`, `process`, `network`, `mcp`) gate execution;
    `ask` produces a HITL approval.
 
-Pack name aliases: `fetch` and `web_search` are legacy names for the `web` pack
-(`packs/web/pack-aliases.ts`, `normalizeLegacyWebPack`). Presets may use them; the runtime
-normalizes to `web`.
+Pack names: `web` is the only web pack (`fetch` and `web_search` were removed as legacy names;
+an unknown pack name fails the run target at start).
 
 If a preset omits `capabilities`, the mapper defaults to `{ core, files, shell }`
 (`agent-definition.mapper.ts` → `packsFromConfig`).
@@ -165,8 +165,10 @@ file from the skill directory (`create-load-skill-tool.ts`).
   start → think → act → end (`FALLBACK_GRAPH`) when `graphJson` is absent.
 - No budget in config → `{ maxSteps: 50, policy: "ask" }`. `policy` is what happens on
   exhaustion: `ask` (HITL) or `error` (fail the run).
-- Creating an agent from a preset seeds companion delegates for `harnesys/assistant` →
-  `harnesys/explorer` + `harnesys/general` (`create-agent-from-preset.use-case.ts`).
+- Creating an agent from a preset creates exactly that one agent — no implicit companions
+  (`create-agent-from-preset.use-case.ts`). Org creation additionally seeds one top-level
+  `harnesys/assistant` agent when that preset exists (`create-relay-org.use-case.ts`,
+  silent skip when absent; failure to seed never fails org creation).
 
 Team presets (`TeamPresetBodySchema`): roles reference agent presets by `agentRef`, plus a board
 (columns, dispatch rules) and a digest schedule (`compose-team-plan.ts`,
@@ -176,9 +178,8 @@ Team presets (`TeamPresetBodySchema`): roles reference agent presets by `agentRe
 
 1. Naming tools that the agent's `capabilities` do not provide. Tool availability derives from
    packs, not from instruction text; the tools section and the wire schema are the only truth.
-2. Assuming `fetch` / `web_search` are separate packs. They are legacy aliases that normalize into
-   `web` (`packs/web/pack-aliases.ts`); bundled presets declare `web` directly, the alias path
-   exists for agents stored before the migration.
+2. Using pack names that do not exist. There is no `fetch` / `web_search` pack: the only web pack
+   is `web`. Unknown pack names fail the run target at start.
 3. Assuming bundled skills are available without listing them in `skills`.
 4. Assuming `issue_comment` does not exist (it does), or that agents can move their own issues to
    `done` freely (board rules and reviewer workflow own that transition).
