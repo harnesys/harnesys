@@ -11,7 +11,12 @@ import { listMinimaxModels } from './minimax.ts';
 import { listMistralModels } from './mistral.ts';
 import { listMoonshotAIModels } from './moonshotai.ts';
 import { listNvidiaModels } from './nvidia.ts';
-import { listOllamaCloudModels, listOllamaModels } from './ollama.ts';
+import {
+  listOllamaCloudModels,
+  listOllamaModels,
+  showOllamaCloudModel,
+  showOllamaModel,
+} from './ollama.ts';
 import { listOpenAIModels } from './openai.ts';
 import { listOpenAICompatibleModels } from './openai-compatible.ts';
 import { listOpenRouterModels } from './openrouter.ts';
@@ -21,9 +26,14 @@ import { listXaiModels } from './xai.ts';
 import { listXiaomiModels } from './xiaomi.ts';
 import { listZaiModels } from './zai.ts';
 export type ListModels = (input: DiscoverInput) => Promise<DiscoveredModel[]>;
+export type ModelDetails = (
+  input: DiscoverInput,
+  name: string,
+) => Promise<DiscoveredModel | undefined>;
 interface DriverDiscover {
   defaultApiUrl: string;
   list: ListModels;
+  details?: ModelDetails;
 }
 const drivers: Record<Driver, DriverDiscover> = {
   openai: { defaultApiUrl: 'https://api.openai.com/v1', list: listOpenAIModels },
@@ -43,8 +53,16 @@ const drivers: Record<Driver, DriverDiscover> = {
   together: { defaultApiUrl: 'https://api.together.xyz/v1', list: listTogetherModels },
   kimi: { defaultApiUrl: 'https://api.moonshot.ai/v1', list: listKimiModels },
   zai: { defaultApiUrl: 'https://api.z.ai/api/paas/v4', list: listZaiModels },
-  ollama: { defaultApiUrl: 'http://localhost:11434', list: listOllamaModels },
-  'ollama-cloud': { defaultApiUrl: 'https://ollama.com', list: listOllamaCloudModels },
+  ollama: {
+    defaultApiUrl: 'http://localhost:11434',
+    list: listOllamaModels,
+    details: showOllamaModel,
+  },
+  'ollama-cloud': {
+    defaultApiUrl: 'https://ollama.com',
+    list: listOllamaCloudModels,
+    details: showOllamaCloudModel,
+  },
   nvidia: { defaultApiUrl: 'https://integrate.api.nvidia.com/v1', list: listNvidiaModels },
   cerebras: { defaultApiUrl: 'https://api.cerebras.ai/v1', list: listCerebrasModels },
   minimax: { defaultApiUrl: 'https://api.minimax.io/v1', list: listMinimaxModels },

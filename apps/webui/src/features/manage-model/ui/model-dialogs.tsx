@@ -22,7 +22,7 @@ import {
   modelFieldsSchema,
   toEditorDraft,
 } from '../model/model-fields';
-import { isOllamaDriver, ollamaFieldsFrom } from '../model/ollama-sync';
+import { isOllamaDriver } from '../model/ollama-sync';
 import { syncModelFromOpenRouter } from '../model/openrouter-sync';
 import { mergePricingExtras, type PricingExtras, pricingExtrasFrom } from '../model/pricing-extras';
 import { ModelFields } from './model-fields';
@@ -126,7 +126,8 @@ export function EditModelDialog({
     setOllamaSyncing(true);
     try {
       const info = await ollamaModelInfo(data.orgId, data.providerId, data.modelName ?? '');
-      form.reset(mergeSyncedFields(form.getValues(), ollamaFieldsFrom(info)));
+      const syncedFields = modelFieldsFrom({ found: info });
+      form.reset(mergeSyncedFields(form.getValues(), syncedFields));
       toast.add({ title: 'Metadata synced from Ollama', description: data.modelName });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';

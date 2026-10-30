@@ -14,6 +14,7 @@ export {
   toBinding,
 } from './src/adapters/models/binding.ts';
 export { discoverModels } from './src/adapters/models/discover.ts';
+export { discoverModelDetails } from './src/adapters/models/discover.ts';
 export { createRunEventBus, type RunEventBus } from './src/adapters/run-event-bus.ts';
 export {
   type AgentIdentity,
@@ -633,6 +634,7 @@ export type {
   DiscoverInput,
   Driver,
   ModelBinding,
+  ModelFields,
   ModelKind,
   ModelRecord,
   ModelsApi,

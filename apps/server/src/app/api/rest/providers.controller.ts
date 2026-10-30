@@ -16,7 +16,6 @@ import { ExportProvidersUseCase } from '../../application/providers/export-provi
 import { GetProviderUseCase } from '../../application/providers/get-provider.use-case.ts';
 import { ImportProvidersUseCase } from '../../application/providers/import-providers.use-case.ts';
 import { ListProvidersUseCase } from '../../application/providers/list-providers.use-case.ts';
-import type { OllamaModelInfo } from '../../application/providers/ollama-model-info.use-case.ts';
 import { OllamaModelInfoUseCase } from '../../application/providers/ollama-model-info.use-case.ts';
 import { UpdateProviderUseCase } from '../../application/providers/update-provider.use-case.ts';
 import { UpdateProviderModelUseCase } from '../../application/providers/update-provider-model.use-case.ts';
@@ -111,21 +110,21 @@ export class ProvidersController {
   }
 
   @Post(':id/ollama-info')
-  ollamaInfo(
+  async ollamaInfo(
     @Param('orgId') orgId: string,
     @Param('id') id: string,
     @Body(ollamaInfoBody) body: z.infer<typeof ollamaInfoBody>,
-  ): Promise<OllamaModelInfo> {
+  ): Promise<DiscoveredModel> {
     return this.ollamaModelInfo.execute({ orgId, providerId: id, name: body.name });
   }
 
   @Post(':id/models')
   @HttpCode(201)
-  createModelHandler(
+  async createModelHandler(
     @Param('orgId') orgId: string,
     @Param('id') id: string,
     @Body(createProviderModelBody) body: z.infer<typeof createProviderModelBody>,
-  ): ProviderModelPublic {
+  ): Promise<ProviderModelPublic> {
     return this.createModel.execute({
       orgId,
       providerId: id,

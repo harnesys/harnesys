@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import type { LlmModel, LlmProvider } from '../../domain/provider/llm-provider.port.ts';
 import { LlmModelPort, LlmProviderPort } from '../../domain/provider/llm-provider.port.ts';
 import { ProviderValidationException } from '../../domain/provider/provider.error.ts';
+import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import { CreateProviderModelUseCase } from './create-provider-model.use-case.ts';
+import { ProviderKeys } from './provider-keys.ts';
 
 const ORG = 'org-1';
 const PROVIDER: LlmProvider = {
@@ -78,34 +80,59 @@ class FakeModels extends LlmModelPort {
   delete(): void {}
 }
 
+class EmptySecrets extends SecretStorePort {
+  get(): Promise<string | null> {
+    return Promise.resolve(null);
+  }
+  set(): Promise<void> {
+    return Promise.resolve();
+  }
+  delete(): Promise<void> {
+    return Promise.resolve();
+  }
+  listKeys(): Promise<string[]> {
+    return Promise.resolve([]);
+  }
+}
+
 describe('CreateProviderModelUseCase', () => {
-  test('rejects attaching a model with an unsupported kind', () => {
-    const useCase = new CreateProviderModelUseCase(new FakeProviders(), new FakeModels());
+  const useCaseFor = (models: FakeModels) =>
+    new CreateProviderModelUseCase(
+      new FakeProviders(),
+      models,
+      new ProviderKeys(new EmptySecrets()),
+    );
+  test('rejects attaching a model with an unsupported kind', async () => {
+    const useCase = useCaseFor(new FakeModels());
     for (const kind of ['audio', 'rerank', 'video']) {
-      expect(() =>
+      expect(
         useCase.execute({ orgId: ORG, providerId: PROVIDER.id, name: 'm', kind }),
-      ).toThrow(ProviderValidationException);
+      ).rejects.toThrow(ProviderValidationException);
     }
   });
 
-  test('attaches supported kinds and defaults to chat', () => {
+  test('attaches supported kinds and defaults to chat', async () => {
     const models = new FakeModels();
-    const useCase = new CreateProviderModelUseCase(new FakeProviders(), models);
-    const embedded = useCase.execute({
+    const useCase = useCaseFor(models);
+    const embedded = await useCase.execute({
       orgId: ORG,
       providerId: PROVIDER.id,
       name: 'vendor/embed',
       kind: 'embed',
     });
     expect(embedded.kind).toBe('embed');
-    const decision = useCase.execute({
+    const decision = await useCase.execute({
       orgId: ORG,
       providerId: PROVIDER.id,
       name: 'vendor/decision',
       kind: 'decision',
     });
     expect(decision.kind).toBe('decision');
-    const chat = useCase.execute({ orgId: ORG, providerId: PROVIDER.id, name: 'vendor/chat' });
+    const chat = await useCase.execute({
+      orgId: ORG,
+      providerId: PROVIDER.id,
+      name: 'vendor/chat',
+    });
     expect(chat.kind).toBe('chat');
     expect(models.inserted?.kind).toBe('chat');
   });
