@@ -1,20 +1,50 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowUpIcon } from 'lucide-react';
 import { useState } from 'react';
-import { browseProjectDirsQuery, type DirectoryListing } from '@/shared/api';
+import { browseProjectDirsQuery, createProjectDir, type DirectoryListing } from '@/shared/api';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { FolderTypeIcon } from '@/shared/ui/icons';
+import { Input } from '@/shared/ui/input';
 
 interface FolderBrowserDialogProps {
   nodeId?: string;
   nodeLabel?: string;
+  orgId?: string;
   onResolve: (path?: string) => void;
 }
 
-export function FolderBrowserDialog({ nodeId, nodeLabel, onResolve }: FolderBrowserDialogProps) {
+export function FolderBrowserDialog({
+  nodeId,
+  nodeLabel,
+  orgId,
+  onResolve,
+}: FolderBrowserDialogProps) {
   const [path, setPath] = useState<string | undefined>(undefined);
-  const { data, isPending, isError } = useQuery(browseProjectDirsQuery({ path, nodeId }));
+  const [newName, setNewName] = useState('');
+  const [createError, setCreateError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { data, isPending, isError } = useQuery(browseProjectDirsQuery({ path, nodeId, orgId }));
+  const create = useMutation({
+    mutationFn: (folderName: string) => {
+      const base = data?.path;
+      if (!base) {
+        throw new Error('No current folder');
+      }
+      return createProjectDir({ path: `${base}/${folderName}`, nodeId, orgId });
+    },
+    onSuccess: (result) => {
+      setNewName('');
+      setCreateError(null);
+      setPath(result.absolutePath);
+      void queryClient.invalidateQueries({ queryKey: ['project-dirs'] });
+    },
+    onError: (err: unknown) => {
+      setCreateError(err instanceof Error ? err.message : String(err));
+    },
+  });
+  const name = newName.trim();
+  const canCreate = name.length > 0 && !name.includes('/') && data?.path !== undefined;
   return (
     <Dialog open>
       <DialogContent className="flex h-[32rem] flex-col gap-4 sm:max-w-md">
@@ -35,6 +65,30 @@ export function FolderBrowserDialog({ nodeId, nodeLabel, onResolve }: FolderBrow
             <DirList data={data} pending={isPending} onOpen={setPath} />
           )}
         </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Input
+            value={newName}
+            placeholder="New folder name"
+            onChange={(event) => setNewName(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && canCreate) {
+                event.preventDefault();
+                create.mutate(name);
+              }
+            }}
+            data-testid="folder-browser-new-name"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!canCreate || create.isPending}
+            onClick={() => create.mutate(name)}
+            data-testid="folder-browser-create"
+          >
+            {create.isPending ? 'Creating…' : 'New folder'}
+          </Button>
+        </div>
+        {createError ? <p className="shrink-0 text-destructive text-sm">{createError}</p> : null}
         <DialogFooter className="shrink-0">
           <Button variant="outline" onClick={() => onResolve()}>
             Cancel

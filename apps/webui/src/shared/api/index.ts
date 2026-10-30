@@ -120,6 +120,7 @@ export {
   type CreateProjectSkillRequest,
   type CreateProjectSkillResponse,
   createProject,
+  createProjectDir,
   createProjectSkill,
   type DirectoryEntry,
   type DirectoryListing,

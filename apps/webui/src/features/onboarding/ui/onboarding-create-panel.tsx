@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FolderBrowserDialog } from '@/features/create-project/ui/folder-browser-dialog.tsx';
 import { createOrg, type MachineOrgEntry } from '@/shared/api/orgs';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -24,6 +25,7 @@ export function OnboardingCreatePanel({
 }) {
   const [name, setName] = useState('');
   const [workspacePath, setWorkspacePath] = useState('');
+  const [browsing, setBrowsing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,15 +87,36 @@ export function OnboardingCreatePanel({
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="onboarding-org-workspace">{CREATE_WORKSPACE_LABEL}</Label>
-            <Input
-              id="onboarding-org-workspace"
-              value={workspacePath}
-              onChange={(event) => setWorkspacePath(event.target.value)}
-              placeholder="/absolute/path/on/this/host"
-              data-testid="create-org-workspace"
-            />
+            <div className="flex gap-2">
+              <Input
+                id="onboarding-org-workspace"
+                value={workspacePath}
+                onChange={(event) => setWorkspacePath(event.target.value)}
+                placeholder="/absolute/path/on/this/host"
+                data-testid="create-org-workspace"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setBrowsing(true)}
+                data-testid="create-org-browse"
+              >
+                Browse…
+              </Button>
+            </div>
             <p className="text-muted-foreground text-xs">{CREATE_WORKSPACE_HINT}</p>
           </div>
+          {browsing ? (
+            <FolderBrowserDialog
+              orgId="local"
+              onResolve={(folder) => {
+                setBrowsing(false);
+                if (folder) {
+                  setWorkspacePath(folder);
+                }
+              }}
+            />
+          ) : null}
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
           <Button type="submit" size="lg" disabled={busy} data-testid="create-org-submit">
             {busy ? 'Creating…' : CREATE_SUBMIT}

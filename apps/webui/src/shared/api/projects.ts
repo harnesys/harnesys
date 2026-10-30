@@ -92,8 +92,9 @@ export function pickProjectFolder(): Promise<{ path: string } | undefined> {
 export function browseProjectDirs(input: {
   path?: string;
   nodeId?: string;
+  orgId?: string;
 }): Promise<DirectoryListing> {
-  const orgId = getActiveOrgId();
+  const orgId = input.orgId ?? getActiveOrgId();
   if (!orgId) {
     return Promise.reject(new ApiError(400, 'No active org'));
   }
@@ -105,10 +106,27 @@ export function browseProjectDirs(input: {
     }),
   });
 }
-export function browseProjectDirsQuery(input: { path?: string; nodeId?: string }) {
+export function browseProjectDirsQuery(input: { path?: string; nodeId?: string; orgId?: string }) {
   return queryOptions({
-    queryKey: ['project-dirs', input.nodeId ?? 'self', input.path ?? ''],
+    queryKey: ['project-dirs', input.orgId ?? 'active', input.nodeId ?? 'self', input.path ?? ''],
     queryFn: () => browseProjectDirs(input),
+  });
+}
+export function createProjectDir(input: {
+  path: string;
+  nodeId?: string;
+  orgId?: string;
+}): Promise<{ absolutePath: string }> {
+  const orgId = input.orgId ?? getActiveOrgId();
+  if (!orgId) {
+    return Promise.reject(new ApiError(400, 'No active org'));
+  }
+  return apiJson(`/api/orgs/${encodeURIComponent(orgId)}/create-dir`, {
+    method: 'POST',
+    body: JSON.stringify({
+      path: input.path,
+      ...(input.nodeId ? { hostId: input.nodeId } : {}),
+    }),
   });
 }
 export async function createProject(input: {
