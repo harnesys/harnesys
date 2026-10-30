@@ -63,6 +63,7 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(root, './src'),
         '@harnesys/studio-shared': path.resolve(root, '../../packages/studio-shared/types.ts'),
         'harnesys/domain': path.resolve(root, '../../packages/harnesys/domain.ts'),
+        'harnesys/models': path.resolve(root, '../../packages/harnesys/models.ts'),
         harnesys: path.resolve(root, '../../packages/harnesys/index.ts'),
       },
     },

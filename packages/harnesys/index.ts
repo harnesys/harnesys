@@ -13,8 +13,12 @@ export {
   ModelLookupError,
   toBinding,
 } from './src/adapters/models/binding.ts';
-export { discoverModels } from './src/adapters/models/discover.ts';
-export { discoverModelDetails } from './src/adapters/models/discover.ts';
+export { listOpenRouterModels } from './src/adapters/models/discover/openrouter.ts';
+export {
+  findMatchingOpenRouterModel,
+  type OpenRouterMatch,
+} from './src/adapters/models/discover/openrouter-lookup.ts';
+export { discoverModelDetails, discoverModels } from './src/adapters/models/discover.ts';
 export { createRunEventBus, type RunEventBus } from './src/adapters/run-event-bus.ts';
 export {
   type AgentIdentity,
@@ -636,6 +640,8 @@ export type {
   ModelBinding,
   ModelFields,
   ModelKind,
+  ModelPricing,
+  ModelPricingOverride,
   ModelRecord,
   ModelsApi,
   ModelsPort,

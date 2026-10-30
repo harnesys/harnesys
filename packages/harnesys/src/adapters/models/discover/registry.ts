@@ -20,6 +20,7 @@ import {
 import { listOpenAIModels } from './openai.ts';
 import { listOpenAICompatibleModels } from './openai-compatible.ts';
 import { listOpenRouterModels } from './openrouter.ts';
+import { findOpenRouterModel } from './openrouter-lookup.ts';
 import { listQwenModels } from './qwen.ts';
 import { listTogetherModels } from './together.ts';
 import { listXaiModels } from './xai.ts';
@@ -52,7 +53,11 @@ const drivers: Record<Driver, DriverDiscover> = {
   xai: { defaultApiUrl: 'https://api.x.ai/v1', list: listXaiModels },
   together: { defaultApiUrl: 'https://api.together.xyz/v1', list: listTogetherModels },
   kimi: { defaultApiUrl: 'https://api.moonshot.ai/v1', list: listKimiModels },
-  zai: { defaultApiUrl: 'https://api.z.ai/api/paas/v4', list: listZaiModels },
+  zai: {
+    defaultApiUrl: 'https://api.z.ai/api/paas/v4',
+    list: listZaiModels,
+    details: (_input, name) => findOpenRouterModel(name),
+  },
   ollama: {
     defaultApiUrl: 'http://localhost:11434',
     list: listOllamaModels,

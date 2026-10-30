@@ -1,321 +1,68 @@
-import type {
-  DiscoveredModel,
-  Effort,
-  Modality,
-  ModelArchitecture,
-  ModelPricing,
-  ModelTopProvider,
-} from '@harnesys/studio-shared';
 import {
-  EFFORTS,
+  type DiscoveredModel,
+  type Effort,
   isEffort,
-  modelKindFromOutputModalities,
-  withChatGenerationParameters,
+  isModelKind,
+  MODALITIES,
+  type Modality,
+  type ModelPricing,
 } from '@harnesys/studio-shared';
+import type { DiscoveredModel as HarnesysDiscoveredModel } from 'harnesys/models';
+import {
+  findMatchingOpenRouterModel,
+  listOpenRouterModels,
+  type ModelPricingOverride,
+} from 'harnesys/models';
 
-const OPENROUTER_MODELS_URL = 'https://openrouter.ai/api/v1/models?output_modalities=all';
-
-export interface ModelPricingOverride {
-  minPromptTokens: number;
-  prompt?: string;
-  completion?: string;
-  input_cache_read?: string;
-  input_cache_write?: string;
-  image?: string;
-  request?: string;
-}
-
+export type { ModelPricingOverride } from 'harnesys/models';
 export type ModelPricingWithOverrides = ModelPricing & { overrides?: ModelPricingOverride[] };
-
-let cachedCatalogPromise: Promise<DiscoveredModel[]> | null = null;
-export async function fetchOpenRouterCatalog(): Promise<DiscoveredModel[]> {
-  if (!cachedCatalogPromise) {
-    cachedCatalogPromise = (async () => {
-      const response = await fetch(OPENROUTER_MODELS_URL);
-      if (!response.ok) {
-        throw new Error(`OpenRouter returned HTTP ${response.status}`);
-      }
-      const json = await response.json();
-      return parseOpenRouterCatalog(json);
-    })().catch((error) => {
-      cachedCatalogPromise = null;
-      throw error;
-    });
-  }
-  return await cachedCatalogPromise;
-}
-export async function syncModelFromOpenRouter(
-  modelName: string,
-): Promise<OpenRouterMatch | undefined> {
-  const catalog = await fetchOpenRouterCatalog();
-  return findMatchingOpenRouterModel(catalog, modelName);
-}
-export interface OpenRouterMatch {
+export interface SyncMatch {
   model: DiscoveredModel;
   ambiguous: boolean;
 }
-export function findMatchingOpenRouterModel(
-  catalog: DiscoveredModel[],
-  query: string,
-): OpenRouterMatch | undefined {
-  const normalizedQuery = normalizeName(query);
-  if (!normalizedQuery) {
+
+let cachedCatalogPromise: Promise<DiscoveredModel[]> | null = null;
+export function fetchOpenRouterCatalog(): Promise<DiscoveredModel[]> {
+  const cached = cachedCatalogPromise;
+  if (cached) {
+    return cached;
+  }
+  const fetched = listOpenRouterModels({ driver: 'openrouter' });
+  cachedCatalogPromise = fetched.then(
+    (list) => list.map(toViewModel),
+    (error: unknown) => {
+      cachedCatalogPromise = null;
+      throw error;
+    },
+  );
+  return cachedCatalogPromise;
+}
+export async function syncModelFromOpenRouter(modelName: string): Promise<SyncMatch | undefined> {
+  const catalog = await fetchOpenRouterCatalog();
+  const match = findMatchingOpenRouterModel(catalog, modelName);
+  if (!match) {
     return undefined;
   }
-  const exact = catalog.find((item) => item.name.toLowerCase() === normalizedQuery);
-  if (exact) {
-    return { model: exact, ambiguous: false };
-  }
-  const querySuffix = suffixOf(normalizedQuery);
-  const suffixMatches = catalog.filter((item) => suffixOf(item.name.toLowerCase()) === querySuffix);
-  if (suffixMatches.length === 1) {
-    return { model: suffixMatches[0], ambiguous: false };
-  }
-  if (suffixMatches.length > 1) {
-    const baseMatch = suffixMatches.find((item) => !item.name.includes(':'));
-    return { model: baseMatch ?? suffixMatches[0], ambiguous: true };
-  }
-  const strippedQuery = stripDateAndVariant(querySuffix);
-  for (const item of catalog) {
-    const itemStripped = stripDateAndVariant(suffixOf(item.name.toLowerCase()));
-    if (itemStripped === strippedQuery) {
-      return { model: item, ambiguous: true };
-    }
-  }
-  for (const item of catalog) {
-    const itemSuffix = suffixOf(item.name.toLowerCase());
-    if (itemSuffix.startsWith(strippedQuery) || strippedQuery.startsWith(itemSuffix)) {
-      return { model: item, ambiguous: true };
-    }
-  }
-  return undefined;
+  return { model: toViewModel(match.model), ambiguous: match.ambiguous };
 }
-function normalizeName(name: string): string {
-  return name.trim().toLowerCase();
-}
-function suffixOf(name: string): string {
-  const slash = name.lastIndexOf('/');
-  return slash >= 0 ? name.slice(slash + 1) : name;
-}
-function stripDateAndVariant(name: string): string {
-  return name
-    .replace(/:\w+$/, '')
-    .replace(/-\d{8}$/, '')
-    .replace(/-\d{4}-\d{2}-\d{2}$/, '');
-}
-function parseOpenRouterCatalog(json: unknown): DiscoveredModel[] {
-  if (!json || typeof json !== 'object' || !('data' in json) || !Array.isArray(json.data)) {
-    return [];
-  }
-  const result: DiscoveredModel[] = [];
-  for (const item of json.data) {
-    const mapped = mapOpenRouterItem(item);
-    if (mapped) {
-      result.push(mapped);
-    }
-  }
-  return result;
-}
-function mapOpenRouterItem(record: unknown): DiscoveredModel | undefined {
-  if (!record || typeof record !== 'object') {
-    return undefined;
-  }
-  const item = record as Record<string, unknown>;
-  const name = typeof item.id === 'string' ? item.id : undefined;
-  if (!name) {
-    return undefined;
-  }
-  const architecture =
-    item.architecture && typeof item.architecture === 'object'
-      ? (item.architecture as Record<string, unknown>)
-      : undefined;
-  const pricing =
-    item.pricing && typeof item.pricing === 'object'
-      ? (item.pricing as Record<string, unknown>)
-      : undefined;
-  const topProvider =
-    item.top_provider && typeof item.top_provider === 'object'
-      ? (item.top_provider as Record<string, unknown>)
-      : undefined;
-  const rawParams = Array.isArray(item.supported_parameters) ? item.supported_parameters : [];
-  const params = rawParams.filter((p): p is string => typeof p === 'string');
-  const rawOutputModalities = Array.isArray(architecture?.output_modalities)
-    ? architecture.output_modalities
-    : [];
-  const kind = modelKindFromOutputModalities(rawOutputModalities);
-  const inputModalities = extractModalities(architecture?.input_modalities);
-  const outputModalities = extractModalities(rawOutputModalities);
-  const contextLength =
-    asPositiveNumber(item.context_length) ?? asPositiveNumber(topProvider?.context_length);
-  const maxOutput = asPositiveNumber(topProvider?.max_completion_tokens);
-  const promptPrice = formatPriceString(pricing?.prompt);
-  const completionPrice = formatPriceString(pricing?.completion);
-  const cacheReadPrice = formatPriceString(pricing?.input_cache_read);
-  const cacheWritePrice = formatPriceString(pricing?.input_cache_write);
-  const imagePrice = formatPriceString(pricing?.image);
-  const requestPrice = formatPriceString(pricing?.request);
-  const pricingOverrides = mapPricingOverrides(pricing?.overrides);
-  let modelPricing: ModelPricingWithOverrides | undefined;
-  if (promptPrice !== undefined && completionPrice !== undefined) {
-    modelPricing = {
-      prompt: promptPrice,
-      completion: completionPrice,
-      input_cache_read: cacheReadPrice,
-      input_cache_write: cacheWritePrice,
-      image: imagePrice,
-      request: requestPrice,
-      overrides: pricingOverrides,
-    };
-  }
-  const reasoningInfo = readReasoningInfo(item.reasoning);
-  const hasReasoningParams =
-    params.includes('reasoning') ||
-    params.includes('reasoning_effort') ||
-    params.includes('include_reasoning') ||
-    reasoningInfo !== undefined;
-  const effort = hasReasoningParams ? resolveEffortLevels(name, reasoningInfo) : undefined;
-  const modelArchitecture: ModelArchitecture | undefined =
-    inputModalities.length > 0 || outputModalities.length > 0
-      ? { input_modalities: inputModalities, output_modalities: outputModalities }
-      : undefined;
-  const modelTopProvider: ModelTopProvider | undefined =
-    contextLength !== undefined || maxOutput !== undefined
-      ? { context_length: contextLength, max_completion_tokens: maxOutput }
-      : undefined;
-  const description = typeof item.description === 'string' ? item.description : undefined;
-  return {
-    name,
-    kind,
-    description,
-    context_length: contextLength,
-    architecture: modelArchitecture,
-    pricing: modelPricing,
-    top_provider: modelTopProvider,
-    supported_parameters: withChatGenerationParameters(params.length > 0 ? params : undefined),
-    effort,
-    defaultEffort: reasoningInfo?.defaultEffort,
-    reasoningMandatory: reasoningInfo?.mandatory,
-  };
-}
-const NONE_LOW_MEDIUM_HIGH: Effort[] = ['none', 'low', 'medium', 'high'];
-const LOW_MEDIUM_HIGH: Effort[] = ['low', 'medium', 'high'];
-const OPENAI_EFFORT: Effort[] = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'];
-const QWEN_EFFORT: Effort[] = ['none', 'low', 'medium', 'xhigh'];
-const MISTRAL_EFFORT: Effort[] = ['none', 'high'];
-interface ReasoningInfo {
-  efforts: Effort[] | undefined;
-  defaultEffort: Effort | undefined;
-  mandatory: boolean | undefined;
-}
-function readReasoningInfo(raw: unknown): ReasoningInfo | undefined {
-  if (!raw || typeof raw !== 'object') {
-    return undefined;
-  }
-  const record = raw as Record<string, unknown>;
-  const supported = Array.isArray(record.supported_efforts)
-    ? record.supported_efforts.filter(isEffortValue)
-    : undefined;
-  const efforts = supported === undefined ? undefined : sortEfforts(unique(supported));
-  const defaultRaw = typeof record.default_effort === 'string' ? record.default_effort : undefined;
+const MODALITY_SET: ReadonlySet<string> = new Set(MODALITIES);
+function toViewModel(model: HarnesysDiscoveredModel): DiscoveredModel {
+  const kind = isModelKind(model.kind) ? model.kind : 'chat';
+  const effort = model.effort?.filter((item): item is Effort => isEffort(item));
   const defaultEffort =
-    defaultRaw !== undefined && isEffortValue(defaultRaw) ? defaultRaw : undefined;
-  const mandatory = typeof record.mandatory === 'boolean' ? record.mandatory : undefined;
-  return { efforts, defaultEffort, mandatory };
+    model.defaultEffort !== undefined && isEffort(model.defaultEffort)
+      ? model.defaultEffort
+      : undefined;
+  const architecture = model.architecture
+    ? {
+        ...model.architecture,
+        input_modalities: filterModalities(model.architecture.input_modalities),
+        output_modalities: filterModalities(model.architecture.output_modalities),
+      }
+    : undefined;
+  return { ...model, kind, effort, defaultEffort, architecture };
 }
-function isEffortValue(value: unknown): value is Effort {
-  return typeof value === 'string' && isEffort(value);
-}
-function unique(values: Effort[]): Effort[] {
-  return [...new Set(values)];
-}
-function sortEfforts(values: Effort[]): Effort[] {
-  const order = new Map(EFFORTS.map((item, index) => [item, index]));
-  return [...values].sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0));
-}
-function resolveEffortLevels(
-  modelId: string,
-  info: ReasoningInfo | undefined,
-): Effort[] | undefined {
-  if (info !== undefined) {
-    if (info.efforts === undefined) {
-      return fallbackEffortLevels(modelId);
-    }
-    if (info.efforts.length === 0) {
-      return undefined;
-    }
-    return info.mandatory === true ? info.efforts.filter((item) => item !== 'none') : info.efforts;
-  }
-  return fallbackEffortLevels(modelId);
-}
-function fallbackEffortLevels(modelId: string): Effort[] {
-  const prefix = modelId.split('/')[0] ?? '';
-  switch (prefix) {
-    case 'openai':
-      return OPENAI_EFFORT;
-    case 'x-ai':
-      return LOW_MEDIUM_HIGH;
-    case 'mistralai':
-      return MISTRAL_EFFORT;
-    case 'qwen':
-      return QWEN_EFFORT;
-    case 'moonshotai':
-      return ['low', 'high', 'max'];
-    case 'nvidia':
-      return LOW_MEDIUM_HIGH;
-    default:
-      return NONE_LOW_MEDIUM_HIGH;
-  }
-}
-function extractModalities(raw: unknown): Modality[] {
-  if (!Array.isArray(raw)) {
-    return [];
-  }
-  const valid: Modality[] = ['text', 'image', 'audio', 'video', 'file'];
-  return raw.filter((item): item is Modality => valid.includes(item as Modality));
-}
-function mapPricingOverrides(raw: unknown): ModelPricingOverride[] | undefined {
-  if (!Array.isArray(raw)) {
-    return undefined;
-  }
-  const overrides: ModelPricingOverride[] = [];
-  for (const entry of raw) {
-    if (!entry || typeof entry !== 'object') {
-      continue;
-    }
-    const record = entry as Record<string, unknown>;
-    overrides.push({
-      minPromptTokens: asPositiveNumber(record.min_prompt_tokens) ?? 0,
-      prompt: formatPriceString(record.prompt),
-      completion: formatPriceString(record.completion),
-      input_cache_read: formatPriceString(record.input_cache_read),
-      input_cache_write: formatPriceString(record.input_cache_write),
-      image: formatPriceString(record.image),
-      request: formatPriceString(record.request),
-    });
-  }
-  return overrides.length > 0 ? overrides : undefined;
-}
-function formatPriceString(value: unknown): string | undefined {
-  if (typeof value === 'string' && value.trim() !== '') {
-    const num = Number(value);
-    return Number.isFinite(num) ? value.trim() : undefined;
-  }
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return String(value);
-  }
-  return undefined;
-}
-function asNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === 'string') {
-    const num = Number(value);
-    return Number.isFinite(num) ? num : undefined;
-  }
-  return undefined;
-}
-function asPositiveNumber(value: unknown): number | undefined {
-  const num = asNumber(value);
-  return num !== undefined && num > 0 ? num : undefined;
+function filterModalities(values: readonly string[] | undefined): Modality[] | undefined {
+  const filtered = (values ?? []).filter((item): item is Modality => MODALITY_SET.has(item));
+  return filtered.length > 0 ? filtered : undefined;
 }
