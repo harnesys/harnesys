@@ -6,13 +6,17 @@ import { studioPath } from '@/shared/config/routes';
 
 export function OnboardingJoinPage() {
   const navigate = useNavigate();
-  const { upsertOrg, setActiveOrgId } = useOrgStore();
+  const { upsertOrg, setActiveOrgId, activeOrgId } = useOrgStore();
+
+  const onBack = () => {
+    void navigate(activeOrgId ? studioPath.desk(activeOrgId) : studioPath.onboardingChoose, {
+      replace: true,
+    });
+  };
 
   return (
     <OnboardingJoinPanel
-      onBack={() => {
-        void navigate(studioPath.onboardingChoose, { replace: true });
-      }}
+      onBack={onBack}
       onJoined={(entry) => {
         upsertOrg(entry);
         setActiveOrgId(entry.orgId);

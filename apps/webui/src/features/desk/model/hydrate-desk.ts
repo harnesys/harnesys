@@ -12,7 +12,6 @@ import {
   listThreads,
   listWebhooks,
 } from '@/shared/api';
-import { getActiveOrgId } from '@/shared/api/active-org';
 import { useDeskStore } from './desk.store';
 
 const inflight = new Map<string, Promise<void>>();

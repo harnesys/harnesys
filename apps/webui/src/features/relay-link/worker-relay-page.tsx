@@ -1,5 +1,6 @@
 import { Navigate, useNavigate } from 'react-router';
 import { useOrgStore } from '@/features/switch-org/org-context';
+import { studioPath } from '@/shared/config/routes';
 import { RelayLinkPanel } from './relay-link-panel';
 
 export function WorkerRelayPage() {
@@ -17,7 +18,7 @@ export function WorkerRelayPage() {
     <RelayLinkPanel
       entry={entry}
       onPairAnother={() => {
-        void navigate('/join');
+        void navigate(studioPath.onboardingJoin);
       }}
     />
   );

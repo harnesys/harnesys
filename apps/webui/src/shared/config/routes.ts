@@ -32,6 +32,7 @@ export type StudioFocus =
 export const studioPath = {
   onboardingChoose: '/onboarding/choose',
   onboardingCreate: '/onboarding/create',
+  onboardingJoin: '/onboarding/join',
   onboardingProvider: (orgId: string) => `/onboarding/provider/${orgId}`,
   onboardingModels: (orgId: string) => `/onboarding/models/${orgId}`,
   onboardingPresets: (orgId: string) => `/onboarding/presets/${orgId}`,

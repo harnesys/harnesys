@@ -6,7 +6,13 @@ import { studioPath } from '@/shared/config/routes';
 
 export function OnboardingCreatePage() {
   const navigate = useNavigate();
-  const { upsertOrg, setActiveOrgId } = useOrgStore();
+  const { upsertOrg, setActiveOrgId, activeOrgId } = useOrgStore();
+
+  const onBack = () => {
+    void navigate(activeOrgId ? studioPath.desk(activeOrgId) : studioPath.onboardingChoose, {
+      replace: true,
+    });
+  };
 
   const onCreated = (entry: MachineOrgEntry) => {
     upsertOrg(entry);
@@ -18,12 +24,5 @@ export function OnboardingCreatePage() {
       });
   };
 
-  return (
-    <OnboardingCreatePanel
-      onBack={() => {
-        void navigate(studioPath.onboardingChoose, { replace: true });
-      }}
-      onCreated={onCreated}
-    />
-  );
+  return <OnboardingCreatePanel onBack={onBack} onCreated={onCreated} />;
 }
