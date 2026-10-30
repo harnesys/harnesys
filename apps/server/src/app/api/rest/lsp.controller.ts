@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Param, Post, Put, Query } from '@harnesys/brix';
-import type { OrgLspListResponse } from '@harnesys/contracts';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@harnesys/brix';
+import type { OrgLspListResponse, UpsertOrgLspServerBody } from '@harnesys/contracts';
+import { UpsertOrgLspServerBodySchema } from '@harnesys/contracts';
 import { SSE_KEEP_ALIVE_MS } from '../../../const.ts';
-import { ApplyOrgLspPresetUseCase } from '../../application/lsp/apply-org-lsp-preset.use-case.ts';
+import { DeleteOrgLspServerUseCase } from '../../application/lsp/delete-org-lsp-server.use-case.ts';
 import { GetOrgLspUseCase } from '../../application/lsp/get-org-lsp.use-case.ts';
 import { GetSourceLspUseCase } from '../../application/lsp/get-source-lsp.use-case.ts';
+import { InstallOrgLspBinaryUseCase } from '../../application/lsp/install-org-lsp-binary.use-case.ts';
 import { LspQueryUseCase } from '../../application/lsp/lsp-query.use-case.ts';
 import {
   LspDefinitionUseCase,
@@ -18,6 +20,7 @@ import { PutOrgLspUseCase } from '../../application/lsp/put-org-lsp.use-case.ts'
 import { PutSourceLspUseCase } from '../../application/lsp/put-source-lsp.use-case.ts';
 import { RestartOrgLspServerUseCase } from '../../application/lsp/restart-org-lsp-server.use-case.ts';
 import { SetOrgLspServerStateUseCase } from '../../application/lsp/set-org-lsp-server-state.use-case.ts';
+import { UpsertOrgLspServerUseCase } from '../../application/lsp/upsert-org-lsp-server.use-case.ts';
 import { LspPort } from '../../domain/lsp/lsp.port.ts';
 
 @Controller()
@@ -25,7 +28,9 @@ export class LspController {
   constructor(
     private readonly getOrgLsp: GetOrgLspUseCase,
     private readonly putOrgLsp: PutOrgLspUseCase,
-    private readonly applyPreset: ApplyOrgLspPresetUseCase,
+    private readonly upsertServer: UpsertOrgLspServerUseCase,
+    private readonly deleteServer: DeleteOrgLspServerUseCase,
+    private readonly installBinary: InstallOrgLspBinaryUseCase,
     private readonly restartServer: RestartOrgLspServerUseCase,
     private readonly setServerState: SetOrgLspServerStateUseCase,
     private readonly getSourceLsp: GetSourceLspUseCase,
@@ -48,9 +53,30 @@ export class LspController {
     return this.putOrgLsp.execute({ orgId, body });
   }
 
-  @Post('orgs/:orgId/lsp/preset/:lang')
-  orgPreset(@Param('orgId') orgId: string, @Param('lang') lang: string): OrgLspListResponse {
-    return this.applyPreset.execute({ orgId, lang });
+  @Put('orgs/:orgId/lsp/servers/:serverId')
+  orgServerUpsert(
+    @Param('orgId') orgId: string,
+    @Param('serverId') serverId: string,
+    @Body(UpsertOrgLspServerBodySchema) body: UpsertOrgLspServerBody,
+  ): Promise<OrgLspListResponse> {
+    return this.upsertServer.execute({ orgId, serverId, body });
+  }
+
+  @Delete('orgs/:orgId/lsp/servers/:serverId')
+  @HttpCode(204)
+  orgServerRemove(
+    @Param('orgId') orgId: string,
+    @Param('serverId') serverId: string,
+  ): Promise<void> {
+    return this.deleteServer.execute({ orgId, serverId });
+  }
+
+  @Post('orgs/:orgId/lsp/servers/:serverId/install-binary')
+  orgInstallBinary(
+    @Param('orgId') orgId: string,
+    @Param('serverId') serverId: string,
+  ): Promise<OrgLspListResponse> {
+    return this.installBinary.execute({ orgId, serverId });
   }
 
   @Post('orgs/:orgId/lsp/:serverId/restart')

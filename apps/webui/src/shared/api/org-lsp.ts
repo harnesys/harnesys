@@ -1,13 +1,17 @@
-import type { OrgLspListResponse } from '@harnesys/contracts';
+import type { OrgLspListResponse, UpsertOrgLspServerBody } from '@harnesys/contracts';
 import { queryOptions } from '@tanstack/react-query';
 import { apiJson, apiUrl } from './client';
 import { authenticatedFetch } from './session';
 import { readSse } from './sse';
 
-export type { OrgLspListResponse };
+export type { OrgLspListResponse, UpsertOrgLspServerBody };
 
 function orgLspBase(orgId: string) {
   return `/api/orgs/${encodeURIComponent(orgId)}/lsp`;
+}
+
+function orgLspServerBase(orgId: string, serverId: string) {
+  return `${orgLspBase(orgId)}/servers/${encodeURIComponent(serverId)}`;
 }
 
 function sourceLspBase(orgId: string, sourceId: string) {
@@ -38,6 +42,27 @@ export function putOrgLsp(orgId: string, body: unknown) {
   return apiJson<OrgLspListResponse>(orgLspBase(orgId), {
     method: 'PUT',
     body: JSON.stringify(body),
+  });
+}
+
+export function upsertOrgLspServer(
+  orgId: string,
+  serverId: string,
+  body: UpsertOrgLspServerBody,
+): Promise<OrgLspListResponse> {
+  return apiJson<OrgLspListResponse>(orgLspServerBase(orgId, serverId), {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteOrgLspServer(orgId: string, serverId: string): Promise<void> {
+  return apiJson<void>(orgLspServerBase(orgId, serverId), { method: 'DELETE' });
+}
+
+export function installOrgLspBinary(orgId: string, serverId: string): Promise<OrgLspListResponse> {
+  return apiJson<OrgLspListResponse>(`${orgLspServerBase(orgId, serverId)}/install-binary`, {
+    method: 'POST',
   });
 }
 

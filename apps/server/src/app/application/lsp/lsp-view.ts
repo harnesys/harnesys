@@ -2,7 +2,12 @@ import type { OrgLspListResponse } from '@harnesys/contracts';
 import { PluginRegistryPort } from '../../domain/plugin/plugin-registry.port.ts';
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
 import type { OrgLspFile } from '../../infra/lsp/org-lsp-file.ts';
-import { appendPluginServers, type ListablePluginServer, toLspListResponse } from './lsp-status.ts';
+import {
+  appendPluginServers,
+  buildCatalog,
+  type ListablePluginServer,
+  toLspListResponse,
+} from './lsp-status.ts';
 
 export async function buildLspView(
   orgId: string,
@@ -24,6 +29,7 @@ export async function buildLspView(
     disabled: entry.disabled || disabledKeys.has(entry.serverId),
   }));
   appendPluginServers(response, pluginServers, file.servers);
+  response.catalog = buildCatalog(file, response.servers);
   return response;
 }
 

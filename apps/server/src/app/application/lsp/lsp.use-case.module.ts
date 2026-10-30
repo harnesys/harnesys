@@ -4,9 +4,10 @@ import { LspModule } from '../../infra/lsp/lsp.module.ts';
 import { MachineHomeModule } from '../../infra/machine-home/machine-home.module.ts';
 import { PluginsModule } from '../../infra/plugins/plugins.module.ts';
 import { SourceModule } from '../../infra/source/source.module.ts';
-import { ApplyOrgLspPresetUseCase } from './apply-org-lsp-preset.use-case.ts';
+import { DeleteOrgLspServerUseCase } from './delete-org-lsp-server.use-case.ts';
 import { GetOrgLspUseCase } from './get-org-lsp.use-case.ts';
 import { GetSourceLspUseCase } from './get-source-lsp.use-case.ts';
+import { InstallOrgLspBinaryUseCase } from './install-org-lsp-binary.use-case.ts';
 import { LspQueryUseCase } from './lsp-query.use-case.ts';
 import {
   LspDefinitionUseCase,
@@ -18,11 +19,14 @@ import { PutOrgLspUseCase } from './put-org-lsp.use-case.ts';
 import { PutSourceLspUseCase } from './put-source-lsp.use-case.ts';
 import { RestartOrgLspServerUseCase } from './restart-org-lsp-server.use-case.ts';
 import { SetOrgLspServerStateUseCase } from './set-org-lsp-server-state.use-case.ts';
+import { UpsertOrgLspServerUseCase } from './upsert-org-lsp-server.use-case.ts';
 
 const useCases = [
   GetOrgLspUseCase,
   PutOrgLspUseCase,
-  ApplyOrgLspPresetUseCase,
+  UpsertOrgLspServerUseCase,
+  DeleteOrgLspServerUseCase,
+  InstallOrgLspBinaryUseCase,
   RestartOrgLspServerUseCase,
   SetOrgLspServerStateUseCase,
   GetSourceLspUseCase,

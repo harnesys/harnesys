@@ -1,10 +1,12 @@
 import type {
+  LspCatalogEntry,
   LspServerStatus,
   OrgLspEntry,
   OrgLspListResponse,
   PluginDiagnostic,
 } from '@harnesys/contracts';
 import type { PluginLspEntry } from '../../domain/plugin/plugin-runtime.port.ts';
+import { LSP_CATALOG } from '../../infra/lsp/lsp-catalog.ts';
 import {
   disabledFileEntries,
   hasBinary,
@@ -130,4 +132,23 @@ function pickExtensions(
     }
   }
   return picked;
+}
+
+export function buildCatalog(file: OrgLspFile, servers: readonly OrgLspEntry[]): LspCatalogEntry[] {
+  const known = new Set([
+    ...file.servers.map((server) => server.serverId),
+    ...disabledFileEntries(file.raw).map((server) => server.serverId),
+    ...servers.map((server) => server.serverId),
+  ]);
+  return LSP_CATALOG.map((spec) => ({
+    serverId: spec.serverId,
+    label: spec.label,
+    description: spec.description,
+    command: spec.command,
+    ...(spec.args !== undefined ? { args: spec.args } : {}),
+    extensionToLanguage: spec.extensionToLanguage,
+    install: spec.install,
+    installed: known.has(spec.serverId),
+    binaryOk: hasBinary(spec.command),
+  }));
 }

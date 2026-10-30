@@ -109,6 +109,8 @@ export {
   TaskEnvelopeSchema,
 } from './fleet-secrets.ts';
 export {
+  type LspCatalogEntry,
+  LspCatalogEntrySchema,
   type LspServerStatus,
   LspServerStatusSchema,
   type OrgLspEntry,
@@ -117,6 +119,8 @@ export {
   OrgLspListResponseSchema,
   type PutOrgLspBody,
   PutOrgLspBodySchema,
+  type UpsertOrgLspServerBody,
+  UpsertOrgLspServerBodySchema,
 } from './lsp.ts';
 export {
   type ListOrgMcpConfigResponse,

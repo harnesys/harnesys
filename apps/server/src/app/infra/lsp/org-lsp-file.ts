@@ -146,24 +146,46 @@ export function withFileDisabled(
   return { [serverId]: next };
 }
 
-export function withPreset(
+export function withServerUpsert(
   raw: unknown,
-  preset: Record<
-    string,
-    { command: string; args?: string[]; extensionToLanguage: Record<string, string> }
-  >,
+  serverId: string,
+  spec: { command: string; args?: string[]; extensionToLanguage: Record<string, string> },
 ): unknown {
   if (isRecord(raw) && isRecord(raw.servers)) {
-    const servers: Record<string, unknown> = { ...(raw.servers as Record<string, unknown>) };
-    mergeMissing(servers, preset);
+    const servers = { ...(raw.servers as Record<string, unknown>) };
+    servers[serverId] = spec;
     return { ...raw, servers };
   }
   if (isRecord(raw)) {
-    const next: Record<string, unknown> = { ...raw };
-    mergeMissing(next, preset);
+    return { ...raw, [serverId]: spec };
+  }
+  return { [serverId]: spec };
+}
+
+export function withoutServer(raw: unknown, serverId: string): unknown {
+  if (isRecord(raw) && isRecord(raw.servers)) {
+    const servers = { ...(raw.servers as Record<string, unknown>) };
+    delete servers[serverId];
+    return { ...raw, servers };
+  }
+  if (isRecord(raw)) {
+    const next = { ...raw };
+    delete next[serverId];
     return next;
   }
-  return { ...preset };
+  return raw;
+}
+
+export function fileHasServer(file: OrgLspFile, serverId: string): boolean {
+  if (file.servers.some((server) => server.serverId === serverId)) {
+    return true;
+  }
+  const record = containerOf(file.raw);
+  if (record === undefined) {
+    return false;
+  }
+  const entry = record[serverId];
+  return isRecord(entry);
 }
 
 export function hasBinary(command: string): boolean {
@@ -198,7 +220,7 @@ function parseServerEntry(
   return { spec };
 }
 
-function parseExtensionMap(value: unknown): Record<string, string> {
+export function parseExtensionMap(value: unknown): Record<string, string> {
   const extensionToLanguage: Record<string, string> = {};
   if (!isRecord(value)) {
     return extensionToLanguage;
@@ -210,14 +232,6 @@ function parseExtensionMap(value: unknown): Record<string, string> {
     }
   }
   return extensionToLanguage;
-}
-
-function mergeMissing(target: Record<string, unknown>, preset: Record<string, unknown>): void {
-  for (const [serverId, spec] of Object.entries(preset)) {
-    if (target[serverId] === undefined) {
-      target[serverId] = spec;
-    }
-  }
 }
 
 function invalidDiag(pathLabel: string, message: string): PluginDiagnostic {
