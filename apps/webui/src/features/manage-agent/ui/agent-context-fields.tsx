@@ -11,6 +11,7 @@ import {
 import { Input } from '@/shared/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/shared/ui/toggle-group';
 import { type AgentFieldsInput, type AgentFieldsOutput } from '../model/agent-fields';
+import { AgentToolOutputFields } from './agent-tool-output-fields';
 
 type AgentFieldsControl = Control<AgentFieldsInput, unknown, AgentFieldsOutput>;
 const HINT_CLASS = 'text-[11px] text-muted-foreground leading-snug';
@@ -117,58 +118,61 @@ export function AgentContextTuningFields({
   onCommit?: () => void;
 }) {
   return (
-    <FieldSet className="gap-2.5">
-      <FieldLegend variant="label" className="text-muted-foreground text-xs">
-        Context tuning
-      </FieldLegend>
-      <FieldGroup className="gap-2.5">
-        <ContextTuningToggle
-          control={control}
-          name="ctxUsageAnchor"
-          label="Anchor estimates on measured usage"
-          description="Estimate context from the provider's measured token usage instead of text alone. Turn off when usage reporting is unreliable."
-          idPrefix={idPrefix}
-          onCommit={onCommit}
-        />
-        <div className="grid grid-cols-2 gap-2.5">
-          <ContextTuningNumber
+    <div className="flex flex-col gap-4">
+      <FieldSet className="gap-2.5">
+        <FieldLegend variant="label" className="text-muted-foreground text-xs">
+          Context tuning
+        </FieldLegend>
+        <FieldGroup className="gap-2.5">
+          <ContextTuningToggle
             control={control}
-            name="ctxLengthCutContinuations"
-            label="Length-cut continuations (0 = off)"
-            description="Retries with a continuation message when output is cut by the token limit. 0 stops immediately. Default 2."
-            placeholder="2"
+            name="ctxUsageAnchor"
+            label="Anchor estimates on measured usage"
+            description="Estimate context from the provider's measured token usage instead of text alone. Turn off when usage reporting is unreliable."
             idPrefix={idPrefix}
             onCommit={onCommit}
           />
-          <ContextTuningNumber
-            control={control}
-            name="providerRetryAttempts"
-            label="Provider retry attempts"
-            description="Retries for transient provider errors (429, 5xx). 1 = no retries; blank = the full backoff schedule (6)."
-            placeholder="6"
-            idPrefix={idPrefix}
-            onCommit={onCommit}
-          />
-          <ContextTuningNumber
-            control={control}
-            name="ctxSpawnHeadChars"
-            label="Spawn result head, chars (0 = unlimited)"
-            description="Characters of each subagent result kept from the start. 0 = unlimited. Default 12000."
-            placeholder="12000"
-            idPrefix={idPrefix}
-            onCommit={onCommit}
-          />
-          <ContextTuningNumber
-            control={control}
-            name="ctxSpawnTailChars"
-            label="Spawn result tail, chars"
-            description="Characters of each subagent result kept from the end. Default 4000."
-            placeholder="4000"
-            idPrefix={idPrefix}
-            onCommit={onCommit}
-          />
-        </div>
-      </FieldGroup>
-    </FieldSet>
+          <div className="grid grid-cols-2 gap-2.5">
+            <ContextTuningNumber
+              control={control}
+              name="ctxLengthCutContinuations"
+              label="Length-cut continuations (0 = off)"
+              description="Retries with a continuation message when output is cut by the token limit. 0 stops immediately. Default 2."
+              placeholder="2"
+              idPrefix={idPrefix}
+              onCommit={onCommit}
+            />
+            <ContextTuningNumber
+              control={control}
+              name="providerRetryAttempts"
+              label="Provider retry attempts"
+              description="Retries for transient provider errors (429, 5xx). 1 = no retries; blank = the full backoff schedule (6)."
+              placeholder="6"
+              idPrefix={idPrefix}
+              onCommit={onCommit}
+            />
+            <ContextTuningNumber
+              control={control}
+              name="ctxSpawnHeadChars"
+              label="Spawn result head, chars (0 = unlimited)"
+              description="Characters of each subagent result kept from the start. 0 = unlimited. Default 12000. The full result is saved to a thread file."
+              placeholder="12000"
+              idPrefix={idPrefix}
+              onCommit={onCommit}
+            />
+            <ContextTuningNumber
+              control={control}
+              name="ctxSpawnTailChars"
+              label="Spawn result tail, chars"
+              description="Characters of each subagent result kept from the end. Default 4000. The full result is saved to a thread file."
+              placeholder="4000"
+              idPrefix={idPrefix}
+              onCommit={onCommit}
+            />
+          </div>
+        </FieldGroup>
+      </FieldSet>
+      <AgentToolOutputFields control={control} idPrefix={idPrefix} onCommit={onCommit} />
+    </div>
   );
 }

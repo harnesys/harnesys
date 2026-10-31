@@ -73,6 +73,29 @@ describe('derivedFileRules', () => {
     expect(rules).toEqual([]);
   });
 
+  test('spilled tool outputs in the thread dir are readable but not editable', () => {
+    const rules = derivedFileRules({
+      workspaceRoot: null,
+      sharedSources: [],
+      threadDir: '/data/threads/t1',
+      agentId: AGENT_ID,
+      hostId: HOST_ID,
+    });
+    const target = '/data/threads/t1/tool-outputs/spawn-s1.json';
+    const base = {
+      canonicalPath: target,
+      primaryDirectory: '/primary/sandbox',
+      hostId: HOST_ID,
+      agentId: AGENT_ID,
+      rules,
+    };
+    expect(resolveFileAccess({ ...base, action: 'read' })).toEqual({ decision: 'allow' });
+    expect(resolveFileAccess({ ...base, action: 'edit' })).toEqual({
+      decision: 'deny',
+      reason: 'denied by file rule /data/threads/t1/tool-outputs/**',
+    });
+  });
+
   test('declared deny inside the workspace wins over the derived allow', () => {
     const derived = derivedFileRules({
       workspaceRoot: WORKSPACE_ROOT,

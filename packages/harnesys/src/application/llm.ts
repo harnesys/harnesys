@@ -81,7 +81,7 @@ export function formatRuntimeSection(runtime: RuntimePromptInfo | undefined): st
     }
   }
   lines.push(
-    "- Thread files: `thread:`-prefixed paths address this conversation's storage (`attachments/`, `sandbox/`); pass them to tools verbatim; attachment files are read-only.",
+    "- Thread files: `thread:`-prefixed paths address this conversation's storage (`attachments/`, `sandbox/`, `tool-outputs/`); pass them to tools verbatim; attachment and tool-output files are read-only.",
   );
   lines.push(
     '- File links in user messages are real host paths (strip the `:line` suffix before tool calls); reads outside allowed roots request approval.',

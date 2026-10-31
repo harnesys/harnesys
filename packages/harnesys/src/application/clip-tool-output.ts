@@ -21,11 +21,41 @@ export function serializeToolOutput(value: unknown): string {
     return String(value);
   }
 }
+const TOOL_OUTPUTS_DIR = 'tool-outputs';
 function toolOutputRelPath(sessionId: string, fileName: string): string {
-  return `.harnesys/threads/${sessionId}/tool-outputs/${fileName}`;
+  return `.harnesys/threads/${sessionId}/${TOOL_OUTPUTS_DIR}/${fileName}`;
 }
 function toolOutputFileName(toolName: string, toolCallId: string): string {
   return `${safeSegment(toolName, 'tool')}-${safeSegment(toolCallId, 'call')}.txt`;
+}
+export interface SpillInput {
+  fileName: string;
+  text: string;
+  sessionId: string;
+  paths?: PathsConfig;
+}
+/**
+ * Writes the full text next to the thread and returns a locator the model can read back:
+ * `thread:tool-outputs/<file>` inside the thread dir, or a workdir-relative path otherwise.
+ */
+export async function spillTextToFile(input: SpillInput): Promise<string | null> {
+  const fileName = safeSegment(input.fileName, 'output');
+  const threadDir = input.paths?.threadDir;
+  if (threadDir) {
+    const absolute = path.join(threadDir, TOOL_OUTPUTS_DIR, fileName);
+    await mkdir(path.dirname(absolute), { recursive: true });
+    await Bun.write(absolute, input.text);
+    return `thread:${TOOL_OUTPUTS_DIR}/${fileName}`;
+  }
+  const cwd = input.paths?.cwd;
+  if (!cwd || !input.sessionId) {
+    return null;
+  }
+  const rel = toolOutputRelPath(input.sessionId, fileName);
+  const absolute = resolveWorkdirPath(cwd, rel);
+  await mkdir(path.dirname(absolute), { recursive: true });
+  await Bun.write(absolute, input.text);
+  return rel;
 }
 export async function presentToolOutput(input: {
   value: unknown;
@@ -41,19 +71,18 @@ export async function presentToolOutput(input: {
   if (safe.length <= settings.maxChars) {
     return safe;
   }
-  let rel: string | null = null;
+  let locator: string | null = null;
   try {
-    rel = await writeToolOutputFile({
+    locator = await spillTextToFile({
       paths: input.paths,
       sessionId: input.sessionId,
-      toolName: input.toolName,
-      toolCallId: input.toolCallId,
+      fileName: toolOutputFileName(input.toolName, input.toolCallId),
       text: safe,
     });
   } catch {
-    rel = null;
+    locator = null;
   }
-  return formatClipped(safe, settings, rel);
+  return formatClipped(safe, settings, locator);
 }
 export async function presentCallOutput(
   ctx: {
@@ -76,49 +105,20 @@ export async function presentCallOutput(
     settings: ctx.toolOutput,
   });
 }
-async function writeToolOutputFile(input: {
-  paths?: PathsConfig;
-  sessionId: string;
-  toolName: string;
-  toolCallId: string;
-  text: string;
-}): Promise<string | null> {
-  const threadDir = input.paths?.threadDir;
-  if (threadDir) {
-    const absolute = path.join(
-      threadDir,
-      'tool-outputs',
-      toolOutputFileName(input.toolName, input.toolCallId),
-    );
-    await mkdir(path.dirname(absolute), { recursive: true });
-    await Bun.write(absolute, input.text);
-    return absolute;
-  }
-  const cwd = input.paths?.cwd;
-  if (!cwd || !input.sessionId) {
-    return null;
-  }
-  const rel = toolOutputRelPath(
-    input.sessionId,
-    toolOutputFileName(input.toolName, input.toolCallId),
-  );
-  const absolute = resolveWorkdirPath(cwd, rel);
-  await mkdir(path.dirname(absolute), { recursive: true });
-  await Bun.write(absolute, input.text);
-  return rel;
+export function spilledOutputLine(textLength: number, locator: string | null): string {
+  return locator
+    ? `Full output (${textLength} chars) saved to ${locator}. The view above is head + tail; read the file only if you need the omitted middle.`
+    : `Full output (${textLength} chars) could not be saved to a file.`;
 }
 function formatClipped(
   text: string,
   settings: ResolvedToolOutputSettings,
-  relPath: string | null,
+  locator: string | null,
 ): string {
   const head = text.slice(0, settings.headChars);
   const tail = text.slice(-settings.tailChars);
   const omitted = Math.max(0, text.length - settings.headChars - settings.tailChars);
-  const fileLine = relPath
-    ? `Full output (${text.length} chars): ${relPath}`
-    : `Full output (${text.length} chars) was not saved to a file.`;
-  return `${head}\n\n… ${omitted} chars omitted …\n\n${tail}\n\n${fileLine}`;
+  return `${head}\n\n… ${omitted} chars omitted …\n\n${tail}\n\n${spilledOutputLine(text.length, locator)}`;
 }
 function safeSegment(value: string, fallback: string): string {
   const cleaned = value.replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '');

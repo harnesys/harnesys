@@ -1,4 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import { mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import {
   appendSpawnResultsMessage,
   clampSpawnResultText,
@@ -32,7 +35,7 @@ describe('clampSpawnResultText', () => {
 });
 
 describe('appendSpawnResultsMessage clamping', () => {
-  test('frames the payload as child output and clamps oversized results', () => {
+  test('frames the payload as child output and clamps oversized results', async () => {
     const state: Record<string, unknown> = { messages: [] };
     const results = [
       {
@@ -41,7 +44,7 @@ describe('appendSpawnResultsMessage clamping', () => {
         output: { report: `${'x'.repeat(30_000)}MIDDLE-BEACON${'x'.repeat(70_000)}` },
       },
     ];
-    appendSpawnResultsMessage(state, '$state.messages', results);
+    await appendSpawnResultsMessage(state, '$state.messages', results);
     const messages = state.messages as { role: string; content: string }[];
     expect(messages).toHaveLength(1);
     const content = messages[0]?.content ?? '';
@@ -52,12 +55,59 @@ describe('appendSpawnResultsMessage clamping', () => {
     expect(content.length).toBeLessThan(SPAWN_RESULT_HEAD_CHARS * 2);
   });
 
-  test('leaves compact results intact', () => {
+  test('leaves compact results intact', async () => {
     const state: Record<string, unknown> = { messages: [] };
     const results = [{ agentId: 'child-1', spawnId: 's1', output: { ok: true } }];
-    appendSpawnResultsMessage(state, '$state.messages', results);
+    await appendSpawnResultsMessage(state, '$state.messages', results);
     const content = (state.messages as { content: string }[])[0]?.content ?? '';
     expect(content).toContain('"ok":true');
     expect(content).not.toContain('characters omitted');
+  });
+
+  test('spills the full spawn output to a file and points at it', async () => {
+    const cwd = await mkdtemp(path.join(tmpdir(), 'harnesys-spawn-'));
+    const state: Record<string, unknown> = { messages: [] };
+    const results = [
+      {
+        agentId: 'child-1',
+        spawnId: 's1',
+        output: { report: `${'x'.repeat(30_000)}MIDDLE-BEACON${'x'.repeat(70_000)}` },
+      },
+    ];
+    await appendSpawnResultsMessage(state, '$state.messages', results, {
+      sessionId: 'thread-1',
+      paths: { cwd },
+    });
+    const content = (state.messages as { content: string }[])[0]?.content ?? '';
+    expect(content).toContain('Full output (');
+    expect(content).toContain('.harnesys/threads/thread-1/tool-outputs/spawn-s1.json');
+    const spilled = await Bun.file(
+      path.join(cwd, '.harnesys/threads/thread-1/tool-outputs/spawn-s1.json'),
+    ).text();
+    expect(spilled).toContain('MIDDLE-BEACON');
+    expect(spilled.split('\n').length).toBeGreaterThan(1);
+  });
+
+  test('redacts secrets in the spilled spawn file when the agent asks for it', async () => {
+    const cwd = await mkdtemp(path.join(tmpdir(), 'harnesys-spawn-'));
+    const state: Record<string, unknown> = { messages: [] };
+    const results = [
+      {
+        agentId: 'child-1',
+        spawnId: 's1',
+        output: {
+          report: `curl -H "Authorization: Bearer supersecrettoken123" ${'x'.repeat(30_000)}`,
+        },
+      },
+    ];
+    await appendSpawnResultsMessage(state, '$state.messages', results, {
+      sessionId: 'thread-1',
+      paths: { cwd },
+      redactSecrets: true,
+    });
+    const spilled = await Bun.file(
+      path.join(cwd, '.harnesys/threads/thread-1/tool-outputs/spawn-s1.json'),
+    ).text();
+    expect(spilled).not.toContain('supersecrettoken123');
   });
 });

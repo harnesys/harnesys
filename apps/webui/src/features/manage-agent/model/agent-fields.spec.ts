@@ -88,3 +88,45 @@ describe('generation save pipeline', () => {
     });
   });
 });
+
+describe('context and tool output knobs', () => {
+  test('spawn limits and tool output settings round-trip through the draft', () => {
+    const fields = agentFieldsFrom({
+      name: 'Coder',
+      role: 'Operator',
+      instructions: '',
+      modelId: MODEL_ID,
+      generation: {
+        context: { spawnResultHeadChars: 6000, spawnResultTailChars: 2000 },
+      },
+      toolOutput: { maxChars: 5000, headChars: 1000, tailChars: 500, redactSecrets: true },
+    });
+    const parsed = agentFieldsSchema.parse(fields);
+    expect(parsed.ctxSpawnHeadChars).toBe(6000);
+    expect(parsed.ctxSpawnTailChars).toBe(2000);
+    expect(parsed.toolOutputRedactSecrets).toBe(true);
+    const draft = toAgentDraft(parsed);
+    expect(draft.generation?.context).toEqual({
+      spawnResultHeadChars: 6000,
+      spawnResultTailChars: 2000,
+    });
+    expect(draft.toolOutput).toEqual({
+      maxChars: 5000,
+      headChars: 1000,
+      tailChars: 500,
+      redactSecrets: true,
+    });
+  });
+
+  test('empty knobs stay empty so the server defaults apply', () => {
+    const fields = agentFieldsFrom({
+      name: 'Coder',
+      role: 'Operator',
+      instructions: '',
+      modelId: MODEL_ID,
+    });
+    const draft = toAgentDraft(agentFieldsSchema.parse(fields));
+    expect(draft.toolOutput).toBeNull();
+    expect(draft.generation?.context).toBeUndefined();
+  });
+});

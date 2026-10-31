@@ -1795,9 +1795,12 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
         throw Object.assign(new Error(message), { code });
       }
       output = [...prepared.denied, ...spawnOutcome.carried, ...spawnOutcome.results];
-      appendSpawnResultsMessage(st, lastMsg, output, {
+      await appendSpawnResultsMessage(st, lastMsg, output, {
         headChars: agent.generation?.context?.spawnResultHeadChars,
         tailChars: agent.generation?.context?.spawnResultTailChars,
+        sessionId: opts.state.sessionId,
+        paths: opts.paths,
+        redactSecrets: agent.toolOutput?.redactSecrets === true,
       });
       clearQueuedSpawns(st);
       delete st[STATE_SPAWN_RESULTS_KEY];

@@ -108,13 +108,10 @@ export function AgentGenerationFields({
     maxTokens: bounds.maxOutputTokens ? String(bounds.maxOutputTokens) : '',
     contextWindowTokens: bounds.contextWindow ? String(bounds.contextWindow) : '',
   };
-  if (!showGeneration) {
-    return null;
-  }
   return (
-    <div className="flex flex-col gap-3" data-testid={`${idPrefix}-generation-fields`}>
+    <>
       {showGeneration ? (
-        <>
+        <div className="flex flex-col gap-3" data-testid={`${idPrefix}-generation-fields`}>
           {limits.length > 0 ? (
             <FieldSet className="gap-2.5">
               <FieldLegend variant="label" className="text-muted-foreground text-xs">
@@ -217,82 +214,84 @@ export function AgentGenerationFields({
               </FieldGroup>
             </FieldSet>
           ) : null}
-        </>
-      ) : null}
 
-      <FieldSet className="gap-2.5">
-        <FieldLegend variant="label" className="text-muted-foreground text-xs">
-          Runtime
-        </FieldLegend>
-        <FieldGroup className="gap-2.5">
-          <Controller
-            control={control}
-            name="reasoningMode"
-            render={({ field }) => (
-              <Field>
-                <FieldLabel htmlFor={`${idPrefix}-reasoningMode`}>Reasoning in history</FieldLabel>
-                <ToggleGroup
-                  variant="segment"
-                  value={[field.value]}
-                  onValueChange={(value) => {
-                    if (value.length === 0) {
-                      return;
-                    }
-                    field.onChange(value[0]);
-                    onCommit?.();
-                  }}
-                >
-                  <ToggleGroupItem value="strip">Strip</ToggleGroupItem>
-                  <ToggleGroupItem value="part">Part</ToggleGroupItem>
-                  <ToggleGroupItem value="keep">Keep</ToggleGroupItem>
-                </ToggleGroup>
-                <FieldDescription className="text-[11px] text-muted-foreground leading-snug">
-                  Strip saves history without model reasoning. Part keeps it saved but sends only
-                  the last N rounds. Keep saves and sends all reasoning.
-                </FieldDescription>
-              </Field>
-            )}
-          />
-          <ReasoningKeepRoundsField control={control} idPrefix={idPrefix} onCommit={onCommit} />
-          <Controller
-            control={control}
-            name="streamIdleTimeoutMs"
-            render={({ field, fieldState }) => (
-              <Field className="gap-1.5" data-invalid={fieldState.invalid || undefined}>
-                <FieldLabel htmlFor={`${idPrefix}-streamIdleTimeoutMs`}>
-                  Stream idle timeout, ms
-                </FieldLabel>
-                <Input
-                  id={`${idPrefix}-streamIdleTimeoutMs`}
-                  inputMode="numeric"
-                  placeholder="300000"
-                  aria-invalid={fieldState.invalid || undefined}
-                  value={typeof field.value === 'string' ? field.value : ''}
-                  onChange={field.onChange}
-                  onBlur={() => {
-                    field.onBlur();
-                    onCommit?.();
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.currentTarget.blur();
-                    }
-                  }}
-                  name={field.name}
-                  ref={field.ref}
-                />
-                <FieldDescription className="text-[11px] text-muted-foreground leading-snug">
-                  Abort the provider stream when no data arrives for this long. Blank = 300000 ms (5
-                  min).
-                </FieldDescription>
-                {fieldState.error ? <FieldError>{fieldState.error.message}</FieldError> : null}
-              </Field>
-            )}
-          />
-        </FieldGroup>
-      </FieldSet>
+          <FieldSet className="gap-2.5">
+            <FieldLegend variant="label" className="text-muted-foreground text-xs">
+              Runtime
+            </FieldLegend>
+            <FieldGroup className="gap-2.5">
+              <Controller
+                control={control}
+                name="reasoningMode"
+                render={({ field }) => (
+                  <Field>
+                    <FieldLabel htmlFor={`${idPrefix}-reasoningMode`}>
+                      Reasoning in history
+                    </FieldLabel>
+                    <ToggleGroup
+                      variant="segment"
+                      value={[field.value]}
+                      onValueChange={(value) => {
+                        if (value.length === 0) {
+                          return;
+                        }
+                        field.onChange(value[0]);
+                        onCommit?.();
+                      }}
+                    >
+                      <ToggleGroupItem value="strip">Strip</ToggleGroupItem>
+                      <ToggleGroupItem value="part">Part</ToggleGroupItem>
+                      <ToggleGroupItem value="keep">Keep</ToggleGroupItem>
+                    </ToggleGroup>
+                    <FieldDescription className="text-[11px] text-muted-foreground leading-snug">
+                      Strip saves history without model reasoning. Part keeps it saved but sends
+                      only the last N rounds. Keep saves and sends all reasoning.
+                    </FieldDescription>
+                  </Field>
+                )}
+              />
+              <ReasoningKeepRoundsField control={control} idPrefix={idPrefix} onCommit={onCommit} />
+              <Controller
+                control={control}
+                name="streamIdleTimeoutMs"
+                render={({ field, fieldState }) => (
+                  <Field className="gap-1.5" data-invalid={fieldState.invalid || undefined}>
+                    <FieldLabel htmlFor={`${idPrefix}-streamIdleTimeoutMs`}>
+                      Stream idle timeout, ms
+                    </FieldLabel>
+                    <Input
+                      id={`${idPrefix}-streamIdleTimeoutMs`}
+                      inputMode="numeric"
+                      placeholder="300000"
+                      aria-invalid={fieldState.invalid || undefined}
+                      value={typeof field.value === 'string' ? field.value : ''}
+                      onChange={field.onChange}
+                      onBlur={() => {
+                        field.onBlur();
+                        onCommit?.();
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.currentTarget.blur();
+                        }
+                      }}
+                      name={field.name}
+                      ref={field.ref}
+                    />
+                    <FieldDescription className="text-[11px] text-muted-foreground leading-snug">
+                      Abort the provider stream when no data arrives for this long. Blank = 300000
+                      ms (5 min).
+                    </FieldDescription>
+                    {fieldState.error ? <FieldError>{fieldState.error.message}</FieldError> : null}
+                  </Field>
+                )}
+              />
+            </FieldGroup>
+          </FieldSet>
+        </div>
+      ) : null}
       <AgentContextTuningFields control={control} idPrefix={idPrefix} onCommit={onCommit} />
-    </div>
+    </>
   );
 }
 function parseOptional(value: string | undefined): number | undefined {
