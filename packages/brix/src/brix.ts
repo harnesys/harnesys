@@ -286,7 +286,13 @@ export class Brix {
     hono.use('*', requestContextMiddleware());
     hono.use('*', traceMiddleware());
     hono.use('*', observabilityMiddleware(logger, metrics));
-    hono.use('*', cors());
+    hono.use(
+      '*',
+      cors({
+        origin: (origin) => origin || undefined,
+        credentials: true,
+      }),
+    );
     const openApiDocument = buildOpenApiDocument({
       info: openApiInfoFromConfig(config),
       controllers: built.controllers,
