@@ -13,6 +13,7 @@ import { AgentCapabilitiesPane } from './agent-capabilities-pane';
 import type { AgentConfigCategory } from './agent-config-nav';
 import { AgentIdentityPane, AgentLimitsPane, AgentModelPane } from './agent-config-panes';
 import { AgentConnectorsPane } from './agent-connectors-pane';
+import { AgentContextFields } from './agent-context-fields';
 import { AgentExecutionPane } from './agent-execution-pane';
 import { AgentGraphPane } from './agent-graph-pane';
 import { AgentHooksPane } from './agent-hooks-pane';
@@ -160,6 +161,14 @@ export function AgentConfigCategoryPanes({
         />
       </div>
       <div className={cn(category !== 'compaction' && 'hidden')}>
+        <Pane
+          label="Context"
+          description="How oversized tool and subagent results are trimmed before entering the model context."
+        >
+          <div className="flex flex-col gap-4">
+            <AgentContextFields control={form.control} />
+          </div>
+        </Pane>
         <DraftCompaction
           key={`compaction-${activeAgent?.id ?? 'new'}`}
           agent={activeAgent}

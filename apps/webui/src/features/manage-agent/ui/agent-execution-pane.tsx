@@ -3,7 +3,8 @@ import { Controller, type UseFormReturn, useWatch } from 'react-hook-form';
 import type { Agent } from '@/entities/agent';
 import { executionProfilesQuery, LOCAL_EXECUTION_PROFILE_ID } from '@/shared/api';
 import { getActiveOrgId } from '@/shared/api/active-org';
-import { Field, FieldLabel } from '@/shared/ui/field';
+import { Field, FieldError, FieldLabel } from '@/shared/ui/field';
+import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import type { AgentFieldsInput, AgentFieldsOutput } from '../model/agent-fields';
 
@@ -74,6 +75,36 @@ export function AgentExecutionPane({ form, activeAgent }: AgentExecutionPaneProp
           that includes it.
         </p>
       )}
+      <Controller
+        control={form.control}
+        name="streamIdleTimeoutMs"
+        render={({ field, fieldState }) => (
+          <Field className="gap-1.5" data-invalid={fieldState.invalid || undefined}>
+            <FieldLabel htmlFor="agent-streamIdleTimeoutMs">Stream idle timeout, ms</FieldLabel>
+            <Input
+              id="agent-streamIdleTimeoutMs"
+              inputMode="numeric"
+              placeholder="300000"
+              aria-invalid={fieldState.invalid || undefined}
+              value={typeof field.value === 'string' ? field.value : ''}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.currentTarget.blur();
+                }
+              }}
+              name={field.name}
+              ref={field.ref}
+            />
+            <p className="text-[11px] text-muted-foreground leading-snug">
+              Abort the provider stream when no data arrives for this long. Blank = 300000 ms (5
+              min).
+            </p>
+            {fieldState.error ? <FieldError>{fieldState.error.message}</FieldError> : null}
+          </Field>
+        )}
+      />
     </div>
   );
 }

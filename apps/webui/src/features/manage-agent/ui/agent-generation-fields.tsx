@@ -27,7 +27,6 @@ import {
   modelSupportedParameters,
 } from '../model/agent-model-info';
 import { GENERATION_LIMITS, GENERATION_SLIDERS, modelBounds } from '../model/generation-specs';
-import { AgentContextTuningFields } from './agent-context-fields';
 import { effortLabel } from './effort-label';
 
 type AgentFieldsControl = Control<AgentFieldsInput, unknown, AgentFieldsOutput>;
@@ -115,7 +114,7 @@ export function AgentGenerationFields({
           {limits.length > 0 ? (
             <FieldSet className="gap-2.5">
               <FieldLegend variant="label" className="text-muted-foreground text-xs">
-                Limits
+                Output bounds
               </FieldLegend>
               <div className="grid grid-cols-2 gap-3">
                 {limits.map((item) => {
@@ -217,7 +216,7 @@ export function AgentGenerationFields({
 
           <FieldSet className="gap-2.5">
             <FieldLegend variant="label" className="text-muted-foreground text-xs">
-              Runtime
+              Reasoning
             </FieldLegend>
             <FieldGroup className="gap-2.5">
               <Controller
@@ -251,46 +250,10 @@ export function AgentGenerationFields({
                 )}
               />
               <ReasoningKeepRoundsField control={control} idPrefix={idPrefix} onCommit={onCommit} />
-              <Controller
-                control={control}
-                name="streamIdleTimeoutMs"
-                render={({ field, fieldState }) => (
-                  <Field className="gap-1.5" data-invalid={fieldState.invalid || undefined}>
-                    <FieldLabel htmlFor={`${idPrefix}-streamIdleTimeoutMs`}>
-                      Stream idle timeout, ms
-                    </FieldLabel>
-                    <Input
-                      id={`${idPrefix}-streamIdleTimeoutMs`}
-                      inputMode="numeric"
-                      placeholder="300000"
-                      aria-invalid={fieldState.invalid || undefined}
-                      value={typeof field.value === 'string' ? field.value : ''}
-                      onChange={field.onChange}
-                      onBlur={() => {
-                        field.onBlur();
-                        onCommit?.();
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                          event.currentTarget.blur();
-                        }
-                      }}
-                      name={field.name}
-                      ref={field.ref}
-                    />
-                    <FieldDescription className="text-[11px] text-muted-foreground leading-snug">
-                      Abort the provider stream when no data arrives for this long. Blank = 300000
-                      ms (5 min).
-                    </FieldDescription>
-                    {fieldState.error ? <FieldError>{fieldState.error.message}</FieldError> : null}
-                  </Field>
-                )}
-              />
             </FieldGroup>
           </FieldSet>
         </div>
       ) : null}
-      <AgentContextTuningFields control={control} idPrefix={idPrefix} onCommit={onCommit} />
     </>
   );
 }

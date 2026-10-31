@@ -45,7 +45,7 @@ export const AGENT_CONFIG_CATEGORIES: AgentConfigNavItem[] = [
   { id: 'access', label: 'Access & security', icon: FolderKeyIcon },
   { id: 'execution', label: 'Execution', icon: ServerIcon },
   { id: 'limits', label: 'Limits', icon: GaugeIcon },
-  { id: 'compaction', label: 'Compaction', icon: FoldVerticalIcon },
+  { id: 'compaction', label: 'Context', icon: FoldVerticalIcon },
   { id: 'memory', label: 'Memory', icon: BrainIcon },
   { id: 'graph', label: 'Graph', icon: WorkflowIcon },
   { id: 'connectors', label: 'Connectors', icon: CableIcon },
@@ -98,7 +98,7 @@ export function AgentConfigCategoryNav({
   className,
 }: AgentConfigCategoryNavProps) {
   return (
-    <div className={cn('flex w-40 shrink-0 flex-col', className)}>
+    <div className={cn('flex w-44 shrink-0 flex-col', className)}>
       {backLabel != null && onBack ? (
         <button
           type="button"
