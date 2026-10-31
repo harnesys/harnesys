@@ -1,6 +1,6 @@
 import type { ProjectMoveItem } from '@harnesys/studio-shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useProjects } from '@/entities/project';
 import { useIdeStore } from '@/features/ide';
 import {
@@ -155,7 +155,7 @@ export function ExplorerContent({
         return;
       }
       if (!expandedDirs.has(dirPath)) {
-        toggleDirStore(projectId, dirPath);
+        startTransition(() => toggleDirStore(projectId, dirPath));
       }
       ensurePrunedChildren({
         qc,
@@ -169,7 +169,7 @@ export function ExplorerContent({
   );
   const toggleDir = (dirPath: string) => {
     const expanding = !expandedDirs.has(dirPath);
-    toggleDirStore(projectId, dirPath);
+    startTransition(() => toggleDirStore(projectId, dirPath));
     if (expanding) {
       ensurePrunedChildren({
         qc,

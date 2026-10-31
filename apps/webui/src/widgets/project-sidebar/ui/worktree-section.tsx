@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, startTransition } from 'react';
 import { useIdeStore } from '@/features/ide';
 import {
   buildMoveItems,
@@ -104,8 +104,10 @@ export function WorktreeSection({
   };
 
   const toggleDir = (dirPath: string) => {
-    setDirs((prev) =>
-      prev.includes(dirPath) ? prev.filter((p) => p !== dirPath) : [...prev, dirPath],
+    startTransition(() =>
+      setDirs((prev) =>
+        prev.includes(dirPath) ? prev.filter((p) => p !== dirPath) : [...prev, dirPath],
+      ),
     );
   };
 

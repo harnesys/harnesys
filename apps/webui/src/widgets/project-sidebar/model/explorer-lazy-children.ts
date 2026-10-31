@@ -45,10 +45,9 @@ export function ensurePrunedChildren(args: {
           item.path === dirPath && item.pruned ? { ...item, pruned: false } : item,
         );
         for (const item of fetched) {
-          const path = dirPath ? `${dirPath}/${item.name}` : item.name;
-          if (!seen.has(path)) {
-            seen.add(path);
-            merged.push({ ...item, path });
+          if (!seen.has(item.path)) {
+            seen.add(item.path);
+            merged.push(item);
           }
         }
         return merged;

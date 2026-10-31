@@ -7,10 +7,15 @@ import { useSessionStore } from '@/entities/session';
 import { toClientThread, useThreadStore } from '@/entities/thread';
 import { toClientWebhook, useWebhookStore } from '@/entities/webhook';
 import { useThreadQueueStore } from '@/features/message-queue';
+import { studioPath } from '@/shared/config/routes';
 import { toast } from '@/shared/ui/toast';
+import { useIssueDrawerStore } from '@/features/manage-issues/model/issue-drawer.store';
 import { useAgentsDisplayStore } from './agents-display.store';
 import { useDeskStore } from './desk.store';
-export function applyDeskEvent(event: DeskEvent): void {
+
+export type DeskEventNavigation = { orgId: string; navigate: (to: string) => void };
+
+export function applyDeskEvent(event: DeskEvent, nav?: DeskEventNavigation): void {
   switch (event.type) {
     case 'agent': {
       useAgentStore.getState().upsert(toClientAgentFromPublic(event.agent));
@@ -99,6 +104,17 @@ export function applyDeskEvent(event: DeskEvent): void {
       toast.add({
         title: issue?.title ?? 'Board rule',
         description: event.text,
+        ...(nav
+          ? {
+              action: {
+                label: 'Open',
+                onClick: () => {
+                  nav.navigate(studioPath.board(nav.orgId, event.boardId));
+                  useIssueDrawerStore.getState().openIssue(event.issueId);
+                },
+              },
+            }
+          : {}),
       });
       return;
     }

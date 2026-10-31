@@ -99,7 +99,7 @@ export function DeskSync() {
     }
     return watchDeskEvents((eventOrgId, event) => {
       if (eventOrgId === activeOrgId) {
-        applyDeskEvent(event);
+        applyDeskEvent(event, { orgId: activeOrgId, navigate });
         return;
       }
       if (event.type === 'run-finish') {
@@ -110,7 +110,7 @@ export function DeskSync() {
         useOrgActivityStore.getState().bump(eventOrgId, 1);
       }
     });
-  }, [orgId, storeOrgId]);
+  }, [orgId, storeOrgId, navigate]);
   useEffect(() => {
     const activeOrgId = orgId ?? storeOrgId;
     if (!activeOrgId) {

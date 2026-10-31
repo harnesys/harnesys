@@ -1,10 +1,12 @@
 import type { GitFileStatus, GitFileStatusMap, ProjectFileEntry } from '@harnesys/studio-shared';
 import { useQuery } from '@tanstack/react-query';
+import { useDeferredValue } from 'react';
 import { useOpenNewTerminal } from '@/features/ide';
 import { getGitFileStatus } from '@/shared/api/git';
 import { gitStatusColorClass, useGitStatusColors } from '@/shared/lib/git-status-colors';
 import { cn } from '@/shared/lib/utils';
 import { FileTypeIcon, FolderTypeIcon } from '@/shared/ui/icons';
+import { Spinner } from '@/shared/ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
 import type { ExplorerCreateDraft } from '../model/explorer-draft.store';
 import { childrenOf } from '../model/file-tree-index';
@@ -46,15 +48,10 @@ function FileRowLabel({
         className={cn(
           'min-w-0 truncate text-sm group-data-[collapsible=icon]:hidden',
           selected ? 'text-sidebar-foreground/90' : 'text-sidebar-foreground/70',
-          entry.ignored && 'text-muted-foreground/60 italic',
           git.decorationClass,
         )}
         style={git.color ? { color: git.color } : undefined}
-        title={
-          [git.status ? `git: ${git.status}` : undefined, entry.ignored ? 'gitignored' : undefined]
-            .filter(Boolean)
-            .join(' · ') || undefined
-        }
+        title={git.status ? `git: ${git.status}` : undefined}
       >
         {entry.name}
       </span>
@@ -81,23 +78,61 @@ function resolveEffectiveMap({
   return isDir && isExpanded ? fetched : undefined;
 }
 
+const LARGE_CHILDREN_LIMIT = 200;
+const NO_CHILDREN: ProjectFileEntry[] = [];
+
+function useDirChildrenState(
+  children: ProjectFileEntry[],
+  isDir: boolean,
+  isExpanded: boolean,
+): {
+  renderedChildren: ProjectFileEntry[];
+  showChildrenBlock: boolean;
+  childrenBusy: boolean;
+} {
+  const deferredChildren = useDeferredValue(children.length > LARGE_CHILDREN_LIMIT ? children : NO_CHILDREN);
+  const deferredExpanded = useDeferredValue(children.length > LARGE_CHILDREN_LIMIT ? isExpanded : false);
+  if (!isDir) {
+    return { renderedChildren: NO_CHILDREN, showChildrenBlock: false, childrenBusy: false };
+  }
+  if (children.length <= LARGE_CHILDREN_LIMIT) {
+    return { renderedChildren: children, showChildrenBlock: isExpanded, childrenBusy: false };
+  }
+  const childrenPending = isExpanded !== deferredExpanded;
+  const deferringChildren = children !== deferredChildren;
+  return {
+    renderedChildren: deferredChildren,
+    showChildrenBlock: isExpanded || childrenPending,
+    childrenBusy: (childrenPending && isExpanded) || (deferredExpanded && deferringChildren),
+  };
+}
+
 function resolveGitDecoration({
   isDir,
   fullPath,
   effectiveMap,
   gitMap,
   colors,
+  ignored,
 }: {
   isDir: boolean;
   fullPath: string;
   effectiveMap: GitFileStatusMap | undefined;
   gitMap: GitFileStatusMap | undefined;
   colors: Record<string, string>;
+  ignored: boolean;
 }): {
   status: GitFileStatus | undefined;
   color: string | undefined;
   decorationClass: string | undefined;
 } {
+  if (ignored) {
+    return {
+      status: 'ignored',
+      color: colors.ignored,
+      decorationClass: gitStatusColorClass('ignored'),
+    };
+  }
   const status = isDir
     ? getDirAggregatedStatus(fullPath, effectiveMap ?? gitMap)
     : effectiveMap?.[fullPath];
@@ -113,6 +148,103 @@ function resolveInfoLabel(isDir: boolean, childCount: number, size: number | und
     return `${childCount} items`;
   }
   return size !== undefined ? formatSize(size) : '';
+}
+
+interface FileRowChildrenProps {
+  fullPath: string;
+  depth: number;
+  projectId: string;
+  worktreeId?: string;
+  busy: boolean;
+  deferredChildren: ProjectFileEntry[];
+  expandedDirs: Set<string>;
+  selectedPaths: string[];
+  createDraft: ExplorerCreateDraft | null;
+  renamePath: string | null;
+  iconMode: boolean;
+  gitMap: GitFileStatusMap | undefined;
+  gitTruncated?: boolean;
+  treeIndex: Map<string, ProjectFileEntry[]>;
+  showHidden: boolean;
+  onToggle: (fullPath: string) => void;
+  onSelect: (fullPath: string, event?: React.MouseEvent) => void;
+  onOpen: (fullPath: string) => void;
+  onStartCreate: (kind: 'file' | 'dir', parentPath: string) => void;
+  onCreateFinish: (name: string) => void;
+  onStartRename: (fullPath: string) => void;
+  onRenameFinish: (fullPath: string, name: string) => void;
+  onMoveInto: (targetDir: string, paths: string[]) => void;
+  onDelete: (fullPath: string) => void;
+}
+
+function FileRowChildren({
+  fullPath,
+  depth,
+  projectId,
+  worktreeId,
+  busy,
+  deferredChildren,
+  expandedDirs,
+  selectedPaths,
+  createDraft,
+  renamePath,
+  iconMode,
+  gitMap,
+  gitTruncated,
+  treeIndex,
+  showHidden,
+  onToggle,
+  onSelect,
+  onOpen,
+  onStartCreate,
+  onCreateFinish,
+  onStartRename,
+  onRenameFinish,
+  onMoveInto,
+  onDelete,
+}: FileRowChildrenProps) {
+  return (
+    <div className="flex flex-col">
+      {busy ? (
+        <div
+          className="flex items-center gap-1.5 py-0.5 text-muted-foreground text-xs"
+          style={{ paddingLeft: `${(depth + 1) * 12 + 8}px` }}
+          data-testid={`file-${fullPath}-loading`}
+        >
+          <Spinner className="size-3" />
+          <span>Loading…</span>
+        </div>
+      ) : null}
+      {deferredChildren.map((child) => (
+        <FileRow
+          key={child.name}
+          entry={child}
+          parentPath={fullPath}
+          depth={depth + 1}
+          projectId={projectId}
+          worktreeId={worktreeId}
+          expandedDirs={expandedDirs}
+          selectedPaths={selectedPaths}
+          createDraft={createDraft}
+          renamePath={renamePath}
+          iconMode={iconMode}
+          gitMap={gitMap}
+          gitTruncated={gitTruncated}
+          treeIndex={treeIndex}
+          showHidden={showHidden}
+          onToggle={onToggle}
+          onSelect={onSelect}
+          onOpen={onOpen}
+          onStartCreate={onStartCreate}
+          onCreateFinish={onCreateFinish}
+          onStartRename={onStartRename}
+          onRenameFinish={onRenameFinish}
+          onMoveInto={onMoveInto}
+          onDelete={onDelete}
+        />
+      ))}
+    </div>
+  );
 }
 
 export function FileRow({
@@ -184,10 +316,22 @@ export function FileRow({
     fetched: dirGitQuery.data?.map,
   });
   const gitColors = useGitStatusColors((state) => state.colors);
-  const git = resolveGitDecoration({ isDir, fullPath, effectiveMap, gitMap, colors: gitColors });
+  const git = resolveGitDecoration({
+    isDir,
+    fullPath,
+    effectiveMap,
+    gitMap,
+    colors: gitColors,
+    ignored: entry.ignored === true,
+  });
   const openNewTerminal = useOpenNewTerminal();
   const entryActions = useEntryActions(projectId, worktreeId);
   const children = isDir ? childrenOf(treeIndex, fullPath, showHidden) : [];
+  const { renderedChildren, showChildrenBlock, childrenBusy } = useDirChildrenState(
+    children,
+    isDir,
+    isExpanded,
+  );
   const infoLabel = resolveInfoLabel(isDir, children.length, entry.size);
   const showCreateHere = createDraft && isDir && createDraft.parentPath === fullPath;
   const { dropState, dragProps } = useFileRowDrag({
@@ -297,38 +441,34 @@ export function FileRow({
         </div>
       )}
 
-      {isDir && isExpanded && (
-        <div className="flex flex-col">
-          {children.map((child) => (
-            <FileRow
-              key={child.name}
-              entry={child}
-              parentPath={fullPath}
-              depth={depth + 1}
-              projectId={projectId}
-              worktreeId={worktreeId}
-              expandedDirs={expandedDirs}
-              selectedPaths={selectedPaths}
-              createDraft={createDraft}
-              renamePath={renamePath}
-              iconMode={iconMode}
-              gitMap={effectiveMap ?? gitMap}
-              gitTruncated={gitTruncated}
-              treeIndex={treeIndex}
-              showHidden={showHidden}
-              onToggle={onToggle}
-              onSelect={onSelect}
-              onOpen={onOpen}
-              onStartCreate={onStartCreate}
-              onCreateFinish={onCreateFinish}
-              onStartRename={onStartRename}
-              onRenameFinish={onRenameFinish}
-              onMoveInto={onMoveInto}
-              onDelete={onDelete}
-            />
-          ))}
-        </div>
-      )}
+      {showChildrenBlock ? (
+        <FileRowChildren
+          fullPath={fullPath}
+          depth={depth}
+          projectId={projectId}
+          worktreeId={worktreeId}
+          busy={childrenBusy}
+          deferredChildren={renderedChildren}
+          expandedDirs={expandedDirs}
+          selectedPaths={selectedPaths}
+          createDraft={createDraft}
+          renamePath={renamePath}
+          iconMode={iconMode}
+          gitMap={effectiveMap ?? gitMap}
+          gitTruncated={gitTruncated}
+          treeIndex={treeIndex}
+          showHidden={showHidden}
+          onToggle={onToggle}
+          onSelect={onSelect}
+          onOpen={onOpen}
+          onStartCreate={onStartCreate}
+          onCreateFinish={onCreateFinish}
+          onStartRename={onStartRename}
+          onRenameFinish={onRenameFinish}
+          onMoveInto={onMoveInto}
+          onDelete={onDelete}
+        />
+      ) : null}
 
       {showCreateHere && (
         <InlineCreateInput kind={createDraft.kind} onFinish={onCreateFinish} depth={depth + 1} />
