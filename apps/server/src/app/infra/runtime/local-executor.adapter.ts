@@ -15,7 +15,6 @@ import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { HookRunStorePort } from '../../domain/agent/hook-run-store.port.ts';
 import { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
 import { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
-import { PermissionGrantStorePort } from '../../domain/approval/permission-grant-store.port.ts';
 import { BrowserHostPort } from '../../domain/browser/browser-host.port.ts';
 import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
@@ -30,6 +29,7 @@ import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { OrgMcpPort } from '../../domain/mcp/org-mcp.port.ts';
 import { ModePresetRegistryPort } from '../../domain/mode-presets/mode-preset-registry.port.ts';
+import { PermissionRuleStorePort } from '../../domain/permissions/permission-rule-store.port.ts';
 import { PlanEventsPort } from '../../domain/plan/plan-events.port.ts';
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
 import { WorkspaceContainerPort } from '../../domain/process-runtime/workspace-container.port.ts';
@@ -86,7 +86,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     private readonly orgSettings: OrgSettingsPort,
     private readonly approvals: ApprovalStorePort,
     private readonly approvalEvents: ApprovalEventsPort,
-    private readonly permissionGrants: PermissionGrantStorePort,
+    private readonly permissionRules: PermissionRuleStorePort,
     private readonly planEvents: PlanEventsPort,
     private readonly threadEvents: ThreadEventsPort,
     private readonly deskEvents: DeskEventsPort,
@@ -154,7 +154,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       models: this.models,
       secrets: this.secrets,
       fileRules: this.fileRules,
-      permissionGrants: this.permissionGrants,
+      permissionRules: this.permissionRules,
       plugins: this.plugins,
       sourceSkills: this.sourceSkills,
       orgSettings: this.orgSettings,

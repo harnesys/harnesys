@@ -160,17 +160,8 @@ function ShellSettings({
     typeof spec.timeout === 'number' && Number.isFinite(spec.timeout)
       ? spec.timeout
       : DEFAULT_SHELL_TIMEOUT_MS;
-  const allowlist = stringList(spec.allowlist);
-  const blocklist = stringList(spec.blocklist);
   function patchSpec(partial: Record<string, unknown>) {
-    const nextSpec = { ...spec, ...partial };
-    for (const key of ['allowlist', 'blocklist'] as const) {
-      const value = nextSpec[key];
-      if (Array.isArray(value) && value.length === 0) {
-        delete nextSpec[key];
-      }
-    }
-    onChange({ spec: nextSpec });
+    onChange({ spec: { ...spec, ...partial } });
   }
   return (
     <FieldGroup className="gap-2">
@@ -196,41 +187,8 @@ function ShellSettings({
           }}
         />
         <FieldDescription className="text-[11px] leading-snug">
-          Used when the tool call omits `timeout_ms`. Cap 600000. Default 30000.
-        </FieldDescription>
-      </Field>
-      <Field>
-        <FieldLabel htmlFor="pack-shell-allowlist">Allowlist</FieldLabel>
-        <Textarea
-          id="pack-shell-allowlist"
-          className="min-h-20 font-mono text-[11px]"
-          placeholder={'git status\ngit diff*\nbun test*'}
-          value={allowlist.join('\n')}
-          onChange={(event) => {
-            patchSpec({ allowlist: linesFromTextarea(event.target.value) });
-          }}
-        />
-        <FieldDescription className="text-[11px] leading-snug">
-          One pattern per line on the full command (`*` / `?` wildcards; bare line is exact). Match
-          skips confirmation. Empty keeps the normal permission ask. This is an approval shortcut,
-          not a lockdown: commands missing from the list still run after the permission ask — use
-          the blocklist or `process: deny` permission to restrict.
-        </FieldDescription>
-      </Field>
-      <Field>
-        <FieldLabel htmlFor="pack-shell-blocklist">Blocklist</FieldLabel>
-        <Textarea
-          id="pack-shell-blocklist"
-          className="min-h-20 font-mono text-[11px]"
-          placeholder={'*rm -rf*\n*mkfs*\nsudo *'}
-          value={blocklist.join('\n')}
-          onChange={(event) => {
-            patchSpec({ blocklist: linesFromTextarea(event.target.value) });
-          }}
-        />
-        <FieldDescription className="text-[11px] leading-snug">
-          Same matching. Hit is a hard deny before permission ask; the agent gets the blocked reason
-          (covers `ls && rm -rf /` via `*rm -rf*`).
+          Used when the tool call omits `timeout_ms`. Cap 600000. Default 30000. Allow and deny
+          command patterns live in Access &amp; security → Rules.
         </FieldDescription>
       </Field>
     </FieldGroup>
@@ -241,10 +199,4 @@ function linesFromTextarea(value: string): string[] {
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean);
-}
-function stringList(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.filter((item): item is string => typeof item === 'string');
 }

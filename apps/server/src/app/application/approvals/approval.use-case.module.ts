@@ -8,20 +8,22 @@ import { MachineHomeModule } from '../../infra/machine-home/machine-home.module.
 import { ModePresetsModule } from '../../infra/mode-presets/mode-presets.module.ts';
 import { RuntimeModule } from '../../infra/runtime/runtime.module.ts';
 import { SourceModule } from '../../infra/source/source.module.ts';
+import { CreatePermissionRuleUseCase } from './create-permission-rule.use-case.ts';
 import { DecideApprovalUseCase } from './decide-approval.use-case.ts';
 import { GetApprovalUseCase } from './get-approval.use-case.ts';
 import { ListApprovalsUseCase } from './list-approvals.use-case.ts';
-import { ListPermissionGrantsUseCase } from './list-permission-grants.use-case.ts';
+import { ListPermissionRulesUseCase } from './list-permission-rules.use-case.ts';
 import { RequestApprovalUseCase } from './request-approval.use-case.ts';
-import { RevokePermissionGrantUseCase } from './revoke-permission-grant.use-case.ts';
+import { RevokePermissionRuleUseCase } from './revoke-permission-rule.use-case.ts';
 
 const useCases = [
   RequestApprovalUseCase,
   ListApprovalsUseCase,
   GetApprovalUseCase,
   DecideApprovalUseCase,
-  ListPermissionGrantsUseCase,
-  RevokePermissionGrantUseCase,
+  ListPermissionRulesUseCase,
+  CreatePermissionRuleUseCase,
+  RevokePermissionRuleUseCase,
 ];
 
 @Module({

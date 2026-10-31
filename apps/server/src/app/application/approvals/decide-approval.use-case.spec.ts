@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
 import { ApprovalValidationException } from '../../domain/approval/approval.error.ts';
-import type { ApprovalRecord } from '../../domain/approval/approval.ts';
+import type { ApprovalDecideInput, ApprovalRecord } from '../../domain/approval/approval.ts';
 import { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
-import type { ModePresetRecord } from '../../domain/mode-presets/mode-preset.ts';
+import type { PermissionRuleRecord } from '../../domain/permissions/permission-rule-store.port.ts';
 import {
   MemoryApprovalEvents,
-  MemoryPermissionGrants,
+  MemoryPermissionRules,
   StubEventClaims,
   StubFileRules,
   StubMachineConfig,
@@ -38,7 +38,7 @@ function approvalRow(): ApprovalRecord {
   };
 }
 
-function agentRecord(config: Record<string, unknown>): AgentRecord {
+function agentRecord(): AgentRecord {
   return {
     id: 'agent-1',
     orgId: 'org-1',
@@ -58,25 +58,8 @@ function agentRecord(config: Record<string, unknown>): AgentRecord {
     mcpServers: [],
     enabledPlugins: {},
     defaultModeId: null,
-    config,
+    config: {},
     hooks: [],
-    createdAt: new Date(0).toISOString(),
-    updatedAt: new Date(0).toISOString(),
-  };
-}
-
-function presetRecord(): ModePresetRecord {
-  return {
-    orgId: 'org-1',
-    id: 'plan',
-    name: 'Plan',
-    description: 'plan mode',
-    instructions: '',
-    skills: [],
-    packs: {},
-    permissions: { process: 'deny' },
-    builtin: true,
-    installedByDefault: true,
     createdAt: new Date(0).toISOString(),
     updatedAt: new Date(0).toISOString(),
   };
@@ -90,8 +73,8 @@ class StoreStub extends ApprovalStorePort {
   }
   decide(
     _orgId: string,
-    input: { approvalId: string; surface: 'web' },
-  ): { winner: boolean; status: 'approved' } {
+    input: ApprovalDecideInput,
+  ): { winner: boolean; status: 'approved' | 'denied' } {
     this.decided.push(input.approvalId);
     if (this.row) {
       this.row = {
@@ -126,33 +109,23 @@ class StoreStub extends ApprovalStorePort {
   }
 }
 
-function shellAllowlistOf(config: Record<string, unknown>): unknown {
-  const packs = config.capabilitiesJson as Record<string, unknown>;
-  const shell = packs.shell as Record<string, unknown>;
-  const spec = shell.spec as Record<string, unknown>;
-  return spec.allowlist;
-}
-
 function build(): {
   useCase: DecideApprovalUseCase;
   store: StoreStub;
-  grants: MemoryPermissionGrants;
+  rules: MemoryPermissionRules;
   agents: AgentsStub;
   modes: ModesStub;
-  fileRules: StubFileRules;
 } {
   const store = new StoreStub();
-  const grants = new MemoryPermissionGrants();
+  const rules = new MemoryPermissionRules();
   const agents = new AgentsStub();
-  agents.agent = agentRecord({
-    capabilitiesJson: { shell: { spec: { allowlist: ['git status'] } } },
-  });
+  agents.agent = agentRecord();
   const modes = new ModesStub();
   const fileRules = new StubFileRules();
   const useCase = new DecideApprovalUseCase(
     store,
     new MemoryApprovalEvents(),
-    grants,
+    rules,
     new StubLocalExecutor(),
     new StubEventClaims(),
     new StubNodeCommands(),
@@ -163,12 +136,18 @@ function build(): {
     new StubSourceLocation(),
     silentLogger(),
   );
-  return { useCase, store, grants, agents, modes, fileRules };
+  return { useCase, store, rules, agents, modes };
+}
+
+function shellRowsOf(rules: MemoryPermissionRules): PermissionRuleRecord[] {
+  return rules.rows.filter(
+    (row) => row.kind === 'shell-cmd' && row.agentId === 'agent-1' && row.effect === 'allow',
+  );
 }
 
 describe('DecideApprovalUseCase rule persistence', () => {
-  test('approve with agent rule appends to the agent shell allowlist', async () => {
-    const { useCase, agents, modes } = build();
+  test('approve with agent rule records a shell command rule', async () => {
+    const { useCase, rules, agents, modes } = build();
     const result = await useCase.execute({
       orgId: 'org-1',
       approvalId: 'approval-1',
@@ -179,13 +158,14 @@ describe('DecideApprovalUseCase rule persistence', () => {
       },
     });
     expect(result.winner).toBe(true);
-    expect(agents.updates).toHaveLength(1);
-    expect(shellAllowlistOf(agents.updates[0]?.config ?? {})).toEqual(['git status', 'bun *']);
+    expect(shellRowsOf(rules).map((row) => row.pattern)).toEqual(['bun *']);
+    expect(shellRowsOf(rules)[0]?.decidedBy).toBe('web');
+    expect(agents.updates).toHaveLength(0);
     expect(modes.updates).toHaveLength(0);
   });
 
   test('duplicate pattern is not duplicated', async () => {
-    const { useCase, agents } = build();
+    const { useCase, rules } = build();
     await useCase.execute({
       orgId: 'org-1',
       approvalId: 'approval-1',
@@ -195,11 +175,11 @@ describe('DecideApprovalUseCase rule persistence', () => {
         rule: { kind: 'exact', pattern: 'git status', target: 'agent' },
       },
     });
-    expect(agents.updates).toHaveLength(0);
+    expect(rules.rows).toHaveLength(1);
   });
 
   test('floor pattern throws and persists nothing', async () => {
-    const { useCase, store, agents, modes } = build();
+    const { useCase, store, rules, agents, modes } = build();
     const promise = useCase.execute({
       orgId: 'org-1',
       approvalId: 'approval-1',
@@ -211,12 +191,13 @@ describe('DecideApprovalUseCase rule persistence', () => {
     });
     await expect(promise).rejects.toBeInstanceOf(ApprovalValidationException);
     expect(store.decided).toHaveLength(0);
+    expect(rules.rows).toHaveLength(0);
     expect(agents.updates).toHaveLength(0);
     expect(modes.updates).toHaveLength(0);
   });
 
-  test('approve_once with a rule calls no update', async () => {
-    const { useCase, agents, modes } = build();
+  test('approve_once with a rule persists nothing', async () => {
+    const { useCase, rules, agents, modes } = build();
     const result = await useCase.execute({
       orgId: 'org-1',
       approvalId: 'approval-1',
@@ -227,12 +208,13 @@ describe('DecideApprovalUseCase rule persistence', () => {
       },
     });
     expect(result.winner).toBe(true);
+    expect(rules.rows).toHaveLength(0);
     expect(agents.updates).toHaveLength(0);
     expect(modes.updates).toHaveLength(0);
   });
 
-  test('deny with a rule calls no update', async () => {
-    const { useCase, agents, modes } = build();
+  test('deny with a rule persists nothing', async () => {
+    const { useCase, rules, agents, modes } = build();
     await useCase.execute({
       orgId: 'org-1',
       approvalId: 'approval-1',
@@ -242,16 +224,14 @@ describe('DecideApprovalUseCase rule persistence', () => {
         rule: { kind: 'program', pattern: 'bun *', target: 'agent' },
       },
     });
+    expect(rules.rows).toHaveLength(0);
     expect(agents.updates).toHaveLength(0);
     expect(modes.updates).toHaveLength(0);
   });
 
-  test('global rule merges into the default mode preset', async () => {
-    const { useCase, agents, modes } = build();
-    if (agents.agent) {
-      agents.agent = { ...agents.agent, defaultModeId: 'plan' };
-    }
-    modes.preset = presetRecord();
+  test('global rule lands org-wide with a default mode', async () => {
+    const { useCase, rules, agents, modes } = build();
+    agents.agent = agents.agent ? { ...agents.agent, defaultModeId: 'plan' } : agents.agent;
     const result = await useCase.execute({
       orgId: 'org-1',
       approvalId: 'approval-1',
@@ -262,16 +242,13 @@ describe('DecideApprovalUseCase rule persistence', () => {
       },
     });
     expect(result.winner).toBe(true);
-    expect(modes.updates).toHaveLength(1);
-    const packs = modes.updates[0]?.packs as Record<string, unknown>;
-    const shell = packs.shell as Record<string, unknown>;
-    const spec = shell.spec as Record<string, unknown>;
-    expect(spec.allowlist).toEqual(['bun *']);
+    expect(rules.rows.map((row) => row.agentId)).toEqual([null]);
+    expect(modes.updates).toHaveLength(0);
     expect(agents.updates).toHaveLength(0);
   });
 
-  test('global rule falls back to the agent spec without a default mode', async () => {
-    const { useCase, agents, modes } = build();
+  test('global rule falls back to the agent without a default mode', async () => {
+    const { useCase, rules, agents, modes } = build();
     await useCase.execute({
       orgId: 'org-1',
       approvalId: 'approval-1',
@@ -281,8 +258,9 @@ describe('DecideApprovalUseCase rule persistence', () => {
         rule: { kind: 'program', pattern: 'bun *', target: 'global' },
       },
     });
-    expect(agents.updates).toHaveLength(1);
+    expect(rules.rows.map((row) => row.agentId)).toEqual(['agent-1']);
     expect(modes.updates).toHaveLength(0);
+    expect(agents.updates).toHaveLength(0);
   });
 });
 
@@ -293,8 +271,8 @@ describe('DecideApprovalUseCase operation persistence', () => {
     }
   }
 
-  test('approve with always scope records the operation grant', async () => {
-    const { useCase, store, grants, agents } = build();
+  test('approve with always scope records the operation rule', async () => {
+    const { useCase, store, rules, agents } = build();
     withOps(store);
     const result = await useCase.execute({
       orgId: 'org-1',
@@ -302,41 +280,41 @@ describe('DecideApprovalUseCase operation persistence', () => {
       body: { decision: 'approve', surface: 'web', scope: 'always' },
     });
     expect(result.winner).toBe(true);
-    expect(grants.has('org-1', 'agent-1', 'network')).toBe(true);
-    expect(grants.rows[0]?.decidedBy).toBe('web');
+    expect(rules.hasOperation('org-1', 'agent-1', 'network')).toBe(true);
+    expect(rules.rows[0]?.decidedBy).toBe('web');
     expect(agents.updates).toHaveLength(0);
   });
 
   test('approve without scope stays ephemeral', async () => {
-    const { useCase, store, grants } = build();
+    const { useCase, store, rules } = build();
     withOps(store);
     await useCase.execute({
       orgId: 'org-1',
       approvalId: 'approval-1',
       body: { decision: 'approve', surface: 'web' },
     });
-    expect(grants.rows).toHaveLength(0);
+    expect(rules.rows).toHaveLength(0);
   });
 
   test('run scope keeps the gate ephemeral', async () => {
-    const { useCase, store, grants } = build();
+    const { useCase, store, rules } = build();
     withOps(store);
     await useCase.execute({
       orgId: 'org-1',
       approvalId: 'approval-1',
       body: { decision: 'approve', surface: 'web', scope: 'run' },
     });
-    expect(grants.rows).toHaveLength(0);
+    expect(rules.rows).toHaveLength(0);
   });
 
   test('approve_once never persists', async () => {
-    const { useCase, store, grants } = build();
+    const { useCase, store, rules } = build();
     withOps(store);
     await useCase.execute({
       orgId: 'org-1',
       approvalId: 'approval-1',
       body: { decision: 'approve_once', surface: 'web' },
     });
-    expect(grants.rows).toHaveLength(0);
+    expect(rules.rows).toHaveLength(0);
   });
 });

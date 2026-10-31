@@ -4,5 +4,5 @@ export * from './domains-work.ts';
 export * from './entity-colors.ts';
 export * from './integrations.ts';
 export * from './memory-policy.ts';
-export * from './permission-grants.ts';
+export * from './permission-rules.ts';
 export * from './teams.ts';

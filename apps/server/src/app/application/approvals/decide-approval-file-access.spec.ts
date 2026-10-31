@@ -11,7 +11,7 @@ import type {
 import { ModePresetRegistryPort } from '../../domain/mode-presets/mode-preset-registry.port.ts';
 import {
   MemoryApprovalEvents,
-  MemoryPermissionGrants,
+  MemoryPermissionRules,
   StubEventClaims,
   StubFileRules,
   StubMachineConfig,
@@ -132,7 +132,7 @@ describe('DecideApprovalUseCase file access', () => {
     const useCase = new DecideApprovalUseCase(
       store,
       new MemoryApprovalEvents(),
-      new MemoryPermissionGrants(),
+      new MemoryPermissionRules(),
       executor,
       new StubEventClaims(),
       new StubNodeCommands(),

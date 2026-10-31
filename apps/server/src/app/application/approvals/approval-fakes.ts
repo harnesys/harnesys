@@ -8,17 +8,19 @@ import {
   ApprovalEventsPort,
 } from '../../domain/approval/approval-events.port.ts';
 import { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
-import {
-  type PermissionGrantRecord,
-  PermissionGrantStorePort,
-  type PermissionGrantWriteInput,
-} from '../../domain/approval/permission-grant-store.port.ts';
 import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
 import type { FileRuleInsert, FileRuleRecord } from '../../domain/file-access/file-access-rule.ts';
 import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
 import { NodeCommandQueuePort } from '../../domain/fleet/node-command-queue.port.ts';
 import type { HostConfig } from '../../domain/machine/machine-config.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
+import type {
+  PermissionRuleFilter,
+  PermissionRuleRecord,
+  PermissionRuleWriteInput,
+  ShellRulePatterns,
+} from '../../domain/permissions/permission-rule-store.port.ts';
+import { PermissionRuleStorePort } from '../../domain/permissions/permission-rule-store.port.ts';
 import {
   type ResolvedSourceLocation,
   type ResolveSourceLocationInput,
@@ -244,21 +246,31 @@ export class StubNodeCommands extends NodeCommandQueuePort {
   }
 }
 
-export class MemoryPermissionGrants extends PermissionGrantStorePort {
-  readonly rows: PermissionGrantRecord[] = [];
+export class MemoryPermissionRules extends PermissionRuleStorePort {
+  readonly rows: PermissionRuleRecord[] = [];
 
-  record(orgId: string, input: PermissionGrantWriteInput): PermissionGrantRecord {
+  record(orgId: string, input: PermissionRuleWriteInput): PermissionRuleRecord {
     const existing = this.rows.find(
-      (row) => row.agentId === input.agentId && row.operation === input.operation,
+      (row) =>
+        row.kind === input.kind &&
+        row.pattern === input.pattern &&
+        row.effect === input.effect &&
+        row.agentId === (input.agentId ?? null) &&
+        row.hostId === (input.hostId ?? null) &&
+        row.action === (input.action ?? null),
     );
     if (existing) {
       return existing;
     }
-    const rec: PermissionGrantRecord = {
+    const rec: PermissionRuleRecord = {
       id: randomUUID(),
       orgId,
-      agentId: input.agentId,
-      operation: input.operation,
+      agentId: input.agentId ?? null,
+      hostId: input.hostId ?? null,
+      kind: input.kind,
+      pattern: input.pattern,
+      action: input.action ?? null,
+      effect: input.effect,
       decidedBy: input.decidedBy ?? null,
       createdAt: new Date(0).toISOString(),
     };
@@ -266,24 +278,52 @@ export class MemoryPermissionGrants extends PermissionGrantStorePort {
     return rec;
   }
 
-  has(orgId: string, agentId: string, operation: string): boolean {
-    return this.rows.some(
-      (row) => row.orgId === orgId && row.agentId === agentId && row.operation === operation,
-    );
-  }
-
-  list(orgId: string, agentId?: string): PermissionGrantRecord[] {
+  list(orgId: string, filter?: PermissionRuleFilter): PermissionRuleRecord[] {
     return this.rows.filter(
-      (row) => row.orgId === orgId && (agentId === undefined || row.agentId === agentId),
+      (row) =>
+        row.orgId === orgId &&
+        (filter?.kind === undefined || row.kind === filter.kind) &&
+        (filter?.agentId === undefined ||
+          (filter.agentId === null ? row.agentId === null : row.agentId === filter.agentId)),
     );
   }
 
-  revoke(orgId: string, grantId: string): boolean {
-    const index = this.rows.findIndex((row) => row.orgId === orgId && row.id === grantId);
+  revoke(orgId: string, ruleId: string): boolean {
+    const index = this.rows.findIndex((row) => row.orgId === orgId && row.id === ruleId);
     if (index < 0) {
       return false;
     }
     this.rows.splice(index, 1);
     return true;
+  }
+
+  hasOperation(orgId: string, agentId: string, operation: string): boolean {
+    return this.rows.some(
+      (row) =>
+        row.orgId === orgId &&
+        row.kind === 'op' &&
+        row.pattern === operation &&
+        row.effect === 'allow' &&
+        row.agentId === agentId,
+    );
+  }
+
+  shellPatterns(orgId: string, agentId: string): ShellRulePatterns {
+    const patterns: ShellRulePatterns = { allow: [], deny: [] };
+    for (const row of this.rows) {
+      if (
+        row.orgId !== orgId ||
+        row.kind !== 'shell-cmd' ||
+        (row.agentId !== null && row.agentId !== agentId)
+      ) {
+        continue;
+      }
+      if (row.effect === 'allow') {
+        patterns.allow.push(row.pattern);
+      } else {
+        patterns.deny.push(row.pattern);
+      }
+    }
+    return patterns;
   }
 }

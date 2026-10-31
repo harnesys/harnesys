@@ -65,11 +65,6 @@ export {
   orgExecutionSettingsTable,
 } from './execution-profiles.ts';
 export {
-  type FileRuleInsertRow,
-  type FileRuleRow,
-  fileAccessRulesTable,
-} from './file-access-rules.ts';
-export {
   type HookRunInsert,
   type HookRunRow,
   hookRunsTable,
@@ -193,10 +188,10 @@ export {
   pendingPlacementsTable,
 } from './pending-placements.ts';
 export {
-  type PermissionGrantInsert,
-  type PermissionGrantRow,
-  permissionGrantsTable,
-} from './permission-grants.ts';
+  type PermissionRuleInsert,
+  type PermissionRuleRow,
+  permissionRulesTable,
+} from './permission-rules.ts';
 export {
   type PluginApprovalRow,
   type PluginInsert,

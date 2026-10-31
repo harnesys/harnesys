@@ -6,9 +6,9 @@ export class ApprovalNotFoundException extends EntityNotFoundException {
   }
 }
 
-export class PermissionGrantNotFoundException extends EntityNotFoundException {
-  constructor(grantId: string) {
-    super(`permission grant not found: ${grantId}`, { grantId });
+export class PermissionRuleNotFoundException extends EntityNotFoundException {
+  constructor(ruleId: string) {
+    super(`permission rule not found: ${ruleId}`, { ruleId });
   }
 }
 

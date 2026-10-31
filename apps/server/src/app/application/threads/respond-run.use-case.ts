@@ -11,13 +11,13 @@ import type { RunRecord } from 'harnesys';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
 import { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
-import { PermissionGrantStorePort } from '../../domain/approval/permission-grant-store.port.ts';
 import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
 import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
 import { FleetHubPort } from '../../domain/fleet/fleet-hub.port.ts';
 import type { WorkerCommand } from '../../domain/fleet/worker-command.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { ModePresetRegistryPort } from '../../domain/mode-presets/mode-preset-registry.port.ts';
+import { PermissionRuleStorePort } from '../../domain/permissions/permission-rule-store.port.ts';
 import { SourceLocationPort } from '../../domain/source/source-location.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import {
@@ -33,7 +33,7 @@ import {
   scopePersistsRule,
   targetAgentIdOf,
 } from '../approvals/persist-decision.ts';
-import { recordOperationGrants } from '../approvals/record-operation-grants.ts';
+import { recordOperationRules } from '../approvals/record-operation-rules.ts';
 
 export interface RespondRunRequest {
   orgId: string;
@@ -60,7 +60,7 @@ export class RespondRunUseCase {
     private readonly modes: ModePresetRegistryPort,
     private readonly approvalStore: ApprovalStorePort,
     private readonly approvalEvents: ApprovalEventsPort,
-    private readonly grants: PermissionGrantStorePort,
+    private readonly rules: PermissionRuleStorePort,
     private readonly fileRules: FileAccessRulePort,
     private readonly machineConfig: MachineConfigPort,
     private readonly sourceLocation: SourceLocationPort,
@@ -207,6 +207,7 @@ export class RespondRunUseCase {
       agents: this.agents,
       modes: this.modes,
       fileRules: this.fileRules,
+      rules: this.rules,
       machineConfig: this.machineConfig,
       sourceLocation: this.sourceLocation,
     };
@@ -220,11 +221,11 @@ export class RespondRunUseCase {
     }
     const ops = row?.context.ops;
     if (!rule && ops !== undefined && ops.length > 0) {
-      recordOperationGrants(this.grants, orgId, { agentId, ops, decidedBy: 'web' });
+      recordOperationRules(this.rules, orgId, { agentId, ops, decidedBy: 'web' });
       return;
     }
     if (rule && rule.kind !== 'file-path') {
-      persistShellDecision(deps, { agentId, rule });
+      persistShellDecision(deps, { agentId, rule, decidedBy: 'web' });
     }
   }
 

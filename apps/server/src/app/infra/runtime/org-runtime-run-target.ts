@@ -17,7 +17,10 @@ import type { OrgRuntimeDeps } from './org-runtime.types.ts';
 import { createAgentsResolve } from './org-runtime-agents.ts';
 import { runTargetFileAccess, runTargetFileAccessForAgent } from './org-runtime-file-access.ts';
 import { resolveTargetHooks, targetHookReport } from './org-runtime-hooks.ts';
-import { runTargetPermissionGrants } from './org-runtime-permission-grants.ts';
+import {
+  applyShellRulePatterns,
+  runTargetPermissionGrants,
+} from './org-runtime-permission-rules.ts';
 import { type SteeringChannel } from './org-runtime-queue.ts';
 import { resolveRunSourceRefs } from './org-runtime-source-refs.ts';
 import { prepareTarget, runtimeOptionsOf, type TargetCache } from './prepare-org-target.ts';
@@ -50,13 +53,19 @@ export function createRunTargetResolver(ctx: RunTargetResolverContext) {
       return null;
     }
     const requested = ctx.sessionRequested.get(threadId) ?? [];
-    const agentDef: AgentDefinition =
+    const shellPatterns =
+      deps.permissionRules?.shellPatterns(deps.orgId, prepared.agentDef.id) ?? undefined;
+    const baseAgentDef: AgentDefinition =
       requested.length > 0
         ? {
             ...prepared.agentDef,
             skills: [...new Set([...(prepared.agentDef.skills ?? []), ...requested])],
           }
         : prepared.agentDef;
+    const agentDef: AgentDefinition =
+      shellPatterns === undefined
+        ? baseAgentDef
+        : applyShellRulePatterns(baseAgentDef, shellPatterns);
     const skills = await composeRunSkills({
       orgSkills: plugin.skills,
       discovery: deps.sourceSkills,
@@ -114,8 +123,8 @@ export function createRunTargetResolver(ctx: RunTargetResolverContext) {
       fileAccess: runTargetFileAccess(deps, prepared),
       fileAccessFor: (agent: AgentDefinition) =>
         runTargetFileAccessForAgent(deps, prepared, agent.id),
-      ...(deps.permissionGrants !== undefined
-        ? { permissionGrants: runTargetPermissionGrants(deps.permissionGrants, deps.orgId) }
+      ...(deps.permissionRules !== undefined
+        ? { permissionGrants: runTargetPermissionGrants(deps.permissionRules, deps.orgId) }
         : {}),
       runtime: runRuntimePromptInfo(deps, prepared, binding),
       steerMessages: () => ctx.steering.steer(threadId),

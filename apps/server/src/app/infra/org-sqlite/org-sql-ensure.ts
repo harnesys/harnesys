@@ -54,7 +54,6 @@ import {
   migrateUsageTable,
 } from './org-sql.ts';
 import { CREATE_CONNECTORS_SQL } from './org-sql-connectors.ts';
-import { CREATE_FILE_ACCESS_RULES_SQL } from './org-sql-file-access.ts';
 import {
   CREATE_INVITES_INDEX_SQL,
   CREATE_INVITES_SQL,
@@ -75,7 +74,7 @@ import {
   backfillIntegrationsFromSources,
   CREATE_INTEGRATIONS_SQL,
 } from './org-sql-integrations.ts';
-import { CREATE_PERMISSION_GRANTS_SQL } from './org-sql-permission-grants.ts';
+import { CREATE_PERMISSION_RULES_SQL, migratePermissionRules } from './org-sql-permission-rules.ts';
 
 interface ColumnInfo {
   name: string;
@@ -312,8 +311,10 @@ export function ensureOrgSchema(
     migrateApprovalsTable(exec, all);
     migrateApprovalsResumeStateColumn(exec, all);
   }
-  exec(CREATE_PERMISSION_GRANTS_SQL);
-  exec(CREATE_FILE_ACCESS_RULES_SQL);
+  exec(CREATE_PERMISSION_RULES_SQL);
+  if (all) {
+    migratePermissionRules(exec, all);
+  }
   exec(CREATE_SCHEDULES_SQL);
   exec(CREATE_WEBHOOKS_SQL);
   if (all) {

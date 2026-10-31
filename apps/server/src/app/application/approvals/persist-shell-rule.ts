@@ -5,15 +5,11 @@ import {
   SHELL_FLOOR_PATTERNS,
   segmentCommand,
 } from 'harnesys';
-import type { AgentRecord } from '../../domain/agent/agent.ts';
-import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { ApprovalValidationException } from '../../domain/approval/approval.error.ts';
-import type { ModePresetRecord } from '../../domain/mode-presets/mode-preset.ts';
-import { ModePresetRegistryPort } from '../../domain/mode-presets/mode-preset-registry.port.ts';
+import type { PermissionRuleStorePort } from '../../domain/permissions/permission-rule-store.port.ts';
 
 export interface PersistShellRuleDeps {
-  agents: AgentRegistryPort;
-  modes: ModePresetRegistryPort;
+  rules: PermissionRuleStorePort;
 }
 
 export interface PersistShellRuleInput {
@@ -21,10 +17,8 @@ export interface PersistShellRuleInput {
   agentId: string;
   defaultModeId: string | null;
   rule: CommandApprovalRule;
+  decidedBy?: string;
 }
-
-const PACK_CONFIG_KEYS = ['capabilitiesJson', 'packs', 'capabilities'] as const;
-const SHELL_SPEC_KEYS = ['allowlist', 'blocklist', 'timeout'] as const;
 
 export function shellRulePatternsOf(rule: CommandApprovalRule): string[] {
   const pattern = normalizePattern(rule.pattern);
@@ -38,52 +32,17 @@ export function shellRulePatternsOf(rule: CommandApprovalRule): string[] {
 
 export function persistShellRule(deps: PersistShellRuleDeps, input: PersistShellRuleInput): void {
   const patterns = shellRulePatternsOf(input.rule);
-  if (input.rule.target === 'global' && input.defaultModeId) {
-    const preset = deps.modes.findById(input.orgId, input.defaultModeId);
-    if (preset) {
-      persistPresetRule(deps, input.orgId, preset, patterns);
-      return;
-    }
+  const targetAgentId =
+    input.rule.target === 'global' && input.defaultModeId ? null : input.agentId;
+  for (const pattern of patterns) {
+    deps.rules.record(input.orgId, {
+      kind: 'shell-cmd',
+      pattern,
+      effect: 'allow',
+      ...(targetAgentId === null ? {} : { agentId: targetAgentId }),
+      ...(input.decidedBy !== undefined ? { decidedBy: input.decidedBy } : {}),
+    });
   }
-  const agent = deps.agents.findById(input.orgId, input.agentId);
-  if (!agent) {
-    return;
-  }
-  persistAgentRule(deps, input.orgId, agent, patterns);
-}
-
-function persistAgentRule(
-  deps: PersistShellRuleDeps,
-  orgId: string,
-  agent: AgentRecord,
-  patterns: string[],
-): void {
-  const key = packsKeyOf(agent.config);
-  const raw = agent.config[key];
-  const packs = { ...(isRecord(raw) ? raw : {}) };
-  const merged = mergeShellPattern(packs.shell, patterns);
-  if (!merged.changed) {
-    return;
-  }
-  packs.shell = merged.next;
-  deps.agents.update(orgId, agent.id, { config: { ...agent.config, [key]: packs } });
-}
-
-function persistPresetRule(
-  deps: PersistShellRuleDeps,
-  orgId: string,
-  preset: ModePresetRecord,
-  patterns: string[],
-): void {
-  const merged = mergeShellPattern(preset.packs.shell, patterns);
-  if (!merged.changed) {
-    return;
-  }
-  const spec = merged.next.spec;
-  deps.modes.update(orgId, preset.id, {
-    packs: { ...preset.packs, shell: { ...(isRecord(spec) ? { spec } : {}) } },
-    updatedAt: new Date().toISOString(),
-  });
 }
 
 function normalizePattern(raw: string): string {
@@ -129,72 +88,4 @@ function segmentProgramPatternsOf(pattern: string): string[] {
     patterns.push(wildcard);
   }
   return patterns;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function packsKeyOf(config: Record<string, unknown>): string {
-  for (const key of PACK_CONFIG_KEYS) {
-    if (isRecord(config[key])) {
-      return key;
-    }
-  }
-  return 'capabilitiesJson';
-}
-
-function stringListOf(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.filter((item): item is string => typeof item === 'string');
-}
-
-function mergeShellPattern(
-  assignment: unknown,
-  patterns: string[],
-): { next: Record<string, unknown>; changed: boolean } {
-  const current = isRecord(assignment) ? assignment : {};
-  const nested = isRecord(current.spec) ? current.spec : undefined;
-  const base = specBaseOf(current, nested);
-  const allowlist = stringListOf(base.allowlist);
-  const missing = patterns.filter((pattern) => !allowlist.includes(pattern));
-  if (missing.length === 0) {
-    return { next: current, changed: false };
-  }
-  const spec = { ...base, allowlist: [...allowlist, ...missing] };
-  return { next: assignmentOf(current, nested, spec), changed: true };
-}
-
-function specBaseOf(
-  current: Record<string, unknown>,
-  nested: Record<string, unknown> | undefined,
-): Record<string, unknown> {
-  if (nested) {
-    return { ...nested };
-  }
-  const base: Record<string, unknown> = {};
-  for (const key of SHELL_SPEC_KEYS) {
-    if (current[key] !== undefined) {
-      base[key] = current[key];
-    }
-  }
-  return base;
-}
-
-function assignmentOf(
-  current: Record<string, unknown>,
-  nested: Record<string, unknown> | undefined,
-  spec: Record<string, unknown>,
-): Record<string, unknown> {
-  const next: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(current)) {
-    if (nested === undefined && (SHELL_SPEC_KEYS as readonly string[]).includes(key)) {
-      continue;
-    }
-    next[key] = value;
-  }
-  next.spec = spec;
-  return next;
 }

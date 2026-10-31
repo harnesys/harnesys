@@ -19,7 +19,6 @@ import type { AgentRegistryPort } from '../../domain/agent/agent-registry.port.t
 import type { HookRunStorePort } from '../../domain/agent/hook-run-store.port.ts';
 import type { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
 import type { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
-import type { PermissionGrantStorePort } from '../../domain/approval/permission-grant-store.port.ts';
 import type { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import type { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
 import type { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
@@ -31,6 +30,7 @@ import type { LspPort } from '../../domain/lsp/lsp.port.ts';
 import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import type { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import type { ModePresetRegistryPort } from '../../domain/mode-presets/mode-preset-registry.port.ts';
+import type { PermissionRuleStorePort } from '../../domain/permissions/permission-rule-store.port.ts';
 import type { PlanEventsPort } from '../../domain/plan/plan-events.port.ts';
 import type { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
 import type { WorkspaceContainerPort } from '../../domain/process-runtime/workspace-container.port.ts';
@@ -114,7 +114,7 @@ export interface OrgRuntimeDeps {
   models: LlmModelPort;
   secrets: SecretStorePort;
   fileRules: FileAccessRulePort;
-  permissionGrants?: PermissionGrantStorePort;
+  permissionRules?: PermissionRuleStorePort;
   plugins: PluginRuntimePort;
   sourceSkills: SourceSkillsPort;
   orgSettings: OrgSettingsPort;

@@ -48,7 +48,7 @@ import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port
 import {
   MemoryApprovalEvents,
   MemoryApprovalStore,
-  MemoryPermissionGrants,
+  MemoryPermissionRules,
   StubFileRules,
   StubMachineConfig,
   StubSourceLocation,
@@ -305,7 +305,7 @@ export function buildUseCase(store: MemoryApprovalStore, events: MemoryApprovalE
     new StubModes(),
     store,
     events,
-    new MemoryPermissionGrants(),
+    new MemoryPermissionRules(),
     new StubFileRules(),
     new StubMachineConfig(),
     new StubSourceLocation(),

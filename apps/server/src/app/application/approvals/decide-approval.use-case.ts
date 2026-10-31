@@ -11,23 +11,17 @@ import { ApprovalNotFoundException } from '../../domain/approval/approval.error.
 import type { ApprovalRecord, ApprovalResumePlan } from '../../domain/approval/approval.ts';
 import { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
 import { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
-import { PermissionGrantStorePort } from '../../domain/approval/permission-grant-store.port.ts';
 import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
 import type { EventClaimRecord } from '../../domain/fleet/event-claim.port.ts';
 import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
 import { NodeCommandQueuePort } from '../../domain/fleet/node-command-queue.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { ModePresetRegistryPort } from '../../domain/mode-presets/mode-preset-registry.port.ts';
+import { PermissionRuleStorePort } from '../../domain/permissions/permission-rule-store.port.ts';
 import { SourceLocationPort } from '../../domain/source/source-location.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
-import {
-  persistFileDecision,
-  persistShellDecision,
-  scopePersistsRule,
-  targetAgentIdOf,
-} from './persist-decision.ts';
+import { type ApprovalPersistDeps, persistDecision, targetAgentIdOf } from './persist-decision.ts';
 import { shellRulePatternsOf } from './persist-shell-rule.ts';
-import { recordOperationGrants } from './record-operation-grants.ts';
 
 export interface DecideApprovalRequest {
   orgId: string;
@@ -79,7 +73,7 @@ export class DecideApprovalUseCase {
   constructor(
     private readonly store: ApprovalStorePort,
     private readonly events: ApprovalEventsPort,
-    private readonly grants: PermissionGrantStorePort,
+    private readonly rules: PermissionRuleStorePort,
     private readonly executor: LocalExecutorPort,
     private readonly claims: EventClaimPort,
     private readonly commands: NodeCommandQueuePort,
@@ -139,45 +133,24 @@ export class DecideApprovalUseCase {
     rule: ApprovalRule | undefined,
     scope: ApprovalDecisionScope | undefined,
   ): void {
-    const deps = {
+    const deps: ApprovalPersistDeps = {
       orgId,
       agents: this.agents,
       modes: this.modes,
       fileRules: this.fileRules,
+      rules: this.rules,
       machineConfig: this.machineConfig,
       sourceLocation: this.sourceLocation,
     };
-    const agentId = targetAgentIdOf(decided.context.delegated, decided.agentId);
-    const file = decided.context.file;
-    const ops = decided.context.ops;
-    if (decision === 'block_path') {
-      if (!file) {
-        return;
-      }
-      persistFileDecision(deps, { agentId, file, blockPath: true, rule, scope });
-      return;
-    }
-    if (decision === 'approve' && !file && !rule && ops !== undefined && ops.length > 0) {
-      if (scope !== 'always') {
-        return;
-      }
-      recordOperationGrants(this.grants, orgId, {
-        agentId,
-        ops,
-        ...(decided.decidedBy !== null ? { decidedBy: decided.decidedBy } : {}),
-      });
-      return;
-    }
-    if (decision !== 'approve' || !scopePersistsRule(scope, rule)) {
-      return;
-    }
-    if (file) {
-      persistFileDecision(deps, { agentId, file, blockPath: false, rule, scope });
-      return;
-    }
-    if (rule && rule.kind !== 'file-path') {
-      persistShellDecision(deps, { agentId, rule });
-    }
+    persistDecision(deps, {
+      agentId: targetAgentIdOf(decided.context.delegated, decided.agentId),
+      decision,
+      rule,
+      scope,
+      file: decided.context.file,
+      ops: decided.context.ops,
+      decidedBy: decided.decidedBy ?? undefined,
+    });
   }
 
   private async resume(orgId: string, input: ApprovalResumeInput): Promise<'decided' | 'applied'> {
