@@ -43,7 +43,7 @@ export function RunAttributionBadge({ run }: { run: ThreadActiveRun | null | und
   return (
     <Badge
       variant="outline"
-      className="h-5 px-1.5 text-[10px]"
+      className="h-5 min-w-0 max-w-full truncate px-1.5 text-[10px]"
       title={text}
       data-testid="run-attribution-badge"
     >

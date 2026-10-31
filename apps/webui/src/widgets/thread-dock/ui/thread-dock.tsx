@@ -53,7 +53,7 @@ export function ThreadDock({
           <div className="min-w-0 flex-1">
             <div className="truncate font-medium text-sm leading-tight">{identity.title}</div>
             {identity.meta ? (
-              <div className="truncate font-mono text-[11px] text-muted-foreground leading-tight">
+              <div className="flex min-w-0 items-center gap-1.5 font-mono text-[11px] text-muted-foreground leading-tight">
                 {identity.meta}
               </div>
             ) : null}

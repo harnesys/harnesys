@@ -137,7 +137,7 @@ export function SpawnView({
           ),
           meta: (
             <>
-              {STATUS_LABEL[spawn.status]}
+              <span className="truncate">{STATUS_LABEL[spawn.status]}</span>
               {running ? <RunAttributionBadge run={activeRun} /> : null}
             </>
           ),
