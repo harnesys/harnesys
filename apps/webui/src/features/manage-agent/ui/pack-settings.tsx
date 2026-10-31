@@ -1,11 +1,12 @@
 import type { PackConfig } from '@harnesys/studio-shared';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/shared/ui/field';
 import { Input } from '@/shared/ui/input';
+import { Switch } from '@/shared/ui/switch';
 import { Textarea } from '@/shared/ui/textarea';
 import { ImagePackSettings } from './image-pack-settings';
 import { MemoryPackSettings } from './memory-pack-settings';
 import { WebPackSettings } from './web-pack-settings';
-export const PACKS_WITH_SETTINGS = new Set(['files', 'shell', 'web']);
+export const PACKS_WITH_SETTINGS = new Set(['agents', 'files', 'shell', 'web']);
 const DEFAULT_SHELL_TIMEOUT_MS = 30000;
 const DEFAULT_FILES_BLOCKLIST = [
   '.env',
@@ -37,6 +38,9 @@ export function PackSettingsFields({
   if (packName === 'files') {
     return <FilesSettings config={config} onChange={onChange} />;
   }
+  if (packName === 'agents') {
+    return <AgentsSettings config={config} onChange={onChange} />;
+  }
   if (packName === 'shell') {
     return <ShellSettings config={config} onChange={onChange} />;
   }
@@ -53,6 +57,43 @@ export function PackSettingsFields({
     <p className="text-[11px] text-muted-foreground leading-snug">
       No Studio form for this pack yet.
     </p>
+  );
+}
+function AgentsSettings({
+  config,
+  onChange,
+}: {
+  config: PackConfig;
+  onChange: (next: PackConfig) => void;
+}) {
+  const spec = config.spec ?? {};
+  const ownDelegatesOnly = spec.ownDelegatesOnly === true;
+  function patchSpec(partial: Record<string, unknown>) {
+    const nextSpec = { ...spec, ...partial };
+    if (nextSpec.ownDelegatesOnly !== true) {
+      delete nextSpec.ownDelegatesOnly;
+    }
+    onChange({ spec: nextSpec });
+  }
+  return (
+    <FieldGroup className="gap-2">
+      <Field>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="pack-agents-own-delegates"
+            size="sm"
+            checked={ownDelegatesOnly}
+            onCheckedChange={(next) => patchSpec({ ownDelegatesOnly: next === true })}
+            aria-label="Own delegates only"
+          />
+          <FieldLabel htmlFor="pack-agents-own-delegates">Own delegates only</FieldLabel>
+        </div>
+        <FieldDescription className="text-[11px] leading-snug">
+          Limits `agents_update` to delegates created by this agent; `agents_delete` is always
+          limited to own delegates. Off lets the agent patch any agent in the org.
+        </FieldDescription>
+      </Field>
+    </FieldGroup>
   );
 }
 function FilesSettings({

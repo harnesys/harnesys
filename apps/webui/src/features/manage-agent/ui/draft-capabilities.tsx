@@ -59,7 +59,11 @@ export function DraftPacksGrants({
               granted={granted}
               locked={isCore}
               lockLabel={isCore ? 'Required' : undefined}
-              tools={agentId ? sourceToolRows(view, `pack:${pack.name}`, base) : []}
+              tools={
+                agentId
+                  ? sourceToolRows(view, `pack:${pack.name}`, base, { ownsDisabledTools: true })
+                  : []
+              }
               toolsHint={
                 agentId
                   ? 'Grant the source and save to tune its tools.'

@@ -44,14 +44,10 @@ export function listSourceFiles(
   options?: { includeIgnored?: boolean; depth?: number },
 ) {
   const orgId = requireOrgId();
-  return listContentTree(
-    orgId,
-    projectId,
-    subPath,
-    undefined,
-    options?.includeIgnored,
-    options?.depth,
-  ).then((tree) =>
+  return listContentTree(orgId, projectId, subPath, {
+    includeIgnored: options?.includeIgnored,
+    depth: options?.depth,
+  }).then((tree) =>
     tree.entries.map((entry) =>
       toEntry(entry, entry.type === 'dir' && options?.depth !== undefined),
     ),
@@ -82,13 +78,10 @@ export async function listSourceFilesTree(
   const orgId = requireOrgId();
   let tree: ContentTreeResponse;
   try {
-    tree = await listContentTree(
-      orgId,
-      projectId,
-      '',
-      options?.worktreeId,
-      options?.includeHidden === true,
-    );
+    tree = await listContentTree(orgId, projectId, '', {
+      worktreeId: options?.worktreeId,
+      includeIgnored: options?.includeHidden === true,
+    });
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       return [];

@@ -226,7 +226,10 @@ function WorkspaceSection({
   const ready = Boolean(orgId && binding);
   const treeQuery = useQuery({
     queryKey: ['workspace-files', orgId, binding?.sourceId, binding?.worktreeId],
-    queryFn: () => listContentTree(orgId ?? '', binding?.sourceId ?? '', '', binding?.worktreeId),
+    queryFn: () =>
+      listContentTree(orgId ?? '', binding?.sourceId ?? '', '', {
+        worktreeId: binding?.worktreeId,
+      }),
     enabled: ready,
   });
   return (
@@ -288,7 +291,7 @@ function WorkspaceEntry({
   const isDir = entry.type === 'dir';
   const childrenQuery = useQuery({
     queryKey: ['workspace-files', orgId, sourceId, worktreeId, entry.path],
-    queryFn: () => listContentTree(orgId, sourceId, entry.path, worktreeId),
+    queryFn: () => listContentTree(orgId, sourceId, entry.path, { worktreeId }),
     enabled: isDir && open,
   });
   return (

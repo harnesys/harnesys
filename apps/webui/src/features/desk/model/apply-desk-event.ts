@@ -6,14 +6,17 @@ import { toClientSchedule, useScheduleStore } from '@/entities/schedule';
 import { useSessionStore } from '@/entities/session';
 import { toClientThread, useThreadStore } from '@/entities/thread';
 import { toClientWebhook, useWebhookStore } from '@/entities/webhook';
+import { useIssueDrawerStore } from '@/features/manage-issues/model/issue-drawer.store';
 import { useThreadQueueStore } from '@/features/message-queue';
 import { studioPath } from '@/shared/config/routes';
 import { toast } from '@/shared/ui/toast';
-import { useIssueDrawerStore } from '@/features/manage-issues/model/issue-drawer.store';
 import { useAgentsDisplayStore } from './agents-display.store';
 import { useDeskStore } from './desk.store';
 
-export type DeskEventNavigation = { orgId: string; navigate: (to: string) => void };
+export interface DeskEventNavigation {
+  orgId: string;
+  navigate: (to: string) => void;
+}
 
 export function applyDeskEvent(event: DeskEvent, nav?: DeskEventNavigation): void {
   switch (event.type) {

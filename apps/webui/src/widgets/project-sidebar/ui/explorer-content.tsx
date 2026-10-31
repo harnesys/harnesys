@@ -31,8 +31,8 @@ import { flattenFileTree, indexFileTree } from '../model/file-tree-index';
 import { useFilesCopyPaste } from '../model/use-files-copy-paste';
 import { useFilesHotkey } from '../model/use-files-hotkey';
 import { useRootDragDrop } from '../model/use-root-drag-drop';
-import { FileTreeWindow } from './file-tree-window';
 import { renderFileTreeRow } from './file-row-render';
+import { FileTreeWindow } from './file-tree-window';
 import { InlineCreateInput } from './inline-create-input';
 
 const EMPTY_DIRS: string[] = [];
@@ -141,9 +141,15 @@ export function ExplorerContent({
       return;
     }
     for (const dirPath of dirPaths) {
-      ensureLazyChildren(dirPath);
+      ensurePrunedChildren({
+        qc,
+        treeKey,
+        projectId,
+        dirPath,
+        state: lazyState.current,
+      });
     }
-  }, [treeQuery.data, dirPaths, ensureLazyChildren]);
+  }, [treeQuery.data, dirPaths, qc, treeKey, projectId]);
   const ensureDirOpen = (dirPath: string) => {
     if (dirPath && !expandedDirs.has(dirPath)) {
       startTransition(() => toggleDirStore(projectId, dirPath));

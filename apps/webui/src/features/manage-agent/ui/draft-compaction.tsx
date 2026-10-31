@@ -136,21 +136,21 @@ export function DraftCompaction({
         <div className="grid grid-cols-2 gap-2">
           <NumberField
             id="draft-compaction-threshold"
-            label="Threshold"
-            value={draft.thresholdRatio}
-            placeholder="0.8"
-            description="Auto compaction fires at this share of the context window minus the reply reserve. Clamp 0.1–1. Default 0.8."
+            label="Threshold, %"
+            value={draft.thresholdPercent}
+            placeholder="80"
+            description="Auto compaction fires at this percent of the context window minus the reply reserve. Clamp 10–100. Default 80."
             disabled={!draft.auto}
-            onChange={(thresholdRatio) => patch({ thresholdRatio })}
+            onChange={(thresholdPercent) => patch({ thresholdPercent })}
           />
           <NumberField
             id="draft-compaction-protect"
-            label="Protect recent"
-            value={draft.protectRecentRatio}
-            placeholder="0.1"
-            description="Recent tail (share of context) kept out of the summary. Clamp 0–0.9. Default 0.1."
+            label="Protect recent, %"
+            value={draft.protectRecentPercent}
+            placeholder="10"
+            description="Recent tail (percent of context) kept out of the summary. Clamp 0–90. Default 10."
             disabled={!draft.auto}
-            onChange={(protectRecentRatio) => patch({ protectRecentRatio })}
+            onChange={(protectRecentPercent) => patch({ protectRecentPercent })}
           />
         </div>
         <Field

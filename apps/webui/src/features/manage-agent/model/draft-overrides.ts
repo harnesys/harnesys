@@ -121,10 +121,30 @@ const TERMINAL_STATUSES: ExplainStatus[] = ['disabled', 'dropped-by-mode', 'deni
 function isTerminal(entry: ExplainEntry): boolean {
   return TERMINAL_STATUSES.includes(entry.status);
 }
+export interface SourceToolRowsOptions {
+  /**
+   * True for the pane that owns this source's disabledTools override (the pack pane).
+   * There the draft drives the switch: a saved `disabled` entry with this source's
+   * override reason renders togglable instead of frozen. Modes pane omits it.
+   */
+  ownsDisabledTools?: boolean;
+}
+function lockedOutsideDraft(entry: ExplainEntry, ownsDisabledTools: boolean): boolean {
+  if (entry.status === 'dropped-by-mode' || entry.status === 'denied-by-universe') {
+    return true;
+  }
+  if (!ownsDisabledTools) {
+    return isTerminal(entry);
+  }
+  // The owning pane edits the saved disabledTools override itself, so a plain
+  // `disabled` entry (this endpoint only emits it for that override) is draft-driven.
+  return false;
+}
 export function sourceToolRows(
   view: AgentCapabilitiesView | undefined,
   source: string,
   override: PackOverride,
+  options: SourceToolRowsOptions = {},
 ): SourceCardTool[] {
   const entries = (view?.explain ?? [])
     .filter((entry) => entry.kind === 'tool' && entry.source === source)
@@ -143,7 +163,7 @@ export function sourceToolRows(
     rows.push({
       name: entry.item,
       exposure: draftExposure ?? registryOf(view, entry.item)?.exposure ?? 'direct',
-      disabled: draftDisabled || isTerminal(entry),
+      disabled: draftDisabled || lockedOutsideDraft(entry, options.ownsDisabledTools === true),
       overridden: draftDisabled || draftExposure !== undefined,
       provenance: entry.source,
       status: entry.status,

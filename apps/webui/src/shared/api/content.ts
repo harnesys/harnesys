@@ -85,14 +85,19 @@ function throwApiError(response: Response, body: unknown): never {
   throw new ApiError(response.status, message, errorCode);
 }
 
+export interface ListContentTreeOptions {
+  worktreeId?: string;
+  includeIgnored?: boolean;
+  depth?: number;
+}
+
 export async function listContentTree(
   orgId: string,
   sourceId: string,
   path = '',
-  worktreeId?: string,
-  includeIgnored?: boolean,
-  depth?: number,
+  options?: ListContentTreeOptions,
 ): Promise<ContentTreeResponse> {
+  const { worktreeId, includeIgnored, depth } = options ?? {};
   const qs = new URLSearchParams();
   if (path) {
     qs.set('path', path);
