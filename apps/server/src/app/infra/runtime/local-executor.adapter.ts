@@ -10,6 +10,7 @@ import type {
   SessionHandle,
   TruncateThreadResult,
 } from 'harnesys';
+import { resolveMcpVaultEntry } from '../../application/mcp/resolve-mcp-vault-placeholders.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { HookRunStorePort } from '../../domain/agent/hook-run-store.port.ts';
 import { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
@@ -161,7 +162,16 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
         invalidateBundle: () => this.plugins.invalidate(orgId),
         apply: async (serverId, entry) => {
           const runtime = await this.ensure(orgId);
-          await runtime.reloadMcp(serverId, entry);
+          const resolved =
+            entry === null
+              ? null
+              : await resolveMcpVaultEntry(
+                  serverId,
+                  entry,
+                  (key) => this.secrets.get(orgId, key),
+                  (message) => this.log.warn({}, message),
+                );
+          await runtime.reloadMcp(serverId, resolved);
         },
       }),
       ...(this.browserEnginesDeps() !== undefined

@@ -1,4 +1,4 @@
-import type { ConnectorCapability, Integration } from '@harnesys/contracts';
+import type { GoogleOAuthService, Integration } from '@harnesys/contracts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { FolderPlusIcon, UnplugIcon } from 'lucide-react';
 import { useState } from 'react';
@@ -24,47 +24,45 @@ import { Input } from '@/shared/ui/input';
 import { SettingsSection } from '@/shared/ui/settings-kit';
 import { StatusDot } from '@/shared/ui/status-dot';
 import { toast } from '@/shared/ui/toast';
-import { CapabilityChips } from './capability-chips';
+import { accountServices, hasDriveService } from '../model/google-services';
 import { CONNECTOR_INSET_CLASSES, ConnectorCard } from './connector-card';
 import { DriveSourcesList } from './drive-sources-list';
+import { GoogleConnectCard } from './google-connect-card';
+import { GoogleServiceChips } from './google-service-picker';
 import { GoogleSigninCard } from './google-signin-card';
+
+type GoogleConnectPhase = 'off' | 'pick' | 'signin';
 
 interface GoogleAccountsSectionProps {
   orgId: string;
-  capabilities: ConnectorCapability[];
   accounts: Integration[];
   sources: Source[] | undefined;
   sourcesLoading: boolean;
-  connecting: boolean;
-  onConnect: () => void;
-  onFinishConnect: () => void;
 }
 
 export function GoogleAccountsSection({
   orgId,
-  capabilities,
   accounts,
   sources,
   sourcesLoading,
-  connecting,
-  onConnect,
-  onFinishConnect,
 }: GoogleAccountsSectionProps) {
   const disconnect = useDisconnectIntegration(orgId, 'Google');
   const [folderFor, setFolderFor] = useState<string | null>(null);
+  const [phase, setPhase] = useState<GoogleConnectPhase>('off');
+  const [services, setServices] = useState<GoogleOAuthService[]>([]);
 
   return (
     <SettingsSection
       label="Accounts"
       count={accounts.length}
       actions={
-        connecting ? undefined : (
+        phase !== 'off' ? undefined : (
           <Button
             type="button"
             variant="ghost"
             size="sm"
             className="text-muted-foreground"
-            onClick={onConnect}
+            onClick={() => setPhase('pick')}
             data-testid="connectors-connect-another"
           >
             {accounts.length > 0 ? 'Connect another account' : 'Connect Google account'}
@@ -74,13 +72,30 @@ export function GoogleAccountsSection({
       testId="connectors-accounts"
     >
       <div className="flex flex-col gap-3">
-        {connecting ? <GoogleSigninCard orgId={orgId} onFinished={onFinishConnect} /> : null}
+        {phase === 'pick' ? (
+          <GoogleConnectCard
+            onContinue={(picked) => {
+              setServices(picked);
+              setPhase('signin');
+            }}
+            onCancel={() => setPhase('off')}
+          />
+        ) : null}
+        {phase === 'signin' ? (
+          <GoogleSigninCard orgId={orgId} services={services} onFinished={() => setPhase('off')} />
+        ) : null}
         {accounts.map((account) => {
           const linked = integrationDriveSources(sources ?? [], account.id);
+          const services = accountServices(account);
+          const driveEnabled = hasDriveService(account);
           return (
             <ConnectorCard key={account.id} className="flex flex-col gap-3 p-4">
-              <div className="flex items-center gap-3">
-                <StatusDot tone={integrationStatusTone(account.status)} label={account.status} />
+              <div className="flex items-start gap-3">
+                <StatusDot
+                  tone={integrationStatusTone(account.status)}
+                  label={account.status}
+                  className="mt-1.5"
+                />
                 <div className="min-w-0 flex-1">
                   <p
                     className="truncate font-medium text-sm"
@@ -88,27 +103,31 @@ export function GoogleAccountsSection({
                   >
                     {account.accountLabel}
                   </p>
-                  <p className="text-muted-foreground text-xs">
-                    {integrationStatusLabel(account.status)}
-                    {linked.length > 0 ? ` · ${linked.length} folders` : ''}
-                  </p>
                   <div className="pt-0.5">
-                    <CapabilityChips capabilities={capabilities} />
+                    {services.length > 0 ? (
+                      <GoogleServiceChips services={services} />
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground">
+                        No services granted — reconnect to pick them
+                      </span>
+                    )}
                   </div>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={account.status !== 'connected'}
-                  onClick={() => {
-                    setFolderFor(folderFor === account.id ? null : account.id);
-                  }}
-                  data-testid={`connectors-add-folder-${account.id}`}
-                >
-                  <FolderPlusIcon data-icon="inline-start" />
-                  Add folder
-                </Button>
+                {driveEnabled ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={account.status !== 'connected'}
+                    onClick={() => {
+                      setFolderFor(folderFor === account.id ? null : account.id);
+                    }}
+                    data-testid={`connectors-add-folder-${account.id}`}
+                  >
+                    <FolderPlusIcon data-icon="inline-start" />
+                    Add folder
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   variant="ghost"
@@ -135,7 +154,17 @@ export function GoogleAccountsSection({
                   }}
                 />
               ) : null}
-              <DriveSourcesList orgId={orgId} sources={linked} loading={sourcesLoading} />
+              {driveEnabled ? (
+                <DriveSourcesList orgId={orgId} sources={linked} loading={sourcesLoading} />
+              ) : null}
+              <div className="flex justify-end border-foreground/5 border-t pt-2">
+                <p className="text-muted-foreground text-xs">
+                  {integrationStatusLabel(account.status)}
+                  {linked.length > 0
+                    ? ` · ${linked.length} ${linked.length === 1 ? 'folder' : 'folders'}`
+                    : ''}
+                </p>
+              </div>
             </ConnectorCard>
           );
         })}

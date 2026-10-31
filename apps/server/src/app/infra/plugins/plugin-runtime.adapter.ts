@@ -26,6 +26,7 @@ import {
 } from 'harnesys';
 import { FsSkillRegistry, loadPluginIrFromDirectory } from 'harnesys/adapters/node';
 import { buildReactGraph, type ReactGraph } from '../../application/agents/react-preset.ts';
+import { resolveMcpVaultJson } from '../../application/mcp/resolve-mcp-vault-placeholders.ts';
 import { applyGrantGating } from '../../application/plugins/plugin-grant-gate.ts';
 import {
   pluginUserConfig,
@@ -118,10 +119,15 @@ export class PluginRuntimeAdapter extends PluginRuntimePort {
     for (const diagnostic of merged.diagnostics) {
       onDiagnostic(diagnostic);
     }
+    const mcpJson = await resolveMcpVaultJson(
+      merged.mcp,
+      (key) => this.secrets.get(orgId, key),
+      (message) => CONSOLE_LOGGER.warn(`[mcp] ${message}`),
+    );
     return {
       entries,
       skills: composeSkills(this.layout.skillsDir(orgId), entries, this.tiers),
-      mcpJson: merged.mcp,
+      mcpJson,
       agents: composeAgents(orgId, entries, onDiagnostic, this.providers, this.models),
       lspServers: collectLspServers(entries, disabled),
     };

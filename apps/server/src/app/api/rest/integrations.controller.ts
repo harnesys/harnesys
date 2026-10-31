@@ -27,6 +27,8 @@ import {
   type GoogleAppConfigBody,
   GoogleAppConfigBodySchema,
   type GoogleAppConfigStatusResponse,
+  type GoogleOAuthLoopbackStartBody,
+  GoogleOAuthLoopbackStartBodySchema,
   type GoogleOAuthLoopbackStartResponse,
   type GoogleOAuthStatusQuery,
   GoogleOAuthStatusQuerySchema,
@@ -77,7 +79,7 @@ export class IntegrationsController {
   ) {}
 
   @Get()
-  list(@Param('orgId') orgId: string): IntegrationsListResponse {
+  list(@Param('orgId') orgId: string): Promise<IntegrationsListResponse> {
     return this.listIntegrations.execute({ orgId });
   }
 
@@ -107,8 +109,9 @@ export class IntegrationsController {
   @Post('google/oauth/loopback/start')
   startGoogleDriveOAuthLoopback(
     @Param('orgId') orgId: string,
+    @Body(GoogleOAuthLoopbackStartBodySchema) body: GoogleOAuthLoopbackStartBody,
   ): Promise<GoogleOAuthLoopbackStartResponse> {
-    return this.startGoogleOAuthLoopback.execute({ orgId });
+    return this.startGoogleOAuthLoopback.execute({ orgId, ...body });
   }
 
   @Get('google/oauth/status')

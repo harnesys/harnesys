@@ -1,270 +1,286 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname } from 'node:path';
 import type {
   CapabilityScope,
   GoogleCalendarEvent,
   GoogleCalendarEventInput,
   GoogleCalendarEventPatch,
   GoogleCalendarListQuery,
+  GoogleDocsAppendInput,
+  GoogleDocsDocument,
   GoogleGmailAttachmentDownloadOptions,
   GoogleGmailAttachmentDownloadResult,
-  GoogleGmailAttachmentHint,
-  GoogleGmailAttachmentMeta,
   GoogleGmailMessage,
   GoogleGmailMessageSummary,
   GoogleGmailSendInput,
   GoogleGmailThread,
   GoogleIntegrationResolution,
+  GoogleSearchConsoleQueryInput,
+  GoogleSearchConsoleRow,
+  GoogleSearchConsoleSite,
+  GoogleSheetsAppendInput,
+  GoogleSheetsMeta,
+  GoogleSheetsRange,
+  GoogleSheetsWriteInput,
   GoogleWorkspacePort,
+  GoogleYoutubeAnalyticsQuery,
+  GoogleYoutubeAnalyticsReport,
+  GoogleYoutubeChannel,
+  GoogleYoutubeCommentThread,
+  GoogleYoutubePlaylist,
+  GoogleYoutubeReplyInput,
+  GoogleYoutubeThumbnailInput,
+  GoogleYoutubeUploadInput,
+  GoogleYoutubeUploadResult,
+  GoogleYoutubeVideo,
+  GoogleYoutubeVideoPatch,
+  GoogleYoutubeVideoSummary,
   ThreadAttachmentPort,
 } from 'harnesys';
-import { IntegrationScopeMissingException } from '../../../domain/integration/integration.error.ts';
-import type { IntegrationRegistryPort } from '../../../domain/integration/integration-registry.port.ts';
-import type { IntegrationTokenPort } from '../../../domain/integration/integration-token.port.ts';
-import {
-  createCalendarEvent,
-  deleteCalendarEvent,
-  listCalendarEvents,
-  PRIMARY_CALENDAR_ID,
-  patchCalendarEvent,
-} from '../../integration/google/calendar-api.ts';
-import {
-  getGmailAttachment,
-  getGmailMessage,
-  getGmailThread,
-  searchGmailMessages,
-  sendGmailMessage,
-} from '../../integration/google/gmail-api.ts';
-import {
-  GOOGLE_CALENDAR_SCOPE,
-  GOOGLE_GMAIL_READONLY_SCOPE,
-  GOOGLE_GMAIL_SEND_SCOPE,
-} from '../../integration/google/google-oauth-device.ts';
+import { OrgGoogleDocsSuitePort } from './org-google-docs-suite.port.ts';
+import type { OrgGoogleDeps } from './org-google-workspace.port.ts';
+import { OrgGoogleWorkspacePort } from './org-google-workspace.port.ts';
+import { OrgGoogleYoutubePort } from './org-google-youtube.port.ts';
 
-export interface OrgGoogleDeps {
-  registry: IntegrationRegistryPort;
-  tokens: IntegrationTokenPort;
-}
+export type { OrgGoogleDeps } from './org-google-workspace.port.ts';
 
-export class OrgGooglePort implements GoogleWorkspacePort {
-  constructor(
-    private readonly deps: OrgGoogleDeps,
-    private readonly attachments?: ThreadAttachmentPort,
-  ) {}
+export class OrgGooglePort extends OrgGoogleWorkspacePort implements GoogleWorkspacePort {
+  private readonly youtube: OrgGoogleYoutubePort;
+  private readonly docsSuite: OrgGoogleDocsSuitePort;
 
-  resolveIntegration(
+  constructor(deps: OrgGoogleDeps, attachments?: ThreadAttachmentPort) {
+    super(deps, attachments);
+    this.youtube = new OrgGoogleYoutubePort(deps);
+    this.docsSuite = new OrgGoogleDocsSuitePort(deps);
+  }
+
+  override resolveIntegration(
     scope: CapabilityScope,
     pinnedIntegrationId?: string,
   ): GoogleIntegrationResolution {
-    const connected = this.deps.registry
-      .list(scope.orgId)
-      .filter((record) => record.provider === 'google');
-    if (pinnedIntegrationId !== undefined) {
-      const pinned = connected.find((record) => record.id === pinnedIntegrationId);
-      return pinned ? { status: 'ready', integrationId: pinned.id } : { status: 'not_found' };
-    }
-    if (connected.length === 0) {
-      return { status: 'not_connected' };
-    }
-    if (connected.length > 1) {
-      return { status: 'ambiguous' };
-    }
-    const [only] = connected;
-    return only ? { status: 'ready', integrationId: only.id } : { status: 'not_connected' };
+    return super.resolveIntegration(scope, pinnedIntegrationId);
   }
 
-  async listEvents(
+  override listEvents(
     scope: CapabilityScope,
     integrationId: string,
     query: GoogleCalendarListQuery,
   ): Promise<GoogleCalendarEvent[]> {
-    return this.withCalendar(scope.orgId, integrationId, (token) =>
-      listCalendarEvents(token, PRIMARY_CALENDAR_ID, query),
-    );
+    return super.listEvents(scope, integrationId, query);
   }
 
-  async createEvent(
+  override createEvent(
     scope: CapabilityScope,
     integrationId: string,
     input: GoogleCalendarEventInput,
   ): Promise<GoogleCalendarEvent> {
-    return this.withCalendar(scope.orgId, integrationId, (token) =>
-      createCalendarEvent(token, PRIMARY_CALENDAR_ID, input),
-    );
+    return super.createEvent(scope, integrationId, input);
   }
 
-  async updateEvent(
+  override updateEvent(
     scope: CapabilityScope,
     integrationId: string,
     eventId: string,
     patch: GoogleCalendarEventPatch,
   ): Promise<GoogleCalendarEvent> {
-    return this.withCalendar(scope.orgId, integrationId, (token) =>
-      patchCalendarEvent(token, PRIMARY_CALENDAR_ID, eventId, patch),
-    );
+    return super.updateEvent(scope, integrationId, eventId, patch);
   }
 
-  async deleteEvent(scope: CapabilityScope, integrationId: string, eventId: string): Promise<void> {
-    await this.withCalendar(scope.orgId, integrationId, (token) =>
-      deleteCalendarEvent(token, PRIMARY_CALENDAR_ID, eventId),
-    );
+  override deleteEvent(
+    scope: CapabilityScope,
+    integrationId: string,
+    eventId: string,
+  ): Promise<void> {
+    return super.deleteEvent(scope, integrationId, eventId);
   }
 
-  searchMessages(
+  override searchMessages(
     scope: CapabilityScope,
     integrationId: string,
     query: string,
     maxResults?: number,
   ): Promise<GoogleGmailMessageSummary[]> {
-    return this.withGmailRead(scope.orgId, integrationId, (token) =>
-      searchGmailMessages(token, query, maxResults),
-    );
+    return super.searchMessages(scope, integrationId, query, maxResults);
   }
 
-  readMessage(
+  override readMessage(
     scope: CapabilityScope,
     integrationId: string,
     messageId: string,
   ): Promise<GoogleGmailMessage> {
-    return this.withGmailRead(scope.orgId, integrationId, (token) =>
-      getGmailMessage(token, messageId),
-    );
+    return super.readMessage(scope, integrationId, messageId);
   }
 
-  readThread(
+  override readThread(
     scope: CapabilityScope,
     integrationId: string,
     threadId: string,
   ): Promise<GoogleGmailThread> {
-    return this.withGmailRead(scope.orgId, integrationId, (token) =>
-      getGmailThread(token, threadId),
-    );
+    return super.readThread(scope, integrationId, threadId);
   }
 
-  async downloadAttachment(
+  override downloadAttachment(
     scope: CapabilityScope,
     integrationId: string,
     messageId: string,
     attachmentId: string,
     options?: GoogleGmailAttachmentDownloadOptions,
   ): Promise<GoogleGmailAttachmentDownloadResult> {
-    const { bytes, size } = await this.withGmailRead(scope.orgId, integrationId, (token) =>
-      getGmailAttachment(token, messageId, attachmentId),
-    );
-    const known = await this.resolveAttachmentMeta(
-      scope,
-      integrationId,
-      messageId,
-      attachmentId,
-      options?.meta,
-    );
-    const savePath = options?.savePath;
-    if (savePath !== undefined) {
-      const locator = options?.locator;
-      if (locator === undefined) {
-        throw new Error('savePath download requires a cwd-relative locator');
-      }
-      await mkdir(dirname(savePath), { recursive: true });
-      await writeFile(savePath, bytes);
-      return {
-        ok: true,
-        relPath: locator,
-        name: known.filename,
-        mediaType: known.mimeType,
-        size,
-      };
-    }
-    if (!this.attachments) {
-      throw new Error('attachment storage is not wired for the google pack');
-    }
-    const record = await this.attachments.put(scope, {
-      name: known.filename,
-      mediaType: known.mimeType,
-      bytes,
-    });
-    return { ...record, size };
+    return super.downloadAttachment(scope, integrationId, messageId, attachmentId, options);
   }
 
-  private async resolveAttachmentMeta(
-    scope: CapabilityScope,
-    integrationId: string,
-    messageId: string,
-    attachmentId: string,
-    hint?: GoogleGmailAttachmentHint,
-  ): Promise<GoogleGmailAttachmentMeta> {
-    if (hint && hint.filename !== '' && hint.mimeType !== '') {
-      return { attachmentId, filename: hint.filename, mimeType: hint.mimeType, size: 0 };
-    }
-    const message = await this.withGmailRead(scope.orgId, integrationId, (token) =>
-      getGmailMessage(token, messageId),
-    );
-    const found = message.attachments.find((entry) => entry.attachmentId === attachmentId);
-    if (!found) {
-      throw new Error(`attachment ${attachmentId} is not part of message ${messageId}`);
-    }
-    return found;
-  }
-
-  sendMessage(
+  override sendMessage(
     scope: CapabilityScope,
     integrationId: string,
     input: GoogleGmailSendInput,
   ): Promise<{ id: string; threadId: string }> {
-    return this.withGmailSend(scope.orgId, integrationId, (token) =>
-      sendGmailMessage(token, input),
-    );
+    return super.sendMessage(scope, integrationId, input);
   }
 
-  private withCalendar<T>(
-    orgId: string,
+  listChannels(scope: CapabilityScope, integrationId: string): Promise<GoogleYoutubeChannel[]> {
+    return this.youtube.listChannels(scope, integrationId);
+  }
+
+  listVideos(
+    scope: CapabilityScope,
     integrationId: string,
-    fn: (token: string) => Promise<T>,
-  ): Promise<T> {
-    return this.withScopes(orgId, integrationId, CALENDAR_SCOPES, fn);
+    maxResults?: number,
+  ): Promise<GoogleYoutubeVideoSummary[]> {
+    return this.youtube.listVideos(scope, integrationId, maxResults);
   }
 
-  private withGmailRead<T>(
-    orgId: string,
+  getVideo(
+    scope: CapabilityScope,
     integrationId: string,
-    fn: (token: string) => Promise<T>,
-  ): Promise<T> {
-    return this.withScopes(orgId, integrationId, GMAIL_READ_SCOPES, fn);
+    videoId: string,
+  ): Promise<GoogleYoutubeVideo> {
+    return this.youtube.getVideo(scope, integrationId, videoId);
   }
 
-  private withGmailSend<T>(
-    orgId: string,
+  updateVideo(
+    scope: CapabilityScope,
     integrationId: string,
-    fn: (token: string) => Promise<T>,
-  ): Promise<T> {
-    return this.withScopes(orgId, integrationId, GMAIL_SEND_SCOPES, fn);
+    videoId: string,
+    patch: GoogleYoutubeVideoPatch,
+  ): Promise<GoogleYoutubeVideo> {
+    return this.youtube.updateVideo(scope, integrationId, videoId, patch);
   }
 
-  private async withScopes<T>(
-    orgId: string,
+  uploadVideo(
+    scope: CapabilityScope,
     integrationId: string,
-    required: readonly string[],
-    fn: (token: string) => Promise<T>,
-  ): Promise<T> {
-    let scopes: ReadonlySet<string>;
-    try {
-      scopes = await this.deps.tokens.getGrantedScopes(orgId, integrationId);
-    } catch {
-      scopes = new Set<string>();
-    }
-    const missing = required.filter((scope) => !scopes.has(scope));
-    if (missing.length > 0) {
-      throw new IntegrationScopeMissingException(orgId, integrationId, missing, RECONNECT_HINT);
-    }
-    return this.accessToken(orgId, integrationId).then(fn);
+    input: GoogleYoutubeUploadInput,
+  ): Promise<GoogleYoutubeUploadResult> {
+    return this.youtube.uploadVideo(scope, integrationId, input);
   }
 
-  private accessToken(orgId: string, integrationId: string): Promise<string> {
-    return this.deps.tokens.getAccessToken(orgId, integrationId);
+  setThumbnail(
+    scope: CapabilityScope,
+    integrationId: string,
+    videoId: string,
+    input: GoogleYoutubeThumbnailInput,
+  ): Promise<void> {
+    return this.youtube.setThumbnail(scope, integrationId, videoId, input);
+  }
+
+  listPlaylists(
+    scope: CapabilityScope,
+    integrationId: string,
+    maxResults?: number,
+  ): Promise<GoogleYoutubePlaylist[]> {
+    return this.youtube.listPlaylists(scope, integrationId, maxResults);
+  }
+
+  addToPlaylist(
+    scope: CapabilityScope,
+    integrationId: string,
+    playlistId: string,
+    videoId: string,
+  ): Promise<void> {
+    return this.youtube.addToPlaylist(scope, integrationId, playlistId, videoId);
+  }
+
+  listComments(
+    scope: CapabilityScope,
+    integrationId: string,
+    videoId: string,
+    maxResults?: number,
+  ): Promise<GoogleYoutubeCommentThread[]> {
+    return this.youtube.listComments(scope, integrationId, videoId, maxResults);
+  }
+
+  replyToComment(
+    scope: CapabilityScope,
+    integrationId: string,
+    input: GoogleYoutubeReplyInput,
+  ): Promise<void> {
+    return this.youtube.replyToComment(scope, integrationId, input);
+  }
+
+  analyticsReport(
+    scope: CapabilityScope,
+    integrationId: string,
+    query: GoogleYoutubeAnalyticsQuery,
+  ): Promise<GoogleYoutubeAnalyticsReport> {
+    return this.youtube.analyticsReport(scope, integrationId, query);
+  }
+
+  getSpreadsheetMeta(
+    scope: CapabilityScope,
+    integrationId: string,
+    spreadsheetId: string,
+  ): Promise<GoogleSheetsMeta> {
+    return this.docsSuite.getSpreadsheetMeta(scope, integrationId, spreadsheetId);
+  }
+
+  readRange(
+    scope: CapabilityScope,
+    integrationId: string,
+    spreadsheetId: string,
+    range: string,
+  ): Promise<GoogleSheetsRange> {
+    return this.docsSuite.readRange(scope, integrationId, spreadsheetId, range);
+  }
+
+  writeRange(
+    scope: CapabilityScope,
+    integrationId: string,
+    input: GoogleSheetsWriteInput,
+  ): Promise<void> {
+    return this.docsSuite.writeRange(scope, integrationId, input);
+  }
+
+  appendRows(
+    scope: CapabilityScope,
+    integrationId: string,
+    input: GoogleSheetsAppendInput,
+  ): Promise<void> {
+    return this.docsSuite.appendRows(scope, integrationId, input);
+  }
+
+  readDocument(
+    scope: CapabilityScope,
+    integrationId: string,
+    documentId: string,
+  ): Promise<GoogleDocsDocument> {
+    return this.docsSuite.readDocument(scope, integrationId, documentId);
+  }
+
+  appendText(
+    scope: CapabilityScope,
+    integrationId: string,
+    input: GoogleDocsAppendInput,
+  ): Promise<void> {
+    return this.docsSuite.appendText(scope, integrationId, input);
+  }
+
+  listSites(scope: CapabilityScope, integrationId: string): Promise<GoogleSearchConsoleSite[]> {
+    return this.docsSuite.listSites(scope, integrationId);
+  }
+
+  searchAnalytics(
+    scope: CapabilityScope,
+    integrationId: string,
+    input: GoogleSearchConsoleQueryInput,
+  ): Promise<GoogleSearchConsoleRow[]> {
+    return this.docsSuite.searchAnalytics(scope, integrationId, input);
   }
 }
-
-const CALENDAR_SCOPES = [GOOGLE_CALENDAR_SCOPE] as const;
-const GMAIL_READ_SCOPES = [GOOGLE_GMAIL_READONLY_SCOPE] as const;
-const GMAIL_SEND_SCOPES = [GOOGLE_GMAIL_SEND_SCOPE] as const;
-const RECONNECT_HINT =
-  'Reconnect the account in Settings → Connectors to grant the missing scopes.';

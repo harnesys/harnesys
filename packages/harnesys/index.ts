@@ -524,6 +524,21 @@ export type {
   GithubWorkflowRunsInput,
 } from './src/ports/github-repos.ts';
 export type {
+  GoogleDocsAppendInput,
+  GoogleDocsDocument,
+  GoogleDocsPort,
+  GoogleSearchConsolePort,
+  GoogleSearchConsoleQueryInput,
+  GoogleSearchConsoleRow,
+  GoogleSearchConsoleSite,
+  GoogleSheetsAppendInput,
+  GoogleSheetsMeta,
+  GoogleSheetsPort,
+  GoogleSheetsRange,
+  GoogleSheetsTab,
+  GoogleSheetsWriteInput,
+} from './src/ports/google-docs-suite.ts';
+export type {
   GoogleCalendarEvent,
   GoogleCalendarEventInput,
   GoogleCalendarEventPatch,
@@ -542,6 +557,24 @@ export type {
   GoogleIntegrationResolutionStatus,
   GoogleWorkspacePort,
 } from './src/ports/google-workspace.ts';
+export type {
+  GoogleYoutubeAnalyticsColumn,
+  GoogleYoutubeAnalyticsQuery,
+  GoogleYoutubeAnalyticsReport,
+  GoogleYoutubeAnalyticsRow,
+  GoogleYoutubeChannel,
+  GoogleYoutubeCommentThread,
+  GoogleYoutubePlaylist,
+  GoogleYoutubePort,
+  GoogleYoutubePrivacy,
+  GoogleYoutubeReplyInput,
+  GoogleYoutubeThumbnailInput,
+  GoogleYoutubeUploadInput,
+  GoogleYoutubeUploadResult,
+  GoogleYoutubeVideo,
+  GoogleYoutubeVideoPatch,
+  GoogleYoutubeVideoSummary,
+} from './src/ports/google-youtube.ts';
 export type {
   GeneratedImageArtifact,
   ImageGenerationRequest,

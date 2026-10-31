@@ -1,3 +1,4 @@
+import type { GoogleOAuthService } from '@harnesys/contracts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { openSystemBrowser } from '@/features/manage-connectors/lib/system-browser';
@@ -10,20 +11,22 @@ import { env } from '@/shared/config/env';
 import { Button } from '@/shared/ui/button';
 import { StatusDot } from '@/shared/ui/status-dot';
 import { toast } from '@/shared/ui/toast';
+import { googleServiceLabels } from '../model/google-services';
 import { ConnectorCard } from './connector-card';
 
 interface GoogleSigninCardProps {
   orgId: string;
+  services: GoogleOAuthService[];
   onFinished: () => void;
 }
 
-export function GoogleSigninCard({ orgId, onFinished }: GoogleSigninCardProps) {
+export function GoogleSigninCard({ orgId, services, onFinished }: GoogleSigninCardProps) {
   const queryClient = useQueryClient();
   const [sessionId, setSessionId] = useState('');
   const [note, setNote] = useState('');
 
   const startMutation = useMutation({
-    mutationFn: () => startGoogleOAuthLoopback(orgId),
+    mutationFn: () => startGoogleOAuthLoopback(orgId, { services }),
     onSuccess: (res) => {
       setSessionId(res.sessionId);
       if (env.isTauri) {
@@ -110,8 +113,9 @@ export function GoogleSigninCard({ orgId, onFinished }: GoogleSigninCardProps) {
         </p>
       </div>
       <p className="text-muted-foreground text-xs leading-4">
-        Complete the sign-in in the Google window — it grants Drive, Calendar, and Gmail access and
-        adds the account below.
+        Complete the sign-in in the Google window — it grants {googleServiceLabels(services)} access
+        and adds the account below. If Google shows an unverified-app warning, press Advanced →
+        Continue.
       </p>
       {note ? <p className="text-destructive text-xs leading-4">{note}</p> : null}
       <div className="flex items-center justify-end gap-1">

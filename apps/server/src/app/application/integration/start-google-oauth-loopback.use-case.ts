@@ -1,5 +1,5 @@
 import { Configuration, Injectable, type ServerBinding } from '@harnesys/brix';
-import type { GoogleOAuthLoopbackStartResponse } from '@harnesys/contracts';
+import type { GoogleOAuthLoopbackStartResponse, GoogleOAuthService } from '@harnesys/contracts';
 import type { AppConfig } from '../../../config.schema.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import {
@@ -14,9 +14,11 @@ import {
   pkceChallengeS256,
 } from '../../infra/integration/google/google-oauth-device.ts';
 import { GoogleOAuthSessionStore } from '../../infra/integration/google/google-oauth-sessions.ts';
+import { googleScopesForServices } from '../../infra/integration/google/google-service-scopes.ts';
 
 export interface StartGoogleOAuthLoopbackInput {
   orgId: string;
+  services?: GoogleOAuthService[];
 }
 
 type LoopbackServerConfig = AppConfig & { server: ServerBinding };
@@ -37,6 +39,7 @@ export class StartGoogleOAuthLoopbackUseCase {
     const authUrl = buildLoopbackAuthorizationUrl({
       clientId: client.clientId,
       redirectUri: googleRedirectUri(this.config),
+      scope: googleScopesForServices(input.services),
       state,
       challenge: await pkceChallengeS256(verifier),
     });

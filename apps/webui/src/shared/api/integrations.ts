@@ -5,6 +5,7 @@ import type {
   GithubInstallStatusResponse,
   GithubManifestStartResponse,
   GithubReposResponse,
+  GoogleOAuthService,
   IntegrationsListResponse,
 } from '@harnesys/contracts';
 import { queryOptions } from '@tanstack/react-query';
@@ -83,11 +84,16 @@ export function disconnectIntegration(
   );
 }
 
-export function startGoogleOAuthLoopback(orgId: string): Promise<GoogleOAuthStartResponse> {
+export function startGoogleOAuthLoopback(
+  orgId: string,
+  body: { services?: GoogleOAuthService[] } = {},
+): Promise<GoogleOAuthStartResponse> {
   return apiJson(
     `/api/orgs/${encodeURIComponent(orgId)}/integrations/google/oauth/loopback/start`,
     {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
     },
   );
 }

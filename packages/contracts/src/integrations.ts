@@ -16,6 +16,7 @@ export const IntegrationSchema = z.object({
   externalAccountId: z.string().min(1),
   credRef: z.string().min(1),
   providerJson: z.record(z.string(), z.unknown()).nullable().default(null),
+  grantedScopes: z.array(z.string()).optional(),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
   lastRefreshAt: z.string().min(1).nullable(),
@@ -207,3 +208,24 @@ export const GithubReposQuerySchema = z.object({
   integrationId: z.string().uuid(),
 });
 export type GithubReposQuery = z.infer<typeof GithubReposQuerySchema>;
+
+export const GoogleOAuthServiceSchema = z.enum([
+  'drive',
+  'gmail',
+  'calendar',
+  'youtube',
+  'sheets',
+  'docs',
+  'search_console',
+]);
+export type GoogleOAuthService = z.infer<typeof GoogleOAuthServiceSchema>;
+
+export const GoogleOAuthLoopbackStartBodySchema = z
+  .object({
+    services: z.array(GoogleOAuthServiceSchema).min(1),
+  })
+  .refine((body) => !(body.services.includes('youtube') && body.services.length > 1), {
+    message:
+      'YouTube must be requested on its own — Google rejects YouTube scopes combined with other services',
+  });
+export type GoogleOAuthLoopbackStartBody = z.infer<typeof GoogleOAuthLoopbackStartBodySchema>;

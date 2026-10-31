@@ -44,10 +44,17 @@ describe('loopback authorization url', () => {
     expect(url.searchParams.get('code_challenge_method')).toBe('S256');
   });
 
-  test('scopes include Gmail, Calendar and Drive', () => {
+  test('scopes include Gmail, Calendar, Drive, YouTube, Sheets, Docs and Search Console', () => {
     expect(GOOGLE_OAUTH_SCOPES).toContain('https://www.googleapis.com/auth/gmail.readonly');
     expect(GOOGLE_OAUTH_SCOPES).toContain('https://www.googleapis.com/auth/gmail.send');
     expect(GOOGLE_OAUTH_SCOPES).toContain('https://www.googleapis.com/auth/calendar');
     expect(GOOGLE_OAUTH_SCOPES).toContain('https://www.googleapis.com/auth/drive.file');
+    expect(GOOGLE_OAUTH_SCOPES).toContain('https://www.googleapis.com/auth/youtube.readonly');
+    expect(GOOGLE_OAUTH_SCOPES).toContain('https://www.googleapis.com/auth/youtube.upload');
+    expect(GOOGLE_OAUTH_SCOPES).toContain('https://www.googleapis.com/auth/youtube.force-ssl');
+    expect(GOOGLE_OAUTH_SCOPES).toContain('https://www.googleapis.com/auth/yt-analytics.readonly');
+    expect(GOOGLE_OAUTH_SCOPES).toContain('https://www.googleapis.com/auth/spreadsheets');
+    expect(GOOGLE_OAUTH_SCOPES).toContain('https://www.googleapis.com/auth/documents');
+    expect(GOOGLE_OAUTH_SCOPES).toContain('https://www.googleapis.com/auth/webmasters.readonly');
   });
 });

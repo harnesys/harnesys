@@ -154,7 +154,6 @@ function ConnectorBody({
     return (
       <GoogleDetail
         orgId={orgId}
-        capabilities={connector.capabilities}
         accounts={accounts}
         sources={sources}
         sourcesLoading={sourcesLoading}

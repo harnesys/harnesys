@@ -1,4 +1,10 @@
 import type { CapabilityScope } from '../domain/pack.ts';
+import type {
+  GoogleDocsPort,
+  GoogleSearchConsolePort,
+  GoogleSheetsPort,
+} from './google-docs-suite.ts';
+import type { GoogleYoutubePort } from './google-youtube.ts';
 import type { ThreadAttachmentRecord } from './thread-attachments.ts';
 
 export type GoogleIntegrationResolutionStatus =
@@ -122,7 +128,11 @@ export interface GoogleGmailAttachmentDownloadOptions {
   locator?: string;
 }
 
-export interface GoogleWorkspacePort {
+export interface GoogleWorkspacePort
+  extends GoogleYoutubePort,
+    GoogleSheetsPort,
+    GoogleDocsPort,
+    GoogleSearchConsolePort {
   resolveIntegration(
     scope: CapabilityScope,
     pinnedIntegrationId?: string,

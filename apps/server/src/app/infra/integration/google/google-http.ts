@@ -4,10 +4,11 @@ const EXCERPT_LIMIT = 300;
 
 export interface GoogleApiCall {
   token: string;
-  method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   path: string;
   query?: URLSearchParams;
   body?: unknown;
+  headers?: Record<string, string>;
 }
 
 export async function googleApiJson<T>(call: GoogleApiCall): Promise<T> {
@@ -22,6 +23,7 @@ export async function googleApiJson<T>(call: GoogleApiCall): Promise<T> {
     headers: {
       Authorization: `Bearer ${call.token}`,
       ...(call.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      ...(call.headers ?? {}),
     },
     ...(call.body !== undefined ? { body: JSON.stringify(call.body) } : {}),
   });

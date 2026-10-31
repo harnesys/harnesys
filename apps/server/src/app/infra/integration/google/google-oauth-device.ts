@@ -5,6 +5,14 @@ export const GOOGLE_DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.fi
 export const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
 export const GOOGLE_GMAIL_READONLY_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
 export const GOOGLE_GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
+export const GOOGLE_YOUTUBE_READONLY_SCOPE = 'https://www.googleapis.com/auth/youtube.readonly';
+export const GOOGLE_YOUTUBE_UPLOAD_SCOPE = 'https://www.googleapis.com/auth/youtube.upload';
+export const GOOGLE_YOUTUBE_MANAGE_SCOPE = 'https://www.googleapis.com/auth/youtube.force-ssl';
+export const GOOGLE_YT_ANALYTICS_READONLY_SCOPE =
+  'https://www.googleapis.com/auth/yt-analytics.readonly';
+export const GOOGLE_SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
+export const GOOGLE_DOCS_SCOPE = 'https://www.googleapis.com/auth/documents';
+export const GOOGLE_SEARCH_CONSOLE_SCOPE = 'https://www.googleapis.com/auth/webmasters.readonly';
 export const GOOGLE_USERINFO_PROFILE_SCOPE = 'https://www.googleapis.com/auth/userinfo.profile';
 export const GOOGLE_USERINFO_EMAIL_SCOPE = 'https://www.googleapis.com/auth/userinfo.email';
 export const GOOGLE_OAUTH_SCOPES: readonly string[] = [
@@ -13,6 +21,13 @@ export const GOOGLE_OAUTH_SCOPES: readonly string[] = [
   GOOGLE_CALENDAR_SCOPE,
   GOOGLE_GMAIL_READONLY_SCOPE,
   GOOGLE_GMAIL_SEND_SCOPE,
+  GOOGLE_YOUTUBE_READONLY_SCOPE,
+  GOOGLE_YOUTUBE_UPLOAD_SCOPE,
+  GOOGLE_YOUTUBE_MANAGE_SCOPE,
+  GOOGLE_YT_ANALYTICS_READONLY_SCOPE,
+  GOOGLE_SHEETS_SCOPE,
+  GOOGLE_DOCS_SCOPE,
+  GOOGLE_SEARCH_CONSOLE_SCOPE,
   GOOGLE_USERINFO_PROFILE_SCOPE,
   GOOGLE_USERINFO_EMAIL_SCOPE,
 ];

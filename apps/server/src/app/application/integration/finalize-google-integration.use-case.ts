@@ -29,6 +29,7 @@ export class FinalizeGoogleIntegrationUseCase {
   async execute(input: FinalizeGoogleIntegrationInput): Promise<FinalizeGoogleIntegrationResult> {
     const credRef = crypto.randomUUID();
     await saveGoogleTokens(this.secrets, input.orgId, credRef, input.tokens);
+    const grantedScopes = grantedScopesOf(input.tokens);
     const identity = await fetchGoogleAccountIdentity(input.tokens.accessToken, credRef);
     const now = new Date().toISOString();
     const existing = this.registry.findByExternalAccount(
@@ -41,6 +42,7 @@ export class FinalizeGoogleIntegrationUseCase {
         status: 'connected',
         accountLabel: identity.accountLabel,
         credRef,
+        providerJson: { ...(existing.providerJson ?? {}), grantedScopes },
         lastRefreshAt: now,
       });
       return { integration: updated, credRef };
@@ -53,7 +55,7 @@ export class FinalizeGoogleIntegrationUseCase {
       accountLabel: identity.accountLabel,
       externalAccountId: identity.externalAccountId,
       credRef,
-      providerJson: null,
+      providerJson: grantedScopes.length > 0 ? { grantedScopes } : null,
       createdAt: now,
       updatedAt: now,
       lastRefreshAt: now,
@@ -66,6 +68,10 @@ export class FinalizeGoogleIntegrationUseCase {
 interface GoogleAccountIdentity {
   externalAccountId: string;
   accountLabel: string;
+}
+
+function grantedScopesOf(tokens: GoogleTokenSet): string[] {
+  return (tokens.scope ?? '').split(' ').filter((scope) => scope !== '');
 }
 
 async function fetchGoogleAccountIdentity(

@@ -1,4 +1,4 @@
-import type { ConnectorCapability, Integration } from '@harnesys/contracts';
+import type { Integration } from '@harnesys/contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { googleAppStatusQuery, googleAppStatusQueryKey } from '@/shared/api/integrations';
@@ -12,33 +12,20 @@ import { GoogleAppCredentialsDialog } from './google-app-credentials-dialog';
 
 interface GoogleDetailProps {
   orgId: string;
-  capabilities: ConnectorCapability[];
   accounts: Integration[];
   sources: Source[] | undefined;
   sourcesLoading: boolean;
 }
 
-export function GoogleDetail({
-  orgId,
-  capabilities,
-  accounts,
-  sources,
-  sourcesLoading,
-}: GoogleDetailProps) {
-  const [connecting, setConnecting] = useState(false);
-
+export function GoogleDetail({ orgId, accounts, sources, sourcesLoading }: GoogleDetailProps) {
   return (
     <div className="flex flex-col gap-8">
       <GoogleAppSection orgId={orgId} />
       <GoogleAccountsSection
         orgId={orgId}
-        capabilities={capabilities}
         accounts={accounts}
         sources={sources}
         sourcesLoading={sourcesLoading}
-        connecting={connecting}
-        onConnect={() => setConnecting(true)}
-        onFinishConnect={() => setConnecting(false)}
       />
     </div>
   );
@@ -57,7 +44,7 @@ function GoogleAppSection({ orgId }: { orgId: string }) {
   return (
     <SettingsSection
       label="Google Cloud App"
-      description="One OAuth client authorizes every connected account. Credentials are stored encrypted in this organization only — Harnesys never sees them."
+      description="One OAuth client authorizes every connected account. Credentials are stored encrypted in this organization only — Harnesys never sees them. The wizard below explains each Google Cloud step: which APIs to enable, how to publish the consent screen, and where to create the client."
       testId="connectors-google-app-section"
     >
       <ConnectorCard className="flex items-center gap-3 p-4">
