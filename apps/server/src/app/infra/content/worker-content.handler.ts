@@ -120,7 +120,10 @@ async function executeOp(orgId: string, req: WorkerRequest, deps: ContentOpDeps)
         }).absoluteRoot;
   switch (req.op) {
     case 'tree':
-      return listTreeAt(root, req.relPath, { includeIgnored: req.includeIgnored === true });
+      return listTreeAt(root, req.relPath, {
+        includeIgnored: req.includeIgnored === true,
+        ...(req.depth !== undefined ? { depth: req.depth } : {}),
+      });
     case 'read': {
       const result = readAt(root, req.relPath);
       return {

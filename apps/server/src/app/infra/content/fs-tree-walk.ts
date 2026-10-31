@@ -14,7 +14,7 @@ import { safe, toRel } from './fs-content-ops.ts';
 export function listTreeAt(
   root: string,
   relPath: string,
-  options?: { includeIgnored?: boolean },
+  options?: { includeIgnored?: boolean; depth?: number },
 ): ContentTreeResult {
   const abs = safe(root, relPath);
   if (!existsSync(abs)) {
@@ -31,9 +31,11 @@ export function listTreeAt(
       out: entries,
       layers: gitLayersForRoot(root, relPath),
       includeIgnored: options?.includeIgnored === true,
+      maxDepth: options?.depth,
     },
     abs,
     relPath,
+    1,
   );
   return { entries, truncated };
 }
@@ -74,21 +76,28 @@ interface WalkContext {
   out: ContentEntry[];
   layers: GitIgnoreLayer[];
   includeIgnored?: boolean;
+  maxDepth?: number;
 }
 
-function walk(ctx: WalkContext, dir: string, relDir: string): boolean {
+function walk(ctx: WalkContext, dir: string, relDir: string, level: number): boolean {
   for (const name of readdirSync(dir)) {
     if (ctx.out.length >= MAX_TREE_ENTRIES) {
       return true;
     }
-    if (walkEntry(ctx, dir, name, relDir)) {
+    if (walkEntry(ctx, dir, name, relDir, level)) {
       return true;
     }
   }
   return false;
 }
 
-function walkEntry(ctx: WalkContext, dir: string, name: string, relDir: string): boolean {
+function walkEntry(
+  ctx: WalkContext,
+  dir: string,
+  name: string,
+  relDir: string,
+  level: number,
+): boolean {
   const abs = join(dir, name);
   const st = statSync(abs);
   const isDir = st.isDirectory();
@@ -128,10 +137,14 @@ function walkEntry(ctx: WalkContext, dir: string, name: string, relDir: string):
     return false;
   }
   ctx.out.push({ name, path, type: 'dir', mtime: st.mtime.toISOString() });
+  if (ctx.maxDepth !== undefined && level >= ctx.maxDepth) {
+    return false;
+  }
   const nested = loadIgnoreLayer(abs, path);
   return walk(
     { root: ctx.root, out: ctx.out, layers: nested ? [...ctx.layers, nested] : ctx.layers },
     abs,
     path,
+    level + 1,
   );
 }

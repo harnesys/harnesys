@@ -39,7 +39,7 @@ export class LocalFsContentAdapter extends OrgContentPort {
     sourceId: string,
     relPath: string,
     worktreeId?: string,
-    options?: { includeIgnored?: boolean },
+    options?: { includeIgnored?: boolean; depth?: number },
   ): Promise<ContentTreeResult> {
     return Promise.resolve(
       listTreeAt(this.contentRoot(orgId, sourceId, worktreeId), relPath, options),

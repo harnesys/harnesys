@@ -44,7 +44,7 @@ export class RoutingContentAdapter extends OrgContentPort {
     sourceId: string,
     relPath: string,
     worktreeId?: string,
-    options?: { includeIgnored?: boolean },
+    options?: { includeIgnored?: boolean; depth?: number },
   ): Promise<ContentTreeResult> {
     return this.route(orgId, sourceId, (ctx) => {
       if (!ctx.remote) {
@@ -56,6 +56,7 @@ export class RoutingContentAdapter extends OrgContentPort {
         relPath,
         ...(worktreeId ? { worktreeId } : {}),
         ...(options?.includeIgnored === true ? { includeIgnored: true } : {}),
+        ...(options?.depth !== undefined ? { depth: options.depth } : {}),
       });
     });
   }

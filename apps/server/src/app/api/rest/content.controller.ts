@@ -64,6 +64,7 @@ export class ContentController {
       path: query.path,
       worktreeId: query.worktreeId,
       includeIgnored: query.includeIgnored === 'true',
+      depth: query.depth,
     });
   }
 

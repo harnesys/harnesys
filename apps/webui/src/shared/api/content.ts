@@ -91,6 +91,7 @@ export async function listContentTree(
   path = '',
   worktreeId?: string,
   includeIgnored?: boolean,
+  depth?: number,
 ): Promise<ContentTreeResponse> {
   const qs = new URLSearchParams();
   if (path) {
@@ -101,6 +102,9 @@ export async function listContentTree(
   }
   if (includeIgnored) {
     qs.set('includeIgnored', 'true');
+  }
+  if (depth !== undefined) {
+    qs.set('depth', String(depth));
   }
   const suffix = qs.toString() ? `?${qs.toString()}` : '';
   const response = await apiRequest(

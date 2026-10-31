@@ -41,11 +41,20 @@ function contentBase(orgId: string, sourceId: string): string {
 export function listSourceFiles(
   projectId: string,
   subPath = '',
-  options?: { includeIgnored?: boolean },
+  options?: { includeIgnored?: boolean; depth?: number },
 ) {
   const orgId = requireOrgId();
-  return listContentTree(orgId, projectId, subPath, undefined, options?.includeIgnored).then(
-    (tree) => tree.entries.map((entry) => toEntry(entry)),
+  return listContentTree(
+    orgId,
+    projectId,
+    subPath,
+    undefined,
+    options?.includeIgnored,
+    options?.depth,
+  ).then((tree) =>
+    tree.entries.map((entry) =>
+      toEntry(entry, entry.type === 'dir' && options?.depth !== undefined),
+    ),
   );
 }
 

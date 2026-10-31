@@ -44,6 +44,7 @@ export const ContentPathQuerySchema = z.object({
   path: z.string().default(''),
   worktreeId: ContentWorktreeIdSchema.optional(),
   includeIgnored: z.enum(['true', 'false']).optional(),
+  depth: z.coerce.number().int().min(1).optional(),
 });
 export type ContentPathQuery = z.infer<typeof ContentPathQuerySchema>;
 

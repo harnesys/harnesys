@@ -8,6 +8,7 @@ export interface ListTreeInput {
   path: string;
   worktreeId?: string;
   includeIgnored?: boolean;
+  depth?: number;
 }
 
 @Injectable()
@@ -20,7 +21,10 @@ export class ListTreeUseCase {
       input.sourceId,
       input.path,
       input.worktreeId,
-      { includeIgnored: input.includeIgnored === true },
+      {
+        includeIgnored: input.includeIgnored === true,
+        ...(input.depth !== undefined ? { depth: input.depth } : {}),
+      },
     );
     return truncated ? { path: input.path, entries, truncated } : { path: input.path, entries };
   }
