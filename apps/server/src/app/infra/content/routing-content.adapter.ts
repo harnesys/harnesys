@@ -44,16 +44,18 @@ export class RoutingContentAdapter extends OrgContentPort {
     sourceId: string,
     relPath: string,
     worktreeId?: string,
+    options?: { includeIgnored?: boolean },
   ): Promise<ContentTreeResult> {
     return this.route(orgId, sourceId, (ctx) => {
       if (!ctx.remote) {
-        return this.local.listTree(orgId, sourceId, relPath, worktreeId);
+        return this.local.listTree(orgId, sourceId, relPath, worktreeId, options);
       }
       return this.proxyJson<ContentTreeResult>(ctx.hostId, {
         op: 'tree',
         sourceId,
         relPath,
         ...(worktreeId ? { worktreeId } : {}),
+        ...(options?.includeIgnored === true ? { includeIgnored: true } : {}),
       });
     });
   }

@@ -8,6 +8,7 @@ export interface ContentEntry {
   type: 'file' | 'dir';
   size?: number;
   mtime?: string;
+  ignored?: boolean;
 }
 
 export interface ContentTreeResponse {
@@ -89,6 +90,7 @@ export async function listContentTree(
   sourceId: string,
   path = '',
   worktreeId?: string,
+  includeIgnored?: boolean,
 ): Promise<ContentTreeResponse> {
   const qs = new URLSearchParams();
   if (path) {
@@ -96,6 +98,9 @@ export async function listContentTree(
   }
   if (worktreeId) {
     qs.set('worktreeId', worktreeId);
+  }
+  if (includeIgnored) {
+    qs.set('includeIgnored', 'true');
   }
   const suffix = qs.toString() ? `?${qs.toString()}` : '';
   const response = await apiRequest(

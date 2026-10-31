@@ -12,7 +12,6 @@ import { SourceLocationPort } from '../../domain/source/source-location.port.ts'
 import {
   downloadAt,
   duplicateAt,
-  listTreeAt,
   mkdirAt,
   moveAt,
   readAt,
@@ -22,6 +21,7 @@ import {
   writeAt,
 } from './fs-content-ops.ts';
 import { copyAt, importAt } from './fs-copy-ops.ts';
+import { listTreeAt } from './fs-tree-walk.ts';
 import { resolveWorktreeContentRoot } from './worktree-content-root.ts';
 
 @Injectable()
@@ -39,8 +39,11 @@ export class LocalFsContentAdapter extends OrgContentPort {
     sourceId: string,
     relPath: string,
     worktreeId?: string,
+    options?: { includeIgnored?: boolean },
   ): Promise<ContentTreeResult> {
-    return Promise.resolve(listTreeAt(this.contentRoot(orgId, sourceId, worktreeId), relPath));
+    return Promise.resolve(
+      listTreeAt(this.contentRoot(orgId, sourceId, worktreeId), relPath, options),
+    );
   }
 
   read(

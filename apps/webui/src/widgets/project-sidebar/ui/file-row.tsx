@@ -46,10 +46,15 @@ function FileRowLabel({
         className={cn(
           'min-w-0 truncate text-sm group-data-[collapsible=icon]:hidden',
           selected ? 'text-sidebar-foreground/90' : 'text-sidebar-foreground/70',
+          entry.ignored && 'text-muted-foreground/60 italic',
           git.decorationClass,
         )}
         style={git.color ? { color: git.color } : undefined}
-        title={git.status ? `git: ${git.status}` : undefined}
+        title={
+          [git.status ? `git: ${git.status}` : undefined, entry.ignored ? 'gitignored' : undefined]
+            .filter(Boolean)
+            .join(' · ') || undefined
+        }
       >
         {entry.name}
       </span>

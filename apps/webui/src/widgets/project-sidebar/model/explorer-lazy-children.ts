@@ -35,7 +35,8 @@ export function ensurePrunedChildren(args: {
     return;
   }
   state.fetched.add(dirPath);
-  void listSourceFiles(projectId, dirPath)
+  const includeIgnored = entry.ignored === true;
+  void listSourceFiles(projectId, dirPath, { includeIgnored })
     .then((fetched) => {
       qc.setQueryData<ProjectFileEntry[]>(treeKey, (old) => {
         const prev = old ?? [];

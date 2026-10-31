@@ -29,6 +29,7 @@ export const WorkerContentRequestSchema = z.object({
   bytesBase64: z.string().optional(),
   ifMatch: z.string().nullable().optional(),
   worktreeId: z.string().min(1).max(200).optional(),
+  includeIgnored: z.boolean().optional(),
 });
 export type WorkerContentRequest = z.infer<typeof WorkerContentRequestSchema>;
 

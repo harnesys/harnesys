@@ -16,6 +16,7 @@ export interface ProjectFileEntry {
   size?: number;
   modifiedAt?: string;
   pruned?: boolean;
+  ignored?: boolean;
 }
 export interface ProjectLspEntry {
   serverId: string;

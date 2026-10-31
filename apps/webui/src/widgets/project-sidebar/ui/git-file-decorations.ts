@@ -33,6 +33,9 @@ export function getDirAggregatedStatus(
   let bestRank = -1;
   for (const [key, status] of Object.entries(map)) {
     if (key === dirPath || key.startsWith(prefix)) {
+      if (status === 'ignored') {
+        continue;
+      }
       const rank = statusRank(status as GitFileStatus);
       if (rank > bestRank) {
         bestRank = rank;

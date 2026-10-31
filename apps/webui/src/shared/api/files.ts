@@ -30,6 +30,7 @@ function toEntry(entry: ContentEntry, pruned = false): ProjectFileEntry {
     size: entry.size,
     modifiedAt: entry.mtime,
     ...(pruned ? { pruned: true } : {}),
+    ...(entry.ignored ? { ignored: true } : {}),
   };
 }
 
@@ -37,10 +38,14 @@ function contentBase(orgId: string, sourceId: string): string {
   return `/api/orgs/${encodeURIComponent(orgId)}/sources/${encodeURIComponent(sourceId)}/content`;
 }
 
-export function listSourceFiles(projectId: string, subPath = '') {
+export function listSourceFiles(
+  projectId: string,
+  subPath = '',
+  options?: { includeIgnored?: boolean },
+) {
   const orgId = requireOrgId();
-  return listContentTree(orgId, projectId, subPath).then((tree) =>
-    tree.entries.map((entry) => toEntry(entry)),
+  return listContentTree(orgId, projectId, subPath, undefined, options?.includeIgnored).then(
+    (tree) => tree.entries.map((entry) => toEntry(entry)),
   );
 }
 
@@ -68,7 +73,13 @@ export async function listSourceFilesTree(
   const orgId = requireOrgId();
   let tree: ContentTreeResponse;
   try {
-    tree = await listContentTree(orgId, projectId, '', options?.worktreeId);
+    tree = await listContentTree(
+      orgId,
+      projectId,
+      '',
+      options?.worktreeId,
+      options?.includeHidden === true,
+    );
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       return [];

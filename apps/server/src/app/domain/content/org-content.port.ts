@@ -22,6 +22,7 @@ export abstract class OrgContentPort {
     sourceId: string,
     relPath: string,
     worktreeId?: string,
+    options?: { includeIgnored?: boolean },
   ): Promise<ContentTreeResult>;
   abstract read(
     orgId: string,

@@ -12,7 +12,6 @@ import { SourceLocationPort } from '../../domain/source/source-location.port.ts'
 import {
   downloadAt,
   duplicateAt,
-  listTreeAt,
   mkdirAt,
   moveAt,
   readAt,
@@ -22,6 +21,7 @@ import {
   writeAt,
 } from './fs-content-ops.ts';
 import { copyAt } from './fs-copy-ops.ts';
+import { listTreeAt } from './fs-tree-walk.ts';
 import { listHostDirectories } from './list-host-directories.ts';
 import {
   type WorkerHostBrowseRequest,
@@ -120,7 +120,7 @@ async function executeOp(orgId: string, req: WorkerRequest, deps: ContentOpDeps)
         }).absoluteRoot;
   switch (req.op) {
     case 'tree':
-      return listTreeAt(root, req.relPath);
+      return listTreeAt(root, req.relPath, { includeIgnored: req.includeIgnored === true });
     case 'read': {
       const result = readAt(root, req.relPath);
       return {

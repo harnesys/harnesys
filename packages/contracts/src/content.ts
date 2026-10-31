@@ -13,6 +13,7 @@ export const ContentEntrySchema = z.object({
   type: ContentEntryTypeSchema,
   size: z.number().int().nonnegative().optional(),
   mtime: z.string().min(1).optional(),
+  ignored: z.boolean().optional(),
 });
 export type ContentEntry = z.infer<typeof ContentEntrySchema>;
 
@@ -42,6 +43,7 @@ export const ContentWorktreeIdSchema = z.string().min(1).max(200);
 export const ContentPathQuerySchema = z.object({
   path: z.string().default(''),
   worktreeId: ContentWorktreeIdSchema.optional(),
+  includeIgnored: z.enum(['true', 'false']).optional(),
 });
 export type ContentPathQuery = z.infer<typeof ContentPathQuerySchema>;
 

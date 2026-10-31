@@ -3,7 +3,6 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
-  readdirSync,
   readFileSync,
   realpathSync,
   renameSync,
@@ -12,10 +11,8 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
-import type { ContentEntry, ContentStat, ContentTreeResult } from '@harnesys/contracts';
-import { MAX_DOWNLOAD_BYTES, MAX_EDITOR_BYTES, MAX_TREE_ENTRIES } from '@harnesys/contracts';
-import ignore from 'ignore';
-import { SAFETY_NAMES } from '../../../const.ts';
+import type { ContentStat } from '@harnesys/contracts';
+import { MAX_DOWNLOAD_BYTES, MAX_EDITOR_BYTES } from '@harnesys/contracts';
 import {
   ContentAlreadyExistsException,
   ContentConflictException,
@@ -27,7 +24,6 @@ import type {
   ContentReadResult,
   ContentWriteResult,
 } from '../../domain/content/org-content.port.ts';
-import { type GitIgnoreLayer, ignoredByLayers } from '../knowledge/knowledge-walk-ignore.ts';
 import { PathJailEscapeError, resolveSafe } from './path-jail.ts';
 
 export function resolveContentRoot(absolutePath: string): string {
@@ -36,55 +32,6 @@ export function resolveContentRoot(absolutePath: string): string {
     throw new ContentNotFoundException('');
   }
   return realpathSync(resolved);
-}
-
-export function listTreeAt(root: string, relPath: string): ContentTreeResult {
-  const abs = safe(root, relPath);
-  if (!existsSync(abs)) {
-    throw new ContentNotFoundException(relPath);
-  }
-  const st = statSync(abs);
-  if (!st.isDirectory()) {
-    throw new ContentPathEscapeException('tree path is not a directory');
-  }
-  const entries: ContentEntry[] = [];
-  const truncated = walk(
-    { root, out: entries, layers: gitLayersForRoot(root, relPath) },
-    abs,
-    relPath,
-  );
-  return { entries, truncated };
-}
-
-function loadIgnoreLayer(absDir: string, relDir: string): GitIgnoreLayer | undefined {
-  const file = join(absDir, '.gitignore');
-  if (!existsSync(file)) {
-    return undefined;
-  }
-  return { relDir, ig: ignore().add(readFileSync(file, 'utf8')) };
-}
-
-function gitLayersForRoot(root: string, relPath: string): GitIgnoreLayer[] {
-  const layers: GitIgnoreLayer[] = [];
-  const rootLayer = loadIgnoreLayer(root, '');
-  if (rootLayer) {
-    layers.push(rootLayer);
-  }
-  if (!relPath) {
-    return layers;
-  }
-  const parts = relPath.split('/');
-  let acc = '';
-  let accAbs = root;
-  for (const part of parts) {
-    accAbs = join(accAbs, part);
-    acc = acc ? `${acc}/${part}` : part;
-    const layer = loadIgnoreLayer(accAbs, acc);
-    if (layer) {
-      layers.push(layer);
-    }
-  }
-  return layers;
 }
 
 export function readAt(root: string, relPath: string): ContentReadResult {
@@ -285,61 +232,11 @@ export function safe(root: string, relPath: string): string {
   }
 }
 
-interface WalkContext {
-  root: string;
-  out: ContentEntry[];
-  layers: GitIgnoreLayer[];
-}
-
-function walk(ctx: WalkContext, dir: string, relDir: string): boolean {
-  for (const name of readdirSync(dir)) {
-    if (ctx.out.length >= MAX_TREE_ENTRIES) {
-      return true;
-    }
-    if (SAFETY_NAMES.has(name)) {
-      continue;
-    }
-    if (walkEntry(ctx, dir, name, relDir)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function walkEntry(ctx: WalkContext, dir: string, name: string, relDir: string): boolean {
-  const abs = join(dir, name);
-  const st = statSync(abs);
-  const isDir = st.isDirectory();
-  const path = toRel(ctx.root, abs);
-  if (ignoredByLayers(ctx.layers, relDir ? `${relDir}/${name}` : name, isDir)) {
-    return false;
-  }
-  if (!isDir) {
-    if (st.isFile()) {
-      ctx.out.push({
-        name,
-        path,
-        type: 'file',
-        size: st.size,
-        mtime: st.mtime.toISOString(),
-      });
-    }
-    return false;
-  }
-  ctx.out.push({ name, path, type: 'dir', mtime: st.mtime.toISOString() });
-  const nested = loadIgnoreLayer(abs, path);
-  return walk(
-    { root: ctx.root, out: ctx.out, layers: nested ? [...ctx.layers, nested] : ctx.layers },
-    abs,
-    path,
-  );
-}
-
 function makeEtag(mtimeMs: number, size: number): string {
   return `"${mtimeMs.toString(16)}-${size.toString(16)}"`;
 }
 
-function toRel(root: string, abs: string): string {
+export function toRel(root: string, abs: string): string {
   const rel = relative(root, abs);
   return rel.split(sep).join('/');
 }
