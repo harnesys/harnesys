@@ -9,6 +9,7 @@ export interface CompactionDraft {
   summaryModel: string;
   microcompact: boolean;
   microcompactKeepRounds: string;
+  microcompactStepRounds: string;
   microcompactMinGainTokens: string;
   compactionFailureLimit: string;
   compactionRapidRefillSteps: string;
@@ -25,6 +26,7 @@ export function compactionDraftFrom(ref: PortRef | null): CompactionDraft {
       summaryModel: '',
       microcompact: false,
       microcompactKeepRounds: '5',
+      microcompactStepRounds: '',
       microcompactMinGainTokens: '256',
       compactionFailureLimit: '3',
       compactionRapidRefillSteps: '3',
@@ -42,6 +44,7 @@ export function compactionDraftFrom(ref: PortRef | null): CompactionDraft {
     summaryModel: summary.model,
     microcompact: spec.microcompact === true,
     microcompactKeepRounds: stringifyNumber(spec.microcompactKeepRounds, '5'),
+    microcompactStepRounds: stringifyNumber(spec.microcompactStepRounds, ''),
     microcompactMinGainTokens: stringifyNumber(spec.microcompactMinGainTokens, '256'),
     compactionFailureLimit: stringifyNumber(spec.compactionFailureLimit, '3'),
     compactionRapidRefillSteps: stringifyNumber(spec.compactionRapidRefillSteps, '3'),
@@ -56,6 +59,7 @@ export function toCompactionPortRef(draft: CompactionDraft): PortRef {
     auto: draft.auto,
     microcompact: draft.microcompact,
     microcompactKeepRounds: parsePositiveInt(draft.microcompactKeepRounds, 5),
+    microcompactStepRounds: parseOptionalPositiveInt(draft.microcompactStepRounds),
     microcompactMinGainTokens: parseNonNegativeInt(draft.microcompactMinGainTokens, 256),
     compactionFailureLimit: parseNonNegativeInt(draft.compactionFailureLimit, 3),
     compactionRapidRefillSteps: parseNonNegativeInt(draft.compactionRapidRefillSteps, 3),
@@ -98,4 +102,12 @@ function parseNonNegativeInt(value: string, fallback: number): number {
 function parsePositiveInt(value: string, fallback: number): number {
   const next = parseNonNegativeInt(value, fallback);
   return Math.max(1, next);
+}
+function parseOptionalPositiveInt(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  const next = Number(trimmed);
+  return Number.isFinite(next) && next >= 1 ? Math.floor(next) : undefined;
 }

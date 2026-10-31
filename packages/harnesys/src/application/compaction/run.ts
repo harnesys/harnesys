@@ -19,6 +19,8 @@ import { writeCompactionFile } from './file-log.ts';
 import { microcompactToolResults } from './microcompact.ts';
 import { planCut } from './plan-cut.ts';
 import { priorSummaryBlock, SUMMARY_SYSTEM_PROMPT, streamSummary } from './summarize.ts';
+
+const microcompactNotified = new WeakSet<object>();
 export interface CompactionGuard {
   consecutiveFailures: number;
   completedSteps: number[];
@@ -412,8 +414,15 @@ export async function* runSummaryPassIfDue(
       : parseThresholdSpec();
   const messages = ctx.state.messages;
   if (Array.isArray(messages) && spec.microcompact) {
+    if (!microcompactNotified.has(ctx.state)) {
+      microcompactNotified.add(ctx.state);
+      (ctx.logger ?? CONSOLE_LOGGER).warn(
+        `[compaction] microcompact is experimental: stepped window keep=${spec.microcompactKeepRounds} step=${spec.microcompactStepRounds}`,
+      );
+    }
     microcompactToolResults(messages as unknown[], {
       keepRounds: spec.microcompactKeepRounds,
+      stepRounds: spec.microcompactStepRounds,
       minGainTokens: spec.microcompactMinGainTokens,
     });
   }

@@ -150,7 +150,7 @@ describe('runSummaryPassIfDue threshold evaluation', () => {
   test('microcompact runs even when automatic compaction is off', async () => {
     const tool = { role: 'tool', toolCallId: 't', name: 'read_file', content: 'a'.repeat(2000) };
     const messages: unknown[] = [user(10)];
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 11; i++) {
       messages.push({ role: 'assistant', content: 'step' }, { ...tool }, user(10));
     }
     const agent = agentOf({ thresholdRatio: 0.8, auto: false, microcompact: true });

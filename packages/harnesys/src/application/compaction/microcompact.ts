@@ -26,8 +26,17 @@ function isMediaPayload(record: ToolRecord): boolean {
   const payload = parseFileToolResult(String(record.name ?? ''), record.content);
   return payload !== undefined && VISION_IMAGE_TYPES.includes(payload.mediaType);
 }
+function isAssistantRound(message: unknown): boolean {
+  if (!message || typeof message !== 'object') {
+    return false;
+  }
+  const m = message as Record<string, unknown>;
+  return m.role === 'assistant' && m.kind !== 'compaction';
+}
 export interface MicrocompactOptions {
   keepRounds?: number;
+  /** Experimental: uncleared assistant rounds to accumulate before a pass fires (default: keepRounds). */
+  stepRounds?: number;
   minGainTokens?: number;
 }
 function intOrDefault(value: unknown, min: number, fallback: number): number {
@@ -35,26 +44,40 @@ function intOrDefault(value: unknown, min: number, fallback: number): number {
     ? Math.floor(value)
     : fallback;
 }
+/**
+ * Experimental: clear tool-result bodies behind a stepped window.
+ *
+ * A pass fires only when at least `stepRounds` assistant rounds with intact
+ * tool results have accumulated behind the kept tail, then clears the whole
+ * batch in one pass. Between passes the history bytes stay stable, which
+ * keeps provider prompt caches warm; a per-step sliding boundary would
+ * rewrite history on every call and break the cache prefix each time.
+ */
 export function microcompactToolResults(
   messages: unknown[],
   options: MicrocompactOptions = {},
 ): boolean {
   const keepRounds = intOrDefault(options.keepRounds, 1, MICROCOMPACT_KEEP_ROUNDS);
+  const stepRounds = intOrDefault(options.stepRounds, 1, keepRounds);
   const minGainTokens = intOrDefault(options.minGainTokens, 0, MICROCOMPACT_MIN_GAIN_TOKENS);
   const rounds: number[] = [];
   for (let i = 0; i < messages.length; i++) {
-    const m = messages[i] as Record<string, unknown> | null | undefined;
-    if (m && typeof m === 'object' && m.role === 'assistant' && m.kind !== 'compaction') {
+    if (isAssistantRound(messages[i])) {
       rounds.push(i);
     }
   }
   const boundaryIndex = rounds.length - keepRounds;
-  const boundary = boundaryIndex >= 0 ? rounds[boundaryIndex] : undefined;
-  if (boundary === undefined || boundary <= 0) {
+  const boundary = boundaryIndex > 0 ? rounds[boundaryIndex] : undefined;
+  if (boundary === undefined) {
     return false;
   }
   const targets: ToolRecord[] = [];
+  const pendingRounds = new Set<number>();
+  let owner = -1;
   for (let i = 0; i < boundary; i++) {
+    if (isAssistantRound(messages[i])) {
+      owner = i;
+    }
     const record = toolRecordOf(messages[i]);
     if (!record || record.isError === true || isMediaPayload(record)) {
       continue;
@@ -63,8 +86,11 @@ export function microcompactToolResults(
       continue;
     }
     targets.push(record);
+    if (owner >= 0) {
+      pendingRounds.add(owner);
+    }
   }
-  if (targets.length === 0) {
+  if (targets.length === 0 || pendingRounds.size < stepRounds) {
     return false;
   }
   const gain = targets.reduce((sum, r) => sum + estimateMessageTokens(r), 0);

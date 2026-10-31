@@ -22,19 +22,23 @@ function history(rounds: number, toolChars = 10_000): unknown[] {
   }
   return out;
 }
+function toolContents(messages: unknown[]): string[] {
+  return messages
+    .filter((m) => (m as { role: string }).role === 'tool')
+    .map((m) => (m as { content: string }).content);
+}
 
 describe('microcompactToolResults', () => {
-  test('clears tool results older than the kept assistant rounds', () => {
-    const messages = history(7);
-    expect(microcompactToolResults(messages)).toBe(true);
-    const tools = messages.filter((m) => (m as { role: string }).role === 'tool');
-    const cleared = tools.slice(0, 2);
-    const kept = tools.slice(2);
-    for (const t of cleared) {
-      expect((t as { content: string }).content).toContain(MICROCOMPACT_CLEARED_MARKER);
+  test('clears a full batch of uncleared rounds behind the kept tail', () => {
+    const messages = history(9);
+    expect(microcompactToolResults(messages, { keepRounds: 2 })).toBe(true);
+    const cleared = toolContents(messages).slice(0, 7);
+    const kept = toolContents(messages).slice(7);
+    for (const content of cleared) {
+      expect(content).toContain(MICROCOMPACT_CLEARED_MARKER);
     }
-    for (const t of kept) {
-      expect((t as { content: string }).content).not.toContain(MICROCOMPACT_CLEARED_MARKER);
+    for (const content of kept) {
+      expect(content).not.toContain(MICROCOMPACT_CLEARED_MARKER);
     }
   });
 
@@ -43,14 +47,33 @@ describe('microcompactToolResults', () => {
     expect(microcompactToolResults(messages)).toBe(false);
   });
 
+  test('stepped trigger holds until a full step of uncleared rounds accumulates', () => {
+    const messages = history(5);
+    expect(microcompactToolResults(messages, { keepRounds: 2, stepRounds: 4 })).toBe(false);
+    const before = JSON.stringify(messages);
+    expect(microcompactToolResults(messages, { keepRounds: 2, stepRounds: 3 })).toBe(true);
+    expect(JSON.stringify(messages)).not.toBe(before);
+  });
+
+  test('fires again only after another full step accumulates', () => {
+    const messages = history(8);
+    expect(microcompactToolResults(messages, { keepRounds: 2 })).toBe(true);
+    const afterFirst = JSON.stringify(messages);
+    messages.push(assistant(), tool(10_000), user());
+    expect(microcompactToolResults(messages, { keepRounds: 2 })).toBe(false);
+    expect(JSON.stringify(messages.slice(0, 25))).toBe(afterFirst);
+    messages.push(assistant(), tool(10_000), user());
+    expect(microcompactToolResults(messages, { keepRounds: 2 })).toBe(true);
+    const cleared = toolContents(messages).filter((c) => c.includes(MICROCOMPACT_CLEARED_MARKER));
+    expect(cleared.length).toBe(8);
+  });
+
   test('skips when the gain is below the token threshold', () => {
     const tiny = Math.floor((MICROCOMPACT_MIN_GAIN_TOKENS * CHARS_PER_TOKEN_ESTIMATE) / 8);
     const messages = history(7, tiny);
-    expect(microcompactToolResults(messages)).toBe(false);
-    for (const m of messages) {
-      if ((m as { role: string }).role === 'tool') {
-        expect((m as { content: string }).content).not.toContain(MICROCOMPACT_CLEARED_MARKER);
-      }
+    expect(microcompactToolResults(messages, { keepRounds: 2 })).toBe(false);
+    for (const content of toolContents(messages)) {
+      expect(content).not.toContain(MICROCOMPACT_CLEARED_MARKER);
     }
   });
 
@@ -73,7 +96,7 @@ describe('microcompactToolResults', () => {
       user(),
       ...history(6),
     ];
-    expect(microcompactToolResults(messages)).toBe(true);
+    expect(microcompactToolResults(messages, { keepRounds: 2 })).toBe(true);
     expect((messages[2] as { content: string }).content).not.toContain(MICROCOMPACT_CLEARED_MARKER);
     expect((messages[3] as { content: string }).content).not.toContain(MICROCOMPACT_CLEARED_MARKER);
   });
@@ -81,17 +104,6 @@ describe('microcompactToolResults', () => {
   test('zero minGainTokens disables the gain floor instead of using the default', () => {
     const tiny = Math.floor((MICROCOMPACT_MIN_GAIN_TOKENS * CHARS_PER_TOKEN_ESTIMATE) / 8);
     const messages = history(7, tiny);
-    expect(microcompactToolResults(messages, { minGainTokens: 0 })).toBe(true);
-  });
-  test('honors custom keepRounds and minGainTokens', () => {
-    const messages = history(4);
-    expect(microcompactToolResults(messages, { keepRounds: 2 })).toBe(true);
-    const tools = messages.filter((m) => (m as { role: string }).role === 'tool');
-    expect((tools[0] as { content: string }).content).toContain(MICROCOMPACT_CLEARED_MARKER);
-    expect((tools[1] as { content: string }).content).toContain(MICROCOMPACT_CLEARED_MARKER);
-    expect((tools[2] as { content: string }).content).not.toContain(MICROCOMPACT_CLEARED_MARKER);
-
-    const strict = history(4, 400);
-    expect(microcompactToolResults(strict, { keepRounds: 2, minGainTokens: 100_000 })).toBe(false);
+    expect(microcompactToolResults(messages, { keepRounds: 2, minGainTokens: 0 })).toBe(true);
   });
 });

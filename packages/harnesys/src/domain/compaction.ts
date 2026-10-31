@@ -7,10 +7,12 @@ export interface CompactionSpec {
   auto?: boolean;
   summaryModel?: AgentModelRef;
   preCompactNote?: boolean;
-  /** Clear tool-result bodies older than N assistant rounds (default: off). */
+  /** Experimental: clear tool-result bodies behind a stepped window (default: off). */
   microcompact?: boolean;
-  /** Assistant rounds whose tool results stay intact (default 5). */
+  /** Experimental: assistant rounds whose tool results stay intact (default 5). */
   microcompactKeepRounds?: number;
+  /** Experimental: uncleared assistant rounds to accumulate before a stepped pass fires (default: keepRounds). */
+  microcompactStepRounds?: number;
   /** Minimum estimated token gain for a microcompact pass (default 256). */
   microcompactMinGainTokens?: number;
   /** Consecutive summary failures before compaction pauses (0 = never pause, default 3). */
@@ -28,6 +30,7 @@ export interface ParsedCompactionSpec {
   preCompactNote: boolean;
   microcompact: boolean;
   microcompactKeepRounds: number;
+  microcompactStepRounds: number;
   microcompactMinGainTokens: number;
   compactionFailureLimit: number;
   compactionRapidRefillSteps: number;
@@ -71,6 +74,10 @@ export function parseThresholdSpec(spec?: Record<string, unknown>): ParsedCompac
     preCompactNote: raw.preCompactNote !== false,
     microcompact: raw.microcompact === true,
     microcompactKeepRounds: positiveInt(raw.microcompactKeepRounds, 5),
+    microcompactStepRounds: positiveInt(
+      raw.microcompactStepRounds,
+      positiveInt(raw.microcompactKeepRounds, 5),
+    ),
     microcompactMinGainTokens: nonNegativeInt(raw.microcompactMinGainTokens, 256),
     compactionFailureLimit: nonNegativeInt(raw.compactionFailureLimit, 3),
     compactionRapidRefillSteps: nonNegativeInt(raw.compactionRapidRefillSteps, 3),

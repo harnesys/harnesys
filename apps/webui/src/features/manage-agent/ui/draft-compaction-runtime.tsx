@@ -49,15 +49,15 @@ export function CompactionRuntimeControls({
     <>
       <SwitchRow
         id="draft-compaction-microcompact"
-        label="Microcompact tool results"
-        description="Clear old tool-result bodies every step, keeping the most recent rounds. Off = never touch tool results between steps."
+        label="Microcompact tool results (experimental)"
+        description="Experimental. In one pass, clear tool-result bodies of accumulated rounds behind the kept tail. Between passes history stays byte-stable, so provider prompt caches keep hitting."
         checked={draft.microcompact}
         onChange={(microcompact) => patch({ microcompact })}
       />
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <NumberField
           id="draft-compaction-mc-keep"
-          label="Microcompact keep rounds"
+          label="Keep rounds"
           value={draft.microcompactKeepRounds}
           placeholder="5"
           description="Assistant rounds whose tool results stay intact. Default 5."
@@ -65,8 +65,17 @@ export function CompactionRuntimeControls({
           onChange={(microcompactKeepRounds) => patch({ microcompactKeepRounds })}
         />
         <NumberField
+          id="draft-compaction-mc-step"
+          label="Step rounds"
+          value={draft.microcompactStepRounds}
+          placeholder="keep"
+          description="Uncleared rounds to accumulate before a pass fires. Empty = keep rounds. Default keep."
+          disabled={!draft.microcompact}
+          onChange={(microcompactStepRounds) => patch({ microcompactStepRounds })}
+        />
+        <NumberField
           id="draft-compaction-mc-gain"
-          label="Microcompact min gain"
+          label="Min gain"
           value={draft.microcompactMinGainTokens}
           placeholder="256"
           description="Skip the pass when the estimated saving is below this many tokens. Default 256."
