@@ -114,6 +114,28 @@ describe('toAgentDefinition memoryPolicy', () => {
   });
 });
 
+describe('toAgentDefinition generation', () => {
+  test('config.generation is mapped to the top-level generation handle', () => {
+    const generation = {
+      temperature: 0.3,
+      stripReasoning: false,
+      reasoningKeepRounds: 2,
+      streamIdleTimeoutMs: 90_000,
+      context: { lengthCutContinuations: 1 },
+    };
+    const def = toAgentDefinition(recordOf({ generation }), {
+      model: undefined,
+      provider: undefined,
+    });
+    expect(def.generation).toEqual(generation);
+  });
+
+  test('absent generation leaves the handle undefined so server defaults apply', () => {
+    const def = toAgentDefinition(recordOf({}), { model: undefined, provider: undefined });
+    expect(def.generation).toBeUndefined();
+  });
+});
+
 describe('toAgentDefinition compaction', () => {
   test('absent key falls back to the spec default so presets get compaction', () => {
     const def = toAgentDefinition(recordOf({}), { model: undefined, provider: undefined });

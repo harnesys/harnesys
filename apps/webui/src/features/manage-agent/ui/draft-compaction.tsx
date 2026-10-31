@@ -6,7 +6,6 @@ import { providersQuery } from '@/shared/api';
 import { getActiveOrgId } from '@/shared/api/active-org';
 import { Pane } from '@/shared/ui/capability-rows';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/shared/ui/field';
-import { Input } from '@/shared/ui/input';
 import {
   Select,
   SelectContent,
@@ -24,6 +23,8 @@ import {
 } from '../model/agent-compaction';
 import type { ModelBounds } from '../model/generation-specs';
 import { type ModelOption, modelGroups, modelOptions } from '../model/model-groups';
+import { CompactionRuntimeControls } from './draft-compaction-runtime';
+import { NumberField } from './pane-number-field';
 
 const SAME_AS_AGENT = '__same_as_agent__';
 export function DraftCompaction({
@@ -173,6 +174,7 @@ export function DraftCompaction({
             onCheckedChange={(value) => patch({ preCompactNote: Boolean(value) })}
           />
         </Field>
+        <CompactionRuntimeControls draft={draft} patch={patch} />
       </FieldGroup>
     </Pane>
   );
@@ -231,43 +233,4 @@ function effectiveReserve(agent: Agent | null, providers: ProviderPublic[]): num
 }
 function formatNumber(value: number | undefined): string {
   return value === undefined ? '?' : value.toLocaleString('en-US');
-}
-function NumberField({
-  id,
-  label,
-  value,
-  placeholder,
-  description,
-  disabled,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  placeholder: string;
-  description: string;
-  disabled?: boolean;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <Field>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Input
-        id={id}
-        inputMode="decimal"
-        placeholder={placeholder}
-        value={value}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') {
-            event.currentTarget.blur();
-          }
-        }}
-      />
-      <FieldDescription className="text-[11px] text-muted-foreground leading-snug">
-        {description}
-      </FieldDescription>
-    </Field>
-  );
 }

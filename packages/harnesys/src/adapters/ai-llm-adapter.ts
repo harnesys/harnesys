@@ -120,7 +120,9 @@ function buildStreamConfig(
   const provider = buildProvider(options.binding, options.sessionId);
   const model = provider(options.binding.model.name) as never;
   const aiTools = toAiTools(context.names, context.registry);
-  const converted = toModelMessages(options.messages).filter((message) => {
+  const converted = toModelMessages(options.messages, {
+    reasoningKeepRounds: options.settings?.generation?.reasoningKeepRounds,
+  }).filter((message) => {
     const role = (message as Record<string, unknown>).role;
     return role !== 'system';
   });
@@ -231,16 +233,20 @@ function normalizeDriverStatus(err: unknown): unknown {
   }
   return err;
 }
+interface StreamRetryOptions {
+  alreadyReplayed?: boolean;
+  attemptLimit?: number;
+}
 function streamErrorChunk(
   err: unknown,
   context: CallContext,
   state: StreamState,
   attempt: number,
-  alreadyReplayed: boolean,
+  options: StreamRetryOptions = {},
 ): { chunk: StreamChunk; waitMs: number; replay: boolean } {
   const normalized = normalizeDriverStatus(err);
   const emitted = state.fullText.length > 0 || state.toolCalls.length > 0;
-  const plan = retryPlan(normalized, emitted, context.signal, attempt, alreadyReplayed);
+  const plan = retryPlan(normalized, emitted, context.signal, attempt, options);
   if (plan === undefined) {
     throw normalized;
   }
@@ -297,6 +303,7 @@ export async function* callModel(options: CallModelOptions): AsyncGenerator<Stre
   }
   const { config: streamConfig, normalization } = buildStreamConfig(options, context);
   const idleMs = streamIdleTimeoutMs(options.settings?.generation);
+  const attemptLimit = options.settings?.generation?.providerRetryAttempts;
   let state = emptyStreamState();
   let alreadyReplayed = false;
   let internal: AbortController | undefined;
@@ -320,7 +327,10 @@ export async function* callModel(options: CallModelOptions): AsyncGenerator<Stre
         yield await completedChunk(result, state);
         return;
       } catch (err) {
-        const retry = streamErrorChunk(err, context, state, attempt, alreadyReplayed);
+        const retry = streamErrorChunk(err, context, state, attempt, {
+          alreadyReplayed,
+          attemptLimit,
+        });
         if (retry.replay) {
           alreadyReplayed = true;
         }

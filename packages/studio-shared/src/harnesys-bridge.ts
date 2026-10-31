@@ -1,4 +1,5 @@
 import type {
+  AgentContextSettings,
   AgentGenerationSettings,
   AgentPaths,
   PermissionGate,
@@ -17,7 +18,14 @@ import {
   withChatGenerationParameters,
 } from 'harnesys/domain';
 
-export type { AgentGenerationSettings, AgentPaths, PortRef, SessionEvent, ToolOutputSettings };
+export type {
+  AgentContextSettings,
+  AgentGenerationSettings,
+  AgentPaths,
+  PortRef,
+  SessionEvent,
+  ToolOutputSettings,
+};
 export {
   DEFAULT_TOOL_OUTPUT_HEAD_CHARS,
   DEFAULT_TOOL_OUTPUT_MAX_CHARS,

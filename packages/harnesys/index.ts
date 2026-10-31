@@ -183,6 +183,7 @@ export {
 } from './src/constants.ts';
 export type {
   AgentBudget,
+  AgentContextSettings,
   AgentDefinition,
   AgentGenerationSettings,
   AgentGraph,

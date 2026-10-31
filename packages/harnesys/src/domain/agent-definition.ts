@@ -12,6 +12,19 @@ export type InterruptReason =
   | 'definition_migrated'
   | 'work'
   | 'wait';
+/** Runtime tuning knobs that are not part of the compaction spec.
+ * Every field optional; undefined keeps the runtime default.
+ * Written to `config.generation.context`. */
+export interface AgentContextSettings {
+  /** Anchor context estimates on measured provider usage (default: on). */
+  usageAnchor?: boolean;
+  /** Continuation attempts after finishReason=length, 0 = finish immediately (default 2). */
+  lengthCutContinuations?: number;
+  /** Head chars kept per spawn result, 0 = unlimited (default 12000). */
+  spawnResultHeadChars?: number;
+  /** Tail chars kept per spawn result (default 4000). */
+  spawnResultTailChars?: number;
+}
 export interface AgentGenerationSettings {
   temperature?: number;
   topP?: number;
@@ -23,8 +36,15 @@ export interface AgentGenerationSettings {
   contextWindowTokens?: number;
   /** Keep model reasoning in persisted history (default: stripped before storage). */
   stripReasoning?: boolean;
+  /** In requests, keep provider reasoning only for the last N assistant rounds.
+   * Requires stripReasoning=false; undefined = keep all (default). */
+  reasoningKeepRounds?: number;
   /** Abort a provider stream that delivers no data for this long (ms). */
   streamIdleTimeoutMs?: number;
+  /** Provider retry attempts per transient error (min 1 = no retries, default 6). */
+  providerRetryAttempts?: number;
+  /** Context-management tuning knobs. */
+  context?: AgentContextSettings;
 }
 export interface AgentModelRef {
   provider: string;

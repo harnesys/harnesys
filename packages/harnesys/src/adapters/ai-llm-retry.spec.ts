@@ -51,7 +51,7 @@ describe('retryPlan', () => {
     const err = apiError(502, 'bad gateway');
     const first = retryPlan(err, true, undefined, 0);
     expect(first?.replay).toBe(true);
-    const second = retryPlan(err, true, undefined, 1, true);
+    const second = retryPlan(err, true, undefined, 1, { alreadyReplayed: true });
     expect(second).toBeUndefined();
   });
 
@@ -64,6 +64,14 @@ describe('retryPlan', () => {
   test('rejects non-transient errors', () => {
     expect(retryPlan(apiError(400, 'bad request'), false, undefined, 0)).toBeUndefined();
     expect(retryPlan(new Error('plain'), false, undefined, 0)).toBeUndefined();
+  });
+
+  test('honors a custom attempt limit', () => {
+    const err = apiError(503, 'unavailable');
+    expect(retryPlan(err, false, undefined, 1, { attemptLimit: 2 })).toBeDefined();
+    expect(retryPlan(err, false, undefined, 2, { attemptLimit: 2 })).toBeUndefined();
+    expect(retryPlan(err, false, undefined, 5, { attemptLimit: 1 })).toBeUndefined();
+    expect(retryPlan(err, false, undefined, 5)).toBeDefined();
   });
 });
 

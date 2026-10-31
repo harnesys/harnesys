@@ -14,7 +14,7 @@ import type { ToolDefinition } from '../../ports/tools.ts';
 import { findBind, isPort, resolveModelForPort } from '../graph-helpers.ts';
 import { emitHook, type HookEmitCtx, hookBlockedReason } from '../hooks/emit-hook.ts';
 import { projectCompacted, projectedForEstimate } from '../llm.ts';
-import { estimateTokens, estimateTokensAnchored } from './estimate.ts';
+import { estimateTokens, estimateTokensAnchored, type TokenEstimate } from './estimate.ts';
 import { writeCompactionFile } from './file-log.ts';
 import { microcompactToolResults } from './microcompact.ts';
 import { planCut } from './plan-cut.ts';
@@ -73,19 +73,35 @@ const PRE_THRESHOLD_GAP = 0.1;
 const BREAKER_MAX_CONSECUTIVE_FAILURES = 3;
 const RAPID_REFILL_WINDOW_STEPS = 3;
 const RAPID_REFILL_MAX_COMPACTIONS = 3;
+interface GuardLimits {
+  failureLimit: number;
+  rapidRefillSteps: number;
+}
+function guardLimitsOf(spec: ParsedCompactionSpec): GuardLimits {
+  return {
+    failureLimit: spec.compactionFailureLimit,
+    rapidRefillSteps: spec.compactionRapidRefillSteps,
+  };
+}
 export function compactionGuardOpen(
   guard: CompactionGuard | undefined,
   step: number,
+  limits: GuardLimits = {
+    failureLimit: BREAKER_MAX_CONSECUTIVE_FAILURES,
+    rapidRefillSteps: RAPID_REFILL_WINDOW_STEPS,
+  },
 ): CompactionSkipReason | null {
   if (!guard) {
     return null;
   }
-  if (guard.consecutiveFailures >= BREAKER_MAX_CONSECUTIVE_FAILURES) {
+  if (limits.failureLimit > 0 && guard.consecutiveFailures >= limits.failureLimit) {
     return 'breaker-open';
   }
-  const recent = guard.completedSteps.filter((s) => step - s <= RAPID_REFILL_WINDOW_STEPS).length;
-  if (recent >= RAPID_REFILL_MAX_COMPACTIONS) {
-    return 'rapid-refill';
+  if (limits.rapidRefillSteps > 0) {
+    const recent = guard.completedSteps.filter((s) => step - s <= limits.rapidRefillSteps).length;
+    if (recent >= RAPID_REFILL_MAX_COMPACTIONS) {
+      return 'rapid-refill';
+    }
   }
   return null;
 }
@@ -101,6 +117,17 @@ function toolsJsonOf(registry: Map<string, ToolDefinition>): string {
   return JSON.stringify(
     [...registry.values()].map((t) => ({ name: t.name, description: t.description })),
   );
+}
+function estimateOf(
+  ctx: CompactionPassContext,
+  messages: readonly unknown[],
+  toolsJson: string,
+): TokenEstimate {
+  const projected = projectedForEstimate(projectCompacted(messages as unknown[]));
+  if (ctx.agent.generation?.context?.usageAnchor === false) {
+    return estimateTokens(projected, toolsJson, { model: ctx.binding.model });
+  }
+  return estimateTokensAnchored(projected, toolsJson, { model: ctx.binding.model });
 }
 function contextWindowOf(binding: ModelBinding): number | undefined {
   const window = binding.model.context_length ?? binding.model.top_provider?.context_length;
@@ -180,11 +207,7 @@ async function* passIfDue(
     return;
   }
   const toolsJson = toolsJsonOf(ctx.toolRegistry);
-  const before = estimateTokensAnchored(
-    projectedForEstimate(projectCompacted(messages)),
-    toolsJson,
-    { model: ctx.binding.model },
-  );
+  const before = estimateOf(ctx, messages, toolsJson);
   const contextLength = await compactionWindowOf(ctx, spec);
   if (!contextLength) {
     yield { type: 'skipped', reason: 'no-context-window' };
@@ -387,12 +410,15 @@ export async function* runSummaryPassIfDue(
     ref && ref.name === THRESHOLD_SUMMARY_NAME
       ? parseThresholdSpec(ref.spec)
       : parseThresholdSpec();
+  const messages = ctx.state.messages;
+  if (Array.isArray(messages) && spec.microcompact) {
+    microcompactToolResults(messages as unknown[], {
+      keepRounds: spec.microcompactKeepRounds,
+      minGainTokens: spec.microcompactMinGainTokens,
+    });
+  }
   if (spec.auto) {
-    const messages = ctx.state.messages;
-    if (Array.isArray(messages)) {
-      microcompactToolResults(messages as unknown[]);
-    }
-    const open = compactionGuardOpen(ctx.guard, ctx.step ?? 0);
+    const open = compactionGuardOpen(ctx.guard, ctx.step ?? 0, guardLimitsOf(spec));
     if (!open) {
       let emitted = false;
       for await (const ev of passIfDue(ctx, spec, 'threshold')) {
@@ -417,7 +443,7 @@ export async function* runForcedCompaction(
     return;
   }
   const spec = parseThresholdSpec(ref.spec);
-  const open = compactionGuardOpen(ctx.guard, ctx.step ?? 0);
+  const open = compactionGuardOpen(ctx.guard, ctx.step ?? 0, guardLimitsOf(spec));
   if (open) {
     yield { type: 'skipped', reason: open };
     return;
@@ -471,13 +497,7 @@ async function contextPressureOf(
     return null;
   }
   const toolsJson = toolsJsonOf(ctx.toolRegistry);
-  const before = estimateTokensAnchored(
-    projectedForEstimate(projectCompacted(messages)),
-    toolsJson,
-    {
-      model: ctx.binding.model,
-    },
-  );
+  const before = estimateOf(ctx, messages, toolsJson);
   return { total: before.total, available };
 }
 export async function* compactForced(

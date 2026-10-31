@@ -2,11 +2,7 @@ import { statSync } from 'node:fs';
 import { callModel, driverErrorStatus, type StreamChunk } from '../adapters/ai-llm-adapter.ts';
 import { mediaDeliveryGates } from '../adapters/ai-llm-provider.ts';
 import { EXCLUSION_TTL_USER_TURNS, LLM_CHUNK_EVENTS } from '../constants.ts';
-import type {
-  AgentDefinition,
-  AgentGenerationSettings,
-  AgentModelRef,
-} from '../domain/agent-definition.ts';
+import type { AgentDefinition, AgentModelRef } from '../domain/agent-definition.ts';
 import { codedRunError } from '../domain/errors.ts';
 import type { FileAccessPolicy } from '../ports/file-access.ts';
 import type { ModelBinding, ResolvedModel } from '../ports/models.ts';
@@ -385,7 +381,7 @@ export async function* runLlmGenerate(
     settings: {
       effort: modelRef?.effort,
       generation: {
-        ...agentIdleTimeout(ctx.agent.generation),
+        ...ctx.agent.generation,
         ...modelRef?.generation,
       },
     },
@@ -475,13 +471,6 @@ export async function* runLlmGenerate(
     });
     yield { type: 'model.completed', data: out };
   }
-}
-function agentIdleTimeout(
-  generation: AgentGenerationSettings | undefined,
-): { streamIdleTimeoutMs: number } | undefined {
-  return generation?.streamIdleTimeoutMs !== undefined
-    ? { streamIdleTimeoutMs: generation.streamIdleTimeoutMs }
-    : undefined;
 }
 function usageTokensOf(usage: unknown): number {
   if (!usage || typeof usage !== 'object') {

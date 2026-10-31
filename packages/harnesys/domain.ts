@@ -1,5 +1,8 @@
 export { isDriver } from './src/adapters/models/binding.ts';
-export type { AgentGenerationSettings } from './src/domain/agent-definition.ts';
+export type {
+  AgentContextSettings,
+  AgentGenerationSettings,
+} from './src/domain/agent-definition.ts';
 export type {
   CompactionMessage,
   CompactionSpec,

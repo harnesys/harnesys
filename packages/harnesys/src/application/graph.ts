@@ -271,6 +271,12 @@ function repairDanglingToolCalls(messages: unknown[]): UnansweredToolCall[] {
   return dangling;
 }
 const LENGTH_CUT_CONTINUATIONS = 2;
+function lengthCutLimitOf(agent: AgentDefinition): number {
+  const value = agent.generation?.context?.lengthCutContinuations;
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? Math.floor(value)
+    : LENGTH_CUT_CONTINUATIONS;
+}
 const LENGTH_CUT_NOTE =
   '[output-limit] Your previous message was cut off by the max output tokens limit. ' +
   'Continue from exactly where you stopped: no recap, no repetition, produce the remaining ' +
@@ -503,6 +509,8 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
   let pressureNoted = false;
   const compactionGuard: CompactionGuard = { consecutiveFailures: 0, completedSteps: [] };
   let lengthCuts = 0;
+  const lengthCutLimit = lengthCutLimitOf(agent);
+  const overflowCompactionEnabled = agent.compaction?.spec?.overflowCompaction !== false;
   const compactionCtx = (binding: ModelBinding): CompactionPassContext => ({
     agent,
     state: st,
@@ -1252,7 +1260,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
           }
         } catch (err) {
           lastError = err;
-          if (!overflowRecovered && isContextOverflowError(err)) {
+          if (!overflowRecovered && overflowCompactionEnabled && isContextOverflowError(err)) {
             overflowRecovered = true;
             const attempt0 = attempt;
             attempt = -1;
@@ -1356,9 +1364,9 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
       if (res.finishReason === 'tool-calls') {
         await commit('running', 'tool.requested');
       }
-      if (res.finishReason === 'length' && closingPhase === 'none') {
+      if (res.finishReason === 'length' && lengthCutLimit > 0 && closingPhase === 'none') {
         lengthCuts += 1;
-        if (lengthCuts > LENGTH_CUT_CONTINUATIONS) {
+        if (lengthCuts > lengthCutLimit) {
           closingReason = 'length';
           closingPhase = 'pending';
           yield await commit('running', 'model.closing', 'recorded', { reason: 'length_cuts' });
@@ -1787,7 +1795,10 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
         throw Object.assign(new Error(message), { code });
       }
       output = [...prepared.denied, ...spawnOutcome.carried, ...spawnOutcome.results];
-      appendSpawnResultsMessage(st, lastMsg, output);
+      appendSpawnResultsMessage(st, lastMsg, output, {
+        headChars: agent.generation?.context?.spawnResultHeadChars,
+        tailChars: agent.generation?.context?.spawnResultTailChars,
+      });
       clearQueuedSpawns(st);
       delete st[STATE_SPAWN_RESULTS_KEY];
       const treeUsage = spawnOutcome.results.reduce(

@@ -21,6 +21,14 @@ describe('clampSpawnResultText', () => {
     expect(clamped).toContain('characters omitted');
     expect(clamped).not.toContain('SECRET-BEACON');
   });
+
+  test('honors custom limits and unlimited head', () => {
+    const text = `${'a'.repeat(5_000)}BEACON${'b'.repeat(5_000)}`;
+    const tight = clampSpawnResultText(text, { headChars: 100, tailChars: 50 });
+    expect(tight.length).toBeLessThan(400);
+    expect(tight).toContain('characters omitted');
+    expect(clampSpawnResultText(text, { headChars: 0 })).toBe(text);
+  });
 });
 
 describe('appendSpawnResultsMessage clamping', () => {

@@ -6,6 +6,7 @@ import type {
 } from '@harnesys/studio-shared';
 import type { PermissionMap } from 'harnesys';
 import { z } from 'zod';
+import { generationSettingsOf } from './agent-generation-settings';
 import { agentModesSchema, fieldsToMode, modeToFields } from './agent-mode-fields';
 
 const optionalAmount = z
@@ -43,8 +44,14 @@ export const agentFieldsSchema = z.object({
   seed: optionalAmount,
   maxTokens: optionalAmount,
   contextWindowTokens: optionalAmount,
-  stripReasoning: z.boolean(),
+  reasoningMode: z.enum(['strip', 'part', 'keep']),
+  reasoningKeepRounds: optionalNonNegativeInt,
   streamIdleTimeoutMs: optionalPositiveInt,
+  providerRetryAttempts: optionalPositiveInt,
+  ctxUsageAnchor: z.boolean(),
+  ctxLengthCutContinuations: optionalNonNegativeInt,
+  ctxSpawnHeadChars: optionalNonNegativeInt,
+  ctxSpawnTailChars: optionalNonNegativeInt,
   toolOutputMaxChars: optionalPositiveInt,
   toolOutputHeadChars: optionalPositiveInt,
   toolOutputTailChars: optionalPositiveInt,
@@ -93,8 +100,14 @@ export function emptyAgentFields(): AgentFieldsInput {
     seed: '',
     maxTokens: '',
     contextWindowTokens: '',
-    stripReasoning: true,
+    reasoningMode: 'strip',
+    reasoningKeepRounds: '',
     streamIdleTimeoutMs: '',
+    providerRetryAttempts: '',
+    ctxUsageAnchor: true,
+    ctxLengthCutContinuations: '',
+    ctxSpawnHeadChars: '',
+    ctxSpawnTailChars: '',
     toolOutputMaxChars: '',
     toolOutputHeadChars: '',
     toolOutputTailChars: '',
@@ -152,8 +165,14 @@ export function agentFieldsFrom(agent: {
     seed: stringify(agent.generation?.seed),
     maxTokens: stringify(agent.generation?.maxTokens),
     contextWindowTokens: stringify(agent.generation?.contextWindowTokens),
-    stripReasoning: agent.generation?.stripReasoning ?? true,
+    reasoningMode: reasoningModeOf(agent.generation),
+    reasoningKeepRounds: stringify(agent.generation?.reasoningKeepRounds),
     streamIdleTimeoutMs: stringify(agent.generation?.streamIdleTimeoutMs),
+    providerRetryAttempts: stringify(agent.generation?.providerRetryAttempts),
+    ctxUsageAnchor: agent.generation?.context?.usageAnchor ?? true,
+    ctxLengthCutContinuations: stringify(agent.generation?.context?.lengthCutContinuations),
+    ctxSpawnHeadChars: stringify(agent.generation?.context?.spawnResultHeadChars),
+    ctxSpawnTailChars: stringify(agent.generation?.context?.spawnResultTailChars),
     toolOutputMaxChars: stringify(agent.toolOutput?.maxChars),
     toolOutputHeadChars: stringify(agent.toolOutput?.headChars),
     toolOutputTailChars: stringify(agent.toolOutput?.tailChars),
@@ -170,6 +189,14 @@ export function agentFieldsFrom(agent: {
     budgetExtendPercent: stringify(agent.budget?.extendDefaultPct ?? 25),
     budgetSpawnMode: agent.budget?.spawnBudget ?? 'pool',
   };
+}
+function reasoningModeOf(
+  generation: AgentGenerationSettings | null | undefined,
+): 'strip' | 'part' | 'keep' {
+  if (generation?.stripReasoning !== false) {
+    return 'strip';
+  }
+  return generation.reasoningKeepRounds !== undefined ? 'part' : 'keep';
 }
 export function toAgentDraft(values: AgentFieldsOutput): {
   name: string;
@@ -188,20 +215,7 @@ export function toAgentDraft(values: AgentFieldsOutput): {
   color: string | null;
   memoryPolicy: Record<string, unknown> | null;
 } {
-  const generation = compactGeneration({
-    temperature: values.temperature,
-    topP: values.topP,
-    topK: values.topK,
-    frequencyPenalty: values.frequencyPenalty,
-    presencePenalty: values.presencePenalty,
-    seed: values.seed,
-    maxTokens: values.maxTokens,
-    contextWindowTokens: values.contextWindowTokens,
-    ...(values.stripReasoning === false ? { stripReasoning: false } : {}),
-    ...(values.streamIdleTimeoutMs !== undefined
-      ? { streamIdleTimeoutMs: values.streamIdleTimeoutMs }
-      : {}),
-  });
+  const generation = compactGeneration(generationSettingsOf(values));
   const limits = {
     maxSteps: values.budgetMaxSteps,
     maxTokens: values.budgetMaxTokens,

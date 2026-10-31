@@ -50,22 +50,34 @@ function jittered(ms: number): number {
   const delta = ms * RETRY_JITTER_RATIO;
   return Math.max(1_000, Math.round(ms + (Math.random() * 2 - 1) * delta));
 }
+export interface RetryPlanOptions {
+  /** A clean replay was already used in this call. */
+  alreadyReplayed?: boolean;
+  /** Cap of retry attempts (default: the full schedule). */
+  attemptLimit?: number;
+}
 export function retryPlan(
   error: unknown,
   emitted: boolean,
   signal: AbortSignal | undefined,
   attempt: number,
-  alreadyReplayed = false,
+  options: RetryPlanOptions = {},
 ): RetryPlan | undefined {
   const rateLimited = isRateLimitError(error);
   if (!rateLimited && !isTransientProviderError(error)) {
     return undefined;
   }
   const schedule = rateLimited ? RATE_LIMIT_RETRY_DELAYS_MS : SERVER_ERROR_RETRY_DELAYS_MS;
-  if (signal?.aborted || attempt >= schedule.length) {
+  const cap =
+    typeof options.attemptLimit === 'number' &&
+    Number.isFinite(options.attemptLimit) &&
+    options.attemptLimit >= 1
+      ? Math.min(Math.floor(options.attemptLimit), schedule.length)
+      : schedule.length;
+  if (signal?.aborted || attempt >= cap) {
     return undefined;
   }
-  if (emitted && alreadyReplayed) {
+  if (emitted && options.alreadyReplayed) {
     return undefined;
   }
   const replay = emitted;

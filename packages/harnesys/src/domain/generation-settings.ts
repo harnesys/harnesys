@@ -57,8 +57,20 @@ export function filterGenerationSettings(
     out.stripReasoning = settings.stripReasoning;
     wrote = true;
   }
+  if (settings.reasoningKeepRounds !== undefined) {
+    out.reasoningKeepRounds = settings.reasoningKeepRounds;
+    wrote = true;
+  }
   if (settings.streamIdleTimeoutMs !== undefined) {
     out.streamIdleTimeoutMs = settings.streamIdleTimeoutMs;
+    wrote = true;
+  }
+  if (settings.providerRetryAttempts !== undefined) {
+    out.providerRetryAttempts = settings.providerRetryAttempts;
+    wrote = true;
+  }
+  if (settings.context !== undefined) {
+    out.context = { ...settings.context };
     wrote = true;
   }
   return wrote ? out : undefined;

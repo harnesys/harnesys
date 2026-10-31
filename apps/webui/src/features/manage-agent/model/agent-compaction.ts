@@ -7,6 +7,12 @@ export interface CompactionDraft {
   auto: boolean;
   summaryProvider: string;
   summaryModel: string;
+  microcompact: boolean;
+  microcompactKeepRounds: string;
+  microcompactMinGainTokens: string;
+  compactionFailureLimit: string;
+  compactionRapidRefillSteps: string;
+  overflowCompaction: boolean;
 }
 export function compactionDraftFrom(ref: PortRef | null): CompactionDraft {
   if (!ref) {
@@ -17,6 +23,12 @@ export function compactionDraftFrom(ref: PortRef | null): CompactionDraft {
       auto: true,
       summaryProvider: '',
       summaryModel: '',
+      microcompact: false,
+      microcompactKeepRounds: '5',
+      microcompactMinGainTokens: '256',
+      compactionFailureLimit: '3',
+      compactionRapidRefillSteps: '3',
+      overflowCompaction: true,
     };
   }
   const spec = ref.spec ?? {};
@@ -28,6 +40,12 @@ export function compactionDraftFrom(ref: PortRef | null): CompactionDraft {
     auto: spec.auto !== false,
     summaryProvider: summary.provider,
     summaryModel: summary.model,
+    microcompact: spec.microcompact === true,
+    microcompactKeepRounds: stringifyNumber(spec.microcompactKeepRounds, '5'),
+    microcompactMinGainTokens: stringifyNumber(spec.microcompactMinGainTokens, '256'),
+    compactionFailureLimit: stringifyNumber(spec.compactionFailureLimit, '3'),
+    compactionRapidRefillSteps: stringifyNumber(spec.compactionRapidRefillSteps, '3'),
+    overflowCompaction: spec.overflowCompaction !== false,
   };
 }
 export function toCompactionPortRef(draft: CompactionDraft): PortRef {
@@ -36,6 +54,12 @@ export function toCompactionPortRef(draft: CompactionDraft): PortRef {
     protectRecentRatio: parseRatio(draft.protectRecentRatio, 0.1),
     preCompactNote: draft.preCompactNote,
     auto: draft.auto,
+    microcompact: draft.microcompact,
+    microcompactKeepRounds: parsePositiveInt(draft.microcompactKeepRounds, 5),
+    microcompactMinGainTokens: parseNonNegativeInt(draft.microcompactMinGainTokens, 256),
+    compactionFailureLimit: parseNonNegativeInt(draft.compactionFailureLimit, 3),
+    compactionRapidRefillSteps: parseNonNegativeInt(draft.compactionRapidRefillSteps, 3),
+    overflowCompaction: draft.overflowCompaction,
   };
   const provider = draft.summaryProvider.trim();
   const model = draft.summaryModel.trim();
@@ -66,4 +90,12 @@ function stringifyNumber(value: unknown, fallback: string): string {
 function parseRatio(value: string, fallback: number): number {
   const next = Number(value.trim());
   return Number.isFinite(next) ? next : fallback;
+}
+function parseNonNegativeInt(value: string, fallback: number): number {
+  const next = Number(value.trim());
+  return Number.isFinite(next) && next >= 0 ? Math.floor(next) : fallback;
+}
+function parsePositiveInt(value: string, fallback: number): number {
+  const next = parseNonNegativeInt(value, fallback);
+  return Math.max(1, next);
 }

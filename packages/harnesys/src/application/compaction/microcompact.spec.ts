@@ -77,4 +77,21 @@ describe('microcompactToolResults', () => {
     expect((messages[2] as { content: string }).content).not.toContain(MICROCOMPACT_CLEARED_MARKER);
     expect((messages[3] as { content: string }).content).not.toContain(MICROCOMPACT_CLEARED_MARKER);
   });
+
+  test('zero minGainTokens disables the gain floor instead of using the default', () => {
+    const tiny = Math.floor((MICROCOMPACT_MIN_GAIN_TOKENS * CHARS_PER_TOKEN_ESTIMATE) / 8);
+    const messages = history(7, tiny);
+    expect(microcompactToolResults(messages, { minGainTokens: 0 })).toBe(true);
+  });
+  test('honors custom keepRounds and minGainTokens', () => {
+    const messages = history(4);
+    expect(microcompactToolResults(messages, { keepRounds: 2 })).toBe(true);
+    const tools = messages.filter((m) => (m as { role: string }).role === 'tool');
+    expect((tools[0] as { content: string }).content).toContain(MICROCOMPACT_CLEARED_MARKER);
+    expect((tools[1] as { content: string }).content).toContain(MICROCOMPACT_CLEARED_MARKER);
+    expect((tools[2] as { content: string }).content).not.toContain(MICROCOMPACT_CLEARED_MARKER);
+
+    const strict = history(4, 400);
+    expect(microcompactToolResults(strict, { keepRounds: 2, minGainTokens: 100_000 })).toBe(false);
+  });
 });

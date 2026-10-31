@@ -4,6 +4,7 @@ import { providersQuery } from '@/shared/api';
 import { getActiveOrgId } from '@/shared/api/active-org';
 import {
   Field,
+  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -26,6 +27,7 @@ import {
   modelSupportedParameters,
 } from '../model/agent-model-info';
 import { GENERATION_LIMITS, GENERATION_SLIDERS, modelBounds } from '../model/generation-specs';
+import { AgentContextTuningFields } from './agent-context-fields';
 import { effortLabel } from './effort-label';
 
 type AgentFieldsControl = Control<AgentFieldsInput, unknown, AgentFieldsOutput>;
@@ -225,23 +227,33 @@ export function AgentGenerationFields({
         <FieldGroup className="gap-2.5">
           <Controller
             control={control}
-            name="stripReasoning"
+            name="reasoningMode"
             render={({ field }) => (
               <Field>
-                <FieldLabel htmlFor={`${idPrefix}-stripReasoning`}>Reasoning in history</FieldLabel>
+                <FieldLabel htmlFor={`${idPrefix}-reasoningMode`}>Reasoning in history</FieldLabel>
                 <ToggleGroup
                   variant="segment"
-                  value={[field.value ? 'strip' : 'keep']}
+                  value={[field.value]}
                   onValueChange={(value) => {
-                    field.onChange(value[0] !== 'strip');
+                    if (value.length === 0) {
+                      return;
+                    }
+                    field.onChange(value[0]);
+                    onCommit?.();
                   }}
                 >
                   <ToggleGroupItem value="strip">Strip</ToggleGroupItem>
+                  <ToggleGroupItem value="part">Part</ToggleGroupItem>
                   <ToggleGroupItem value="keep">Keep</ToggleGroupItem>
                 </ToggleGroup>
+                <FieldDescription className="text-[11px] text-muted-foreground leading-snug">
+                  Strip saves history without model reasoning. Part keeps it saved but sends only
+                  the last N rounds. Keep saves and sends all reasoning.
+                </FieldDescription>
               </Field>
             )}
           />
+          <ReasoningKeepRoundsField control={control} idPrefix={idPrefix} onCommit={onCommit} />
           <Controller
             control={control}
             name="streamIdleTimeoutMs"
@@ -269,12 +281,17 @@ export function AgentGenerationFields({
                   name={field.name}
                   ref={field.ref}
                 />
+                <FieldDescription className="text-[11px] text-muted-foreground leading-snug">
+                  Abort the provider stream when no data arrives for this long. Blank = 300000 ms (5
+                  min).
+                </FieldDescription>
                 {fieldState.error ? <FieldError>{fieldState.error.message}</FieldError> : null}
               </Field>
             )}
           />
         </FieldGroup>
       </FieldSet>
+      <AgentContextTuningFields control={control} idPrefix={idPrefix} onCommit={onCommit} />
     </div>
   );
 }
@@ -287,4 +304,53 @@ function parseOptional(value: string | undefined): number | undefined {
 }
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+function ReasoningKeepRoundsField({
+  control,
+  idPrefix,
+  onCommit,
+}: {
+  control: AgentFieldsControl;
+  idPrefix: string;
+  onCommit?: () => void;
+}) {
+  const mode = useWatch({ control, name: 'reasoningMode' });
+  return (
+    <Controller
+      control={control}
+      name="reasoningKeepRounds"
+      render={({ field, fieldState }) => (
+        <Field className="gap-1.5" data-invalid={fieldState.invalid || undefined}>
+          <FieldLabel htmlFor={`${idPrefix}-reasoningKeepRounds`}>
+            Reasoning rounds in requests
+          </FieldLabel>
+          <Input
+            id={`${idPrefix}-reasoningKeepRounds`}
+            inputMode="numeric"
+            placeholder="all"
+            disabled={mode !== 'part'}
+            aria-invalid={fieldState.invalid || undefined}
+            value={typeof field.value === 'string' ? field.value : ''}
+            onChange={field.onChange}
+            onBlur={() => {
+              field.onBlur();
+              onCommit?.();
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.currentTarget.blur();
+              }
+            }}
+            name={field.name}
+            ref={field.ref}
+          />
+          <FieldDescription className="text-[11px] text-muted-foreground leading-snug">
+            Recent assistant rounds whose reasoning is sent back to the provider in Part mode. Blank
+            = all rounds, 0 = none.
+          </FieldDescription>
+          {fieldState.error ? <FieldError>{fieldState.error.message}</FieldError> : null}
+        </Field>
+      )}
+    />
+  );
 }

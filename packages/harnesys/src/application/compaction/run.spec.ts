@@ -3,6 +3,7 @@ import { THRESHOLD_SUMMARY_NAME } from '../../constants.ts';
 import type { AgentDefinition } from '../../domain/agent-definition.ts';
 import type { ModelBinding, ProviderConfig } from '../../ports/models.ts';
 import type { ToolDefinition } from '../../ports/tools.ts';
+import { MICROCOMPACT_CLEARED_MARKER } from './microcompact.ts';
 import type { CompactionPassContext } from './run.ts';
 import {
   type CompactionGuard,
@@ -144,6 +145,20 @@ describe('runSummaryPassIfDue threshold evaluation', () => {
     });
     const events = await collect(runSummaryPassIfDue(ctx));
     expect(events).toEqual([{ type: 'skipped', reason: 'near-threshold' }]);
+  });
+
+  test('microcompact runs even when automatic compaction is off', async () => {
+    const tool = { role: 'tool', toolCallId: 't', name: 'read_file', content: 'a'.repeat(2000) };
+    const messages: unknown[] = [user(10)];
+    for (let i = 0; i < 7; i++) {
+      messages.push({ role: 'assistant', content: 'step' }, { ...tool }, user(10));
+    }
+    const agent = agentOf({ thresholdRatio: 0.8, auto: false, microcompact: true });
+    await collect(runSummaryPassIfDue(ctxOf({ agent, binding: bindingOf(100_000), messages })));
+    const cleared = messages.filter((m) =>
+      String((m as { content?: unknown }).content).includes(MICROCOMPACT_CLEARED_MARKER),
+    );
+    expect(cleared.length).toBeGreaterThan(0);
   });
 
   test('agent max tokens act as the output reserve', async () => {
@@ -427,5 +442,37 @@ describe('forced overflow compaction and circuit breakers', () => {
     expect(events.at(-1)?.type).toBe('completed');
     expect(guard.consecutiveFailures).toBe(0);
     expect(guard.completedSteps).toEqual([4]);
+  });
+
+  test('a zero failure limit keeps the breaker closed', async () => {
+    stubFetch(summarySse);
+    const guard: CompactionGuard = { consecutiveFailures: 99, completedSteps: [8, 9, 10] };
+    const agent = agentOf({
+      thresholdRatio: 0.8,
+      preCompactNote: false,
+      compactionFailureLimit: 0,
+      compactionRapidRefillSteps: 0,
+    });
+    const ctx = ctxOf({
+      agent,
+      binding: bindingOf(1000),
+      messages: [user(120), user(3400)],
+    });
+    ctx.guard = guard;
+    ctx.step = 11;
+    const events = await collect(runSummaryPassIfDue(ctx));
+    expect(events.at(-1)?.type).toBe('completed');
+  });
+
+  test('a context threshold override above the pressure level skips the pass', async () => {
+    stubFetch(summarySse);
+    const agent = agentOf({ thresholdRatio: 0.99, preCompactNote: false });
+    const ctx = ctxOf({
+      agent,
+      binding: bindingOf(1000),
+      messages: [user(120), user(700)],
+    });
+    const events = await collect(runSummaryPassIfDue(ctx));
+    expect(events).toEqual([]);
   });
 });

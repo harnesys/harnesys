@@ -67,11 +67,13 @@ export function toAgentDefinition(
   const permissions = permissionsFromConfig(agent.config);
   const observability = observabilityFromConfig(agent.config);
   const memoryPolicy = parseMemoryPolicy(agent.config.memoryPolicyJson);
+  const generation = generationFromConfig(agent.config);
   return {
     id: agent.id,
     prompts: { main: { instructions: agent.instructions } },
     level: agent.level,
     model: resolveModelRef(lookup, agent.config),
+    ...(generation ? { generation } : {}),
     skills: agent.skills,
     mcpServers: agent.mcpServers,
     packs: packsFromConfig(agent.config),
@@ -110,12 +112,10 @@ function resolveModelRef(
     return undefined;
   }
   const effort = typeof config.effort === 'string' ? config.effort : undefined;
-  const generation = generationFromConfig(config);
   return {
     provider: lookup.provider.name,
     model: lookup.model.name,
     ...(effort ? { effort } : {}),
-    ...(generation ? { generation } : {}),
   };
 }
 

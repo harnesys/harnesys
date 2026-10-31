@@ -26,7 +26,21 @@ function isMediaPayload(record: ToolRecord): boolean {
   const payload = parseFileToolResult(String(record.name ?? ''), record.content);
   return payload !== undefined && VISION_IMAGE_TYPES.includes(payload.mediaType);
 }
-export function microcompactToolResults(messages: unknown[]): boolean {
+export interface MicrocompactOptions {
+  keepRounds?: number;
+  minGainTokens?: number;
+}
+function intOrDefault(value: unknown, min: number, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= min
+    ? Math.floor(value)
+    : fallback;
+}
+export function microcompactToolResults(
+  messages: unknown[],
+  options: MicrocompactOptions = {},
+): boolean {
+  const keepRounds = intOrDefault(options.keepRounds, 1, MICROCOMPACT_KEEP_ROUNDS);
+  const minGainTokens = intOrDefault(options.minGainTokens, 0, MICROCOMPACT_MIN_GAIN_TOKENS);
   const rounds: number[] = [];
   for (let i = 0; i < messages.length; i++) {
     const m = messages[i] as Record<string, unknown> | null | undefined;
@@ -34,7 +48,7 @@ export function microcompactToolResults(messages: unknown[]): boolean {
       rounds.push(i);
     }
   }
-  const boundaryIndex = rounds.length - MICROCOMPACT_KEEP_ROUNDS;
+  const boundaryIndex = rounds.length - keepRounds;
   const boundary = boundaryIndex >= 0 ? rounds[boundaryIndex] : undefined;
   if (boundary === undefined || boundary <= 0) {
     return false;
@@ -54,7 +68,7 @@ export function microcompactToolResults(messages: unknown[]): boolean {
     return false;
   }
   const gain = targets.reduce((sum, r) => sum + estimateMessageTokens(r), 0);
-  if (gain < MICROCOMPACT_MIN_GAIN_TOKENS) {
+  if (gain < minGainTokens) {
     return false;
   }
   for (const record of targets) {

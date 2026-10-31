@@ -65,10 +65,10 @@ function assistantContent(
   }
   return content;
 }
-function assistantMessage(item: MessageRecord): MessageRecord {
+function assistantMessage(item: MessageRecord, keepReasoning = true): MessageRecord {
   const text = typeof item.content === 'string' ? item.content : '';
   const toolCalls = Array.isArray(item.toolCalls) ? (item.toolCalls as MessageRecord[]) : [];
-  const reasoning = typeof item.reasoning === 'string' ? item.reasoning : '';
+  const reasoning = keepReasoning && typeof item.reasoning === 'string' ? item.reasoning : '';
   if (toolCalls.length === 0 && !reasoning) {
     return { role: 'assistant', content: text };
   }
@@ -121,16 +121,52 @@ function convertMessage(item: MessageRecord): MessageRecord | undefined {
   }
   return undefined;
 }
-export function toModelMessages(raw: unknown[]): unknown[] {
+export interface ModelMessagesOptions {
+  /** In requests, keep reasoning parts only for the last N assistant rounds
+   * that carry reasoning; undefined = keep all, 0 = strip all. */
+  reasoningKeepRounds?: number;
+}
+export function toModelMessages(raw: unknown[], options: ModelMessagesOptions = {}): unknown[] {
+  const keepRounds = positiveIntOrUndefined(options.reasoningKeepRounds);
+  const keepFrom = keepRounds === undefined ? undefined : keepFromIndex(raw, keepRounds);
   const out: unknown[] = [];
-  for (const item of raw as MessageRecord[]) {
+  for (let i = 0; i < raw.length; i++) {
+    const item = raw[i] as MessageRecord;
     if (!item || typeof item !== 'object') {
       continue;
     }
-    const converted = convertMessage(item);
+    const converted =
+      keepFrom !== undefined && isAssistant(item) && i <= keepFrom
+        ? assistantMessage(item, false)
+        : convertMessage(item);
     if (converted) {
       out.push(converted);
     }
   }
   return out;
+}
+function positiveIntOrUndefined(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? Math.floor(value)
+    : undefined;
+}
+function isAssistant(item: MessageRecord): boolean {
+  return item.role === 'assistant';
+}
+function keepFromIndex(raw: unknown[], keepRounds: number): number {
+  const positions: number[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const item = raw[i] as MessageRecord;
+    if (
+      item &&
+      typeof item === 'object' &&
+      isAssistant(item) &&
+      typeof item.reasoning === 'string' &&
+      item.reasoning !== ''
+    ) {
+      positions.push(i);
+    }
+  }
+  const cutoff = positions.length - keepRounds;
+  return cutoff > 0 ? (positions[cutoff - 1] ?? -1) : -1;
 }

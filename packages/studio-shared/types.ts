@@ -88,6 +88,7 @@ export type {
   GitSummaryCounts,
 } from './src/git.ts';
 export type {
+  AgentContextSettings,
   AgentGenerationSettings,
   AgentProjectPaths,
   PortRef,
