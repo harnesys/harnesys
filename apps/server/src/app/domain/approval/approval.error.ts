@@ -6,6 +6,12 @@ export class ApprovalNotFoundException extends EntityNotFoundException {
   }
 }
 
+export class PermissionGrantNotFoundException extends EntityNotFoundException {
+  constructor(grantId: string) {
+    super(`permission grant not found: ${grantId}`, { grantId });
+  }
+}
+
 export class ApprovalValidationException extends ValidationException {
   constructor(message: string) {
     super(message);

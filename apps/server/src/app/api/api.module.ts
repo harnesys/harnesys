@@ -81,6 +81,7 @@ import { ModelTranscriptionController } from './rest/model-transcription.control
 import { ModelVoicesController } from './rest/model-voices.controller.ts';
 import { OrgGitController } from './rest/org-git.controller.ts';
 import { OrgsController } from './rest/orgs.controller.ts';
+import { PermissionGrantsController } from './rest/permission-grants.controller.ts';
 import { PlacementQueueController } from './rest/placement-queue.controller.ts';
 import {
   PluginCatalogController,
@@ -188,6 +189,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     VaultController,
     AgentsController,
     FileRulesController,
+    PermissionGrantsController,
     CapabilitiesController,
     CatalogController,
     SkillsController,

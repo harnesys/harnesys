@@ -9,6 +9,8 @@ import { Pane } from '@/shared/ui/capability-rows';
 import type { AgentCapabilitiesDraft } from '../model/agent-config';
 import type { AgentFieldsInput, AgentFieldsOutput } from '../model/agent-fields';
 import type { StudioGraphDocument } from '../model/agent-graph-document';
+import { overrideOfAssignment } from '../model/draft-overrides';
+import { AgentAlwaysAllowedPane } from './agent-always-allowed-pane';
 import { AgentCapabilitiesPane } from './agent-capabilities-pane';
 import type { AgentConfigCategory } from './agent-config-nav';
 import { AgentIdentityPane, AgentLimitsPane, AgentModelPane } from './agent-config-panes';
@@ -66,6 +68,7 @@ export function AgentConfigCategoryPanes({
   const permissions = useWatch({ control: form.control, name: 'permissions' });
   const agentModelId = useWatch({ control: form.control, name: 'modelId' });
   const memoryStatus = useQuery(memoryStatusQuery(orgId));
+  const shellAllowlist = shellAllowlistOf(capabilities);
   return (
     <div
       className={cn(
@@ -115,6 +118,19 @@ export function AgentConfigCategoryPanes({
             />
           )}
         />
+        <Pane
+          label="Always allowed"
+          description="Approvals remembered from Ask prompts. Revoke to be asked again."
+        >
+          <AgentAlwaysAllowedPane
+            orgId={orgId}
+            agentId={activeAgent?.id ?? null}
+            shellAllowlist={shellAllowlist}
+            onShellRevoke={(entry) => {
+              onCapabilitiesPatch(withoutShellEntry(capabilities, entry));
+            }}
+          />
+        </Pane>
       </div>
       <div className={cn(category !== 'modes' && 'hidden')}>
         <AgentModesPane
@@ -296,4 +312,29 @@ function UnsavedAgentHint({ text }: { text: string }) {
       {text}
     </p>
   );
+}
+
+function shellAllowlistOf(capabilities: AgentCapabilitiesDraft): string[] {
+  const spec = overrideOfAssignment(capabilities.capabilities?.shell).spec;
+  return Array.isArray(spec?.allowlist)
+    ? spec.allowlist.filter((entry): entry is string => typeof entry === 'string')
+    : [];
+}
+
+function withoutShellEntry(
+  capabilities: AgentCapabilitiesDraft,
+  entry: string,
+): Partial<AgentCapabilitiesDraft> {
+  const base = overrideOfAssignment(capabilities.capabilities?.shell);
+  const spec = base.spec ?? {};
+  const allowlist = Array.isArray(spec.allowlist) ? spec.allowlist : [];
+  return {
+    capabilities: {
+      ...capabilities.capabilities,
+      shell: {
+        ...base,
+        spec: { ...spec, allowlist: allowlist.filter((item) => item !== entry) },
+      },
+    },
+  };
 }
