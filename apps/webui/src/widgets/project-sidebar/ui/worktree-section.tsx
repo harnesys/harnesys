@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState, startTransition } from 'react';
+import { startTransition, useEffect, useState } from 'react';
 import { useIdeStore } from '@/features/ide';
 import {
   buildMoveItems,
@@ -23,9 +23,11 @@ import { toast } from '@/shared/ui/toast';
 import { useExplorerExpandStore } from '../model/explorer-expand.store';
 import { useExplorerHiddenStore } from '../model/explorer-hidden.store';
 import { useFileSelectionStore } from '../model/file-selection.store';
-import { childrenOf, indexFileTree } from '../model/file-tree-index';
+import { type FlatTreeRow, flattenFileTree, indexFileTree } from '../model/file-tree-index';
 import { worktreeBranchKey } from './branch-keys';
-import { FileRow, InlineCreateInput } from './file-row';
+import { renderFileTreeRow } from './file-row-render';
+import { FileTreeWindow } from './file-tree-window';
+import { InlineCreateInput } from './inline-create-input';
 
 import { worktreeFilesTreeQueryKey } from './worktree-tree-key';
 
@@ -68,6 +70,14 @@ export function WorktreeSection({
     selectionProjectId === projectId && selectionScope === worktree.id ? selectedPaths : [];
   const moveMutation = useMoveProjectFiles(projectId, worktree.id);
   const treeIndex = indexFileTree(treeQuery.data ?? []);
+  const expandedDirs = new Set(dirs);
+  const rows = flattenFileTree({
+    index: treeIndex,
+    showHidden,
+    expandedDirs,
+    depthOffset: depthOffset + 1,
+    createDraft: draft,
+  });
   const rootLabel = worktree.branch;
   const rootTitle = `${sourceName}.worktrees/${worktree.branch}`;
   const [rootDrop, setRootDrop] = useState<'valid' | 'invalid' | null>(null);
@@ -76,27 +86,8 @@ export function WorktreeSection({
     if (selectionProjectId !== projectId || selectionScope !== worktree.id) {
       return;
     }
-    const out: string[] = [];
-    const walk = (parent: string) => {
-      for (const entry of childrenOf(treeIndex, parent, showHidden)) {
-        out.push(entry.path);
-        if (entry.kind === 'dir' && dirs.includes(entry.path)) {
-          walk(entry.path);
-        }
-      }
-    };
-    walk('');
-    setVisiblePaths(out);
-  }, [
-    treeIndex,
-    dirs,
-    showHidden,
-    selectionProjectId,
-    selectionScope,
-    projectId,
-    worktree.id,
-    setVisiblePaths,
-  ]);
+    setVisiblePaths(rows.filter((row) => row.kind === 'entry').map((row) => row.fullPath));
+  }, [rows, selectionProjectId, selectionScope, projectId, worktree.id, setVisiblePaths]);
 
   const invalidateTree = () => {
     void qc.invalidateQueries({ queryKey: worktreeFilesTreeQueryKey(projectId, worktree.id) });
@@ -216,6 +207,27 @@ export function WorktreeSection({
     }
   };
 
+  const rowHandlers = {
+    projectId,
+    worktreeId: worktree.id,
+    expandedDirs,
+    selectedPaths: activeSelectedPaths,
+    renamePath,
+    iconMode: false,
+    onToggle: toggleDir,
+    onSelect: handleSelect,
+    onOpen: handleOpen,
+    onStartCreate: (kind: 'file' | 'dir', parentPath: string) => {
+      setDraft({ kind, parentPath });
+    },
+    onStartRename: setRenamePath,
+    onRenameFinish: handleRenameFinish,
+    onMoveInto: handleMoveInto,
+    onDelete: handleDelete,
+    onCreateFinish: finishCreate,
+  };
+  const renderRow = (row: FlatTreeRow) => renderFileTreeRow(row, rowHandlers);
+
   return (
     <div
       className="opacity-70 group-data-[collapsible=icon]:hidden"
@@ -277,35 +289,13 @@ export function WorktreeSection({
           {draft && draft.parentPath === '' ? (
             <InlineCreateInput kind={draft.kind} onFinish={finishCreate} depth={depthOffset + 1} />
           ) : null}
-          {childrenOf(treeIndex, '', showHidden).map((entry) => (
-            <FileRow
-              key={entry.name}
-              entry={entry}
-              parentPath=""
-              depth={depthOffset + 1}
-              projectId={projectId}
-              worktreeId={worktree.id}
-              expandedDirs={new Set(dirs)}
-              selectedPaths={activeSelectedPaths}
-              createDraft={draft ? { ...draft, projectId } : null}
-              renamePath={renamePath}
-              iconMode={false}
-              gitMap={undefined}
-              gitTruncated={false}
-              treeIndex={treeIndex}
-              showHidden={showHidden}
-              onToggle={toggleDir}
-              onSelect={handleSelect}
-              onOpen={handleOpen}
-              onStartCreate={(kind, parentPath) => setDraft({ kind, parentPath })}
-              onCreateFinish={finishCreate}
-              onStartRename={setRenamePath}
-              onRenameFinish={handleRenameFinish}
-              onMoveInto={handleMoveInto}
-              onDelete={handleDelete}
-            />
-          ))}
-          {!treeQuery.isPending && childrenOf(treeIndex, '', showHidden).length === 0 ? (
+          <FileTreeWindow
+            rows={rows}
+            rowHeight={28}
+            renderRow={renderRow}
+            testId={`explorer-rows-${worktree.id}`}
+          />
+          {!treeQuery.isPending && rows.length === 0 ? (
             <p
               className="px-2 py-2 text-muted-foreground text-xs"
               style={{ paddingLeft: `${8 + (depthOffset + 1) * 12}px` }}

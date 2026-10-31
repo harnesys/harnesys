@@ -35,12 +35,12 @@
     "pin-memory": {},
     "core": {},
     "agents": {
+      "spec": {
+        "ownDelegatesOnly": true
+      },
       "disabledTools": [
         "agents_handoff",
-        "agents_create",
-        "agents_create_subagent",
-        "agents_update",
-        "agents_delete"
+        "agents_create"
       ]
     }
   },

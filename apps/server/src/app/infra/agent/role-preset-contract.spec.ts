@@ -23,13 +23,8 @@ const CODER_OK: Partial<AgentPresetBody> = {
     'pin-memory': {},
     core: {},
     agents: {
-      disabledTools: [
-        'agents_handoff',
-        'agents_create',
-        'agents_create_subagent',
-        'agents_update',
-        'agents_delete',
-      ],
+      spec: { ownDelegatesOnly: true },
+      disabledTools: ['agents_handoff', 'agents_create'],
     },
   },
   permissions: { 'fs.write': 'allow', process: 'allow', network: 'ask', mcp: 'ask' },

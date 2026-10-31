@@ -210,6 +210,14 @@ function collectPatch(input: AgentsUpdateInput): { patch: AgentCatalogPatch } | 
   return { patch };
 }
 
+function notOwnedDelegate(name: string): { error: string } {
+  return {
+    error:
+      `"${name}" is not your delegate; this host limits agents_update to delegates created by you ` +
+      '(top-level agents are managed in the project UI).',
+  };
+}
+
 async function applyUpdate(
   deps: CreateAgentsToolsParams,
   raw: unknown,
@@ -231,6 +239,9 @@ async function applyUpdate(
   if ('error' in target) {
     return target;
   }
+  if (deps.ownDelegatesOnly === true && target.row.parentId !== scope.agentId) {
+    return notOwnedDelegate(target.row.name);
+  }
   const collected = collectPatch(input);
   if ('error' in collected) {
     return collected;
@@ -243,6 +254,10 @@ async function applyUpdate(
 }
 
 export function agentUpdateTool(deps: CreateAgentsToolsParams): ToolDefinition {
+  const scopeSuffix =
+    deps.ownDelegatesOnly === true
+      ? ' This host limits updates to delegates created by you; top-level agents are managed in the project UI.'
+      : '';
   return tool('agents_update', {
     group: 'agents',
     operations: ['agents'],
@@ -254,7 +269,8 @@ export function agentUpdateTool(deps: CreateAgentsToolsParams): ToolDefinition {
       'sharedSourceIds, sourceLevels {sourceId: read|edit}, secretNames, enabledPlugins, executionProfileId, ' +
       'defaultModeId, hooks, config. Unknown targets, plugin agents and ambiguous names fail with an error. ' +
       'agentId accepts an exact id, a unique id prefix (8+ chars), or a name. ' +
-      'At least one field besides agentId is required. Returns { agentId }.',
+      'At least one field besides agentId is required. Returns { agentId }.' +
+      scopeSuffix,
     input: {
       type: 'object',
       properties: {

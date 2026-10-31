@@ -6,12 +6,26 @@ import { createAgentsTools } from './create-agents-tools.ts';
 export interface AgentsCapabilityPorts {
   agents: AgentsCatalogPort;
 }
-export const agentsCapability = definePack<AgentsCapabilityPorts, Record<string, unknown>>({
+export interface AgentsPackSpec {
+  ownDelegatesOnly?: boolean;
+}
+export const agentsCapability = definePack<AgentsCapabilityPorts, AgentsPackSpec>({
   name: 'agents',
   version: '1.0.0',
   description:
     'Agent catalog: agents_list / agents_create / agents_create_subagent / agents_spawn / agents_handoff / agents_update / agents_delete',
   icon: 'agents',
+  specSchema: {
+    type: 'object',
+    properties: {
+      ownDelegatesOnly: {
+        type: 'boolean',
+        description:
+          'Limit agents_update to delegates created by the calling agent (delete is always own-delegates-only).',
+      },
+    },
+    additionalProperties: false,
+  },
   meta: {
     tools: [
       {
@@ -42,7 +56,7 @@ export const agentsCapability = definePack<AgentsCapabilityPorts, Record<string,
       {
         name: 'agents_update',
         description:
-          'Patch name/role/instructions/budget of your own delegate; graph and packs are owner-only (tools removed; use sources). budget replaces the stored budget (omitted fields drop out): maxSteps/maxTokens/deadlineMs (integers >= 1) and policy ask|error, same shape as agents_create, at least one field required. Returns { agentId }. agentId accepts an exact id, a unique id prefix (8+ chars), or a name.',
+          'Patch name/role/instructions/budget of an agent (scope: whole org by default, own delegates only with pack spec ownDelegatesOnly); graph and packs are owner-only (tools removed; use sources). budget replaces the stored budget (omitted fields drop out): maxSteps/maxTokens/deadlineMs (integers >= 1) and policy ask|error, same shape as agents_create, at least one field required. Returns { agentId }. agentId accepts an exact id, a unique id prefix (8+ chars), or a name.',
       },
       {
         name: 'agents_delete',
@@ -54,11 +68,18 @@ export const agentsCapability = definePack<AgentsCapabilityPorts, Record<string,
     hasSettings: false,
   },
   create: (ctx) => ({
-    tools: [
-      ...createAgentsTools({ agents: ctx.ports.agents, resolveScope: () => ctx.scope }),
-      createAgentsHandoffTool({ agents: ctx.ports.agents, resolveScope: () => ctx.scope }),
-      ...createAgentLifecycleTools({ agents: ctx.ports.agents, resolveScope: () => ctx.scope }),
-    ],
+    tools: (() => {
+      const params = {
+        agents: ctx.ports.agents,
+        resolveScope: () => ctx.scope,
+        ownDelegatesOnly: ctx.spec.ownDelegatesOnly === true,
+      };
+      return [
+        ...createAgentsTools(params),
+        createAgentsHandoffTool(params),
+        ...createAgentLifecycleTools(params),
+      ];
+    })(),
     notes: () => [
       {
         tag: 'agent-tools',

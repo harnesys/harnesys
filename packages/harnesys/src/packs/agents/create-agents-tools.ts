@@ -13,6 +13,7 @@ import { spawnAgentTool } from './spawn-agents-tool.ts';
 export interface CreateAgentsToolsParams {
   agents: AgentsCatalogPort;
   resolveScope: () => CapabilityScope;
+  ownDelegatesOnly?: boolean;
 }
 async function withInheritedModel(
   agents: AgentsCatalogPort,

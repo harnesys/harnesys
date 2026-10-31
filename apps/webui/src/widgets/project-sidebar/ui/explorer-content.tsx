@@ -1,6 +1,5 @@
-import type { ProjectMoveItem } from '@harnesys/studio-shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { startTransition, useEffect, useRef, useState } from 'react';
 import { useProjects } from '@/entities/project';
 import { useIdeStore } from '@/features/ide';
 import {
@@ -8,9 +7,6 @@ import {
   buildRenameItem,
   canDropInto,
   isValidFileName,
-  moveDrag,
-  sameMoveScope,
-  setMoveDrag,
   useMoveProjectFiles,
 } from '@/features/move-project-files';
 import { openProjectFile } from '@/features/open-file';
@@ -30,10 +26,14 @@ import { useExplorerExpandStore } from '../model/explorer-expand.store';
 import { useExplorerHiddenStore } from '../model/explorer-hidden.store';
 import { createLazyChildrenState, ensurePrunedChildren } from '../model/explorer-lazy-children';
 import { useFileSelectionStore } from '../model/file-selection.store';
-import { childrenOf, indexFileTree } from '../model/file-tree-index';
+import type { FlatTreeRow } from '../model/file-tree-index';
+import { flattenFileTree, indexFileTree } from '../model/file-tree-index';
 import { useFilesCopyPaste } from '../model/use-files-copy-paste';
 import { useFilesHotkey } from '../model/use-files-hotkey';
-import { FileRow, InlineCreateInput } from './file-row';
+import { useRootDragDrop } from '../model/use-root-drag-drop';
+import { FileTreeWindow } from './file-tree-window';
+import { renderFileTreeRow } from './file-row-render';
+import { InlineCreateInput } from './inline-create-input';
 
 const EMPTY_DIRS: string[] = [];
 
@@ -57,9 +57,13 @@ export function ExplorerContent({
   const cancelCreate = useExplorerDraftStore((store) => store.cancel);
   const dirPaths = useExplorerExpandStore((s) => s.dirs[projectId] ?? EMPTY_DIRS);
   const toggleDirStore = useExplorerExpandStore((s) => s.toggleDir);
-  const expandedDirs = useMemo(() => new Set(dirPaths), [dirPaths]);
+  const expandedDirs = new Set(dirPaths);
   const [renamePath, setRenamePath] = useState<string | null>(null);
   const moveMutation = useMoveProjectFiles(projectId);
+  const { handleRootDrop, handleRootDragOver } = useRootDragDrop({
+    projectId,
+    mutate: moveMutation.mutate,
+  });
   const selectedPaths = useFileSelectionStore((s) => s.selectedPaths);
   const selectionProjectId = useFileSelectionStore((s) => s.projectId);
   const selectionScope = useFileSelectionStore((s) => s.scopeWorktreeId);
@@ -102,82 +106,34 @@ export function ExplorerContent({
     mutationFn: (path: string) => deleteProjectFile(projectId, path),
     onSuccess: invalidateTree,
   });
-  const treeIndex = useMemo(() => indexFileTree(treeQuery.data ?? []), [treeQuery.data]);
-  const entries = childrenOf(treeIndex, '', showHidden);
-  const computeVisible = useCallback((): string[] => {
-    const out: string[] = [];
-    const walk = (parent: string) => {
-      for (const ent of childrenOf(treeIndex, parent, showHidden)) {
-        out.push(ent.path);
-        if (ent.kind === 'dir' && expandedDirs.has(ent.path)) {
-          walk(ent.path);
-        }
-      }
-    };
-    walk('');
-    return out;
-  }, [treeIndex, expandedDirs, showHidden]);
-  const visibleForStore = computeVisible();
+  const treeIndex = indexFileTree(treeQuery.data ?? []);
+  const rows = flattenFileTree({
+    index: treeIndex,
+    showHidden,
+    expandedDirs,
+    depthOffset,
+    createDraft,
+  });
+  const visiblePaths = rows.filter((row) => row.kind === 'entry').map((row) => row.fullPath);
   const setVisiblePaths = useFileSelectionStore((s) => s.setVisiblePaths);
   useEffect(() => {
     if (selectionProjectId === projectId && !selectionScope) {
-      setVisiblePaths(visibleForStore);
+      setVisiblePaths(visiblePaths);
     }
-  }, [visibleForStore, setVisiblePaths, selectionProjectId, selectionScope, projectId]);
-  const activateProject = useCallback(() => {
-    setScope(projectId, null);
-  }, [setScope, projectId]);
-  const handleSelect = useCallback(
-    (path: string, event?: React.MouseEvent) => {
-      activateProject();
-      setFilesActive(true);
-      const e = event as React.MouseEvent | undefined;
-      if (e?.shiftKey) {
-        const anchor = useFileSelectionStore.getState().anchorPath;
-        if (!anchor) {
-          selectSingle(path);
-        } else {
-          selectRange(path);
-        }
-        return;
-      }
-      if (e?.metaKey || e?.ctrlKey) {
-        togglePath(path);
-        return;
-      }
-      selectSingle(path);
-    },
-    [activateProject, selectSingle, togglePath, selectRange, setFilesActive],
-  );
-  const ensureDirOpen = useCallback(
-    (dirPath: string) => {
-      if (!dirPath) {
-        return;
-      }
-      if (!expandedDirs.has(dirPath)) {
-        startTransition(() => toggleDirStore(projectId, dirPath));
-      }
-      ensurePrunedChildren({
-        qc,
-        treeKey,
-        projectId,
-        dirPath,
-        state: lazyState.current,
-      });
-    },
-    [expandedDirs, toggleDirStore, projectId, qc, treeKey],
-  );
+  }, [visiblePaths, setVisiblePaths, selectionProjectId, selectionScope, projectId]);
+  const ensureLazyChildren = (dirPath: string) => {
+    ensurePrunedChildren({
+      qc,
+      treeKey,
+      projectId,
+      dirPath,
+      state: lazyState.current,
+    });
+  };
   const toggleDir = (dirPath: string) => {
-    const expanding = !expandedDirs.has(dirPath);
     startTransition(() => toggleDirStore(projectId, dirPath));
-    if (expanding) {
-      ensurePrunedChildren({
-        qc,
-        treeKey,
-        projectId,
-        dirPath,
-        state: lazyState.current,
-      });
+    if (!expandedDirs.has(dirPath)) {
+      ensureLazyChildren(dirPath);
     }
   };
   useEffect(() => {
@@ -185,15 +141,15 @@ export function ExplorerContent({
       return;
     }
     for (const dirPath of dirPaths) {
-      ensurePrunedChildren({
-        qc,
-        treeKey,
-        projectId,
-        dirPath,
-        state: lazyState.current,
-      });
+      ensureLazyChildren(dirPath);
     }
-  }, [treeQuery.data, dirPaths, qc, treeKey, projectId]);
+  }, [treeQuery.data, dirPaths, ensureLazyChildren]);
+  const ensureDirOpen = (dirPath: string) => {
+    if (dirPath && !expandedDirs.has(dirPath)) {
+      startTransition(() => toggleDirStore(projectId, dirPath));
+    }
+    ensureLazyChildren(dirPath);
+  };
   const finishCreate = (name: string) => {
     if (!createDraft || !name.trim()) {
       cancelCreate();
@@ -216,20 +172,12 @@ export function ExplorerContent({
     deleteMutation.mutate(path);
     useIdeStore.getState().closeByEntity(projectId, 'file', path);
   };
-  const move = (items: ProjectMoveItem[], expandTarget?: string) => {
-    if (items.length === 0) {
+  const handleMoveInto = (targetDir: string, paths: string[]) => {
+    const items = buildMoveItems(paths, targetDir);
+    if (items.length === 0 || !canDropInto(paths, targetDir)) {
       return;
     }
-    moveMutation.mutate(items, {
-      onSuccess: () => {
-        if (expandTarget) {
-          ensureDirOpen(expandTarget);
-        }
-      },
-    });
-  };
-  const handleMoveInto = (targetDir: string, paths: string[]) => {
-    move(buildMoveItems(paths, targetDir), targetDir);
+    moveMutation.mutate(items);
   };
   const handleRenameFinish = (path: string, name: string) => {
     setRenamePath(null);
@@ -241,37 +189,28 @@ export function ExplorerContent({
       toast.add({ title: 'Invalid file name', description: trimmed });
       return;
     }
-    move([buildRenameItem(path, trimmed)]);
+    moveMutation.mutate([buildRenameItem(path, trimmed)]);
   };
-  const handleRootDrop = (event: React.DragEvent) => {
-    const drag = moveDrag();
-    if (!drag || !sameMoveScope(drag, projectId)) {
-      return;
-    }
-    if ((event.target as Element | null)?.closest?.('[data-path]')) {
-      return;
-    }
-    const items = buildMoveItems(drag.paths, '');
-    if (items.length === 0 || !canDropInto(drag.paths, '')) {
-      return;
-    }
-    event.preventDefault();
-    setMoveDrag(null);
-    move(items);
+  const activateProject = () => {
+    setScope(projectId, null);
   };
-  const handleRootDragOver = (event: React.DragEvent) => {
-    const drag = moveDrag();
-    if (!drag || !sameMoveScope(drag, projectId)) {
+  const handleSelect = (path: string, event?: React.MouseEvent) => {
+    activateProject();
+    setFilesActive(true);
+    if (event?.shiftKey) {
+      const anchor = useFileSelectionStore.getState().anchorPath;
+      if (!anchor) {
+        selectSingle(path);
+      } else {
+        selectRange(path);
+      }
       return;
     }
-    if ((event.target as Element | null)?.closest?.('[data-path]')) {
+    if (event?.metaKey || event?.ctrlKey) {
+      togglePath(path);
       return;
     }
-    if (!canDropInto(drag.paths, '') || buildMoveItems(drag.paths, '').length === 0) {
-      return;
-    }
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
+    selectSingle(path);
   };
   const handleOpen = (path: string) => {
     activateProject();
@@ -281,6 +220,27 @@ export function ExplorerContent({
   };
   useFilesHotkey(selectionProjectId === projectId ? projectId : '');
   useFilesCopyPaste(projectId, qc);
+  const rowHandlers = {
+    projectId,
+    expandedDirs,
+    selectedPaths: activeSelectedPaths,
+    renamePath,
+    iconMode,
+    gitMap: gitTruncated ? undefined : gitMap,
+    gitTruncated,
+    onToggle: toggleDir,
+    onSelect: handleSelect,
+    onOpen: handleOpen,
+    onStartCreate: (kind: 'file' | 'dir', parentPath: string) => {
+      startCreate(kind, parentPath, projectId);
+    },
+    onStartRename: setRenamePath,
+    onRenameFinish: handleRenameFinish,
+    onMoveInto: handleMoveInto,
+    onDelete: handleDelete,
+    onCreateFinish: finishCreate,
+  };
+  const renderRow = (row: FlatTreeRow) => renderFileTreeRow(row, rowHandlers);
   return (
     <div
       role="tree"
@@ -303,34 +263,13 @@ export function ExplorerContent({
       {createDraft && createDraft.parentPath === '' ? (
         <InlineCreateInput kind={createDraft.kind} onFinish={finishCreate} depth={depthOffset} />
       ) : null}
-      {entries.map((entry) => (
-        <FileRow
-          key={entry.name}
-          entry={entry}
-          parentPath=""
-          depth={depthOffset}
-          projectId={projectId}
-          expandedDirs={expandedDirs}
-          selectedPaths={activeSelectedPaths}
-          createDraft={createDraft}
-          renamePath={renamePath}
-          iconMode={iconMode}
-          gitMap={gitTruncated ? undefined : gitMap}
-          gitTruncated={gitTruncated}
-          treeIndex={treeIndex}
-          showHidden={showHidden}
-          onToggle={toggleDir}
-          onSelect={handleSelect}
-          onOpen={handleOpen}
-          onStartCreate={(kind, parentPath) => startCreate(kind, parentPath, projectId)}
-          onCreateFinish={finishCreate}
-          onStartRename={setRenamePath}
-          onRenameFinish={handleRenameFinish}
-          onMoveInto={handleMoveInto}
-          onDelete={handleDelete}
-        />
-      ))}
-      {!treeQuery.isPending && entries.length === 0 ? (
+      <FileTreeWindow
+        rows={rows}
+        rowHeight={iconMode ? 32 : 28}
+        renderRow={renderRow}
+        testId={`explorer-rows-${projectId}`}
+      />
+      {!treeQuery.isPending && rows.length === 0 ? (
         <p
           className="px-2 py-2 text-muted-foreground text-xs group-data-[collapsible=icon]:hidden"
           style={{ paddingLeft: `${8 + depthOffset * 12}px` }}

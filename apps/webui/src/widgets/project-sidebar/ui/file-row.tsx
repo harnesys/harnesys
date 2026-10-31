@@ -1,15 +1,11 @@
 import type { GitFileStatus, GitFileStatusMap, ProjectFileEntry } from '@harnesys/studio-shared';
 import { useQuery } from '@tanstack/react-query';
-import { useDeferredValue } from 'react';
 import { useOpenNewTerminal } from '@/features/ide';
 import { getGitFileStatus } from '@/shared/api/git';
 import { gitStatusColorClass, useGitStatusColors } from '@/shared/lib/git-status-colors';
 import { cn } from '@/shared/lib/utils';
 import { FileTypeIcon, FolderTypeIcon } from '@/shared/ui/icons';
-import { Spinner } from '@/shared/ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
-import type { ExplorerCreateDraft } from '../model/explorer-draft.store';
-import { childrenOf } from '../model/file-tree-index';
 import { useEntryActions } from '../model/use-entry-actions';
 import { FileRowActions } from './file-row-actions';
 import { getDirAggregatedStatus } from './git-file-decorations';
@@ -78,35 +74,6 @@ function resolveEffectiveMap({
   return isDir && isExpanded ? fetched : undefined;
 }
 
-const LARGE_CHILDREN_LIMIT = 200;
-const NO_CHILDREN: ProjectFileEntry[] = [];
-
-function useDirChildrenState(
-  children: ProjectFileEntry[],
-  isDir: boolean,
-  isExpanded: boolean,
-): {
-  renderedChildren: ProjectFileEntry[];
-  showChildrenBlock: boolean;
-  childrenBusy: boolean;
-} {
-  const deferredChildren = useDeferredValue(children.length > LARGE_CHILDREN_LIMIT ? children : NO_CHILDREN);
-  const deferredExpanded = useDeferredValue(children.length > LARGE_CHILDREN_LIMIT ? isExpanded : false);
-  if (!isDir) {
-    return { renderedChildren: NO_CHILDREN, showChildrenBlock: false, childrenBusy: false };
-  }
-  if (children.length <= LARGE_CHILDREN_LIMIT) {
-    return { renderedChildren: children, showChildrenBlock: isExpanded, childrenBusy: false };
-  }
-  const childrenPending = isExpanded !== deferredExpanded;
-  const deferringChildren = children !== deferredChildren;
-  return {
-    renderedChildren: deferredChildren,
-    showChildrenBlock: isExpanded || childrenPending,
-    childrenBusy: (childrenPending && isExpanded) || (deferredExpanded && deferringChildren),
-  };
-}
-
 function resolveGitDecoration({
   isDir,
   fullPath,
@@ -150,155 +117,51 @@ function resolveInfoLabel(isDir: boolean, childCount: number, size: number | und
   return size !== undefined ? formatSize(size) : '';
 }
 
-interface FileRowChildrenProps {
-  fullPath: string;
-  depth: number;
-  projectId: string;
-  worktreeId?: string;
-  busy: boolean;
-  deferredChildren: ProjectFileEntry[];
-  expandedDirs: Set<string>;
-  selectedPaths: string[];
-  createDraft: ExplorerCreateDraft | null;
-  renamePath: string | null;
-  iconMode: boolean;
-  gitMap: GitFileStatusMap | undefined;
-  gitTruncated?: boolean;
-  treeIndex: Map<string, ProjectFileEntry[]>;
-  showHidden: boolean;
-  onToggle: (fullPath: string) => void;
-  onSelect: (fullPath: string, event?: React.MouseEvent) => void;
-  onOpen: (fullPath: string) => void;
-  onStartCreate: (kind: 'file' | 'dir', parentPath: string) => void;
-  onCreateFinish: (name: string) => void;
-  onStartRename: (fullPath: string) => void;
-  onRenameFinish: (fullPath: string, name: string) => void;
-  onMoveInto: (targetDir: string, paths: string[]) => void;
-  onDelete: (fullPath: string) => void;
-}
-
-function FileRowChildren({
-  fullPath,
-  depth,
-  projectId,
-  worktreeId,
-  busy,
-  deferredChildren,
-  expandedDirs,
-  selectedPaths,
-  createDraft,
-  renamePath,
-  iconMode,
-  gitMap,
-  gitTruncated,
-  treeIndex,
-  showHidden,
-  onToggle,
-  onSelect,
-  onOpen,
-  onStartCreate,
-  onCreateFinish,
-  onStartRename,
-  onRenameFinish,
-  onMoveInto,
-  onDelete,
-}: FileRowChildrenProps) {
-  return (
-    <div className="flex flex-col">
-      {busy ? (
-        <div
-          className="flex items-center gap-1.5 py-0.5 text-muted-foreground text-xs"
-          style={{ paddingLeft: `${(depth + 1) * 12 + 8}px` }}
-          data-testid={`file-${fullPath}-loading`}
-        >
-          <Spinner className="size-3" />
-          <span>Loading…</span>
-        </div>
-      ) : null}
-      {deferredChildren.map((child) => (
-        <FileRow
-          key={child.name}
-          entry={child}
-          parentPath={fullPath}
-          depth={depth + 1}
-          projectId={projectId}
-          worktreeId={worktreeId}
-          expandedDirs={expandedDirs}
-          selectedPaths={selectedPaths}
-          createDraft={createDraft}
-          renamePath={renamePath}
-          iconMode={iconMode}
-          gitMap={gitMap}
-          gitTruncated={gitTruncated}
-          treeIndex={treeIndex}
-          showHidden={showHidden}
-          onToggle={onToggle}
-          onSelect={onSelect}
-          onOpen={onOpen}
-          onStartCreate={onStartCreate}
-          onCreateFinish={onCreateFinish}
-          onStartRename={onStartRename}
-          onRenameFinish={onRenameFinish}
-          onMoveInto={onMoveInto}
-          onDelete={onDelete}
-        />
-      ))}
-    </div>
-  );
-}
-
 export function FileRow({
   entry,
-  parentPath,
+  fullPath,
   depth,
+  childCount,
   projectId,
   worktreeId,
   expandedDirs,
   selectedPaths,
-  createDraft,
   renamePath,
   iconMode,
   gitMap,
   gitTruncated,
-  treeIndex,
-  showHidden,
   onToggle,
   onSelect,
   onOpen,
   onStartCreate,
-  onCreateFinish,
   onStartRename,
   onRenameFinish,
   onMoveInto,
   onDelete,
 }: {
   entry: ProjectFileEntry;
-  parentPath: string;
+  fullPath: string;
   depth: number;
+  childCount: number;
   projectId: string;
   worktreeId?: string;
   expandedDirs: Set<string>;
   selectedPaths: string[];
-  createDraft: ExplorerCreateDraft | null;
   renamePath: string | null;
   iconMode: boolean;
   gitMap?: GitFileStatusMap;
   gitTruncated?: boolean;
-  treeIndex: Map<string, ProjectFileEntry[]>;
-  showHidden: boolean;
   onToggle: (fullPath: string) => void;
   onSelect: (fullPath: string, event?: React.MouseEvent) => void;
   onOpen: (fullPath: string) => void;
   onStartCreate: (kind: 'file' | 'dir', parentPath: string) => void;
-  onCreateFinish: (name: string) => void;
   onStartRename: (fullPath: string) => void;
   onRenameFinish: (fullPath: string, name: string) => void;
   onMoveInto: (targetDir: string, paths: string[]) => void;
   onDelete: (fullPath: string) => void;
 }) {
-  const fullPath = parentPath ? `${parentPath}/${entry.name}` : entry.name;
   const isDir = entry.kind === 'dir';
-  const isExpanded = isDir && expandedDirs.has(fullPath);
+  const isExpanded = expandedDirs.has(fullPath);
   const selected = selectedPaths.includes(fullPath);
   const dirGitQuery = useQuery({
     queryKey: ['projects', projectId, 'git', 'file-status', fullPath],
@@ -326,14 +189,7 @@ export function FileRow({
   });
   const openNewTerminal = useOpenNewTerminal();
   const entryActions = useEntryActions(projectId, worktreeId);
-  const children = isDir ? childrenOf(treeIndex, fullPath, showHidden) : [];
-  const { renderedChildren, showChildrenBlock, childrenBusy } = useDirChildrenState(
-    children,
-    isDir,
-    isExpanded,
-  );
-  const infoLabel = resolveInfoLabel(isDir, children.length, entry.size);
-  const showCreateHere = createDraft && isDir && createDraft.parentPath === fullPath;
+  const infoLabel = resolveInfoLabel(isDir, childCount, entry.size);
   const { dropState, dragProps } = useFileRowDrag({
     projectId,
     worktreeId,
@@ -366,7 +222,31 @@ export function FileRow({
     onSelect(fullPath);
   };
   return (
-    <>
+    <div
+      role="treeitem"
+      tabIndex={0}
+      aria-expanded={isDir ? isExpanded : undefined}
+      aria-selected={selected}
+      className={cn(
+        'group/file relative flex items-center rounded-md hover:bg-sidebar-accent/70',
+        selected && 'bg-sidebar-accent/70 text-sidebar-accent-foreground',
+        'group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center',
+        dropState === 'valid' && 'bg-live/15 ring-1 ring-live ring-inset',
+        dropState === 'invalid' && 'cursor-not-allowed opacity-60',
+      )}
+      style={!iconMode ? { paddingLeft: `${depth * 12 + 1}px` } : undefined}
+      data-testid={`file-${fullPath}`}
+      data-selected={selected ? 'true' : 'false'}
+      data-drop={dropState ?? undefined}
+      data-path={fullPath}
+      draggable={dragProps.draggable}
+      onDragStart={dragProps.onDragStart}
+      onDragEnd={dragProps.onDragEnd}
+      onDragOver={dragProps.onDragOver}
+      onDragLeave={dragProps.onDragLeave}
+      onDrop={dragProps.onDrop}
+      onKeyDown={handleKeyDown}
+    >
       {renamePath === fullPath ? (
         <InlineCreateInput
           kind={isDir ? 'dir' : 'file'}
@@ -375,31 +255,7 @@ export function FileRow({
           onFinish={(name) => onRenameFinish(fullPath, name)}
         />
       ) : (
-        <div
-          role="treeitem"
-          tabIndex={0}
-          aria-expanded={isDir ? isExpanded : undefined}
-          aria-selected={selected}
-          className={cn(
-            'group/file relative flex items-center rounded-md hover:bg-sidebar-accent/70',
-            selected && 'bg-sidebar-accent/70 text-sidebar-accent-foreground',
-            'group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center',
-            dropState === 'valid' && 'bg-live/15 ring-1 ring-live ring-inset',
-            dropState === 'invalid' && 'cursor-not-allowed opacity-60',
-          )}
-          style={!iconMode ? { paddingLeft: `${depth * 12 + 1}px` } : undefined}
-          data-testid={`file-${fullPath}`}
-          data-selected={selected ? 'true' : 'false'}
-          data-drop={dropState ?? undefined}
-          data-path={fullPath}
-          draggable={dragProps.draggable}
-          onDragStart={dragProps.onDragStart}
-          onDragEnd={dragProps.onDragEnd}
-          onDragOver={dragProps.onDragOver}
-          onDragLeave={dragProps.onDragLeave}
-          onDrop={dragProps.onDrop}
-          onKeyDown={handleKeyDown}
-        >
+        <>
           <Tooltip>
             <TooltipTrigger
               render={
@@ -438,45 +294,11 @@ export function FileRow({
             onStartRename={onStartRename}
             onDelete={onDelete}
           />
-        </div>
+        </>
       )}
-
-      {showChildrenBlock ? (
-        <FileRowChildren
-          fullPath={fullPath}
-          depth={depth}
-          projectId={projectId}
-          worktreeId={worktreeId}
-          busy={childrenBusy}
-          deferredChildren={renderedChildren}
-          expandedDirs={expandedDirs}
-          selectedPaths={selectedPaths}
-          createDraft={createDraft}
-          renamePath={renamePath}
-          iconMode={iconMode}
-          gitMap={effectiveMap ?? gitMap}
-          gitTruncated={gitTruncated}
-          treeIndex={treeIndex}
-          showHidden={showHidden}
-          onToggle={onToggle}
-          onSelect={onSelect}
-          onOpen={onOpen}
-          onStartCreate={onStartCreate}
-          onCreateFinish={onCreateFinish}
-          onStartRename={onStartRename}
-          onRenameFinish={onRenameFinish}
-          onMoveInto={onMoveInto}
-          onDelete={onDelete}
-        />
-      ) : null}
-
-      {showCreateHere && (
-        <InlineCreateInput kind={createDraft.kind} onFinish={onCreateFinish} depth={depth + 1} />
-      )}
-    </>
+    </div>
   );
 }
-export { InlineCreateInput } from './inline-create-input';
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) {

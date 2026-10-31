@@ -42,7 +42,7 @@ export function ensurePrunedChildren(args: {
         const prev = old ?? [];
         const seen = new Set(prev.map((item) => item.path));
         const merged = prev.map((item) =>
-          item.path === dirPath && item.pruned ? { ...item, pruned: false } : item,
+          item.path === dirPath ? { ...item, pruned: false } : item,
         );
         for (const item of fetched) {
           if (!seen.has(item.path)) {
