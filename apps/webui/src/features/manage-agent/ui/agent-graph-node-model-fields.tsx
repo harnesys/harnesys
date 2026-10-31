@@ -208,18 +208,25 @@ function seedValues(ref: AgentModelRef | undefined, providers: ProviderPublic[])
     maxTokens: numberString(generation?.maxTokens),
   };
 }
-function nodeGenerationOf(values: AgentFieldsOutput): AgentGenerationSettings | null {
+function nodeGenerationOf(values: AgentFieldsInput): AgentGenerationSettings | null {
   const generation: AgentGenerationSettings = {
-    temperature: values.temperature,
-    topP: values.topP,
-    topK: values.topK,
-    frequencyPenalty: values.frequencyPenalty,
-    presencePenalty: values.presencePenalty,
-    seed: values.seed,
-    maxTokens: values.maxTokens,
+    temperature: numberOrNull(values.temperature),
+    topP: numberOrNull(values.topP),
+    topK: numberOrNull(values.topK),
+    frequencyPenalty: numberOrNull(values.frequencyPenalty),
+    presencePenalty: numberOrNull(values.presencePenalty),
+    seed: numberOrNull(values.seed),
+    maxTokens: numberOrNull(values.maxTokens),
   };
   const wrote = Object.values(generation).some((value) => value !== undefined);
   return wrote ? generation : null;
+}
+function numberOrNull(value: string | undefined): number | undefined {
+  if (value === undefined || value.trim() === '') {
+    return undefined;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 function modelRefOf(node: Node): AgentModelRef | undefined {
   if (node.type !== 'llm:generate' && node.type !== 'control:route') {

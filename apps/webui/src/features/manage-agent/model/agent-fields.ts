@@ -85,7 +85,8 @@ export type AgentGenerationField =
   | 'presencePenalty'
   | 'seed'
   | 'maxTokens'
-  | 'contextWindowTokens';
+  | 'contextWindowTokens'
+  | 'reasoningMode';
 export function emptyAgentFields(): AgentFieldsInput {
   return {
     name: '',
