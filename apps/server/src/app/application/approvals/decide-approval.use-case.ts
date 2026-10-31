@@ -11,6 +11,7 @@ import { ApprovalNotFoundException } from '../../domain/approval/approval.error.
 import type { ApprovalRecord, ApprovalResumePlan } from '../../domain/approval/approval.ts';
 import { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
 import { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
+import { PermissionGrantStorePort } from '../../domain/approval/permission-grant-store.port.ts';
 import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
 import type { EventClaimRecord } from '../../domain/fleet/event-claim.port.ts';
 import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
@@ -26,6 +27,7 @@ import {
   targetAgentIdOf,
 } from './persist-decision.ts';
 import { shellRulePatternsOf } from './persist-shell-rule.ts';
+import { recordOperationGrants } from './record-operation-grants.ts';
 
 export interface DecideApprovalRequest {
   orgId: string;
@@ -77,6 +79,7 @@ export class DecideApprovalUseCase {
   constructor(
     private readonly store: ApprovalStorePort,
     private readonly events: ApprovalEventsPort,
+    private readonly grants: PermissionGrantStorePort,
     private readonly executor: LocalExecutorPort,
     private readonly claims: EventClaimPort,
     private readonly commands: NodeCommandQueuePort,
@@ -146,11 +149,23 @@ export class DecideApprovalUseCase {
     };
     const agentId = targetAgentIdOf(decided.context.delegated, decided.agentId);
     const file = decided.context.file;
+    const ops = decided.context.ops;
     if (decision === 'block_path') {
       if (!file) {
         return;
       }
       persistFileDecision(deps, { agentId, file, blockPath: true, rule, scope });
+      return;
+    }
+    if (decision === 'approve' && !file && !rule && ops !== undefined && ops.length > 0) {
+      if (scope !== 'always') {
+        return;
+      }
+      recordOperationGrants(this.grants, orgId, {
+        agentId,
+        ops,
+        ...(decided.decidedBy !== null ? { decidedBy: decided.decidedBy } : {}),
+      });
       return;
     }
     if (decision !== 'approve' || !scopePersistsRule(scope, rule)) {

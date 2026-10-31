@@ -162,6 +162,7 @@ export async function prepareExecuteGraphOpts(
     rejected: answer?.rejected === true,
     resumePayload: answer?.payload,
     resumeInterruptId: answer?.interruptId,
+    ...(opts.permissionGrants !== undefined ? { permissionGrants: opts.permissionGrants } : {}),
     ...(answer?.note !== undefined ? { resumeNote: answer.note } : {}),
     childJournal,
     ...(deps.childRunner ? { childRunner: deps.childRunner } : {}),

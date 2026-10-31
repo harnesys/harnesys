@@ -75,6 +75,7 @@ import {
   backfillIntegrationsFromSources,
   CREATE_INTEGRATIONS_SQL,
 } from './org-sql-integrations.ts';
+import { CREATE_PERMISSION_GRANTS_SQL } from './org-sql-permission-grants.ts';
 
 interface ColumnInfo {
   name: string;
@@ -311,6 +312,7 @@ export function ensureOrgSchema(
     migrateApprovalsTable(exec, all);
     migrateApprovalsResumeStateColumn(exec, all);
   }
+  exec(CREATE_PERMISSION_GRANTS_SQL);
   exec(CREATE_FILE_ACCESS_RULES_SQL);
   exec(CREATE_SCHEDULES_SQL);
   exec(CREATE_WEBHOOKS_SQL);

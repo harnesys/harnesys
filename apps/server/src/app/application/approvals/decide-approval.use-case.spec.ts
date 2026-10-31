@@ -6,6 +6,7 @@ import { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts'
 import type { ModePresetRecord } from '../../domain/mode-presets/mode-preset.ts';
 import {
   MemoryApprovalEvents,
+  MemoryPermissionGrants,
   StubEventClaims,
   StubFileRules,
   StubMachineConfig,
@@ -87,8 +88,19 @@ class StoreStub extends ApprovalStorePort {
   request(): { id: string } {
     throw new Error('not used');
   }
-  decide(_orgId: string, input: { approvalId: string }): { winner: boolean; status: 'approved' } {
+  decide(
+    _orgId: string,
+    input: { approvalId: string; surface: 'web' },
+  ): { winner: boolean; status: 'approved' } {
     this.decided.push(input.approvalId);
+    if (this.row) {
+      this.row = {
+        ...this.row,
+        status: 'approved',
+        decidedBy: input.surface,
+        decidedAt: new Date(0).toISOString(),
+      };
+    }
     return { winner: true, status: 'approved' };
   }
   list(): ApprovalRecord[] {
@@ -124,11 +136,13 @@ function shellAllowlistOf(config: Record<string, unknown>): unknown {
 function build(): {
   useCase: DecideApprovalUseCase;
   store: StoreStub;
+  grants: MemoryPermissionGrants;
   agents: AgentsStub;
   modes: ModesStub;
   fileRules: StubFileRules;
 } {
   const store = new StoreStub();
+  const grants = new MemoryPermissionGrants();
   const agents = new AgentsStub();
   agents.agent = agentRecord({
     capabilitiesJson: { shell: { spec: { allowlist: ['git status'] } } },
@@ -138,6 +152,7 @@ function build(): {
   const useCase = new DecideApprovalUseCase(
     store,
     new MemoryApprovalEvents(),
+    grants,
     new StubLocalExecutor(),
     new StubEventClaims(),
     new StubNodeCommands(),
@@ -148,7 +163,7 @@ function build(): {
     new StubSourceLocation(),
     silentLogger(),
   );
-  return { useCase, store, agents, modes, fileRules };
+  return { useCase, store, grants, agents, modes, fileRules };
 }
 
 describe('DecideApprovalUseCase rule persistence', () => {
@@ -268,5 +283,60 @@ describe('DecideApprovalUseCase rule persistence', () => {
     });
     expect(agents.updates).toHaveLength(1);
     expect(modes.updates).toHaveLength(0);
+  });
+});
+
+describe('DecideApprovalUseCase operation persistence', () => {
+  function withOps(store: StoreStub): void {
+    if (store.row) {
+      store.row = { ...store.row, context: { source: 'permission', ops: ['network'] } };
+    }
+  }
+
+  test('approve with always scope records the operation grant', async () => {
+    const { useCase, store, grants, agents } = build();
+    withOps(store);
+    const result = await useCase.execute({
+      orgId: 'org-1',
+      approvalId: 'approval-1',
+      body: { decision: 'approve', surface: 'web', scope: 'always' },
+    });
+    expect(result.winner).toBe(true);
+    expect(grants.has('org-1', 'agent-1', 'network')).toBe(true);
+    expect(grants.rows[0]?.decidedBy).toBe('web');
+    expect(agents.updates).toHaveLength(0);
+  });
+
+  test('approve without scope stays ephemeral', async () => {
+    const { useCase, store, grants } = build();
+    withOps(store);
+    await useCase.execute({
+      orgId: 'org-1',
+      approvalId: 'approval-1',
+      body: { decision: 'approve', surface: 'web' },
+    });
+    expect(grants.rows).toHaveLength(0);
+  });
+
+  test('run scope keeps the gate ephemeral', async () => {
+    const { useCase, store, grants } = build();
+    withOps(store);
+    await useCase.execute({
+      orgId: 'org-1',
+      approvalId: 'approval-1',
+      body: { decision: 'approve', surface: 'web', scope: 'run' },
+    });
+    expect(grants.rows).toHaveLength(0);
+  });
+
+  test('approve_once never persists', async () => {
+    const { useCase, store, grants } = build();
+    withOps(store);
+    await useCase.execute({
+      orgId: 'org-1',
+      approvalId: 'approval-1',
+      body: { decision: 'approve_once', surface: 'web' },
+    });
+    expect(grants.rows).toHaveLength(0);
   });
 });

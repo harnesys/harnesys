@@ -15,6 +15,7 @@ import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { HookRunStorePort } from '../../domain/agent/hook-run-store.port.ts';
 import { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
 import { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
+import { PermissionGrantStorePort } from '../../domain/approval/permission-grant-store.port.ts';
 import { BrowserHostPort } from '../../domain/browser/browser-host.port.ts';
 import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
@@ -85,6 +86,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     private readonly orgSettings: OrgSettingsPort,
     private readonly approvals: ApprovalStorePort,
     private readonly approvalEvents: ApprovalEventsPort,
+    private readonly permissionGrants: PermissionGrantStorePort,
     private readonly planEvents: PlanEventsPort,
     private readonly threadEvents: ThreadEventsPort,
     private readonly deskEvents: DeskEventsPort,
@@ -152,6 +154,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       models: this.models,
       secrets: this.secrets,
       fileRules: this.fileRules,
+      permissionGrants: this.permissionGrants,
       plugins: this.plugins,
       sourceSkills: this.sourceSkills,
       orgSettings: this.orgSettings,

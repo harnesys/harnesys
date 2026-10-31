@@ -24,6 +24,7 @@ import type { FileAccessPolicy } from '../ports/file-access.ts';
 import type { Logger } from '../ports/logger.ts';
 import type { ModelBinding, ModelsPort, ProviderConfig } from '../ports/models.ts';
 import type { PathsConfig } from '../ports/paths.ts';
+import type { PermissionGrantsPort } from '../ports/permission-grants-port.ts';
 import type { PermissionMap } from '../ports/permissions.ts';
 import type { RuntimePromptInfo } from '../ports/runtime-prompt.ts';
 import type { RuntimeState } from '../ports/runtime-state.ts';
@@ -375,6 +376,7 @@ export interface GraphOpts {
   state: RuntimeState;
   permissions?: PermissionMap;
   paths?: PathsConfig;
+  permissionGrants?: PermissionGrantsPort;
   models: ProviderConfig[] | ModelsPort;
   toolRegistry: Map<string, ToolDefinition>;
   plan: Plan;
@@ -1456,6 +1458,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
           spawnPath: opts.spawnPath,
           process: opts.process,
           fileAccess: opts.fileAccess,
+          permissionGrants: opts.permissionGrants,
         });
       } catch (e) {
         if (e instanceof AskUserInterrupt) {

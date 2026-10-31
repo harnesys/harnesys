@@ -193,6 +193,11 @@ export {
   pendingPlacementsTable,
 } from './pending-placements.ts';
 export {
+  type PermissionGrantInsert,
+  type PermissionGrantRow,
+  permissionGrantsTable,
+} from './permission-grants.ts';
+export {
   type PluginApprovalRow,
   type PluginInsert,
   type PluginRow,

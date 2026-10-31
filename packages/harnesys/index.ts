@@ -159,6 +159,9 @@ export type {
   UnansweredToolCall,
 } from './src/application/tool-message.ts';
 export {
+  abandonedContextOf,
+  type AbandonedCallContext,
+  abandonedToolResult,
   buildToolMessage,
   collectUnansweredToolCalls,
   SYNTHETIC_TOOL_RESULT_ABANDONED,
@@ -691,6 +694,7 @@ export {
   SUPPORTED_MODEL_KINDS,
 } from './src/ports/models.ts';
 export type { PathsConfig } from './src/ports/paths.ts';
+export { PermissionGrantsPort } from './src/ports/permission-grants-port.ts';
 export type { PermissionGate, PermissionMap } from './src/ports/permissions.ts';
 export { DEFAULT_PERMISSIONS } from './src/ports/permissions.ts';
 export type { PlanItem, PlanPort, PlanSaveItemInput, PlanSnapshot } from './src/ports/plan.ts';

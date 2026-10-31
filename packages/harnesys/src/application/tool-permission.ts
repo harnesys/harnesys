@@ -2,6 +2,7 @@ import { SANDBOX_DENY_PREFIX } from '../constants.ts';
 import { AskUserInterrupt } from '../domain/errors.ts';
 import type { JsonSchema } from '../domain/json-schema.ts';
 import type { ToolAskSubject } from '../domain/tool-subject.ts';
+import type { PermissionGrantsPort } from '../ports/permission-grants-port.ts';
 import type { HookEmitCtx } from './hooks/emit-hook.ts';
 import { emitHook, hookBlockedReason } from './hooks/emit-hook.ts';
 import {
@@ -32,6 +33,7 @@ export interface PermissionGateContext {
   hooks?: HookEmitCtx;
   agentId?: string;
   spawnPath?: string;
+  permissionGrants?: PermissionGrantsPort;
 }
 export interface PermissionGateDone {
   result: ToolCallResult;
@@ -148,6 +150,16 @@ export async function applyPermissionGate(input: {
   }
   if (operation && loadRunOpGrant(ctx.state, operation)) {
     return null;
+  }
+  if (operation !== undefined && ctx.permissionGrants !== undefined) {
+    const durable = await ctx.permissionGrants.granted(ctx.agentId ?? '', operation);
+    if (durable) {
+      if (permissionResumeMatches(ctx, idx)) {
+        ctx.resumePayload = undefined;
+      }
+      recordGranted(ctx.state, ctx.nodeId, call.id);
+      return null;
+    }
   }
   if (ctx.sandbox) {
     throwPermissionAsk(call, ctx, idx, operation, input.subject);

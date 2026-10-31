@@ -3,6 +3,7 @@ import type { ApprovalRecord } from '../../domain/approval/approval.ts';
 import { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
 import {
   MemoryApprovalEvents,
+  MemoryPermissionGrants,
   StubEventClaims,
   StubFileRules,
   StubMachineConfig,
@@ -89,6 +90,7 @@ function build(row: ApprovalRecord): Built {
   const useCase = new DecideApprovalUseCase(
     new RowStoreStub(row),
     new MemoryApprovalEvents(),
+    new MemoryPermissionGrants(),
     executor,
     new StubEventClaims(),
     new StubNodeCommands(),

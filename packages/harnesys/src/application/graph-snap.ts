@@ -3,7 +3,11 @@ import type { Cursor, Event, Snapshot } from '../domain/snapshot.ts';
 import { RUNTIME_VERSION } from '../domain/snapshot.ts';
 import type { RuntimeState } from '../ports/runtime-state.ts';
 import { hashStr } from './graph-helpers.ts';
-import { SYNTHETIC_TOOL_RESULT_ABANDONED } from './tool-message.ts';
+import {
+  type AbandonedCallContext,
+  abandonedContextOf,
+  abandonedToolResult,
+} from './tool-message.ts';
 
 export interface ForeignDecision {
   content: string;
@@ -103,6 +107,7 @@ export function decisionTextOf(
 function pairDanglingToolCalls(
   state: Record<string, unknown>,
   decision: ForeignDecision | undefined,
+  context?: AbandonedCallContext,
 ): Record<string, unknown> {
   const prev = state.messages;
   if (!Array.isArray(prev) || prev.length === 0) {
@@ -131,7 +136,7 @@ function pairDanglingToolCalls(
       role: 'tool',
       toolCallId,
       name,
-      content: decision?.content ?? SYNTHETIC_TOOL_RESULT_ABANDONED,
+      content: decision?.content ?? abandonedToolResult(context),
     });
   }
   return { ...state, messages };
@@ -150,13 +155,14 @@ export async function abandonForeignSnapshot(
   }
   const sequence = snap.sequence + 1;
   const cursor = { ...snap.cursor };
+  const context = abandonedContextOf(cursor.interrupt);
   delete cursor.interrupt;
   await state.commit(
     {
       ...snap,
       status: 'completed',
       sequence,
-      state: pairDanglingToolCalls(snap.state, decision),
+      state: pairDanglingToolCalls(snap.state, decision, context),
       cursor,
     },
     [],

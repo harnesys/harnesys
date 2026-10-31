@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Logger } from '@harnesys/brix';
 import type { ApprovalStatus } from '@harnesys/contracts';
 import { ApprovalNotFoundException } from '../../domain/approval/approval.error.ts';
@@ -7,6 +8,11 @@ import {
   ApprovalEventsPort,
 } from '../../domain/approval/approval-events.port.ts';
 import { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
+import {
+  type PermissionGrantRecord,
+  PermissionGrantStorePort,
+  type PermissionGrantWriteInput,
+} from '../../domain/approval/permission-grant-store.port.ts';
 import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
 import type { FileRuleInsert, FileRuleRecord } from '../../domain/file-access/file-access-rule.ts';
 import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
@@ -235,5 +241,49 @@ export class StubNodeCommands extends NodeCommandQueuePort {
 
   drain(): Promise<void> {
     return Promise.resolve();
+  }
+}
+
+export class MemoryPermissionGrants extends PermissionGrantStorePort {
+  readonly rows: PermissionGrantRecord[] = [];
+
+  record(orgId: string, input: PermissionGrantWriteInput): PermissionGrantRecord {
+    const existing = this.rows.find(
+      (row) => row.agentId === input.agentId && row.operation === input.operation,
+    );
+    if (existing) {
+      return existing;
+    }
+    const rec: PermissionGrantRecord = {
+      id: randomUUID(),
+      orgId,
+      agentId: input.agentId,
+      operation: input.operation,
+      decidedBy: input.decidedBy ?? null,
+      createdAt: new Date(0).toISOString(),
+    };
+    this.rows.push(rec);
+    return rec;
+  }
+
+  has(orgId: string, agentId: string, operation: string): boolean {
+    return this.rows.some(
+      (row) => row.orgId === orgId && row.agentId === agentId && row.operation === operation,
+    );
+  }
+
+  list(orgId: string, agentId?: string): PermissionGrantRecord[] {
+    return this.rows.filter(
+      (row) => row.orgId === orgId && (agentId === undefined || row.agentId === agentId),
+    );
+  }
+
+  revoke(orgId: string, grantId: string): boolean {
+    const index = this.rows.findIndex((row) => row.orgId === orgId && row.id === grantId);
+    if (index < 0) {
+      return false;
+    }
+    this.rows.splice(index, 1);
+    return true;
   }
 }

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { InMemoryRuntimeState } from '../adapters/in-memory-runtime-state.ts';
+import type { JsonSchema } from '../domain/json-schema.ts';
 import type { Snapshot } from '../domain/snapshot.ts';
 import { RUNTIME_VERSION } from '../domain/snapshot.ts';
 import { abandonForeignSnapshot, decisionTextOf } from './graph-snap.ts';
@@ -86,6 +87,33 @@ describe('abandonForeignSnapshot', () => {
     const snap = await state.load();
     const messages = (snap?.state.messages ?? []) as unknown[];
     expect(messages.at(-1)?.content).toBe(SYNTHETIC_TOOL_RESULT_ABANDONED);
+  });
+
+  test('interrupt context lands in the abandoned stub', async () => {
+    const state = new InMemoryRuntimeState('session-1');
+    const snap = snapOf('run-1', 'needs_input', [
+      {
+        role: 'assistant',
+        content: '',
+        toolCalls: [{ id: 'call1', name: 'browser', arguments: {} }],
+      },
+    ]);
+    snap.cursor.interrupt = {
+      interruptId: 'perm/act:0/0',
+      reason: 'allow network?',
+      resumeSchema: { type: 'object', properties: {} } as JsonSchema,
+      nodeId: 'act',
+      source: 'permission',
+      tool: { name: 'browser', input: {}, toolCallId: 'call1' },
+    };
+    state.hydrate(snap);
+    await abandonForeignSnapshot(state, 'run-2');
+    const loaded = await state.load();
+    const messages = (loaded?.state.messages ?? []) as unknown[];
+    const last = messages.at(-1) as { content?: string };
+    expect(last.content).toContain('allow network?');
+    expect(last.content).toContain('browser');
+    expect(last.content).toContain('do not retry');
   });
 
   test('own snapshot is left untouched', async () => {

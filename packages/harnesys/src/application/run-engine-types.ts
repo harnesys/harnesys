@@ -7,6 +7,7 @@ import type { FileAccessPolicy } from '../ports/file-access.ts';
 import type { Logger } from '../ports/logger.ts';
 import type { ModelsPort, ProviderConfig } from '../ports/models.ts';
 import type { PathsConfig } from '../ports/paths.ts';
+import type { PermissionGrantsPort } from '../ports/permission-grants-port.ts';
 import type { PermissionMap } from '../ports/permissions.ts';
 import type { RunEventStore } from '../ports/run-event-store.ts';
 import type { RunLifecycleStore } from '../ports/run-lifecycle-store.ts';
@@ -57,6 +58,7 @@ export interface RunTargetOpts {
   process?: ProcessJobTarget;
   fileAccess?: FileAccessPolicy;
   fileAccessFor?: (agent: AgentDefinition) => FileAccessPolicy;
+  permissionGrants?: PermissionGrantsPort;
   runtime?: RuntimePromptInfo;
   steerMessages?: () => Promise<SteerMessage[]>;
   ackSteerMessages?: (itemIds: string[]) => Promise<void>;

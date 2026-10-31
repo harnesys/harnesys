@@ -17,6 +17,7 @@ import type { OrgRuntimeDeps } from './org-runtime.types.ts';
 import { createAgentsResolve } from './org-runtime-agents.ts';
 import { runTargetFileAccess, runTargetFileAccessForAgent } from './org-runtime-file-access.ts';
 import { resolveTargetHooks, targetHookReport } from './org-runtime-hooks.ts';
+import { runTargetPermissionGrants } from './org-runtime-permission-grants.ts';
 import { type SteeringChannel } from './org-runtime-queue.ts';
 import { resolveRunSourceRefs } from './org-runtime-source-refs.ts';
 import { prepareTarget, runtimeOptionsOf, type TargetCache } from './prepare-org-target.ts';
@@ -113,6 +114,9 @@ export function createRunTargetResolver(ctx: RunTargetResolverContext) {
       fileAccess: runTargetFileAccess(deps, prepared),
       fileAccessFor: (agent: AgentDefinition) =>
         runTargetFileAccessForAgent(deps, prepared, agent.id),
+      ...(deps.permissionGrants !== undefined
+        ? { permissionGrants: runTargetPermissionGrants(deps.permissionGrants, deps.orgId) }
+        : {}),
       runtime: runRuntimePromptInfo(deps, prepared, binding),
       steerMessages: () => ctx.steering.steer(threadId),
       ackSteerMessages: (itemIds: string[]) => ctx.steering.ack(itemIds),

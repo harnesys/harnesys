@@ -1,11 +1,12 @@
 import type {
+  AbandonedCallContext,
   RunEventStore,
   RunLifecycleStore,
   SessionEvent,
   SessionHandle,
   TruncateThreadResult,
 } from 'harnesys';
-import { SYNTHETIC_TOOL_RESULT_ABANDONED } from 'harnesys';
+import { abandonedContextOf, abandonedToolResult } from 'harnesys';
 import { ThreadValidationException } from '../../domain/thread/thread.error.ts';
 import type { ThreadSessionRef } from './wait-ticker.ts';
 
@@ -80,7 +81,10 @@ export async function truncateThreadState(
   if (cut >= messages.length) {
     return;
   }
-  const kept = repairDanglingToolCalls(messages.slice(0, cut));
+  const kept = repairDanglingToolCalls(
+    messages.slice(0, cut),
+    abandonedContextOf(snap.cursor.interrupt),
+  );
   const sequence = snap.sequence + 1;
   await ref.state.commit({ ...snap, sequence, state: { ...state, messages: kept } }, [], {
     kind: 'recorded',
@@ -111,7 +115,7 @@ function isUserMessage(item: unknown): boolean {
   );
 }
 
-function repairDanglingToolCalls(messages: unknown[]): unknown[] {
+function repairDanglingToolCalls(messages: unknown[], context?: AbandonedCallContext): unknown[] {
   if (messages.length === 0) {
     return messages;
   }
@@ -135,7 +139,7 @@ function repairDanglingToolCalls(messages: unknown[]): unknown[] {
       role: 'tool',
       toolCallId,
       name,
-      content: SYNTHETIC_TOOL_RESULT_ABANDONED,
+      content: abandonedToolResult(context),
     });
   }
   return out;

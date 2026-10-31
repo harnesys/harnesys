@@ -20,6 +20,36 @@ const ATTACHMENT_KINDS = ['image', 'audio', 'video', 'file'] as const;
 export const SYNTHETIC_TOOL_RESULT_ABANDONED =
   '{"ok":false,"error":"run closed before user decision; the call was never executed and its effect did not happen"}';
 export const SYNTHETIC_TOOL_RESULT_ENDED = 'run ended before tool execution; no result recorded';
+export interface AbandonedCallContext {
+  source?: string;
+  question?: string;
+  toolName?: string;
+}
+export function abandonedContextOf(interrupt: unknown): AbandonedCallContext | undefined {
+  if (!interrupt || typeof interrupt !== 'object') {
+    return undefined;
+  }
+  const rec = interrupt as Record<string, unknown>;
+  const tool = rec.tool as Record<string, unknown> | undefined;
+  return {
+    source: typeof rec.source === 'string' ? rec.source : undefined,
+    question: typeof rec.reason === 'string' ? rec.reason : undefined,
+    toolName: tool && typeof tool.name === 'string' ? tool.name : undefined,
+  };
+}
+export function abandonedToolResult(context?: AbandonedCallContext): string {
+  if (context === undefined) {
+    return SYNTHETIC_TOOL_RESULT_ABANDONED;
+  }
+  const awaiting = [context.source ?? 'user decision', context.toolName, context.question]
+    .filter((part) => part !== undefined)
+    .join(': ');
+  return JSON.stringify({
+    ok: false,
+    error: `the call never executed; the run closed while awaiting ${awaiting}; no decision was recorded`,
+    hint: 'do not retry blindly; ask the user to decide the pending request, or pick a non-gated alternative',
+  });
+}
 export function serializeToolResult(value: unknown): string {
   if (typeof value === 'string') {
     return value;

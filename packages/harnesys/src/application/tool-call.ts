@@ -6,6 +6,7 @@ import type {
 import type { ProcessJobTarget } from '../domain/process-job.ts';
 import type { FileAccessPolicy } from '../ports/file-access.ts';
 import type { PathsConfig } from '../ports/paths.ts';
+import type { PermissionGrantsPort } from '../ports/permission-grants-port.ts';
 import type { PermissionMap } from '../ports/permissions.ts';
 import type { ToolDefinition } from '../ports/tools.ts';
 import { presentCallOutput } from './clip-tool-output.ts';
@@ -60,6 +61,7 @@ export interface ToolCallContext {
   spawnPath?: string;
   process?: ProcessJobTarget;
   fileAccess?: FileAccessPolicy;
+  permissionGrants?: PermissionGrantsPort;
 }
 function codeError(code: string, message: string): never {
   throw Object.assign(new Error(message), { code });

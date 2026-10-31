@@ -1,6 +1,5 @@
 import { dirname, sep } from 'node:path';
 import type { ApprovalDecisionScope, ApprovalRule, FileApprovalRule } from '@harnesys/contracts';
-import { DEFAULT_PERMISSIONS } from 'harnesys';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import type {
   ApprovalDelegatedContext,
@@ -34,13 +33,6 @@ export interface PersistShellDecisionInput {
   agentId: string;
   rule: ApprovalRule;
 }
-
-export interface PersistOpAllowInput {
-  agentId: string;
-  ops: string[];
-}
-
-const PERMISSIONS_CONFIG_KEY = 'permissionsJson';
 
 export function scopePersistsRule(
   scope: ApprovalDecisionScope | undefined,
@@ -126,33 +118,6 @@ export function persistShellDecision(
   );
 }
 
-export function persistOpAllow(deps: ApprovalPersistDeps, input: PersistOpAllowInput): void {
-  if (input.ops.length === 0) {
-    return;
-  }
-  const agent = deps.agents.findById(deps.orgId, input.agentId);
-  if (!agent) {
-    return;
-  }
-  const key = permissionsKeyOf(agent.config);
-  const stored = permissionsOf(agent.config, key);
-  const next: Record<string, unknown> = { ...stored };
-  let changed = false;
-  for (const op of input.ops) {
-    if (effectiveGateOf(stored, op) !== 'ask') {
-      continue;
-    }
-    next[op] = 'allow';
-    changed = true;
-  }
-  if (!changed) {
-    return;
-  }
-  deps.agents.update(deps.orgId, input.agentId, {
-    config: { ...agent.config, [key]: next },
-  });
-}
-
 function upgradeSourceLevel(
   deps: ApprovalPersistDeps,
   agentId: string,
@@ -195,29 +160,4 @@ function folderRuleOf(file: ApprovalFileContext): FileApprovalRule {
 function isInsideRoot(path: string, root: string): boolean {
   const normalized = root.endsWith(sep) ? root : root + sep;
   return path.startsWith(normalized);
-}
-
-function permissionsKeyOf(config: Record<string, unknown>): string {
-  const legacy = config.permissions;
-  if (
-    (config[PERMISSIONS_CONFIG_KEY] === undefined || config[PERMISSIONS_CONFIG_KEY] === null) &&
-    legacy !== null &&
-    typeof legacy === 'object' &&
-    !Array.isArray(legacy)
-  ) {
-    return 'permissions';
-  }
-  return PERMISSIONS_CONFIG_KEY;
-}
-
-function permissionsOf(config: Record<string, unknown>, key: string): Record<string, unknown> {
-  const raw = config[key];
-  return raw !== null && typeof raw === 'object' && !Array.isArray(raw)
-    ? (raw as Record<string, unknown>)
-    : {};
-}
-
-function effectiveGateOf(stored: Record<string, unknown>, op: string): string {
-  const gate = stored[op] ?? DEFAULT_PERMISSIONS[op] ?? 'ask';
-  return typeof gate === 'string' ? gate : 'ask';
 }

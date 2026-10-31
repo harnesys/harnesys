@@ -727,7 +727,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS approvals_run_interrupt
   WHERE status <> 'superseded';
 CREATE INDEX IF NOT EXISTS approvals_status ON approvals(status);
 `;
-
 export const CREATE_SCHEDULES_SQL = `
 CREATE TABLE IF NOT EXISTS schedules (
   id TEXT PRIMARY KEY,

@@ -11,6 +11,7 @@ import type { RunRecord } from 'harnesys';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
 import { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
+import { PermissionGrantStorePort } from '../../domain/approval/permission-grant-store.port.ts';
 import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
 import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
 import { FleetHubPort } from '../../domain/fleet/fleet-hub.port.ts';
@@ -32,6 +33,7 @@ import {
   scopePersistsRule,
   targetAgentIdOf,
 } from '../approvals/persist-decision.ts';
+import { recordOperationGrants } from '../approvals/record-operation-grants.ts';
 
 export interface RespondRunRequest {
   orgId: string;
@@ -58,6 +60,7 @@ export class RespondRunUseCase {
     private readonly modes: ModePresetRegistryPort,
     private readonly approvalStore: ApprovalStorePort,
     private readonly approvalEvents: ApprovalEventsPort,
+    private readonly grants: PermissionGrantStorePort,
     private readonly fileRules: FileAccessRulePort,
     private readonly machineConfig: MachineConfigPort,
     private readonly sourceLocation: SourceLocationPort,
@@ -213,6 +216,11 @@ export class RespondRunUseCase {
       return;
     }
     if (payload.approved !== true) {
+      return;
+    }
+    const ops = row?.context.ops;
+    if (!rule && ops !== undefined && ops.length > 0) {
+      recordOperationGrants(this.grants, orgId, { agentId, ops, decidedBy: 'web' });
       return;
     }
     if (rule && rule.kind !== 'file-path') {
