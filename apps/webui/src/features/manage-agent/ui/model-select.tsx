@@ -24,6 +24,8 @@ interface ModelSelectProps {
   size?: 'sm' | 'default';
   orgId?: string;
   emptyLabel?: string;
+  /** Model kinds offered as selectable; defaults to chat models only. */
+  kinds?: readonly string[];
 }
 export function ModelSelect({
   value,
@@ -35,10 +37,11 @@ export function ModelSelect({
   size = 'default',
   orgId: orgIdProp,
   emptyLabel,
+  kinds,
 }: ModelSelectProps) {
   const orgId = orgIdProp ?? getActiveOrgId() ?? '';
   const providers = useQuery(providersQuery(orgId)).data ?? [];
-  const groups = modelGroups(providers);
+  const groups = modelGroups(providers, kinds ?? ['chat']);
   const items = modelOptions(groups);
   const hasEmptyOption = emptyLabel !== undefined;
   const empty = items.length === 0;

@@ -1,10 +1,12 @@
 import type { ConnectorPublic, ConnectorStatus, MirrorPolicyPublic } from '@harnesys/contracts';
+import { CONNECTOR_CATALOG } from '@harnesys/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useOpenThreadTab } from '@/features/ide';
+import { ConnectorMark } from '@/features/manage-connectors/ui/connector-icon';
 import { alert } from '@/shared/services/overlay';
 import { Button } from '@/shared/ui/button';
-import { Pane } from '@/shared/ui/capability-rows';
+import { Pane, RowChip } from '@/shared/ui/capability-rows';
 import { Field, FieldLabel } from '@/shared/ui/field';
 import { Input } from '@/shared/ui/input';
 import { RowListSkeleton } from '@/shared/ui/settings-kit';
@@ -27,6 +29,16 @@ const STATUS_LABEL: Record<ConnectorStatus, string> = {
   active: 'Active',
   paused: 'Paused',
   error: 'Error',
+};
+
+const TELEGRAM_DESCRIPTOR =
+  CONNECTOR_CATALOG.find((item) => item.id === 'telegram') ?? CONNECTOR_CATALOG[0];
+
+const STATUS_TONE: Record<ConnectorStatus, 'ok' | 'warn' | 'info' | 'danger'> = {
+  active: 'ok',
+  paused: 'warn',
+  awaiting_pair: 'info',
+  error: 'danger',
 };
 
 interface PairInfo {
@@ -217,25 +229,30 @@ function TelegramConnectorCard({
   onOpenThread: () => void;
   onPolicyChange: (policy: MirrorPolicyPublic) => void;
 }) {
+  const status = connector?.status ?? null;
+
   return (
     <div
-      className="flex flex-col gap-3 rounded-lg border p-3"
+      className="flex flex-col gap-3 rounded-lg border bg-popover p-3"
       data-testid="agent-connector-telegram"
     >
-      <div className="flex items-baseline justify-between gap-2">
-        <p className="font-medium text-sm">Telegram</p>
-        {connector ? (
-          <span className="font-mono text-[11px] text-muted-foreground">
-            {STATUS_LABEL[connector.status]}
-          </span>
-        ) : (
-          <span className="font-mono text-[11px] text-muted-foreground">Not connected</span>
-        )}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <ConnectorMark connector={TELEGRAM_DESCRIPTOR} size="sm" />
+          <div className="min-w-0">
+            <p className="truncate font-medium text-sm leading-5">Telegram</p>
+            <p className="truncate font-mono text-[11px] text-muted-foreground leading-4">
+              {connector?.botUsername ? `@${connector.botUsername}` : 'Not linked'}
+            </p>
+          </div>
+        </div>
+        <RowChip
+          tone={status ? STATUS_TONE[status] : 'neutral'}
+          testId="agent-connector-telegram-status"
+        >
+          {status ? STATUS_LABEL[status] : 'Not connected'}
+        </RowChip>
       </div>
-
-      {connector?.botUsername ? (
-        <p className="font-mono text-muted-foreground text-xs">@{connector.botUsername}</p>
-      ) : null}
 
       {connector?.lastError ? (
         <p className="text-destructive text-xs" data-testid="agent-connector-last-error">

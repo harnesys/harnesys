@@ -191,6 +191,7 @@ export type {
   AgentObservability,
   AgentPaths,
   Edge,
+  GraphRoute,
   InterruptReason,
   MapInstruction,
   MapMaxTokensPerItem,

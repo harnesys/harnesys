@@ -83,6 +83,9 @@ export async function finalizeDraftText(
 }
 
 export async function maybeFlushDraft(deps: DraftSendDeps, state: DraftSendState): Promise<void> {
+  if (state.pending.length === 0 && state.lastSent.length === 0 && state.deliveryId === null) {
+    return;
+  }
   const tick = nextDraftTick({
     pending: state.pending,
     lastSent: state.lastSent,

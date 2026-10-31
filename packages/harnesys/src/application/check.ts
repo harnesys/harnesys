@@ -92,7 +92,7 @@ export function check(
       }
     };
     for (const [id, node] of Object.entries(def.graph.nodes)) {
-      if (node.type === 'llm:generate') {
+      if (node.type === 'llm:generate' || node.type === 'control:route') {
         const m = node.model;
         if (typeof m === 'string') {
           if (!resolveModelRef(m)) {
@@ -137,6 +137,7 @@ export function check(
         'llm:generate',
         'tool:call',
         'control:assign',
+        'control:route',
         'control:spawn',
         'control:map',
         'control:yield',

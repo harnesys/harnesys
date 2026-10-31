@@ -13,6 +13,8 @@ export interface StudioGraphDocument {
   nodes: Record<string, Node>;
   edges: Edge[];
   layout?: StudioGraphLayout;
+  /** Node id of the default (primary) llm:generate node; its model follows the agent default. */
+  primary?: string;
 }
 export interface HarnesysGraph {
   nodes: Record<string, Node>;
@@ -21,6 +23,7 @@ export interface HarnesysGraph {
 export interface AgentGraphFlowNodeData {
   spec: Node;
   rankdir: GraphRankdir;
+  primary?: string;
   [key: string]: unknown;
 }
 export interface AgentGraphFlowEdgeData {
@@ -60,6 +63,20 @@ export function defaultReactGraph(): StudioGraphDocument {
     edges: DEFAULT_REACT_EDGES.map((edge) => ({ ...edge })),
   };
 }
+export const ROUTE_DEFAULT_HANDLE = 'route:__default__';
+export function routeHandleExpr(routeKey: string): string {
+  return `$output.route = "${routeKey}"`;
+}
+function routeHandleOf(edge: Edge, sourceType: string | undefined): string | undefined {
+  if (sourceType !== 'control:route') {
+    return undefined;
+  }
+  const match =
+    edge.when !== undefined
+      ? /^\$output\.route\s*=\s*"([A-Za-z][A-Za-z0-9_-]*)"$/.exec(edge.when)
+      : null;
+  return match ? `route:${match[1]}` : ROUTE_DEFAULT_HANDLE;
+}
 export function toFlow(doc: StudioGraphDocument): {
   nodes: AgentGraphFlowNode[];
   edges: AgentGraphFlowEdge[];
@@ -72,13 +89,16 @@ export function toFlow(doc: StudioGraphDocument): {
       id,
       type: 'agent-graph-node',
       position,
-      data: { spec, rankdir },
+      data: { spec, rankdir, ...(doc.primary !== undefined ? { primary: doc.primary } : {}) },
     };
   });
   const edges: AgentGraphFlowEdge[] = doc.edges.map((edge, index) => ({
     id: `e-${index}-${edge.from}-${edge.to}`,
     source: edge.from,
     target: edge.to,
+    ...(routeHandleOf(edge, doc.nodes[edge.from]?.type) !== undefined
+      ? { sourceHandle: routeHandleOf(edge, doc.nodes[edge.from]?.type) }
+      : {}),
     data: edge.when !== undefined ? { when: edge.when } : {},
   }));
   return { nodes, edges };

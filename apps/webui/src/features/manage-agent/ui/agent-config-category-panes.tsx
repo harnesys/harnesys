@@ -64,6 +64,7 @@ export function AgentConfigCategoryPanes({
   onOpenSubagent,
 }: AgentConfigCategoryPanesProps) {
   const permissions = useWatch({ control: form.control, name: 'permissions' });
+  const agentModelId = useWatch({ control: form.control, name: 'modelId' });
   const memoryStatus = useQuery(memoryStatusQuery(orgId));
   return (
     <div
@@ -85,7 +86,7 @@ export function AgentConfigCategoryPanes({
         label="Model"
         description="Model, effort and generation parameters."
       >
-        <AgentModelPane form={form} orgId={orgId} />
+        <AgentModelPane form={form} orgId={orgId} graphDoc={graphDoc} />
       </Pane>
       <div className={cn('flex flex-col gap-6', category !== 'access' && 'hidden')}>
         <Pane
@@ -224,6 +225,7 @@ export function AgentConfigCategoryPanes({
         >
           <AgentGraphPane
             value={graphDoc}
+            agentModelId={agentModelId}
             onChange={(next) => {
               graphTouchedRef.current = true;
               graphDocRef.current = next;

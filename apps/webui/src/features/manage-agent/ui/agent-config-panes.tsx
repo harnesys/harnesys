@@ -1,10 +1,19 @@
+import type { ProviderPublic } from '@harnesys/studio-shared';
 import { useQuery } from '@tanstack/react-query';
+import type { AgentModelRef, Node } from 'harnesys';
 import { useEffect } from 'react';
 import { Controller, type UseFormReturn, useWatch } from 'react-hook-form';
 import { providersQuery } from '@/shared/api';
 import { getActiveOrgId } from '@/shared/api/active-org';
 import { ColorSwatches } from '@/shared/ui/color-swatches';
-import { Field, FieldError, FieldGroup, FieldLabel } from '@/shared/ui/field';
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from '@/shared/ui/field';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import {
@@ -12,6 +21,8 @@ import {
   type AgentFieldsOutput,
   type AgentGenerationField,
 } from '../model/agent-fields';
+import type { StudioGraphDocument } from '../model/agent-graph-document';
+import { modelIdOfRef } from '../model/agent-graph-model-ref';
 import { sanitizeForModel } from '../model/agent-model-info';
 import { generationDefaults } from '../model/generation-specs';
 import { AgentBudgetFields } from './agent-budget-fields';
@@ -105,7 +116,15 @@ export function AgentIdentityPane({ form }: { form: AgentFieldsForm }) {
     </FieldGroup>
   );
 }
-export function AgentModelPane({ form, orgId }: { form: AgentFieldsForm; orgId: string }) {
+export function AgentModelPane({
+  form,
+  orgId,
+  graphDoc,
+}: {
+  form: AgentFieldsForm;
+  orgId: string;
+  graphDoc?: StudioGraphDocument | null;
+}) {
   const providers = useQuery(providersQuery(getActiveOrgId() ?? '')).data ?? [];
   const modelId = useWatch({ control: form.control, name: 'modelId' });
   useEffect(() => {
@@ -174,8 +193,75 @@ export function AgentModelPane({ form, orgId }: { form: AgentFieldsForm; orgId: 
         <AgentEffortField control={form.control} orgId={orgId} />
       </div>
       <AgentGenerationFields control={form.control} orgId={orgId} />
+      {graphDoc ? <GraphNodeOverrides graphDoc={graphDoc} providers={providers} /> : null}
     </FieldGroup>
   );
+}
+function GraphNodeOverrides({
+  graphDoc,
+  providers,
+}: {
+  graphDoc: StudioGraphDocument;
+  providers: ProviderPublic[];
+}) {
+  const entries = Object.entries(graphDoc.nodes).filter(
+    ([, node]) =>
+      (node.type === 'llm:generate' || node.type === 'control:route') &&
+      node.model !== undefined &&
+      typeof node.model === 'object',
+  );
+  if (entries.length === 0) {
+    return null;
+  }
+  return (
+    <FieldSet className="gap-2">
+      <FieldLegend variant="label" className="text-muted-foreground text-xs">
+        Graph node overrides
+      </FieldLegend>
+      <p className="text-[11px] text-muted-foreground leading-snug">
+        Nodes in Custom mode ignore these agent defaults. Edit them in the graph node inspector.
+      </p>
+      <ul className="flex flex-col gap-1">
+        {entries.map(([id, node]) => (
+          <li
+            key={id}
+            className="flex items-center justify-between gap-2 rounded border border-border/60 px-2 py-1"
+          >
+            <span className="truncate font-mono text-[11px]">
+              {id}
+              {graphDoc.primary === id ? (
+                <span className="ml-1 rounded bg-primary/15 px-1 align-middle font-medium text-[8px] text-primary uppercase">
+                  Default
+                </span>
+              ) : null}
+            </span>
+            <span className="shrink-0 truncate text-[11px] text-muted-foreground">
+              {overrideSummary(node, providers)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </FieldSet>
+  );
+}
+function overrideSummary(node: Node, providers: ProviderPublic[]): string {
+  if (node.type !== 'llm:generate' && node.type !== 'control:route') {
+    return '';
+  }
+  const model = node.model as AgentModelRef | undefined;
+  const modelId = modelIdOfRef(model, providers);
+  const knobs: string[] = [];
+  if (model?.effort) {
+    knobs.push(`effort ${model.effort}`);
+  }
+  const generation = model?.generation ?? {};
+  for (const key of Object.keys(generation) as (keyof typeof generation)[]) {
+    if (generation[key] !== undefined) {
+      knobs.push(key);
+    }
+  }
+  const target = modelId ?? `${model?.provider ?? '?'}/${model?.model ?? '?'}`;
+  return knobs.length > 0 ? `${target} · ${knobs.join(', ')}` : target;
 }
 export function AgentLimitsPane({ form }: { form: AgentFieldsForm }) {
   return (

@@ -22,6 +22,9 @@ export interface AgentGraphInspectorProps {
   onChangeNode: (id: string, node: Node) => void;
   onRenameNode: (fromId: string, toId: string) => void;
   onChangeEdge: (index: number, edge: Edge) => void;
+  agentModelId?: string | null;
+  primaryNodeId?: string;
+  onPrimaryChange?: (id: string | undefined) => void;
 }
 export function AgentGraphInspector({
   selection,
@@ -29,6 +32,9 @@ export function AgentGraphInspector({
   onChangeNode,
   onRenameNode,
   onChangeEdge,
+  agentModelId,
+  primaryNodeId,
+  onPrimaryChange,
 }: AgentGraphInspectorProps) {
   return (
     <aside className="agent-graph-inspector flex max-h-full w-full flex-col overflow-hidden">
@@ -43,6 +49,9 @@ export function AgentGraphInspector({
           onChangeNode={onChangeNode}
           onRenameNode={onRenameNode}
           onChangeEdge={onChangeEdge}
+          agentModelId={agentModelId}
+          primaryNodeId={primaryNodeId}
+          onPrimaryChange={onPrimaryChange}
         />
       </div>
       {diagnostics.length > 0 ? (
@@ -71,11 +80,17 @@ function InspectorBody({
   onChangeNode,
   onRenameNode,
   onChangeEdge,
+  agentModelId,
+  primaryNodeId,
+  onPrimaryChange,
 }: {
   selection: AgentGraphSelection;
   onChangeNode: (id: string, node: Node) => void;
   onRenameNode: (fromId: string, toId: string) => void;
   onChangeEdge: (index: number, edge: Edge) => void;
+  agentModelId?: string | null;
+  primaryNodeId?: string;
+  onPrimaryChange?: (id: string | undefined) => void;
 }) {
   if (selection == null) {
     return <p className="text-muted-foreground text-sm">Select a node.</p>;
@@ -90,10 +105,14 @@ function InspectorBody({
   }
   return (
     <NodeInspectorBody
+      key={selection.id}
       id={selection.id}
       node={selection.node}
       onChangeNode={onChangeNode}
       onRenameNode={onRenameNode}
+      agentModelId={agentModelId}
+      primaryNodeId={primaryNodeId}
+      onPrimaryChange={onPrimaryChange}
     />
   );
 }
@@ -102,11 +121,17 @@ function NodeInspectorBody({
   node,
   onChangeNode,
   onRenameNode,
+  agentModelId,
+  primaryNodeId,
+  onPrimaryChange,
 }: {
   id: string;
   node: Node;
   onChangeNode: (id: string, node: Node) => void;
   onRenameNode: (fromId: string, toId: string) => void;
+  agentModelId?: string | null;
+  primaryNodeId?: string;
+  onPrimaryChange?: (id: string | undefined) => void;
 }) {
   const known = specByType(node.type) !== undefined;
   const isCustom = node.type.startsWith('custom:');
@@ -134,6 +159,9 @@ function NodeInspectorBody({
       node={node}
       onChangeId={(nextId) => onRenameNode(id, nextId)}
       onChange={(next) => onChangeNode(id, next)}
+      agentModelId={agentModelId}
+      primaryNodeId={primaryNodeId}
+      onPrimaryChange={onPrimaryChange}
     />
   );
 }

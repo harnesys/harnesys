@@ -9,6 +9,7 @@ import {
   defaultReactGraph,
   fromFlow,
   type GraphRankdir,
+  ROUTE_DEFAULT_HANDLE,
   type StudioGraphDocument,
   toFlow,
 } from '../model/agent-graph-document';
@@ -20,6 +21,7 @@ export interface AgentGraphPaneProps {
   value?: StudioGraphDocument | null;
   onChange?: (doc: StudioGraphDocument) => void;
   diagnostics?: Diagnostic[];
+  agentModelId?: string | null;
 }
 export function AgentGraphPane(props: AgentGraphPaneProps) {
   return (
@@ -28,11 +30,17 @@ export function AgentGraphPane(props: AgentGraphPaneProps) {
     </ReactFlowProvider>
   );
 }
-function AgentGraphPaneInner({ value, onChange, diagnostics = [] }: AgentGraphPaneProps) {
+function AgentGraphPaneInner({
+  value,
+  onChange,
+  diagnostics = [],
+  agentModelId,
+}: AgentGraphPaneProps) {
   const [initialDoc] = useState(() => ensurePositions(value ?? defaultReactGraph()));
   const [nodes, setNodes] = useState<AgentGraphFlowNode[]>(() => toFlow(initialDoc).nodes);
   const [edges, setEdges] = useState<AgentGraphFlowEdge[]>(() => toFlow(initialDoc).edges);
   const [rankdir, setRankdir] = useState<GraphRankdir>(initialDoc.layout?.rankdir ?? 'TB');
+  const [primaryId, setPrimaryId] = useState<string | undefined>(initialDoc.primary);
   const [selection, setSelection] = useState<AgentGraphSelection>(null);
   const seeded = useRef(false);
   useEffect(() => {
@@ -48,10 +56,12 @@ function AgentGraphPaneInner({ value, onChange, diagnostics = [] }: AgentGraphPa
       nextNodes: AgentGraphFlowNode[],
       nextEdges: AgentGraphFlowEdge[],
       nextRankdir: GraphRankdir,
+      nextPrimary: string | undefined = primaryId,
     ) => {
-      onChange?.(fromFlow(nextNodes, nextEdges, nextRankdir));
+      const doc = fromFlow(nextNodes, nextEdges, nextRankdir);
+      onChange?.(nextPrimary !== undefined ? { ...doc, primary: nextPrimary } : doc);
     },
-    [onChange],
+    [onChange, primaryId],
   );
   const replaceNodes = useCallback(
     (next: AgentGraphFlowNode[]) => {
@@ -191,6 +201,14 @@ function AgentGraphPaneInner({ value, onChange, diagnostics = [] }: AgentGraphPa
     },
     [edges, emit, nodes],
   );
+  const onPrimaryChange = useCallback(
+    (next: string | undefined) => {
+      setPrimaryId(next);
+      setNodes(nodes.map((node) => ({ ...node, data: { ...node.data, primary: next } })));
+      emit(nodes, edges, rankdir, next);
+    },
+    [edges, emit, nodes, rankdir],
+  );
   return (
     <div className="relative min-h-0 w-full min-w-0 flex-1 overflow-hidden rounded-md border border-border">
       <AgentGraphCanvas
@@ -214,6 +232,9 @@ function AgentGraphPaneInner({ value, onChange, diagnostics = [] }: AgentGraphPa
             onChangeNode={onChangeNode}
             onRenameNode={onRenameNode}
             onChangeEdge={onChangeEdge}
+            agentModelId={agentModelId}
+            primaryNodeId={primaryId}
+            onPrimaryChange={onPrimaryChange}
           />
         </div>
       </div>
@@ -246,12 +267,15 @@ function withDefaultEdges(
         id: `e-${stamp}-${source.id}-${added.id}`,
         source: source.id,
         target: added.id,
+        ...(defaultOut.sourceHandle ? { sourceHandle: defaultOut.sourceHandle } : {}),
+        ...(defaultOut.targetHandle ? { targetHandle: defaultOut.targetHandle } : {}),
         data: {},
       },
       {
         id: `e-${stamp}-${added.id}-${defaultOut.target}`,
         source: added.id,
         target: defaultOut.target,
+        ...(type === 'control:route' ? { sourceHandle: ROUTE_DEFAULT_HANDLE } : {}),
         data: defaultOut.data ?? {},
       },
     ];

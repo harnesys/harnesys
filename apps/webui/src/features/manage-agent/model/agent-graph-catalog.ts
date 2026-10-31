@@ -80,6 +80,24 @@ export const GRAPH_NODE_SPECS: GraphNodeSpec[] = [
     defaults: () => ({ type: 'control:assign', patch: {} }),
   },
   {
+    type: 'control:route',
+    group: 'control',
+    label: 'Route',
+    summary: 'Decision routing.',
+    description:
+      'Asks a decision model (or any LLM with structured output) to pick one route for the input. Each route becomes a labeled output port and its edge carries when: $output.route = "key". The unlabeled port is the fallback default edge.',
+    inPalette: true,
+    ports: { in: true, out: true },
+    defaults: () => ({
+      type: 'control:route',
+      prompt: '',
+      routes: [
+        { key: 'simple', label: 'Simple' },
+        { key: 'complex', label: 'Complex' },
+      ],
+    }),
+  },
+  {
     type: 'control:spawn',
     group: 'control',
     label: 'Spawn',

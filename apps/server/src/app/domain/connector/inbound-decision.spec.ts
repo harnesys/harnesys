@@ -163,6 +163,22 @@ describe('decideInbound', () => {
       decideInbound(
         base({
           ...paired,
+          update: {
+            kind: 'command',
+            command: 'start',
+            args: '',
+            chatType: 'private',
+            chatId: '1',
+            userId: '77',
+            messageId: '1',
+          },
+        }),
+      ),
+    ).toEqual({ type: 'reply', text: helpText(), inbox: 'rejected' });
+    expect(
+      decideInbound(
+        base({
+          ...paired,
           activeRunStatus: 'needs_input',
           update: {
             kind: 'message',

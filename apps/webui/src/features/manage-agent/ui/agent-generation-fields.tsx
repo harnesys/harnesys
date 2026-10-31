@@ -90,17 +90,22 @@ export function AgentGenerationFields({
   idPrefix = 'agent',
   onCommit,
   orgId: _orgId,
+  exclude = [],
 }: {
   control: AgentFieldsControl;
   idPrefix?: string;
   onCommit?: () => void;
   orgId: string;
+  /** Field names to hide (e.g. knobs the engine does not apply at node level). */
+  exclude?: AgentGenerationField[];
 }) {
   const providers = useQuery(providersQuery(getActiveOrgId() ?? '')).data ?? [];
   const modelId = useWatch({ control, name: 'modelId' });
   const supported = modelSupportedParameters(modelId, providers);
-  const sliders = GENERATION_SLIDERS.filter((item) => generationFieldVisible(supported, item.name));
-  const limits = GENERATION_LIMITS.filter((item) => generationFieldVisible(supported, item.name));
+  const visible = (item: AgentGenerationField): boolean =>
+    generationFieldVisible(supported, item) && !exclude.includes(item);
+  const sliders = GENERATION_SLIDERS.filter((item) => visible(item.name));
+  const limits = GENERATION_LIMITS.filter((item) => visible(item.name));
   const showGeneration = hasGenerationFields(supported);
   const bounds = modelBounds(modelId, providers);
   const placeholders: Partial<Record<AgentGenerationField, string>> = {
@@ -214,44 +219,50 @@ export function AgentGenerationFields({
             </FieldSet>
           ) : null}
 
-          <FieldSet className="gap-2.5">
-            <FieldLegend variant="label" className="text-muted-foreground text-xs">
-              Reasoning
-            </FieldLegend>
-            <FieldGroup className="gap-2.5">
-              <Controller
-                control={control}
-                name="reasoningMode"
-                render={({ field }) => (
-                  <Field>
-                    <FieldLabel htmlFor={`${idPrefix}-reasoningMode`}>
-                      Reasoning in history
-                    </FieldLabel>
-                    <ToggleGroup
-                      variant="segment"
-                      value={[field.value]}
-                      onValueChange={(value) => {
-                        if (value.length === 0) {
-                          return;
-                        }
-                        field.onChange(value[0]);
-                        onCommit?.();
-                      }}
-                    >
-                      <ToggleGroupItem value="strip">Strip</ToggleGroupItem>
-                      <ToggleGroupItem value="part">Part</ToggleGroupItem>
-                      <ToggleGroupItem value="keep">Keep</ToggleGroupItem>
-                    </ToggleGroup>
-                    <FieldDescription className="text-[11px] text-muted-foreground leading-snug">
-                      Strip saves history without model reasoning. Part keeps it saved but sends
-                      only the last N rounds. Keep saves and sends all reasoning.
-                    </FieldDescription>
-                  </Field>
-                )}
-              />
-              <ReasoningKeepRoundsField control={control} idPrefix={idPrefix} onCommit={onCommit} />
-            </FieldGroup>
-          </FieldSet>
+          {!exclude.includes('reasoningMode') ? (
+            <FieldSet className="gap-2.5">
+              <FieldLegend variant="label" className="text-muted-foreground text-xs">
+                Reasoning
+              </FieldLegend>
+              <FieldGroup className="gap-2.5">
+                <Controller
+                  control={control}
+                  name="reasoningMode"
+                  render={({ field }) => (
+                    <Field>
+                      <FieldLabel htmlFor={`${idPrefix}-reasoningMode`}>
+                        Reasoning in history
+                      </FieldLabel>
+                      <ToggleGroup
+                        variant="segment"
+                        value={[field.value]}
+                        onValueChange={(value) => {
+                          if (value.length === 0) {
+                            return;
+                          }
+                          field.onChange(value[0]);
+                          onCommit?.();
+                        }}
+                      >
+                        <ToggleGroupItem value="strip">Strip</ToggleGroupItem>
+                        <ToggleGroupItem value="part">Part</ToggleGroupItem>
+                        <ToggleGroupItem value="keep">Keep</ToggleGroupItem>
+                      </ToggleGroup>
+                      <FieldDescription className="text-[11px] text-muted-foreground leading-snug">
+                        Strip saves history without model reasoning. Part keeps it saved but sends
+                        only the last N rounds. Keep saves and sends all reasoning.
+                      </FieldDescription>
+                    </Field>
+                  )}
+                />
+                <ReasoningKeepRoundsField
+                  control={control}
+                  idPrefix={idPrefix}
+                  onCommit={onCommit}
+                />
+              </FieldGroup>
+            </FieldSet>
+          ) : null}
         </div>
       ) : null}
     </>

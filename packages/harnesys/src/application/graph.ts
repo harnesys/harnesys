@@ -1,4 +1,5 @@
 import { DEFAULT_MEMORY_POLICY } from '@harnesys/contracts';
+import { callModel } from '../adapters/ai-llm-adapter.ts';
 import {
   EVENT_TYPES,
   MEMORY_REMIND_DEFAULT,
@@ -72,10 +73,17 @@ import {
   findBind,
   isPort,
   type MergeStateFn,
+  resolveAgentModelRef,
   resolveModelForPort,
   stateKeyOf,
 } from './graph-helpers.ts';
 import { executeMap, type MapNodeSpec, prepareMap } from './graph-map.ts';
+import {
+  parseRouteDecision,
+  type RouteDecision,
+  routeInstruction,
+  routeOutputSchema,
+} from './graph-route.ts';
 import { mkEv, mkSnap, type SnapCtx } from './graph-snap.ts';
 import {
   type ChildRunner,
@@ -1528,6 +1536,95 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
         const e = await commit('running', 'tool.completed');
         yield e;
       }
+    } else if (node.type === 'control:route') {
+      const rn = node as {
+        type: 'control:route';
+        prompt?: string;
+        routes: { key: string; label?: string; description?: string }[];
+        model?:
+          | string
+          | {
+              provider: string;
+              model: string;
+            };
+        minConfidence?: number;
+      };
+      let binding: ModelBinding | null = null;
+      if (isPort(opts.models)) {
+        const coords = resolveModelForPort(rn.model, agent);
+        if (coords) {
+          try {
+            binding = await (opts.models as ModelsPort).get(coords.provider, coords.model);
+          } catch {
+            binding = null;
+          }
+        }
+      } else {
+        binding =
+          findBind(opts.models as ProviderConfig[], rn.model as never, agent)?.binding ?? null;
+      }
+      if (!binding) {
+        const e = await commit('failed', 'run.failed');
+        yield e;
+        throw Object.assign(new Error('model_unresolved'), { code: 'model_unresolved' });
+      }
+      await commit('running', 'model.requested', 'recorded');
+      const routeStartedAt = Date.now();
+      const routeState = typeof input === 'string' ? input : JSON.stringify(input ?? {});
+      const routeSlots = graphSlots(opts, st, input, output);
+      const routeRef = resolveAgentModelRef(rn.model, agent);
+      let decision: RouteDecision | undefined;
+      let routeUsage: unknown;
+      let routeError: unknown;
+      try {
+        const stream = callModel({
+          binding,
+          prompt: routeInstruction(rn, routeSlots),
+          messages: [{ role: 'user', content: routeState }],
+          toolNames: [],
+          signalOrRegistry: opts.signal ?? new AbortController().signal,
+          outputSchema: routeOutputSchema(rn.routes),
+          settings: { effort: routeRef?.effort, generation: routeRef?.generation },
+        });
+        for await (const chunk of stream) {
+          if (chunk.type === 'completed') {
+            decision = parseRouteDecision(chunk.text ?? '', rn.routes, rn.minConfidence);
+            routeUsage = chunk.usage;
+          }
+        }
+      } catch (err) {
+        routeError = err;
+      }
+      if (routeError) {
+        const e = await commit('failed', 'run.failed');
+        yield e;
+        throw routeError;
+      }
+      if (routeUsage && typeof routeUsage === 'object') {
+        const u = routeUsage as Record<string, unknown>;
+        const total =
+          typeof u.totalTokens === 'number' && Number.isFinite(u.totalTokens)
+            ? u.totalTokens
+            : (typeof u.inputTokens === 'number' ? u.inputTokens : 0) +
+              (typeof u.outputTokens === 'number' ? u.outputTokens : 0);
+        tokens += total;
+      }
+      const routeOutput: Record<string, unknown> = decision
+        ? {
+            route: decision.key,
+            ...(decision.confidence !== undefined ? { confidence: decision.confidence } : {}),
+          }
+        : { route: '' };
+      output = routeOutput;
+      yield await commit('running', 'model.completed', 'recorded', {
+        model: binding.model.name,
+        ...(binding.model.id ? { modelId: binding.model.id } : {}),
+        agentId: agent.id,
+        route: routeOutput.route,
+        ...(decision?.confidence !== undefined ? { confidence: decision.confidence } : {}),
+        durationMs: Date.now() - routeStartedAt,
+        ...(routeUsage !== undefined ? { usage: routeUsage } : {}),
+      });
     } else if (node.type === 'control:assign') {
       const asn = node as {
         type: 'control:assign';

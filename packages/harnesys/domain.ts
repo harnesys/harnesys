@@ -2,6 +2,7 @@ export { isDriver } from './src/adapters/models/binding.ts';
 export type {
   AgentContextSettings,
   AgentGenerationSettings,
+  GraphRoute,
 } from './src/domain/agent-definition.ts';
 export type {
   CompactionMessage,

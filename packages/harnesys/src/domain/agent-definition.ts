@@ -164,6 +164,11 @@ export interface NodePlacement {
   tag?: string;
   sameAsParent?: boolean;
 }
+export interface GraphRoute {
+  key: string;
+  label?: string;
+  description?: string;
+}
 export type Node =
   | {
       type: 'core:start';
@@ -185,6 +190,13 @@ export type Node =
   | {
       type: 'control:assign';
       patch: Record<string, Expr | unknown>;
+    }
+  | {
+      type: 'control:route';
+      prompt?: Expr;
+      routes: GraphRoute[];
+      model?: string | AgentModelRef;
+      minConfidence?: number;
     }
   | {
       type: 'control:spawn';

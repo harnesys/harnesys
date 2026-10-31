@@ -106,8 +106,8 @@ function decideStart(
   if (input.bindingUserId !== null && input.bindingUserId !== update.userId) {
     return reply(OTHER_ACCOUNT);
   }
-  if (input.bindingUserId !== null && input.bindingUserId === update.userId) {
-    return reply(NOT_LINKED);
+  if (input.bindingUserId === update.userId) {
+    return reply(helpText());
   }
   const hash = input.pairHash;
   const expiresAt = input.pairExpiresAt;

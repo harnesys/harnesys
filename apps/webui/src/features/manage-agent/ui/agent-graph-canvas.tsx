@@ -18,6 +18,7 @@ import type {
   AgentGraphFlowNode,
   GraphRankdir,
 } from '../model/agent-graph-document';
+import { ROUTE_DEFAULT_HANDLE } from '../model/agent-graph-document';
 import { layoutGraph } from '../model/agent-graph-layout';
 import { AgentGraphNode } from './agent-graph-node';
 import { AGENT_GRAPH_DND_TYPE } from './agent-graph-palette';
@@ -89,17 +90,31 @@ export function AgentGraphCanvas({
         return;
       }
       const id = `e-${Date.now()}-${connection.source}-${connection.target}`;
+      const source = nodes.find((node) => node.id === connection.source);
+      let when: string | undefined;
+      if (
+        source?.data.spec.type === 'control:route' &&
+        typeof connection.sourceHandle === 'string' &&
+        connection.sourceHandle.startsWith('route:')
+      ) {
+        when =
+          connection.sourceHandle === ROUTE_DEFAULT_HANDLE
+            ? undefined
+            : `$output.route = "${connection.sourceHandle.slice('route:'.length)}"`;
+      }
       onEdgesChange([
         ...edges,
         {
           id,
           source: connection.source,
           target: connection.target,
-          data: {},
+          ...(connection.sourceHandle ? { sourceHandle: connection.sourceHandle } : {}),
+          ...(connection.targetHandle ? { targetHandle: connection.targetHandle } : {}),
+          data: when !== undefined ? { when } : {},
         },
       ]);
     },
-    [edges, isValidConnection, onEdgesChange],
+    [edges, isValidConnection, nodes, onEdgesChange],
   );
   const runAutoLayout = useCallback(() => {
     const positions = layoutGraph(

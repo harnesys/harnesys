@@ -4,6 +4,7 @@ import type { Diagnostic, DiagnosticSeverity } from '../domain/errors.ts';
 import { packValueIssues } from '../domain/pack.ts';
 import { type Ast, isPathExpr, parseExpr } from './expr-eval.ts';
 import { validateMapWaitNodes } from './graph-map-validate.ts';
+import { isValidRouteKey } from './graph-route.ts';
 
 function hasCycle(nodes: Record<string, Node>, edges: Edge[]): boolean {
   const adj = new Map<string, string[]>();
@@ -240,6 +241,59 @@ export function validateStructural(def: AgentDefinition): Diagnostic[] {
             }
           }
         }
+      }
+    }
+    if (n.type === 'control:route') {
+      const rn = n as {
+        routes?: unknown;
+        minConfidence?: unknown;
+      };
+      const routes = Array.isArray(rn.routes) ? (rn.routes as unknown[]) : [];
+      if (routes.length === 0) {
+        add(
+          'route_routes_required',
+          'error',
+          'control:route requires at least one route',
+          `graph.nodes.${id}.routes`,
+        );
+      }
+      const seenKeys = new Set<string>();
+      for (let i = 0; i < routes.length; i++) {
+        const route = routes[i] as { key?: unknown };
+        const base = `graph.nodes.${id}.routes[${i}]`;
+        if (!isValidRouteKey(route.key)) {
+          add('route_key_invalid', 'error', 'route key must match [A-Za-z][A-Za-z0-9_-]*', base);
+          continue;
+        }
+        if (seenKeys.has(route.key)) {
+          add('route_key_duplicate', 'error', `duplicate route key "${route.key}"`, base);
+        }
+        seenKeys.add(route.key);
+        const covered = (edgesByFrom.get(id) ?? []).some(
+          (edge) => edge.when?.includes(`"${route.key}"`) === true,
+        );
+        if (!covered) {
+          add(
+            'route_edge_missing',
+            'warning',
+            `no outgoing edge for route "${route.key}"; the default edge will catch it`,
+            base,
+          );
+        }
+      }
+      if (
+        rn.minConfidence !== undefined &&
+        (typeof rn.minConfidence !== 'number' ||
+          rn.minConfidence < 0 ||
+          rn.minConfidence > 1 ||
+          Number.isNaN(rn.minConfidence))
+      ) {
+        add(
+          'route_min_confidence',
+          'error',
+          'minConfidence must be a number between 0 and 1',
+          `graph.nodes.${id}.minConfidence`,
+        );
       }
     }
     if (
