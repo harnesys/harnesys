@@ -14,10 +14,15 @@ import type { ToolDefinition } from '../../ports/tools.ts';
 import { findBind, isPort, resolveModelForPort } from '../graph-helpers.ts';
 import { emitHook, type HookEmitCtx, hookBlockedReason } from '../hooks/emit-hook.ts';
 import { projectCompacted, projectedForEstimate } from '../llm.ts';
-import { estimateTokens } from './estimate.ts';
+import { estimateTokens, estimateTokensAnchored } from './estimate.ts';
 import { writeCompactionFile } from './file-log.ts';
+import { microcompactToolResults } from './microcompact.ts';
 import { planCut } from './plan-cut.ts';
 import { priorSummaryBlock, SUMMARY_SYSTEM_PROMPT, streamSummary } from './summarize.ts';
+export interface CompactionGuard {
+  consecutiveFailures: number;
+  completedSteps: number[];
+}
 export interface CompactionPassContext {
   agent: AgentDefinition;
   state: Record<string, unknown>;
@@ -29,6 +34,8 @@ export interface CompactionPassContext {
   signal: AbortSignal;
   logger?: Logger;
   hooks?: HookEmitCtx;
+  guard?: CompactionGuard;
+  step?: number;
 }
 export type CompactionPassEvent =
   | {
@@ -59,8 +66,29 @@ export type CompactionSkipReason =
   | 'already-covered'
   | 'no-cut-plan'
   | 'hook-blocked'
-  | 'empty-window';
+  | 'empty-window'
+  | 'breaker-open'
+  | 'rapid-refill';
 const PRE_THRESHOLD_GAP = 0.1;
+const BREAKER_MAX_CONSECUTIVE_FAILURES = 3;
+const RAPID_REFILL_WINDOW_STEPS = 3;
+const RAPID_REFILL_MAX_COMPACTIONS = 3;
+export function compactionGuardOpen(
+  guard: CompactionGuard | undefined,
+  step: number,
+): CompactionSkipReason | null {
+  if (!guard) {
+    return null;
+  }
+  if (guard.consecutiveFailures >= BREAKER_MAX_CONSECUTIVE_FAILURES) {
+    return 'breaker-open';
+  }
+  const recent = guard.completedSteps.filter((s) => step - s <= RAPID_REFILL_WINDOW_STEPS).length;
+  if (recent >= RAPID_REFILL_MAX_COMPACTIONS) {
+    return 'rapid-refill';
+  }
+  return null;
+}
 function findAnchorIndex(messages: readonly unknown[]): number {
   for (let i = messages.length - 1; i >= 0; i--) {
     if (isCompactionMessage(messages[i])) {
@@ -140,7 +168,7 @@ async function resolveSummaryBinding(
 async function* passIfDue(
   ctx: CompactionPassContext,
   spec: ParsedCompactionSpec,
-  reason: 'threshold' | 'manual',
+  reason: 'threshold' | 'manual' | 'overflow',
 ): AsyncGenerator<CompactionPassEvent> {
   const messages = Array.isArray(ctx.state.messages) ? (ctx.state.messages as unknown[]) : null;
   if (!messages || messages.length === 0) {
@@ -152,9 +180,11 @@ async function* passIfDue(
     return;
   }
   const toolsJson = toolsJsonOf(ctx.toolRegistry);
-  const before = estimateTokens(projectedForEstimate(projectCompacted(messages)), toolsJson, {
-    model: ctx.binding.model,
-  });
+  const before = estimateTokensAnchored(
+    projectedForEstimate(projectCompacted(messages)),
+    toolsJson,
+    { model: ctx.binding.model },
+  );
   const contextLength = await compactionWindowOf(ctx, spec);
   if (!contextLength) {
     yield { type: 'skipped', reason: 'no-context-window' };
@@ -207,7 +237,7 @@ async function* passIfDue(
 }
 interface WriteArgs {
   spec: ParsedCompactionSpec;
-  reason: 'threshold' | 'manual';
+  reason: 'threshold' | 'manual' | 'overflow';
   plan: {
     coveredFrom: number;
     coveredUntil: number;
@@ -280,6 +310,9 @@ async function* writeCompactionMessage(
       }
     }
   } catch (e) {
+    if (ctx.guard) {
+      ctx.guard.consecutiveFailures += 1;
+    }
     yield {
       type: 'failed',
       error: e instanceof Error ? e.message : String(e),
@@ -288,6 +321,9 @@ async function* writeCompactionMessage(
   }
   const text = completed && typeof completed.text === 'string' ? completed.text : '';
   if (completed?.finishReason !== 'stop' || !text.trim()) {
+    if (ctx.guard) {
+      ctx.guard.consecutiveFailures += 1;
+    }
     yield {
       type: 'failed',
       error: `summary pass rejected: finishReason=${completed?.finishReason ?? 'none'}${text.trim() ? '' : ', empty text'}`,
@@ -317,6 +353,12 @@ async function* writeCompactionMessage(
     { model: ctx.binding.model },
   ).total;
   messages.push(message);
+  if (ctx.guard) {
+    ctx.guard.consecutiveFailures = 0;
+    if (ctx.step !== undefined) {
+      ctx.guard.completedSteps.push(ctx.step);
+    }
+  }
   try {
     await writeCompactionFile({
       paths: ctx.paths,
@@ -346,16 +388,48 @@ export async function* runSummaryPassIfDue(
       ? parseThresholdSpec(ref.spec)
       : parseThresholdSpec();
   if (spec.auto) {
-    let emitted = false;
-    for await (const ev of passIfDue(ctx, spec, 'threshold')) {
-      emitted = true;
-      yield ev;
+    const messages = ctx.state.messages;
+    if (Array.isArray(messages)) {
+      microcompactToolResults(messages as unknown[]);
     }
-    if (emitted) {
-      return;
+    const open = compactionGuardOpen(ctx.guard, ctx.step ?? 0);
+    if (!open) {
+      let emitted = false;
+      for await (const ev of passIfDue(ctx, spec, 'threshold')) {
+        emitted = true;
+        yield ev;
+      }
+      if (emitted) {
+        return;
+      }
+    } else {
+      yield { type: 'skipped', reason: open };
     }
   }
   yield* pressureEventIfDue(ctx, spec);
+}
+export async function* runForcedCompaction(
+  ctx: CompactionPassContext,
+): AsyncGenerator<CompactionPassEvent> {
+  const ref: PortRef | undefined = ctx.agent.compaction;
+  if (!ref || ref.name !== THRESHOLD_SUMMARY_NAME) {
+    yield { type: 'failed', error: 'compaction is not configured' };
+    return;
+  }
+  const spec = parseThresholdSpec(ref.spec);
+  const open = compactionGuardOpen(ctx.guard, ctx.step ?? 0);
+  if (open) {
+    yield { type: 'skipped', reason: open };
+    return;
+  }
+  let emitted = false;
+  for await (const ev of passIfDue(ctx, spec, 'overflow')) {
+    emitted = true;
+    yield ev;
+  }
+  if (!emitted) {
+    yield { type: 'failed', error: 'context overflow: forced compaction did not shrink history' };
+  }
 }
 
 async function* pressureEventIfDue(
@@ -397,9 +471,13 @@ async function contextPressureOf(
     return null;
   }
   const toolsJson = toolsJsonOf(ctx.toolRegistry);
-  const before = estimateTokens(projectedForEstimate(projectCompacted(messages)), toolsJson, {
-    model: ctx.binding.model,
-  });
+  const before = estimateTokensAnchored(
+    projectedForEstimate(projectCompacted(messages)),
+    toolsJson,
+    {
+      model: ctx.binding.model,
+    },
+  );
   return { total: before.total, available };
 }
 export async function* compactForced(

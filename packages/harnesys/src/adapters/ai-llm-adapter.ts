@@ -236,14 +236,55 @@ function streamErrorChunk(
   context: CallContext,
   state: StreamState,
   attempt: number,
-): { chunk: StreamChunk; waitMs: number } {
+  alreadyReplayed: boolean,
+): { chunk: StreamChunk; waitMs: number; replay: boolean } {
   const normalized = normalizeDriverStatus(err);
   const emitted = state.fullText.length > 0 || state.toolCalls.length > 0;
-  const plan = retryPlan(normalized, emitted, context.signal, attempt);
+  const plan = retryPlan(normalized, emitted, context.signal, attempt, alreadyReplayed);
   if (plan === undefined) {
     throw normalized;
   }
-  return { chunk: retryChunk(normalized, attempt, plan), waitMs: plan.waitMs };
+  return { chunk: retryChunk(normalized, attempt, plan), waitMs: plan.waitMs, replay: plan.replay };
+}
+const DEFAULT_STREAM_IDLE_TIMEOUT_MS = 300_000;
+function streamIdleTimeoutMs(generation: AgentGenerationSettings | undefined): number {
+  const value = generation?.streamIdleTimeoutMs;
+  return typeof value === 'number' && Number.isFinite(value) && value >= 1_000
+    ? value
+    : DEFAULT_STREAM_IDLE_TIMEOUT_MS;
+}
+function streamIdleError(idleMs: number): Error {
+  return Object.assign(
+    new Error(`stream idle timeout: no data for ${Math.round(idleMs / 1000)}s`),
+    { name: 'StreamIdleTimeoutError', statusCode: 504 },
+  );
+}
+async function* idleGuard(
+  parts: AsyncIterable<Record<string, unknown>>,
+  idleMs: number,
+  abort: AbortController,
+): AsyncGenerator<Record<string, unknown>> {
+  const iterator = parts[Symbol.asyncIterator]();
+  while (true) {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        abort.abort(streamIdleError(idleMs));
+        reject(streamIdleError(idleMs));
+      }, idleMs);
+    });
+    try {
+      const next = await Promise.race([iterator.next(), timeout]);
+      if (!next || next.done) {
+        return;
+      }
+      yield next.value;
+    } finally {
+      if (timer !== undefined) {
+        clearTimeout(timer);
+      }
+    }
+  }
 }
 export async function* callModel(options: CallModelOptions): AsyncGenerator<StreamChunk> {
   const context = resolveCallContext(options);
@@ -255,23 +296,40 @@ export async function* callModel(options: CallModelOptions): AsyncGenerator<Stre
     return;
   }
   const { config: streamConfig, normalization } = buildStreamConfig(options, context);
-  const state = emptyStreamState();
-  for (let attempt = 0; ; attempt += 1) {
-    try {
-      const result = (await streamText(streamConfig as never)) as never;
-      const parts = (result as { stream: AsyncIterable<Record<string, unknown>> }).stream;
-      const partContext: PartContext = { registry: context.registry, state };
-      yield* consumeParts(parts, partContext);
-      await persistCallRawRequest(options, result, driver, context.names, normalization);
-      if (state.chunkBuffer) {
-        yield { type: 'chunk', text: state.chunkBuffer, chunkId: crypto.randomUUID() };
+  const idleMs = streamIdleTimeoutMs(options.settings?.generation);
+  let state = emptyStreamState();
+  let alreadyReplayed = false;
+  let internal: AbortController | undefined;
+  const onOuterAbort = (): void => {
+    internal?.abort(context.signal?.reason);
+  };
+  context.signal?.addEventListener('abort', onOuterAbort, { once: true });
+  try {
+    for (let attempt = 0; ; attempt += 1) {
+      internal = new AbortController();
+      try {
+        streamConfig.abortSignal = internal.signal;
+        const result = (await streamText(streamConfig as never)) as never;
+        const parts = (result as { stream: AsyncIterable<Record<string, unknown>> }).stream;
+        const partContext: PartContext = { registry: context.registry, state };
+        yield* consumeParts(idleGuard(parts, idleMs, internal), partContext);
+        await persistCallRawRequest(options, result, driver, context.names, normalization);
+        if (state.chunkBuffer) {
+          yield { type: 'chunk', text: state.chunkBuffer, chunkId: crypto.randomUUID() };
+        }
+        yield await completedChunk(result, state);
+        return;
+      } catch (err) {
+        const retry = streamErrorChunk(err, context, state, attempt, alreadyReplayed);
+        if (retry.replay) {
+          alreadyReplayed = true;
+        }
+        state = emptyStreamState();
+        yield retry.chunk;
+        await abortableSleep(retry.waitMs, context.signal);
       }
-      yield await completedChunk(result, state);
-      return;
-    } catch (err) {
-      const retry = streamErrorChunk(err, context, state, attempt);
-      yield retry.chunk;
-      await abortableSleep(retry.waitMs, context.signal);
     }
+  } finally {
+    context.signal?.removeEventListener('abort', onOuterAbort);
   }
 }

@@ -53,5 +53,13 @@ export function filterGenerationSettings(
     out.contextWindowTokens = settings.contextWindowTokens;
     wrote = true;
   }
+  if (settings.stripReasoning !== undefined) {
+    out.stripReasoning = settings.stripReasoning;
+    wrote = true;
+  }
+  if (settings.streamIdleTimeoutMs !== undefined) {
+    out.streamIdleTimeoutMs = settings.streamIdleTimeoutMs;
+    wrote = true;
+  }
   return wrote ? out : undefined;
 }

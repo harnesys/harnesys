@@ -21,6 +21,10 @@ export interface AgentGenerationSettings {
   seed?: number;
   maxTokens?: number;
   contextWindowTokens?: number;
+  /** Keep model reasoning in persisted history (default: stripped before storage). */
+  stripReasoning?: boolean;
+  /** Abort a provider stream that delivers no data for this long (ms). */
+  streamIdleTimeoutMs?: number;
 }
 export interface AgentModelRef {
   provider: string;

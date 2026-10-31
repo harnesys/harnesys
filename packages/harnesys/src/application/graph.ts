@@ -43,7 +43,14 @@ import {
   extendState,
 } from './budget.ts';
 import type { CapabilitySet, CapabilityUniverse } from './capability-set.ts';
-import { type CompactionSkipReason, runSummaryPassIfDue } from './compaction/run.ts';
+import {
+  type CompactionGuard,
+  type CompactionPassContext,
+  type CompactionPassEvent,
+  type CompactionSkipReason,
+  runForcedCompaction,
+  runSummaryPassIfDue,
+} from './compaction/run.ts';
 import type { Plan } from './compile.ts';
 import type { Slots } from './expr-eval.ts';
 import { evalExpr } from './expr-eval.ts';
@@ -89,7 +96,7 @@ import {
   hookStopEffect,
   resolveHookCtx,
 } from './hooks/emit-hook.ts';
-import { type LlmResult, runLlmGenerate } from './llm.ts';
+import { isContextOverflowError, type LlmResult, runLlmGenerate } from './llm.ts';
 import {
   budgetNote,
   type LlmNote,
@@ -188,6 +195,22 @@ function compactionSkipNote(reason: CompactionSkipReason): LlmNote {
         'Lower "Max tokens" in the agent model settings.',
     };
   }
+  if (reason === 'breaker-open') {
+    return {
+      tag: 'compaction',
+      text:
+        'Automatic compaction is paused: the last summary attempts failed repeatedly. ' +
+        'Keep responses short and avoid reading large files until compaction is retried.',
+    };
+  }
+  if (reason === 'rapid-refill') {
+    return {
+      tag: 'compaction',
+      text:
+        'Context refills immediately after each compaction. Finish the current task and ' +
+        'produce the final report instead of loading more data.',
+    };
+  }
   return {
     tag: 'compaction',
     text:
@@ -246,6 +269,26 @@ function repairDanglingToolCalls(messages: unknown[]): UnansweredToolCall[] {
   );
   messages.push(...fixed);
   return dangling;
+}
+const LENGTH_CUT_CONTINUATIONS = 2;
+const LENGTH_CUT_NOTE =
+  '[output-limit] Your previous message was cut off by the max output tokens limit. ' +
+  'Continue from exactly where you stopped: no recap, no repetition, produce the remaining ' +
+  'content in smaller pieces.';
+function pushContinuationMessage(
+  state: Record<string, unknown>,
+  messagesExpr: string | undefined,
+): void {
+  const key = messagesExpr ? stateKeyOf(messagesExpr) : 'messages';
+  if (!key) {
+    return;
+  }
+  let arr = state[key];
+  if (!Array.isArray(arr)) {
+    arr = [];
+    state[key] = arr;
+  }
+  (arr as unknown[]).push({ role: 'user', content: LENGTH_CUT_NOTE });
 }
 function normalizeInputAttachments(input: unknown): {
   text?: string;
@@ -458,6 +501,22 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
   let entryResumeActive = false;
   let compactionNote: LlmNote | undefined;
   let pressureNoted = false;
+  const compactionGuard: CompactionGuard = { consecutiveFailures: 0, completedSteps: [] };
+  let lengthCuts = 0;
+  const compactionCtx = (binding: ModelBinding): CompactionPassContext => ({
+    agent,
+    state: st,
+    sessionId: opts.state.sessionId,
+    binding,
+    models: opts.models,
+    toolRegistry,
+    paths: opts.paths,
+    signal: opts.signal ?? new AbortController().signal,
+    logger: opts.logger,
+    hooks,
+    guard: compactionGuard,
+    step: steps,
+  });
   const loopGuard = createLoopGuardState();
   if (opts.startNodeId && (opts.resumePayload !== undefined || opts.rejected === true)) {
     cur = opts.startNodeId;
@@ -634,6 +693,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
   let closingArmed = false;
   let wrapSuppressions = 0;
   let closingPhase: 'none' | 'pending' | 'done' = 'none';
+  let closingReason: 'budget' | 'length' = 'budget';
   let closingReport = '';
   function isSandboxWrap(): boolean {
     if (opts.sandbox !== true || wrapSuppressions >= 2) {
@@ -1022,56 +1082,50 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
           { code: 'model_context_window_missing' },
         );
       }
-      for await (const ev of runSummaryPassIfDue({
-        agent: agent,
-        state: st,
-        sessionId: opts.state.sessionId,
-        binding,
-        models: opts.models,
-        toolRegistry: toolRegistry,
-        paths: opts.paths,
-        signal: opts.signal ?? new AbortController().signal,
-        logger: opts.logger,
-        hooks,
-      })) {
-        if (ev.type === 'completed') {
-          const m = ev.message;
-          compactionNote = undefined;
-          const u = m.stats.usage as Record<string, unknown> | undefined;
-          tokens +=
-            typeof u?.totalTokens === 'number' && Number.isFinite(u.totalTokens)
-              ? u.totalTokens
-              : (typeof u?.inputTokens === 'number' ? u.inputTokens : 0) +
-                (typeof u?.outputTokens === 'number' ? u.outputTokens : 0);
-          const e = await commit('running', 'compaction.completed', 'recorded', {
-            id: m.id,
-            coveredFrom: m.coveredFrom,
-            coveredUntil: m.coveredUntil,
-            reason: m.reason,
-            tokensBefore: m.stats.tokensBefore,
-            tokensAfter: m.stats.tokensAfter,
-            summary: m.content,
-            ...(m.model ? { model: m.model } : {}),
-          });
-          yield e;
-        } else if (ev.type === 'failed') {
-          compactionNote = compactionFailNote(ev.error);
-          const e = await commit('running', 'compaction.failed', 'recorded', { error: ev.error });
-          yield e;
-        } else if (ev.type === 'skipped') {
-          compactionNote = compactionSkipNote(ev.reason);
-        } else if (ev.type === 'pressure') {
-          if (!pressureNoted) {
-            compactionNote = contextPressureNote();
-            pressureNoted = true;
+      async function* drainCompaction(
+        gen: AsyncGenerator<CompactionPassEvent>,
+      ): AsyncGenerator<Event> {
+        for await (const ev of gen) {
+          if (ev.type === 'completed') {
+            const m = ev.message;
+            compactionNote = undefined;
+            const u = m.stats.usage as Record<string, unknown> | undefined;
+            tokens +=
+              typeof u?.totalTokens === 'number' && Number.isFinite(u.totalTokens)
+                ? u.totalTokens
+                : (typeof u?.inputTokens === 'number' ? u.inputTokens : 0) +
+                  (typeof u?.outputTokens === 'number' ? u.outputTokens : 0);
+            yield await commit('running', 'compaction.completed', 'recorded', {
+              id: m.id,
+              coveredFrom: m.coveredFrom,
+              coveredUntil: m.coveredUntil,
+              reason: m.reason,
+              tokensBefore: m.stats.tokensBefore,
+              tokensAfter: m.stats.tokensAfter,
+              summary: m.content,
+              ...(m.model ? { model: m.model } : {}),
+            });
+          } else if (ev.type === 'failed') {
+            compactionNote = compactionFailNote(ev.error);
+            yield await commit('running', 'compaction.failed', 'recorded', { error: ev.error });
+          } else if (ev.type === 'skipped') {
+            compactionNote = compactionSkipNote(ev.reason);
+          } else if (ev.type === 'pressure') {
+            if (!pressureNoted) {
+              compactionNote = contextPressureNote();
+              pressureNoted = true;
+            }
+          } else if (PASSTHROUGH_MODEL_EVENTS.has(ev.type)) {
+            yield {
+              ...mkEv(ctx(), ev.type),
+              metadata: ev.data as Record<string, unknown>,
+              agentId: agent.id,
+            };
           }
-        } else if (PASSTHROUGH_MODEL_EVENTS.has(ev.type)) {
-          yield {
-            ...mkEv(ctx(), ev.type),
-            metadata: ev.data as Record<string, unknown>,
-            agentId: agent.id,
-          };
         }
+      }
+      for await (const ev of drainCompaction(runSummaryPassIfDue(compactionCtx(binding)))) {
+        yield ev;
       }
       const bindingsToTry = [binding, ...fallbackBindings];
       let lastError: unknown;
@@ -1079,6 +1133,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
       let usedModel = '';
       let usedModelId = '';
       let startedAt = 0;
+      let overflowRecovered = false;
       for (let attempt = 0; attempt < bindingsToTry.length; attempt++) {
         const currentBinding = bindingsToTry[attempt];
         if (!currentBinding) {
@@ -1197,6 +1252,27 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
           }
         } catch (err) {
           lastError = err;
+          if (!overflowRecovered && isContextOverflowError(err)) {
+            overflowRecovered = true;
+            const attempt0 = attempt;
+            attempt = -1;
+            let compacted = false;
+            for await (const ev of drainCompaction(
+              runForcedCompaction(compactionCtx(currentBinding)),
+            )) {
+              if (ev.type === 'compaction.completed') {
+                compacted = true;
+              }
+              yield ev;
+            }
+            if (compacted) {
+              lastError = undefined;
+              usedModel = '';
+              usedModelId = '';
+              continue;
+            }
+            attempt = attempt0;
+          }
         }
       }
       if (lastError) {
@@ -1219,10 +1295,11 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
             arr = Array.isArray(inp?.messages) ? [...(inp.messages as unknown[])] : [];
             st[key] = arr;
           }
+          const keepReasoning = agent.generation?.stripReasoning === false;
           arr.push({
             role: 'assistant',
             content: res.text ?? '',
-            reasoning: res.reasoning,
+            ...(keepReasoning ? { reasoning: res.reasoning } : {}),
             toolCalls: res.toolCalls,
             finishReason: res.finishReason,
             sources: res.sources,
@@ -1278,6 +1355,34 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
       yield e;
       if (res.finishReason === 'tool-calls') {
         await commit('running', 'tool.requested');
+      }
+      if (res.finishReason === 'length' && closingPhase === 'none') {
+        lengthCuts += 1;
+        if (lengthCuts > LENGTH_CUT_CONTINUATIONS) {
+          closingReason = 'length';
+          closingPhase = 'pending';
+          yield await commit('running', 'model.closing', 'recorded', { reason: 'length_cuts' });
+        } else {
+          pushContinuationMessage(st, lastMsg);
+          yield await commit('running', 'model.continued', 'recorded', {
+            finishReason: 'length',
+            cuts: lengthCuts,
+          });
+        }
+        nodeSteps.set(cur, (nodeSteps.get(cur) ?? 0) + 1);
+        steps += 1;
+        const overCut = overBudget();
+        if (overCut && !suppressBudgetStop()) {
+          const outcome = await budgetStop(overCut);
+          yield outcome.event;
+          if (outcome.stop) {
+            break;
+          }
+        }
+        continue;
+      }
+      if (res.finishReason !== 'length') {
+        lengthCuts = 0;
       }
     } else if (node.type === 'tool:call') {
       const tn = node as ToolCallFixed | ToolCallBatch;
@@ -1907,8 +2012,9 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
     }
     await emitHook(hooks, 'NodeEnd', { node: { id: cur, type: node.type } });
     if (closingPhase === 'done') {
-      const e = await commit('budget_exceeded', 'run.failed', 'recorded', {
-        code: 'budget_exceeded',
+      const byLength = closingReason === 'length';
+      const e = await commit(byLength ? 'failed' : 'budget_exceeded', 'run.failed', 'recorded', {
+        code: byLength ? 'output_limit_exceeded' : 'budget_exceeded',
         ...(closingReport === '' ? {} : { text: closingReport }),
       });
       yield e;

@@ -10,7 +10,7 @@ interface RoleRule {
 }
 
 const CODER_RULE: RoleRule = {
-  requiredCapabilities: ['files', 'shell', 'issues', 'lsp', 'plan', 'pin-memory', 'core'],
+  requiredCapabilities: ['files', 'shell', 'issues', 'lsp', 'plan', 'pin-memory', 'core', 'agents'],
   forbiddenCapabilities: [],
   permissions: { 'fs.write': 'allow', process: 'allow', network: 'ask', mcp: 'ask' },
   maxSteps: 300,

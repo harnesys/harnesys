@@ -43,6 +43,8 @@ export const agentFieldsSchema = z.object({
   seed: optionalAmount,
   maxTokens: optionalAmount,
   contextWindowTokens: optionalAmount,
+  stripReasoning: z.boolean(),
+  streamIdleTimeoutMs: optionalPositiveInt,
   toolOutputMaxChars: optionalPositiveInt,
   toolOutputHeadChars: optionalPositiveInt,
   toolOutputTailChars: optionalPositiveInt,
@@ -91,6 +93,8 @@ export function emptyAgentFields(): AgentFieldsInput {
     seed: '',
     maxTokens: '',
     contextWindowTokens: '',
+    stripReasoning: true,
+    streamIdleTimeoutMs: '',
     toolOutputMaxChars: '',
     toolOutputHeadChars: '',
     toolOutputTailChars: '',
@@ -148,6 +152,8 @@ export function agentFieldsFrom(agent: {
     seed: stringify(agent.generation?.seed),
     maxTokens: stringify(agent.generation?.maxTokens),
     contextWindowTokens: stringify(agent.generation?.contextWindowTokens),
+    stripReasoning: agent.generation?.stripReasoning ?? true,
+    streamIdleTimeoutMs: stringify(agent.generation?.streamIdleTimeoutMs),
     toolOutputMaxChars: stringify(agent.toolOutput?.maxChars),
     toolOutputHeadChars: stringify(agent.toolOutput?.headChars),
     toolOutputTailChars: stringify(agent.toolOutput?.tailChars),
@@ -191,6 +197,10 @@ export function toAgentDraft(values: AgentFieldsOutput): {
     seed: values.seed,
     maxTokens: values.maxTokens,
     contextWindowTokens: values.contextWindowTokens,
+    ...(values.stripReasoning === false ? { stripReasoning: false } : {}),
+    ...(values.streamIdleTimeoutMs !== undefined
+      ? { streamIdleTimeoutMs: values.streamIdleTimeoutMs }
+      : {}),
   });
   const limits = {
     maxSteps: values.budgetMaxSteps,

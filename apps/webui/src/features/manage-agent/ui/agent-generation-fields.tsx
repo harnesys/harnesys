@@ -13,6 +13,7 @@ import {
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Slider } from '@/shared/ui/slider';
+import { ToggleGroup, ToggleGroupItem } from '@/shared/ui/toggle-group';
 import {
   type AgentFieldsInput,
   type AgentFieldsOutput,
@@ -110,108 +111,170 @@ export function AgentGenerationFields({
   }
   return (
     <div className="flex flex-col gap-3" data-testid={`${idPrefix}-generation-fields`}>
-      {limits.length > 0 ? (
-        <FieldSet className="gap-2.5">
-          <FieldLegend variant="label" className="text-muted-foreground text-xs">
-            Limits
-          </FieldLegend>
-          <div className="grid grid-cols-2 gap-3">
-            {limits.map((item) => {
-              const fieldId = `${idPrefix}-${item.name}`;
-              return (
-                <Controller
-                  key={item.name}
-                  control={control}
-                  name={item.name}
-                  render={({ field, fieldState }) => (
-                    <Field className="gap-1.5" data-invalid={fieldState.invalid || undefined}>
-                      <FieldLabel htmlFor={fieldId}>{item.label}</FieldLabel>
-                      <Input
-                        id={fieldId}
-                        inputMode="numeric"
-                        placeholder={
-                          placeholders[item.name] || item.placeholder || 'Provider default'
-                        }
-                        aria-invalid={fieldState.invalid || undefined}
-                        value={typeof field.value === 'string' ? field.value : ''}
-                        onChange={field.onChange}
-                        onBlur={() => {
-                          field.onBlur();
-                          onCommit?.();
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter') {
-                            event.currentTarget.blur();
-                          }
-                        }}
-                        name={field.name}
-                        ref={field.ref}
-                      />
-                      {fieldState.error ? (
-                        <FieldError>{fieldState.error.message}</FieldError>
-                      ) : null}
-                    </Field>
-                  )}
-                />
-              );
-            })}
-          </div>
-        </FieldSet>
+      {showGeneration ? (
+        <>
+          {limits.length > 0 ? (
+            <FieldSet className="gap-2.5">
+              <FieldLegend variant="label" className="text-muted-foreground text-xs">
+                Limits
+              </FieldLegend>
+              <div className="grid grid-cols-2 gap-3">
+                {limits.map((item) => {
+                  const fieldId = `${idPrefix}-${item.name}`;
+                  return (
+                    <Controller
+                      key={item.name}
+                      control={control}
+                      name={item.name}
+                      render={({ field, fieldState }) => (
+                        <Field className="gap-1.5" data-invalid={fieldState.invalid || undefined}>
+                          <FieldLabel htmlFor={fieldId}>{item.label}</FieldLabel>
+                          <Input
+                            id={fieldId}
+                            inputMode="numeric"
+                            placeholder={
+                              placeholders[item.name] || item.placeholder || 'Provider default'
+                            }
+                            aria-invalid={fieldState.invalid || undefined}
+                            value={typeof field.value === 'string' ? field.value : ''}
+                            onChange={field.onChange}
+                            onBlur={() => {
+                              field.onBlur();
+                              onCommit?.();
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') {
+                                event.currentTarget.blur();
+                              }
+                            }}
+                            name={field.name}
+                            ref={field.ref}
+                          />
+                          {fieldState.error ? (
+                            <FieldError>{fieldState.error.message}</FieldError>
+                          ) : null}
+                        </Field>
+                      )}
+                    />
+                  );
+                })}
+              </div>
+            </FieldSet>
+          ) : null}
+
+          {sliders.length > 0 ? (
+            <FieldSet className="gap-2.5">
+              <FieldLegend variant="label" className="text-muted-foreground text-xs">
+                Sampling
+              </FieldLegend>
+              <FieldGroup className="gap-2.5">
+                {sliders.map((item) => {
+                  const fieldId = `${idPrefix}-${item.name}`;
+                  return (
+                    <Controller
+                      key={item.name}
+                      control={control}
+                      name={item.name}
+                      render={({ field, fieldState }) => {
+                        const parsed = parseOptional(field.value);
+                        const display = parsed ?? item.fallback;
+                        return (
+                          <Field className="gap-1.5" data-invalid={fieldState.invalid || undefined}>
+                            <div className="flex items-center justify-between gap-2">
+                              <FieldLabel htmlFor={fieldId}>{item.label}</FieldLabel>
+                              <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
+                                {parsed === undefined ? 'Default' : item.format(parsed)}
+                              </span>
+                            </div>
+                            <Slider
+                              id={fieldId}
+                              min={item.min}
+                              max={item.max}
+                              step={item.step}
+                              value={display}
+                              aria-invalid={fieldState.invalid || undefined}
+                              onValueChange={(next) => {
+                                const value = Array.isArray(next) ? next[0] : next;
+                                if (typeof value !== 'number' || !Number.isFinite(value)) {
+                                  return;
+                                }
+                                field.onChange(item.format(clamp(value, item.min, item.max)));
+                              }}
+                              onBlur={field.onBlur}
+                              onValueCommitted={() => onCommit?.()}
+                            />
+                            {fieldState.error ? (
+                              <FieldError>{fieldState.error.message}</FieldError>
+                            ) : null}
+                          </Field>
+                        );
+                      }}
+                    />
+                  );
+                })}
+              </FieldGroup>
+            </FieldSet>
+          ) : null}
+        </>
       ) : null}
 
-      {sliders.length > 0 ? (
-        <FieldSet className="gap-2.5">
-          <FieldLegend variant="label" className="text-muted-foreground text-xs">
-            Sampling
-          </FieldLegend>
-          <FieldGroup className="gap-2.5">
-            {sliders.map((item) => {
-              const fieldId = `${idPrefix}-${item.name}`;
-              return (
-                <Controller
-                  key={item.name}
-                  control={control}
-                  name={item.name}
-                  render={({ field, fieldState }) => {
-                    const parsed = parseOptional(field.value);
-                    const display = parsed ?? item.fallback;
-                    return (
-                      <Field className="gap-1.5" data-invalid={fieldState.invalid || undefined}>
-                        <div className="flex items-center justify-between gap-2">
-                          <FieldLabel htmlFor={fieldId}>{item.label}</FieldLabel>
-                          <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
-                            {parsed === undefined ? 'Default' : item.format(parsed)}
-                          </span>
-                        </div>
-                        <Slider
-                          id={fieldId}
-                          min={item.min}
-                          max={item.max}
-                          step={item.step}
-                          value={display}
-                          aria-invalid={fieldState.invalid || undefined}
-                          onValueChange={(next) => {
-                            const value = Array.isArray(next) ? next[0] : next;
-                            if (typeof value !== 'number' || !Number.isFinite(value)) {
-                              return;
-                            }
-                            field.onChange(item.format(clamp(value, item.min, item.max)));
-                          }}
-                          onBlur={field.onBlur}
-                          onValueCommitted={() => onCommit?.()}
-                        />
-                        {fieldState.error ? (
-                          <FieldError>{fieldState.error.message}</FieldError>
-                        ) : null}
-                      </Field>
-                    );
+      <FieldSet className="gap-2.5">
+        <FieldLegend variant="label" className="text-muted-foreground text-xs">
+          Runtime
+        </FieldLegend>
+        <FieldGroup className="gap-2.5">
+          <Controller
+            control={control}
+            name="stripReasoning"
+            render={({ field }) => (
+              <Field>
+                <FieldLabel htmlFor={`${idPrefix}-stripReasoning`}>Reasoning in history</FieldLabel>
+                <ToggleGroup
+                  variant="segment"
+                  value={[field.value ? 'strip' : 'keep']}
+                  onValueChange={(value) => {
+                    field.onChange(value[0] !== 'strip');
                   }}
+                >
+                  <ToggleGroupItem value="strip">Strip</ToggleGroupItem>
+                  <ToggleGroupItem value="keep">Keep</ToggleGroupItem>
+                </ToggleGroup>
+              </Field>
+            )}
+          />
+          <Controller
+            control={control}
+            name="streamIdleTimeoutMs"
+            render={({ field, fieldState }) => (
+              <Field className="gap-1.5" data-invalid={fieldState.invalid || undefined}>
+                <FieldLabel htmlFor={`${idPrefix}-streamIdleTimeoutMs`}>
+                  Stream idle timeout, ms
+                </FieldLabel>
+                <Input
+                  id={`${idPrefix}-streamIdleTimeoutMs`}
+                  inputMode="numeric"
+                  placeholder="300000"
+                  aria-invalid={fieldState.invalid || undefined}
+                  value={typeof field.value === 'string' ? field.value : ''}
+                  onChange={field.onChange}
+                  onBlur={() => {
+                    field.onBlur();
+                    onCommit?.();
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.currentTarget.blur();
+                    }
+                  }}
+                  name={field.name}
+                  ref={field.ref}
                 />
-              );
-            })}
-          </FieldGroup>
-        </FieldSet>
-      ) : null}
+                {fieldState.error ? <FieldError>{fieldState.error.message}</FieldError> : null}
+              </Field>
+            )}
+          />
+        </FieldGroup>
+      </FieldSet>
     </div>
   );
 }

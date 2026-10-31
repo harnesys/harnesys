@@ -3,6 +3,7 @@ import { env } from '@/shared/config/env';
 export interface LoginGrant {
   accessToken: string;
   accessExpiresAt: string | null;
+  refreshToken: string | null;
 }
 
 export class SessionFailure extends Error {
@@ -28,6 +29,28 @@ let accessToken: string | null = null;
 let refreshInflight: Promise<boolean> | null = null;
 const deadListeners = new Set<() => void>();
 const readyListeners = new Set<() => void>();
+const REFRESH_STORAGE_KEY = 'harnesys.refresh';
+const REFRESH_TOKEN_HEADER = 'x-refresh-token';
+
+function readStoredRefresh(): string | null {
+  try {
+    return localStorage.getItem(REFRESH_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function storeRefresh(token: string | null): void {
+  try {
+    if (token === null) {
+      localStorage.removeItem(REFRESH_STORAGE_KEY);
+    } else {
+      localStorage.setItem(REFRESH_STORAGE_KEY, token);
+    }
+  } catch {
+    return;
+  }
+}
 
 function notifySessionReady(): void {
   for (const listener of readyListeners) {
@@ -56,6 +79,7 @@ export function clearAccess(): void {
 
 export function notifySessionDead(): void {
   accessToken = null;
+  storeRefresh(null);
   for (const listener of deadListeners) {
     listener();
   }
@@ -124,7 +148,11 @@ export async function sessionLogin(login: string, password: string): Promise<Log
   if (!response.ok) {
     throw await toSessionFailure(response);
   }
-  const body = (await readJson(response)) as { accessToken?: unknown; accessExpiresAt?: unknown };
+  const body = (await readJson(response)) as {
+    accessToken?: unknown;
+    accessExpiresAt?: unknown;
+    refreshToken?: unknown;
+  };
   if (typeof body?.accessToken !== 'string' || body.accessToken === '') {
     throw new SessionFailure(
       response.status,
@@ -132,20 +160,26 @@ export async function sessionLogin(login: string, password: string): Promise<Log
       'Login response has no access token',
     );
   }
+  const refreshToken =
+    typeof body.refreshToken === 'string' && body.refreshToken !== '' ? body.refreshToken : null;
+  storeRefresh(refreshToken);
   accessToken = body.accessToken;
   notifySessionReady();
   return {
     accessToken: body.accessToken,
     accessExpiresAt: typeof body.accessExpiresAt === 'string' ? body.accessExpiresAt : null,
+    refreshToken,
   };
 }
 
 async function performRefresh(): Promise<boolean> {
+  const stored = readStoredRefresh();
   let response: Response;
   try {
     response = await fetch(`${env.localHostOrigin}/api/session/refresh`, {
       method: 'POST',
       credentials: 'include',
+      headers: stored === null ? {} : { [REFRESH_TOKEN_HEADER]: stored },
     });
   } catch {
     notifySessionDead();
@@ -155,10 +189,13 @@ async function performRefresh(): Promise<boolean> {
     notifySessionDead();
     return false;
   }
-  const body = (await readJson(response)) as { accessToken?: unknown };
+  const body = (await readJson(response)) as { accessToken?: unknown; refreshToken?: unknown };
   if (typeof body?.accessToken !== 'string' || body.accessToken === '') {
     notifySessionDead();
     return false;
+  }
+  if (typeof body.refreshToken === 'string' && body.refreshToken !== '') {
+    storeRefresh(body.refreshToken);
   }
   accessToken = body.accessToken;
   return true;
@@ -174,13 +211,16 @@ export function sessionRefresh(): Promise<boolean> {
 }
 
 export async function sessionLogout(): Promise<void> {
+  const stored = readStoredRefresh();
   try {
     await fetch(`${env.localHostOrigin}/api/session/logout`, {
       method: 'POST',
       credentials: 'include',
+      headers: stored === null ? {} : { [REFRESH_TOKEN_HEADER]: stored },
     });
   } finally {
     accessToken = null;
+    storeRefresh(null);
   }
 }
 

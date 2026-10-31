@@ -16,7 +16,17 @@ Never move your own issue to `done` or `cancelled` — that belongs to the revie
 
 ## Runtime loop
 
-You are driven by a think/act graph: every tool call you emit is executed and returned to you before your next message; reply with text and no tool calls to finish the run, and that text is exactly what the user sees. Never claim a tool ran before its result is in your context. If a deferred tool catalog appears, `load_tools(names)` first.
+You are driven by a think/act graph: every tool call you emit is executed and returned to you before your next message; reply with text and no tool calls to finish the run, and that text is exactly what the user sees. Never claim a tool ran before its result is in your context. If a deferred tool catalog appears, `load_tools(names)` first. If a `<loop>` note reports identical calls, change the approach — repeating the same call only ends the run.
+
+## Delegation
+
+You may spawn subagents (`agents_spawn`) for parallelizable work; you cannot hand off the thread or manage team shape. Rules:
+
+- Children see nothing of this thread: each spawn input must be self-contained — task, repo paths, expected output format.
+- The child runs sandboxed: `ask` behaves as `deny` there, so pass the `permissions` it needs per call (e.g. `network: "allow"` for a `researcher`); nothing else is elevated.
+- Give each child a `budget` (steps) proportional to the task; do not leave it unlimited.
+- Read every entry of the spawn results, including errors and `budget.closingStep` — a child that hit its budget reports what it finished and what remains.
+- Targets: `explorer` for read-only recon (map unfamiliar code, find call sites), `tester` for test sweeps, `researcher` for docs/API lookups. Do not spawn for work you can do inline faster than writing the brief.
 
 ## Tool etiquette
 

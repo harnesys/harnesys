@@ -6,8 +6,10 @@ import {
 } from '../application/provider-error.ts';
 import type { StreamChunk } from './ai-llm-chunks.ts';
 
-const RATE_LIMIT_RETRY_DELAYS_MS = [10_000, 30_000, 60_000];
-const SERVER_ERROR_RETRY_DELAYS_MS = [3_000, 8_000, 20_000];
+const RATE_LIMIT_RETRY_DELAYS_MS = [10_000, 20_000, 40_000, 80_000, 160_000, 300_000];
+const SERVER_ERROR_RETRY_DELAYS_MS = [2_000, 4_000, 8_000, 16_000, 32_000, 60_000];
+const RETRY_AFTER_MAX_MS = 600_000;
+const RETRY_JITTER_RATIO = 0.2;
 interface RetryAfterHeaders {
   'retry-after'?: string;
   'retry-after-ms'?: string;
@@ -42,23 +44,37 @@ function retryAfterMsOf(error: unknown): number | undefined {
 export interface RetryPlan {
   schedule: number[];
   waitMs: number;
+  replay: boolean;
+}
+function jittered(ms: number): number {
+  const delta = ms * RETRY_JITTER_RATIO;
+  return Math.max(1_000, Math.round(ms + (Math.random() * 2 - 1) * delta));
 }
 export function retryPlan(
   error: unknown,
   emitted: boolean,
   signal: AbortSignal | undefined,
   attempt: number,
+  alreadyReplayed = false,
 ): RetryPlan | undefined {
   const rateLimited = isRateLimitError(error);
   if (!rateLimited && !isTransientProviderError(error)) {
     return undefined;
   }
   const schedule = rateLimited ? RATE_LIMIT_RETRY_DELAYS_MS : SERVER_ERROR_RETRY_DELAYS_MS;
-  if (emitted || signal?.aborted || attempt >= schedule.length) {
+  if (signal?.aborted || attempt >= schedule.length) {
     return undefined;
   }
-  const waitMs = retryAfterMsOf(error) ?? schedule[attempt] ?? (rateLimited ? 10_000 : 3_000);
-  return { schedule, waitMs };
+  if (emitted && alreadyReplayed) {
+    return undefined;
+  }
+  const replay = emitted;
+  const advised = retryAfterMsOf(error);
+  const waitMs =
+    advised !== undefined
+      ? Math.min(advised, RETRY_AFTER_MAX_MS)
+      : jittered(schedule[attempt] ?? (rateLimited ? 10_000 : 2_000));
+  return { schedule, waitMs, replay };
 }
 export function retryChunk(error: unknown, attempt: number, plan: RetryPlan): StreamChunk {
   const maxRetries = plan.schedule.length;
@@ -99,6 +115,12 @@ export function driverErrorStatus(error: unknown): number | undefined {
   for (const candidate of candidates) {
     if (APICallError.isInstance(candidate) && typeof candidate.statusCode === 'number') {
       return candidate.statusCode;
+    }
+  }
+  for (const candidate of candidates) {
+    const status = (candidate as { statusCode?: unknown }).statusCode;
+    if (typeof status === 'number' && Number.isFinite(status)) {
+      return status;
     }
   }
   return undefined;

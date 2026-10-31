@@ -4,7 +4,12 @@ import type { AgentDefinition } from '../../domain/agent-definition.ts';
 import type { ModelBinding, ProviderConfig } from '../../ports/models.ts';
 import type { ToolDefinition } from '../../ports/tools.ts';
 import type { CompactionPassContext } from './run.ts';
-import { compactForced, runSummaryPassIfDue } from './run.ts';
+import {
+  type CompactionGuard,
+  compactForced,
+  runForcedCompaction,
+  runSummaryPassIfDue,
+} from './run.ts';
 
 const TOOL_REGISTRY = new Map<string, ToolDefinition>();
 
@@ -340,5 +345,87 @@ describe('runSummaryPassIfDue failure and model choice', () => {
     });
     const events = await collect(compactForced(ctx));
     expect(events).toEqual([{ type: 'skipped', reason: 'no-context-window' }]);
+  });
+});
+
+describe('forced overflow compaction and circuit breakers', () => {
+  test('runForcedCompaction summarizes below the threshold with the overflow reason', async () => {
+    stubFetch(summarySse);
+    const ctx = ctxOf({
+      agent: agentOf({ thresholdRatio: 0.8, preCompactNote: false }),
+      binding: bindingOf(1000),
+      messages: [user(600), user(600)],
+    });
+    const events = await collect(runForcedCompaction(ctx));
+    const completed = events.find((e) => e.type === 'completed');
+    expect(completed).toBeDefined();
+    const message = completed?.message as { reason?: string; content?: string };
+    expect(message.reason).toBe('overflow');
+    expect(message.content).toBe('SUMMARY TEXT');
+  });
+
+  test('forced compaction without anything to summarize reports a failure', async () => {
+    const ctx = ctxOf({
+      agent: agentOf({ thresholdRatio: 0.8 }),
+      binding: bindingOf(1_000_000),
+      messages: [user(20)],
+    });
+    const events = await collect(runForcedCompaction(ctx));
+    expect(events.at(-1)?.type).toBe('failed');
+  });
+
+  test('three consecutive failures open the breaker for threshold and forced passes', async () => {
+    const guard: CompactionGuard = { consecutiveFailures: 3, completedSteps: [] };
+    const ctx = ctxOf({
+      agent: agentOf({ thresholdRatio: 0.8, preCompactNote: false }),
+      messages: [user(3000)],
+    });
+    ctx.guard = guard;
+    ctx.step = 10;
+    expect(await collect(runSummaryPassIfDue(ctx))).toEqual([
+      { type: 'skipped', reason: 'breaker-open' },
+      { type: 'pressure' },
+    ]);
+    const forcedCtx = ctxOf({
+      agent: agentOf({ thresholdRatio: 0.8, preCompactNote: false }),
+      binding: bindingOf(1_000_000),
+      messages: [user(120), user(2800)],
+    });
+    forcedCtx.guard = guard;
+    forcedCtx.step = 10;
+    expect(await collect(runForcedCompaction(forcedCtx))).toEqual([
+      { type: 'skipped', reason: 'breaker-open' },
+    ]);
+  });
+
+  test('rapid refills open the breaker after three compactions in three steps', async () => {
+    stubFetch(summarySse);
+    const guard: CompactionGuard = { consecutiveFailures: 0, completedSteps: [8, 9, 10] };
+    const ctx = ctxOf({
+      agent: agentOf({ thresholdRatio: 0.8, preCompactNote: false }),
+      binding: bindingOf(1_000_000),
+      messages: [user(120), user(2800)],
+    });
+    ctx.guard = guard;
+    ctx.step = 11;
+    expect(await collect(runSummaryPassIfDue(ctx))).toEqual([
+      { type: 'skipped', reason: 'rapid-refill' },
+    ]);
+  });
+
+  test('a completed pass resets the failure counter', async () => {
+    stubFetch(summarySse);
+    const guard: CompactionGuard = { consecutiveFailures: 2, completedSteps: [] };
+    const ctx = ctxOf({
+      agent: agentOf({ thresholdRatio: 0.8, preCompactNote: false }),
+      binding: bindingOf(1000),
+      messages: [user(120), user(3400)],
+    });
+    ctx.guard = guard;
+    ctx.step = 4;
+    const events = await collect(runSummaryPassIfDue(ctx));
+    expect(events.at(-1)?.type).toBe('completed');
+    expect(guard.consecutiveFailures).toBe(0);
+    expect(guard.completedSteps).toEqual([4]);
   });
 });

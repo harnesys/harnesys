@@ -65,10 +65,15 @@ const LOOPBACK_ADDRESSES = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 export interface SessionAccessTokens {
   accessToken: string;
   accessExpiresAt: string;
+  refreshToken: string;
+  refreshExpiresAt: string;
 }
 
+const REFRESH_TOKEN_HEADER = 'x-refresh-token';
+
 function toAccessTokens(tokens: SessionTokens): SessionAccessTokens {
-  return { accessToken: tokens.accessToken, accessExpiresAt: tokens.accessExpiresAt };
+  const { accessToken, accessExpiresAt, refreshToken, refreshExpiresAt } = tokens;
+  return { accessToken, accessExpiresAt, refreshToken, refreshExpiresAt };
 }
 
 function isSecureRequest(ctx: BrixContext): boolean {
@@ -92,6 +97,14 @@ function setRefreshCookie(ctx: BrixContext, value: string, expiresAt: string): v
     secure: isSecureRequest(ctx),
     maxAge: Math.max(0, Math.round((Date.parse(expiresAt) - Date.now()) / 1000)),
   });
+}
+
+function presentedRefreshToken(ctx: BrixContext): string | undefined {
+  const header = ctx.req.header(REFRESH_TOKEN_HEADER);
+  if (typeof header === 'string' && header !== '') {
+    return header;
+  }
+  return getCookie(ctx, REFRESH_COOKIE);
 }
 
 function clearRefreshCookie(ctx: BrixContext): void {
@@ -143,7 +156,7 @@ export class SessionController {
   @Post('refresh')
   @HttpCode(200)
   async refresh(@Ctx() ctx: BrixContext): Promise<SessionAccessTokens> {
-    const token = getCookie(ctx, REFRESH_COOKIE);
+    const token = presentedRefreshToken(ctx);
     if (token === undefined) {
       throw new SessionExpiredException();
     }
@@ -160,10 +173,11 @@ export class SessionController {
     return toAccessTokens(tokens);
   }
 
+  @Public()
   @Post('logout')
   @HttpCode(200)
   async logout(@Ctx() ctx: BrixContext): Promise<void> {
-    const token = getCookie(ctx, REFRESH_COOKIE);
+    const token = presentedRefreshToken(ctx);
     if (token !== undefined) {
       await this.sessionLogout.execute({ refreshToken: token });
     }

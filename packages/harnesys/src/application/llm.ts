@@ -2,7 +2,11 @@ import { statSync } from 'node:fs';
 import { callModel, driverErrorStatus, type StreamChunk } from '../adapters/ai-llm-adapter.ts';
 import { mediaDeliveryGates } from '../adapters/ai-llm-provider.ts';
 import { EXCLUSION_TTL_USER_TURNS, LLM_CHUNK_EVENTS } from '../constants.ts';
-import type { AgentDefinition, AgentModelRef } from '../domain/agent-definition.ts';
+import type {
+  AgentDefinition,
+  AgentGenerationSettings,
+  AgentModelRef,
+} from '../domain/agent-definition.ts';
 import { codedRunError } from '../domain/errors.ts';
 import type { FileAccessPolicy } from '../ports/file-access.ts';
 import type { ModelBinding, ResolvedModel } from '../ports/models.ts';
@@ -229,6 +233,10 @@ function contextLengthRejection(error: unknown): boolean {
   const haystack = `${(error as { name?: string }).name ?? ''} ${(error as Error).message ?? ''} ${(error as { code?: string }).code ?? ''}`;
   return /context|token|length|too many/i.test(haystack);
 }
+export function isContextOverflowError(error: unknown): boolean {
+  const status = driverStatusOf(error);
+  return (status === 400 || status === 413) && contextLengthRejection(error);
+}
 export interface LlmResult {
   finishReason: string;
   text?: string;
@@ -376,7 +384,10 @@ export async function* runLlmGenerate(
     outputSchema: node.output as Record<string, unknown> | undefined,
     settings: {
       effort: modelRef?.effort,
-      generation: modelRef?.generation,
+      generation: {
+        ...agentIdleTimeout(ctx.agent.generation),
+        ...modelRef?.generation,
+      },
     },
     sessionId: ctx.sessionId,
     runId: ctx.runId,
@@ -464,6 +475,13 @@ export async function* runLlmGenerate(
     });
     yield { type: 'model.completed', data: out };
   }
+}
+function agentIdleTimeout(
+  generation: AgentGenerationSettings | undefined,
+): { streamIdleTimeoutMs: number } | undefined {
+  return generation?.streamIdleTimeoutMs !== undefined
+    ? { streamIdleTimeoutMs: generation.streamIdleTimeoutMs }
+    : undefined;
 }
 function usageTokensOf(usage: unknown): number {
   if (!usage || typeof usage !== 'object') {

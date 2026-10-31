@@ -49,6 +49,16 @@ function firstApiError(error: unknown): unknown {
   return allErrors(error).find((candidate) => APICallError.isInstance(candidate));
 }
 
+function plainStatusOf(error: unknown): number | undefined {
+  for (const candidate of allErrors(error)) {
+    const status = (candidate as { statusCode?: unknown }).statusCode;
+    if (typeof status === 'number' && Number.isFinite(status)) {
+      return status;
+    }
+  }
+  return undefined;
+}
+
 export function isRateLimitError(error: unknown): boolean {
   return allErrors(error).some(
     (candidate) =>
@@ -62,7 +72,11 @@ export function isTransientProviderError(error: unknown): boolean {
     return true;
   }
   const api = firstApiError(error);
-  return api !== undefined && APICallError.isInstance(api) && (api.statusCode ?? 0) >= 500;
+  if (api !== undefined && APICallError.isInstance(api)) {
+    return (api.statusCode ?? 0) >= 500;
+  }
+  const status = plainStatusOf(error);
+  return status !== undefined && status >= 500;
 }
 
 export function providerErrorCode(error: unknown): string {

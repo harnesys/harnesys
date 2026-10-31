@@ -44,7 +44,9 @@ export type CompactSkipReason =
   | 'already-covered'
   | 'no-cut-plan'
   | 'hook-blocked'
-  | 'empty-window';
+  | 'empty-window'
+  | 'breaker-open'
+  | 'rapid-refill';
 
 export type CompactThreadResult =
   | {

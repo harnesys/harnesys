@@ -52,7 +52,7 @@ export interface CompactionMessage {
   content: string;
   coveredFrom: number;
   coveredUntil: number;
-  reason: 'threshold' | 'manual';
+  reason: 'threshold' | 'manual' | 'overflow';
   stats: {
     tokensBefore: number;
     tokensAfter: number;
