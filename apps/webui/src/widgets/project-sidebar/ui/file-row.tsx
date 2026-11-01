@@ -1,5 +1,6 @@
 import type { GitFileStatus, GitFileStatusMap, ProjectFileEntry } from '@harnesys/studio-shared';
 import { useQuery } from '@tanstack/react-query';
+import { ChevronRightIcon } from 'lucide-react';
 import { useOpenNewTerminal } from '@/features/ide';
 import { getGitFileStatus } from '@/shared/api/git';
 import { gitStatusColorClass, useGitStatusColors } from '@/shared/lib/git-status-colors';
@@ -30,16 +31,29 @@ function FileRowLabel({
   };
 }) {
   return (
-    <span data-drag-label className="flex min-w-0 items-center gap-1.5">
+    <span data-drag-label className="flex min-w-0 items-center gap-0.75 -ml-2">
       {isDir ? (
-        <span className="flex size-[18px] shrink-0 items-center justify-center">
-          <FolderTypeIcon open={isExpanded} size="sm" />
+        <span
+          data-dir-chevron={entry.name}
+          className="flex size-4 shrink-0 cursor-pointer items-center justify-center"
+        >
+          <ChevronRightIcon
+            className={cn(
+              'size-3.5 text-sidebar-foreground/50 transition-transform',
+              isExpanded && 'rotate-90',
+            )}
+          />
         </span>
       ) : (
-        <span className="flex size-[18px] shrink-0 items-center justify-center">
-          <FileTypeIcon name={entry.name} size="sm" />
-        </span>
+        <span className="flex size-4 shrink-0 items-center justify-center" />
       )}
+      <span className="flex size-[18px] shrink-0 items-center justify-center">
+        {isDir ? (
+          <FolderTypeIcon open={isExpanded} size="sm" />
+        ) : (
+          <FileTypeIcon name={entry.name} size="sm" />
+        )}
+      </span>
       <span
         className={cn(
           'min-w-0 truncate text-sm group-data-[collapsible=icon]:hidden',
@@ -200,16 +214,18 @@ export function FileRow({
     onMoveInto,
   });
   const handleClick = (event: React.MouseEvent) => {
-    const hasModifier = event.shiftKey || event.metaKey || event.ctrlKey;
-    if (isDir && !hasModifier) {
+    if (isDir && (event.target as Element | null)?.closest?.('[data-dir-chevron]')) {
       onToggle(fullPath);
+      return;
     }
     onSelect(fullPath, event);
   };
   const handleDoubleClick = () => {
-    if (!isDir) {
-      onOpen(fullPath);
+    if (isDir) {
+      onToggle(fullPath);
+      return;
     }
+    onOpen(fullPath);
   };
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key !== 'Enter' && event.key !== ' ') {
