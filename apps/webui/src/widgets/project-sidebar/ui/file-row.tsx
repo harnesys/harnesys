@@ -31,7 +31,7 @@ function FileRowLabel({
   };
 }) {
   return (
-    <span data-drag-label className="flex min-w-0 items-center gap-0.75 -ml-2">
+    <span data-drag-label className="-ml-2 flex min-w-0 items-center gap-0.75">
       {isDir ? (
         <span
           data-dir-chevron={entry.name}
