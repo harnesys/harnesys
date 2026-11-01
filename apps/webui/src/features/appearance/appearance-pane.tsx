@@ -67,10 +67,10 @@ export function AppearancePane() {
                   selected ? 'border-live' : 'border-border hover:border-foreground/25',
                 )}
               >
-                <span className="block h-16 overflow-hidden rounded-md border border-border">
+                <span className="relative block h-16 w-full overflow-hidden rounded-md border border-border">
                   <ThemePreview choice={value} />
                 </span>
-                <span className="flex items-center gap-1.5 px-0.5 text-sm">
+                <span className="flex w-full items-center gap-1.5 px-0.5 text-sm">
                   <Icon className="size-3.5 text-muted-foreground" />
                   {label}
                   {selected ? <CheckIcon className="ml-auto size-3.5 text-live" /> : null}
@@ -198,11 +198,11 @@ function GitStatusColorRow({ row }: { row: GitStatusSettingsRow }) {
 function ThemePreview({ choice }: { choice: UiTheme }) {
   if (choice === 'system') {
     return (
-      <span className="flex h-full w-full">
-        <span className="flex-1">
+      <span className="absolute inset-0 flex">
+        <span className="relative flex-1">
           <MiniWindow variant="light" />
         </span>
-        <span className="flex-1">
+        <span className="relative flex-1">
           <MiniWindow variant="dark" />
         </span>
       </span>
@@ -217,7 +217,7 @@ function MiniWindow({ variant }: { variant: 'dark' | 'light' }) {
       ? { shell: 'bg-[#0f1114]', side: 'bg-[#16191d]', line: 'bg-[#2a2f36]' }
       : { shell: 'bg-[#f4f5f6]', side: 'bg-[#eeeff1]', line: 'bg-[#d9dce0]' };
   return (
-    <span className={cn('flex h-full w-full', palette.shell)}>
+    <span className={cn('absolute inset-0 flex', palette.shell)}>
       <span className={cn('w-1/3 shrink-0', palette.side)} />
       <span className="flex flex-1 flex-col gap-1 p-1.5">
         <span className={cn('h-1 w-3/4 rounded-full', palette.line)} />
