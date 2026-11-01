@@ -100,7 +100,7 @@ import { SourceVcsController } from './rest/source-vcs.controller.ts';
 import { SourceWorktreesController } from './rest/source-worktrees.controller.ts';
 import { SourcesController } from './rest/sources.controller.ts';
 import { TeamsController } from './rest/teams.controller.ts';
-import { TerminalsController } from './rest/terminals.controller.ts';
+import { OrgTerminalsController, TerminalsController } from './rest/terminals.controller.ts';
 import { ThreadAttachmentsController } from './rest/thread-attachments.controller.ts';
 import { ThreadCompactController } from './rest/thread-compact.controller.ts';
 import { ThreadFilesController } from './rest/thread-files.controller.ts';
@@ -182,6 +182,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     SourceMaterializeController,
     SourceWorktreesController,
     TerminalsController,
+    OrgTerminalsController,
     ContentController,
     ProvidersController,
     KnowledgeController,

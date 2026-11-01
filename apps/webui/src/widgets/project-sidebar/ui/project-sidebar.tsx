@@ -15,7 +15,7 @@ import { isDesktop, useAppUpdateStore } from '@/features/app-update';
 import { isNewerVersion, releasesQuery } from '@/features/app-update/model/server-update';
 import {
   useAgentsInProjects,
-  useDeskStore,
+  useDeskReady,
   useErroredThreads,
   useSchedulesInProjects,
   useWaitingThreads,
@@ -111,7 +111,7 @@ export function ProjectSidebar({
   const schedules = useSchedulesInProjects(automationScopeIds);
   const webhooks = useWebhooksInProjects(automationScopeIds);
   const boards = useIssueBoardStore((state) => state.boards);
-  const deskPending = useDeskStore((state) => (orgId ? state.hydrated[orgId] !== 'ready' : true));
+  const deskPending = !useDeskReady(orgId);
   const { setOpenMobile, state } = useSidebar();
   const ideTabs = useIdeTabs();
   const activeThreadId = ideTabs.tabs.find((tab) => tab.id === ideTabs.activeId)?.threadId ?? null;

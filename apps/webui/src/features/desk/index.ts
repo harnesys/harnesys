@@ -12,7 +12,6 @@ export {
 export {
   type AgentFileTab,
   type AgentOpenFiles,
-  type DeskHydrateStatus,
   type InspectorTab,
   type ProjectFileTab,
   type ProjectOpenFiles,
@@ -25,7 +24,8 @@ export {
   setDeskWorkspaceReader,
   setDeskWorkspaceWriter,
 } from './model/desk-chrome';
-export { hydrateDesk, hydrateOrgDesk } from './model/hydrate-desk';
+export { deskGitSummaryQuery, deskTerminalsKey } from './model/desk-queries';
+export { useDeskReady } from './model/desk-store-sync';
 export { scheduleMarkThreadRead } from './model/mark-thread-read';
 export { resetOrgState } from './model/org-reset';
 export { ensureThreadCached, refreshThread } from './model/refresh-thread';
@@ -50,5 +50,6 @@ export {
   useWaitingThreads,
   useWebhooksInProjects,
 } from './model/use-desk';
+export { useOrgTerminals, useProjectTerminals } from './model/use-org-terminals';
 export { DeskSync } from './ui/desk-sync';
 export { OrgDeskSync } from './ui/org-desk-sync';

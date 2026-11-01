@@ -18,7 +18,7 @@ import { applyDeskEvent } from '../model/apply-desk-event';
 import { ensureApprovalChimeUnlock, notifyApprovalRequested } from '../model/approval-chime';
 import { useDeskStore } from '../model/desk.store';
 import { hydrateDeskChrome } from '../model/desk-chrome';
-import { hydrateDesk } from '../model/hydrate-desk';
+import { useDeskOrgExtrasSync, useDeskReady, useDeskStoreSync } from '../model/desk-store-sync';
 import { refreshThread } from '../model/refresh-thread';
 export function DeskSync() {
   const navigate = useNavigate();
@@ -28,13 +28,11 @@ export function DeskSync() {
   const projectId = studioFocusProjectId(focus);
   const projectQuery = useProjects();
   const lastSelfNodeRef = useRef<string | null>(null);
-  const projectIds = useMemo(
-    () => projectQuery.data?.map((item) => item.id) ?? [],
-    [projectQuery.data],
-  );
-  const visibleReady = useDeskStore((state) =>
-    projectId ? state.hydrated[projectId] === 'ready' : false,
-  );
+  const activeOrgId = orgId ?? storeOrgId;
+  const visibleReady = useDeskReady(projectId);
+  useDeskStoreSync(activeOrgId ?? null);
+  useDeskStoreSync(projectId && projectId !== activeOrgId ? projectId : null);
+  useDeskOrgExtrasSync(activeOrgId ?? null);
   const { data: meta } = useQuery(appMetaQuery(orgId));
   const remoteProjects = useMemo(() => {
     const remote = new Set<string>();
@@ -66,34 +64,12 @@ export function DeskSync() {
     }
   }, [meta, projectQuery.data, queryClient]);
   useLayoutEffect(() => {
-    const activeOrgId = orgId ?? storeOrgId;
     if (!activeOrgId) {
       return;
     }
     void hydrateDeskChrome(activeOrgId).catch(() => {});
-    void hydrateDesk(activeOrgId).catch(() => {});
-    if (projectId && projectId !== activeOrgId) {
-      void hydrateDesk(projectId).catch(() => {});
-    }
-  }, [projectId, orgId, storeOrgId]);
+  }, [activeOrgId]);
   useEffect(() => {
-    if (projectQuery.status !== 'success') {
-      return;
-    }
-    const known = new Set(projectIds);
-    if (orgId) {
-      known.add(orgId);
-    }
-    for (const id of Object.keys(useDeskStore.getState().hydrated)) {
-      if (!known.has(id)) {
-        useDeskStore.getState().setHydrateStatus(id, null);
-      }
-    }
-    // File trees load on demand when their explorer section mounts
-    // (staleTime 60s each) instead of all at boot competing with desk slices.
-  }, [projectIds, projectQuery.status, orgId]);
-  useEffect(() => {
-    const activeOrgId = orgId ?? storeOrgId;
     if (!activeOrgId) {
       return;
     }
@@ -110,16 +86,14 @@ export function DeskSync() {
         useOrgActivityStore.getState().bump(eventOrgId, 1);
       }
     });
-  }, [orgId, storeOrgId, navigate]);
+  }, [activeOrgId, navigate]);
   useEffect(() => {
-    const activeOrgId = orgId ?? storeOrgId;
     if (!activeOrgId) {
       return;
     }
     useOrgActivityStore.getState().clear(activeOrgId);
-  }, [orgId, storeOrgId]);
+  }, [activeOrgId]);
   useEffect(() => {
-    const activeOrgId = orgId ?? storeOrgId;
     if (!activeOrgId) {
       return;
     }
@@ -153,9 +127,8 @@ export function DeskSync() {
         return;
       }
     });
-  }, [orgId, storeOrgId]);
+  }, [activeOrgId]);
   useEffect(() => {
-    const activeOrgId = orgId ?? storeOrgId;
     if (!activeOrgId) {
       return;
     }
@@ -172,9 +145,8 @@ export function DeskSync() {
         void refreshThread(frame.approval.threadId, { force });
       }
     });
-  }, [orgId, storeOrgId]);
+  }, [activeOrgId]);
   useEffect(() => {
-    const activeOrgId = orgId ?? storeOrgId;
     if (!activeOrgId) {
       return;
     }
@@ -197,7 +169,7 @@ export function DeskSync() {
       void queryClient.invalidateQueries({ queryKey: gitFileStatusQueryKey(frame.sourceId) });
       void queryClient.invalidateQueries({ queryKey: gitOrgSummaryQueryKey(activeOrgId) });
     });
-  }, [orgId, storeOrgId, queryClient, remoteProjects]);
+  }, [activeOrgId, queryClient, remoteProjects]);
   useEffect(() => {
     if (!projectId || projectQuery.status === 'pending' || !visibleReady) {
       return;

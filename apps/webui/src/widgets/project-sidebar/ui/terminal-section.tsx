@@ -1,13 +1,9 @@
-import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { MoreHorizontalIcon, PlusIcon, SquareTerminalIcon } from 'lucide-react';
 import { useProjects } from '@/entities/project';
+import { deskTerminalsKey, useOrgTerminals } from '@/features/desk';
 import { useIdeStore, useOpenNewTerminal, useOpenTerminalTab } from '@/features/ide';
-import {
-  deleteTerminal,
-  listTerminals,
-  type TerminalSessionRecord,
-  terminalsQueryKey,
-} from '@/shared/api';
+import { deleteTerminal, type TerminalSessionRecord } from '@/shared/api';
 import { useStudioNavigation } from '@/shared/config/navigation';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -90,39 +86,23 @@ export function TerminalSection({
   activeSessionId: string | null;
   onSelectDone?: () => void;
 }) {
-  const projectQuery = useProjects();
-  const projects = projectQuery.data ?? [];
   const { openDesk } = useStudioNavigation();
   const openTerminalTab = useOpenTerminalTab();
   const queryClient = useQueryClient();
-  const sessionQueries = useQueries({
-    queries: projects.map((project) => ({
-      queryKey: terminalsQueryKey(project.id),
-      queryFn: () => listTerminals(project.id),
-      staleTime: 5000,
-    })),
-  });
+  const sessions = useOrgTerminals();
   const rows: {
     projectId: string;
     session: TerminalSessionRecord;
   }[] = [];
-  for (let i = 0; i < projects.length; i += 1) {
-    const project = projects[i];
-    const sessions = sessionQueries[i]?.data ?? [];
-    for (const session of sessions) {
-      if (project) {
-        rows.push({ projectId: project.id, session });
-      }
-    }
+  for (const session of sessions) {
+    rows.push({ projectId: session.projectId, session });
   }
   const remove = useMutation({
     mutationFn: ({ projectId, sessionId }: { projectId: string; sessionId: string }) =>
       deleteTerminal(projectId, sessionId),
     onSuccess: (_void, variables) => {
       useIdeStore.getState().closeByEntity(variables.projectId, 'terminal', variables.sessionId);
-      void queryClient.invalidateQueries({
-        queryKey: terminalsQueryKey(variables.projectId),
-      });
+      void queryClient.invalidateQueries({ queryKey: deskTerminalsKey });
       if (activeSessionId === variables.sessionId) {
         openDesk();
       }

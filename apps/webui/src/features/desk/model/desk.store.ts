@@ -12,17 +12,14 @@ export interface AgentOpenFiles {
 }
 export type ProjectFileTab = AgentFileTab;
 export type ProjectOpenFiles = AgentOpenFiles;
-export type DeskHydrateStatus = 'pending' | 'ready';
 interface DeskState {
   inspectorTab: InspectorTab;
   inspectorOpen: boolean;
-  hydrated: Record<string, DeskHydrateStatus>;
   focusedThreadId: string | null;
   filesByAgentId: Record<string, AgentOpenFiles>;
   filesByProjectId: Record<string, ProjectOpenFiles>;
 }
 type DeskStore = DeskState & {
-  setHydrateStatus: (projectId: string, status: DeskHydrateStatus | null) => void;
   setFocusedThreadId: (threadId: string | null) => void;
   setInspectorTab: (tab: InspectorTab) => void;
   toggleInspector: () => void;
@@ -41,27 +38,12 @@ const emptyFiles = (): AgentOpenFiles => ({ tabs: [], activePath: null });
 const initialDesk: DeskState = {
   inspectorTab: 'inspector',
   inspectorOpen: false,
-  hydrated: {},
   focusedThreadId: null,
   filesByAgentId: {},
   filesByProjectId: {},
 };
 export const useDeskStore = create<DeskStore>((set) => ({
   ...initialDesk,
-  setHydrateStatus: (projectId, status) =>
-    set((state) => {
-      if (status === null) {
-        if (!(projectId in state.hydrated)) {
-          return state;
-        }
-        const { [projectId]: _, ...hydrated } = state.hydrated;
-        return { hydrated };
-      }
-      if (state.hydrated[projectId] === status) {
-        return state;
-      }
-      return { hydrated: { ...state.hydrated, [projectId]: status } };
-    }),
   setFocusedThreadId: (threadId) => set({ focusedThreadId: threadId }),
   setInspectorTab: (tab) => set({ inspectorTab: tab }),
   toggleInspector: () => set((state) => ({ inspectorOpen: !state.inspectorOpen })),

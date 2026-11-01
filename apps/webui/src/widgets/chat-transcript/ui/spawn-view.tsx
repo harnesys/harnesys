@@ -4,7 +4,7 @@ import { agentColorClass, useAgentStore } from '@/entities/agent';
 import type { SpawnStatus } from '@/entities/session';
 import { spawnSubtreeIds, spawnTaskText, splitRuns, useThreadFeeds } from '@/entities/session';
 import { useThreadStore } from '@/entities/thread';
-import { refreshThread, useDeskStore, useThreadEvents } from '@/features/desk';
+import { refreshThread, useDeskReady, useThreadEvents } from '@/features/desk';
 import type { IdeTab } from '@/features/ide';
 import { useOpenSpawnTab } from '@/features/ide';
 import { cn } from '@/shared/lib/utils';
@@ -39,7 +39,7 @@ export function SpawnView({
   const feeds = useThreadFeeds(threadId);
   const spawns = [...(feeds?.inherited.spawns ?? []), ...(feeds?.own.spawns ?? [])];
   const hasEvents = events.length > 0;
-  const deskReady = useDeskStore((state) => state.hydrated[tab.projectId] === 'ready');
+  const deskReady = useDeskReady(tab.projectId);
   const openSpawnTab = useOpenSpawnTab();
   const spawn = spawns.find((item) => item.spawnId === spawnId);
   const agent = useAgentStore((state) => (spawn ? state.byId(spawn.agentId) : undefined));

@@ -4,10 +4,6 @@ import { apiJson } from './client';
 
 export type { TerminalSessionRecord };
 
-export function terminalsQueryKey(projectId: string) {
-  return ['terminals', projectId] as const;
-}
-
 function terminalsUrl(projectId: string): string {
   const orgId = getActiveOrgId();
   if (!orgId) {
@@ -16,8 +12,8 @@ function terminalsUrl(projectId: string): string {
   return `/api/orgs/${encodeURIComponent(orgId)}/sources/${encodeURIComponent(projectId)}/terminals`;
 }
 
-export function listTerminals(projectId: string): Promise<TerminalSessionRecord[]> {
-  return apiJson(terminalsUrl(projectId));
+export function listOrgTerminals(orgId: string): Promise<TerminalSessionRecord[]> {
+  return apiJson(`/api/orgs/${encodeURIComponent(orgId)}/terminals`);
 }
 
 export function createTerminal(projectId: string, cwd?: string): Promise<TerminalSessionRecord> {

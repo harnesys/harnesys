@@ -8,13 +8,8 @@ import type {
 import { useQuery } from '@tanstack/react-query';
 import { useActiveOrgStore } from '@/entities/org-machine';
 import { type Project, useProjects } from '@/entities/project';
-import { useDeskStore } from '@/features/desk';
-import {
-  getGitFileStatus,
-  getOrgGitSummary,
-  gitFileStatusQueryKey,
-  gitOrgSummaryQueryKey,
-} from '@/shared/api/git';
+import { deskGitSummaryQuery, useDeskReady } from '@/features/desk';
+import { getGitFileStatus, gitFileStatusQueryKey } from '@/shared/api/git';
 import { useStudioLocation } from '@/shared/config/location';
 
 export type GitStatus = Extract<
@@ -74,14 +69,11 @@ export function useOrgGitSummaries(): GitSourceSummary[] | null {
   const { orgId: routeOrgId } = useStudioLocation();
   const storeOrgId = useActiveOrgStore((state) => state.orgId);
   const orgId = routeOrgId ?? storeOrgId;
-  const deskReady = useDeskStore((state) => (orgId ? state.hydrated[orgId] === 'ready' : false));
+  // Observer only: DeskSync hydrates the summary once the desk slices settle.
+  const deskReady = useDeskReady(orgId);
   const summaryQuery = useQuery({
-    queryKey: orgId ? gitOrgSummaryQueryKey(orgId) : ['git', 'summary', 'inactive'],
-    queryFn: () => getOrgGitSummary(orgId ?? ''),
+    ...deskGitSummaryQuery(orgId ?? ''),
     enabled: Boolean(orgId) && deskReady,
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
   });
   return orgId ? (summaryQuery.data ?? null) : null;
 }
@@ -113,10 +105,16 @@ export function useGitChanges(): GitProjectChanges[] {
 }
 
 export function useGitFileChanges(projectId: string): GitFileRow[] {
+  const { orgId: routeOrgId } = useStudioLocation();
+  const storeOrgId = useActiveOrgStore((state) => state.orgId);
+  const orgId = routeOrgId ?? storeOrgId;
+  // Wait for the desk basket: an early fetch hits git before host routing
+  // (rememberProjectNode) is known and caches an empty status forever.
+  const deskReady = useDeskReady(orgId);
   const query = useQuery({
     queryKey: gitFileStatusQueryKey(projectId),
     queryFn: () => getGitFileStatus(projectId),
-    enabled: Boolean(projectId),
+    enabled: Boolean(projectId) && Boolean(orgId) && deskReady,
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Thread } from '@/entities/thread';
 import {
   useAgentThreads,
-  useDeskStore,
+  useDeskReady,
   useSelectedAgent,
   useSelectedThread,
 } from '@/features/desk';
@@ -14,9 +14,8 @@ import { NoThreads } from './no-threads';
 import { ThreadPanel } from './thread-panel';
 export function ChatTranscript() {
   const projectId = studioFocusProjectId(useStudioLocation().focus);
-  const isHydrating = useDeskStore(
-    (state) => Boolean(projectId) && state.hydrated[projectId ?? ''] !== 'ready',
-  );
+  const deskReady = useDeskReady(projectId);
+  const isHydrating = Boolean(projectId) && !deskReady;
   const agent = useSelectedAgent();
   const thread = useSelectedThread();
   const threads = useAgentThreads(agent?.id ?? null);

@@ -33,11 +33,12 @@ export class TerminalSessionsAdapter extends TerminalSessionsPort {
   }
 
   list(projectId: string): TerminalSessionRecord[] {
+    return this.listAll().filter((record) => record.projectId === projectId);
+  }
+
+  listAll(): TerminalSessionRecord[] {
     const records: TerminalSessionRecord[] = [];
-    for (const [sessionId, sessionProjectId] of this.projectBySession) {
-      if (sessionProjectId !== projectId) {
-        continue;
-      }
+    for (const [sessionId, projectId] of this.projectBySession) {
       const job = this.jobs.get(sessionId);
       if (!job) {
         this.projectBySession.delete(sessionId);

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { toClientAgentFromPublic, useAgentStore } from '@/entities/agent';
 import { toClientThread, useThreadStore } from '@/entities/thread';
-import { useDeskStore } from '@/features/desk';
+import { useDeskReady } from '@/features/desk';
 import { GitCommitDiffView } from '@/features/git-commit';
 import { type IdeTab, useIdeStore } from '@/features/ide';
 import { agentConnectorsQuery } from '@/features/manage-agent/model/connector-api';
@@ -189,7 +189,7 @@ function FileTabContent({
 
 export function IdeTabContent({ tab, projectId }: { tab: IdeTab; projectId: string }) {
   const orgId = useOrgId() ?? projectId;
-  const isHydrating = useDeskStore((state) => state.hydrated[projectId] !== 'ready');
+  const isHydrating = !useDeskReady(projectId);
   if (tab.kind === 'thread' && tab.threadId) {
     return <ThreadTabContent tab={tab} threadId={tab.threadId} isHydrating={isHydrating} />;
   }

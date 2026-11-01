@@ -10,7 +10,7 @@ import {
   orgSummaryQueryKey,
   projectQueryKey,
 } from '@/shared/api';
-import { useDeskStore } from './desk.store';
+import { DESK_QUERY_KEY } from './desk-queries';
 
 export function resetOrgState(nextOrgId: string, queryClient: QueryClient): void {
   if (!nextOrgId) {
@@ -23,7 +23,8 @@ export function resetOrgState(nextOrgId: string, queryClient: QueryClient): void
   useIssueStore.setState({ items: [] });
   useIssueBoardStore.setState({ boards: [] });
   useIssueLabelStore.setState({ items: [] });
-  useDeskStore.setState({ hydrated: {} });
+  // Invalidate (not remove): remove would cancel in-flight desk fetches on first mount and refetch them.
+  void queryClient.invalidateQueries({ queryKey: DESK_QUERY_KEY });
   queryClient.removeQueries({ queryKey: projectQueryKey });
   queryClient.removeQueries({ queryKey: orgAgentsQueryKey });
   queryClient.removeQueries({ queryKey: orgSummaryQueryKey });

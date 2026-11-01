@@ -206,9 +206,8 @@ export { type CreateTeamBody, type CreateTeamResponse, createTeam } from './team
 export {
   createTerminal,
   deleteTerminal,
-  listTerminals,
+  listOrgTerminals,
   type TerminalSessionRecord,
-  terminalsQueryKey,
 } from './terminals';
 export {
   listThreadAttachments,

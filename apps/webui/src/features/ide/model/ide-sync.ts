@@ -2,8 +2,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { useActiveOrgStore } from '@/entities/org-machine';
-import { useDeskStore } from '@/features/desk';
-import { terminalsQueryKey, watchDeskEvents } from '@/shared/api';
+import { deskTerminalsKey, useDeskReady } from '@/features/desk';
+import { watchDeskEvents } from '@/shared/api';
 import { useStudioLocation } from '@/shared/config/location';
 import { studioPath } from '@/shared/config/routes';
 import { useIdeStore } from './ide.store';
@@ -17,9 +17,7 @@ export function useIdeSync() {
   const storeOrgId = useActiveOrgStore((state) => state.orgId);
   const org = urlOrgId ?? storeOrgId ?? '';
   const projectId = focus.kind === 'none' || focus.kind === 'settings' ? null : focus.projectId;
-  const deskReady = useDeskStore((state) =>
-    projectId ? state.hydrated[projectId] === 'ready' : false,
-  );
+  const deskReady = useDeskReady(projectId);
   const focusProjectRef = useRef<string | null>(projectId);
   focusProjectRef.current = projectId;
   useEffect(() => {
@@ -30,7 +28,7 @@ export function useIdeSync() {
       if (event.type !== 'terminal') {
         return;
       }
-      void queryClient.invalidateQueries({ queryKey: terminalsQueryKey(event.projectId) });
+      void queryClient.invalidateQueries({ queryKey: deskTerminalsKey });
       useIdeStore.getState().openTerminal(event.projectId, event.jobId);
       if (event.projectId === focusProjectRef.current) {
         void navigate(studioPath.terminal(org, event.projectId, event.jobId));

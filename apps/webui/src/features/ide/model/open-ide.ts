@@ -1,8 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router';
-import { useDeskStore } from '@/features/desk';
-import { createTerminal, terminalsQueryKey } from '@/shared/api/terminals';
+import { deskTerminalsKey, useDeskStore } from '@/features/desk';
+import { createTerminal } from '@/shared/api/terminals';
 import { useStudioNavigation } from '@/shared/config/navigation';
 import { studioPath } from '@/shared/config/routes';
 import type { IdeTab } from './ide.store';
@@ -95,7 +95,7 @@ export function useOpenNewTerminal() {
   return useCallback(
     (projectId: string, cwd?: string) =>
       createTerminal(projectId, cwd).then((session) => {
-        void queryClient.invalidateQueries({ queryKey: terminalsQueryKey(projectId) });
+        void queryClient.invalidateQueries({ queryKey: deskTerminalsKey });
         openTerminalTab(projectId, session.id);
         return session;
       }),

@@ -2,14 +2,14 @@ import type { ThreadRecord } from '@harnesys/studio-shared';
 import { useEffect, useState } from 'react';
 import { useSessionStore } from '@/entities/session';
 import { useThreadStore } from '@/entities/thread';
-import { refreshThread, useDeskStore } from '@/features/desk';
+import { refreshThread, useDeskReady } from '@/features/desk';
 import { connectThreadRun } from '@/features/send-message';
 import { useIsRemoteProject } from '@/shared/api';
 
 const TERMINAL_RUN_STATUSES = new Set(['completed', 'failed', 'cancelled', 'dead_lettered']);
 export function useSyncedThread(threadId: string | null, orgId: string): boolean {
   const hasEvents = useSessionStore((state) => (threadId ? threadId in state.events : false));
-  const hydrated = useDeskStore((state) => state.hydrated[orgId] === 'ready');
+  const hydrated = useDeskReady(orgId);
   const liveRunId = useThreadStore((state) =>
     threadId ? (state.items.find((item) => item.id === threadId)?.activeRunId ?? null) : null,
   );

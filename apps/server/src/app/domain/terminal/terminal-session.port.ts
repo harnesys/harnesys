@@ -11,6 +11,7 @@ export interface CreateTerminalSessionInput {
 
 export abstract class TerminalSessionsPort {
   abstract list(projectId: string): TerminalSessionRecord[];
+  abstract listAll(): TerminalSessionRecord[];
   abstract get(sessionId: string): TerminalSessionRecord | null;
   abstract create(input: CreateTerminalSessionInput): TerminalSessionRecord;
   abstract write(sessionId: string, data: string): boolean;

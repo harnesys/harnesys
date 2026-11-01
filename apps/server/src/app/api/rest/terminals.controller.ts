@@ -45,3 +45,13 @@ export class TerminalsController {
     this.deleteSession.execute({ projectId: sourceId, sessionId });
   }
 }
+
+@Controller('orgs/:orgId/terminals')
+export class OrgTerminalsController {
+  constructor(private readonly listSessions: ListTerminalSessionsUseCase) {}
+
+  @Get()
+  list(@Param('orgId') _orgId: string): TerminalSessionRecord[] {
+    return this.listSessions.execute({});
+  }
+}

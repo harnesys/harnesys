@@ -256,7 +256,7 @@ export function ExplorerContent({
       data-testid={`explorer-content-${projectId}`}
     >
       {gitTruncated ? (
-        <div className="mx-1 rounded-md bg-status-warn/10 px-2 py-1 text-status-warn text-xs group-data-[collapsible=icon]:hidden">
+        <div className="mx-2 mt-1 rounded-md bg-status-warn/10 px-2 py-1 text-[10px] text-status-warn group-data-[collapsible=icon]:hidden">
           Large repo — file decorations off. Expand a folder for status.
         </div>
       ) : null}
@@ -271,7 +271,7 @@ export function ExplorerContent({
       ) : null}
       <FileTreeWindow
         rows={rows}
-        rowHeight={iconMode ? 32 : 28}
+        rowHeight={iconMode ? 32 : 24}
         renderRow={renderRow}
         testId={`explorer-rows-${projectId}`}
       />
@@ -280,7 +280,7 @@ export function ExplorerContent({
           className="px-2 py-2 text-muted-foreground text-xs group-data-[collapsible=icon]:hidden"
           style={{ paddingLeft: `${8 + depthOffset * 12}px` }}
         >
-          Empty project.
+          Empty source.
         </p>
       ) : null}
     </div>

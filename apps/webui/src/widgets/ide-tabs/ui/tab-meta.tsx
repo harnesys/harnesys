@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
 import {
   CalendarClockIcon,
   EarthIcon,
@@ -12,9 +11,9 @@ import {
 import { AgentRecordAvatar, useAgentStore } from '@/entities/agent';
 import { useIssueBoardStore } from '@/entities/issue';
 import { useThreadStore } from '@/entities/thread';
+import { useProjectTerminals } from '@/features/desk';
 import type { IdeTab } from '@/features/ide';
 import { resolveBoardIcon } from '@/features/manage-issues';
-import { listTerminals, terminalsQueryKey } from '@/shared/api';
 import { entityColorTintClass } from '@/shared/lib/entity-colors';
 import { cn } from '@/shared/lib/utils';
 import { FileTypeIcon } from '@/shared/ui/icons';
@@ -99,12 +98,7 @@ export function useTabLabel(tab: IdeTab): string {
   const agent = useAgentStore((state) =>
     tab.kind === 'spawn' && tab.agentId ? (state.byId(tab.agentId) ?? undefined) : undefined,
   );
-  const terminalsQuery = useQuery({
-    queryKey: terminalsQueryKey(tab.projectId),
-    queryFn: () => listTerminals(tab.projectId),
-    enabled: tab.kind === 'terminal' && Boolean(tab.terminalSessionId),
-    staleTime: 5000,
-  });
+  const terminalsQuery = useProjectTerminals(tab.projectId);
   if (tab.kind === 'file' && tab.path) {
     const base = fileBaseName(tab.path);
     return tab.worktreeBranch ? `${base} · ${tab.worktreeBranch}` : base;
@@ -128,7 +122,7 @@ export function useTabLabel(tab: IdeTab): string {
     return agent?.name ?? 'Spawn';
   }
   if (tab.kind === 'terminal') {
-    const session = terminalsQuery.data?.find((item) => item.id === tab.terminalSessionId);
+    const session = terminalsQuery.find((item) => item.id === tab.terminalSessionId);
     return session?.title ?? 'Terminal';
   }
   return tab.kind;
