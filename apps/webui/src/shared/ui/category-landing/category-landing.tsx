@@ -63,7 +63,7 @@ export function CategoryLandingDescription({
   return (
     <p
       className={cn(
-        'mt-3 line-clamp-4 text-muted-foreground text-sm leading-relaxed',
+        'mt-3 line-clamp-2 text-muted-foreground text-sm leading-relaxed',
         className,
       )}
     >
