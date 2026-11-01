@@ -112,21 +112,27 @@ export class TerminalSessionsAdapter extends TerminalSessionsPort {
     });
     const meta: SessionMeta = { projectId: input.projectId, orgId: input.orgId ?? '' };
     this.metaBySession.set(job.id, meta);
+    this.watchExit(job.id);
     this.emitChanged(job.id);
     return toSessionRecord(job, meta);
+  }
+
+  private watchExit(sessionId: string): void {
+    if (this.exitWatched.has(sessionId)) {
+      return;
+    }
+    this.exitWatched.add(sessionId);
+    this.jobs.subscribe(
+      sessionId,
+      () => {},
+      () => this.emitChanged(sessionId),
+    );
   }
 
   upsertExternal(job: TerminalJobSnapshot): void {
     const meta: SessionMeta = { projectId: '', orgId: job.orgId ?? '' };
     this.metaBySession.set(job.id, meta);
-    if (!this.exitWatched.has(job.id)) {
-      this.exitWatched.add(job.id);
-      this.jobs.subscribe(
-        job.id,
-        () => {},
-        () => this.emitChanged(job.id),
-      );
-    }
+    this.watchExit(job.id);
     this.emitChanged(job.id);
   }
 

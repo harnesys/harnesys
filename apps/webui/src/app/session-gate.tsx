@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import { appRouter } from '@/app/router';
+import { dismissSplash } from '@/app/splash';
 import {
   getAccess,
   sessionOwnerStatus,
@@ -7,11 +8,6 @@ import {
   subscribeSessionDead,
   subscribeSessionReady,
 } from '@/shared/api/session';
-
-const SPLASH_MIN_MS = 1200;
-const SPLASH_MAX_MS = 2000;
-const SPLASH_FADE_MS = 400;
-const splashShownAt = performance.now();
 
 type GateState = 'checking' | 'login' | 'signup' | 'ready';
 
@@ -75,17 +71,7 @@ export function SessionGate({ children }: { children: ReactNode }) {
     if (state === 'checking') {
       return;
     }
-    const splash = document.getElementById('app-splash');
-    if (!splash) {
-      return;
-    }
-    const elapsed = performance.now() - splashShownAt;
-    const delay = Math.max(0, Math.min(SPLASH_MIN_MS - elapsed, SPLASH_MAX_MS - elapsed));
-    const timer = window.setTimeout(() => {
-      splash.classList.add('is-done');
-      window.setTimeout(() => splash.remove(), SPLASH_FADE_MS);
-    }, delay);
-    return () => window.clearTimeout(timer);
+    dismissSplash();
   }, [state]);
 
   if (state === 'checking') {

@@ -1,30 +1,25 @@
-import { compileUntil, matchesUntil } from '../../application/process-jobs/read-until.ts';
-import {
-  argvToShellCommand,
-  portForwardArgs,
-  type RemoteCopyDirection,
-  remoteCopyCommand,
-  sshSocketPath,
-} from '../../application/process-jobs/ssh-argv.ts';
-import { defaultSshRuntimeDir } from '../../application/process-jobs/ssh-process-backend.ts';
+import { compileUntil } from '../../application/process-jobs/read-until.ts';
 import type {
   ProcessJobMode,
   ProcessJobRecord,
   ProcessJobRegistry,
   ProcessJobStatus,
+  ProcessJobTarget,
 } from '../../domain/process-job.ts';
-import type { ToolDefinition } from '../../ports/tools.ts';
+import type { ToolContext, ToolDefinition } from '../../ports/tools.ts';
 import { tool } from '../../ports/tools.ts';
+import { forwardTools } from './terminal-forward.ts';
+import { readSessionOutput } from './terminal-session-io.ts';
+import {
+  describeTarget,
+  sshAskGate,
+  sshHostOf,
+  type TerminalSessionPorts,
+  type ToolTargetInput,
+  tryToRegistryTarget,
+} from './terminal-targets.ts';
 
 const READ_TIMEOUT_MAX_MS = 30000;
-const POLL_SLICE_MS = 250;
-export interface ToolTargetInput {
-  kind: 'host' | 'container' | 'ssh';
-  host?: string;
-  user?: string;
-  port?: number;
-  containerId?: string;
-}
 export interface TerminalSpawnInput {
   name?: string;
   command: string;
@@ -44,19 +39,6 @@ export interface TerminalReadInput {
 }
 export interface TerminalKillInput {
   session: string;
-}
-export interface TerminalForwardInput {
-  mode: 'local' | 'remote' | 'dynamic';
-  spec: string;
-  target?: ToolTargetInput;
-}
-export interface TerminalCopyInput {
-  direction: RemoteCopyDirection;
-  local_path: string;
-  remote_path: string;
-  host: string;
-  user?: string;
-  port?: number;
 }
 export interface TerminalSpawnResult {
   sessionId: string;
@@ -97,88 +79,57 @@ export interface TerminalListItem {
   target: string;
   createdAt: string;
 }
-export interface TerminalSessionPorts {
-  jobs: ProcessJobRegistry;
-  resolveOrgId?: () => string | undefined;
-  resolveThreadId?: () => string | undefined;
-  sshHostApproved?: (host: string) => boolean;
-  onSessionSpawned?: (record: ProcessJobRecord) => void;
-}
-function describeTarget(target: ProcessJobRecord['target']): string {
-  if (target === undefined) {
-    return 'host';
-  }
-  if (target.kind === 'container') {
-    return `container:${target.containerId}`;
-  }
-  if (target.kind === 'ssh') {
-    const userPart = target.user === undefined ? '' : `${target.user}@`;
-    const portPart = target.port === undefined ? '' : `:${target.port}`;
-    return `ssh:${userPart}${target.host}${portPart}`;
-  }
-  return 'host';
-}
-export function toRegistryTarget(input: ToolTargetInput | undefined): ProcessJobRecord['target'] {
-  if (input === undefined || input.kind === 'host') {
-    return undefined;
-  }
-  if (input.kind === 'container') {
-    if (typeof input.containerId !== 'string' || input.containerId.length === 0) {
-      throw new Error('container target requires containerId');
-    }
-    return { kind: 'container', containerId: input.containerId, orgId: '', workspaceKey: '' };
-  }
-  if (typeof input.host !== 'string' || input.host.length === 0) {
-    throw new Error('ssh target requires host');
-  }
-  return {
-    kind: 'ssh',
-    host: input.host,
-    ...(input.user === undefined ? {} : { user: input.user }),
-    ...(input.port === undefined ? {} : { port: input.port }),
-  };
-}
-function sshHostOf(input: ToolTargetInput | undefined): string | undefined {
-  return input?.kind === 'ssh' && typeof input.host === 'string' ? input.host : undefined;
-}
-function sshAskGate(host: string | undefined, ports: TerminalSessionPorts) {
-  if (host === undefined) {
-    return undefined;
-  }
-  if (ports.sshHostApproved?.(host)) {
-    return undefined;
-  }
-  return { decision: 'ask' as const };
+function jobs(ports: TerminalSessionPorts): ProcessJobRegistry {
+  return ports.jobs;
 }
 function resolveJob(ports: TerminalSessionPorts, ref: string): ProcessJobRecord | null {
   const orgId = ports.resolveOrgId?.();
   return jobs(ports).getByName(orgId, ref) ?? jobs(ports).get(ref);
 }
-function jobs(ports: TerminalSessionPorts): ProcessJobRegistry {
-  return ports.jobs;
+function namedSessionResult(
+  ports: TerminalSessionPorts,
+  orgId: string | undefined,
+  name: string | undefined,
+  sticky: boolean,
+): TerminalSpawnResult | null {
+  if (name === undefined || name === '') {
+    return null;
+  }
+  const existing = jobs(ports).getByName(orgId, name);
+  if (existing === null) {
+    return null;
+  }
+  if (sticky && existing.status === 'running') {
+    return { ...toResult(existing), reused: true };
+  }
+  return {
+    sessionId: existing.id,
+    mode: existing.mode,
+    status: existing.status,
+    error: `session name already in use: ${name}`,
+  };
 }
-function waitForData(jobs: ProcessJobRegistry, id: string, waitMs: number): Promise<void> {
-  return new Promise((resolve) => {
-    let settled = false;
-    let unsub: (() => void) | null = null;
-    const finish = (): void => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      clearTimeout(timer);
-      unsub?.();
-      resolve();
-    };
-    const timer = setTimeout(finish, Math.max(0, waitMs));
-    unsub = jobs.subscribe(
-      id,
-      () => finish(),
-      () => finish(),
-    );
-    if (unsub === null) {
-      finish();
-    }
+interface SpawnSessionArgs {
+  ports: TerminalSessionPorts;
+  parsed: TerminalSpawnInput;
+  ctx: ToolContext;
+  orgId: string | undefined;
+  name: string | undefined;
+  target: ProcessJobTarget | undefined;
+}
+function spawnSession(args: SpawnSessionArgs): ProcessJobRecord {
+  const { ports, parsed, ctx, orgId, name, target } = args;
+  return ports.jobs.start({
+    cwd: ctx.cwd,
+    command: parsed.command,
+    mode: parsed.mode ?? 'pty',
+    title: name ?? parsed.command.slice(0, 60),
+    env: ctx.env,
+    orgId,
+    ...(ctx.threadId === undefined ? {} : { threadId: ctx.threadId }),
+    ...(name === undefined || name === '' ? {} : { name }),
+    origin: 'agent',
+    ...(target === undefined ? {} : { process: target }),
   });
 }
 function toResult(record: ProcessJobRecord): TerminalSpawnResult {
@@ -192,10 +143,6 @@ function toResult(record: ProcessJobRecord): TerminalSpawnResult {
 export function terminalTools(ports: TerminalSessionPorts): ToolDefinition[] {
   const spawnGate = (input: unknown) =>
     sshAskGate(sshHostOf((input as TerminalSpawnInput).target), ports);
-  const copyAskGate = (input: unknown) => {
-    const host = (input as TerminalCopyInput).host;
-    return sshAskGate(typeof host === 'string' && host !== '' ? host : undefined, ports);
-  };
   return [
     tool('terminal_spawn', {
       group: 'core',
@@ -229,44 +176,18 @@ export function terminalTools(ports: TerminalSessionPorts): ToolDefinition[] {
         const parsed = input as TerminalSpawnInput;
         const orgId = ports.resolveOrgId?.();
         const name = parsed.name?.trim();
-        if (name !== undefined && name !== '') {
-          const existing = jobs(ports).getByName(orgId, name);
-          if (existing !== null) {
-            if (parsed.sticky === true && existing.status === 'running') {
-              return { ...toResult(existing), reused: true };
-            }
-            return {
-              sessionId: existing.id,
-              mode: existing.mode,
-              status: existing.status,
-              error: `session name already in use: ${name}`,
-            };
-          }
+        const named = namedSessionResult(ports, orgId, name, parsed.sticky === true);
+        if (named !== null) {
+          return named;
         }
-        let target: ProcessJobRecord['target'];
-        try {
-          target = toRegistryTarget(parsed.target ?? ctx.process);
-        } catch (err) {
-          return {
-            sessionId: '',
-            error: err instanceof Error ? err.message : String(err),
-          };
+        const { target, error } = tryToRegistryTarget(parsed.target ?? ctx.process);
+        if (error !== undefined) {
+          return { sessionId: '', error };
         }
         if (parsed.mode === 'pty' && target?.kind === 'container') {
           return { sessionId: '', error: 'container mode does not support pty sessions' };
         }
-        const record = jobs(ports).start({
-          cwd: ctx.cwd,
-          command: parsed.command,
-          mode: parsed.mode ?? 'pty',
-          title: name ?? parsed.command.slice(0, 60),
-          env: ctx.env,
-          orgId,
-          ...(ctx.threadId === undefined ? {} : { threadId: ctx.threadId }),
-          ...(name === undefined || name === '' ? {} : { name }),
-          origin: 'agent',
-          ...(target === undefined ? {} : { process: target }),
-        });
+        const record = spawnSession({ ports, parsed, ctx, orgId, name, target });
         ports.onSessionSpawned?.(record);
         return toResult(record);
       },
@@ -348,8 +269,8 @@ export function terminalTools(ports: TerminalSessionPorts): ToolDefinition[] {
             error: `invalid until pattern: ${parsed.until}`,
           };
         }
-        let read = jobs(ports).read(record.id, { since });
-        if (read === null) {
+        const state = await readSessionOutput(jobs(ports), record, since, untilRe, timeoutMs);
+        if (state === null) {
           return {
             sessionId: record.id,
             status: 'missing',
@@ -360,40 +281,15 @@ export function terminalTools(ports: TerminalSessionPorts): ToolDefinition[] {
             truncated: false,
           };
         }
-        let status = record.status;
-        let exitCode: number | null = record.exitCode;
-        let matched = untilRe === null ? undefined : matchesUntil(untilRe, read.text);
-        const deadline = Date.now() + timeoutMs;
-        while (
-          untilRe !== null &&
-          matched !== true &&
-          status === 'running' &&
-          Date.now() < deadline
-        ) {
-          await waitForData(jobs(ports), record.id, POLL_SLICE_MS);
-          const reread = jobs(ports).read(record.id, { since });
-          if (reread === null) {
-            break;
-          }
-          read = reread;
-          const current = jobs(ports).get(record.id);
-          if (current === null) {
-            break;
-          }
-          status = current.status;
-          exitCode = current.exitCode;
-          matched = matchesUntil(untilRe, read.text);
-        }
-        const final = jobs(ports).get(record.id);
         return {
           sessionId: record.id,
-          status: final?.status ?? status,
-          exitCode: final?.exitCode ?? exitCode,
-          output: read.text,
+          status: state.status,
+          exitCode: state.exitCode,
+          output: state.read.text,
           since,
-          nextSince: read.nextSince,
-          truncated: read.truncated,
-          ...(matched === undefined ? {} : { matched }),
+          nextSince: state.read.nextSince,
+          truncated: state.read.truncated,
+          ...(state.matched === undefined ? {} : { matched: state.matched }),
         };
       },
     }),
@@ -443,118 +339,6 @@ export function terminalTools(ports: TerminalSessionPorts): ToolDefinition[] {
         return { sessions: items };
       },
     }),
-    tool('port_forward', {
-      group: 'core',
-      description:
-        'Open an SSH port forward as a background job (local -L / remote -R / dynamic -D). Kill it with terminal_kill.',
-      operations: ['process'],
-      sideEffect: 'write',
-      input: {
-        type: 'object',
-        properties: {
-          mode: { type: 'string' },
-          spec: { type: 'string' },
-          target: {
-            type: 'object',
-            properties: {
-              kind: { type: 'string' },
-              host: { type: 'string' },
-              user: { type: 'string' },
-              port: { type: 'integer' },
-            },
-            required: ['kind'],
-          },
-        },
-        required: ['mode', 'spec', 'target'],
-      },
-      gate: (input) => sshAskGate(sshHostOf((input as TerminalForwardInput).target), ports),
-      execute(input, ctx) {
-        const parsed = input as TerminalForwardInput;
-        let target: ProcessJobRecord['target'];
-        try {
-          target = toRegistryTarget(parsed.target);
-        } catch (err) {
-          return { error: err instanceof Error ? err.message : String(err) };
-        }
-        if (target?.kind !== 'ssh') {
-          return { error: 'port_forward requires an ssh target' };
-        }
-        const command = argvToShellCommand(
-          portForwardArgs({
-            target,
-            socketPath: sshSocketPath(defaultSshRuntimeDir(), target),
-            spec: parsed.spec,
-            mode: parsed.mode,
-          }),
-        );
-        const orgId = ports.resolveOrgId?.();
-        const record = jobs(ports).start({
-          cwd: ctx.cwd,
-          command,
-          mode: 'pipes',
-          title: `port-forward ${parsed.mode} ${parsed.spec}`,
-          env: ctx.env,
-          orgId,
-          ...(ctx.threadId === undefined ? {} : { threadId: ctx.threadId }),
-          origin: 'agent',
-          process: { kind: 'host' },
-        });
-        ports.onSessionSpawned?.(record);
-        return { sessionId: record.id, status: record.status, spec: parsed.spec };
-      },
-    }),
-    tool('remote_copy', {
-      group: 'core',
-      description:
-        'Copy files over SSH via tar pipe: push local_path → remote host:remote_path, or pull. Runs as a background job; read it with terminal_read.',
-      operations: ['process'],
-      sideEffect: 'write',
-      input: {
-        type: 'object',
-        properties: {
-          direction: { type: 'string' },
-          local_path: { type: 'string' },
-          remote_path: { type: 'string' },
-          host: { type: 'string' },
-          user: { type: 'string' },
-          port: { type: 'integer' },
-        },
-        required: ['direction', 'local_path', 'remote_path', 'host'],
-      },
-      gate: copyAskGate,
-      execute(input, ctx) {
-        const parsed = input as TerminalCopyInput;
-        if (parsed.direction !== 'push' && parsed.direction !== 'pull') {
-          return { error: 'direction must be push or pull' };
-        }
-        const target = {
-          kind: 'ssh' as const,
-          host: parsed.host,
-          ...(parsed.user === undefined ? {} : { user: parsed.user }),
-          ...(parsed.port === undefined ? {} : { port: parsed.port }),
-        };
-        const command = remoteCopyCommand({
-          target,
-          socketPath: sshSocketPath(defaultSshRuntimeDir(), target),
-          direction: parsed.direction,
-          localPath: parsed.local_path,
-          remotePath: parsed.remote_path,
-        });
-        const orgId = ports.resolveOrgId?.();
-        const record = jobs(ports).start({
-          cwd: ctx.cwd,
-          command,
-          mode: 'pipes',
-          title: `remote_copy ${parsed.direction} ${parsed.local_path}`,
-          env: ctx.env,
-          orgId,
-          ...(ctx.threadId === undefined ? {} : { threadId: ctx.threadId }),
-          origin: 'agent',
-          process: { kind: 'host' },
-        });
-        ports.onSessionSpawned?.(record);
-        return { sessionId: record.id, status: record.status };
-      },
-    }),
+    ...forwardTools(ports),
   ];
 }

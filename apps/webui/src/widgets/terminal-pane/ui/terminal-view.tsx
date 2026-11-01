@@ -31,6 +31,70 @@ type ClientMessage =
       rows: number;
     };
 
+interface TerminalSocketHooks {
+  onOpen: () => void;
+  onMessage: (data: unknown) => void;
+  onFail: (reason: string) => void;
+}
+function createTerminalSocket(
+  url: string,
+  isDisposed: () => boolean,
+  isExited: () => boolean,
+  hooks: TerminalSocketHooks,
+): WebSocket {
+  const ws = new WebSocket(url);
+  ws.onopen = () => {
+    if (isDisposed()) {
+      return;
+    }
+    hooks.onOpen();
+  };
+  ws.onmessage = (event) => {
+    if (isDisposed()) {
+      return;
+    }
+    hooks.onMessage(event.data);
+  };
+  ws.onerror = () => {
+    if (isDisposed() || isExited()) {
+      return;
+    }
+    hooks.onFail('Terminal connection failed');
+  };
+  ws.onclose = () => {
+    if (isDisposed() || isExited()) {
+      return;
+    }
+    hooks.onFail('Terminal disconnected');
+  };
+  return ws;
+}
+async function openTerminalSocket(args: {
+  sessionId: string;
+  readOnly: boolean;
+  cols: number;
+  rows: number;
+  isDisposed: () => boolean;
+  isExited: () => boolean;
+  onTicketError: (message: string) => void;
+  hooks: TerminalSocketHooks;
+}): Promise<WebSocket | null> {
+  let grant: NodeTicketGrant;
+  try {
+    grant = await requestNodeTicket(args.readOnly ? ['terminal.open:ro'] : ['terminal.open']);
+  } catch (err) {
+    if (!args.isDisposed()) {
+      args.onTicketError(err instanceof Error ? err.message : 'ticket fetch failed');
+    }
+    return null;
+  }
+  if (args.isDisposed()) {
+    return null;
+  }
+  const ro = args.readOnly ? '&ro=1' : '';
+  const url = `${hostWsBase()}/api/terminals/${encodeURIComponent(args.sessionId)}?cols=${args.cols}&rows=${args.rows}${ro}&ticket=${encodeURIComponent(grant.ticket)}`;
+  return createTerminalSocket(url, args.isDisposed, args.isExited, args.hooks);
+}
 function applyServerMessage(
   term: Terminal,
   raw: unknown,
@@ -89,70 +153,44 @@ export function TerminalView({
     let disposed = false;
     let exited = false;
     let ws: WebSocket | null = null;
-    let resizeObserver: ResizeObserver | null = null;
     const send = (message: ClientMessage) => {
       if (ws?.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify(message));
       }
     };
-    const connect = () => {
-      const open = async () => {
-        const cols = term.cols || 80;
-        const rows = term.rows || 24;
-        let grant: NodeTicketGrant;
-        try {
-          grant = await requestNodeTicket(
-            readOnly === true ? ['terminal.open:ro'] : ['terminal.open'],
-          );
-        } catch (err) {
-          if (!disposed) {
-            setStatus('error');
-            setError(err instanceof Error ? err.message : 'ticket fetch failed');
-          }
-          return;
-        }
-        if (disposed) {
-          return;
-        }
-        ws = new WebSocket(
-          `${hostWsBase()}/api/terminals/${encodeURIComponent(sessionId)}?cols=${cols}&rows=${rows}${readOnly === true ? '&ro=1' : ''}&ticket=${encodeURIComponent(grant.ticket)}`,
-        );
-        ws.onopen = () => {
-          if (disposed) {
-            return;
-          }
-          setStatus('live');
-          setError(null);
-          fit.fit();
-          send({ type: 'resize', cols: term.cols, rows: term.rows });
-        };
-        ws.onmessage = (event) => {
-          if (disposed) {
-            return;
-          }
-          applyServerMessage(term, event.data, (code) => {
-            exited = true;
-            setStatus('exited');
-            term.writeln('');
-            term.writeln(`\r\n[Process exited${code === null ? '' : ` with code ${code}`}]`);
-          });
-        };
-        ws.onerror = () => {
-          if (disposed || exited) {
-            return;
-          }
+    const onProcessExit = (code: number | null): void => {
+      exited = true;
+      setStatus('exited');
+      term.writeln('');
+      term.writeln(`\r\n[Process exited${code === null ? '' : ` with code ${code}`}]`);
+    };
+    const onSocketOpen = (): void => {
+      setStatus('live');
+      setError(null);
+      fit.fit();
+      send({ type: 'resize', cols: term.cols, rows: term.rows });
+    };
+    const onSocketMessage = (data: unknown): void => {
+      applyServerMessage(term, data, onProcessExit);
+    };
+    const onSocketFail = (reason: string): void => {
+      setStatus('error');
+      setError(reason);
+    };
+    const openSocket = async (): Promise<void> => {
+      ws = await openTerminalSocket({
+        sessionId,
+        readOnly: readOnly === true,
+        cols: term.cols || 80,
+        rows: term.rows || 24,
+        isDisposed: () => disposed,
+        isExited: () => exited,
+        onTicketError: (message) => {
           setStatus('error');
-          setError('Terminal connection failed');
-        };
-        ws.onclose = () => {
-          if (disposed || exited) {
-            return;
-          }
-          setStatus('error');
-          setError('Terminal disconnected');
-        };
-      };
-      void open();
+          setError(message);
+        },
+        hooks: { onOpen: onSocketOpen, onMessage: onSocketMessage, onFail: onSocketFail },
+      });
     };
     const dataDisposable = term.onData((data) => {
       if (readOnly !== true) {
@@ -164,19 +202,19 @@ export function TerminalView({
         send({ type: 'resize', cols, rows });
       }
     });
-    resizeObserver = new ResizeObserver(() => {
+    const resizeObserver = new ResizeObserver(() => {
       try {
         fit.fit();
       } catch {}
     });
     resizeObserver.observe(host);
-    connect();
+    void openSocket();
     void projectId;
     return () => {
       disposed = true;
       dataDisposable.dispose();
       resizeDisposable.dispose();
-      resizeObserver?.disconnect();
+      resizeObserver.disconnect();
       ws?.close();
       term.dispose();
     };

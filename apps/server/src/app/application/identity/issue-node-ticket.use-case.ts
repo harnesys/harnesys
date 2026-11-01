@@ -44,9 +44,7 @@ export class IssueNodeTicketUseCase {
     }
     // read-only terminal attach is implied by full terminal access
     // (memberships created before terminal.open:ro only store terminal.open)
-    return (
-      action === 'terminal.open:ro' && authorize(principal, 'terminal.open', { orgId })
-    );
+    return action === 'terminal.open:ro' && authorize(principal, 'terminal.open', { orgId });
   }
 
   async execute(input: IssueNodeTicketInput): Promise<IssuedNodeTicket> {

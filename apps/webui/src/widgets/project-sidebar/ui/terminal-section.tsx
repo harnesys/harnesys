@@ -182,6 +182,14 @@ function TerminalRow({
         className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left"
         onClick={onSelect}
       >
+        {!session.exited ? (
+          <span
+            className="relative inline-flex size-1.5 shrink-0 animate-pulse rounded-full bg-live"
+            data-testid={`terminal-active-${session.id}`}
+          >
+            <span className="sr-only">active</span>
+          </span>
+        ) : null}
         <SquareTerminalIcon className="size-3.5 shrink-0 text-muted-foreground" />
         <span className="flex min-w-0 flex-1 items-center gap-1.5">
           <span className="min-w-0 truncate text-sm leading-4">{session.title}</span>
@@ -195,12 +203,7 @@ function TerminalRow({
           ) : null}
           {session.exited ? (
             <span className="shrink-0 text-[10px] text-muted-foreground">exited</span>
-          ) : (
-            <span
-              className="size-1.5 shrink-0 rounded-full bg-emerald-500"
-              data-testid={`terminal-active-${session.id}`}
-            />
-          )}
+          ) : null}
         </span>
       </button>
       <div className="hidden items-center gap-0.5 pr-1 group-focus-within/term:flex group-hover/term:flex">

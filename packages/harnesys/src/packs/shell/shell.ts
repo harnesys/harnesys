@@ -1,4 +1,3 @@
-import path from 'node:path';
 import {
   DEFAULT_SHELL_TIMEOUT_MS,
   MAX_SHELL_TIMEOUT_MS,
@@ -8,11 +7,13 @@ import type {
   ProcessJobRecord,
   ProcessJobRegistry,
   ProcessJobStatus,
+  ProcessJobTarget,
 } from '../../domain/process-job.ts';
 import type { ToolContext, ToolDefinition } from '../../ports/tools.ts';
 import { tool } from '../../ports/tools.ts';
 import { gateShellCommand } from './shell-gate.ts';
-import { type ToolTargetInput, toRegistryTarget } from './terminal-tools.ts';
+import { runOnHost } from './shell-host.ts';
+import { type ToolTargetInput, tryToRegistryTarget } from './terminal-targets.ts';
 export interface ShellOptions {
   timeout?: number;
   allowlist?: readonly string[];
@@ -60,14 +61,14 @@ export interface ShellBlockingArgs {
   ctx: ToolContext;
   ports: ShellPorts;
   mode: ProcessJobMode;
-  target?: ProcessJobRecord['target'];
+  target?: ProcessJobTarget;
 }
 export interface ShellBackgroundArgs {
   input: ShellExecuteInput;
   ctx: ToolContext;
   ports: ShellPorts;
   mode: ProcessJobMode;
-  target?: ProcessJobRecord['target'];
+  target?: ProcessJobTarget;
 }
 export interface ShellPorts {
   jobs?: ProcessJobRegistry;
@@ -130,15 +131,11 @@ export function shell(options: ShellOptions = {}, ports: ShellPorts = {}): ToolD
       );
       const mode: ProcessJobMode = parsed.open_in_terminal === true ? 'pty' : 'pipes';
       const background = parsed.run_in_background === true || parsed.block_until_ms === 0;
-      let effectiveTarget: ProcessJobRecord['target'];
-      try {
-        effectiveTarget = toRegistryTarget(parsed.target) ?? ctx.process;
-      } catch (err) {
-        return {
-          jobId: '',
-          error: err instanceof Error ? err.message : String(err),
-        };
+      const { target, error } = tryToRegistryTarget(parsed.target);
+      if (error !== undefined) {
+        return { jobId: '', error };
       }
+      const effectiveTarget = target ?? ctx.process;
       if (mode === 'pty' && effectiveTarget?.kind === 'container') {
         const failed: ShellStartErrorResult = {
           jobId: '',
@@ -302,73 +299,4 @@ async function runBackground(
     outputSoFar: text,
     timedOutWaiting: true,
   };
-}
-async function runOnHost(
-  command: string,
-  timeoutMs: number,
-  cwd: string,
-  opts: {
-    signal?: AbortSignal;
-    env?: Record<string, string>;
-  },
-) {
-  const { signal, env } = opts;
-  const started = performance.now();
-  const proc = Bun.spawn(['/bin/sh', '-c', command], {
-    cwd: path.resolve(cwd),
-    env,
-    stdout: 'pipe',
-    stderr: 'pipe',
-    stdin: 'ignore',
-    detached: true,
-  });
-  let timedOut = false;
-  const stop = (): void => {
-    killProcessGroup(proc.pid);
-  };
-  const timer = setTimeout(() => {
-    timedOut = true;
-    stop();
-  }, timeoutMs);
-  const onAbort = (): void => {
-    stop();
-  };
-  if (signal?.aborted) {
-    stop();
-  } else {
-    signal?.addEventListener('abort', onAbort, { once: true });
-  }
-  try {
-    const [stdoutBuf, stderrBuf, exitCode] = await Promise.all([
-      new Response(proc.stdout).text(),
-      new Response(proc.stderr).text(),
-      proc.exited,
-    ]);
-    if (signal?.aborted) {
-      throw new Error('shell aborted');
-    }
-    if (timedOut) {
-      throw new Error(`shell timed out after ${timeoutMs}ms`);
-    }
-    return {
-      exitCode,
-      stdout: stdoutBuf,
-      stderr: stderrBuf,
-      durationMs: Math.round(performance.now() - started),
-    };
-  } finally {
-    clearTimeout(timer);
-    signal?.removeEventListener('abort', onAbort);
-  }
-}
-function killProcessGroup(pid: number): void {
-  try {
-    process.kill(-pid, 'SIGKILL');
-  } catch {
-    try {
-      process.kill(pid, 'SIGKILL');
-    } catch {
-      return;
-    }
-  }
 }

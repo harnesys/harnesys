@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
+import { EulaGate } from '@/app/eula-gate';
 import { QueryProvider } from '@/app/query-provider';
 import { SessionGate } from '@/app/session-gate';
 import { AppUpdateCheck } from '@/features/app-update/app-update-check';
@@ -15,14 +16,16 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider defaultTheme="dark">
       <QueryProvider>
-        <SessionGate>
-          <OrgProvider>
-            <Toaster>
-              {children}
-              <AppUpdateCheck />
-            </Toaster>
-          </OrgProvider>
-        </SessionGate>
+        <EulaGate>
+          <SessionGate>
+            <OrgProvider>
+              <Toaster>
+                {children}
+                <AppUpdateCheck />
+              </Toaster>
+            </OrgProvider>
+          </SessionGate>
+        </EulaGate>
       </QueryProvider>
     </ThemeProvider>
   );

@@ -128,7 +128,8 @@ export function portForwardArgs(input: {
   spec: string;
   mode: 'local' | 'remote' | 'dynamic';
 }): string[] {
-  const flag = input.mode === 'local' ? '-L' : input.mode === 'remote' ? '-R' : '-D';
+  const FORWARD_FLAG = { local: '-L', remote: '-R', dynamic: '-D' } as const;
+  const flag = FORWARD_FLAG[input.mode];
   return [
     'ssh',
     '-N',

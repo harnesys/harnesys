@@ -44,7 +44,7 @@ export function AccordionSection({
       <div
         className={cn(
           'group/head flex h-7 shrink-0 items-center gap-0.5 rounded-md px-1 transition-colors group-data-[collapsible=icon]:hidden',
-          'text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+          'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
           dragging && 'cursor-grabbing opacity-50!',
           dropHint === 'before' && 'shadow-[inset_0_2px_0_0_var(--color-live)]',
           dropHint === 'after' && 'shadow-[inset_0_-2px_0_0_var(--color-live)]',
@@ -63,9 +63,7 @@ export function AccordionSection({
           <span className="mr-0.5 flex shrink-0 items-center justify-center [&>svg]:size-4">
             {icon}
           </span>
-          <span className="truncate font-medium text-[13px]">
-            {title}
-          </span>
+          <span className="truncate font-medium text-[13px]">{title}</span>
         </button>
         {hasTrailing ? (
           <span

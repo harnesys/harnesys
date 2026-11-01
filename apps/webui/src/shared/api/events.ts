@@ -12,6 +12,7 @@ import type {
   EventsWatchThreadErrorEvent,
   EventsWatchThreadErrorFrame,
   KnowledgeIndexState,
+  TerminalWatchEvent,
 } from '@harnesys/studio-shared';
 import { env } from '@/shared/config/env';
 import { watchEventSource } from './sse';
@@ -30,7 +31,7 @@ export function watchDeskEvents(onEvent: (orgId: string, event: DeskEvent) => vo
 }
 
 export function watchTerminalEvents(
-  onEvent: (orgId: string, frame: EventsWatchTerminalFrame['event']) => void,
+  onEvent: (orgId: string, frame: TerminalWatchEvent) => void,
 ): () => void {
   return watchEventSource(eventsWatchUrl, 'terminal', (data) => {
     try {

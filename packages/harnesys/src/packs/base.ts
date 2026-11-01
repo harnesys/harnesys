@@ -3,7 +3,8 @@ import type { FilesOptions } from '../adapters/actions/files-options.ts';
 import { definePack } from '../domain/pack.ts';
 import type { ProcessJobRecord, ProcessJobRegistry } from '../domain/process-job.ts';
 import type { ShellOptions } from './shell/shell.ts';
-import { type TerminalSessionPorts, terminalTools } from './shell/terminal-tools.ts';
+import { type TerminalSessionPorts } from './shell/terminal-targets.ts';
+import { terminalTools } from './shell/terminal-tools.ts';
 export interface FilesPackSpec {
   root?: string;
   blocklist?: string[];

@@ -2,6 +2,7 @@ import { Database } from 'bun:sqlite';
 import type { BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { ensureEulaSchema, eulaConsentsTable } from '../eula/eula.schema.ts';
 import { ensurePresetsSchema, presetsTable } from '../presets/presets.schema.ts';
 import {
   ensurePluginMarketplacesSchema,
@@ -13,6 +14,7 @@ const machineSchema = {
   pluginRegistriesTable,
   pluginCatalogEntriesTable,
   presetsTable,
+  eulaConsentsTable,
 };
 
 export type MachineSqliteDb = BunSQLiteDatabase<typeof machineSchema>;
@@ -28,6 +30,9 @@ export function withMachineSqlite<T>(layout: HostFsLayoutPort, fn: (db: MachineS
       sqlite.exec(sql);
     });
     ensurePresetsSchema((sql) => {
+      sqlite.exec(sql);
+    });
+    ensureEulaSchema((sql) => {
       sqlite.exec(sql);
     });
     const db = drizzle(sqlite, { schema: machineSchema });

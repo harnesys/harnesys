@@ -4,6 +4,7 @@ import { ApprovalUseCaseModule } from '../application/approvals/approval.use-cas
 import { CapabilitiesUseCaseModule } from '../application/capabilities/capabilities.use-case.module.ts';
 import { ConnectorUseCaseModule } from '../application/connectors/connector.use-case.module.ts';
 import { ContentUseCaseModule } from '../application/content/content.use-case.module.ts';
+import { EulaUseCaseModule } from '../application/eula/eula.use-case.module.ts';
 import { ExecutionProfileUseCaseModule } from '../application/execution-profile/execution-profile.use-case.module.ts';
 import { FileAccessUseCaseModule } from '../application/file-access/file-access.use-case.module.ts';
 import { FleetUseCaseModule } from '../application/fleet/fleet.use-case.module.ts';
@@ -56,6 +57,7 @@ import { CatalogController } from './rest/catalog.controller.ts';
 import { ConnectorsController } from './rest/connectors.controller.ts';
 import { ContentController } from './rest/content.controller.ts';
 import { DiscoveryController } from './rest/discovery.controller.ts';
+import { EulaController } from './rest/eula.controller.ts';
 import { EventsWatchController } from './rest/events-watch.controller.ts';
 import { FileRulesController } from './rest/file-rules.controller.ts';
 import { FleetController } from './rest/fleet.controller.ts';
@@ -115,6 +117,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
 @Module({
   imports: [
     OrgMachineUseCaseModule,
+    EulaUseCaseModule,
     ReleaseModule,
     ReleaseUseCaseModule,
     FleetUseCaseModule,
@@ -162,6 +165,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
   ],
   controllers: [
     HealthController,
+    EulaController,
     AgentHooksController,
     OrgsController,
     SessionController,
