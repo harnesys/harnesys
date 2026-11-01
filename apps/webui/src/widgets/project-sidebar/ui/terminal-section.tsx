@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { MoreHorizontalIcon, PlusIcon, SquareTerminalIcon } from 'lucide-react';
+import { PlusIcon, SquareTerminalIcon, Trash2Icon } from 'lucide-react';
 import { useProjects } from '@/entities/project';
 import { deskTerminalsKey, useOrgTerminals } from '@/features/desk';
 import { useIdeStore, useOpenNewTerminal, useOpenTerminalTab } from '@/features/ide';
@@ -183,46 +183,43 @@ function TerminalRow({
         onClick={onSelect}
       >
         <SquareTerminalIcon className="size-3.5 shrink-0 text-muted-foreground" />
-        <span className="min-w-0 flex-1 truncate text-sm leading-4">{session.title}</span>
-        {session.origin === 'agent' ? (
-          <span
-            className="shrink-0 rounded bg-muted px-1 py-px text-[9px] text-muted-foreground uppercase tracking-wide"
-            data-testid={`terminal-origin-${session.id}`}
-          >
-            agent
-          </span>
-        ) : null}
-        {session.exited ? (
-          <span className="shrink-0 text-[10px] text-muted-foreground">exited</span>
-        ) : (
-          <span
-            className="size-1.5 shrink-0 rounded-full bg-emerald-500"
-            data-testid={`terminal-active-${session.id}`}
-          />
-        )}
-      </button>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className="absolute top-1/2 right-1 -translate-y-1/2 opacity-0 group-hover/term:opacity-100 data-open:opacity-100"
+        <span className="flex min-w-0 flex-1 items-center gap-1.5">
+          <span className="min-w-0 truncate text-sm leading-4">{session.title}</span>
+          {session.origin === 'agent' ? (
+            <span
+              className="shrink-0 rounded bg-muted px-1 py-px text-[9px] text-muted-foreground uppercase tracking-wide"
+              data-testid={`terminal-origin-${session.id}`}
+            >
+              agent
+            </span>
+          ) : null}
+          {session.exited ? (
+            <span className="shrink-0 text-[10px] text-muted-foreground">exited</span>
+          ) : (
+            <span
+              className="size-1.5 shrink-0 rounded-full bg-emerald-500"
+              data-testid={`terminal-active-${session.id}`}
             />
-          }
-          onClick={(event) => event.stopPropagation()}
+          )}
+        </span>
+      </button>
+      <div className="hidden items-center gap-0.5 pr-1 group-focus-within/term:flex group-hover/term:flex">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          className="size-5"
+          aria-label="Kill terminal"
+          title="Kill terminal"
+          data-testid={`terminal-kill-${session.id}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete();
+          }}
         >
-          <MoreHorizontalIcon className="text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
-          <span className="sr-only">Terminal actions</span>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
-          <DropdownMenuGroup>
-            <DropdownMenuItem variant="destructive" onClick={onDelete}>
-              Kill terminal
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          <Trash2Icon className="size-3 text-sidebar-foreground/50 group-hover/button:text-destructive" />
+        </Button>
+      </div>
     </div>
   );
 }
