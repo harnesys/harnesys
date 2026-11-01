@@ -27,7 +27,7 @@ export function Resizer({
         vertical
           ? 'h-px w-full cursor-row-resize bg-border/70 before:absolute before:-top-1.5 before:right-0 before:left-0 before:h-3 before:content-[""]'
           : 'w-px cursor-col-resize bg-border/70 before:absolute before:inset-y-0 before:-left-1.5 before:w-3 before:content-[""]',
-        'hover:bg-foreground/30',
+        'hover:bg-foreground/10',
         dragging && 'bg-foreground/50',
       )}
     >
