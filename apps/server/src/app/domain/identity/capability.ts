@@ -18,6 +18,7 @@ export type Capability =
   | 'secret.read'
   | 'secret.write'
   | 'terminal.open'
+  | 'terminal.open:ro'
   | 'agent.manage'
   | 'schedule.manage';
 
@@ -41,6 +42,7 @@ export const CAPABILITIES: readonly Capability[] = [
   'secret.read',
   'secret.write',
   'terminal.open',
+  'terminal.open:ro',
   'agent.manage',
   'schedule.manage',
 ];

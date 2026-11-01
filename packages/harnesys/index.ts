@@ -133,6 +133,23 @@ export type {
   ProcessSpawnBackendStartInput,
 } from './src/application/process-jobs/process-job-backend.ts';
 export { createProcessJobRegistry } from './src/application/process-jobs/process-job-registry.ts';
+export { compileUntil, matchesUntil } from './src/application/process-jobs/read-until.ts';
+export {
+  execArgs as sshExecArgs,
+  masterArgs as sshMasterArgs,
+  masterCheckArgs as sshMasterCheckArgs,
+  portForwardArgs as sshPortForwardArgs,
+  ptyExecArgs as sshPtyExecArgs,
+  remoteCopyCommand as sshRemoteCopyCommand,
+  remoteKillArgs as sshRemoteKillArgs,
+  remotePidPath as sshRemotePidPath,
+  sshDestination,
+  sshSocketPath,
+} from './src/application/process-jobs/ssh-argv.ts';
+export {
+  createSshProcessBackend,
+  sweepSshSockets,
+} from './src/application/process-jobs/ssh-process-backend.ts';
 export type { ReplayThreadHistoryOpts } from './src/application/replay-thread-history.ts';
 export { rebuildThreadMessages } from './src/application/replay-thread-history.ts';
 export type { RunClaimer } from './src/application/run-claimer.ts';

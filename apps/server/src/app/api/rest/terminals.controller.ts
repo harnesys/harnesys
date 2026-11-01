@@ -48,10 +48,19 @@ export class TerminalsController {
 
 @Controller('orgs/:orgId/terminals')
 export class OrgTerminalsController {
-  constructor(private readonly listSessions: ListTerminalSessionsUseCase) {}
+  constructor(
+    private readonly listSessions: ListTerminalSessionsUseCase,
+    private readonly deleteSession: DeleteTerminalSessionUseCase,
+  ) {}
 
   @Get()
-  list(@Param('orgId') _orgId: string): TerminalSessionRecord[] {
-    return this.listSessions.execute({});
+  list(@Param('orgId') orgId: string): TerminalSessionRecord[] {
+    return this.listSessions.execute({ orgId });
+  }
+
+  @Delete(':sessionId')
+  @HttpCode(204)
+  delete(@Param('orgId') _orgId: string, @Param('sessionId') sessionId: string): void {
+    this.deleteSession.execute({ sessionId });
   }
 }

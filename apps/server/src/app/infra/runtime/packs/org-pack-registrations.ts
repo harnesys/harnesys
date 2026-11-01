@@ -36,6 +36,7 @@ import {
 } from './org-pack-registrations.helpers.ts';
 import { OrgPlanPort } from './org-plan.port.ts';
 import { OrgSkillsPackPort } from './org-skills.pack.port.ts';
+import { sshHostGateOf } from './ssh-host-gate.ts';
 import type { WireOrgPacksDeps } from './wire-org-packs.ts';
 
 export interface WireOrgPackContext {
@@ -149,6 +150,14 @@ function shellRegistration(ctx: WireOrgPackContext) {
     ports: {
       jobs: ctx.jobs,
       resolveOrgId: () => getHostToolScope()?.orgId ?? ctx.deps.orgId,
+      resolveThreadId: () => getHostToolScope()?.threadId,
+      sshHostApproved: sshHostGateOf(
+        ctx.deps.permissionRules,
+        ctx.deps.orgId,
+        () => getHostToolScope()?.agentId,
+      ),
+      onPtyJob: (record) => ctx.deps.terminalSessions?.upsertExternal(record),
+      onSessionSpawned: (record) => ctx.deps.terminalSessions?.upsertExternal(record),
     },
     resolveScope: ctx.stubScope,
   });

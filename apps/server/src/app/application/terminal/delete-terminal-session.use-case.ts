@@ -3,7 +3,7 @@ import { TerminalSessionNotFoundException } from '../../domain/terminal/terminal
 import { TerminalSessionsPort } from '../../domain/terminal/terminal-session.port.ts';
 
 export interface DeleteTerminalSessionInput {
-  projectId: string;
+  projectId?: string;
   sessionId: string;
 }
 
@@ -13,7 +13,10 @@ export class DeleteTerminalSessionUseCase {
 
   execute(input: DeleteTerminalSessionInput): void {
     const session = this.sessions.get(input.sessionId);
-    if (!session || session.projectId !== input.projectId) {
+    if (!session) {
+      throw new TerminalSessionNotFoundException(input.sessionId);
+    }
+    if (input.projectId !== undefined && session.projectId !== input.projectId) {
       throw new TerminalSessionNotFoundException(input.sessionId);
     }
     this.sessions.delete(input.sessionId);

@@ -6,7 +6,7 @@ import { useActiveOrgStore, useOrgActivityStore } from '@/entities/org-machine';
 import { useProjects } from '@/entities/project';
 import { toClientThread, useThreadStore } from '@/entities/thread';
 import { appMetaQuery, listThreads, watchDeskEvents, watchThreadErrors } from '@/shared/api';
-import { watchApprovalEvents, watchSourceChanges } from '@/shared/api/events';
+import { watchApprovalEvents, watchSourceChanges, watchTerminalEvents } from '@/shared/api/events';
 import { sourceFilesTreeQueryKey } from '@/shared/api/files';
 import { rememberProjectNode, rememberSelfNode } from '@/shared/api/fleet';
 import { gitFileStatusQueryKey, gitOrgSummaryQueryKey, gitStatusQueryKey } from '@/shared/api/git';
@@ -18,6 +18,7 @@ import { applyDeskEvent } from '../model/apply-desk-event';
 import { ensureApprovalChimeUnlock, notifyApprovalRequested } from '../model/approval-chime';
 import { useDeskStore } from '../model/desk.store';
 import { hydrateDeskChrome } from '../model/desk-chrome';
+import { deskTerminalsKey } from '../model/desk-queries';
 import { useDeskOrgExtrasSync, useDeskReady, useDeskStoreSync } from '../model/desk-store-sync';
 import { refreshThread } from '../model/refresh-thread';
 export function DeskSync() {
@@ -87,6 +88,16 @@ export function DeskSync() {
       }
     });
   }, [activeOrgId, navigate]);
+  useEffect(() => {
+    if (!activeOrgId) {
+      return;
+    }
+    return watchTerminalEvents((eventOrgId) => {
+      if (eventOrgId === activeOrgId) {
+        void queryClient.invalidateQueries({ queryKey: deskTerminalsKey });
+      }
+    });
+  }, [activeOrgId, queryClient]);
   useEffect(() => {
     if (!activeOrgId) {
       return;

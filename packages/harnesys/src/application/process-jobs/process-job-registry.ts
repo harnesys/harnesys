@@ -9,6 +9,7 @@ import type {
 } from '../../domain/process-job.ts';
 import { dockerProcessBackend } from './docker-process-backend.ts';
 import { hostProcessBackend, type ProcessSpawnBackend } from './process-job-backend.ts';
+import { createSshProcessBackend } from './ssh-process-backend.ts';
 
 const SCROLLBACK_CHARS = 256000;
 const MAX_RUNNING_PER_CWD = 16;
@@ -51,17 +52,26 @@ function settle(job: LiveJob, status: ProcessJobStatus, code: number | null): vo
     listener(code);
   }
 }
+let sshBackendInstance: ProcessSpawnBackend | null = null;
 function defaultBackendFor(target?: ProcessJobTarget): ProcessSpawnBackend {
   if (target?.kind === 'container') {
     return dockerProcessBackend;
   }
+  if (target?.kind === 'ssh') {
+    sshBackendInstance ??= createSshProcessBackend();
+    return sshBackendInstance;
+  }
   return hostProcessBackend;
+}
+function nameKey(orgId: string | undefined, name: string): string {
+  return `${orgId ?? ''}\u0000${name}`;
 }
 export function createProcessJobRegistry(
   backendFor?: (target?: ProcessJobTarget) => ProcessSpawnBackend,
 ): ProcessJobRegistry {
   const backendOf = backendFor ?? defaultBackendFor;
   const byId = new Map<string, LiveJob>();
+  const byName = new Map<string, string>();
   function runningInCwd(cwd: string): number {
     let count = 0;
     for (const job of byId.values()) {
@@ -74,11 +84,31 @@ export function createProcessJobRegistry(
   function snapshot(record: ProcessJobRecord): ProcessJobRecord {
     return { ...record };
   }
+  function dispose(job: LiveJob): void {
+    try {
+      if (job.record.status === 'running') {
+        backendOf(job.record.target).kill(job.record, job.proc);
+      } else if (job.terminal && !job.proc.killed) {
+        job.proc.kill();
+      }
+      if (job.terminal && !job.terminal.closed) {
+        job.terminal.close();
+      }
+    } catch {}
+    job.dataListeners.clear();
+    job.exitListeners.clear();
+  }
   return {
     start(input: ProcessJobStartInput): ProcessJobRecord {
       const cwd = path.resolve(input.cwd);
       if (runningInCwd(cwd) >= MAX_RUNNING_PER_CWD) {
         throw new Error('too many running process jobs');
+      }
+      if (input.name !== undefined) {
+        const key = nameKey(input.orgId, input.name);
+        if (byName.has(key)) {
+          throw new Error(`session name already in use: ${input.name}`);
+        }
       }
       const id = crypto.randomUUID();
       const record: ProcessJobRecord = {
@@ -91,6 +121,9 @@ export function createProcessJobRegistry(
         exitCode: null,
         createdAt: new Date().toISOString(),
         ...(input.orgId === undefined ? {} : { orgId: input.orgId }),
+        ...(input.threadId === undefined ? {} : { threadId: input.threadId }),
+        ...(input.name === undefined ? {} : { name: input.name }),
+        ...(input.origin === undefined ? {} : { origin: input.origin }),
         ...(input.process === undefined ? {} : { target: input.process }),
       };
       let job: LiveJob | undefined;
@@ -125,9 +158,20 @@ export function createProcessJobRegistry(
         exitListeners: new Set(),
       };
       byId.set(id, job);
+      if (input.name !== undefined) {
+        byName.set(nameKey(input.orgId, input.name), id);
+      }
       return snapshot(job.record);
     },
     get(id): ProcessJobRecord | null {
+      const job = byId.get(id);
+      return job ? snapshot(job.record) : null;
+    },
+    getByName(orgId, name): ProcessJobRecord | null {
+      const id = byName.get(nameKey(orgId, name));
+      if (id === undefined) {
+        return null;
+      }
       const job = byId.get(id);
       return job ? snapshot(job.record) : null;
     },
@@ -141,6 +185,9 @@ export function createProcessJobRegistry(
             return false;
           }
           if (filter?.mode !== undefined && job.record.mode !== filter.mode) {
+            return false;
+          }
+          if (filter?.name !== undefined && job.record.name !== filter.name) {
             return false;
           }
           return true;
@@ -242,19 +289,32 @@ export function createProcessJobRegistry(
         return false;
       }
       byId.delete(id);
-      try {
-        if (job.record.status === 'running') {
-          backendOf(job.record.target).kill(job.record, job.proc);
-        } else if (job.terminal && !job.proc.killed) {
-          job.proc.kill();
+      if (job.record.name !== undefined) {
+        const key = nameKey(job.record.orgId, job.record.name);
+        if (byName.get(key) === id) {
+          byName.delete(key);
         }
-        if (job.terminal && !job.terminal.closed) {
-          job.terminal.close();
-        }
-      } catch {}
-      job.dataListeners.clear();
-      job.exitListeners.clear();
+      }
+      dispose(job);
       return true;
+    },
+    reapOrg(orgId: string): number {
+      let reaped = 0;
+      for (const [id, job] of [...byId.entries()]) {
+        if (job.record.orgId !== orgId) {
+          continue;
+        }
+        byId.delete(id);
+        if (job.record.name !== undefined) {
+          const key = nameKey(orgId, job.record.name);
+          if (byName.get(key) === id) {
+            byName.delete(key);
+          }
+        }
+        dispose(job);
+        reaped += 1;
+      }
+      return reaped;
     },
   };
 }

@@ -34,7 +34,7 @@ export class CreateTerminalSessionUseCase {
       hostId: this.machine.get().id,
     }).absoluteRoot;
     const cwd = resolveTerminalCwd(root, input.cwd);
-    return this.sessions.create({ projectId: input.projectId, cwd });
+    return this.sessions.create({ projectId: input.projectId, cwd, orgId: input.orgId });
   }
 }
 

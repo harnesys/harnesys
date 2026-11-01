@@ -1,7 +1,12 @@
 import type { DeskEvent } from './desk-events.ts';
 import type { KnowledgeIndexState } from './knowledge.ts';
 import type { ApprovalKind, ApprovalOption, ApprovalStatus, OrgId } from './org-types.ts';
+import type { TerminalWatchEvent } from './terminal.ts';
 
+export interface EventsWatchTerminalFrame {
+  orgId: OrgId;
+  event: TerminalWatchEvent;
+}
 export interface EventsWatchDeskFrame {
   orgId: OrgId;
   event: DeskEvent;

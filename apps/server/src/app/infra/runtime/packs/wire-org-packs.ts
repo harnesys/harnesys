@@ -14,12 +14,14 @@ import { DeskEventsPort } from '../../../domain/desk/desk-events.port.ts';
 import type { LspPort } from '../../../domain/lsp/lsp.port.ts';
 import type { HostFsLayoutPort } from '../../../domain/machine/host-fs-layout.port.ts';
 import type { ModePresetRegistryPort } from '../../../domain/mode-presets/mode-preset-registry.port.ts';
+import type { PermissionRuleStorePort } from '../../../domain/permissions/permission-rule-store.port.ts';
 import type { PlanEventsPort } from '../../../domain/plan/plan-events.port.ts';
 import type { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-provider.port.ts';
 import type { ScheduleRepositoryPort } from '../../../domain/schedule/schedule-repository.port.ts';
 import type { SecretStorePort } from '../../../domain/secret/secret-store.port.ts';
 import type { OrgSettingsPort } from '../../../domain/skills/org-settings.port.ts';
 import type { SourceRegistryPort } from '../../../domain/source/source-registry.port.ts';
+import type { TerminalSessionsPort } from '../../../domain/terminal/terminal-session.port.ts';
 import type { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
 import type { WebhookRepositoryPort } from '../../../domain/webhook/webhook-repository.port.ts';
 import { ExecutionProfileAdapter } from '../../execution-profile/execution-profile.adapter.ts';
@@ -62,6 +64,8 @@ export interface WireOrgPacksDeps {
   memoryDb?: OrgSqliteDb;
   lsp?: LspPort;
   jobs?: ProcessJobRegistry;
+  terminalSessions?: TerminalSessionsPort;
+  permissionRules?: PermissionRuleStorePort;
   skills?: OrgSkillsDeps;
   orgSettings?: OrgSettingsPort;
   mcpManage?: McpManagePort;
@@ -113,6 +117,8 @@ export function orgPackInputs(
     planDb: db,
     planEvents: deps.planEvents,
     memoryDb: db,
+    ...(deps.permissionRules !== undefined ? { permissionRules: deps.permissionRules } : {}),
+    ...(deps.terminalSessions !== undefined ? { terminalSessions: deps.terminalSessions } : {}),
     createAgent: agentCatalogCreate({
       orgId: deps.orgId,
       agents: deps.agents,
@@ -138,7 +144,7 @@ export function orgPackInputs(
 }
 
 export function wireOrgPacks(deps: WireOrgPacksDeps): WiredOrgPacks {
-  const jobs = deps.jobs ?? createProcessJobRegistry();
+  const jobs = deps.jobs ?? deps.terminalSessions?.jobRegistry() ?? createProcessJobRegistry();
   const stubScope = (): CapabilityScope => ({
     orgId: deps.orgId,
     agentId: '_',

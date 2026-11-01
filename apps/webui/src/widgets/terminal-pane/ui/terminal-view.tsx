@@ -53,7 +53,15 @@ function applyServerMessage(
     onProcessExit(message.code);
   }
 }
-export function TerminalView({ projectId, sessionId }: { projectId: string; sessionId: string }) {
+export function TerminalView({
+  sessionId,
+  readOnly,
+  projectId,
+}: {
+  sessionId: string;
+  readOnly?: boolean;
+  projectId?: string;
+}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<'connecting' | 'live' | 'exited' | 'error'>('connecting');
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +71,7 @@ export function TerminalView({ projectId, sessionId }: { projectId: string; sess
       return;
     }
     const term = new Terminal({
-      cursorBlink: true,
+      cursorBlink: readOnly !== true,
       fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
       fontSize: 13,
       theme: {
@@ -93,7 +101,9 @@ export function TerminalView({ projectId, sessionId }: { projectId: string; sess
         const rows = term.rows || 24;
         let grant: NodeTicketGrant;
         try {
-          grant = await requestNodeTicket(['terminal.open']);
+          grant = await requestNodeTicket(
+            readOnly === true ? ['terminal.open:ro'] : ['terminal.open'],
+          );
         } catch (err) {
           if (!disposed) {
             setStatus('error');
@@ -105,7 +115,7 @@ export function TerminalView({ projectId, sessionId }: { projectId: string; sess
           return;
         }
         ws = new WebSocket(
-          `${hostWsBase()}/api/terminals/${encodeURIComponent(sessionId)}?cols=${cols}&rows=${rows}&ticket=${encodeURIComponent(grant.ticket)}`,
+          `${hostWsBase()}/api/terminals/${encodeURIComponent(sessionId)}?cols=${cols}&rows=${rows}${readOnly === true ? '&ro=1' : ''}&ticket=${encodeURIComponent(grant.ticket)}`,
         );
         ws.onopen = () => {
           if (disposed) {
@@ -145,10 +155,14 @@ export function TerminalView({ projectId, sessionId }: { projectId: string; sess
       void open();
     };
     const dataDisposable = term.onData((data) => {
-      send({ type: 'in', data });
+      if (readOnly !== true) {
+        send({ type: 'in', data });
+      }
     });
     const resizeDisposable = term.onResize(({ cols, rows }) => {
-      send({ type: 'resize', cols, rows });
+      if (readOnly !== true) {
+        send({ type: 'resize', cols, rows });
+      }
     });
     resizeObserver = new ResizeObserver(() => {
       try {
@@ -166,7 +180,7 @@ export function TerminalView({ projectId, sessionId }: { projectId: string; sess
       ws?.close();
       term.dispose();
     };
-  }, [sessionId, projectId]);
+  }, [sessionId, projectId, readOnly]);
   return (
     <div className="relative flex min-h-0 flex-1 flex-col" data-testid="ide-terminal">
       <div ref={hostRef} className="min-h-0 flex-1 px-2 py-2" />

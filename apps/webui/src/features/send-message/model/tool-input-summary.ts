@@ -52,8 +52,12 @@ const SUMMARY_BUILDERS: Record<string, SummaryBuilder> = {
   glob: linesSummary(['pattern', 'path']),
   grep: linesSummary(['pattern', 'path', 'glob']),
   shell: shellSummary,
-  process_poll: linesSummary(['job_id', 'since', 'wait_ms']),
-  process_kill: linesSummary(['job_id']),
+  terminal_spawn: linesSummary(['name', 'command']),
+  terminal_read: linesSummary(['session', 'since', 'until']),
+  terminal_write: linesSummary(['session', 'data']),
+  terminal_kill: linesSummary(['session']),
+  port_forward: linesSummary(['mode', 'spec']),
+  remote_copy: linesSummary(['direction', 'local_path', 'remote_path']),
   http: fetchSummary,
   fetch: fetchSummary,
   agents_spawn: spawnSummary,
@@ -211,10 +215,18 @@ function toolTitle(name: string): string {
       return 'Grep';
     case 'shell':
       return 'Terminal';
-    case 'process_poll':
-      return 'Process Poll';
-    case 'process_kill':
-      return 'Process Kill';
+    case 'terminal_spawn':
+      return 'Spawn Terminal';
+    case 'terminal_read':
+      return 'Read Terminal';
+    case 'terminal_write':
+      return 'Write Terminal';
+    case 'terminal_kill':
+      return 'Kill Terminal';
+    case 'port_forward':
+      return 'Port Forward';
+    case 'remote_copy':
+      return 'Remote Copy';
     case 'http':
     case 'fetch':
       return 'Fetch';

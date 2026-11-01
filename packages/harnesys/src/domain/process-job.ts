@@ -1,11 +1,25 @@
 export type ProcessJobMode = 'pipes' | 'pty';
 export type ProcessJobStatus = 'running' | 'exited' | 'killed' | 'timed_out';
-export interface ProcessJobTarget {
+export type ProcessJobOrigin = 'user' | 'agent';
+export interface HostProcessJobTarget {
+  kind: 'host';
+}
+export interface ContainerProcessJobTarget {
   kind: 'container';
   containerId: string;
   orgId: string;
   workspaceKey: string;
 }
+export interface SshProcessJobTarget {
+  kind: 'ssh';
+  host: string;
+  user?: string;
+  port?: number;
+}
+export type ProcessJobTarget =
+  | HostProcessJobTarget
+  | ContainerProcessJobTarget
+  | SshProcessJobTarget;
 export interface ProcessJobRecord {
   id: string;
   cwd: string;
@@ -16,6 +30,9 @@ export interface ProcessJobRecord {
   exitCode: number | null;
   createdAt: string;
   orgId?: string;
+  threadId?: string;
+  name?: string;
+  origin?: ProcessJobOrigin;
   target?: ProcessJobTarget;
 }
 export interface ProcessJobReadResult {
@@ -29,6 +46,9 @@ export interface ProcessJobStartInput {
   mode: ProcessJobMode;
   title?: string;
   orgId?: string;
+  threadId?: string;
+  name?: string;
+  origin?: ProcessJobOrigin;
   env?: Record<string, string>;
   cols?: number;
   rows?: number;
@@ -37,7 +57,13 @@ export interface ProcessJobStartInput {
 export interface ProcessJobRegistry {
   start(input: ProcessJobStartInput): ProcessJobRecord;
   get(id: string): ProcessJobRecord | null;
-  list(filter?: { cwd?: string; orgId?: string; mode?: ProcessJobMode }): ProcessJobRecord[];
+  getByName(orgId: string | undefined, name: string): ProcessJobRecord | null;
+  list(filter?: {
+    cwd?: string;
+    orgId?: string;
+    mode?: ProcessJobMode;
+    name?: string;
+  }): ProcessJobRecord[];
   read(
     id: string,
     opts?: {
@@ -53,4 +79,5 @@ export interface ProcessJobRegistry {
   ): (() => void) | null;
   kill(id: string): boolean;
   delete(id: string): boolean;
+  reapOrg(orgId: string): number;
 }

@@ -198,7 +198,11 @@ export {
   visibleScheduledText,
 } from './src/schedule-prompt.ts';
 export * from './src/semver.ts';
-export type { TerminalSessionRecord } from './src/terminal.ts';
+export type {
+  TerminalSessionOrigin,
+  TerminalSessionRecord,
+  TerminalWatchEvent,
+} from './src/terminal.ts';
 export { isTextAttachment } from './src/text-attachment.ts';
 export type {
   AcceptedRunResponse,

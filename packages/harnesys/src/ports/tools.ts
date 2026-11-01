@@ -22,6 +22,7 @@ export interface ToolContext {
   sandbox?: boolean;
   env?: Record<string, string>;
   agentId?: string;
+  threadId?: string;
   process?: ProcessJobTarget;
   fileAccess?: FileAccessPolicy;
 }

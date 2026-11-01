@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { toClientAgentFromPublic, useAgentStore } from '@/entities/agent';
 import { toClientThread, useThreadStore } from '@/entities/thread';
-import { useDeskReady } from '@/features/desk';
+import { useDeskReady, useOrgTerminals } from '@/features/desk';
 import { GitCommitDiffView } from '@/features/git-commit';
 import { type IdeTab, useIdeStore } from '@/features/ide';
 import { agentConnectorsQuery } from '@/features/manage-agent/model/connector-api';
@@ -245,7 +245,19 @@ export function IdeTabContent({ tab, projectId }: { tab: IdeTab; projectId: stri
     );
   }
   if (tab.kind === 'terminal' && tab.terminalSessionId) {
-    return <TerminalView projectId={projectId} sessionId={tab.terminalSessionId} />;
+    return <TerminalReadOnlySurface sessionId={tab.terminalSessionId} projectId={projectId} />;
   }
   return null;
+}
+
+function TerminalReadOnlySurface({
+  sessionId,
+  projectId,
+}: {
+  sessionId: string;
+  projectId: string;
+}) {
+  const sessions = useOrgTerminals();
+  const readOnly = sessions.find((item) => item.id === sessionId)?.origin === 'agent';
+  return <TerminalView projectId={projectId} sessionId={sessionId} readOnly={readOnly} />;
 }

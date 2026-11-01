@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { OrgIdSchema } from './org-machine.ts';
 
-export const PermissionRuleKindSchema = z.enum(['fs-path', 'shell-cmd', 'op']);
+export const PermissionRuleKindSchema = z.enum(['fs-path', 'shell-cmd', 'op', 'ssh-host']);
 export type PermissionRuleKind = z.infer<typeof PermissionRuleKindSchema>;
 
 export const PermissionRuleEffectSchema = z.enum(['allow', 'deny']);

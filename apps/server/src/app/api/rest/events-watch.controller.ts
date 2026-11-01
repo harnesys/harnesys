@@ -8,6 +8,7 @@ import type {
   EventsWatchIndexStateFrame,
   EventsWatchMaterializationFrame,
   EventsWatchReleaseFrame,
+  EventsWatchTerminalFrame,
   EventsWatchThreadErrorFrame,
 } from '@harnesys/studio-shared';
 import { SSE_KEEP_ALIVE_MS } from '../../../const.ts';
@@ -24,6 +25,7 @@ import { SkillsEventsPort } from '../../domain/skills/skills-events.port.ts';
 import { MaterializationEventsPort } from '../../domain/source/materialization-events.port.ts';
 import { SourceWatchEventsPort } from '../../domain/source/source-watch-events.port.ts';
 import { SourceWatchGatePort } from '../../domain/source/source-watch-gate.port.ts';
+import { TerminalEventsPort } from '../../domain/terminal/terminal-events.port.ts';
 import { ThreadEventsPort } from '../../domain/thread/thread-events.port.ts';
 import { OrgIdHeader } from '../org-id.ts';
 
@@ -42,6 +44,7 @@ export class EventsWatchController {
     private readonly fleetEvents: FleetEventsPort,
     private readonly materializationEvents: MaterializationEventsPort,
     private readonly releaseEvents: ReleaseEventsPort,
+    private readonly terminalEvents: TerminalEventsPort,
   ) {}
 
   @Get('events/watch')
@@ -58,6 +61,7 @@ export class EventsWatchController {
     const fleetEvents = this.fleetEvents;
     const materializationEvents = this.materializationEvents;
     const releaseEvents = this.releaseEvents;
+    const terminalEvents = this.terminalEvents;
     let keepAlive: ReturnType<typeof setInterval> | undefined;
     let unsubscribeIndex: (() => void) | undefined;
     let unsubscribeApprovals: (() => void) | undefined;
@@ -70,6 +74,7 @@ export class EventsWatchController {
     let unsubscribeFleet: (() => void) | undefined;
     let unsubscribeMaterialization: (() => void) | undefined;
     let unsubscribeRelease: (() => void) | undefined;
+    let unsubscribeTerminals: (() => void) | undefined;
     let releaseSourceWatches: (() => void) | undefined;
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
@@ -135,6 +140,10 @@ export class EventsWatchController {
         unsubscribeRelease = releaseEvents.subscribe((frame: EventsWatchReleaseFrame) => {
           write('release-available', JSON.stringify(frame));
         });
+        unsubscribeTerminals = terminalEvents.subscribe((eventOrgId, event) => {
+          const frame: EventsWatchTerminalFrame = { orgId: eventOrgId, event };
+          write('terminal', JSON.stringify(frame));
+        });
         releaseSourceWatches = sourceWatchGate.acquire(orgId);
         keepAlive = setInterval(() => {
           try {
@@ -159,6 +168,7 @@ export class EventsWatchController {
         unsubscribeFleet?.();
         unsubscribeMaterialization?.();
         unsubscribeRelease?.();
+        unsubscribeTerminals?.();
         releaseSourceWatches?.();
       },
     });

@@ -61,7 +61,13 @@ export function SourceRootIcon({
   className?: string;
 }) {
   return (
-    <span className={cn('relative inline-flex size-[18px] shrink-0', className)} aria-hidden>
+    <span
+      className={cn(
+        'relative inline-flex size-[18px] shrink-0 items-center justify-center',
+        className,
+      )}
+      aria-hidden
+    >
       <FolderTypeIcon open={open} size="sm" />
       <DistributionBadge
         hasGit={hasGit}

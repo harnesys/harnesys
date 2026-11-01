@@ -1,61 +1,101 @@
 import { Injectable } from '@harnesys/brix';
 import type { TerminalSessionRecord } from '@harnesys/studio-shared';
 import type { ProcessJobRegistry } from 'harnesys';
-import { createProcessJobRegistry, type ProcessJobRecord } from 'harnesys';
+import { createProcessJobRegistry, type ProcessJobRecord, sweepSshSockets } from 'harnesys';
+import { TerminalEventsPort } from '../../domain/terminal/terminal-events.port.ts';
 import {
   type CreateTerminalSessionInput,
   type TerminalDataListener,
   type TerminalExitListener,
+  type TerminalJobSnapshot,
   TerminalSessionsPort,
 } from '../../domain/terminal/terminal-session.port.ts';
 
-function toSessionRecord(job: ProcessJobRecord, projectId: string): TerminalSessionRecord {
+interface SessionMeta {
+  projectId: string;
+  orgId: string;
+}
+
+function targetLabelOf(job: ProcessJobRecord | TerminalJobSnapshot): string {
+  const target = job.target as
+    | { kind?: string; host?: string; user?: string; containerId?: string }
+    | undefined;
+  if (target === undefined || target.kind === undefined || target.kind === 'host') {
+    return 'host';
+  }
+  if (target.kind === 'container') {
+    return `container:${target.containerId ?? ''}`;
+  }
+  const userPart = target.user === undefined ? '' : `${target.user}@`;
+  return `ssh:${userPart}${target.host ?? ''}`;
+}
+
+function toSessionRecord(job: ProcessJobRecord, meta: SessionMeta): TerminalSessionRecord {
   return {
     id: job.id,
-    projectId,
+    projectId: meta.projectId,
     title: job.title,
     cwd: job.cwd,
     createdAt: job.createdAt,
     exitCode: job.exitCode,
     exited: job.status !== 'running',
+    origin: job.origin ?? 'user',
+    ...(meta.orgId === '' ? {} : { orgId: meta.orgId }),
+    ...(job.name === undefined ? {} : { name: job.name }),
+    target: targetLabelOf(job),
   };
 }
+
+const SWEEP_SSH_SOCKET_MAX_AGE_MS = 11 * 60 * 1000;
 
 @Injectable()
 export class TerminalSessionsAdapter extends TerminalSessionsPort {
   private readonly jobs: ProcessJobRegistry;
-  private readonly projectBySession = new Map<string, string>();
+  private readonly metaBySession = new Map<string, SessionMeta>();
   private readonly titleIndexByProject = new Map<string, number>();
+  private readonly exitWatched = new Set<string>();
 
-  constructor() {
+  constructor(private readonly events: TerminalEventsPort) {
     super();
     this.jobs = createProcessJobRegistry();
+    this.sweepSshSockets();
+  }
+
+  private sweepSshSockets(): void {
+    try {
+      sweepSshSockets(`${process.env.HOME ?? ''}/.harnesys/run/ssh`, SWEEP_SSH_SOCKET_MAX_AGE_MS);
+    } catch {
+      // best effort: ssh socket sweep must never block boot
+    }
   }
 
   list(projectId: string): TerminalSessionRecord[] {
     return this.listAll().filter((record) => record.projectId === projectId);
   }
 
-  listAll(): TerminalSessionRecord[] {
+  listAll(orgId?: string): TerminalSessionRecord[] {
     const records: TerminalSessionRecord[] = [];
-    for (const [sessionId, projectId] of this.projectBySession) {
+    for (const [sessionId, meta] of this.metaBySession) {
       const job = this.jobs.get(sessionId);
       if (!job) {
-        this.projectBySession.delete(sessionId);
+        this.metaBySession.delete(sessionId);
         continue;
       }
-      records.push(toSessionRecord(job, projectId));
+      if (orgId !== undefined && meta.orgId !== orgId) {
+        continue;
+      }
+      records.push(toSessionRecord(job, meta));
     }
     return records.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
   get(sessionId: string): TerminalSessionRecord | null {
     const job = this.jobs.get(sessionId);
-    const projectId = this.projectBySession.get(sessionId);
-    if (!job || projectId === undefined) {
+    const meta = this.metaBySession.get(sessionId);
+    if (!job || meta === undefined) {
       return null;
     }
-    return toSessionRecord(job, projectId);
+    return toSessionRecord(job, meta);
   }
 
   create(input: CreateTerminalSessionInput): TerminalSessionRecord {
@@ -67,9 +107,31 @@ export class TerminalSessionsAdapter extends TerminalSessionsPort {
       mode: 'pty',
       command: process.env.SHELL ?? '/bin/zsh',
       title,
+      origin: 'user',
+      ...(input.orgId === undefined ? {} : { orgId: input.orgId }),
     });
-    this.projectBySession.set(job.id, input.projectId);
-    return toSessionRecord(job, input.projectId);
+    const meta: SessionMeta = { projectId: input.projectId, orgId: input.orgId ?? '' };
+    this.metaBySession.set(job.id, meta);
+    this.emitChanged(job.id);
+    return toSessionRecord(job, meta);
+  }
+
+  upsertExternal(job: TerminalJobSnapshot): void {
+    const meta: SessionMeta = { projectId: '', orgId: job.orgId ?? '' };
+    this.metaBySession.set(job.id, meta);
+    if (!this.exitWatched.has(job.id)) {
+      this.exitWatched.add(job.id);
+      this.jobs.subscribe(
+        job.id,
+        () => {},
+        () => this.emitChanged(job.id),
+      );
+    }
+    this.emitChanged(job.id);
+  }
+
+  jobRegistry(): ProcessJobRegistry {
+    return this.jobs;
   }
 
   write(sessionId: string, data: string): boolean {
@@ -93,10 +155,21 @@ export class TerminalSessionsAdapter extends TerminalSessionsPort {
   }
 
   delete(sessionId: string): boolean {
+    const meta = this.metaBySession.get(sessionId);
     const removed = this.jobs.delete(sessionId);
     if (removed) {
-      this.projectBySession.delete(sessionId);
+      this.metaBySession.delete(sessionId);
+      this.exitWatched.delete(sessionId);
+      this.events.emit(meta?.orgId ?? '', { type: 'removed', sessionId });
     }
     return removed;
+  }
+
+  private emitChanged(sessionId: string): void {
+    const record = this.get(sessionId);
+    if (record === null) {
+      return;
+    }
+    this.events.emit(record.orgId ?? '', { type: 'changed', session: record });
   }
 }

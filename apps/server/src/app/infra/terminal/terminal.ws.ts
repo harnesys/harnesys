@@ -25,6 +25,7 @@ function rawOf(ws: WSContext): object {
 
 interface Attachment {
   sessionId: string;
+  readonly: boolean;
   unsubscribe: () => void;
 }
 
@@ -47,15 +48,22 @@ export function registerTerminalWs(app: HonoLike, container: Container): void {
       }
       return {
         onOpen: (_evt: unknown, ws: WSContext) => {
-          void admit(tickets, ticket, ws, () =>
-            attach({
-              sessions,
-              attachments,
-              sessionId: requested,
-              ws,
-              cols: colsOf(c),
-              rows: rowsOf(c),
-            }),
+          const readonlyAttach = c.req.query('ro') === '1';
+          void admit(
+            tickets,
+            ticket,
+            ws,
+            readonlyAttach ? ['terminal.open:ro'] : ['terminal.open'],
+            () =>
+              attach({
+                sessions,
+                attachments,
+                sessionId: requested,
+                ws,
+                cols: colsOf(c),
+                rows: rowsOf(c),
+                ro: readonlyAttach,
+              }),
           );
         },
         onMessage: (evt: MessageEvent, ws: WSContext) => {
@@ -83,6 +91,7 @@ async function admit(
   tickets: NodeTicketAccess,
   ticket: string,
   ws: WSContext,
+  requiredActions: string[],
   next: () => void,
 ): Promise<void> {
   let verified: VerifiedNodeTicket;
@@ -90,7 +99,7 @@ async function admit(
     verified = await tickets.verify({
       ticket,
       orgId: null,
-      requiredActions: ['terminal.open'],
+      requiredActions,
       nowMs: Date.now(),
     });
   } catch {
@@ -116,8 +125,9 @@ function attach(input: {
   ws: WSContext;
   cols: number;
   rows: number;
+  ro?: boolean;
 }): void {
-  const { sessions, attachments, sessionId, ws, cols, rows } = input;
+  const { sessions, attachments, sessionId, ws, cols, rows, ro } = input;
   const session = sessions.get(sessionId);
   if (!session) {
     ws.close(1008, 'terminal session not found');
@@ -146,7 +156,7 @@ function attach(input: {
     ws.close(1011, 'failed to attach');
     return;
   }
-  attachments.set(rawOf(ws), { sessionId, unsubscribe });
+  attachments.set(rawOf(ws), { sessionId, readonly: ro === true, unsubscribe });
 }
 
 function onMessage(
@@ -166,12 +176,18 @@ function onMessage(
     return;
   }
   if (message.type === 'in') {
+    if (attachment.readonly) {
+      return;
+    }
     if (typeof message.data === 'string') {
       sessions.write(attachment.sessionId, message.data);
     }
     return;
   }
   if (message.type === 'resize') {
+    if (attachment.readonly) {
+      return;
+    }
     if (typeof message.cols === 'number' && typeof message.rows === 'number') {
       sessions.resize(attachment.sessionId, message.cols, message.rows);
     }

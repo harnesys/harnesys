@@ -43,6 +43,7 @@ import { ReleaseModule } from '../infra/release/release.module.ts';
 import { RuntimeModule } from '../infra/runtime/runtime.module.ts';
 import { SkillsModule } from '../infra/skills/skills.module.ts';
 import { SourceWatchModule } from '../infra/source/source-watch.module.ts';
+import { TerminalModule } from '../infra/terminal/terminal.module.ts';
 import { SessionGuard } from './guards/session.guard.ts';
 import { AgentHooksController } from './rest/agent-hooks.controller.ts';
 import { AgentsController } from './rest/agents.controller.ts';
@@ -137,6 +138,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     CapabilitiesUseCaseModule,
     SkillsUseCaseModule,
     TerminalUseCaseModule,
+    TerminalModule,
     McpUseCaseModule,
     ModePresetsUseCaseModule,
     PluginsUseCaseModule,

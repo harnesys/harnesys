@@ -2,8 +2,8 @@ import { files, shell } from '../adapters/actions';
 import type { FilesOptions } from '../adapters/actions/files-options.ts';
 import { definePack } from '../domain/pack.ts';
 import type { ProcessJobRecord, ProcessJobRegistry } from '../domain/process-job.ts';
-import { processTools } from './shell/process-tools.ts';
 import type { ShellOptions } from './shell/shell.ts';
+import { type TerminalSessionPorts, terminalTools } from './shell/terminal-tools.ts';
 export interface FilesPackSpec {
   root?: string;
   blocklist?: string[];
@@ -94,9 +94,10 @@ export const filesCapability = definePack<Record<string, unknown>, FilesPackSpec
   },
   create: (ctx) => ({ tools: files(filesOptionsFromSpec(ctx.spec)) }),
 });
-export interface ShellPackPorts {
+export interface ShellPackPorts extends TerminalSessionPorts {
   jobs: ProcessJobRegistry;
   onPtyJob?: (record: ProcessJobRecord) => void;
+  onSessionSpawned?: (record: ProcessJobRecord) => void;
   resolveOrgId?: () => string | undefined;
 }
 export const shellCapability = definePack<ShellPackPorts, ShellPackSpec>({
@@ -115,14 +116,37 @@ export const shellCapability = definePack<ShellPackPorts, ShellPackSpec>({
   },
   meta: {
     tools: [
-      { name: 'shell', description: 'Run a shell command; optional background / terminal.' },
-      { name: 'process_poll', description: 'Read output and status of a process job.' },
-      { name: 'process_kill', description: 'Kill a process job started by shell.' },
+      {
+        name: 'shell',
+        description: 'Run a shell command; optional background / terminal / remote target.',
+      },
+      {
+        name: 'terminal_spawn',
+        description: 'Start a named terminal session (host, ssh or REPL) kept across calls.',
+      },
+      { name: 'terminal_write', description: 'Write to the stdin of a terminal session.' },
+      {
+        name: 'terminal_read',
+        description: 'Read session output; optional until-regex blocking read (max 30s).',
+      },
+      { name: 'terminal_kill', description: 'Kill a terminal session or background job.' },
+      { name: 'terminal_list', description: 'List sessions and background jobs.' },
+      { name: 'port_forward', description: 'Open an SSH port forward as a background job.' },
+      { name: 'remote_copy', description: 'Copy files over SSH via tar pipe (push/pull).' },
     ],
     skills: [],
     hasSettings: true,
   },
   create: (ctx) => ({
-    tools: [shell(shellOptionsFromSpec(ctx.spec), ctx.ports), ...processTools(ctx.ports.jobs)],
+    tools: [
+      shell(shellOptionsFromSpec(ctx.spec), ctx.ports),
+      ...terminalTools({
+        jobs: ctx.ports.jobs,
+        resolveOrgId: ctx.ports.resolveOrgId,
+        resolveThreadId: ctx.ports.resolveThreadId,
+        sshHostApproved: ctx.ports.sshHostApproved,
+        onSessionSpawned: ctx.ports.onSessionSpawned,
+      }),
+    ],
   }),
 });

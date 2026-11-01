@@ -196,7 +196,7 @@ export function ProjectSidebar({
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
   };
-  const renderSection = (id: OrderedSectionId) => {
+  const renderSection = (id: OrderedSectionId, resizer: ReactNode = null) => {
     const Icon = SECTION_META[id].icon;
     const drag = {
       headerDragProps: headerProps(id),
@@ -208,6 +208,7 @@ export function ProjectSidebar({
         return (
           <AccordionSection
             id="agents"
+            resizer={resizer}
             icon={<Icon />}
             title="Agents"
             count={agents.filter((agent) => !agent.parentId).length}
@@ -228,6 +229,7 @@ export function ProjectSidebar({
         return (
           <AccordionSection
             id="projects"
+            resizer={resizer}
             icon={<Icon />}
             title={<ProjectsTitle />}
             size={shares[id] ?? 1}
@@ -241,6 +243,7 @@ export function ProjectSidebar({
         return (
           <AccordionSection
             id="issues"
+            resizer={resizer}
             icon={<Icon />}
             title="Issues"
             count={boards.length}
@@ -259,6 +262,7 @@ export function ProjectSidebar({
         return (
           <AccordionSection
             id="automations"
+            resizer={resizer}
             icon={<Icon />}
             title="Automations"
             count={schedules.length + webhooks.length}
@@ -283,6 +287,7 @@ export function ProjectSidebar({
         return (
           <AccordionSection
             id="git"
+            resizer={resizer}
             icon={<Icon />}
             title={<GitTitle />}
             size={shares[id] ?? 1}
@@ -296,6 +301,7 @@ export function ProjectSidebar({
         return (
           <AccordionSection
             id="terminal"
+            resizer={resizer}
             icon={<Icon />}
             title="Terminal"
             size={shares[id] ?? 1}
@@ -336,8 +342,7 @@ export function ProjectSidebar({
           ) : null}
           {visibleSections.map((id, index) => (
             <Fragment key={id}>
-              {index > 0 || inboxExpanded ? resizeNode(id) : null}
-              {renderSection(id)}
+              {renderSection(id, index > 0 || inboxExpanded ? resizeNode(id) : null)}
             </Fragment>
           ))}
         </div>

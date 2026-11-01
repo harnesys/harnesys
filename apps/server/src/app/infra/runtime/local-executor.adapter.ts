@@ -43,6 +43,7 @@ import { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
 import { SourceLocationPort } from '../../domain/source/source-location.port.ts';
 import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+import { TerminalSessionsPort } from '../../domain/terminal/terminal-session.port.ts';
 import {
   type CompactThreadResult,
   LocalExecutorPort,
@@ -90,6 +91,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     private readonly planEvents: PlanEventsPort,
     private readonly threadEvents: ThreadEventsPort,
     private readonly deskEvents: DeskEventsPort,
+    private readonly terminalSessions: TerminalSessionsPort,
     private readonly schedules: ScheduleRepositoryPort,
     private readonly webhooks: WebhookRepositoryPort,
     private readonly knowledgeSearch: KnowledgeSearchPort,
@@ -187,6 +189,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       planEvents: this.planEvents,
       threadEvents: this.threadEvents,
       deskEvents: this.deskEvents,
+      terminalSessions: this.terminalSessions,
       schedules: this.schedules,
       webhooks: this.webhooks,
       knowledge: {

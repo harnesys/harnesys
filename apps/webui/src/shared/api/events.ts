@@ -8,6 +8,7 @@ import type {
   EventsWatchReleaseFrame,
   EventsWatchSkillsFrame,
   EventsWatchSourceChangeFrame,
+  EventsWatchTerminalFrame,
   EventsWatchThreadErrorEvent,
   EventsWatchThreadErrorFrame,
   KnowledgeIndexState,
@@ -21,6 +22,19 @@ export function watchDeskEvents(onEvent: (orgId: string, event: DeskEvent) => vo
   return watchEventSource(eventsWatchUrl, 'desk', (data) => {
     try {
       const frame = JSON.parse(data) as EventsWatchDeskFrame;
+      onEvent(frame.orgId, frame.event);
+    } catch {
+      // ignore malformed frames
+    }
+  });
+}
+
+export function watchTerminalEvents(
+  onEvent: (orgId: string, frame: EventsWatchTerminalFrame['event']) => void,
+): () => void {
+  return watchEventSource(eventsWatchUrl, 'terminal', (data) => {
+    try {
+      const frame = JSON.parse(data) as EventsWatchTerminalFrame;
       onEvent(frame.orgId, frame.event);
     } catch {
       // ignore malformed frames

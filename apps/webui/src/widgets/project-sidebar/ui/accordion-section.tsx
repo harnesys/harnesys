@@ -14,6 +14,7 @@ interface AccordionSectionProps {
   actions?: ReactNode;
   size: number;
   children: ReactNode;
+  resizer?: ReactNode;
   headerDragProps?: HTMLAttributes<HTMLButtonElement>;
   dragging?: boolean;
   dropHint?: 'before' | 'after' | null;
@@ -27,6 +28,7 @@ export function AccordionSection({
   actions,
   size,
   children,
+  resizer = null,
   headerDragProps,
   dragging = false,
   dropHint = null,
@@ -43,7 +45,6 @@ export function AccordionSection({
         className={cn(
           'group/head flex h-7 shrink-0 items-center gap-0.5 rounded-md px-1 transition-colors group-data-[collapsible=icon]:hidden',
           'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-          'opacity-70 hover:opacity-100',
           dragging && 'cursor-grabbing opacity-50!',
           dropHint === 'before' && 'shadow-[inset_0_2px_0_0_var(--color-live)]',
           dropHint === 'after' && 'shadow-[inset_0_-2px_0_0_var(--color-live)]',
@@ -55,12 +56,16 @@ export function AccordionSection({
           onClick={() => toggle(id)}
           aria-expanded={shown}
           className={cn(
-            'flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md px-1 text-left font-semibold text-sm outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
+            'flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md px-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
             headerDragProps && 'cursor-grab select-none',
           )}
         >
-          <span className="flex size-4 shrink-0 items-center justify-center">{icon}</span>
-          <span className="truncate">{title}</span>
+          <span className="flex size-4 shrink-0 items-center justify-center [&>svg]:size-3.5">
+            {icon}
+          </span>
+          <span className="truncate font-medium text-[11px] uppercase tracking-[0.06em]">
+            {title}
+          </span>
         </button>
         {hasTrailing ? (
           <span
@@ -97,13 +102,16 @@ export function AccordionSection({
         ) : null}
       </div>
       {shown ? (
-        <ScrollArea
-          data-accordion-content={id}
-          style={iconMode ? { flexGrow: 0, flexBasis: 'auto' } : { flexGrow: size, flexBasis: 0 }}
-          className="min-h-0"
-        >
-          {children}
-        </ScrollArea>
+        <>
+          {resizer}
+          <ScrollArea
+            data-accordion-content={id}
+            style={iconMode ? { flexGrow: 0, flexBasis: 'auto' } : { flexGrow: size, flexBasis: 0 }}
+            className="min-h-0"
+          >
+            {children}
+          </ScrollArea>
+        </>
       ) : null}
     </>
   );

@@ -3,7 +3,8 @@ import { MoreHorizontalIcon, PlusIcon, SquareTerminalIcon } from 'lucide-react';
 import { useProjects } from '@/entities/project';
 import { deskTerminalsKey, useOrgTerminals } from '@/features/desk';
 import { useIdeStore, useOpenNewTerminal, useOpenTerminalTab } from '@/features/ide';
-import { deleteTerminal, type TerminalSessionRecord } from '@/shared/api';
+import { deleteOrgTerminal, deleteTerminal, type TerminalSessionRecord } from '@/shared/api';
+import { useOrgId } from '@/shared/config/location';
 import { useStudioNavigation } from '@/shared/config/navigation';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -89,17 +90,28 @@ export function TerminalSection({
   const { openDesk } = useStudioNavigation();
   const openTerminalTab = useOpenTerminalTab();
   const queryClient = useQueryClient();
+  const routeOrgId = useOrgId();
   const sessions = useOrgTerminals();
   const rows: {
     projectId: string;
     session: TerminalSessionRecord;
   }[] = [];
   for (const session of sessions) {
-    rows.push({ projectId: session.projectId, session });
+    rows.push({
+      projectId: session.projectId || routeOrgId || '',
+      session,
+    });
   }
   const remove = useMutation({
-    mutationFn: ({ projectId, sessionId }: { projectId: string; sessionId: string }) =>
-      deleteTerminal(projectId, sessionId),
+    mutationFn: ({
+      projectId,
+      sessionId,
+      agent,
+    }: {
+      projectId: string;
+      sessionId: string;
+      agent: boolean;
+    }) => (agent ? deleteOrgTerminal(sessionId) : deleteTerminal(projectId, sessionId)),
     onSuccess: (_void, variables) => {
       useIdeStore.getState().closeByEntity(variables.projectId, 'terminal', variables.sessionId);
       void queryClient.invalidateQueries({ queryKey: deskTerminalsKey });
@@ -133,7 +145,13 @@ export function TerminalSection({
             openTerminalTab(projectId, session.id);
             onSelectDone?.();
           }}
-          onDelete={() => remove.mutate({ projectId, sessionId: session.id })}
+          onDelete={() =>
+            remove.mutate({
+              projectId,
+              sessionId: session.id,
+              agent: session.origin === 'agent',
+            })
+          }
         />
       ))}
     </div>
@@ -166,9 +184,22 @@ function TerminalRow({
       >
         <SquareTerminalIcon className="size-3.5 shrink-0 text-muted-foreground" />
         <span className="min-w-0 flex-1 truncate text-sm leading-4">{session.title}</span>
+        {session.origin === 'agent' ? (
+          <span
+            className="shrink-0 rounded bg-muted px-1 py-px text-[9px] text-muted-foreground uppercase tracking-wide"
+            data-testid={`terminal-origin-${session.id}`}
+          >
+            agent
+          </span>
+        ) : null}
         {session.exited ? (
           <span className="shrink-0 text-[10px] text-muted-foreground">exited</span>
-        ) : null}
+        ) : (
+          <span
+            className="size-1.5 shrink-0 rounded-full bg-emerald-500"
+            data-testid={`terminal-active-${session.id}`}
+          />
+        )}
       </button>
       <DropdownMenu>
         <DropdownMenuTrigger

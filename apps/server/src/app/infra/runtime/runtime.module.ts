@@ -24,6 +24,7 @@ import { ScheduleModule } from '../schedules/schedule.module.ts';
 import { SecretModule } from '../secret/secret.module.ts';
 import { SkillsModule } from '../skills/skills.module.ts';
 import { SourceModule } from '../source/source.module.ts';
+import { TerminalModule } from '../terminal/terminal.module.ts';
 import { ThreadModule } from '../thread/thread.module.ts';
 import { WebhookModule } from '../webhooks/webhook.module.ts';
 import { LocalExecutorAdapter } from './local-executor.adapter.ts';
@@ -45,6 +46,7 @@ import { WaitTickerGateAdapter } from './wait-ticker-gate.adapter.ts';
     FileAccessModule,
     PlanModule,
     DeskModule,
+    TerminalModule,
     ScheduleModule,
     WebhookModule,
     KnowledgeModule,

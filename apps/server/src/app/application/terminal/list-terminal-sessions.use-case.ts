@@ -4,6 +4,7 @@ import { TerminalSessionsPort } from '../../domain/terminal/terminal-session.por
 
 export interface ListTerminalSessionsInput {
   projectId?: string;
+  orgId?: string;
 }
 
 @Injectable()
@@ -11,6 +12,9 @@ export class ListTerminalSessionsUseCase {
   constructor(private readonly sessions: TerminalSessionsPort) {}
 
   execute(input: ListTerminalSessionsInput): TerminalSessionRecord[] {
-    return input.projectId ? this.sessions.list(input.projectId) : this.sessions.listAll();
+    if (input.projectId) {
+      return this.sessions.list(input.projectId);
+    }
+    return this.sessions.listAll(input.orgId);
   }
 }

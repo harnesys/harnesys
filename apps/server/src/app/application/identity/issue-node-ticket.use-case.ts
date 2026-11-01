@@ -38,6 +38,17 @@ export class IssueNodeTicketUseCase {
     private readonly orgs: OrgMachineStore,
   ) {}
 
+  private authorized(principal: Principal, action: string, orgId: string): boolean {
+    if (authorize(principal, action, { orgId })) {
+      return true;
+    }
+    // read-only terminal attach is implied by full terminal access
+    // (memberships created before terminal.open:ro only store terminal.open)
+    return (
+      action === 'terminal.open:ro' && authorize(principal, 'terminal.open', { orgId })
+    );
+  }
+
   async execute(input: IssueNodeTicketInput): Promise<IssuedNodeTicket> {
     if (input.principal.kind !== 'user') {
       throw new ForbiddenException('Tickets are issued to user sessions only');
@@ -46,7 +57,7 @@ export class IssueNodeTicketUseCase {
       throw new ValidationException('actions must be non-empty');
     }
     for (const action of input.actions) {
-      if (!authorize(input.principal, action, { orgId: input.orgId })) {
+      if (!this.authorized(input.principal, action, input.orgId)) {
         throw new ForbiddenException(`Action is not allowed: ${action}`);
       }
     }
@@ -91,5 +102,7 @@ export class IssueNodeTicketUseCase {
 }
 
 function ticketTtlSec(actions: string[]): number {
-  return actions.includes('terminal.open') ? TERMINAL_TICKET_TTL_SEC : DEFAULT_TICKET_TTL_SEC;
+  return actions.includes('terminal.open') || actions.includes('terminal.open:ro')
+    ? TERMINAL_TICKET_TTL_SEC
+    : DEFAULT_TICKET_TTL_SEC;
 }

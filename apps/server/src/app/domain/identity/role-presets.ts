@@ -22,6 +22,7 @@ const OWNER: Capability[] = [
   'secret.read',
   'secret.write',
   'terminal.open',
+  'terminal.open:ro',
   'agent.manage',
   'schedule.manage',
 ];
@@ -44,6 +45,7 @@ const ADMIN: Capability[] = [
   'secret.read',
   'secret.write',
   'terminal.open',
+  'terminal.open:ro',
   'agent.manage',
   'schedule.manage',
 ];
@@ -58,11 +60,12 @@ const OPERATOR: Capability[] = [
   'source.read',
   'source.write',
   'terminal.open',
+  'terminal.open:ro',
   'agent.manage',
   'schedule.manage',
 ];
 
-const VIEWER: Capability[] = ['org.read', 'desk.read', 'source.read'];
+const VIEWER: Capability[] = ['org.read', 'desk.read', 'source.read', 'terminal.open:ro'];
 
 export const ROLE_PRESETS: Record<OrgRole, Capability[]> = {
   owner: OWNER,

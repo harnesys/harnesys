@@ -15,8 +15,12 @@ type ToolCaptionKind = 'terminal' | 'file' | 'search' | 'globe' | 'pencil' | 'qu
 
 const CAPTION_SPECS: Record<string, CaptionSpec> = {
   shell: { kind: 'terminal', title: 'Terminal', fields: ['command'] },
-  process_poll: { kind: 'terminal', title: 'Process Poll', fields: ['job_id', 'jobId'] },
-  process_kill: { kind: 'terminal', title: 'Process Kill', fields: ['job_id', 'jobId'] },
+  terminal_spawn: { kind: 'terminal', title: 'Spawn Terminal', fields: ['name', 'command'] },
+  terminal_read: { kind: 'terminal', title: 'Read Terminal', fields: ['session'] },
+  terminal_write: { kind: 'terminal', title: 'Write Terminal', fields: ['session'] },
+  terminal_kill: { kind: 'terminal', title: 'Kill Terminal', fields: ['session'] },
+  port_forward: { kind: 'terminal', title: 'Port Forward', fields: ['mode', 'spec'] },
+  remote_copy: { kind: 'terminal', title: 'Remote Copy', fields: ['direction', 'local_path'] },
   read_file: { kind: 'file', title: 'Read File', fields: ['path'], transform: 'basename' },
   write_file: { kind: 'pencil', title: 'Write File', fields: ['path'], transform: 'basename' },
   edit_file: { kind: 'pencil', title: 'Edit File', fields: ['path'], transform: 'basename' },

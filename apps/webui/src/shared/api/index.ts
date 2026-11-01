@@ -205,6 +205,7 @@ export { readSse } from './sse';
 export { type CreateTeamBody, type CreateTeamResponse, createTeam } from './teams';
 export {
   createTerminal,
+  deleteOrgTerminal,
   deleteTerminal,
   listOrgTerminals,
   type TerminalSessionRecord,

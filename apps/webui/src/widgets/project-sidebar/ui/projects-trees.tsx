@@ -38,14 +38,12 @@ function canMoveToProjectRoot(paths: string[]): boolean {
 function ProjectRoot({
   projectId,
   name,
-  multi,
   open,
   onToggle,
   project,
 }: {
   projectId: string;
   name: string;
-  multi: boolean;
   open: boolean;
   onToggle: () => void;
   project?: BridgedProject;
@@ -114,10 +112,7 @@ function ProjectRoot({
     >
       <button
         type="button"
-        className={cn(
-          'flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1 text-left',
-          multi ? 'text-[10px] text-muted-foreground uppercase tracking-[0.04em]' : 'text-xs',
-        )}
+        className={cn('flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1 text-left text-xs')}
         onClick={onToggle}
       >
         <SourceRootIcon
@@ -130,7 +125,7 @@ function ProjectRoot({
         />
         <span
           className={cn(
-            'min-w-0 flex-1 truncate font-medium',
+            'min-w-0 flex-1 truncate font-medium text-muted-foreground',
             'group-data-[collapsible=icon]:hidden',
           )}
         >
@@ -163,7 +158,6 @@ export function ProjectsTrees({ projectIds }: { projectIds: string[] }) {
   const hidden = useHiddenSourceIds(orgId);
   const showAll = useSourceVisibilityStore((s) => s.showAll);
   const visibleIds = projectIds.filter((id) => !hidden.includes(id));
-  const multi = visibleIds.length > 1;
   useEffect(() => {
     pruneRoots(visibleIds);
   }, [visibleIds, pruneRoots]);
@@ -217,7 +211,6 @@ export function ProjectsTrees({ projectIds }: { projectIds: string[] }) {
             <ProjectRoot
               projectId={id}
               name={project.name}
-              multi={multi}
               open={open}
               project={project}
               onToggle={() => {

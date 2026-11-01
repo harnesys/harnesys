@@ -12,6 +12,7 @@ import type {
 import type { ToolContext, ToolDefinition } from '../../ports/tools.ts';
 import { tool } from '../../ports/tools.ts';
 import { gateShellCommand } from './shell-gate.ts';
+import { type ToolTargetInput, toRegistryTarget } from './terminal-tools.ts';
 export interface ShellOptions {
   timeout?: number;
   allowlist?: readonly string[];
@@ -23,6 +24,7 @@ export interface ShellExecuteInput {
   run_in_background?: boolean;
   block_until_ms?: number;
   open_in_terminal?: boolean;
+  target?: ToolTargetInput;
 }
 export interface ShellBlockingResult {
   exitCode: number | null;
@@ -58,17 +60,21 @@ export interface ShellBlockingArgs {
   ctx: ToolContext;
   ports: ShellPorts;
   mode: ProcessJobMode;
+  target?: ProcessJobRecord['target'];
 }
 export interface ShellBackgroundArgs {
   input: ShellExecuteInput;
   ctx: ToolContext;
   ports: ShellPorts;
   mode: ProcessJobMode;
+  target?: ProcessJobRecord['target'];
 }
 export interface ShellPorts {
   jobs?: ProcessJobRegistry;
   onPtyJob?: (record: ProcessJobRecord) => void;
   resolveOrgId?: () => string | undefined;
+  resolveThreadId?: () => string | undefined;
+  sshHostApproved?: (host: string) => boolean;
 }
 export function shell(options: ShellOptions = {}, ports: ShellPorts = {}): ToolDefinition {
   const defaultTimeout = options.timeout ?? DEFAULT_SHELL_TIMEOUT_MS;
@@ -87,14 +93,35 @@ export function shell(options: ShellOptions = {}, ports: ShellPorts = {}): ToolD
         run_in_background: { type: 'boolean' },
         block_until_ms: { type: 'integer', minimum: 0 },
         open_in_terminal: { type: 'boolean' },
+        target: {
+          type: 'object',
+          properties: {
+            kind: { type: 'string' },
+            host: { type: 'string' },
+            user: { type: 'string' },
+            port: { type: 'integer' },
+            containerId: { type: 'string' },
+          },
+          required: ['kind'],
+        },
       },
       required: ['command'],
     },
-    gate: (input, scope) =>
-      gateShellCommand(input, allowlist, blocklist, {
+    gate: (input, scope) => {
+      const parsedGate = input as ShellExecuteInput;
+      const host = parsedGate.target?.kind === 'ssh' ? parsedGate.target.host : undefined;
+      if (
+        host !== undefined &&
+        ports.sshHostApproved !== undefined &&
+        !ports.sshHostApproved(host)
+      ) {
+        return { decision: 'ask' as const };
+      }
+      return gateShellCommand(input, allowlist, blocklist, {
         cwd: scope?.cwd,
         paths: { threadDir: scope?.paths?.threadDir },
-      }),
+      });
+    },
     execute(input, ctx) {
       const parsed = input as ShellExecuteInput;
       const timeoutMs = Math.min(
@@ -103,7 +130,16 @@ export function shell(options: ShellOptions = {}, ports: ShellPorts = {}): ToolD
       );
       const mode: ProcessJobMode = parsed.open_in_terminal === true ? 'pty' : 'pipes';
       const background = parsed.run_in_background === true || parsed.block_until_ms === 0;
-      if (parsed.open_in_terminal === true && ctx.process?.kind === 'container') {
+      let effectiveTarget: ProcessJobRecord['target'];
+      try {
+        effectiveTarget = toRegistryTarget(parsed.target) ?? ctx.process;
+      } catch (err) {
+        return {
+          jobId: '',
+          error: err instanceof Error ? err.message : String(err),
+        };
+      }
+      if (mode === 'pty' && effectiveTarget?.kind === 'container') {
         const failed: ShellStartErrorResult = {
           jobId: '',
           error: 'container mode does not support open_in_terminal (host profile required)',
@@ -111,9 +147,16 @@ export function shell(options: ShellOptions = {}, ports: ShellPorts = {}): ToolD
         return failed;
       }
       if (!background && parsed.block_until_ms === undefined) {
-        return runBlocking({ command: parsed.command, timeoutMs, ctx, ports, mode });
+        return runBlocking({
+          command: parsed.command,
+          timeoutMs,
+          ctx,
+          ports,
+          mode,
+          target: effectiveTarget,
+        });
       }
-      return runBackground({ input: parsed, ctx, ports, mode });
+      return runBackground({ input: parsed, ctx, ports, mode, target: effectiveTarget });
     },
   });
 }
@@ -165,8 +208,8 @@ function waitForJobExit(
   });
 }
 async function runBlocking(args: ShellBlockingArgs): Promise<ShellBlockingResult> {
-  const { command, timeoutMs, ctx, ports, mode } = args;
-  if (mode === 'pipes' && ctx.process === undefined) {
+  const { command, timeoutMs, ctx, ports, mode, target } = args;
+  if (mode === 'pipes' && target === undefined) {
     return runOnHost(command, timeoutMs, ctx.cwd, {
       signal: ctx.signal,
       env: ctx.env,
@@ -181,7 +224,8 @@ async function runBlocking(args: ShellBlockingArgs): Promise<ShellBlockingResult
     mode,
     env: ctx.env,
     orgId,
-    ...(ctx.process === undefined ? {} : { process: ctx.process }),
+    ...(ports.resolveThreadId?.() === undefined ? {} : { threadId: ports.resolveThreadId?.() }),
+    ...(target === undefined ? {} : { process: target }),
   });
   if (mode === 'pty') {
     ports.onPtyJob?.(record);
@@ -208,7 +252,7 @@ async function runBackground(
 ): Promise<
   ShellBackgroundResult | ShellStartErrorResult | ShellWaitedResult | ShellWaitTimeoutResult
 > {
-  const { input: parsed, ctx, ports, mode } = args;
+  const { input: parsed, ctx, ports, mode, target } = args;
   const registry = requireJobs(ports.jobs);
   const started = performance.now();
   const orgId = ports.resolveOrgId?.();
@@ -220,7 +264,8 @@ async function runBackground(
       mode,
       env: ctx.env,
       orgId,
-      ...(ctx.process === undefined ? {} : { process: ctx.process }),
+      ...(ports.resolveThreadId?.() === undefined ? {} : { threadId: ports.resolveThreadId?.() }),
+      ...(target === undefined ? {} : { process: target }),
     });
   } catch (err) {
     return {

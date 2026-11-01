@@ -44,6 +44,7 @@ import type { SourceDriverPort } from '../../domain/source/source-driver.port.ts
 import type { SourceLocationPort } from '../../domain/source/source-location.port.ts';
 import type { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import type { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+import type { TerminalSessionsPort } from '../../domain/terminal/terminal-session.port.ts';
 import type {
   CompactThreadResult,
   ThreadQueueDrainResult,
@@ -128,6 +129,7 @@ export interface OrgRuntimeDeps {
   planEvents?: PlanEventsPort;
   threadEvents?: ThreadEventsPort;
   deskEvents?: DeskEventsPort;
+  terminalSessions?: TerminalSessionsPort;
   schedules?: ScheduleRepositoryPort;
   webhooks?: WebhookRepositoryPort;
   knowledge?: OrgKnowledgeDeps;
