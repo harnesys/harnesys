@@ -15,7 +15,8 @@
         "title": "Harnesys",
         "width": 1280,
         "height": 800,
-        "visible": false
+        "visible": false,
+        "dragDropEnabled": false
       }
     ],
     "security": {
