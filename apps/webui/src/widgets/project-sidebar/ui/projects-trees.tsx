@@ -125,7 +125,7 @@ function ProjectRoot({
         />
         <span
           className={cn(
-            'min-w-0 flex-1 truncate font-medium text-muted-foreground',
+            'min-w-0 flex-1 truncate text-muted-foreground text-sm',
             'group-data-[collapsible=icon]:hidden',
           )}
         >

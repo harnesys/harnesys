@@ -208,7 +208,7 @@ export function IssuesSectionActions() {
       title="New board"
       onClick={startCreation}
     >
-      <PlusIcon />
+      <PlusIcon className="size-3.5 text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
       <span className="sr-only">New board</span>
     </Button>
   );
