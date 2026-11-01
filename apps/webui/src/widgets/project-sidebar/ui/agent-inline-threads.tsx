@@ -222,7 +222,7 @@ function InlineThreadRow({
         </TooltipContent>
       </Tooltip>
       {hasMenu ? (
-        <div className="absolute top-0.5 right-1 z-10 flex gap-0.5 opacity-0 transition-opacity group-hover/ithread:opacity-100 group-data-[collapsible=icon]:hidden">
+        <div className="hidden items-center gap-0.5 pr-1 group-focus-within/ithread:flex group-hover/ithread:flex group-data-[collapsible=icon]:hidden">
           {onPinToggle ? (
             <Button
               variant="ghost"
@@ -306,7 +306,7 @@ function rowRight(
     return null;
   }
   return (
-    <span className="shrink-0 font-mono text-[10px] text-muted-foreground/70 leading-none transition-opacity group-hover/ithread:opacity-0">
+    <span className="shrink-0 font-mono text-[10px] text-muted-foreground/70 leading-none group-focus-within/ithread:hidden group-hover/ithread:hidden">
       {threadTime(thread.updatedAt, timeZone)}
     </span>
   );
