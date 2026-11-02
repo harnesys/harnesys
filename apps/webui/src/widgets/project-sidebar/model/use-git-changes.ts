@@ -69,11 +69,11 @@ export function useOrgGitSummaries(): GitSourceSummary[] | null {
   const { orgId: routeOrgId } = useStudioLocation();
   const storeOrgId = useActiveOrgStore((state) => state.orgId);
   const orgId = routeOrgId ?? storeOrgId;
-  // Observer only: DeskSync hydrates the summary once the desk slices settle.
-  const deskReady = useDeskReady(orgId);
+  // Читатель кэша: инициализацией кэша владеет useDeskOrgExtrasSync
+  // (один HTTP-фетч при монтировании DeskSync + SSE setQueryData).
   const summaryQuery = useQuery({
     ...deskGitSummaryQuery(orgId ?? ''),
-    enabled: Boolean(orgId) && deskReady,
+    enabled: false,
   });
   return orgId ? (summaryQuery.data ?? null) : null;
 }

@@ -1,4 +1,5 @@
 import type {
+  EventsWatchGitSummaryFrame,
   GitDiffResponse,
   GitFileStatusMap,
   GitSourceSummary,
@@ -8,6 +9,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { getActiveOrgId } from './active-org';
 import { ApiError, apiJson } from './client';
 import { selfNodeCached } from './fleet';
+import { eventsWatchUrl, watchEventSource } from './events';
 import { getSourceHostStatus, refreshGitSource, switchGitBranch } from './sources';
 
 function orgSourceGitPath(sourceId: string, suffix: string): string {
@@ -135,6 +137,19 @@ export async function getGitDiff(projectId: string, filePath: string): Promise<G
 
 export function getOrgGitSummary(orgId: string): Promise<GitSourceSummary[]> {
   return apiJson(`/api/orgs/${encodeURIComponent(orgId)}/git/summary`);
+}
+
+export function watchGitSummary(
+  onData: (summaries: GitSourceSummary[]) => void,
+): () => void {
+  return watchEventSource(eventsWatchUrl, 'git-summary', (data) => {
+    try {
+      const frame = JSON.parse(data) as EventsWatchGitSummaryFrame;
+      onData(frame.summaries);
+    } catch {
+      // ignore malformed frames
+    }
+  });
 }
 
 export const gitStatusQueryKey = (projectId: string) =>

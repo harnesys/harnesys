@@ -1,4 +1,5 @@
 import type { DeskEvent } from './desk-events.ts';
+import type { GitSourceSummary } from './git.ts';
 import type { KnowledgeIndexState } from './knowledge.ts';
 import type { ApprovalKind, ApprovalOption, ApprovalStatus, OrgId } from './org-types.ts';
 import type { TerminalWatchEvent } from './terminal.ts';
@@ -14,6 +15,10 @@ export interface EventsWatchDeskFrame {
 export interface SourceWatchEvent {
   kind: 'fs' | 'git';
   changedPath?: string;
+}
+export interface EventsWatchGitSummaryFrame {
+  orgId: OrgId;
+  summaries: GitSourceSummary[];
 }
 export interface EventsWatchSourceChangeFrame {
   orgId: OrgId;

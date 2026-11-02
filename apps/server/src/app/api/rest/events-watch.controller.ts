@@ -5,6 +5,7 @@ import type {
   EventsWatchApprovalRecord,
   EventsWatchDeskFrame,
   EventsWatchFleetFrame,
+  EventsWatchGitSummaryFrame,
   EventsWatchIndexStateFrame,
   EventsWatchMaterializationFrame,
   EventsWatchReleaseFrame,
@@ -22,6 +23,7 @@ import { KnowledgeIndexEventsPort } from '../../domain/knowledge/knowledge-index
 import { PlanEventsPort } from '../../domain/plan/plan-events.port.ts';
 import { ReleaseEventsPort } from '../../domain/release/release-events.port.ts';
 import { SkillsEventsPort } from '../../domain/skills/skills-events.port.ts';
+import { GitSummaryEventsPort } from '../../domain/source/git-summary-events.port.ts';
 import { MaterializationEventsPort } from '../../domain/source/materialization-events.port.ts';
 import { SourceWatchEventsPort } from '../../domain/source/source-watch-events.port.ts';
 import { SourceWatchGatePort } from '../../domain/source/source-watch-gate.port.ts';
@@ -39,6 +41,7 @@ export class EventsWatchController {
     private readonly deskEvents: DeskEventsPort,
     private readonly sourceWatchEvents: SourceWatchEventsPort,
     private readonly sourceWatchGate: SourceWatchGatePort,
+    private readonly gitSummaryEvents: GitSummaryEventsPort,
     private readonly skillsEvents: SkillsEventsPort,
     private readonly threadEvents: ThreadEventsPort,
     private readonly fleetEvents: FleetEventsPort,
@@ -56,6 +59,7 @@ export class EventsWatchController {
     const deskEvents = this.deskEvents;
     const sourceWatchEvents = this.sourceWatchEvents;
     const sourceWatchGate = this.sourceWatchGate;
+    const gitSummaryEvents = this.gitSummaryEvents;
     const skillsEvents = this.skillsEvents;
     const threadEvents = this.threadEvents;
     const fleetEvents = this.fleetEvents;
@@ -69,6 +73,7 @@ export class EventsWatchController {
     let unsubscribeIssues: (() => void) | undefined;
     let unsubscribeDesk: (() => void) | undefined;
     let unsubscribeSources: (() => void) | undefined;
+    let unsubscribeGitSummary: (() => void) | undefined;
     let unsubscribeSkills: (() => void) | undefined;
     let unsubscribeThreadErrors: (() => void) | undefined;
     let unsubscribeFleet: (() => void) | undefined;
@@ -117,6 +122,9 @@ export class EventsWatchController {
         unsubscribeSources = sourceWatchEvents.subscribe((frame) => {
           write('source-change', JSON.stringify(frame));
         });
+        unsubscribeGitSummary = gitSummaryEvents.subscribe((frame) => {
+          write('git-summary', JSON.stringify(frame));
+        });
         unsubscribeSkills = skillsEvents.subscribe((frame) => {
           write('skills-changed', JSON.stringify(frame));
         });
@@ -163,6 +171,7 @@ export class EventsWatchController {
         unsubscribeIssues?.();
         unsubscribeDesk?.();
         unsubscribeSources?.();
+        unsubscribeGitSummary?.();
         unsubscribeSkills?.();
         unsubscribeThreadErrors?.();
         unsubscribeFleet?.();

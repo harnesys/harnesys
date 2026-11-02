@@ -16,8 +16,9 @@ import type {
 } from '@harnesys/studio-shared';
 import { env } from '@/shared/config/env';
 import { watchEventSource } from './sse';
+export { watchEventSource };
 
-const eventsWatchUrl = `${env.localHostOrigin}/api/events/watch`;
+export const eventsWatchUrl = `${env.localHostOrigin}/api/events/watch`;
 
 export function watchDeskEvents(onEvent: (orgId: string, event: DeskEvent) => void): () => void {
   return watchEventSource(eventsWatchUrl, 'desk', (data) => {

@@ -1,4 +1,4 @@
-import { useQueries, useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { toClientAgentFromPublic, useAgentStore } from '@/entities/agent';
 import { useIssueBoardStore, useIssueLabelStore, useIssueStore } from '@/entities/issue';
@@ -16,6 +16,7 @@ import {
   deskThreadsQuery,
   deskWebhooksQuery,
 } from './desk-queries';
+import { gitOrgSummaryQueryKey, watchGitSummary } from '@/shared/api/git';
 
 function useDeskSlices(scopeId: string) {
   return useQueries({
@@ -47,11 +48,20 @@ export function useDeskReady(scopeId: string | null): boolean {
 }
 
 export function useDeskOrgExtrasSync(orgId: string | null): void {
-  const orgReady = useDeskReady(orgId);
+  const queryClient = useQueryClient();
   useQuery(deskTerminalsQuery(orgId ?? ''));
-  // Git summary is expensive; wait until the desk slices settle so it does
-  // not compete with them at boot (old hydrate gating, kept 1:1).
-  useQuery({ ...deskGitSummaryQuery(orgId ?? ''), enabled: Boolean(orgId) && orgReady });
+  // Инициализируем кэш git summary один раз при монтировании DeskSync — это
+  // единственное место, которое делает первый HTTP-фетч summary. Далее
+  // обновления только через SSE (setQueryData) — без HTTP.
+  useQuery({ ...deskGitSummaryQuery(orgId ?? ''), enabled: Boolean(orgId) });
+  useEffect(() => {
+    if (!orgId) {
+      return;
+    }
+    return watchGitSummary((summaries) => {
+      queryClient.setQueryData(gitOrgSummaryQueryKey(orgId), summaries);
+    });
+  }, [orgId, queryClient]);
 }
 
 export function useDeskStoreSync(

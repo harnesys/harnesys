@@ -9,7 +9,7 @@ import { appMetaQuery, listThreads, watchDeskEvents, watchThreadErrors } from '@
 import { watchApprovalEvents, watchSourceChanges, watchTerminalEvents } from '@/shared/api/events';
 import { sourceFilesTreeQueryKey } from '@/shared/api/files';
 import { rememberProjectNode, rememberSelfNode } from '@/shared/api/fleet';
-import { gitFileStatusQueryKey, gitOrgSummaryQueryKey, gitStatusQueryKey } from '@/shared/api/git';
+import { gitFileStatusQueryKey, gitStatusQueryKey } from '@/shared/api/git';
 import { projectQueryKey } from '@/shared/api/project-base';
 import { studioFocusProjectId, useStudioLocation } from '@/shared/config/location';
 import { studioPath } from '@/shared/config/routes';
@@ -178,7 +178,6 @@ export function DeskSync() {
         void queryClient.invalidateQueries({
           queryKey: gitFileStatusQueryKey(frame.sourceId),
         });
-        void queryClient.invalidateQueries({ queryKey: gitOrgSummaryQueryKey(activeOrgId) });
         return;
       }
       void queryClient.invalidateQueries({ queryKey: sourceFilesTreeQueryKey(frame.sourceId) });
@@ -186,7 +185,6 @@ export function DeskSync() {
         queryKey: ['source-file-content', frame.sourceId],
       });
       void queryClient.invalidateQueries({ queryKey: gitFileStatusQueryKey(frame.sourceId) });
-      void queryClient.invalidateQueries({ queryKey: gitOrgSummaryQueryKey(activeOrgId) });
     });
   }, [activeOrgId, queryClient, remoteProjects]);
   useEffect(() => {
