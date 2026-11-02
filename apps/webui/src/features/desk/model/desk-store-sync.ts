@@ -5,7 +5,12 @@ import { useIssueBoardStore, useIssueLabelStore, useIssueStore } from '@/entitie
 import { toClientSchedule, useScheduleStore } from '@/entities/schedule';
 import { toClientThread, useThreadStore } from '@/entities/thread';
 import { toClientWebhook, useWebhookStore } from '@/entities/webhook';
-import { gitOrgSummaryQueryKey, watchGitSummary } from '@/shared/api/git';
+import {
+  gitFileStatusQueryKey,
+  gitOrgSummaryQueryKey,
+  watchGitFileStatus,
+  watchGitSummary,
+} from '@/shared/api/git';
 import {
   deskAgentsQuery,
   deskBoardsQuery,
@@ -60,6 +65,20 @@ export function useDeskOrgExtrasSync(orgId: string | null): void {
     }
     return watchGitSummary((summaries) => {
       queryClient.setQueryData(gitOrgSummaryQueryKey(orgId), summaries);
+    });
+  }, [orgId, queryClient]);
+  useEffect(() => {
+    if (!orgId) {
+      return;
+    }
+    return watchGitFileStatus((frame) => {
+      if (frame.orgId !== orgId) {
+        return;
+      }
+      queryClient.setQueryData(gitFileStatusQueryKey(frame.sourceId), {
+        map: frame.map,
+        truncated: frame.truncated,
+      });
     });
   }, [orgId, queryClient]);
 }

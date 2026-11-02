@@ -1,7 +1,8 @@
 import type { DeskEvent } from './desk-events.ts';
-import type { GitSourceSummary } from './git.ts';
+import type { GitFileStatusMap, GitSourceSummary } from './git.ts';
 import type { KnowledgeIndexState } from './knowledge.ts';
 import type { ApprovalKind, ApprovalOption, ApprovalStatus, OrgId } from './org-types.ts';
+import type { ProjectFileEventKind } from './project-files.ts';
 import type { TerminalWatchEvent } from './terminal.ts';
 
 export interface EventsWatchTerminalFrame {
@@ -14,11 +15,18 @@ export interface EventsWatchDeskFrame {
 }
 export interface SourceWatchEvent {
   kind: 'fs' | 'git';
+  fileKind?: ProjectFileEventKind;
   changedPath?: string;
 }
 export interface EventsWatchGitSummaryFrame {
   orgId: OrgId;
   summaries: GitSourceSummary[];
+}
+export interface EventsWatchGitFileStatusFrame {
+  orgId: OrgId;
+  sourceId: string;
+  map: GitFileStatusMap;
+  truncated: boolean;
 }
 export interface EventsWatchSourceChangeFrame {
   orgId: OrgId;

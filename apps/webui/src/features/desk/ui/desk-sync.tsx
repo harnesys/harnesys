@@ -7,9 +7,9 @@ import { useProjects } from '@/entities/project';
 import { toClientThread, useThreadStore } from '@/entities/thread';
 import { appMetaQuery, listThreads, watchDeskEvents, watchThreadErrors } from '@/shared/api';
 import { watchApprovalEvents, watchSourceChanges, watchTerminalEvents } from '@/shared/api/events';
-import { sourceFilesTreeQueryKey } from '@/shared/api/files';
+import { isLocalFileWrite, sourceFilesTreeQueryKey } from '@/shared/api/files';
 import { rememberProjectNode, rememberSelfNode } from '@/shared/api/fleet';
-import { gitFileStatusQueryKey, gitStatusQueryKey } from '@/shared/api/git';
+import { gitStatusQueryKey } from '@/shared/api/git';
 import { projectQueryKey } from '@/shared/api/project-base';
 import { studioFocusProjectId, useStudioLocation } from '@/shared/config/location';
 import { studioPath } from '@/shared/config/routes';
@@ -178,24 +178,23 @@ export function DeskSync() {
           queryKey: gitStatusQueryKey(frame.sourceId),
           exact: false,
         });
-        void queryClient.invalidateQueries({
-          queryKey: gitFileStatusQueryKey(frame.sourceId),
-          exact: false,
-        });
         return;
       }
-      void queryClient.invalidateQueries({
-        queryKey: sourceFilesTreeQueryKey(frame.sourceId),
-        exact: false,
-      });
-      void queryClient.invalidateQueries({
-        queryKey: ['source-file-content', frame.sourceId],
-        exact: false,
-      });
-      void queryClient.invalidateQueries({
-        queryKey: gitFileStatusQueryKey(frame.sourceId),
-        exact: false,
-      });
+      const changedPath = frame.event.changedPath;
+      if (!changedPath) {
+        return;
+      }
+      if (frame.event.fileKind === 'create' || frame.event.fileKind === 'delete') {
+        void queryClient.invalidateQueries({
+          queryKey: sourceFilesTreeQueryKey(frame.sourceId),
+          exact: false,
+        });
+      }
+      if (!isLocalFileWrite(frame.sourceId, changedPath)) {
+        void queryClient.invalidateQueries({
+          queryKey: ['source-file-content', frame.sourceId, changedPath],
+        });
+      }
     });
   }, [activeOrgId, queryClient, remoteProjects]);
   useEffect(() => {

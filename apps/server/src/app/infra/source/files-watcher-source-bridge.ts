@@ -11,7 +11,10 @@ import { trace } from '../../libs/trace.ts';
 
 export function toSourceWatchEvent(event: ProjectFileEvent): SourceWatchEvent {
   const changedPath = event.dir ? `${event.dir}/${event.name}` : event.name;
-  return event.dir === '.git' ? { kind: 'git', changedPath } : { kind: 'fs', changedPath };
+  const fileKind = event.kind;
+  return event.dir === '.git'
+    ? { kind: 'git', fileKind, changedPath }
+    : { kind: 'fs', fileKind, changedPath };
 }
 
 @Injectable()

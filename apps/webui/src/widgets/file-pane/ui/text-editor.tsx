@@ -5,7 +5,7 @@ import type { editor } from 'monaco-editor';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { remappedPathAfterMove, useIdeStore } from '@/features/ide';
 import { markProjectFileDirty } from '@/features/open-file';
-import { readProjectFileText } from '@/shared/api/files';
+import { readProjectFileText, sourceFileContentQueryKey } from '@/shared/api/files';
 import { useEditorPreferences } from '@/shared/lib/editor-preferences';
 import '@/shared/lib/monaco';
 import { detectLanguage } from '@/shared/lib/tool-code';
@@ -19,7 +19,7 @@ import {
 import { createEditorOptions, editorThemeName, toModelPath } from '../model/editor-setup';
 import { useEditorLspBridge } from '../model/use-editor-lsp-bridge';
 import { useMarkdownEditorMode } from '../model/use-markdown-editor-mode';
-import { contentQueryKey, scopedKey, useTextPersistence } from '../model/use-text-persistence';
+import { scopedKey, useTextPersistence } from '../model/use-text-persistence';
 import { bindMonacoDefinitionOpener, setMonacoDefinitionNavContext } from './monaco-definition-nav';
 import {
   bindMonacoImportLinkOpener,
@@ -57,7 +57,7 @@ export function TextEditor({
   );
   const resolved = editorThemeName(theme);
   const scopeKey = scopedKey(path, worktreeId);
-  const contentKey = contentQueryKey(projectId, { path, worktreeId });
+  const contentKey = sourceFileContentQueryKey(projectId, path, worktreeId);
   const { flushIfDirty, requestSave } = useTextPersistence({
     projectId,
     setDrafts,
@@ -159,12 +159,9 @@ export function TextEditor({
   const serverText =
     activePath === scopeKey
       ? (contentQuery.data ?? '')
-      : (qc.getQueryData<FileContent>([
-          'source-file-content',
-          projectId,
-          activePath ?? '',
-          worktreeId ?? '',
-        ]) ?? '');
+      : (qc.getQueryData<FileContent>(
+          sourceFileContentQueryKey(projectId, activePath ?? '', worktreeId),
+        ) ?? '');
   useEffect(() => {
     if (prefs.autoSaveMode !== 'afterDelay' || !activePath || value === serverText) {
       return;

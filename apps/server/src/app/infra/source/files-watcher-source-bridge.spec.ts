@@ -5,14 +5,17 @@ describe('toSourceWatchEvent', () => {
   test('git-dir events map to kind git, others to fs with rel path', () => {
     expect(toSourceWatchEvent({ kind: 'change', dir: '.git', name: 'HEAD' })).toEqual({
       kind: 'git',
+      fileKind: 'change',
       changedPath: '.git/HEAD',
     });
     expect(toSourceWatchEvent({ kind: 'create', dir: 'docs', name: 'a.md' })).toEqual({
       kind: 'fs',
+      fileKind: 'create',
       changedPath: 'docs/a.md',
     });
     expect(toSourceWatchEvent({ kind: 'delete', dir: '', name: 'b.txt' })).toEqual({
       kind: 'fs',
+      fileKind: 'delete',
       changedPath: 'b.txt',
     });
   });

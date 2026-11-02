@@ -300,5 +300,38 @@ export async function writeProjectFileContent(
     content: input.content,
     ...(input.worktreeId ? { worktreeId: input.worktreeId } : {}),
   });
+  markLocalFileWrite(projectId, input.path);
   return { path: result.path };
+}
+
+export function sourceFileContentQueryKey(
+  projectId: string,
+  path: string,
+  worktreeId?: string,
+): readonly ['source-file-content', string, string, string] {
+  return ['source-file-content', projectId, path, worktreeId ?? ''];
+}
+
+const localWrites = new Map<string, number>();
+const LOCAL_WRITE_TTL_MS = 5000;
+
+function localWriteKey(projectId: string, path: string): string {
+  return `${projectId}\u0000${path}`;
+}
+
+export function markLocalFileWrite(projectId: string, path: string): void {
+  localWrites.set(localWriteKey(projectId, path), Date.now());
+}
+
+export function isLocalFileWrite(projectId: string, path: string): boolean {
+  const key = localWriteKey(projectId, path);
+  const at = localWrites.get(key);
+  if (at === undefined) {
+    return false;
+  }
+  if (Date.now() - at > LOCAL_WRITE_TTL_MS) {
+    localWrites.delete(key);
+    return false;
+  }
+  return true;
 }

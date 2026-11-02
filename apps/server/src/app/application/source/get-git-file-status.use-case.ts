@@ -10,8 +10,8 @@ import { mapGitVcsError } from './map-git-vcs-error.ts';
 export interface GetGitFileStatusInput {
   orgId: string;
   sourceId: string;
-  hostId: string;
-  worktreeId: string;
+  hostId?: string;
+  worktreeId?: string;
   path?: string;
 }
 
@@ -37,8 +37,8 @@ export class GetGitFileStatusUseCase {
       return { map: {}, truncated: false };
     }
     const { cwd } = this.worktrees.resolve(input.orgId, input.sourceId, {
-      hostId: input.hostId,
-      worktreeId: input.worktreeId,
+      ...(input.hostId ? { hostId: input.hostId } : {}),
+      ...(input.worktreeId ? { worktreeId: input.worktreeId } : {}),
     });
     try {
       return await this.git.getFileStatus(cwd, input.path);

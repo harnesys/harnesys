@@ -1,4 +1,5 @@
 import type {
+  EventsWatchGitFileStatusFrame,
   EventsWatchGitSummaryFrame,
   GitDiffResponse,
   GitFileStatusMap,
@@ -144,6 +145,18 @@ export function watchGitSummary(onData: (summaries: GitSourceSummary[]) => void)
     try {
       const frame = JSON.parse(data) as EventsWatchGitSummaryFrame;
       onData(frame.summaries);
+    } catch {
+      // ignore malformed frames
+    }
+  });
+}
+
+export function watchGitFileStatus(
+  onData: (frame: EventsWatchGitFileStatusFrame) => void,
+): () => void {
+  return watchEventSource(eventsWatchUrl, 'git-file-status', (data) => {
+    try {
+      onData(JSON.parse(data) as EventsWatchGitFileStatusFrame);
     } catch {
       // ignore malformed frames
     }

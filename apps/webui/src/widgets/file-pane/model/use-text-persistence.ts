@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef } from 'react';
 import { useIdeStore } from '@/features/ide';
 import { markProjectFileDirty } from '@/features/open-file';
-import { writeProjectFileContent } from '@/shared/api/files';
+import { sourceFileContentQueryKey, writeProjectFileContent } from '@/shared/api/files';
 
 export function scopedKey(path: string, worktreeId?: string): string {
   return worktreeId ? `${worktreeId}:${path}` : path;
@@ -11,13 +11,6 @@ export function scopedKey(path: string, worktreeId?: string): string {
 export interface TextTarget {
   path: string;
   worktreeId?: string;
-}
-
-export function contentQueryKey(
-  projectId: string,
-  target: TextTarget,
-): readonly [string, string, string, string] {
-  return ['source-file-content', projectId, target.path, target.worktreeId ?? ''];
 }
 
 export function useTextPersistence(input: {
@@ -37,7 +30,10 @@ export function useTextPersistence(input: {
         path: saveInput.path,
         ...(saveInput.worktreeId ? { worktreeId: saveInput.worktreeId } : {}),
       };
-      qc.setQueryData(contentQueryKey(projectId, target), saveInput.content);
+      qc.setQueryData(
+        sourceFileContentQueryKey(projectId, target.path, target.worktreeId),
+        saveInput.content,
+      );
       setDrafts((prev) => ({
         ...prev,
         [scopedKey(target.path, target.worktreeId)]: saveInput.content,
@@ -62,7 +58,10 @@ export function useTextPersistence(input: {
       if (draft === undefined) {
         return;
       }
-      const serverText = qc.getQueryData<string>(contentQueryKey(projectId, target)) ?? '';
+      const serverText =
+        qc.getQueryData<string>(
+          sourceFileContentQueryKey(projectId, target.path, target.worktreeId),
+        ) ?? '';
       if (draft === serverText) {
         return;
       }

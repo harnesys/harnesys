@@ -1,13 +1,13 @@
 import { Module } from '@harnesys/brix';
 import { SourceUseCaseModule } from '../../application/source/source.use-case.module.ts';
-import { GitSummaryEventsPort } from '../../domain/source/git-summary-events.port.ts';
+import { GitWatchEventsPort } from '../../domain/source/git-watch-events.port.ts';
 import { MaterializationEventsPort } from '../../domain/source/materialization-events.port.ts';
 import { SourceWatchEventsPort } from '../../domain/source/source-watch-events.port.ts';
 import { SourceWatchGatePort } from '../../domain/source/source-watch-gate.port.ts';
 import { FilesWatcherModule } from '../files-watcher/files-watcher.module.ts';
 import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
 import { SourceWatchBridge } from './files-watcher-source-bridge.ts';
-import { GitSummaryEventsAdapter } from './git-summary-events.adapter.ts';
+import { GitWatchEventsAdapter } from './git-watch-events.adapter.ts';
 import { SourceModule } from './source.module.ts';
 import { SourceWatchEventsAdapter } from './source-watch-events.adapter.ts';
 
@@ -16,13 +16,13 @@ import { SourceWatchEventsAdapter } from './source-watch-events.adapter.ts';
   providers: [
     { provide: SourceWatchEventsPort, useClass: SourceWatchEventsAdapter },
     { provide: SourceWatchGatePort, useClass: SourceWatchBridge },
-    { provide: GitSummaryEventsPort, useClass: GitSummaryEventsAdapter },
+    { provide: GitWatchEventsPort, useClass: GitWatchEventsAdapter },
   ],
   exports: [
     SourceWatchEventsPort,
     SourceWatchGatePort,
     MaterializationEventsPort,
-    GitSummaryEventsPort,
+    GitWatchEventsPort,
   ],
 })
 export class SourceWatchModule {}
