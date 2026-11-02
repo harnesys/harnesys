@@ -1,5 +1,5 @@
 import { MOONSHOTAI_DEFAULT_URL } from '../../../constants.ts';
-import type { DiscoveredModel, DiscoverInput } from '../../../ports/models.ts';
+import type { DiscoveredModel, DiscoverInput, ModelArchitecture } from '../../../ports/models.ts';
 import { fetchListedModels } from './fetch-list.ts';
 import { asNumber, asRecord, asString, itemsOf, topProviderOf } from './parse.ts';
 import { bearerHeaders, modelsUrl } from './request.ts';
@@ -36,10 +36,32 @@ function mapMoonshotAIModel(item: unknown): DiscoveredModel | undefined {
     name,
     kind,
     context_length: contextLength,
+    architecture: chatArchitecture(
+      kind,
+      record.supports_image_in === true,
+      record.supports_video_in === true,
+    ),
     top_provider: topProviderOf(contextLength),
     effort: hasReasoning ? ['low', 'high', 'max'] : undefined,
     raw: item,
   };
+}
+function chatArchitecture(
+  kind: 'chat' | 'embed',
+  supportsImage: boolean,
+  supportsVideo: boolean,
+): ModelArchitecture | undefined {
+  if (kind !== 'chat') {
+    return undefined;
+  }
+  const input = ['text'];
+  if (supportsImage) {
+    input.push('image');
+  }
+  if (supportsVideo) {
+    input.push('video');
+  }
+  return { input_modalities: input, output_modalities: ['text'] };
 }
 function moonshotaiKind(name: string): 'chat' | 'embed' {
   if (/embed/i.test(name)) {

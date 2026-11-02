@@ -1,10 +1,17 @@
 import { Controller, Get } from '@harnesys/brix';
 import { DRIVERS } from 'harnesys';
 
+interface CatalogEndpointResponse {
+  id: string;
+  label: string;
+  apiUrl: string;
+  group?: string;
+}
+
 interface CatalogDriverResponse {
   id: (typeof DRIVERS)[number];
   defaultUrl: string;
-  endpoints: Array<{ id: string; label: string; apiUrl: string }>;
+  endpoints: CatalogEndpointResponse[];
 }
 
 interface StudioCatalogResponse {
@@ -34,6 +41,49 @@ const DEFAULT_URLS: Record<(typeof DRIVERS)[number], string> = {
   moonshotai: 'https://api.moonshot.ai/v1',
 };
 
+const KIMI_ENDPOINTS: CatalogEndpointResponse[] = [
+  {
+    id: 'payg-intl',
+    label: 'International',
+    apiUrl: 'https://api.moonshot.ai/v1',
+    group: 'Pay-as-you-go',
+  },
+  {
+    id: 'payg-cn',
+    label: 'China',
+    apiUrl: 'https://api.moonshot.cn/v1',
+    group: 'Pay-as-you-go',
+  },
+  {
+    id: 'coding-intl',
+    label: 'International',
+    apiUrl: 'https://api.kimi.ai/coding/v1',
+    group: 'Coding Plan (subscription)',
+  },
+  {
+    id: 'coding-cn',
+    label: 'China',
+    apiUrl: 'https://api.kimi.com/coding/v1',
+    group: 'Coding Plan (subscription)',
+  },
+];
+
+const DRIVER_ENDPOINTS: Partial<Record<(typeof DRIVERS)[number], CatalogEndpointResponse[]>> = {
+  kimi: KIMI_ENDPOINTS,
+  moonshotai: KIMI_ENDPOINTS,
+};
+
+function driverEndpoints(
+  id: (typeof DRIVERS)[number],
+  defaultUrl: string,
+): CatalogEndpointResponse[] {
+  const presets = DRIVER_ENDPOINTS[id];
+  if (presets) {
+    return presets;
+  }
+  return defaultUrl ? [{ id: 'default', label: 'Default', apiUrl: defaultUrl }] : [];
+}
+
 @Controller()
 export class CatalogController {
   @Get('catalog')
@@ -44,7 +94,7 @@ export class CatalogController {
         return {
           id,
           defaultUrl,
-          endpoints: defaultUrl ? [{ id: 'default', label: 'Default', apiUrl: defaultUrl }] : [],
+          endpoints: driverEndpoints(id, defaultUrl),
         };
       }),
     };
