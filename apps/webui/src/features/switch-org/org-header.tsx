@@ -58,7 +58,7 @@ export function OrgHeader({ inboxCount }: { inboxCount?: number }) {
 
   return (
     <div
-      className="group flex w-full items-center rounded-md not-last:border-b px-1.5 py-1.5 outline-none transition-colors hover:bg-sidebar-accent/60 data-open:bg-sidebar-accent/60 group-data-[collapsible=icon]:px-0"
+      className="group flex w-full items-center rounded-md not-last:border-b px-1 py-1.5 outline-none transition-colors hover:bg-sidebar-accent/60 data-open:bg-sidebar-accent/60 group-data-[collapsible=icon]:px-0"
       data-open={menuOpen ? '' : undefined}
       data-testid="org-header"
     >

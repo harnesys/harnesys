@@ -1,9 +1,9 @@
 import {
+  CpuIcon,
   GitBranchIcon,
   HardDriveIcon,
   InboxIcon,
   type LucideIcon,
-  SparkleIcon,
   SquareKanbanIcon,
   SquareTerminalIcon,
   ZapIcon,
@@ -24,7 +24,7 @@ export const SECTION_META: Record<
   }
 > = {
   inbox: { label: 'Inbox', icon: InboxIcon },
-  agents: { label: 'Agents', icon: SparkleIcon },
+  agents: { label: 'Agents', icon: CpuIcon },
   issues: { label: 'Issues', icon: SquareKanbanIcon },
   projects: { label: 'Sources', icon: HardDriveIcon },
   automations: { label: 'Automations', icon: ZapIcon },

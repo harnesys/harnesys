@@ -5,6 +5,7 @@ import { useIssueBoardStore, useIssueLabelStore, useIssueStore } from '@/entitie
 import { toClientSchedule, useScheduleStore } from '@/entities/schedule';
 import { toClientThread, useThreadStore } from '@/entities/thread';
 import { toClientWebhook, useWebhookStore } from '@/entities/webhook';
+import { gitOrgSummaryQueryKey, watchGitSummary } from '@/shared/api/git';
 import {
   deskAgentsQuery,
   deskBoardsQuery,
@@ -16,7 +17,6 @@ import {
   deskThreadsQuery,
   deskWebhooksQuery,
 } from './desk-queries';
-import { gitOrgSummaryQueryKey, watchGitSummary } from '@/shared/api/git';
 
 function useDeskSlices(scopeId: string) {
   return useQueries({

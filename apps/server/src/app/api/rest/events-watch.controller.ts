@@ -5,7 +5,6 @@ import type {
   EventsWatchApprovalRecord,
   EventsWatchDeskFrame,
   EventsWatchFleetFrame,
-  EventsWatchGitSummaryFrame,
   EventsWatchIndexStateFrame,
   EventsWatchMaterializationFrame,
   EventsWatchReleaseFrame,

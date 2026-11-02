@@ -16,6 +16,7 @@ import type {
 } from '@harnesys/studio-shared';
 import { env } from '@/shared/config/env';
 import { watchEventSource } from './sse';
+
 export { watchEventSource };
 
 export const eventsWatchUrl = `${env.localHostOrigin}/api/events/watch`;

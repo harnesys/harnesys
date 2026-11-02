@@ -19,9 +19,6 @@ export class GitSummaryEventsAdapter extends GitSummaryEventsPort {
   ) {
     super();
     this.sourceWatchEvents.subscribe((frame) => {
-      if (frame.event.kind !== 'git') {
-        return;
-      }
       const orgId = frame.orgId;
       this.pending.add(orgId);
       const existing = this.timers.get(orgId);
