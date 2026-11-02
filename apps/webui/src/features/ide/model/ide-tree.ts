@@ -1,5 +1,6 @@
 import { EDITOR_SPLIT_MAX_RATIO, EDITOR_SPLIT_MIN_RATIO } from '@/shared/config/constants';
-export type IdeSplitSide = 'left' | 'right';
+export type IdeSplitSide = 'left' | 'right' | 'up' | 'down';
+export type IdeSplitOrientation = 'row' | 'column';
 export type IdeSplitNode =
   | {
       kind: 'group';
@@ -8,6 +9,7 @@ export type IdeSplitNode =
   | {
       kind: 'split';
       splitId: string;
+      orientation: IdeSplitOrientation;
       ratio: number;
       first: IdeSplitNode;
       second: IdeSplitNode;

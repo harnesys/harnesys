@@ -3,6 +3,7 @@ export {
   firstGroupOfLayout,
   type IdeGroup,
   type IdeSplitNode,
+  type IdeSplitOrientation,
   type IdeSplitSide,
   type IdeTab,
   type IdeTabKind,

@@ -18,6 +18,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { parseFileRefDrag } from '@/shared/lib/file-ref-drag';
+import { parseTerminalRefDrag } from '@/shared/lib/terminal-ref-drag';
 import { type ComposerPayload, serializeComposerDoc } from '../model/composer-doc';
 import { fileItems } from '../model/composer-providers';
 import { isValidEntityRef } from '../model/entity-kinds';
@@ -39,6 +40,7 @@ export interface ComposerEditorHandle {
   clear(): void;
   focus(): void;
   insertFileMention(ref: string, href?: string): void;
+  insertTerminal(name: string, id: string, at?: number | null): void;
   insertPlainText(text: string): void;
   posAtPoint(x: number, y: number): number | null;
   insertFileLinks(links: FileChipInput[], at?: number | null): void;
@@ -106,7 +108,7 @@ export const ComposerEditor = forwardRef<ComposerEditorHandle, ComposerEditorPro
                   if (data.types.includes('Files')) {
                     return true;
                   }
-                  if (parseFileRefDrag(data)) {
+                  if (parseFileRefDrag(data) || parseTerminalRefDrag(data)) {
                     event.preventDefault();
                     return true;
                   }
@@ -207,6 +209,21 @@ export const ComposerEditor = forwardRef<ComposerEditorHandle, ComposerEditorPro
       },
       [editor],
     );
+    const insertTerminal = useCallback(
+      (name: string, id: string, at?: number | null) => {
+        if (latest.current.disabled || !isValidEntityRef('terminal', name)) {
+          return;
+        }
+        const position = at ?? editor.state.selection.from;
+        $insertInlineEntity(editor, position, { kind: 'terminal', ref: name, href: id });
+        editor
+          .chain()
+          .insertContentAt(position + 1, ' ')
+          .focus()
+          .run();
+      },
+      [editor],
+    );
     const posAtPoint = useCallback(
       (x: number, y: number): number | null => {
         const coords = editor.view.posAtCoords({ left: x, top: y });
@@ -236,11 +253,12 @@ export const ComposerEditor = forwardRef<ComposerEditorHandle, ComposerEditorPro
         clear: () => editor.commands.clearContent(),
         focus: () => editor.commands.focus(),
         insertFileMention,
+        insertTerminal,
         insertPlainText,
         posAtPoint,
         insertFileLinks,
       }),
-      [editor, insertFileMention, insertPlainText, posAtPoint, insertFileLinks],
+      [editor, insertFileMention, insertTerminal, insertPlainText, posAtPoint, insertFileLinks],
     );
     return (
       <>

@@ -1,8 +1,14 @@
 import { randomUUID } from '@/shared/lib/random-uuid';
 import type { IdeTab } from './ide.store';
-import { collapseLayout, type IdeSplitNode, type IdeSplitSide, replaceGroup } from './ide-tree';
+import {
+  collapseLayout,
+  type IdeSplitNode,
+  type IdeSplitOrientation,
+  type IdeSplitSide,
+  replaceGroup,
+} from './ide-tree';
 
-export type { IdeSplitNode, IdeSplitSide } from './ide-tree';
+export type { IdeSplitNode, IdeSplitOrientation, IdeSplitSide } from './ide-tree';
 export { collapseLayout, replaceGroup, setSplitRatioState } from './ide-tree';
 export interface IdeGroup {
   id: string;
@@ -206,12 +212,15 @@ export function splitGroupState(
   const groups = ws.groups.map((g) => (g.id === group.id ? rest : g)).concat(newGroup);
   const fresh: IdeSplitNode = { kind: 'group', groupId: newGroupId };
   const anchor: IdeSplitNode = { kind: 'group', groupId };
+  const orientation: IdeSplitOrientation = side === 'up' || side === 'down' ? 'column' : 'row';
+  const freshFirst = side === 'left' || side === 'up';
   const split: IdeSplitNode = {
     kind: 'split',
     splitId: randomUUID(),
+    orientation,
     ratio: 0.5,
-    first: side === 'left' ? fresh : anchor,
-    second: side === 'left' ? anchor : fresh,
+    first: freshFirst ? fresh : anchor,
+    second: freshFirst ? anchor : fresh,
   };
   const layout = replaceGroup(ws.layout, groupId, split);
   return {

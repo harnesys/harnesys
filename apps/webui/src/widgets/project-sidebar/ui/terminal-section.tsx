@@ -15,6 +15,7 @@ import {
 } from '@/shared/api';
 import { useOrgId } from '@/shared/config/location';
 import { useStudioNavigation } from '@/shared/config/navigation';
+import { setTerminalRefDrag } from '@/shared/lib/terminal-ref-drag';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import {
@@ -303,6 +304,14 @@ function TerminalRow({
       <button
         type="button"
         className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left"
+        draggable
+        onDragStart={(event) => {
+          event.dataTransfer.effectAllowed = 'copy';
+          setTerminalRefDrag(event.dataTransfer, {
+            id: session.id,
+            name: session.name ?? session.title,
+          });
+        }}
         onClick={onSelect}
         onDoubleClick={() => setEditing(true)}
       >

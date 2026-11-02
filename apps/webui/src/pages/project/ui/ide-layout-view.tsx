@@ -72,6 +72,7 @@ function IdeSplitView({
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [dragging, setDragging] = useState(false);
+  const column = node.orientation === 'column';
   const onResizeStart = (event: ReactMouseEvent) => {
     event.preventDefault();
     const box = ref.current?.getBoundingClientRect();
@@ -80,7 +81,9 @@ function IdeSplitView({
     }
     setDragging(true);
     const onMove = (move: MouseEvent) => {
-      const ratio = (move.clientX - box.left) / box.width;
+      const ratio = column
+        ? (move.clientY - box.top) / box.height
+        : (move.clientX - box.left) / box.width;
       useIdeStore.getState().setSplitRatio(node.splitId, ratio);
     };
     const onUp = () => {
@@ -94,12 +97,16 @@ function IdeSplitView({
   return (
     <div
       ref={ref}
-      className="flex min-h-0 min-w-0 flex-1"
+      className={cn('flex min-h-0 min-w-0 flex-1', column ? 'flex-col' : 'flex-row')}
       data-testid={`ide-split-${node.splitId}`}
     >
       <div
         className="flex min-h-0 min-w-0 flex-col"
-        style={{ width: `${node.ratio * 100}%`, flex: 'none' }}
+        style={
+          column
+            ? { height: `${node.ratio * 100}%`, flex: 'none' }
+            : { width: `${node.ratio * 100}%`, flex: 'none' }
+        }
       >
         <SplitNodeView
           node={node.first}
@@ -110,6 +117,7 @@ function IdeSplitView({
       <Resizer
         label="Resize split"
         testId="ide-split-resize"
+        orientation={column ? 'vertical' : 'horizontal'}
         dragging={dragging}
         onResizeStart={onResizeStart}
       />

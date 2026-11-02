@@ -1,5 +1,5 @@
 import type { PersistedIdeWorkspace, WindowDesk, WindowDesksByOrg } from '@harnesys/studio-shared';
-import { getWindowDesk, putWindowDesk } from '@/shared/api';
+import { type DeskChromeStorage, readDeskChrome, writeDeskChrome } from './desk-chrome-storage';
 
 type WorkspaceReader = () => PersistedIdeWorkspace | null;
 type WorkspaceWriter = (workspace: PersistedIdeWorkspace | null) => void;
@@ -41,18 +41,23 @@ export function schedulePersistDeskChrome(): void {
   }
   persistTimer = setTimeout(() => {
     persistTimer = null;
-    void flushPersistDeskChrome();
+    flushPersistDeskChrome();
   }, 300);
 }
-export async function flushPersistDeskChrome(): Promise<void> {
+export function flushPersistDeskChrome(): void {
   if (!ready || !activeOrgId) {
+    return;
+  }
+  const storage = deskStorage();
+  if (!storage) {
     return;
   }
   const orgId = activeOrgId;
   desksCache = { ...desksCache, [orgId]: currentDesk() };
-  try {
-    desksCache = await putWindowDesk(desksCache);
-  } catch {}
+  writeDeskChrome(storage, desksCache);
+}
+function deskStorage(): DeskChromeStorage | null {
+  return typeof localStorage === 'undefined' ? null : localStorage;
 }
 function currentDesk(): WindowDesk {
   return { workspace: workspaceReader() };
@@ -82,11 +87,12 @@ async function ensureDesksLoaded(): Promise<void> {
   await (loadPromise ?? Promise.resolve());
 }
 async function loadDesks(): Promise<void> {
-  try {
-    const response = await getWindowDesk();
-    desksCache = response.desks ?? {};
-  } catch {
-    return;
+  const storage = deskStorage();
+  if (storage) {
+    desksCache = readDeskChrome(storage);
   }
   desksLoaded = true;
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => flushPersistDeskChrome());
 }

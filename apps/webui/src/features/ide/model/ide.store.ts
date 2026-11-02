@@ -56,7 +56,7 @@ export interface IdeTab {
   worktreeBranch?: string;
   dirty?: boolean;
 }
-export type { IdeGroup, IdeSplitSide, IdeWorkspaceState } from './ide-layout';
+export type { IdeGroup, IdeSplitOrientation, IdeSplitSide, IdeWorkspaceState } from './ide-layout';
 
 export interface OpenAttachmentInput {
   issueId: string;

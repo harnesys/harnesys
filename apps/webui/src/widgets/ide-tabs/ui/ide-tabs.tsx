@@ -1,4 +1,12 @@
-import { EllipsisIcon, PanelLeftIcon, PanelRightIcon, Trash2Icon, XIcon } from 'lucide-react';
+import {
+  EllipsisIcon,
+  PanelBottomIcon,
+  PanelLeftIcon,
+  PanelRightIcon,
+  PanelTopIcon,
+  Trash2Icon,
+  XIcon,
+} from 'lucide-react';
 import { type RefObject, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useActiveOrgStore } from '@/entities/org-machine';
@@ -138,6 +146,20 @@ export function IdeGroupTabs({
             disabled={!activeId}
           >
             <PanelRightIcon /> Split Right
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            data-testid="split-up"
+            onClick={() => useIdeStore.getState().splitGroup(groupId, 'up')}
+            disabled={!activeId}
+          >
+            <PanelTopIcon /> Split Up
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            data-testid="split-down"
+            onClick={() => useIdeStore.getState().splitGroup(groupId, 'down')}
+            disabled={!activeId}
+          >
+            <PanelBottomIcon /> Split Down
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem

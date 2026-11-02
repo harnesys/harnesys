@@ -270,4 +270,3 @@ export {
   type UpdateWebhookInput,
   updateWebhookRecord,
 } from './webhooks';
-export { getWindowDesk, putWindowDesk } from './window-desk';

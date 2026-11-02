@@ -15,6 +15,9 @@ export function inlineEntityText(kind: EntityKind, ref: string, href: string): s
   if (kind === 'file' && href.length > 0) {
     return `[${refBasename(ref)}](${href})`;
   }
+  if (kind === 'terminal') {
+    return href.length > 0 ? `${ref} (terminal id: ${href})` : ref;
+  }
   return ref;
 }
 function refBasename(ref: string): string {
@@ -31,7 +34,7 @@ export const InlineEntityNode = Node.create<InlineEntityAttrs>({
         default: 'skill',
         parseHTML: (element) => element.getAttribute('data-inline-entity'),
         validate: (value): asserts value is EntityKind => {
-          if (value !== 'skill' && value !== 'file') {
+          if (value !== 'skill' && value !== 'file' && value !== 'terminal') {
             throw new Error(`inlineEntity: unknown entity kind ${String(value)}`);
           }
         },
@@ -91,7 +94,9 @@ export function isInlineEntityNode(node: ProseMirrorNode): boolean {
   }
   const kind = node.attrs.kind as EntityKind;
   const ref = node.attrs.ref as string;
-  return (kind === 'skill' || kind === 'file') && isValidEntityRef(kind, ref);
+  return (
+    (kind === 'skill' || kind === 'file' || kind === 'terminal') && isValidEntityRef(kind, ref)
+  );
 }
 export function inlineEntityKind(node: ProseMirrorNode): EntityKind | null {
   if (!isInlineEntityNode(node)) {

@@ -13,7 +13,7 @@ function appendInlineEntity(child: ProseMirrorNode, text: string, skills: string
     }
     return text;
   }
-  if (kind === 'file') {
+  if (kind === 'file' || kind === 'terminal') {
     const href = child.attrs.href as string;
     const gap = text.length > 0 && !text.endsWith(' ') ? ' ' : '';
     return `${text}${gap}${inlineEntityText(kind, ref, href)} `;

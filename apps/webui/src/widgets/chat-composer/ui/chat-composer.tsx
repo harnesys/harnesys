@@ -14,6 +14,7 @@ import { getActiveOrgId } from '@/shared/api/active-org';
 import { getSourceLocation, sourceLocationQueryKey } from '@/shared/api/source-location';
 import { useStudioLocation } from '@/shared/config/location';
 import { parseFileRefDrag } from '@/shared/lib/file-ref-drag';
+import { parseTerminalRefDrag } from '@/shared/lib/terminal-ref-drag';
 import { InputGroup, InputGroupAddon } from '@/shared/ui/input-group';
 import { toast } from '@/shared/ui/toast';
 import { RetryBanner, useRetrySignal } from '@/widgets/thread-run-status';
@@ -222,6 +223,11 @@ export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }
     event.preventDefault();
     const dataTransfer = event.dataTransfer;
     const at = editorRef.current?.posAtPoint(event.clientX, event.clientY) ?? null;
+    const terminal = parseTerminalRefDrag(dataTransfer);
+    if (terminal) {
+      editorRef.current?.insertTerminal(terminal.name, terminal.id, at);
+      return;
+    }
     const drag = parseFileRefDrag(dataTransfer);
     if (drag) {
       setDropPrompt(refDropPrompt(drag, at));
