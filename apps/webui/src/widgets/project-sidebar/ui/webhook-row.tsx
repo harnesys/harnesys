@@ -1,5 +1,6 @@
 import { CogIcon, WebhookIcon } from 'lucide-react';
 import { type Webhook, webhookInk, webhookStatusLabel } from '@/entities/webhook';
+import { setEntityRefDrag } from '@/shared/lib/entity-ref-drag';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { useSidebar } from '@/shared/ui/sidebar';
@@ -33,6 +34,15 @@ export function WebhookRow({
             <button
               type="button"
               className="flex min-w-0 flex-1 items-start gap-2 px-2 py-2 text-left group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
+              draggable
+              onDragStart={(event) => {
+                event.dataTransfer.effectAllowed = 'copy';
+                setEntityRefDrag(event.dataTransfer, {
+                  kind: 'webhook',
+                  id: webhook.id,
+                  name: webhook.name,
+                });
+              }}
               onClick={onSelect}
             />
           }

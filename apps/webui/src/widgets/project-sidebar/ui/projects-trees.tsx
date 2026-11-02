@@ -13,6 +13,7 @@ import {
 import { selfNodeCached } from '@/shared/api/fleet';
 import type { BridgedProject } from '@/shared/api/projects';
 import { useOrgId } from '@/shared/config/location';
+import { setEntityRefDrag } from '@/shared/lib/entity-ref-drag';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { useExplorerExpandStore } from '../model/explorer-expand.store';
@@ -113,6 +114,11 @@ function ProjectRoot({
       <button
         type="button"
         className={cn('flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1 text-left text-xs')}
+        draggable
+        onDragStart={(event) => {
+          event.dataTransfer.effectAllowed = 'copy';
+          setEntityRefDrag(event.dataTransfer, { kind: 'source', id: projectId, name });
+        }}
         onClick={onToggle}
       >
         <SourceRootIcon

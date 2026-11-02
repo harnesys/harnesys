@@ -3,8 +3,7 @@ import { Node } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { EntityChipView } from '../ui/entity-chip-view';
-import type { EntityKind } from './entity-kinds';
-import { isValidEntityRef } from './entity-kinds';
+import { type EntityKind, isEntityKind, isValidEntityRef } from './entity-kinds';
 export interface InlineEntityAttrs {
   kind: EntityKind;
   ref: string;
@@ -15,8 +14,8 @@ export function inlineEntityText(kind: EntityKind, ref: string, href: string): s
   if (kind === 'file' && href.length > 0) {
     return `[${refBasename(ref)}](${href})`;
   }
-  if (kind === 'terminal') {
-    return href.length > 0 ? `${ref} (terminal id: ${href})` : ref;
+  if (kind !== 'skill' && href.length > 0) {
+    return `${ref} (${kind} id: ${href})`;
   }
   return ref;
 }
@@ -34,7 +33,7 @@ export const InlineEntityNode = Node.create<InlineEntityAttrs>({
         default: 'skill',
         parseHTML: (element) => element.getAttribute('data-inline-entity'),
         validate: (value): asserts value is EntityKind => {
-          if (value !== 'skill' && value !== 'file' && value !== 'terminal') {
+          if (!isEntityKind(value)) {
             throw new Error(`inlineEntity: unknown entity kind ${String(value)}`);
           }
         },
@@ -94,9 +93,7 @@ export function isInlineEntityNode(node: ProseMirrorNode): boolean {
   }
   const kind = node.attrs.kind as EntityKind;
   const ref = node.attrs.ref as string;
-  return (
-    (kind === 'skill' || kind === 'file' || kind === 'terminal') && isValidEntityRef(kind, ref)
-  );
+  return isEntityKind(kind) && isValidEntityRef(kind, ref);
 }
 export function inlineEntityKind(node: ProseMirrorNode): EntityKind | null {
   if (!isInlineEntityNode(node)) {

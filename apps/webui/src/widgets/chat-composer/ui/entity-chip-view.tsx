@@ -1,6 +1,14 @@
 import type { NodeViewProps } from '@tiptap/core';
 import { NodeViewWrapper } from '@tiptap/react';
-import { SquareTerminalIcon, ZapIcon } from 'lucide-react';
+import {
+  CalendarClockIcon,
+  HardDriveIcon,
+  type LucideIcon,
+  SquareKanbanIcon,
+  SquareTerminalIcon,
+  WebhookIcon,
+  ZapIcon,
+} from 'lucide-react';
 import { FileTypeIcon } from '@/shared/ui/icons';
 import { type EntityKind, isEntityKind, isValidEntityRef } from '../model/entity-kinds';
 
@@ -28,8 +36,15 @@ function EntityChipIcon({ kind, ref }: { kind: EntityKind; ref: string }) {
   if (kind === 'file') {
     return <FileTypeIcon name={ref} size="xs" />;
   }
-  if (kind === 'terminal') {
-    return <SquareTerminalIcon className="size-3 shrink-0 text-muted-foreground" />;
-  }
-  return <ZapIcon className="size-3 shrink-0 text-muted-foreground" />;
+  const Icon = ENTITY_ICONS[kind];
+  return <Icon className="size-3 shrink-0 text-muted-foreground" />;
 }
+
+const ENTITY_ICONS: Record<Exclude<EntityKind, 'file'>, LucideIcon> = {
+  skill: ZapIcon,
+  terminal: SquareTerminalIcon,
+  source: HardDriveIcon,
+  board: SquareKanbanIcon,
+  schedule: CalendarClockIcon,
+  webhook: WebhookIcon,
+};

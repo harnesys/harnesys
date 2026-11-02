@@ -7,18 +7,18 @@ export interface ComposerPayload {
 function appendInlineEntity(child: ProseMirrorNode, text: string, skills: string[]): string {
   const kind = inlineEntityKind(child);
   const ref = child.attrs.ref as string;
+  if (!kind) {
+    return text;
+  }
   if (kind === 'skill') {
     if (!skills.includes(ref)) {
       skills.push(ref);
     }
     return text;
   }
-  if (kind === 'file' || kind === 'terminal') {
-    const href = child.attrs.href as string;
-    const gap = text.length > 0 && !text.endsWith(' ') ? ' ' : '';
-    return `${text}${gap}${inlineEntityText(kind, ref, href)} `;
-  }
-  return text;
+  const href = child.attrs.href as string;
+  const gap = text.length > 0 && !text.endsWith(' ') ? ' ' : '';
+  return `${text}${gap}${inlineEntityText(kind, ref, href)} `;
 }
 function appendInlineChild(child: ProseMirrorNode, text: string, skills: string[]): string {
   if (child.isText) {
