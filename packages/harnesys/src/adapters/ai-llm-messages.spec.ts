@@ -28,7 +28,7 @@ const PROVIDER_CLASSES = [
   'mistral',
   'xai',
   'alibaba',
-  'moonshotai',
+  'kimi',
 ] as const;
 
 describe('media insert wire shapes', () => {

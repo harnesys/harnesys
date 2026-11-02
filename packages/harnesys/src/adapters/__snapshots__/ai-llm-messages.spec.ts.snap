@@ -408,9 +408,9 @@ exports[`media insert wire shapes wire shape for alibaba: alibaba wire shape 1`]
 }
 `;
 
-exports[`media insert wire shapes wire shape for moonshotai: moonshotai wire shape 1`] = `
+exports[`media insert wire shapes wire shape for kimi: kimi wire shape 1`] = `
 {
-  "driver": "moonshotai",
+  "driver": "kimi",
   "messages": [
     {
       "content": "look at this",

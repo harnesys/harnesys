@@ -9,7 +9,6 @@ import { listGroqModels } from './groq.ts';
 import { listKimiModels } from './kimi.ts';
 import { listMinimaxModels } from './minimax.ts';
 import { listMistralModels } from './mistral.ts';
-import { listMoonshotAIModels } from './moonshotai.ts';
 import { listNvidiaModels } from './nvidia.ts';
 import {
   listOllamaCloudModels,
@@ -80,7 +79,6 @@ const drivers: Record<Driver, DriverDiscover> = {
     defaultApiUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
     list: listAlibabaModels,
   },
-  moonshotai: { defaultApiUrl: 'https://api.moonshot.ai/v1', list: listMoonshotAIModels },
 };
 export function discoverAdapter(driver: string): DriverDiscover {
   if (!(DRIVERS as readonly string[]).includes(driver)) {

@@ -136,7 +136,6 @@ export function buildProvider(
     case 'alibaba':
     case 'qwen':
       return (m: string) => createAlibaba(opts as never)(m);
-    case 'moonshotai':
     case 'moonshot':
     case 'kimi':
       return (m: string) => createMoonshotAI(opts as never)(m);

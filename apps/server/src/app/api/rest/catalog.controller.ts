@@ -38,7 +38,6 @@ const DEFAULT_URLS: Record<(typeof DRIVERS)[number], string> = {
   xiaomi: 'https://api.xiaomimimo.com/v1',
   qwen: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
   alibaba: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
-  moonshotai: 'https://api.moonshot.ai/v1',
 };
 
 const KIMI_ENDPOINTS: CatalogEndpointResponse[] = [
@@ -70,7 +69,6 @@ const KIMI_ENDPOINTS: CatalogEndpointResponse[] = [
 
 const DRIVER_ENDPOINTS: Partial<Record<(typeof DRIVERS)[number], CatalogEndpointResponse[]>> = {
   kimi: KIMI_ENDPOINTS,
-  moonshotai: KIMI_ENDPOINTS,
 };
 
 function driverEndpoints(
