@@ -208,6 +208,8 @@ export {
   deleteOrgTerminal,
   deleteTerminal,
   listOrgTerminals,
+  renameOrgTerminal,
+  renameTerminal,
   stopOrgTerminal,
   stopTerminal,
   type TerminalSessionRecord,

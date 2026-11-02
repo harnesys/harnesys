@@ -11,7 +11,7 @@ import { dockerProcessBackend } from './docker-process-backend.ts';
 import { hostProcessBackend, type ProcessSpawnBackend } from './process-job-backend.ts';
 import { createSshProcessBackend } from './ssh-process-backend.ts';
 
-const SCROLLBACK_CHARS = 256000;
+const SCROLLBACK_CHARS = 1000000;
 const MAX_RUNNING_PER_CWD = 16;
 type DataListener = (chunk: string) => void;
 type ExitListener = (code: number | null) => void;
@@ -233,6 +233,27 @@ export function createProcessJobRegistry(
       } catch {
         return false;
       }
+    },
+    rename(id, name): boolean {
+      const job = byId.get(id);
+      const trimmed = name.trim();
+      if (!job || trimmed === '') {
+        return false;
+      }
+      const nextKey = nameKey(job.record.orgId, trimmed);
+      const owner = byName.get(nextKey);
+      if (owner !== undefined && owner !== id) {
+        throw new Error(`session name already in use: ${trimmed}`);
+      }
+      if (job.record.name !== undefined) {
+        const prevKey = nameKey(job.record.orgId, job.record.name);
+        if (byName.get(prevKey) === id) {
+          byName.delete(prevKey);
+        }
+      }
+      byName.set(nextKey, id);
+      job.record = { ...job.record, name: trimmed, title: trimmed };
+      return true;
     },
     resize(id, cols, rows): boolean {
       const job = byId.get(id);

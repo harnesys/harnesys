@@ -11,7 +11,7 @@ import {
 import { AgentRecordAvatar, useAgentStore } from '@/entities/agent';
 import { useIssueBoardStore } from '@/entities/issue';
 import { useThreadStore } from '@/entities/thread';
-import { useProjectTerminals } from '@/features/desk';
+import { useOrgTerminals } from '@/features/desk';
 import type { IdeTab } from '@/features/ide';
 import { resolveBoardIcon } from '@/features/manage-issues';
 import { entityColorTintClass } from '@/shared/lib/entity-colors';
@@ -98,7 +98,7 @@ export function useTabLabel(tab: IdeTab): string {
   const agent = useAgentStore((state) =>
     tab.kind === 'spawn' && tab.agentId ? (state.byId(tab.agentId) ?? undefined) : undefined,
   );
-  const terminalsQuery = useProjectTerminals(tab.projectId);
+  const terminals = useOrgTerminals();
   if (tab.kind === 'file' && tab.path) {
     const base = fileBaseName(tab.path);
     return tab.worktreeBranch ? `${base} · ${tab.worktreeBranch}` : base;
@@ -122,7 +122,7 @@ export function useTabLabel(tab: IdeTab): string {
     return agent?.name ?? 'Spawn';
   }
   if (tab.kind === 'terminal') {
-    const session = terminalsQuery.find((item) => item.id === tab.terminalSessionId);
+    const session = terminals.find((item) => item.id === tab.terminalSessionId);
     return session?.title ?? 'Terminal';
   }
   return tab.kind;

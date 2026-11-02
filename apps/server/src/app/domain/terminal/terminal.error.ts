@@ -1,8 +1,14 @@
-import { EntityNotFoundException, ValidationException } from '@harnesys/brix';
+import { ConflictException, EntityNotFoundException, ValidationException } from '@harnesys/brix';
 
 export class TerminalSessionNotFoundException extends EntityNotFoundException {
   constructor(sessionId: string) {
     super(`Terminal session not found: ${sessionId}`, { sessionId });
+  }
+}
+
+export class TerminalNameConflictException extends ConflictException {
+  constructor(title: string) {
+    super(`Terminal title already in use: ${title}`, { title });
   }
 }
 

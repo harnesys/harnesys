@@ -13,8 +13,3 @@ function useOrgTerminalsQuery() {
 export function useOrgTerminals(): TerminalSessionRecord[] {
   return useOrgTerminalsQuery().data ?? [];
 }
-
-export function useProjectTerminals(projectId: string): TerminalSessionRecord[] {
-  const terminals = useOrgTerminalsQuery().data;
-  return terminals?.filter((item) => item.projectId === projectId) ?? [];
-}

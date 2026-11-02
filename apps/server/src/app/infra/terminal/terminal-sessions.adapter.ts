@@ -2,12 +2,14 @@ import { Injectable } from '@harnesys/brix';
 import type { TerminalSessionRecord } from '@harnesys/studio-shared';
 import type { ProcessJobRegistry } from 'harnesys';
 import { createProcessJobRegistry, type ProcessJobRecord, sweepSshSockets } from 'harnesys';
+import { TerminalNameConflictException } from '../../domain/terminal/terminal.error.ts';
 import { TerminalEventsPort } from '../../domain/terminal/terminal-events.port.ts';
 import {
   type CreateTerminalSessionInput,
   type TerminalDataListener,
   type TerminalExitListener,
   type TerminalJobSnapshot,
+  type TerminalScrollback,
   TerminalSessionsPort,
 } from '../../domain/terminal/terminal-session.port.ts';
 
@@ -144,6 +146,19 @@ export class TerminalSessionsAdapter extends TerminalSessionsPort {
     return this.jobs.write(sessionId, data);
   }
 
+  rename(sessionId: string, title: string): TerminalSessionRecord | null {
+    if (this.jobs.get(sessionId) === null) {
+      return null;
+    }
+    try {
+      this.jobs.rename(sessionId, title);
+    } catch {
+      throw new TerminalNameConflictException(title);
+    }
+    this.emitChanged(sessionId);
+    return this.get(sessionId);
+  }
+
   resize(sessionId: string, cols: number, rows: number): boolean {
     return this.jobs.resize(sessionId, cols, rows);
   }
@@ -156,8 +171,12 @@ export class TerminalSessionsAdapter extends TerminalSessionsPort {
     return this.jobs.subscribe(sessionId, onData, onExit);
   }
 
-  scrollback(sessionId: string): string | null {
-    return this.jobs.read(sessionId)?.text ?? null;
+  scrollback(sessionId: string): TerminalScrollback | null {
+    const result = this.jobs.read(sessionId);
+    if (result === null) {
+      return null;
+    }
+    return { text: result.text, truncated: result.truncated };
   }
 
   stop(sessionId: string): boolean {

@@ -1,9 +1,10 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post } from '@harnesys/brix';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@harnesys/brix';
 import type { TerminalSessionRecord } from '@harnesys/studio-shared';
 import { z } from 'zod';
 import { CreateTerminalSessionUseCase } from '../../application/terminal/create-terminal-session.use-case.ts';
 import { DeleteTerminalSessionUseCase } from '../../application/terminal/delete-terminal-session.use-case.ts';
 import { ListTerminalSessionsUseCase } from '../../application/terminal/list-terminal-sessions.use-case.ts';
+import { RenameTerminalSessionUseCase } from '../../application/terminal/rename-terminal-session.use-case.ts';
 import { StopTerminalSessionUseCase } from '../../application/terminal/stop-terminal-session.use-case.ts';
 
 const CreateTerminalBodySchema = z.object({
@@ -11,12 +12,18 @@ const CreateTerminalBodySchema = z.object({
 });
 type CreateTerminalBody = z.infer<typeof CreateTerminalBodySchema>;
 
+const RenameTerminalBodySchema = z.object({
+  title: z.string().trim().min(1).max(80),
+});
+type RenameTerminalBody = z.infer<typeof RenameTerminalBodySchema>;
+
 @Controller('orgs/:orgId/sources/:sourceId/terminals')
 export class TerminalsController {
   constructor(
     private readonly listSessions: ListTerminalSessionsUseCase,
     private readonly createSession: CreateTerminalSessionUseCase,
     private readonly deleteSession: DeleteTerminalSessionUseCase,
+    private readonly renameSession: RenameTerminalSessionUseCase,
     private readonly stopSession: StopTerminalSessionUseCase,
   ) {}
 
@@ -35,6 +42,16 @@ export class TerminalsController {
     @Body(CreateTerminalBodySchema) body: CreateTerminalBody,
   ): TerminalSessionRecord {
     return this.createSession.execute({ orgId, projectId: sourceId, cwd: body.cwd });
+  }
+
+  @Patch(':sessionId')
+  rename(
+    @Param('orgId') _orgId: string,
+    @Param('sourceId') sourceId: string,
+    @Param('sessionId') sessionId: string,
+    @Body(RenameTerminalBodySchema) body: RenameTerminalBody,
+  ): TerminalSessionRecord {
+    return this.renameSession.execute({ projectId: sourceId, sessionId, title: body.title });
   }
 
   @Post(':sessionId/stop')
@@ -63,12 +80,21 @@ export class OrgTerminalsController {
   constructor(
     private readonly listSessions: ListTerminalSessionsUseCase,
     private readonly deleteSession: DeleteTerminalSessionUseCase,
+    private readonly renameSession: RenameTerminalSessionUseCase,
     private readonly stopSession: StopTerminalSessionUseCase,
   ) {}
 
   @Get()
   list(@Param('orgId') orgId: string): TerminalSessionRecord[] {
     return this.listSessions.execute({ orgId });
+  }
+
+  @Patch(':sessionId')
+  rename(
+    @Param('sessionId') sessionId: string,
+    @Body(RenameTerminalBodySchema) body: RenameTerminalBody,
+  ): TerminalSessionRecord {
+    return this.renameSession.execute({ sessionId, title: body.title });
   }
 
   @Post(':sessionId/stop')

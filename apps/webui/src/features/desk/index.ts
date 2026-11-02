@@ -50,6 +50,6 @@ export {
   useWaitingThreads,
   useWebhooksInProjects,
 } from './model/use-desk';
-export { useOrgTerminals, useProjectTerminals } from './model/use-org-terminals';
+export { useOrgTerminals } from './model/use-org-terminals';
 export { DeskSync } from './ui/desk-sync';
 export { OrgDeskSync } from './ui/org-desk-sync';

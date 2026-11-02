@@ -1,16 +1,20 @@
 import { FitAddon } from '@xterm/addon-fit';
 import { Terminal } from '@xterm/xterm';
 import { useEffect, useRef, useState } from 'react';
+import { useOrgTerminals } from '@/features/desk';
+import { ApiError } from '@/shared/api/client';
 import type { NodeTicketGrant } from '@/shared/api/node-tickets';
 import { requestNodeTicket } from '@/shared/api/node-tickets';
 import { hostWsBase } from '@/shared/config/env';
 import { cn } from '@/shared/lib/utils';
+import { type TerminalConnectionStatus, TerminalStatusBar } from './terminal-status-bar';
 import '@xterm/xterm/css/xterm.css';
 
 type ServerMessage =
   | {
       type: 'history';
       data: string;
+      truncated: boolean;
     }
   | {
       type: 'out';
@@ -69,36 +73,22 @@ function createTerminalSocket(
   };
   return ws;
 }
-async function openTerminalSocket(args: {
-  sessionId: string;
-  readOnly: boolean;
-  cols: number;
-  rows: number;
-  isDisposed: () => boolean;
-  isExited: () => boolean;
-  onTicketError: (message: string) => void;
-  hooks: TerminalSocketHooks;
-}): Promise<WebSocket | null> {
-  let grant: NodeTicketGrant;
+async function requestTerminalAccess(): Promise<{ ticket: string; readOnly: boolean }> {
   try {
-    grant = await requestNodeTicket(args.readOnly ? ['terminal.open:ro'] : ['terminal.open']);
-  } catch (err) {
-    if (!args.isDisposed()) {
-      args.onTicketError(err instanceof Error ? err.message : 'ticket fetch failed');
+    const grant: NodeTicketGrant = await requestNodeTicket(['terminal.open']);
+    return { ticket: grant.ticket, readOnly: false };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403) {
+      const grant: NodeTicketGrant = await requestNodeTicket(['terminal.open:ro']);
+      return { ticket: grant.ticket, readOnly: true };
     }
-    return null;
+    throw error;
   }
-  if (args.isDisposed()) {
-    return null;
-  }
-  const ro = args.readOnly ? '&ro=1' : '';
-  const url = `${hostWsBase()}/api/terminals/${encodeURIComponent(args.sessionId)}?cols=${args.cols}&rows=${args.rows}${ro}&ticket=${encodeURIComponent(grant.ticket)}`;
-  return createTerminalSocket(url, args.isDisposed, args.isExited, args.hooks);
 }
 function applyServerMessage(
   term: Terminal,
   raw: unknown,
-  onProcessExit: (code: number | null) => void,
+  handlers: { onProcessExit: (code: number | null) => void; onTruncated: () => void },
 ): void {
   if (typeof raw !== 'string') {
     return;
@@ -109,33 +99,38 @@ function applyServerMessage(
   } catch {
     return;
   }
-  if (message.type === 'history' || message.type === 'out') {
+  if (message.type === 'history') {
+    if (message.truncated) {
+      handlers.onTruncated();
+    }
+    term.write(message.data);
+    return;
+  }
+  if (message.type === 'out') {
     term.write(message.data);
     return;
   }
   if (message.type === 'exit') {
-    onProcessExit(message.code);
+    handlers.onProcessExit(message.code);
   }
 }
-export function TerminalView({
-  sessionId,
-  readOnly,
-  projectId,
-}: {
-  sessionId: string;
-  readOnly?: boolean;
-  projectId?: string;
-}) {
+export function TerminalView({ sessionId, projectId }: { sessionId: string; projectId?: string }) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const [status, setStatus] = useState<'connecting' | 'live' | 'exited' | 'error'>('connecting');
+  const session = useOrgTerminals().find((item) => item.id === sessionId);
+  const [status, setStatus] = useState<TerminalConnectionStatus>('connecting');
   const [error, setError] = useState<string | null>(null);
+  const [truncated, setTruncated] = useState(false);
+  const [exitCode, setExitCode] = useState<number | null>(null);
+  const [readOnly, setReadOnly] = useState(false);
+  const [dims, setDims] = useState({ cols: 80, rows: 24 });
   useEffect(() => {
     const host = hostRef.current;
     if (!host) {
       return;
     }
     const term = new Terminal({
-      cursorBlink: readOnly !== true,
+      cursorBlink: true,
+      scrollback: 10000,
       fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
       fontSize: 13,
       theme: {
@@ -152,6 +147,7 @@ export function TerminalView({
     fit.fit();
     let disposed = false;
     let exited = false;
+    let readonly = false;
     let ws: WebSocket | null = null;
     const send = (message: ClientMessage) => {
       if (ws?.readyState === WebSocket.OPEN) {
@@ -161,6 +157,7 @@ export function TerminalView({
     const onProcessExit = (code: number | null): void => {
       exited = true;
       setStatus('exited');
+      setExitCode(code);
       term.writeln('');
       term.writeln(`\r\n[Process exited${code === null ? '' : ` with code ${code}`}]`);
     };
@@ -168,37 +165,56 @@ export function TerminalView({
       setStatus('live');
       setError(null);
       fit.fit();
+      setDims({ cols: term.cols, rows: term.rows });
       send({ type: 'resize', cols: term.cols, rows: term.rows });
     };
     const onSocketMessage = (data: unknown): void => {
-      applyServerMessage(term, data, onProcessExit);
+      applyServerMessage(term, data, { onProcessExit, onTruncated: () => setTruncated(true) });
     };
     const onSocketFail = (reason: string): void => {
       setStatus('error');
       setError(reason);
     };
     const openSocket = async (): Promise<void> => {
-      ws = await openTerminalSocket({
-        sessionId,
-        readOnly: readOnly === true,
-        cols: term.cols || 80,
-        rows: term.rows || 24,
-        isDisposed: () => disposed,
-        isExited: () => exited,
-        onTicketError: (message) => {
+      let access: { ticket: string; readOnly: boolean };
+      try {
+        access = await requestTerminalAccess();
+      } catch (err) {
+        if (!disposed) {
           setStatus('error');
-          setError(message);
+          setError(err instanceof Error ? err.message : 'ticket fetch failed');
+        }
+        return;
+      }
+      if (disposed) {
+        return;
+      }
+      readonly = access.readOnly;
+      setReadOnly(readonly);
+      if (readonly) {
+        term.options.cursorBlink = false;
+      }
+      const ro = readonly ? '&ro=1' : '';
+      const url = `${hostWsBase()}/api/terminals/${encodeURIComponent(sessionId)}?cols=${term.cols || 80}&rows=${term.rows || 24}${ro}&ticket=${encodeURIComponent(access.ticket)}`;
+      ws = createTerminalSocket(
+        url,
+        () => disposed,
+        () => exited,
+        {
+          onOpen: onSocketOpen,
+          onMessage: onSocketMessage,
+          onFail: onSocketFail,
         },
-        hooks: { onOpen: onSocketOpen, onMessage: onSocketMessage, onFail: onSocketFail },
-      });
+      );
     };
     const dataDisposable = term.onData((data) => {
-      if (readOnly !== true) {
+      if (!readonly) {
         send({ type: 'in', data });
       }
     });
     const resizeDisposable = term.onResize(({ cols, rows }) => {
-      if (readOnly !== true) {
+      setDims({ cols, rows });
+      if (!readonly) {
         send({ type: 'resize', cols, rows });
       }
     });
@@ -218,19 +234,38 @@ export function TerminalView({
       ws?.close();
       term.dispose();
     };
-  }, [sessionId, projectId, readOnly]);
+  }, [sessionId, projectId]);
   return (
     <div className="relative flex min-h-0 flex-1 flex-col" data-testid="ide-terminal">
+      {truncated ? (
+        <div
+          className="shrink-0 border-border/40 border-b bg-muted/40 px-3 py-1 text-[11px] text-muted-foreground"
+          data-testid="terminal-truncated"
+        >
+          Earlier output was trimmed
+        </div>
+      ) : null}
       <div ref={hostRef} className="min-h-0 flex-1 px-2 py-2" />
+      <TerminalStatusBar
+        title={session?.title ?? 'Terminal'}
+        origin={session?.origin ?? 'user'}
+        cwd={session?.cwd ?? ''}
+        status={status}
+        exitCode={exitCode}
+        readOnly={readOnly}
+        cols={dims.cols}
+        rows={dims.rows}
+        createdAt={session?.createdAt ?? ''}
+      />
       {status === 'connecting' ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-muted-foreground text-sm">
-          Connecting…
+          Connecting...
         </div>
       ) : null}
       {status === 'error' ? (
         <div
           className={cn(
-            'absolute inset-x-0 bottom-0 border-t bg-destructive/10 px-3 py-2 text-destructive text-xs',
+            'absolute inset-x-0 bottom-6 border-t bg-destructive/10 px-3 py-2 text-destructive text-xs',
           )}
         >
           {error ?? 'Terminal unavailable'}

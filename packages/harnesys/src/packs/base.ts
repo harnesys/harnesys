@@ -123,15 +123,25 @@ export const shellCapability = definePack<ShellPackPorts, ShellPackSpec>({
       },
       {
         name: 'terminal_spawn',
-        description: 'Start a named terminal session (host, ssh or REPL) kept across calls.',
+        description:
+          'Start a named terminal session (host, ssh or REPL) kept across calls; shared with the user in the sidebar.',
       },
-      { name: 'terminal_write', description: 'Write to the stdin of a terminal session.' },
+      {
+        name: 'terminal_write',
+        description: 'Write to a shared session stdin; 0x03 = Ctrl+C, 0x04 = EOF.',
+      },
       {
         name: 'terminal_read',
-        description: 'Read session output; optional until-regex blocking read (max 30s).',
+        description: 'Read session output (non-destructive); optional until-regex (max 30s).',
       },
-      { name: 'terminal_kill', description: 'Kill a terminal session or background job.' },
-      { name: 'terminal_list', description: 'List sessions and background jobs.' },
+      {
+        name: 'terminal_kill',
+        description: 'Kill a session or background job; also the user shell if user-opened.',
+      },
+      {
+        name: 'terminal_list',
+        description: 'List sessions and background jobs, including user-opened ones.',
+      },
       { name: 'port_forward', description: 'Open an SSH port forward as a background job.' },
       { name: 'remote_copy', description: 'Copy files over SSH via tar pipe (push/pull).' },
     ],

@@ -23,6 +23,34 @@ export function createTerminal(projectId: string, cwd?: string): Promise<Termina
   });
 }
 
+export function renameTerminal(
+  projectId: string,
+  sessionId: string,
+  title: string,
+): Promise<TerminalSessionRecord> {
+  return apiJson(`${terminalsUrl(projectId)}/${encodeURIComponent(sessionId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ title }),
+  });
+}
+
+export function renameOrgTerminal(
+  sessionId: string,
+  title: string,
+): Promise<TerminalSessionRecord> {
+  const orgId = getActiveOrgId();
+  if (!orgId) {
+    throw new Error('No active org');
+  }
+  return apiJson(
+    `/api/orgs/${encodeURIComponent(orgId)}/terminals/${encodeURIComponent(sessionId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ title }),
+    },
+  );
+}
+
 export function deleteTerminal(projectId: string, sessionId: string): Promise<void> {
   return apiJson(`${terminalsUrl(projectId)}/${encodeURIComponent(sessionId)}`, {
     method: 'DELETE',

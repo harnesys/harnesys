@@ -44,6 +44,31 @@ describe('process job registry named sessions', () => {
     expect(again.name).toBe('svc');
   });
 
+  test('rename updates title and name and frees the previous name', () => {
+    const registry = createProcessJobRegistry();
+    const record = registry.start({
+      cwd: '/tmp',
+      command: 'true',
+      mode: 'pipes',
+      orgId: 'org-1',
+      name: 'old',
+      title: 'old',
+    });
+    expect(registry.rename(record.id, 'renamed')).toBe(true);
+    expect(registry.get(record.id)?.title).toBe('renamed');
+    expect(registry.get(record.id)?.name).toBe('renamed');
+    expect(registry.getByName('org-1', 'renamed')?.id).toBe(record.id);
+    expect(registry.getByName('org-1', 'old')).toBeNull();
+  });
+
+  test('rename rejects duplicate names within the same org', () => {
+    const registry = createProcessJobRegistry();
+    registry.start({ cwd: '/tmp', command: 'true', mode: 'pipes', orgId: 'org-1', name: 'taken' });
+    const other = registry.start({ cwd: '/tmp', command: 'true', mode: 'pipes', orgId: 'org-1' });
+    expect(() => registry.rename(other.id, 'taken')).toThrow('session name already in use');
+    expect(registry.rename('missing', 'any')).toBe(false);
+  });
+
   test('reapOrg kills running jobs and keeps other orgs untouched', () => {
     const registry = createProcessJobRegistry();
     const mine = registry.start({

@@ -1,11 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { CircleStopIcon, PlusIcon, SquareTerminalIcon, Trash2Icon } from 'lucide-react';
+import { CircleStopIcon, PencilIcon, PlusIcon, SquareTerminalIcon, Trash2Icon } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useProjects } from '@/entities/project';
 import { deskTerminalsKey, useOrgTerminals } from '@/features/desk';
 import { useIdeStore, useOpenNewTerminal, useOpenTerminalTab } from '@/features/ide';
 import {
   deleteOrgTerminal,
   deleteTerminal,
+  renameOrgTerminal,
+  renameTerminal,
   stopOrgTerminal,
   stopTerminal,
   type TerminalSessionRecord,
@@ -152,6 +155,29 @@ export function TerminalSection({
       });
     },
   });
+  const rename = useMutation({
+    mutationFn: ({
+      projectId,
+      sessionId,
+      agent,
+      title,
+    }: {
+      projectId: string;
+      sessionId: string;
+      agent: boolean;
+      title: string;
+    }) =>
+      agent ? renameOrgTerminal(sessionId, title) : renameTerminal(projectId, sessionId, title),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: deskTerminalsKey });
+    },
+    onError: (error) => {
+      toast.add({
+        title: 'Failed to rename terminal',
+        description: error instanceof Error ? error.message : undefined,
+      });
+    },
+  });
   if (rows.length === 0) {
     return (
       <TerminalCreateMenu
@@ -185,9 +211,50 @@ export function TerminalSection({
               agent: session.origin === 'agent',
             })
           }
+          onRename={(title) =>
+            rename.mutate({
+              projectId,
+              sessionId: session.id,
+              agent: session.origin === 'agent',
+              title,
+            })
+          }
         />
       ))}
     </div>
+  );
+}
+function TerminalTitleInput({
+  initialValue,
+  onFinish,
+}: {
+  initialValue: string;
+  onFinish: (title: string) => void;
+}) {
+  const [value, setValue] = useState(initialValue);
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      onFinish(value);
+    } else if (event.key === 'Escape') {
+      onFinish('');
+    }
+  };
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      value={value}
+      onChange={(event) => setValue(event.target.value)}
+      onKeyDown={handleKeyDown}
+      onBlur={() => onFinish(value)}
+      className="min-w-0 flex-1 rounded bg-transparent px-1 text-sm outline-none ring-1 ring-sidebar-ring/40"
+      data-testid="terminal-rename-input"
+    />
   );
 }
 function TerminalRow({
@@ -196,13 +263,34 @@ function TerminalRow({
   onSelect,
   onStop,
   onDelete,
+  onRename,
 }: {
   session: TerminalSessionRecord;
   selected: boolean;
   onSelect: () => void;
   onStop: () => void;
   onDelete: () => void;
+  onRename: (title: string) => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const finishRename = (title: string) => {
+    setEditing(false);
+    const trimmed = title.trim();
+    if (trimmed !== '' && trimmed !== session.title) {
+      onRename(trimmed);
+    }
+  };
+  if (editing) {
+    return (
+      <div
+        className="flex items-center gap-2 rounded-md px-2 py-1"
+        data-testid={`terminal-${session.id}`}
+      >
+        <SquareTerminalIcon className="size-3.5 shrink-0 text-muted-foreground" />
+        <TerminalTitleInput initialValue={session.title} onFinish={finishRename} />
+      </div>
+    );
+  }
   return (
     <div
       className={cn(
@@ -216,6 +304,7 @@ function TerminalRow({
         type="button"
         className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left"
         onClick={onSelect}
+        onDoubleClick={() => setEditing(true)}
       >
         <SquareTerminalIcon className="size-3.5 shrink-0 text-muted-foreground" />
         <span className="flex min-w-0 flex-1 items-center gap-1.5">
@@ -242,6 +331,21 @@ function TerminalRow({
         ) : null}
       </button>
       <div className="hidden items-center gap-0.5 pr-1 group-focus-within/term:flex group-hover/term:flex">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          className="size-5"
+          aria-label="Rename terminal"
+          title="Rename terminal"
+          data-testid={`terminal-rename-${session.id}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            setEditing(true);
+          }}
+        >
+          <PencilIcon className="size-3 text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
+        </Button>
         {!session.exited ? (
           <Button
             type="button"

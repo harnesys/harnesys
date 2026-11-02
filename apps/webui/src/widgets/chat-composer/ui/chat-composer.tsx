@@ -1,11 +1,12 @@
 import { DEFAULT_MODE_ID } from '@harnesys/studio-shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { Agent } from '@/entities/agent';
 import { useScheduleStore } from '@/entities/schedule';
 import { useSessionStore } from '@/entities/session';
 import type { Thread } from '@/entities/thread';
 import { useThreadWorktreeStore } from '@/entities/thread';
-import { useSelectedAgent, useSelectedThread, useThreadEvents } from '@/features/desk';
+import { useThreadEvents } from '@/features/desk';
 import { ThreadQueueStack } from '@/features/message-queue';
 import { type PendingHitl, pendingHitl, useRunStreamState } from '@/features/send-message';
 import { providersQuery } from '@/shared/api';
@@ -60,9 +61,7 @@ import { ThreadPlanBanner } from './thread-plan-banner';
 import { VoiceInputButton } from './voice-input-button';
 import { VoiceStatusBar } from './voice-status-bar';
 
-export function ChatComposer() {
-  const agent = useSelectedAgent();
-  const thread = useSelectedThread();
+export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }) {
   const queryClient = useQueryClient();
   const { orgId } = useStudioLocation();
   const events = useThreadEvents(thread?.id ?? null);
@@ -94,7 +93,7 @@ export function ChatComposer() {
     modelDefaultEffort,
   );
   const verified = agentModelVerified(modelId, providers);
-  const disabled = !agent || !thread || sending || Boolean(hitl);
+  const disabled = sending || Boolean(hitl);
   const contextWindow = modelContextWindow(modelId, providers);
   const modelIncomplete = contextWindow === 0;
   const usage = composerUsage(events, contextWindow);

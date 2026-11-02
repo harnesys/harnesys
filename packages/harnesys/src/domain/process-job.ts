@@ -71,6 +71,7 @@ export interface ProcessJobRegistry {
     },
   ): ProcessJobReadResult | null;
   write(id: string, data: string): boolean;
+  rename(id: string, name: string): boolean;
   resize(id: string, cols: number, rows: number): boolean;
   subscribe(
     id: string,

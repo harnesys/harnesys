@@ -1,6 +1,7 @@
 import { compileUntil } from '../../application/process-jobs/read-until.ts';
 import type {
   ProcessJobMode,
+  ProcessJobOrigin,
   ProcessJobRecord,
   ProcessJobRegistry,
   ProcessJobStatus,
@@ -76,6 +77,7 @@ export interface TerminalListItem {
   title: string;
   status: ProcessJobStatus;
   mode: ProcessJobMode;
+  origin: ProcessJobOrigin;
   target: string;
   createdAt: string;
 }
@@ -147,7 +149,7 @@ export function terminalTools(ports: TerminalSessionPorts): ToolDefinition[] {
     tool('terminal_spawn', {
       group: 'core',
       description:
-        'Start a named terminal session (interactive shell, ssh, REPL). Persists across calls; write/read it by name.',
+        'Start a named terminal session (interactive shell, ssh, REPL). Persists across calls; write/read it by name or session id. The session is shared: it appears in the user sidebar with an "agent" badge, and the user can open it and type in the same shell. This is the intended way to drive long-lived interactive programs instead of mkfifo/background-shell tricks.',
       operations: ['process'],
       sideEffect: 'write',
       input: {
@@ -194,7 +196,8 @@ export function terminalTools(ports: TerminalSessionPorts): ToolDefinition[] {
     }),
     tool('terminal_write', {
       group: 'core',
-      description: 'Write data to the stdin of a terminal session (name or session id).',
+      description:
+        'Write raw data to the stdin of a terminal session (name or session id). The stdin is shared with the user, who may also be typing in the same session — do not assume exclusive control and prefer explicit, well-formed input. Control characters: 0x03 (Ctrl+C) interrupts the foreground process, 0x04 (Ctrl+D) signals EOF.',
       operations: ['process'],
       sideEffect: 'write',
       input: {
@@ -226,7 +229,7 @@ export function terminalTools(ports: TerminalSessionPorts): ToolDefinition[] {
     tool('terminal_read', {
       group: 'core',
       description:
-        'Read output of a terminal session or background job. Optional `until` regex blocks (max 30s) until output matches, the session exits, or timeout.',
+        'Read output of a terminal session or background job. Non-destructive and shared: reading does not consume output and may interleave with the user typing in the same session; page with `since` from the previous `nextSince`. Optional `until` regex blocks (max 30s) until output matches, the session exits, or timeout.',
       operations: ['process'],
       sideEffect: 'read',
       input: {
@@ -295,7 +298,8 @@ export function terminalTools(ports: TerminalSessionPorts): ToolDefinition[] {
     }),
     tool('terminal_kill', {
       group: 'core',
-      description: 'Kill a terminal session or background job (name or session id).',
+      description:
+        'Kill a terminal session or background job (name or session id). For a user-opened session this also terminates the shell the user is working in, so prefer terminal_write with 0x03 (Ctrl+C) when only the foreground command should stop.',
       operations: ['process'],
       sideEffect: 'write',
       input: {
@@ -319,7 +323,8 @@ export function terminalTools(ports: TerminalSessionPorts): ToolDefinition[] {
     }),
     tool('terminal_list', {
       group: 'core',
-      description: 'List terminal sessions and background jobs of this org.',
+      description:
+        'List terminal sessions and background jobs of this org. Includes sessions opened by the user (origin "user"); read or write them by session id or name to work in the same shell. The user can rename any session from the sidebar, so a session `name` may come from them.',
       operations: ['process'],
       sideEffect: 'read',
       input: { type: 'object', properties: {} },
@@ -333,6 +338,7 @@ export function terminalTools(ports: TerminalSessionPorts): ToolDefinition[] {
             title: record.title,
             status: record.status,
             mode: record.mode,
+            origin: record.origin ?? 'user',
             target: describeTarget(record.target),
             createdAt: record.createdAt,
           }));

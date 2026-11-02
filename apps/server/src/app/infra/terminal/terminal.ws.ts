@@ -15,7 +15,7 @@ import { upgradeWebSocket } from '../ws/bun-websocket.ts';
 type ClientMessage = { type: 'in'; data: string } | { type: 'resize'; cols: number; rows: number };
 
 type ServerMessage =
-  | { type: 'history'; data: string }
+  | { type: 'history'; data: string; truncated: boolean }
   | { type: 'out'; data: string }
   | { type: 'exit'; code: number | null };
 
@@ -134,9 +134,15 @@ function attach(input: {
     return;
   }
   sessions.resize(sessionId, cols, rows);
-  const history = sessions.scrollback(sessionId) ?? '';
-  if (history.length > 0 && ws.readyState === 1) {
-    ws.send(JSON.stringify({ type: 'history', data: history } satisfies ServerMessage));
+  const history = sessions.scrollback(sessionId);
+  if (history !== null && history.text.length > 0 && ws.readyState === 1) {
+    ws.send(
+      JSON.stringify({
+        type: 'history',
+        data: history.text,
+        truncated: history.truncated,
+      } satisfies ServerMessage),
+    );
   }
   if (session.exited && ws.readyState === 1) {
     ws.send(JSON.stringify({ type: 'exit', code: session.exitCode } satisfies ServerMessage));

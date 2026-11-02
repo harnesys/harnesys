@@ -102,7 +102,8 @@ If a preset omits `capabilities`, the mapper defaults to `{ core, files, shell }
 - `core`: `ask_user`, `map`, `wait`
 - `files`: `list_dir`, `glob`, `grep`, `read_file`, `file_read_image`, `edit_file`, `write_file`,
   `extract_file_text`, `write_docx`, `write_xlsx`
-- `shell`: `shell`, `process_poll`, `process_kill`
+- `shell`: `shell`, `terminal_spawn`, `terminal_write`, `terminal_read`, `terminal_kill`,
+  `terminal_list`, `port_forward`, `remote_copy`
 - `web`: `fetch`, `web_search`, `browser_fetch`, `browser`, `browser_close` (managed headless
   browser on an engine sidecar). The pack also ships a pack-level `browser` skill — pack skills
   are not subject to the agent `skills` allowlist (§4).
@@ -131,6 +132,18 @@ If a preset omits `capabilities`, the mapper defaults to `{ core, files, shell }
   `memory_delete`, `memory_list`; `recall_search`; `knowledge_search`, `knowledge_read`
 - `skills`: `search_skills`, `install_skill`, `create_skill`
 - core services: `load_tools`, `load_skill` (+ alias `Skill`)
+
+### Shared terminals
+
+Terminal sessions are shared between the agent and the user, not agent-private. A session spawned
+by `terminal_spawn` appears in the user sidebar with an `agent` badge; the user can open it and type
+in the same PTY. Conversely, `terminal_list` returns user-opened sessions (`origin: "user"`), and the
+agent can `terminal_read` / `terminal_write` them by session id or by a name the user set — the same
+shell, same scrollback. Neither side has exclusive control, so reads may interleave and writes should
+be explicit. To stop only the foreground command in a shared session, `terminal_write` the interrupt
+character (0x03, Ctrl+C) instead of `terminal_kill`, which also terminates a user-opened shell. Users
+can rename any terminal from the sidebar (pencil icon or double-click); a rename also becomes the
+session `name` the agent can target.
 
 ## 4. Skills pipeline
 

@@ -11,6 +11,11 @@ export interface CreateTerminalSessionInput {
   orgId?: string;
 }
 
+export interface TerminalScrollback {
+  text: string;
+  truncated: boolean;
+}
+
 export interface TerminalJobSnapshot {
   id: string;
   title: string;
@@ -32,13 +37,14 @@ export abstract class TerminalSessionsPort {
   abstract upsertExternal(job: TerminalJobSnapshot): void;
   abstract jobRegistry(): ProcessJobRegistry;
   abstract write(sessionId: string, data: string): boolean;
+  abstract rename(sessionId: string, title: string): TerminalSessionRecord | null;
   abstract resize(sessionId: string, cols: number, rows: number): boolean;
   abstract subscribe(
     sessionId: string,
     onData: TerminalDataListener,
     onExit?: TerminalExitListener,
   ): (() => void) | null;
-  abstract scrollback(sessionId: string): string | null;
+  abstract scrollback(sessionId: string): TerminalScrollback | null;
   abstract stop(sessionId: string): boolean;
   abstract delete(sessionId: string): boolean;
 }
