@@ -5,6 +5,7 @@ import { DeskModule } from '../../infra/desk/desk.module.ts';
 import { ExecutionProfileModule } from '../../infra/execution-profile/execution-profile.module.ts';
 import { FleetHubModule } from '../../infra/fleet-hub/fleet-hub.module.ts';
 import { IdentitySqliteModule } from '../../infra/identity-sqlite/identity-sqlite.module.ts';
+import { LspModule } from '../../infra/lsp/lsp.module.ts';
 import { MachineHomeModule } from '../../infra/machine-home/machine-home.module.ts';
 import { PresetsModule } from '../../infra/presets/presets.module.ts';
 import { ScheduleModule } from '../../infra/schedules/schedule.module.ts';
@@ -31,6 +32,7 @@ import { UpdateOrgUseCase } from './update-org.use-case.ts';
     DeskModule,
     AgentUseCaseModule,
     PresetsModule,
+    LspModule,
   ],
   providers: [
     CreateRelayOrgUseCase,

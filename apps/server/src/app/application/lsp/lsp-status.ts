@@ -9,13 +9,18 @@ import type { PluginLspEntry } from '../../domain/plugin/plugin-runtime.port.ts'
 import { LSP_CATALOG } from '../../infra/lsp/lsp-catalog.ts';
 import {
   disabledFileEntries,
-  hasBinary,
   isFileDisabled,
   type LspServerSpec,
   type OrgLspFile,
 } from '../../infra/lsp/org-lsp-file.ts';
 
-export function toLspListResponse(file: OrgLspFile, includeRaw = false): OrgLspListResponse {
+export type HasBinary = (command: string) => boolean;
+
+export function toLspListResponse(
+  file: OrgLspFile,
+  includeRaw: boolean,
+  hasBinary: HasBinary,
+): OrgLspListResponse {
   const servers: OrgLspEntry[] = file.servers.map((server) =>
     toEntry(
       { ...server, origin: 'file' },
@@ -23,13 +28,16 @@ export function toLspListResponse(file: OrgLspFile, includeRaw = false): OrgLspL
         disabled: isFileDisabled(file.raw, server.serverId),
         granted: true,
       },
+      hasBinary,
     ),
   );
   for (const entry of disabledFileEntries(file.raw)) {
     if (servers.some((server) => server.serverId === entry.serverId && server.origin === 'file')) {
       continue;
     }
-    servers.push(toEntry({ ...entry, origin: 'file' }, { disabled: true, granted: true }));
+    servers.push(
+      toEntry({ ...entry, origin: 'file' }, { disabled: true, granted: true }, hasBinary),
+    );
   }
   const response: OrgLspListResponse = {
     servers,
@@ -44,6 +52,7 @@ export function toLspListResponse(file: OrgLspFile, includeRaw = false): OrgLspL
 function toEntry(
   server: LspServerSpec & { origin: string },
   flags: { disabled?: boolean; granted: boolean; lastError?: string },
+  hasBinary: HasBinary,
 ): OrgLspEntry {
   const disabled = flags.disabled ?? false;
   const binaryOk = hasBinary(server.command);
@@ -76,6 +85,7 @@ export function appendPluginServers(
   response: OrgLspListResponse,
   pluginServers: readonly ListablePluginServer[],
   fileServers: readonly LspServerSpec[],
+  hasBinary: HasBinary,
 ): void {
   const owner = new Map<string, string>();
   claimExtensions(
@@ -102,6 +112,7 @@ export function appendPluginServers(
           origin,
         },
         { disabled: entry.disabled, granted: entry.granted },
+        hasBinary,
       ),
     );
   }
@@ -134,7 +145,11 @@ function pickExtensions(
   return picked;
 }
 
-export function buildCatalog(file: OrgLspFile, servers: readonly OrgLspEntry[]): LspCatalogEntry[] {
+export function buildCatalog(
+  file: OrgLspFile,
+  servers: readonly OrgLspEntry[],
+  hasBinary: HasBinary,
+): LspCatalogEntry[] {
   const known = new Set([
     ...file.servers.map((server) => server.serverId),
     ...disabledFileEntries(file.raw).map((server) => server.serverId),

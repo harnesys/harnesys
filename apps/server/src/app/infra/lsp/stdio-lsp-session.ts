@@ -6,7 +6,7 @@ import { LspDocuments } from './lsp-documents.ts';
 import { isRecord, normalizeHover, normalizeLocations, toDiagnostic } from './lsp-messages.ts';
 import { LspStdioTransport } from './lsp-stdio-transport.ts';
 import { resolveTsserverJs } from './resolve-tsserver.ts';
-import { lspServerRoot, spawnServer } from './spawn-lsp-server.ts';
+import { type LspSpawnOptions, lspServerRoot, spawnServer } from './spawn-lsp-server.ts';
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 20000;
 const DEFAULT_SHUTDOWN_TIMEOUT_MS = 5000;
@@ -51,9 +51,10 @@ export class StdioLspSession {
     config: LspServerSpec,
     projectRoot: string,
     allowedRoots: string[] = [],
+    spawn: LspSpawnOptions = { pathEnv: process.env.PATH ?? '' },
   ): Promise<StdioLspSession> {
     const root = realpathSync(lspServerRoot(config, projectRoot));
-    const proc = spawnServer(config, root);
+    const proc = spawnServer(config, root, spawn);
     const session = new StdioLspSession(proc, config, root, allowedRoots.map(realpathOrSelf));
     try {
       await session.initialize();

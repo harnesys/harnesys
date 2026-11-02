@@ -17,6 +17,7 @@ import {
   useAgentsInProjects,
   useDeskReady,
   useErroredThreads,
+  useOrgTerminals,
   useSchedulesInProjects,
   useWaitingThreads,
   useWebhooksInProjects,
@@ -111,6 +112,7 @@ export function ProjectSidebar({
   const schedules = useSchedulesInProjects(automationScopeIds);
   const webhooks = useWebhooksInProjects(automationScopeIds);
   const boards = useIssueBoardStore((state) => state.boards);
+  const terminals = useOrgTerminals();
   const deskPending = !useDeskReady(orgId);
   const { setOpenMobile, state } = useSidebar();
   const ideTabs = useIdeTabs();
@@ -304,6 +306,7 @@ export function ProjectSidebar({
             resizer={resizer}
             icon={<Icon />}
             title="Terminal"
+            count={terminals.length}
             size={shares[id] ?? 1}
             actions={<TerminalSectionActions onCreated={() => setOpenMobile(false)} />}
             {...drag}

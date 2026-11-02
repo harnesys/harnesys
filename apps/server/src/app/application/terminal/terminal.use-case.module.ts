@@ -5,6 +5,7 @@ import { TerminalModule } from '../../infra/terminal/terminal.module.ts';
 import { CreateTerminalSessionUseCase } from './create-terminal-session.use-case.ts';
 import { DeleteTerminalSessionUseCase } from './delete-terminal-session.use-case.ts';
 import { ListTerminalSessionsUseCase } from './list-terminal-sessions.use-case.ts';
+import { StopTerminalSessionUseCase } from './stop-terminal-session.use-case.ts';
 
 @Module({
   imports: [MachineHomeModule, SourceModule, TerminalModule],
@@ -12,11 +13,13 @@ import { ListTerminalSessionsUseCase } from './list-terminal-sessions.use-case.t
     ListTerminalSessionsUseCase,
     CreateTerminalSessionUseCase,
     DeleteTerminalSessionUseCase,
+    StopTerminalSessionUseCase,
   ],
   exports: [
     ListTerminalSessionsUseCase,
     CreateTerminalSessionUseCase,
     DeleteTerminalSessionUseCase,
+    StopTerminalSessionUseCase,
   ],
 })
 export class TerminalUseCaseModule {}

@@ -32,6 +32,7 @@ import { SourceUseCaseModule } from '../application/source/source.use-case.modul
 import { TeamsUseCaseModule } from '../application/teams/teams.use-case.module.ts';
 import { TerminalUseCaseModule } from '../application/terminal/terminal.use-case.module.ts';
 import { ThreadUseCaseModule } from '../application/threads/thread.use-case.module.ts';
+import { ToolchainUseCaseModule } from '../application/toolchain/toolchain.use-case.module.ts';
 import { UsageUseCaseModule } from '../application/usage/usage.use-case.module.ts';
 import { BrowserUseCaseModule } from '../application/use-cases/browser/browser.use-case.module.ts';
 import { VaultUseCaseModule } from '../application/vault/vault.use-case.module.ts';
@@ -110,6 +111,7 @@ import { ThreadFilesController } from './rest/thread-files.controller.ts';
 import { ThreadMessageQueueController } from './rest/thread-message-queue.controller.ts';
 import { ThreadRawModelRequestsController } from './rest/thread-raw-model-requests.controller.ts';
 import { ThreadsController } from './rest/threads.controller.ts';
+import { ToolchainController } from './rest/toolchain.controller.ts';
 import { UsageController } from './rest/usage.controller.ts';
 import { VaultController } from './rest/vault.controller.ts';
 import { OrgHooksController, WebhooksController } from './rest/webhooks.controller.ts';
@@ -147,6 +149,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     PluginsUseCaseModule,
     PresetUseCaseModule,
     LspUseCaseModule,
+    ToolchainUseCaseModule,
     BrowserUseCaseModule,
     ThreadUseCaseModule,
     ApprovalUseCaseModule,
@@ -209,6 +212,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     PluginCatalogController,
     PresetsController,
     LspController,
+    ToolchainController,
     BrowserController,
     ThreadsController,
     ThreadAttachmentsController,

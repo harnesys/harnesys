@@ -39,3 +39,20 @@ export function deleteOrgTerminal(sessionId: string): Promise<void> {
     { method: 'DELETE' },
   );
 }
+
+export function stopTerminal(projectId: string, sessionId: string): Promise<void> {
+  return apiJson(`${terminalsUrl(projectId)}/${encodeURIComponent(sessionId)}/stop`, {
+    method: 'POST',
+  });
+}
+
+export function stopOrgTerminal(sessionId: string): Promise<void> {
+  const orgId = getActiveOrgId();
+  if (!orgId) {
+    throw new Error('No active org');
+  }
+  return apiJson(
+    `/api/orgs/${encodeURIComponent(orgId)}/terminals/${encodeURIComponent(sessionId)}/stop`,
+    { method: 'POST' },
+  );
+}

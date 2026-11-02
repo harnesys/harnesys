@@ -17,6 +17,18 @@ export const BrowserDefaultEngineSchema = z.union([
 ]);
 export type BrowserDefaultEngine = z.infer<typeof BrowserDefaultEngineSchema>;
 
+export const ToolchainModeSchema = z.enum(['auto', 'custom']);
+export type ToolchainMode = z.infer<typeof ToolchainModeSchema>;
+
+export const ToolchainSettingsSchema = z.object({
+  mode: ToolchainModeSchema.default('auto'),
+  shell: z.string().default('auto'),
+  node: z.string().default('auto'),
+  extraPathDirs: z.array(z.string()).default([]),
+  commandOverrides: z.record(z.string(), z.string()).default({}),
+});
+export type ToolchainSettings = z.infer<typeof ToolchainSettingsSchema>;
+
 export const OrgSettingsSchema = z.object({
   skillsSourceAutoLoad: z.boolean().default(true),
   timezone: z.string().refine(isIanaTimeZone, { message: 'unknown timezone' }).default('UTC'),
@@ -25,6 +37,13 @@ export const OrgSettingsSchema = z.object({
       defaultEngine: BrowserDefaultEngineSchema.default('auto'),
     })
     .default({ defaultEngine: 'auto' }),
+  toolchain: ToolchainSettingsSchema.default({
+    mode: 'auto',
+    shell: 'auto',
+    node: 'auto',
+    extraPathDirs: [],
+    commandOverrides: {},
+  }),
 });
 export type OrgSettings = z.infer<typeof OrgSettingsSchema>;
 

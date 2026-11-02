@@ -19,6 +19,7 @@ import { OrgModePresetsPane } from '@/features/manage-org-mode-presets/org-mode-
 import { OrgPackagesPane } from '@/features/manage-org-packages/org-packages-pane';
 import { OrgPluginsPane } from '@/features/manage-org-plugins/org-plugins-pane';
 import { OrgSkillsPane } from '@/features/manage-org-skills/org-skills-pane';
+import { OrgToolchainPane } from '@/features/manage-org-toolchain/org-toolchain-pane';
 import { ModelsPane } from '@/features/manage-project-settings/ui/models-pane';
 import { UsagePane } from '@/features/manage-usage';
 import { VaultPane } from '@/features/manage-vault/vault-pane';
@@ -120,6 +121,8 @@ function SettingsPane({ category, orgId }: { category: WindowSettingsCategory; o
       return <OrgPackagesPane orgId={orgId} />;
     case 'lsp':
       return <OrgLspPane orgId={orgId} />;
+    case 'toolchain':
+      return <OrgToolchainPane orgId={orgId} />;
     case 'providers':
       return <ModelsPane orgId={orgId} />;
     case 'connectors':

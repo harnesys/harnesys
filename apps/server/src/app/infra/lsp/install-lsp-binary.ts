@@ -1,4 +1,3 @@
-import { userPath } from './effective-path.ts';
 import type { LspInstallSpec } from './lsp-catalog.ts';
 import { installForCommand } from './lsp-catalog.ts';
 
@@ -15,14 +14,17 @@ export function installSpecForCommand(command: string): LspInstallSpec | undefin
   return install === undefined ? undefined : { command, install };
 }
 
-export async function installLspBinary(spec: LspInstallSpec): Promise<InstallLspBinaryResult> {
+export async function installLspBinary(
+  spec: LspInstallSpec,
+  pathEnv: string,
+): Promise<InstallLspBinaryResult> {
   const proc = Bun.spawn(['/bin/sh', '-lc', spec.install], {
     stdin: 'ignore',
     stdout: 'pipe',
     stderr: 'pipe',
     env: {
       ...process.env,
-      PATH: userPath(),
+      PATH: pathEnv,
     },
   });
   let timedOut = false;

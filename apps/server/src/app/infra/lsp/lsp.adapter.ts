@@ -12,6 +12,7 @@ import {
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { PluginRegistryPort } from '../../domain/plugin/plugin-registry.port.ts';
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
+import { ToolchainPort } from '../../domain/toolchain/toolchain.port.ts';
 import { toDiagnostic } from './lsp-messages.ts';
 import { readOrgLspFile } from './org-lsp-file.ts';
 import {
@@ -19,6 +20,7 @@ import {
   type ResolvedLspServer,
   resolveLspServers,
 } from './server-resolution.ts';
+import type { LspSpawnOptions } from './spawn-lsp-server.ts';
 import { StdioLspSession } from './stdio-lsp-session.ts';
 
 export interface OrgDiagnosticsFrame {
@@ -49,6 +51,7 @@ export class LspAdapter extends LspPort {
     private readonly runtime: PluginRuntimePort,
     private readonly plugins: PluginRegistryPort,
     private readonly layout: HostFsLayoutPort,
+    private readonly toolchain: ToolchainPort,
   ) {
     super();
   }
@@ -153,7 +156,12 @@ export class LspAdapter extends LspPort {
     if (existing !== undefined && restarts >= maxRestarts) {
       throw new Error(`lsp server "${server.serverId}" exited and restart limit reached`);
     }
-    const session = await StdioLspSession.start(spec, cwd, roots);
+    const session = await StdioLspSession.start(
+      spec,
+      cwd,
+      roots,
+      this.spawnOptions(orgId, spec.command),
+    );
     const slot: SessionSlot = { session, restarts: existing !== undefined ? restarts + 1 : 0 };
     slots.set(key, slot);
     session.onMessage((message) => this.fanOut(orgId, cwd, server.serverId, message));
@@ -165,6 +173,14 @@ export class LspAdapter extends LspPort {
       })
       .catch(() => undefined);
     return slot;
+  }
+
+  private spawnOptions(orgId: string, command: string): LspSpawnOptions {
+    const override = this.toolchain.overrides(orgId)[command];
+    return {
+      pathEnv: this.toolchain.resolve(orgId).pathEnv,
+      ...(override !== undefined && override.length > 0 ? { override } : {}),
+    };
   }
 
   private async serverFor(orgId: string, ext: string): Promise<ResolvedLspServer> {

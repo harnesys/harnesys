@@ -1,9 +1,15 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { PlusIcon, SquareTerminalIcon, Trash2Icon } from 'lucide-react';
+import { CircleStopIcon, PlusIcon, SquareTerminalIcon, Trash2Icon } from 'lucide-react';
 import { useProjects } from '@/entities/project';
 import { deskTerminalsKey, useOrgTerminals } from '@/features/desk';
 import { useIdeStore, useOpenNewTerminal, useOpenTerminalTab } from '@/features/ide';
-import { deleteOrgTerminal, deleteTerminal, type TerminalSessionRecord } from '@/shared/api';
+import {
+  deleteOrgTerminal,
+  deleteTerminal,
+  stopOrgTerminal,
+  stopTerminal,
+  type TerminalSessionRecord,
+} from '@/shared/api';
 import { useOrgId } from '@/shared/config/location';
 import { useStudioNavigation } from '@/shared/config/navigation';
 import { cn } from '@/shared/lib/utils';
@@ -126,6 +132,26 @@ export function TerminalSection({
       });
     },
   });
+  const stop = useMutation({
+    mutationFn: ({
+      projectId,
+      sessionId,
+      agent,
+    }: {
+      projectId: string;
+      sessionId: string;
+      agent: boolean;
+    }) => (agent ? stopOrgTerminal(sessionId) : stopTerminal(projectId, sessionId)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: deskTerminalsKey });
+    },
+    onError: (error) => {
+      toast.add({
+        title: 'Failed to stop terminal',
+        description: error instanceof Error ? error.message : undefined,
+      });
+    },
+  });
   if (rows.length === 0) {
     return (
       <TerminalCreateMenu
@@ -145,6 +171,13 @@ export function TerminalSection({
             openTerminalTab(projectId, session.id);
             onSelectDone?.();
           }}
+          onStop={() =>
+            stop.mutate({
+              projectId,
+              sessionId: session.id,
+              agent: session.origin === 'agent',
+            })
+          }
           onDelete={() =>
             remove.mutate({
               projectId,
@@ -161,11 +194,13 @@ function TerminalRow({
   session,
   selected,
   onSelect,
+  onStop,
   onDelete,
 }: {
   session: TerminalSessionRecord;
   selected: boolean;
   onSelect: () => void;
+  onStop: () => void;
   onDelete: () => void;
 }) {
   return (
@@ -182,14 +217,6 @@ function TerminalRow({
         className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left"
         onClick={onSelect}
       >
-        {!session.exited ? (
-          <span
-            className="relative inline-flex size-1.5 shrink-0 animate-pulse rounded-full bg-live"
-            data-testid={`terminal-active-${session.id}`}
-          >
-            <span className="sr-only">active</span>
-          </span>
-        ) : null}
         <SquareTerminalIcon className="size-3.5 shrink-0 text-muted-foreground" />
         <span className="flex min-w-0 flex-1 items-center gap-1.5">
           <span className="min-w-0 truncate text-sm leading-4">{session.title}</span>
@@ -205,8 +232,33 @@ function TerminalRow({
             <span className="shrink-0 text-[10px] text-muted-foreground">exited</span>
           ) : null}
         </span>
+        {!session.exited ? (
+          <span
+            className="relative inline-flex size-1.5 shrink-0 animate-pulse rounded-full bg-live"
+            data-testid={`terminal-active-${session.id}`}
+          >
+            <span className="sr-only">active</span>
+          </span>
+        ) : null}
       </button>
       <div className="hidden items-center gap-0.5 pr-1 group-focus-within/term:flex group-hover/term:flex">
+        {!session.exited ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            className="size-5"
+            aria-label="Stop session"
+            title="Stop session"
+            data-testid={`terminal-stop-${session.id}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onStop();
+            }}
+          >
+            <CircleStopIcon className="size-3 text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
+          </Button>
+        ) : null}
         <Button
           type="button"
           variant="ghost"

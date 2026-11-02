@@ -2,9 +2,12 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { ToolchainDiscovery } from '@harnesys/contracts';
 import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { PluginRegistryPort } from '../../domain/plugin/plugin-registry.port.ts';
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
+import type { ToolchainResolution } from '../../domain/toolchain/toolchain.port.ts';
+import { ToolchainPort } from '../../domain/toolchain/toolchain.port.ts';
 import { DeleteOrgLspServerUseCase } from './delete-org-lsp-server.use-case.ts';
 import { GetOrgLspUseCase } from './get-org-lsp.use-case.ts';
 import { PutOrgLspUseCase } from './put-org-lsp.use-case.ts';
@@ -26,6 +29,32 @@ const emptyPluginRegistry = Object.assign(Object.create(PluginRegistryPort.proto
   setServerDisabled: () => undefined,
 }) as PluginRegistryPort;
 
+class MissingToolchain extends ToolchainPort {
+  override resolve(_orgId: string): ToolchainResolution {
+    return { pathEnv: '', dirs: [] };
+  }
+
+  override hasBinary(_orgId: string, _command: string): boolean {
+    return false;
+  }
+
+  override overrides(_orgId: string): Record<string, string> {
+    return {};
+  }
+
+  override invalidate(_orgId: string): void {}
+
+  override discover(_orgId: string, _commands: readonly string[]): Promise<ToolchainDiscovery> {
+    return Promise.resolve({
+      shells: [],
+      nodeVersions: [],
+      effectiveDirs: [],
+      commands: [],
+      mode: 'auto',
+    });
+  }
+}
+
 describe('org LSP file roundtrip', () => {
   const dirs: string[] = [];
 
@@ -39,8 +68,13 @@ describe('org LSP file roundtrip', () => {
     const home = mkdtempSync(join(tmpdir(), 'harnesys-lsp-'));
     dirs.push(home);
     const layout = createLayout(home);
-    const put = new PutOrgLspUseCase(layout);
-    const get = new GetOrgLspUseCase(layout, emptyPluginRuntime, emptyPluginRegistry);
+    const put = new PutOrgLspUseCase(layout, new MissingToolchain());
+    const get = new GetOrgLspUseCase(
+      layout,
+      emptyPluginRuntime,
+      emptyPluginRegistry,
+      new MissingToolchain(),
+    );
 
     put.execute({
       orgId: 'org-1',
@@ -65,9 +99,19 @@ describe('org LSP file roundtrip', () => {
     const home = mkdtempSync(join(tmpdir(), 'harnesys-lsp-'));
     dirs.push(home);
     const layout = createLayout(home);
-    const put = new PutOrgLspUseCase(layout);
-    const upsert = new UpsertOrgLspServerUseCase(layout, emptyPluginRuntime, emptyPluginRegistry);
-    const get = new GetOrgLspUseCase(layout, emptyPluginRuntime, emptyPluginRegistry);
+    const put = new PutOrgLspUseCase(layout, new MissingToolchain());
+    const upsert = new UpsertOrgLspServerUseCase(
+      layout,
+      emptyPluginRuntime,
+      emptyPluginRegistry,
+      new MissingToolchain(),
+    );
+    const get = new GetOrgLspUseCase(
+      layout,
+      emptyPluginRuntime,
+      emptyPluginRegistry,
+      new MissingToolchain(),
+    );
 
     put.execute({
       orgId: 'org-1',
@@ -103,9 +147,19 @@ describe('org LSP file roundtrip', () => {
     const home = mkdtempSync(join(tmpdir(), 'harnesys-lsp-'));
     dirs.push(home);
     const layout = createLayout(home);
-    const upsert = new UpsertOrgLspServerUseCase(layout, emptyPluginRuntime, emptyPluginRegistry);
+    const upsert = new UpsertOrgLspServerUseCase(
+      layout,
+      emptyPluginRuntime,
+      emptyPluginRegistry,
+      new MissingToolchain(),
+    );
     const remove = new DeleteOrgLspServerUseCase(layout);
-    const get = new GetOrgLspUseCase(layout, emptyPluginRuntime, emptyPluginRegistry);
+    const get = new GetOrgLspUseCase(
+      layout,
+      emptyPluginRuntime,
+      emptyPluginRegistry,
+      new MissingToolchain(),
+    );
 
     await upsert.execute({
       orgId: 'org-1',
@@ -122,7 +176,12 @@ describe('org LSP file roundtrip', () => {
     const home = mkdtempSync(join(tmpdir(), 'harnesys-lsp-'));
     dirs.push(home);
     const layout = createLayout(home);
-    const upsert = new UpsertOrgLspServerUseCase(layout, emptyPluginRuntime, emptyPluginRegistry);
+    const upsert = new UpsertOrgLspServerUseCase(
+      layout,
+      emptyPluginRuntime,
+      emptyPluginRegistry,
+      new MissingToolchain(),
+    );
     const remove = new DeleteOrgLspServerUseCase(layout);
 
     expect(
@@ -141,7 +200,12 @@ describe('org LSP file roundtrip', () => {
     const home = mkdtempSync(join(tmpdir(), 'harnesys-lsp-'));
     dirs.push(home);
     const layout = createLayout(home);
-    const upsert = new UpsertOrgLspServerUseCase(layout, emptyPluginRuntime, emptyPluginRegistry);
+    const upsert = new UpsertOrgLspServerUseCase(
+      layout,
+      emptyPluginRuntime,
+      emptyPluginRegistry,
+      new MissingToolchain(),
+    );
     const result = await upsert.execute({
       orgId: 'org-1',
       serverId: 'bad',

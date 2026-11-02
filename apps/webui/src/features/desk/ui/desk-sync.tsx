@@ -27,12 +27,20 @@ export function DeskSync() {
   const { orgId, focus } = useStudioLocation();
   const storeOrgId = useActiveOrgStore((state) => state.orgId);
   const projectId = studioFocusProjectId(focus);
+  const activeOrgId = orgId ?? storeOrgId;
+  const projectDeskFocus =
+    focus.kind === 'thread' ||
+    focus.kind === 'spawn' ||
+    focus.kind === 'schedule' ||
+    focus.kind === 'webhook';
+  const deskReadyScope = projectDeskFocus ? projectId : null;
+  const projectScopeId =
+    projectDeskFocus && projectId && projectId !== activeOrgId ? projectId : null;
   const projectQuery = useProjects();
   const lastSelfNodeRef = useRef<string | null>(null);
-  const activeOrgId = orgId ?? storeOrgId;
-  const visibleReady = useDeskReady(projectId);
-  useDeskStoreSync(activeOrgId ?? null);
-  useDeskStoreSync(projectId && projectId !== activeOrgId ? projectId : null);
+  const visibleReady = useDeskReady(deskReadyScope);
+  useDeskStoreSync(activeOrgId ?? null, { orgEntities: true });
+  useDeskStoreSync(projectScopeId);
   useDeskOrgExtrasSync(activeOrgId ?? null);
   const { data: meta } = useQuery(appMetaQuery(orgId));
   const remoteProjects = useMemo(() => {

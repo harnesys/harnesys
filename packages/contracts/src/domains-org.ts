@@ -190,7 +190,26 @@ export {
   type OrgSettingsPatch,
   OrgSettingsPatchSchema,
   OrgSettingsSchema,
+  type ToolchainMode,
+  ToolchainModeSchema,
+  type ToolchainSettings,
 } from './org-settings.ts';
+export {
+  type ToolchainCommandSource,
+  ToolchainCommandSourceSchema,
+  type ToolchainCommandStatus,
+  ToolchainCommandStatusSchema,
+  type ToolchainDiscovery,
+  ToolchainDiscoverySchema,
+  type ToolchainNodeManager,
+  ToolchainNodeManagerSchema,
+  type ToolchainNodeVersion,
+  ToolchainNodeVersionSchema,
+  type ToolchainShell,
+  type ToolchainShellKind,
+  ToolchainShellKindSchema,
+  ToolchainShellSchema,
+} from './toolchain.ts';
 export { type UiVisibility, UiVisibilitySchema } from './ui-visibility.ts';
 export {
   type PutVaultEntryBody,

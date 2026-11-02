@@ -1,6 +1,7 @@
 import { Injectable, ValidationException } from '@harnesys/brix';
 import type { OrgLspListResponse } from '@harnesys/contracts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { ToolchainPort } from '../../domain/toolchain/toolchain.port.ts';
 import { readOrgLspFile, writeOrgLspFile } from '../../infra/lsp/org-lsp-file.ts';
 import { toLspListResponse } from './lsp-status.ts';
 
@@ -11,7 +12,10 @@ export interface PutOrgLspRequest {
 
 @Injectable()
 export class PutOrgLspUseCase {
-  constructor(private readonly layout: HostFsLayoutPort) {}
+  constructor(
+    private readonly layout: HostFsLayoutPort,
+    private readonly toolchain: ToolchainPort,
+  ) {}
 
   execute(request: PutOrgLspRequest): OrgLspListResponse {
     this.layout.ensureOrgDir(request.orgId);
@@ -23,6 +27,8 @@ export class PutOrgLspUseCase {
         error instanceof Error ? error.message : 'invalid org LSP config',
       );
     }
-    return toLspListResponse(readOrgLspFile(path), true);
+    return toLspListResponse(readOrgLspFile(path), true, (command) =>
+      this.toolchain.hasBinary(request.orgId, command),
+    );
   }
 }

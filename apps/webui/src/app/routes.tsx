@@ -134,19 +134,14 @@ export const routes: RouteObject[] = [
           {
             element: <ProjectPage />,
             children: [
-              { path: 'schedule/:scheduleId', element: null },
-              { path: 'webhook/:webhookId', element: null },
-              { path: 'spawn/:threadId/:spawnId', element: null },
-              { path: 'terminal/:sessionId', element: null },
-            ],
-          },
-          {
-            element: <ProjectPage />,
-            children: [
               { index: true, element: null },
               { path: 'thread/:threadId', element: null },
               { path: 'board/:boardId', element: null },
               { path: 'attachment/:issueId/:attachmentId', element: null },
+              { path: 'schedule/:scheduleId', element: null },
+              { path: 'webhook/:webhookId', element: null },
+              { path: 'spawn/:threadId/:spawnId', element: null },
+              { path: 'terminal/:sessionId', element: null },
               {
                 path: ':projectId',
                 children: [

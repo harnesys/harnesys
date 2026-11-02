@@ -181,6 +181,7 @@ export function OrgLspPane({ orgId }: { orgId: string }) {
             {fileServers.map((server) => (
               <OrgLspServerRow
                 key={server.serverId}
+                orgId={orgId}
                 server={server}
                 installCommand={installCommands.get(server.command)}
                 expanded={expandedId === server.serverId}
@@ -207,6 +208,7 @@ export function OrgLspPane({ orgId }: { orgId: string }) {
             {pluginServers.map((server) => (
               <OrgLspServerRow
                 key={server.serverId}
+                orgId={orgId}
                 server={server}
                 installCommand={installCommands.get(server.command)}
                 expanded={expandedId === server.serverId}

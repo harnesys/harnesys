@@ -3,6 +3,7 @@ import type { OrgLspListResponse, UpsertOrgLspServerBody } from '@harnesys/contr
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { PluginRegistryPort } from '../../domain/plugin/plugin-registry.port.ts';
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
+import { ToolchainPort } from '../../domain/toolchain/toolchain.port.ts';
 import {
   parseExtensionMap,
   readOrgLspFile,
@@ -23,6 +24,7 @@ export class UpsertOrgLspServerUseCase {
     private readonly layout: HostFsLayoutPort,
     private readonly runtime: PluginRuntimePort,
     private readonly plugins: PluginRegistryPort,
+    private readonly toolchain: ToolchainPort,
   ) {}
 
   async execute(request: UpsertOrgLspServerRequest): Promise<OrgLspListResponse> {
@@ -44,6 +46,13 @@ export class UpsertOrgLspServerUseCase {
         error instanceof Error ? error.message : 'invalid org LSP config',
       );
     }
-    return buildLspView(request.orgId, readOrgLspFile(path), this.runtime, this.plugins, true);
+    return buildLspView({
+      orgId: request.orgId,
+      file: readOrgLspFile(path),
+      runtime: this.runtime,
+      plugins: this.plugins,
+      includeRaw: true,
+      hasBinary: (command) => this.toolchain.hasBinary(request.orgId, command),
+    });
   }
 }

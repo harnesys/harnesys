@@ -11,7 +11,7 @@ export function OrgDeskSync() {
   const orgId = useOrgId();
   const queryClient = useQueryClient();
   const lastOrgRef = useRef<string | null>(null);
-  useDeskStoreSync(orgId);
+  useDeskStoreSync(orgId, { orgEntities: true });
   useEffect(() => {
     if (!orgId) {
       return;

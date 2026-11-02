@@ -189,7 +189,8 @@ function FileTabContent({
 
 export function IdeTabContent({ tab, projectId }: { tab: IdeTab; projectId: string }) {
   const orgId = useOrgId() ?? projectId;
-  const isHydrating = !useDeskReady(projectId);
+  const hydrateScope = tab.kind === 'thread' || tab.kind === 'spawn' ? projectId : null;
+  const isHydrating = !useDeskReady(hydrateScope);
   if (tab.kind === 'thread' && tab.threadId) {
     return <ThreadTabContent tab={tab} threadId={tab.threadId} isHydrating={isHydrating} />;
   }

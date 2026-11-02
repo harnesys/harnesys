@@ -4,6 +4,7 @@ import type {
   ProviderSnapshot,
   SourceSnapshot,
 } from '@harnesys/contracts';
+import { OrgSettingsSchema } from '@harnesys/contracts';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
 import type { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import type { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
@@ -224,6 +225,7 @@ export function createSnapshotOrgSettings(snapshot: OrgExecutionSnapshot): OrgSe
       skillsSourceAutoLoad: snapshot.runtime.skillsSourceAutoLoad,
       timezone: snapshot.runtime.timezone,
       browser: snapshot.runtime.browser,
+      toolchain: OrgSettingsSchema.parse({}).toolchain,
     }),
     set: () => {
       throw new Error('org execution replica is read-only');

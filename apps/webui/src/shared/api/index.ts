@@ -208,6 +208,8 @@ export {
   deleteOrgTerminal,
   deleteTerminal,
   listOrgTerminals,
+  stopOrgTerminal,
+  stopTerminal,
   type TerminalSessionRecord,
 } from './terminals';
 export {

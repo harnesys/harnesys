@@ -8,6 +8,7 @@ import type { OrgLspListResponse } from '@harnesys/contracts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { PluginRegistryPort } from '../../domain/plugin/plugin-registry.port.ts';
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
+import { ToolchainPort } from '../../domain/toolchain/toolchain.port.ts';
 import { installLspBinary, installSpecForCommand } from '../../infra/lsp/install-lsp-binary.ts';
 import {
   disabledFileEntries,
@@ -27,6 +28,7 @@ export class InstallOrgLspBinaryUseCase {
     private readonly layout: HostFsLayoutPort,
     private readonly runtime: PluginRuntimePort,
     private readonly plugins: PluginRegistryPort,
+    private readonly toolchain: ToolchainPort,
   ) {}
 
   async execute(request: InstallOrgLspBinaryRequest): Promise<OrgLspListResponse> {
@@ -54,12 +56,19 @@ export class InstallOrgLspBinaryUseCase {
       );
     }
     try {
-      await installLspBinary(spec);
+      await installLspBinary(spec, this.toolchain.resolve(request.orgId).pathEnv);
     } catch (error) {
       throw new ValidationException(
         `install failed for ${command}: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
-    return buildLspView(request.orgId, readOrgLspFile(path), this.runtime, this.plugins, true);
+    return buildLspView({
+      orgId: request.orgId,
+      file: readOrgLspFile(path),
+      runtime: this.runtime,
+      plugins: this.plugins,
+      includeRaw: true,
+      hasBinary: (command) => this.toolchain.hasBinary(request.orgId, command),
+    });
   }
 }

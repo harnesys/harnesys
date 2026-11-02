@@ -9,6 +9,8 @@ import {
   RotateCwIcon,
   Trash2Icon,
 } from 'lucide-react';
+import { Link } from 'react-router';
+import { studioPath } from '@/shared/config/routes';
 import { Button } from '@/shared/ui/button';
 import { Row, RowChip, RowField, RowSection } from '@/shared/ui/capability-rows';
 import type { StatusDotTone } from '@/shared/ui/status-dot';
@@ -16,6 +18,7 @@ import type { StatusDotTone } from '@/shared/ui/status-dot';
 export type LspServerAction = 'restart' | 'stop' | 'enable';
 
 interface OrgLspServerRowProps {
+  orgId: string;
   server: OrgLspEntry;
   installCommand?: string;
   expanded: boolean;
@@ -28,6 +31,7 @@ interface OrgLspServerRowProps {
 }
 
 export function OrgLspServerRow({
+  orgId,
   server,
   installCommand,
   expanded,
@@ -138,6 +142,15 @@ export function OrgLspServerRow({
           <div className="flex flex-col gap-0.5 rounded-md border border-border bg-muted/40 px-2 py-1.5">
             <p className="text-xs">{problem.title}</p>
             {problem.hint && <p className="text-[11px] text-muted-foreground">{problem.hint}</p>}
+            {!server.binaryOk && (
+              <Link
+                to={studioPath.settings(orgId, 'toolchain')}
+                className="text-[11px] text-underline underline-offset-2"
+                data-testid={`lsp-toolchain-link-${server.serverId}`}
+              >
+                Open toolchain settings
+              </Link>
+            )}
           </div>
         )}
         {!problem && status.label === 'Off' && (

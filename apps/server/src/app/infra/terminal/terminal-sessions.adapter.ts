@@ -160,6 +160,10 @@ export class TerminalSessionsAdapter extends TerminalSessionsPort {
     return this.jobs.read(sessionId)?.text ?? null;
   }
 
+  stop(sessionId: string): boolean {
+    return this.jobs.kill(sessionId);
+  }
+
   delete(sessionId: string): boolean {
     const meta = this.metaBySession.get(sessionId);
     const removed = this.jobs.delete(sessionId);

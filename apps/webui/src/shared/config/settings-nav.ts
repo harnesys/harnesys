@@ -1,6 +1,7 @@
 import {
   BellIcon,
   BlocksIcon,
+  BoxesIcon,
   BracesIcon,
   Building2Icon,
   CableIcon,
@@ -36,6 +37,7 @@ export const WINDOW_SETTINGS_CATEGORIES = [
   'plugins',
   'packages',
   'lsp',
+  'toolchain',
   'browser',
   'fleet',
   'profiles',
@@ -149,6 +151,12 @@ export const WINDOW_SETTINGS_GROUPS: SettingsNavGroup[] = [
         label: 'LSP',
         description: 'Organization language server defaults (lsp.json).',
         icon: BracesIcon,
+      },
+      {
+        id: 'toolchain',
+        label: 'Toolchain',
+        description: 'PATH resolution for binaries on this host: shell, node version, extra dirs.',
+        icon: BoxesIcon,
       },
       {
         id: 'browser',

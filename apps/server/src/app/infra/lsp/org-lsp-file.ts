@@ -1,5 +1,5 @@
-import { accessSync, constants, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { delimiter, dirname, join } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import type { PluginDiagnostic } from '@harnesys/contracts';
 
 export interface LspServerSpec {
@@ -188,18 +188,6 @@ export function fileHasServer(file: OrgLspFile, serverId: string): boolean {
   return isRecord(entry);
 }
 
-export function hasBinary(command: string): boolean {
-  if (command.includes('/') || command.includes('\\')) {
-    return isExecutable(command);
-  }
-  for (const dir of (process.env.PATH ?? '').split(delimiter)) {
-    if (dir.length > 0 && isExecutable(join(dir, command))) {
-      return true;
-    }
-  }
-  return false;
-}
-
 function parseServerEntry(
   serverId: string,
   value: unknown,
@@ -241,15 +229,6 @@ function invalidDiag(pathLabel: string, message: string): PluginDiagnostic {
     message,
     ...(pathLabel ? { path: pathLabel } : {}),
   };
-}
-
-function isExecutable(path: string): boolean {
-  try {
-    accessSync(path, constants.X_OK);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 function containerOf(raw: unknown): Record<string, unknown> | undefined {

@@ -42,7 +42,8 @@ function useDeskSlices(scopeId: string) {
 }
 
 export function useDeskReady(scopeId: string | null): boolean {
-  return useDeskSlices(scopeId ?? '').ready;
+  const { ready } = useDeskSlices(scopeId ?? '');
+  return scopeId === null ? true : ready;
 }
 
 export function useDeskOrgExtrasSync(orgId: string | null): void {
@@ -53,10 +54,14 @@ export function useDeskOrgExtrasSync(orgId: string | null): void {
   useQuery({ ...deskGitSummaryQuery(orgId ?? ''), enabled: Boolean(orgId) && orgReady });
 }
 
-export function useDeskStoreSync(scopeId: string | null): boolean {
+export function useDeskStoreSync(
+  scopeId: string | null,
+  options: { orgEntities?: boolean } = {},
+): boolean {
   const { ready, agents, threads, schedules, webhooks, boards, labels, issues } = useDeskSlices(
     scopeId ?? '',
   );
+  const { orgEntities = false } = options;
   useEffect(() => {
     if (!scopeId) {
       return;
@@ -78,15 +83,17 @@ export function useDeskStoreSync(scopeId: string | null): boolean {
     if (webhooks) {
       useWebhookStore.getState().replaceProject(scopeId, webhooks.map(toClientWebhook));
     }
-    if (boards) {
-      useIssueBoardStore.getState().replaceAll(boards);
+    if (orgEntities) {
+      if (boards) {
+        useIssueBoardStore.getState().replaceAll(boards);
+      }
+      if (labels) {
+        useIssueLabelStore.getState().replaceAll(labels);
+      }
+      if (issues) {
+        useIssueStore.getState().replaceAll(issues);
+      }
     }
-    if (labels) {
-      useIssueLabelStore.getState().replaceAll(labels);
-    }
-    if (issues) {
-      useIssueStore.getState().replaceAll(issues);
-    }
-  }, [scopeId, agents, threads, schedules, webhooks, boards, labels, issues]);
+  }, [scopeId, agents, threads, schedules, webhooks, boards, labels, issues, orgEntities]);
   return ready;
 }

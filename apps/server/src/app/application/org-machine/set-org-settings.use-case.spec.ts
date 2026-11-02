@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'bun:test';
+import type { ToolchainDiscovery } from '@harnesys/contracts';
+import { LspPort } from '../../domain/lsp/lsp.port.ts';
 import type { ScheduleRecord } from '../../domain/schedule/schedule.ts';
+import type { ToolchainResolution } from '../../domain/toolchain/toolchain.port.ts';
+import { ToolchainPort } from '../../domain/toolchain/toolchain.port.ts';
 import {
   FakeDeskEvents,
   FakeOrgSettings,
@@ -36,7 +40,13 @@ describe('SetOrgSettingsUseCase', () => {
     const settings = new FakeOrgSettings();
     const schedules = new FakeSchedules();
     schedules.items.set('s-1', schedule('s-1', '0 9 * * *', '2026-10-22T09:00:00.000Z'));
-    const useCase = new SetOrgSettingsUseCase(settings, schedules, new FakeDeskEvents());
+    const useCase = new SetOrgSettingsUseCase(
+      settings,
+      schedules,
+      new FakeDeskEvents(),
+      fakeToolchain(),
+      fakeLsp(),
+    );
 
     useCase.execute({ orgId: ORG_ID, patch: { timezone: 'Europe/Moscow' } });
 
@@ -49,10 +59,128 @@ describe('SetOrgSettingsUseCase', () => {
     const settings = new FakeOrgSettings();
     const schedules = new FakeSchedules();
     schedules.items.set('s-1', schedule('s-1', '0 9 * * *', '2026-10-22T09:00:00.000Z'));
-    const useCase = new SetOrgSettingsUseCase(settings, schedules, new FakeDeskEvents());
+    const useCase = new SetOrgSettingsUseCase(
+      settings,
+      schedules,
+      new FakeDeskEvents(),
+      fakeToolchain(),
+      fakeLsp(),
+    );
 
     useCase.execute({ orgId: ORG_ID, patch: { skillsSourceAutoLoad: false } });
 
     expect(schedules.items.get('s-1')?.nextRunAt).toBe('2026-10-22T09:00:00.000Z');
   });
+
+  test('toolchain change invalidates toolchain and live LSP sessions', () => {
+    const settings = new FakeOrgSettings();
+    const toolchain = fakeToolchain();
+    const lsp = fakeLsp();
+    const useCase = new SetOrgSettingsUseCase(
+      settings,
+      new FakeSchedules(),
+      new FakeDeskEvents(),
+      toolchain,
+      lsp,
+    );
+
+    useCase.execute({
+      orgId: ORG_ID,
+      patch: {
+        toolchain: {
+          mode: 'custom',
+          shell: 'auto',
+          node: 'auto',
+          extraPathDirs: ['/tmp/extra-bin'],
+          commandOverrides: {},
+        },
+      },
+    });
+
+    expect(toolchain.invalidated).toEqual([ORG_ID]);
+    expect(lsp.invalidatedOrgs).toEqual([ORG_ID]);
+  });
+
+  test('unrelated settings change does not invalidate toolchain', () => {
+    const toolchain = fakeToolchain();
+    const lsp = fakeLsp();
+    const useCase = new SetOrgSettingsUseCase(
+      new FakeOrgSettings(),
+      new FakeSchedules(),
+      new FakeDeskEvents(),
+      toolchain,
+      lsp,
+    );
+
+    useCase.execute({ orgId: ORG_ID, patch: { timezone: 'UTC' } });
+
+    expect(toolchain.invalidated).toEqual([]);
+    expect(lsp.invalidatedOrgs).toEqual([]);
+  });
 });
+
+class RecordingToolchain extends ToolchainPort {
+  invalidated: string[] = [];
+
+  override resolve(_orgId: string): ToolchainResolution {
+    return { pathEnv: '', dirs: [] };
+  }
+
+  override hasBinary(_orgId: string, _command: string): boolean {
+    return false;
+  }
+
+  override overrides(_orgId: string): Record<string, string> {
+    return {};
+  }
+
+  override invalidate(orgId: string): void {
+    this.invalidated.push(orgId);
+  }
+
+  override discover(_orgId: string, _commands: readonly string[]): Promise<ToolchainDiscovery> {
+    return Promise.resolve({
+      shells: [],
+      nodeVersions: [],
+      effectiveDirs: [],
+      commands: [],
+      mode: 'auto',
+    });
+  }
+}
+
+class RecordingLsp extends LspPort {
+  invalidatedOrgs: string[] = [];
+
+  override invalidateOrg(orgId: string): void {
+    this.invalidatedOrgs.push(orgId);
+  }
+
+  override diagnostics(): Promise<never> {
+    return Promise.reject(new Error('not implemented'));
+  }
+
+  override definition(): Promise<never> {
+    return Promise.reject(new Error('not implemented'));
+  }
+
+  override references(): Promise<never> {
+    return Promise.reject(new Error('not implemented'));
+  }
+
+  override hover(): Promise<never> {
+    return Promise.reject(new Error('not implemented'));
+  }
+
+  override onDiagnostics(): () => void {
+    return () => undefined;
+  }
+}
+
+function fakeToolchain(): RecordingToolchain {
+  return new RecordingToolchain();
+}
+
+function fakeLsp(): RecordingLsp {
+  return new RecordingLsp();
+}

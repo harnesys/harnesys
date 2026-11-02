@@ -39,5 +39,6 @@ export abstract class TerminalSessionsPort {
     onExit?: TerminalExitListener,
   ): (() => void) | null;
   abstract scrollback(sessionId: string): string | null;
+  abstract stop(sessionId: string): boolean;
   abstract delete(sessionId: string): boolean;
 }

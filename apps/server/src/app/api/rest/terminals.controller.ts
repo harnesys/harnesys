@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { CreateTerminalSessionUseCase } from '../../application/terminal/create-terminal-session.use-case.ts';
 import { DeleteTerminalSessionUseCase } from '../../application/terminal/delete-terminal-session.use-case.ts';
 import { ListTerminalSessionsUseCase } from '../../application/terminal/list-terminal-sessions.use-case.ts';
+import { StopTerminalSessionUseCase } from '../../application/terminal/stop-terminal-session.use-case.ts';
 
 const CreateTerminalBodySchema = z.object({
   cwd: z.string().min(1).optional(),
@@ -16,6 +17,7 @@ export class TerminalsController {
     private readonly listSessions: ListTerminalSessionsUseCase,
     private readonly createSession: CreateTerminalSessionUseCase,
     private readonly deleteSession: DeleteTerminalSessionUseCase,
+    private readonly stopSession: StopTerminalSessionUseCase,
   ) {}
 
   @Get()
@@ -35,6 +37,16 @@ export class TerminalsController {
     return this.createSession.execute({ orgId, projectId: sourceId, cwd: body.cwd });
   }
 
+  @Post(':sessionId/stop')
+  @HttpCode(204)
+  stop(
+    @Param('orgId') _orgId: string,
+    @Param('sourceId') sourceId: string,
+    @Param('sessionId') sessionId: string,
+  ): void {
+    this.stopSession.execute({ projectId: sourceId, sessionId });
+  }
+
   @Delete(':sessionId')
   @HttpCode(204)
   delete(
@@ -51,11 +63,18 @@ export class OrgTerminalsController {
   constructor(
     private readonly listSessions: ListTerminalSessionsUseCase,
     private readonly deleteSession: DeleteTerminalSessionUseCase,
+    private readonly stopSession: StopTerminalSessionUseCase,
   ) {}
 
   @Get()
   list(@Param('orgId') orgId: string): TerminalSessionRecord[] {
     return this.listSessions.execute({ orgId });
+  }
+
+  @Post(':sessionId/stop')
+  @HttpCode(204)
+  stop(@Param('orgId') _orgId: string, @Param('sessionId') sessionId: string): void {
+    this.stopSession.execute({ sessionId });
   }
 
   @Delete(':sessionId')
