@@ -6,7 +6,7 @@ import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { WebhookRepositoryPort } from '../../domain/webhook/webhook-repository.port.ts';
-import { insertAgentThread, toThreadPublic } from '../threads/thread.helpers.ts';
+import { insertAgentThread, toThreadPublicForAgent } from '../threads/thread.helpers.ts';
 import { requireBindableWebhookThread } from './bind-webhook-thread.ts';
 import { toDeskWebhookEvent, toWebhookPublic, webhookEndpointFor } from './webhook.helpers.ts';
 
@@ -83,7 +83,7 @@ export class CreateWebhookUseCase {
     this.deskEvents.emit(request.orgId, toDeskWebhookEvent(webhook));
     return {
       webhook: toWebhookPublic(webhook),
-      thread: toThreadPublic({
+      thread: toThreadPublicForAgent({
         thread,
         agentId: agent.id,
         agentName: agent.name,

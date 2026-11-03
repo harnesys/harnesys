@@ -1,5 +1,5 @@
 import { isDriver } from 'harnesys';
-import type { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-provider.port.ts';
+import { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-provider.port.ts';
 import type { AgentModelCoords } from './consolidate-thread-model.ts';
 
 export type DecisionModelCoordsResolver = () => AgentModelCoords | undefined;

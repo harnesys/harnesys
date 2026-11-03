@@ -7,7 +7,7 @@ import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { ConnectorConflictException } from '../../domain/connector/connector.error.ts';
 import type { ConnectorInsert } from '../../domain/connector/connector.ts';
 import { DEFAULT_MIRROR_POLICY } from '../../domain/connector/constants.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { ensureOrgSchema } from '../org-sqlite/org-sql-ensure.ts';
 import { agentsTable } from '../org-sqlite/schema/agents.ts';
 import {

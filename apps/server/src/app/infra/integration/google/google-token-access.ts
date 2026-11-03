@@ -1,4 +1,4 @@
-import type { SecretStorePort } from '../../../domain/secret/secret-store.port.ts';
+import { SecretStorePort } from '../../../domain/secret/secret-store.port.ts';
 import { requireGoogleAppConfig } from './google-app-config.ts';
 import {
   type GoogleOAuthClientConfig,

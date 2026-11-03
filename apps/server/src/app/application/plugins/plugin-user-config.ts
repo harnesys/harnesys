@@ -6,7 +6,7 @@ import type {
   UserConfigContentOptions,
   UserConfigValue,
 } from 'harnesys';
-import type { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
+import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import { MASKED_OPTION } from './plugin-options.ts';
 
 export const PLUGIN_SECRET_PREFIX = 'plugin:';

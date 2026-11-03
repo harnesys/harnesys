@@ -27,7 +27,8 @@ import type {
   ThreadPatch,
   ThreadRecord,
 } from '../../domain/thread/thread.ts';
-import type { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
+import { toThreadRecord } from '../../domain/thread/thread.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { connectorSecretKey } from './connector.helpers.ts';
 import { UpsertTelegramConnectorUseCase } from './upsert-telegram-connector.use-case.ts';
@@ -78,8 +79,9 @@ class FakeThreadRepo extends ThreadRepositoryPort {
   }
 
   insert(rec: ThreadInsert): ThreadRecord {
-    this.rows.push(rec);
-    return rec;
+    const thread = toThreadRecord(rec);
+    this.rows.push(thread);
+    return thread;
   }
 
   patch(orgId: string, id: string, patch: ThreadPatch): ThreadRecord {

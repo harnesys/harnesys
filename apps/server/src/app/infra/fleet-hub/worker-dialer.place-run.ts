@@ -1,8 +1,8 @@
 import type { Logger } from '@harnesys/brix';
 import type { TaskEnvelope } from '@harnesys/contracts';
 import type { SessionEvent } from 'harnesys';
-import type { PendingRunEventPort } from '../../domain/fleet/pending-run-event.port.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { PendingRunEventPort } from '../../domain/fleet/pending-run-event.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import type { PlaceRunInput } from './work-executor.compose.ts';
 import type { DialerSession } from './worker-dialer.session.ts';
 import { fetchRunAttachments, persistRunEventBatch } from './worker-dialer.sync.ts';

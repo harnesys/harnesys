@@ -5,6 +5,7 @@ import {
   MessageCircle,
   SendIcon,
   SquareKanbanIcon,
+  UsersIcon,
 } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 
@@ -18,6 +19,8 @@ export function threadKindInk(kind: ThreadKind): string | null {
       return 'text-violet-500/90';
     case 'connector':
       return 'text-sky-400/90';
+    case 'group':
+      return 'text-emerald-500/90';
     case 'chat':
       return null;
   }
@@ -34,6 +37,8 @@ export function ThreadKindIcon({ kind, className }: { kind: ThreadKind; classNam
       return <EarthIcon className={cn(className, ink)} aria-hidden />;
     case 'connector':
       return <SendIcon className={cn(className, ink)} aria-hidden />;
+    case 'group':
+      return <UsersIcon className={cn(className, ink)} aria-hidden />;
     case 'chat':
       return <MessageCircle className={cn(className, ink)} aria-hidden />;
   }

@@ -6,7 +6,7 @@ import {
   dailyBudgetExceeded,
   localDayRange,
 } from '../../domain/usage/daily-budget.ts';
-import type { UsagePort } from '../../domain/usage/usage-port.ts';
+import { UsagePort } from '../../domain/usage/usage-port.ts';
 
 export function assertDailyBudget(input: {
   usage: UsagePort;

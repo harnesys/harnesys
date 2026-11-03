@@ -32,29 +32,48 @@ export class DeleteAgentUseCase {
       await this.secrets.delete(request.orgId, connector.secretRef);
     }
     const threadIds = this.threadAgents.listThreadIdsByAgent(request.orgId, request.agentId);
-    await this.cancelLiveRuns(request.orgId, threadIds);
+    const ownThreadIds: string[] = [];
     for (const threadId of threadIds) {
-      this.threads.delete(request.orgId, threadId);
+      const thread = this.threads.findById(request.orgId, threadId);
+      if (!thread) {
+        continue;
+      }
+      await this.cancelLiveRuns(request.orgId, threadId, request.agentId, thread.kind === 'group');
+      if (thread.kind === 'group') {
+        this.threadAgents.remove(request.orgId, threadId, request.agentId);
+        if (thread.autoReplyAgentId === request.agentId) {
+          const next = this.threadAgents.listByThread(request.orgId, threadId)[0]?.agentId ?? null;
+          this.threads.patch(request.orgId, threadId, { autoReplyAgentId: next });
+        }
+        continue;
+      }
+      ownThreadIds.push(threadId);
+    }
+    this.threads.deleteMany(request.orgId, ownThreadIds);
+    for (const threadId of ownThreadIds) {
       this.threadAgents.remove(request.orgId, threadId, request.agentId);
     }
     this.agents.delete(request.orgId, request.agentId);
   }
 
-  private async cancelLiveRuns(orgId: string, threadIds: string[]): Promise<void> {
-    if (threadIds.length === 0) {
+  private async cancelLiveRuns(
+    orgId: string,
+    threadId: string,
+    agentId: string,
+    onlyOwnRun: boolean,
+  ): Promise<void> {
+    const lifecycle = await this.executor.lifecycle(orgId);
+    const active = await lifecycle.activeByThread(threadId);
+    if (!active) {
       return;
     }
-    const lifecycle = await this.executor.lifecycle(orgId);
-    for (const threadId of threadIds) {
-      const active = await lifecycle.activeByThread(threadId);
-      if (!active) {
-        continue;
-      }
-      try {
-        await this.executor.cancel(orgId, active.runId);
-      } catch {
-        // best-effort: deletion must proceed even if the run is already gone
-      }
+    if (onlyOwnRun && active.agentId !== agentId) {
+      return;
+    }
+    try {
+      await this.executor.cancel(orgId, active.runId);
+    } catch {
+      // best-effort: deletion must proceed even if the run is already gone
     }
   }
 }

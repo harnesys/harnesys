@@ -7,13 +7,20 @@ import { collectInheritedEvents } from '../../domain/thread/fork-logs.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { ThreadNotFoundException } from '../../domain/thread/thread.error.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
+import { ThreadParticipantRepositoryPort } from '../../domain/thread/thread-participant-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { runAttributionNamesOf } from './run-attribution.ts';
-import { soleAgentIdOf, toThreadPublic, waitingForProfileIdFromEvents } from './thread.helpers.ts';
+import {
+  membersOf,
+  participantsOf,
+  toThreadPublic,
+  waitingForProfileIdFromEvents,
+} from './thread.helpers.ts';
 
 export interface GetThreadRequest {
   orgId: string;
   threadId: string;
+  userId?: string;
 }
 
 @Injectable()
@@ -21,6 +28,7 @@ export class GetThreadUseCase {
   constructor(
     private readonly threads: ThreadRepositoryPort,
     private readonly threadAgents: ThreadAgentRepositoryPort,
+    private readonly participants: ThreadParticipantRepositoryPort,
     private readonly agents: AgentRegistryPort,
     private readonly executor: LocalExecutorPort,
     private readonly users: UserRepository,
@@ -32,8 +40,6 @@ export class GetThreadUseCase {
     if (!thread) {
       throw new ThreadNotFoundException(request.threadId);
     }
-    const agentId = soleAgentIdOf(this.threadAgents, request.orgId, thread.id) ?? '';
-    const agent = agentId ? this.agents.findById(request.orgId, agentId) : undefined;
     const lifecycle = await this.executor.lifecycle(request.orgId);
     const events = await this.executor.events(request.orgId);
     const [active, ownEvents] = await Promise.all([
@@ -46,16 +52,22 @@ export class GetThreadUseCase {
       thread,
     );
     const sessionEvents = [...inherited, ...ownEvents];
+    const deps = {
+      threadAgents: this.threadAgents,
+      participants: this.participants,
+      agents: this.agents,
+    };
     return toThreadPublic({
       thread,
-      agentId,
-      agentName: agent?.name ?? '',
+      members: membersOf(deps, request.orgId, thread.id),
+      participants: participantsOf(deps, request.orgId, thread.id),
       active,
       events: sessionEvents,
       inheritedEventCount: thread.inheritedEventCount,
       waitingForProfileId: waitingForProfileIdFromEvents(sessionEvents),
       names: runAttributionNamesOf(this.users, this.nodes, request.orgId),
       bindingLocked: this.threads.threadIdsWithRuns(request.orgId).has(thread.id),
+      userId: request.userId ?? null,
     });
   }
 }

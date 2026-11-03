@@ -5,8 +5,8 @@ import {
   type ImageGenerationRequest,
   type ThreadAttachmentPort,
 } from 'harnesys';
-import type { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-provider.port.ts';
-import type { SecretStorePort } from '../../../domain/secret/secret-store.port.ts';
+import { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-provider.port.ts';
+import { SecretStorePort } from '../../../domain/secret/secret-store.port.ts';
 import { SdkImageAdapter } from '../../model-execution/sdk-image.adapter.ts';
 import { createOrgModelsPort } from '../org-models.port.ts';
 

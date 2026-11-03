@@ -10,23 +10,23 @@ import {
   type SessionEvent,
 } from 'harnesys';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
-import type { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
-import type { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
-import type { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
+import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
+import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import {
   mergeShellAssignment,
   rawShellAssignment,
 } from '../../domain/mode-presets/preset-shell-merge.ts';
-import type { WorkspaceContainerPort } from '../../domain/process-runtime/workspace-container.port.ts';
-import type { LlmModelPort, LlmProviderPort } from '../../domain/provider/llm-provider.port.ts';
-import type { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repository.port.ts';
-import type { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
-import type { SourceSkillsPort } from '../../domain/skills/source-skills.port.ts';
-import type { SourceLocationPort } from '../../domain/source/source-location.port.ts';
-import type { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
-import type { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
-import type { WebhookRepositoryPort } from '../../domain/webhook/webhook-repository.port.ts';
+import { WorkspaceContainerPort } from '../../domain/process-runtime/workspace-container.port.ts';
+import { LlmModelPort, LlmProviderPort } from '../../domain/provider/llm-provider.port.ts';
+import { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repository.port.ts';
+import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
+import { SourceSkillsPort } from '../../domain/skills/source-skills.port.ts';
+import { SourceLocationPort } from '../../domain/source/source-location.port.ts';
+import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
+import { WebhookRepositoryPort } from '../../domain/webhook/webhook-repository.port.ts';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
 import { toAgentDefinition } from '../runtime/agent-definition.mapper.ts';
 import { composeRunSkills } from '../runtime/compose-run-skills.ts';

@@ -28,6 +28,32 @@ export function assertThreadsOwnMembership(all?: (sql: string) => ColumnInfo[]):
   );
 }
 
+export function assertThreadsThreadSeq(all?: (sql: string) => ColumnInfo[]): void {
+  if (!all) {
+    return;
+  }
+  const columns = new Set(all('PRAGMA table_info(threads)').map((column) => column.name));
+  if (columns.size === 0 || columns.has('last_thread_seq')) {
+    return;
+  }
+  throw new Error(
+    'Legacy org database detected: table "threads" has no "last_thread_seq" column. Delete the org database and restart so the schema is recreated.',
+  );
+}
+
+export function assertRunEventsThreadScoped(all?: (sql: string) => ColumnInfo[]): void {
+  if (!all) {
+    return;
+  }
+  const columns = new Set(all('PRAGMA table_info(run_events)').map((column) => column.name));
+  if (columns.size === 0 || columns.has('thread_seq')) {
+    return;
+  }
+  throw new Error(
+    'Legacy org database detected: table "run_events" has no "thread_seq" column. Delete the org database and restart so the schema is recreated.',
+  );
+}
+
 export function assertRunsAgentSnapshot(all?: (sql: string) => ColumnInfo[]): void {
   if (!all) {
     return;

@@ -95,6 +95,7 @@ export function UserSegment({
         />
       ) : (
         <>
+          <AuthorLabel event={event} />
           {visibleText ? (
             <div className="max-w-[80%] rounded-2xl rounded-br-md bg-secondary px-3.5 py-1.5 text-secondary-foreground shadow-xs">
               <Markdown text={visibleText} components={fileLink} />
@@ -336,4 +337,11 @@ function AttachmentPreview({
     );
   }
   return <FileChip name={item.name} mediaType={item.mediaType ?? ''} href={url ?? undefined} />;
+}
+
+function AuthorLabel({ event }: { event: SessionEvent }) {
+  if (!event.author) {
+    return null;
+  }
+  return <div className="text-[11px] text-muted-foreground">{event.author.displayName}</div>;
 }

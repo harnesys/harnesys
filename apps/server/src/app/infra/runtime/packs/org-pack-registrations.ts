@@ -15,7 +15,7 @@ import {
 } from 'harnesys';
 import { lspCapability } from 'harnesys/lsp';
 import { skillsCapability } from 'harnesys/skills';
-import type { LspPort } from '../../../domain/lsp/lsp.port.ts';
+import { LspPort } from '../../../domain/lsp/lsp.port.ts';
 import { scopedLspPort } from '../../lsp/scoped-lsp.port.ts';
 import { getHostToolScope } from '../host-tool-scope.ts';
 import { OrgAgentsCatalogPort } from './org-agents-catalog.port.ts';

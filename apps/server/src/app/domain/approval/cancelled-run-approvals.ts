@@ -1,6 +1,6 @@
 import type { SessionEvent } from 'harnesys';
-import type { ApprovalEventsPort } from './approval-events.port.ts';
-import type { ApprovalStorePort } from './approval-store.port.ts';
+import { ApprovalEventsPort } from './approval-events.port.ts';
+import { ApprovalStorePort } from './approval-store.port.ts';
 
 export interface CancelledRunApprovalsDeps {
   approvals: ApprovalStorePort;

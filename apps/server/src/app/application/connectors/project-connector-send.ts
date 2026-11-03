@@ -1,7 +1,7 @@
 import type { SessionEvent } from 'harnesys';
-import type { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
+import { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
 import type { ProjectEventInput, ProjectionPlan } from '../../domain/connector/project-event.ts';
-import type { TelegramApiPort } from '../../domain/connector/telegram-api.port.ts';
+import { TelegramApiPort } from '../../domain/connector/telegram-api.port.ts';
 import type { DraftSendState } from './project-connector-draft.ts';
 
 export interface ProjectSendDeps {

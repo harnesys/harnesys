@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AppConfig, HarnesysPathsConfig } from '../../../config.schema.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { SecretLockedException } from '../../domain/secret/secret.error.ts';
 import { ensureOrgSchema } from '../org-sqlite/org-sql-ensure.ts';
 import { loadOrCreateMasterKey } from './master-key.ts';

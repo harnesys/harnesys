@@ -1,6 +1,6 @@
 import type { ProjectFileEvent } from '@harnesys/studio-shared';
 import { SAFETY_NAMES } from '../../../const.ts';
-import type { FilesWatcherPort } from '../../domain/knowledge/files-watcher.port.ts';
+import { FilesWatcherPort } from '../../domain/knowledge/files-watcher.port.ts';
 import { trace } from '../../libs/trace.ts';
 import type { SqliteKnowledgeIndexRepo } from './knowledge-index-repo.ts';
 import type { KnowledgeIndexer } from './knowledge-indexer.ts';

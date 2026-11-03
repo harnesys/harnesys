@@ -21,7 +21,9 @@ export interface CreateThreadInput {
   title?: string;
   agentId?: string;
   originAgentId?: string;
-  kind?: 'chat' | 'schedule' | 'webhook' | 'issue' | 'connector';
+  agentIds?: string[];
+  participantUserIds?: string[];
+  kind?: 'chat' | 'group' | 'schedule' | 'webhook' | 'issue' | 'connector';
   parentThreadId?: string;
   forkAt?: string;
 }
@@ -34,17 +36,19 @@ function requireOrgId(): string {
   return orgId;
 }
 
-function threadsBase(orgId: string): string {
+export function threadsBase(orgId: string): string {
   return `/api/orgs/${encodeURIComponent(orgId)}/threads`;
 }
 
-function toStudioSummary(record: ContractThreadSummary): ThreadSummary {
+export function toStudioSummary(record: ContractThreadSummary): ThreadSummary {
   return {
     id: record.id,
     title: record.title,
     agentId: record.agentId,
-    originAgentId: record.originAgentId,
-    agentName: record.agentName,
+    members: record.members,
+    autoReplyAgentId: record.autoReplyAgentId,
+    policy: record.policy,
+    participants: record.participants,
     projectId: record.orgId,
     kind: record.kind,
     issueId: record.issueId ?? null,
@@ -94,6 +98,8 @@ export function createThreadRecord(body: CreateThreadInput): Promise<ThreadRecor
   }
   const payload: CreateThreadBody = {
     agentId: body.agentId,
+    ...(body.agentIds?.length ? { agentIds: body.agentIds } : {}),
+    ...(body.participantUserIds?.length ? { participantUserIds: body.participantUserIds } : {}),
     ...(body.title ? { title: body.title } : {}),
     ...(body.kind ? { kind: body.kind } : {}),
     ...(body.parentThreadId ? { parentThreadId: body.parentThreadId } : {}),

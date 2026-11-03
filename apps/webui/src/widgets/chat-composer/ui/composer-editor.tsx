@@ -24,6 +24,7 @@ import { fileItems } from '../model/composer-providers';
 import { isValidEntityRef } from '../model/entity-kinds';
 import type { FileOption } from '../model/file-source';
 import { $insertInlineEntity, InlineEntityNode } from '../model/inline-entity-node';
+import { filterMentions, type MentionOption } from '../model/mention-source';
 import { type SkillOption, useComposerSkillOptions } from '../model/skill-source';
 import type { SlashCommand } from '../model/slash-commands';
 import {
@@ -33,6 +34,11 @@ import {
   fileSuggestionKey,
   insertFileChips,
 } from './file-suggestion-menu';
+import {
+  createMentionSuggestion,
+  exitMentionSuggestion,
+  mentionSuggestionKey,
+} from './mention-suggestion-menu';
 import { type PickerAnchor, SkillPicker } from './picker-menu';
 import { createSlashSuggestion, exitSlashSuggestion, slashSuggestionKey } from './suggestion-menu';
 export interface ComposerEditorHandle {
@@ -49,6 +55,7 @@ export interface ComposerEditorProps {
   placeholder: string;
   disabled: boolean;
   fileOptions: FileOption[];
+  mentionOptions: MentionOption[];
   onChange(payload: ComposerPayload): void;
   onSubmit(): void;
   onSlashCommand(command: SlashCommand): void;
@@ -88,7 +95,8 @@ export const ComposerEditor = forwardRef<ComposerEditorHandle, ComposerEditorPro
                   }
                   if (
                     slashSuggestionKey.getState(view.state)?.active ||
-                    fileSuggestionKey.getState(view.state)?.active
+                    fileSuggestionKey.getState(view.state)?.active ||
+                    mentionSuggestionKey.getState(view.state)?.active
                   ) {
                     return false;
                   }
@@ -148,6 +156,10 @@ export const ComposerEditor = forwardRef<ComposerEditorHandle, ComposerEditorPro
           isDisabled: () => latest.current.disabled,
           getItems: (query) => safeFileItems(query, latest.current.fileOptions),
         }),
+        createMentionSuggestion({
+          isDisabled: () => latest.current.disabled,
+          getItems: (query) => filterMentions(query, latest.current.mentionOptions),
+        }),
       ];
     }, []);
     const editorProps = useMemo(
@@ -173,6 +185,7 @@ export const ComposerEditor = forwardRef<ComposerEditorHandle, ComposerEditorPro
       if (props.disabled) {
         exitSlashSuggestion(editor.view);
         exitFileSuggestion(editor.view);
+        exitMentionSuggestion(editor.view);
         closePicker();
       }
     }, [props.disabled, editor, closePicker]);

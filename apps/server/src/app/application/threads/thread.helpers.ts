@@ -1,19 +1,30 @@
 import type {
   RunLifecycleStatus,
   ThreadActiveRun,
+  ThreadMember,
+  ThreadParticipant,
   ThreadPublic,
   ThreadSummary,
 } from '@harnesys/contracts';
 import type { RunAttribution, RunVia } from 'harnesys';
+import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import type {
   ThreadActiveRun as StoredActiveRun,
   ThreadInsert,
+  ThreadParticipantRecord,
   ThreadRecord,
 } from '../../domain/thread/thread.ts';
-import type { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
-import type { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
+import { ThreadParticipantRepositoryPort } from '../../domain/thread/thread-participant-repository.port.ts';
+import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 
 export const DEFAULT_THREAD_TITLE = 'New chat';
+
+export interface ThreadSummaryDeps {
+  threadAgents: ThreadAgentRepositoryPort;
+  participants: ThreadParticipantRepositoryPort;
+  agents: AgentRegistryPort;
+}
 
 export function insertAgentThread(
   deps: { threads: ThreadRepositoryPort; threadAgents: ThreadAgentRepositoryPort },
@@ -31,6 +42,56 @@ export function soleAgentIdOf(
   threadId: string,
 ): string | undefined {
   return threadAgents.listByThread(orgId, threadId)[0]?.agentId;
+}
+
+export function membersOf(
+  deps: ThreadSummaryDeps,
+  orgId: string,
+  threadId: string,
+): ThreadMember[] {
+  const agentNames = new Map(
+    deps.agents.list(orgId).map((agent) => [agent.id, agent.name] as const),
+  );
+  return deps.threadAgents
+    .listByThread(orgId, threadId)
+    .map((row) => ({ id: row.agentId, name: agentNames.get(row.agentId) ?? row.agentId }));
+}
+
+export function membersByThread(
+  deps: ThreadSummaryDeps,
+  orgId: string,
+  threadIds: string[],
+): Map<string, ThreadMember[]> {
+  const agentNames = new Map(
+    deps.agents.list(orgId).map((agent) => [agent.id, agent.name] as const),
+  );
+  const out = new Map<string, ThreadMember[]>();
+  for (const row of deps.threadAgents.listByThreads(orgId, threadIds)) {
+    const list = out.get(row.threadId) ?? [];
+    list.push({ id: row.agentId, name: agentNames.get(row.agentId) ?? row.agentId });
+    out.set(row.threadId, list);
+  }
+  return out;
+}
+
+export function participantsOf(
+  deps: ThreadSummaryDeps,
+  orgId: string,
+  threadId: string,
+): ThreadParticipant[] {
+  return deps.participants.listByThread(orgId, threadId).map(toParticipant);
+}
+
+export function toParticipant(record: ThreadParticipantRecord): ThreadParticipant {
+  return {
+    id: record.id,
+    provider: record.provider,
+    providerUserId: record.providerUserId,
+    displayName: record.displayName,
+    username: record.username,
+    role: record.role,
+    lastSeenAt: record.lastSeenAt,
+  };
 }
 
 function deriveThreadTitle(text: string, maxChars = 48): string | undefined {
@@ -62,6 +123,21 @@ export function applyDerivedThreadTitle(input: {
 
 export function isThreadUnread(updatedAt: string, lastReadAt: string): boolean {
   return updatedAt > lastReadAt;
+}
+
+export function unreadOf(input: {
+  thread: ThreadRecord;
+  participants: ThreadParticipant[];
+  userId?: string | null;
+}): boolean {
+  const { thread, participants, userId } = input;
+  if (thread.kind === 'group' && userId) {
+    const me = participants.find(
+      (item) => item.provider === 'app' && item.providerUserId === userId,
+    );
+    return isThreadUnread(thread.updatedAt, me?.lastSeenAt ?? thread.createdAt);
+  }
+  return isThreadUnread(thread.updatedAt, thread.lastReadAt);
 }
 
 export interface RunAttributionNames {
@@ -157,23 +233,37 @@ export function lastErrorOf(
   return { runId, message, at };
 }
 
-export function toThreadSummary(input: {
+export interface ThreadSummaryInput {
   thread: ThreadRecord;
-  agentId: string;
-  agentName: string;
+  members: ThreadMember[];
+  participants: ThreadParticipant[];
   active: ActiveRunSource | null;
   waitingForProfileId?: string;
   names?: RunAttributionNames;
   bindingLocked?: boolean;
-}): ThreadSummary {
-  const { thread, agentId, agentName, active, bindingLocked, names, waitingForProfileId } = input;
+  userId?: string | null;
+}
+
+function primaryAgentIdOf(thread: ThreadRecord, members: ThreadMember[]): string {
+  const autoReply = thread.autoReplyAgentId;
+  if (autoReply && members.some((member) => member.id === autoReply)) {
+    return autoReply;
+  }
+  return members[0]?.id ?? '';
+}
+
+export function toThreadSummary(input: ThreadSummaryInput): ThreadSummary {
+  const { thread, members, participants, active, bindingLocked, names, waitingForProfileId } =
+    input;
   return {
     id: thread.id,
     orgId: thread.orgId,
     title: thread.title,
-    agentId,
-    originAgentId: agentId,
-    agentName,
+    agentId: primaryAgentIdOf(thread, members),
+    members,
+    autoReplyAgentId: thread.autoReplyAgentId,
+    policy: thread.policy,
+    participants,
     kind: thread.kind,
     issueId: thread.issueId ?? null,
     parentThreadId: thread.parentThreadId,
@@ -181,7 +271,7 @@ export function toThreadSummary(input: {
     createdAt: thread.createdAt,
     updatedAt: thread.updatedAt,
     lastReadAt: thread.lastReadAt,
-    unread: isThreadUnread(thread.updatedAt, thread.lastReadAt),
+    unread: unreadOf({ thread, participants, userId: input.userId }),
     pinned: pinnedOf(thread),
     runMode: runModeOf(thread),
     runProfileId: thread.runProfileId ?? null,
@@ -192,22 +282,32 @@ export function toThreadSummary(input: {
   };
 }
 
-export function toThreadPublic(input: {
+export function toThreadPublic(
+  input: ThreadSummaryInput & { events: unknown[]; inheritedEventCount?: number },
+): ThreadPublic {
+  return {
+    ...toThreadSummary(input),
+    events: input.events,
+    inheritedEventCount: input.inheritedEventCount ?? 0,
+  };
+}
+
+export function toThreadPublicForAgent(input: {
   thread: ThreadRecord;
   agentId: string;
   agentName: string;
   active: ActiveRunSource | null;
   events: unknown[];
   inheritedEventCount?: number;
-  waitingForProfileId?: string;
-  names?: RunAttributionNames;
-  bindingLocked?: boolean;
 }): ThreadPublic {
-  return {
-    ...toThreadSummary(input),
+  return toThreadPublic({
+    thread: input.thread,
+    members: [{ id: input.agentId, name: input.agentName }],
+    participants: [],
+    active: input.active,
     events: input.events,
     inheritedEventCount: input.inheritedEventCount ?? 0,
-  };
+  });
 }
 
 export function waitingForProfileIdFromEvents(events: unknown[]): string | undefined {

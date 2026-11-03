@@ -15,11 +15,11 @@ import {
 } from '../../../application/agents/agent.helpers.ts';
 import { validateAgentHooks } from '../../../application/agents/agent-hooks.validation.ts';
 import type { AgentPatch, AgentRecord } from '../../../domain/agent/agent.ts';
-import type { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
+import { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
 import { ExecutionProfilePort } from '../../../domain/execution-profile/execution-profile.port.ts';
 import { ModePresetRegistryPort } from '../../../domain/mode-presets/mode-preset-registry.port.ts';
 import type { PluginAgentEntry } from '../../../domain/plugin/plugin-runtime.port.ts';
-import type { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-provider.port.ts';
+import { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-provider.port.ts';
 import { toAgentDefinition } from '../agent-definition.mapper.ts';
 import type { OrgPluginRuntimeSource } from '../org-plugin-wiring.ts';
 

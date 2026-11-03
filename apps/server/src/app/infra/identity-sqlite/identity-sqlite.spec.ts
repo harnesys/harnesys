@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { SessionStoreAdapter } from './session-repository.adapter.ts';
 import { UserRepositoryAdapter } from './user-repository.adapter.ts';
 

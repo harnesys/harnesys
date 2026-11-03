@@ -3,6 +3,7 @@ import {
   type AnySQLiteColumn,
   check,
   index,
+  integer,
   primaryKey,
   sqliteTable,
   text,
@@ -16,9 +17,20 @@ export const threadsTable = sqliteTable(
     id: text('id').primaryKey(),
     orgId: text('org_id').notNull(),
     title: text('title').notNull(),
-    kind: text('kind', { enum: ['chat', 'schedule', 'webhook', 'issue', 'connector'] })
+    kind: text('kind', {
+      enum: ['chat', 'group', 'schedule', 'webhook', 'issue', 'connector'],
+    })
       .notNull()
       .default('chat'),
+    autoReplyAgentId: text('auto_reply_agent_id').references(
+      (): AnySQLiteColumn => agentsTable.id,
+      {
+        onDelete: 'set null',
+      },
+    ),
+    policy: text('policy').notNull().default('{"version":1}'),
+    lastThreadSeq: integer('last_thread_seq').notNull().default(0),
+    conversationCount: integer('conversation_count').notNull().default(0),
     parentThreadId: text('parent_thread_id').references((): AnySQLiteColumn => threadsTable.id, {
       onDelete: 'set null',
     }),
@@ -37,7 +49,7 @@ export const threadsTable = sqliteTable(
   (table) => ({
     kindCheck: check(
       'threads_kind_check',
-      sql`${table.kind} IN ('chat', 'schedule', 'webhook', 'issue', 'connector')`,
+      sql`${table.kind} IN ('chat', 'group', 'schedule', 'webhook', 'issue', 'connector')`,
     ),
     orgIdx: index('threads_org_idx').on(table.orgId),
     issueIdx: index('threads_issue_idx').on(table.issueId),

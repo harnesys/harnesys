@@ -14,11 +14,11 @@ import {
   webhookEndpointFor,
 } from '../../../application/webhooks/webhook.helpers.ts';
 import { AgentNotFoundException } from '../../../domain/agent/agent.error.ts';
-import type { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
+import { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
 import { DeskEventsPort } from '../../../domain/desk/desk-events.port.ts';
 import type { ThreadRecord } from '../../../domain/thread/thread.ts';
-import type { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
-import type { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
+import { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
+import { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
 import {
   WebhookNotFoundException,
   WebhookValidationException,
@@ -27,7 +27,7 @@ import type {
   WebhookRecord as ServerWebhookRecord,
   WebhookPatch,
 } from '../../../domain/webhook/webhook.ts';
-import type { WebhookRepositoryPort } from '../../../domain/webhook/webhook-repository.port.ts';
+import { WebhookRepositoryPort } from '../../../domain/webhook/webhook-repository.port.ts';
 
 export interface OrgWebhookPortDeps {
   webhooks: WebhookRepositoryPort;

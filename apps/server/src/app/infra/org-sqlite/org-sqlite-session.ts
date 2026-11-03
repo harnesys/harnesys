@@ -2,7 +2,7 @@ import { Database } from 'bun:sqlite';
 import { existsSync } from 'node:fs';
 import type { BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { ensureOrgSchema } from './org-sql-ensure.ts';
 import * as knowledgeSchema from './schema/index.ts';
 

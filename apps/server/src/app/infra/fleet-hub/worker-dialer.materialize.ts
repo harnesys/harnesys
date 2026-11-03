@@ -1,10 +1,10 @@
 import { materializeGitSourceOnHost } from '../../application/source/materialize-git-source.ts';
-import type { OrgExecutionReplicaPort } from '../../domain/fleet/org-execution-replica.port.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
-import type { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
-import type { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
-import type { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
-import type { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
+import { OrgExecutionReplicaPort } from '../../domain/fleet/org-execution-replica.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
+import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
+import { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
+import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { hasGitVcs, sourceHostAvailability } from '../../domain/source/vcs-capability.ts';
 import { sanitizeGitText } from '../source/drivers/git/git-engine.ts';
 import { resolveFleetSecretByOperation } from './fleet-secret-resolver.ts';

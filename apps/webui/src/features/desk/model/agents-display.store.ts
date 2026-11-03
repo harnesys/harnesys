@@ -5,6 +5,7 @@ import { AGENTS_DISPLAY_STORAGE_KEY } from '@/shared/config/constants';
 
 export const AGENT_THREAD_KINDS: readonly ThreadKind[] = [
   'chat',
+  'group',
   'issue',
   'schedule',
   'webhook',

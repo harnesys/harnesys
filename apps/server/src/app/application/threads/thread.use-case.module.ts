@@ -15,6 +15,8 @@ import { ThreadModule } from '../../infra/thread/thread.module.ts';
 import { UsageModule } from '../../infra/usage/usage.module.ts';
 import { FleetUseCaseModule } from '../fleet/fleet.use-case.module.ts';
 import { SkillsUseCaseModule } from '../skills/skills.use-case.module.ts';
+import { AddThreadAgentUseCase } from './add-thread-agent.use-case.ts';
+import { AddThreadParticipantUseCase } from './add-thread-participant.use-case.ts';
 import { CancelRunUseCase } from './cancel-run.use-case.ts';
 import { CompactThreadUseCase } from './compact-thread.use-case.ts';
 import { CreateThreadUseCase } from './create-thread.use-case.ts';
@@ -31,6 +33,8 @@ import { ListThreadRawModelRequestsUseCase } from './list-thread-raw-model-reque
 import { ListThreadsUseCase } from './list-threads.use-case.ts';
 import { MarkThreadReadUseCase } from './mark-thread-read.use-case.ts';
 import { ReadThreadFileUseCase } from './read-thread-file.use-case.ts';
+import { RemoveThreadAgentUseCase } from './remove-thread-agent.use-case.ts';
+import { RemoveThreadParticipantUseCase } from './remove-thread-participant.use-case.ts';
 import { RespondRunUseCase } from './respond-run.use-case.ts';
 import { RetryRunUseCase } from './retry-run.use-case.ts';
 import { SendThreadRunUseCase } from './send-thread-run.use-case.ts';
@@ -38,6 +42,7 @@ import { StreamRunEventsUseCase } from './stream-run-events.use-case.ts';
 import { ThreadMessageQueueUseCase } from './thread-message-queue.use-case.ts';
 import { TickWaitTimersUseCase } from './tick-wait-timers.use-case.ts';
 import { UpdateThreadBindingUseCase } from './update-thread-binding.use-case.ts';
+import { UpdateThreadPolicyUseCase } from './update-thread-policy.use-case.ts';
 import { UploadThreadAttachmentUseCase } from './upload-thread-attachment.use-case.ts';
 
 const useCases = [
@@ -56,6 +61,11 @@ const useCases = [
   DeleteThreadUseCase,
   DeleteThreadEventUseCase,
   UpdateThreadBindingUseCase,
+  UpdateThreadPolicyUseCase,
+  AddThreadAgentUseCase,
+  RemoveThreadAgentUseCase,
+  AddThreadParticipantUseCase,
+  RemoveThreadParticipantUseCase,
   TickWaitTimersUseCase,
   UploadThreadAttachmentUseCase,
   ListThreadAttachmentsUseCase,

@@ -10,11 +10,11 @@ import type {
   ApprovalDelegatedContext,
   ApprovalFileContext,
 } from '../../domain/approval/approval.ts';
-import type { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
-import type { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
-import type { ModePresetRegistryPort } from '../../domain/mode-presets/mode-preset-registry.port.ts';
-import type { PermissionRuleStorePort } from '../../domain/permissions/permission-rule-store.port.ts';
-import type { SourceLocationPort } from '../../domain/source/source-location.port.ts';
+import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
+import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
+import { ModePresetRegistryPort } from '../../domain/mode-presets/mode-preset-registry.port.ts';
+import { PermissionRuleStorePort } from '../../domain/permissions/permission-rule-store.port.ts';
+import { SourceLocationPort } from '../../domain/source/source-location.port.ts';
 import { denyFileRuleOf, persistFileRule } from './persist-file-rule.ts';
 import { persistShellRule } from './persist-shell-rule.ts';
 import { recordOperationRules } from './record-operation-rules.ts';

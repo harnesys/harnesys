@@ -82,13 +82,14 @@ function setup(): TestHarness {
 }
 
 function enqueue(harness: TestHarness, text: string, offsetMs = 0): string {
-  const id = enqueueThreadMessage(harness.db, { threadId: 'thread-1', text });
-  if (offsetMs > 0 && id !== null) {
+  const result = enqueueThreadMessage(harness.db, { threadId: 'thread-1', text });
+  const id = result.itemIds[0] ?? '';
+  if (offsetMs > 0 && id !== '') {
     harness.sqlite
       .query('UPDATE thread_message_queue SET queued_at = ? WHERE item_id = ?')
       .run(new Date(Date.now() + offsetMs).toISOString(), id);
   }
-  return id ?? '';
+  return id;
 }
 
 describe('thread message queue', () => {
@@ -134,13 +135,13 @@ describe('thread message queue', () => {
       text: 'one',
       clientEventId: 'ce-1',
     });
-    expect(first).not.toBeNull();
+    expect(first.itemIds).toHaveLength(1);
     const dup = enqueueThreadMessage(h.db, {
       threadId: 'thread-1',
       text: 'one',
       clientEventId: 'ce-1',
     });
-    expect(dup).toBeNull();
+    expect(dup.itemIds).toHaveLength(0);
     expect(listQueuedThreadMessages(h.db, 'thread-1')).toHaveLength(1);
     const itemId = listQueuedThreadMessages(h.db, 'thread-1')[0]?.itemId ?? '';
     expect(deleteQueuedThreadMessage(h.db, 'thread-1', itemId)).toHaveLength(1);

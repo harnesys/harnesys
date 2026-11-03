@@ -1,7 +1,7 @@
 import { ScheduleValidationException } from '../../domain/schedule/schedule.error.ts';
 import { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repository.port.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
-import type { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 
 export function requireBindableScheduleThread(input: {

@@ -204,6 +204,7 @@ export type {
   TerminalWatchEvent,
 } from './src/terminal.ts';
 export { isTextAttachment } from './src/text-attachment.ts';
+export type { ThreadMemberRef, ThreadParticipantRef, ThreadPolicy } from './src/thread';
 export type {
   AcceptedRunResponse,
   CompactThreadResponse,

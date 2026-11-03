@@ -1,5 +1,5 @@
 import type { HookRunReport, RunEventFeed, RunEventStore } from 'harnesys';
-import type { HookRunStorePort } from '../../domain/agent/hook-run-store.port.ts';
+import { HookRunStorePort } from '../../domain/agent/hook-run-store.port.ts';
 
 export function createHookReport(input: {
   orgId: string;

@@ -13,6 +13,7 @@ import {
 } from 'harnesys';
 import { soleAgentIdOf } from '../../application/threads/thread.helpers.ts';
 import { composeRunSkills } from './compose-run-skills.ts';
+import { createThreadHistoryTool, THREAD_HISTORY_TOOL } from './create-thread-history-tool.ts';
 import { runInHostToolScope } from './host-tool-scope.ts';
 import type { OrgPluginWiring } from './org-plugin-wiring.ts';
 import type { OrgRuntimeDeps } from './org-runtime.types.ts';
@@ -79,7 +80,10 @@ export function createRunTargetResolver(ctx: RunTargetResolverContext) {
     });
     const universe: CapabilityUniverse = {
       registrations: ctx.packRegistrations,
-      baseRegistry: plugin.makeRegistry(),
+      baseRegistry: withThreadHistory(plugin.makeRegistry(), {
+        threadId,
+        events: ctx.events,
+      }),
       roster: ctx.agentsResolve.list(agentDef),
       fsSkills: skills,
       mode: prepared.mode,
@@ -126,6 +130,15 @@ export function createRunTargetResolver(ctx: RunTargetResolverContext) {
     };
     return target;
   };
+}
+
+function withThreadHistory(
+  base: Map<string, ToolDefinition>,
+  deps: { threadId: string; events: RunEventStore },
+): Map<string, ToolDefinition> {
+  const registry = new Map(base);
+  registry.set(THREAD_HISTORY_TOOL, createThreadHistoryTool(deps));
+  return registry;
 }
 
 function agentDefFor(

@@ -2,8 +2,42 @@ import { z } from 'zod';
 import { ExecutionProfileIdSchema } from './execution-profile.ts';
 import { OrgIdSchema } from './org-machine.ts';
 
-export const ThreadKindSchema = z.enum(['chat', 'schedule', 'webhook', 'issue', 'connector']);
+export const ThreadKindSchema = z.enum([
+  'chat',
+  'group',
+  'schedule',
+  'webhook',
+  'issue',
+  'connector',
+]);
 export type ThreadKind = z.infer<typeof ThreadKindSchema>;
+
+export const ThreadPolicySchema = z.object({
+  version: z.literal(1).default(1),
+  contextWindow: z.number().int().min(1).max(40).optional(),
+  mentionGating: z.boolean().optional(),
+});
+export type ThreadPolicy = z.infer<typeof ThreadPolicySchema>;
+
+export const ThreadMemberSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+});
+export type ThreadMember = z.infer<typeof ThreadMemberSchema>;
+
+export const ThreadParticipantRoleSchema = z.enum(['member', 'blocked']);
+export type ThreadParticipantRole = z.infer<typeof ThreadParticipantRoleSchema>;
+
+export const ThreadParticipantSchema = z.object({
+  id: z.string().uuid(),
+  provider: z.string().min(1),
+  providerUserId: z.string().min(1),
+  displayName: z.string(),
+  username: z.string().nullable(),
+  role: ThreadParticipantRoleSchema,
+  lastSeenAt: z.string().nullable(),
+});
+export type ThreadParticipant = z.infer<typeof ThreadParticipantSchema>;
 
 export const RunLifecycleStatusSchema = z.enum([
   'queued',
@@ -44,9 +78,11 @@ export const ThreadSummarySchema = z.object({
   id: z.string().uuid(),
   orgId: OrgIdSchema,
   title: z.string().min(1),
-  agentId: z.string().uuid(),
-  originAgentId: z.string().uuid(),
-  agentName: z.string(),
+  agentId: z.string(),
+  members: z.array(ThreadMemberSchema),
+  autoReplyAgentId: z.string().uuid().nullable(),
+  policy: ThreadPolicySchema,
+  participants: z.array(ThreadParticipantSchema),
   kind: ThreadKindSchema,
   issueId: z.string().uuid().nullable(),
   parentThreadId: z.string().uuid().nullable(),
@@ -73,12 +109,36 @@ export type ThreadPublic = z.infer<typeof ThreadPublicSchema>;
 
 export const CreateThreadBodySchema = z.object({
   agentId: z.string().uuid(),
+  agentIds: z.array(z.string().uuid()).max(8).optional(),
+  participantUserIds: z.array(z.string().uuid()).max(20).optional(),
   title: z.string().trim().min(1).optional(),
   kind: ThreadKindSchema.optional(),
   parentThreadId: z.string().uuid().optional(),
   forkAt: z.string().trim().min(1).optional(),
 });
 export type CreateThreadBody = z.infer<typeof CreateThreadBodySchema>;
+
+export const AddThreadAgentBodySchema = z.object({
+  agentId: z.string().uuid(),
+});
+export type AddThreadAgentBody = z.infer<typeof AddThreadAgentBodySchema>;
+
+export const AddThreadParticipantBodySchema = z.object({
+  userId: z.string().uuid(),
+});
+export type AddThreadParticipantBody = z.infer<typeof AddThreadParticipantBodySchema>;
+
+export const UpdateThreadPolicyBodySchema = z.object({
+  autoReplyAgentId: z.string().uuid().nullable().optional(),
+  contextWindow: z.number().int().min(1).max(40).nullable().optional(),
+  mentionGating: z.boolean().optional(),
+});
+export type UpdateThreadPolicyBody = z.infer<typeof UpdateThreadPolicyBodySchema>;
+
+export const SetThreadParticipantRoleBodySchema = z.object({
+  role: ThreadParticipantRoleSchema,
+});
+export type SetThreadParticipantRoleBody = z.infer<typeof SetThreadParticipantRoleBodySchema>;
 
 export const UpdateThreadBindingBodySchema = z
   .object({
@@ -118,6 +178,7 @@ export const SendThreadRunBodySchema = z
     correlationId: z.string().optional(),
     sourceId: z.string().uuid().optional(),
     worktreeId: z.string().uuid().optional(),
+    agentId: z.string().uuid().optional(),
   })
   .refine(
     (b) => !b.skills?.length || (b.text?.trim() ?? '') !== '' || (b.attachmentIds?.length ?? 0) > 0,
@@ -179,9 +240,9 @@ export const ThreadFilePathQuerySchema = z.object({
 export type ThreadFilePathQuery = z.infer<typeof ThreadFilePathQuerySchema>;
 
 export const AcceptedRunResponseSchema = z.object({
-  runId: z.string().uuid(),
+  runId: z.string(),
   threadId: z.string().uuid(),
-  status: z.enum(['queued', 'waiting', 'failed']),
+  status: z.enum(['queued', 'waiting', 'failed', 'ignored']),
   waitingForProfileId: z.string().optional(),
 });
 export type AcceptedRunResponse = z.infer<typeof AcceptedRunResponseSchema>;

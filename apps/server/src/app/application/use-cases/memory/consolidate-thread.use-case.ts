@@ -11,7 +11,7 @@ import {
   type SessionEvent,
 } from 'harnesys';
 import type { AgentRecord } from '../../../domain/agent/agent.ts';
-import type { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
+import { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
 import type { EmbeddingsPort } from '../../../infra/knowledge/embeddings.ts';
 import { OrgMemoryConsolidationStore } from '../../../infra/memory/org-memory-consolidation.store.ts';
 import type { OrgSqliteDb } from '../../../infra/org-sqlite/org-sqlite-session.ts';
@@ -41,8 +41,8 @@ import {
   parseConsolidationVerdict,
   pendingEventsOf,
 } from './consolidation-decisions.ts';
-import type { PromoteFactsUseCase } from './promote-facts.use-case.ts';
-import type { ReflectThreadUseCase } from './reflect-thread.use-case.ts';
+import { PromoteFactsUseCase } from './promote-facts.use-case.ts';
+import { ReflectThreadUseCase } from './reflect-thread.use-case.ts';
 
 export interface ConsolidateThreadDeps {
   db: OrgSqliteDb;

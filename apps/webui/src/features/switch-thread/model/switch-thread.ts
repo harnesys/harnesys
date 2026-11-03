@@ -44,6 +44,31 @@ export async function openNewThread(agentId: string, _orgId: string): Promise<st
   setActiveThreadId(agentId, record.id);
   return record.id;
 }
+export interface OpenGroupThreadInput {
+  agentIds: string[];
+  participantUserIds: string[];
+  title?: string;
+}
+
+export async function openGroupThread(input: OpenGroupThreadInput): Promise<string | null> {
+  const first = input.agentIds[0];
+  if (!first) {
+    return null;
+  }
+  const record = await createThreadRecord({
+    agentId: first,
+    agentIds: input.agentIds,
+    participantUserIds: input.participantUserIds,
+    kind: 'group',
+    ...(input.title ? { title: input.title } : {}),
+  });
+  const thread = toClientThread(record);
+  useThreadStore.getState().upsert(thread);
+  useSessionStore.getState().replaceEvents(record.id, record.events);
+  setActiveThreadId(first, thread.id);
+  return thread.id;
+}
+
 export async function branchThread(
   forkAt: string,
   agentId: string,

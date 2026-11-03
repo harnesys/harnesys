@@ -245,6 +245,11 @@ export {
   threadMessageQueueTable,
 } from './thread-message-queue.ts';
 export {
+  type ThreadParticipantInsertRow,
+  type ThreadParticipantRow,
+  threadParticipantsTable,
+} from './thread-participants.ts';
+export {
   type ThreadPlanInsert,
   type ThreadPlanRow,
   threadPlansTable,

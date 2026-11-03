@@ -1,8 +1,8 @@
 import type { Logger } from '@harnesys/brix';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
-import type { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
-import type { WorkspaceContainerPort } from '../../domain/process-runtime/workspace-container.port.ts';
-import type { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
+import { WorkspaceContainerPort } from '../../domain/process-runtime/workspace-container.port.ts';
+import { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
 import type { DialerSession } from './worker-dialer.session.ts';
 
 export interface WorkerWorktreeDeps {

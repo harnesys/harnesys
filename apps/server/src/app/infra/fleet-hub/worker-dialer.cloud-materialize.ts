@@ -1,9 +1,9 @@
 import { materializeCloudSourceOnHost } from '../../application/source/materialize-cloud-source.ts';
-import type { OrgExecutionReplicaPort } from '../../domain/fleet/org-execution-replica.port.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
-import type { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
-import type { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
-import type { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
+import { OrgExecutionReplicaPort } from '../../domain/fleet/org-execution-replica.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
+import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
+import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import {
   getValidGoogleAccessToken,
   googleCredKey,

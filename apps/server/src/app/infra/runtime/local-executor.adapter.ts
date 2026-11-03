@@ -224,8 +224,8 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     return (await this.ensure(orgId)).events;
   }
 
-  async sessionFor(orgId: string, threadId: string): Promise<SessionHandle> {
-    return (await this.ensure(orgId)).sessionFor(threadId);
+  async sessionFor(orgId: string, threadId: string, agentId?: string): Promise<SessionHandle> {
+    return (await this.ensure(orgId)).sessionFor(threadId, agentId);
   }
 
   async send(input: SendLocalRunInput): Promise<AcceptedRunResponse> {
@@ -246,6 +246,8 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       ...(input.triggerKind ? { triggerKind: input.triggerKind } : {}),
       ...(input.branch ? { branch: input.branch } : {}),
       ...(input.attribution ? { attribution: input.attribution } : {}),
+      ...(input.agentId ? { agentId: input.agentId } : {}),
+      ...(input.triggerThreadSeq !== undefined ? { triggerThreadSeq: input.triggerThreadSeq } : {}),
     });
   }
 
@@ -279,19 +281,17 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
   async truncateThreadFrom(
     orgId: string,
     threadId: string,
-    runId: string,
-    seq: number,
+    threadSeq: number,
   ): Promise<TruncateThreadResult> {
-    return (await this.ensure(orgId)).truncateThread(threadId, runId, seq);
+    return (await this.ensure(orgId)).truncateThread(threadId, threadSeq);
   }
 
   async removeThreadEvent(
     orgId: string,
     threadId: string,
-    runId: string,
-    seq: number,
+    threadSeq: number,
   ): Promise<SessionEvent> {
-    return (await this.ensure(orgId)).removeThreadEvent(threadId, runId, seq);
+    return (await this.ensure(orgId)).removeThreadEvent(threadId, threadSeq);
   }
 
   async tickWaitTimers(orgId: string): Promise<number> {

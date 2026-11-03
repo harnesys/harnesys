@@ -1,5 +1,5 @@
 import type { Attachment, AttachmentKind } from 'harnesys';
-import type { AttachmentRepositoryPort } from '../../domain/thread/attachment-repository.port.ts';
+import { AttachmentRepositoryPort } from '../../domain/thread/attachment-repository.port.ts';
 import {
   RunConflictException,
   ThreadValidationException,

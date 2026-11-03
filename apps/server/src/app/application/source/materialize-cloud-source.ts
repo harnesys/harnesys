@@ -1,12 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { MaterializationState } from '@harnesys/contracts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import type {
   CloudRemoteBackendPort,
   CloudRemoteEntry,
 } from '../../domain/source/cloud-remote-backend.port.ts';
-import type { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
+import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import type { MirrorMetaFile } from '../../infra/source/drivers/cloud/cloud-mirror-engine.ts';
 import {
   assertSafeCloudName,

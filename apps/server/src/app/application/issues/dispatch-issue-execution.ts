@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { FleetContentProxyPort } from '../../domain/fleet/fleet-content-proxy.port.ts';
+import { FleetContentProxyPort } from '../../domain/fleet/fleet-content-proxy.port.ts';
 import type { IssueBoardRecord } from '../../domain/issue/board.ts';
 import {
   IssueExecutionActiveException,
@@ -7,18 +7,18 @@ import {
 } from '../../domain/issue/issue.error.ts';
 import type { IssueFireReason, IssueRecord } from '../../domain/issue/issue.ts';
 import { IssueEventsPort } from '../../domain/issue/issue-events.port.ts';
-import type { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
+import { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
 import {
   decideIssueReservation,
   isOwnIssueExecutionTransition,
   issueExecutionCorrelationId,
 } from '../../domain/issue/issue-execution.ts';
-import type { IssueFirePort } from '../../domain/issue/issue-fire.port.ts';
+import { IssueFirePort } from '../../domain/issue/issue-fire.port.ts';
 import { IssueRepositoryPort } from '../../domain/issue/issue-repository.port.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
-import type { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
-import type { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
-import type { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
+import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
+import { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
 import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import {

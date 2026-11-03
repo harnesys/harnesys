@@ -1,5 +1,5 @@
 import type { MaterializationOrigin } from '@harnesys/contracts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import {
   type GitRepositoryLayout,
   gitWorktreePath,
@@ -10,8 +10,9 @@ import {
   SourceNotFoundException,
   SourcePathInvalidException,
 } from '../../domain/source/source.error.ts';
-import type { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
-import type { SourceRecord, SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
+import type { SourceRecord } from '../../domain/source/source-registry.port.ts';
+import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import { hasGitRemote, hasGitVcs } from '../../domain/source/vcs-capability.ts';
 
 export interface ManagedGitLayout {

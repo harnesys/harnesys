@@ -1,7 +1,9 @@
 import { Injectable } from '@harnesys/brix';
-import type { CreateThreadBody, ThreadPublic } from '@harnesys/contracts';
+import type { CreateThreadBody, ThreadKind, ThreadPublic } from '@harnesys/contracts';
 import { AgentNotFoundException } from '../../domain/agent/agent.error.ts';
+import type { AgentRecord } from '../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
+import { UserRepository } from '../../domain/identity/user-repository.port.ts';
 import { collectInheritedEvents } from '../../domain/thread/fork-logs.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import {
@@ -9,12 +11,24 @@ import {
   ThreadValidationException,
 } from '../../domain/thread/thread.error.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
+import { ThreadParticipantRepositoryPort } from '../../domain/thread/thread-participant-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
-import { DEFAULT_THREAD_TITLE, insertAgentThread, toThreadPublic } from './thread.helpers.ts';
+import {
+  DEFAULT_THREAD_TITLE,
+  membersOf,
+  participantsOf,
+  toThreadPublic,
+} from './thread.helpers.ts';
 
 export interface CreateThreadRequest {
   orgId: string;
   body: CreateThreadBody;
+}
+
+interface ForkInfo {
+  parentThreadId: string | null;
+  forkAt: string | null;
+  inheritedEventCount: number;
 }
 
 @Injectable()
@@ -22,15 +36,77 @@ export class CreateThreadUseCase {
   constructor(
     private readonly threads: ThreadRepositoryPort,
     private readonly threadAgents: ThreadAgentRepositoryPort,
+    private readonly participants: ThreadParticipantRepositoryPort,
     private readonly agents: AgentRegistryPort,
+    private readonly users: UserRepository,
     private readonly executor: LocalExecutorPort,
   ) {}
 
   async execute(request: CreateThreadRequest): Promise<ThreadPublic> {
+    const { agent, agentIds, kind } = this.resolveAgents(request);
+    const fork = await this.resolveFork(request, kind);
+    const now = new Date().toISOString();
+    const thread = this.threads.insert({
+      id: crypto.randomUUID(),
+      orgId: request.orgId,
+      title: request.body.title?.trim() || DEFAULT_THREAD_TITLE,
+      kind,
+      autoReplyAgentId: agent.id,
+      policy: { version: 1 },
+      lastThreadSeq: 0,
+      conversationCount: 0,
+      parentThreadId: fork.parentThreadId,
+      forkAt: fork.forkAt,
+      inheritedEventCount: fork.inheritedEventCount,
+      metadata: { runMode: agent.defaultModeId ?? undefined },
+      runProfileId: null,
+      runDirectory: null,
+      createdAt: now,
+      updatedAt: now,
+      lastReadAt: now,
+    });
+    for (const agentId of agentIds) {
+      this.threadAgents.ensure(request.orgId, thread.id, agentId);
+    }
+    this.ensureParticipants(request, thread.id, now);
+    const deps = {
+      threadAgents: this.threadAgents,
+      participants: this.participants,
+      agents: this.agents,
+    };
+    return toThreadPublic({
+      thread,
+      members: membersOf(deps, request.orgId, thread.id),
+      participants: participantsOf(deps, request.orgId, thread.id),
+      active: null,
+      events: [],
+      inheritedEventCount: fork.inheritedEventCount,
+    });
+  }
+
+  private resolveAgents(request: CreateThreadRequest): {
+    agent: AgentRecord;
+    agentIds: string[];
+    kind: ThreadKind;
+  } {
     const agent = this.agents.findById(request.orgId, request.body.agentId);
     if (!agent) {
       throw new AgentNotFoundException(request.body.agentId);
     }
+    const agentIds = [...new Set([agent.id, ...(request.body.agentIds ?? [])])];
+    for (const agentId of agentIds) {
+      if (!this.agents.findById(request.orgId, agentId)) {
+        throw new AgentNotFoundException(agentId);
+      }
+    }
+    const requestedKind = request.body.kind ?? (agentIds.length > 1 ? 'group' : 'chat');
+    if (agentIds.length > 1 && requestedKind === 'chat') {
+      throw new ThreadValidationException('a chat thread has exactly one agent');
+    }
+    return { agent, agentIds, kind: agentIds.length > 1 ? 'group' : requestedKind };
+  }
+
+  private async resolveFork(request: CreateThreadRequest, kind: ThreadKind): Promise<ForkInfo> {
     let parentThreadId: string | null = null;
     let forkAt: string | null = null;
     let inheritedEventCount = 0;
@@ -38,6 +114,9 @@ export class CreateThreadUseCase {
       const parent = this.threads.findById(request.orgId, request.body.parentThreadId);
       if (!parent) {
         throw new ThreadNotFoundException(request.body.parentThreadId);
+      }
+      if (parent.kind === 'group' || kind === 'group') {
+        throw new ThreadValidationException('forking a group thread is not supported');
       }
       parentThreadId = parent.id;
       forkAt = request.body.forkAt?.trim() ? request.body.forkAt.trim() : null;
@@ -53,33 +132,29 @@ export class CreateThreadUseCase {
     } else if (request.body.forkAt?.trim()) {
       throw new ThreadValidationException('parent required for fork');
     }
-    const now = new Date().toISOString();
-    const thread = insertAgentThread(
-      { threads: this.threads, threadAgents: this.threadAgents },
-      {
+    return { parentThreadId, forkAt, inheritedEventCount };
+  }
+
+  private ensureParticipants(request: CreateThreadRequest, threadId: string, now: string): void {
+    for (const userId of request.body.participantUserIds ?? []) {
+      const user = this.users.findById(userId);
+      if (!user) {
+        throw new ThreadNotFoundException(userId);
+      }
+      this.participants.ensure({
         id: crypto.randomUUID(),
         orgId: request.orgId,
-        title: request.body.title?.trim() || DEFAULT_THREAD_TITLE,
-        kind: request.body.kind ?? 'chat',
-        parentThreadId,
-        forkAt,
-        inheritedEventCount,
-        metadata: { runMode: agent.defaultModeId ?? undefined },
-        runProfileId: null,
-        runDirectory: null,
+        threadId,
+        provider: 'app',
+        providerUserId: user.id,
+        displayName: user.name,
+        username: user.login,
+        role: 'member',
+        firstSeenAt: now,
+        lastSeenAt: now,
         createdAt: now,
         updatedAt: now,
-        lastReadAt: now,
-      },
-      agent.id,
-    );
-    return toThreadPublic({
-      thread,
-      agentId: agent.id,
-      agentName: agent.name,
-      active: null,
-      events: [],
-      inheritedEventCount,
-    });
+      });
+    }
   }
 }

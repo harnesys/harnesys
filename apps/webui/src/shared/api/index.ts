@@ -220,6 +220,13 @@ export {
   loadThreadFileContent,
 } from './thread-files';
 export {
+  addThreadAgent,
+  addThreadParticipant,
+  removeThreadAgent,
+  removeThreadParticipant,
+  updateThreadPolicy,
+} from './thread-groups';
+export {
   deleteThreadQueueItem,
   deliverThreadQueueItem,
   listThreadQueue,

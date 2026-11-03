@@ -1,4 +1,4 @@
-import { and, eq, gt } from 'drizzle-orm';
+import { and, eq, gt, isNotNull } from 'drizzle-orm';
 import {
   codedRunError,
   type PendingSessionEvent,
@@ -8,6 +8,8 @@ import {
 } from 'harnesys';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
 import { runEventsTable, runsTable } from '../org-sqlite/schema/index.ts';
+import { bumpConversationCount, nextThreadSeq } from '../org-sqlite/thread-transcript.store.ts';
+import { stampFinalAnswer } from './run-events-final-answer.ts';
 import {
   removeThreadEventRow,
   rowToEvent,
@@ -39,6 +41,10 @@ function clientEventIdOf(event: PendingSessionEvent): string | undefined {
 
 function seqOf(event: PendingSessionEvent | SessionEvent): number {
   return (event as { seq?: number }).seq ?? 0;
+}
+
+function isConversationalType(type: string): boolean {
+  return type === 'user' || type === 'run.completed';
 }
 
 export class SqliteRunEventStore implements RunEventStore {
@@ -85,7 +91,8 @@ export class SqliteRunEventStore implements RunEventStore {
     const prepared = this.options?.prepare
       ? this.options.prepare(tx, runId, threadId, events)
       : events;
-    for (const pending of prepared) {
+    const stamped = stampFinalAnswer(tx, runId, prepared);
+    for (const pending of stamped) {
       const result = appendOneEvent(tx, {
         pending,
         runId,
@@ -98,7 +105,7 @@ export class SqliteRunEventStore implements RunEventStore {
       counter = result.counter;
       persistedMax = result.persistedMax;
     }
-    if (prepared.length > 0) {
+    if (stamped.length > 0) {
       this.bump(runId, counter);
       tx.update(runsTable)
         .set({ lastSeq: persistedMax, updatedAt: new Date().toISOString() })
@@ -145,6 +152,7 @@ export class SqliteRunEventStore implements RunEventStore {
       .select()
       .from(runEventsTable)
       .where(and(eq(runEventsTable.runId, runId), gt(runEventsTable.seq, fromSeq)))
+      .orderBy(runEventsTable.seq)
       .all();
     return Promise.resolve(rows.map(rowToEvent));
   }
@@ -159,17 +167,16 @@ export class SqliteRunEventStore implements RunEventStore {
       .select()
       .from(runEventsTable)
       .where(eq(runEventsTable.threadId, threadId))
+      .orderBy(runEventsTable.threadSeq)
       .all();
-    return Promise.resolve(
-      rows.sort((a, b) => a.timestamp - b.timestamp || a.seq - b.seq).map(rowToEvent),
-    );
+    return Promise.resolve(rows.map(rowToEvent));
   }
 
   hasRun(runId: string): Promise<boolean> {
     const row = this.db
-      .select({ seq: runEventsTable.seq })
+      .select({ threadSeq: runEventsTable.threadSeq })
       .from(runEventsTable)
-      .where(eq(runEventsTable.runId, runId))
+      .where(and(eq(runEventsTable.runId, runId), isNotNull(runEventsTable.runId)))
       .limit(1)
       .get();
     return Promise.resolve(row !== undefined);
@@ -177,7 +184,7 @@ export class SqliteRunEventStore implements RunEventStore {
 
   removeUserEvent(runId: string, seq: number): Promise<boolean> {
     const existing = this.db
-      .select({ seq: runEventsTable.seq })
+      .select({ threadSeq: runEventsTable.threadSeq })
       .from(runEventsTable)
       .where(
         and(
@@ -191,19 +198,17 @@ export class SqliteRunEventStore implements RunEventStore {
     if (!existing) {
       return Promise.resolve(false);
     }
-    this.db
-      .delete(runEventsTable)
-      .where(and(eq(runEventsTable.runId, runId), eq(runEventsTable.seq, seq)))
-      .run();
-    return Promise.resolve(true);
+    return this.removeEvent(existing.threadSeq === undefined ? '' : '', existing.threadSeq).then(
+      (removed) => removed !== null,
+    );
   }
 
-  truncateThreadFrom(threadId: string, runId: string, seq: number): Promise<TruncateThreadResult> {
+  truncateThreadFrom(threadId: string, threadSeq: number): Promise<TruncateThreadResult> {
     try {
       return Promise.resolve(
         this.db.transaction(
           (tx): TruncateThreadResult => {
-            const result = truncateThreadEvents(tx as OrgSqliteDb, threadId, runId, seq);
+            const result = truncateThreadEvents(tx as OrgSqliteDb, threadId, threadSeq);
             for (const id of result.removedRunIds) {
               this.seqByRun.delete(id);
             }
@@ -217,14 +222,14 @@ export class SqliteRunEventStore implements RunEventStore {
     }
   }
 
-  removeEvent(threadId: string, runId: string, seq: number): Promise<SessionEvent | null> {
+  removeEvent(threadId: string, threadSeq: number): Promise<SessionEvent | null> {
     try {
       return Promise.resolve(
         this.db.transaction(
           (tx): SessionEvent | null => {
-            const result = removeThreadEventRow(tx as OrgSqliteDb, threadId, runId, seq);
-            if (result.runDeleted) {
-              this.seqByRun.delete(runId);
+            const result = removeThreadEventRow(tx as OrgSqliteDb, threadId, threadSeq);
+            if (result.runDeleted && result.removed?.runId) {
+              this.seqByRun.delete(result.removed.runId);
             }
             return result.removed;
           },
@@ -283,17 +288,30 @@ function appendOneEvent(tx: OrgSqliteDb, input: AppendOneInput): AppendOneResult
   const seq = pre > 0 ? pre : input.counter + 1;
   const counter = seq > input.counter ? seq : input.counter;
   const persistedMax = seq > input.persistedMax ? seq : input.persistedMax;
-  const full = { ...input.pending, seq, runId: input.runId } as SessionEvent;
+  const threadSeq = nextThreadSeq(tx, input.threadId);
+  const conversational = isConversationalType(input.pending.type);
+  const full = {
+    ...input.pending,
+    seq,
+    runId: input.runId,
+    threadSeq,
+    conversational,
+  } as SessionEvent;
   tx.insert(runEventsTable)
     .values({
+      threadId: input.threadId,
+      threadSeq,
       runId: input.runId,
       seq,
-      threadId: input.threadId,
       type: input.pending.type,
       timestamp: input.now,
       metadata: JSON.stringify({ ...input.pending }),
       clientEventId: clientEventId ?? null,
+      conversational: conversational ? 1 : 0,
     })
     .run();
+  if (conversational) {
+    bumpConversationCount(tx, input.threadId, 1);
+  }
   return { event: full, counter, persistedMax };
 }

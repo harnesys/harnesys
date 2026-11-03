@@ -24,6 +24,7 @@ export interface ComposerTrailingControlsProps {
   agent: Agent | null | undefined;
   hasEvents: boolean;
   providers: ProviderPublic[];
+  modelControls: boolean;
   currentEffort: Effort | undefined;
   levels: Effort[];
   onEffortChange: (value: Effort) => void;
@@ -48,6 +49,7 @@ export function ComposerTrailingControls({
   agent,
   hasEvents,
   providers,
+  modelControls,
   currentEffort,
   levels,
   onEffortChange,
@@ -71,25 +73,27 @@ export function ComposerTrailingControls({
         window={contextWindow}
         disabled={!agentReady}
       />
-      <ModelSelect
-        value={modelId}
-        disabled={disabled || !agent || !orgId}
-        size="sm"
-        triggerClassName="h-7 max-w-44 border-0 bg-transparent px-1.5 font-mono text-[11px] shadow-none"
-        onChange={(next) => {
-          if (!agent || !orgId || !next) {
-            return;
-          }
-          switchComposerModel({
-            agent,
-            orgId,
-            nextModelId: next,
-            hasEvents,
-            providers,
-          });
-        }}
-      />
-      {currentEffort ? (
+      {modelControls ? (
+        <ModelSelect
+          value={modelId}
+          disabled={disabled || !agent || !orgId}
+          size="sm"
+          triggerClassName="h-7 max-w-44 border-0 bg-transparent px-1.5 font-mono text-[11px] shadow-none"
+          onChange={(next) => {
+            if (!agent || !orgId || !next) {
+              return;
+            }
+            switchComposerModel({
+              agent,
+              orgId,
+              nextModelId: next,
+              hasEvents,
+              providers,
+            });
+          }}
+        />
+      ) : null}
+      {modelControls && currentEffort ? (
         <EffortSelect
           levels={levels}
           value={currentEffort}
@@ -97,7 +101,7 @@ export function ComposerTrailingControls({
           onChange={onEffortChange}
         />
       ) : null}
-      {verified ? null : (
+      {modelControls && !verified ? (
         <UnverifiedModelCard modelName={findModelLabel(modelId, providers)}>
           <button
             type="button"
@@ -107,7 +111,7 @@ export function ComposerTrailingControls({
             <TriangleAlertIcon className="size-3.5" />
           </button>
         </UnverifiedModelCard>
-      )}
+      ) : null}
       {modelIncomplete ? (
         <UnverifiedModelCard
           modelName={findModelLabel(modelId, providers)}

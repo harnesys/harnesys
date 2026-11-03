@@ -1,5 +1,5 @@
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
-import type { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { WebhookValidationException } from '../../domain/webhook/webhook.error.ts';
 import { WebhookRepositoryPort } from '../../domain/webhook/webhook-repository.port.ts';

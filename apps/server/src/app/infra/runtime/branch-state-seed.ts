@@ -1,11 +1,19 @@
 import type { RunEventStore, RunLifecycleStore, RuntimeState } from 'harnesys';
 import { InMemoryRuntimeState, rebuildThreadMessages } from 'harnesys';
 import { collectInheritedEvents, seedMessagesFromEvents } from '../../domain/thread/fork-logs.ts';
-import type { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
+import type { ThreadRecord } from '../../domain/thread/thread.ts';
+import { contextWindowOf } from '../../domain/thread/thread-policy.ts';
+import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
+import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
+import { latestDeliveredThreadMessage } from '../org-sqlite/thread-message-queue.store.ts';
+import { listConversationalBefore } from '../org-sqlite/thread-transcript.store.ts';
+import { groupWindowMessages } from './group-window.ts';
+import { threadSessionKey } from './thread-session-key.ts';
 import type { ThreadSessionRef } from './wait-ticker.ts';
 
 export interface BranchSeedDeps {
   orgId: string;
+  db?: OrgSqliteDb;
   sessions: Map<string, ThreadSessionRef>;
   threads: ThreadRepositoryPort;
   events: RunEventStore;
@@ -17,33 +25,39 @@ export function createBranchSeed(deps: BranchSeedDeps) {
   const stateOf = (threadId: string): InMemoryRuntimeState =>
     deps.stateFactory?.(threadId, null) ?? new InMemoryRuntimeState(threadId);
   return {
-    seededThreadState(threadId: string): Promise<InMemoryRuntimeState> {
-      const existing = deps.sessions.get(threadId);
+    seededThreadState(threadId: string, agentId?: string): Promise<InMemoryRuntimeState> {
+      const key = threadSessionKey(threadId, agentId);
+      const existing = deps.sessions.get(key);
       if (existing) {
-        return reseedIfEmpty(threadId, existing.state);
+        return reseedIfEmpty(threadId, existing.state, agentId);
       }
       const state = stateOf(threadId);
-      deps.sessions.set(threadId, { state });
-      return seedBranchState(threadId, state, null).then(() => state);
+      deps.sessions.set(key, { state });
+      return seedBranchState(threadId, state, null, agentId).then(() => state);
     },
-    seededRunState(threadId: string, runId: string | null): Promise<InMemoryRuntimeState> {
+    seededRunState(
+      threadId: string,
+      runId: string | null,
+      agentId?: string,
+    ): Promise<InMemoryRuntimeState> {
       const state = deps.stateFactory?.(threadId, runId) ?? new InMemoryRuntimeState(threadId);
-      return seedBranchState(threadId, state, runId).then(() => state);
+      return seedBranchState(threadId, state, runId, agentId).then(() => state);
     },
-    seedBranchState(threadId: string, state: RuntimeState): Promise<void> {
-      return seedBranchState(threadId, state, null);
+    seedBranchState(threadId: string, state: RuntimeState, agentId?: string): Promise<void> {
+      return seedBranchState(threadId, state, null, agentId);
     },
   };
 
   function reseedIfEmpty(
     threadId: string,
     state: InMemoryRuntimeState,
+    agentId?: string,
   ): Promise<InMemoryRuntimeState> {
     return state.load().then((snapshot) => {
       if (snapshot !== null) {
         return state;
       }
-      return seedBranchState(threadId, state, null).then(() => state);
+      return seedBranchState(threadId, state, null, agentId).then(() => state);
     });
   }
 
@@ -51,6 +65,7 @@ export function createBranchSeed(deps: BranchSeedDeps) {
     threadId: string,
     state: RuntimeState,
     runId: string | null,
+    agentId?: string,
   ): Promise<void> {
     if ((await state.load()) !== null) {
       return;
@@ -59,11 +74,43 @@ export function createBranchSeed(deps: BranchSeedDeps) {
     if (!thread) {
       return;
     }
+    if (thread.kind === 'group') {
+      await seedGroupState(thread, state, runId, agentId);
+      return;
+    }
     if (thread.parentThreadId && thread.forkAt) {
       await seedForkState(threadId, state, thread.parentThreadId, thread.forkAt);
       return;
     }
     await seedReplayState(threadId, state, runId);
+  }
+
+  async function seedGroupState(
+    thread: ThreadRecord,
+    state: RuntimeState,
+    runId: string | null,
+    agentId?: string,
+  ): Promise<void> {
+    if (!deps.db) {
+      return;
+    }
+    const db = deps.db;
+    const trigger = agentId ? latestDeliveredThreadMessage(db, thread.id, agentId) : null;
+    const before = trigger?.threadSeq ?? thread.lastThreadSeq + 1;
+    const rows = listConversationalBefore(db, thread.id, before, contextWindowOf(thread.policy));
+    const messages = groupWindowMessages(rows);
+    const initialInput = trigger
+      ? {
+          text: trigger.text,
+          ...(trigger.attachments && trigger.attachments.length > 0
+            ? { attachments: trigger.attachments }
+            : {}),
+        }
+      : null;
+    if (messages.length === 0 && initialInput === null) {
+      return;
+    }
+    await commitSeed(state, messages, runId, initialInput);
   }
 
   async function seedForkState(
@@ -81,7 +128,7 @@ export function createBranchSeed(deps: BranchSeedDeps) {
     if (messages.length === 0) {
       return;
     }
-    await commitSeed(state, messages, null);
+    await commitSeed(state, messages, null, null);
   }
 
   async function seedReplayState(
@@ -95,13 +142,14 @@ export function createBranchSeed(deps: BranchSeedDeps) {
     if (messages.length === 0 && runId === null) {
       return;
     }
-    await commitSeed(state, messages, runId);
+    await commitSeed(state, messages, runId, null);
   }
 
   async function commitSeed(
     state: RuntimeState,
     messages: unknown[],
     runId: string | null,
+    initialInput: unknown,
   ): Promise<void> {
     await state.commit(
       {
@@ -112,7 +160,7 @@ export function createBranchSeed(deps: BranchSeedDeps) {
         sequence: 0,
         status: 'idle',
         runtimeVersion: 'seed',
-        initialInput: null,
+        initialInput,
         state: { messages },
         cursor: { nodes: {} },
       },

@@ -16,7 +16,7 @@ import { observeThreadErrors } from './observe-thread-errors.ts';
 import { createOrgModelsPort } from './org-models.port.ts';
 import type { OrgRuntimeDeps } from './org-runtime.types.ts';
 import { OrgEpisodicPort } from './packs/org-episodic.port.ts';
-import type { TargetCache } from './prepare-org-target.ts';
+import { cachedTargetOf, type TargetCache } from './prepare-org-target.ts';
 import { prepareUsageEvents } from './prepare-usage-events.ts';
 import { requestRunParkApprovals } from './request-approval-for-park.ts';
 import { SqliteRunEventStore } from './sqlite-run-events.adapter.ts';
@@ -47,7 +47,7 @@ export function createOrgRunStores(
   const fileRuntime =
     parkRuntime &&
     ((threadId: string): ParkFileRuntime | undefined => {
-      const cwd = parkRuntime.targetCache.get(threadId)?.cwd;
+      const cwd = cachedTargetOf(parkRuntime.targetCache, threadId)?.cwd;
       if (cwd === undefined) {
         return undefined;
       }

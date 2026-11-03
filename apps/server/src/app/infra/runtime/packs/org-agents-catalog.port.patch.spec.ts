@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import type { AgentCatalogPatch, CapabilityScope } from 'harnesys';
 import type { AgentRecord } from '../../../domain/agent/agent.ts';
-import type { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
-import type { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-provider.port.ts';
+import { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
+import { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-provider.port.ts';
 import { OrgAgentsCatalogPort } from './org-agents-catalog.port.ts';
 
 const NOW = '2026-01-01T00:00:00.000Z';

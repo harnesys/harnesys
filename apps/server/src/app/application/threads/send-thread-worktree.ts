@@ -1,4 +1,4 @@
-import type { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
+import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
 import { WorktreeNotFoundException } from '../../domain/source/source.error.ts';
 import { ThreadValidationException } from '../../domain/thread/thread.error.ts';
 

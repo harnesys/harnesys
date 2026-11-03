@@ -1,7 +1,7 @@
 import type { SkillRegistry } from 'harnesys';
 import { composeSkillRegistries } from 'harnesys';
 import { FsSkillRegistry } from 'harnesys/adapters/node';
-import type { SourceSkillsPort } from '../../domain/skills/source-skills.port.ts';
+import { SourceSkillsPort } from '../../domain/skills/source-skills.port.ts';
 
 export interface RunSourceRef {
   id: string;

@@ -1,4 +1,4 @@
-import type { SecretStorePort } from './secret-store.port.ts';
+import { SecretStorePort } from './secret-store.port.ts';
 import { legacyProviderSecretKey, parseVaultRef, vaultStorageKey } from './vault-keys.ts';
 
 export async function resolveProviderApiKey(

@@ -30,13 +30,15 @@ export interface SendThreadMessageInput {
   triggerKind?: RunTriggerKind;
   branch?: string;
   attribution?: RunAttribution;
+  agentId?: string;
+  triggerThreadSeq?: number;
 }
 
 export interface RunControlDeps {
   lifecycle: RunLifecycleStore;
   requestedSkills: Map<string, string[]>;
   worktreeBindings: Map<string, ThreadBinding>;
-  sessionFor: (threadId: string) => Promise<SessionHandle>;
+  sessionFor: (threadId: string, agentId?: string) => Promise<SessionHandle>;
   kick: () => void;
   abortRun?: (runId: string) => void;
 }
@@ -45,7 +47,7 @@ export async function sendThreadMessage(
   deps: RunControlDeps,
   input: SendThreadMessageInput,
 ): Promise<AcceptedRunResponse> {
-  const handle = await deps.sessionFor(input.threadId);
+  const handle = await deps.sessionFor(input.threadId, input.agentId);
   const clientEventId = input.clientEventId ?? crypto.randomUUID();
   deps.requestedSkills.set(input.threadId, input.skills ?? []);
   syncThreadBinding(deps.worktreeBindings, input);
@@ -60,6 +62,7 @@ export async function sendThreadMessage(
     {
       clientEventId,
       ...(input.correlationId ? { correlationId: input.correlationId } : {}),
+      ...(input.triggerThreadSeq !== undefined ? { triggerThreadSeq: input.triggerThreadSeq } : {}),
     },
   );
   return { runId, threadId: input.threadId, status: 'queued' as const };

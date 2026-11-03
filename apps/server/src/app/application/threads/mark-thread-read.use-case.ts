@@ -5,13 +5,15 @@ import { NodeRepository } from '../../domain/fleet/node-repository.port.ts';
 import { UserRepository } from '../../domain/identity/user-repository.port.ts';
 import { ThreadNotFoundException } from '../../domain/thread/thread.error.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
+import { ThreadParticipantRepositoryPort } from '../../domain/thread/thread-participant-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { runAttributionNamesOf } from './run-attribution.ts';
-import { soleAgentIdOf, toThreadPublic } from './thread.helpers.ts';
+import { membersOf, participantsOf, toThreadPublic } from './thread.helpers.ts';
 
 export interface MarkThreadReadRequest {
   orgId: string;
   threadId: string;
+  userId?: string;
 }
 
 @Injectable()
@@ -19,6 +21,7 @@ export class MarkThreadReadUseCase {
   constructor(
     private readonly threads: ThreadRepositoryPort,
     private readonly threadAgents: ThreadAgentRepositoryPort,
+    private readonly participants: ThreadParticipantRepositoryPort,
     private readonly agents: AgentRegistryPort,
     private readonly users: UserRepository,
     private readonly nodes: NodeRepository,
@@ -30,18 +33,30 @@ export class MarkThreadReadUseCase {
       throw new ThreadNotFoundException(request.threadId);
     }
     const read = this.threads.markRead(request.orgId, request.threadId, new Date().toISOString());
-    const agentId = soleAgentIdOf(this.threadAgents, request.orgId, read.id) ?? '';
-    const agent = agentId ? this.agents.findById(request.orgId, agentId) : undefined;
-    const active = this.threads.findActiveRun(request.orgId, read.id);
+    if (thread.kind === 'group' && request.userId) {
+      this.participants.touchSeen(
+        request.orgId,
+        thread.id,
+        request.userId,
+        new Date().toISOString(),
+      );
+    }
+    const deps = {
+      threadAgents: this.threadAgents,
+      participants: this.participants,
+      agents: this.agents,
+    };
+    const participants = participantsOf(deps, request.orgId, read.id);
     return toThreadPublic({
       thread: read,
-      agentId,
-      agentName: agent?.name ?? '',
-      active: active ?? null,
+      members: membersOf(deps, request.orgId, read.id),
+      participants,
+      active: this.threads.findActiveRun(request.orgId, read.id) ?? null,
       events: [],
       inheritedEventCount: 0,
       waitingForProfileId: undefined,
       names: runAttributionNamesOf(this.users, this.nodes, request.orgId),
+      userId: request.userId ?? null,
     });
   }
 }

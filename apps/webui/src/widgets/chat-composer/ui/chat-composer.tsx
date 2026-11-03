@@ -39,6 +39,7 @@ import {
   resolvePromptLinks,
 } from '../model/drop-prompt';
 import { useComposerFileOptions } from '../model/file-source';
+import { threadMentionOptions } from '../model/mention-source';
 import { modelContextWindow } from '../model/model-context';
 import { allowedAttachKinds, modelInputModalities } from '../model/model-input';
 import type { SlashCommand } from '../model/slash-commands';
@@ -103,6 +104,8 @@ export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }
   const pendingNames = useMemo(() => pending.map((file) => file.name), [pending]);
   const fileOptions = useComposerFileOptions(thread?.id ?? null, pendingNames);
   const canSend = hasText || pending.length > 0;
+  const isGroupThread = thread?.kind === 'group';
+  const mentionOptions = threadMentionOptions(thread);
   const placeholder = composerPlaceholder({ hitl, streaming, agentName: agent?.name ?? null });
   const worktreeBinding = useThreadWorktreeStore((state) =>
     thread ? state.byThread[thread.id] : undefined,
@@ -158,6 +161,7 @@ export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }
             disabled={disabled}
             placeholder={placeholder}
             fileOptions={fileOptions.options}
+            mentionOptions={mentionOptions}
             onChange={handleDraftChange}
             onSubmit={submit}
             onSlashCommand={runSlashCommand}
@@ -183,6 +187,7 @@ export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }
               agent={agent}
               hasEvents={events.length > 0}
               providers={providers}
+              modelControls={!isGroupThread}
               currentEffort={currentEffort}
               levels={levels}
               onEffortChange={setEffort}
@@ -306,7 +311,7 @@ export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }
       payload: editorRef.current?.getPayload() ?? { text: '', skills: [] },
       pending,
       threadId: thread.id,
-      effort: currentEffort,
+      effort: isGroupThread ? undefined : currentEffort,
       mode,
       disabled,
       setSending,

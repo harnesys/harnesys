@@ -3,8 +3,8 @@ import type { ApprovalBudget } from '@harnesys/contracts';
 import { desc, eq, inArray } from 'drizzle-orm';
 import type { RunRecord } from 'harnesys';
 import type { ApprovalDelegatedContext } from '../../domain/approval/approval.ts';
-import type { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
-import type { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
+import { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
+import { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
 import {
   APPROVAL_PARK_SOURCE_SET,
   type ObservedPark,

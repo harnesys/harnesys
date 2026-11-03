@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ApprovalNotFoundException } from '../../domain/approval/approval.error.ts';
 import type { ApprovalRequestInput } from '../../domain/approval/approval.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { ensureOrgSchema } from '../org-sqlite/org-sql-ensure.ts';
 import { ApprovalStoreAdapter } from './approval-store.adapter.ts';
 

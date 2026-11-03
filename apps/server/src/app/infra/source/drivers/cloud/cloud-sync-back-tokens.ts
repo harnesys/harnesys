@@ -1,4 +1,4 @@
-import type { SecretStorePort } from '../../../../domain/secret/secret-store.port.ts';
+import { SecretStorePort } from '../../../../domain/secret/secret-store.port.ts';
 import type { GoogleOAuthClientConfig } from '../../../integration/google/google-oauth-device.ts';
 import {
   getValidGoogleAccessToken,

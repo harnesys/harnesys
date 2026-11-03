@@ -1,6 +1,5 @@
 import { Injectable } from '@harnesys/brix';
-import type { ThreadKind } from '@harnesys/contracts';
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import {
   ThreadNotFoundException,
@@ -13,6 +12,7 @@ import type {
   ThreadPatch,
   ThreadRecord,
 } from '../../domain/thread/thread.ts';
+import { parseThreadPolicy } from '../../domain/thread/thread-policy.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { type OrgSqliteDb, withOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 import { runAttributionOf } from '../org-sqlite/run-attribution.ts';
@@ -23,6 +23,7 @@ import {
   threadAgentsTable,
   threadsTable,
 } from '../org-sqlite/schema';
+import { threadPatchUpdates } from './thread-patch-updates.ts';
 
 const ACTIVE_RUN_STATUSES: ThreadActiveRunStatus[] = [
   'queued',
@@ -30,43 +31,6 @@ const ACTIVE_RUN_STATUSES: ThreadActiveRunStatus[] = [
   'needs_input',
   'waiting',
 ];
-
-interface ThreadPatchUpdates {
-  title?: string;
-  kind?: ThreadKind;
-  metadata?: string;
-  issueId?: string | null;
-  runProfileId?: string | null;
-  runDirectory?: string | null;
-  lastReadAt?: string;
-  updatedAt: string;
-}
-
-function threadPatchUpdates(patch: ThreadPatch): ThreadPatchUpdates {
-  const updates: ThreadPatchUpdates = { updatedAt: new Date().toISOString() };
-  if (patch.title !== undefined) {
-    updates.title = patch.title;
-  }
-  if (patch.kind !== undefined) {
-    updates.kind = patch.kind;
-  }
-  if (patch.metadata !== undefined) {
-    updates.metadata = JSON.stringify(patch.metadata);
-  }
-  if (patch.issueId !== undefined) {
-    updates.issueId = patch.issueId;
-  }
-  if (patch.runProfileId !== undefined) {
-    updates.runProfileId = patch.runProfileId;
-  }
-  if (patch.runDirectory !== undefined) {
-    updates.runDirectory = patch.runDirectory;
-  }
-  if (patch.lastReadAt !== undefined) {
-    updates.lastReadAt = patch.lastReadAt;
-  }
-  return updates;
-}
 
 function applyThreadPatch(
   db: OrgSqliteDb,
@@ -125,6 +89,10 @@ export class ThreadRepositoryAdapter extends ThreadRepositoryPort {
             orgId: rec.orgId,
             title: rec.title,
             kind: rec.kind,
+            autoReplyAgentId: rec.autoReplyAgentId,
+            policy: JSON.stringify(rec.policy),
+            lastThreadSeq: rec.lastThreadSeq,
+            conversationCount: rec.conversationCount,
             parentThreadId: rec.parentThreadId,
             forkAt: rec.forkAt,
             inheritedEventCount: String(rec.inheritedEventCount),
@@ -190,13 +158,30 @@ export class ThreadRepositoryAdapter extends ThreadRepositoryPort {
     });
   }
 
+  override deleteMany(orgId: string, ids: string[]): void {
+    if (ids.length === 0) {
+      return;
+    }
+    withOrgSqlite(this.layout, orgId, (db) => {
+      db.delete(threadsTable)
+        .where(and(eq(threadsTable.orgId, orgId), inArray(threadsTable.id, ids)))
+        .run();
+    });
+  }
+
   deleteByAgent(orgId: string, agentId: string): void {
     withOrgSqlite(this.layout, orgId, (db) => {
       const threadIds = db
         .select({ threadId: threadAgentsTable.threadId })
         .from(threadAgentsTable)
         .innerJoin(threadsTable, eq(threadsTable.id, threadAgentsTable.threadId))
-        .where(and(eq(threadsTable.orgId, orgId), eq(threadAgentsTable.agentId, agentId)))
+        .where(
+          and(
+            eq(threadsTable.orgId, orgId),
+            eq(threadAgentsTable.agentId, agentId),
+            ne(threadsTable.kind, 'group'),
+          ),
+        )
         .all()
         .map((row) => row.threadId);
       if (threadIds.length === 0) {
@@ -316,6 +301,10 @@ function toThread(row: ThreadRow): ThreadRecord {
     orgId: row.orgId,
     title: row.title,
     kind: row.kind,
+    autoReplyAgentId: row.autoReplyAgentId ?? null,
+    policy: parseThreadPolicy(row.policy),
+    lastThreadSeq: Number(row.lastThreadSeq ?? 0),
+    conversationCount: Number(row.conversationCount ?? 0),
     parentThreadId: row.parentThreadId ?? null,
     forkAt: row.forkAt ?? null,
     inheritedEventCount: Number(row.inheritedEventCount ?? '0'),

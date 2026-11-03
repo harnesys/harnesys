@@ -1,5 +1,5 @@
 import type { ThreadAgentRecord } from '../../../domain/thread/thread.ts';
-import type { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
+import { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
 
 export class MemoryThreadAgents implements ThreadAgentRepositoryPort {
   rows: ThreadAgentRecord[] = [];

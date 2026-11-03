@@ -1,11 +1,11 @@
 import { CONSOLE_LOGGER, type ProcessJobTarget } from 'harnesys';
-import type { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
+import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
 import type { FileRuleRecord } from '../../domain/file-access/file-access-rule.ts';
-import type { NodeRepository } from '../../domain/fleet/node-repository.port.ts';
+import { NodeRepository } from '../../domain/fleet/node-repository.port.ts';
 import type { RunIsolation } from '../../domain/fleet/placement.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
-import type { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
-import type { WorkspaceContainerPort } from '../../domain/process-runtime/workspace-container.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
+import { WorkspaceContainerPort } from '../../domain/process-runtime/workspace-container.port.ts';
 import type { RunTriggerKind } from '../../domain/thread/prepare-runtime-input.ts';
 
 export interface ThreadBinding {

@@ -1,4 +1,4 @@
-import type { ModePresetRegistryPort } from './mode-preset-registry.port.ts';
+import { ModePresetRegistryPort } from './mode-preset-registry.port.ts';
 
 const PACK_CONFIG_KEYS = ['capabilitiesJson', 'packs', 'capabilities'] as const;
 const SHELL_SPEC_KEYS = ['allowlist', 'blocklist', 'timeout'] as const;

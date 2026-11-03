@@ -7,6 +7,7 @@ import { GitCommitDiffView } from '@/features/git-commit';
 import { type IdeTab, useIdeStore } from '@/features/ide';
 import { agentConnectorsQuery } from '@/features/manage-agent/model/connector-api';
 import { BoardSurface } from '@/features/manage-issues';
+import { ThreadMembersPanel } from '@/features/manage-thread-members';
 import { openFileKind } from '@/features/open-file';
 import { HitlPrompt } from '@/features/send-message';
 import { ApiError, getOrgAgent, getThread } from '@/shared/api';
@@ -132,9 +133,10 @@ function ThreadTabContent({
       </div>
     );
   }
-  if (thread.kind === 'chat' || thread.kind === 'connector') {
+  if (thread.kind === 'chat' || thread.kind === 'group' || thread.kind === 'connector') {
     return (
       <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-thread">
+        {thread.kind === 'group' ? <ThreadMembersPanel thread={thread} /> : null}
         {thread.kind === 'connector' ? (
           <ConnectorAwaitingBanner orgId={agent.orgId} agentId={agent.id} threadId={thread.id} />
         ) : null}

@@ -1,8 +1,8 @@
 import type { PendingSessionEvent } from 'harnesys';
-import type { ExecutionProfilePort } from '../../domain/execution-profile/execution-profile.port.ts';
+import { ExecutionProfilePort } from '../../domain/execution-profile/execution-profile.port.ts';
 import { LOCAL_EXECUTION_PROFILE_ID } from '../../domain/execution-profile/execution-profile.ts';
-import type { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
-import type { FleetHubPort } from '../../domain/fleet/fleet-hub.port.ts';
+import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
+import { FleetHubPort } from '../../domain/fleet/fleet-hub.port.ts';
 import {
   DEFAULT_WORKSPACE_IMAGE,
   decidePlacement,

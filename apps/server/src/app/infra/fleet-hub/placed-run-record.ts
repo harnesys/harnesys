@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type TaskEnvelope, TaskEnvelopeSchema } from '@harnesys/contracts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 
 function recordPath(layout: HostFsLayoutPort, orgId: string, runId: string): string {
   return join(layout.orgDir(orgId), 'placed-runs', `${runId}.json`);

@@ -1,5 +1,5 @@
 import type { OrgLspListResponse } from '@harnesys/contracts';
-import type { PluginRegistryPort } from '../../domain/plugin/plugin-registry.port.ts';
+import { PluginRegistryPort } from '../../domain/plugin/plugin-registry.port.ts';
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
 import type { OrgLspFile } from '../../infra/lsp/org-lsp-file.ts';
 import {

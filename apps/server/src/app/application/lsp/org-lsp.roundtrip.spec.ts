@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ToolchainDiscovery } from '@harnesys/contracts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { PluginRegistryPort } from '../../domain/plugin/plugin-registry.port.ts';
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
 import type { ToolchainResolution } from '../../domain/toolchain/toolchain.port.ts';

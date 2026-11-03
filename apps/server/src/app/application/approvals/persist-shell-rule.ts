@@ -6,7 +6,7 @@ import {
   segmentCommand,
 } from 'harnesys';
 import { ApprovalValidationException } from '../../domain/approval/approval.error.ts';
-import type { PermissionRuleStorePort } from '../../domain/permissions/permission-rule-store.port.ts';
+import { PermissionRuleStorePort } from '../../domain/permissions/permission-rule-store.port.ts';
 
 export interface PersistShellRuleDeps {
   rules: PermissionRuleStorePort;

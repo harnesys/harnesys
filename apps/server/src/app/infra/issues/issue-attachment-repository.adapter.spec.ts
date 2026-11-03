@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { IssueAttachmentRecord } from '../../domain/issue/issue.ts';
 import { IssueAttachmentRepositoryPort } from '../../domain/issue/issue-attachment-repository.port.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { ensureOrgSchema } from '../org-sqlite/org-sql-ensure.ts';
 import { withOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 import { issueBoardsTable, issuesTable } from '../org-sqlite/schema/index.ts';

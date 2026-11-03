@@ -8,7 +8,7 @@ import type {
   PlanSnapshot,
   PlanStatus,
 } from 'harnesys';
-import type { PlanEventsPort } from '../../../domain/plan/plan-events.port.ts';
+import { PlanEventsPort } from '../../../domain/plan/plan-events.port.ts';
 import type { OrgSqliteDb } from '../../org-sqlite/org-sqlite-session.ts';
 import { type ThreadPlanRow, threadPlansTable } from '../../org-sqlite/schema/thread-plans.ts';
 import { toRecord } from './plan-record.ts';

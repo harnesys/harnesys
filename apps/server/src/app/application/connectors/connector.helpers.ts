@@ -2,7 +2,7 @@ import type { ConnectorPublic, MirrorPolicyPublic } from '@harnesys/contracts';
 import type { ConnectorRecord } from '../../domain/connector/connector.ts';
 import { type MirrorPolicy, PAIR_CODE_TTL_MS } from '../../domain/connector/constants.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
-import type { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
+import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 
 export function connectorSecretKey(connectorId: string): string {
   return `connector_telegram_${connectorId}`;

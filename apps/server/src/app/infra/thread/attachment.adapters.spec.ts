@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { ensureOrgSchema } from '../org-sqlite/org-sql-ensure.ts';
 import { agentsTable } from '../org-sqlite/schema/agents.ts';
 import { AttachmentRepositoryAdapter } from './attachment-repository.adapter.ts';

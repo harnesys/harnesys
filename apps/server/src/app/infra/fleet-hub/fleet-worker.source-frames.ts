@@ -1,9 +1,9 @@
 import { MaterializationStateFrameSchema } from '@harnesys/contracts';
 import type { WSContext } from 'hono/ws';
 import { markSiblingCloudCopiesRefreshRequired } from '../../application/source/mark-cloud-siblings-refresh.ts';
-import type { MaterializationEventsPort } from '../../domain/source/materialization-events.port.ts';
-import type { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
-import type { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
+import { MaterializationEventsPort } from '../../domain/source/materialization-events.port.ts';
+import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
+import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 
 interface PeerLink {
   get(): { orgId: string; nodeId: string } | null;

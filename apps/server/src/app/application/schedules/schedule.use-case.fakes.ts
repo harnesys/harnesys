@@ -19,7 +19,8 @@ import type {
   ThreadPatch,
   ThreadRecord,
 } from '../../domain/thread/thread.ts';
-import type { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
+import { toThreadRecord } from '../../domain/thread/thread.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 
 export class FakeSchedules extends ScheduleRepositoryPort {
@@ -91,8 +92,9 @@ export class FakeThreads extends ThreadRepositoryPort {
   }
 
   insert(rec: ThreadInsert): ThreadRecord {
-    this.items.set(rec.id, rec);
-    return rec;
+    const thread = toThreadRecord(rec);
+    this.items.set(rec.id, thread);
+    return thread;
   }
 
   patch(_orgId: string, id: string, patch: ThreadPatch): ThreadRecord {

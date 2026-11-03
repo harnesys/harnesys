@@ -1,8 +1,8 @@
 import type { CapabilityScope, ThreadSummary, ThreadsPort } from 'harnesys';
-import type { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
-import type { ScheduleRepositoryPort } from '../../../domain/schedule/schedule-repository.port.ts';
-import type { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
-import type { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
+import { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
+import { ScheduleRepositoryPort } from '../../../domain/schedule/schedule-repository.port.ts';
+import { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
+import { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
 
 export interface OrgThreadsPortDeps {
   threads: ThreadRepositoryPort;

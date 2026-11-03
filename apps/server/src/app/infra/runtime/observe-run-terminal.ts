@@ -1,6 +1,6 @@
 import type { Logger, SessionEvent } from 'harnesys';
-import type { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
-import type { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
+import { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
+import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
 
 const TERMINAL_EVENT_TYPES = new Set(['run.completed', 'run.failed', 'run.cancelled', 'done']);
 

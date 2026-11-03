@@ -24,6 +24,7 @@ export interface SendOpts {
   signal?: AbortSignal;
   permissions?: PermissionMap;
   paths?: PathsConfig;
+  triggerThreadSeq?: number;
 }
 export interface SessionHandle {
   send(

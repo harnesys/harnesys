@@ -17,8 +17,8 @@ import type {
   GoogleIntegrationResolution,
   ThreadAttachmentPort,
 } from 'harnesys';
-import type { IntegrationRegistryPort } from '../../../domain/integration/integration-registry.port.ts';
-import type { IntegrationTokenPort } from '../../../domain/integration/integration-token.port.ts';
+import { IntegrationRegistryPort } from '../../../domain/integration/integration-registry.port.ts';
+import { IntegrationTokenPort } from '../../../domain/integration/integration-token.port.ts';
 import {
   createCalendarEvent,
   deleteCalendarEvent,

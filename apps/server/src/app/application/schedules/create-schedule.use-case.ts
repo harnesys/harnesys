@@ -9,7 +9,7 @@ import { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repositor
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
-import { insertAgentThread, toThreadPublic } from '../threads/thread.helpers.ts';
+import { insertAgentThread, toThreadPublicForAgent } from '../threads/thread.helpers.ts';
 import { requireBindableScheduleThread } from './bind-schedule-thread.ts';
 import { isValidCron, nextCronRunAt } from './cron-next.ts';
 import { toDeskScheduleEvent, toSchedulePublic } from './schedule.helpers.ts';
@@ -100,7 +100,7 @@ export class CreateScheduleUseCase {
     this.deskEvents.emit(request.orgId, toDeskScheduleEvent(schedule));
     return {
       schedule: toSchedulePublic(schedule),
-      thread: toThreadPublic({
+      thread: toThreadPublicForAgent({
         thread,
         agentId: agent.id,
         agentName: agent.name,

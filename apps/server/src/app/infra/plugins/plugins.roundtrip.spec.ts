@@ -7,7 +7,7 @@ import { InstallPluginUseCase } from '../../application/plugins/install-plugin.u
 import { InvalidatePluginsUseCase } from '../../application/plugins/invalidate-plugins.use-case.ts';
 import { ListPluginsUseCase } from '../../application/plugins/list-plugins.use-case.ts';
 import { RemovePluginUseCase } from '../../application/plugins/remove-plugin.use-case.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { PluginRegistriesPort } from '../../domain/plugin/plugin-registries.port.ts';
 import { ensureOrgSchema } from '../org-sqlite/org-sql-ensure.ts';
 import { PluginRegistryAdapter } from './plugin-registry.adapter.ts';

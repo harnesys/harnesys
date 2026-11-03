@@ -38,6 +38,7 @@ export const useThreadStore = create<ThreadStore>((set, get) => ({
       return null;
     }
     const thread: Thread = {
+      members: [{ id: agentId, name: '' }],
       id: randomUUID(),
       agentId,
       originAgentId: agentId,

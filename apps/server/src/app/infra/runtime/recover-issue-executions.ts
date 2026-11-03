@@ -1,5 +1,5 @@
 import type { RunLifecycleStore } from 'harnesys';
-import type { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
+import { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
 import { reconcileIssueExecution } from '../../domain/issue/issue-execution.ts';
 
 export interface RecoverIssueExecutionsDeps {

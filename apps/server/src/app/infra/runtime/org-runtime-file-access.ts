@@ -1,6 +1,6 @@
 import type { AgentSourceLevel } from '@harnesys/contracts';
 import type { FileAccessPolicy, FileRuleInput } from 'harnesys';
-import type { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
+import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import {
   derivedFileRules,
   type SharedSourceAccess,
@@ -9,9 +9,9 @@ import {
   createFileAccessPolicy,
   fileRuleInputsOf,
 } from '../../domain/file-access/file-access-policy.factory.ts';
-import type { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
-import type { SourceLocationPort } from '../../domain/source/source-location.port.ts';
-import type { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
+import { SourceLocationPort } from '../../domain/source/source-location.port.ts';
+import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 
 interface FileAccessRuntimeDeps {
   orgId: string;

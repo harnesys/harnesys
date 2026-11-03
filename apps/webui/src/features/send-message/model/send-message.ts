@@ -5,6 +5,7 @@ import { useThreadQueueStore } from '@/features/message-queue';
 import { ApiError, cancelRun, sendThreadRun } from '@/shared/api';
 import { randomUUID } from '@/shared/lib/random-uuid';
 import { preview, trace } from '@/shared/lib/trace';
+import { toast } from '@/shared/ui/toast';
 import { connectThreadRun } from './client-registry';
 import { requestRevealMessage, requestScrollToEnd } from './scroll-requests';
 export interface SendMessageOptions {
@@ -60,6 +61,14 @@ export async function sendMessage(options: SendMessageOptions) {
       return;
     }
     useThreadStore.getState().touch(threadId);
+    if (!accepted.runId) {
+      useSessionStore.getState().finishRun(threadId);
+      toast.add({
+        title: 'No agent addressed',
+        description: 'Mention an agent with @Name or set an auto-reply agent.',
+      });
+      return;
+    }
     connectThreadRun(threadId, accepted.runId);
     trace('client', 'POST accepted', { runId: accepted.runId, status: accepted.status });
   } catch (error) {

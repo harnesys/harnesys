@@ -1,6 +1,6 @@
 import type { ApprovalRule, FileApprovalRule } from '@harnesys/contracts';
-import type { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
-import type { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
+import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
+import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 
 export interface PersistFileRuleDeps {
   fileRules: FileAccessRulePort;

@@ -9,6 +9,7 @@ import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
 import { FleetHubPort } from '../../domain/fleet/fleet-hub.port.ts';
 import { OrgAudit } from '../../domain/fleet/org-audit.port.ts';
 import type { PlacementResult } from '../../domain/fleet/placement.ts';
+import { UserRepository } from '../../domain/identity/user-repository.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
@@ -35,6 +36,7 @@ import {
   auditRunStart,
   type RunStartAttribution,
 } from './run-attribution.ts';
+import { sendGroupThread } from './send-group-thread.ts';
 import {
   type AttachmentMeta,
   attachmentMetasOf,
@@ -77,6 +79,7 @@ export class SendThreadRunUseCase {
     private readonly usage: UsagePort,
     private readonly orgSettings: OrgSettingsPort,
     private readonly threadAgents: ThreadAgentRepositoryPort,
+    private readonly users: UserRepository,
   ) {}
 
   async execute(request: SendThreadRunRequest): Promise<AcceptedRunResponse> {
@@ -84,6 +87,22 @@ export class SendThreadRunUseCase {
     const thread = this.threads.findById(request.orgId, request.threadId);
     if (!thread) {
       throw new ThreadNotFoundException(request.threadId);
+    }
+    if (thread.kind === 'group') {
+      return await sendGroupThread(
+        {
+          threads: this.threads,
+          threadAgents: this.threadAgents,
+          agents: this.agents,
+          attachments: this.attachments,
+          users: this.users,
+          executor: this.executor,
+          audit: this.audit,
+          layout: this._layout,
+        },
+        request,
+        thread,
+      );
     }
     const agentId = this.threadAgents.listByThread(request.orgId, thread.id)[0]?.agentId;
     if (!agentId) {

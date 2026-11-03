@@ -22,6 +22,7 @@ import type {
 } from '../../domain/schedule/schedule.ts';
 import { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repository.port.ts';
 import type { ThreadActiveRun, ThreadInsert, ThreadRecord } from '../../domain/thread/thread.ts';
+import { toThreadRecord } from '../../domain/thread/thread.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 
 export class FakeBoards extends IssueBoardRepositoryPort {
@@ -258,8 +259,9 @@ export class FakeThreads extends ThreadRepositoryPort {
   }
 
   insert(rec: ThreadInsert): ThreadRecord {
-    this.items.set(rec.id, rec);
-    return rec;
+    const thread = toThreadRecord(rec);
+    this.items.set(rec.id, thread);
+    return thread;
   }
 
   patch(): ThreadRecord {

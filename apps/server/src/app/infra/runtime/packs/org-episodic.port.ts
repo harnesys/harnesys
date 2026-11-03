@@ -45,7 +45,16 @@ export class OrgEpisodicPort implements EpisodicPort {
       .orderBy(desc(runEventsTable.timestamp), desc(runEventsTable.seq))
       .limit(limit)
       .all();
-    return Promise.resolve(rows.map(toHit));
+    return Promise.resolve(
+      rows.map((row) =>
+        toHit({
+          runId: row.runId ?? row.threadId,
+          seq: row.seq ?? 0,
+          threadId: row.threadId,
+          metadata: row.metadata,
+        }),
+      ),
+    );
   }
 }
 

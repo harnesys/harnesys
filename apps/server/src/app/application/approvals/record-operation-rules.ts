@@ -1,4 +1,4 @@
-import type { PermissionRuleStorePort } from '../../domain/permissions/permission-rule-store.port.ts';
+import { PermissionRuleStorePort } from '../../domain/permissions/permission-rule-store.port.ts';
 
 export interface RecordOperationRulesInput {
   agentId: string;

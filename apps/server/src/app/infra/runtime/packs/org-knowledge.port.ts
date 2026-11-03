@@ -10,9 +10,9 @@ import {
   KnowledgeSourceNotFoundException,
   KnowledgeValidationException,
 } from '../../../domain/knowledge/knowledge.error.ts';
-import type { KnowledgeSearchPort } from '../../../domain/knowledge/knowledge-search.port.ts';
-import type { KnowledgeStorePort } from '../../../domain/knowledge/knowledge-store.port.ts';
-import type { SourceRegistryPort } from '../../../domain/source/source-registry.port.ts';
+import { KnowledgeSearchPort } from '../../../domain/knowledge/knowledge-search.port.ts';
+import { KnowledgeStorePort } from '../../../domain/knowledge/knowledge-store.port.ts';
+import { SourceRegistryPort } from '../../../domain/source/source-registry.port.ts';
 
 export interface OrgKnowledgeDeps {
   search: KnowledgeSearchPort;

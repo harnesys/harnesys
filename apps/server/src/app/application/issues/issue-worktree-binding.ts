@@ -1,10 +1,10 @@
 import type { ListRepositoryWorktreesResponse } from '@harnesys/contracts';
-import type { FleetContentProxyPort } from '../../domain/fleet/fleet-content-proxy.port.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
-import type { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
+import { FleetContentProxyPort } from '../../domain/fleet/fleet-content-proxy.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import type { RepositoryWorktree } from '../../domain/source/repository-worktree.ts';
-import type { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
-import type { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
+import { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
+import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 
 export interface IssueWorktreeBinding {
   sourceId: string;

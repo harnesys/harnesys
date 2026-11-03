@@ -14,17 +14,16 @@ export interface ThreadHistoryDeps {
   sessions: Map<string, ThreadSessionRef>;
   lifecycle: RunLifecycleStore;
   events: RunEventStore;
-  sessionFor: (threadId: string) => Promise<SessionHandle>;
+  sessionFor: (threadId: string, agentId?: string) => Promise<SessionHandle>;
 }
 
 export async function truncateThreadHistory(
   deps: ThreadHistoryDeps,
   threadId: string,
-  runId: string,
-  seq: number,
+  threadSeq: number,
 ): Promise<TruncateThreadResult> {
   await cancelActiveForTruncate(deps, threadId);
-  const result = await deps.events.truncateThreadFrom(threadId, runId, seq);
+  const result = await deps.events.truncateThreadFrom(threadId, threadSeq);
   await truncateThreadState(deps.sessions, threadId, result.remainingUserCount);
   return result;
 }
@@ -32,14 +31,13 @@ export async function truncateThreadHistory(
 export async function removeThreadHistoryEvent(
   deps: Pick<ThreadHistoryDeps, 'events' | 'sessions'>,
   threadId: string,
-  runId: string,
-  seq: number,
+  threadSeq: number,
 ): Promise<SessionEvent> {
-  const removed = await deps.events.removeEvent(threadId, runId, seq);
+  const removed = await deps.events.removeEvent(threadId, threadSeq);
   if (!removed) {
-    throw new ThreadValidationException(`event not found: ${runId}:${seq}`);
+    throw new ThreadValidationException(`event not found: ${threadId}:${threadSeq}`);
   }
-  deps.sessions.delete(threadId);
+  forgetThreadSessions(deps.sessions, threadId);
   return removed;
 }
 
@@ -64,8 +62,31 @@ export async function truncateThreadState(
   threadId: string,
   keepUserCount: number,
 ): Promise<void> {
-  const ref = sessions.get(threadId);
-  if (!ref?.state) {
+  const refs = threadSessionRefs(sessions, threadId);
+  for (const ref of refs) {
+    await truncateSessionState(ref, keepUserCount);
+  }
+}
+
+function threadSessionRefs(
+  sessions: Map<string, ThreadSessionRef>,
+  threadId: string,
+): ThreadSessionRef[] {
+  const prefix = `${threadId}:`;
+  return [...sessions.entries()].filter(([key]) => key.startsWith(prefix)).map(([, ref]) => ref);
+}
+
+function forgetThreadSessions(sessions: Map<string, ThreadSessionRef>, threadId: string): void {
+  const prefix = `${threadId}:`;
+  for (const key of [...sessions.keys()]) {
+    if (key.startsWith(prefix)) {
+      sessions.delete(key);
+    }
+  }
+}
+
+async function truncateSessionState(ref: ThreadSessionRef, keepUserCount: number): Promise<void> {
+  if (!ref.state) {
     return;
   }
   const snap = await ref.state.load();

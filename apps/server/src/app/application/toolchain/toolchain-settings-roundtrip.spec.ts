@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import type { OrgSettings, ToolchainDiscovery } from '@harnesys/contracts';
 import { OrgSettingsSchema } from '@harnesys/contracts';
 import { LspPort } from '../../domain/lsp/lsp.port.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { PluginRegistryPort } from '../../domain/plugin/plugin-registry.port.ts';
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';

@@ -15,7 +15,7 @@ import {
 import type { AgentRecord } from '../../../domain/agent/agent.ts';
 import type { OrgSqliteDb } from '../../../infra/org-sqlite/org-sqlite-session.ts';
 import { memoryFactsTable } from '../../../infra/org-sqlite/schema/agent-memory.ts';
-import type { OrgSemanticPort } from '../../../infra/runtime/packs/org-semantic.port.ts';
+import { OrgSemanticPort } from '../../../infra/runtime/packs/org-semantic.port.ts';
 import { compactEvents, numberAt } from './consolidate-thread-model.helpers.ts';
 import { type ConsolidationDecision, type MemoryCandidate } from './consolidation-decisions.ts';
 

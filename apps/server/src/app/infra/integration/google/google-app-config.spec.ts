@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { SecretStorePort } from '../../../domain/secret/secret-store.port.ts';
+import { SecretStorePort } from '../../../domain/secret/secret-store.port.ts';
 import {
   GOOGLE_APP_CONFIG_KEY,
   googleRedirectUri,

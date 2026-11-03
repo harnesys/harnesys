@@ -12,9 +12,9 @@ import {
   RunEventAckFrameSchema,
 } from '@harnesys/contracts';
 import type { Attachment, RunAttribution, SessionEvent } from 'harnesys';
-import type { OrgExecutionReplicaPort } from '../../domain/fleet/org-execution-replica.port.ts';
-import type { PendingRunEventPort } from '../../domain/fleet/pending-run-event.port.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { OrgExecutionReplicaPort } from '../../domain/fleet/org-execution-replica.port.ts';
+import { PendingRunEventPort } from '../../domain/fleet/pending-run-event.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { attachmentRelPath, sanitizeFileName } from '../../domain/thread/attachment.ts';
 
 export function parseConnectedSnapshot(

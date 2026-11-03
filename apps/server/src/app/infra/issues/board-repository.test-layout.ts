@@ -2,8 +2,8 @@ import { Database } from 'bun:sqlite';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { BoardStatus } from '@harnesys/contracts';
-import type { IssueBoardRepositoryPort } from '../../domain/issue/board-repository.port.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { IssueBoardRepositoryPort } from '../../domain/issue/board-repository.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { ensureOrgSchema } from '../org-sqlite/org-sql-ensure.ts';
 
 export function createTestLayout(home: string): HostFsLayoutPort {

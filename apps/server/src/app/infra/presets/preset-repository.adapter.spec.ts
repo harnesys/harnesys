@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AgentPresetBody, TeamPresetBody } from '@harnesys/contracts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { PresetConflictException } from '../../domain/presets/preset.error.ts';
 import { PresetRepositoryAdapter } from './preset-repository.adapter.ts';
 

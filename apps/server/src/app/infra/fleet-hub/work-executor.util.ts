@@ -2,12 +2,12 @@ import { mkdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { TaskEnvelope } from '@harnesys/contracts';
 import { type InMemoryRunLifecycleStore, type RunEventFeed, type SessionEvent } from 'harnesys';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
-import type { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import { LEGACY_PROVIDER_SECRET_PREFIX, vaultStorageKey } from '../../domain/secret/vault-keys.ts';
 import { SourceLocationPort } from '../../domain/source/source-location.port.ts';
-import type { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import { permissionsFromConfig } from '../runtime/agent-definition.mapper.ts';
 import type { WorkExecutorDeps } from './work-executor.compose.ts';
 

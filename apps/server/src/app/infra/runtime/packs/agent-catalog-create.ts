@@ -6,8 +6,8 @@ import {
 } from 'harnesys';
 import { buildReactGraph, DEFAULT_REACT_BUDGET } from '../../../application/agents/react-preset.ts';
 import type { AgentRecord } from '../../../domain/agent/agent.ts';
-import type { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
-import type { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-provider.port.ts';
+import { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
+import { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-provider.port.ts';
 
 export interface AgentCatalogCreateDeps {
   orgId: string;

@@ -1,8 +1,8 @@
 import type { CapabilityScope, ThreadAttachmentPutInput, ThreadAttachmentRecord } from 'harnesys';
 import { ThreadAttachmentPort } from 'harnesys';
 import { UploadThreadAttachmentUseCase } from '../../../application/threads/upload-thread-attachment.use-case.ts';
-import type { HostFsLayoutPort } from '../../../domain/machine/host-fs-layout.port.ts';
-import type { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
+import { HostFsLayoutPort } from '../../../domain/machine/host-fs-layout.port.ts';
+import { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
 import { AttachmentRepositoryAdapter } from '../../thread/attachment-repository.adapter.ts';
 import { AttachmentStorageAdapter } from '../../thread/attachment-storage.adapter.ts';
 

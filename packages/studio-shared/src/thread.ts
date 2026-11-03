@@ -9,8 +9,26 @@ import type {
 } from 'harnesys';
 
 export type { Event, RequestPlan, RequestSection, SessionEvent, SessionEventType, Snapshot };
-export const THREAD_KINDS = ['chat', 'schedule', 'webhook', 'issue', 'connector'] as const;
+export const THREAD_KINDS = ['chat', 'group', 'schedule', 'webhook', 'issue', 'connector'] as const;
 export type ThreadKind = (typeof THREAD_KINDS)[number];
+export interface ThreadPolicy {
+  version: 1;
+  contextWindow?: number;
+  mentionGating?: boolean;
+}
+export interface ThreadMemberRef {
+  id: string;
+  name: string;
+}
+export interface ThreadParticipantRef {
+  id: string;
+  provider: string;
+  providerUserId: string;
+  displayName: string;
+  username: string | null;
+  role: 'member' | 'blocked';
+  lastSeenAt: string | null;
+}
 export interface ThreadActiveRun {
   runId: string;
   status: RunLifecycleStatus;
@@ -30,8 +48,10 @@ export interface ThreadRecord {
   id: string;
   title: string;
   agentId: string;
-  originAgentId: string;
-  agentName: string;
+  members: ThreadMemberRef[];
+  autoReplyAgentId: string | null;
+  policy: ThreadPolicy;
+  participants: ThreadParticipantRef[];
   projectId: string;
   kind: ThreadKind;
   issueId: string | null;
@@ -52,16 +72,18 @@ export interface ThreadRecord {
   lastError?: ThreadLastError | null;
 }
 export interface ThreadAgentRef {
-  agentId: string;
-  originAgentId: string;
+  members: readonly { id: string }[];
+  autoReplyAgentId?: string | null;
 }
 export type ThreadSummary = Pick<
   ThreadRecord,
   | 'id'
   | 'title'
   | 'agentId'
-  | 'originAgentId'
-  | 'agentName'
+  | 'members'
+  | 'autoReplyAgentId'
+  | 'policy'
+  | 'participants'
   | 'projectId'
   | 'kind'
   | 'issueId'
@@ -84,11 +106,18 @@ export function threadsForAgent<T extends ThreadAgentRef>(
   threads: readonly T[],
   agentId: string,
 ): T[] {
-  return threads.filter((thread) => thread.originAgentId === agentId || thread.agentId === agentId);
+  return threads.filter((thread) => thread.members.some((member) => member.id === agentId));
+}
+export function primaryAgentIdOf(thread: ThreadAgentRef): string | undefined {
+  const autoReply = thread.autoReplyAgentId ?? undefined;
+  if (autoReply && thread.members.some((member) => member.id === autoReply)) {
+    return autoReply;
+  }
+  return thread.members[0]?.id;
 }
 export interface AcceptedRunResponse {
   runId: string;
-  status: 'queued' | 'waiting' | 'failed';
+  status: 'queued' | 'waiting' | 'failed' | 'ignored';
 }
 export type CompactThreadResponse =
   | {

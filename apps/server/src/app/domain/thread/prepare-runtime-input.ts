@@ -1,8 +1,8 @@
 import { join } from 'node:path';
 import type { AgentRecord } from '../agent/agent.ts';
-import type { HostFsLayoutPort } from '../machine/host-fs-layout.port.ts';
-import type { SourceLocationPort } from '../source/source-location.port.ts';
-import type { SourceRegistryPort } from '../source/source-registry.port.ts';
+import { HostFsLayoutPort } from '../machine/host-fs-layout.port.ts';
+import { SourceLocationPort } from '../source/source-location.port.ts';
+import { SourceRegistryPort } from '../source/source-registry.port.ts';
 import type { ActiveWorktreeRef, PrimaryKind, SharedSourceRef } from './thread-runtime-context.ts';
 
 export type RunTriggerKind = 'chat' | 'issue' | 'schedule' | 'webhook' | 'connector';

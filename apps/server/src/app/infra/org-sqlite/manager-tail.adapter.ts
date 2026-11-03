@@ -33,8 +33,8 @@ export class ManagerTailAdapter extends ManagerTailPort {
 
 function rowToItem(row: RunEventRow): ManagerThreadTailItem {
   return {
-    seq: row.seq,
-    runId: row.runId,
+    seq: row.seq ?? row.threadSeq,
+    runId: row.runId ?? '',
     kind: row.type,
     at: new Date(row.timestamp).toISOString(),
     preview: previewOf(rowToEvent(row)),
@@ -42,7 +42,7 @@ function rowToItem(row: RunEventRow): ManagerThreadTailItem {
 }
 
 function previewOf(event: SessionEvent): string | null {
-  const record: Record<string, unknown> = event;
+  const record: Record<string, unknown> = { ...event };
   for (const field of PREVIEW_TEXT_FIELDS) {
     const value = record[field];
     if (typeof value === 'string' && value.trim() !== '') {

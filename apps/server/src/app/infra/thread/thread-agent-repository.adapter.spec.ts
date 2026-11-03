@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import type { SessionEvent } from 'harnesys';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
 import { ensureOrgSchema } from '../org-sqlite/org-sql-ensure.ts';
 import { openOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
@@ -34,6 +34,10 @@ function threadOf(id: string): ThreadRecord {
     orgId: ORG_ID,
     title: id,
     kind: 'chat',
+    autoReplyAgentId: null,
+    policy: { version: 1 },
+    lastThreadSeq: 0,
+    conversationCount: 0,
     parentThreadId: null,
     forkAt: null,
     inheritedEventCount: 0,

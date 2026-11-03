@@ -182,7 +182,7 @@ export function createSession(
           agentName: def.name ?? def.id,
           attribution: sendInputAttribution(input),
         },
-        [userEvent],
+        sendOpts?.triggerThreadSeq === undefined ? [userEvent] : [],
       );
       ctx.claimer?.kick();
       return { runId };

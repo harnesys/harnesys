@@ -6,23 +6,24 @@ import type {
 } from '@harnesys/contracts';
 import { OrgSettingsSchema } from '@harnesys/contracts';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
-import type { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
-import type { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
+import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import type {
   LlmModel,
   LlmModelPort,
   LlmProvider,
   LlmProviderPort,
 } from '../../domain/provider/llm-provider.port.ts';
-import type { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
+import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
 import {
   type ResolvedSourceLocation,
   type ResolveSourceLocationInput,
   SourceLocationPort,
 } from '../../domain/source/source-location.port.ts';
-import type { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
-import type { SourceRecord, SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
+import type { SourceRecord } from '../../domain/source/source-registry.port.ts';
+import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import { resolveContentRoot } from '../content/fs-content-ops.ts';
 import { resolveSourceLocation } from '../source/source-location.adapter.ts';
 

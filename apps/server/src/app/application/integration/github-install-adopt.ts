@@ -1,4 +1,4 @@
-import type { IntegrationRegistryPort } from '../../domain/integration/integration-registry.port.ts';
+import { IntegrationRegistryPort } from '../../domain/integration/integration-registry.port.ts';
 import { signGithubAppJwt } from '../../infra/integration/github/app-jwt.ts';
 import { listAppInstallations } from '../../infra/integration/github/github-api.ts';
 import { GithubAppStore } from '../../infra/integration/github/github-app-store.ts';

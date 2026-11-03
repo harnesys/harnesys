@@ -3,7 +3,7 @@ import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { ensureOrgSchema } from '../org-sqlite/org-sql-ensure.ts';
 import { SqliteLlmModelAdapter } from './sqlite-llm-model.adapter.ts';
 import { SqliteLlmProviderAdapter } from './sqlite-llm-provider.adapter.ts';

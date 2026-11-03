@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import type { HostFsLayoutPort } from '../machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../machine/host-fs-layout.port.ts';
 
 export const MAX_ISSUE_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 

@@ -8,7 +8,7 @@ import type {
   McpServerOverview,
 } from 'harnesys';
 import { CONSOLE_LOGGER, McpRegistry } from 'harnesys';
-import type { OrgMcpPort } from '../../../domain/mcp/org-mcp.port.ts';
+import { OrgMcpPort } from '../../../domain/mcp/org-mcp.port.ts';
 
 export interface OrgMcpManageDeps {
   orgId: string;

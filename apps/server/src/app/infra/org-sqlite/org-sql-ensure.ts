@@ -33,6 +33,7 @@ import {
   CREATE_SECRETS_SQL,
   CREATE_THREAD_AGENTS_SQL,
   CREATE_THREAD_MESSAGE_QUEUE_SQL,
+  CREATE_THREAD_PARTICIPANTS_SQL,
   CREATE_THREAD_PLANS_SQL,
   CREATE_THREADS_ISSUE_IDX_SQL,
   CREATE_THREADS_SQL,
@@ -62,8 +63,10 @@ import {
 } from './org-sql-fleet.ts';
 import {
   assertIssuesStatusKey,
+  assertRunEventsThreadScoped,
   assertRunsAgentSnapshot,
   assertThreadsOwnMembership,
+  assertThreadsThreadSeq,
 } from './org-sql-guards.ts';
 import { CREATE_HOOK_RUNS_SQL } from './org-sql-hooks.ts';
 import {
@@ -271,7 +274,9 @@ export function ensureOrgSchema(
   if (all) {
     migrateThreadsBindingColumns(exec, all);
   }
+  assertThreadsThreadSeq(all);
   exec(CREATE_THREAD_AGENTS_SQL);
+  exec(CREATE_THREAD_PARTICIPANTS_SQL);
   exec(CREATE_THREADS_ISSUE_IDX_SQL);
   exec(CREATE_ISSUE_BOARDS_SQL);
   exec(CREATE_BOARD_STATUSES_SQL);
@@ -295,6 +300,7 @@ export function ensureOrgSchema(
     migrateRunsAttributionColumns(exec, all);
   }
   exec(CREATE_RUN_EVENTS_SQL);
+  assertRunEventsThreadScoped(all);
   exec(CREATE_RUN_SNAPSHOTS_SQL);
   exec(CREATE_ATTACHMENTS_SQL);
   exec(CREATE_THREAD_MESSAGE_QUEUE_SQL);

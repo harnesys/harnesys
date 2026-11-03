@@ -1,4 +1,4 @@
-import type { IntegrationRegistryPort } from '../../domain/integration/integration-registry.port.ts';
+import { IntegrationRegistryPort } from '../../domain/integration/integration-registry.port.ts';
 
 interface ServerConfig {
   server?: { port?: number };

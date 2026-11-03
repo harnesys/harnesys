@@ -12,20 +12,20 @@ import type {
 import { intersectPermissions } from 'harnesys';
 import { runModeOf } from '../../application/threads/thread.helpers.ts';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
-import type { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
+import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { CHANNEL_NOTE } from '../../domain/connector/constants.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
-import type { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import type { ModePresetRecord } from '../../domain/mode-presets/mode-preset.ts';
-import type { ModePresetRegistryPort } from '../../domain/mode-presets/mode-preset-registry.port.ts';
+import { ModePresetRegistryPort } from '../../domain/mode-presets/mode-preset-registry.port.ts';
 import {
   mergeShellAssignment,
   rawShellAssignment,
   shellSpecBaseOf,
 } from '../../domain/mode-presets/preset-shell-merge.ts';
-import type { LlmModelPort, LlmProviderPort } from '../../domain/provider/llm-provider.port.ts';
-import type { SourceLocationPort } from '../../domain/source/source-location.port.ts';
-import type { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+import { LlmModelPort, LlmProviderPort } from '../../domain/provider/llm-provider.port.ts';
+import { SourceLocationPort } from '../../domain/source/source-location.port.ts';
+import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import {
   type PrepareTargetOptions,
   type RunTriggerKind,
@@ -34,7 +34,8 @@ import {
 } from '../../domain/thread/prepare-runtime-input.ts';
 import { ThreadValidationException } from '../../domain/thread/thread.error.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
-import type { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
+import { contextWindowOf } from '../../domain/thread/thread-policy.ts';
+import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import {
   type PrimarySourceRef,
   threadRuntimeContextOf,
@@ -46,6 +47,8 @@ import {
   permissionsFromConfig,
   toAgentDefinition,
 } from './agent-definition.mapper.ts';
+import { groupChannelNote } from './group-note.ts';
+import { type TargetCache, targetCacheKey } from './target-cache.ts';
 
 export interface PrepareOrgTargetDeps {
   orgId: string;
@@ -60,7 +63,8 @@ export interface PrepareOrgTargetDeps {
   models: LlmModelPort;
 }
 
-export type TargetCache = Map<string, { agentId: string; pathsAllow: string[]; cwd: string }>;
+export type { TargetCache } from './target-cache.ts';
+export { cachedTargetOf, targetCacheKey } from './target-cache.ts';
 
 export interface PreparedPaths {
   allow: string[];
@@ -155,7 +159,11 @@ export function prepareTarget(
     cwd: primary.primaryDirectory,
     threadDir,
   };
-  cache.set(threadId, { agentId: agent.id, pathsAllow: paths.allow, cwd: paths.cwd });
+  cache.set(targetCacheKey(threadId, agent.id), {
+    agentId: agent.id,
+    pathsAllow: paths.allow,
+    cwd: paths.cwd,
+  });
   const scope: CapabilityScope = {
     orgId: deps.orgId,
     agentId: agent.id,
@@ -176,10 +184,19 @@ export function prepareTarget(
     ...(primarySource !== undefined ? { primarySource } : {}),
     sharedSources: sharedSourcesOf({ orgId: deps.orgId, sources: deps.sources }, agent),
   });
-  const channelNote =
-    thread.kind === 'connector' && thread.metadata.provider === 'telegram'
-      ? CHANNEL_NOTE
-      : undefined;
+  const notes: string[] = [];
+  if (thread.kind === 'group') {
+    notes.push(
+      groupChannelNote({
+        window: contextWindowOf(thread.policy),
+        total: thread.conversationCount,
+      }),
+    );
+  }
+  if (thread.kind === 'connector' && thread.metadata.provider === 'telegram') {
+    notes.push(CHANNEL_NOTE);
+  }
+  const channelNote = notes.length > 0 ? notes.join('\n\n') : undefined;
   return {
     agent,
     agentDef: runAgentDef(deps, thread, agent, { model, provider }),

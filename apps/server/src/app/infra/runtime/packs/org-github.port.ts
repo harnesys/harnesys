@@ -24,9 +24,9 @@ import type {
   GithubWorkflowRunRecord,
   GithubWorkflowRunsInput,
 } from 'harnesys';
-import type { IntegrationEventsPort } from '../../../domain/integration/integration-events.port.ts';
-import type { IntegrationRegistryPort } from '../../../domain/integration/integration-registry.port.ts';
-import type { IntegrationTokenPort } from '../../../domain/integration/integration-token.port.ts';
+import { IntegrationEventsPort } from '../../../domain/integration/integration-events.port.ts';
+import { IntegrationRegistryPort } from '../../../domain/integration/integration-registry.port.ts';
+import { IntegrationTokenPort } from '../../../domain/integration/integration-token.port.ts';
 import {
   getRepoContent,
   listInstallationRepos,

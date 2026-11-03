@@ -1,9 +1,9 @@
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
-import type { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
-import type { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
+import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
 import type { RepositoryWorktree } from '../../domain/source/repository-worktree.ts';
 import { decideStaleCreatingRecovery } from '../../domain/source/repository-worktree.ts';
-import type { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
+import { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
 
 export interface RecoverStaleWorktreesDeps {
   orgId: string;

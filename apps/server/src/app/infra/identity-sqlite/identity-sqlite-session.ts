@@ -1,7 +1,7 @@
 import { Database } from 'bun:sqlite';
 import type { BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import * as identitySchema from './identity.schema.ts';
 import { ensureIdentitySchema } from './identity-sql.ts';
 

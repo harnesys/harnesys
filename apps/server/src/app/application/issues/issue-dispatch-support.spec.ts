@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { IssueRecord } from '../../domain/issue/issue.ts';
 import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
 import type { RepositoryWorktree } from '../../domain/source/repository-worktree.ts';
-import type { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
+import { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
 import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import type { SourceRecord } from '../../domain/source/source-registry.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';

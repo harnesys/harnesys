@@ -1,5 +1,5 @@
 import type { HookBinding } from 'harnesys';
-import type { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
+import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import { VAULT_SECRET_PREFIX } from '../../domain/secret/vault-keys.ts';
 
 export async function resolveHookSecrets(

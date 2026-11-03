@@ -16,9 +16,9 @@ import type {
   IssueRecord,
 } from '../../domain/issue/issue.ts';
 import type { IssueLabelRecord } from '../../domain/issue/label.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { gitWorktreePath } from '../../domain/source/git-repository-layout.ts';
-import type { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
+import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
 
 export interface IssueWorktreeRefDeps {
   worktrees: RepositoryWorktreePort;

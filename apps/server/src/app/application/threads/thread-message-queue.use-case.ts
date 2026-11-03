@@ -5,7 +5,7 @@ import type { ThreadQueueEnqueueBody } from '../../api/rest/thread-message-queue
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { ThreadNotFoundException } from '../../domain/thread/thread.error.ts';
-import { withOrgSqlite } from '../../infra/org-sqlite/org-sqlite-session.ts';
+import { type OrgSqliteDb, withOrgSqlite } from '../../infra/org-sqlite/org-sqlite-session.ts';
 import { threadsTable } from '../../infra/org-sqlite/schema/index.ts';
 import type { QueuedThreadMessage } from '../../infra/org-sqlite/thread-message-queue.store.ts';
 import {
@@ -42,13 +42,17 @@ export class ThreadMessageQueueUseCase {
     this.assertThread(request.orgId, request.threadId);
     const uploaded = (request.body.attachments ?? []) as Attachment[];
     withOrgSqlite(this.layout, request.orgId, (db) =>
-      enqueueThreadMessage(db, {
-        threadId: request.threadId,
-        text: request.body.text,
-        ...(uploaded.length > 0 ? { attachments: uploaded } : {}),
-        ...(request.body.origin ? { origin: request.body.origin } : {}),
-        ...(request.body.clientEventId ? { clientEventId: request.body.clientEventId } : {}),
-      }),
+      db.transaction(
+        (tx) =>
+          enqueueThreadMessage(tx as OrgSqliteDb, {
+            threadId: request.threadId,
+            text: request.body.text,
+            ...(uploaded.length > 0 ? { attachments: uploaded } : {}),
+            ...(request.body.origin ? { origin: request.body.origin } : {}),
+            ...(request.body.clientEventId ? { clientEventId: request.body.clientEventId } : {}),
+          }),
+        { behavior: 'immediate' },
+      ),
     );
     await this.executor.drainMessageQueue(request.orgId, request.threadId);
     return this.list(request);

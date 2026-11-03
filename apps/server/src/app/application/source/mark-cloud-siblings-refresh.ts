@@ -1,6 +1,6 @@
 import { siblingRefreshFlag } from '../../domain/source/cloud-materialization-state.ts';
-import type { MaterializationEventsPort } from '../../domain/source/materialization-events.port.ts';
-import type { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
+import { MaterializationEventsPort } from '../../domain/source/materialization-events.port.ts';
+import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 
 export function markSiblingCloudCopiesRefreshRequired(input: {
   materializations: SourceMaterializationPort;

@@ -1,7 +1,7 @@
 import type { Logger } from '@harnesys/brix';
 import type { NodeIdentityStore } from '../../domain/fleet/node-identity-store.port.ts';
-import type { PendingRunEventPort } from '../../domain/fleet/pending-run-event.port.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { PendingRunEventPort } from '../../domain/fleet/pending-run-event.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import type { OrgMachineStore } from '../../domain/machine/org-machine-store.port.ts';
 import type { WorkerContentHandler } from '../content/worker-content.handler.ts';
 import {

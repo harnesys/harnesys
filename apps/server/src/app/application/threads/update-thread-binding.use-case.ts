@@ -1,14 +1,16 @@
 import { isAbsolute } from 'node:path';
 import { Injectable } from '@harnesys/brix';
 import type { ThreadSummary, UpdateThreadBindingBody } from '@harnesys/contracts';
+import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { ExecutionProfilePort } from '../../domain/execution-profile/execution-profile.port.ts';
 import {
   ThreadNotFoundException,
   ThreadValidationException,
 } from '../../domain/thread/thread.error.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
+import { ThreadParticipantRepositoryPort } from '../../domain/thread/thread-participant-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
-import { soleAgentIdOf, toThreadSummary } from './thread.helpers.ts';
+import { membersOf, participantsOf, toThreadSummary } from './thread.helpers.ts';
 
 export interface UpdateThreadBindingRequest {
   orgId: string;
@@ -21,6 +23,8 @@ export class UpdateThreadBindingUseCase {
   constructor(
     private readonly threads: ThreadRepositoryPort,
     private readonly threadAgents: ThreadAgentRepositoryPort,
+    private readonly participants: ThreadParticipantRepositoryPort,
+    private readonly agents: AgentRegistryPort,
     private readonly profiles: ExecutionProfilePort,
   ) {}
 
@@ -53,10 +57,15 @@ export class UpdateThreadBindingUseCase {
         ? { runDirectory: request.body.runDirectory }
         : {}),
     });
+    const deps = {
+      threadAgents: this.threadAgents,
+      participants: this.participants,
+      agents: this.agents,
+    };
     return toThreadSummary({
       thread: updated,
-      agentId: soleAgentIdOf(this.threadAgents, request.orgId, updated.id) ?? '',
-      agentName: '',
+      members: membersOf(deps, request.orgId, updated.id),
+      participants: participantsOf(deps, request.orgId, updated.id),
       active: this.threads.findActiveRun(request.orgId, thread.id) ?? null,
       bindingLocked: locked,
     });

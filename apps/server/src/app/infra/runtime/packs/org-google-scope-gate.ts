@@ -1,5 +1,5 @@
 import { IntegrationScopeMissingException } from '../../../domain/integration/integration.error.ts';
-import type { IntegrationTokenPort } from '../../../domain/integration/integration-token.port.ts';
+import { IntegrationTokenPort } from '../../../domain/integration/integration-token.port.ts';
 
 const RECONNECT_HINT =
   'Reconnect the account in Settings → Connectors to grant the missing scopes.';

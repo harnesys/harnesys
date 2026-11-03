@@ -5,7 +5,7 @@ import { basename, dirname, join, resolve, sep } from 'node:path';
 import type { InstallPluginBody } from '@harnesys/contracts';
 import type { CatalogEntry } from 'harnesys/plugins-catalog';
 import { findMarketplaceManifest, parseClaudeMarketplace } from 'harnesys/plugins-catalog';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import {
   PluginNotFoundException,
   PluginValidationException,

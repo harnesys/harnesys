@@ -6,7 +6,11 @@ export function toClientThread(record: ThreadSummary | ThreadRecord): Thread {
   return {
     id: record.id,
     agentId: record.agentId,
-    originAgentId: record.originAgentId,
+    originAgentId: record.agentId,
+    members: record.members,
+    autoReplyAgentId: record.autoReplyAgentId,
+    policy: record.policy,
+    participants: record.participants,
     orgId,
     title: record.title,
     kind: record.kind,

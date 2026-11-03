@@ -8,11 +8,11 @@ import {
   type SourceIndexState,
   sourceIndexStateOf,
 } from '../../domain/knowledge/index-state-summary.ts';
-import type { KnowledgeStorePort } from '../../domain/knowledge/knowledge-store.port.ts';
-import type { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
-import type { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
-import type { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
-import type { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+import { KnowledgeStorePort } from '../../domain/knowledge/knowledge-store.port.ts';
+import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
+import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
+import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
+import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import type { PrimarySourceRef } from '../../domain/thread/thread-runtime-context.ts';
 import type { ThreadBinding } from './workspace-target.ts';
 

@@ -1,8 +1,9 @@
 import type { SourceVcs } from '@harnesys/contracts';
 import { decideSourceVcsUpdate } from '../../domain/source/decide-source-vcs.ts';
-import type { GitVcsPort, VcsProbeRaw } from '../../domain/source/git-vcs.port.ts';
-import type { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
-import type { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+import type { VcsProbeRaw } from '../../domain/source/git-vcs.port.ts';
+import { GitVcsPort } from '../../domain/source/git-vcs.port.ts';
+import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
+import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 
 export interface SourceVcsRefresherDeps {
   sources: SourceRegistryPort;

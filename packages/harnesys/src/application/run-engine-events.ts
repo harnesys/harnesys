@@ -243,9 +243,9 @@ export function eventToSessionEvent(ev: Event): SessionEvent | null {
     if (!id) {
       return null;
     }
-    const reason = m?.reason === 'manual' ? 'manual' : 'threshold';
-    const out: Record<string, unknown> = {
-      type: 'compaction',
+    const reason = m?.reason === 'manual' ? ('manual' as const) : ('threshold' as const);
+    const covered = {
+      type: 'compaction' as const,
       id,
       reason,
       coveredFrom: num(m?.coveredFrom) ?? 0,
@@ -253,40 +253,33 @@ export function eventToSessionEvent(ev: Event): SessionEvent | null {
       tokensBefore: num(m?.tokensBefore) ?? 0,
       tokensAfter: num(m?.tokensAfter) ?? 0,
     };
-    if (typeof m?.summary === 'string' && m.summary) {
-      out.summary = m.summary;
-    }
-    return out as SessionEvent;
+    return typeof m?.summary === 'string' && m.summary
+      ? { ...covered, summary: m.summary }
+      : covered;
   }
   if (t === 'tool.completed' || t === 'tool.intent') {
     const m = ev.metadata as Record<string, unknown> | undefined;
-    const out: Record<string, unknown> = {
-      type: 'tool',
-      phase: t === 'tool.intent' ? 'requested' : 'completed',
+    const tool = {
+      type: 'tool' as const,
+      phase: t === 'tool.intent' ? ('requested' as const) : ('completed' as const),
       toolCallId: String(m?.toolCallId ?? ''),
       name: String(m?.name ?? ''),
       input: m?.input,
       output: m?.output,
     };
-    if (typeof m?.message === 'string') {
-      out.message = m.message;
-    }
-    return out as SessionEvent;
+    return typeof m?.message === 'string' ? { ...tool, message: m.message } : tool;
   }
   if (t === 'tool.failed') {
     const m = ev.metadata as Record<string, unknown> | undefined;
-    const out: Record<string, unknown> = {
-      type: 'tool',
-      phase: 'failed',
+    const tool = {
+      type: 'tool' as const,
+      phase: 'failed' as const,
       toolCallId: String(m?.toolCallId ?? ''),
       name: String(m?.name ?? ''),
       input: m?.input,
       output: m?.output,
     };
-    if (typeof m?.message === 'string') {
-      out.message = m.message;
-    }
-    return out as SessionEvent;
+    return typeof m?.message === 'string' ? { ...tool, message: m.message } : tool;
   }
   if (t === 'tool.skipped') {
     const m = ev.metadata as Record<string, unknown> | undefined;

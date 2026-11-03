@@ -20,7 +20,7 @@ import {
 } from '../../../application/schedules/schedule.helpers.ts';
 import { insertAgentThread } from '../../../application/threads/thread.helpers.ts';
 import { AgentNotFoundException } from '../../../domain/agent/agent.error.ts';
-import type { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
+import { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
 import { DeskEventsPort } from '../../../domain/desk/desk-events.port.ts';
 import {
   ScheduleNotFoundException,
@@ -30,11 +30,11 @@ import type {
   SchedulePatch,
   ScheduleRecord as ServerScheduleRecord,
 } from '../../../domain/schedule/schedule.ts';
-import type { ScheduleRepositoryPort } from '../../../domain/schedule/schedule-repository.port.ts';
-import type { OrgSettingsPort } from '../../../domain/skills/org-settings.port.ts';
+import { ScheduleRepositoryPort } from '../../../domain/schedule/schedule-repository.port.ts';
+import { OrgSettingsPort } from '../../../domain/skills/org-settings.port.ts';
 import type { ThreadRecord } from '../../../domain/thread/thread.ts';
-import type { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
-import type { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
+import { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
+import { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
 
 export interface OrgSchedulerPortDeps {
   schedules: ScheduleRepositoryPort;

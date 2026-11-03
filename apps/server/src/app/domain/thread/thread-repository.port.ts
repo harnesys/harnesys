@@ -11,6 +11,11 @@ export abstract class ThreadRepositoryPort {
   abstract updateTitle(orgId: string, id: string, title: string): ThreadRecord;
   abstract touch(orgId: string, id: string): void;
   abstract delete(orgId: string, id: string): void;
+  deleteMany(orgId: string, ids: string[]): void {
+    for (const id of ids) {
+      this.delete(orgId, id);
+    }
+  }
   abstract deleteByAgent(orgId: string, agentId: string): void;
   abstract listByIssue(orgId: string, issueId: string): ThreadRecord[];
   abstract findByIssueAndAgent(

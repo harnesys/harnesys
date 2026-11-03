@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { UploadThreadAttachmentUseCase } from '../../application/threads/upload-thread-attachment.use-case.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MAX_ATTACHMENT_BYTES } from '../../domain/thread/attachment.ts';
 import { AttachmentRepositoryPort } from '../../domain/thread/attachment-repository.port.ts';
 import { AttachmentStoragePort } from '../../domain/thread/attachment-storage.port.ts';
@@ -127,6 +127,10 @@ function threadStub(threadId: string, _agentId: string): ThreadRepositoryPort {
     orgId: ORG_ID,
     title: 't',
     kind: 'chat',
+    autoReplyAgentId: null,
+    policy: { version: 1 },
+    lastThreadSeq: 0,
+    conversationCount: 0,
     parentThreadId: null,
     forkAt: null,
     inheritedEventCount: 0,

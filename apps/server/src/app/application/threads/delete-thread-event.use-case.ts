@@ -10,15 +10,21 @@ import {
   ThreadValidationException,
 } from '../../domain/thread/thread.error.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
+import { ThreadParticipantRepositoryPort } from '../../domain/thread/thread-participant-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { runAttributionNamesOf } from './run-attribution.ts';
-import { soleAgentIdOf, toThreadPublic, waitingForProfileIdFromEvents } from './thread.helpers.ts';
+import {
+  membersOf,
+  participantsOf,
+  toThreadPublic,
+  waitingForProfileIdFromEvents,
+} from './thread.helpers.ts';
 
 export interface DeleteThreadEventRequest {
   orgId: string;
   threadId: string;
-  runId: string;
-  seq: number;
+  threadSeq: number;
+  userId?: string;
 }
 
 const DELETABLE_ERROR_TYPES = new Set(['error', 'run.failed']);
@@ -28,6 +34,7 @@ export class DeleteThreadEventUseCase {
   constructor(
     private readonly threads: ThreadRepositoryPort,
     private readonly threadAgents: ThreadAgentRepositoryPort,
+    private readonly participants: ThreadParticipantRepositoryPort,
     private readonly agents: AgentRegistryPort,
     private readonly executor: LocalExecutorPort,
     private readonly users: UserRepository,
@@ -39,38 +46,22 @@ export class DeleteThreadEventUseCase {
     if (!thread) {
       throw new ThreadNotFoundException(request.threadId);
     }
-    const lifecycle = await this.executor.lifecycle(request.orgId);
-    const rec = await lifecycle.get(request.runId);
-    if (!rec || rec.threadId !== request.threadId) {
-      throw new ThreadNotFoundException(request.runId);
-    }
     const events = await this.executor.events(request.orgId);
     const target = (await events.listByThread(request.threadId)).find(
-      (event) => event.runId === request.runId && event.seq === request.seq,
+      (event) => event.threadSeq === request.threadSeq,
     );
     if (!target) {
-      throw new ThreadNotFoundException(`${request.runId}:${request.seq}`);
+      throw new ThreadNotFoundException(`${request.threadId}:${request.threadSeq}`);
     }
     if (target.type === 'user') {
-      await this.executor.truncateThreadFrom(
-        request.orgId,
-        request.threadId,
-        request.runId,
-        request.seq,
-      );
+      await this.executor.truncateThreadFrom(request.orgId, request.threadId, request.threadSeq);
     } else if (DELETABLE_ERROR_TYPES.has(target.type)) {
-      await this.executor.removeThreadEvent(
-        request.orgId,
-        request.threadId,
-        request.runId,
-        request.seq,
-      );
+      await this.executor.removeThreadEvent(request.orgId, request.threadId, request.threadSeq);
     } else {
       throw new ThreadValidationException(`only user and error events can be deleted`);
     }
     this.threads.touch(request.orgId, request.threadId);
-    const agentId = soleAgentIdOf(this.threadAgents, request.orgId, thread.id) ?? '';
-    const agent = agentId ? this.agents.findById(request.orgId, agentId) : undefined;
+    const lifecycle = await this.executor.lifecycle(request.orgId);
     const [active, ownEvents] = await Promise.all([
       lifecycle.activeByThread(thread.id),
       events.listByThread(thread.id),
@@ -81,16 +72,22 @@ export class DeleteThreadEventUseCase {
       thread,
     );
     const sessionEvents = [...inherited, ...ownEvents];
+    const deps = {
+      threadAgents: this.threadAgents,
+      participants: this.participants,
+      agents: this.agents,
+    };
     return toThreadPublic({
       thread,
-      agentId,
-      agentName: agent?.name ?? '',
+      members: membersOf(deps, request.orgId, thread.id),
+      participants: participantsOf(deps, request.orgId, thread.id),
       active,
       events: sessionEvents,
       inheritedEventCount: inherited.length,
       waitingForProfileId: waitingForProfileIdFromEvents(sessionEvents),
       names: runAttributionNamesOf(this.users, this.nodes, request.orgId),
       bindingLocked: this.threads.threadIdsWithRuns(request.orgId).has(thread.id),
+      userId: request.userId ?? null,
     });
   }
 }

@@ -7,6 +7,10 @@ import type {
 import type { RunRecord } from '../ports/run-lifecycle-store.ts';
 import type { SessionEvent } from '../ports/session.ts';
 
+function threadSeqOf(event: SessionEvent): number {
+  return (event as { threadSeq?: number }).threadSeq ?? 0;
+}
+
 function seqOf(event: SessionEvent): number {
   return (
     (
@@ -20,6 +24,7 @@ function seqOf(event: SessionEvent): number {
 export class InMemoryRunEventStore implements RunEventStore {
   events: Map<string, SessionEvent[]> = new Map();
   nextSeq: Map<string, number> = new Map();
+  private threadSeq: Map<string, number> = new Map();
   private insertion: InsertionEntry[] = [];
   private runs: Map<string, RunRecord> | null = null;
   attachLifecycleRuns(runs: Map<string, RunRecord>): void {
@@ -51,6 +56,7 @@ export class InMemoryRunEventStore implements RunEventStore {
     const stored = this.events.get(runId) ?? [];
     const record = this.runs?.get(runId);
     let maxSeq = this.nextSeq.get(runId) ?? 0;
+    let threadSeq = this.threadSeq.get(record?.threadId ?? '') ?? 0;
     const assigned: SessionEvent[] = [];
     for (const event of events) {
       const pre = seqOf(event as SessionEvent);
@@ -58,7 +64,9 @@ export class InMemoryRunEventStore implements RunEventStore {
       if (seq > maxSeq) {
         maxSeq = seq;
       }
-      const full = { ...event, seq, runId } as SessionEvent;
+      threadSeq += 1;
+      this.threadSeq.set(record?.threadId ?? '', threadSeq);
+      const full = { ...event, seq, runId, threadSeq } as SessionEvent;
       stored.push(full);
       this.insertion.push({ threadId: record?.threadId ?? '', event: full });
       assigned.push(full);
@@ -105,14 +113,15 @@ export class InMemoryRunEventStore implements RunEventStore {
     }
     return Promise.resolve(true);
   }
-  truncateThreadFrom(threadId: string, runId: string, seq: number): Promise<TruncateThreadResult> {
+  truncateThreadFrom(threadId: string, threadSeq: number): Promise<TruncateThreadResult> {
     const cutoffIndex = this.insertion.findIndex(
-      (entry) =>
-        entry.threadId === threadId && entry.event.runId === runId && seqOf(entry.event) === seq,
+      (entry) => entry.threadId === threadId && threadSeqOf(entry.event) === threadSeq,
     );
     const found = cutoffIndex < 0 ? undefined : this.insertion[cutoffIndex];
     if (!found) {
-      return Promise.reject(codedRunError('unknown_event', `event ${runId}:${seq} not found`));
+      return Promise.reject(
+        codedRunError('unknown_event', `event ${threadId}:${threadSeq} not found`),
+      );
     }
     const cutoff = { ...found.event } as SessionEvent;
     const removedKeys = tailKeys(this.insertion, cutoffIndex, threadId);
@@ -128,9 +137,23 @@ export class InMemoryRunEventStore implements RunEventStore {
       remainingUserCount: countThreadUsers(this.insertion, threadId),
     });
   }
-  removeEvent(threadId: string, runId: string, seq: number): Promise<SessionEvent | null> {
+  removeEvent(threadId: string, threadSeq: number): Promise<SessionEvent | null> {
+    const insertionIndex = this.insertion.findIndex(
+      (entry) => entry.threadId === threadId && threadSeqOf(entry.event) === threadSeq,
+    );
+    if (insertionIndex < 0) {
+      return Promise.resolve(null);
+    }
+    const removed = this.insertion[insertionIndex];
+    const runId = removed?.event.runId;
+    const seq = removed === undefined ? 0 : seqOf(removed.event);
+    if (runId === undefined) {
+      this.insertion.splice(insertionIndex, 1);
+      return Promise.resolve(null);
+    }
     const stored = this.events.get(runId);
     if (!stored) {
+      this.insertion.splice(insertionIndex, 1);
       return Promise.resolve(null);
     }
     const index = stored.findIndex((event) => seqOf(event) === seq);
@@ -138,10 +161,6 @@ export class InMemoryRunEventStore implements RunEventStore {
       return Promise.resolve(null);
     }
     const [deleted] = stored.splice(index, 1);
-    const insertionIndex = this.insertion.findIndex(
-      (entry) =>
-        entry.threadId === threadId && entry.event.runId === runId && seqOf(entry.event) === seq,
-    );
     if (insertionIndex >= 0) {
       this.insertion.splice(insertionIndex, 1);
     }

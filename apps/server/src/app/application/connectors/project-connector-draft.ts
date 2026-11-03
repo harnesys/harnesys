@@ -3,9 +3,9 @@ import type {
   ConnectorRecord,
   ConnectorStreamMode,
 } from '../../domain/connector/connector.ts';
-import type { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
+import { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
 import { nextDraftTick, takeDraftChunk } from '../../domain/connector/draft-buffer.ts';
-import type { TelegramApiPort } from '../../domain/connector/telegram-api.port.ts';
+import { TelegramApiPort } from '../../domain/connector/telegram-api.port.ts';
 
 export interface DraftSendState {
   orgId: string;

@@ -1,6 +1,8 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@harnesys/brix';
 import type {
   AcceptedRunResponse,
+  AddThreadAgentBody,
+  AddThreadParticipantBody,
   CancelRunResponse,
   CreateThreadBody,
   ListThreadsResponse,
@@ -13,16 +15,22 @@ import type {
   ThreadPublic,
   ThreadSummary,
   UpdateThreadBindingBody,
+  UpdateThreadPolicyBody,
 } from '@harnesys/contracts';
 import {
+  AddThreadAgentBodySchema,
+  AddThreadParticipantBodySchema,
   CreateThreadBodySchema,
   RejectRunBodySchema,
   RespondRunBodySchema,
   SendThreadRunBodySchema,
   StreamRunEventsQuerySchema,
   UpdateThreadBindingBodySchema,
+  UpdateThreadPolicyBodySchema,
 } from '@harnesys/contracts';
 import type { ThreadPlanRecord } from '@harnesys/studio-shared';
+import { AddThreadAgentUseCase } from '../../application/threads/add-thread-agent.use-case.ts';
+import { AddThreadParticipantUseCase } from '../../application/threads/add-thread-participant.use-case.ts';
 import { CancelRunUseCase } from '../../application/threads/cancel-run.use-case.ts';
 import { CreateThreadUseCase } from '../../application/threads/create-thread.use-case.ts';
 import { DeleteThreadUseCase } from '../../application/threads/delete-thread.use-case.ts';
@@ -32,12 +40,15 @@ import { GetThreadUseCase } from '../../application/threads/get-thread.use-case.
 import { GetThreadPlanUseCase } from '../../application/threads/get-thread-plan.use-case.ts';
 import { ListThreadsUseCase } from '../../application/threads/list-threads.use-case.ts';
 import { MarkThreadReadUseCase } from '../../application/threads/mark-thread-read.use-case.ts';
+import { RemoveThreadAgentUseCase } from '../../application/threads/remove-thread-agent.use-case.ts';
+import { RemoveThreadParticipantUseCase } from '../../application/threads/remove-thread-participant.use-case.ts';
 import { RespondRunUseCase } from '../../application/threads/respond-run.use-case.ts';
 import { RetryRunUseCase } from '../../application/threads/retry-run.use-case.ts';
 import { userRunStart } from '../../application/threads/run-attribution.ts';
 import { SendThreadRunUseCase } from '../../application/threads/send-thread-run.use-case.ts';
 import { StreamRunEventsUseCase } from '../../application/threads/stream-run-events.use-case.ts';
 import { UpdateThreadBindingUseCase } from '../../application/threads/update-thread-binding.use-case.ts';
+import { UpdateThreadPolicyUseCase } from '../../application/threads/update-thread-policy.use-case.ts';
 import { type Principal } from '../../domain/identity/principal.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { SessionPrincipal } from '../guards/session.guard.ts';
@@ -60,12 +71,23 @@ export class ThreadsController {
     private readonly deleteThread: DeleteThreadUseCase,
     private readonly deleteThreadEvent: DeleteThreadEventUseCase,
     private readonly updateThreadBinding: UpdateThreadBindingUseCase,
+    private readonly updateThreadPolicy: UpdateThreadPolicyUseCase,
+    private readonly addThreadAgent: AddThreadAgentUseCase,
+    private readonly removeThreadAgent: RemoveThreadAgentUseCase,
+    private readonly addThreadParticipant: AddThreadParticipantUseCase,
+    private readonly removeThreadParticipant: RemoveThreadParticipantUseCase,
     private readonly executor: LocalExecutorPort,
   ) {}
 
   @Get()
-  list(@Param('orgId') orgId: string): Promise<ListThreadsResponse> {
-    return this.listThreads.execute({ orgId });
+  list(
+    @Param('orgId') orgId: string,
+    @SessionPrincipal() principal: Principal,
+  ): Promise<ListThreadsResponse> {
+    return this.listThreads.execute({
+      orgId,
+      ...(principal.kind === 'user' ? { userId: principal.userId } : {}),
+    });
   }
 
   @Post()
@@ -78,8 +100,65 @@ export class ThreadsController {
   }
 
   @Get(':threadId')
-  get(@Param('orgId') orgId: string, @Param('threadId') threadId: string): Promise<ThreadPublic> {
-    return this.getThread.execute({ orgId, threadId });
+  get(
+    @Param('orgId') orgId: string,
+    @Param('threadId') threadId: string,
+    @SessionPrincipal() principal: Principal,
+  ): Promise<ThreadPublic> {
+    return this.getThread.execute({
+      orgId,
+      threadId,
+      ...(principal.kind === 'user' ? { userId: principal.userId } : {}),
+    });
+  }
+
+  @Patch(':threadId/policy')
+  updatePolicy(
+    @Param('orgId') orgId: string,
+    @Param('threadId') threadId: string,
+    @Body(UpdateThreadPolicyBodySchema) body: UpdateThreadPolicyBody,
+  ): ThreadSummary {
+    return this.updateThreadPolicy.execute({ orgId, threadId, body });
+  }
+
+  @Post(':threadId/agents')
+  @HttpCode(201)
+  addAgent(
+    @Param('orgId') orgId: string,
+    @Param('threadId') threadId: string,
+    @Body(AddThreadAgentBodySchema) body: AddThreadAgentBody,
+  ): ThreadSummary {
+    return this.addThreadAgent.execute({ orgId, threadId, body });
+  }
+
+  @Delete(':threadId/agents/:agentId')
+  @HttpCode(200)
+  removeAgent(
+    @Param('orgId') orgId: string,
+    @Param('threadId') threadId: string,
+    @Param('agentId') agentId: string,
+  ): ThreadSummary {
+    return this.removeThreadAgent.execute({ orgId, threadId, agentId });
+  }
+
+  @Post(':threadId/participants')
+  @HttpCode(201)
+  addParticipant(
+    @Param('orgId') orgId: string,
+    @Param('threadId') threadId: string,
+    @Body(AddThreadParticipantBodySchema) body: AddThreadParticipantBody,
+  ): ThreadSummary {
+    return this.addThreadParticipant.execute({ orgId, threadId, body });
+  }
+
+  @Delete(':threadId/participants/:participantId')
+  @HttpCode(200)
+  removeParticipant(
+    @Param('orgId') orgId: string,
+    @Param('threadId') threadId: string,
+    @Param('participantId') participantId: string,
+  ): ThreadSummary {
+    return this.removeThreadParticipant.execute({ orgId, threadId, participantId });
   }
 
   @Patch(':threadId/binding')
@@ -114,15 +193,20 @@ export class ThreadsController {
     await this.deleteThread.execute({ orgId, threadId });
   }
 
-  @Delete(':threadId/runs/:runId/events/:seq')
+  @Delete(':threadId/events/:threadSeq')
   @HttpCode(200)
   removeEvent(
     @Param('orgId') orgId: string,
     @Param('threadId') threadId: string,
-    @Param('runId') runId: string,
-    @Param('seq') seq: string,
+    @Param('threadSeq') threadSeq: string,
+    @SessionPrincipal() principal: Principal,
   ): Promise<ThreadPublic> {
-    return this.deleteThreadEvent.execute({ orgId, threadId, runId, seq: Number(seq) });
+    return this.deleteThreadEvent.execute({
+      orgId,
+      threadId,
+      threadSeq: Number(threadSeq),
+      ...(principal.kind === 'user' ? { userId: principal.userId } : {}),
+    });
   }
 
   @Post(':threadId/runs')
@@ -179,8 +263,16 @@ export class ThreadsController {
 
   @Post(':threadId/read')
   @HttpCode(200)
-  read(@Param('orgId') orgId: string, @Param('threadId') threadId: string): Promise<ThreadPublic> {
-    return this.markThreadRead.execute({ orgId, threadId });
+  read(
+    @Param('orgId') orgId: string,
+    @Param('threadId') threadId: string,
+    @SessionPrincipal() principal: Principal,
+  ): Promise<ThreadPublic> {
+    return this.markThreadRead.execute({
+      orgId,
+      threadId,
+      ...(principal.kind === 'user' ? { userId: principal.userId } : {}),
+    });
   }
 
   @Post(':threadId/runs/:runId/respond')

@@ -34,6 +34,7 @@ import { recoverIssueExecutionsIfPresent } from './recover-issue-executions.ts';
 import { recoverOrphanedRuns } from './recover-orphaned-runs.ts';
 import { recoverStaleWorktrees } from './recover-stale-worktrees.ts';
 import { SqliteRuntimeState } from './sqlite-runtime-state.adapter.ts';
+import { threadSessionKey } from './thread-session-key.ts';
 import { removeThreadHistoryEvent, truncateThreadHistory } from './truncate-thread-state.ts';
 import { sweepWaitTimers, type ThreadSessionRef } from './wait-ticker.ts';
 import { reconcileWorkspaces, type ThreadBinding } from './workspace-target.ts';
@@ -114,6 +115,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
 
   const branchSeed = createBranchSeed({
     orgId: deps.orgId,
+    db: session.db,
     sessions: threadSessions,
     threads: deps.threads,
     events: runEvents,
@@ -180,26 +182,27 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     logger: CONSOLE_LOGGER,
   });
 
-  async function sessionFor(threadId: string): Promise<SessionHandle> {
-    const existing = threadSessions.get(threadId);
+  async function sessionFor(threadId: string, agentId?: string): Promise<SessionHandle> {
+    const resolvedAgentId = agentId ?? soleAgentIdOf(deps.threadAgents, deps.orgId, threadId);
+    if (resolvedAgentId === undefined) {
+      throw new ThreadValidationException('thread has no agent');
+    }
+    const key = threadSessionKey(threadId, resolvedAgentId);
+    const existing = threadSessions.get(key);
     if (existing?.handle) {
       return existing.handle;
-    }
-    const agentId = soleAgentIdOf(deps.threadAgents, deps.orgId, threadId);
-    if (agentId === undefined) {
-      throw new ThreadValidationException('thread has no agent');
     }
     const prepared = prepareTarget(
       deps,
       threadId,
-      agentId,
+      resolvedAgentId,
       targetCache,
       worktreeBindings.get(threadId),
     );
     if (!prepared) {
       throw new ThreadNotFoundException(threadId);
     }
-    const state = await branchSeed.seededThreadState(threadId);
+    const state = await branchSeed.seededThreadState(threadId, resolvedAgentId);
     const handle = Promise.resolve(
       runtime.session(prepared.agentDef, {
         state,
@@ -207,7 +210,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
         paths: prepared.paths,
       }),
     );
-    threadSessions.set(threadId, { state, handle });
+    threadSessions.set(key, { state, handle });
     return handle;
   }
 
@@ -266,20 +269,18 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     stream(runId, fromSeq = 0) {
       return feed.subscribe(runId, fromSeq);
     },
-    async truncateThread(threadId, runId, seq) {
+    async truncateThread(threadId, threadSeq) {
       return truncateThreadHistory(
         { lifecycle: runLifecycle, events: runEvents, sessions: threadSessions, sessionFor },
         threadId,
-        runId,
-        seq,
+        threadSeq,
       );
     },
-    async removeThreadEvent(threadId, runId, seq) {
+    async removeThreadEvent(threadId, threadSeq) {
       return removeThreadHistoryEvent(
         { events: runEvents, sessions: threadSessions },
         threadId,
-        runId,
-        seq,
+        threadSeq,
       );
     },
     tickWaitTimers,

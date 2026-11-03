@@ -2,10 +2,10 @@ import type { Logger } from '@harnesys/brix';
 import type { SessionHandle } from 'harnesys';
 import { resumePayloadOf } from '../../application/approvals/decide-approval.use-case.ts';
 import type { ApprovalRecord, ApprovalResumePlan } from '../../domain/approval/approval.ts';
-import type { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
-import type { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
-import type { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
-import type { NodeCommandQueuePort } from '../../domain/fleet/node-command-queue.port.ts';
+import { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
+import { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
+import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
+import { NodeCommandQueuePort } from '../../domain/fleet/node-command-queue.port.ts';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
 import { runStatusOf } from './run-row-queries.ts';
 

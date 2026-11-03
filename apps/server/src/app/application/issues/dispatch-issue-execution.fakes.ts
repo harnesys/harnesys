@@ -9,11 +9,11 @@ import {
   type IssueFireResult,
 } from '../../domain/issue/issue-fire.port.ts';
 import { IssueRepositoryPort } from '../../domain/issue/issue-repository.port.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { type HostConfig, MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
 import type { RepositoryWorktree } from '../../domain/source/repository-worktree.ts';
-import type { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
+import { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
 import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import type { SourceRecord } from '../../domain/source/source-registry.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';

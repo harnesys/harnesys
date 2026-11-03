@@ -1,7 +1,7 @@
 import type { SecretResolver, SecretResolveScope } from 'harnesys';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
-import type { LlmModelPort, LlmProviderPort } from '../../domain/provider/llm-provider.port.ts';
-import type { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
+import { LlmModelPort, LlmProviderPort } from '../../domain/provider/llm-provider.port.ts';
+import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import {
   LEGACY_PROVIDER_SECRET_PREFIX,
   legacyProviderSecretKey,

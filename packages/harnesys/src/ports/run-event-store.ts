@@ -17,8 +17,8 @@ export interface RunEventStore extends RunSeqAllocator {
     events: PendingSessionEvent[],
   ): SessionEvent[] | Promise<SessionEvent[]>;
   removeUserEvent(runId: string, seq: number): Promise<boolean>;
-  truncateThreadFrom(threadId: string, runId: string, seq: number): Promise<TruncateThreadResult>;
-  removeEvent(threadId: string, runId: string, seq: number): Promise<SessionEvent | null>;
+  truncateThreadFrom(threadId: string, threadSeq: number): Promise<TruncateThreadResult>;
+  removeEvent(threadId: string, threadSeq: number): Promise<SessionEvent | null>;
 }
 
 export interface TruncateThreadResult {

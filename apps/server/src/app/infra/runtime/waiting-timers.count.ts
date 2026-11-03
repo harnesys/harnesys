@@ -1,5 +1,5 @@
 import { and, count, eq, isNotNull } from 'drizzle-orm';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { withOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 import { runsTable } from '../org-sqlite/schema/index.ts';
 

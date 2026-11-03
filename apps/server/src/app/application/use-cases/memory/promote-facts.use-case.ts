@@ -3,7 +3,7 @@ import { and, asc, desc, eq, gte, isNull } from 'drizzle-orm';
 import type { Logger, ModelsPort } from 'harnesys';
 import { MEMORY_PROMOTE_CANDIDATES_LIMIT } from 'harnesys';
 import type { AgentRecord } from '../../../domain/agent/agent.ts';
-import type { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
+import { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
 import { OrgMemoryPromotionStore } from '../../../infra/memory/org-memory-promotion.store.ts';
 import type { OrgSqliteDb } from '../../../infra/org-sqlite/org-sqlite-session.ts';
 import { memoryFactsTable } from '../../../infra/org-sqlite/schema/agent-memory.ts';

@@ -4,12 +4,12 @@ import {
   type IssueWorkspacePlan,
   resolveIssueWorkspacePlan,
 } from '../../domain/issue/issue-worktree-binding.ts';
-import type { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
-import type { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
 import type { RepositoryWorktree } from '../../domain/source/repository-worktree.ts';
-import type { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
-import type { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
-import type { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+import { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
+import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
+import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import { pickReusableWorktree } from './issue-worktree-binding.ts';
 
 export type IssueDispatchPlan = IssueWorkspacePlan | 'unbound';

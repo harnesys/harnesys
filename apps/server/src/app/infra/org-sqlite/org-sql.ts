@@ -403,7 +403,11 @@ CREATE TABLE IF NOT EXISTS threads (
   id TEXT PRIMARY KEY,
   org_id TEXT NOT NULL,
   title TEXT NOT NULL,
-  kind TEXT NOT NULL DEFAULT 'chat' CHECK(kind IN ('chat', 'schedule', 'webhook', 'issue', 'connector')),
+  kind TEXT NOT NULL DEFAULT 'chat' CHECK(kind IN ('chat', 'group', 'schedule', 'webhook', 'issue', 'connector')),
+  auto_reply_agent_id TEXT REFERENCES agents(id) ON DELETE SET NULL,
+  policy TEXT NOT NULL DEFAULT '{"version":1}',
+  last_thread_seq INTEGER NOT NULL DEFAULT 0,
+  conversation_count INTEGER NOT NULL DEFAULT 0,
   parent_thread_id TEXT REFERENCES threads(id) ON DELETE SET NULL,
   fork_at TEXT,
   inherited_event_count TEXT NOT NULL DEFAULT '0',
@@ -430,6 +434,26 @@ CREATE INDEX IF NOT EXISTS thread_agents_agent_idx ON thread_agents(agent_id);
 
 export const CREATE_THREADS_ISSUE_IDX_SQL = `
 CREATE INDEX IF NOT EXISTS threads_issue_idx ON threads(issue_id);
+`;
+
+export const CREATE_THREAD_PARTICIPANTS_SQL = `
+CREATE TABLE IF NOT EXISTS thread_participants (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+  provider TEXT NOT NULL,
+  provider_user_id TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  username TEXT,
+  role TEXT NOT NULL DEFAULT 'member' CHECK(role IN ('member', 'blocked')),
+  first_seen_at TEXT NOT NULL,
+  last_seen_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS thread_participants_identity_idx
+  ON thread_participants(thread_id, provider, provider_user_id);
+CREATE INDEX IF NOT EXISTS thread_participants_thread_idx ON thread_participants(thread_id);
 `;
 
 export function migrateThreadsInheritedEventCount(
@@ -554,16 +578,24 @@ CREATE INDEX IF NOT EXISTS runs_wait_fire_idx ON runs(status, wait_fire_at);
 
 export const CREATE_RUN_EVENTS_SQL = `
 CREATE TABLE IF NOT EXISTS run_events (
-  run_id TEXT NOT NULL REFERENCES runs(run_id) ON DELETE CASCADE,
-  seq INTEGER NOT NULL,
   thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+  thread_seq INTEGER NOT NULL,
+  run_id TEXT REFERENCES runs(run_id) ON DELETE CASCADE,
+  seq INTEGER,
   type TEXT NOT NULL,
   timestamp INTEGER NOT NULL,
   metadata TEXT,
   client_event_id TEXT,
-  PRIMARY KEY (run_id, seq)
+  conversational INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (thread_id, thread_seq)
 );
-CREATE INDEX IF NOT EXISTS run_events_client_idx ON run_events(thread_id, client_event_id);
+CREATE UNIQUE INDEX IF NOT EXISTS run_events_run_seq_idx
+  ON run_events(run_id, seq) WHERE run_id IS NOT NULL AND seq IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS run_events_client_idx
+  ON run_events(thread_id, client_event_id)
+  WHERE conversational = 1 AND client_event_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS run_events_conversation_idx
+  ON run_events(thread_id, thread_seq) WHERE conversational = 1;
 `;
 
 export const CREATE_RUN_SNAPSHOTS_SQL = `
@@ -582,15 +614,22 @@ export const CREATE_THREAD_MESSAGE_QUEUE_SQL = `
 CREATE TABLE IF NOT EXISTS thread_message_queue (
   item_id TEXT PRIMARY KEY NOT NULL,
   thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
-  text TEXT NOT NULL,
+  thread_seq INTEGER,
+  target_agent_id TEXT REFERENCES agents(id) ON DELETE CASCADE,
+  text TEXT,
   attachments TEXT,
   origin TEXT,
-  client_event_id TEXT UNIQUE,
+  client_event_id TEXT,
   queued_at TEXT NOT NULL,
-  delivered_at TEXT
+  delivered_at TEXT,
+  FOREIGN KEY (thread_id, thread_seq)
+    REFERENCES run_events(thread_id, thread_seq) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS thread_message_queue_thread_idx
   ON thread_message_queue(thread_id, queued_at);
+CREATE UNIQUE INDEX IF NOT EXISTS thread_message_queue_target_idx
+  ON thread_message_queue(thread_id, thread_seq, target_agent_id)
+  WHERE thread_seq IS NOT NULL AND target_agent_id IS NOT NULL;
 `;
 
 export const CREATE_ATTACHMENTS_SQL = `
