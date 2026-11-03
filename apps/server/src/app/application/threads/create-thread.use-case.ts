@@ -8,8 +8,9 @@ import {
   ThreadNotFoundException,
   ThreadValidationException,
 } from '../../domain/thread/thread.error.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
-import { DEFAULT_THREAD_TITLE, toThreadPublic } from './thread.helpers.ts';
+import { DEFAULT_THREAD_TITLE, insertAgentThread, toThreadPublic } from './thread.helpers.ts';
 
 export interface CreateThreadRequest {
   orgId: string;
@@ -20,6 +21,7 @@ export interface CreateThreadRequest {
 export class CreateThreadUseCase {
   constructor(
     private readonly threads: ThreadRepositoryPort,
+    private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly agents: AgentRegistryPort,
     private readonly executor: LocalExecutorPort,
   ) {}
@@ -52,25 +54,28 @@ export class CreateThreadUseCase {
       throw new ThreadValidationException('parent required for fork');
     }
     const now = new Date().toISOString();
-    const thread = this.threads.insert({
-      id: crypto.randomUUID(),
-      orgId: request.orgId,
-      agentId: agent.id,
-      originAgentId: agent.id,
-      title: request.body.title?.trim() || DEFAULT_THREAD_TITLE,
-      kind: request.body.kind ?? 'chat',
-      parentThreadId,
-      forkAt,
-      inheritedEventCount,
-      metadata: { runMode: agent.defaultModeId ?? undefined },
-      runProfileId: null,
-      runDirectory: null,
-      createdAt: now,
-      updatedAt: now,
-      lastReadAt: now,
-    });
+    const thread = insertAgentThread(
+      { threads: this.threads, threadAgents: this.threadAgents },
+      {
+        id: crypto.randomUUID(),
+        orgId: request.orgId,
+        title: request.body.title?.trim() || DEFAULT_THREAD_TITLE,
+        kind: request.body.kind ?? 'chat',
+        parentThreadId,
+        forkAt,
+        inheritedEventCount,
+        metadata: { runMode: agent.defaultModeId ?? undefined },
+        runProfileId: null,
+        runDirectory: null,
+        createdAt: now,
+        updatedAt: now,
+        lastReadAt: now,
+      },
+      agent.id,
+    );
     return toThreadPublic({
       thread,
+      agentId: agent.id,
       agentName: agent.name,
       active: null,
       events: [],

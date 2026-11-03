@@ -14,6 +14,7 @@ export interface IssueWaitingRunInput {
   runId: string;
   profileId: string;
   agentId: string;
+  agentName: string;
   priority: number;
   trigger: { kind: 'chat' | 'issue' | 'schedule' | 'webhook' | 'connector'; id: string };
   reason: string;
@@ -52,7 +53,13 @@ export class IssueWaitingRunUseCase {
     const clientEventId = input.clientEventId ?? randomUUID();
     const attachmentMetas = input.attachmentMetas ?? toEnvelopeAttachments(input.attachments ?? []);
     const created = await lifecycle.create(
-      { runId: input.runId, threadId: input.threadId, attribution: input.attribution },
+      {
+        runId: input.runId,
+        threadId: input.threadId,
+        agentId: input.agentId,
+        agentName: input.agentName,
+        attribution: input.attribution,
+      },
       [waitingUserEvent(input, clientEventId), input.placementEvent],
     );
     await lifecycle.transition(created.runId, created.leaseEpoch, {

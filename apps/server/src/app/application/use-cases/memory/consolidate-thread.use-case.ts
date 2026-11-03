@@ -16,7 +16,7 @@ import type { EmbeddingsPort } from '../../../infra/knowledge/embeddings.ts';
 import { OrgMemoryConsolidationStore } from '../../../infra/memory/org-memory-consolidation.store.ts';
 import type { OrgSqliteDb } from '../../../infra/org-sqlite/org-sqlite-session.ts';
 import { memoryFactsTable } from '../../../infra/org-sqlite/schema/agent-memory.ts';
-import { threadsTable } from '../../../infra/org-sqlite/schema/threads.ts';
+import { threadAgentsTable } from '../../../infra/org-sqlite/schema/threads.ts';
 import { packsFromConfig } from '../../../infra/runtime/agent-definition.mapper.ts';
 import { OrgSemanticPort } from '../../../infra/runtime/packs/org-semantic.port.ts';
 import { parseExtractionFacts } from './consolidate-thread-model.helpers.ts';
@@ -199,15 +199,16 @@ export class ConsolidateThreadUseCase {
   }
 
   private agentOf(orgId: string, threadId: string): AgentRecord | undefined {
-    const thread = this.deps.db
+    const member = this.deps.db
       .select()
-      .from(threadsTable)
-      .where(eq(threadsTable.id, threadId))
+      .from(threadAgentsTable)
+      .where(eq(threadAgentsTable.threadId, threadId))
+      .limit(1)
       .get();
-    if (!thread) {
+    if (!member) {
       return undefined;
     }
-    const agent = this.deps.agents.findById(orgId, thread.agentId);
+    const agent = this.deps.agents.findById(orgId, member.agentId);
     if (!agent || agent.level === 'delegate') {
       return undefined;
     }

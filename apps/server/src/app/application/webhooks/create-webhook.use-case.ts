@@ -3,9 +3,10 @@ import type { CreateWebhookBody, CreateWebhookResponse } from '@harnesys/contrac
 import { AgentNotFoundException } from '../../domain/agent/agent.error.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { WebhookRepositoryPort } from '../../domain/webhook/webhook-repository.port.ts';
-import { toThreadPublic } from '../threads/thread.helpers.ts';
+import { insertAgentThread, toThreadPublic } from '../threads/thread.helpers.ts';
 import { requireBindableWebhookThread } from './bind-webhook-thread.ts';
 import { toDeskWebhookEvent, toWebhookPublic, webhookEndpointFor } from './webhook.helpers.ts';
 
@@ -20,6 +21,7 @@ export class CreateWebhookUseCase {
   constructor(
     private readonly webhooks: WebhookRepositoryPort,
     private readonly threads: ThreadRepositoryPort,
+    private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly agents: AgentRegistryPort,
     private readonly deskEvents: DeskEventsPort,
   ) {}
@@ -36,6 +38,7 @@ export class CreateWebhookUseCase {
     const existingThread = request.body.threadId
       ? requireBindableWebhookThread({
           threads: this.threads,
+          threadAgents: this.threadAgents,
           webhooks: this.webhooks,
           orgId: request.orgId,
           agentId: agent.id,
@@ -44,23 +47,25 @@ export class CreateWebhookUseCase {
       : undefined;
     const thread =
       existingThread ??
-      this.threads.insert({
-        id: crypto.randomUUID(),
-        orgId: request.orgId,
-        agentId: agent.id,
-        originAgentId: agent.id,
-        title: name,
-        kind: 'webhook',
-        parentThreadId: null,
-        forkAt: null,
-        inheritedEventCount: 0,
-        metadata: {},
-        runProfileId: null,
-        runDirectory: null,
-        createdAt: now,
-        updatedAt: now,
-        lastReadAt: now,
-      });
+      insertAgentThread(
+        { threads: this.threads, threadAgents: this.threadAgents },
+        {
+          id: crypto.randomUUID(),
+          orgId: request.orgId,
+          title: name,
+          kind: 'webhook',
+          parentThreadId: null,
+          forkAt: null,
+          inheritedEventCount: 0,
+          metadata: {},
+          runProfileId: null,
+          runDirectory: null,
+          createdAt: now,
+          updatedAt: now,
+          lastReadAt: now,
+        },
+        agent.id,
+      );
     const webhook = this.webhooks.insert({
       id,
       orgId: request.orgId,
@@ -80,6 +85,7 @@ export class CreateWebhookUseCase {
       webhook: toWebhookPublic(webhook),
       thread: toThreadPublic({
         thread,
+        agentId: agent.id,
         agentName: agent.name,
         active: null,
         events: [],

@@ -21,8 +21,8 @@ function seedThread(layout: TempLayout, orgId: string, threadId: string): void {
   try {
     raw.exec('PRAGMA foreign_keys = OFF;');
     raw.exec(
-      `INSERT OR IGNORE INTO threads (id, org_id, agent_id, origin_agent_id, title, kind, metadata, created_at, updated_at, last_read_at)
-       VALUES ('${threadId}', '${orgId}', 'agent-1', 'agent-1', 't', 'chat', '{}', datetime('now'), datetime('now'), datetime('now'))`,
+      `INSERT OR IGNORE INTO threads (id, org_id, title, kind, metadata, created_at, updated_at, last_read_at)
+       VALUES ('${threadId}', '${orgId}', 't', 'chat', '{}', datetime('now'), datetime('now'), datetime('now'))`,
     );
   } finally {
     raw.close();

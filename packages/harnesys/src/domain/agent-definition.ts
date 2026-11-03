@@ -99,6 +99,7 @@ export type MapInstruction = string;
 export type MapMaxTokensPerItem = number;
 export interface AgentDefinition {
   id: string;
+  name?: string;
   version?: string;
   level?: AgentLevel;
   prompts: Record<

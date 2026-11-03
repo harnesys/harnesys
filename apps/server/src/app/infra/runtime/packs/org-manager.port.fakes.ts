@@ -20,7 +20,7 @@ import type {
 } from '../../../domain/usage/usage-port.ts';
 import { UsagePort } from '../../../domain/usage/usage-port.ts';
 import { OrgManagerPort } from './org-manager.port.ts';
-import { MemoryAgents, MemoryThreads } from './wire-org-packs.fakes.ts';
+import { MemoryAgents, MemoryThreadAgents, MemoryThreads } from './wire-org-packs.fakes.ts';
 
 export class FakeUsage extends UsagePort {
   spendByAgent = new Map<string, number>();
@@ -197,6 +197,7 @@ export class FakeOrgSettings extends OrgSettingsPort {
 export function managerPort(parts?: {
   agents?: MemoryAgents;
   threads?: MemoryThreads;
+  threadAgents?: MemoryThreadAgents;
   usage?: FakeUsage;
   approvals?: FakeApprovals;
   issues?: FakeIssues;
@@ -207,6 +208,7 @@ export function managerPort(parts?: {
   port: OrgManagerPort;
   agents: MemoryAgents;
   threads: MemoryThreads;
+  threadAgents: MemoryThreadAgents;
   usage: FakeUsage;
   approvals: FakeApprovals;
   issues: FakeIssues;
@@ -216,6 +218,7 @@ export function managerPort(parts?: {
 } {
   const agents = parts?.agents ?? new MemoryAgents();
   const threads = parts?.threads ?? new MemoryThreads();
+  const threadAgents = parts?.threadAgents ?? new MemoryThreadAgents();
   const usage = parts?.usage ?? new FakeUsage();
   const approvals = parts?.approvals ?? new FakeApprovals();
   const issues = parts?.issues ?? new FakeIssues();
@@ -225,6 +228,7 @@ export function managerPort(parts?: {
   const port = new OrgManagerPort({
     agents,
     threads,
+    threadAgents,
     usage,
     approvals,
     issues,
@@ -232,5 +236,16 @@ export function managerPort(parts?: {
     tail,
     orgSettings,
   });
-  return { port, agents, threads, usage, approvals, issues, boards, tail, orgSettings };
+  return {
+    port,
+    agents,
+    threads,
+    threadAgents,
+    usage,
+    approvals,
+    issues,
+    boards,
+    tail,
+    orgSettings,
+  };
 }

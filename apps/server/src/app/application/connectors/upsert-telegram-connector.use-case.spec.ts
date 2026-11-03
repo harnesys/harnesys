@@ -21,7 +21,13 @@ import {
 } from '../../domain/connector/telegram-api.port.ts';
 import { TelegramPollerSyncPort } from '../../domain/connector/telegram-poller-sync.port.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
-import type { ThreadInsert, ThreadPatch, ThreadRecord } from '../../domain/thread/thread.ts';
+import type {
+  ThreadAgentRecord,
+  ThreadInsert,
+  ThreadPatch,
+  ThreadRecord,
+} from '../../domain/thread/thread.ts';
+import type { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { connectorSecretKey } from './connector.helpers.ts';
 import { UpsertTelegramConnectorUseCase } from './upsert-telegram-connector.use-case.ts';
@@ -102,14 +108,7 @@ class FakeThreadRepo extends ThreadRepositoryPort {
     }
   }
 
-  deleteByAgent(orgId: string, agentId: string): void {
-    for (let i = this.rows.length - 1; i >= 0; i -= 1) {
-      const row = this.rows[i];
-      if (row?.orgId === orgId && row.agentId === agentId) {
-        this.rows.splice(i, 1);
-      }
-    }
-  }
+  deleteByAgent(): void {}
 
   listByIssue() {
     return [];
@@ -269,16 +268,53 @@ class FakeTelegramApi extends TelegramApiPort {
   }
 }
 
+class FakeThreadAgents implements ThreadAgentRepositoryPort {
+  readonly rows: ThreadAgentRecord[] = [];
+
+  listByThread(_orgId: string, threadId: string): ThreadAgentRecord[] {
+    return this.rows.filter((row) => row.threadId === threadId);
+  }
+
+  listByThreads(_orgId: string, threadIds: string[]): ThreadAgentRecord[] {
+    return this.rows.filter((row) => threadIds.includes(row.threadId));
+  }
+
+  ensure(_orgId: string, threadId: string, agentId: string): ThreadAgentRecord {
+    const found = this.rows.find((row) => row.threadId === threadId && row.agentId === agentId);
+    if (found) {
+      return found;
+    }
+    const row = { threadId, agentId, createdAt: new Date().toISOString() };
+    this.rows.push(row);
+    return row;
+  }
+
+  remove(_orgId: string, threadId: string, agentId: string): void {
+    const index = this.rows.findIndex(
+      (row) => row.threadId === threadId && row.agentId === agentId,
+    );
+    if (index >= 0) {
+      this.rows.splice(index, 1);
+    }
+  }
+
+  listThreadIdsByAgent(_orgId: string, agentId: string): string[] {
+    return this.rows.filter((row) => row.agentId === agentId).map((row) => row.threadId);
+  }
+}
+
 describe('UpsertTelegramConnectorUseCase', () => {
   test('stores token, returns pair code without token, creates connector thread, rejects shared bot', async () => {
     const connectors = new FakeConnectorRepo();
     const secrets = new FakeSecretStore();
     const threads = new FakeThreadRepo();
+    const threadAgents = new FakeThreadAgents();
     const telegram = new FakeTelegramApi();
     const useCase = new UpsertTelegramConnectorUseCase(
       connectors,
       secrets,
       threads,
+      threadAgents,
       telegram,
       new FakePoller(),
       { child: () => ({ warn: () => undefined }) } as never,

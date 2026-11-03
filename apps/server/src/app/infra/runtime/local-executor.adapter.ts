@@ -1,6 +1,5 @@
 import { Injectable, Logger, type ModuleDestroyHook } from '@harnesys/brix';
 import type { AcceptedRunResponse, CancelRunResponse, RetryRunResponse } from '@harnesys/contracts';
-import { and, count, eq, isNotNull } from 'drizzle-orm';
 import type {
   HostEngineEntry,
   McpServerInfo,
@@ -51,12 +50,11 @@ import {
   type ThreadQueueDrainResult,
 } from '../../domain/thread/local-executor.port.ts';
 import { RunNotFoundException } from '../../domain/thread/thread.error.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadEventsPort } from '../../domain/thread/thread-events.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { WaitTickerGatePort } from '../../domain/thread/wait-ticker-gate.port.ts';
 import { WebhookRepositoryPort } from '../../domain/webhook/webhook-repository.port.ts';
-import { withOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
-import { runsTable } from '../org-sqlite/schema/index.ts';
 import { openOrgRuntime } from './org-runtime.ts';
 import type { OrgRuntime } from './org-runtime.types.ts';
 import { githubToolsDeps } from './packs/github-tools.holder.ts';
@@ -65,6 +63,7 @@ import { issueToolsDeps } from './packs/issue-tools.holder.ts';
 import { managerToolsDeps } from './packs/manager-tools.holder.ts';
 import { OrgMcpManagePort } from './packs/org-mcp-manage.port.ts';
 import { skillsToolsDeps } from './packs/skills-tools.holder.ts';
+import { countWaitingTimersOf } from './waiting-timers.count.ts';
 
 @Injectable()
 export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDestroyHook {
@@ -74,6 +73,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     private readonly layout: HostFsLayoutPort,
     private readonly machineConfig: MachineConfigPort,
     private readonly threads: ThreadRepositoryPort,
+    private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly agents: AgentRegistryPort,
     private readonly modes: ModePresetRegistryPort,
     private readonly sources: SourceRegistryPort,
@@ -144,6 +144,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       containers: this.containers,
       nodes: this.nodes,
       threads: this.threads,
+      threadAgents: this.threadAgents,
       agents: this.agents,
       hookRuns: this.hookRuns,
       modes: this.modes,
@@ -299,14 +300,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
   }
 
   async countWaitingTimers(orgId: string): Promise<number> {
-    const row = await withOrgSqlite(this.layout, orgId, (db) =>
-      db
-        .select({ value: count() })
-        .from(runsTable)
-        .where(and(eq(runsTable.status, 'waiting'), isNotNull(runsTable.waitFireAt)))
-        .get(),
-    );
-    return row?.value ?? 0;
+    return countWaitingTimersOf(this.layout, orgId);
   }
 
   async stream(

@@ -1,10 +1,12 @@
 import { ScheduleValidationException } from '../../domain/schedule/schedule.error.ts';
 import { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repository.port.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
+import type { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 
 export function requireBindableScheduleThread(input: {
   threads: ThreadRepositoryPort;
+  threadAgents: ThreadAgentRepositoryPort;
   schedules: ScheduleRepositoryPort;
   orgId: string;
   agentId: string;
@@ -19,7 +21,8 @@ export function requireBindableScheduleThread(input: {
   if (!thread || thread.orgId !== input.orgId) {
     throw new ScheduleValidationException('thread not found');
   }
-  if (thread.agentId !== input.agentId) {
+  const members = input.threadAgents.listByThread(input.orgId, thread.id);
+  if (!members.some((member) => member.agentId === input.agentId)) {
     throw new ScheduleValidationException('thread belongs to another agent');
   }
   const occupied = input.schedules.findByThreadId(input.orgId, thread.id);

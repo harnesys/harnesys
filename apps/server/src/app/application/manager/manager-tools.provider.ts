@@ -5,6 +5,7 @@ import { IssueBoardRepositoryPort } from '../../domain/issue/board-repository.po
 import { IssueRepositoryPort } from '../../domain/issue/issue-repository.port.ts';
 import { ManagerTailPort } from '../../domain/manager/manager-tail.port.ts';
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { UsagePort } from '../../domain/usage/usage-port.ts';
 import { setManagerToolsDeps } from '../../infra/runtime/packs/manager-tools.holder.ts';
@@ -15,6 +16,7 @@ export class ManagerToolsProvider implements ModuleInitHook {
   constructor(
     private readonly agents: AgentRegistryPort,
     private readonly threads: ThreadRepositoryPort,
+    private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly usage: UsagePort,
     private readonly approvals: ApprovalStorePort,
     private readonly issues: IssueRepositoryPort,
@@ -27,6 +29,7 @@ export class ManagerToolsProvider implements ModuleInitHook {
     const deps: OrgManagerDeps = {
       agents: this.agents,
       threads: this.threads,
+      threadAgents: this.threadAgents,
       usage: this.usage,
       approvals: this.approvals,
       issues: this.issues,

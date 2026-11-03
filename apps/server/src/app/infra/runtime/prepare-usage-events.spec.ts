@@ -8,6 +8,7 @@ import { agentsTable } from '../org-sqlite/schema/agents.ts';
 import * as schema from '../org-sqlite/schema/index.ts';
 import { llmModelsTable } from '../org-sqlite/schema/llm-models.ts';
 import { llmProvidersTable } from '../org-sqlite/schema/llm-providers.ts';
+import { runsTable } from '../org-sqlite/schema/runs.ts';
 import { threadsTable } from '../org-sqlite/schema/threads.ts';
 import { priceOverridesTable, usageTable } from '../org-sqlite/schema/usage.ts';
 import { prepareUsageEvents } from './prepare-usage-events.ts';
@@ -71,12 +72,21 @@ function seedThread(db: ReturnType<typeof createDb>, agentId: string): string {
     .values({
       id: threadId,
       orgId: ORG_ID,
-      agentId,
-      originAgentId: agentId,
       title: 'thread',
       createdAt: NOW,
       updatedAt: NOW,
       lastReadAt: NOW,
+    })
+    .run();
+  db.insert(runsTable)
+    .values({
+      runId: 'run-1',
+      threadId,
+      agentId,
+      agentName: 'coder',
+      status: 'running',
+      createdAt: NOW,
+      updatedAt: NOW,
     })
     .run();
   return threadId;
@@ -123,7 +133,7 @@ describe('prepareUsageEvents', () => {
     expect(row?.agentId).toBe('agent-1');
   });
 
-  test('executing agent wins over the thread agent', () => {
+  test('executing agent wins over the run agent', () => {
     const db = createDb();
     const { modelId, modelName } = seedCatalog(db);
     const threadId = seedThread(db, 'agent-1');

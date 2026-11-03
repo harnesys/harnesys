@@ -33,7 +33,10 @@ async function parkUntil(
 ): Promise<{ askId: string; toolCallId: string }> {
   if (text !== null) {
     const userEvent = { type: 'user', text } as PendingSessionEvent;
-    await stack.lifecycle.create({ runId, threadId: THREAD_ID }, [userEvent]);
+    await stack.lifecycle.create(
+      { runId, threadId: THREAD_ID, agentId: 'agent-1', agentName: 'agent-1' },
+      [userEvent],
+    );
   }
   stack.claimer.kick();
   await waitFor(async () => {

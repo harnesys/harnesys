@@ -15,7 +15,6 @@ import type { PlacementResult } from '../../domain/fleet/placement.ts';
 import { OrgMachineStore } from '../../domain/machine/org-machine-store.port.ts';
 import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
-import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { resolveRunPlacement, toPlacementEvent } from '../threads/resolve-run-placement.ts';
 import { PlacePendingRunUseCase } from './place-pending-run.use-case.ts';
 
@@ -33,7 +32,6 @@ export class ReschedulePlacementQueueUseCase {
     private readonly orgs: OrgMachineStore,
     private readonly pending: PendingPlacementPort,
     private readonly agents: AgentRegistryPort,
-    private readonly threads: ThreadRepositoryPort,
     private readonly profiles: ExecutionProfilePort,
     private readonly worktrees: RepositoryWorktreePort,
     private readonly hub: FleetHubPort,
@@ -164,9 +162,7 @@ export class ReschedulePlacementQueueUseCase {
   }
 
   private resolve(orgId: string, row: PendingPlacement): PlacementResult {
-    const thread = this.threads.findById(orgId, row.threadId);
-    const agentId = row.payload.agentId || thread?.agentId;
-    const agent = agentId ? this.agents.findById(orgId, agentId) : null;
+    const agent = this.agents.findById(orgId, row.payload.agentId);
     if (!agent) {
       return {
         kind: 'unavailable',

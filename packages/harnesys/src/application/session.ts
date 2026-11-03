@@ -174,9 +174,16 @@ export function createSession(
         clientEventId: sendOpts?.clientEventId,
         correlationId: sendOpts?.correlationId,
       } as PendingSessionEvent;
-      await ctx.lifecycle.create({ runId, threadId, attribution: sendInputAttribution(input) }, [
-        userEvent,
-      ]);
+      await ctx.lifecycle.create(
+        {
+          runId,
+          threadId,
+          agentId: def.id,
+          agentName: def.name ?? def.id,
+          attribution: sendInputAttribution(input),
+        },
+        [userEvent],
+      );
       ctx.claimer?.kick();
       return { runId };
     },

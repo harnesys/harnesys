@@ -207,6 +207,7 @@ async function runPlaced(
     const forwarder = await startPlacedForwarder({
       input,
       envelope,
+      agentName: agent.name,
       events,
       lifecycle,
       feed,

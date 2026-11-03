@@ -402,8 +402,6 @@ export const CREATE_THREADS_SQL = `
 CREATE TABLE IF NOT EXISTS threads (
   id TEXT PRIMARY KEY,
   org_id TEXT NOT NULL,
-  agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
-  origin_agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   kind TEXT NOT NULL DEFAULT 'chat' CHECK(kind IN ('chat', 'schedule', 'webhook', 'issue', 'connector')),
   parent_thread_id TEXT REFERENCES threads(id) ON DELETE SET NULL,
@@ -418,118 +416,21 @@ CREATE TABLE IF NOT EXISTS threads (
   last_read_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS threads_org_idx ON threads(org_id);
-CREATE INDEX IF NOT EXISTS threads_agent_idx ON threads(agent_id);
+`;
+
+export const CREATE_THREAD_AGENTS_SQL = `
+CREATE TABLE IF NOT EXISTS thread_agents (
+  thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+  agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (thread_id, agent_id)
+);
+CREATE INDEX IF NOT EXISTS thread_agents_agent_idx ON thread_agents(agent_id);
 `;
 
 export const CREATE_THREADS_ISSUE_IDX_SQL = `
 CREATE INDEX IF NOT EXISTS threads_issue_idx ON threads(issue_id);
 `;
-
-const THREADS_ISSUE_MIGRATE_SQL = `
-CREATE TABLE threads_issue_mig (
-  id TEXT PRIMARY KEY,
-  org_id TEXT NOT NULL,
-  agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
-  origin_agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  kind TEXT NOT NULL DEFAULT 'chat' CHECK(kind IN ('chat', 'schedule', 'webhook', 'issue', 'connector')),
-  parent_thread_id TEXT REFERENCES threads(id) ON DELETE SET NULL,
-  fork_at TEXT,
-  metadata TEXT NOT NULL DEFAULT '{}',
-  issue_id TEXT REFERENCES issues(id) ON DELETE CASCADE,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  last_read_at TEXT NOT NULL
-);
-INSERT INTO threads_issue_mig
-  (id, org_id, agent_id, origin_agent_id, title, kind, parent_thread_id, fork_at, metadata, issue_id, created_at, updated_at, last_read_at)
-SELECT id, org_id, agent_id, origin_agent_id, title, kind, parent_thread_id, fork_at, metadata, NULL, created_at, updated_at, last_read_at FROM threads;
-DROP TABLE threads;
-ALTER TABLE threads_issue_mig RENAME TO threads;
-CREATE INDEX IF NOT EXISTS threads_org_idx ON threads(org_id);
-CREATE INDEX IF NOT EXISTS threads_agent_idx ON threads(agent_id);
-CREATE INDEX IF NOT EXISTS threads_issue_idx ON threads(issue_id);
-`;
-
-const THREADS_CONNECTOR_MIGRATE_SQL = `
-CREATE TABLE threads_connector_mig (
-  id TEXT PRIMARY KEY,
-  org_id TEXT NOT NULL,
-  agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
-  origin_agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  kind TEXT NOT NULL DEFAULT 'chat' CHECK(kind IN ('chat', 'schedule', 'webhook', 'issue', 'connector')),
-  parent_thread_id TEXT REFERENCES threads(id) ON DELETE SET NULL,
-  fork_at TEXT,
-  metadata TEXT NOT NULL DEFAULT '{}',
-  issue_id TEXT REFERENCES issues(id) ON DELETE CASCADE,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  last_read_at TEXT NOT NULL
-);
-INSERT INTO threads_connector_mig
-  (id, org_id, agent_id, origin_agent_id, title, kind, parent_thread_id, fork_at, metadata, issue_id, created_at, updated_at, last_read_at)
-SELECT id, org_id, agent_id, origin_agent_id, title, kind, parent_thread_id, fork_at, metadata, issue_id, created_at, updated_at, last_read_at FROM threads;
-DROP TABLE threads;
-ALTER TABLE threads_connector_mig RENAME TO threads;
-CREATE INDEX IF NOT EXISTS threads_org_idx ON threads(org_id);
-CREATE INDEX IF NOT EXISTS threads_agent_idx ON threads(agent_id);
-CREATE INDEX IF NOT EXISTS threads_issue_idx ON threads(issue_id);
-`;
-
-export function migrateThreadsIssueKind(
-  exec: (sql: string) => void,
-  all?: (sql: string) => ColumnInfo[],
-): void {
-  if (!all) {
-    return;
-  }
-  const rows = all(
-    `SELECT sql AS name FROM sqlite_master WHERE type = 'table' AND name = 'threads'`,
-  );
-  const ddl = rows[0]?.name ?? '';
-  if (!ddl || ddl.includes(`'issue'`)) {
-    return;
-  }
-  exec('PRAGMA foreign_keys=OFF');
-  exec('BEGIN');
-  try {
-    exec(THREADS_ISSUE_MIGRATE_SQL);
-    exec('COMMIT');
-  } catch (err) {
-    exec('ROLLBACK');
-    exec('PRAGMA foreign_keys=ON');
-    throw err;
-  }
-  exec('PRAGMA foreign_keys=ON');
-}
-
-export function migrateThreadsConnectorKind(
-  exec: (sql: string) => void,
-  all?: (sql: string) => ColumnInfo[],
-): void {
-  if (!all) {
-    return;
-  }
-  const rows = all(
-    `SELECT sql AS name FROM sqlite_master WHERE type = 'table' AND name = 'threads'`,
-  );
-  const ddl = rows[0]?.name ?? '';
-  if (!ddl || ddl.includes(`'connector'`)) {
-    return;
-  }
-  exec('PRAGMA foreign_keys=OFF');
-  exec('BEGIN');
-  try {
-    exec(THREADS_CONNECTOR_MIGRATE_SQL);
-    exec('COMMIT');
-  } catch (err) {
-    exec('ROLLBACK');
-    exec('PRAGMA foreign_keys=ON');
-    throw err;
-  }
-  exec('PRAGMA foreign_keys=ON');
-}
 
 export function migrateThreadsInheritedEventCount(
   exec: (sql: string) => void,
@@ -627,6 +528,8 @@ export const CREATE_RUNS_SQL = `
 CREATE TABLE IF NOT EXISTS runs (
   run_id TEXT PRIMARY KEY,
   thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+  agent_id TEXT REFERENCES agents(id) ON DELETE SET NULL,
+  agent_name TEXT NOT NULL,
   status TEXT NOT NULL,
   interrupt_id TEXT,
   wait_fire_at INTEGER,

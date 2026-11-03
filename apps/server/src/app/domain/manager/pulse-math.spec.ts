@@ -38,8 +38,6 @@ function threadOf(id: string, overrides: Partial<ThreadRecord> = {}): ThreadReco
   return {
     id,
     orgId: 'org-1',
-    agentId: 'agent-1',
-    originAgentId: 'agent-1',
     title: `thread ${id}`,
     kind: 'chat',
     parentThreadId: null,
@@ -78,6 +76,7 @@ describe('buildPulse', () => {
     const pulse = buildPulse({
       agents: [agentOf('a1', { budgetUsdDaily: 4 })],
       threads: [],
+      agentIdByThread: new Map(),
       spentByAgent: new Map([['a1', 3]]),
       pendingApprovals: 0,
       openIssues: 0,
@@ -99,6 +98,7 @@ describe('buildPulse', () => {
     const pulse = buildPulse({
       agents: [agentOf('a1')],
       threads: [],
+      agentIdByThread: new Map(),
       spentByAgent: new Map([['a1', 2]]),
       pendingApprovals: 0,
       openIssues: 0,
@@ -112,6 +112,7 @@ describe('buildPulse', () => {
     const pulse = buildPulse({
       agents: [agentOf('a1')],
       threads: [],
+      agentIdByThread: new Map(),
       spentByAgent: new Map(),
       pendingApprovals: 0,
       openIssues: 0,
@@ -122,12 +123,12 @@ describe('buildPulse', () => {
 
   test('failed threads come from metadata.lastError with agent name', () => {
     const failed = threadOf('t1', {
-      agentId: 'a2',
       metadata: { lastError: { runId: 'r1', message: 'boom', at: NOW } },
     });
     const pulse = buildPulse({
       agents: [agentOf('a1'), agentOf('a2', { name: 'reviewer' })],
       threads: [threadOf('t0'), failed, threadOf('t2')],
+      agentIdByThread: new Map([['t1', 'a2']]),
       spentByAgent: new Map(),
       pendingApprovals: 0,
       openIssues: 0,
@@ -150,6 +151,7 @@ describe('buildPulse', () => {
     const pulse = buildPulse({
       agents: [],
       threads: [threadOf('t1', { metadata: { lastError: 'plain' } })],
+      agentIdByThread: new Map(),
       spentByAgent: new Map(),
       pendingApprovals: 0,
       openIssues: 0,
@@ -162,6 +164,7 @@ describe('buildPulse', () => {
     const pulse = buildPulse({
       agents: [agentOf('a1'), agentOf('a2')],
       threads: [],
+      agentIdByThread: new Map(),
       spentByAgent: new Map([
         ['a1', 1.25],
         ['a2', 0.75],

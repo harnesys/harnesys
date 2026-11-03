@@ -7,7 +7,7 @@ import type { ApprovalStorePort } from '../../domain/approval/approval-store.por
 import type { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
 import type { NodeCommandQueuePort } from '../../domain/fleet/node-command-queue.port.ts';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
-import { runStatusOf } from './approval-reconcile.ts';
+import { runStatusOf } from './run-row-queries.ts';
 
 const RESUME_AFTER_MS = 10_000;
 const RESUME_LIMIT = 25;

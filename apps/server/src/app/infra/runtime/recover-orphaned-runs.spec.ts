@@ -35,6 +35,7 @@ function setup() {
       .values({
         runId: rec.runId,
         threadId: rec.threadId,
+        agentName: rec.agentName ?? 'agent',
         status: rec.status,
         parentRunId: rec.parentRunId,
         attempt: rec.attempt,

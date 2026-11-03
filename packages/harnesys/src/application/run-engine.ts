@@ -122,7 +122,13 @@ export function createRunEngine(deps: RunEngineDeps): RunEngine {
           childRuns.set(spawnId, entry);
           const born = entry;
           entry.tail = deps.lifecycle
-            .create({ runId: spawnId, threadId: record.threadId, parentRunId: runId })
+            .create({
+              runId: spawnId,
+              threadId: record.threadId,
+              agentId: record.agentId ?? '',
+              agentName: record.agentName ?? '',
+              parentRunId: runId,
+            })
             .then((rec) =>
               deps.lifecycle.transition(rec.runId, rec.leaseEpoch, {
                 from: 'queued',

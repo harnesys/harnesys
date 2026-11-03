@@ -5,12 +5,12 @@ import { PromoteFactsUseCase } from '../../application/use-cases/memory/promote-
 import { findDecisionModelCoords } from '../../application/use-cases/memory/promote-triage.ts';
 import { ReflectThreadUseCase } from '../../application/use-cases/memory/reflect-thread.use-case.ts';
 import { observeCancelledRun } from '../../domain/approval/cancelled-run-approvals.ts';
-import { observeParks, type ParkFileRuntime } from '../../domain/approval/park-observer.ts';
+import type { ParkFileRuntime } from '../../domain/approval/park-observer.ts';
 import { resolveProviderApiKey } from '../../domain/secret/provider-api-key.ts';
 import { StudioEmbeddings } from '../knowledge/embeddings.ts';
 import { decisionModelIdOf, embedModelIdOf } from '../memory/org-memory-settings.store.ts';
 import type { OrgSqliteDb, OrgSqliteSession } from '../org-sqlite/org-sqlite-session.ts';
-import { createApprovalReconcile, runStatusOf } from './approval-reconcile.ts';
+import { createApprovalReconcile } from './approval-reconcile.ts';
 import { observeRunTerminal } from './observe-run-terminal.ts';
 import { observeThreadErrors } from './observe-thread-errors.ts';
 import { createOrgModelsPort } from './org-models.port.ts';
@@ -18,7 +18,7 @@ import type { OrgRuntimeDeps } from './org-runtime.types.ts';
 import { OrgEpisodicPort } from './packs/org-episodic.port.ts';
 import type { TargetCache } from './prepare-org-target.ts';
 import { prepareUsageEvents } from './prepare-usage-events.ts';
-import { requestApprovalForPark } from './request-approval-for-park.ts';
+import { requestRunParkApprovals } from './request-approval-for-park.ts';
 import { SqliteRunEventStore } from './sqlite-run-events.adapter.ts';
 import { SqliteRunLifecycleStore } from './sqlite-run-lifecycle.adapter.ts';
 import { withWaitGateSignal } from './wait-ticker.ts';
@@ -63,7 +63,6 @@ export function createOrgRunStores(
   const reconcile = createApprovalReconcile({
     db: session.db,
     orgId: deps.orgId,
-    threads: deps.threads,
     ...(deps.approvals === undefined ? {} : { approvals: deps.approvals }),
     ...(deps.approvalEvents === undefined ? {} : { approvalEvents: deps.approvalEvents }),
     ...(deps.logger === undefined ? {} : { logger: deps.logger }),
@@ -126,28 +125,22 @@ export function createOrgRunStores(
       const assigned = runEvents.appendWithinTx(tx, runId, threadId, events);
       const approvals = deps.approvals;
       if (context?.park === true && approvals) {
-        observeParks(threadId, runId, assigned, (park) => {
-          if (runStatusOf(session.db, runId) !== 'needs_input') {
-            return;
-          }
-          try {
-            const runtime = fileRuntime?.(threadId);
-            requestApprovalForPark({
-              orgId: deps.orgId,
-              threads: deps.threads,
-              approvals,
-              approvalEvents: deps.approvalEvents,
-              park,
-              ...(runtime === undefined ? {} : { fileRuntime: runtime }),
-            });
-          } catch (error) {
+        requestRunParkApprovals({
+          orgId: deps.orgId,
+          db: session.db,
+          approvals,
+          approvalEvents: deps.approvalEvents,
+          runId,
+          threadId,
+          events: assigned,
+          ...(fileRuntime === undefined ? {} : { fileRuntime }),
+          onError: (error, park) =>
             deps.logger
               ?.child('run-parks')
               .warn(
                 { error, orgId: deps.orgId, runId, askId: park.askId },
                 'park approval request failed',
-              );
-          }
+              ),
         });
       }
       return assigned;

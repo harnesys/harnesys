@@ -70,6 +70,7 @@ export function toAgentDefinition(
   const generation = generationFromConfig(agent.config);
   return {
     id: agent.id,
+    name: agent.name,
     prompts: { main: { instructions: agent.instructions } },
     level: agent.level,
     model: resolveModelRef(lookup, agent.config),

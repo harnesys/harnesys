@@ -33,8 +33,6 @@ function setup(): TestHarness {
     .values({
       id: 'thread-1',
       orgId: 'org-1',
-      agentId: 'agent-1',
-      originAgentId: 'agent-1',
       title: 't',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

@@ -77,6 +77,8 @@ export class InMemoryRunLifecycleStore implements RunLifecycleStore {
     const record: RunRecord = {
       runId: run.runId,
       threadId: run.threadId,
+      agentId: run.agentId,
+      agentName: run.agentName,
       status: 'queued',
       attempt: 1,
       leaseEpoch: 0,

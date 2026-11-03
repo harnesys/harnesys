@@ -6,8 +6,9 @@ import {
   ThreadNotFoundException,
   ThreadValidationException,
 } from '../../domain/thread/thread.error.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
-import { toThreadSummary } from './thread.helpers.ts';
+import { soleAgentIdOf, toThreadSummary } from './thread.helpers.ts';
 
 export interface UpdateThreadBindingRequest {
   orgId: string;
@@ -19,6 +20,7 @@ export interface UpdateThreadBindingRequest {
 export class UpdateThreadBindingUseCase {
   constructor(
     private readonly threads: ThreadRepositoryPort,
+    private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly profiles: ExecutionProfilePort,
   ) {}
 
@@ -53,6 +55,7 @@ export class UpdateThreadBindingUseCase {
     });
     return toThreadSummary({
       thread: updated,
+      agentId: soleAgentIdOf(this.threadAgents, request.orgId, updated.id) ?? '',
       agentName: '',
       active: this.threads.findActiveRun(request.orgId, thread.id) ?? null,
       bindingLocked: locked,

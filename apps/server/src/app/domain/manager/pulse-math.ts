@@ -5,6 +5,7 @@ import type { ThreadRecord } from '../thread/thread.ts';
 export interface BuildPulseInput {
   agents: AgentRecord[];
   threads: ThreadRecord[];
+  agentIdByThread: Map<string, string>;
   spentByAgent: Map<string, number>;
   pendingApprovals: number;
   openIssues: number;
@@ -36,12 +37,13 @@ export function buildPulse(input: BuildPulseInput): ManagerPulse {
     if (lastError === null) {
       return [];
     }
+    const agentId = input.agentIdByThread.get(thread.id) ?? '';
     return [
       {
         threadId: thread.id,
         title: thread.title,
-        agentId: thread.agentId,
-        agentName: nameByAgent.get(thread.agentId) ?? null,
+        agentId,
+        agentName: nameByAgent.get(agentId) ?? null,
         kind: thread.kind,
         lastError,
         updatedAt: thread.updatedAt,

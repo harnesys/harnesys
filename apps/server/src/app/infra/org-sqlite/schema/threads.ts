@@ -1,5 +1,12 @@
 import { sql } from 'drizzle-orm';
-import { type AnySQLiteColumn, check, index, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import {
+  type AnySQLiteColumn,
+  check,
+  index,
+  primaryKey,
+  sqliteTable,
+  text,
+} from 'drizzle-orm/sqlite-core';
 import { agentsTable } from './agents.ts';
 import { issuesTable } from './issues.ts';
 
@@ -8,12 +15,6 @@ export const threadsTable = sqliteTable(
   {
     id: text('id').primaryKey(),
     orgId: text('org_id').notNull(),
-    agentId: text('agent_id')
-      .notNull()
-      .references((): AnySQLiteColumn => agentsTable.id, { onDelete: 'cascade' }),
-    originAgentId: text('origin_agent_id')
-      .notNull()
-      .references((): AnySQLiteColumn => agentsTable.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
     kind: text('kind', { enum: ['chat', 'schedule', 'webhook', 'issue', 'connector'] })
       .notNull()
@@ -39,10 +40,27 @@ export const threadsTable = sqliteTable(
       sql`${table.kind} IN ('chat', 'schedule', 'webhook', 'issue', 'connector')`,
     ),
     orgIdx: index('threads_org_idx').on(table.orgId),
-    agentIdx: index('threads_agent_idx').on(table.agentId),
     issueIdx: index('threads_issue_idx').on(table.issueId),
+  }),
+);
+
+export const threadAgentsTable = sqliteTable(
+  'thread_agents',
+  {
+    threadId: text('thread_id')
+      .notNull()
+      .references((): AnySQLiteColumn => threadsTable.id, { onDelete: 'cascade' }),
+    agentId: text('agent_id')
+      .notNull()
+      .references((): AnySQLiteColumn => agentsTable.id, { onDelete: 'cascade' }),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.threadId, table.agentId] }),
+    agentIdx: index('thread_agents_agent_idx').on(table.agentId),
   }),
 );
 
 export type ThreadRow = typeof threadsTable.$inferSelect;
 export type ThreadInsert = typeof threadsTable.$inferInsert;
+export type ThreadAgentRow = typeof threadAgentsTable.$inferSelect;

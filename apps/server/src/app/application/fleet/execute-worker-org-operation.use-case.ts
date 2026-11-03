@@ -15,7 +15,6 @@ import { WorkerOrgOperationReceiptPort } from '../../domain/fleet/worker-org-ope
 import { authorize } from '../../domain/identity/authorize.ts';
 import { type NodePrincipal } from '../../domain/identity/principal.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
-import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { issueToolsDeps } from '../../infra/runtime/packs/issue-tools.holder.ts';
 import { CreateScheduleUseCase } from '../schedules/create-schedule.use-case.ts';
 import { DeleteScheduleUseCase } from '../schedules/delete-schedule.use-case.ts';
@@ -40,7 +39,6 @@ export class ExecuteWorkerOrgOperationUseCase {
     private readonly claims: EventClaimPort,
     private readonly receipts: WorkerOrgOperationReceiptPort,
     private readonly executor: LocalExecutorPort,
-    private readonly threads: ThreadRepositoryPort,
     private readonly listSchedules: ListSchedulesUseCase,
     private readonly createSchedule: CreateScheduleUseCase,
     private readonly updateSchedule: UpdateScheduleUseCase,
@@ -92,11 +90,10 @@ export class ExecuteWorkerOrgOperationUseCase {
     if (!run) {
       throw new HttpException(404, 'RUN_NOT_FOUND', `run not found: ${runId}`);
     }
-    const thread = this.threads.findById(orgId, run.threadId);
-    if (!thread) {
-      throw new HttpException(404, 'THREAD_NOT_FOUND', `thread not found: ${run.threadId}`);
+    if (!run.agentId) {
+      throw new HttpException(404, 'AGENT_NOT_FOUND', `run ${runId} has no agent`);
     }
-    return thread.agentId;
+    return run.agentId;
   }
 
   private dispatch(orgId: string, actorAgentId: string, operation: WorkerOrgOperation): unknown {

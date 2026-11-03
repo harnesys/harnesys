@@ -10,7 +10,11 @@ import {
   type RuntimeHandle,
   type SessionHandle,
 } from 'harnesys';
-import { ThreadNotFoundException } from '../../domain/thread/thread.error.ts';
+import { soleAgentIdOf } from '../../application/threads/thread.helpers.ts';
+import {
+  ThreadNotFoundException,
+  ThreadValidationException,
+} from '../../domain/thread/thread.error.ts';
 import { openOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 import { type ApprovalResumeSweep, createApprovalResumeSweep } from './approval-resume-sweep.ts';
 import { createBranchSeed } from './branch-state-seed.ts';
@@ -103,6 +107,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     targetCache,
     sessionRequested,
     events: runEvents,
+    lifecycle: runLifecycle,
     feed,
     steering,
   });
@@ -137,7 +142,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
       resolve: (threadId, runId) =>
         branchSeed
           .seededRunState(threadId, runId ?? null)
-          .then((state) => resolveRunTarget(threadId, state)),
+          .then((state) => resolveRunTarget(threadId, state, runId ?? undefined)),
     },
     onComplete: (record) =>
       void drainMessageQueue(record.threadId)
@@ -169,7 +174,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     targets: {
       resolve: async (threadId, runId) => {
         const state = await branchSeed.seededRunState(threadId, runId ?? null);
-        return resolveRunTarget(threadId, state);
+        return resolveRunTarget(threadId, state, runId ?? undefined);
       },
     },
     logger: CONSOLE_LOGGER,
@@ -180,7 +185,17 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     if (existing?.handle) {
       return existing.handle;
     }
-    const prepared = prepareTarget(deps, threadId, targetCache, worktreeBindings.get(threadId));
+    const agentId = soleAgentIdOf(deps.threadAgents, deps.orgId, threadId);
+    if (agentId === undefined) {
+      throw new ThreadValidationException('thread has no agent');
+    }
+    const prepared = prepareTarget(
+      deps,
+      threadId,
+      agentId,
+      targetCache,
+      worktreeBindings.get(threadId),
+    );
     if (!prepared) {
       throw new ThreadNotFoundException(threadId);
     }

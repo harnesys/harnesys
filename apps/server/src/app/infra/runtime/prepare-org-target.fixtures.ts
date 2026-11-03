@@ -173,8 +173,6 @@ export function threadRecord(runMode: string | undefined): ThreadRecord {
   return {
     id: 'thread-1',
     orgId: 'org-1',
-    agentId: 'agent-1',
-    originAgentId: 'agent-1',
     title: 't',
     kind: 'chat',
     parentThreadId: null,

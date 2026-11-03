@@ -18,6 +18,7 @@ import {
   toDeskScheduleDeletedEvent,
   toDeskScheduleEvent,
 } from '../../../application/schedules/schedule.helpers.ts';
+import { insertAgentThread } from '../../../application/threads/thread.helpers.ts';
 import { AgentNotFoundException } from '../../../domain/agent/agent.error.ts';
 import type { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
 import { DeskEventsPort } from '../../../domain/desk/desk-events.port.ts';
@@ -32,11 +33,13 @@ import type {
 import type { ScheduleRepositoryPort } from '../../../domain/schedule/schedule-repository.port.ts';
 import type { OrgSettingsPort } from '../../../domain/skills/org-settings.port.ts';
 import type { ThreadRecord } from '../../../domain/thread/thread.ts';
+import type { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
 import type { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
 
 export interface OrgSchedulerPortDeps {
   schedules: ScheduleRepositoryPort;
   threads: ThreadRepositoryPort;
+  threadAgents: ThreadAgentRepositoryPort;
   agents: AgentRegistryPort;
   orgSettings: OrgSettingsPort;
   deskEvents?: DeskEventsPort;
@@ -83,23 +86,25 @@ export class OrgSchedulerPort implements SchedulerPort {
     const now = new Date().toISOString();
     const thread = input.threadId
       ? this.requireBindableThread(scope.orgId, agent.id, input.threadId)
-      : this.deps.threads.insert({
-          id: crypto.randomUUID(),
-          orgId: scope.orgId,
-          agentId: agent.id,
-          originAgentId: agent.id,
-          title: name,
-          kind: 'schedule',
-          parentThreadId: null,
-          forkAt: null,
-          inheritedEventCount: 0,
-          metadata: {},
-          runProfileId: null,
-          runDirectory: null,
-          createdAt: now,
-          updatedAt: now,
-          lastReadAt: now,
-        });
+      : insertAgentThread(
+          { threads: this.deps.threads, threadAgents: this.deps.threadAgents },
+          {
+            id: crypto.randomUUID(),
+            orgId: scope.orgId,
+            title: name,
+            kind: 'schedule',
+            parentThreadId: null,
+            forkAt: null,
+            inheritedEventCount: 0,
+            metadata: {},
+            runProfileId: null,
+            runDirectory: null,
+            createdAt: now,
+            updatedAt: now,
+            lastReadAt: now,
+          },
+          agent.id,
+        );
     const schedule = this.deps.schedules.insert({
       id: crypto.randomUUID(),
       orgId: scope.orgId,
@@ -122,7 +127,7 @@ export class OrgSchedulerPort implements SchedulerPort {
     this.deps.deskEvents?.emit(scope.orgId, toDeskScheduleEvent(schedule));
     return Promise.resolve({
       schedule: toPortRecord(schedule),
-      thread: { id: thread.id, title: thread.title, kind: thread.kind, agentId: thread.agentId },
+      thread: { id: thread.id, title: thread.title, kind: thread.kind, agentId: agent.id },
     });
   }
 
@@ -178,7 +183,8 @@ export class OrgSchedulerPort implements SchedulerPort {
     if (!thread || thread.orgId !== orgId) {
       throw new ScheduleValidationException('thread not found');
     }
-    if (thread.agentId !== agentId) {
+    const members = this.deps.threadAgents.listByThread(orgId, thread.id);
+    if (!members.some((member) => member.agentId === agentId)) {
       throw new ScheduleValidationException('thread belongs to another agent');
     }
     const occupied = this.deps.schedules.findByThreadId(orgId, thread.id);

@@ -20,6 +20,7 @@ import {
   ThreadValidationException,
 } from '../../domain/thread/thread.error.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { UsagePort } from '../../domain/usage/usage-port.ts';
 import { IssueRemoteRunUseCase } from '../fleet/issue-remote-run.use-case.ts';
@@ -75,6 +76,7 @@ export class SendThreadRunUseCase {
     private readonly effectiveSkills: GetEffectiveSkillsUseCase,
     private readonly usage: UsagePort,
     private readonly orgSettings: OrgSettingsPort,
+    private readonly threadAgents: ThreadAgentRepositoryPort,
   ) {}
 
   async execute(request: SendThreadRunRequest): Promise<AcceptedRunResponse> {
@@ -83,7 +85,11 @@ export class SendThreadRunUseCase {
     if (!thread) {
       throw new ThreadNotFoundException(request.threadId);
     }
-    const agent = this.agents.findById(request.orgId, thread.agentId);
+    const agentId = this.threadAgents.listByThread(request.orgId, thread.id)[0]?.agentId;
+    if (!agentId) {
+      throw new ThreadValidationException('thread has no agent');
+    }
+    const agent = this.agents.findById(request.orgId, agentId);
     if (!agent) {
       throw new ThreadValidationException('agent not found for thread');
     }
@@ -192,6 +198,7 @@ export class SendThreadRunUseCase {
         request,
         threadId: thread.id,
         agentId: agent.id,
+        agentName: agent.name,
         decision,
         text: input.runText,
         attachments,
@@ -238,6 +245,7 @@ export class SendThreadRunUseCase {
     request: SendThreadRunRequest;
     threadId: string;
     agentId: string;
+    agentName: string;
     decision: Extract<PlacementResult, { kind: 'unavailable' }>;
     text?: string;
     attachments: Attachment[];
@@ -261,6 +269,7 @@ export class SendThreadRunUseCase {
       runId: input.decision.request.runId,
       profileId: input.decision.request.profileId,
       agentId: input.agentId,
+      agentName: input.agentName,
       priority: input.request.priority ?? 3,
       trigger,
       reason: input.decision.reason,

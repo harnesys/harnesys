@@ -1,6 +1,6 @@
 import { Injectable } from '@harnesys/brix';
 import type { ThreadKind } from '@harnesys/contracts';
-import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import {
   ThreadNotFoundException,
@@ -16,7 +16,13 @@ import type {
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { type OrgSqliteDb, withOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 import { runAttributionOf } from '../org-sqlite/run-attribution.ts';
-import { type RunRow, runsTable, type ThreadRow, threadsTable } from '../org-sqlite/schema';
+import {
+  type RunRow,
+  runsTable,
+  type ThreadRow,
+  threadAgentsTable,
+  threadsTable,
+} from '../org-sqlite/schema';
 
 const ACTIVE_RUN_STATUSES: ThreadActiveRunStatus[] = [
   'queued',
@@ -26,7 +32,6 @@ const ACTIVE_RUN_STATUSES: ThreadActiveRunStatus[] = [
 ];
 
 interface ThreadPatchUpdates {
-  agentId?: string;
   title?: string;
   kind?: ThreadKind;
   metadata?: string;
@@ -39,9 +44,6 @@ interface ThreadPatchUpdates {
 
 function threadPatchUpdates(patch: ThreadPatch): ThreadPatchUpdates {
   const updates: ThreadPatchUpdates = { updatedAt: new Date().toISOString() };
-  if (patch.agentId !== undefined) {
-    updates.agentId = patch.agentId;
-  }
   if (patch.title !== undefined) {
     updates.title = patch.title;
   }
@@ -121,8 +123,6 @@ export class ThreadRepositoryAdapter extends ThreadRepositoryPort {
           .values({
             id: rec.id,
             orgId: rec.orgId,
-            agentId: rec.agentId,
-            originAgentId: rec.originAgentId,
             title: rec.title,
             kind: rec.kind,
             parentThreadId: rec.parentThreadId,
@@ -192,13 +192,18 @@ export class ThreadRepositoryAdapter extends ThreadRepositoryPort {
 
   deleteByAgent(orgId: string, agentId: string): void {
     withOrgSqlite(this.layout, orgId, (db) => {
+      const threadIds = db
+        .select({ threadId: threadAgentsTable.threadId })
+        .from(threadAgentsTable)
+        .innerJoin(threadsTable, eq(threadsTable.id, threadAgentsTable.threadId))
+        .where(and(eq(threadsTable.orgId, orgId), eq(threadAgentsTable.agentId, agentId)))
+        .all()
+        .map((row) => row.threadId);
+      if (threadIds.length === 0) {
+        return;
+      }
       db.delete(threadsTable)
-        .where(
-          and(
-            eq(threadsTable.orgId, orgId),
-            or(eq(threadsTable.agentId, agentId), eq(threadsTable.originAgentId, agentId)),
-          ),
-        )
+        .where(and(eq(threadsTable.orgId, orgId), inArray(threadsTable.id, threadIds)))
         .run();
     });
   }
@@ -217,17 +222,18 @@ export class ThreadRepositoryAdapter extends ThreadRepositoryPort {
   findByIssueAndAgent(orgId: string, issueId: string, agentId: string): ThreadRecord | undefined {
     return withOrgSqlite(this.layout, orgId, (db) => {
       const row = db
-        .select()
+        .select({ thread: threadsTable })
         .from(threadsTable)
+        .innerJoin(threadAgentsTable, eq(threadAgentsTable.threadId, threadsTable.id))
         .where(
           and(
             eq(threadsTable.orgId, orgId),
             eq(threadsTable.issueId, issueId),
-            eq(threadsTable.agentId, agentId),
+            eq(threadAgentsTable.agentId, agentId),
           ),
         )
         .get();
-      return row ? toThread(row) : undefined;
+      return row ? toThread(row.thread) : undefined;
     });
   }
 
@@ -308,8 +314,6 @@ function toThread(row: ThreadRow): ThreadRecord {
   return {
     id: row.id,
     orgId: row.orgId,
-    agentId: row.agentId,
-    originAgentId: row.originAgentId,
     title: row.title,
     kind: row.kind,
     parentThreadId: row.parentThreadId ?? null,
@@ -340,7 +344,7 @@ function parseMetadata(raw: string): Record<string, unknown> {
 function mapThreadSqliteError(err: unknown): Error {
   const message = err instanceof Error ? err.message : String(err);
   if (message.includes('FOREIGN KEY') || message.includes('SQLITE_CONSTRAINT')) {
-    return new ThreadValidationException('agent not found for thread');
+    return new ThreadValidationException('thread reference not found');
   }
   return err instanceof Error ? err : new Error(message);
 }

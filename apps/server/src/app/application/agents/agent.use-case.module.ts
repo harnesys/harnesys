@@ -4,7 +4,9 @@ import { ConnectorModule } from '../../infra/connector/connector.module.ts';
 import { ExecutionProfileModule } from '../../infra/execution-profile/execution-profile.module.ts';
 import { ModePresetsModule } from '../../infra/mode-presets/mode-presets.module.ts';
 import { PresetsModule } from '../../infra/presets/presets.module.ts';
+import { RuntimeModule } from '../../infra/runtime/runtime.module.ts';
 import { SecretModule } from '../../infra/secret/secret.module.ts';
+import { ThreadModule } from '../../infra/thread/thread.module.ts';
 import { CreateAgentUseCase } from './create-agent.use-case.ts';
 import { CreateAgentFromPresetUseCase } from './create-agent-from-preset.use-case.ts';
 import { DeleteAgentUseCase } from './delete-agent.use-case.ts';
@@ -29,6 +31,8 @@ const useCases = [
     ConnectorModule,
     SecretModule,
     PresetsModule,
+    ThreadModule,
+    RuntimeModule,
   ],
   providers: [...useCases],
   exports: [...useCases],

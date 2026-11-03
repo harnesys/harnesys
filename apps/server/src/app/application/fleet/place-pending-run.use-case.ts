@@ -69,8 +69,7 @@ export class PlacePendingRunUseCase {
   }
 
   private resolveAgent(input: PlacePendingRunInput) {
-    const agentId =
-      input.pending.payload.agentId || this.threadAgentId(input.orgId, input.pending.threadId);
+    const agentId = input.pending.payload.agentId;
     const agent = this.agents.findById(input.orgId, agentId);
     if (!agent) {
       throw new ThreadValidationException('agent not found for pending placement');
@@ -171,13 +170,5 @@ export class PlacePendingRunUseCase {
       ...(input.pending.payload.worktreeId ? { worktreeId: input.pending.payload.worktreeId } : {}),
       ...(isolation?.mode === 'container' ? { isolation } : {}),
     };
-  }
-
-  private threadAgentId(orgId: string, threadId: string): string {
-    const thread = this.threads.findById(orgId, threadId);
-    if (!thread) {
-      throw new ThreadValidationException(`thread not found: ${threadId}`);
-    }
-    return thread.agentId;
   }
 }

@@ -73,7 +73,7 @@ export function observeParks(
 
 export function approvalRequestForPark(
   park: ObservedPark,
-  thread: { agentId: string } | undefined,
+  runAgentId: string | undefined,
   fileRuntime?: ParkFileRuntime,
 ): ApprovalRequestInput {
   const file = fileContextOf(park, fileRuntime);
@@ -88,7 +88,7 @@ export function approvalRequestForPark(
   };
   return {
     runId: park.runId,
-    agentId: thread?.agentId ?? '',
+    agentId: runAgentId ?? '',
     threadId: park.threadId,
     interruptId: park.askId,
     kind,

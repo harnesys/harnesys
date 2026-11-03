@@ -250,8 +250,10 @@ export {
   threadPlansTable,
 } from './thread-plans.ts';
 export {
+  type ThreadAgentRow,
   type ThreadInsert,
   type ThreadRow,
+  threadAgentsTable,
   threadsTable,
 } from './threads.ts';
 export {

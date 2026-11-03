@@ -20,13 +20,13 @@ function setup() {
 
 function seedThread(sqlite: Database, threadId: string, orgId: string): void {
   sqlite.run(
-    `INSERT INTO threads (id, org_id, agent_id, origin_agent_id, title, created_at, updated_at, last_read_at)
-     VALUES (?, ?, 'agent-1', 'agent-1', 't', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')`,
+    `INSERT INTO threads (id, org_id, title, created_at, updated_at, last_read_at)
+     VALUES (?, ?, 't', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')`,
     [threadId, orgId],
   );
   sqlite.run(
-    `INSERT INTO runs (run_id, thread_id, status, created_at, updated_at)
-     VALUES (?, ?, 'completed', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')`,
+    `INSERT INTO runs (run_id, thread_id, agent_id, agent_name, status, created_at, updated_at)
+     VALUES (?, ?, 'agent-1', 'agent-1', 'completed', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')`,
     [`${threadId}-run`, threadId],
   );
 }

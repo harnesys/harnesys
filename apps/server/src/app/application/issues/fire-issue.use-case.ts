@@ -9,10 +9,12 @@ import type { IssueFireRequest, IssueFireResult } from '../../domain/issue/issue
 import { IssueRepositoryPort } from '../../domain/issue/issue-repository.port.ts';
 import { IssueLabelRepositoryPort } from '../../domain/issue/label-repository.port.ts';
 import { RunConflictException } from '../../domain/thread/thread.error.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadEventsPort } from '../../domain/thread/thread-events.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { mechanicalRunStart } from '../threads/run-attribution.ts';
 import { SendThreadRunUseCase } from '../threads/send-thread-run.use-case.ts';
+import { insertAgentThread } from '../threads/thread.helpers.ts';
 
 function workspaceRefs(request: IssueFireRequest): { sourceId?: string; worktreeId?: string } {
   if (request.sourceId === undefined) {
@@ -33,6 +35,7 @@ export class FireIssueUseCase {
     private readonly labels: IssueLabelRepositoryPort,
     private readonly attachments: IssueAttachmentRepositoryPort,
     private readonly threads: ThreadRepositoryPort,
+    private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly events: IssueEventsPort,
     private readonly threadEvents: ThreadEventsPort,
     private readonly sendThreadRun: SendThreadRunUseCase,
@@ -204,23 +207,25 @@ export class FireIssueUseCase {
       return existing;
     }
     const now = new Date().toISOString();
-    return this.threads.insert({
-      id: crypto.randomUUID(),
-      orgId,
+    return insertAgentThread(
+      { threads: this.threads, threadAgents: this.threadAgents },
+      {
+        id: crypto.randomUUID(),
+        orgId,
+        title: `Issue: ${title}`.slice(0, 80),
+        kind: 'issue',
+        parentThreadId: null,
+        forkAt: null,
+        inheritedEventCount: 0,
+        metadata: {},
+        issueId,
+        runProfileId: null,
+        runDirectory: null,
+        createdAt: now,
+        updatedAt: now,
+        lastReadAt: now,
+      },
       agentId,
-      originAgentId: agentId,
-      title: `Issue: ${title}`.slice(0, 80),
-      kind: 'issue',
-      parentThreadId: null,
-      forkAt: null,
-      inheritedEventCount: 0,
-      metadata: {},
-      issueId,
-      runProfileId: null,
-      runDirectory: null,
-      createdAt: now,
-      updatedAt: now,
-      lastReadAt: now,
-    });
+    );
   }
 }

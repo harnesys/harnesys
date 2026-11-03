@@ -9,9 +9,10 @@ import {
   ThreadNotFoundException,
   ThreadValidationException,
 } from '../../domain/thread/thread.error.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { runAttributionNamesOf } from './run-attribution.ts';
-import { toThreadPublic, waitingForProfileIdFromEvents } from './thread.helpers.ts';
+import { soleAgentIdOf, toThreadPublic, waitingForProfileIdFromEvents } from './thread.helpers.ts';
 
 export interface DeleteThreadEventRequest {
   orgId: string;
@@ -26,6 +27,7 @@ const DELETABLE_ERROR_TYPES = new Set(['error', 'run.failed']);
 export class DeleteThreadEventUseCase {
   constructor(
     private readonly threads: ThreadRepositoryPort,
+    private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly agents: AgentRegistryPort,
     private readonly executor: LocalExecutorPort,
     private readonly users: UserRepository,
@@ -67,7 +69,8 @@ export class DeleteThreadEventUseCase {
       throw new ThreadValidationException(`only user and error events can be deleted`);
     }
     this.threads.touch(request.orgId, request.threadId);
-    const agent = this.agents.findById(request.orgId, thread.agentId);
+    const agentId = soleAgentIdOf(this.threadAgents, request.orgId, thread.id) ?? '';
+    const agent = agentId ? this.agents.findById(request.orgId, agentId) : undefined;
     const [active, ownEvents] = await Promise.all([
       lifecycle.activeByThread(thread.id),
       events.listByThread(thread.id),
@@ -80,6 +83,7 @@ export class DeleteThreadEventUseCase {
     const sessionEvents = [...inherited, ...ownEvents];
     return toThreadPublic({
       thread,
+      agentId,
       agentName: agent?.name ?? '',
       active,
       events: sessionEvents,

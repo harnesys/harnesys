@@ -105,8 +105,6 @@ describe('attachment adapters', () => {
     new ThreadRepositoryAdapter(layout).insert({
       id: threadId,
       orgId,
-      agentId,
-      originAgentId: agentId,
       title: 't',
       kind: 'chat',
       parentThreadId: null,

@@ -106,6 +106,7 @@ export function scopeOf(orgId: string, target: RunTarget): CapabilityScope {
 export function prepareTarget(
   deps: PrepareOrgTargetDeps,
   threadId: string,
+  agentId: string,
   cache: TargetCache,
   options?: PrepareTargetOptions,
 ) {
@@ -113,7 +114,7 @@ export function prepareTarget(
   if (!thread) {
     return null;
   }
-  const agent = deps.agents.findById(deps.orgId, thread.agentId);
+  const agent = deps.agents.findById(deps.orgId, agentId);
   if (!agent) {
     throw new ThreadValidationException('agent not found for thread');
   }

@@ -6,10 +6,12 @@ import {
   type InMemoryRuntimeState,
   type PackRegistration,
   type RunEventStore,
+  type RunLifecycleStore,
   type RunRegistry,
   resolveCapabilitySet,
   type ToolDefinition,
 } from 'harnesys';
+import { soleAgentIdOf } from '../../application/threads/thread.helpers.ts';
 import { composeRunSkills } from './compose-run-skills.ts';
 import { runInHostToolScope } from './host-tool-scope.ts';
 import type { OrgPluginWiring } from './org-plugin-wiring.ts';
@@ -40,32 +42,35 @@ export interface RunTargetResolverContext {
   targetCache: TargetCache;
   sessionRequested: Map<string, string[]>;
   events: RunEventStore;
+  lifecycle: RunLifecycleStore;
   feed: ReturnType<typeof createRunEventFeed>;
   steering: SteeringChannel;
 }
 
 export function createRunTargetResolver(ctx: RunTargetResolverContext) {
-  return async function resolveRunTarget(threadId: string, state: InMemoryRuntimeState) {
+  return async function resolveRunTarget(
+    threadId: string,
+    state: InMemoryRuntimeState,
+    runId?: string,
+  ) {
     const { deps, plugin } = ctx;
     const binding = ctx.worktreeBindings.get(threadId);
-    const prepared = prepareTarget(deps, threadId, ctx.targetCache, runtimeOptionsOf(binding));
+    const run = runId === undefined ? null : await ctx.lifecycle.get(runId);
+    const agentId = run?.agentId ?? soleAgentIdOf(deps.threadAgents, deps.orgId, threadId);
+    if (agentId === undefined) {
+      return null;
+    }
+    const prepared = prepareTarget(
+      deps,
+      threadId,
+      agentId,
+      ctx.targetCache,
+      runtimeOptionsOf(binding),
+    );
     if (!prepared) {
       return null;
     }
-    const requested = ctx.sessionRequested.get(threadId) ?? [];
-    const shellPatterns =
-      deps.permissionRules?.shellPatterns(deps.orgId, prepared.agentDef.id) ?? undefined;
-    const baseAgentDef: AgentDefinition =
-      requested.length > 0
-        ? {
-            ...prepared.agentDef,
-            skills: [...new Set([...(prepared.agentDef.skills ?? []), ...requested])],
-          }
-        : prepared.agentDef;
-    const agentDef: AgentDefinition =
-      shellPatterns === undefined
-        ? baseAgentDef
-        : applyShellRulePatterns(baseAgentDef, shellPatterns);
+    const agentDef = agentDefFor(ctx, threadId, prepared.agentDef);
     const skills = await composeRunSkills({
       orgSkills: plugin.skills,
       discovery: deps.sourceSkills,
@@ -88,20 +93,7 @@ export function createRunTargetResolver(ctx: RunTargetResolverContext) {
             ]),
           ),
         ),
-      discoverTool: (name: string) => {
-        const def = plugin.makeRegistry().get(name);
-        if (def === undefined) {
-          return undefined;
-        }
-        const server = def.operations?.includes('mcp') === true ? def.group : undefined;
-        if (server !== undefined) {
-          const fresh = deps.agents.findById(deps.orgId, agentDef.id);
-          if (!new Set(fresh?.mcpServers ?? agentDef.mcpServers ?? []).has(server)) {
-            return undefined;
-          }
-        }
-        return def;
-      },
+      discoverTool: makeDiscoverTool(ctx, agentDef),
     };
     const capabilitySet = runInHostToolScope(prepared.scope, () =>
       resolveCapabilitySet(agentDef, universe),
@@ -133,5 +125,39 @@ export function createRunTargetResolver(ctx: RunTargetResolverContext) {
       ...(prepared.channelNote ? { channelNote: prepared.channelNote } : {}),
     };
     return target;
+  };
+}
+
+function agentDefFor(
+  ctx: RunTargetResolverContext,
+  threadId: string,
+  agentDef: AgentDefinition,
+): AgentDefinition {
+  const requested = ctx.sessionRequested.get(threadId) ?? [];
+  const withSkills =
+    requested.length > 0
+      ? {
+          ...agentDef,
+          skills: [...new Set([...(agentDef.skills ?? []), ...requested])],
+        }
+      : agentDef;
+  const shellPatterns = ctx.deps.permissionRules?.shellPatterns(ctx.deps.orgId, withSkills.id);
+  return shellPatterns === undefined
+    ? withSkills
+    : applyShellRulePatterns(withSkills, shellPatterns);
+}
+
+function makeDiscoverTool(ctx: RunTargetResolverContext, agentDef: AgentDefinition) {
+  return (name: string): ToolDefinition | undefined => {
+    const def = ctx.plugin.makeRegistry().get(name);
+    if (def === undefined) {
+      return undefined;
+    }
+    const server = def.operations?.includes('mcp') === true ? def.group : undefined;
+    if (server === undefined) {
+      return def;
+    }
+    const fresh = ctx.deps.agents.findById(ctx.deps.orgId, agentDef.id);
+    return new Set(fresh?.mcpServers ?? agentDef.mcpServers ?? []).has(server) ? def : undefined;
   };
 }

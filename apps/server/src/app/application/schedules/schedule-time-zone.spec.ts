@@ -6,6 +6,7 @@ import {
   FakeDeskEvents,
   FakeOrgSettings,
   FakeSchedules,
+  FakeThreadAgents,
   FakeThreads,
 } from './schedule.use-case.fakes.ts';
 import { UpdateScheduleUseCase } from './update-schedule.use-case.ts';
@@ -55,13 +56,28 @@ function localClock(iso: string, timezone: string): string {
 function harness(timezone: string) {
   const schedules = new FakeSchedules();
   const threads = new FakeThreads();
+  const threadAgents = new FakeThreadAgents();
   const agents = new FakeAgents();
   const orgSettings = new FakeOrgSettings();
   orgSettings.timezone = timezone;
   const agent = agents.insert(agentRecord());
   const deskEvents = new FakeDeskEvents();
-  const create = new CreateScheduleUseCase(schedules, threads, agents, orgSettings, deskEvents);
-  const update = new UpdateScheduleUseCase(schedules, threads, agents, orgSettings, deskEvents);
+  const create = new CreateScheduleUseCase(
+    schedules,
+    threads,
+    threadAgents,
+    agents,
+    orgSettings,
+    deskEvents,
+  );
+  const update = new UpdateScheduleUseCase(
+    schedules,
+    threads,
+    threadAgents,
+    agents,
+    orgSettings,
+    deskEvents,
+  );
   return { schedules, threads, agents, orgSettings, agent, create, update };
 }
 

@@ -31,6 +31,7 @@ import {
   CREATE_RUNS_SQL,
   CREATE_SCHEDULES_SQL,
   CREATE_SECRETS_SQL,
+  CREATE_THREAD_AGENTS_SQL,
   CREATE_THREAD_MESSAGE_QUEUE_SQL,
   CREATE_THREAD_PLANS_SQL,
   CREATE_THREADS_ISSUE_IDX_SQL,
@@ -48,9 +49,7 @@ import {
   migrateNodesDockerColumn,
   migrateSourcesVcsColumns,
   migrateThreadPlansTable,
-  migrateThreadsConnectorKind,
   migrateThreadsInheritedEventCount,
-  migrateThreadsIssueKind,
   migrateUsageTable,
 } from './org-sql.ts';
 import { CREATE_CONNECTORS_SQL } from './org-sql-connectors.ts';
@@ -61,6 +60,11 @@ import {
   migrateInvitesCodeHash,
   migratePendingRunEventsAttributionColumns,
 } from './org-sql-fleet.ts';
+import {
+  assertIssuesStatusKey,
+  assertRunsAgentSnapshot,
+  assertThreadsOwnMembership,
+} from './org-sql-guards.ts';
 import { CREATE_HOOK_RUNS_SQL } from './org-sql-hooks.ts';
 import {
   CREATE_INTEGRATION_EVENTS_DELIVERY_IDX_SQL,
@@ -210,19 +214,6 @@ function migrateTriggerOwnerColumns(
   }
 }
 
-function assertIssuesStatusKey(all?: (sql: string) => ColumnInfo[]): void {
-  if (!all) {
-    return;
-  }
-  const columns = new Set(all('PRAGMA table_info(issues)').map((column) => column.name));
-  if (columns.size === 0 || columns.has('status_key')) {
-    return;
-  }
-  throw new Error(
-    'Legacy org database detected: table "issues" has no "status_key" column. Delete the org database and restart so the schema is recreated.',
-  );
-}
-
 function migrateIssuesBranchColumns(
   exec: (sql: string) => void,
   all: (sql: string) => ColumnInfo[],
@@ -275,12 +266,12 @@ export function ensureOrgSchema(
   exec(CREATE_KNOWLEDGE_SQL);
   ensureKnowledgeFts(exec);
   exec(CREATE_THREADS_SQL);
-  migrateThreadsIssueKind(exec, all);
-  migrateThreadsConnectorKind(exec, all);
+  assertThreadsOwnMembership(all);
   migrateThreadsInheritedEventCount(exec, all);
   if (all) {
     migrateThreadsBindingColumns(exec, all);
   }
+  exec(CREATE_THREAD_AGENTS_SQL);
   exec(CREATE_THREADS_ISSUE_IDX_SQL);
   exec(CREATE_ISSUE_BOARDS_SQL);
   exec(CREATE_BOARD_STATUSES_SQL);
@@ -299,6 +290,7 @@ export function ensureOrgSchema(
     migrateIssueExecutionCorrelationIndex(exec, all);
   }
   exec(CREATE_RUNS_SQL);
+  assertRunsAgentSnapshot(all);
   if (all) {
     migrateRunsAttributionColumns(exec, all);
   }

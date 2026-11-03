@@ -49,6 +49,7 @@ import type {
   CompactThreadResult,
   ThreadQueueDrainResult,
 } from '../../domain/thread/local-executor.port.ts';
+import type { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import type { ThreadEventsPort } from '../../domain/thread/thread-events.port.ts';
 import type { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import type { WaitTickerGatePort } from '../../domain/thread/wait-ticker-gate.port.ts';
@@ -103,6 +104,7 @@ export interface OrgRuntimeDeps {
   containers: WorkspaceContainerPort;
   nodes?: NodeRepository;
   threads: ThreadRepositoryPort;
+  threadAgents: ThreadAgentRepositoryPort;
   agents: AgentRegistryPort;
   hookRuns?: HookRunStorePort;
   modes: ModePresetRegistryPort;

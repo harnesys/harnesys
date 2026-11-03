@@ -12,8 +12,6 @@ export function makeThread(): ThreadRecord {
   return {
     id: THREAD_ID,
     orgId: ORG,
-    agentId: 'agent-1',
-    originAgentId: 'agent-1',
     title: 'test',
     kind: 'chat',
     parentThreadId: null,

@@ -76,7 +76,13 @@ export class IssueRemoteRunUseCase {
     const attachmentMetas = input.attachmentMetas ?? toEnvelopeAttachments(input.attachments ?? []);
     const userEvents = remoteUserEvents(input, clientEventId, attachmentMetas);
     const created = await lifecycle.create(
-      { runId, threadId: input.threadId, attribution: input.attribution },
+      {
+        runId,
+        threadId: input.threadId,
+        agentId: input.agent.id,
+        agentName: input.agent.name,
+        attribution: input.attribution,
+      },
       userEvents,
     );
     const waitPrompt = `placed on host ${input.nodeId}`;
@@ -178,6 +184,7 @@ export class IssueRemoteRunUseCase {
       runId,
       profileId,
       agentId: input.agent.id,
+      agentName: input.agent.name,
       priority: 3,
       trigger: { kind: 'chat', id: input.threadId },
       reason,

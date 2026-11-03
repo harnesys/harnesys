@@ -12,7 +12,7 @@ describe('prepareTarget runtime context', () => {
     const chat = build(undefined, undefined, ['src-1']);
     const chatThreadDir = join(currentBaseDir(), 'org-1', 'thread-1');
     const chatSandbox = join(chatThreadDir, 'sandbox');
-    const chatPrepared = prepareTarget(chat.deps, 'thread-1', chat.cache);
+    const chatPrepared = prepareTarget(chat.deps, 'thread-1', 'agent-1', chat.cache);
     expect(chatPrepared?.runtime.primaryKind).toBe('sandbox');
     expect(chatPrepared?.runtime.primaryDirectory).toBe(chatSandbox);
     expect(chatPrepared?.runtime.threadSandbox).toBe(chatSandbox);
@@ -26,25 +26,37 @@ describe('prepareTarget runtime context', () => {
 
     const scheduled = build(undefined, undefined, ['src-1']);
     const scheduledSandbox = join(currentBaseDir(), 'org-1', 'thread-1', 'sandbox');
-    const scheduledPrepared = prepareTarget(scheduled.deps, 'thread-1', scheduled.cache, {
-      triggerKind: 'schedule',
-    });
+    const scheduledPrepared = prepareTarget(
+      scheduled.deps,
+      'thread-1',
+      'agent-1',
+      scheduled.cache,
+      {
+        triggerKind: 'schedule',
+      },
+    );
     expect(scheduledPrepared?.runtime.primaryKind).toBe('sandbox');
     expect(scheduledPrepared?.runtime.primaryDirectory).toBe(scheduledSandbox);
     expect(scheduledPrepared?.paths.cwd).toBe(scheduledSandbox);
 
     const directory = build(undefined, undefined, ['src-1']);
     const directoryRoot = currentBaseDir();
-    const directoryPrepared = prepareTarget(directory.deps, 'thread-1', directory.cache, {
-      directory: directoryRoot,
-    });
+    const directoryPrepared = prepareTarget(
+      directory.deps,
+      'thread-1',
+      'agent-1',
+      directory.cache,
+      {
+        directory: directoryRoot,
+      },
+    );
     expect(directoryPrepared?.runtime.primaryKind).toBe('directory');
     expect(directoryPrepared?.runtime.primaryDirectory).toBe(directoryRoot);
     expect(directoryPrepared?.paths.cwd).toBe(directoryRoot);
 
     const worktree = build('issue', undefined, ['src-1']);
     const worktreeRoot = currentBaseDir();
-    const worktreePrepared = prepareTarget(worktree.deps, 'thread-1', worktree.cache, {
+    const worktreePrepared = prepareTarget(worktree.deps, 'thread-1', 'agent-1', worktree.cache, {
       triggerKind: 'issue',
       sourceId: 'src-1',
       worktreeId: 'wt-1',
@@ -61,7 +73,7 @@ describe('prepareTarget runtime context', () => {
 
     const issue = build('issue', undefined, ['src-1']);
     const issueSourceRoot = currentBaseDir();
-    const issuePrepared = prepareTarget(issue.deps, 'thread-1', issue.cache, {
+    const issuePrepared = prepareTarget(issue.deps, 'thread-1', 'agent-1', issue.cache, {
       triggerKind: 'issue',
       sourceId: 'src-1',
     });

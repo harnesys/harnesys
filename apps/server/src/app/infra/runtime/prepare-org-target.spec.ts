@@ -19,14 +19,14 @@ function shellSpecOf(agentDef: AgentDefinition | undefined): Record<string, unkn
 describe('prepareTarget runMode permissions', () => {
   test('stricter mode gates win over agent permissions', () => {
     const { deps, cache } = build('plan');
-    const prepared = prepareTarget(deps, 'thread-1', cache);
+    const prepared = prepareTarget(deps, 'thread-1', 'agent-1', cache);
     expect(prepared?.permissions['fs.write']).toBe('deny');
     expect(prepared?.permissions.process).toBe('deny');
   });
 
   test('thread without runMode keeps agent permissions', () => {
     const { deps, cache } = build(undefined);
-    const prepared = prepareTarget(deps, 'thread-1', cache);
+    const prepared = prepareTarget(deps, 'thread-1', 'agent-1', cache);
     expect(prepared?.permissions['fs.write']).toBe('allow');
     expect(prepared?.permissions.process).toBe('allow');
   });
@@ -34,7 +34,7 @@ describe('prepareTarget runMode permissions', () => {
   test('unknown runMode keeps agent permissions', () => {
     const { deps, cache, modes } = build('missing');
     modes.preset = undefined;
-    const prepared = prepareTarget(deps, 'thread-1', cache);
+    const prepared = prepareTarget(deps, 'thread-1', 'agent-1', cache);
     expect(prepared?.permissions['fs.write']).toBe('allow');
     expect(prepared?.permissions.process).toBe('allow');
   });
@@ -53,7 +53,7 @@ describe('prepareTarget runMode capability fields', () => {
         },
       ],
     });
-    const prepared = prepareTarget(deps, 'thread-1', cache);
+    const prepared = prepareTarget(deps, 'thread-1', 'agent-1', cache);
     expect(prepared?.mode).toEqual({
       id: 'local',
       packs: { shell: true },
@@ -64,13 +64,13 @@ describe('prepareTarget runMode capability fields', () => {
 
   test('falls back to the org preset when no agent-local mode matches', () => {
     const { deps, cache } = build('plan');
-    const prepared = prepareTarget(deps, 'thread-1', cache);
+    const prepared = prepareTarget(deps, 'thread-1', 'agent-1', cache);
     expect(prepared?.mode?.id).toBe('plan');
   });
 
   test('default runMode builds no capability fields', () => {
     const { deps, cache } = build('default');
-    const prepared = prepareTarget(deps, 'thread-1', cache);
+    const prepared = prepareTarget(deps, 'thread-1', 'agent-1', cache);
     expect(prepared?.mode).toBeUndefined();
   });
 
@@ -81,7 +81,7 @@ describe('prepareTarget runMode capability fields', () => {
     if (agent) {
       agent.defaultModeId = null;
     }
-    const prepared = prepareTarget(deps, 'thread-1', cache);
+    const prepared = prepareTarget(deps, 'thread-1', 'agent-1', cache);
     expect(prepared?.mode).toBeUndefined();
   });
 });
@@ -93,7 +93,7 @@ describe('prepareTarget runMode shell spec', () => {
       presetShell: { spec: { blocklist: ['evil-tool *'] } },
     };
     const { deps, cache } = build('plan', opts);
-    const prepared = prepareTarget(deps, 'thread-1', cache);
+    const prepared = prepareTarget(deps, 'thread-1', 'agent-1', cache);
     expect(shellSpecOf(prepared?.agentDef).blocklist).toEqual(['evil-tool *']);
   });
 
@@ -103,7 +103,7 @@ describe('prepareTarget runMode shell spec', () => {
       presetShell: { spec: { allowlist: ['bun *'], blocklist: ['evil-tool *'] } },
     };
     const { deps, cache } = build('plan', opts);
-    const prepared = prepareTarget(deps, 'thread-1', cache);
+    const prepared = prepareTarget(deps, 'thread-1', 'agent-1', cache);
     const spec = shellSpecOf(prepared?.agentDef);
     expect(spec.allowlist).toEqual(['git status', 'bun *']);
     expect(spec.blocklist).toEqual(['evil-tool *', 'agent-blocked *']);

@@ -54,11 +54,11 @@ describe('park observer', () => {
       prompt: 'allow fs.write?',
       tool: { name: 'write_file', input: { path: 'no-such/agent-path.ts' }, toolCallId: 'call-9' },
     };
-    const request = approvalRequestForPark(
-      park,
-      { agentId: 'agent-1' },
-      { host: 'host-1', cwd: process.cwd(), runtime: 'container' },
-    );
+    const request = approvalRequestForPark(park, 'agent-1', {
+      host: 'host-1',
+      cwd: process.cwd(),
+      runtime: 'container',
+    });
     expect(request.kind).toBe('file_access');
     expect(request.options).toEqual(['deny', 'approve_once', 'approve', 'block_path']);
     expect(request.context.file).toEqual({

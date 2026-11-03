@@ -14,10 +14,12 @@ import { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repositor
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
 import type {
   ThreadActiveRun,
+  ThreadAgentRecord,
   ThreadInsert,
   ThreadPatch,
   ThreadRecord,
 } from '../../domain/thread/thread.ts';
+import type { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 
 export class FakeSchedules extends ScheduleRepositoryPort {
@@ -127,6 +129,43 @@ export class FakeThreads extends ThreadRepositoryPort {
 
   threadIdsWithRuns(): Set<string> {
     return new Set();
+  }
+}
+
+export class FakeThreadAgents implements ThreadAgentRepositoryPort {
+  readonly items: ThreadAgentRecord[] = [];
+
+  listByThread(_orgId: string, threadId: string): ThreadAgentRecord[] {
+    return this.items.filter((record) => record.threadId === threadId);
+  }
+
+  listByThreads(_orgId: string, threadIds: string[]): ThreadAgentRecord[] {
+    return this.items.filter((record) => threadIds.includes(record.threadId));
+  }
+
+  ensure(_orgId: string, threadId: string, agentId: string): ThreadAgentRecord {
+    const found = this.items.find((record) => record.threadId === threadId);
+    if (found) {
+      return found;
+    }
+    const record = { threadId, agentId, createdAt: new Date().toISOString() };
+    this.items.push(record);
+    return record;
+  }
+
+  remove(_orgId: string, threadId: string, agentId: string): void {
+    const index = this.items.findIndex(
+      (record) => record.threadId === threadId && record.agentId === agentId,
+    );
+    if (index >= 0) {
+      this.items.splice(index, 1);
+    }
+  }
+
+  listThreadIdsByAgent(_orgId: string, agentId: string): string[] {
+    return this.items
+      .filter((record) => record.agentId === agentId)
+      .map((record) => record.threadId);
   }
 }
 

@@ -68,7 +68,7 @@ export class RespondRunUseCase {
 
   async execute(request: RespondRunRequest): Promise<RespondRunResponse> {
     const asserted = await this.assertRun(request);
-    this.persistApprovedRule(asserted.thread, request);
+    this.persistApprovedRule(asserted.rec.agentId ?? '', request);
     if (
       this.routeRemote(request.orgId, request.runId, asserted.rec, {
         askId: request.body.askId,
@@ -184,7 +184,7 @@ export class RespondRunUseCase {
     return { thread, rec };
   }
 
-  private persistApprovedRule(thread: ThreadRecord, request: RespondRunRequest): void {
+  private persistApprovedRule(runAgentId: string, request: RespondRunRequest): void {
     const payload = request.body.payload;
     if (!isRecord(payload)) {
       return;
@@ -201,7 +201,7 @@ export class RespondRunUseCase {
     }
     const orgId = request.orgId;
     const row = this.approvalStore.getByRunInterrupt(orgId, request.runId, request.body.askId);
-    const agentId = targetAgentIdOf(row?.context.delegated, thread.agentId);
+    const agentId = targetAgentIdOf(row?.context.delegated, runAgentId);
     const deps = {
       orgId,
       agents: this.agents,

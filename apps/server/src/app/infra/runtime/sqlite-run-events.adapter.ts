@@ -114,16 +114,19 @@ export class SqliteRunEventStore implements RunEventStore {
   append(runId: string, expectedEpoch: number, events: SessionEvent[]): Promise<SessionEvent[]> {
     try {
       return Promise.resolve(
-        this.db.transaction((tx): SessionEvent[] => {
-          const row = tx.select().from(runsTable).where(eq(runsTable.runId, runId)).get();
-          if (row?.status !== 'running' || row?.leaseEpoch !== expectedEpoch) {
-            throw codedRunError(
-              'lease_stale',
-              `run ${runId} not executable by epoch ${expectedEpoch}`,
-            );
-          }
-          return this.appendWithinTx(tx as OrgSqliteDb, runId, row.threadId, events);
-        }),
+        this.db.transaction(
+          (tx): SessionEvent[] => {
+            const row = tx.select().from(runsTable).where(eq(runsTable.runId, runId)).get();
+            if (row?.status !== 'running' || row?.leaseEpoch !== expectedEpoch) {
+              throw codedRunError(
+                'lease_stale',
+                `run ${runId} not executable by epoch ${expectedEpoch}`,
+              );
+            }
+            return this.appendWithinTx(tx as OrgSqliteDb, runId, row.threadId, events);
+          },
+          { behavior: 'immediate' },
+        ),
       );
     } catch (error) {
       return Promise.reject(error);
@@ -131,8 +134,9 @@ export class SqliteRunEventStore implements RunEventStore {
   }
 
   appendForThread(threadId: string, runId: string, events: PendingSessionEvent[]): SessionEvent[] {
-    return this.db.transaction((tx): SessionEvent[] =>
-      this.appendWithinTx(tx as OrgSqliteDb, runId, threadId, events),
+    return this.db.transaction(
+      (tx): SessionEvent[] => this.appendWithinTx(tx as OrgSqliteDb, runId, threadId, events),
+      { behavior: 'immediate' },
     );
   }
 
@@ -197,13 +201,16 @@ export class SqliteRunEventStore implements RunEventStore {
   truncateThreadFrom(threadId: string, runId: string, seq: number): Promise<TruncateThreadResult> {
     try {
       return Promise.resolve(
-        this.db.transaction((tx): TruncateThreadResult => {
-          const result = truncateThreadEvents(tx as OrgSqliteDb, threadId, runId, seq);
-          for (const id of result.removedRunIds) {
-            this.seqByRun.delete(id);
-          }
-          return result;
-        }),
+        this.db.transaction(
+          (tx): TruncateThreadResult => {
+            const result = truncateThreadEvents(tx as OrgSqliteDb, threadId, runId, seq);
+            for (const id of result.removedRunIds) {
+              this.seqByRun.delete(id);
+            }
+            return result;
+          },
+          { behavior: 'immediate' },
+        ),
       );
     } catch (error) {
       return Promise.reject(error);
@@ -213,13 +220,16 @@ export class SqliteRunEventStore implements RunEventStore {
   removeEvent(threadId: string, runId: string, seq: number): Promise<SessionEvent | null> {
     try {
       return Promise.resolve(
-        this.db.transaction((tx): SessionEvent | null => {
-          const result = removeThreadEventRow(tx as OrgSqliteDb, threadId, runId, seq);
-          if (result.runDeleted) {
-            this.seqByRun.delete(runId);
-          }
-          return result.removed;
-        }),
+        this.db.transaction(
+          (tx): SessionEvent | null => {
+            const result = removeThreadEventRow(tx as OrgSqliteDb, threadId, runId, seq);
+            if (result.runDeleted) {
+              this.seqByRun.delete(runId);
+            }
+            return result.removed;
+          },
+          { behavior: 'immediate' },
+        ),
       );
     } catch (error) {
       return Promise.reject(error);

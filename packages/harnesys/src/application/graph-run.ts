@@ -38,7 +38,15 @@ export async function runGraph(opts: GraphOpts): Promise<RunResult> {
   const threadId = opts.state.sessionId;
   const loaded = await opts.state.load();
   const runId = loaded?.runId ?? crypto.randomUUID();
-  await lifecycle.create({ runId, threadId }, [inputToUserEvent(opts.input)]);
+  await lifecycle.create(
+    {
+      runId,
+      threadId,
+      agentId: opts.agent.id,
+      agentName: opts.agent.name ?? opts.agent.id,
+    },
+    [inputToUserEvent(opts.input)],
+  );
   const claimed = await lifecycle.claim(runId, 'oneshot', 15000);
   if (claimed === null) {
     throw Object.assign(new Error(`run ${runId} was not claimed`), { code: 'claim_failed' });

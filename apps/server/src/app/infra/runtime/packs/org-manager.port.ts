@@ -15,6 +15,7 @@ import { IssueRepositoryPort } from '../../../domain/issue/issue-repository.port
 import { ManagerTailPort } from '../../../domain/manager/manager-tail.port.ts';
 import { buildPulse } from '../../../domain/manager/pulse-math.ts';
 import { OrgSettingsPort } from '../../../domain/skills/org-settings.port.ts';
+import { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
 import { localDayRange } from '../../../domain/usage/daily-budget.ts';
 import { UsagePort } from '../../../domain/usage/usage-port.ts';
@@ -22,6 +23,7 @@ import { UsagePort } from '../../../domain/usage/usage-port.ts';
 export interface OrgManagerDeps {
   agents: AgentRegistryPort;
   threads: ThreadRepositoryPort;
+  threadAgents: ThreadAgentRepositoryPort;
   usage: UsagePort;
   approvals: ApprovalStorePort;
   issues: IssueRepositoryPort;
@@ -55,6 +57,15 @@ export class OrgManagerPort extends ManagerObservationPort {
   pulse(scope: CapabilityScope): Promise<ManagerPulse> {
     const agents = this.deps.agents.list(scope.orgId);
     const threads = this.deps.threads.listByOrg(scope.orgId);
+    const agentIdByThread = new Map<string, string>();
+    for (const member of this.deps.threadAgents.listByThreads(
+      scope.orgId,
+      threads.map((thread) => thread.id),
+    )) {
+      if (!agentIdByThread.has(member.threadId)) {
+        agentIdByThread.set(member.threadId, member.agentId);
+      }
+    }
     const range = localDayRange(this.deps.orgSettings.get(scope.orgId).timezone, new Date());
     const spentByAgent = new Map(
       agents.map((agent) => [
@@ -68,7 +79,15 @@ export class OrgManagerPort extends ManagerObservationPort {
       .listByOrg(scope.orgId)
       .filter((issue) => !closedKeysByBoard.get(issue.boardId)?.has(issue.statusKey)).length;
     return Promise.resolve(
-      buildPulse({ agents, threads, spentByAgent, pendingApprovals, openIssues, day: range.day }),
+      buildPulse({
+        agents,
+        threads,
+        agentIdByThread,
+        spentByAgent,
+        pendingApprovals,
+        openIssues,
+        day: range.day,
+      }),
     );
   }
 

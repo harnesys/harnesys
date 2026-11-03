@@ -3,6 +3,7 @@ import type { UpdateWebhookBody, WebhookPublic } from '@harnesys/contracts';
 import { AgentNotFoundException } from '../../domain/agent/agent.error.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import {
   WebhookNotFoundException,
@@ -26,6 +27,7 @@ export class UpdateWebhookUseCase {
   constructor(
     private readonly webhooks: WebhookRepositoryPort,
     private readonly threads: ThreadRepositoryPort,
+    private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly agents: AgentRegistryPort,
     private readonly deskEvents: DeskEventsPort,
   ) {}
@@ -64,6 +66,7 @@ export class UpdateWebhookUseCase {
     if (request.body.threadId !== undefined) {
       const bound = requireBindableWebhookThread({
         threads: this.threads,
+        threadAgents: this.threadAgents,
         webhooks: this.webhooks,
         orgId: request.orgId,
         agentId: nextAgentId,

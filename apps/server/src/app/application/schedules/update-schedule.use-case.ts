@@ -10,6 +10,7 @@ import {
 import type { SchedulePatch, ScheduleRecord } from '../../domain/schedule/schedule.ts';
 import { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repository.port.ts';
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { recordOwnerOnWrite } from '../threads/run-attribution.ts';
 import { requireBindableScheduleThread } from './bind-schedule-thread.ts';
@@ -28,6 +29,7 @@ export class UpdateScheduleUseCase {
   constructor(
     private readonly schedules: ScheduleRepositoryPort,
     private readonly threads: ThreadRepositoryPort,
+    private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly agents: AgentRegistryPort,
     private readonly orgSettings: OrgSettingsPort,
     private readonly deskEvents: DeskEventsPort,
@@ -53,6 +55,7 @@ export class UpdateScheduleUseCase {
       currentId: current.id,
       agentId: nextAgentId,
       threads: this.threads,
+      threadAgents: this.threadAgents,
       schedules: this.schedules,
     });
     const updated = this.schedules.update(request.orgId, current.id, patch);
@@ -143,6 +146,7 @@ function applyThreadBind(
     currentId: string;
     agentId: string;
     threads: ThreadRepositoryPort;
+    threadAgents: ThreadAgentRepositoryPort;
     schedules: ScheduleRepositoryPort;
   },
 ): void {
@@ -151,6 +155,7 @@ function applyThreadBind(
   }
   const bound = requireBindableScheduleThread({
     threads: input.threads,
+    threadAgents: input.threadAgents,
     schedules: input.schedules,
     orgId: input.orgId,
     agentId: input.agentId,

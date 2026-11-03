@@ -172,9 +172,7 @@ export class MemoryThreads extends ThreadRepositoryPort {
   delete(orgId: string, id: string): void {
     this.rows = this.rows.filter((row) => !(row.orgId === orgId && row.id === id));
   }
-  deleteByAgent(orgId: string, agentId: string): void {
-    this.rows = this.rows.filter((row) => !(row.orgId === orgId && row.agentId === agentId));
-  }
+  deleteByAgent(): void {}
 }
 
 export class MemorySchedules extends ScheduleRepositoryPort {
@@ -329,3 +327,5 @@ export function memoryDb(): OrgSqliteDb {
   sqlite.exec(CREATE_ORG_MEMORY_SETTINGS_SQL);
   return drizzle(sqlite, { schema });
 }
+
+export { MemoryThreadAgents } from './thread-agent.fakes.ts';

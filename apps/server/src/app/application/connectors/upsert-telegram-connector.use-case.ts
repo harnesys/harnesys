@@ -15,7 +15,9 @@ import {
 } from '../../domain/connector/telegram-api.port.ts';
 import { TelegramPollerSyncPort } from '../../domain/connector/telegram-poller-sync.port.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
+import { insertAgentThread } from '../threads/thread.helpers.ts';
 import {
   connectorSecretKey,
   findConnectorThread,
@@ -38,6 +40,7 @@ export class UpsertTelegramConnectorUseCase {
     private readonly connectors: ConnectorRepositoryPort,
     private readonly secrets: SecretStorePort,
     private readonly threads: ThreadRepositoryPort,
+    private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly telegram: TelegramApiPort,
     private readonly poller: TelegramPollerSyncPort,
     logger: Logger,
@@ -95,28 +98,31 @@ export class UpsertTelegramConnectorUseCase {
       if (!thread) {
         throw new ConnectorValidationException('Connector thread is missing');
       }
+      this.threadAgents.ensure(request.orgId, thread.id, request.agentId);
       threadId = thread.id;
     } else {
       const connectorId = crypto.randomUUID();
       const secretRef = connectorSecretKey(connectorId);
       await this.secrets.set(request.orgId, secretRef, token);
-      const thread = this.threads.insert({
-        id: crypto.randomUUID(),
-        orgId: request.orgId,
-        agentId: request.agentId,
-        originAgentId: request.agentId,
-        title: 'Telegram',
-        kind: 'connector',
-        parentThreadId: null,
-        forkAt: null,
-        inheritedEventCount: 0,
-        metadata: { connectorId, provider: 'telegram' },
-        runProfileId: null,
-        runDirectory: null,
-        createdAt: now,
-        updatedAt: now,
-        lastReadAt: now,
-      });
+      const thread = insertAgentThread(
+        { threads: this.threads, threadAgents: this.threadAgents },
+        {
+          id: crypto.randomUUID(),
+          orgId: request.orgId,
+          title: 'Telegram',
+          kind: 'connector',
+          parentThreadId: null,
+          forkAt: null,
+          inheritedEventCount: 0,
+          metadata: { connectorId, provider: 'telegram' },
+          runProfileId: null,
+          runDirectory: null,
+          createdAt: now,
+          updatedAt: now,
+          lastReadAt: now,
+        },
+        request.agentId,
+      );
       threadId = thread.id;
       connector = this.connectors.insert({
         id: connectorId,

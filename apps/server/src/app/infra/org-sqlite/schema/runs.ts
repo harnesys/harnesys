@@ -1,4 +1,5 @@
 import { type AnySQLiteColumn, index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { agentsTable } from './agents.ts';
 import { threadsTable } from './threads.ts';
 
 export const runsTable = sqliteTable(
@@ -8,6 +9,10 @@ export const runsTable = sqliteTable(
     threadId: text('thread_id')
       .notNull()
       .references((): AnySQLiteColumn => threadsTable.id, { onDelete: 'cascade' }),
+    agentId: text('agent_id').references((): AnySQLiteColumn => agentsTable.id, {
+      onDelete: 'set null',
+    }),
+    agentName: text('agent_name').notNull(),
     status: text('status').notNull(),
     interruptId: text('interrupt_id'),
     waitFireAt: integer('wait_fire_at'),

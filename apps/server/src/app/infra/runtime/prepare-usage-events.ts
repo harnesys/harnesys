@@ -7,20 +7,20 @@ import {
   type UsageCost,
 } from '../../application/usage/pricing.ts';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
-import { threadsTable } from '../org-sqlite/schema/threads.ts';
+import { runsTable } from '../org-sqlite/schema/runs.ts';
 import { usageTable } from '../org-sqlite/schema/usage.ts';
 import { usagePriceSources } from './usage-price-source.ts';
 
 export function prepareUsageEvents(
   tx: OrgSqliteDb,
   runId: string,
-  threadId: string,
+  _threadId: string,
   events: PendingSessionEvent[],
 ): PendingSessionEvent[] {
   if (!events.some((event) => event.type === 'model.usage')) {
     return events;
   }
-  const threadAgentId = threadAgentIdOf(tx, threadId);
+  const runAgentId = runAgentIdOf(tx, runId);
   return events.map((event) => {
     if (event.type !== 'model.usage') {
       return event;
@@ -31,7 +31,7 @@ export function prepareUsageEvents(
     const cost = costOf(tx, { model, modelId, usage });
     recordUsage(tx, {
       runId,
-      agentId: event.agentId ?? threadAgentId,
+      agentId: event.agentId ?? runAgentId,
       model,
       modelId,
       usage,
@@ -93,11 +93,11 @@ function recordUsage(
   }
 }
 
-function threadAgentIdOf(tx: OrgSqliteDb, threadId: string): string | null {
-  const thread = tx
-    .select({ agentId: threadsTable.agentId })
-    .from(threadsTable)
-    .where(eq(threadsTable.id, threadId))
+function runAgentIdOf(tx: OrgSqliteDb, runId: string): string | null {
+  const run = tx
+    .select({ agentId: runsTable.agentId })
+    .from(runsTable)
+    .where(eq(runsTable.runId, runId))
     .get();
-  return thread?.agentId ?? null;
+  return run?.agentId ?? null;
 }

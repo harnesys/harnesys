@@ -3,8 +3,6 @@ import type { ThreadKind } from '@harnesys/contracts';
 export interface ThreadRecord {
   id: string;
   orgId: string;
-  agentId: string;
-  originAgentId: string;
   title: string;
   kind: ThreadKind;
   parentThreadId: string | null;
@@ -34,7 +32,6 @@ export interface ThreadActiveRun {
 }
 
 export type ThreadPatch = Partial<{
-  agentId: string;
   title: string;
   kind: ThreadKind;
   metadata: Record<string, unknown>;
@@ -43,3 +40,9 @@ export type ThreadPatch = Partial<{
   runDirectory: string | null;
   lastReadAt: string;
 }>;
+
+export interface ThreadAgentRecord {
+  threadId: string;
+  agentId: string;
+  createdAt: string;
+}

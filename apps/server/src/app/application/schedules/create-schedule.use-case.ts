@@ -7,8 +7,9 @@ import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import { ScheduleValidationException } from '../../domain/schedule/schedule.error.ts';
 import { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repository.port.ts';
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
-import { toThreadPublic } from '../threads/thread.helpers.ts';
+import { insertAgentThread, toThreadPublic } from '../threads/thread.helpers.ts';
 import { requireBindableScheduleThread } from './bind-schedule-thread.ts';
 import { isValidCron, nextCronRunAt } from './cron-next.ts';
 import { toDeskScheduleEvent, toSchedulePublic } from './schedule.helpers.ts';
@@ -24,6 +25,7 @@ export class CreateScheduleUseCase {
   constructor(
     private readonly schedules: ScheduleRepositoryPort,
     private readonly threads: ThreadRepositoryPort,
+    private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly agents: AgentRegistryPort,
     private readonly orgSettings: OrgSettingsPort,
     private readonly deskEvents: DeskEventsPort,
@@ -48,6 +50,7 @@ export class CreateScheduleUseCase {
     const existingThread = request.body.threadId
       ? requireBindableScheduleThread({
           threads: this.threads,
+          threadAgents: this.threadAgents,
           schedules: this.schedules,
           orgId: request.orgId,
           agentId: agent.id,
@@ -56,23 +59,25 @@ export class CreateScheduleUseCase {
       : undefined;
     const thread =
       existingThread ??
-      this.threads.insert({
-        id: crypto.randomUUID(),
-        orgId: request.orgId,
-        agentId: agent.id,
-        originAgentId: agent.id,
-        title: name,
-        kind: 'schedule',
-        parentThreadId: null,
-        forkAt: null,
-        inheritedEventCount: 0,
-        metadata: {},
-        runProfileId: null,
-        runDirectory: null,
-        createdAt: now,
-        updatedAt: now,
-        lastReadAt: now,
-      });
+      insertAgentThread(
+        { threads: this.threads, threadAgents: this.threadAgents },
+        {
+          id: crypto.randomUUID(),
+          orgId: request.orgId,
+          title: name,
+          kind: 'schedule',
+          parentThreadId: null,
+          forkAt: null,
+          inheritedEventCount: 0,
+          metadata: {},
+          runProfileId: null,
+          runDirectory: null,
+          createdAt: now,
+          updatedAt: now,
+          lastReadAt: now,
+        },
+        agent.id,
+      );
     const schedule = this.schedules.insert({
       id: crypto.randomUUID(),
       orgId: request.orgId,
@@ -97,6 +102,7 @@ export class CreateScheduleUseCase {
       schedule: toSchedulePublic(schedule),
       thread: toThreadPublic({
         thread,
+        agentId: agent.id,
         agentName: agent.name,
         active: null,
         events: [],

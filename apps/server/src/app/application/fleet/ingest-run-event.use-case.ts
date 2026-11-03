@@ -9,7 +9,6 @@ import { WORK_CLAIM_LEASE_SEC } from '../../domain/fleet/work-claim.constants.ts
 import { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
 import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
-import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 
 export interface IngestRunEventInput {
   orgId: string;
@@ -32,7 +31,6 @@ export class IngestRunEventUseCase {
   constructor(
     private readonly claims: EventClaimPort,
     private readonly executor: LocalExecutorPort,
-    private readonly threads: ThreadRepositoryPort,
     private readonly approvals: ApprovalStorePort,
     private readonly approvalEvents: ApprovalEventsPort,
     private readonly fleetEvents: FleetEventsPort,
@@ -89,7 +87,7 @@ export class IngestRunEventUseCase {
       leaseUntil: new Date(Date.now() + WORK_CLAIM_LEASE_SEC * 1000).toISOString(),
     });
     await this.executor.publishEvents(input.orgId, input.runId, stored);
-    this.requestApprovalsForParks(input.orgId, fresh.threadId, input.runId, stored);
+    this.requestApprovalsForParks(input.orgId, fresh.threadId, input.runId, fresh.agentId, stored);
     const terminal = incoming.some(
       (event) =>
         event.type === 'run.completed' ||
@@ -118,12 +116,12 @@ export class IngestRunEventUseCase {
     orgId: string,
     threadId: string,
     runId: string,
+    runAgentId: string | undefined,
     events: SessionEvent[],
   ): void {
     observeParks(threadId, runId, events, (park) => {
       try {
-        const thread = this.threads.findById(orgId, park.threadId);
-        const input = approvalRequestForPark(park, thread);
+        const input = approvalRequestForPark(park, runAgentId);
         const { id } = this.approvals.request(orgId, input);
         const row = this.approvals.get(orgId, id);
         if (row) {

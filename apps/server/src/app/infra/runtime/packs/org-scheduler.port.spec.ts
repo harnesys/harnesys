@@ -4,7 +4,12 @@ import { OrgSettingsSchema } from '@harnesys/contracts';
 import type { CapabilityScope } from 'harnesys';
 import { OrgSettingsPort } from '../../../domain/skills/org-settings.port.ts';
 import { OrgSchedulerPort } from './org-scheduler.port.ts';
-import { MemoryAgents, MemorySchedules, MemoryThreads } from './wire-org-packs.fakes.ts';
+import {
+  MemoryAgents,
+  MemorySchedules,
+  MemoryThreadAgents,
+  MemoryThreads,
+} from './wire-org-packs.fakes.ts';
 
 class FakeOrgSettings extends OrgSettingsPort {
   timezone = 'UTC';
@@ -41,6 +46,7 @@ function localClock(iso: string, timezone: string): string {
 function setup(timezone: string) {
   const schedules = new MemorySchedules();
   const threads = new MemoryThreads();
+  const threadAgents = new MemoryThreadAgents();
   const agents = new MemoryAgents();
   const orgSettings = new FakeOrgSettings();
   orgSettings.timezone = timezone;
@@ -68,8 +74,14 @@ function setup(timezone: string) {
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
   });
-  const port = new OrgSchedulerPort({ schedules, threads, agents, orgSettings });
-  return { port, schedules, threads, agents, orgSettings, agent };
+  const port = new OrgSchedulerPort({
+    schedules,
+    threads,
+    threadAgents,
+    agents,
+    orgSettings,
+  });
+  return { port, schedules, threads, threadAgents, agents, orgSettings, agent };
 }
 
 describe('OrgSchedulerPort timezone', () => {

@@ -6,19 +6,26 @@ import { startEventForwarder } from './work-executor.util.ts';
 export async function startPlacedForwarder(args: {
   input: PlaceRunInput;
   envelope: TaskEnvelope;
+  agentName: string;
   events: InMemoryRunEventStore;
   lifecycle: InMemoryRunLifecycleStore;
   feed: ReturnType<typeof createRunEventFeed>;
   sendFrame: (payload: string) => void;
   active: { cancelled: boolean };
 }): Promise<{ stop(): void }> {
-  const { input, envelope, events, lifecycle, feed, sendFrame, active } = args;
+  const { input, envelope, agentName, events, lifecycle, feed, sendFrame, active } = args;
   const attachments =
     envelope.attachments.length > 0 && input.fetchAttachments
       ? await input.fetchAttachments(envelope.attachments)
       : [];
   await lifecycle.create(
-    { runId: envelope.runId, threadId: envelope.threadId, attribution: envelope.attribution },
+    {
+      runId: envelope.runId,
+      threadId: envelope.threadId,
+      agentId: envelope.agentId,
+      agentName,
+      attribution: envelope.attribution,
+    },
     [
       {
         type: 'user',
@@ -54,4 +61,33 @@ function applyRelayBaseSeq(
     }
   }
   return baseSeq;
+}
+
+export async function parkRestoredRun(input: {
+  lifecycle: InMemoryRunLifecycleStore;
+  events: InMemoryRunEventStore;
+  envelope: TaskEnvelope;
+  agentName: string;
+  askId: string;
+  relayLastSeq: number;
+}): Promise<void> {
+  const { lifecycle, events, envelope, agentName, askId, relayLastSeq } = input;
+  events.nextSeq.set(envelope.runId, relayLastSeq);
+  const created = await lifecycle.create({
+    runId: envelope.runId,
+    threadId: envelope.threadId,
+    agentId: envelope.agentId,
+    agentName,
+    attribution: envelope.attribution,
+  });
+  const record = lifecycle.runs.get(envelope.runId);
+  if (record) {
+    record.lastSeq = relayLastSeq;
+  }
+  await lifecycle.transition(envelope.runId, created.leaseEpoch, {
+    from: 'queued',
+    to: 'needs_input',
+    interruptId: askId,
+    events: [],
+  });
 }

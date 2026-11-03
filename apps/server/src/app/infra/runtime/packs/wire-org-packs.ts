@@ -22,6 +22,7 @@ import type { SecretStorePort } from '../../../domain/secret/secret-store.port.t
 import type { OrgSettingsPort } from '../../../domain/skills/org-settings.port.ts';
 import type { SourceRegistryPort } from '../../../domain/source/source-registry.port.ts';
 import type { TerminalSessionsPort } from '../../../domain/terminal/terminal-session.port.ts';
+import type { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
 import type { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
 import type { WebhookRepositoryPort } from '../../../domain/webhook/webhook-repository.port.ts';
 import { ExecutionProfileAdapter } from '../../execution-profile/execution-profile.adapter.ts';
@@ -49,6 +50,7 @@ export interface WireOrgPacksDeps {
   models: LlmModelPort;
   secrets?: SecretStorePort;
   threads?: ThreadRepositoryPort;
+  threadAgents?: ThreadAgentRepositoryPort;
   schedules?: ScheduleRepositoryPort;
   webhooks?: WebhookRepositoryPort;
   deskEvents?: DeskEventsPort;
@@ -77,6 +79,7 @@ export interface WireOrgPacksDeps {
 
 export interface WireOrgPackFilter {
   threads?: ThreadRepositoryPort;
+  threadAgents?: ThreadAgentRepositoryPort;
   lsp?: LspPort;
   schedules?: ScheduleRepositoryPort;
   webhooks?: WebhookRepositoryPort;
@@ -111,6 +114,7 @@ export function orgPackInputs(
     layout: deps.layout,
     agents: deps.agents,
     threads: deps.threads,
+    threadAgents: deps.threadAgents,
     providers: deps.providers,
     models: deps.models,
     sources: deps.sources,

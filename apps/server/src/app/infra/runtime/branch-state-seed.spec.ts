@@ -92,8 +92,6 @@ function threadRecord(): ThreadRecord {
   return {
     id: THREAD_ID,
     orgId: ORG_ID,
-    agentId: 'agent-1',
-    originAgentId: 'agent-1',
     title: 't',
     kind: 'chat',
     parentThreadId: null,

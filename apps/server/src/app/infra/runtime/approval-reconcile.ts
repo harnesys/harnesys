@@ -11,7 +11,6 @@ import {
   type ObservedParkTool,
   type ParkFileRuntime,
 } from '../../domain/approval/park-observer.ts';
-import type { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
 import { runEventsTable, runsTable } from '../org-sqlite/schema/index.ts';
 import { requestApprovalForPark } from './request-approval-for-park.ts';
@@ -27,7 +26,6 @@ const TERMINAL_RUN_STATUSES: ReadonlySet<string> = new Set([
 export interface ApprovalReconcileDeps {
   db: OrgSqliteDb;
   orgId: string;
-  threads: ThreadRepositoryPort;
   approvals?: ApprovalStorePort;
   approvalEvents?: ApprovalEventsPort;
   logger?: Logger;
@@ -46,14 +44,6 @@ export function createApprovalReconcile(deps: ApprovalReconcileDeps): ApprovalRe
   };
 }
 
-export function runStatusOf(db: OrgSqliteDb, runId: string): string | undefined {
-  return db
-    .select({ status: runsTable.status })
-    .from(runsTable)
-    .where(eq(runsTable.runId, runId))
-    .get()?.status;
-}
-
 function reconcileRuns(deps: ApprovalReconcileDeps): Promise<void> {
   const approvals = deps.approvals;
   if (approvals === undefined) {
@@ -70,7 +60,7 @@ function reconcileRuns(deps: ApprovalReconcileDeps): Promise<void> {
 
 function restoreMissingApprovals(deps: ApprovalReconcileDeps, approvals: ApprovalStorePort): void {
   const parked = deps.db
-    .select({ runId: runsTable.runId, threadId: runsTable.threadId })
+    .select({ runId: runsTable.runId, threadId: runsTable.threadId, agentId: runsTable.agentId })
     .from(runsTable)
     .where(eq(runsTable.status, 'needs_input'))
     .orderBy(desc(runsTable.updatedAt))
@@ -86,10 +76,10 @@ function restoreMissingApprovals(deps: ApprovalReconcileDeps, approvals: Approva
     }
     requestApprovalForPark({
       orgId: deps.orgId,
-      threads: deps.threads,
       approvals,
       ...(deps.approvalEvents === undefined ? {} : { approvalEvents: deps.approvalEvents }),
       park,
+      ...(row.agentId === null ? {} : { runAgentId: row.agentId }),
       ...runtimeOf(deps, row.threadId),
     });
   }

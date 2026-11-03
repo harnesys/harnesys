@@ -4,6 +4,7 @@ import {
   memoryFactsTable,
   memoryPromotionsTable,
   runsTable,
+  threadAgentsTable,
   threadsTable,
 } from '../org-sqlite/schema/index.ts';
 
@@ -13,18 +14,20 @@ const MEMORY_CRAWL_THREAD_CAP = 20;
 export function recentThreadsOf(db: OrgSqliteDb, orgId: string, agentId: string) {
   const since = new Date(Date.now() - MEMORY_CRAWL_THREAD_DAYS * DAY_MS).toISOString();
   return db
-    .select()
+    .select({ thread: threadsTable })
     .from(threadsTable)
+    .innerJoin(threadAgentsTable, eq(threadAgentsTable.threadId, threadsTable.id))
     .where(
       and(
         eq(threadsTable.orgId, orgId),
-        eq(threadsTable.agentId, agentId),
+        eq(threadAgentsTable.agentId, agentId),
         gte(threadsTable.updatedAt, since),
       ),
     )
     .orderBy(desc(threadsTable.updatedAt))
     .limit(MEMORY_CRAWL_THREAD_CAP)
-    .all();
+    .all()
+    .map((row) => row.thread);
 }
 
 export function latestRunIdOf(db: OrgSqliteDb, threadId: string): string | undefined {

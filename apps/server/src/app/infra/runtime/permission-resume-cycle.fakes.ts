@@ -218,8 +218,6 @@ export function buildStack(): Stack {
   threads.thread = {
     id: THREAD_ID,
     orgId: 'org-1',
-    agentId: 'agent-1',
-    originAgentId: 'agent-1',
     title: 't',
     kind: 'chat',
     parentThreadId: null,

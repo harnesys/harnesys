@@ -97,13 +97,14 @@ function semanticRegistration(ctx: WireOrgPackContext, memoryDb: OrgSqliteDb) {
 }
 
 export function threadsRegistration(ctx: WireOrgPackContext) {
-  if (!ctx.deps.threads) {
+  if (!ctx.deps.threads || !ctx.deps.threadAgents) {
     return undefined;
   }
   return registerPack(threadsCapability, {
     ports: {
       threads: new OrgThreadsPort({
         threads: ctx.deps.threads,
+        threadAgents: ctx.deps.threadAgents,
         agents: ctx.deps.agents,
         ...(ctx.deps.schedules ? { schedules: ctx.deps.schedules } : {}),
       }),
@@ -113,7 +114,7 @@ export function threadsRegistration(ctx: WireOrgPackContext) {
 }
 
 export function schedulerRegistration(ctx: WireOrgPackContext) {
-  if (!ctx.deps.schedules || !ctx.deps.threads || !ctx.deps.orgSettings) {
+  if (!ctx.deps.schedules || !ctx.deps.threads || !ctx.deps.threadAgents || !ctx.deps.orgSettings) {
     return undefined;
   }
   return registerPack(schedulerCapability, {
@@ -121,6 +122,7 @@ export function schedulerRegistration(ctx: WireOrgPackContext) {
       scheduler: new OrgSchedulerPort({
         schedules: ctx.deps.schedules,
         threads: ctx.deps.threads,
+        threadAgents: ctx.deps.threadAgents,
         agents: ctx.deps.agents,
         orgSettings: ctx.deps.orgSettings,
         ...(ctx.deps.deskEvents ? { deskEvents: ctx.deps.deskEvents } : {}),
@@ -131,7 +133,7 @@ export function schedulerRegistration(ctx: WireOrgPackContext) {
 }
 
 export function webhookRegistration(ctx: WireOrgPackContext) {
-  if (!ctx.deps.webhooks || !ctx.deps.threads) {
+  if (!ctx.deps.webhooks || !ctx.deps.threads || !ctx.deps.threadAgents) {
     return undefined;
   }
   return registerPack(webhookCapability, {
@@ -139,6 +141,7 @@ export function webhookRegistration(ctx: WireOrgPackContext) {
       webhook: new OrgWebhookPort({
         webhooks: ctx.deps.webhooks,
         threads: ctx.deps.threads,
+        threadAgents: ctx.deps.threadAgents,
         agents: ctx.deps.agents,
         ...(ctx.deps.deskEvents ? { deskEvents: ctx.deps.deskEvents } : {}),
       }),

@@ -6,9 +6,10 @@ import { UserRepository } from '../../domain/identity/user-repository.port.ts';
 import { collectInheritedEvents } from '../../domain/thread/fork-logs.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { ThreadNotFoundException } from '../../domain/thread/thread.error.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { runAttributionNamesOf } from './run-attribution.ts';
-import { toThreadPublic, waitingForProfileIdFromEvents } from './thread.helpers.ts';
+import { soleAgentIdOf, toThreadPublic, waitingForProfileIdFromEvents } from './thread.helpers.ts';
 
 export interface GetThreadRequest {
   orgId: string;
@@ -19,6 +20,7 @@ export interface GetThreadRequest {
 export class GetThreadUseCase {
   constructor(
     private readonly threads: ThreadRepositoryPort,
+    private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly agents: AgentRegistryPort,
     private readonly executor: LocalExecutorPort,
     private readonly users: UserRepository,
@@ -30,7 +32,8 @@ export class GetThreadUseCase {
     if (!thread) {
       throw new ThreadNotFoundException(request.threadId);
     }
-    const agent = this.agents.findById(request.orgId, thread.agentId);
+    const agentId = soleAgentIdOf(this.threadAgents, request.orgId, thread.id) ?? '';
+    const agent = agentId ? this.agents.findById(request.orgId, agentId) : undefined;
     const lifecycle = await this.executor.lifecycle(request.orgId);
     const events = await this.executor.events(request.orgId);
     const [active, ownEvents] = await Promise.all([
@@ -45,6 +48,7 @@ export class GetThreadUseCase {
     const sessionEvents = [...inherited, ...ownEvents];
     return toThreadPublic({
       thread,
+      agentId,
       agentName: agent?.name ?? '',
       active,
       events: sessionEvents,

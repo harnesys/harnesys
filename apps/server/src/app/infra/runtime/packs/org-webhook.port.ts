@@ -7,6 +7,7 @@ import type {
   WebhookRecord,
   WebhookUpdateInput,
 } from 'harnesys';
+import { insertAgentThread } from '../../../application/threads/thread.helpers.ts';
 import {
   toDeskWebhookDeletedEvent,
   toDeskWebhookEvent,
@@ -16,6 +17,7 @@ import { AgentNotFoundException } from '../../../domain/agent/agent.error.ts';
 import type { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
 import { DeskEventsPort } from '../../../domain/desk/desk-events.port.ts';
 import type { ThreadRecord } from '../../../domain/thread/thread.ts';
+import type { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
 import type { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
 import {
   WebhookNotFoundException,
@@ -30,6 +32,7 @@ import type { WebhookRepositoryPort } from '../../../domain/webhook/webhook-repo
 export interface OrgWebhookPortDeps {
   webhooks: WebhookRepositoryPort;
   threads: ThreadRepositoryPort;
+  threadAgents: ThreadAgentRepositoryPort;
   agents: AgentRegistryPort;
   deskEvents?: DeskEventsPort;
 }
@@ -53,23 +56,25 @@ export class OrgWebhookPort implements WebhookPort {
     }
     const now = new Date().toISOString();
     const id = crypto.randomUUID();
-    const thread = this.deps.threads.insert({
-      id: crypto.randomUUID(),
-      orgId: scope.orgId,
-      agentId: agent.id,
-      originAgentId: agent.id,
-      title: name,
-      kind: 'webhook',
-      parentThreadId: null,
-      forkAt: null,
-      inheritedEventCount: 0,
-      metadata: {},
-      runProfileId: null,
-      runDirectory: null,
-      createdAt: now,
-      updatedAt: now,
-      lastReadAt: now,
-    });
+    const thread = insertAgentThread(
+      { threads: this.deps.threads, threadAgents: this.deps.threadAgents },
+      {
+        id: crypto.randomUUID(),
+        orgId: scope.orgId,
+        title: name,
+        kind: 'webhook',
+        parentThreadId: null,
+        forkAt: null,
+        inheritedEventCount: 0,
+        metadata: {},
+        runProfileId: null,
+        runDirectory: null,
+        createdAt: now,
+        updatedAt: now,
+        lastReadAt: now,
+      },
+      agent.id,
+    );
     const webhook = this.deps.webhooks.insert({
       id,
       orgId: scope.orgId,
@@ -87,7 +92,7 @@ export class OrgWebhookPort implements WebhookPort {
     this.deps.deskEvents?.emit(scope.orgId, toDeskWebhookEvent(webhook));
     return Promise.resolve({
       webhook: toPortRecord(webhook),
-      thread: toPortThread(thread, agent.name),
+      thread: toPortThread(thread, agent.id, agent.name),
     });
   }
 
@@ -194,11 +199,15 @@ function toPortRecord(row: ServerWebhookRecord): WebhookRecord {
   };
 }
 
-function toPortThread(thread: ThreadRecord, agentName: string): WebhookCreatedThread {
+function toPortThread(
+  thread: ThreadRecord,
+  agentId: string,
+  agentName: string,
+): WebhookCreatedThread {
   return {
     id: thread.id,
     title: thread.title,
-    agentId: thread.agentId,
+    agentId,
     agentName,
     orgId: thread.orgId,
     kind: thread.kind,

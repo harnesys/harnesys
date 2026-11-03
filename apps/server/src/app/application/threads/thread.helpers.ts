@@ -7,11 +7,31 @@ import type {
 import type { RunAttribution, RunVia } from 'harnesys';
 import type {
   ThreadActiveRun as StoredActiveRun,
+  ThreadInsert,
   ThreadRecord,
 } from '../../domain/thread/thread.ts';
+import type { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import type { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 
 export const DEFAULT_THREAD_TITLE = 'New chat';
+
+export function insertAgentThread(
+  deps: { threads: ThreadRepositoryPort; threadAgents: ThreadAgentRepositoryPort },
+  rec: ThreadInsert,
+  agentId: string,
+): ThreadRecord {
+  const thread = deps.threads.insert(rec);
+  deps.threadAgents.ensure(rec.orgId, thread.id, agentId);
+  return thread;
+}
+
+export function soleAgentIdOf(
+  threadAgents: ThreadAgentRepositoryPort,
+  orgId: string,
+  threadId: string,
+): string | undefined {
+  return threadAgents.listByThread(orgId, threadId)[0]?.agentId;
+}
 
 function deriveThreadTitle(text: string, maxChars = 48): string | undefined {
   const trimmed = text.trim().replace(/\s+/g, ' ');
@@ -139,19 +159,20 @@ export function lastErrorOf(
 
 export function toThreadSummary(input: {
   thread: ThreadRecord;
+  agentId: string;
   agentName: string;
   active: ActiveRunSource | null;
   waitingForProfileId?: string;
   names?: RunAttributionNames;
   bindingLocked?: boolean;
 }): ThreadSummary {
-  const { thread, agentName, active, bindingLocked, names, waitingForProfileId } = input;
+  const { thread, agentId, agentName, active, bindingLocked, names, waitingForProfileId } = input;
   return {
     id: thread.id,
     orgId: thread.orgId,
     title: thread.title,
-    agentId: thread.agentId,
-    originAgentId: thread.originAgentId,
+    agentId,
+    originAgentId: agentId,
     agentName,
     kind: thread.kind,
     issueId: thread.issueId ?? null,
@@ -173,6 +194,7 @@ export function toThreadSummary(input: {
 
 export function toThreadPublic(input: {
   thread: ThreadRecord;
+  agentId: string;
   agentName: string;
   active: ActiveRunSource | null;
   events: unknown[];

@@ -24,6 +24,7 @@ import {
   placedWireDeps,
   runSkillsOf,
 } from './work-executor.compose.ts';
+import { parkRestoredRun } from './work-executor.forwarder.ts';
 import { ensurePlacedProcess } from './work-executor.process.ts';
 import {
   type PlacedAskResume,
@@ -156,11 +157,19 @@ async function runResumed(
       ...(env.process !== undefined ? { process: env.process } : {}),
     });
     active.stopEngine = () => engine.stop();
-    await parkRestoredRun(lifecycle, events, envelope, resume.askId, input.relayLastSeq);
+    await parkRestoredRun({
+      lifecycle,
+      events,
+      envelope,
+      agentName: agent.name,
+      askId: resume.askId,
+      relayLastSeq: input.relayLastSeq,
+    });
     await deliverResume({
       active,
       log,
       agentDef,
+      agentName: agent.name,
       envelope,
       input,
       stack: { claimer, engine, runtime, state },
@@ -243,35 +252,11 @@ async function ensurePlacedProcessSafe(
   }
 }
 
-async function parkRestoredRun(
-  lifecycle: InMemoryRunLifecycleStore,
-  events: InMemoryRunEventStore,
-  envelope: TaskEnvelope,
-  askId: string,
-  relayLastSeq: number,
-): Promise<void> {
-  events.nextSeq.set(envelope.runId, relayLastSeq);
-  const created = await lifecycle.create({
-    runId: envelope.runId,
-    threadId: envelope.threadId,
-    attribution: envelope.attribution,
-  });
-  const record = lifecycle.runs.get(envelope.runId);
-  if (record) {
-    record.lastSeq = relayLastSeq;
-  }
-  await lifecycle.transition(envelope.runId, created.leaseEpoch, {
-    from: 'queued',
-    to: 'needs_input',
-    interruptId: askId,
-    events: [],
-  });
-}
-
 interface DeliverResumeArgs {
   active: PlacedRunGate;
   log: Logger;
   agentDef: ReturnType<typeof agentDefinitionOf>;
+  agentName: string;
   envelope: TaskEnvelope;
   input: ResumePlacedRunInput;
   stack: PlacedRunStack;

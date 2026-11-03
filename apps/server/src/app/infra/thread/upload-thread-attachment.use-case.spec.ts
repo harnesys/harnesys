@@ -80,7 +80,7 @@ function createLayout(home: string): HostFsLayoutPort {
   } as HostFsLayoutPort;
 }
 
-function threadStub(threadId: string, agentId: string): ThreadRepositoryPort {
+function threadStub(threadId: string, _agentId: string): ThreadRepositoryPort {
   class Stub extends ThreadRepositoryPort {
     constructor(private readonly record: ThreadRecord) {
       super();
@@ -125,8 +125,6 @@ function threadStub(threadId: string, agentId: string): ThreadRepositoryPort {
   return new Stub({
     id: threadId,
     orgId: ORG_ID,
-    agentId,
-    originAgentId: agentId,
     title: 't',
     kind: 'chat',
     parentThreadId: null,
@@ -173,8 +171,6 @@ describe('UploadThreadAttachmentUseCase', () => {
     new ThreadRepositoryAdapter(layout).insert({
       id: threadId,
       orgId: ORG_ID,
-      agentId,
-      originAgentId: agentId,
       title: 't',
       kind: 'chat',
       parentThreadId: null,
