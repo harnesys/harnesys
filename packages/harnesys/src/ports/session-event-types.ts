@@ -39,5 +39,7 @@ export interface SessionEventScope {
   threadSeq?: number;
   conversational?: boolean;
   author?: { provider: string; providerUserId: string; displayName: string };
+  agentId?: string;
+  agentName?: string;
   originConnectorId?: string;
 }

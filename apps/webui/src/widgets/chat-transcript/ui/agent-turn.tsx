@@ -1,13 +1,15 @@
 import { AlertCircleIcon, RotateCcwIcon, TerminalIcon, Trash2Icon } from 'lucide-react';
+import type { Agent } from '@/entities/agent';
+import { AgentAvatar, AgentRecordAvatar, initialsFromName, useAgentStore } from '@/entities/agent';
 import { type FeedRun, type FeedSegment, useLiveTail } from '@/entities/session';
+import { useThreadStore } from '@/entities/thread';
 import { useDeskStore, useSelectedAgent, useSelectedThread } from '@/features/desk';
-import { useFileLinkComponents } from '@/features/ide';
 import { branchThread } from '@/features/switch-thread';
 import { studioFocusProjectId, useStudioLocation } from '@/shared/config/location';
 import { useStudioNavigation } from '@/shared/config/navigation';
-import { Markdown } from '@/shared/ui/markdown';
 import { toast } from '@/shared/ui/toast';
 import { useStreamText } from '../model/stream-text';
+import { ThreadMarkdown } from '../model/thread-markdown';
 import { ActivityItems } from './activity-items';
 import { ActivityRail } from './activity-rail';
 import { BranchPointBadge } from './branch-point-badge';
@@ -96,6 +98,13 @@ export function AssistantMessageView({
   branchChildren?: { id: string; agentId: string; title: string }[];
 }) {
   const segments = run.segments;
+  const group = useThreadStore((state) =>
+    threadId ? state.byId(threadId)?.kind === 'group' : false,
+  );
+  const runAgentId = agentIdOfRun(run);
+  const runAgentName = agentNameOfRun(run);
+  const agent = useAgentStore((state) => (runAgentId ? state.byId(runAgentId) : undefined));
+  const firstAssistantIndex = segments.findIndex((segment) => segment.kind !== 'user');
   const lastSegment = segments[segments.length - 1];
   const pendingReply =
     streaming &&
@@ -109,20 +118,40 @@ export function AssistantMessageView({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col">
-        {segments.map((segment, index) => (
-          <div key={segment.key} className={segmentSpacing(segments[index - 1], segment)}>
-            <TurnSegmentView
-              segment={segment}
-              live={streaming && index === segments.length - 1 && !pendingReply}
-              threadId={threadId}
-              runId={runId}
-              inherited={inherited}
-              streaming={streaming}
-              readOnly={readOnly}
-              onOpenSpawn={onOpenSpawn}
-            />
-          </div>
-        ))}
+        {segments.map((segment, index) => {
+          const segmentNode = (
+            <div className={segmentSpacing(segments[index - 1], segment)}>
+              <TurnSegmentView
+                segment={segment}
+                live={streaming && index === segments.length - 1 && !pendingReply}
+                threadId={threadId}
+                runId={runId}
+                inherited={inherited}
+                streaming={streaming}
+                readOnly={readOnly}
+                onOpenSpawn={onOpenSpawn}
+              />
+            </div>
+          );
+          if (!group || segment.kind === 'user') {
+            return <div key={segment.key}>{segmentNode}</div>;
+          }
+          return (
+            <div key={segment.key} className="min-w-0">
+              {index === firstAssistantIndex ? (
+                <div className="mb-1 flex items-center gap-1.5">
+                  <AgentTurnAvatar agent={agent} name={runAgentName} />
+                  {runAgentName ? (
+                    <span className="truncate font-medium text-muted-foreground text-xs">
+                      {runAgentName}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+              {segmentNode}
+            </div>
+          );
+        })}
         {pendingReply ? (
           <div className={segments.length > 0 ? 'mt-3' : undefined}>
             <ActivityRail live={true}>
@@ -144,6 +173,34 @@ export function AssistantMessageView({
       </div>
     </div>
   );
+}
+
+function agentIdOfRun(run: FeedRun): string | undefined {
+  for (const event of run.events) {
+    if (event.agentId) {
+      return event.agentId;
+    }
+  }
+  return undefined;
+}
+
+function agentNameOfRun(run: FeedRun): string | undefined {
+  for (const event of run.events) {
+    if (event.agentName) {
+      return event.agentName;
+    }
+  }
+  return undefined;
+}
+
+function AgentTurnAvatar({ agent, name }: { agent: Agent | undefined; name: string | undefined }) {
+  if (agent) {
+    return <AgentRecordAvatar agent={agent} size="sm" title={agent.name} />;
+  }
+  if (!name) {
+    return null;
+  }
+  return <AgentAvatar initials={initialsFromName(name)} color={null} title={name} size="sm" />;
 }
 
 function segmentSpacing(prev: FeedSegment | undefined, curr: FeedSegment): string | undefined {
@@ -272,7 +329,6 @@ function LiveMarkdown({
   threadId?: string;
   blockId?: string;
 }) {
-  const fileLink = useFileLinkComponents();
   const tail = useLiveTail(live ? threadId : undefined);
   const applies =
     live &&
@@ -280,5 +336,5 @@ function LiveMarkdown({
     tail.text !== '' &&
     (blockId === undefined || tail.id === blockId);
   const shown = useStreamText(applies ? tail.text : text, applies);
-  return <Markdown text={shown} streaming={live} components={fileLink} />;
+  return <ThreadMarkdown text={shown} threadId={threadId} streaming={live} />;
 }

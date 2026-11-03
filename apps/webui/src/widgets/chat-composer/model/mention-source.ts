@@ -1,3 +1,4 @@
+import type { Agent } from '@/entities/agent';
 import type { Thread } from '@/entities/thread';
 
 export type MentionKind = 'agent' | 'user';
@@ -7,6 +8,8 @@ export interface MentionOption {
   label: string;
   kind: MentionKind;
   handle: string;
+  initials: string;
+  color: string | null;
 }
 
 const MAX_MENTIONS = 8;
@@ -36,21 +39,42 @@ export function filterMentions(
     .slice(0, MAX_MENTIONS);
 }
 
-export function threadMentionOptions(thread: Thread | undefined): MentionOption[] {
+function agentInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) {
+    return 'AG';
+  }
+  if (parts.length === 1) {
+    return parts[0]?.slice(0, 2).toUpperCase() ?? 'AG';
+  }
+  return `${parts[0]?.[0] ?? ''}${parts[1]?.[0] ?? ''}`.toUpperCase();
+}
+
+export function threadMentionOptions(
+  thread: Thread | undefined,
+  agents: Agent[] = [],
+): MentionOption[] {
   if (thread?.kind !== 'group') {
     return [];
   }
-  const agents = (thread.members ?? []).map((member) => ({
-    id: member.id,
-    label: member.name,
-    kind: 'agent' as const,
-    handle: mentionHandle(member.name),
-  }));
+  const agentOptions = (thread.members ?? []).map((member) => {
+    const agent = agents.find((item) => item.id === member.id);
+    return {
+      id: member.id,
+      label: member.name,
+      kind: 'agent' as const,
+      handle: mentionHandle(member.name),
+      initials: agent?.initials ?? agentInitials(member.name),
+      color: agent?.color ?? null,
+    };
+  });
   const users = (thread.participants ?? []).map((participant) => ({
     id: participant.id,
     label: participant.displayName,
     kind: 'user' as const,
     handle: mentionHandle(participant.username ?? participant.displayName),
+    initials: agentInitials(participant.displayName),
+    color: null,
   }));
-  return [...agents, ...users];
+  return [...agentOptions, ...users];
 }

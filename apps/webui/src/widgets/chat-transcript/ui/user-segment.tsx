@@ -10,7 +10,6 @@ import { useState } from 'react';
 import { saveAgentBullet } from '@/entities/agent';
 import { useSessionStore } from '@/entities/session';
 import { useDeskStore, useSelectedAgent, useSelectedThread } from '@/features/desk';
-import { useFileLinkComponents } from '@/features/ide';
 import {
   deleteOptimisticUserMessage,
   deleteUserMessage,
@@ -20,18 +19,17 @@ import {
   sendMessage,
 } from '@/features/send-message';
 import { branchThread } from '@/features/switch-thread';
-import { loadThreadAttachment } from '@/shared/api';
-import { useAuthedBlobUrl } from '@/shared/api/blob-url';
 import { studioFocusProjectId, useStudioLocation } from '@/shared/config/location';
 import { useStudioNavigation } from '@/shared/config/navigation';
-import { FileChip } from '@/shared/ui/file-chip';
-import { Markdown } from '@/shared/ui/markdown';
 import { toast } from '@/shared/ui/toast';
 import { splitDirectiveTags } from '../model/directive-tag';
+import { ThreadMarkdown } from '../model/thread-markdown';
 import { FeedNotice } from './feed-notice';
 import { IssueWakeBanner } from './issue-wake-message';
 import { MessageActions } from './message-actions';
 import { ModeTagBadges } from './mode-tag-badge';
+import { AttachmentPreview, uniqueAttachments } from './user-attachments';
+import { AuthorLabel } from './user-author-label';
 import { buildSendInput, type SendInput, UserMessageEditor } from './user-message-edit';
 
 export function UserSegment({
@@ -51,7 +49,6 @@ export function UserSegment({
   readOnly?: boolean;
 }) {
   const atts = event.attachments;
-  const fileLink = useFileLinkComponents();
   const wake = isScheduleWakeEvent(event);
   const issueWake = !wake && isIssueWakeEvent(event);
   const rawText = event.text ?? '';
@@ -81,8 +78,8 @@ export function UserSegment({
       </div>
     );
   }
-  return (
-    <div className="flex flex-col items-end gap-2">
+  const content = (
+    <>
       <ModeTagBadges badges={badges} sidecarSkills={sidecarSkills} />
       {editing ? (
         <UserMessageEditor
@@ -95,10 +92,10 @@ export function UserSegment({
         />
       ) : (
         <>
-          <AuthorLabel event={event} />
+          <AuthorLabel event={event} threadId={threadId} />
           {visibleText ? (
             <div className="max-w-[80%] rounded-2xl rounded-br-md bg-secondary px-3.5 py-1.5 text-secondary-foreground shadow-xs">
-              <Markdown text={visibleText} components={fileLink} />
+              <ThreadMarkdown text={visibleText} threadId={threadId} />
             </div>
           ) : null}
           {atts?.length ? (
@@ -127,8 +124,9 @@ export function UserSegment({
           ) : null}
         </>
       )}
-    </div>
+    </>
   );
+  return <div className="flex flex-col items-end gap-2">{content}</div>;
 
   function saveEdit(text: string): void {
     if (!threadId) {
@@ -289,59 +287,4 @@ function ScheduleWakeBanner({ text }: { text: string }) {
       {body ? <p className="whitespace-pre-wrap text-sm">{body}</p> : null}
     </FeedNotice>
   );
-}
-function uniqueAttachments<
-  T extends {
-    id: string;
-    path: string;
-  },
->(items: T[]): T[] {
-  const seen = new Set<string>();
-  const out: T[] = [];
-  for (const item of items) {
-    const key = item.path || item.id;
-    if (seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    out.push(item);
-  }
-  return out;
-}
-function AttachmentPreview({
-  threadId,
-  item,
-}: {
-  threadId: string;
-  item: {
-    id: string;
-    kind: string;
-    name: string;
-    mediaType: string;
-    path: string;
-  };
-}) {
-  const { url } = useAuthedBlobUrl(() => loadThreadAttachment(threadId, item.id), item.id);
-  if (item.kind === 'audio') {
-    return (
-      <audio controls src={url ?? undefined} className="h-9 max-w-64">
-        <track kind="captions" />
-      </audio>
-    );
-  }
-  if (item.kind === 'video') {
-    return (
-      <video controls src={url ?? undefined} className="max-h-48 max-w-64 rounded-xl">
-        <track kind="captions" />
-      </video>
-    );
-  }
-  return <FileChip name={item.name} mediaType={item.mediaType ?? ''} href={url ?? undefined} />;
-}
-
-function AuthorLabel({ event }: { event: SessionEvent }) {
-  if (!event.author) {
-    return null;
-  }
-  return <div className="text-[11px] text-muted-foreground">{event.author.displayName}</div>;
 }

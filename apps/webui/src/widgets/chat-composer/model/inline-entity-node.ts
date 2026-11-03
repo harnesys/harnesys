@@ -11,6 +11,9 @@ export interface InlineEntityAttrs {
 }
 export const INLINE_ENTITY_TYPE = 'inlineEntity';
 export function inlineEntityText(kind: EntityKind, ref: string, href: string): string {
+  if (kind === 'mention') {
+    return `@${ref}`;
+  }
   if (kind === 'file' && href.length > 0) {
     return `[${refBasename(ref)}](${href})`;
   }

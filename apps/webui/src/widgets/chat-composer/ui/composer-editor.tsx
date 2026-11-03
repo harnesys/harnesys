@@ -35,6 +35,7 @@ import {
   insertFileChips,
 } from './file-suggestion-menu';
 import {
+  createMentionInputRule,
   createMentionSuggestion,
   exitMentionSuggestion,
   mentionSuggestionKey,
@@ -159,6 +160,13 @@ export const ComposerEditor = forwardRef<ComposerEditorHandle, ComposerEditorPro
         createMentionSuggestion({
           isDisabled: () => latest.current.disabled,
           getItems: (query) => filterMentions(query, latest.current.mentionOptions),
+        }),
+        createMentionInputRule({
+          isDisabled: () => latest.current.disabled,
+          findOption: (handle) =>
+            latest.current.mentionOptions.find(
+              (option) => option.handle.toLowerCase() === handle.toLowerCase(),
+            ),
         }),
       ];
     }, []);

@@ -18,4 +18,8 @@ describe('inline entity text for the agent', () => {
   test('skill chip stays a bare name', () => {
     expect(inlineEntityText('skill', 'plan', '')).toBe('plan');
   });
+
+  test('mention chip serializes as an @handle', () => {
+    expect(inlineEntityText('mention', 'ada-lovelace', 'user-1')).toBe('@ada-lovelace');
+  });
 });

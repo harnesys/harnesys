@@ -3,8 +3,9 @@ import type { Agent } from '../model/agent';
 import { agentColorTintClass } from '../model/agent-colors';
 
 const AVATAR_SIZES = {
+  xs: 'size-3.5 text-[8px] leading-none',
   sm: 'size-4 text-[8px] leading-none',
-  md: 'size-9 text-xs',
+  md: 'size-6 text-xs',
   lg: 'size-10 text-sm',
 } as const;
 

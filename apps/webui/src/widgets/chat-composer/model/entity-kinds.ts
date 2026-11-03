@@ -5,7 +5,8 @@ export type EntityKind =
   | 'source'
   | 'board'
   | 'schedule'
-  | 'webhook';
+  | 'webhook'
+  | 'mention';
 export interface EntityChipProps {
   kind: EntityKind;
   ref: string;
@@ -21,7 +22,8 @@ export function isEntityKind(value: unknown): value is EntityKind {
     value === 'source' ||
     value === 'board' ||
     value === 'schedule' ||
-    value === 'webhook'
+    value === 'webhook' ||
+    value === 'mention'
   );
 }
 export function isValidEntityRef(kind: EntityKind, ref: string): boolean {

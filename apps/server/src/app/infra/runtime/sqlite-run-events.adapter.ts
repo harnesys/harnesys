@@ -85,9 +85,11 @@ export class SqliteRunEventStore implements RunEventStore {
   ): SessionEvent[] {
     const now = Date.now();
     const assigned: SessionEvent[] = [];
+    const runRow = tx.select().from(runsTable).where(eq(runsTable.runId, runId)).get();
     let counter = this.lastSeqOf(runId, tx);
-    let persistedMax =
-      tx.select().from(runsTable).where(eq(runsTable.runId, runId)).get()?.lastSeq ?? 0;
+    let persistedMax = runRow?.lastSeq ?? 0;
+    const agentId = runRow?.agentId ?? undefined;
+    const agentName = runRow?.agentName;
     const prepared = this.options?.prepare
       ? this.options.prepare(tx, runId, threadId, events)
       : events;
@@ -100,6 +102,8 @@ export class SqliteRunEventStore implements RunEventStore {
         now,
         counter,
         persistedMax,
+        agentId,
+        agentName,
       });
       assigned.push(result.event);
       counter = result.counter;
@@ -149,12 +153,15 @@ export class SqliteRunEventStore implements RunEventStore {
 
   tail(runId: string, fromSeq: number): Promise<SessionEvent[]> {
     const rows = this.db
-      .select()
+      .select({ event: runEventsTable, agentId: runsTable.agentId, agentName: runsTable.agentName })
       .from(runEventsTable)
+      .leftJoin(runsTable, eq(runsTable.runId, runEventsTable.runId))
       .where(and(eq(runEventsTable.runId, runId), gt(runEventsTable.seq, fromSeq)))
       .orderBy(runEventsTable.seq)
       .all();
-    return Promise.resolve(rows.map(rowToEvent));
+    return Promise.resolve(
+      rows.map((row) => rowToEvent(row.event, { id: row.agentId, name: row.agentName })),
+    );
   }
 
   latestSeq(runId: string): Promise<number> {
@@ -164,12 +171,15 @@ export class SqliteRunEventStore implements RunEventStore {
 
   listByThread(threadId: string): Promise<SessionEvent[]> {
     const rows = this.db
-      .select()
+      .select({ event: runEventsTable, agentId: runsTable.agentId, agentName: runsTable.agentName })
       .from(runEventsTable)
+      .leftJoin(runsTable, eq(runsTable.runId, runEventsTable.runId))
       .where(eq(runEventsTable.threadId, threadId))
       .orderBy(runEventsTable.threadSeq)
       .all();
-    return Promise.resolve(rows.map(rowToEvent));
+    return Promise.resolve(
+      rows.map((row) => rowToEvent(row.event, { id: row.agentId, name: row.agentName })),
+    );
   }
 
   hasRun(runId: string): Promise<boolean> {
@@ -249,6 +259,8 @@ interface AppendOneInput {
   now: number;
   counter: number;
   persistedMax: number;
+  agentId?: string;
+  agentName?: string;
 }
 
 interface AppendOneResult {
@@ -263,13 +275,16 @@ function findByClientEventId(
   clientEventId: string,
 ): SessionEvent | null {
   const existing = tx
-    .select()
+    .select({ event: runEventsTable, agentId: runsTable.agentId, agentName: runsTable.agentName })
     .from(runEventsTable)
+    .leftJoin(runsTable, eq(runsTable.runId, runEventsTable.runId))
     .where(
       and(eq(runEventsTable.threadId, threadId), eq(runEventsTable.clientEventId, clientEventId)),
     )
     .get();
-  return existing ? rowToEvent(existing) : null;
+  return existing
+    ? rowToEvent(existing.event, { id: existing.agentId, name: existing.agentName })
+    : null;
 }
 
 function appendOneEvent(tx: OrgSqliteDb, input: AppendOneInput): AppendOneResult {
@@ -290,8 +305,13 @@ function appendOneEvent(tx: OrgSqliteDb, input: AppendOneInput): AppendOneResult
   const persistedMax = seq > input.persistedMax ? seq : input.persistedMax;
   const threadSeq = nextThreadSeq(tx, input.threadId);
   const conversational = isConversationalType(input.pending.type);
+  const agent = {
+    ...(input.agentId ? { agentId: input.agentId } : {}),
+    ...(input.agentName ? { agentName: input.agentName } : {}),
+  };
   const full = {
     ...input.pending,
+    ...agent,
     seq,
     runId: input.runId,
     threadSeq,
@@ -305,7 +325,7 @@ function appendOneEvent(tx: OrgSqliteDb, input: AppendOneInput): AppendOneResult
       seq,
       type: input.pending.type,
       timestamp: input.now,
-      metadata: JSON.stringify({ ...input.pending }),
+      metadata: JSON.stringify({ ...input.pending, ...agent }),
       clientEventId: clientEventId ?? null,
       conversational: conversational ? 1 : 0,
     })

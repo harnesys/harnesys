@@ -1,6 +1,7 @@
 import type { NodeViewProps } from '@tiptap/core';
 import { NodeViewWrapper } from '@tiptap/react';
 import {
+  AtSignIcon,
   CalendarClockIcon,
   HardDriveIcon,
   type LucideIcon,
@@ -19,7 +20,8 @@ export function EntityChipView(props: NodeViewProps) {
   if (!isEntityKind(kind) || !isValidEntityRef(kind, ref)) {
     return null;
   }
-  const title = href && kind !== 'skill' ? `${ref} → ${href}` : ref;
+  const title = entityChipTitle(kind, ref, href);
+  const label = entityChipLabel(kind, ref);
   return (
     <NodeViewWrapper
       as="span"
@@ -27,9 +29,23 @@ export function EntityChipView(props: NodeViewProps) {
       title={title}
     >
       <EntityChipIcon kind={kind} ref={ref} />
-      <span className="truncate">{ref}</span>
+      <span className="truncate">{label}</span>
     </NodeViewWrapper>
   );
+}
+
+function entityChipTitle(kind: EntityKind, ref: string, href: string): string {
+  if (kind === 'mention') {
+    return `@${ref}`;
+  }
+  if (href && kind !== 'skill') {
+    return `${ref} → ${href}`;
+  }
+  return ref;
+}
+
+function entityChipLabel(kind: EntityKind, ref: string): string {
+  return kind === 'mention' ? `@${ref}` : ref;
 }
 
 function EntityChipIcon({ kind, ref }: { kind: EntityKind; ref: string }) {
@@ -47,4 +63,5 @@ const ENTITY_ICONS: Record<Exclude<EntityKind, 'file'>, LucideIcon> = {
   board: SquareKanbanIcon,
   schedule: CalendarClockIcon,
   webhook: WebhookIcon,
+  mention: AtSignIcon,
 };

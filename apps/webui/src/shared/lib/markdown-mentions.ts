@@ -45,6 +45,12 @@ function markLine(line: string): string {
 function markSegment(segment: string): string {
   return segment.replace(
     MENTION_PATTERN,
-    (_match, prefix: string, slug: string) => `${prefix}[@${slug}](${MENTION_HREF_PREFIX}${slug})`,
+    (match, prefix: string, slug: string, offset: number, whole: string) => {
+      const suffix = whole.slice(offset + match.length);
+      if (suffix.startsWith('](mention:')) {
+        return match;
+      }
+      return `${prefix}[@${slug}](${MENTION_HREF_PREFIX}${slug})`;
+    },
   );
 }

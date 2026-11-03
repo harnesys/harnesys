@@ -14,13 +14,18 @@ export interface RemoveThreadEventResult {
   runDeleted: boolean;
 }
 
-export function rowToEvent(row: RunEventRow): SessionEvent {
+export function rowToEvent(
+  row: RunEventRow,
+  agent?: { id?: string | null; name?: string | null },
+): SessionEvent {
   const meta = row.metadata ? (JSON.parse(row.metadata) as Record<string, unknown>) : {};
   return {
     ...(meta as object),
     type: row.type,
     ...(row.seq === null ? {} : { seq: row.seq }),
     ...(row.runId === null ? {} : { runId: row.runId }),
+    ...(agent?.id ? { agentId: agent.id } : {}),
+    ...(agent?.name ? { agentName: agent.name } : {}),
     threadSeq: row.threadSeq,
     conversational: row.conversational === 1,
   } as SessionEvent;

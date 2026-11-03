@@ -1,4 +1,4 @@
-import { Extension } from '@tiptap/core';
+import { Extension, InputRule } from '@tiptap/core';
 import { PluginKey } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
 import { ReactRenderer } from '@tiptap/react';
@@ -9,6 +9,9 @@ import {
   type SuggestionProps,
 } from '@tiptap/suggestion';
 import { forwardRef, useCallback, useImperativeHandle, useState } from 'react';
+import { AgentAvatar } from '@/entities/agent';
+import { UserAvatar } from '@/shared/ui/user-avatar';
+import { INLINE_ENTITY_TYPE } from '../model/inline-entity-node';
 import type { MentionOption } from '../model/mention-source';
 
 export {
@@ -29,6 +32,42 @@ export interface MentionSuggestionOptions {
   getItems(query: string): MentionOption[];
 }
 
+export interface MentionInputRuleOptions {
+  isDisabled(): boolean;
+  findOption(handle: string): MentionOption | undefined;
+}
+
+const TYPED_MENTION_PATTERN = /@([\p{L}\p{N}._-]+)\s$/u;
+
+export function createMentionInputRule(options: MentionInputRuleOptions) {
+  return Extension.create({
+    name: 'composer-mention-input-rule',
+    addInputRules() {
+      return [
+        new InputRule({
+          find: TYPED_MENTION_PATTERN,
+          handler: ({ state, range, match }) => {
+            if (options.isDisabled()) {
+              return;
+            }
+            const handle = match[1];
+            if (!handle) {
+              return;
+            }
+            const option = options.findOption(handle);
+            const nodeType = state.schema.nodes[INLINE_ENTITY_TYPE];
+            if (!option || !nodeType) {
+              return;
+            }
+            const node = nodeType.create({ kind: 'mention', ref: option.handle, href: option.id });
+            state.tr.replaceWith(range.from, range.to, [node, state.schema.text(' ')]);
+          },
+        }),
+      ];
+    },
+  });
+}
+
 export function createMentionSuggestion(options: MentionSuggestionOptions) {
   return Extension.create({
     name: 'composer-mention-suggestion',
@@ -46,7 +85,18 @@ export function createMentionSuggestion(options: MentionSuggestionOptions) {
           shouldShow: ({ query }) => !options.isDisabled() && options.getItems(query).length > 0,
           items: ({ query }) => options.getItems(query),
           command: ({ editor, range, props }) => {
-            editor.chain().focus().deleteRange(range).insertContent(`@${props.handle} `).run();
+            editor
+              .chain()
+              .focus()
+              .deleteRange(range)
+              .insertContent([
+                {
+                  type: INLINE_ENTITY_TYPE,
+                  attrs: { kind: 'mention', ref: props.handle, href: props.id },
+                },
+                { type: 'text', text: ' ' },
+              ])
+              .run();
           },
           render: () => createMentionMenuRenderer(),
         }),
@@ -124,13 +174,14 @@ export const MentionSuggestionMenu = forwardRef<
             >
               <button
                 type="button"
-                className={`flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-sm ${isActive ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/60'}`}
+                className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm ${isActive ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/60'}`}
                 onMouseEnter={() => setActive(index)}
                 onClick={() => onSelect(option)}
               >
+                <MentionAvatar option={option} />
                 <span className="truncate">{option.label}</span>
                 <span className="ml-auto shrink-0 font-mono text-[10px] text-muted-foreground">
-                  @{option.handle}
+                  {option.kind === 'agent' ? 'agent' : 'user'}
                 </span>
               </button>
             </li>
@@ -140,6 +191,15 @@ export const MentionSuggestionMenu = forwardRef<
     </div>
   );
 });
+
+function MentionAvatar({ option }: { option: MentionOption }) {
+  if (option.kind === 'agent') {
+    return (
+      <AgentAvatar initials={option.initials} color={option.color} title={option.label} size="xs" />
+    );
+  }
+  return <UserAvatar name={option.label} seed={option.id} title={option.label} size="xs" />;
+}
 
 interface MenuKeydownState {
   items: MentionOption[];

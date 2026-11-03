@@ -2,6 +2,7 @@ import { DEFAULT_MODE_ID } from '@harnesys/studio-shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Agent } from '@/entities/agent';
+import { useAgentStore } from '@/entities/agent';
 import { useScheduleStore } from '@/entities/schedule';
 import { useSessionStore } from '@/entities/session';
 import type { Thread } from '@/entities/thread';
@@ -105,8 +106,14 @@ export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }
   const fileOptions = useComposerFileOptions(thread?.id ?? null, pendingNames);
   const canSend = hasText || pending.length > 0;
   const isGroupThread = thread?.kind === 'group';
-  const mentionOptions = threadMentionOptions(thread);
-  const placeholder = composerPlaceholder({ hitl, streaming, agentName: agent?.name ?? null });
+  const agents = useAgentStore((state) => state.items);
+  const mentionOptions = threadMentionOptions(thread, agents);
+  const placeholder = composerPlaceholder({
+    hitl,
+    streaming,
+    agentName: agent?.name ?? null,
+    isGroup: Boolean(isGroupThread),
+  });
   const worktreeBinding = useThreadWorktreeStore((state) =>
     thread ? state.byThread[thread.id] : undefined,
   );
@@ -335,9 +342,15 @@ interface ComposerPlaceholderArgs {
   hitl: PendingHitl | null;
   streaming: boolean;
   agentName: string | null;
+  isGroup: boolean;
 }
 
-function composerPlaceholder({ hitl, streaming, agentName }: ComposerPlaceholderArgs): string {
+function composerPlaceholder({
+  hitl,
+  streaming,
+  agentName,
+  isGroup,
+}: ComposerPlaceholderArgs): string {
   if (hitl) {
     return hitl.source === 'ask_user'
       ? 'Answer the prompt above…'
@@ -345,6 +358,9 @@ function composerPlaceholder({ hitl, streaming, agentName }: ComposerPlaceholder
   }
   if (streaming) {
     return 'Agent is running — your message will be queued…';
+  }
+  if (isGroup) {
+    return 'Message the group or @mention a member…';
   }
   return agentName ? `Message ${agentName}…` : 'Select an agent to start a thread';
 }
