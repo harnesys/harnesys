@@ -1,9 +1,9 @@
-import type { Thread } from '@/entities/thread';
 import { UsersIcon } from 'lucide-react';
+import type { Thread } from '@/entities/thread';
+import { cn } from '@/shared/lib/utils';
 import { AddThreadMemberMenu } from './add-thread-member-menu';
 import { ThreadGroupSettings } from './thread-group-settings';
 import { ThreadMembersPopover } from './thread-member-avatars';
-import { cn } from '@/shared/lib/utils';
 
 function memberSummary(agents: number, people: number): string {
   const parts: string[] = [];
@@ -25,9 +25,11 @@ export function ThreadMembersPanel({ thread }: { thread: Thread }) {
       className="flex shrink-0 items-center gap-3 border-border/40 border-b px-3 py-2"
       data-testid="thread-members-panel"
     >
-      <div className="min-w-0 flex-1 flex items-center">
+      <div className="flex min-w-0 flex-1 items-center">
         <div
-          className={cn('mr-2 flex size-7 shrink-0 items-center justify-center rounded-md bg-muted-foreground/10 text-muted-foreground')}
+          className={cn(
+            'mr-2 flex size-7 shrink-0 items-center justify-center rounded-md bg-muted-foreground/10 text-muted-foreground',
+          )}
         >
           <UsersIcon className="size-4" />
         </div>

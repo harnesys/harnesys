@@ -1,18 +1,18 @@
 import { Settings2Icon, Trash2Icon } from 'lucide-react';
 import { useId, useState } from 'react';
 import type { Thread } from '@/entities/thread';
+import { useIdeStore } from '@/features/ide';
+import { closeThread, confirmDeleteThread } from '@/features/switch-thread';
 import { updateThreadPolicy } from '@/shared/api';
+import { useStudioNavigation } from '@/shared/config/navigation';
 import { Button } from '@/shared/ui/button';
 import { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from '@/shared/ui/field';
 import { Input } from '@/shared/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Switch } from '@/shared/ui/switch';
-import { mutateThread } from '../model/thread-members-mutation';
-import { useStudioNavigation } from '@/shared/config/navigation';
-import { closeThread, confirmDeleteThread } from '@/features/switch-thread';
-import { useIdeStore } from '@/features/ide';
 import { toast } from '@/shared/ui/toast';
+import { mutateThread } from '../model/thread-members-mutation';
 
 const NONE = '__none__';
 
@@ -140,7 +140,7 @@ export function ThreadGroupSettings({ thread }: { thread: Thread }) {
           onClick={removeThread}
           className="w-full"
         >
-          <Trash2Icon className="size-3"/>
+          <Trash2Icon className="size-3" />
           Delete Group
         </Button>
       </PopoverContent>
