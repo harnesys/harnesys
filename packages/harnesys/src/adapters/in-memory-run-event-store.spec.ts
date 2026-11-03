@@ -37,7 +37,7 @@ describe('InMemoryRunEventStore.truncateThreadFrom', () => {
       { type: 'text-delta', text: 'answer two' },
       { type: 'run.failed', message: 'boom' },
     ]);
-    const result = await store.truncateThreadFrom('', 'run-2', 1);
+    const result = await store.truncateThreadFrom('', 4);
     expect(result.cutoff.type).toBe('user');
     expect(result.removedEvents).toBe(3);
     expect(result.remainingUserCount).toBe(1);
@@ -49,7 +49,7 @@ describe('InMemoryRunEventStore.truncateThreadFrom', () => {
   test('rejects unknown events', async () => {
     const store = new InMemoryRunEventStore();
     store.appendLocked('run-1', [{ type: 'user', text: 'hi' }]);
-    await expect(store.truncateThreadFrom('', 'run-1', 99)).rejects.toThrow();
+    await expect(store.truncateThreadFrom('', 99)).rejects.toThrow();
   });
 });
 
@@ -60,7 +60,7 @@ describe('InMemoryRunEventStore.removeEvent', () => {
       { type: 'user', text: 'hi' },
       { type: 'run.failed', message: 'boom' },
     ]);
-    const removed = await store.removeEvent('', 'run-1', 2);
+    const removed = await store.removeEvent('', 2);
     expect(removed?.type).toBe('run.failed');
     const tail = await store.tail('run-1', 0);
     expect(tail.map((event) => event.type)).toEqual(['user']);

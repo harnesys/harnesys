@@ -65,6 +65,21 @@ function enqueueSingle(
   tx: OrgSqliteDb,
   input: EnqueueThreadMessageInput,
 ): EnqueueThreadMessageResult {
+  const duplicate =
+    input.clientEventId &&
+    tx
+      .select({ itemId: threadMessageQueueTable.itemId })
+      .from(threadMessageQueueTable)
+      .where(
+        and(
+          eq(threadMessageQueueTable.threadId, input.threadId),
+          eq(threadMessageQueueTable.clientEventId, input.clientEventId),
+        ),
+      )
+      .get();
+  if (duplicate) {
+    return { threadSeq: null, itemIds: [], duplicate: true };
+  }
   const inserted = tx
     .insert(threadMessageQueueTable)
     .values({

@@ -33,9 +33,9 @@ function seedThread(sqlite: Database, threadId: string, orgId: string): void {
 
 function seedEvent(sqlite: Database, threadId: string, seq: number, text: string): void {
   sqlite.run(
-    `INSERT INTO run_events (run_id, seq, thread_id, type, timestamp, metadata)
-     VALUES (?, ?, ?, 'message', ?, ?)`,
-    [`${threadId}-run`, seq, threadId, seq, JSON.stringify({ type: 'message', text })],
+    `INSERT INTO run_events (run_id, seq, thread_id, thread_seq, type, timestamp, metadata)
+     VALUES (?, ?, ?, ?, 'message', ?, ?)`,
+    [`${threadId}-run`, seq, threadId, seq, seq, JSON.stringify({ type: 'message', text })],
   );
 }
 
