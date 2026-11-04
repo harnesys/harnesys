@@ -64,7 +64,9 @@ export function FailedMessageView({
         </>
       }
     >
-      <div className="wrap-break-word font-mono text-destructive text-xs leading-relaxed">{text}</div>
+      <div className="wrap-break-word font-mono text-destructive text-xs leading-relaxed">
+        {text}
+      </div>
     </FeedNotice>
   );
 }

@@ -68,7 +68,8 @@ export class RespondRunUseCase {
 
   async execute(request: RespondRunRequest): Promise<RespondRunResponse> {
     const asserted = await this.assertRun(request);
-    this.persistApprovedRule(asserted.rec.agentId ?? '', request);
+    const agentId = requireRunAgent(asserted.rec);
+    this.persistApprovedRule(agentId, request);
     if (
       this.routeRemote(request.orgId, request.runId, asserted.rec, {
         askId: request.body.askId,
@@ -85,7 +86,7 @@ export class RespondRunUseCase {
       );
       return { ok: true };
     }
-    const session = await this.executor.sessionFor(request.orgId, request.threadId);
+    const session = await this.executor.sessionFor(request.orgId, request.threadId, agentId);
     try {
       await session.respond(request.runId, request.body.askId, request.body.payload, {
         clientEventId: request.body.clientEventId,
@@ -104,6 +105,7 @@ export class RespondRunUseCase {
 
   async reject(request: RejectRunRequest): Promise<RespondRunResponse> {
     const asserted = await this.assertRun(request);
+    const agentId = requireRunAgent(asserted.rec);
     if (
       this.routeRemote(request.orgId, request.runId, asserted.rec, {
         askId: request.body.askId,
@@ -115,7 +117,7 @@ export class RespondRunUseCase {
       this.closeApprovalFromReject(request.orgId, request.runId, request.body.askId);
       return { ok: true };
     }
-    const session = await this.executor.sessionFor(request.orgId, request.threadId);
+    const session = await this.executor.sessionFor(request.orgId, request.threadId, agentId);
     try {
       await session.reject(request.runId, request.body.askId, {
         note: request.body.note,
@@ -264,6 +266,13 @@ export class RespondRunUseCase {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function requireRunAgent(rec: RunRecord): string {
+  if (!rec.agentId) {
+    throw new RunConflictException('run has no agent', { runId: rec.runId });
+  }
+  return rec.agentId;
 }
 
 const DECISION_SCOPES: ReadonlySet<string> = new Set(['once', 'run', 'always']);

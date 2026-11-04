@@ -30,16 +30,30 @@ export class RemoveThreadAgentUseCase {
     if (!thread) {
       throw new ThreadNotFoundException(request.threadId);
     }
-    this.threadAgents.remove(request.orgId, thread.id, request.agentId);
-    const remaining = this.threadAgents.listByThread(request.orgId, thread.id);
+    if (thread.kind === 'chat') {
+      throw new ThreadValidationException(
+        'a chat thread has exactly one agent; delete the thread instead',
+      );
+    }
+    const members = this.threadAgents.listByThread(request.orgId, thread.id);
+    const remaining = members.filter((row) => row.agentId !== request.agentId);
+    if (remaining.length === members.length) {
+      throw new ThreadNotFoundException(`${thread.id}:${request.agentId}`);
+    }
+    if (remaining.length === 0) {
+      throw new ThreadValidationException(
+        'a thread must keep at least one agent; delete the thread instead',
+      );
+    }
     if (thread.autoReplyAgentId === request.agentId) {
-      this.threads.patch(request.orgId, thread.id, {
-        autoReplyAgentId: remaining[0]?.agentId ?? null,
-      });
+      const nextAutoReply = remaining[0];
+      if (nextAutoReply) {
+        this.threads.patch(request.orgId, thread.id, {
+          autoReplyAgentId: nextAutoReply.agentId,
+        });
+      }
     }
-    if (thread.kind === 'chat' && remaining.length !== 1) {
-      throw new ThreadValidationException('a chat thread has exactly one agent');
-    }
+    this.threadAgents.remove(request.orgId, thread.id, request.agentId);
     const deps = {
       threadAgents: this.threadAgents,
       participants: this.participants,

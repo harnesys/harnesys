@@ -55,6 +55,7 @@ export function makeRunRecord(): RunRecord {
   return {
     runId: RUN_ID,
     threadId: THREAD_ID,
+    agentId: 'agent-1',
     status: 'needs_input' as const,
     leaseEpoch: 0,
     attempt: 0,

@@ -1,6 +1,7 @@
 import type { AcceptedRunResponse } from '@harnesys/contracts';
 import type { RunLifecycleStore, SessionHandle, SteerMessage } from 'harnesys';
 import type { ThreadQueueDrainResult } from '../../domain/thread/local-executor.port.ts';
+import { ThreadValidationException } from '../../domain/thread/thread.error.ts';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
 import {
   clearThreadMessageDelivered,
@@ -22,7 +23,7 @@ export interface ThreadQueueDrainerDeps {
 export interface ThreadQueueRuntimeDeps {
   db: OrgSqliteDb;
   lifecycle: RunLifecycleStore;
-  sessionFor: (threadId: string, agentId?: string) => Promise<SessionHandle>;
+  sessionFor: (threadId: string, agentId: string) => Promise<SessionHandle>;
   requestedSkills: Map<string, string[]>;
   worktreeBindings: Map<string, ThreadBinding>;
   kick: () => void;
@@ -85,15 +86,20 @@ async function deliverQueuedThreadMessage(
   deps: ThreadQueueDrainerDeps,
   item: QueuedThreadMessage,
 ): Promise<string | null> {
+  const agentId = item.targetAgentId;
+  if (agentId === null) {
+    clearThreadMessageDelivered(deps.db, item.itemId);
+    throw new ThreadValidationException(`queued message has no target agent: ${item.itemId}`);
+  }
   markThreadMessageDelivered(deps.db, item.itemId, new Date().toISOString());
   try {
     const accepted = await deps.send({
       threadId: item.threadId,
+      agentId,
       text: item.text,
       ...(item.attachments ? { attachments: item.attachments } : {}),
       ...(item.origin ? { origin: item.origin } : {}),
       ...(item.clientEventId ? { clientEventId: item.clientEventId } : {}),
-      ...(item.targetAgentId ? { agentId: item.targetAgentId } : {}),
       ...(item.threadSeq !== null ? { triggerThreadSeq: item.threadSeq } : {}),
     });
     return accepted.runId;

@@ -82,7 +82,11 @@ function setup(): TestHarness {
 }
 
 function enqueue(harness: TestHarness, text: string, offsetMs = 0): string {
-  const result = enqueueThreadMessage(harness.db, { threadId: 'thread-1', text });
+  const result = enqueueThreadMessage(harness.db, {
+    threadId: 'thread-1',
+    text,
+    targetAgentIds: ['agent-1'],
+  });
   const id = result.itemIds[0] ?? '';
   if (offsetMs > 0 && id !== '') {
     harness.sqlite
@@ -100,6 +104,7 @@ describe('thread message queue', () => {
     expect(result).toEqual({ status: 'delivered', runId: 'run-1' });
     expect(h.sends).toHaveLength(1);
     expect(h.sends[0]?.text).toBe('hello');
+    expect(h.sends[0]?.agentId).toBe('agent-1');
     const items = listQueuedThreadMessages(h.db, 'thread-1');
     expect(items).toHaveLength(0);
     expect(await h.drain('thread-1')).toEqual({ status: 'empty' });

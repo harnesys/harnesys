@@ -45,18 +45,15 @@ export function RunTurn({
           onDelete={
             deletable && threadId
               ? () => {
-                  const target = deletable;
-                  void deleteErrorEvent(
-                    threadId,
-                    target.runId,
-                    target.seq,
-                    run.error ?? undefined,
-                  ).catch((error) => {
-                    toast.add({
-                      title: 'Could not delete',
-                      description: error instanceof Error ? error.message : 'Delete failed',
-                    });
-                  });
+                  const threadSeq = deletable;
+                  void deleteErrorEvent(threadId, threadSeq, run.error ?? undefined).catch(
+                    (error) => {
+                      toast.add({
+                        title: 'Could not delete',
+                        description: error instanceof Error ? error.message : 'Delete failed',
+                      });
+                    },
+                  );
                 }
               : undefined
           }
@@ -66,17 +63,15 @@ export function RunTurn({
   );
 }
 
-function errorEventOf(run: FeedRun): { runId: string; seq: number } | undefined {
+function errorEventOf(run: FeedRun): number | undefined {
   for (let index = run.events.length - 1; index >= 0; index -= 1) {
     const event = run.events[index];
     if (!event || (event.type !== 'error' && event.type !== 'run.failed')) {
       continue;
     }
-    const eventRunId = event.runId ?? run.runId;
-    if (typeof eventRunId !== 'string' || typeof event.seq !== 'number') {
-      continue;
+    if (typeof event.threadSeq === 'number') {
+      return event.threadSeq;
     }
-    return { runId: eventRunId, seq: event.seq };
   }
   return undefined;
 }

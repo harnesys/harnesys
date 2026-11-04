@@ -1,12 +1,16 @@
 import { HttpException, Injectable } from '@harnesys/brix';
-import { eq } from 'drizzle-orm';
 import type { Attachment } from 'harnesys';
 import type { ThreadQueueEnqueueBody } from '../../api/rest/thread-message-queue.schema.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
-import { ThreadNotFoundException } from '../../domain/thread/thread.error.ts';
+import {
+  ThreadNotFoundException,
+  ThreadValidationException,
+} from '../../domain/thread/thread.error.ts';
+import type { ThreadRecord } from '../../domain/thread/thread.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
+import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { type OrgSqliteDb, withOrgSqlite } from '../../infra/org-sqlite/org-sqlite-session.ts';
-import { threadsTable } from '../../infra/org-sqlite/schema/index.ts';
 import type { QueuedThreadMessage } from '../../infra/org-sqlite/thread-message-queue.store.ts';
 import {
   deleteQueuedThreadMessage,
@@ -36,10 +40,16 @@ export class ThreadMessageQueueUseCase {
   constructor(
     private readonly layout: HostFsLayoutPort,
     private readonly executor: LocalExecutorPort,
+    private readonly threads: ThreadRepositoryPort,
+    private readonly threadAgents: ThreadAgentRepositoryPort,
   ) {}
 
   async enqueue(request: ThreadMessageEnqueueRequest): Promise<ThreadMessageQueueResponse> {
-    this.assertThread(request.orgId, request.threadId);
+    const thread = this.assertThread(request.orgId, request.threadId);
+    const agentId = this.threadAgents.listByThread(request.orgId, thread.id)[0]?.agentId;
+    if (!agentId) {
+      throw new ThreadValidationException('thread has no agent');
+    }
     const uploaded = (request.body.attachments ?? []) as Attachment[];
     withOrgSqlite(this.layout, request.orgId, (db) =>
       db.transaction(
@@ -47,6 +57,7 @@ export class ThreadMessageQueueUseCase {
           enqueueThreadMessage(tx as OrgSqliteDb, {
             threadId: request.threadId,
             text: request.body.text,
+            targetAgentIds: [agentId],
             ...(uploaded.length > 0 ? { attachments: uploaded } : {}),
             ...(request.body.origin ? { origin: request.body.origin } : {}),
             ...(request.body.clientEventId ? { clientEventId: request.body.clientEventId } : {}),
@@ -96,16 +107,14 @@ export class ThreadMessageQueueUseCase {
     }
   }
 
-  private assertThread(orgId: string, threadId: string): void {
-    const found = withOrgSqlite(this.layout, orgId, (db) =>
-      db
-        .select({ id: threadsTable.id })
-        .from(threadsTable)
-        .where(eq(threadsTable.id, threadId))
-        .get(),
-    );
-    if (!found) {
+  private assertThread(orgId: string, threadId: string): ThreadRecord {
+    const thread = this.threads.findById(orgId, threadId);
+    if (!thread) {
       throw new ThreadNotFoundException(threadId);
     }
+    if (thread.kind === 'group') {
+      throw new ThreadValidationException('steering is not available in group threads');
+    }
+    return thread;
   }
 }

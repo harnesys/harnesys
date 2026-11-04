@@ -1,5 +1,50 @@
-import type { SessionHandle } from 'harnesys';
+import type { RunLifecycleStore, RunRecord, SessionHandle } from 'harnesys';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
+
+const RUN_RECORD: RunRecord = {
+  runId: 'run-1',
+  threadId: 'thread-1',
+  agentId: 'agent-1',
+  status: 'needs_input',
+  attempt: 1,
+  leaseEpoch: 1,
+  lastSeq: 0,
+  createdAt: new Date(0).toISOString(),
+  updatedAt: new Date(0).toISOString(),
+};
+
+class StubLifecycle implements RunLifecycleStore {
+  async get(runId: string): Promise<RunRecord | null> {
+    return runId === RUN_RECORD.runId ? RUN_RECORD : null;
+  }
+  create(): Promise<RunRecord> {
+    return Promise.resolve(RUN_RECORD);
+  }
+  activeByThread(): Promise<RunRecord | null> {
+    return Promise.resolve(null);
+  }
+  childrenByParent(): Promise<RunRecord[]> {
+    return Promise.resolve([]);
+  }
+  claim(): Promise<RunRecord | null> {
+    return Promise.resolve(null);
+  }
+  transition(): Promise<RunRecord> {
+    return Promise.resolve(RUN_RECORD);
+  }
+  renewLease(): Promise<boolean> {
+    return Promise.resolve(false);
+  }
+  listClaimable(): Promise<RunRecord[]> {
+    return Promise.resolve([]);
+  }
+  listDueTimers(): Promise<RunRecord[]> {
+    return Promise.resolve([]);
+  }
+  listStaleRunning(): Promise<RunRecord[]> {
+    return Promise.resolve([]);
+  }
+}
 
 export class StubLocalExecutor extends LocalExecutorPort {
   lifecycle(): Promise<never> {
@@ -76,8 +121,8 @@ export class RecordingExecutor extends LocalExecutorPort {
   readonly rejectedNotes: Array<string | undefined> = [];
   readonly responded: string[] = [];
 
-  lifecycle(): Promise<never> {
-    return Promise.reject(new Error('no runtime'));
+  lifecycle(): Promise<RunLifecycleStore> {
+    return Promise.resolve(new StubLifecycle());
   }
 
   events(): never {

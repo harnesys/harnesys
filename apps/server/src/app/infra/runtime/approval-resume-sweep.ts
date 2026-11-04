@@ -1,5 +1,5 @@
 import type { Logger } from '@harnesys/brix';
-import type { SessionHandle } from 'harnesys';
+import type { RunLifecycleStore, SessionHandle } from 'harnesys';
 import { resumePayloadOf } from '../../application/approvals/decide-approval.use-case.ts';
 import type { ApprovalRecord, ApprovalResumePlan } from '../../domain/approval/approval.ts';
 import { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
@@ -26,7 +26,8 @@ export interface ApprovalResumeSweepDeps {
   approvals: ApprovalStorePort;
   claims: EventClaimPort;
   commands: NodeCommandQueuePort;
-  sessionFor: (threadId: string) => Promise<SessionHandle>;
+  lifecycle: Pick<RunLifecycleStore, 'get'>;
+  sessionFor: (threadId: string, agentId: string) => Promise<SessionHandle>;
   approvalEvents?: ApprovalEventsPort;
   logger?: Logger;
 }
@@ -147,7 +148,15 @@ async function respondLocally(
     return;
   }
   try {
-    const session = await deps.sessionFor(approval.threadId);
+    const run = await deps.lifecycle.get(approval.runId);
+    if (!run?.agentId) {
+      deps.logger?.warn(
+        { orgId: deps.orgId, runId: approval.runId, approvalId: approval.id },
+        'approval resume sweep: run has no agent, decision stays decided',
+      );
+      return;
+    }
+    const session = await deps.sessionFor(approval.threadId, run.agentId);
     const plan = planOf(approval);
     if (plan.decision === 'deny') {
       await session.reject(approval.runId, approval.interruptId, { note: approval.context.note });

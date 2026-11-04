@@ -329,14 +329,10 @@ export function deleteThreadRecord(id: string): Promise<void> {
   });
 }
 
-export function deleteThreadUserEvent(
-  threadId: string,
-  runId: string,
-  seq: number,
-): Promise<ThreadRecord> {
+export function deleteThreadUserEvent(threadId: string, threadSeq: number): Promise<ThreadRecord> {
   const orgId = requireOrgId();
   return apiJson<ThreadPublic>(
-    `${threadsBase(orgId)}/${encodeURIComponent(threadId)}/runs/${encodeURIComponent(runId)}/events/${encodeURIComponent(String(seq))}`,
+    `${threadsBase(orgId)}/${encodeURIComponent(threadId)}/events/${encodeURIComponent(String(threadSeq))}`,
     { method: 'DELETE' },
   ).then(toStudioRecord);
 }

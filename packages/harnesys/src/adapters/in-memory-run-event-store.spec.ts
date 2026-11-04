@@ -1,29 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { InMemoryRunEventStore } from './in-memory-run-event-store.ts';
 
-describe('InMemoryRunEventStore.removeUserEvent', () => {
-  test('removes only the user event with matching seq', async () => {
-    const store = new InMemoryRunEventStore();
-    store.appendLocked('run-1', [
-      { type: 'user', text: 'hello' },
-      { type: 'text-delta', text: 'hi' },
-    ]);
-    const removed = await store.removeUserEvent('run-1', 1);
-    expect(removed).toBe(true);
-    const remaining = await store.tail('run-1', 0);
-    expect(remaining.map((event) => event.type)).toEqual(['text-delta']);
-    expect(await store.listByThread('')).toHaveLength(1);
-  });
-
-  test('refuses non-user events and unknown runs', async () => {
-    const store = new InMemoryRunEventStore();
-    store.appendLocked('run-1', [{ type: 'text-delta', text: 'hi' }]);
-    expect(await store.removeUserEvent('run-1', 1)).toBe(false);
-    expect(await store.removeUserEvent('missing', 1)).toBe(false);
-    expect(await store.tail('run-1', 0)).toHaveLength(1);
-  });
-});
-
 describe('InMemoryRunEventStore.truncateThreadFrom', () => {
   test('removes cutoff user event and every later thread event', async () => {
     const store = new InMemoryRunEventStore();

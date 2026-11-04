@@ -14,7 +14,7 @@ export interface ThreadHistoryDeps {
   sessions: Map<string, ThreadSessionRef>;
   lifecycle: RunLifecycleStore;
   events: RunEventStore;
-  sessionFor: (threadId: string, agentId?: string) => Promise<SessionHandle>;
+  sessionFor: (threadId: string, agentId: string) => Promise<SessionHandle>;
 }
 
 export async function truncateThreadHistory(
@@ -46,11 +46,11 @@ export async function cancelActiveForTruncate(
   threadId: string,
 ): Promise<void> {
   const active = await deps.lifecycle.activeByThread(threadId);
-  if (!active) {
+  if (!active?.agentId) {
     return;
   }
   try {
-    const handle = await deps.sessionFor(threadId);
+    const handle = await deps.sessionFor(threadId, active.agentId);
     await handle.cancel(active.runId);
   } catch {
     // best-effort: truncate proceeds even when cancel races terminal state

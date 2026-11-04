@@ -10,26 +10,24 @@ interface EditBaseInput {
 }
 
 export interface ReloadUserMessageInput extends EditBaseInput {
-  runId: string;
-  seq: number;
+  threadSeq: number;
 }
 
 export async function reloadUserMessage(input: ReloadUserMessageInput): Promise<void> {
-  const { threadId, runId, seq, text, attachments, skills } = input;
-  await deleteUserMessage(threadId, runId, seq);
+  const { threadId, threadSeq, text, attachments, skills } = input;
+  await deleteUserMessage(threadId, threadSeq);
   await sendMessage({ threadId, content: text, attachments, skills });
 }
 
 export interface EditUserMessageInput extends EditBaseInput {
-  runId?: string;
-  seq?: number;
+  threadSeq?: number;
   clientEventId?: string;
 }
 
 export async function editUserMessage(input: EditUserMessageInput): Promise<void> {
-  const { threadId, runId, seq, text, attachments, skills, clientEventId } = input;
-  if (runId && seq !== undefined) {
-    await deleteUserMessage(threadId, runId, seq);
+  const { threadId, threadSeq, text, attachments, skills, clientEventId } = input;
+  if (threadSeq !== undefined) {
+    await deleteUserMessage(threadId, threadSeq);
   } else if (clientEventId) {
     deleteOptimisticUserMessage(threadId, clientEventId);
   }

@@ -45,6 +45,7 @@ export async function dispatchLocalRun(input: {
   executor: LocalExecutorPort;
   request: SendThreadRunRequest;
   thread: ThreadRecord;
+  agent: AgentRecord;
   decision: Exclude<PlacementResult, { kind: 'unavailable' }>;
   runText: string | undefined;
   attachments: Attachment[];
@@ -52,7 +53,8 @@ export async function dispatchLocalRun(input: {
   worktreeBinding: WorktreeBinding | null;
   sharedFields: SharedRunFields;
 }): Promise<AcceptedRunResponse> {
-  const { executor, request, thread, decision, runText, attachments, skills, sharedFields } = input;
+  const { executor, request, thread, agent, decision, runText, attachments, skills, sharedFields } =
+    input;
   const placementExtras = input.worktreeBinding
     ? {
         worktreeId: input.worktreeBinding.worktreeId,
@@ -62,6 +64,7 @@ export async function dispatchLocalRun(input: {
   const accepted = await executor.send({
     orgId: request.orgId,
     threadId: thread.id,
+    agentId: agent.id,
     attribution: attributedRun(request.attribution, decision.nodeId),
     text: runText,
     effort: request.body.effort,

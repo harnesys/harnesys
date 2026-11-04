@@ -95,24 +95,6 @@ export class InMemoryRunEventStore implements RunEventStore {
     const stored = this.events.get(runId);
     return Promise.resolve(stored !== undefined && stored.length > 0);
   }
-  removeUserEvent(runId: string, seq: number): Promise<boolean> {
-    const stored = this.events.get(runId);
-    if (!stored) {
-      return Promise.resolve(false);
-    }
-    const index = stored.findIndex((event) => seqOf(event) === seq && event.type === 'user');
-    if (index < 0) {
-      return Promise.resolve(false);
-    }
-    stored.splice(index, 1);
-    const insertionIndex = this.insertion.findIndex(
-      (entry) => entry.event.runId === runId && seqOf(entry.event) === seq,
-    );
-    if (insertionIndex >= 0) {
-      this.insertion.splice(insertionIndex, 1);
-    }
-    return Promise.resolve(true);
-  }
   truncateThreadFrom(threadId: string, threadSeq: number): Promise<TruncateThreadResult> {
     const cutoffIndex = this.insertion.findIndex(
       (entry) => entry.threadId === threadId && threadSeqOf(entry.event) === threadSeq,

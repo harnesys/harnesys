@@ -11,7 +11,6 @@ import {
   resolveCapabilitySet,
   type ToolDefinition,
 } from 'harnesys';
-import { soleAgentIdOf } from '../../application/threads/thread.helpers.ts';
 import { composeRunSkills } from './compose-run-skills.ts';
 import { createThreadHistoryTool, THREAD_HISTORY_TOOL } from './create-thread-history-tool.ts';
 import { runInHostToolScope } from './host-tool-scope.ts';
@@ -48,16 +47,20 @@ export interface RunTargetResolverContext {
   steering: SteeringChannel;
 }
 
+export interface RunTargetSelector {
+  runId?: string;
+  agentId?: string;
+}
+
 export function createRunTargetResolver(ctx: RunTargetResolverContext) {
   return async function resolveRunTarget(
     threadId: string,
     state: InMemoryRuntimeState,
-    runId?: string,
+    selector?: RunTargetSelector,
   ) {
     const { deps, plugin } = ctx;
     const binding = ctx.worktreeBindings.get(threadId);
-    const run = runId === undefined ? null : await ctx.lifecycle.get(runId);
-    const agentId = run?.agentId ?? soleAgentIdOf(deps.threadAgents, deps.orgId, threadId);
+    const agentId = await resolveAgentId(ctx, selector);
     if (agentId === undefined) {
       return null;
     }
@@ -130,6 +133,20 @@ export function createRunTargetResolver(ctx: RunTargetResolverContext) {
     };
     return target;
   };
+}
+
+async function resolveAgentId(
+  ctx: RunTargetResolverContext,
+  selector: RunTargetSelector | undefined,
+): Promise<string | undefined> {
+  if (selector?.agentId !== undefined) {
+    return selector.agentId;
+  }
+  if (selector?.runId === undefined) {
+    return undefined;
+  }
+  const run = await ctx.lifecycle.get(selector.runId);
+  return run?.agentId;
 }
 
 function withThreadHistory(

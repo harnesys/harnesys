@@ -156,11 +156,13 @@ class StubThreads extends ThreadRepositoryPort {
   }
 }
 
-class StubExecutor extends LocalExecutorPort {
+export class StubExecutor extends LocalExecutorPort {
+  readonly sessionCalls: { threadId: string; agentId: string }[] = [];
   async lifecycle(): Promise<RunLifecycleStore> {
     return new StubLifecycle();
   }
-  async sessionFor(): Promise<SessionHandle> {
+  async sessionFor(_orgId: string, threadId: string, agentId: string): Promise<SessionHandle> {
+    this.sessionCalls.push({ threadId, agentId });
     return new StubSession();
   }
   events(): Promise<RunEventStore> {
@@ -295,10 +297,14 @@ class StubModes extends ModePresetRegistryPort {
   ensureSeeded(): void {}
 }
 
-export function buildUseCase(store: MemoryApprovalStore, events: MemoryApprovalEvents) {
+export function buildUseCase(
+  store: MemoryApprovalStore,
+  events: MemoryApprovalEvents,
+  executor: StubExecutor = new StubExecutor(),
+) {
   return new RespondRunUseCase(
     new StubThreads(),
-    new StubExecutor(),
+    executor,
     new StubClaims(),
     new StubHub(),
     new StubAgents(),

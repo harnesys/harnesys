@@ -34,7 +34,7 @@ export interface SendLocalRunInput {
   triggerKind?: RunTriggerKind;
   branch?: string;
   attribution?: RunAttribution;
-  agentId?: string;
+  agentId: string;
   triggerThreadSeq?: number;
 }
 
@@ -64,7 +64,7 @@ export type CompactThreadResult =
 export abstract class LocalExecutorPort {
   abstract lifecycle(orgId: string): Promise<RunLifecycleStore>;
   abstract events(orgId: string): Promise<RunEventStore>;
-  abstract sessionFor(orgId: string, threadId: string, agentId?: string): Promise<SessionHandle>;
+  abstract sessionFor(orgId: string, threadId: string, agentId: string): Promise<SessionHandle>;
   abstract send(input: SendLocalRunInput): Promise<AcceptedRunResponse>;
   abstract compact(orgId: string, threadId: string): Promise<CompactThreadResult>;
   abstract drainMessageQueue(orgId: string, threadId: string): Promise<ThreadQueueDrainResult>;

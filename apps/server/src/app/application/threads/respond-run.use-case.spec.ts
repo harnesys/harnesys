@@ -7,10 +7,28 @@ import {
   makeApproval,
   ORG,
   RUN_ID,
+  StubExecutor,
   THREAD_ID,
 } from './respond-run.use-case.fakes.ts';
 
 describe('RespondRunUseCase', () => {
+  test('respond resumes the session of the agent that owns the run', async () => {
+    const store = new MemoryApprovalStore();
+    const events = new MemoryApprovalEvents();
+    store.seed(makeApproval());
+    const executor = new StubExecutor();
+    const uc = buildUseCase(store, events, executor);
+
+    await uc.execute({
+      orgId: ORG,
+      threadId: THREAD_ID,
+      runId: RUN_ID,
+      body: { askId: ASK_ID, payload: { approved: true }, clientEventId: 'ev-agent' },
+    });
+
+    expect(executor.sessionCalls).toEqual([{ threadId: THREAD_ID, agentId: 'agent-1' }]);
+  });
+
   test('respond with approved:true and no rule → approval becomes approved + emit decided', async () => {
     const store = new MemoryApprovalStore();
     const events = new MemoryApprovalEvents();

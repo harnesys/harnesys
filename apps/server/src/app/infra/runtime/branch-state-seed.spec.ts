@@ -71,9 +71,6 @@ class StubEvents implements RunEventStore {
   appendForThread(): SessionEvent[] {
     throw new Error('not used');
   }
-  async removeUserEvent(): Promise<boolean> {
-    return false;
-  }
   async truncateThreadFrom(): Promise<{
     cutoff: SessionEvent;
     removedEvents: number;

@@ -2,13 +2,9 @@ import { useSessionStore } from '@/entities/session';
 import { toClientThread, useThreadStore } from '@/entities/thread';
 import { deleteThreadUserEvent } from '@/shared/api';
 
-export async function deleteUserMessage(
-  threadId: string,
-  runId: string,
-  seq: number,
-): Promise<void> {
+export async function deleteUserMessage(threadId: string, threadSeq: number): Promise<void> {
   useSessionStore.getState().abortRun(threadId);
-  const record = await deleteThreadUserEvent(threadId, runId, seq);
+  const record = await deleteThreadUserEvent(threadId, threadSeq);
   useThreadStore.getState().upsert(toClientThread(record));
   useSessionStore.getState().replaceEvents(record.id, record.events);
   dismissMatchingFailures(threadId);
@@ -16,11 +12,10 @@ export async function deleteUserMessage(
 
 export async function deleteErrorEvent(
   threadId: string,
-  runId: string,
-  seq: number,
+  threadSeq: number,
   knownText?: string,
 ): Promise<void> {
-  const record = await deleteThreadUserEvent(threadId, runId, seq);
+  const record = await deleteThreadUserEvent(threadId, threadSeq);
   useThreadStore.getState().upsert(toClientThread(record));
   useSessionStore.getState().replaceEvents(record.id, record.events);
   dismissMatchingFailures(threadId, knownText);

@@ -10,11 +10,8 @@ import {
   type RuntimeHandle,
   type SessionHandle,
 } from 'harnesys';
-import { soleAgentIdOf } from '../../application/threads/thread.helpers.ts';
-import {
-  ThreadNotFoundException,
-  ThreadValidationException,
-} from '../../domain/thread/thread.error.ts';
+import { primaryAgentIdOf } from '../../application/threads/thread.helpers.ts';
+import { ThreadNotFoundException } from '../../domain/thread/thread.error.ts';
 import { openOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 import { type ApprovalResumeSweep, createApprovalResumeSweep } from './approval-resume-sweep.ts';
 import { createBranchSeed } from './branch-state-seed.ts';
@@ -130,6 +127,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
           approvals: deps.approvals,
           claims: deps.claims,
           commands: deps.commands,
+          lifecycle: runLifecycle,
           sessionFor,
           ...(deps.approvalEvents === undefined ? {} : { approvalEvents: deps.approvalEvents }),
           ...(deps.logger === undefined ? {} : { logger: deps.logger }),
@@ -144,7 +142,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
       resolve: (threadId, runId) =>
         branchSeed
           .seededRunState(threadId, runId ?? null)
-          .then((state) => resolveRunTarget(threadId, state, runId ?? undefined)),
+          .then((state) => resolveRunTarget(threadId, state, { runId })),
     },
     onComplete: (record) =>
       void drainMessageQueue(record.threadId)
@@ -176,18 +174,14 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     targets: {
       resolve: async (threadId, runId) => {
         const state = await branchSeed.seededRunState(threadId, runId ?? null);
-        return resolveRunTarget(threadId, state, runId ?? undefined);
+        return resolveRunTarget(threadId, state, { runId });
       },
     },
     logger: CONSOLE_LOGGER,
   });
 
-  async function sessionFor(threadId: string, agentId?: string): Promise<SessionHandle> {
-    const resolvedAgentId = agentId ?? soleAgentIdOf(deps.threadAgents, deps.orgId, threadId);
-    if (resolvedAgentId === undefined) {
-      throw new ThreadValidationException('thread has no agent');
-    }
-    const key = threadSessionKey(threadId, resolvedAgentId);
+  async function sessionFor(threadId: string, agentId: string): Promise<SessionHandle> {
+    const key = threadSessionKey(threadId, agentId);
     const existing = threadSessions.get(key);
     if (existing?.handle) {
       return existing.handle;
@@ -195,14 +189,14 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     const prepared = prepareTarget(
       deps,
       threadId,
-      resolvedAgentId,
+      agentId,
       targetCache,
       worktreeBindings.get(threadId),
     );
     if (!prepared) {
       throw new ThreadNotFoundException(threadId);
     }
-    const state = await branchSeed.seededThreadState(threadId, resolvedAgentId);
+    const state = await branchSeed.seededThreadState(threadId, agentId);
     const handle = Promise.resolve(
       runtime.session(prepared.agentDef, {
         state,
@@ -252,16 +246,26 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     feed,
     sessionFor,
     send: (input) => sendThreadMessage(runControl, input),
-    compact: (threadId) =>
-      compactThread(
+    compact: (threadId) => {
+      const thread = deps.threads.findById(deps.orgId, threadId);
+      const agentId =
+        thread === undefined
+          ? undefined
+          : primaryAgentIdOf(
+              thread,
+              deps.threadAgents.listByThread(deps.orgId, threadId).map((row) => row.agentId),
+            );
+      return compactThread(
         {
           models: modelsPort,
           events: runEvents,
+          agentId,
           seededThreadState: (id) => branchSeed.seededThreadState(id),
           resolveRunTarget,
         },
         threadId,
-      ),
+      );
+    },
     drainMessageQueue,
     cancel: (runId) =>
       cancelThreadRun({ ...runControl, abortRun: (id) => engine.abort(id) }, runId),

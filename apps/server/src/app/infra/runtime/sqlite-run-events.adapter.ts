@@ -192,27 +192,6 @@ export class SqliteRunEventStore implements RunEventStore {
     return Promise.resolve(row !== undefined);
   }
 
-  removeUserEvent(runId: string, seq: number): Promise<boolean> {
-    const existing = this.db
-      .select({ threadSeq: runEventsTable.threadSeq })
-      .from(runEventsTable)
-      .where(
-        and(
-          eq(runEventsTable.runId, runId),
-          eq(runEventsTable.seq, seq),
-          eq(runEventsTable.type, 'user'),
-        ),
-      )
-      .limit(1)
-      .get();
-    if (!existing) {
-      return Promise.resolve(false);
-    }
-    return this.removeEvent(existing.threadSeq === undefined ? '' : '', existing.threadSeq).then(
-      (removed) => removed !== null,
-    );
-  }
-
   truncateThreadFrom(threadId: string, threadSeq: number): Promise<TruncateThreadResult> {
     try {
       return Promise.resolve(

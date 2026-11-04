@@ -224,7 +224,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     return (await this.ensure(orgId)).events;
   }
 
-  async sessionFor(orgId: string, threadId: string, agentId?: string): Promise<SessionHandle> {
+  async sessionFor(orgId: string, threadId: string, agentId: string): Promise<SessionHandle> {
     return (await this.ensure(orgId)).sessionFor(threadId, agentId);
   }
 
@@ -246,7 +246,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       ...(input.triggerKind ? { triggerKind: input.triggerKind } : {}),
       ...(input.branch ? { branch: input.branch } : {}),
       ...(input.attribution ? { attribution: input.attribution } : {}),
-      ...(input.agentId ? { agentId: input.agentId } : {}),
+      agentId: input.agentId,
       ...(input.triggerThreadSeq !== undefined ? { triggerThreadSeq: input.triggerThreadSeq } : {}),
     });
   }

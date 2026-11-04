@@ -238,6 +238,7 @@ export class SendThreadRunUseCase {
         executor: this.executor,
         request,
         thread,
+        agent,
         decision,
         runText: input.runText,
         attachments,

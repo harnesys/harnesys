@@ -36,14 +36,6 @@ export function insertAgentThread(
   return thread;
 }
 
-export function soleAgentIdOf(
-  threadAgents: ThreadAgentRepositoryPort,
-  orgId: string,
-  threadId: string,
-): string | undefined {
-  return threadAgents.listByThread(orgId, threadId)[0]?.agentId;
-}
-
 export function membersOf(
   deps: ThreadSummaryDeps,
   orgId: string,
@@ -244,22 +236,26 @@ export interface ThreadSummaryInput {
   userId?: string | null;
 }
 
-function primaryAgentIdOf(thread: ThreadRecord, members: ThreadMember[]): string {
+export function primaryAgentIdOf(thread: ThreadRecord, memberIds: string[]): string | undefined {
   const autoReply = thread.autoReplyAgentId;
-  if (autoReply && members.some((member) => member.id === autoReply)) {
+  if (autoReply && memberIds.includes(autoReply)) {
     return autoReply;
   }
-  return members[0]?.id ?? '';
+  return memberIds[0];
 }
 
 export function toThreadSummary(input: ThreadSummaryInput): ThreadSummary {
   const { thread, members, participants, active, bindingLocked, names, waitingForProfileId } =
     input;
+  const agentId = primaryAgentIdOf(
+    thread,
+    members.map((member) => member.id),
+  );
   return {
     id: thread.id,
     orgId: thread.orgId,
     title: thread.title,
-    agentId: primaryAgentIdOf(thread, members),
+    agentId: agentId ?? '',
     members,
     autoReplyAgentId: thread.autoReplyAgentId,
     policy: thread.policy,

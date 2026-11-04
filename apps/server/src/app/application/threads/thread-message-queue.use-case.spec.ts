@@ -9,10 +9,16 @@ import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { withOrgSqlite } from '../../infra/org-sqlite/org-sqlite-session.ts';
 import { enqueueThreadMessage } from '../../infra/org-sqlite/thread-message-queue.store.ts';
 import { StubLayout } from '../../infra/runtime/prepare-org-target.fixtures.ts';
+import { MemoryThreadMembers, MemoryThreads } from './thread.fakes.ts';
 import { ThreadMessageQueueUseCase } from './thread-message-queue.use-case.ts';
 
 function queueUseCase(layout: TempLayout, executor: LocalExecutorPort): ThreadMessageQueueUseCase {
-  return new ThreadMessageQueueUseCase(layout, executor);
+  return new ThreadMessageQueueUseCase(
+    layout,
+    executor,
+    new MemoryThreads(),
+    new MemoryThreadMembers(),
+  );
 }
 
 function seedThread(layout: TempLayout, orgId: string, threadId: string): void {

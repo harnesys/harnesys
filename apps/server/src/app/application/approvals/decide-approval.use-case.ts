@@ -187,7 +187,16 @@ export class DecideApprovalUseCase {
       return 'decided';
     }
     try {
-      const session = await this.executor.sessionFor(orgId, row.threadId);
+      const lifecycle = await this.executor.lifecycle(orgId);
+      const run = await lifecycle.get(row.runId);
+      if (!run?.agentId) {
+        this.log.warn(
+          { orgId, runId: row.runId, interruptId: row.interruptId },
+          'approval resume skipped: run has no agent',
+        );
+        return 'decided';
+      }
+      const session = await this.executor.sessionFor(orgId, row.threadId, run.agentId);
       if (plan.decision === 'deny') {
         await session.reject(row.runId, row.interruptId, { note });
       } else {

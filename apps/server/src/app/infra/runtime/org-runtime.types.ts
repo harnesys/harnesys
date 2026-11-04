@@ -66,7 +66,7 @@ export interface OrgRuntime {
   lifecycle: RunLifecycleStore;
   events: RunEventStore;
   feed: RunEventFeed;
-  sessionFor(threadId: string, agentId?: string): Promise<SessionHandle>;
+  sessionFor(threadId: string, agentId: string): Promise<SessionHandle>;
   send(input: {
     threadId: string;
     text?: string;
@@ -81,7 +81,7 @@ export interface OrgRuntime {
     isolation?: RunIsolation;
     branch?: string;
     attribution?: RunAttribution;
-    agentId?: string;
+    agentId: string;
     triggerThreadSeq?: number;
   }): Promise<AcceptedRunResponse>;
   compact(threadId: string): Promise<CompactThreadResult>;

@@ -89,6 +89,7 @@ function enqueueSingle(
       ...(input.attachments ? { attachments: JSON.stringify(input.attachments) } : {}),
       ...(input.origin ? { origin: input.origin } : {}),
       ...(input.clientEventId ? { clientEventId: input.clientEventId } : {}),
+      ...(input.targetAgentIds?.[0] ? { targetAgentId: input.targetAgentIds[0] } : {}),
       queuedAt: new Date().toISOString(),
     })
     .onConflictDoNothing()

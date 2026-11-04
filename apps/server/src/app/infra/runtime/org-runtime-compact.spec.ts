@@ -25,9 +25,6 @@ function fakeStore(runs: string[], events: SessionEvent[]): RunEventStore {
     appendForThread: () => {
       throw new Error('not used');
     },
-    removeUserEvent: () => {
-      throw new Error('not used');
-    },
     truncateThreadFrom: () => {
       throw new Error('not used');
     },

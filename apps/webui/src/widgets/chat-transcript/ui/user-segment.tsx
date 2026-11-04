@@ -15,7 +15,6 @@ import {
   deleteUserMessage,
   editUserMessage,
   reloadUserMessage,
-  resolveUserEventTarget,
   sendMessage,
 } from '@/features/send-message';
 import { branchThread } from '@/features/switch-thread';
@@ -66,7 +65,7 @@ export function UserSegment({
       threadId &&
       !wake &&
       !issueWake &&
-      (event.seq !== undefined || clientEventId),
+      (event.threadSeq !== undefined || clientEventId),
   );
   if (wake) {
     return <ScheduleWakeBanner text={rawText} />;
@@ -116,7 +115,7 @@ export function UserSegment({
               bulletText={visibleText}
               threadId={threadId}
               runId={runId}
-              seq={event.seq}
+              threadSeq={event.threadSeq}
               sendInput={sendInput}
               clientEventId={event.clientEventId}
               onEdit={editable ? () => setEditing(true) : undefined}
@@ -132,14 +131,11 @@ export function UserSegment({
     if (!threadId) {
       return;
     }
-    const target = resolveUserEventTarget({
-      runId,
-      seq: event.seq,
-      activeRunId: useSessionStore.getState().activeRuns[threadId]?.runId,
-    });
-    const input = target
-      ? { threadId, runId: target.runId, seq: target.seq, text, ...sendInput }
-      : { threadId, text, clientEventId, ...sendInput };
+    const threadSeq = event.threadSeq;
+    const input =
+      threadSeq !== undefined
+        ? { threadId, threadSeq, text, ...sendInput }
+        : { threadId, text, clientEventId, ...sendInput };
     void editUserMessage(input).catch((error: unknown) => {
       toast.add({
         title: 'Could not edit',
@@ -156,7 +152,7 @@ function UserSegmentActions({
   bulletText,
   threadId,
   runId,
-  seq,
+  threadSeq,
   sendInput,
   clientEventId,
   onEdit,
@@ -167,7 +163,7 @@ function UserSegmentActions({
   bulletText: string;
   threadId: string;
   runId?: string;
-  seq?: number;
+  threadSeq?: number;
   sendInput: SendInput;
   clientEventId?: string;
   onEdit?: () => void;
@@ -194,12 +190,10 @@ function UserSegmentActions({
           : undefined
       }
       onRetry={() => {
-        const target = activeTarget();
-        if (target) {
+        if (threadSeq !== undefined) {
           void reloadUserMessage({
             threadId,
-            runId: target.runId,
-            seq: target.seq,
+            threadSeq,
             text: rawText,
             ...sendInput,
           }).catch((error) => {
@@ -231,9 +225,8 @@ function UserSegmentActions({
             }
       }
       onDelete={() => {
-        const target = activeTarget();
-        if (target) {
-          void deleteUserMessage(threadId, target.runId, target.seq).catch((error) => {
+        if (threadSeq !== undefined) {
+          void deleteUserMessage(threadId, threadSeq).catch((error) => {
             toast.add({
               title: 'Could not delete',
               description: error instanceof Error ? error.message : 'Delete failed',
@@ -247,14 +240,6 @@ function UserSegmentActions({
       }}
     />
   );
-
-  function activeTarget(): { runId: string; seq: number } | undefined {
-    return resolveUserEventTarget({
-      runId,
-      seq,
-      activeRunId: useSessionStore.getState().activeRuns[threadId]?.runId,
-    });
-  }
 }
 
 function isScheduleWakeEvent(

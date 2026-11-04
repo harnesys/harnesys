@@ -19,12 +19,18 @@ import {
   ThreadNotFoundException,
   ThreadValidationException,
 } from '../../domain/thread/thread.error.ts';
+import type { RunTargetSelector } from './org-runtime-run-target.ts';
 
 export interface CompactThreadDeps {
   models: ModelsPort;
   events: RunEventStore;
+  agentId: string | undefined;
   seededThreadState: (threadId: string) => Promise<InMemoryRuntimeState>;
-  resolveRunTarget: (threadId: string, state: InMemoryRuntimeState) => Promise<RunTarget | null>;
+  resolveRunTarget: (
+    threadId: string,
+    state: InMemoryRuntimeState,
+    selector?: RunTargetSelector,
+  ) => Promise<RunTarget | null>;
 }
 
 export async function compactThread(
@@ -32,7 +38,7 @@ export async function compactThread(
   threadId: string,
 ): Promise<CompactThreadResult> {
   const state = await deps.seededThreadState(threadId);
-  const target = await deps.resolveRunTarget(threadId, state);
+  const target = await deps.resolveRunTarget(threadId, state, { agentId: deps.agentId });
   if (!target) {
     throw new ThreadNotFoundException(threadId);
   }

@@ -39,20 +39,28 @@ export class DeleteAgentUseCase {
         continue;
       }
       await this.cancelLiveRuns(request.orgId, threadId, request.agentId, thread.kind === 'group');
-      if (thread.kind === 'group') {
-        this.threadAgents.remove(request.orgId, threadId, request.agentId);
-        if (thread.autoReplyAgentId === request.agentId) {
-          const next = this.threadAgents.listByThread(request.orgId, threadId)[0]?.agentId ?? null;
-          this.threads.patch(request.orgId, threadId, { autoReplyAgentId: next });
-        }
+      if (thread.kind !== 'group') {
+        ownThreadIds.push(threadId);
         continue;
       }
-      ownThreadIds.push(threadId);
-    }
-    this.threads.deleteMany(request.orgId, ownThreadIds);
-    for (const threadId of ownThreadIds) {
+      const remaining = this.threadAgents
+        .listByThread(request.orgId, threadId)
+        .filter((row) => row.agentId !== request.agentId);
+      if (remaining.length === 0) {
+        ownThreadIds.push(threadId);
+        continue;
+      }
+      if (thread.autoReplyAgentId === request.agentId) {
+        const nextAutoReply = remaining[0];
+        if (nextAutoReply) {
+          this.threads.patch(request.orgId, threadId, {
+            autoReplyAgentId: nextAutoReply.agentId,
+          });
+        }
+      }
       this.threadAgents.remove(request.orgId, threadId, request.agentId);
     }
+    this.threads.deleteMany(request.orgId, ownThreadIds);
     this.agents.delete(request.orgId, request.agentId);
   }
 

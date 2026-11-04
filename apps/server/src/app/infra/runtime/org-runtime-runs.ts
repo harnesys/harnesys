@@ -30,7 +30,7 @@ export interface SendThreadMessageInput {
   triggerKind?: RunTriggerKind;
   branch?: string;
   attribution?: RunAttribution;
-  agentId?: string;
+  agentId: string;
   triggerThreadSeq?: number;
 }
 
@@ -38,7 +38,7 @@ export interface RunControlDeps {
   lifecycle: RunLifecycleStore;
   requestedSkills: Map<string, string[]>;
   worktreeBindings: Map<string, ThreadBinding>;
-  sessionFor: (threadId: string, agentId?: string) => Promise<SessionHandle>;
+  sessionFor: (threadId: string, agentId: string) => Promise<SessionHandle>;
   kick: () => void;
   abortRun?: (runId: string) => void;
 }

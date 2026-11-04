@@ -12,7 +12,6 @@ export {
 } from './model/delete-turn';
 export { rejectAsk, respondToAsk, retryRun } from './model/hitl-actions';
 export { type PendingHitl, pendingHitl } from './model/pending-hitl';
-export { resolveUserEventTarget, type UserEventTarget } from './model/resolve-user-event-target';
 export {
   editUserMessage,
   type ReloadUserMessageInput,
