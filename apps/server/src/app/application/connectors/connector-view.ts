@@ -1,17 +1,21 @@
 import type { ConnectorPublic, ThreadMember } from '@harnesys/contracts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { ConnectorNotFoundException } from '../../domain/connector/connector.error.ts';
-import type { ConnectorRecord } from '../../domain/connector/connector.ts';
+import type { ConnectorBindingRecord, ConnectorRecord } from '../../domain/connector/connector.ts';
 import { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
-import { primaryThreadIdOf, toConnectorPublic } from './connector.helpers.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
+import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
+import { toBindingPublic, toConnectorPublic } from './connector.helpers.ts';
 
 export interface ConnectorViewDeps {
   connectors: ConnectorRepositoryPort;
   agents: AgentRegistryPort;
+  threads: ThreadRepositoryPort;
+  threadAgents: ThreadAgentRepositoryPort;
 }
 
 export function connectorAgentsOf(
-  deps: ConnectorViewDeps,
+  deps: Pick<ConnectorViewDeps, 'connectors' | 'agents'>,
   orgId: string,
   connectorId: string,
 ): ThreadMember[] {
@@ -21,25 +25,46 @@ export function connectorAgentsOf(
   }));
 }
 
+export function bindingView(
+  deps: Pick<ConnectorViewDeps, 'connectors' | 'threads' | 'threadAgents'>,
+  connector: ConnectorRecord,
+  bindingId: string,
+) {
+  const binding = deps.connectors.findBinding(connector.orgId, connector.id, bindingId);
+  return bindingWithThread(deps, connector, binding);
+}
+
+export function bindingWithThread(
+  deps: Pick<ConnectorViewDeps, 'threads' | 'threadAgents'>,
+  connector: ConnectorRecord,
+  binding: ConnectorBindingRecord,
+) {
+  const thread = binding.threadId
+    ? (deps.threads.findById(connector.orgId, binding.threadId) ?? null)
+    : null;
+  const agentIds = thread
+    ? deps.threadAgents.listByThread(connector.orgId, thread.id).map((row) => row.agentId)
+    : [];
+  return toBindingPublic(binding, thread, agentIds);
+}
+
 export function connectorView(
   deps: ConnectorViewDeps,
   connector: ConnectorRecord,
 ): ConnectorPublic {
-  const bindings = deps.connectors.listBindings(connector.orgId, connector.id);
-  return toConnectorPublic(connector, {
-    agents: connectorAgentsOf(deps, connector.orgId, connector.id),
-    bindings,
-    threadId: primaryThreadIdOf(bindings),
-  });
+  const bindings = deps.connectors
+    .listBindings(connector.orgId, connector.id)
+    .map((binding) => bindingWithThread(deps, connector, binding));
+  return toConnectorPublic(connector, { bindings });
 }
 
-export function requireTelegramConnector(
+export function requireConnector(
   connectors: ConnectorRepositoryPort,
-  request: { orgId: string; agentId: string },
+  request: { orgId: string; connectorId: string },
 ): ConnectorRecord {
-  const found = connectors.findByAgentProvider(request.orgId, request.agentId, 'telegram');
-  if (!found) {
-    throw new ConnectorNotFoundException(`telegram:${request.agentId}`);
+  const found = connectors.findById(request.orgId, request.connectorId);
+  if (found?.provider !== 'telegram') {
+    throw new ConnectorNotFoundException(request.connectorId);
   }
   return found;
 }

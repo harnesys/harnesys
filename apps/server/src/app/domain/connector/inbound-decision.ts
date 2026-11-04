@@ -33,6 +33,7 @@ export interface DecideInboundInput {
 }
 
 const NOT_LINKED = 'This bot is not linked yet.';
+const NOT_CONNECTED_THREAD = 'This chat is not connected to a thread yet.';
 const OTHER_ACCOUNT = 'This bot is already linked to another Telegram account.';
 const UNSUPPORTED = 'I can take text, photos, and files.';
 const FILE_WHILE_ASK = 'Reply with text or a button, then send the file.';
@@ -51,6 +52,13 @@ export function decideInbound(input: DecideInboundInput): InboundDecision {
   }
   if (update.kind === 'callback') {
     return decideCallback(update, binding);
+  }
+  if (
+    update.kind === 'chat_member' ||
+    update.kind === 'topic_created' ||
+    update.kind === 'ignored'
+  ) {
+    return { type: 'ignore' };
   }
   if (update.kind === 'unsupported') {
     return decideUnsupported(update, binding);
@@ -86,7 +94,7 @@ function decideUnsupported(
     return { type: 'ignore' };
   }
   if (!binding || binding.threadId === null) {
-    return reply(NOT_LINKED);
+    return reply(NOT_CONNECTED_THREAD);
   }
   return reply(UNSUPPORTED);
 }
@@ -102,8 +110,11 @@ function decideCommand(
     return decideStart(input, update);
   }
   const binding = input.binding;
-  if (!binding || binding.threadId === null) {
+  if (!binding) {
     return reply(NOT_LINKED);
+  }
+  if (binding.threadId === null) {
+    return reply(NOT_CONNECTED_THREAD);
   }
   if (binding.pairedUserId !== null && binding.pairedUserId !== update.author.userId) {
     return reply(OTHER_ACCOUNT);
@@ -155,7 +166,7 @@ function decideMessage(
     return input.canReadUnmentioned ? { type: 'claim' } : { type: 'ignore' };
   }
   if (binding.threadId === null) {
-    return isPrivate(update.chatType) ? reply(NOT_LINKED) : { type: 'ignore' };
+    return isPrivate(update.chatType) ? reply(NOT_CONNECTED_THREAD) : { type: 'ignore' };
   }
   if (binding.pairedUserId !== null && binding.pairedUserId !== update.author.userId) {
     return reply(OTHER_ACCOUNT);
@@ -186,6 +197,10 @@ function privateOnly(chatId: string, binding: InboundBinding | null): boolean {
 
 function reply(text: string): InboundDecision {
   return { type: 'reply', text, inbox: 'rejected' };
+}
+
+export function pairedNotice(): string {
+  return 'Paired. An admin can connect this chat to a thread in Harnesys.';
 }
 
 export function pendingClaimNotice(): string {

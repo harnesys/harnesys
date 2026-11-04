@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { OrgIdSchema } from './org-machine.ts';
-import { ThreadMemberSchema } from './thread.ts';
+import { ThreadKindSchema, ThreadMemberSchema } from './thread.ts';
 
 export const ConnectorProviderSchema = z.string().min(1);
 export type ConnectorProvider = z.infer<typeof ConnectorProviderSchema>;
@@ -36,20 +36,23 @@ export const ConnectorBindingPublicSchema = z.object({
   topicId: z.string().nullable(),
   chatType: z.string().min(1),
   title: z.string().nullable(),
-  threadId: z.string().uuid().nullable(),
   status: ConnectorBindingStatusSchema,
+  threadId: z.string().uuid().nullable(),
+  threadTitle: z.string().nullable(),
+  threadKind: ThreadKindSchema.nullable(),
+  agentIds: z.array(z.string().uuid()),
+  autoReplyAgentId: z.string().uuid().nullable(),
 });
 export type ConnectorBindingPublic = z.infer<typeof ConnectorBindingPublicSchema>;
 
 export const ConnectorPublicSchema = z.object({
   id: z.string().uuid(),
   orgId: OrgIdSchema,
-  agents: z.array(ThreadMemberSchema),
   provider: ConnectorProviderSchema,
   status: ConnectorStatusSchema,
+  botId: z.string(),
   botUsername: z.string(),
   lastError: z.string().nullable(),
-  threadId: z.string().uuid().nullable(),
   capabilities: ConnectorCapabilitiesSchema,
   capabilityWarning: z.string().nullable(),
   bindings: z.array(ConnectorBindingPublicSchema),
@@ -75,22 +78,43 @@ export const PatchTelegramPolicyBodySchema = z
   .strict();
 export type PatchTelegramPolicyBody = z.infer<typeof PatchTelegramPolicyBodySchema>;
 
-export const AddConnectorAgentBodySchema = z.object({
-  agentId: z.string().uuid(),
+export const ListConnectorsQuerySchema = z.object({
+  provider: z.string().trim().min(1).optional(),
+  agentId: z.string().uuid().optional(),
 });
-export type AddConnectorAgentBody = z.infer<typeof AddConnectorAgentBodySchema>;
+export type ListConnectorsQuery = z.infer<typeof ListConnectorsQuerySchema>;
 
-export const ConnectConnectorBindingBodySchema = z.object({
-  autoReplyAgentId: z.string().uuid().nullable().optional(),
-  title: z.string().trim().min(1).max(120).optional(),
+export const AttachChatBodySchema = z.object({
+  chatId: z.string().trim().min(1),
+  topicId: z.string().trim().min(1).nullable().optional(),
+  title: z.string().trim().min(1).max(160).optional(),
 });
-export type ConnectConnectorBindingBody = z.infer<typeof ConnectConnectorBindingBodySchema>;
+export type AttachChatBody = z.infer<typeof AttachChatBodySchema>;
+
+export const ConnectChatBodySchema = z.discriminatedUnion('mode', [
+  z.object({
+    mode: z.literal('existing'),
+    threadId: z.string().uuid(),
+    allowPromote: z.boolean().optional(),
+  }),
+  z.object({
+    mode: z.literal('new'),
+    title: z.string().trim().min(1).max(120).optional(),
+    agentIds: z.array(z.string().uuid()).min(1).max(8),
+    autoReplyAgentId: z.string().uuid().nullable().optional(),
+  }),
+]);
+export type ConnectChatBody = z.infer<typeof ConnectChatBodySchema>;
+
+export const CreateTopicBodySchema = z.object({
+  name: z.string().trim().min(1).max(128),
+});
+export type CreateTopicBody = z.infer<typeof CreateTopicBodySchema>;
 
 export const UpsertTelegramConnectorResponseSchema = z.object({
   connector: ConnectorPublicSchema,
   pairCode: z.string().min(1),
   pairUrl: z.string().min(1),
-  threadId: z.string().uuid().nullable(),
 });
 export type UpsertTelegramConnectorResponse = z.infer<typeof UpsertTelegramConnectorResponseSchema>;
 
@@ -116,3 +140,17 @@ export const UnpairTelegramConnectorResponseSchema = z.object({
   pairUrl: z.string().min(1),
 });
 export type UnpairTelegramConnectorResponse = z.infer<typeof UnpairTelegramConnectorResponseSchema>;
+
+export const ConnectChatResponseSchema = z.object({
+  connector: ConnectorPublicSchema,
+  binding: ConnectorBindingPublicSchema,
+});
+export type ConnectChatResponse = z.infer<typeof ConnectChatResponseSchema>;
+
+export const AttachChatResponseSchema = ConnectChatResponseSchema;
+export type AttachChatResponse = z.infer<typeof AttachChatResponseSchema>;
+
+export const CreateTopicResponseSchema = ConnectChatResponseSchema;
+export type CreateTopicResponse = z.infer<typeof CreateTopicResponseSchema>;
+
+export const ThreadMemberListSchema = z.array(ThreadMemberSchema);

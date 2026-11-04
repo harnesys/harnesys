@@ -6,9 +6,11 @@ import type {
 import { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
 import { nextDraftTick, takeDraftChunk } from '../../domain/connector/draft-buffer.ts';
 import { TelegramApiPort } from '../../domain/connector/telegram-api.port.ts';
+import { retryAfterMs, shouldFallbackToEdit } from './draft-retry.ts';
 
 export interface DraftSendState {
   orgId: string;
+  prefix: string;
   connectorId: string;
   bindingId: string;
   threadId: string;
@@ -154,10 +156,16 @@ async function flushDraftMode(
   state: DraftSendState,
   text: string,
 ): Promise<void> {
-  await deps.telegram.sendMessageDraft(state.token, state.chatId, state.draftId, text, {
-    canStop: true,
-    topicId: state.topicId,
-  });
+  await deps.telegram.sendMessageDraft(
+    state.token,
+    state.chatId,
+    state.draftId,
+    visibleText(state, text),
+    {
+      canStop: true,
+      topicId: state.topicId,
+    },
+  );
   if (state.streamMode === null) {
     state.streamMode = 'draft';
     deps.updateStreamMode(state.orgId, state.connectorId, 'draft');
@@ -169,7 +177,7 @@ async function flushEditMode(
   state: DraftSendState,
   text: string,
 ): Promise<void> {
-  const body = text.length > 0 ? text : '…';
+  const body = visibleText(state, text.length > 0 ? text : '…');
   if (state.externalMessageId === null) {
     const sent = await deps.telegram.sendMessage(state.token, state.chatId, body, {
       topicId: state.topicId,
@@ -186,28 +194,18 @@ async function sendFinalChunk(
   text: string,
 ): Promise<void> {
   await waitRetry(deps, state);
+  const body = visibleText(state, text.length > 0 ? text : '…');
   if (state.externalMessageId === null) {
-    const sent = await deps.telegram.sendMessage(
-      state.token,
-      state.chatId,
-      text.length > 0 ? text : '…',
-      { topicId: state.topicId },
-    );
+    const sent = await deps.telegram.sendMessage(state.token, state.chatId, body, {
+      topicId: state.topicId,
+    });
     state.externalMessageId = sent.messageId;
   } else if (state.streamMode === 'edit') {
-    await deps.telegram.editMessageText(
-      state.token,
-      state.chatId,
-      state.externalMessageId,
-      text.length > 0 ? text : '…',
-    );
+    await deps.telegram.editMessageText(state.token, state.chatId, state.externalMessageId, body);
   } else {
-    const sent = await deps.telegram.sendMessage(
-      state.token,
-      state.chatId,
-      text.length > 0 ? text : '…',
-      { topicId: state.topicId },
-    );
+    const sent = await deps.telegram.sendMessage(state.token, state.chatId, body, {
+      topicId: state.topicId,
+    });
     state.externalMessageId = sent.messageId;
   }
   persistDelivery(deps, state, text);
@@ -285,26 +283,6 @@ async function waitRetry(deps: DraftSendDeps, state: DraftSendState): Promise<vo
   }
 }
 
-function shouldFallbackToEdit(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.includes('TEXTDRAFT') || message.toLowerCase().includes('forum');
-}
-
-function retryAfterMs(error: unknown): number | null {
-  if (typeof error === 'object' && error !== null && 'retryAfter' in error) {
-    const value = (error as { retryAfter: unknown }).retryAfter;
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      return value * 1000;
-    }
-  }
-  const message = error instanceof Error ? error.message : String(error);
-  if (!message.includes('429')) {
-    return null;
-  }
-  const match = /retry_after["\s:=]+(\d+)/i.exec(message);
-  return match ? Number(match[1]) * 1000 : 1000;
-}
-
 export function draftStateFromConnector(
   connector: ConnectorRecord,
   input: {
@@ -316,10 +294,12 @@ export function draftStateFromConnector(
     topicId: string | null;
     token: string;
     delivery?: ConnectorDeliveryRecord;
+    prefix?: string;
   },
 ): DraftSendState {
   return {
     orgId: input.orgId,
+    prefix: input.prefix ?? '',
     connectorId: connector.id,
     bindingId: input.bindingId,
     threadId: input.threadId,
@@ -344,4 +324,11 @@ export function draftStateFromConnector(
 function textIndexOf(blockKey: string): number {
   const match = /^text:(\d+)$/.exec(blockKey);
   return match ? Number(match[1]) : 0;
+}
+
+function visibleText(state: DraftSendState, text: string): string {
+  if (state.textIndex !== 0 || !state.prefix || text.length === 0) {
+    return text;
+  }
+  return `${state.prefix}${text}`;
 }

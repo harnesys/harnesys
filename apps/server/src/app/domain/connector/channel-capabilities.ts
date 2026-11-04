@@ -71,7 +71,7 @@ export function isGroupChat(chatType: string): boolean {
 
 export function capabilityWarningOf(input: {
   capabilities: ChannelCapabilities;
-  bindings: ConnectorBindingRecord[];
+  bindings: Array<Pick<ConnectorBindingRecord, 'chatType'>>;
 }): string | null {
   const groups = input.bindings.filter((binding) => isGroupChat(binding.chatType));
   if (groups.length === 0 || input.capabilities.canReadUnmentioned) {

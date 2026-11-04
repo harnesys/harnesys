@@ -2,6 +2,7 @@ import { CONNECTOR_CATALOG, type ConnectorDescriptor } from '@harnesys/contracts
 import { useQuery } from '@tanstack/react-query';
 import { PlusIcon } from 'lucide-react';
 import { Link } from 'react-router';
+import { orgConnectorsQuery } from '@/features/manage-connectors/model/connector-api';
 import { integrationsQuery } from '@/shared/api/integrations';
 import { studioPath } from '@/shared/config/routes';
 import { Badge } from '@/shared/ui/badge';
@@ -11,7 +12,9 @@ import { ConnectorMark } from './ui/connector-icon';
 
 export function ConnectorsPane({ orgId }: { orgId: string }) {
   const integrations = useQuery(integrationsQuery(orgId));
+  const orgConnectors = useQuery(orgConnectorsQuery(orgId, { provider: 'telegram' }));
   const accounts = integrations.data?.integrations ?? [];
+  const telegramConnected = (orgConnectors.data?.items ?? []).length > 0;
   const available = CONNECTOR_CATALOG.filter((item) => item.status === 'available');
   const planned = CONNECTOR_CATALOG.filter((item) => item.status === 'planned');
   return (
@@ -26,7 +29,11 @@ export function ConnectorsPane({ orgId }: { orgId: string }) {
               key={connector.id}
               connector={connector}
               orgId={orgId}
-              connected={accounts.some((account) => account.provider === connector.id)}
+              connected={
+                connector.id === 'telegram'
+                  ? telegramConnected
+                  : accounts.some((account) => account.provider === connector.id)
+              }
             />
           ))}
         </div>

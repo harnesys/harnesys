@@ -28,6 +28,7 @@ export abstract class ConnectorRepositoryPort {
   abstract listAgentIds(orgId: string, connectorId: string): string[];
   abstract ensureAgent(orgId: string, connectorId: string, agentId: string): void;
   abstract removeAgent(orgId: string, connectorId: string, agentId: string): void;
+  abstract replaceAgents(orgId: string, connectorId: string, agentIds: string[]): void;
 
   abstract insertBinding(rec: ConnectorBindingInsert): ConnectorBindingRecord;
   abstract findActiveBinding(
@@ -47,6 +48,14 @@ export abstract class ConnectorRepositoryPort {
     threadId: string,
   ): ConnectorBindingRecord | undefined;
   abstract listBindings(orgId: string, connectorId: string): ConnectorBindingRecord[];
+  abstract listBindingsByThread(orgId: string, threadId: string): ConnectorBindingRecord[];
+  abstract updateBindingTitle(
+    orgId: string,
+    bindingId: string,
+    title: string,
+    updatedAt: string,
+  ): void;
+  abstract deleteBinding(orgId: string, bindingId: string): void;
   abstract attachBindingThread(
     orgId: string,
     bindingId: string,

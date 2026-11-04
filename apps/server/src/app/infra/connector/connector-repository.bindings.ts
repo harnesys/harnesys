@@ -113,6 +113,22 @@ export function findBindingForThread(
   return row ? toBinding(row) : undefined;
 }
 
+export function listBindingsByThread(
+  db: OrgSqliteDb,
+  orgId: string,
+  threadId: string,
+): ConnectorBindingRecord[] {
+  return db
+    .select()
+    .from(connectorBindingsTable)
+    .where(
+      and(eq(connectorBindingsTable.orgId, orgId), eq(connectorBindingsTable.threadId, threadId)),
+    )
+    .orderBy(asc(connectorBindingsTable.createdAt))
+    .all()
+    .map(toBinding);
+}
+
 export function listBindings(db: OrgSqliteDb, connectorId: string): ConnectorBindingRecord[] {
   return db
     .select()
@@ -150,6 +166,25 @@ export function detachBinding(
 ): void {
   db.update(connectorBindingsTable)
     .set({ threadId: null, status: 'unpaired', updatedAt })
+    .where(and(eq(connectorBindingsTable.orgId, orgId), eq(connectorBindingsTable.id, bindingId)))
+    .run();
+}
+
+export function updateBindingTitle(
+  db: OrgSqliteDb,
+  orgId: string,
+  bindingId: string,
+  title: string,
+  updatedAt: string,
+): void {
+  db.update(connectorBindingsTable)
+    .set({ title, updatedAt })
+    .where(and(eq(connectorBindingsTable.orgId, orgId), eq(connectorBindingsTable.id, bindingId)))
+    .run();
+}
+
+export function deleteBinding(db: OrgSqliteDb, orgId: string, bindingId: string): void {
+  db.delete(connectorBindingsTable)
     .where(and(eq(connectorBindingsTable.orgId, orgId), eq(connectorBindingsTable.id, bindingId)))
     .run();
 }

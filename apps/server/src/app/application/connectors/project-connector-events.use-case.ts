@@ -27,6 +27,7 @@ import {
 interface RouteContext {
   connector: ConnectorRecord;
   binding: ConnectorBindingRecord;
+  agentName: string;
 }
 
 @Injectable()
@@ -93,6 +94,7 @@ export class ProjectConnectorEventsUseCase
       chatId: route.binding.externalChatId,
       topicId: route.binding.externalTopicId,
       token,
+      prefix: prefixForRoute(route),
     });
     this.sessions.set(`${route.connector.id}:${runId}`, state);
     const draftTick = setInterval(() => {
@@ -145,9 +147,12 @@ export class ProjectConnectorEventsUseCase
         continue;
       }
       if (delivery.lastText) {
-        await this.telegram.sendMessage(token, binding.externalChatId, delivery.lastText, {
-          topicId: binding.externalTopicId,
-        });
+        await this.telegram.sendMessage(
+          token,
+          binding.externalChatId,
+          prefixOf(binding.chatType, rec?.agentName) + delivery.lastText,
+          { topicId: binding.externalTopicId },
+        );
       }
       this.connectors.upsertDelivery(orgId, {
         ...delivery,
@@ -244,10 +249,10 @@ export class ProjectConnectorEventsUseCase
       return null;
     }
     const binding = this.connectors.findBindingForThread(orgId, connector.id, threadId);
-    if (!binding) {
+    if (!binding || binding.threadId !== threadId) {
       return null;
     }
-    return { connector, binding };
+    return { connector, binding, agentName: run?.agentName ?? 'Agent' };
   }
 
   private draftDeps(): DraftSendDeps {
@@ -264,4 +269,15 @@ export class ProjectConnectorEventsUseCase
       },
     };
   }
+}
+
+function prefixForRoute(route: RouteContext): string {
+  return prefixOf(route.binding.chatType, route.agentName);
+}
+
+function prefixOf(chatType: string, agentName: string | undefined): string {
+  if (chatType === 'private') {
+    return '';
+  }
+  return `${agentName ?? 'Agent'}: `;
 }

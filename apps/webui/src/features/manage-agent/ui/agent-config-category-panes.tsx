@@ -12,7 +12,6 @@ import type { StudioGraphDocument } from '../model/agent-graph-document';
 import { AgentCapabilitiesPane } from './agent-capabilities-pane';
 import type { AgentConfigCategory } from './agent-config-nav';
 import { AgentIdentityPane, AgentLimitsPane, AgentModelPane } from './agent-config-panes';
-import { AgentConnectorsPane } from './agent-connectors-pane';
 import { AgentContextFields } from './agent-context-fields';
 import { AgentExecutionPane } from './agent-execution-pane';
 import { AgentGraphPane } from './agent-graph-pane';
@@ -22,6 +21,7 @@ import { AgentPermissionsPane } from './agent-permissions-pane';
 import { AgentRulesPane } from './agent-rules-pane';
 import { AgentSourcesPane } from './agent-sources-pane';
 import { AgentSubagentsPane } from './agent-subagents-pane';
+import { AgentTelegramInfo } from './agent-telegram-info';
 import { DraftCompaction } from './draft-compaction';
 import { AgentMemoryPolicyPane } from './memory-policy-pane';
 
@@ -288,9 +288,9 @@ function AgentConnectorsSection({
     return null;
   }
   if (!activeAgent || activeAgent.id === '') {
-    return <UnsavedAgentHint text="Save the agent to attach connectors." />;
+    return <UnsavedAgentHint text="Save the agent to see its Telegram connections." />;
   }
-  return <AgentConnectorsPane orgId={orgId} agentId={activeAgent.id} />;
+  return <AgentTelegramInfo orgId={orgId} agentId={activeAgent.id} />;
 }
 
 function UnsavedAgentHint({ text }: { text: string }) {

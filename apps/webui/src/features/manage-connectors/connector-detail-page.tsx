@@ -8,12 +8,14 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowLeftIcon, CableIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router';
+import { orgConnectorsQuery } from '@/features/manage-connectors/model/connector-api';
 import { orgSourcesQuery } from '@/features/manage-connectors/model/drive-sources';
 import { CapabilityChips } from '@/features/manage-connectors/ui/capability-chips';
 import { ConnectorCard } from '@/features/manage-connectors/ui/connector-card';
 import { ConnectorMark } from '@/features/manage-connectors/ui/connector-icon';
 import { GithubDetail } from '@/features/manage-connectors/ui/github-detail';
 import { GoogleDetail } from '@/features/manage-connectors/ui/google-detail';
+import { TelegramDetail } from '@/features/manage-connectors/ui/telegram/telegram-detail';
 import { integrationsQuery } from '@/shared/api/integrations';
 import type { Source } from '@/shared/api/sources';
 import { studioPath } from '@/shared/config/routes';
@@ -30,6 +32,7 @@ const CONTENT_LABELS: Record<ConnectorContent, string> = {
 const AUTH_LABELS = {
   'oauth-browser': 'Browser OAuth',
   'github-app-install': 'GitHub App',
+  'bot-token': 'Bot token',
 } as const;
 
 export function ConnectorDetailPage() {
@@ -44,11 +47,15 @@ export function ConnectorDetailPage() {
 function ConnectorDetail({ orgId, connector }: { orgId: string; connector: ConnectorDescriptor }) {
   const navigate = useNavigate();
   const integrations = useQuery(integrationsQuery(orgId));
+  const orgConnectors = useQuery(orgConnectorsQuery(orgId, { provider: 'telegram' }));
   const sources = useQuery(orgSourcesQuery(orgId));
   const accounts = (integrations.data?.integrations ?? []).filter(
     (item) => item.provider === connector.id,
   );
-  const connected = accounts.length > 0;
+  const connected =
+    connector.id === 'telegram'
+      ? (orgConnectors.data?.items ?? []).length > 0
+      : accounts.length > 0;
 
   return (
     <div
@@ -150,6 +157,9 @@ function ConnectorBody({
   sources,
   sourcesLoading,
 }: ConnectorBodyProps) {
+  if (connector.id === 'telegram') {
+    return <TelegramDetail orgId={orgId} />;
+  }
   if (connector.id === 'google') {
     return (
       <GoogleDetail

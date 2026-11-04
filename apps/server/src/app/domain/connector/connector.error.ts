@@ -17,3 +17,11 @@ export class ConnectorValidationException extends ValidationException {
     super(message);
   }
 }
+
+export class ConnectorPromotionRequiredException extends ConflictException {
+  readonly code = 'connector_promotion_required';
+
+  constructor(message = 'This is a 1:1 thread. Confirm converting it to a group thread.') {
+    super(message);
+  }
+}

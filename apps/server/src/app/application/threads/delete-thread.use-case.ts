@@ -1,9 +1,12 @@
 import { Injectable } from '@harnesys/brix';
+import { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { AttachmentStoragePort } from '../../domain/thread/attachment-storage.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { ThreadNotFoundException } from '../../domain/thread/thread.error.ts';
+import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
+import { syncConnectorAgents } from '../connectors/sync-connector-agents.ts';
 
 export interface DeleteThreadRequest {
   orgId: string;
@@ -17,6 +20,8 @@ export class DeleteThreadUseCase {
     private readonly storage: AttachmentStoragePort,
     private readonly layout: HostFsLayoutPort,
     private readonly executor: LocalExecutorPort,
+    private readonly connectors: ConnectorRepositoryPort,
+    private readonly threadAgents: ThreadAgentRepositoryPort,
   ) {}
 
   async execute(request: DeleteThreadRequest): Promise<void> {
@@ -25,6 +30,7 @@ export class DeleteThreadUseCase {
       throw new ThreadNotFoundException(request.threadId);
     }
     await this.cancelActiveRun(request.orgId, request.threadId);
+    this.detachBindings(request.orgId, request.threadId);
     this.threads.delete(request.orgId, request.threadId);
     await this.storage.removeThread(this.layout.threadDir(request.orgId, request.threadId));
   }
@@ -38,6 +44,21 @@ export class DeleteThreadUseCase {
           throw error;
         }
       }
+    }
+  }
+
+  private detachBindings(orgId: string, threadId: string): void {
+    const connectorIds = new Set<string>();
+    for (const binding of this.connectors.listBindingsByThread(orgId, threadId)) {
+      connectorIds.add(binding.connectorId);
+      this.connectors.detachBinding(orgId, binding.id, new Date().toISOString());
+    }
+    for (const connectorId of connectorIds) {
+      syncConnectorAgents(
+        { connectors: this.connectors, threadAgents: this.threadAgents },
+        orgId,
+        connectorId,
+      );
     }
   }
 

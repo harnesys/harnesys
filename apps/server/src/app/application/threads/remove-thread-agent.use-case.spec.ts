@@ -3,6 +3,7 @@ import {
   ThreadNotFoundException,
   ThreadValidationException,
 } from '../../domain/thread/thread.error.ts';
+import { MemoryConnectors } from '../connectors/connector.fakes.ts';
 import { RemoveThreadAgentUseCase } from './remove-thread-agent.use-case.ts';
 import {
   MemoryAgents,
@@ -22,7 +23,13 @@ function build() {
   return {
     threads,
     members,
-    useCase: new RemoveThreadAgentUseCase(threads, members, new StubThreadParticipants(), agents),
+    useCase: new RemoveThreadAgentUseCase(
+      threads,
+      members,
+      new StubThreadParticipants(),
+      agents,
+      new MemoryConnectors(),
+    ),
   };
 }
 

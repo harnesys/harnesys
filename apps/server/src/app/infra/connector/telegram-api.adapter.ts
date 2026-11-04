@@ -4,8 +4,10 @@ import {
   TelegramBlockedError,
   type TelegramBotCommand,
   type TelegramBotIdentity,
+  type TelegramChatInfo,
   type TelegramChatMember,
   type TelegramFileRef,
+  type TelegramForumTopic,
   type TelegramInlineButton,
   type TelegramSentMessage,
   TelegramUnauthorizedError,
@@ -20,7 +22,13 @@ import {
 } from './telegram-api.http.ts';
 
 const STOPPED_UPDATE = 'stopped_message_generation';
-const DEFAULT_ALLOWED = ['message', 'edited_message', 'callback_query', STOPPED_UPDATE] as const;
+const DEFAULT_ALLOWED = [
+  'message',
+  'edited_message',
+  'callback_query',
+  'my_chat_member',
+  STOPPED_UPDATE,
+] as const;
 
 @Injectable()
 export class TelegramApiAdapter extends TelegramApiPort {
@@ -252,13 +260,41 @@ export class TelegramApiAdapter extends TelegramApiPort {
       if (typeof status !== 'string') {
         return null;
       }
-      return { status, canManageChat: result?.can_manage_chat === true };
+      return {
+        status,
+        canManageChat: result?.can_manage_chat === true,
+        canManageTopics: result?.can_manage_topics === true,
+      };
     } catch (error) {
       if (isMemberLookupMiss(error)) {
         return null;
       }
       throw error;
     }
+  }
+
+  async getChat(token: string, chatId: string): Promise<TelegramChatInfo> {
+    const result = asRecord(await callJson(token, 'getChat', { chat_id: chatId }));
+    const id = result?.id;
+    const type = result?.type;
+    if ((typeof id !== 'number' && typeof id !== 'string') || typeof type !== 'string') {
+      throw new Error('Telegram getChat returned an unexpected payload');
+    }
+    return {
+      id: String(id),
+      type,
+      title: typeof result?.title === 'string' ? result.title : null,
+      username: typeof result?.username === 'string' ? result.username : null,
+    };
+  }
+
+  async createForumTopic(token: string, chatId: string, name: string): Promise<TelegramForumTopic> {
+    const result = asRecord(await callJson(token, 'createForumTopic', { chat_id: chatId, name }));
+    const topicId = result?.message_thread_id;
+    if (typeof topicId !== 'number' && typeof topicId !== 'string') {
+      throw new Error('Telegram createForumTopic returned no message_thread_id');
+    }
+    return { chatId, topicId: String(topicId) };
   }
 
   async setMyCommands(token: string, commands: TelegramBotCommand[]): Promise<void> {

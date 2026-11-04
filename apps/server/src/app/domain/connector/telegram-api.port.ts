@@ -44,6 +44,19 @@ export interface TelegramInlineButton {
 export interface TelegramChatMember {
   status: string;
   canManageChat: boolean;
+  canManageTopics: boolean;
+}
+
+export interface TelegramChatInfo {
+  id: string;
+  type: string;
+  title: string | null;
+  username: string | null;
+}
+
+export interface TelegramForumTopic {
+  chatId: string;
+  topicId: string;
 }
 
 export abstract class TelegramApiPort {
@@ -118,6 +131,14 @@ export abstract class TelegramApiPort {
     chatId: string,
     userId: string,
   ): Promise<TelegramChatMember | null>;
+
+  abstract getChat(token: string, chatId: string): Promise<TelegramChatInfo>;
+
+  abstract createForumTopic(
+    token: string,
+    chatId: string,
+    name: string,
+  ): Promise<TelegramForumTopic>;
 
   abstract setMyCommands(token: string, commands: TelegramBotCommand[]): Promise<void>;
 }

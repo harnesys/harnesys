@@ -145,6 +145,16 @@ Rules:
 - Inbound normalizes to `{ text, author, addressedAgentIds?, replyToExternalMessageId?, originConnectorId }` and hands off to `resolveResponders`. Nothing about policy crosses the boundary.
 - `deliver(runId, payload)` routes by `runs.origin_connector_id` and reuses `connector_deliveries`, so one conversation can hold several agents and several bots. A run started from the app has no origin connector and is never mirrored back.
 - `connector_routes` is gone. Outbound needs no route table: the run carries its origin connector, the binding carries its thread. Echo suppression reads `metadata.originConnectorId`.
+
+### 4.1 Bots belong to the organization
+
+A bot is an organization-level transport, not an agent accessory: `connectors` has no `agent_id`, and `connector_agents` is a derived ACL recomputed from the agents of the threads the bot's bindings point to. As a result:
+
+- One bot serves several chats and topics, and one thread can be served by several bots.
+- Deleting an agent never deletes a bot or unpairs a person; it detaches the thread and recomputes the ACL.
+- A direct message connects to a `chat` thread with exactly one agent; a group or forum topic connects to a `group` thread. One chat maps to at most one thread, and one thread maps to at most one chat per bot.
+- Connecting a group to an existing 1:1 thread requires an explicit promotion, which flips `threads.kind` to `group` and keeps the history and members.
+- Bots, chats, pair links and policies are managed in Settings → Connectors → Telegram. Agent settings show the routes of that agent read-only, and a thread header shows its Telegram route with connect and disconnect actions.
 - Pairing is two-step: a group or topic message with no binding claims it as an `unpaired` binding, and an admin connects it from the agent's connector pane. A direct message pairs by code, then its first inbound message opens the thread.
 - `provider` is a string everywhere in the core. No `platform !== 'telegram'` whitelist, no `IN ('telegram','web')` CHECK. Adding Discord touches no core schema.
 

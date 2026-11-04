@@ -40,6 +40,7 @@ import {
   connectorMembersOf,
   replyText,
 } from './apply-telegram-context.ts';
+import { discoverChat } from './discover-chat.ts';
 import { RunTelegramCommandUseCase } from './run-telegram-command.use-case.ts';
 
 export interface ApplyTelegramUpdateRequest {
@@ -115,6 +116,12 @@ export class ApplyTelegramUpdateUseCase {
       createdAt: new Date().toISOString(),
     });
     if (inserted === 'duplicate') {
+      return;
+    }
+
+    if (request.update.kind === 'chat_member' || request.update.kind === 'topic_created') {
+      discoverChat(this.deps.connectors, request.orgId, connector, request.update);
+      this.deps.connectors.markInbox(request.orgId, inboxId, 'consumed');
       return;
     }
 
@@ -255,12 +262,27 @@ function chatOf(update: CanonicalUpdate): { chatId: string | null; topicId: stri
   if (update.kind === 'message' || update.kind === 'command') {
     return { chatId: update.chatId, topicId: update.topicId };
   }
-  if (update.kind === 'callback' || update.kind === 'unsupported') {
+  if (update.kind === 'topic_created') {
+    return { chatId: update.chatId, topicId: update.topicId };
+  }
+  if (
+    update.kind === 'callback' ||
+    update.kind === 'unsupported' ||
+    update.kind === 'chat_member' ||
+    update.kind === 'ignored'
+  ) {
     return { chatId: update.chatId, topicId: null };
   }
   return { chatId: update.chatId ?? null, topicId: null };
 }
 
 function inboxKindOf(update: CanonicalUpdate): ConnectorInboxKind {
+  if (
+    update.kind === 'chat_member' ||
+    update.kind === 'topic_created' ||
+    update.kind === 'ignored'
+  ) {
+    return 'unsupported';
+  }
   return update.kind;
 }

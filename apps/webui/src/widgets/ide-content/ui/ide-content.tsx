@@ -5,6 +5,7 @@ import { toClientThread, useThreadStore } from '@/entities/thread';
 import { useDeskReady } from '@/features/desk';
 import { GitCommitDiffView } from '@/features/git-commit';
 import { type IdeTab, useIdeStore } from '@/features/ide';
+import { ThreadTelegramBadge } from '@/features/manage-connectors/ui/telegram/telegram-thread-badge';
 import { BoardSurface } from '@/features/manage-issues';
 import { ThreadMembersPanel } from '@/features/manage-thread-members';
 import { openFileKind } from '@/features/open-file';
@@ -109,6 +110,7 @@ function ThreadTabContent({
   if (thread.kind === 'chat' || thread.kind === 'group') {
     return (
       <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-thread">
+        <ThreadTelegramBadge orgId={orgId} threadId={thread.id} />
         {thread.kind === 'group' ? <ThreadMembersPanel thread={thread} /> : null}
         <div className="min-h-0 flex-1">
           <ThreadPanel threadId={thread.id} agent={agent} active />

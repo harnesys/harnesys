@@ -11,6 +11,7 @@ import {
 } from '../../domain/connector/channel-capabilities.ts';
 import type { ConnectorBindingRecord, ConnectorRecord } from '../../domain/connector/connector.ts';
 import { type MirrorPolicy, PAIR_CODE_TTL_MS } from '../../domain/connector/constants.ts';
+import type { ThreadRecord } from '../../domain/thread/thread.ts';
 
 export function connectorSecretKey(connectorId: string): string {
   return `connector_telegram_${connectorId}`;
@@ -41,22 +42,28 @@ export function toCapabilitiesPublic(capabilities: ChannelCapabilities): Connect
   };
 }
 
-export function toBindingPublic(rec: ConnectorBindingRecord): ConnectorBindingPublic {
+export function toBindingPublic(
+  rec: ConnectorBindingRecord,
+  thread: ThreadRecord | null,
+  agentIds: string[],
+): ConnectorBindingPublic {
   return {
     id: rec.id,
     chatId: rec.externalChatId,
     topicId: rec.externalTopicId,
     chatType: rec.chatType,
     title: rec.title,
-    threadId: rec.threadId,
     status: rec.status,
+    threadId: rec.threadId,
+    threadTitle: thread?.title ?? null,
+    threadKind: thread?.kind ?? null,
+    agentIds,
+    autoReplyAgentId: thread?.autoReplyAgentId ?? null,
   };
 }
 
 export interface ConnectorPublicInput {
-  agents: ThreadMember[];
-  bindings: ConnectorBindingRecord[];
-  threadId: string | null;
+  bindings: ConnectorBindingPublic[];
 }
 
 export function toConnectorPublic(
@@ -66,29 +73,25 @@ export function toConnectorPublic(
   return {
     id: rec.id,
     orgId: rec.orgId,
-    agents: input.agents,
     provider: rec.provider,
     status: rec.status,
+    botId: rec.botUserId,
     botUsername: rec.botUsername,
     lastError: rec.lastError,
-    threadId: input.threadId,
     capabilities: toCapabilitiesPublic(rec.capabilities),
     capabilityWarning: capabilityWarningOf({
       capabilities: rec.capabilities,
       bindings: input.bindings,
     }),
-    bindings: input.bindings.map(toBindingPublic),
+    bindings: input.bindings,
     policy: toPolicyPublic(rec.policy),
     createdAt: rec.createdAt,
     updatedAt: rec.updatedAt,
   };
 }
 
-export function primaryThreadIdOf(bindings: ConnectorBindingRecord[]): string | null {
-  const bound = bindings.find((binding) => binding.threadId !== null);
-  return bound?.threadId ?? null;
-}
-
 export function pairExpiresAtIso(nowMs: number): string {
   return new Date(nowMs + PAIR_CODE_TTL_MS).toISOString();
 }
+
+export type { ThreadMember };

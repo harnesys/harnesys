@@ -165,6 +165,23 @@ export function ensureConnectorAgent(
     .run();
 }
 
+export function replaceConnectorAgents(
+  db: OrgSqliteDb,
+  connectorId: string,
+  agentIds: string[],
+  createdAt: string,
+): void {
+  db.transaction((tx) => {
+    tx.delete(connectorAgentsTable).where(eq(connectorAgentsTable.connectorId, connectorId)).run();
+    for (const agentId of agentIds) {
+      tx.insert(connectorAgentsTable)
+        .values({ connectorId, agentId, createdAt })
+        .onConflictDoNothing()
+        .run();
+    }
+  });
+}
+
 export function removeConnectorAgent(db: OrgSqliteDb, connectorId: string, agentId: string): void {
   db.delete(connectorAgentsTable)
     .where(

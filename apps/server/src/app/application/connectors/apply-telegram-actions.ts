@@ -1,8 +1,8 @@
 import type { Attachment } from 'harnesys';
-import { helpText } from '../../domain/connector/bot-commands.ts';
 import { connectorOrigin } from '../../domain/connector/echo.ts';
 import {
   type InboundDecision,
+  pairedNotice,
   pendingClaimNotice,
   pendingConnectionNotice,
 } from '../../domain/connector/inbound-decision.ts';
@@ -21,7 +21,6 @@ import {
   touchParticipant,
 } from './apply-telegram-context.ts';
 import { findOpenAsk, payloadForAskText, payloadForButtonValue } from './apply-telegram-hitl.ts';
-import { openConnectorThread } from './open-connector-thread.ts';
 
 export async function pairConnector(
   deps: ApplyActionDeps,
@@ -48,12 +47,8 @@ export async function pairConnector(
     pairCodeExpiresAt: null,
     updatedAt: now,
   });
-  const thread = openConnectorThread(
-    { connectors: deps.connectors, threads: deps.threads, threadAgents: deps.threadAgents },
-    { orgId: ctx.orgId, connector: ctx.connector, binding },
-  );
   deps.connectors.markInbox(ctx.orgId, ctx.inboxId, 'consumed');
-  await replyText(deps, { ...ctx, binding, threadId: thread?.id ?? null }, helpText());
+  await replyText(deps, { ...ctx, binding, threadId: null }, pairedNotice());
 }
 
 export async function claimBinding(deps: ApplyActionDeps, ctx: ApplyActionContext): Promise<void> {
@@ -83,12 +78,9 @@ export async function enqueueInbound(
     deps.connectors.markInbox(ctx.orgId, ctx.inboxId, 'rejected');
     return;
   }
-  const thread =
-    (ctx.binding.threadId ? deps.threads.findById(ctx.orgId, ctx.binding.threadId) : undefined) ??
-    openConnectorThread(
-      { connectors: deps.connectors, threads: deps.threads, threadAgents: deps.threadAgents },
-      { orgId: ctx.orgId, connector: ctx.connector, binding: ctx.binding },
-    );
+  const thread = ctx.binding.threadId
+    ? deps.threads.findById(ctx.orgId, ctx.binding.threadId)
+    : undefined;
   if (!thread) {
     await replyText(deps, ctx, pendingConnectionNotice());
     deps.connectors.markInbox(ctx.orgId, ctx.inboxId, 'rejected');

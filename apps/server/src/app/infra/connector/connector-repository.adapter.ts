@@ -19,13 +19,16 @@ import { withOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 import {
   attachBindingThread as attachBindingThreadRow,
   clearBindings as clearBindingsRow,
+  deleteBinding as deleteBindingRow,
   detachBinding as detachBindingRow,
   findActiveBinding as findActiveBindingRow,
   findBindingByChat as findBindingByChatRow,
   findBindingById as findBindingByIdRow,
   findBindingForThread as findBindingForThreadRow,
   insertBinding as insertBindingRow,
+  listBindingsByThread as listBindingsByThreadRow,
   listBindings as listBindingsRow,
+  updateBindingTitle as updateBindingTitleRow,
 } from './connector-repository.bindings.ts';
 import {
   findDeliveryByMessage as findDeliveryByMessageRow,
@@ -45,6 +48,7 @@ import {
   listConnectorAgentIds,
   listConnectorsByOrg,
   removeConnectorAgent,
+  replaceConnectorAgents,
   updateConnector,
 } from './connector-repository.store.ts';
 
@@ -106,6 +110,12 @@ export class ConnectorRepositoryAdapter extends ConnectorRepositoryPort {
     });
   }
 
+  replaceAgents(orgId: string, connectorId: string, agentIds: string[]): void {
+    withOrgSqlite(this.layout, orgId, (db) => {
+      replaceConnectorAgents(db, connectorId, agentIds, new Date().toISOString());
+    });
+  }
+
   insertBinding(rec: ConnectorBindingInsert): ConnectorBindingRecord {
     return withOrgSqlite(this.layout, rec.orgId, (db) => insertBindingRow(db, rec));
   }
@@ -147,6 +157,22 @@ export class ConnectorRepositoryAdapter extends ConnectorRepositoryPort {
 
   listBindings(orgId: string, connectorId: string): ConnectorBindingRecord[] {
     return withOrgSqlite(this.layout, orgId, (db) => listBindingsRow(db, connectorId));
+  }
+
+  listBindingsByThread(orgId: string, threadId: string): ConnectorBindingRecord[] {
+    return withOrgSqlite(this.layout, orgId, (db) => listBindingsByThreadRow(db, orgId, threadId));
+  }
+
+  updateBindingTitle(orgId: string, bindingId: string, title: string, updatedAt: string): void {
+    withOrgSqlite(this.layout, orgId, (db) => {
+      updateBindingTitleRow(db, orgId, bindingId, title, updatedAt);
+    });
+  }
+
+  deleteBinding(orgId: string, bindingId: string): void {
+    withOrgSqlite(this.layout, orgId, (db) => {
+      deleteBindingRow(db, orgId, bindingId);
+    });
   }
 
   attachBindingThread(

@@ -1,8 +1,24 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Put } from '@harnesys/brix';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Query,
+} from '@harnesys/brix';
 import type {
-  AddConnectorAgentBody,
-  ConnectConnectorBindingBody,
+  AttachChatBody,
+  AttachChatResponse,
+  ConnectChatBody,
+  ConnectChatResponse,
+  CreateTopicBody,
+  CreateTopicResponse,
   IssuePairCodeResponse,
+  ListConnectorsQuery,
   ListConnectorsResponse,
   PatchTelegramPolicyBody,
   TelegramConnectorActionResponse,
@@ -11,16 +27,22 @@ import type {
   UpsertTelegramConnectorResponse,
 } from '@harnesys/contracts';
 import {
-  AddConnectorAgentBodySchema,
-  ConnectConnectorBindingBodySchema,
+  AttachChatBodySchema,
+  ConnectChatBodySchema,
+  CreateTopicBodySchema,
+  ListConnectorsQuerySchema,
   PatchTelegramPolicyBodySchema,
   UpsertTelegramConnectorBodySchema,
 } from '@harnesys/contracts';
-import { AddConnectorAgentUseCase } from '../../application/connectors/add-connector-agent.use-case.ts';
-import { ConnectConnectorBindingUseCase } from '../../application/connectors/connect-connector-binding.use-case.ts';
-import { DisconnectConnectorBindingUseCase } from '../../application/connectors/disconnect-connector-binding.use-case.ts';
-import { ListConnectorsUseCase } from '../../application/connectors/list-connectors.use-case.ts';
-import { RemoveConnectorAgentUseCase } from '../../application/connectors/remove-connector-agent.use-case.ts';
+import { AttachChatUseCase } from '../../application/connectors/attach-chat.use-case.ts';
+import { ConnectChatUseCase } from '../../application/connectors/connect-chat.use-case.ts';
+import { CreateTopicUseCase } from '../../application/connectors/create-topic.use-case.ts';
+import { DisconnectChatUseCase } from '../../application/connectors/disconnect-chat.use-case.ts';
+import { ForgetChatUseCase } from '../../application/connectors/forget-chat.use-case.ts';
+import {
+  GetConnectorUseCase,
+  ListConnectorsUseCase,
+} from '../../application/connectors/list-connectors.use-case.ts';
 import {
   IssuePairCodeUseCase,
   PatchTelegramPolicyUseCase,
@@ -31,10 +53,11 @@ import {
 } from '../../application/connectors/telegram-connector-actions.use-case.ts';
 import { UpsertTelegramConnectorUseCase } from '../../application/connectors/upsert-telegram-connector.use-case.ts';
 
-@Controller('orgs/:orgId/agents/:agentId/connectors')
+@Controller('orgs/:orgId/connectors')
 export class ConnectorsController {
   constructor(
     private readonly listConnectors: ListConnectorsUseCase,
+    private readonly getConnector: GetConnectorUseCase,
     private readonly upsertTelegram: UpsertTelegramConnectorUseCase,
     private readonly issuePairCode: IssuePairCodeUseCase,
     private readonly pauseTelegram: PauseTelegramConnectorUseCase,
@@ -42,107 +65,137 @@ export class ConnectorsController {
     private readonly unpairTelegram: UnpairTelegramConnectorUseCase,
     private readonly patchPolicy: PatchTelegramPolicyUseCase,
     private readonly removeTelegram: RemoveTelegramConnectorUseCase,
-    private readonly addAgent: AddConnectorAgentUseCase,
-    private readonly removeAgent: RemoveConnectorAgentUseCase,
-    private readonly connectBinding: ConnectConnectorBindingUseCase,
-    private readonly disconnectBinding: DisconnectConnectorBindingUseCase,
+    private readonly attachChat: AttachChatUseCase,
+    private readonly connectChat: ConnectChatUseCase,
+    private readonly disconnectChat: DisconnectChatUseCase,
+    private readonly createTopic: CreateTopicUseCase,
+    private readonly forgetChat: ForgetChatUseCase,
   ) {}
 
   @Get()
-  list(@Param('orgId') orgId: string, @Param('agentId') agentId: string): ListConnectorsResponse {
-    return this.listConnectors.execute({ orgId, agentId });
+  list(
+    @Param('orgId') orgId: string,
+    @Query(ListConnectorsQuerySchema) query: ListConnectorsQuery,
+  ): ListConnectorsResponse {
+    return this.listConnectors.execute({ orgId, ...query });
   }
 
-  @Put('telegram')
-  upsert(
+  @Get(':connectorId')
+  get(
     @Param('orgId') orgId: string,
-    @Param('agentId') agentId: string,
+    @Param('connectorId') connectorId: string,
+  ): TelegramConnectorActionResponse {
+    return this.getConnector.execute({ orgId, connectorId });
+  }
+
+  @Post('telegram')
+  create(
+    @Param('orgId') orgId: string,
     @Body(UpsertTelegramConnectorBodySchema) body: UpsertTelegramConnectorBody,
   ): Promise<UpsertTelegramConnectorResponse> {
-    return this.upsertTelegram.execute({ orgId, agentId, token: body.token });
+    return this.upsertTelegram.execute({ orgId, token: body.token });
   }
 
-  @Post('telegram/pair-code')
+  @Put(':connectorId/telegram')
+  update(
+    @Param('orgId') orgId: string,
+    @Param('connectorId') connectorId: string,
+    @Body(UpsertTelegramConnectorBodySchema) body: UpsertTelegramConnectorBody,
+  ): Promise<UpsertTelegramConnectorResponse> {
+    return this.upsertTelegram.execute({ orgId, connectorId, token: body.token });
+  }
+
+  @Delete(':connectorId')
+  @HttpCode(204)
+  remove(@Param('orgId') orgId: string, @Param('connectorId') connectorId: string): Promise<void> {
+    return this.removeTelegram.execute({ orgId, connectorId });
+  }
+
+  @Post(':connectorId/telegram/pair-code')
   pairCode(
     @Param('orgId') orgId: string,
-    @Param('agentId') agentId: string,
+    @Param('connectorId') connectorId: string,
   ): IssuePairCodeResponse {
-    return this.issuePairCode.execute({ orgId, agentId });
+    return this.issuePairCode.execute({ orgId, connectorId });
   }
 
-  @Post('telegram/pause')
+  @Post(':connectorId/telegram/pause')
   pause(
     @Param('orgId') orgId: string,
-    @Param('agentId') agentId: string,
+    @Param('connectorId') connectorId: string,
   ): TelegramConnectorActionResponse {
-    return this.pauseTelegram.execute({ orgId, agentId });
+    return this.pauseTelegram.execute({ orgId, connectorId });
   }
 
-  @Post('telegram/resume')
+  @Post(':connectorId/telegram/resume')
   resume(
     @Param('orgId') orgId: string,
-    @Param('agentId') agentId: string,
+    @Param('connectorId') connectorId: string,
   ): TelegramConnectorActionResponse {
-    return this.resumeTelegram.execute({ orgId, agentId });
+    return this.resumeTelegram.execute({ orgId, connectorId });
   }
 
-  @Post('telegram/unpair')
+  @Post(':connectorId/telegram/unpair')
   unpair(
     @Param('orgId') orgId: string,
-    @Param('agentId') agentId: string,
+    @Param('connectorId') connectorId: string,
   ): UnpairTelegramConnectorResponse {
-    return this.unpairTelegram.execute({ orgId, agentId });
+    return this.unpairTelegram.execute({ orgId, connectorId });
   }
 
-  @Patch('telegram/policy')
+  @Patch(':connectorId/telegram/policy')
   policy(
     @Param('orgId') orgId: string,
-    @Param('agentId') agentId: string,
+    @Param('connectorId') connectorId: string,
     @Body(PatchTelegramPolicyBodySchema) body: PatchTelegramPolicyBody,
   ): TelegramConnectorActionResponse {
-    return this.patchPolicy.execute({ orgId, agentId, body });
+    return this.patchPolicy.execute({ orgId, connectorId, body });
   }
 
-  @Post('telegram/agents')
-  addConnectorAgent(
+  @Post(':connectorId/telegram/chats/attach')
+  attach(
     @Param('orgId') orgId: string,
-    @Param('agentId') agentId: string,
-    @Body(AddConnectorAgentBodySchema) body: AddConnectorAgentBody,
-  ): TelegramConnectorActionResponse {
-    return this.addAgent.execute({ orgId, agentId, body });
+    @Param('connectorId') connectorId: string,
+    @Body(AttachChatBodySchema) body: AttachChatBody,
+  ): Promise<AttachChatResponse> {
+    return this.attachChat.execute({ orgId, connectorId, body });
   }
 
-  @Delete('telegram/agents/:memberAgentId')
-  removeConnectorAgent(
-    @Param('orgId') orgId: string,
-    @Param('agentId') agentId: string,
-    @Param('memberAgentId') memberAgentId: string,
-  ): TelegramConnectorActionResponse {
-    return this.removeAgent.execute({ orgId, agentId, body: { agentId: memberAgentId } });
-  }
-
-  @Post('telegram/bindings/:bindingId/connect')
+  @Post(':connectorId/telegram/chats/:bindingId/connect')
   connect(
     @Param('orgId') orgId: string,
-    @Param('agentId') agentId: string,
+    @Param('connectorId') connectorId: string,
     @Param('bindingId') bindingId: string,
-    @Body(ConnectConnectorBindingBodySchema) body: ConnectConnectorBindingBody,
-  ): Promise<TelegramConnectorActionResponse> {
-    return this.connectBinding.execute({ orgId, agentId, bindingId, body });
+    @Body(ConnectChatBodySchema) body: ConnectChatBody,
+  ): Promise<ConnectChatResponse> {
+    return this.connectChat.execute({ orgId, connectorId, bindingId, body });
   }
 
-  @Delete('telegram/bindings/:bindingId/connect')
+  @Delete(':connectorId/telegram/chats/:bindingId/connect')
   disconnect(
     @Param('orgId') orgId: string,
-    @Param('agentId') agentId: string,
+    @Param('connectorId') connectorId: string,
     @Param('bindingId') bindingId: string,
   ): TelegramConnectorActionResponse {
-    return this.disconnectBinding.execute({ orgId, agentId, bindingId });
+    return this.disconnectChat.execute({ orgId, connectorId, bindingId });
   }
 
-  @Delete('telegram')
-  @HttpCode(204)
-  remove(@Param('orgId') orgId: string, @Param('agentId') agentId: string): Promise<void> {
-    return this.removeTelegram.execute({ orgId, agentId });
+  @Post(':connectorId/telegram/chats/:bindingId/topics')
+  topic(
+    @Param('orgId') orgId: string,
+    @Param('connectorId') connectorId: string,
+    @Param('bindingId') bindingId: string,
+    @Body(CreateTopicBodySchema) body: CreateTopicBody,
+  ): Promise<CreateTopicResponse> {
+    return this.createTopic.execute({ orgId, connectorId, bindingId, body });
+  }
+
+  @Delete(':connectorId/telegram/chats/:bindingId')
+  forget(
+    @Param('orgId') orgId: string,
+    @Param('connectorId') connectorId: string,
+    @Param('bindingId') bindingId: string,
+  ): TelegramConnectorActionResponse {
+    return this.forgetChat.execute({ orgId, connectorId, bindingId });
   }
 }

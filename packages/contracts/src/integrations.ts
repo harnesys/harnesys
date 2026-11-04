@@ -52,7 +52,7 @@ export const ConnectorDescriptorSchema = z.object({
   description: z.string().min(1),
   icon: z.string().min(1),
   auth: z.object({
-    kind: z.enum(['oauth-browser', 'github-app-install']),
+    kind: z.enum(['oauth-browser', 'github-app-install', 'bot-token']),
   }),
   content: ConnectorContentSchema,
   capabilities: z.array(ConnectorCapabilitySchema),
@@ -136,14 +136,14 @@ export const CONNECTOR_CATALOG: ConnectorDescriptor[] = [
   {
     id: 'telegram',
     name: 'Telegram',
-    tagline: 'Direct chats with agents',
+    tagline: 'Bots, groups, and topics for agents',
     description:
-      'Connect a Telegram bot for direct chats where agents answer questions and act on attached sources. Planned for a future release.',
+      'Connect one or more Telegram bots to this organization, then connect a direct message, group, or forum topic to a thread. A thread can hold several agents: one answers every message, the rest answer when mentioned. Bots need to be a group admin or have privacy mode disabled to read group messages.',
     icon: 'telegram',
-    auth: { kind: 'oauth-browser' },
+    auth: { kind: 'bot-token' },
     content: 'none',
     capabilities: [],
-    status: 'planned',
+    status: 'available',
   },
 ];
 

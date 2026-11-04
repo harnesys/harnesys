@@ -11,13 +11,14 @@ import { ThreadModule } from '../../infra/thread/thread.module.ts';
 import { UsageModule } from '../../infra/usage/usage.module.ts';
 import { SkillsUseCaseModule } from '../skills/skills.use-case.module.ts';
 import { ThreadUseCaseModule } from '../threads/thread.use-case.module.ts';
-import { AddConnectorAgentUseCase } from './add-connector-agent.use-case.ts';
 import { ApplyTelegramUpdateUseCase } from './apply-telegram-update.use-case.ts';
-import { ConnectConnectorBindingUseCase } from './connect-connector-binding.use-case.ts';
-import { DisconnectConnectorBindingUseCase } from './disconnect-connector-binding.use-case.ts';
-import { ListConnectorsUseCase } from './list-connectors.use-case.ts';
+import { AttachChatUseCase } from './attach-chat.use-case.ts';
+import { ConnectChatUseCase } from './connect-chat.use-case.ts';
+import { CreateTopicUseCase } from './create-topic.use-case.ts';
+import { DisconnectChatUseCase } from './disconnect-chat.use-case.ts';
+import { ForgetChatUseCase } from './forget-chat.use-case.ts';
+import { GetConnectorUseCase, ListConnectorsUseCase } from './list-connectors.use-case.ts';
 import { ProjectConnectorEventsUseCase } from './project-connector-events.use-case.ts';
-import { RemoveConnectorAgentUseCase } from './remove-connector-agent.use-case.ts';
 import { RunTelegramCommandUseCase } from './run-telegram-command.use-case.ts';
 import {
   IssuePairCodeUseCase,
@@ -32,16 +33,18 @@ import { UpsertTelegramConnectorUseCase } from './upsert-telegram-connector.use-
 const useCases = [
   UpsertTelegramConnectorUseCase,
   ListConnectorsUseCase,
+  GetConnectorUseCase,
   IssuePairCodeUseCase,
   PauseTelegramConnectorUseCase,
   ResumeTelegramConnectorUseCase,
   UnpairTelegramConnectorUseCase,
   RemoveTelegramConnectorUseCase,
   PatchTelegramPolicyUseCase,
-  AddConnectorAgentUseCase,
-  RemoveConnectorAgentUseCase,
-  ConnectConnectorBindingUseCase,
-  DisconnectConnectorBindingUseCase,
+  ConnectChatUseCase,
+  DisconnectChatUseCase,
+  AttachChatUseCase,
+  CreateTopicUseCase,
+  ForgetChatUseCase,
   ApplyTelegramUpdateUseCase,
   RunTelegramCommandUseCase,
 ];
