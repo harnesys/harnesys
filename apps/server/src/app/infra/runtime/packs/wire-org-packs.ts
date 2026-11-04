@@ -42,6 +42,7 @@ import { orgPackNames } from './org-pack-list.ts';
 import { registrationForPack } from './org-pack-registrations.ts';
 import { isPackSatisfied } from './org-pack-requirements.ts';
 import type { OrgSkillsDeps } from './org-skills.pack.port.ts';
+import type { OrgTelegramDeps } from './org-telegram.port.ts';
 
 export interface WireOrgPacksDeps {
   orgId: string;
@@ -61,6 +62,7 @@ export interface WireOrgPacksDeps {
   manager?: OrgManagerDeps;
   google?: OrgGoogleDeps;
   github?: OrgGithubDeps;
+  telegram?: OrgTelegramDeps;
   knowledge?: OrgKnowledgeDeps;
   sources?: SourceRegistryPort;
   planDb?: OrgSqliteDb;
@@ -91,6 +93,7 @@ export interface WireOrgPackFilter {
   manager?: OrgManagerDeps;
   google?: OrgGoogleDeps;
   github?: OrgGithubDeps;
+  telegram?: OrgTelegramDeps;
   knowledge?: OrgKnowledgeDeps;
   skills?: OrgSkillsDeps;
   orgSettings?: OrgSettingsPort;
@@ -146,6 +149,7 @@ export function orgPackInputs(
     ...(deps.manager ? { manager: deps.manager } : {}),
     ...(deps.google ? { google: deps.google } : {}),
     ...(deps.github ? { github: deps.github } : {}),
+    ...(deps.telegram ? { telegram: deps.telegram } : {}),
     ...(deps.skills ? { skills: deps.skills } : {}),
     ...(deps.lsp ? { lsp: deps.lsp } : {}),
   };

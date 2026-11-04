@@ -59,6 +59,7 @@ import { openOrgRuntime } from './org-runtime.ts';
 import type { OrgRuntime } from './org-runtime.types.ts';
 import { githubToolsDeps } from './packs/github-tools.holder.ts';
 import { googleToolsDeps } from './packs/google-tools.holder.ts';
+import { telegramToolsDeps } from './packs/telegram-tools.holder.ts';
 import { issueToolsDeps } from './packs/issue-tools.holder.ts';
 import { managerToolsDeps } from './packs/manager-tools.holder.ts';
 import { OrgMcpManagePort } from './packs/org-mcp-manage.port.ts';
@@ -136,6 +137,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     const skills = skillsToolsDeps();
     const google = googleToolsDeps();
     const github = githubToolsDeps();
+    const telegram = telegramToolsDeps();
     const pending = openOrgRuntime({
       orgId,
       logger: this.log.child('org-runtime'),
@@ -204,6 +206,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       ...(manager ? { manager } : {}),
       ...(google ? { google } : {}),
       ...(github ? { github } : {}),
+      ...(telegram ? { telegram } : {}),
       ...(skills ? { skills } : {}),
       ...(this.lsp ? { lsp: this.lsp } : {}),
     });

@@ -28,6 +28,11 @@ export type { PlanCapabilityPorts } from './plan/index.ts';
 export { planCapability } from './plan/index.ts';
 export type { SchedulerCapabilityPorts } from './scheduler/index.ts';
 export { schedulerCapability } from './scheduler/index.ts';
+export type {
+  TelegramCapabilityPorts,
+  TelegramPackSpec,
+} from './telegram/index.ts';
+export { telegramCapability } from './telegram/index.ts';
 export type { ThreadsCapabilityPorts } from './threads/index.ts';
 export { threadsCapability } from './threads/index.ts';
 export type { WebPackPorts, WebPackSpec } from './web/index.ts';

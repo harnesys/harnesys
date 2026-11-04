@@ -34,6 +34,7 @@ describe('org pack single source', () => {
       'semantic-memory',
       'shell',
       'skills',
+      'telegram',
       'threads',
       'web',
       'webhook',

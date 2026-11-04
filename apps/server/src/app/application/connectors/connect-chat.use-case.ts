@@ -9,7 +9,7 @@ import {
 import type { ConnectorRecord } from '../../domain/connector/connector.ts';
 import { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
 import {
-  type TelegramApiPort,
+  TelegramApiPort,
   TelegramUnauthorizedError,
 } from '../../domain/connector/telegram-api.port.ts';
 import { threadKindOfChat } from '../../domain/connector/thread-kind.ts';
@@ -51,7 +51,7 @@ export class ConnectChatUseCase {
     }
     const targetKind = threadKindOfChat(binding.chatType);
     if (targetKind === 'group') {
-      await this.assertBotCanReadGroup(connector, binding.externalChatId);
+      await this.assertBotCanPost(connector, binding.externalChatId, binding.chatType);
     }
 
     if (request.body.mode === 'existing') {
@@ -137,12 +137,21 @@ export class ConnectChatUseCase {
     if (targetKind === 'group' && agentIds.length > 8) {
       throw new ConnectorValidationException('A thread can hold at most 8 agents');
     }
+    const binding = this.connectors.findBinding(connector.orgId, connector.id, bindingId);
+    if (binding.chatType === 'channel' && body.autoReplyAgentId) {
+      throw new ConnectorValidationException(
+        'Channels are mention-only: a channel post cannot trigger an automatic reply',
+      );
+    }
     const autoReplyAgentId =
-      targetKind === 'chat' ? (agentIds[0] ?? null) : (body.autoReplyAgentId ?? null);
+      targetKind === 'chat'
+        ? (agentIds[0] ?? null)
+        : binding.chatType === 'channel'
+          ? null
+          : (body.autoReplyAgentId ?? null);
     if (autoReplyAgentId !== null && !agentIds.includes(autoReplyAgentId)) {
       throw new ConnectorValidationException('The auto-reply agent must belong to this thread');
     }
-    const binding = this.connectors.findBinding(connector.orgId, connector.id, bindingId);
     createThreadForChat(
       {
         connectors: this.connectors,
@@ -195,14 +204,18 @@ export class ConnectChatUseCase {
     }));
   }
 
-  private async assertBotCanReadGroup(connector: ConnectorRecord, chatId: string): Promise<void> {
+  private async assertBotCanPost(
+    connector: ConnectorRecord,
+    chatId: string,
+    chatType: string,
+  ): Promise<void> {
     const token = await this.secrets.get(connector.orgId, connector.secretRef);
     if (!token) {
       throw new ConnectorValidationException('Connector token is missing');
     }
     try {
       const me = await this.telegram.getMe(token);
-      if (me.canReadAllGroupMessages) {
+      if (chatType !== 'channel' && me.canReadAllGroupMessages) {
         return;
       }
     } catch (error) {
@@ -216,7 +229,9 @@ export class ConnectChatUseCase {
       return;
     }
     throw new ConnectorValidationException(
-      'Make the bot a group admin or disable privacy mode in BotFather (/setprivacy).',
+      chatType === 'channel'
+        ? 'Make the bot an admin of the channel so it can post there.'
+        : 'Make the bot a group admin or disable privacy mode in BotFather (/setprivacy).',
     );
   }
 }

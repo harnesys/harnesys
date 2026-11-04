@@ -3,6 +3,7 @@ import type {
   ConnectorDeliveryInsert,
   ConnectorDeliveryRecord,
   ConnectorInboxInsert,
+  ConnectorInboxRecord,
   ConnectorInboxStatus,
   ConnectorInsert,
   ConnectorPatch,
@@ -228,6 +229,10 @@ export class MemoryConnectors extends ConnectorRepositoryPort {
 
   markInbox(_orgId: string, _id: string, _status: ConnectorInboxStatus): void {}
 
+  listRecentInbox(): ConnectorInboxRecord[] {
+    return [];
+  }
+
   upsertDelivery(_orgId: string, rec: ConnectorDeliveryInsert): ConnectorDeliveryRecord {
     return rec;
   }
@@ -315,6 +320,15 @@ export class FakeTelegram extends TelegramApiPort {
   ): Promise<TelegramForumTopic> {
     return { chatId: '', topicId: '' };
   }
+
+  async deleteMessage(_token: string, _chatId: string, _messageId: string): Promise<void> {}
+
+  async pinChatMessage(
+    _token: string,
+    _chatId: string,
+    _messageId: string,
+    _notify?: boolean,
+  ): Promise<void> {}
 
   async setMyCommands(_token: string, _commands: TelegramBotCommand[]): Promise<void> {}
 }

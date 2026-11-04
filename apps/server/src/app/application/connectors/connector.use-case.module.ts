@@ -20,6 +20,7 @@ import { ForgetChatUseCase } from './forget-chat.use-case.ts';
 import { GetConnectorUseCase, ListConnectorsUseCase } from './list-connectors.use-case.ts';
 import { ProjectConnectorEventsUseCase } from './project-connector-events.use-case.ts';
 import { RunTelegramCommandUseCase } from './run-telegram-command.use-case.ts';
+import { TelegramToolsProvider } from './telegram-tools.provider.ts';
 import {
   IssuePairCodeUseCase,
   PatchTelegramPolicyUseCase,
@@ -63,6 +64,7 @@ const useCases = [
   ],
   providers: [
     ...useCases,
+    TelegramToolsProvider,
     { provide: TelegramPollerSyncPort, useClass: TelegramPoller },
     { provide: ConnectorOutboundPort, useClass: ProjectConnectorEventsUseCase },
   ],

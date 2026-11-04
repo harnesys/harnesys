@@ -276,7 +276,7 @@ function prefixForRoute(route: RouteContext): string {
 }
 
 function prefixOf(chatType: string, agentName: string | undefined): string {
-  if (chatType === 'private') {
+  if (chatType !== 'group' && chatType !== 'supergroup') {
     return '';
   }
   return `${agentName ?? 'Agent'}: `;

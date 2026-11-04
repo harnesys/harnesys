@@ -4,7 +4,7 @@ import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { ConnectorValidationException } from '../../domain/connector/connector.error.ts';
 import { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
 import {
-  type TelegramApiPort,
+  TelegramApiPort,
   type TelegramChatInfo,
   TelegramUnauthorizedError,
 } from '../../domain/connector/telegram-api.port.ts';

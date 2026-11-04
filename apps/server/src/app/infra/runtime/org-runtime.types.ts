@@ -60,6 +60,7 @@ import type { OrgIssueDeps } from './packs/org-issue.port.ts';
 import type { OrgKnowledgeDeps } from './packs/org-knowledge.port.ts';
 import type { OrgManagerDeps } from './packs/org-manager.port.ts';
 import type { OrgSkillsDeps } from './packs/org-skills.pack.port.ts';
+import type { OrgTelegramDeps } from './packs/org-telegram.port.ts';
 
 export interface OrgRuntime {
   orgId: string;
@@ -143,6 +144,7 @@ export interface OrgRuntimeDeps {
   manager?: OrgManagerDeps;
   google?: OrgGoogleDeps;
   github?: OrgGithubDeps;
+  telegram?: OrgTelegramDeps;
   skills?: OrgSkillsDeps;
   waitGate?: WaitTickerGatePort;
 }

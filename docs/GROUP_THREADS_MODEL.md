@@ -152,11 +152,13 @@ A bot is an organization-level transport, not an agent accessory: `connectors` h
 
 - One bot serves several chats and topics, and one thread can be served by several bots.
 - Deleting an agent never deletes a bot or unpairs a person; it detaches the thread and recomputes the ACL.
-- A direct message connects to a `chat` thread with exactly one agent; a group or forum topic connects to a `group` thread. One chat maps to at most one thread, and one thread maps to at most one chat per bot.
+- A direct message connects to a `chat` thread with exactly one agent; a group, forum topic, or channel connects to a `group` thread. One chat maps to at most one thread, and one thread maps to at most one chat per bot.
 - Connecting a group to an existing 1:1 thread requires an explicit promotion, which flips `threads.kind` to `group` and keeps the history and members.
-- Bots, chats, pair links and policies are managed in Settings → Connectors → Telegram. Agent settings show the routes of that agent read-only, and a thread header shows its Telegram route with connect and disconnect actions.
+- Bots, chats, pair links and policies are managed in one place: Settings → Connectors → Telegram. Agent settings have no per-connector tab; the thread header shows its Telegram route with connect and disconnect actions.
 - Pairing is two-step: a group or topic message with no binding claims it as an `unpaired` binding, and an admin connects it from the agent's connector pane. A direct message pairs by code, then its first inbound message opens the thread.
 - `provider` is a string everywhere in the core. No `platform !== 'telegram'` whitelist, no `IN ('telegram','web')` CHECK. Adding Discord touches no core schema.
+
+Channels are publish-heavy: a channel post is mirrored into its group thread, but channels never auto-reply — an agent answers only when mentioned. The `telegram` tool pack (`telegram_list_chats`, `telegram_get_chat`, `telegram_read_messages`, `telegram_send_message`, `telegram_edit_message`, `telegram_delete_message`, `telegram_pin_message`) lets agents post, edit, delete, pin, and read recent messages in connected groups and channels. Telegram's Bot API has no history endpoint, so `telegram_read_messages` returns only updates the bot actually received.
 
 Cardinality (decided): one bot serves many agents. A bot has no default agent. An org connects several bots, each with its own agent set (`connector_agents`). A binding maps a chat or topic to a thread. Responders are intersected with the connector's agent set, so a bot never delivers for an agent it does not serve.
 

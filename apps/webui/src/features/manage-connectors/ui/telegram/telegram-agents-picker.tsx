@@ -10,12 +10,14 @@ export function TelegramAgentsPicker({
   orgId,
   agentIds,
   autoReplyAgentId,
+  allowAutoReply = true,
   onAgentIdsChange,
   onAutoReplyChange,
 }: {
   orgId: string;
   agentIds: string[];
   autoReplyAgentId: string | null;
+  allowAutoReply?: boolean;
   onAgentIdsChange: (ids: string[]) => void;
   onAutoReplyChange: (id: string | null) => void;
 }) {
@@ -55,29 +57,35 @@ export function TelegramAgentsPicker({
           <p className="text-muted-foreground text-xs">This organization has no agents yet.</p>
         ) : null}
       </div>
-      <div className="flex items-center gap-2">
-        <span className="text-[11px] text-muted-foreground uppercase tracking-wide">
-          Who answers every message
-        </span>
-        <Select
-          value={autoReplyAgentId ?? MENTIONS_ONLY}
-          onValueChange={(value) =>
-            onAutoReplyChange(value === MENTIONS_ONLY ? null : (value ?? null))
-          }
-        >
-          <SelectTrigger size="sm" className="min-w-40" aria-label="Auto-reply agent">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={MENTIONS_ONLY}>Mention-only</SelectItem>
-            {agentIds.map((agentId) => (
-              <SelectItem key={agentId} value={agentId}>
-                {items.find((agent) => agent.id === agentId)?.name ?? agentId}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {!allowAutoReply ? (
+        <p className="text-[11px] text-muted-foreground">
+          Channels are mention-only: a channel post cannot trigger an automatic reply.
+        </p>
+      ) : (
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] text-muted-foreground uppercase tracking-wide">
+            Who answers every message
+          </span>
+          <Select
+            value={autoReplyAgentId ?? MENTIONS_ONLY}
+            onValueChange={(value) =>
+              onAutoReplyChange(value === MENTIONS_ONLY ? null : (value ?? null))
+            }
+          >
+            <SelectTrigger size="sm" className="min-w-40" aria-label="Auto-reply agent">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={MENTIONS_ONLY}>Mention-only</SelectItem>
+              {agentIds.map((agentId) => (
+                <SelectItem key={agentId} value={agentId}>
+                  {items.find((agent) => agent.id === agentId)?.name ?? agentId}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
     </div>
   );
 }

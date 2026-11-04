@@ -12,6 +12,7 @@ import type { OrgIssueDeps } from './org-issue.port.ts';
 import type { OrgManagerDeps } from './org-manager.port.ts';
 import { isHostWired, orgPackNames } from './org-pack-list.ts';
 import type { OrgSkillsDeps } from './org-skills.pack.port.ts';
+import type { OrgTelegramDeps } from './org-telegram.port.ts';
 import {
   FakeKnowledgeSearch,
   FakeKnowledgeStore,
@@ -55,6 +56,7 @@ function fullDeps(): WireOrgPacksDeps {
     manager: {} as OrgManagerDeps,
     google: {} as OrgGoogleDeps,
     github: {} as OrgGithubDeps,
+    telegram: {} as OrgTelegramDeps,
     skills: {} as OrgSkillsDeps,
     mcpManage: {} as McpManagePort,
     lsp: {} as LspPort,

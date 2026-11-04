@@ -30,8 +30,7 @@ export type AgentConfigCategory =
   | 'hooks'
   | 'graph'
   | 'limits'
-  | 'subagents'
-  | 'connectors';
+  | 'subagents';
 export interface AgentConfigNavItem {
   id: AgentConfigCategory;
   label: string;
@@ -47,7 +46,6 @@ export const AGENT_CONFIG_CATEGORIES: AgentConfigNavItem[] = [
   { id: 'compaction', label: 'Context', icon: FoldVerticalIcon },
   { id: 'memory', label: 'Memory', icon: BrainIcon },
   { id: 'graph', label: 'Graph', icon: WorkflowIcon },
-  { id: 'connectors', label: 'Telegram', icon: BotIcon },
   { id: 'subagents', label: 'Subagents', icon: BotIcon },
   { id: 'hooks', label: 'Hooks', icon: WebhookIcon },
   { id: 'modes', label: 'Modes', icon: SlidersHorizontalIcon },
@@ -60,10 +58,7 @@ export function filterAgentConfigCategories(options: {
   return AGENT_CONFIG_CATEGORIES.filter((item) => {
     if (
       options.isDelegate &&
-      (item.id === 'modes' ||
-        item.id === 'hooks' ||
-        item.id === 'subagents' ||
-        item.id === 'connectors')
+      (item.id === 'modes' || item.id === 'hooks' || item.id === 'subagents')
     ) {
       return false;
     }

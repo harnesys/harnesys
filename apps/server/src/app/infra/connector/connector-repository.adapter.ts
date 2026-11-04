@@ -6,6 +6,7 @@ import type {
   ConnectorDeliveryInsert,
   ConnectorDeliveryRecord,
   ConnectorInboxInsert,
+  ConnectorInboxRecord,
   ConnectorInboxStatus,
   ConnectorInsert,
   ConnectorPatch,
@@ -34,6 +35,7 @@ import {
   findDeliveryByMessage as findDeliveryByMessageRow,
   findDelivery as findDeliveryRow,
   insertInbox as insertInboxRow,
+  listRecentInbox as listRecentInboxRow,
   listStreamingDeliveries,
   markInbox as markInboxRow,
   upsertDelivery as upsertDeliveryRow,
@@ -206,6 +208,18 @@ export class ConnectorRepositoryAdapter extends ConnectorRepositoryPort {
     withOrgSqlite(this.layout, orgId, (db) => {
       markInboxRow(db, id, status);
     });
+  }
+
+  listRecentInbox(
+    orgId: string,
+    connectorId: string,
+    externalChatId: string,
+    externalTopicId: string | null,
+    limit: number,
+  ): ConnectorInboxRecord[] {
+    return withOrgSqlite(this.layout, orgId, (db) =>
+      listRecentInboxRow(db, connectorId, externalChatId, externalTopicId, limit),
+    );
   }
 
   upsertDelivery(orgId: string, rec: ConnectorDeliveryInsert): ConnectorDeliveryRecord {

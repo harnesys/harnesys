@@ -28,6 +28,7 @@ export function TelegramConnectWizard({
   onCancel: () => void;
 }) {
   const targetKind = binding.chatType === 'private' ? 'chat' : 'group';
+  const isChannel = binding.chatType === 'channel';
   const [mode, setMode] = useState<Mode>(initialThreadId ? 'existing' : 'new');
   const [threadId, setThreadId] = useState<string | null>(initialThreadId ?? null);
   const [title, setTitle] = useState('');
@@ -49,7 +50,7 @@ export function TelegramConnectWizard({
       return connectChat(orgId, connectorId, binding.id, {
         mode: 'new',
         agentIds,
-        autoReplyAgentId,
+        autoReplyAgentId: isChannel ? null : autoReplyAgentId,
         ...(title.trim() ? { title: title.trim() } : {}),
       });
     },
@@ -79,7 +80,7 @@ export function TelegramConnectWizard({
   });
 
   const canSubmit =
-    mode === 'existing' ? threadId !== null : agentIds.length > 0 && !mutation.isPending;
+    !mutation.isPending && (mode === 'existing' ? threadId !== null : agentIds.length > 0);
 
   return (
     <div
@@ -123,6 +124,7 @@ export function TelegramConnectWizard({
             orgId={orgId}
             agentIds={agentIds}
             autoReplyAgentId={autoReplyAgentId}
+            allowAutoReply={!isChannel}
             onAgentIdsChange={(ids) => setAgentIds(targetKind === 'chat' ? ids.slice(-1) : ids)}
             onAutoReplyChange={setAutoReplyAgentId}
           />
@@ -157,8 +159,8 @@ function connectionHint(targetKind: 'chat' | 'group', chatType: string): string 
   if (targetKind === 'chat') {
     return 'A direct message connects to a chat thread with exactly one agent.';
   }
-  if (chatType === 'group' || chatType === 'supergroup') {
-    return 'One agent answers every message; the others answer when mentioned with @name.';
+  if (chatType === 'channel') {
+    return 'New channel posts appear in the thread. Agents answer only when mentioned with @name; channels never auto-reply.';
   }
-  return 'This chat type is not supported yet.';
+  return 'One agent answers every message; the others answer when mentioned with @name.';
 }

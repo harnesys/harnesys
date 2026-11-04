@@ -12,8 +12,8 @@ describe('threadKindOfChat', () => {
     expect(threadKindOfChat('supergroup')).toBe('group');
   });
 
-  test('rejects channels', () => {
-    expect(() => threadKindOfChat('channel')).toThrow(ConnectorValidationException);
+  test('maps channels to group threads', () => {
+    expect(threadKindOfChat('channel')).toBe('group');
   });
 
   test('rejects unknown chat types', () => {

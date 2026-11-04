@@ -1,6 +1,7 @@
 import {
   asRecord,
   authorOf,
+  captionOrText,
   chatIdOf,
   chatOf,
   hasUnsupportedMedia,
@@ -108,9 +109,24 @@ export function parseTelegramUpdate(update: unknown): CanonicalUpdate {
     return { kind: 'edit', chatId, messageId };
   }
 
+  const editedChannel = asRecord(root.edited_channel_post);
+  if (editedChannel !== null) {
+    const chatId = chatIdOf(editedChannel);
+    const messageId = messageIdOf(editedChannel);
+    if (chatId === null || messageId === null) {
+      throw new ConnectorUpdateError('Empty telegram update');
+    }
+    return { kind: 'edit', chatId, messageId };
+  }
+
   const membership = asRecord(root.my_chat_member);
   if (membership !== null) {
     return parseChatMember(membership);
+  }
+
+  const channelPost = asRecord(root.channel_post);
+  if (channelPost !== null) {
+    return parseChannelPost(channelPost);
   }
 
   const message = asRecord(root.message);
@@ -163,6 +179,46 @@ function parseCallback(callback: Record<string, unknown>): CanonicalUpdate {
     deliveryId,
     callbackQueryId,
   };
+}
+
+function parseChannelPost(post: Record<string, unknown>): CanonicalUpdate {
+  const chat = asRecord(post.chat);
+  const chatId = chat !== null ? idString(chat.id) : null;
+  const messageId = messageIdOf(post);
+  if (chatId === null || messageId === null) {
+    throw new ConnectorUpdateError('Empty telegram update');
+  }
+  const chatType = 'channel';
+  const from = asRecord(post.from);
+  if (from !== null && from.is_bot === true) {
+    return { kind: 'ignored', chatId, chatType };
+  }
+  const senderChat = asRecord(post.sender_chat);
+  const authorRef = from ?? senderChat;
+  const authorId = authorRef !== null ? idString(authorRef.id) : null;
+  if (authorRef === null || authorId === null) {
+    return { kind: 'ignored', chatId, chatType };
+  }
+  const base = {
+    ...chatOf(chat, post, chatId, chatType),
+    messageId,
+    replyToMessageId: replyToMessageIdOf(post),
+    author: from !== null ? authorOf(from, authorId) : channelAuthorOf(authorRef, authorId),
+  };
+  const withFile = messageWithFile(post, base);
+  if (withFile !== null) {
+    return withFile;
+  }
+  return { kind: 'message', text: captionOrText(post), ...base };
+}
+
+function channelAuthorOf(
+  senderChat: Record<string, unknown>,
+  userId: string,
+): CanonicalAuthor {
+  const username = typeof senderChat.username === 'string' ? senderChat.username : null;
+  const title = typeof senderChat.title === 'string' ? senderChat.title : '';
+  return { userId, displayName: title || username || userId, username };
 }
 
 function parseMessage(message: Record<string, unknown>): CanonicalUpdate {

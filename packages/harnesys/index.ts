@@ -437,6 +437,15 @@ export { planCapability } from './src/packs/plan/index.ts';
 export type { SchedulerCapabilityPorts } from './src/packs/scheduler/index.ts';
 export { schedulerCapability } from './src/packs/scheduler/index.ts';
 export {
+  type CreateTelegramToolsParams,
+  createTelegramTools,
+} from './src/packs/telegram/create-telegram-tools.ts';
+export type {
+  TelegramCapabilityPorts,
+  TelegramPackSpec,
+} from './src/packs/telegram/index.ts';
+export { telegramCapability } from './src/packs/telegram/index.ts';
+export {
   firstMatchingCommandPattern,
   matchProgram,
 } from './src/packs/shell/command-glob.ts';
@@ -601,6 +610,13 @@ export type {
   GoogleYoutubeVideoPatch,
   GoogleYoutubeVideoSummary,
 } from './src/ports/google-youtube.ts';
+export type {
+  TelegramChatSummary,
+  TelegramChatTarget,
+  TelegramMessageSummary,
+  TelegramPostResult,
+} from './src/ports/telegram-chats.ts';
+export { TelegramChatsPort } from './src/ports/telegram-chats.ts';
 export type {
   GeneratedImageArtifact,
   ImageGenerationRequest,

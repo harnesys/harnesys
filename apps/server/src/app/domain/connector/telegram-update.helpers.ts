@@ -126,7 +126,7 @@ function lastPhotoFileId(photo: unknown): string | null {
   return last.file_id;
 }
 
-function captionOrText(message: Record<string, unknown>): string {
+export function captionOrText(message: Record<string, unknown>): string {
   if (typeof message.caption === 'string') {
     return message.caption;
   }

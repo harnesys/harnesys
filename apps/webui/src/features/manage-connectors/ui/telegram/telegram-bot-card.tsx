@@ -19,15 +19,15 @@ import {
   unpairTelegramBot,
   updateTelegramBot,
 } from '../../model/connector-api';
-import { TelegramConnectionsTree } from './telegram-connections-tree';
+import { TelegramDiscovery } from './telegram-discovery';
 import { CONNECTOR_STATUS_LABEL, CONNECTOR_STATUS_TONE, type PairInfo } from './telegram-status';
 
-const POLICY_ROWS: ReadonlyArray<{ key: keyof MirrorPolicyPublic; label: string }> = [
-  { key: 'text', label: 'Assistant text' },
-  { key: 'ask', label: 'Questions and approvals' },
-  { key: 'failures', label: 'Failures' },
-  { key: 'files', label: 'Files' },
-  { key: 'appUserEcho', label: 'Messages typed in Harnesys' },
+const POLICY_ROWS: ReadonlyArray<{ key: keyof MirrorPolicyPublic; label: string; hint: string }> = [
+  { key: 'text', label: 'Agent replies', hint: 'Final answers and streamed text' },
+  { key: 'ask', label: 'Questions and approvals', hint: 'Buttons that unblock a run' },
+  { key: 'failures', label: 'Failures', hint: 'Run errors and stops' },
+  { key: 'files', label: 'Files', hint: 'Attachments produced by an agent' },
+  { key: 'appUserEcho', label: 'Messages typed in Harnesys', hint: 'Mirror your own prompts' },
 ];
 
 export function TelegramBotCard({
@@ -44,6 +44,7 @@ export function TelegramBotCard({
   onChanged: () => void;
 }) {
   const [token, setToken] = useState('');
+  const [tokenOpen, setTokenOpen] = useState(false);
   const [pair, setPair] = useState<PairInfo | null>(initialPair);
 
   function failure(title: string) {
@@ -59,6 +60,7 @@ export function TelegramBotCard({
     mutationFn: () => updateTelegramBot(orgId, connector.id, token),
     onSuccess: (result) => {
       setToken('');
+      setTokenOpen(false);
       setPair({ pairCode: result.pairCode, pairUrl: result.pairUrl });
       onChanged();
       toast.add({ title: 'Bot token updated' });
@@ -89,7 +91,10 @@ export function TelegramBotCard({
     onSuccess: (result) => {
       setPair({ pairCode: result.pairCode, pairUrl: result.pairUrl });
       onChanged();
-      toast.add({ title: 'Direct messages unpaired', description: 'Groups and topics are kept.' });
+      toast.add({
+        title: 'Direct messages unpaired',
+        description: 'Groups and channels are kept.',
+      });
     },
     onError: failure('Unpair failed'),
   });
@@ -117,11 +122,13 @@ export function TelegramBotCard({
     unpair.isPending ||
     policy.isPending ||
     remove.isPending;
+  const connected = connector.bindings.filter((binding) => binding.threadId !== null).length;
 
   async function confirmRemove(): Promise<void> {
     const ok = await alert.confirm({
-      title: 'Remove this bot?',
-      description: 'The token is deleted and its chats are forgotten. Threads stay in Harnesys.',
+      title: `Remove @${connector.botUsername}?`,
+      description:
+        'The token is deleted and its chats are forgotten. Threads and their history stay in Harnesys.',
       confirmText: 'Remove',
       variant: 'destructive',
       testId: 'telegram-remove-bot-dialog',
@@ -134,7 +141,7 @@ export function TelegramBotCard({
   async function confirmUnpair(): Promise<void> {
     const ok = await alert.confirm({
       title: 'Unpair direct messages?',
-      description: 'Groups and topics stay connected. A new pair link is issued.',
+      description: 'Groups and channels stay connected. A new pair link is issued.',
       confirmText: 'Unpair',
       testId: 'telegram-unpair-dialog',
     });
@@ -144,24 +151,48 @@ export function TelegramBotCard({
   }
 
   return (
-    <div
-      className="flex flex-col gap-3 rounded-lg border bg-popover p-3"
+    <article
+      className="flex flex-col gap-4 rounded-xl border bg-popover p-4"
       data-testid="telegram-bot-card"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-col">
-          <span className="truncate font-medium text-sm">@{connector.botUsername}</span>
-          <span className="font-mono text-[11px] text-muted-foreground">id {connector.botId}</span>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <div className="flex items-center gap-2">
+            <span className="truncate font-medium text-base">@{connector.botUsername}</span>
+            <RowChip tone={CONNECTOR_STATUS_TONE[connector.status]}>
+              {CONNECTOR_STATUS_LABEL[connector.status]}
+            </RowChip>
+          </div>
+          <span className="text-muted-foreground text-xs">
+            {connector.bindings.length} chats · {connected} connected · bot id{' '}
+            <span className="font-mono">{connector.botId}</span>
+          </span>
         </div>
-        <div className="flex items-center gap-2">
-          <RowChip tone={CONNECTOR_STATUS_TONE[connector.status]}>
-            {CONNECTOR_STATUS_LABEL[connector.status]}
-          </RowChip>
+        <div className="flex flex-wrap items-center gap-3">
+          <a
+            href={telegramBotGroupLink(connector.botUsername)}
+            target="_blank"
+            rel="noreferrer"
+            className="text-status-info text-xs underline-offset-2 hover:underline"
+          >
+            Add to a group or channel
+          </a>
+          <a
+            href={telegramBotLink(connector.botUsername)}
+            target="_blank"
+            rel="noreferrer"
+            className="text-status-info text-xs underline-offset-2 hover:underline"
+          >
+            Open in Telegram
+          </a>
         </div>
-      </div>
+      </header>
 
       {connector.lastError ? (
-        <p className="text-destructive text-xs" data-testid="telegram-bot-error">
+        <p
+          className="rounded-md bg-destructive/10 px-2.5 py-1.5 text-destructive text-xs"
+          data-testid="telegram-bot-error"
+        >
           {connector.lastError}
         </p>
       ) : null}
@@ -169,29 +200,33 @@ export function TelegramBotCard({
         <p className="text-status-warn text-xs">{connector.capabilityWarning}</p>
       ) : null}
 
-      <div className="flex flex-wrap gap-2">
-        <a
-          href={telegramBotGroupLink(connector.botUsername)}
-          target="_blank"
-          rel="noreferrer"
-          className="text-status-info text-xs underline-offset-2 hover:underline"
+      <section className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed px-3 py-2">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <span className="text-[13px]">Direct messages</span>
+          <span className="text-[11px] text-muted-foreground">
+            Create a link, open it, and send /start so this bot can receive DMs.
+          </span>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={busy}
+          onClick={() => pairMutation.mutate()}
         >
-          Add to a group
-        </a>
-        <a
-          href={telegramBotLink(connector.botUsername)}
-          target="_blank"
-          rel="noreferrer"
-          className="text-status-info text-xs underline-offset-2 hover:underline"
+          {pair ? 'New pair link' : 'Pair direct messages'}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          disabled={busy}
+          onClick={() => void confirmUnpair()}
         >
-          Open in Telegram
-        </a>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Direct messages</p>
+          Unpair
+        </Button>
         {pair ? (
-          <div className="flex flex-col gap-1 rounded-md border border-dashed px-2 py-2 text-xs">
+          <div className="flex w-full flex-col gap-0.5 border-t pt-2 text-xs">
             <a
               href={pair.pairUrl}
               target="_blank"
@@ -200,79 +235,41 @@ export function TelegramBotCard({
             >
               {pair.pairUrl}
             </a>
-            <p className="font-mono text-muted-foreground">{pair.pairCode}</p>
+            <span className="text-[11px] text-muted-foreground">
+              or send <span className="font-mono">{pair.pairCode}</span> to the bot
+            </span>
           </div>
         ) : null}
-        <div className="flex flex-wrap gap-1.5">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() => pairMutation.mutate()}
-          >
-            {pair ? 'New pair link' : 'Create pair link'}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() => void confirmUnpair()}
-          >
-            Unpair DMs
-          </Button>
+      </section>
+
+      <TelegramDiscovery
+        orgId={orgId}
+        connector={connector}
+        initialThreadId={initialThreadId}
+        onChanged={onChanged}
+      />
+
+      <section className="flex flex-col gap-2 border-t pt-3">
+        <div>
+          <p className="font-medium text-sm">What gets mirrored to Telegram</p>
+          <p className="text-muted-foreground text-xs">
+            Only agents' output goes out. Your Harnesys messages stay here unless the last switch is
+            on.
+          </p>
         </div>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Connections</p>
-        <TelegramConnectionsTree
-          orgId={orgId}
-          connector={connector}
-          initialThreadId={initialThreadId}
-          onChanged={onChanged}
-        />
-      </div>
-
-      <Field className="gap-1.5">
-        <FieldLabel htmlFor={`telegram-token-${connector.id}`}>Replace bot token</FieldLabel>
-        <div className="flex gap-2">
-          <Input
-            id={`telegram-token-${connector.id}`}
-            type="password"
-            autoComplete="off"
-            className="font-mono"
-            placeholder="••••••••"
-            value={token}
-            disabled={busy}
-            onChange={(event) => setToken(event.target.value)}
-          />
-          <Button
-            type="button"
-            size="sm"
-            disabled={!token.trim() || busy}
-            onClick={() => saveToken.mutate()}
-          >
-            Save
-          </Button>
-        </div>
-      </Field>
-
-      <details className="rounded-md border px-2 py-1.5">
-        <summary className="cursor-pointer text-muted-foreground text-xs">Mirror policy</summary>
-        <div className="flex flex-col gap-1 pt-2">
+        <div className="grid gap-1 sm:grid-cols-2">
           {POLICY_ROWS.map((row) => (
             <Field
               key={row.key}
               orientation="horizontal"
-              className="rounded-md px-1 py-1 hover:bg-muted/60"
+              className="items-center rounded-md px-1.5 py-1 hover:bg-muted/60"
             >
               <FieldLabel
                 htmlFor={`telegram-policy-${connector.id}-${row.key}`}
-                className="flex-1 font-normal"
+                className="flex flex-1 flex-col items-start gap-0 font-normal"
               >
-                {row.label}
+                <span className="text-[13px]">{row.label}</span>
+                <span className="text-[11px] text-muted-foreground">{row.hint}</span>
               </FieldLabel>
               <Switch
                 id={`telegram-policy-${connector.id}-${row.key}`}
@@ -285,9 +282,9 @@ export function TelegramBotCard({
             </Field>
           ))}
         </div>
-      </details>
+      </section>
 
-      <div className="flex flex-wrap gap-2 border-t pt-2">
+      <footer className="flex flex-wrap items-center gap-2 border-t pt-3">
         {connector.status === 'paused' ? (
           <Button
             type="button"
@@ -312,13 +309,52 @@ export function TelegramBotCard({
         <Button
           type="button"
           size="sm"
+          variant="ghost"
+          disabled={busy}
+          onClick={() => setTokenOpen((open) => !open)}
+        >
+          {tokenOpen ? 'Cancel token change' : 'Replace token'}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
           variant="destructive"
+          className="ml-auto"
           disabled={busy}
           onClick={() => void confirmRemove()}
         >
           Remove bot
         </Button>
-      </div>
-    </div>
+      </footer>
+
+      {tokenOpen ? (
+        <Field className="gap-1.5">
+          <FieldLabel htmlFor={`telegram-token-${connector.id}`}>New bot token</FieldLabel>
+          <div className="flex gap-2">
+            <Input
+              id={`telegram-token-${connector.id}`}
+              type="password"
+              autoComplete="off"
+              className="font-mono"
+              placeholder="123456:ABC-DEF…"
+              value={token}
+              disabled={busy}
+              onChange={(event) => setToken(event.target.value)}
+            />
+            <Button
+              type="button"
+              size="sm"
+              disabled={!token.trim() || busy}
+              onClick={() => saveToken.mutate()}
+            >
+              Save
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Replacing the token keeps chats and threads; the new bot must be the same bot.
+          </p>
+        </Field>
+      ) : null}
+    </article>
   );
 }

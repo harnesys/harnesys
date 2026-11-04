@@ -102,16 +102,36 @@ describe('parseTelegramUpdate', () => {
     }
   });
 
-  test('rejects channel posts', () => {
-    expect(() =>
-      parseTelegramUpdate({
-        update_id: 4,
-        channel_post: {
-          message_id: 1,
-          chat: { id: -100, type: 'channel', title: 'News' },
-          text: 'hello',
-        },
-      }),
-    ).toThrow(ConnectorUpdateError);
+  test('parses channel posts as channel messages', () => {
+    const update = parseTelegramUpdate({
+      update_id: 4,
+      channel_post: {
+        message_id: 1,
+        chat: { id: -100, type: 'channel', title: 'News' },
+        sender_chat: { id: -100, type: 'channel', title: 'News' },
+        text: 'hello',
+      },
+    });
+    expect(update.kind).toBe('message');
+    if (update.kind !== 'message') {
+      throw new Error('expected a message');
+    }
+    expect(update.chatType).toBe('channel');
+    expect(update.chatId).toBe('-100');
+    expect(update.text).toBe('hello');
+    expect(update.author.displayName).toBe('News');
+  });
+
+  test('ignores channel posts written by a bot', () => {
+    const update = parseTelegramUpdate({
+      update_id: 5,
+      channel_post: {
+        message_id: 2,
+        chat: { id: -100, type: 'channel', title: 'News' },
+        from: { id: 42, is_bot: true, first_name: 'Bot' },
+        text: 'posted by the bot',
+      },
+    });
+    expect(update.kind).toBe('ignored');
   });
 });

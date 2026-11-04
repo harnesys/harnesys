@@ -12,6 +12,7 @@ import {
   planCapability,
   registerPack,
   shellCapability,
+  telegramCapability,
 } from 'harnesys';
 import { lspCapability } from 'harnesys/lsp';
 import { skillsCapability } from 'harnesys/skills';
@@ -36,6 +37,7 @@ import {
 } from './org-pack-registrations.helpers.ts';
 import { OrgPlanPort } from './org-plan.port.ts';
 import { OrgSkillsPackPort } from './org-skills.pack.port.ts';
+import { OrgTelegramPort } from './org-telegram.port.ts';
 import { sshHostGateOf } from './ssh-host-gate.ts';
 import type { WireOrgPacksDeps } from './wire-org-packs.ts';
 
@@ -68,6 +70,8 @@ export function registrationForPack(packName: string, ctx: WireOrgPackContext) {
       return googleRegistration(ctx);
     case 'github':
       return githubRegistration(ctx);
+    case 'telegram':
+      return telegramRegistration(ctx);
     case 'lsp':
       return lspRegistration(ctx);
     case 'agents':
@@ -140,6 +144,17 @@ function githubRegistration(ctx: WireOrgPackContext) {
   }
   return registerPack(githubCapability, {
     ports: { github: new OrgGithubPort(github) },
+    resolveScope: ctx.liveScope,
+  });
+}
+
+function telegramRegistration(ctx: WireOrgPackContext) {
+  const telegram = ctx.deps.telegram;
+  if (!telegram) {
+    return undefined;
+  }
+  return registerPack(telegramCapability, {
+    ports: { telegram: new OrgTelegramPort(telegram) },
     resolveScope: ctx.liveScope,
   });
 }

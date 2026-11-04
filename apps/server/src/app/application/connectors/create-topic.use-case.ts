@@ -5,7 +5,7 @@ import { isGroupChat } from '../../domain/connector/channel-capabilities.ts';
 import { ConnectorValidationException } from '../../domain/connector/connector.error.ts';
 import { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
 import {
-  type TelegramApiPort,
+  TelegramApiPort,
   TelegramUnauthorizedError,
 } from '../../domain/connector/telegram-api.port.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';

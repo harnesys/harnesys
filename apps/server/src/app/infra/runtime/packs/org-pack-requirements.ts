@@ -28,6 +28,8 @@ function packDependencySatisfied(packName: string, deps: WireOrgPackFilter): boo
       return deps.google !== undefined;
     case 'github':
       return deps.github !== undefined;
+    case 'telegram':
+      return deps.telegram !== undefined;
     case 'knowledge-memory':
       return deps.knowledge !== undefined && deps.sources !== undefined;
     case 'skills':

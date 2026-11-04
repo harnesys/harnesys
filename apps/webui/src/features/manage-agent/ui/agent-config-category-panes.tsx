@@ -21,7 +21,6 @@ import { AgentPermissionsPane } from './agent-permissions-pane';
 import { AgentRulesPane } from './agent-rules-pane';
 import { AgentSourcesPane } from './agent-sources-pane';
 import { AgentSubagentsPane } from './agent-subagents-pane';
-import { AgentTelegramInfo } from './agent-telegram-info';
 import { DraftCompaction } from './draft-compaction';
 import { AgentMemoryPolicyPane } from './memory-policy-pane';
 
@@ -218,7 +217,6 @@ export function AgentConfigCategoryPanes({
         enabledPlugins={capabilities.enabledPlugins ?? {}}
         onOpenSubagent={onOpenSubagent}
       />
-      <AgentConnectorsSection category={category} orgId={orgId} activeAgent={activeAgent} />
       {category === 'graph' ? (
         <Pane
           sticky={false}
@@ -273,24 +271,6 @@ function AgentSubagentsSection({
       onConfigure={onOpenSubagent}
     />
   );
-}
-
-function AgentConnectorsSection({
-  category,
-  orgId,
-  activeAgent,
-}: {
-  category: AgentConfigCategory;
-  orgId: string;
-  activeAgent: Agent | null;
-}) {
-  if (category !== 'connectors') {
-    return null;
-  }
-  if (!activeAgent || activeAgent.id === '') {
-    return <UnsavedAgentHint text="Save the agent to see its Telegram connections." />;
-  }
-  return <AgentTelegramInfo orgId={orgId} agentId={activeAgent.id} />;
 }
 
 function UnsavedAgentHint({ text }: { text: string }) {

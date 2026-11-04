@@ -13,6 +13,7 @@ import {
   memoryThread,
 } from '../threads/thread.fakes.ts';
 import { ConnectChatUseCase } from './connect-chat.use-case.ts';
+import type { TelegramChatMember } from '../../domain/connector/telegram-api.port.ts';
 import {
   FakeSecrets,
   FakeTelegram,
@@ -21,7 +22,17 @@ import {
   memoryConnector,
 } from './connector.fakes.ts';
 
-function build(bindings: ConnectorBindingRecord[]) {
+class MemberOnlyTelegram extends FakeTelegram {
+  override async getChatMember(
+    _token: string,
+    _chatId: string,
+    _userId: string,
+  ): Promise<TelegramChatMember> {
+    return { status: 'member', canManageChat: false, canManageTopics: false };
+  }
+}
+
+function build(bindings: ConnectorBindingRecord[], telegram: FakeTelegram = new FakeTelegram()) {
   const threads = new MemoryThreads();
   const members = new MemoryThreadMembers();
   const agents = new MemoryAgents();
@@ -34,7 +45,7 @@ function build(bindings: ConnectorBindingRecord[]) {
     threads,
     members,
     agents,
-    new FakeTelegram(),
+    telegram,
   );
   return { threads, members, agents, connectors, useCase };
 }
@@ -147,5 +158,54 @@ describe('ConnectChatUseCase', () => {
         body: { mode: 'existing', threadId: 't1' },
       }),
     ).rejects.toThrow(ConnectorConflictException);
+  });
+
+  test('connects a channel to a group thread without auto-reply', async () => {
+    const { useCase, threads } = build([
+      memoryBinding({ id: 'b1', externalChatId: '-1009', chatType: 'channel' }),
+    ]);
+
+    const result = await useCase.execute({
+      orgId: 'org-1',
+      connectorId: 'conn-1',
+      bindingId: 'b1',
+      body: { mode: 'new', agentIds: ['a1', 'a2'] },
+    });
+
+    const thread = threads.findById('org-1', result.binding.threadId as string);
+    expect(thread?.kind).toBe('group');
+    expect(thread?.autoReplyAgentId).toBeNull();
+    expect(result.binding.threadKind).toBe('group');
+  });
+
+  test('rejects an auto-reply agent for a channel', async () => {
+    const { useCase } = build([
+      memoryBinding({ id: 'b1', externalChatId: '-1009', chatType: 'channel' }),
+    ]);
+
+    await expect(
+      useCase.execute({
+        orgId: 'org-1',
+        connectorId: 'conn-1',
+        bindingId: 'b1',
+        body: { mode: 'new', agentIds: ['a1'], autoReplyAgentId: 'a1' },
+      }),
+    ).rejects.toThrow(ConnectorValidationException);
+  });
+
+  test('requires channel admin rights before connecting', async () => {
+    const { useCase } = build(
+      [memoryBinding({ id: 'b1', externalChatId: '-1009', chatType: 'channel' })],
+      new MemberOnlyTelegram(),
+    );
+
+    await expect(
+      useCase.execute({
+        orgId: 'org-1',
+        connectorId: 'conn-1',
+        bindingId: 'b1',
+        body: { mode: 'new', agentIds: ['a1'] },
+      }),
+    ).rejects.toThrow('channel');
   });
 });

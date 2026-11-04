@@ -4,6 +4,7 @@ import type {
   ConnectorDeliveryInsert,
   ConnectorDeliveryRecord,
   ConnectorInboxInsert,
+  ConnectorInboxRecord,
   ConnectorInboxStatus,
   ConnectorInsert,
   ConnectorPatch,
@@ -67,6 +68,13 @@ export abstract class ConnectorRepositoryPort {
 
   abstract insertInbox(orgId: string, rec: ConnectorInboxInsert): InsertInboxResult;
   abstract markInbox(orgId: string, id: string, status: ConnectorInboxStatus): void;
+  abstract listRecentInbox(
+    orgId: string,
+    connectorId: string,
+    externalChatId: string,
+    externalTopicId: string | null,
+    limit: number,
+  ): ConnectorInboxRecord[];
 
   abstract upsertDelivery(orgId: string, rec: ConnectorDeliveryInsert): ConnectorDeliveryRecord;
   abstract findDelivery(orgId: string, id: string): ConnectorDeliveryRecord | undefined;

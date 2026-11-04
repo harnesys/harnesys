@@ -18,6 +18,7 @@ import {
   schedulerCapability,
   semanticMemoryCapability,
   shellCapability,
+  telegramCapability,
   threadsCapability,
   webCapability,
   webhookCapability,
@@ -67,6 +68,8 @@ function registrationForPack(packName: string) {
       return registerPack(googleCapability, { resolveScope: stubScope });
     case 'github':
       return registerPack(githubCapability, { resolveScope: stubScope });
+    case 'telegram':
+      return registerPack(telegramCapability, { resolveScope: stubScope });
     case 'pin-memory':
       return registerPack(pinMemoryCapability, { resolveScope: stubScope });
     case 'semantic-memory':

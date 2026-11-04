@@ -165,6 +165,26 @@ export class TelegramApiAdapter extends TelegramApiPort {
     );
   }
 
+  async deleteMessage(token: string, chatId: string, messageId: string): Promise<void> {
+    await callJson(token, 'deleteMessage', {
+      chat_id: chatId,
+      message_id: Number(messageId),
+    });
+  }
+
+  async pinChatMessage(
+    token: string,
+    chatId: string,
+    messageId: string,
+    notify?: boolean,
+  ): Promise<void> {
+    await callJson(token, 'pinChatMessage', {
+      chat_id: chatId,
+      message_id: Number(messageId),
+      disable_notification: notify !== true,
+    });
+  }
+
   async sendChatAction(
     token: string,
     chatId: string,

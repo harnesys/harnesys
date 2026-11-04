@@ -1,6 +1,7 @@
 import { Module } from '@harnesys/brix';
 import { AgentModule } from '../../infra/agent/agent.module.ts';
 import { ApprovalModule } from '../../infra/approvals/approval.module.ts';
+import { ConnectorModule } from '../../infra/connector/connector.module.ts';
 import { ExecutionProfileModule } from '../../infra/execution-profile/execution-profile.module.ts';
 import { FileAccessModule } from '../../infra/file-access/file-access.module.ts';
 import { FleetHubModule } from '../../infra/fleet-hub/fleet-hub.module.ts';
@@ -83,6 +84,7 @@ const useCases = [
   imports: [
     ThreadModule,
     AgentModule,
+    ConnectorModule,
     ApprovalModule,
     ModePresetsModule,
     RuntimeModule,

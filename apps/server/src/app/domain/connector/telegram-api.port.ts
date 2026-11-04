@@ -95,6 +95,15 @@ export abstract class TelegramApiPort {
     text: string,
   ): Promise<TelegramSentMessage>;
 
+  abstract deleteMessage(token: string, chatId: string, messageId: string): Promise<void>;
+
+  abstract pinChatMessage(
+    token: string,
+    chatId: string,
+    messageId: string,
+    notify?: boolean,
+  ): Promise<void>;
+
   abstract sendChatAction(
     token: string,
     chatId: string,

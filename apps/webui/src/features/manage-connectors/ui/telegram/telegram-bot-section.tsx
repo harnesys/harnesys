@@ -18,23 +18,23 @@ export function TelegramBotSection({
   onChanged: () => void;
 }) {
   return (
-    <SettingsSection
-      label="Bots"
-      description="One bot can serve several chats. Its token is stored encrypted on this machine."
-    >
-      <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4" data-testid="telegram-bots">
+      {connectors.map((connector) => (
+        <TelegramBotCard
+          key={connector.id}
+          orgId={orgId}
+          connector={connector}
+          initialPair={pairByConnector[connector.id] ?? null}
+          initialThreadId={initialThreadId}
+          onChanged={onChanged}
+        />
+      ))}
+      <SettingsSection
+        label={connectors.length > 0 ? 'Add another bot' : 'Add a bot'}
+        description="Create a bot with @BotFather and paste its token. A bot is a transport: it can serve any chat and any thread in this organization."
+      >
         <TelegramAddBotForm orgId={orgId} onCreated={onChanged} />
-        {connectors.map((connector) => (
-          <TelegramBotCard
-            key={connector.id}
-            orgId={orgId}
-            connector={connector}
-            initialPair={pairByConnector[connector.id] ?? null}
-            initialThreadId={initialThreadId}
-            onChanged={onChanged}
-          />
-        ))}
-      </div>
-    </SettingsSection>
+      </SettingsSection>
+    </div>
   );
 }
