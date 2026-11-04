@@ -1,70 +1,100 @@
 import { describe, expect, test } from 'bun:test';
 import { helpText } from './bot-commands.ts';
-import { type DecideInboundInput, decideInbound } from './inbound-decision.ts';
+import {
+  type DecideInboundInput,
+  decideInbound,
+  type InboundBinding,
+  pendingClaimNotice,
+  pendingConnectionNotice,
+} from './inbound-decision.ts';
 import { createPairCode } from './pair-code.ts';
-import type { CanonicalUpdate } from './telegram-update.ts';
+import type { CanonicalAuthor, CanonicalChat, CanonicalUpdate } from './telegram-update.ts';
+
+const DM: CanonicalChat = {
+  chatId: '1',
+  chatType: 'private',
+  chatTitle: '',
+  topicId: null,
+};
+
+const GROUP: CanonicalChat = {
+  chatId: '-100',
+  chatType: 'group',
+  chatTitle: 'Team',
+  topicId: null,
+};
+
+const ALICE: CanonicalAuthor = { userId: '77', displayName: 'Alice', username: 'alice' };
+
+function message(text: string, chat: CanonicalChat = DM, author = ALICE): CanonicalUpdate {
+  return {
+    kind: 'message',
+    messageId: '1',
+    text,
+    replyToMessageId: null,
+    author,
+    ...chat,
+  };
+}
+
+function command(name: string, args: string, chat: CanonicalChat = DM): CanonicalUpdate {
+  return {
+    kind: 'command',
+    command: name,
+    args,
+    messageId: '1',
+    replyToMessageId: null,
+    author: ALICE,
+    ...chat,
+  };
+}
 
 function base(over: Partial<DecideInboundInput> & { update: CanonicalUpdate }): DecideInboundInput {
   return {
-    connectorStatus: 'awaiting_pair',
     pairHash: null,
     pairExpiresAt: null,
     now: 1_000,
-    bindingUserId: null,
+    binding: null,
     activeRunStatus: null,
+    canReadUnmentioned: false,
     ...over,
   };
 }
 
+const PAIRED: InboundBinding = {
+  chatType: 'private',
+  pairedUserId: '77',
+  threadId: 'thread-1',
+  threadKind: 'chat',
+};
+
+const GROUP_CONNECTED: InboundBinding = {
+  chatType: 'group',
+  pairedUserId: null,
+  threadId: 'thread-2',
+  threadKind: 'group',
+};
+
 describe('decideInbound', () => {
-  test('unpaired and non-private replies; matching start pairs', () => {
+  test('unpaired chat pairs only with a matching start code', () => {
     const { code, hash } = createPairCode();
-    expect(
-      decideInbound(
-        base({
-          update: {
-            kind: 'message',
-            chatType: 'private',
-            chatId: '1',
-            userId: '9',
-            messageId: '1',
-            text: 'hi',
-          },
-        }),
-      ),
-    ).toEqual({ type: 'reply', text: 'This bot is not linked yet.', inbox: 'rejected' });
-    expect(
-      decideInbound(
-        base({
-          update: {
-            kind: 'message',
-            chatType: 'group',
-            chatId: '1',
-            userId: '9',
-            messageId: '1',
-            text: 'hi',
-          },
-        }),
-      ),
-    ).toEqual({
+    expect(decideInbound(base({ update: message('hi') }))).toEqual({
       type: 'reply',
-      text: 'This bot only accepts a private chat.',
+      text: 'This bot is not linked yet.',
       inbox: 'rejected',
     });
     expect(
+      decideInbound(base({ update: message('hi', GROUP), canReadUnmentioned: false })),
+    ).toEqual({ type: 'ignore' });
+    expect(decideInbound(base({ update: message('hi', GROUP), canReadUnmentioned: true }))).toEqual(
+      { type: 'claim' },
+    );
+    expect(
       decideInbound(
         base({
           pairHash: hash,
           pairExpiresAt: 2_000,
-          update: {
-            kind: 'command',
-            command: 'start',
-            args: 'WRONG',
-            chatType: 'private',
-            chatId: '1',
-            userId: '9',
-            messageId: '1',
-          },
+          update: command('start', 'WRONG'),
         }),
       ),
     ).toEqual({ type: 'reply', text: 'This bot is not linked yet.', inbox: 'rejected' });
@@ -73,152 +103,52 @@ describe('decideInbound', () => {
         base({
           pairHash: hash,
           pairExpiresAt: 2_000,
-          update: {
-            kind: 'command',
-            command: 'start',
-            args: code,
-            chatType: 'private',
-            chatId: '55',
-            userId: '77',
-            messageId: '1',
-          },
+          update: command('start', code),
         }),
       ),
-    ).toEqual({ type: 'pair', userId: '77', chatId: '55' });
-    expect(
-      decideInbound(
-        base({
-          update: {
-            kind: 'command',
-            command: 'stop',
-            args: '',
-            chatType: 'private',
-            chatId: '1',
-            userId: '9',
-            messageId: '1',
-          },
-        }),
-      ),
-    ).toEqual({ type: 'reply', text: 'This bot is not linked yet.', inbox: 'rejected' });
+    ).toEqual({ type: 'pair', userId: '77', chatId: '1', chatType: 'private', title: 'Alice' });
   });
 
-  test('paired commands, enqueue vs respond, edit ignore, private mismatch', () => {
-    const paired = {
-      connectorStatus: 'active' as const,
-      bindingUserId: '77',
-      pairHash: null,
-      pairExpiresAt: null,
-    };
+  test('connected chat routes commands, answers, and queueing', () => {
+    const paired = { binding: PAIRED };
     expect(
-      decideInbound(
-        base({
-          ...paired,
-          activeRunStatus: 'running',
-          update: {
-            kind: 'command',
-            command: 'stop',
-            args: '',
-            chatType: 'private',
-            chatId: '1',
-            userId: '77',
-            messageId: '1',
-          },
-        }),
-      ),
+      decideInbound(base({ ...paired, activeRunStatus: 'running', update: command('stop', '') })),
     ).toEqual({ type: 'command', name: 'stop' });
     expect(
       decideInbound(
-        base({
-          ...paired,
-          activeRunStatus: 'needs_input',
-          update: {
-            kind: 'command',
-            command: 'compact',
-            args: '',
-            chatType: 'private',
-            chatId: '1',
-            userId: '77',
-            messageId: '1',
-          },
-        }),
+        base({ ...paired, activeRunStatus: 'needs_input', update: command('compact', '') }),
       ),
     ).toEqual({ type: 'command', name: 'compact' });
+    expect(decideInbound(base({ ...paired, update: command('foo', '') }))).toEqual({
+      type: 'reply',
+      text: helpText(),
+      inbox: 'rejected',
+    });
+    expect(decideInbound(base({ ...paired, update: command('start', '') }))).toEqual({
+      type: 'reply',
+      text: helpText(),
+      inbox: 'rejected',
+    });
     expect(
-      decideInbound(
-        base({
-          ...paired,
-          update: {
-            kind: 'command',
-            command: 'foo',
-            args: '',
-            chatType: 'private',
-            chatId: '1',
-            userId: '77',
-            messageId: '1',
-          },
-        }),
-      ),
-    ).toEqual({ type: 'reply', text: helpText(), inbox: 'rejected' });
-    expect(
-      decideInbound(
-        base({
-          ...paired,
-          update: {
-            kind: 'command',
-            command: 'start',
-            args: '',
-            chatType: 'private',
-            chatId: '1',
-            userId: '77',
-            messageId: '1',
-          },
-        }),
-      ),
-    ).toEqual({ type: 'reply', text: helpText(), inbox: 'rejected' });
-    expect(
-      decideInbound(
-        base({
-          ...paired,
-          activeRunStatus: 'needs_input',
-          update: {
-            kind: 'message',
-            chatType: 'private',
-            chatId: '1',
-            userId: '77',
-            messageId: '2',
-            text: 'yes',
-          },
-        }),
-      ),
+      decideInbound(base({ ...paired, activeRunStatus: 'needs_input', update: message('yes') })),
     ).toEqual({ type: 'respond', text: 'yes' });
     expect(
-      decideInbound(
-        base({
-          ...paired,
-          activeRunStatus: 'running',
-          update: {
-            kind: 'message',
-            chatType: 'private',
-            chatId: '1',
-            userId: '77',
-            messageId: '3',
-            text: 'later',
-          },
-        }),
-      ),
+      decideInbound(base({ ...paired, activeRunStatus: 'running', update: message('later') })),
     ).toEqual({ type: 'enqueue', text: 'later' });
     expect(
       decideInbound(
         base({
           ...paired,
-          activeRunStatus: null,
           update: {
             kind: 'message',
-            chatType: 'private',
-            chatId: '1',
-            userId: '77',
-            messageId: '4',
+            messageId: '1',
             text: 'go',
+            replyToMessageId: null,
+            author: ALICE,
+            chatId: '1',
+            chatType: 'private',
+            chatTitle: '',
+            topicId: null,
             fileId: 'f1',
             fileKind: 'document',
           },
@@ -232,11 +162,14 @@ describe('decideInbound', () => {
           activeRunStatus: 'needs_input',
           update: {
             kind: 'message',
-            chatType: 'private',
-            chatId: '1',
-            userId: '77',
-            messageId: '5',
+            messageId: '1',
             text: '',
+            replyToMessageId: null,
+            author: ALICE,
+            chatId: '1',
+            chatType: 'private',
+            chatTitle: '',
+            topicId: null,
             fileId: 'f2',
             fileKind: 'photo',
           },
@@ -267,14 +200,7 @@ describe('decideInbound', () => {
       decideInbound(
         base({
           ...paired,
-          update: {
-            kind: 'message',
-            chatType: 'private',
-            chatId: '1',
-            userId: '99',
-            messageId: '6',
-            text: 'x',
-          },
+          update: message('x', DM, { userId: '99', displayName: 'Bob', username: null }),
         }),
       ),
     ).toEqual({
@@ -282,5 +208,27 @@ describe('decideInbound', () => {
       text: 'This bot is already linked to another Telegram account.',
       inbox: 'rejected',
     });
+  });
+
+  test('group binding waits for an explicit connect', () => {
+    expect(
+      decideInbound(
+        base({
+          update: message('hello', GROUP),
+          binding: { ...GROUP_CONNECTED, threadId: null },
+          canReadUnmentioned: true,
+        }),
+      ),
+    ).toEqual({ type: 'ignore' });
+    expect(
+      decideInbound(base({ update: message('hello', GROUP), binding: GROUP_CONNECTED })),
+    ).toEqual({ type: 'enqueue', text: 'hello' });
+  });
+});
+
+describe('pending notices', () => {
+  test('describe the unconnected and claimed states', () => {
+    expect(pendingConnectionNotice()).toContain('not connected');
+    expect(pendingClaimNotice()).toContain('Harnesys');
   });
 });

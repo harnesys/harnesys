@@ -25,12 +25,7 @@ export class DeleteAgentUseCase {
 
   async execute(request: DeleteAgentRequest): Promise<void> {
     requireAgent(this.agents, request.orgId, request.agentId);
-    const owned = this.connectors
-      .listByOrg(request.orgId)
-      .filter((c) => c.agentId === request.agentId);
-    for (const connector of owned) {
-      await this.secrets.delete(request.orgId, connector.secretRef);
-    }
+    await this.detachFromConnectors(request.orgId, request.agentId);
     const threadIds = this.threadAgents.listThreadIdsByAgent(request.orgId, request.agentId);
     const ownThreadIds: string[] = [];
     for (const threadId of threadIds) {
@@ -62,6 +57,22 @@ export class DeleteAgentUseCase {
     }
     this.threads.deleteMany(request.orgId, ownThreadIds);
     this.agents.delete(request.orgId, request.agentId);
+  }
+
+  private async detachFromConnectors(orgId: string, agentId: string): Promise<void> {
+    for (const connector of this.connectors.listByOrg(orgId)) {
+      const agentIds = this.connectors.listAgentIds(orgId, connector.id);
+      if (!agentIds.includes(agentId)) {
+        continue;
+      }
+      const remaining = agentIds.filter((id) => id !== agentId);
+      if (remaining.length > 0) {
+        this.connectors.removeAgent(orgId, connector.id, agentId);
+        continue;
+      }
+      await this.secrets.delete(orgId, connector.secretRef);
+      this.connectors.delete(orgId, connector.id);
+    }
   }
 
   private async cancelLiveRuns(

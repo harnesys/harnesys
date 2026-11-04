@@ -75,6 +75,7 @@ export interface OrgRuntime {
     skills?: string[];
     clientEventId?: string;
     origin?: string;
+    originConnectorId?: string;
     correlationId?: string;
     sourceId?: string;
     worktreeId?: string;

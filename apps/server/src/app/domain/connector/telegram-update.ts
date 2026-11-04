@@ -1,23 +1,34 @@
+export interface CanonicalChat {
+  chatId: string;
+  chatType: string;
+  chatTitle: string;
+  topicId: string | null;
+}
+
+export interface CanonicalAuthor {
+  userId: string;
+  displayName: string;
+  username: string | null;
+}
+
 export type CanonicalUpdate =
-  | {
+  | ({
       kind: 'command';
       command: string;
       args: string;
-      chatType: string;
-      chatId: string;
-      userId: string;
       messageId: string;
-    }
-  | {
+      replyToMessageId: string | null;
+      author: CanonicalAuthor;
+    } & CanonicalChat)
+  | ({
       kind: 'message';
-      chatType: string;
-      chatId: string;
-      userId: string;
       messageId: string;
       text: string;
+      replyToMessageId: string | null;
+      author: CanonicalAuthor;
       fileId?: string;
       fileKind?: 'photo' | 'document';
-    }
+    } & CanonicalChat)
   | {
       kind: 'callback';
       chatId: string;
@@ -110,11 +121,17 @@ function parseMessage(message: Record<string, unknown>): CanonicalUpdate {
   if (hasUnsupportedMedia(message)) {
     return { kind: 'unsupported', chatType, chatId };
   }
-  if (userId === null || messageId === null) {
+  if (userId === null || messageId === null || from === null) {
     throw new ConnectorUpdateError('Empty telegram update');
   }
 
-  const withFile = messageWithFile(message, { chatType, chatId, userId, messageId });
+  const base = {
+    ...chatOf(chat, message, chatId, chatType),
+    messageId,
+    replyToMessageId: replyToMessageIdOf(message),
+    author: authorOf(from, userId),
+  };
+  const withFile = messageWithFile(message, base);
   if (withFile !== null) {
     return withFile;
   }
@@ -126,19 +143,42 @@ function parseMessage(message: Record<string, unknown>): CanonicalUpdate {
       kind: 'command',
       command: command.command,
       args: command.args,
-      chatType,
-      chatId,
-      userId,
-      messageId,
+      ...base,
     };
   }
 
-  return { kind: 'message', chatType, chatId, userId, messageId, text };
+  return { kind: 'message', text, ...base };
+}
+
+function chatOf(
+  chat: Record<string, unknown> | null,
+  message: Record<string, unknown>,
+  chatId: string,
+  chatType: string,
+): CanonicalChat {
+  return {
+    chatId,
+    chatType,
+    chatTitle: chat !== null && typeof chat.title === 'string' ? chat.title : '',
+    topicId: topicIdOf(message),
+  };
+}
+
+function authorOf(from: Record<string, unknown>, userId: string): CanonicalAuthor {
+  const firstName = typeof from.first_name === 'string' ? from.first_name : '';
+  const lastName = typeof from.last_name === 'string' ? from.last_name : '';
+  const username = typeof from.username === 'string' ? from.username : null;
+  const displayName = [firstName, lastName].filter(Boolean).join(' ').trim();
+  return {
+    userId,
+    displayName: displayName || username || userId,
+    username,
+  };
 }
 
 function messageWithFile(
   message: Record<string, unknown>,
-  base: { chatType: string; chatId: string; userId: string; messageId: string },
+  base: Omit<Extract<CanonicalUpdate, { kind: 'message' }>, 'kind' | 'text'>,
 ): CanonicalUpdate | null {
   const photoFileId = lastPhotoFileId(message.photo);
   if (photoFileId !== null) {
@@ -185,6 +225,28 @@ function parseCommand(text: string): { command: string; args: string } | null {
     return null;
   }
   return { command, args };
+}
+
+function replyToMessageIdOf(message: Record<string, unknown>): string | null {
+  const replied = asRecord(message.reply_to_message);
+  if (replied !== null) {
+    const id = messageIdOf(replied);
+    if (id !== null) {
+      return id;
+    }
+  }
+  const quote = asRecord(message.quote);
+  if (quote !== null) {
+    const id = messageIdOf(quote);
+    if (id !== null) {
+      return id;
+    }
+  }
+  return null;
+}
+
+function topicIdOf(message: Record<string, unknown>): string | null {
+  return idString(message.message_thread_id);
 }
 
 function hasUnsupportedMedia(message: Record<string, unknown>): boolean {

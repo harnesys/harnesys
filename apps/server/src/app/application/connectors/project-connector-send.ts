@@ -36,6 +36,7 @@ export async function sendAskMessage(
   }
   const sent = await deps.telegram.sendMessage(state.token, state.chatId, text, {
     replyMarkup: { inlineKeyboard: [buttons] },
+    topicId: state.topicId,
   });
   for (const button of buttons) {
     const delivery = deps.connectors.findDelivery(state.orgId, button.value);
@@ -57,7 +58,9 @@ export async function sendStatusMessage(
   text: string,
 ): Promise<void> {
   const id = crypto.randomUUID();
-  const sent = await deps.telegram.sendMessage(state.token, state.chatId, text);
+  const sent = await deps.telegram.sendMessage(state.token, state.chatId, text, {
+    topicId: state.topicId,
+  });
   deps.connectors.upsertDelivery(state.orgId, {
     id,
     connectorId: state.connectorId,
@@ -95,8 +98,8 @@ export async function sendFileMessage(
   const id = crypto.randomUUID();
   const sent =
     mediaType.startsWith('image/') || looksImage(filename)
-      ? await deps.telegram.sendPhoto(state.token, state.chatId, bytes, filename)
-      : await deps.telegram.sendDocument(state.token, state.chatId, bytes, filename);
+      ? await deps.telegram.sendPhoto(state.token, state.chatId, bytes, filename, state.topicId)
+      : await deps.telegram.sendDocument(state.token, state.chatId, bytes, filename, state.topicId);
   deps.connectors.upsertDelivery(state.orgId, {
     id,
     connectorId: state.connectorId,

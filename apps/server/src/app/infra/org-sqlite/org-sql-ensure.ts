@@ -62,9 +62,12 @@ import {
   migratePendingRunEventsAttributionColumns,
 } from './org-sql-fleet.ts';
 import {
+  assertConnectorsAgentSet,
   assertIssuesStatusKey,
   assertRunEventsThreadScoped,
   assertRunsAgentSnapshot,
+  assertRunsOriginConnector,
+  assertThreadsKindIsConversation,
   assertThreadsOwnMembership,
   assertThreadsThreadSeq,
 } from './org-sql-guards.ts';
@@ -270,6 +273,7 @@ export function ensureOrgSchema(
   ensureKnowledgeFts(exec);
   exec(CREATE_THREADS_SQL);
   assertThreadsOwnMembership(all);
+  assertThreadsKindIsConversation(all);
   migrateThreadsInheritedEventCount(exec, all);
   if (all) {
     migrateThreadsBindingColumns(exec, all);
@@ -296,6 +300,7 @@ export function ensureOrgSchema(
   }
   exec(CREATE_RUNS_SQL);
   assertRunsAgentSnapshot(all);
+  assertRunsOriginConnector(all);
   if (all) {
     migrateRunsAttributionColumns(exec, all);
   }
@@ -319,6 +324,7 @@ export function ensureOrgSchema(
     migrateTriggerOwnerColumns(exec, all);
   }
   exec(CREATE_CONNECTORS_SQL);
+  assertConnectorsAgentSet(all);
   exec(CREATE_THREAD_PLANS_SQL);
   if (all) {
     migrateThreadPlansTable(exec, all);

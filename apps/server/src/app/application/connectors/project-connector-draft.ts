@@ -14,6 +14,7 @@ export interface DraftSendState {
   threadId: string;
   runId: string;
   chatId: string;
+  topicId: string | null;
   token: string;
   coalesceMs: number;
   streamMode: ConnectorStreamMode | null;
@@ -155,6 +156,7 @@ async function flushDraftMode(
 ): Promise<void> {
   await deps.telegram.sendMessageDraft(state.token, state.chatId, state.draftId, text, {
     canStop: true,
+    topicId: state.topicId,
   });
   if (state.streamMode === null) {
     state.streamMode = 'draft';
@@ -169,7 +171,9 @@ async function flushEditMode(
 ): Promise<void> {
   const body = text.length > 0 ? text : '…';
   if (state.externalMessageId === null) {
-    const sent = await deps.telegram.sendMessage(state.token, state.chatId, body);
+    const sent = await deps.telegram.sendMessage(state.token, state.chatId, body, {
+      topicId: state.topicId,
+    });
     state.externalMessageId = sent.messageId;
     return;
   }
@@ -187,6 +191,7 @@ async function sendFinalChunk(
       state.token,
       state.chatId,
       text.length > 0 ? text : '…',
+      { topicId: state.topicId },
     );
     state.externalMessageId = sent.messageId;
   } else if (state.streamMode === 'edit') {
@@ -201,6 +206,7 @@ async function sendFinalChunk(
       state.token,
       state.chatId,
       text.length > 0 ? text : '…',
+      { topicId: state.topicId },
     );
     state.externalMessageId = sent.messageId;
   }
@@ -307,6 +313,7 @@ export function draftStateFromConnector(
     threadId: string;
     runId: string;
     chatId: string;
+    topicId: string | null;
     token: string;
     delivery?: ConnectorDeliveryRecord;
   },
@@ -318,6 +325,7 @@ export function draftStateFromConnector(
     threadId: input.threadId,
     runId: input.runId,
     chatId: input.chatId,
+    topicId: input.topicId,
     token: input.token,
     coalesceMs: connector.policy.coalesceMs,
     streamMode: connector.streamMode,

@@ -1,14 +1,13 @@
+import type { ChannelCapabilities } from './channel-capabilities.ts';
 import type { MirrorPolicy } from './constants.ts';
 
-export type ConnectorProvider = 'telegram';
+export type ConnectorProvider = string;
 
 export type ConnectorStatus = 'awaiting_pair' | 'active' | 'paused' | 'error';
 
 export type ConnectorStreamMode = 'draft' | 'edit';
 
 export type ConnectorBindingStatus = 'active' | 'unpaired';
-
-export type ConnectorRouteScope = 'thread' | 'agent';
 
 export type ConnectorInboxKind =
   | 'message'
@@ -22,16 +21,11 @@ export type ConnectorInboxStatus = 'pending' | 'consumed' | 'rejected';
 
 export type ConnectorDeliveryStatus = 'streaming' | 'final' | 'failed';
 
-export type ConnectorChatType = 'private';
-
-export interface ParticipantPolicy {
-  userId: string;
-}
+export type ConnectorChatType = string;
 
 export interface ConnectorRecord {
   id: string;
   orgId: string;
-  agentId: string;
   provider: ConnectorProvider;
   secretRef: string;
   status: ConnectorStatus;
@@ -42,6 +36,7 @@ export interface ConnectorRecord {
   leaseOwner: string | null;
   leaseUntil: string | null;
   streamMode: ConnectorStreamMode | null;
+  capabilities: ChannelCapabilities;
   policy: MirrorPolicy;
   modeOverride: string | null;
   lastError: string | null;
@@ -61,6 +56,7 @@ export type ConnectorPatch = Partial<{
   leaseOwner: string | null;
   leaseUntil: string | null;
   streamMode: ConnectorStreamMode | null;
+  capabilities: ChannelCapabilities;
   policy: MirrorPolicy;
   modeOverride: string | null;
   lastError: string | null;
@@ -74,25 +70,14 @@ export interface ConnectorBindingRecord {
   externalChatId: string;
   externalTopicId: string | null;
   chatType: ConnectorChatType;
-  threadId: string;
-  participantPolicy: ParticipantPolicy | null;
+  title: string | null;
+  threadId: string | null;
   status: ConnectorBindingStatus;
   createdAt: string;
   updatedAt: string;
 }
 
 export type ConnectorBindingInsert = ConnectorBindingRecord;
-
-export interface ConnectorRouteRecord {
-  id: string;
-  connectorId: string;
-  bindingId: string;
-  scope: ConnectorRouteScope;
-  threadId: string;
-  createdAt: string;
-}
-
-export type ConnectorRouteInsert = ConnectorRouteRecord;
 
 export interface ConnectorInboxRecord {
   id: string;

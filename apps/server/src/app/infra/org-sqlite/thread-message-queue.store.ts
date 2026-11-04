@@ -12,6 +12,7 @@ export interface QueuedThreadMessage {
   text: string;
   attachments: Attachment[] | null;
   origin: string | null;
+  originConnectorId: string | null;
   clientEventId: string | null;
   queuedAt: string;
   deliveredAt: string | null;
@@ -22,6 +23,7 @@ export interface EnqueueThreadMessageInput {
   text: string;
   attachments?: Attachment[] | null;
   origin?: string | null;
+  originConnectorId?: string | null;
   clientEventId?: string | null;
   author?: { provider: string; providerUserId: string; displayName: string } | null;
   targetAgentIds?: string[];
@@ -115,6 +117,7 @@ export function enqueueThreadMessage(
     text: input.text,
     attachments: input.attachments ?? null,
     origin: input.origin ?? null,
+    originConnectorId: input.originConnectorId ?? null,
     clientEventId: input.clientEventId ?? null,
     author: input.author ?? null,
   });
@@ -262,6 +265,7 @@ function mapRow(row: QueueJoinRow): QueuedThreadMessage {
     text: row.queue.text ?? (typeof meta.text === 'string' ? meta.text : ''),
     attachments: parseAttachments(attachments),
     origin: row.queue.origin ?? (typeof meta.origin === 'string' ? meta.origin : null),
+    originConnectorId: typeof meta.originConnectorId === 'string' ? meta.originConnectorId : null,
     clientEventId:
       row.queue.clientEventId ??
       (typeof meta.clientEventId === 'string' ? meta.clientEventId : null),

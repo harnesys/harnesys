@@ -110,8 +110,11 @@ describe('connector pure decisions', () => {
       args: 'ABC123',
       chatType: 'private',
       chatId: '55',
-      userId: '77',
+      chatTitle: '',
+      topicId: null,
       messageId: '10',
+      replyToMessageId: null,
+      author: { userId: '77', displayName: '77', username: null },
     });
 
     const group = parseTelegramUpdate({
@@ -127,9 +130,12 @@ describe('connector pure decisions', () => {
       kind: 'message',
       chatType: 'group',
       chatId: '-100',
-      userId: '88',
+      chatTitle: '',
+      topicId: null,
       messageId: '11',
+      replyToMessageId: null,
       text: 'hello group',
+      author: { userId: '88', displayName: '88', username: null },
     });
   });
 });

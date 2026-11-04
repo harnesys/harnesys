@@ -9,7 +9,7 @@ import type {
 } from 'harnesys';
 
 export type { Event, RequestPlan, RequestSection, SessionEvent, SessionEventType, Snapshot };
-export const THREAD_KINDS = ['chat', 'group', 'schedule', 'webhook', 'issue', 'connector'] as const;
+export const THREAD_KINDS = ['chat', 'group', 'schedule', 'webhook', 'issue'] as const;
 export type ThreadKind = (typeof THREAD_KINDS)[number];
 export interface ThreadPolicy {
   version: 1;

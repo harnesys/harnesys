@@ -2,14 +2,7 @@ import { z } from 'zod';
 import { ExecutionProfileIdSchema } from './execution-profile.ts';
 import { OrgIdSchema } from './org-machine.ts';
 
-export const ThreadKindSchema = z.enum([
-  'chat',
-  'group',
-  'schedule',
-  'webhook',
-  'issue',
-  'connector',
-]);
+export const ThreadKindSchema = z.enum(['chat', 'group', 'schedule', 'webhook', 'issue']);
 export type ThreadKind = z.infer<typeof ThreadKindSchema>;
 
 export const ThreadPolicySchema = z.object({

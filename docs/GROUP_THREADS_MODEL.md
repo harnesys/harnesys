@@ -103,7 +103,8 @@ connector_bindings:
   external_chat_id, external_topic_id, chat_type,
   thread_id NULL, status
   -- participant_policy folded into threads.policy
-connector_routes, connector_inbox, connector_deliveries: unchanged (draft/streamed outbound, update dedup, routing)
+connector_inbox, connector_deliveries: unchanged (update dedup, draft/streamed outbound)
+  -- connector_routes is dropped: delivery routes by runs.origin_connector_id and connector_bindings.thread_id
 ```
 
 A binding outlives its thread (`thread_id NULL`): deleting an agent removes a `chat` thread but must not unpair the external user.
@@ -142,7 +143,9 @@ Rules:
 
 - Transport identity is `(provider, external_chat_id, external_topic_id)` on `connector_bindings`; `chat_type` is no longer restricted to `private`.
 - Inbound normalizes to `{ text, author, addressedAgentIds?, replyToExternalMessageId?, originConnectorId }` and hands off to `resolveResponders`. Nothing about policy crosses the boundary.
-- `deliver(runId, payload)` routes by `runs.origin_connector_id` and reuses `connector_deliveries`, so one conversation can hold several agents and several bots.
+- `deliver(runId, payload)` routes by `runs.origin_connector_id` and reuses `connector_deliveries`, so one conversation can hold several agents and several bots. A run started from the app has no origin connector and is never mirrored back.
+- `connector_routes` is gone. Outbound needs no route table: the run carries its origin connector, the binding carries its thread. Echo suppression reads `metadata.originConnectorId`.
+- Pairing is two-step: a group or topic message with no binding claims it as an `unpaired` binding, and an admin connects it from the agent's connector pane. A direct message pairs by code, then its first inbound message opens the thread.
 - `provider` is a string everywhere in the core. No `platform !== 'telegram'` whitelist, no `IN ('telegram','web')` CHECK. Adding Discord touches no core schema.
 
 Cardinality (decided): one bot serves many agents. A bot has no default agent. An org connects several bots, each with its own agent set (`connector_agents`). A binding maps a chat or topic to a thread. Responders are intersected with the connector's agent set, so a bot never delivers for an agent it does not serve.
@@ -192,7 +195,7 @@ Port, by idea (the branch holds the group behavior that `main` lacks):
 
 Do not port, do not recreate:
 
-- The branch's own table families (`telegram-bots`, `telegram-chats`, `telegram-topics`, `org-sql-group-threads.ts`, `agent-groups.ts`). `main` already has `connectors`, `connector_bindings`, `connector_routes`, `connector_inbox`, `connector_deliveries`.
+- The branch's own table families (`telegram-bots`, `telegram-chats`, `telegram-topics`, `org-sql-group-threads.ts`, `agent-groups.ts`). `main` already has `connectors`, `connector_bindings`, `connector_inbox`, `connector_deliveries`; `connector_routes` is dropped in v1.
 - `respond_mode`, `route-conflict.ts` / `assertBindingFree`, `telegram-shared-topic.ts` / `DEMOTE_SHARED_BINDINGS_SQL`, the duplicate `selectBinding`, `thread_agents.role`, `agent_groups` and `threads.group_id`.
 
 Rewrite rather than port — the `kind === 'connector'` seam silently stops mirroring once the kind is removed:
@@ -206,6 +209,7 @@ Rebuild rather than port: responder policy, membership, workspace resolution, ca
 
 ## 9. Open items
 
+- Remote group runs are not supported in v1: a group thread executes on the local node only.
 - Cleaning `thread_participants` when an org user is deleted.
 - Per-agent run profile: `run_profile_id` / `runModeOf(thread)` stay thread-scoped in v1, so one preset applies to every agent in a group.
 - Binding lifecycle independent of the thread: a binding may outlive its thread (`thread_id NULL`).

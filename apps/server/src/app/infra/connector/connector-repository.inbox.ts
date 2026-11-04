@@ -3,14 +3,13 @@ import type {
   ConnectorDeliveryInsert,
   ConnectorDeliveryRecord,
   ConnectorInboxInsert,
-  ConnectorInboxRecord,
   ConnectorInboxStatus,
   InsertInboxResult,
 } from '../../domain/connector/connector.ts';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
 import { connectorDeliveriesTable, connectorInboxTable } from '../org-sqlite/schema/index.ts';
 import { mapConnectorSqliteError } from './connector-repository.errors.ts';
-import { stringifyPayload, toDelivery, toInbox } from './connector-repository.mappers.ts';
+import { stringifyPayload, toDelivery } from './connector-repository.mappers.ts';
 
 export function insertInbox(db: OrgSqliteDb, rec: ConnectorInboxInsert): InsertInboxResult {
   try {
@@ -36,40 +35,8 @@ export function insertInbox(db: OrgSqliteDb, rec: ConnectorInboxInsert): InsertI
   }
 }
 
-export function listPendingInbox(db: OrgSqliteDb, connectorId: string): ConnectorInboxRecord[] {
-  return db
-    .select()
-    .from(connectorInboxTable)
-    .where(
-      and(
-        eq(connectorInboxTable.connectorId, connectorId),
-        eq(connectorInboxTable.status, 'pending'),
-      ),
-    )
-    .all()
-    .map(toInbox);
-}
-
 export function markInbox(db: OrgSqliteDb, id: string, status: ConnectorInboxStatus): void {
   db.update(connectorInboxTable).set({ status }).where(eq(connectorInboxTable.id, id)).run();
-}
-
-export function updateInbox(
-  db: OrgSqliteDb,
-  id: string,
-  patch: { status?: ConnectorInboxStatus; payload?: unknown },
-): void {
-  const set: { status?: ConnectorInboxStatus; payload?: string } = {};
-  if (patch.status !== undefined) {
-    set.status = patch.status;
-  }
-  if (patch.payload !== undefined) {
-    set.payload = stringifyPayload(patch.payload);
-  }
-  if (set.status === undefined && set.payload === undefined) {
-    return;
-  }
-  db.update(connectorInboxTable).set(set).where(eq(connectorInboxTable.id, id)).run();
 }
 
 export function upsertDelivery(
@@ -122,6 +89,28 @@ export function findDelivery(db: OrgSqliteDb, id: string): ConnectorDeliveryReco
     .select()
     .from(connectorDeliveriesTable)
     .where(eq(connectorDeliveriesTable.id, id))
+    .get();
+  return row ? toDelivery(row) : undefined;
+}
+
+export function findDeliveryByMessage(
+  db: OrgSqliteDb,
+  connectorId: string,
+  externalMessageId: string,
+): ConnectorDeliveryRecord | undefined {
+  if (externalMessageId === '') {
+    return undefined;
+  }
+  const row = db
+    .select()
+    .from(connectorDeliveriesTable)
+    .where(
+      and(
+        eq(connectorDeliveriesTable.connectorId, connectorId),
+        eq(connectorDeliveriesTable.externalMessageId, externalMessageId),
+      ),
+    )
+    .orderBy(connectorDeliveriesTable.updatedAt)
     .get();
   return row ? toDelivery(row) : undefined;
 }

@@ -1,31 +1,21 @@
 import type { AcceptedRunResponse } from '@harnesys/contracts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
-import type { OrgAudit } from '../../domain/fleet/org-audit.port.ts';
 import { UserRepository } from '../../domain/identity/user-repository.port.ts';
-import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { AttachmentRepositoryPort } from '../../domain/thread/attachment-repository.port.ts';
-import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { resolveResponders } from '../../domain/thread/responder-policy.ts';
-import { ThreadInvariantException } from '../../domain/thread/thread.error.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { allowsMentions } from '../../domain/thread/thread-policy.ts';
-import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
-import { type OrgSqliteDb, withOrgSqlite } from '../../infra/org-sqlite/org-sqlite-session.ts';
-import { enqueueThreadMessage } from '../../infra/org-sqlite/thread-message-queue.store.ts';
-import { attributedRun, auditRunStart } from './run-attribution.ts';
 import { resolveAttachmentsOf } from './send-thread-attachments.ts';
+import { SendThreadMessageUseCase } from './send-thread-message.use-case.ts';
 import type { SendThreadRunRequest } from './send-thread-run.use-case.ts';
 
 export interface GroupSendDeps {
-  threads: ThreadRepositoryPort;
   threadAgents: ThreadAgentRepositoryPort;
   agents: AgentRegistryPort;
   attachments: AttachmentRepositoryPort;
   users: UserRepository;
-  executor: LocalExecutorPort;
-  audit: OrgAudit;
-  layout: HostFsLayoutPort;
+  sendMessage: SendThreadMessageUseCase;
 }
 
 export async function sendGroupThread(
@@ -57,45 +47,17 @@ export async function sendGroupThread(
         providerUserId: actorId,
         displayName: deps.users.findById(actorId)?.name ?? actorId,
       }
-    : null;
-  const enqueued = withOrgSqlite(deps.layout, request.orgId, (db) =>
-    db.transaction(
-      (tx) =>
-        enqueueThreadMessage(tx as OrgSqliteDb, {
-          threadId: thread.id,
-          text: request.body.text ?? '',
-          ...(attachments.length > 0 ? { attachments } : {}),
-          ...(request.body.origin ? { origin: request.body.origin } : {}),
-          ...(request.body.clientEventId ? { clientEventId: request.body.clientEventId } : {}),
-          ...(author ? { author } : {}),
-          targetAgentIds: responders,
-          threadScoped: true,
-        }),
-      { behavior: 'immediate' },
-    ),
-  );
-  const threadSeq = enqueued.threadSeq;
-  if (threadSeq === null) {
-    throw new ThreadInvariantException(`group send stored no message for thread ${thread.id}`, {
-      threadId: thread.id,
-    });
-  }
-  deps.threads.touch(request.orgId, thread.id);
-  if (enqueued.duplicate) {
-    return { status: 'stored', reason: 'duplicate', threadId: thread.id, threadSeq };
-  }
-  if (responders.length === 0) {
-    return { status: 'stored', reason: 'no_responder', threadId: thread.id, threadSeq };
-  }
-  const drained = await deps.executor.drainMessageQueue(request.orgId, thread.id);
-  if (drained.status !== 'delivered') {
-    return { status: 'stored', reason: 'deferred', threadId: thread.id, threadSeq };
-  }
-  auditRunStart(deps.audit, {
+    : undefined;
+  return await deps.sendMessage.execute({
     orgId: request.orgId,
-    runId: drained.runId,
-    attribution: attributedRun(request.attribution, null),
+    threadId: thread.id,
+    text: request.body.text ?? '',
+    ...(attachments.length > 0 ? { attachments } : {}),
+    ...(request.body.origin ? { origin: request.body.origin } : {}),
+    ...(request.body.clientEventId ? { clientEventId: request.body.clientEventId } : {}),
+    ...(author ? { author } : {}),
+    targetAgentIds: responders,
+    attribution: request.attribution,
     triggerId: request.trigger?.id ?? thread.id,
   });
-  return { status: 'queued', runId: drained.runId, threadId: thread.id };
 }

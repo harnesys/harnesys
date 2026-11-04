@@ -111,6 +111,14 @@ export {
   PackCatalogToolSchema,
 } from './capabilities.ts';
 export {
+  type AddConnectorAgentBody,
+  AddConnectorAgentBodySchema,
+  type ConnectConnectorBindingBody,
+  ConnectConnectorBindingBodySchema,
+  type ConnectorBindingPublic,
+  ConnectorBindingPublicSchema,
+  type ConnectorCapabilities,
+  ConnectorCapabilitiesSchema,
   type ConnectorProvider,
   ConnectorProviderSchema,
   type ConnectorPublic,

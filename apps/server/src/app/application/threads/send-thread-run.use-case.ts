@@ -48,6 +48,7 @@ import {
   resolveAttachmentsOf,
 } from './send-thread-attachments.ts';
 import { dispatchLocalRun, dispatchRemoteRun, sharedRunFields } from './send-thread-dispatch.ts';
+import { SendThreadMessageUseCase } from './send-thread-message.use-case.ts';
 import { resolveWorktreeBinding, type WorktreeBinding } from './send-thread-worktree.ts';
 import { applyDerivedThreadTitle } from './thread.helpers.ts';
 
@@ -84,6 +85,7 @@ export class SendThreadRunUseCase {
     private readonly orgSettings: OrgSettingsPort,
     private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly users: UserRepository,
+    private readonly sendMessage: SendThreadMessageUseCase,
   ) {}
 
   async execute(request: SendThreadRunRequest): Promise<AcceptedRunResponse> {
@@ -95,14 +97,11 @@ export class SendThreadRunUseCase {
     if (thread.kind === 'group') {
       return await sendGroupThread(
         {
-          threads: this.threads,
           threadAgents: this.threadAgents,
           agents: this.agents,
           attachments: this.attachments,
           users: this.users,
-          executor: this.executor,
-          audit: this.audit,
-          layout: this._layout,
+          sendMessage: this.sendMessage,
         },
         request,
         thread,

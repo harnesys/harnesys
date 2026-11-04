@@ -22,7 +22,7 @@ export interface CreateThreadInput {
   agentId?: string;
   agentIds?: string[];
   participantUserIds?: string[];
-  kind?: 'chat' | 'group' | 'schedule' | 'webhook' | 'issue' | 'connector';
+  kind?: 'chat' | 'group' | 'schedule' | 'webhook' | 'issue';
   parentThreadId?: string;
   forkAt?: string;
 }

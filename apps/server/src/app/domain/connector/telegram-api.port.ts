@@ -19,6 +19,7 @@ export class TelegramBlockedError extends Error {
 export interface TelegramBotIdentity {
   id: string;
   username: string;
+  canReadAllGroupMessages: boolean;
 }
 
 export interface TelegramSentMessage {
@@ -40,6 +41,11 @@ export interface TelegramInlineButton {
   value: string;
 }
 
+export interface TelegramChatMember {
+  status: string;
+  canManageChat: boolean;
+}
+
 export abstract class TelegramApiPort {
   abstract getMe(token: string): Promise<TelegramBotIdentity>;
 
@@ -56,6 +62,8 @@ export abstract class TelegramApiPort {
     text: string,
     options?: {
       replyMarkup?: { inlineKeyboard: TelegramInlineButton[][] };
+      topicId?: string | null;
+      replyToMessageId?: string | null;
     },
   ): Promise<TelegramSentMessage>;
 
@@ -64,7 +72,7 @@ export abstract class TelegramApiPort {
     chatId: string,
     draftId: number,
     text: string,
-    options?: { canStop?: boolean },
+    options?: { canStop?: boolean; topicId?: string | null },
   ): Promise<TelegramSentMessage>;
 
   abstract editMessageText(
@@ -74,13 +82,19 @@ export abstract class TelegramApiPort {
     text: string,
   ): Promise<TelegramSentMessage>;
 
-  abstract sendChatAction(token: string, chatId: string, action: 'typing'): Promise<void>;
+  abstract sendChatAction(
+    token: string,
+    chatId: string,
+    action: 'typing',
+    topicId?: string | null,
+  ): Promise<void>;
 
   abstract sendPhoto(
     token: string,
     chatId: string,
     bytes: Uint8Array,
     filename: string,
+    topicId?: string | null,
   ): Promise<TelegramSentMessage>;
 
   abstract sendDocument(
@@ -88,6 +102,7 @@ export abstract class TelegramApiPort {
     chatId: string,
     bytes: Uint8Array,
     filename: string,
+    topicId?: string | null,
   ): Promise<TelegramSentMessage>;
 
   abstract answerCallbackQuery(
@@ -97,6 +112,12 @@ export abstract class TelegramApiPort {
   ): Promise<void>;
 
   abstract getFile(token: string, fileId: string): Promise<TelegramFileRef & { bytes: Uint8Array }>;
+
+  abstract getChatMember(
+    token: string,
+    chatId: string,
+    userId: string,
+  ): Promise<TelegramChatMember | null>;
 
   abstract setMyCommands(token: string, commands: TelegramBotCommand[]): Promise<void>;
 }

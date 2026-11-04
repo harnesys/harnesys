@@ -4,6 +4,7 @@ import {
   check,
   index,
   integer,
+  primaryKey,
   sqliteTable,
   text,
   uniqueIndex,
@@ -15,9 +16,6 @@ export const connectorsTable = sqliteTable(
   {
     id: text('id').primaryKey(),
     orgId: text('org_id').notNull(),
-    agentId: text('agent_id')
-      .notNull()
-      .references((): AnySQLiteColumn => agentsTable.id, { onDelete: 'cascade' }),
     provider: text('provider').notNull(),
     secretRef: text('secret_ref').notNull(),
     status: text('status').notNull().default('awaiting_pair'),
@@ -28,6 +26,7 @@ export const connectorsTable = sqliteTable(
     leaseOwner: text('lease_owner'),
     leaseUntil: text('lease_until'),
     streamMode: text('stream_mode'),
+    capabilities: text('capabilities').notNull().default('{}'),
     policy: text('policy').notNull(),
     modeOverride: text('mode_override'),
     lastError: text('last_error'),
@@ -44,10 +43,26 @@ export const connectorsTable = sqliteTable(
       sql`${table.streamMode} IS NULL OR ${table.streamMode} IN ('draft', 'edit')`,
     ),
     orgIdx: index('connectors_org_idx').on(table.orgId),
-    agentProviderIdx: index('connectors_agent_provider_idx').on(table.agentId, table.provider),
     botUserUnique: uniqueIndex('connectors_org_provider_bot_user_unique')
       .on(table.orgId, table.provider, table.botUserId)
       .where(sql`${table.botUserId} != ''`),
+  }),
+);
+
+export const connectorAgentsTable = sqliteTable(
+  'connector_agents',
+  {
+    connectorId: text('connector_id')
+      .notNull()
+      .references((): AnySQLiteColumn => connectorsTable.id, { onDelete: 'cascade' }),
+    agentId: text('agent_id')
+      .notNull()
+      .references((): AnySQLiteColumn => agentsTable.id, { onDelete: 'cascade' }),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.connectorId, table.agentId] }),
+    agentIdx: index('connector_agents_agent_idx').on(table.agentId),
   }),
 );
 
@@ -62,8 +77,8 @@ export const connectorBindingsTable = sqliteTable(
     externalChatId: text('external_chat_id').notNull().default(''),
     externalTopicId: text('external_topic_id').notNull().default(''),
     chatType: text('chat_type').notNull().default('private'),
-    threadId: text('thread_id').notNull(),
-    participantPolicy: text('participant_policy').notNull().default('{}'),
+    title: text('title').notNull().default(''),
+    threadId: text('thread_id'),
     status: text('status').notNull().default('active'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
@@ -73,39 +88,13 @@ export const connectorBindingsTable = sqliteTable(
       'connector_bindings_status_check',
       sql`${table.status} IN ('active', 'unpaired')`,
     ),
-    chatTypeCheck: check(
-      'connector_bindings_chat_type_check',
-      sql`${table.chatType} IN ('private')`,
-    ),
     chatUnique: uniqueIndex('connector_bindings_chat_unique').on(
       table.connectorId,
       table.externalChatId,
       table.externalTopicId,
     ),
     connectorIdx: index('connector_bindings_connector_idx').on(table.connectorId),
-  }),
-);
-
-export const connectorRoutesTable = sqliteTable(
-  'connector_routes',
-  {
-    id: text('id').primaryKey(),
-    connectorId: text('connector_id')
-      .notNull()
-      .references((): AnySQLiteColumn => connectorsTable.id, { onDelete: 'cascade' }),
-    bindingId: text('binding_id').notNull(),
-    scope: text('scope').notNull().default('thread'),
-    threadId: text('thread_id').notNull(),
-    createdAt: text('created_at').notNull(),
-  },
-  (table) => ({
-    scopeCheck: check('connector_routes_scope_check', sql`${table.scope} IN ('thread', 'agent')`),
-    routeUnique: uniqueIndex('connector_routes_unique').on(
-      table.connectorId,
-      table.scope,
-      table.threadId,
-    ),
-    connectorIdx: index('connector_routes_connector_idx').on(table.connectorId),
+    threadIdx: index('connector_bindings_thread_idx').on(table.threadId),
   }),
 );
 
@@ -169,15 +158,18 @@ export const connectorDeliveriesTable = sqliteTable(
       table.blockKey,
     ),
     streamingIdx: index('connector_deliveries_streaming_idx').on(table.connectorId, table.status),
+    messageIdx: index('connector_deliveries_message_idx').on(
+      table.connectorId,
+      table.externalMessageId,
+    ),
   }),
 );
 
 export type ConnectorRow = typeof connectorsTable.$inferSelect;
 export type ConnectorInsertRow = typeof connectorsTable.$inferInsert;
+export type ConnectorAgentRow = typeof connectorAgentsTable.$inferSelect;
 export type ConnectorBindingRow = typeof connectorBindingsTable.$inferSelect;
 export type ConnectorBindingInsertRow = typeof connectorBindingsTable.$inferInsert;
-export type ConnectorRouteRow = typeof connectorRoutesTable.$inferSelect;
-export type ConnectorRouteInsertRow = typeof connectorRoutesTable.$inferInsert;
 export type ConnectorInboxRow = typeof connectorInboxTable.$inferSelect;
 export type ConnectorInboxInsertRow = typeof connectorInboxTable.$inferInsert;
 export type ConnectorDeliveryRow = typeof connectorDeliveriesTable.$inferSelect;

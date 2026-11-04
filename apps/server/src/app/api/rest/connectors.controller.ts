@@ -1,5 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Put } from '@harnesys/brix';
 import type {
+  AddConnectorAgentBody,
+  ConnectConnectorBindingBody,
   IssuePairCodeResponse,
   ListConnectorsResponse,
   PatchTelegramPolicyBody,
@@ -9,10 +11,16 @@ import type {
   UpsertTelegramConnectorResponse,
 } from '@harnesys/contracts';
 import {
+  AddConnectorAgentBodySchema,
+  ConnectConnectorBindingBodySchema,
   PatchTelegramPolicyBodySchema,
   UpsertTelegramConnectorBodySchema,
 } from '@harnesys/contracts';
+import { AddConnectorAgentUseCase } from '../../application/connectors/add-connector-agent.use-case.ts';
+import { ConnectConnectorBindingUseCase } from '../../application/connectors/connect-connector-binding.use-case.ts';
+import { DisconnectConnectorBindingUseCase } from '../../application/connectors/disconnect-connector-binding.use-case.ts';
 import { ListConnectorsUseCase } from '../../application/connectors/list-connectors.use-case.ts';
+import { RemoveConnectorAgentUseCase } from '../../application/connectors/remove-connector-agent.use-case.ts';
 import {
   IssuePairCodeUseCase,
   PatchTelegramPolicyUseCase,
@@ -34,6 +42,10 @@ export class ConnectorsController {
     private readonly unpairTelegram: UnpairTelegramConnectorUseCase,
     private readonly patchPolicy: PatchTelegramPolicyUseCase,
     private readonly removeTelegram: RemoveTelegramConnectorUseCase,
+    private readonly addAgent: AddConnectorAgentUseCase,
+    private readonly removeAgent: RemoveConnectorAgentUseCase,
+    private readonly connectBinding: ConnectConnectorBindingUseCase,
+    private readonly disconnectBinding: DisconnectConnectorBindingUseCase,
   ) {}
 
   @Get()
@@ -89,6 +101,43 @@ export class ConnectorsController {
     @Body(PatchTelegramPolicyBodySchema) body: PatchTelegramPolicyBody,
   ): TelegramConnectorActionResponse {
     return this.patchPolicy.execute({ orgId, agentId, body });
+  }
+
+  @Post('telegram/agents')
+  addConnectorAgent(
+    @Param('orgId') orgId: string,
+    @Param('agentId') agentId: string,
+    @Body(AddConnectorAgentBodySchema) body: AddConnectorAgentBody,
+  ): TelegramConnectorActionResponse {
+    return this.addAgent.execute({ orgId, agentId, body });
+  }
+
+  @Delete('telegram/agents/:memberAgentId')
+  removeConnectorAgent(
+    @Param('orgId') orgId: string,
+    @Param('agentId') agentId: string,
+    @Param('memberAgentId') memberAgentId: string,
+  ): TelegramConnectorActionResponse {
+    return this.removeAgent.execute({ orgId, agentId, body: { agentId: memberAgentId } });
+  }
+
+  @Post('telegram/bindings/:bindingId/connect')
+  connect(
+    @Param('orgId') orgId: string,
+    @Param('agentId') agentId: string,
+    @Param('bindingId') bindingId: string,
+    @Body(ConnectConnectorBindingBodySchema) body: ConnectConnectorBindingBody,
+  ): Promise<TelegramConnectorActionResponse> {
+    return this.connectBinding.execute({ orgId, agentId, bindingId, body });
+  }
+
+  @Delete('telegram/bindings/:bindingId/connect')
+  disconnect(
+    @Param('orgId') orgId: string,
+    @Param('agentId') agentId: string,
+    @Param('bindingId') bindingId: string,
+  ): TelegramConnectorActionResponse {
+    return this.disconnectBinding.execute({ orgId, agentId, bindingId });
   }
 
   @Delete('telegram')

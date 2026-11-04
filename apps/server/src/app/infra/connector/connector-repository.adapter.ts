@@ -1,43 +1,50 @@
 import { Injectable } from '@harnesys/brix';
+import { ConnectorNotFoundException } from '../../domain/connector/connector.error.ts';
 import type {
   ConnectorBindingInsert,
   ConnectorBindingRecord,
   ConnectorDeliveryInsert,
   ConnectorDeliveryRecord,
   ConnectorInboxInsert,
-  ConnectorInboxRecord,
   ConnectorInboxStatus,
   ConnectorInsert,
   ConnectorPatch,
   ConnectorProvider,
   ConnectorRecord,
-  ConnectorRouteInsert,
-  ConnectorRouteRecord,
   InsertInboxResult,
 } from '../../domain/connector/connector.ts';
 import { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { withOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 import {
+  attachBindingThread as attachBindingThreadRow,
+  clearBindings as clearBindingsRow,
+  detachBinding as detachBindingRow,
+  findActiveBinding as findActiveBindingRow,
+  findBindingByChat as findBindingByChatRow,
+  findBindingById as findBindingByIdRow,
+  findBindingForThread as findBindingForThreadRow,
+  insertBinding as insertBindingRow,
+  listBindings as listBindingsRow,
+} from './connector-repository.bindings.ts';
+import {
+  findDeliveryByMessage as findDeliveryByMessageRow,
   findDelivery as findDeliveryRow,
   insertInbox as insertInboxRow,
-  listPendingInbox,
   listStreamingDeliveries,
   markInbox as markInboxRow,
-  updateInbox as updateInboxRow,
   upsertDelivery as upsertDeliveryRow,
 } from './connector-repository.inbox.ts';
 import {
-  clearBinding as clearBindingRow,
   deleteConnector,
-  deleteRoutesForConnector as deleteRoutes,
-  findActiveBinding as findActiveBindingRow,
+  ensureConnectorAgent,
   findConnectorByAgentProvider,
   findConnectorByBotUser,
-  insertBinding as insertBindingRow,
+  findConnectorById,
   insertConnector,
-  insertRoute as insertRouteRow,
+  listConnectorAgentIds,
   listConnectorsByOrg,
+  removeConnectorAgent,
   updateConnector,
 } from './connector-repository.store.ts';
 
@@ -49,6 +56,10 @@ export class ConnectorRepositoryAdapter extends ConnectorRepositoryPort {
 
   listByOrg(orgId: string): ConnectorRecord[] {
     return withOrgSqlite(this.layout, orgId, (db) => listConnectorsByOrg(db, orgId));
+  }
+
+  findById(orgId: string, id: string): ConnectorRecord | undefined {
+    return withOrgSqlite(this.layout, orgId, (db) => findConnectorById(db, orgId, id));
   }
 
   findByAgentProvider(
@@ -79,6 +90,22 @@ export class ConnectorRepositoryAdapter extends ConnectorRepositoryPort {
     });
   }
 
+  listAgentIds(orgId: string, connectorId: string): string[] {
+    return withOrgSqlite(this.layout, orgId, (db) => listConnectorAgentIds(db, connectorId));
+  }
+
+  ensureAgent(orgId: string, connectorId: string, agentId: string): void {
+    withOrgSqlite(this.layout, orgId, (db) => {
+      ensureConnectorAgent(db, connectorId, agentId, new Date().toISOString());
+    });
+  }
+
+  removeAgent(orgId: string, connectorId: string, agentId: string): void {
+    withOrgSqlite(this.layout, orgId, (db) => {
+      removeConnectorAgent(db, connectorId, agentId);
+    });
+  }
+
   insertBinding(rec: ConnectorBindingInsert): ConnectorBindingRecord {
     return withOrgSqlite(this.layout, rec.orgId, (db) => insertBindingRow(db, rec));
   }
@@ -87,19 +114,61 @@ export class ConnectorRepositoryAdapter extends ConnectorRepositoryPort {
     return withOrgSqlite(this.layout, orgId, (db) => findActiveBindingRow(db, orgId, connectorId));
   }
 
-  clearBinding(orgId: string, connectorId: string, updatedAt: string): void {
+  findBinding(orgId: string, connectorId: string, id: string): ConnectorBindingRecord {
+    const found = withOrgSqlite(this.layout, orgId, (db) =>
+      findBindingByIdRow(db, orgId, connectorId, id),
+    );
+    if (!found) {
+      throw new ConnectorNotFoundException(id);
+    }
+    return found;
+  }
+
+  findBindingByChat(
+    orgId: string,
+    connectorId: string,
+    externalChatId: string,
+    externalTopicId: string | null,
+  ): ConnectorBindingRecord | undefined {
+    return withOrgSqlite(this.layout, orgId, (db) =>
+      findBindingByChatRow(db, connectorId, externalChatId, externalTopicId),
+    );
+  }
+
+  findBindingForThread(
+    orgId: string,
+    connectorId: string,
+    threadId: string,
+  ): ConnectorBindingRecord | undefined {
+    return withOrgSqlite(this.layout, orgId, (db) =>
+      findBindingForThreadRow(db, connectorId, threadId),
+    );
+  }
+
+  listBindings(orgId: string, connectorId: string): ConnectorBindingRecord[] {
+    return withOrgSqlite(this.layout, orgId, (db) => listBindingsRow(db, connectorId));
+  }
+
+  attachBindingThread(
+    orgId: string,
+    bindingId: string,
+    threadId: string,
+    updatedAt: string,
+  ): ConnectorBindingRecord {
+    return withOrgSqlite(this.layout, orgId, (db) =>
+      attachBindingThreadRow(db, orgId, bindingId, threadId, updatedAt),
+    );
+  }
+
+  detachBinding(orgId: string, bindingId: string, updatedAt: string): void {
     withOrgSqlite(this.layout, orgId, (db) => {
-      clearBindingRow(db, orgId, connectorId, updatedAt);
+      detachBindingRow(db, orgId, bindingId, updatedAt);
     });
   }
 
-  insertRoute(orgId: string, rec: ConnectorRouteInsert): ConnectorRouteRecord {
-    return withOrgSqlite(this.layout, orgId, (db) => insertRouteRow(db, rec));
-  }
-
-  deleteRoutesForConnector(orgId: string, connectorId: string): void {
+  clearBindings(orgId: string, connectorId: string): void {
     withOrgSqlite(this.layout, orgId, (db) => {
-      deleteRoutes(db, connectorId);
+      clearBindingsRow(db, connectorId);
     });
   }
 
@@ -107,23 +176,9 @@ export class ConnectorRepositoryAdapter extends ConnectorRepositoryPort {
     return withOrgSqlite(this.layout, orgId, (db) => insertInboxRow(db, rec));
   }
 
-  listPending(orgId: string, connectorId: string): ConnectorInboxRecord[] {
-    return withOrgSqlite(this.layout, orgId, (db) => listPendingInbox(db, connectorId));
-  }
-
   markInbox(orgId: string, id: string, status: ConnectorInboxStatus): void {
     withOrgSqlite(this.layout, orgId, (db) => {
       markInboxRow(db, id, status);
-    });
-  }
-
-  updateInbox(
-    orgId: string,
-    id: string,
-    patch: { status?: ConnectorInboxStatus; payload?: unknown },
-  ): void {
-    withOrgSqlite(this.layout, orgId, (db) => {
-      updateInboxRow(db, id, patch);
     });
   }
 
@@ -133,6 +188,16 @@ export class ConnectorRepositoryAdapter extends ConnectorRepositoryPort {
 
   findDelivery(orgId: string, id: string): ConnectorDeliveryRecord | undefined {
     return withOrgSqlite(this.layout, orgId, (db) => findDeliveryRow(db, id));
+  }
+
+  findDeliveryByMessage(
+    orgId: string,
+    connectorId: string,
+    externalMessageId: string,
+  ): ConnectorDeliveryRecord | undefined {
+    return withOrgSqlite(this.layout, orgId, (db) =>
+      findDeliveryByMessageRow(db, connectorId, externalMessageId),
+    );
   }
 
   listStreaming(orgId: string, connectorId: string): ConnectorDeliveryRecord[] {

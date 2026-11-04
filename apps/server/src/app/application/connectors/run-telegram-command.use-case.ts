@@ -18,7 +18,9 @@ export interface RunTelegramCommandRequest {
   connector: ConnectorRecord;
   inboxId: string;
   chatId: string;
+  topicId: string | null;
   threadId: string;
+  agentId: string;
   name: PairedCommandName;
   activeRunId: string | null;
   activeStatus: string | null;
@@ -103,7 +105,7 @@ export class RunTelegramCommandUseCase {
   private async skills(request: RunTelegramCommandRequest): Promise<string> {
     const effective = await this.effectiveSkills.execute({
       orgId: request.orgId,
-      agentId: request.connector.agentId,
+      agentId: request.agentId,
     });
     return formatSkillList(
       effective.skills.filter((skill) => skill.granted).map((skill) => skill.name),
@@ -115,6 +117,6 @@ export class RunTelegramCommandUseCase {
     if (!token) {
       throw new ConnectorValidationException('Connector token is missing');
     }
-    await this.telegram.sendMessage(token, request.chatId, text);
+    await this.telegram.sendMessage(token, request.chatId, text, { topicId: request.topicId });
   }
 }

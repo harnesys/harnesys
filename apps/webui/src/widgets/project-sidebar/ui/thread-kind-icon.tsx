@@ -3,7 +3,6 @@ import {
   CalendarClockIcon,
   EarthIcon,
   MessageCircle,
-  SendIcon,
   SquareKanbanIcon,
   UsersIcon,
 } from 'lucide-react';
@@ -17,8 +16,6 @@ export function threadKindInk(kind: ThreadKind): string | null {
       return 'text-sky-500/90';
     case 'webhook':
       return 'text-violet-500/90';
-    case 'connector':
-      return 'text-sky-400/90';
     case 'group':
       return 'text-emerald-500/90';
     case 'chat':
@@ -35,8 +32,6 @@ export function ThreadKindIcon({ kind, className }: { kind: ThreadKind; classNam
       return <CalendarClockIcon className={cn(className, ink)} aria-hidden />;
     case 'webhook':
       return <EarthIcon className={cn(className, ink)} aria-hidden />;
-    case 'connector':
-      return <SendIcon className={cn(className, ink)} aria-hidden />;
     case 'group':
       return <UsersIcon className={cn(className, ink)} aria-hidden />;
     case 'chat':

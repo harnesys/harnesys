@@ -5,7 +5,6 @@ import { toClientThread, useThreadStore } from '@/entities/thread';
 import { useDeskReady } from '@/features/desk';
 import { GitCommitDiffView } from '@/features/git-commit';
 import { type IdeTab, useIdeStore } from '@/features/ide';
-import { agentConnectorsQuery } from '@/features/manage-agent/model/connector-api';
 import { BoardSurface } from '@/features/manage-issues';
 import { ThreadMembersPanel } from '@/features/manage-thread-members';
 import { openFileKind } from '@/features/open-file';
@@ -27,32 +26,6 @@ import { ThreadTriggerDock } from '@/widgets/thread-dock';
 import { ThreadJournal } from '@/widgets/thread-journal';
 import { ScheduleSurface, WebhookSurface } from './automation-surface';
 import { ThreadFileTabContent } from './thread-file-tab';
-
-function ConnectorAwaitingBanner({
-  orgId,
-  agentId,
-  threadId,
-}: {
-  orgId: string;
-  agentId: string;
-  threadId: string;
-}) {
-  const connectorsQuery = useQuery(agentConnectorsQuery(orgId, agentId));
-  const awaiting = connectorsQuery.data?.items.some(
-    (item) => item.threadId === threadId && item.status === 'awaiting_pair',
-  );
-  if (!awaiting) {
-    return null;
-  }
-  return (
-    <div
-      className="shrink-0 border-border/40 border-b px-3 py-1.5 text-muted-foreground text-xs"
-      data-testid="connector-awaiting-banner"
-    >
-      Waiting for Telegram link.
-    </div>
-  );
-}
 
 function isNotFound(error: Error | null): boolean {
   return error instanceof ApiError && error.status === 404;
@@ -133,13 +106,10 @@ function ThreadTabContent({
       </div>
     );
   }
-  if (thread.kind === 'chat' || thread.kind === 'group' || thread.kind === 'connector') {
+  if (thread.kind === 'chat' || thread.kind === 'group') {
     return (
       <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-thread">
         {thread.kind === 'group' ? <ThreadMembersPanel thread={thread} /> : null}
-        {thread.kind === 'connector' ? (
-          <ConnectorAwaitingBanner orgId={agent.orgId} agentId={agent.id} threadId={thread.id} />
-        ) : null}
         <div className="min-h-0 flex-1">
           <ThreadPanel threadId={thread.id} agent={agent} active />
         </div>

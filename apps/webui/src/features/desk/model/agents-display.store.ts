@@ -9,7 +9,6 @@ export const AGENT_THREAD_KINDS: readonly ThreadKind[] = [
   'issue',
   'schedule',
   'webhook',
-  'connector',
 ];
 
 interface AgentsDisplayState {

@@ -1,4 +1,5 @@
 import type {
+  ConnectConnectorBindingBody,
   ConnectorPublic,
   IssuePairCodeResponse,
   ListConnectorsResponse,
@@ -74,6 +75,42 @@ export function patchTelegramPolicy(orgId: string, agentId: string, body: PatchT
       method: 'PATCH',
       body: JSON.stringify(body),
     },
+  );
+}
+
+export function addConnectorAgent(orgId: string, agentId: string, memberAgentId: string) {
+  return apiJson<TelegramConnectorActionResponse>(
+    `${connectorsBase(orgId, agentId)}/telegram/agents`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ agentId: memberAgentId }),
+    },
+  );
+}
+
+export function removeConnectorAgent(orgId: string, agentId: string, memberAgentId: string) {
+  return apiJson<TelegramConnectorActionResponse>(
+    `${connectorsBase(orgId, agentId)}/telegram/agents/${encodeURIComponent(memberAgentId)}`,
+    { method: 'DELETE' },
+  );
+}
+
+export function connectConnectorBinding(
+  orgId: string,
+  agentId: string,
+  bindingId: string,
+  body: ConnectConnectorBindingBody,
+) {
+  return apiJson<TelegramConnectorActionResponse>(
+    `${connectorsBase(orgId, agentId)}/telegram/bindings/${encodeURIComponent(bindingId)}/connect`,
+    { method: 'POST', body: JSON.stringify(body) },
+  );
+}
+
+export function disconnectConnectorBinding(orgId: string, agentId: string, bindingId: string) {
+  return apiJson<TelegramConnectorActionResponse>(
+    `${connectorsBase(orgId, agentId)}/telegram/bindings/${encodeURIComponent(bindingId)}/connect`,
+    { method: 'DELETE' },
   );
 }
 

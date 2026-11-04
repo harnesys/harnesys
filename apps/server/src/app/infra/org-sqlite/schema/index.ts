@@ -32,6 +32,7 @@ export {
   attachmentsTable,
 } from './attachments.ts';
 export {
+  type ConnectorAgentRow,
   type ConnectorBindingInsertRow,
   type ConnectorBindingRow,
   type ConnectorDeliveryInsertRow,
@@ -39,13 +40,11 @@ export {
   type ConnectorInboxInsertRow,
   type ConnectorInboxRow,
   type ConnectorInsertRow,
-  type ConnectorRouteInsertRow,
-  type ConnectorRouteRow,
   type ConnectorRow,
+  connectorAgentsTable,
   connectorBindingsTable,
   connectorDeliveriesTable,
   connectorInboxTable,
-  connectorRoutesTable,
   connectorsTable,
 } from './connectors.ts';
 export {

@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@harnesys/brix';
 import type { UpsertTelegramConnectorResponse } from '@harnesys/contracts';
+import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { BOT_COMMANDS } from '../../domain/connector/bot-commands.ts';
+import { telegramCapabilities } from '../../domain/connector/channel-capabilities.ts';
 import {
   ConnectorConflictException,
   ConnectorValidationException,
@@ -11,20 +13,13 @@ import { DEFAULT_MIRROR_POLICY } from '../../domain/connector/constants.ts';
 import { createPairCode } from '../../domain/connector/pair-code.ts';
 import {
   TelegramApiPort,
+  type TelegramBotIdentity,
   TelegramUnauthorizedError,
 } from '../../domain/connector/telegram-api.port.ts';
 import { TelegramPollerSyncPort } from '../../domain/connector/telegram-poller-sync.port.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
-import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
-import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
-import { insertAgentThread } from '../threads/thread.helpers.ts';
-import {
-  connectorSecretKey,
-  findConnectorThread,
-  pairExpiresAtIso,
-  pairUrlFor,
-  toConnectorPublic,
-} from './connector.helpers.ts';
+import { connectorSecretKey, pairExpiresAtIso, pairUrlFor } from './connector.helpers.ts';
+import { connectorView } from './connector-view.ts';
 
 export interface UpsertTelegramConnectorRequest {
   orgId: string;
@@ -39,8 +34,7 @@ export class UpsertTelegramConnectorUseCase {
   constructor(
     private readonly connectors: ConnectorRepositoryPort,
     private readonly secrets: SecretStorePort,
-    private readonly threads: ThreadRepositoryPort,
-    private readonly threadAgents: ThreadAgentRepositoryPort,
+    private readonly agents: AgentRegistryPort,
     private readonly telegram: TelegramApiPort,
     private readonly poller: TelegramPollerSyncPort,
     logger: Logger,
@@ -56,7 +50,7 @@ export class UpsertTelegramConnectorUseCase {
       'telegram',
     );
 
-    let me: { id: string; username: string };
+    let me: TelegramBotIdentity;
     try {
       me = await this.telegram.getMe(token);
     } catch (err) {
@@ -68,82 +62,63 @@ export class UpsertTelegramConnectorUseCase {
 
     const other = this.connectors.findByBotUser(request.orgId, me.id);
     if (other && other.id !== existing?.id) {
-      throw new ConnectorConflictException('This bot is already connected to another agent');
+      throw new ConnectorConflictException('This bot is already connected to this workspace');
     }
 
     const nowMs = Date.now();
     const now = new Date(nowMs).toISOString();
     const pair = createPairCode();
-    const expiresAt = pairExpiresAtIso(nowMs);
+    const capabilities = telegramCapabilities({
+      canReadAllGroupMessages: me.canReadAllGroupMessages,
+      canEditMessages: true,
+      streaming: true,
+    });
 
     let connector: ConnectorRecord;
-    let threadId: string;
 
     if (existing) {
       const secretRef = connectorSecretKey(existing.id);
       await this.secrets.set(request.orgId, secretRef, token);
+      const paired = this.connectors.listBindings(request.orgId, existing.id).length > 0;
       connector = this.connectors.update(request.orgId, existing.id, {
         secretRef,
         botUserId: me.id,
         botUsername: me.username,
-        pairCodeHash: pair.hash,
-        pairCodeExpiresAt: expiresAt,
-        status: 'awaiting_pair',
+        pairCodeHash: pair.code,
+        pairCodeExpiresAt: pairExpiresAtIso(nowMs),
+        capabilities,
+        status: paired || existing.status === 'active' ? 'active' : 'awaiting_pair',
         leaseOwner: null,
         leaseUntil: null,
         lastError: null,
         updatedAt: now,
       });
-      const thread = findConnectorThread(this.threads, request.orgId, existing.id);
-      if (!thread) {
-        throw new ConnectorValidationException('Connector thread is missing');
-      }
-      this.threadAgents.ensure(request.orgId, thread.id, request.agentId);
-      threadId = thread.id;
+      this.connectors.ensureAgent(request.orgId, connector.id, request.agentId);
     } else {
       const connectorId = crypto.randomUUID();
       const secretRef = connectorSecretKey(connectorId);
       await this.secrets.set(request.orgId, secretRef, token);
-      const thread = insertAgentThread(
-        { threads: this.threads, threadAgents: this.threadAgents },
-        {
-          id: crypto.randomUUID(),
-          orgId: request.orgId,
-          title: 'Telegram',
-          kind: 'connector',
-          parentThreadId: null,
-          forkAt: null,
-          inheritedEventCount: 0,
-          metadata: { connectorId, provider: 'telegram' },
-          runProfileId: null,
-          runDirectory: null,
-          createdAt: now,
-          updatedAt: now,
-          lastReadAt: now,
-        },
-        request.agentId,
-      );
-      threadId = thread.id;
       connector = this.connectors.insert({
         id: connectorId,
         orgId: request.orgId,
-        agentId: request.agentId,
         provider: 'telegram',
         secretRef,
         status: 'awaiting_pair',
         botUserId: me.id,
         botUsername: me.username,
-        pairCodeHash: pair.hash,
-        pairCodeExpiresAt: expiresAt,
+        pairCodeHash: pair.code,
+        pairCodeExpiresAt: pairExpiresAtIso(nowMs),
         leaseOwner: null,
         leaseUntil: null,
         streamMode: null,
+        capabilities,
         policy: DEFAULT_MIRROR_POLICY,
         modeOverride: null,
         lastError: null,
         createdAt: now,
         updatedAt: now,
       });
+      this.connectors.ensureAgent(request.orgId, connector.id, request.agentId);
     }
 
     this.poller.sync(request.orgId, connector.id);
@@ -157,11 +132,12 @@ export class UpsertTelegramConnectorUseCase {
       );
     }
 
+    const view = connectorView({ connectors: this.connectors, agents: this.agents }, connector);
     return {
-      connector: toConnectorPublic(connector, threadId),
+      connector: view,
       pairCode: pair.code,
       pairUrl: pairUrlFor(connector.botUsername, pair.code),
-      threadId,
+      threadId: view.threadId,
     };
   }
 }

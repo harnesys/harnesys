@@ -18,7 +18,7 @@ export const threadsTable = sqliteTable(
     orgId: text('org_id').notNull(),
     title: text('title').notNull(),
     kind: text('kind', {
-      enum: ['chat', 'group', 'schedule', 'webhook', 'issue', 'connector'],
+      enum: ['chat', 'group', 'schedule', 'webhook', 'issue'],
     })
       .notNull()
       .default('chat'),
@@ -49,7 +49,7 @@ export const threadsTable = sqliteTable(
   (table) => ({
     kindCheck: check(
       'threads_kind_check',
-      sql`${table.kind} IN ('chat', 'group', 'schedule', 'webhook', 'issue', 'connector')`,
+      sql`${table.kind} IN ('chat', 'group', 'schedule', 'webhook', 'issue')`,
     ),
     orgIdx: index('threads_org_idx').on(table.orgId),
     issueIdx: index('threads_issue_idx').on(table.issueId),

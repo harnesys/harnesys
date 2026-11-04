@@ -8,7 +8,6 @@ import { TelegramApiPort } from '../../domain/connector/telegram-api.port.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { ThreadEventsPort } from '../../domain/thread/thread-events.port.ts';
-import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import {
   appendDraftText,
   type DraftSendDeps,
@@ -45,7 +44,6 @@ export class ProjectConnectorEventsUseCase
     private readonly secrets: SecretStorePort,
     private readonly telegram: TelegramApiPort,
     private readonly executor: LocalExecutorPort,
-    private readonly threads: ThreadRepositoryPort,
     private readonly threadEvents: ThreadEventsPort,
     logger: Logger,
   ) {
@@ -62,16 +60,10 @@ export class ProjectConnectorEventsUseCase
       // so no sqlite access is allowed here (a nested connection would
       // self-deadlock on the open write tx until busy_timeout).
       const { threadId, runId } = event;
-      queueMicrotask(() => this.maybeProjectRun(orgId, threadId, runId));
+      queueMicrotask(() => {
+        void this.maybeProjectRun(orgId, threadId, runId);
+      });
     });
-  }
-
-  private maybeProjectRun(orgId: string, threadId: string, runId: string): void {
-    const thread = this.threads.findById(orgId, threadId);
-    if (thread?.kind !== 'connector') {
-      return;
-    }
-    void this.projectRun(orgId, threadId, runId);
   }
 
   onModuleDestroy(): void {
@@ -84,11 +76,8 @@ export class ProjectConnectorEventsUseCase
     if (this.inflight.has(key)) {
       return;
     }
-    const route = this.routeForThread(orgId, threadId);
+    const route = await this.routeForRun(orgId, threadId, runId);
     if (!route) {
-      return;
-    }
-    if (route.connector.status === 'paused' || route.connector.status === 'awaiting_pair') {
       return;
     }
     const token = await this.secrets.get(orgId, route.connector.secretRef);
@@ -102,6 +91,7 @@ export class ProjectConnectorEventsUseCase
       threadId,
       runId,
       chatId: route.binding.externalChatId,
+      topicId: route.binding.externalTopicId,
       token,
     });
     this.sessions.set(`${route.connector.id}:${runId}`, state);
@@ -111,7 +101,7 @@ export class ProjectConnectorEventsUseCase
     try {
       const stream = await this.executor.stream(orgId, runId, 0);
       for await (const event of stream) {
-        const live = this.connectors.listByOrg(orgId).find((row) => row.id === route.connector.id);
+        const live = this.connectors.findById(orgId, route.connector.id);
         if (!live || live.status === 'paused' || live.status === 'awaiting_pair') {
           return;
         }
@@ -132,12 +122,8 @@ export class ProjectConnectorEventsUseCase
   }
 
   async resumeStreaming(orgId: string, connectorId: string): Promise<void> {
-    const connector = this.connectors.listByOrg(orgId).find((row) => row.id === connectorId);
+    const connector = this.connectors.findById(orgId, connectorId);
     if (!connector) {
-      return;
-    }
-    const binding = this.connectors.findActiveBinding(orgId, connectorId);
-    if (!binding) {
       return;
     }
     const token = await this.secrets.get(orgId, connector.secretRef);
@@ -146,6 +132,7 @@ export class ProjectConnectorEventsUseCase
     }
     const lifecycle = await this.executor.lifecycle(orgId);
     for (const delivery of this.connectors.listStreaming(orgId, connectorId)) {
+      const binding = this.connectors.findBinding(orgId, connectorId, delivery.bindingId);
       const rec = await lifecycle.get(delivery.runId);
       const running =
         rec !== null &&
@@ -158,7 +145,9 @@ export class ProjectConnectorEventsUseCase
         continue;
       }
       if (delivery.lastText) {
-        await this.telegram.sendMessage(token, binding.externalChatId, delivery.lastText);
+        await this.telegram.sendMessage(token, binding.externalChatId, delivery.lastText, {
+          topicId: binding.externalTopicId,
+        });
       }
       this.connectors.upsertDelivery(orgId, {
         ...delivery,
@@ -174,6 +163,10 @@ export class ProjectConnectorEventsUseCase
       return;
     }
     await finalizeDraftText(this.draftDeps(), state);
+  }
+
+  private async maybeProjectRun(orgId: string, threadId: string, runId: string): Promise<void> {
+    await this.projectRun(orgId, threadId, runId);
   }
 
   private async handleEvent(
@@ -209,7 +202,9 @@ export class ProjectConnectorEventsUseCase
         await finalizeDraftText(this.draftDeps(), state, plan.text || undefined);
         return;
       case 'echo':
-        await this.telegram.sendMessage(state.token, state.chatId, plan.text);
+        await this.telegram.sendMessage(state.token, state.chatId, plan.text, {
+          topicId: state.topicId,
+        });
         return;
       case 'ask':
         await finalizeDraftText(this.draftDeps(), state);
@@ -230,14 +225,29 @@ export class ProjectConnectorEventsUseCase
     }
   }
 
-  private routeForThread(orgId: string, threadId: string): RouteContext | null {
-    for (const connector of this.connectors.listByOrg(orgId)) {
-      const binding = this.connectors.findActiveBinding(orgId, connector.id);
-      if (binding?.threadId === threadId) {
-        return { connector, binding };
-      }
+  private async routeForRun(
+    orgId: string,
+    threadId: string,
+    runId: string,
+  ): Promise<RouteContext | null> {
+    const lifecycle = await this.executor.lifecycle(orgId);
+    const run = await lifecycle.get(runId);
+    const connectorId = run?.originConnectorId;
+    if (!connectorId) {
+      return null;
     }
-    return null;
+    const connector = this.connectors.findById(orgId, connectorId);
+    if (!connector) {
+      return null;
+    }
+    if (connector.status === 'paused' || connector.status === 'awaiting_pair') {
+      return null;
+    }
+    const binding = this.connectors.findBindingForThread(orgId, connector.id, threadId);
+    if (!binding) {
+      return null;
+    }
+    return { connector, binding };
   }
 
   private draftDeps(): DraftSendDeps {

@@ -11,9 +11,13 @@ import { ThreadModule } from '../../infra/thread/thread.module.ts';
 import { UsageModule } from '../../infra/usage/usage.module.ts';
 import { SkillsUseCaseModule } from '../skills/skills.use-case.module.ts';
 import { ThreadUseCaseModule } from '../threads/thread.use-case.module.ts';
+import { AddConnectorAgentUseCase } from './add-connector-agent.use-case.ts';
 import { ApplyTelegramUpdateUseCase } from './apply-telegram-update.use-case.ts';
+import { ConnectConnectorBindingUseCase } from './connect-connector-binding.use-case.ts';
+import { DisconnectConnectorBindingUseCase } from './disconnect-connector-binding.use-case.ts';
 import { ListConnectorsUseCase } from './list-connectors.use-case.ts';
 import { ProjectConnectorEventsUseCase } from './project-connector-events.use-case.ts';
+import { RemoveConnectorAgentUseCase } from './remove-connector-agent.use-case.ts';
 import { RunTelegramCommandUseCase } from './run-telegram-command.use-case.ts';
 import {
   IssuePairCodeUseCase,
@@ -34,6 +38,10 @@ const useCases = [
   UnpairTelegramConnectorUseCase,
   RemoveTelegramConnectorUseCase,
   PatchTelegramPolicyUseCase,
+  AddConnectorAgentUseCase,
+  RemoveConnectorAgentUseCase,
+  ConnectConnectorBindingUseCase,
+  DisconnectConnectorBindingUseCase,
   ApplyTelegramUpdateUseCase,
   RunTelegramCommandUseCase,
 ];

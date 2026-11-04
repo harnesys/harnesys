@@ -4,22 +4,23 @@ import {
   TelegramBlockedError,
   type TelegramBotCommand,
   type TelegramBotIdentity,
+  type TelegramChatMember,
   type TelegramFileRef,
   type TelegramInlineButton,
   type TelegramSentMessage,
   TelegramUnauthorizedError,
 } from '../../domain/connector/telegram-api.port.ts';
+import {
+  API_ROOT,
+  asRecord,
+  callForm,
+  callJson,
+  isMemberLookupMiss,
+  messageIdOf,
+} from './telegram-api.http.ts';
 
-const API_ROOT = 'https://api.telegram.org';
 const STOPPED_UPDATE = 'stopped_message_generation';
 const DEFAULT_ALLOWED = ['message', 'edited_message', 'callback_query', STOPPED_UPDATE] as const;
-
-interface TelegramApiResponse {
-  ok: boolean;
-  description?: string;
-  error_code?: number;
-  result?: unknown;
-}
 
 @Injectable()
 export class TelegramApiAdapter extends TelegramApiPort {
@@ -33,7 +34,7 @@ export class TelegramApiAdapter extends TelegramApiPort {
   }
 
   async getMe(token: string): Promise<TelegramBotIdentity> {
-    const result = await this.callJson(token, 'getMe', {});
+    const result = await callJson(token, 'getMe', {});
     const user = asRecord(result);
     const id = user?.id;
     const username = user?.username;
@@ -44,7 +45,11 @@ export class TelegramApiAdapter extends TelegramApiPort {
     ) {
       throw new Error('Telegram getMe returned an unexpected payload');
     }
-    return { id: String(id), username };
+    return {
+      id: String(id),
+      username,
+      canReadAllGroupMessages: user?.can_read_all_group_messages === true,
+    };
   }
 
   async getUpdates(
@@ -54,7 +59,7 @@ export class TelegramApiAdapter extends TelegramApiPort {
     signal?: AbortSignal,
   ): Promise<unknown[]> {
     try {
-      const result = await this.callJson(
+      const result = await callJson(
         token,
         'getUpdates',
         {
@@ -72,7 +77,7 @@ export class TelegramApiAdapter extends TelegramApiPort {
           this.warnedStoppedUpdate = true;
           this.log.warn({}, 'Telegram rejected stopped_message_generation in allowed_updates');
         }
-        const result = await this.callJson(
+        const result = await callJson(
           token,
           'getUpdates',
           {
@@ -92,9 +97,19 @@ export class TelegramApiAdapter extends TelegramApiPort {
     token: string,
     chatId: string,
     text: string,
-    options?: { replyMarkup?: { inlineKeyboard: TelegramInlineButton[][] } },
+    options?: {
+      replyMarkup?: { inlineKeyboard: TelegramInlineButton[][] };
+      topicId?: string | null;
+      replyToMessageId?: string | null;
+    },
   ): Promise<TelegramSentMessage> {
     const body: Record<string, unknown> = { chat_id: chatId, text };
+    if (options?.topicId) {
+      body.message_thread_id = Number(options.topicId);
+    }
+    if (options?.replyToMessageId) {
+      body.reply_to_message_id = Number(options.replyToMessageId);
+    }
     if (options?.replyMarkup) {
       body.reply_markup = {
         inline_keyboard: options.replyMarkup.inlineKeyboard.map((row) =>
@@ -102,7 +117,7 @@ export class TelegramApiAdapter extends TelegramApiPort {
         ),
       };
     }
-    return messageIdOf(await this.callJson(token, 'sendMessage', body));
+    return messageIdOf(await callJson(token, 'sendMessage', body));
   }
 
   async sendMessageDraft(
@@ -110,17 +125,20 @@ export class TelegramApiAdapter extends TelegramApiPort {
     chatId: string,
     draftId: number,
     text: string,
-    options?: { canStop?: boolean },
+    options?: { canStop?: boolean; topicId?: string | null },
   ): Promise<TelegramSentMessage> {
     const body: Record<string, unknown> = {
       chat_id: chatId,
       draft_id: draftId,
       text,
     };
+    if (options?.topicId) {
+      body.message_thread_id = Number(options.topicId);
+    }
     if (options?.canStop === true) {
       body.can_stop = true;
     }
-    await this.callJson(token, 'sendMessageDraft', body);
+    await callJson(token, 'sendMessageDraft', body);
     return { messageId: String(draftId) };
   }
 
@@ -131,7 +149,7 @@ export class TelegramApiAdapter extends TelegramApiPort {
     text: string,
   ): Promise<TelegramSentMessage> {
     return messageIdOf(
-      await this.callJson(token, 'editMessageText', {
+      await callJson(token, 'editMessageText', {
         chat_id: chatId,
         message_id: Number(messageId),
         text,
@@ -139,8 +157,17 @@ export class TelegramApiAdapter extends TelegramApiPort {
     );
   }
 
-  async sendChatAction(token: string, chatId: string, action: 'typing'): Promise<void> {
-    await this.callJson(token, 'sendChatAction', { chat_id: chatId, action });
+  async sendChatAction(
+    token: string,
+    chatId: string,
+    action: 'typing',
+    topicId?: string | null,
+  ): Promise<void> {
+    const body: Record<string, unknown> = { chat_id: chatId, action };
+    if (topicId) {
+      body.message_thread_id = Number(topicId);
+    }
+    await callJson(token, 'sendChatAction', body);
   }
 
   async sendPhoto(
@@ -148,6 +175,7 @@ export class TelegramApiAdapter extends TelegramApiPort {
     chatId: string,
     bytes: Uint8Array,
     filename: string,
+    topicId?: string | null,
   ): Promise<TelegramSentMessage> {
     return this.sendUpload({
       token,
@@ -156,6 +184,7 @@ export class TelegramApiAdapter extends TelegramApiPort {
       chatId,
       bytes,
       filename,
+      ...(topicId ? { topicId } : {}),
     });
   }
 
@@ -164,6 +193,7 @@ export class TelegramApiAdapter extends TelegramApiPort {
     chatId: string,
     bytes: Uint8Array,
     filename: string,
+    topicId?: string | null,
   ): Promise<TelegramSentMessage> {
     return this.sendUpload({
       token,
@@ -172,6 +202,7 @@ export class TelegramApiAdapter extends TelegramApiPort {
       chatId,
       bytes,
       filename,
+      ...(topicId ? { topicId } : {}),
     });
   }
 
@@ -180,11 +211,11 @@ export class TelegramApiAdapter extends TelegramApiPort {
     if (text !== undefined) {
       body.text = text;
     }
-    await this.callJson(token, 'answerCallbackQuery', body);
+    await callJson(token, 'answerCallbackQuery', body);
   }
 
   async getFile(token: string, fileId: string): Promise<TelegramFileRef & { bytes: Uint8Array }> {
-    const result = asRecord(await this.callJson(token, 'getFile', { file_id: fileId }));
+    const result = asRecord(await callJson(token, 'getFile', { file_id: fileId }));
     const filePath = result?.file_path;
     const fileSize = result?.file_size;
     if (typeof filePath !== 'string' || filePath.length === 0) {
@@ -208,8 +239,30 @@ export class TelegramApiAdapter extends TelegramApiPort {
     };
   }
 
+  async getChatMember(
+    token: string,
+    chatId: string,
+    userId: string,
+  ): Promise<TelegramChatMember | null> {
+    try {
+      const result = asRecord(
+        await callJson(token, 'getChatMember', { chat_id: chatId, user_id: userId }),
+      );
+      const status = result?.status;
+      if (typeof status !== 'string') {
+        return null;
+      }
+      return { status, canManageChat: result?.can_manage_chat === true };
+    } catch (error) {
+      if (isMemberLookupMiss(error)) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
   async setMyCommands(token: string, commands: TelegramBotCommand[]): Promise<void> {
-    await this.callJson(token, 'setMyCommands', {
+    await callJson(token, 'setMyCommands', {
       commands: commands.map((command) => ({
         command: command.command,
         description: command.description,
@@ -224,59 +277,15 @@ export class TelegramApiAdapter extends TelegramApiPort {
     chatId: string;
     bytes: Uint8Array;
     filename: string;
+    topicId?: string;
   }): Promise<TelegramSentMessage> {
     const form = new FormData();
     form.set('chat_id', input.chatId);
+    if (input.topicId) {
+      form.set('message_thread_id', String(Number(input.topicId)));
+    }
     form.set(input.field, new Blob([input.bytes]), input.filename);
-    return messageIdOf(await this.callForm(input.token, input.method, form));
-  }
-
-  private async callJson(
-    token: string,
-    method: string,
-    body: Record<string, unknown>,
-    signal?: AbortSignal,
-  ): Promise<unknown> {
-    const response = await fetch(`${API_ROOT}/bot${token}/${method}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal,
-    });
-    return this.readOk(response);
-  }
-
-  private async callForm(token: string, method: string, form: FormData): Promise<unknown> {
-    const response = await fetch(`${API_ROOT}/bot${token}/${method}`, {
-      method: 'POST',
-      body: form,
-    });
-    return this.readOk(response);
-  }
-
-  private async readOk(response: Response): Promise<unknown> {
-    const payload = (await response.json()) as TelegramApiResponse;
-    if (response.status === 401 || payload.error_code === 401) {
-      throw new TelegramUnauthorizedError();
-    }
-    const description = payload.description ?? '';
-    if (
-      (response.status === 403 || payload.error_code === 403) &&
-      description.toLowerCase().includes('blocked')
-    ) {
-      throw new TelegramBlockedError();
-    }
-    if (!payload.ok) {
-      const error = new Error(
-        description || `Telegram API error ${payload.error_code ?? response.status}`,
-      );
-      Object.assign(error, {
-        statusCode: payload.error_code ?? response.status,
-        description,
-      });
-      throw error;
-    }
-    return payload.result;
+    return messageIdOf(await callForm(input.token, input.method, form));
   }
 
   private shouldDropStoppedUpdate(error: unknown): boolean {
@@ -293,20 +302,4 @@ export class TelegramApiAdapter extends TelegramApiPort {
     const text = `${String(rec.description ?? '')} ${String(rec.message ?? '')}`.toLowerCase();
     return text.includes(STOPPED_UPDATE);
   }
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
-    return null;
-  }
-  return value as Record<string, unknown>;
-}
-
-function messageIdOf(result: unknown): TelegramSentMessage {
-  const message = asRecord(result);
-  const messageId = message?.message_id;
-  if (typeof messageId !== 'number' && typeof messageId !== 'string') {
-    throw new Error('Telegram response missing message_id');
-  }
-  return { messageId: String(messageId) };
 }

@@ -1,50 +1,27 @@
-import type { ConnectorPublic, ConnectorStatus, MirrorPolicyPublic } from '@harnesys/contracts';
-import { CONNECTOR_CATALOG } from '@harnesys/contracts';
+import type { MirrorPolicyPublic } from '@harnesys/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useOpenThreadTab } from '@/features/ide';
-import { ConnectorMark } from '@/features/manage-connectors/ui/connector-icon';
 import { alert } from '@/shared/services/overlay';
-import { Button } from '@/shared/ui/button';
-import { Pane, RowChip } from '@/shared/ui/capability-rows';
-import { Field, FieldLabel } from '@/shared/ui/field';
-import { Input } from '@/shared/ui/input';
+import { Pane } from '@/shared/ui/capability-rows';
 import { RowListSkeleton } from '@/shared/ui/settings-kit';
 import { toast } from '@/shared/ui/toast';
 import {
+  addConnectorAgent,
   agentConnectorsQuery,
   agentConnectorsQueryKey,
+  connectConnectorBinding,
+  disconnectConnectorBinding,
   issueTelegramPairCode,
   patchTelegramPolicy,
   pauseTelegramConnector,
+  removeConnectorAgent,
   removeTelegramConnector,
   resumeTelegramConnector,
   unpairTelegramConnector,
   upsertTelegramConnector,
 } from '../model/connector-api';
-import { AgentConnectorPolicy } from './agent-connector-policy';
-
-const STATUS_LABEL: Record<ConnectorStatus, string> = {
-  awaiting_pair: 'Awaiting pair',
-  active: 'Active',
-  paused: 'Paused',
-  error: 'Error',
-};
-
-const TELEGRAM_DESCRIPTOR =
-  CONNECTOR_CATALOG.find((item) => item.id === 'telegram') ?? CONNECTOR_CATALOG[0];
-
-const STATUS_TONE: Record<ConnectorStatus, 'ok' | 'warn' | 'info' | 'danger'> = {
-  active: 'ok',
-  paused: 'warn',
-  awaiting_pair: 'info',
-  error: 'danger',
-};
-
-interface PairInfo {
-  pairCode: string;
-  pairUrl: string;
-}
+import { type PairInfo, TelegramConnectorCard } from './agent-connector-card';
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Request failed';
@@ -63,6 +40,12 @@ export function AgentConnectorsPane({ orgId, agentId }: { orgId: string; agentId
     await queryClient.invalidateQueries({ queryKey: agentConnectorsQueryKey(orgId, agentId) });
   }
 
+  function onFailure(title: string) {
+    return (error: unknown) => {
+      toast.add({ title, description: errorMessage(error) });
+    };
+  }
+
   const saveMutation = useMutation({
     mutationFn: () => upsertTelegramConnector(orgId, agentId, token),
     onSuccess: async (result) => {
@@ -71,9 +54,7 @@ export function AgentConnectorsPane({ orgId, agentId }: { orgId: string; agentId
       await invalidate();
       toast.add({ title: 'Telegram connector saved' });
     },
-    onError: (error) => {
-      toast.add({ title: 'Save failed', description: errorMessage(error) });
-    },
+    onError: onFailure('Save failed'),
   });
 
   const pairMutation = useMutation({
@@ -82,9 +63,7 @@ export function AgentConnectorsPane({ orgId, agentId }: { orgId: string; agentId
       setPairInfo({ pairCode: result.pairCode, pairUrl: result.pairUrl });
       await invalidate();
     },
-    onError: (error) => {
-      toast.add({ title: 'Could not generate link', description: errorMessage(error) });
-    },
+    onError: onFailure('Could not generate link'),
   });
 
   const pauseMutation = useMutation({
@@ -93,9 +72,7 @@ export function AgentConnectorsPane({ orgId, agentId }: { orgId: string; agentId
       setPairInfo(null);
       await invalidate();
     },
-    onError: (error) => {
-      toast.add({ title: 'Pause failed', description: errorMessage(error) });
-    },
+    onError: onFailure('Pause failed'),
   });
 
   const resumeMutation = useMutation({
@@ -104,9 +81,7 @@ export function AgentConnectorsPane({ orgId, agentId }: { orgId: string; agentId
       setPairInfo(null);
       await invalidate();
     },
-    onError: (error) => {
-      toast.add({ title: 'Resume failed', description: errorMessage(error) });
-    },
+    onError: onFailure('Resume failed'),
   });
 
   const unpairMutation = useMutation({
@@ -115,19 +90,43 @@ export function AgentConnectorsPane({ orgId, agentId }: { orgId: string; agentId
       setPairInfo({ pairCode: result.pairCode, pairUrl: result.pairUrl });
       await invalidate();
     },
-    onError: (error) => {
-      toast.add({ title: 'Unpair failed', description: errorMessage(error) });
-    },
+    onError: onFailure('Unpair failed'),
   });
 
   const policyMutation = useMutation({
     mutationFn: (policy: MirrorPolicyPublic) => patchTelegramPolicy(orgId, agentId, policy),
+    onSuccess: invalidate,
+    onError: onFailure('Policy update failed'),
+  });
+
+  const addAgentMutation = useMutation({
+    mutationFn: (memberAgentId: string) => addConnectorAgent(orgId, agentId, memberAgentId),
+    onSuccess: invalidate,
+    onError: onFailure('Could not add agent'),
+  });
+
+  const removeAgentMutation = useMutation({
+    mutationFn: (memberAgentId: string) => removeConnectorAgent(orgId, agentId, memberAgentId),
+    onSuccess: invalidate,
+    onError: onFailure('Could not remove agent'),
+  });
+
+  const connectMutation = useMutation({
+    mutationFn: (input: { bindingId: string; autoReplyAgentId: string | null }) =>
+      connectConnectorBinding(orgId, agentId, input.bindingId, {
+        autoReplyAgentId: input.autoReplyAgentId,
+      }),
     onSuccess: async () => {
       await invalidate();
+      toast.add({ title: 'Chat connected' });
     },
-    onError: (error) => {
-      toast.add({ title: 'Policy update failed', description: errorMessage(error) });
-    },
+    onError: onFailure('Could not connect chat'),
+  });
+
+  const disconnectMutation = useMutation({
+    mutationFn: (bindingId: string) => disconnectConnectorBinding(orgId, agentId, bindingId),
+    onSuccess: invalidate,
+    onError: onFailure('Could not disconnect chat'),
   });
 
   const removeMutation = useMutation({
@@ -138,9 +137,7 @@ export function AgentConnectorsPane({ orgId, agentId }: { orgId: string; agentId
       await invalidate();
       toast.add({ title: 'Telegram connector removed' });
     },
-    onError: (error) => {
-      toast.add({ title: 'Remove failed', description: errorMessage(error) });
-    },
+    onError: onFailure('Remove failed'),
   });
 
   const busy =
@@ -150,12 +147,16 @@ export function AgentConnectorsPane({ orgId, agentId }: { orgId: string; agentId
     resumeMutation.isPending ||
     unpairMutation.isPending ||
     policyMutation.isPending ||
-    removeMutation.isPending;
+    removeMutation.isPending ||
+    addAgentMutation.isPending ||
+    removeAgentMutation.isPending ||
+    connectMutation.isPending ||
+    disconnectMutation.isPending;
 
   async function confirmRemove() {
     const ok = await alert.confirm({
       title: 'Remove Telegram connector?',
-      description: 'The bot token is deleted. The thread stays as a regular chat.',
+      description: 'The bot token is deleted. Chats stay as regular threads.',
       confirmText: 'Remove',
       variant: 'destructive',
       testId: 'remove-telegram-connector-dialog',
@@ -173,6 +174,7 @@ export function AgentConnectorsPane({ orgId, agentId }: { orgId: string; agentId
     >
       {connectorsQuery.isPending ? <RowListSkeleton testId="connectors-loading" /> : null}
       <TelegramConnectorCard
+        orgId={orgId}
         connector={connector}
         token={token}
         pairInfo={pairInfo}
@@ -187,171 +189,15 @@ export function AgentConnectorsPane({ orgId, agentId }: { orgId: string; agentId
         onRemove={() => {
           void confirmRemove();
         }}
-        onOpenThread={() => {
-          if (connector) {
-            openThreadTab(orgId, agentId, connector.threadId);
-          }
-        }}
+        onAddAgent={(memberAgentId) => addAgentMutation.mutate(memberAgentId)}
+        onRemoveAgent={(memberAgentId) => removeAgentMutation.mutate(memberAgentId)}
+        onConnect={(bindingId, autoReplyAgentId) =>
+          connectMutation.mutate({ bindingId, autoReplyAgentId })
+        }
+        onDisconnect={(bindingId) => disconnectMutation.mutate(bindingId)}
+        onOpenThread={(threadId) => openThreadTab(orgId, agentId, threadId)}
         onPolicyChange={(policy) => policyMutation.mutate(policy)}
       />
     </Pane>
-  );
-}
-
-function TelegramConnectorCard({
-  connector,
-  token,
-  pairInfo,
-  busy,
-  canSave,
-  onTokenChange,
-  onSave,
-  onGenerateLink,
-  onPause,
-  onResume,
-  onUnpair,
-  onRemove,
-  onOpenThread,
-  onPolicyChange,
-}: {
-  connector: ConnectorPublic | null;
-  token: string;
-  pairInfo: PairInfo | null;
-  busy: boolean;
-  canSave: boolean;
-  onTokenChange: (value: string) => void;
-  onSave: () => void;
-  onGenerateLink: () => void;
-  onPause: () => void;
-  onResume: () => void;
-  onUnpair: () => void;
-  onRemove: () => void;
-  onOpenThread: () => void;
-  onPolicyChange: (policy: MirrorPolicyPublic) => void;
-}) {
-  const status = connector?.status ?? null;
-
-  return (
-    <div
-      className="flex flex-col gap-3 rounded-lg border bg-popover p-3"
-      data-testid="agent-connector-telegram"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <ConnectorMark connector={TELEGRAM_DESCRIPTOR} size="sm" />
-          <div className="min-w-0">
-            <p className="truncate font-medium text-sm leading-5">Telegram</p>
-            <p className="truncate font-mono text-[11px] text-muted-foreground leading-4">
-              {connector?.botUsername ? `@${connector.botUsername}` : 'Not linked'}
-            </p>
-          </div>
-        </div>
-        <RowChip
-          tone={status ? STATUS_TONE[status] : 'neutral'}
-          testId="agent-connector-telegram-status"
-        >
-          {status ? STATUS_LABEL[status] : 'Not connected'}
-        </RowChip>
-      </div>
-
-      {connector?.lastError ? (
-        <p className="text-destructive text-xs" data-testid="agent-connector-last-error">
-          {connector.lastError}
-        </p>
-      ) : null}
-
-      <Field className="gap-1.5">
-        <FieldLabel htmlFor="connector-bot-token">Bot token</FieldLabel>
-        <div className="flex gap-2">
-          <Input
-            id="connector-bot-token"
-            type="password"
-            autoComplete="off"
-            className="font-mono"
-            placeholder={connector ? '••••••••' : '123456:ABC…'}
-            value={token}
-            disabled={busy}
-            onChange={(event) => onTokenChange(event.target.value)}
-          />
-          <Button type="button" size="sm" disabled={!canSave} onClick={onSave}>
-            Save
-          </Button>
-        </div>
-      </Field>
-
-      {connector ? (
-        <>
-          <PairSection pairInfo={pairInfo} busy={busy} onGenerateLink={onGenerateLink} />
-          <div className="flex flex-wrap gap-2">
-            {connector.status === 'paused' ? (
-              <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onResume}>
-                Resume
-              </Button>
-            ) : (
-              <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onPause}>
-                Pause
-              </Button>
-            )}
-            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onUnpair}>
-              Unpair
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={busy}
-              onClick={onOpenThread}
-            >
-              Open thread
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="destructive"
-              disabled={busy}
-              onClick={onRemove}
-            >
-              Remove
-            </Button>
-          </div>
-          <AgentConnectorPolicy
-            policy={connector.policy}
-            disabled={busy}
-            onChange={onPolicyChange}
-          />
-        </>
-      ) : null}
-    </div>
-  );
-}
-
-function PairSection({
-  pairInfo,
-  busy,
-  onGenerateLink,
-}: {
-  pairInfo: PairInfo | null;
-  busy: boolean;
-  onGenerateLink: () => void;
-}) {
-  if (pairInfo) {
-    return (
-      <div className="flex flex-col gap-1 rounded-md border border-dashed px-2 py-2 text-xs">
-        <a
-          href={pairInfo.pairUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="truncate text-status-info underline-offset-2 hover:underline"
-        >
-          {pairInfo.pairUrl}
-        </a>
-        <p className="font-mono text-muted-foreground">{pairInfo.pairCode}</p>
-      </div>
-    );
-  }
-  return (
-    <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onGenerateLink}>
-      Generate a new link
-    </Button>
   );
 }

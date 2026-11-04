@@ -2,6 +2,10 @@ interface ColumnInfo {
   name: string;
 }
 
+interface TableSqlRow {
+  sql?: string | null;
+}
+
 export function assertIssuesStatusKey(all?: (sql: string) => ColumnInfo[]): void {
   if (!all) {
     return;
@@ -41,6 +45,22 @@ export function assertThreadsThreadSeq(all?: (sql: string) => ColumnInfo[]): voi
   );
 }
 
+export function assertThreadsKindIsConversation(all?: (sql: string) => ColumnInfo[]): void {
+  if (!all) {
+    return;
+  }
+  const rows = all(
+    "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'threads'",
+  ) as TableSqlRow[];
+  const ddl = rows[0]?.sql ?? '';
+  if (!ddl?.includes("'connector'")) {
+    return;
+  }
+  throw new Error(
+    'Legacy org database detected: table "threads" still allows the "connector" kind. Delete the org database and restart so the schema is recreated.',
+  );
+}
+
 export function assertRunEventsThreadScoped(all?: (sql: string) => ColumnInfo[]): void {
   if (!all) {
     return;
@@ -64,5 +84,31 @@ export function assertRunsAgentSnapshot(all?: (sql: string) => ColumnInfo[]): vo
   }
   throw new Error(
     'Legacy org database detected: table "runs" has no "agent_name" column. Delete the org database and restart so the schema is recreated.',
+  );
+}
+
+export function assertRunsOriginConnector(all?: (sql: string) => ColumnInfo[]): void {
+  if (!all) {
+    return;
+  }
+  const columns = new Set(all('PRAGMA table_info(runs)').map((column) => column.name));
+  if (columns.size === 0 || columns.has('origin_connector_id')) {
+    return;
+  }
+  throw new Error(
+    'Legacy org database detected: table "runs" has no "origin_connector_id" column. Delete the org database and restart so the schema is recreated.',
+  );
+}
+
+export function assertConnectorsAgentSet(all?: (sql: string) => ColumnInfo[]): void {
+  if (!all) {
+    return;
+  }
+  const columns = new Set(all('PRAGMA table_info(connectors)').map((column) => column.name));
+  if (columns.size === 0 || !columns.has('agent_id')) {
+    return;
+  }
+  throw new Error(
+    'Legacy org database detected: table "connectors" still has an "agent_id" column. Delete the org database and restart so the schema is recreated.',
   );
 }

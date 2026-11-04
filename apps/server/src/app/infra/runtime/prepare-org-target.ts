@@ -193,7 +193,7 @@ export function prepareTarget(
       }),
     );
   }
-  if (thread.kind === 'connector' && thread.metadata.provider === 'telegram') {
+  if (thread.metadata.provider === 'telegram') {
     notes.push(CHANNEL_NOTE);
   }
   const channelNote = notes.length > 0 ? notes.join('\n\n') : undefined;

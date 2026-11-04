@@ -238,6 +238,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       ...(input.skills?.length ? { skills: input.skills } : {}),
       clientEventId: input.clientEventId,
       ...(input.origin ? { origin: input.origin } : {}),
+      ...(input.originConnectorId ? { originConnectorId: input.originConnectorId } : {}),
       correlationId: input.correlationId,
       ...(input.directory ? { directory: input.directory } : {}),
       ...(input.sourceId ? { sourceId: input.sourceId } : {}),

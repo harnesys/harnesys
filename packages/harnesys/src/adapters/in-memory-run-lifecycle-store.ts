@@ -79,6 +79,7 @@ export class InMemoryRunLifecycleStore implements RunLifecycleStore {
       threadId: run.threadId,
       agentId: run.agentId,
       agentName: run.agentName,
+      ...(run.originConnectorId !== undefined ? { originConnectorId: run.originConnectorId } : {}),
       status: 'queued',
       attempt: 1,
       leaseEpoch: 0,

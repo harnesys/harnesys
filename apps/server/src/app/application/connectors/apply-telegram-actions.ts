@@ -1,95 +1,76 @@
-import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
-import { ConnectorValidationException } from '../../domain/connector/connector.error.ts';
-import type { ConnectorInboxRecord, ConnectorRecord } from '../../domain/connector/connector.ts';
-import { ConnectorOutboundPort } from '../../domain/connector/connector-outbound.port.ts';
-import { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
+import type { Attachment } from 'harnesys';
+import { helpText } from '../../domain/connector/bot-commands.ts';
 import { connectorOrigin } from '../../domain/connector/echo.ts';
-import type { InboundDecision } from '../../domain/connector/inbound-decision.ts';
-import { foldPending, type PendingInbound } from '../../domain/connector/inbox-fold.ts';
-import { TelegramApiPort } from '../../domain/connector/telegram-api.port.ts';
-import type { CanonicalUpdate } from '../../domain/connector/telegram-update.ts';
-import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
+import {
+  type InboundDecision,
+  pendingClaimNotice,
+  pendingConnectionNotice,
+} from '../../domain/connector/inbound-decision.ts';
 import { MAX_ATTACHMENT_BYTES } from '../../domain/thread/attachment.ts';
-import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
+import { resolveResponders } from '../../domain/thread/responder-policy.ts';
 import { RunConflictException } from '../../domain/thread/thread.error.ts';
-import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
-import { CancelRunUseCase } from '../threads/cancel-run.use-case.ts';
-import { RespondRunUseCase } from '../threads/respond-run.use-case.ts';
-import { SendThreadRunUseCase } from '../threads/send-thread-run.use-case.ts';
-import { UploadThreadAttachmentUseCase } from '../threads/upload-thread-attachment.use-case.ts';
+import type { ThreadRecord } from '../../domain/thread/thread.ts';
+import { allowsMentions } from '../../domain/thread/thread-policy.ts';
+import {
+  type ApplyActionContext,
+  type ApplyActionDeps,
+  claimChat,
+  connectorMembersOf,
+  replyText,
+  requireToken,
+  touchParticipant,
+} from './apply-telegram-context.ts';
 import { findOpenAsk, payloadForAskText, payloadForButtonValue } from './apply-telegram-hitl.ts';
-import { findConnectorThread } from './connector.helpers.ts';
-
-export interface ApplyActionDeps {
-  connectors: ConnectorRepositoryPort;
-  secrets: SecretStorePort;
-  threads: ThreadRepositoryPort;
-  agents: AgentRegistryPort;
-  telegram: TelegramApiPort;
-  executor: LocalExecutorPort;
-  sendRun: SendThreadRunUseCase;
-  respondRun: RespondRunUseCase;
-  cancelRun: CancelRunUseCase;
-  uploadAttachment: UploadThreadAttachmentUseCase;
-  outbound: ConnectorOutboundPort;
-}
-
-export interface ApplyActionContext {
-  orgId: string;
-  connector: ConnectorRecord;
-  inboxId: string;
-  update: CanonicalUpdate;
-  chatId: string | null;
-  threadId: string | null;
-  activeRunId: string | null;
-  activeStatus: string | null;
-}
-
-interface PendingPayload {
-  text: string;
-  messageId: string;
-  attachmentIds: string[];
-}
+import { openConnectorThread } from './open-connector-thread.ts';
 
 export async function pairConnector(
   deps: ApplyActionDeps,
   ctx: ApplyActionContext,
-  userId: string,
-  chatId: string,
+  decision: Extract<InboundDecision, { type: 'pair' }>,
 ): Promise<void> {
-  const thread = findConnectorThread(deps.threads, ctx.orgId, ctx.connector.id);
-  if (!thread) {
-    throw new ConnectorValidationException('Connector thread is missing');
-  }
   const now = new Date().toISOString();
-  const binding = deps.connectors.insertBinding({
-    id: crypto.randomUUID(),
-    connectorId: ctx.connector.id,
-    orgId: ctx.orgId,
-    externalChatId: chatId,
-    externalTopicId: null,
-    chatType: 'private',
-    threadId: thread.id,
-    participantPolicy: { userId },
-    status: 'active',
-    createdAt: now,
-    updatedAt: now,
-  });
-  deps.connectors.insertRoute(ctx.orgId, {
-    id: crypto.randomUUID(),
-    connectorId: ctx.connector.id,
-    bindingId: binding.id,
-    scope: 'thread',
-    threadId: thread.id,
-    createdAt: now,
-  });
+  let binding = deps.connectors.findBindingByChat(
+    ctx.orgId,
+    ctx.connector.id,
+    decision.chatId,
+    ctx.topicId,
+  );
+  if (!binding) {
+    binding = claimChat(deps, ctx, decision);
+  }
+  if (!binding) {
+    deps.connectors.markInbox(ctx.orgId, ctx.inboxId, 'rejected');
+    return;
+  }
   deps.connectors.update(ctx.orgId, ctx.connector.id, {
     status: 'active',
     pairCodeHash: null,
     pairCodeExpiresAt: null,
     updatedAt: now,
   });
+  const thread = openConnectorThread(
+    { connectors: deps.connectors, threads: deps.threads, threadAgents: deps.threadAgents },
+    { orgId: ctx.orgId, connector: ctx.connector, binding },
+  );
   deps.connectors.markInbox(ctx.orgId, ctx.inboxId, 'consumed');
+  await replyText(deps, { ...ctx, binding, threadId: thread?.id ?? null }, helpText());
+}
+
+export async function claimBinding(deps: ApplyActionDeps, ctx: ApplyActionContext): Promise<void> {
+  const update = ctx.update;
+  if (update.kind !== 'message' || ctx.chatId === null) {
+    deps.connectors.markInbox(ctx.orgId, ctx.inboxId, 'rejected');
+    return;
+  }
+  if (!ctx.binding) {
+    claimChat(deps, ctx, {
+      chatId: ctx.chatId,
+      chatType: update.chatType,
+      title: update.chatTitle || update.author.displayName,
+    });
+  }
+  deps.connectors.markInbox(ctx.orgId, ctx.inboxId, 'consumed');
+  await replyText(deps, ctx, pendingClaimNotice());
 }
 
 export async function enqueueInbound(
@@ -97,38 +78,58 @@ export async function enqueueInbound(
   ctx: ApplyActionContext,
   decision: Extract<InboundDecision, { type: 'enqueue' }>,
 ): Promise<void> {
-  if (!ctx.threadId || !ctx.chatId) {
+  const update = ctx.update;
+  if (ctx.chatId === null || ctx.binding === null || update.kind !== 'message') {
     deps.connectors.markInbox(ctx.orgId, ctx.inboxId, 'rejected');
     return;
   }
-  const messageId =
-    ctx.update.kind === 'message' || ctx.update.kind === 'command'
-      ? ctx.update.messageId
-      : 'unknown';
-  const attachmentIds: string[] = [];
+  const thread =
+    (ctx.binding.threadId ? deps.threads.findById(ctx.orgId, ctx.binding.threadId) : undefined) ??
+    openConnectorThread(
+      { connectors: deps.connectors, threads: deps.threads, threadAgents: deps.threadAgents },
+      { orgId: ctx.orgId, connector: ctx.connector, binding: ctx.binding },
+    );
+  if (!thread) {
+    await replyText(deps, ctx, pendingConnectionNotice());
+    deps.connectors.markInbox(ctx.orgId, ctx.inboxId, 'rejected');
+    return;
+  }
+  touchParticipant(deps, ctx, thread, update);
+  const attachments: Attachment[] = [];
   if (decision.fileId) {
-    const token = await requireToken(deps, ctx);
-    const file = await deps.telegram.getFile(token, decision.fileId);
-    if (file.fileSize > MAX_ATTACHMENT_BYTES || file.bytes.byteLength > MAX_ATTACHMENT_BYTES) {
-      await deps.telegram.sendMessage(token, ctx.chatId, 'File is larger than 20 MB.');
+    const uploaded = await downloadAttachment(deps, ctx, thread, decision);
+    if (uploaded === null) {
       deps.connectors.markInbox(ctx.orgId, ctx.inboxId, 'rejected');
       return;
     }
-    const uploaded = await deps.uploadAttachment.execute({
-      orgId: ctx.orgId,
-      threadId: ctx.threadId,
-      name:
-        decision.fileKind === 'photo' ? 'photo.jpg' : (file.filePath.split('/').pop() ?? 'file'),
-      mediaType: decision.fileKind === 'photo' ? 'image/jpeg' : 'application/octet-stream',
-      bytes: file.bytes,
-    });
-    attachmentIds.push(uploaded.id);
+    attachments.push(uploaded);
   }
-  const payload: PendingPayload = { text: decision.text, messageId, attachmentIds };
-  deps.connectors.updateInbox(ctx.orgId, ctx.inboxId, { status: 'pending', payload });
-  if (ctx.activeStatus === null) {
-    await flushPending(deps, ctx);
-  }
+  const members = connectorMembersOf(deps, ctx, thread);
+  const responders = resolveResponders({
+    text: update.text,
+    explicitAgentId: null,
+    repliedToAgentId: await repliedAgentOf(deps, ctx, update.replyToMessageId, members),
+    members,
+    autoReplyAgentId: thread.autoReplyAgentId,
+    allowMentions: allowsMentions(thread.policy),
+  });
+  await deps.sendMessage.execute({
+    orgId: ctx.orgId,
+    threadId: thread.id,
+    text: update.text,
+    ...(attachments.length > 0 ? { attachments } : {}),
+    origin: connectorOrigin(ctx.connector.id),
+    originConnectorId: ctx.connector.id,
+    author: {
+      provider: ctx.connector.provider,
+      providerUserId: update.author.userId,
+      displayName: update.author.displayName,
+    },
+    targetAgentIds: responders,
+    attribution: { via: 'agent' },
+    triggerId: ctx.connector.id,
+  });
+  deps.connectors.markInbox(ctx.orgId, ctx.inboxId, 'consumed');
 }
 
 export async function respondInboundText(
@@ -252,76 +253,61 @@ export async function stopActiveRun(
   deps.connectors.markInbox(ctx.orgId, ctx.inboxId, 'consumed');
 }
 
-export async function replyText(
+async function downloadAttachment(
   deps: ApplyActionDeps,
   ctx: ApplyActionContext,
-  text: string,
-): Promise<void> {
-  if (!ctx.chatId) {
-    return;
-  }
-  const token = await requireToken(deps, ctx);
-  await deps.telegram.sendMessage(token, ctx.chatId, text);
-}
-
-async function flushPending(deps: ApplyActionDeps, ctx: ApplyActionContext): Promise<void> {
-  if (!ctx.threadId || !ctx.chatId) {
-    return;
-  }
-  const pending = deps.connectors.listPending(ctx.orgId, ctx.connector.id);
-  if (pending.length === 0) {
-    return;
-  }
-  const items: PendingInbound[] = [];
-  for (const row of pending) {
-    const payload = asPendingPayload(row);
-    if (payload !== null) {
-      items.push(payload);
-    }
-  }
-  if (items.length === 0) {
-    return;
-  }
-  const folded = foldPending(items);
-  const token = await requireToken(deps, ctx);
-  await deps.telegram.sendChatAction(token, ctx.chatId, 'typing');
-  const agent = deps.agents.findById(ctx.orgId, ctx.connector.agentId);
-  await deps.sendRun.execute({
-    orgId: ctx.orgId,
-    threadId: ctx.threadId,
-    body: {
-      text: folded.text,
-      attachmentIds: folded.attachmentIds.length > 0 ? folded.attachmentIds : undefined,
-      clientEventId: folded.clientEventId,
-      origin: connectorOrigin(ctx.connector.id),
-      mode: agent?.defaultModeId ?? undefined,
-    },
-    attribution: { via: 'agent' },
-    trigger: { kind: 'connector', id: ctx.connector.id },
-  });
-  for (const row of pending) {
-    deps.connectors.markInbox(ctx.orgId, row.id, 'consumed');
-  }
-}
-
-async function requireToken(deps: ApplyActionDeps, ctx: ApplyActionContext): Promise<string> {
-  const token = await deps.secrets.get(ctx.orgId, ctx.connector.secretRef);
-  if (!token) {
-    throw new ConnectorValidationException('Connector token is missing');
-  }
-  return token;
-}
-
-function asPendingPayload(row: ConnectorInboxRecord): PendingInbound | null {
-  const payload = row.payload;
-  if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
+  thread: ThreadRecord,
+  decision: Extract<InboundDecision, { type: 'enqueue' }>,
+): Promise<Attachment | null> {
+  if (!decision.fileId || ctx.chatId === null) {
     return null;
   }
-  const rec = payload as Record<string, unknown>;
-  const text = typeof rec.text === 'string' ? rec.text : '';
-  const messageId = typeof rec.messageId === 'string' ? rec.messageId : String(row.updateId);
-  const attachmentIds = Array.isArray(rec.attachmentIds)
-    ? rec.attachmentIds.filter((id): id is string => typeof id === 'string')
-    : [];
-  return { text, messageId, attachmentIds };
+  const token = await requireToken(deps, ctx);
+  const file = await deps.telegram.getFile(token, decision.fileId);
+  if (file.fileSize > MAX_ATTACHMENT_BYTES || file.bytes.byteLength > MAX_ATTACHMENT_BYTES) {
+    await deps.telegram.sendMessage(token, ctx.chatId, 'File is larger than 20 MB.', {
+      topicId: ctx.topicId,
+    });
+    return null;
+  }
+  const uploaded = await deps.uploadAttachment.execute({
+    orgId: ctx.orgId,
+    threadId: thread.id,
+    name: decision.fileKind === 'photo' ? 'photo.jpg' : (file.filePath.split('/').pop() ?? 'file'),
+    mediaType: decision.fileKind === 'photo' ? 'image/jpeg' : 'application/octet-stream',
+    bytes: file.bytes,
+  });
+  if (!uploaded.path) {
+    return null;
+  }
+  return {
+    id: uploaded.id,
+    kind: uploaded.kind,
+    name: uploaded.name,
+    mediaType: uploaded.mediaType,
+    path: uploaded.path,
+  };
+}
+
+async function repliedAgentOf(
+  deps: ApplyActionDeps,
+  ctx: ApplyActionContext,
+  replyToMessageId: string | null,
+  members: Array<{ id: string }>,
+): Promise<string | null> {
+  if (replyToMessageId === null) {
+    return null;
+  }
+  const delivery = deps.connectors.findDeliveryByMessage(
+    ctx.orgId,
+    ctx.connector.id,
+    replyToMessageId,
+  );
+  if (!delivery) {
+    return null;
+  }
+  const lifecycle = await deps.executor.lifecycle(ctx.orgId);
+  const run = await lifecycle.get(delivery.runId);
+  const agentId = run?.agentId ?? null;
+  return agentId !== null && members.some((member) => member.id === agentId) ? agentId : null;
 }

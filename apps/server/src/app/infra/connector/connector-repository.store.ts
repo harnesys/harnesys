@@ -1,29 +1,17 @@
-import { and, eq } from 'drizzle-orm';
-import { ConnectorNotFoundException } from '../../domain/connector/connector.error.ts';
+import { and, asc, eq } from 'drizzle-orm';
 import type {
-  ConnectorBindingInsert,
-  ConnectorBindingRecord,
   ConnectorInsert,
   ConnectorPatch,
   ConnectorProvider,
   ConnectorRecord,
-  ConnectorRouteInsert,
-  ConnectorRouteRecord,
 } from '../../domain/connector/connector.ts';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
-import {
-  connectorBindingsTable,
-  connectorRoutesTable,
-  connectorsTable,
-} from '../org-sqlite/schema/index.ts';
+import { connectorAgentsTable, connectorsTable } from '../org-sqlite/schema/index.ts';
 import { mapConnectorSqliteError } from './connector-repository.errors.ts';
 import {
-  stringifyParticipant,
+  stringifyCapabilities,
   stringifyPolicy,
-  toBinding,
   toConnector,
-  topicToStorage,
-  toRoute,
 } from './connector-repository.mappers.ts';
 
 export function listConnectorsByOrg(db: OrgSqliteDb, orgId: string): ConnectorRecord[] {
@@ -35,24 +23,47 @@ export function listConnectorsByOrg(db: OrgSqliteDb, orgId: string): ConnectorRe
     .map(toConnector);
 }
 
+export function findConnectorById(
+  db: OrgSqliteDb,
+  orgId: string,
+  id: string,
+): ConnectorRecord | undefined {
+  const row = db
+    .select()
+    .from(connectorsTable)
+    .where(and(eq(connectorsTable.orgId, orgId), eq(connectorsTable.id, id)))
+    .get();
+  return row ? toConnector(row) : undefined;
+}
+
 export function findConnectorByAgentProvider(
   db: OrgSqliteDb,
   orgId: string,
   agentId: string,
   provider: ConnectorProvider,
 ): ConnectorRecord | undefined {
-  const row = db
-    .select()
-    .from(connectorsTable)
-    .where(
-      and(
-        eq(connectorsTable.orgId, orgId),
-        eq(connectorsTable.agentId, agentId),
-        eq(connectorsTable.provider, provider),
-      ),
-    )
-    .get();
-  return row ? toConnector(row) : undefined;
+  const linked = db
+    .select({ connectorId: connectorAgentsTable.connectorId })
+    .from(connectorAgentsTable)
+    .where(eq(connectorAgentsTable.agentId, agentId))
+    .all();
+  for (const link of linked) {
+    const row = db
+      .select()
+      .from(connectorsTable)
+      .where(
+        and(
+          eq(connectorsTable.orgId, orgId),
+          eq(connectorsTable.id, link.connectorId),
+          eq(connectorsTable.provider, provider),
+        ),
+      )
+      .get();
+    if (row) {
+      return toConnector(row);
+    }
+  }
+  return undefined;
 }
 
 export function findConnectorByBotUser(
@@ -78,7 +89,6 @@ export function insertConnector(db: OrgSqliteDb, rec: ConnectorInsert): Connecto
       .values({
         id: rec.id,
         orgId: rec.orgId,
-        agentId: rec.agentId,
         provider: rec.provider,
         secretRef: rec.secretRef,
         status: rec.status,
@@ -89,6 +99,7 @@ export function insertConnector(db: OrgSqliteDb, rec: ConnectorInsert): Connecto
         leaseOwner: rec.leaseOwner,
         leaseUntil: rec.leaseUntil,
         streamMode: rec.streamMode,
+        capabilities: stringifyCapabilities(rec.capabilities),
         policy: stringifyPolicy(rec.policy),
         modeOverride: rec.modeOverride,
         lastError: rec.lastError,
@@ -118,13 +129,10 @@ export function updateConnector(
       .returning()
       .get();
     if (!row) {
-      throw new ConnectorNotFoundException(id);
+      throw mapConnectorSqliteError(new Error(`connector not found: ${id}`));
     }
     return toConnector(row);
   } catch (err) {
-    if (err instanceof ConnectorNotFoundException) {
-      throw err;
-    }
     throw mapConnectorSqliteError(err);
   }
 }
@@ -135,99 +143,37 @@ export function deleteConnector(db: OrgSqliteDb, orgId: string, id: string): voi
     .run();
 }
 
-export function insertBinding(
-  db: OrgSqliteDb,
-  rec: ConnectorBindingInsert,
-): ConnectorBindingRecord {
-  try {
-    const row = db
-      .insert(connectorBindingsTable)
-      .values({
-        id: rec.id,
-        connectorId: rec.connectorId,
-        orgId: rec.orgId,
-        externalChatId: rec.externalChatId,
-        externalTopicId: topicToStorage(rec.externalTopicId),
-        chatType: rec.chatType,
-        threadId: rec.threadId,
-        participantPolicy: stringifyParticipant(rec.participantPolicy),
-        status: rec.status,
-        createdAt: rec.createdAt,
-        updatedAt: rec.updatedAt,
-      })
-      .returning()
-      .get();
-    return toBinding(row);
-  } catch (err) {
-    throw mapConnectorSqliteError(err);
-  }
+export function listConnectorAgentIds(db: OrgSqliteDb, connectorId: string): string[] {
+  return db
+    .select({ agentId: connectorAgentsTable.agentId })
+    .from(connectorAgentsTable)
+    .where(eq(connectorAgentsTable.connectorId, connectorId))
+    .orderBy(asc(connectorAgentsTable.createdAt))
+    .all()
+    .map((row) => row.agentId);
 }
 
-export function findActiveBinding(
+export function ensureConnectorAgent(
   db: OrgSqliteDb,
-  orgId: string,
   connectorId: string,
-): ConnectorBindingRecord | undefined {
-  const row = db
-    .select()
-    .from(connectorBindingsTable)
-    .where(
-      and(
-        eq(connectorBindingsTable.orgId, orgId),
-        eq(connectorBindingsTable.connectorId, connectorId),
-        eq(connectorBindingsTable.status, 'active'),
-      ),
-    )
-    .get();
-  return row ? toBinding(row) : undefined;
-}
-
-export function clearBinding(
-  db: OrgSqliteDb,
-  orgId: string,
-  connectorId: string,
-  updatedAt: string,
+  agentId: string,
+  createdAt: string,
 ): void {
-  db.update(connectorBindingsTable)
-    .set({
-      status: 'unpaired',
-      externalChatId: '',
-      externalTopicId: '',
-      participantPolicy: '{}',
-      updatedAt,
-    })
-    .where(
-      and(
-        eq(connectorBindingsTable.orgId, orgId),
-        eq(connectorBindingsTable.connectorId, connectorId),
-        eq(connectorBindingsTable.status, 'active'),
-      ),
-    )
+  db.insert(connectorAgentsTable)
+    .values({ connectorId, agentId, createdAt })
+    .onConflictDoNothing()
     .run();
 }
 
-export function insertRoute(db: OrgSqliteDb, rec: ConnectorRouteInsert): ConnectorRouteRecord {
-  try {
-    const row = db
-      .insert(connectorRoutesTable)
-      .values({
-        id: rec.id,
-        connectorId: rec.connectorId,
-        bindingId: rec.bindingId,
-        scope: rec.scope,
-        threadId: rec.threadId,
-        createdAt: rec.createdAt,
-      })
-      .returning()
-      .get();
-    return toRoute(row);
-  } catch (err) {
-    throw mapConnectorSqliteError(err);
-  }
-}
-
-export function deleteRoutesForConnector(db: OrgSqliteDb, connectorId: string): void {
-  db.delete(connectorRoutesTable).where(eq(connectorRoutesTable.connectorId, connectorId)).run();
+export function removeConnectorAgent(db: OrgSqliteDb, connectorId: string, agentId: string): void {
+  db.delete(connectorAgentsTable)
+    .where(
+      and(
+        eq(connectorAgentsTable.connectorId, connectorId),
+        eq(connectorAgentsTable.agentId, agentId),
+      ),
+    )
+    .run();
 }
 
 function connectorPatchValues(patch: ConnectorPatch): Record<string, unknown> {
@@ -258,6 +204,9 @@ function connectorPatchValues(patch: ConnectorPatch): Record<string, unknown> {
   }
   if (patch.streamMode !== undefined) {
     values.streamMode = patch.streamMode;
+  }
+  if (patch.capabilities !== undefined) {
+    values.capabilities = stringifyCapabilities(patch.capabilities);
   }
   if (patch.policy !== undefined) {
     values.policy = stringifyPolicy(patch.policy);

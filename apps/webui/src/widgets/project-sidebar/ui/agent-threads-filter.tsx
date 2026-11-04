@@ -31,10 +31,6 @@ const KIND_META: Record<ThreadKind, { label: string; icon: ReactNode }> = {
     label: 'Webhooks',
     icon: <ThreadKindIcon kind="webhook" className="size-3.5" />,
   },
-  connector: {
-    label: 'Connectors',
-    icon: <ThreadKindIcon kind="connector" className="size-3.5" />,
-  },
 };
 
 export function AgentThreadsFilterMenu({ agentId }: { agentId: string }) {

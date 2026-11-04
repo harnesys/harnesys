@@ -37,6 +37,7 @@ import { RemoveThreadAgentUseCase } from './remove-thread-agent.use-case.ts';
 import { RemoveThreadParticipantUseCase } from './remove-thread-participant.use-case.ts';
 import { RespondRunUseCase } from './respond-run.use-case.ts';
 import { RetryRunUseCase } from './retry-run.use-case.ts';
+import { SendThreadMessageUseCase } from './send-thread-message.use-case.ts';
 import { SendThreadRunUseCase } from './send-thread-run.use-case.ts';
 import { StreamRunEventsUseCase } from './stream-run-events.use-case.ts';
 import { ThreadMessageQueueUseCase } from './thread-message-queue.use-case.ts';
@@ -49,6 +50,7 @@ const useCases = [
   CreateThreadUseCase,
   ListThreadsUseCase,
   GetThreadUseCase,
+  SendThreadMessageUseCase,
   SendThreadRunUseCase,
   CancelRunUseCase,
   CompactThreadUseCase,

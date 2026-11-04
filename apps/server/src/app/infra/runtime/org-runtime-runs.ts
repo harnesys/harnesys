@@ -22,6 +22,7 @@ export interface SendThreadMessageInput {
   skills?: string[];
   clientEventId?: string;
   origin?: string;
+  originConnectorId?: string;
   correlationId?: string;
   directory?: string;
   sourceId?: string;
@@ -57,6 +58,7 @@ export async function sendThreadMessage(
       effort: input.effort,
       ...(input.attachments?.length ? { attachments: input.attachments } : {}),
       ...(input.origin ? { origin: input.origin } : {}),
+      ...(input.originConnectorId ? { originConnectorId: input.originConnectorId } : {}),
       ...(input.attribution ? { attribution: input.attribution } : {}),
     },
     {
