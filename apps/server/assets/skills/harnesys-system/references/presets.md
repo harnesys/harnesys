@@ -6,8 +6,8 @@ System presets live in the app bundle (`apps/server/assets/presets/agents/<name>
 
 | Preset | Role | Packs | Skills | Budget | Purpose |
 |---|---|---|---|---|---|
-| `assistant` | chief-of-staff | files, shell, web, skills, issues, manager, lsp, mcp, plan, agents, threads, scheduler, webhook, episodic+semantic+knowledge+pin memory, core | agent-creator, workspace-ops, find-skills | 400 steps / 1h / ask | The owner's right hand: configures the workspace, grows the team, plans and runs work. Widest grants. |
-| `researcher` | researcher | files, web, plan, agents, threads, all four memory packs, core | agent-creator | 250 steps / 1h / ask | Deep dives and web research; can spawn read-only subagents. |
+| `assistant` | chief-of-staff | files, shell, web, skills, issues, manager, lsp, mcp, plan, agents, threads, scheduler, webhook, semantic+knowledge+pin memory, core | agent-creator, workspace-ops, find-skills | 400 steps / 1h / ask | The owner's right hand: configures the workspace, grows the team, plans and runs work. Widest grants. |
+| `researcher` | researcher | files, web, plan, agents, threads, semantic+knowledge+pin memory, core | agent-creator | 250 steps / 1h / ask | Deep dives and web research; can spawn read-only subagents. |
 | `coder` | coder | files, shell, issues, lsp, plan, pin-memory, core | issue-ops | 300 steps / 45m / ask | Implementation work tracked through issues. |
 | `reviewer` | reviewer | files, shell, issues, core | issue-ops | 120 steps / 20m / ask | Code review against issue criteria. |
 | `tester` | tester | files, shell, plan, core | — | 150 steps / 30m / ask | Verification: runs tests, reproduces bugs. |

@@ -78,13 +78,16 @@ This is the single source of truth for what each capability pack contains. Gener
 - `plan_item_update`: Update status of a specific task item in the thread plan.
 - `plan_get`: Get current execution plan and tasks status for this thread.
 
-### threads — Thread discovery: thread_list
-- `thread_list`: List threads in this project. Each id works with schedule_set threadId to wake that conversation and with thread_tail to read that thread's event journal (runs, failures, comments). current=true is THIS chat. hasSchedule=true already has a cron (one schedule per thread).
+### threads — Thread discovery and transcripts: threads_list / threads_history / threads_search / threads_tail
+- `threads_list`: List threads in this project. Each id works with schedule_set threadId to wake that conversation and with threads_tail to read that thread's event journal (runs, failures, comments). current=true is THIS chat. hasSchedule=true already has a cron (one schedule per thread).
+- `threads_history`: Read older conversational messages of a thread before the current window. Defaults to this thread; pass threadId to read another thread in this project. People messages and final answers are returned in thread order; pass beforeSeq to page further back.
+- `threads_search`: Keyword search over thread transcripts. scope=thread (default) searches this chat; scope=org searches every thread in the project, optionally narrowed by threadId. Returns matching snippets with threadId and threadSeq, newest first.
+- `threads_tail`: Last events of a thread (run journal: runId, kind, timestamp, preview). threadId comes from threads_list rows or manager_pulse failedThreads; load missing tools via load_tools. limit 1..100, default 20.
 
 ### scheduler — Cron schedules: schedule_list / schedule_set / schedule_pause / schedule_delete / schedule_peek
 - `schedule_list`: List cron schedules in this project.
 - `schedule_peek`: Read the last fire run(s) from this schedule thread journal (human detail, agent texts, tools, errors). last defaults to 1, max 99.
-- `schedule_set`: Create a cron schedule, or update it when id is set. Defaults to this agent as target. nextRunAt is the next cron instant after create, not now. threadId chooses WHERE the fire lands: omit = new dedicated schedule thread (isolated cron log); "self" = THIS chat (fires here once this run is idle; one active run per thread); uuid from thread_list = that existing conversation. Thread agent must match targetAgentId. One schedule per thread. history=none|last|all folds prior fires only on dedicated schedule threads; historyLast is how many when history=last (1–99).
+- `schedule_set`: Create a cron schedule, or update it when id is set. Defaults to this agent as target. nextRunAt is the next cron instant after create, not now. threadId chooses WHERE the fire lands: omit = new dedicated schedule thread (isolated cron log); "self" = THIS chat (fires here once this run is idle; one active run per thread); uuid from threads_list = that existing conversation. Thread agent must match targetAgentId. One schedule per thread. history=none|last|all folds prior fires only on dedicated schedule threads; historyLast is how many when history=last (1–99).
 - `schedule_pause`: Pause or resume a schedule by id.
 - `schedule_delete`: Delete a schedule by id.
 
@@ -114,10 +117,9 @@ This is the single source of truth for what each capability pack contains. Gener
 - `label_create`: Create a dispatch label.
 - `label_delete`: Delete a dispatch label. Requires confirm=true.
 
-### manager — Manager observation: manager_pulse / usage_report / thread_tail
+### manager — Manager observation: manager_pulse / usage_report
 - `manager_pulse`: Read-only org snapshot: agents with today spend vs daily budget, failed threads, pending approvals, open issues and total spend today. Start here for any "how is the org doing" question.
 - `usage_report`: Token and cost usage aggregated by day or by agent (groupBy day|agent) over an optional from/to window. Rows carry input/output tokens, cost in USD and run count.
-- `thread_tail`: Last events of a thread (run journal: runId, kind, timestamp, preview). threadId comes from thread_list rows or manager_pulse failedThreads; load missing tools via load_tools. limit 1..100, default 20.
 
 ### google — Google Workspace: calendar_list_events / calendar_create_event / calendar_update_event / calendar_delete_event / gmail_search_messages / gmail_read_message / gmail_read_thread / gmail_download_attachment / gmail_send_message
 - `calendar_list_events`: List Google Calendar events with time-range and text filters.
@@ -151,9 +153,6 @@ This is the single source of truth for what each capability pack contains. Gener
 - `github_ci_run_jobs`: Jobs of a workflow run.
 - `github_ci_rerun`: Re-run a workflow run.
 - `github_recent_events`: Recent webhook events of the installation.
-
-### episodic-memory — Past-thread recall: recall_search
-- `recall_search`: Search past thread experience (episodic recall). Read-only. Store a fact with memory_write.
 
 ### knowledge-memory — Indexed corpus: knowledge_search / knowledge_read
 - `knowledge_search`: Search the knowledge corpus (docs / wiki)

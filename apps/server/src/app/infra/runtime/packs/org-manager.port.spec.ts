@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { CapabilityScope, ManagerUsageReport } from 'harnesys';
 import type { UsageGroupRow } from '../../../domain/usage/usage-port.ts';
-import { FakeOrgSettings, FakeTail, FakeUsage, managerPort } from './org-manager.port.fakes.ts';
+import { FakeOrgSettings, FakeUsage, managerPort } from './org-manager.port.fakes.ts';
 import { MemoryAgents } from './wire-org-packs.fakes.ts';
 
 const SCOPE: CapabilityScope = {
@@ -119,17 +119,5 @@ describe('OrgManagerPort', () => {
       totalCostUsd: 2,
       totalRuns: 5,
     });
-  });
-
-  test('threadTail delegates to tail port with clamped limit', async () => {
-    const tail = new FakeTail();
-    const { port } = managerPort({ tail });
-    const items = await port.threadTail(SCOPE, 'thread-9', 5);
-    expect(tail.calls).toEqual([{ orgId: 'org-1', threadId: 'thread-9', limit: 5 }]);
-    expect(items).toHaveLength(2);
-    expect(items[0]?.seq).toBe(2);
-    const clamped = await port.threadTail(SCOPE, 'thread-9', 500);
-    expect(clamped).toHaveLength(2);
-    expect(tail.calls.at(-1)).toEqual({ orgId: 'org-1', threadId: 'thread-9', limit: 100 });
   });
 });

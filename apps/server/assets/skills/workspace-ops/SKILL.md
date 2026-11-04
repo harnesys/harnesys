@@ -27,7 +27,7 @@ Skills load from three roots, ascending precedence: system (`~/.harnesys/skills/
 agents_list            # top-level agents plus this agent's own delegates
 schedule_list / schedule_peek <id>
 plan_get
-pin_list / memory_list / knowledge_search "topic" / recall_search "query"
+pin_list / memory_list / knowledge_search "topic" / threads_search "query" scope=org
 list_dir <path> ; read_file <workspace>/.harnesys/skills/<name>/SKILL.md
 ```
 
@@ -52,9 +52,9 @@ Capability packs: a pack is a bundle of tools; value shapes are `{}` (enabled wi
 - `memory_write`: curated semantic fact, `scope: session` or `long`
 - `pin_set`: persistent rules for all agents (conventions, forbidden patterns, budget policies); keep focused, max 32 items
 - `knowledge_search` / `knowledge_read`: search the indexed corpus, read a hit by id; the index is built from knowledge roots, not from a write tool
-- `recall_search`: past thread experience, read-only
+- `threads_search`: past thread transcripts, read-only (`scope: thread` for this chat, `scope: org` for the project)
 
-Verify memory state after any change (`pin_list`, `memory_list`, `knowledge_search`, `recall_search`).
+Verify memory state after any change (`pin_list`, `memory_list`, `knowledge_search`, `threads_search`).
 
 ## Schedules
 
@@ -92,7 +92,7 @@ Track execution with the plan pack: each step names an owner and exit criteria; 
 1. `agents_list` - agents exist with correct capabilities, skills, graph
 2. `schedule_list` / `schedule_peek` - correct cron and target
 3. `plan_get` - plan state if the plan pack is in use
-4. `pin_list` / `memory_list` / `knowledge_search` / `recall_search` - memory state
+4. `pin_list` / `memory_list` / `knowledge_search` / `threads_search` - memory state
 5. `read_file` / `shell` - file-level check of `.harnesys/` meta
 
 ## Anti-patterns

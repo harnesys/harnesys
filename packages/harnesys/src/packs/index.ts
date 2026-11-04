@@ -16,8 +16,6 @@ export type { ManagerCapabilityPorts } from './manager/index.ts';
 export { managerCapability } from './manager/index.ts';
 export type { McpCapabilityPorts } from './mcp/index.ts';
 export { mcpCapability } from './mcp/index.ts';
-export type { EpisodicMemoryPorts } from './memory/episodic.ts';
-export { episodicMemoryCapability } from './memory/episodic.ts';
 export { memoryCapabilities, memoryCapabilityList } from './memory/index.ts';
 export type { KnowledgeMemoryPorts } from './memory/knowledge.ts';
 export { knowledgeMemoryCapability } from './memory/knowledge.ts';

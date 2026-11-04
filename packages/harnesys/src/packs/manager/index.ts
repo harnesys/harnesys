@@ -7,7 +7,7 @@ export interface ManagerCapabilityPorts {
 export const managerCapability = definePack<ManagerCapabilityPorts, Record<string, unknown>>({
   name: 'manager',
   version: '1.0.0',
-  description: 'Manager observation: manager_pulse / usage_report / thread_tail',
+  description: 'Manager observation: manager_pulse / usage_report',
   icon: 'manager',
   meta: {
     tools: [
@@ -20,11 +20,6 @@ export const managerCapability = definePack<ManagerCapabilityPorts, Record<strin
         name: 'usage_report',
         description:
           'Token and cost usage aggregated by day or by agent (groupBy day|agent) over an optional from/to window. Rows carry input/output tokens, cost in USD and run count.',
-      },
-      {
-        name: 'thread_tail',
-        description:
-          'Last events of a thread (run journal: runId, kind, timestamp, preview). threadId comes from thread_list rows or manager_pulse failedThreads; load missing tools via load_tools. limit 1..100, default 20.',
       },
     ],
     skills: [],

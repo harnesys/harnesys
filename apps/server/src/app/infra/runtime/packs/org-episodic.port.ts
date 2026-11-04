@@ -7,9 +7,11 @@ import { threadsTable } from '../../org-sqlite/schema/threads.ts';
 const DEFAULT_SEARCH_LIMIT = 20;
 
 interface EpisodicScanRow {
-  runId: string;
-  seq: number;
+  runId: string | null;
+  seq: number | null;
   threadId: string;
+  threadSeq: number;
+  type: string;
   metadata: string | null;
 }
 
@@ -32,11 +34,16 @@ export class OrgEpisodicPort implements EpisodicPort {
     if (input.agentId !== undefined && input.agentId !== '') {
       conditions.push(like(runEventsTable.metadata, `%"agentId":"${input.agentId}"%`));
     }
+    if (input.conversationalOnly === true) {
+      conditions.push(eq(runEventsTable.conversational, 1));
+    }
     const rows = this.db
       .select({
         runId: runEventsTable.runId,
         seq: runEventsTable.seq,
         threadId: runEventsTable.threadId,
+        threadSeq: runEventsTable.threadSeq,
+        type: runEventsTable.type,
         metadata: runEventsTable.metadata,
       })
       .from(runEventsTable)
@@ -48,9 +55,11 @@ export class OrgEpisodicPort implements EpisodicPort {
     return Promise.resolve(
       rows.map((row) =>
         toHit({
-          runId: row.runId ?? row.threadId,
-          seq: row.seq ?? 0,
+          runId: row.runId,
+          seq: row.seq,
           threadId: row.threadId,
+          threadSeq: row.threadSeq,
+          type: row.type,
           metadata: row.metadata,
         }),
       ),
@@ -63,29 +72,54 @@ function resolveLimit(limit: number | undefined): number {
 }
 
 function toHit(row: EpisodicScanRow): EpisodicHit {
+  const metadata = metadataOf(row.metadata);
+  const author = authorOf(metadata);
+  const role = roleOf(row.type);
   return {
     threadId: row.threadId,
-    entryId: row.runId,
-    seq: row.seq,
-    text: textOf(row.metadata),
+    threadSeq: row.threadSeq,
+    ...(row.runId !== null ? { entryId: row.runId } : {}),
+    ...(row.seq !== null ? { seq: row.seq } : {}),
+    ...(role !== undefined ? { role } : {}),
+    ...(author !== undefined ? { author } : {}),
+    text: textOf(metadata, row.metadata),
   };
 }
 
-function textOf(metadata: string | null): string {
+function metadataOf(metadata: string | null): Record<string, unknown> {
   if (metadata === null) {
-    return '';
+    return {};
   }
-  let parsed: unknown;
   try {
-    parsed = JSON.parse(metadata) as unknown;
+    const parsed: unknown = JSON.parse(metadata);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
   } catch {
-    return metadata;
+    return {};
   }
-  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-    const text = (parsed as Record<string, unknown>).text;
-    if (typeof text === 'string') {
-      return text;
-    }
+}
+
+function roleOf(type: string): 'user' | 'assistant' | undefined {
+  if (type === 'user') {
+    return 'user';
   }
-  return metadata;
+  return type === 'run.completed' ? 'assistant' : undefined;
+}
+
+function authorOf(metadata: Record<string, unknown>): string | undefined {
+  const author = metadata.author;
+  if (!author || typeof author !== 'object' || Array.isArray(author)) {
+    return undefined;
+  }
+  const displayName = (author as Record<string, unknown>).displayName;
+  return typeof displayName === 'string' ? displayName : undefined;
+}
+
+function textOf(metadata: Record<string, unknown>, raw: string | null): string {
+  const text = metadata.text;
+  if (typeof text === 'string') {
+    return text;
+  }
+  return raw ?? '';
 }

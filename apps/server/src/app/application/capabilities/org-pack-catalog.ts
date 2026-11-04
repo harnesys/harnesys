@@ -1,7 +1,6 @@
 import {
   agentsCapability,
   coreCapability,
-  episodicMemoryCapability,
   filesCapability,
   githubCapability,
   googleCapability,
@@ -72,8 +71,6 @@ function registrationForPack(packName: string) {
       return registerPack(pinMemoryCapability, { resolveScope: stubScope });
     case 'semantic-memory':
       return registerPack(semanticMemoryCapability, { resolveScope: stubScope });
-    case 'episodic-memory':
-      return registerPack(episodicMemoryCapability, { resolveScope: stubScope });
     case 'knowledge-memory':
       return registerPack(knowledgeMemoryCapability, { resolveScope: stubScope });
     case 'skills':

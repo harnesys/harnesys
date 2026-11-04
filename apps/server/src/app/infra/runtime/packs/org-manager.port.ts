@@ -1,7 +1,6 @@
 import type {
   CapabilityScope,
   ManagerPulse,
-  ManagerThreadTailItem,
   ManagerUsageQuery,
   ManagerUsageReport,
   ManagerUsageRow,
@@ -31,8 +30,6 @@ export interface OrgManagerDeps {
   tail: ManagerTailPort;
   orgSettings: OrgSettingsPort;
 }
-
-const TAIL_LIMIT_MAX = 100;
 
 function closedStatusKeysByBoard(boards: IssueBoardRecord[]): Map<string, Set<string>> {
   const map = new Map<string, Set<string>>();
@@ -115,14 +112,5 @@ export class OrgManagerPort extends ManagerObservationPort {
       totalCostUsd: report.totals.costUsd,
       totalRuns,
     });
-  }
-
-  threadTail(
-    scope: CapabilityScope,
-    threadId: string,
-    limit: number,
-  ): Promise<ManagerThreadTailItem[]> {
-    const requested = Math.max(1, Math.min(limit, TAIL_LIMIT_MAX));
-    return Promise.resolve(this.deps.tail.tail(scope.orgId, threadId, requested));
   }
 }

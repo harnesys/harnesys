@@ -73,8 +73,11 @@ export interface SemanticMemoryPort {
 }
 export interface EpisodicHit {
   threadId: string;
+  threadSeq?: number;
   entryId?: string;
   seq?: number;
+  role?: 'user' | 'assistant';
+  author?: string;
   text: string;
   score?: number;
 }
@@ -91,6 +94,7 @@ export interface EpisodicSearchInput {
   threadId?: string;
   agentId?: string;
   limit?: number;
+  conversationalOnly?: boolean;
 }
 export interface EpisodicPort {
   index?(input: EpisodicIndexInput): Promise<void>;

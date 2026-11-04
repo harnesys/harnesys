@@ -1,11 +1,7 @@
 import { isHostWired } from './org-pack-list.ts';
 import type { WireOrgPackFilter } from './wire-org-packs.ts';
 
-const MEMORY_PACK_NAMES: ReadonlySet<string> = new Set([
-  'pin-memory',
-  'semantic-memory',
-  'episodic-memory',
-]);
+const MEMORY_PACK_NAMES: ReadonlySet<string> = new Set(['pin-memory', 'semantic-memory']);
 
 export function isPackSatisfied(packName: string, deps: WireOrgPackFilter): boolean {
   if (!isHostWired(packName)) {

@@ -134,10 +134,6 @@ function pushPluginEntries(
   }
 }
 
-const TOOL_EXPLAIN_REASONS: Record<string, string> = {
-  recall_search: 'episodic full-text scan',
-};
-
 function pushPackEntries(
   explain: ExplainEntry[],
   registry: AgentCapabilityRegistryEntry[],
@@ -169,9 +165,7 @@ function pushPackEntries(
       kind: 'tool',
       source,
       status: disabled ? 'disabled' : 'granted',
-      reason: disabled
-        ? 'disabled in pack override'
-        : (TOOL_EXPLAIN_REASONS[tool.name] ?? 'agent pack grant'),
+      reason: disabled ? 'disabled in pack override' : 'agent pack grant',
     });
     registry.push({
       name: tool.name,

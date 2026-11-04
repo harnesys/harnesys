@@ -2,7 +2,6 @@ import type { PackConfig } from '@harnesys/studio-shared';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/shared/ui/field';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
-import { ToggleGroup, ToggleGroupItem } from '@/shared/ui/toggle-group';
 
 interface SettingsProps {
   config: PackConfig;
@@ -15,9 +14,6 @@ export function MemoryPackSettings({
 }: SettingsProps & {
   packName: string;
 }) {
-  if (packName === 'episodic-memory') {
-    return <EpisodicSettings config={config} onChange={onChange} />;
-  }
   if (packName === 'semantic-memory') {
     return <SemanticSettings config={config} onChange={onChange} />;
   }
@@ -28,58 +24,6 @@ export function MemoryPackSettings({
     return <PinSettings config={config} onChange={onChange} />;
   }
   return null;
-}
-function EpisodicSettings({ config, onChange }: SettingsProps) {
-  const spec = config.spec ?? {};
-  const store = spec.store === 'vector' ? 'vector' : 'fts';
-  const topK = specNumber(spec.topK, DEFAULT_EPISODIC_TOP_K);
-  const indexOnCompact = specBoolean(spec.indexOnCompact, DEFAULT_EPISODIC_INDEX_ON_COMPACT);
-  function patchSpec(partial: Record<string, unknown>) {
-    onChange({ spec: { ...spec, ...partial } });
-  }
-  return (
-    <FieldGroup className="gap-2">
-      <Field>
-        <FieldLabel>Store</FieldLabel>
-        <ToggleGroup
-          variant="segment"
-          size="sm"
-          value={[store]}
-          onValueChange={(value) => {
-            const next = value[0];
-            if (next === 'fts' || next === 'vector') {
-              patchSpec({ store: next });
-            }
-          }}
-        >
-          <ToggleGroupItem value="fts" className="min-w-[44px] text-[11px]">
-            fts
-          </ToggleGroupItem>
-          <ToggleGroupItem value="vector" className="min-w-[44px] text-[11px]">
-            vector
-          </ToggleGroupItem>
-        </ToggleGroup>
-        <FieldDescription className="text-[11px] leading-snug">
-          fts is full-text search. vector needs an embeddings model in the project.
-        </FieldDescription>
-      </Field>
-      <NumberField
-        id="pack-episodic-top-k"
-        label="topK"
-        value={topK}
-        fallback={DEFAULT_EPISODIC_TOP_K}
-        onCommit={(next) => patchSpec({ topK: next })}
-        description="Max hits per recall_search. Default 8."
-      />
-      <SwitchField
-        id="pack-episodic-index-on-compact"
-        label="Index on compact"
-        checked={indexOnCompact}
-        onCheckedChange={(next) => patchSpec({ indexOnCompact: next })}
-        description="Index thread summaries into episodic recall on compaction. Default on."
-      />
-    </FieldGroup>
-  );
 }
 function SemanticSettings({ config, onChange }: SettingsProps) {
   const spec = config.spec ?? {};
@@ -223,8 +167,6 @@ function specNumber(value: unknown, fallback: number): number {
 function specBoolean(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
 }
-const DEFAULT_EPISODIC_TOP_K = 8;
-const DEFAULT_EPISODIC_INDEX_ON_COMPACT = true;
 const DEFAULT_SEMANTIC_AUTO_PROJECT_SESSION = false;
 const DEFAULT_SEMANTIC_AUTO_PROJECT_LONG = true;
 const DEFAULT_KNOWLEDGE_TOP_K = 5;

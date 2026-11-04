@@ -6,6 +6,7 @@ import type {
   McpManagePort,
   PackRegistration,
   ProcessJobRegistry,
+  RunEventStore,
 } from 'harnesys';
 import { createProcessJobRegistry } from 'harnesys';
 import type { AgentRecord } from '../../../domain/agent/agent.ts';
@@ -51,6 +52,7 @@ export interface WireOrgPacksDeps {
   secrets?: SecretStorePort;
   threads?: ThreadRepositoryPort;
   threadAgents?: ThreadAgentRepositoryPort;
+  events?: RunEventStore;
   schedules?: ScheduleRepositoryPort;
   webhooks?: WebhookRepositoryPort;
   deskEvents?: DeskEventsPort;
@@ -107,6 +109,7 @@ export function orgPackInputs(
   deps: OrgRuntimeDeps,
   db: OrgSqliteDb,
   engineSnapshot?: HostEngineEntry[],
+  events?: RunEventStore,
 ): WireOrgPacksDeps {
   return {
     orgId: deps.orgId,
@@ -115,6 +118,7 @@ export function orgPackInputs(
     agents: deps.agents,
     threads: deps.threads,
     threadAgents: deps.threadAgents,
+    ...(events !== undefined ? { events } : {}),
     providers: deps.providers,
     models: deps.models,
     sources: deps.sources,

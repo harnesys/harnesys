@@ -1,6 +1,5 @@
 import type { HostEngineEntry } from 'harnesys';
 import {
-  episodicMemoryCapability,
   knowledgeMemoryCapability,
   pinMemoryCapability,
   registerPack,
@@ -67,13 +66,7 @@ export function memoryRegistration(packName: string, ctx: WireOrgPackContext) {
       resolveScope: ctx.liveScope,
     });
   }
-  if (packName === 'semantic-memory') {
-    return semanticRegistration(ctx, memoryDb);
-  }
-  return registerPack(episodicMemoryCapability, {
-    ports: { episodic: new OrgEpisodicPort(memoryDb) },
-    resolveScope: ctx.liveScope,
-  });
+  return semanticRegistration(ctx, memoryDb);
 }
 
 function semanticRegistration(ctx: WireOrgPackContext, memoryDb: OrgSqliteDb) {
@@ -100,12 +93,16 @@ export function threadsRegistration(ctx: WireOrgPackContext) {
   if (!ctx.deps.threads || !ctx.deps.threadAgents) {
     return undefined;
   }
+  const memoryDb = ctx.deps.memoryDb;
   return registerPack(threadsCapability, {
     ports: {
       threads: new OrgThreadsPort({
         threads: ctx.deps.threads,
         threadAgents: ctx.deps.threadAgents,
         agents: ctx.deps.agents,
+        ...(ctx.deps.events ? { events: ctx.deps.events } : {}),
+        ...(memoryDb ? { episodic: new OrgEpisodicPort(memoryDb) } : {}),
+        ...(ctx.deps.manager ? { tail: ctx.deps.manager.tail } : {}),
         ...(ctx.deps.schedules ? { schedules: ctx.deps.schedules } : {}),
       }),
     },

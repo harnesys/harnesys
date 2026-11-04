@@ -40,7 +40,6 @@
     "threads": {},
     "scheduler": {},
     "webhook": {},
-    "episodic-memory": {},
     "semantic-memory": {},
     "knowledge-memory": {},
     "pin-memory": {},

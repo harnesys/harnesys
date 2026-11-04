@@ -81,7 +81,6 @@ export function registrationForPack(packName: string, ctx: WireOrgPackContext) {
       return planRegistration(ctx);
     case 'pin-memory':
     case 'semantic-memory':
-    case 'episodic-memory':
       return memoryRegistration(packName, ctx);
     case 'threads':
       return threadsRegistration(ctx);

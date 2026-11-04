@@ -410,10 +410,6 @@ export { managerCapability } from './src/packs/manager/index.ts';
 export type { McpCapabilityPorts } from './src/packs/mcp/index.ts';
 export { mcpCapability } from './src/packs/mcp/index.ts';
 export {
-  type CreateEpisodicToolsParams,
-  createEpisodicTools,
-} from './src/packs/memory/create-episodic-tools.ts';
-export {
   type CreateKnowledgeToolsParams,
   createKnowledgeTools,
 } from './src/packs/memory/create-knowledge-tools.ts';
@@ -422,8 +418,6 @@ export {
   type CreateSemanticToolsParams,
   createSemanticTools,
 } from './src/packs/memory/create-semantic-tools.ts';
-export type { EpisodicMemoryPorts } from './src/packs/memory/episodic.ts';
-export { episodicMemoryCapability } from './src/packs/memory/episodic.ts';
 export { memoryCapabilities, memoryCapabilityList } from './src/packs/memory/index.ts';
 export type { KnowledgeMemoryPorts } from './src/packs/memory/knowledge.ts';
 export { knowledgeMemoryCapability } from './src/packs/memory/knowledge.ts';
@@ -448,8 +442,18 @@ export {
 } from './src/packs/shell/command-glob.ts';
 export { programOf, segmentCommand } from './src/packs/shell/shell-chain.ts';
 export { SHELL_FLOOR_PATTERNS } from './src/packs/shell/shell-floor.ts';
+export {
+  createThreadsHistoryTool,
+  THREADS_HISTORY_TOOL,
+} from './src/packs/threads/create-threads-history-tool.ts';
 export type { ThreadsCapabilityPorts } from './src/packs/threads/index.ts';
 export { threadsCapability } from './src/packs/threads/index.ts';
+export {
+  clampSearchLimit,
+  readThreadHistory,
+  searchThreadHistory,
+  snippetText,
+} from './src/packs/threads/thread-history.ts';
 export {
   AGENT_BROWSER_VERSION,
   type AgentBrowserRegistryRelease,
@@ -773,7 +777,16 @@ export type {
   ThreadAttachmentRecord,
 } from './src/ports/thread-attachments.ts';
 export { ThreadAttachmentPort } from './src/ports/thread-attachments.ts';
-export type { ThreadSummary, ThreadsPort } from './src/ports/threads.ts';
+export type {
+  ThreadHistoryMessage,
+  ThreadHistoryPage,
+  ThreadHistoryQuery,
+  ThreadSearchQuery,
+  ThreadSearchResult,
+  ThreadSearchScope,
+  ThreadSummary,
+  ThreadsPort,
+} from './src/ports/threads.ts';
 export type {
   CustomNodeImpl,
   SideEffect,

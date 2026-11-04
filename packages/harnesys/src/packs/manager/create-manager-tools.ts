@@ -13,10 +13,6 @@ interface ManagerUsageToolInput {
   to?: string;
   groupBy?: ManagerUsageGroupBy;
 }
-interface ManagerThreadTailToolInput {
-  threadId: string;
-  limit?: number;
-}
 const USAGE_GROUP_BYS: ManagerUsageGroupBy[] = ['day', 'agent'];
 async function runGuard<T>(fn: () => Promise<T>): Promise<
   | T
@@ -62,29 +58,6 @@ export function createManagerTools(deps: CreateManagerToolsParams): ToolDefiniti
             to: input.to,
             groupBy: input.groupBy,
           });
-        }),
-    }),
-    tool('thread_tail', {
-      group: 'manager',
-      description:
-        'Last events of a thread (run journal: runId, kind, timestamp, preview). threadId comes from thread_list rows or manager_pulse failedThreads; load missing tools via load_tools. limit 1..100, default 20.',
-      input: {
-        type: 'object',
-        properties: {
-          threadId: { type: 'string' },
-          limit: { type: 'integer', minimum: 1, maximum: 100 },
-        },
-        required: ['threadId'],
-      },
-      execute: async (raw) =>
-        runGuard(async () => {
-          const input = raw as ManagerThreadTailToolInput;
-          const requested = input.limit === undefined || input.limit < 1 ? 20 : input.limit;
-          return await deps.observation.threadTail(
-            deps.resolveScope(),
-            input.threadId,
-            Math.min(requested, 100),
-          );
         }),
     }),
   ];

@@ -3,16 +3,17 @@ import {
   type CapabilityUniverse,
   createLoadToolsTool,
   createRunEventFeed,
+  createThreadsHistoryTool,
   type InMemoryRuntimeState,
   type PackRegistration,
   type RunEventStore,
   type RunLifecycleStore,
   type RunRegistry,
   resolveCapabilitySet,
+  THREADS_HISTORY_TOOL,
   type ToolDefinition,
 } from 'harnesys';
 import { composeRunSkills } from './compose-run-skills.ts';
-import { createThreadHistoryTool, THREAD_HISTORY_TOOL } from './create-thread-history-tool.ts';
 import { runInHostToolScope } from './host-tool-scope.ts';
 import type { OrgPluginWiring } from './org-plugin-wiring.ts';
 import type { OrgRuntimeDeps } from './org-runtime.types.ts';
@@ -154,7 +155,7 @@ function withThreadHistory(
   deps: { threadId: string; events: RunEventStore },
 ): Map<string, ToolDefinition> {
   const registry = new Map(base);
-  registry.set(THREAD_HISTORY_TOOL, createThreadHistoryTool(deps));
+  registry.set(THREADS_HISTORY_TOOL, createThreadsHistoryTool(deps));
   return registry;
 }
 

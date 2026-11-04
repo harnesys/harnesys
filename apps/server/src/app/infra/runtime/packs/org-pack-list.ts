@@ -17,7 +17,6 @@ const ORG_PACK_NAMES: readonly string[] = [
   'github',
   'pin-memory',
   'semantic-memory',
-  'episodic-memory',
   'knowledge-memory',
   'skills',
 ];
@@ -41,7 +40,6 @@ const HOST_WIRED_PACKS: ReadonlySet<string> = new Set([
   'github',
   'pin-memory',
   'semantic-memory',
-  'episodic-memory',
   'knowledge-memory',
   'skills',
 ]);

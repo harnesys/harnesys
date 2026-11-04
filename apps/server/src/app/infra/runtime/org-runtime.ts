@@ -74,7 +74,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
   const engineSnapshot =
     deps.browserEngines !== undefined ? await deps.browserEngines.snapshot() : undefined;
   const { registrations: packRegistrations } = wireOrgPacks(
-    orgPackInputs(deps, session.db, engineSnapshot),
+    orgPackInputs(deps, session.db, engineSnapshot, runEvents),
   );
 
   const plugin = await wireOrgPlugins(deps.plugins, deps.orgId);

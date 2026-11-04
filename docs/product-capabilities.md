@@ -36,7 +36,7 @@ Verified tool names from `packages/harnesys/src/packs`:
 - **GitHub**: issues (list/get/create/comment/close/labels), PRs (list/get/diff/create/update/review/merge), code search, repos list, file contents, CI workflow runs + rerun, recent events.
 - **Google**: Gmail (`search/read thread/message/send/download attachment`), Calendar (`list/create/update/delete events`), Drive sources.
 - **Issues/boards** (native tracker): `issue_create/list/get/update/move/comment/nudge/dependency/attachment_add`, `board_create/update/delete`, `board_rule_save/delete`, labels — agents manage their own work boards.
-- **Knowledge/memory**: `knowledge_search / knowledge_read` (RAG), `memory_write/update/delete/list`, `recall_search`, `pin_set/list/remove`. Three memory kinds: **episodic** (event log), **semantic** (facts, with promotion pipeline episodic→semantic), **pins** (pinned facts). Memory crawler + relevance scoring.
+- **Knowledge/memory**: `knowledge_search / knowledge_read` (RAG), `memory_write/update/delete/list`, `pin_set/list/remove`. Two memory kinds: **semantic** (facts, with promotion pipeline), **pins** (pinned facts). Transcript history is searched with `threads_search` (`scope=thread|org`). Memory crawler + relevance scoring.
 - **Agents**: spawn/handoff/lifecycle (above).
 - **Manager**: `manager_pulse` — a supervisor role that checks on other agents.
 - **MCP**: `mcp_connect/list/check/toggle/remove` — agents can attach Model Context Protocol servers themselves.
@@ -44,7 +44,7 @@ Verified tool names from `packages/harnesys/src/packs`:
 - **Skills**: `search_skills / install_skill / create_skill` — agents discover, install, and author their own skills.
 - **Scheduler**: `schedule_set/list/delete/pause/peek` — agents schedule their own future work.
 - **Webhooks**: `webhook_set/list/delete` — agents subscribe to external events.
-- **Threads**: `thread_list/tail` — read other conversations.
+- **Threads**: `threads_list/history/search/tail` — read other conversations and search their transcripts.
 - **Image**: `image_generate` (model-backed image generation).
 
 ## Model providers

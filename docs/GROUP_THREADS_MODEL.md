@@ -169,9 +169,9 @@ A run seeds from its trigger plus a clean window of the last N conversational me
 - N defaults to 6 and is configurable per thread (`threads.policy.contextWindow`).
 - Ordering and the window boundary come from `thread_seq`. The trigger row is excluded from the window (it is already the run input) and fan-out seeds every target by the trigger's `thread_seq`.
 - The window is built by a dedicated builder, not `rebuildThreadMessages`: that replay (`replay-thread-history.ts`) handles `user`/`text-delta`/`model.usage`/`tool`/`compaction` and silently drops `run.completed`, which now carries the final answer. People rows come from `metadata.author`; answers come from `run.completed` joined to `runs.agent_name`.
-- `thread_history(before_seq, limit)` is the required tool: a deterministic, paginated read of conversational rows before the window. It does not depend on any configured model.
-- `thread_search(query)` is an optional bonus on top: semantic search over the transcript, reusing `org_memory_settings.embed_model_id` **only when it is set** (`embedModelIdOf` returns `undefined` otherwise). When no embedding model is configured, the note offers `thread_history` alone — a pointer the agent cannot open is worse than no pointer (`HARNESS_CHANGE_CRITERIA.md`).
-- A runtime note tells the agent it is in a group thread, that it sees the last N of M messages, that the window can be off-topic, and that `thread_history` (and `thread_search` when configured) exist when the window is not enough. The wording is conditional.
+- `threads_history(before_seq, limit)` is the required tool: a deterministic, paginated read of conversational rows before the window. It does not depend on any configured model.
+- `threads_search(query, scope)` is a keyword search over the transcript: `scope=thread` reads the current thread, `scope=org` searches every thread in the project. Neither mode depends on a configured embedding model.
+- A runtime note tells the agent it is in a group thread, that it sees the last N of M messages, that the window can be off-topic, and that `threads_history` (and `threads_search`) exist when the window is not enough. The wording is conditional.
 - `M` is a conversational counter maintained on append and on event deletion, not a `COUNT` over a large transcript.
 - Compaction leaves the seeding critical path for groups: the seed is bounded by N. A single long run still compacts its own context, and manual compaction stays a user tool. No per-agent context table, no cursor, no digest.
 - Forking a `group` thread is rejected in v1: `seedForkState` seeds full history and would bypass the window. Revisit later.
@@ -210,4 +210,4 @@ Rebuild rather than port: responder policy, membership, workspace resolution, ca
 - Per-agent run profile: `run_profile_id` / `runModeOf(thread)` stay thread-scoped in v1, so one preset applies to every agent in a group.
 - Binding lifecycle independent of the thread: a binding may outlive its thread (`thread_id NULL`).
 - Per-group policy fields beyond the first set (rate limits, moderation).
-- `thread_history` / `thread_search` limits and whether `thread_search` ships with the first cut.
+- `threads_history` / `threads_search` limits and the `scope=org` page size.

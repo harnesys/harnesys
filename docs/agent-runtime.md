@@ -56,7 +56,6 @@ this step):` followed by `<tag>` blocks (`llm-notes.ts`, `assembleNotes`). Curre
 | `active-plan` | plan pack: full `<active-plan>` block with item ids and next task |
 | `pin-memory`, `memory-pin` | pin pack: usage rule + projected pinned facts |
 | `semantic-memory`, `memory-semantic` | semantic pack: usage rule + projected facts |
-| `episodic-memory` | episodic pack: `recall_search` guidance |
 | `knowledge-memory` | knowledge pack: `knowledge_search` → `knowledge_read` guidance |
 | github/google | source-status notes when resolution changes (`packs/github/index.ts`, `packs/google/index.ts`) |
 
@@ -78,7 +77,7 @@ Per run (`org-runtime-run-target.ts`):
 
 1. The host registers all wired packs (`packs/org-pack-registrations.ts`). Wired pack names:
    `core, files, image, shell, web, lsp, agents, mcp, plan, threads, scheduler, webhook, issues,
-   manager, google, github, pin-memory, semantic-memory, episodic-memory, knowledge-memory, skills`.
+   manager, google, github, pin-memory, semantic-memory, knowledge-memory, skills`.
 2. `resolveCapabilitySet` (`capability-set.ts`) grants: host base tools (minus `load_tools`,
    `load_skill`, `Skill`, which are core services), pack tools (first pack wins on name
    collision), minus `disallowedTools` (alias-resolved), adjusted by the active mode (packs,
@@ -111,11 +110,11 @@ If a preset omits `capabilities`, the mapper defaults to `{ core, files, shell }
   `board_rule_delete`, `board_delete`, `issue_create`, `issue_move`, `issue_update`, `issue_nudge`,
   `issue_get`, `issue_list`, `issue_comment`, `issue_dependency`, `issue_attachment_add`,
   `label_list`, `label_create`, `label_delete`
-- `manager`: `manager_pulse`, `usage_report`, `thread_tail`
+- `manager`: `manager_pulse`, `usage_report`
 - `plan`: `plan_save`, `plan_item_update`, `plan_get`
 - `agents`: `agents_list`, `agents_create`, `agents_create_subagent`, `agents_spawn`,
   `agents_handoff`, `agents_update`, `agents_delete`
-- `threads`: `thread_list`
+- `threads`: `threads_list`, `threads_history`, `threads_search`, `threads_tail`
 - `scheduler`: `schedule_set`, `schedule_peek`, `schedule_list`, `schedule_pause`,
   `schedule_delete`
 - `webhook`: `webhook_set`
@@ -129,7 +128,7 @@ If a preset omits `capabilities`, the mapper defaults to `{ core, files, shell }
 - `image`: `image_generate`
 - `mcp`: `mcp_connect`, `mcp_list`, `mcp_check`, `mcp_toggle`, `mcp_remove`
 - memory packs: `pin_set`, `pin_list`, `pin_remove`; `memory_write`, `memory_update`,
-  `memory_delete`, `memory_list`; `recall_search`; `knowledge_search`, `knowledge_read`
+  `memory_delete`, `memory_list`; `knowledge_search`, `knowledge_read`
 - `skills`: `search_skills`, `install_skill`, `create_skill`
 - core services: `load_tools`, `load_skill` (+ alias `Skill`)
 

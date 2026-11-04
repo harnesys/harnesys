@@ -19,7 +19,6 @@ describe('org pack single source', () => {
     ).toEqual([
       'agents',
       'core',
-      'episodic-memory',
       'files',
       'github',
       'google',
@@ -53,6 +52,5 @@ describe('org pack single source', () => {
     expect(isHostWired('manager')).toBe(true);
     expect(isHostWired('pin-memory')).toBe(true);
     expect(isHostWired('semantic-memory')).toBe(true);
-    expect(isHostWired('episodic-memory')).toBe(true);
   });
 });

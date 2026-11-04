@@ -18,7 +18,6 @@ class FakeObservation extends ManagerObservationPort {
     scope: CapabilityScope;
     query: { from?: string; to?: string; groupBy?: 'day' | 'agent' };
   }> = [];
-  tailCalls: Array<{ scope: CapabilityScope; threadId: string; limit: number }> = [];
   failure?: Error;
 
   async pulse(scope: CapabilityScope) {
@@ -68,14 +67,6 @@ class FakeObservation extends ManagerObservationPort {
       totalRuns: 2,
     };
   }
-
-  async threadTail(scope: CapabilityScope, threadId: string, limit: number) {
-    this.tailCalls.push({ scope, threadId, limit });
-    if (this.failure) {
-      throw this.failure;
-    }
-    return [{ seq: 1, runId: 'run-1', kind: 'message', at: '2026-10-18T10:00:00Z', preview: 'hi' }];
-  }
 }
 
 function toolMap(observation: FakeObservation) {
@@ -85,12 +76,12 @@ function toolMap(observation: FakeObservation) {
 }
 
 describe('manager pack tools', () => {
-  test('registers exactly three manager tools in the manager group', () => {
+  test('registers exactly two manager tools in the manager group', () => {
     const tools = createManagerTools({
       observation: new FakeObservation(),
       resolveScope: () => scope,
     });
-    expect(tools.map((t) => t.name)).toEqual(['manager_pulse', 'usage_report', 'thread_tail']);
+    expect(tools.map((t) => t.name)).toEqual(['manager_pulse', 'usage_report']);
     for (const t of tools) {
       expect(t.group).toBe('manager');
       expect(t.description.trim().length).toBeGreaterThan(0);
@@ -146,34 +137,13 @@ describe('manager pack tools', () => {
     });
   });
 
-  test('thread_tail passes threadId and default limit 20', async () => {
-    const observation = new FakeObservation();
-    const byName = toolMap(observation);
-    const result = await byName.get('thread_tail')?.execute({ threadId: 'thread-7' }, ctx);
-    expect(observation.tailCalls).toEqual([{ scope, threadId: 'thread-7', limit: 20 }]);
-    expect(result).toEqual([
-      { seq: 1, runId: 'run-1', kind: 'message', at: '2026-10-18T10:00:00Z', preview: 'hi' },
-    ]);
-  });
-
-  test('thread_tail clamps limit 0 to 20 and over 100 to 100', async () => {
-    const observation = new FakeObservation();
-    const byName = toolMap(observation);
-    await byName.get('thread_tail')?.execute({ threadId: 't1', limit: 0 }, ctx);
-    await byName.get('thread_tail')?.execute({ threadId: 't2', limit: 150 }, ctx);
-    await byName.get('thread_tail')?.execute({ threadId: 't3', limit: 50 }, ctx);
-    expect(observation.tailCalls.map((c) => c.limit)).toEqual([20, 100, 50]);
-  });
-
   test('port errors become { error: message } results', async () => {
     const observation = new FakeObservation();
     observation.failure = new Error('observation unavailable');
     const byName = toolMap(observation);
     const pulse = await byName.get('manager_pulse')?.execute({}, ctx);
     const usage = await byName.get('usage_report')?.execute({ groupBy: 'day' }, ctx);
-    const tail = await byName.get('thread_tail')?.execute({ threadId: 't1' }, ctx);
     expect(pulse).toEqual({ error: 'observation unavailable' });
     expect(usage).toEqual({ error: 'observation unavailable' });
-    expect(tail).toEqual({ error: 'observation unavailable' });
   });
 });
