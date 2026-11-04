@@ -42,11 +42,11 @@ export function AgentsSection({
     if (!thread) {
       return;
     }
-    const owner = roots.find(
-      (item) => item.id === thread.agentId || item.id === thread.originAgentId,
-    );
-    if (owner) {
-      useAgentsDisplayStore.getState().expand(owner.id);
+    const memberIds = new Set(thread.members.map((member) => member.id));
+    for (const owner of roots) {
+      if (memberIds.has(owner.id)) {
+        useAgentsDisplayStore.getState().expand(owner.id);
+      }
     }
   }, [activeThreadId, roots]);
   if (roots.length === 0) {

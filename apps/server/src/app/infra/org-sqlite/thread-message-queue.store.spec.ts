@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite';
 import { describe, expect, test } from 'bun:test';
-import type { AcceptedRunResponse } from '@harnesys/contracts';
+import type { RunAcceptedResponse } from '@harnesys/contracts';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import type { RunRecord } from 'harnesys';
 import { createSteeringChannel, drainThreadMessageQueue } from '../runtime/org-runtime-queue.ts';
@@ -66,7 +66,7 @@ function setup(): TestHarness {
           : null,
       ),
   };
-  const send = (input: SendThreadMessageInput): Promise<AcceptedRunResponse> => {
+  const send = (input: SendThreadMessageInput): Promise<RunAcceptedResponse> => {
     if (harness.busy) {
       throw Object.assign(new Error('thread busy'), { code: 'thread_busy' });
     }

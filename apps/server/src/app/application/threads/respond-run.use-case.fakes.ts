@@ -1,8 +1,8 @@
 import type {
-  AcceptedRunResponse,
   CancelRunResponse,
   NodeStatus,
   RetryRunResponse,
+  RunAcceptedResponse,
 } from '@harnesys/contracts';
 import type {
   McpServerInfo,
@@ -168,7 +168,7 @@ export class StubExecutor extends LocalExecutorPort {
   events(): Promise<RunEventStore> {
     return Promise.reject(new Error('not used'));
   }
-  send(_input: SendLocalRunInput): Promise<AcceptedRunResponse> {
+  send(_input: SendLocalRunInput): Promise<RunAcceptedResponse> {
     throw new Error('not used');
   }
   compact = (): Promise<CompactThreadResult> => Promise.reject(new Error('not used'));

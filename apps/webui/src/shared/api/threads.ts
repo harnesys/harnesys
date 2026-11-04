@@ -20,7 +20,6 @@ import { authenticatedFetch } from './session';
 export interface CreateThreadInput {
   title?: string;
   agentId?: string;
-  originAgentId?: string;
   agentIds?: string[];
   participantUserIds?: string[];
   kind?: 'chat' | 'group' | 'schedule' | 'webhook' | 'issue' | 'connector';
@@ -167,10 +166,23 @@ export function sendThreadRun(options: SendThreadRunOptions): Promise<AcceptedRu
       ...(attachmentIds?.length ? { attachmentIds } : {}),
       ...(sourceId && worktreeId ? { sourceId, worktreeId } : {}),
     }),
-  }).then((accepted) => ({
-    runId: accepted.runId,
-    status: accepted.status,
-  }));
+  }).then((accepted) =>
+    accepted.status === 'stored'
+      ? {
+          status: 'stored',
+          reason: accepted.reason,
+          threadId: accepted.threadId,
+          threadSeq: accepted.threadSeq,
+        }
+      : {
+          status: accepted.status,
+          runId: accepted.runId,
+          threadId: accepted.threadId,
+          ...(accepted.waitingForProfileId
+            ? { waitingForProfileId: accepted.waitingForProfileId }
+            : {}),
+        },
+  );
 }
 export function getThreadPlan(threadId: string): Promise<ThreadPlanRecord | null> {
   const orgId = requireOrgId();

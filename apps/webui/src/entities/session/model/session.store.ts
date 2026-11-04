@@ -1,7 +1,14 @@
 import type { SessionEvent } from '@harnesys/studio-shared';
 import { create } from 'zustand';
 import { coalesceStreamDeltas, isToolInputStream } from './coalesce-events';
-import { ceilFromEvents, eventKey, fillSeenAt, stableEventKey, stableKeys } from './event-keys';
+import {
+  ceilFromEvents,
+  eventKey,
+  fillSeenAt,
+  stableEventKey,
+  stableKeys,
+  withThreadSeq,
+} from './event-keys';
 import { feedDrop, feedSetBoundary, feedUpdate } from './feed/feed-engine';
 import type { ThreadFeeds } from './feed/feed-types';
 import { clearLiveTail, clearLiveTails, ingestLiveDelta, sealLiveTail } from './live-tail';
@@ -39,6 +46,7 @@ interface SessionStoreActions {
   reconcileEvents: (threadId: string, events: SessionEvent[]) => void;
   appendEvent: (threadId: string, event: SessionEvent) => void;
   removeEventByClientEventId: (threadId: string, clientEventId: string) => void;
+  setEventThreadSeq: (threadId: string, clientEventId: string, threadSeq: number) => void;
   setSentSkills: (threadId: string, clientEventId: string, skills: string[]) => void;
   sentSkillsFor: (clientEventId: string) => string[] | undefined;
   dismissFailure: (threadId: string, id: string) => void;
@@ -180,6 +188,22 @@ export const useSessionStore = create<SessionStoreState & SessionStoreActions>((
         }
         const { [key]: _removed, ...restSeen } = threadSeen;
         return { ...stripped, seenAt: { ...base.seenAt, [threadId]: restSeen } };
+      });
+    },
+    setEventThreadSeq(threadId, clientEventId, threadSeq) {
+      set((state) => {
+        const base = applyBatches(state, takePending());
+        const next = withThreadSeq(base.events[threadId] ?? EMPTY_EVENTS, clientEventId, threadSeq);
+        if (next === null) {
+          return base;
+        }
+        const seen = base.seenAt[threadId] ?? {};
+        return {
+          ...base,
+          events: { ...base.events, [threadId]: next },
+          feeds: { ...base.feeds, [threadId]: feedUpdate(threadId, next, seen, null) },
+          contentEpoch: { ...base.contentEpoch, [threadId]: Date.now() },
+        };
       });
     },
     setSentSkills(_threadId, clientEventId, skills) {

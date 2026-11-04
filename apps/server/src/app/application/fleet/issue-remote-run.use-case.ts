@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@harnesys/brix';
 import {
-  type AcceptedRunResponse,
   DEFAULT_MODE_ID,
+  type RunAcceptedResponse,
   type TaskEnvelope,
   type TaskEnvelopeAttachment,
 } from '@harnesys/contracts';
@@ -63,7 +63,7 @@ export class IssueRemoteRunUseCase {
     private readonly issueWaiting: IssueWaitingRunUseCase,
   ) {}
 
-  async execute(input: IssueRemoteRunInput): Promise<AcceptedRunResponse> {
+  async execute(input: IssueRemoteRunInput): Promise<RunAcceptedResponse> {
     this.validateMode(input.orgId, input.mode);
     const snapshot = this.buildSnapshot.execute(input.orgId);
     if (!this.snapshotAcks.isReadyForRevision(input.orgId, input.nodeId, snapshot.revision)) {
@@ -158,7 +158,7 @@ export class IssueRemoteRunUseCase {
   private async deferUntilSnapshotReady(
     input: IssueRemoteRunInput,
     configRevision: number,
-  ): Promise<AcceptedRunResponse> {
+  ): Promise<RunAcceptedResponse> {
     const ack = this.snapshotAcks.find(input.orgId, input.nodeId);
     const online = this.hub.hasPeer(input.nodeId);
     if (ack?.status === 'incompatible' && ack.revision === configRevision) {

@@ -86,7 +86,6 @@ export async function branchThread(
   const events = useSessionStore.getState().eventsOf(currentThreadId);
   const record = await createThreadRecord({
     agentId: agent.id,
-    originAgentId: agent.id,
     title: branchTitle(titleSource(events, forkAt)),
     parentThreadId: currentThreadId,
     forkAt,

@@ -1,4 +1,4 @@
-import type { AcceptedRunResponse, CancelRunResponse, RetryRunResponse } from '@harnesys/contracts';
+import type { CancelRunResponse, RetryRunResponse, RunAcceptedResponse } from '@harnesys/contracts';
 import type {
   Attachment,
   McpServerInfo,
@@ -65,7 +65,7 @@ export abstract class LocalExecutorPort {
   abstract lifecycle(orgId: string): Promise<RunLifecycleStore>;
   abstract events(orgId: string): Promise<RunEventStore>;
   abstract sessionFor(orgId: string, threadId: string, agentId: string): Promise<SessionHandle>;
-  abstract send(input: SendLocalRunInput): Promise<AcceptedRunResponse>;
+  abstract send(input: SendLocalRunInput): Promise<RunAcceptedResponse>;
   abstract compact(orgId: string, threadId: string): Promise<CompactThreadResult>;
   abstract drainMessageQueue(orgId: string, threadId: string): Promise<ThreadQueueDrainResult>;
   abstract cancel(orgId: string, runId: string): Promise<CancelRunResponse>;

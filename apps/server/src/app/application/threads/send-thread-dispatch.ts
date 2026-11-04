@@ -1,4 +1,4 @@
-import type { AcceptedRunResponse } from '@harnesys/contracts';
+import type { RunAcceptedResponse } from '@harnesys/contracts';
 import type { Attachment } from 'harnesys';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
 import type { PlacementResult, RunIsolation } from '../../domain/fleet/placement.ts';
@@ -52,7 +52,7 @@ export async function dispatchLocalRun(input: {
   skills: string[];
   worktreeBinding: WorktreeBinding | null;
   sharedFields: SharedRunFields;
-}): Promise<AcceptedRunResponse> {
+}): Promise<RunAcceptedResponse> {
   const { executor, request, thread, agent, decision, runText, attachments, skills, sharedFields } =
     input;
   const placementExtras = input.worktreeBinding
@@ -93,7 +93,7 @@ export async function dispatchRemoteRun(input: {
   skills: string[];
   attachmentMetas: AttachmentMeta[];
   sharedFields: SharedRunFields;
-}): Promise<AcceptedRunResponse> {
+}): Promise<RunAcceptedResponse> {
   const { issueRemote, request, thread, agent, decision, runText, attachments, skills } = input;
   return await issueRemote.execute({
     orgId: request.orgId,

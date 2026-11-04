@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@harnesys/brix';
-import type { AcceptedRunResponse, TaskEnvelopeAttachment } from '@harnesys/contracts';
+import type { RunAcceptedResponse, TaskEnvelopeAttachment } from '@harnesys/contracts';
 import type { Attachment, RunAttribution } from 'harnesys';
 import { FleetEventsPort } from '../../domain/fleet/fleet-events.port.ts';
 import { OrgConfigRevisionPort } from '../../domain/fleet/org-config-revision.port.ts';
@@ -48,7 +48,7 @@ export class IssueWaitingRunUseCase {
     private readonly revisions: OrgConfigRevisionPort,
   ) {}
 
-  async execute(input: IssueWaitingRunInput): Promise<AcceptedRunResponse> {
+  async execute(input: IssueWaitingRunInput): Promise<RunAcceptedResponse> {
     const lifecycle = await this.executor.lifecycle(input.orgId);
     const clientEventId = input.clientEventId ?? randomUUID();
     const attachmentMetas = input.attachmentMetas ?? toEnvelopeAttachments(input.attachments ?? []);

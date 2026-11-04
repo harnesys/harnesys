@@ -1,4 +1,4 @@
-import type { AcceptedRunResponse } from '@harnesys/contracts';
+import type { RunAcceptedResponse } from '@harnesys/contracts';
 import type { RunLifecycleStore, SessionHandle, SteerMessage } from 'harnesys';
 import type { ThreadQueueDrainResult } from '../../domain/thread/local-executor.port.ts';
 import { ThreadValidationException } from '../../domain/thread/thread.error.ts';
@@ -17,7 +17,7 @@ import type { ThreadBinding } from './workspace-target.ts';
 export interface ThreadQueueDrainerDeps {
   db: OrgSqliteDb;
   lifecycle: Pick<RunLifecycleStore, 'activeByThread'>;
-  send: (input: SendThreadMessageInput) => Promise<AcceptedRunResponse>;
+  send: (input: SendThreadMessageInput) => Promise<RunAcceptedResponse>;
 }
 
 export interface ThreadQueueRuntimeDeps {

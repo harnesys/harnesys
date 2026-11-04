@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@harnesys/brix';
-import type { AcceptedRunResponse, SendThreadRunBody } from '@harnesys/contracts';
+import type {
+  AcceptedRunResponse,
+  RunAcceptedResponse,
+  SendThreadRunBody,
+} from '@harnesys/contracts';
 import type { Attachment } from 'harnesys';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
@@ -203,7 +207,7 @@ export class SendThreadRunUseCase {
     requestedSkills: string[];
     runText: string | undefined;
     worktreeBinding: WorktreeBinding | null;
-  }): Promise<AcceptedRunResponse> {
+  }): Promise<RunAcceptedResponse> {
     const { request, thread, agent, decision, attachments, requestedSkills, worktreeBinding } =
       input;
     const attachmentMetas = attachmentMetasOf(
@@ -272,7 +276,7 @@ export class SendThreadRunUseCase {
     attachmentMetas: AttachmentMeta[];
     requestedSkills: string[];
     worktreeBinding: WorktreeBinding | null;
-  }): Promise<AcceptedRunResponse> {
+  }): Promise<RunAcceptedResponse> {
     const trigger = input.request.trigger ?? {
       kind: 'chat' as const,
       id: input.request.threadId,

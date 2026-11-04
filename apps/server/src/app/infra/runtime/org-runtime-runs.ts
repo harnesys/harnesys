@@ -1,4 +1,4 @@
-import type { AcceptedRunResponse } from '@harnesys/contracts';
+import type { RunAcceptedResponse } from '@harnesys/contracts';
 import type {
   Attachment,
   PendingSessionEvent,
@@ -46,7 +46,7 @@ export interface RunControlDeps {
 export async function sendThreadMessage(
   deps: RunControlDeps,
   input: SendThreadMessageInput,
-): Promise<AcceptedRunResponse> {
+): Promise<RunAcceptedResponse> {
   const handle = await deps.sessionFor(input.threadId, input.agentId);
   const clientEventId = input.clientEventId ?? crypto.randomUUID();
   deps.requestedSkills.set(input.threadId, input.skills ?? []);

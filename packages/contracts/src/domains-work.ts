@@ -312,6 +312,7 @@ export {
   RespondRunResponseSchema,
   type RetryRunResponse,
   RetryRunResponseSchema,
+  type RunAcceptedResponse,
   type RunLifecycleStatus,
   RunLifecycleStatusSchema,
   type SendThreadRunBody,

@@ -1,4 +1,4 @@
-import { ConflictException, HttpException } from '@harnesys/brix';
+import { ConflictException, EntityNotFoundException, HttpException } from '@harnesys/brix';
 
 export class InvalidCredentialsException extends HttpException {
   constructor() {
@@ -27,6 +27,12 @@ export class SessionReuseException extends HttpException {
 export class UserInviteInvalidException extends HttpException {
   constructor() {
     super(410, 'INVITE_INVALID', 'Invite is unknown, expired, or already used');
+  }
+}
+
+export class UserNotFoundException extends EntityNotFoundException {
+  constructor(userId: string) {
+    super(`User not found: ${userId}`, { userId });
   }
 }
 

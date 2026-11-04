@@ -12,6 +12,7 @@ import { RunConflictException } from '../../domain/thread/thread.error.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadEventsPort } from '../../domain/thread/thread-events.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
+import { requireRunAccepted } from '../threads/run-accepted.ts';
 import { mechanicalRunStart } from '../threads/run-attribution.ts';
 import { SendThreadRunUseCase } from '../threads/send-thread-run.use-case.ts';
 import { insertAgentThread } from '../threads/thread.helpers.ts';
@@ -53,30 +54,32 @@ export class FireIssueUseCase {
       const board = this.boards.findById(request.orgId, issue.boardId);
       const thread = this.ensureThread(request.orgId, issue.id, request.agentId, issue.title);
       const sourceRefs = this.sourceRefs(request.orgId, issue.id);
-      const accepted = await this.sendThreadRun.execute({
-        orgId: request.orgId,
-        threadId: thread.id,
-        body: {
-          text: issueTaskText({
-            issueId: issue.id,
-            title: issue.title,
-            description: this.descriptionWithSources(issue.description, sourceRefs),
-            status: issue.statusKey,
-            priority: issue.priority,
-            type: issue.type,
-            labels: this.labelTitles(request.orgId, issue.labels),
-            ...(board ? { board: board.name } : {}),
-            reason: request.reason,
-          }),
-          correlationId: request.correlationId ?? this.correlationId(request, issue.statusKey),
-          ...workspaceRefs(request),
-        },
-        issueRuleProfileId: request.issueRuleProfileId ?? null,
-        priority: issue.priority,
-        attribution: mechanicalRunStart(request.ownerUserId ?? null),
-        trigger: { kind: 'issue', id: issue.id },
-        ...(request.branch ? { branch: request.branch } : {}),
-      });
+      const accepted = requireRunAccepted(
+        await this.sendThreadRun.execute({
+          orgId: request.orgId,
+          threadId: thread.id,
+          body: {
+            text: issueTaskText({
+              issueId: issue.id,
+              title: issue.title,
+              description: this.descriptionWithSources(issue.description, sourceRefs),
+              status: issue.statusKey,
+              priority: issue.priority,
+              type: issue.type,
+              labels: this.labelTitles(request.orgId, issue.labels),
+              ...(board ? { board: board.name } : {}),
+              reason: request.reason,
+            }),
+            correlationId: request.correlationId ?? this.correlationId(request, issue.statusKey),
+            ...workspaceRefs(request),
+          },
+          issueRuleProfileId: request.issueRuleProfileId ?? null,
+          priority: issue.priority,
+          attribution: mechanicalRunStart(request.ownerUserId ?? null),
+          trigger: { kind: 'issue', id: issue.id },
+          ...(request.branch ? { branch: request.branch } : {}),
+        }),
+      );
       this.threads.touch(request.orgId, thread.id);
       this.clearThreadLaunchError(request.orgId, thread.id, accepted.runId);
       this.recordTrail(request.orgId, issue, request, 'fired');

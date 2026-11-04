@@ -1,5 +1,5 @@
 import type { Logger } from '@harnesys/brix';
-import type { AcceptedRunResponse } from '@harnesys/contracts';
+import type { RunAcceptedResponse } from '@harnesys/contracts';
 import type {
   Attachment,
   HostEngineEntry,
@@ -83,7 +83,7 @@ export interface OrgRuntime {
     attribution?: RunAttribution;
     agentId: string;
     triggerThreadSeq?: number;
-  }): Promise<AcceptedRunResponse>;
+  }): Promise<RunAcceptedResponse>;
   compact(threadId: string): Promise<CompactThreadResult>;
   drainMessageQueue(threadId: string): Promise<ThreadQueueDrainResult>;
   cancel(runId: string): Promise<void>;

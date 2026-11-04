@@ -41,7 +41,6 @@ export const useThreadStore = create<ThreadStore>((set, get) => ({
       members: [{ id: agentId, name: '' }],
       id: randomUUID(),
       agentId,
-      originAgentId: agentId,
       title,
       kind: 'chat',
       updatedAt: new Date().toISOString(),

@@ -8,6 +8,7 @@ import type {
 } from '@harnesys/contracts';
 import type { RunAttribution, RunVia } from 'harnesys';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
+import { ThreadInvariantException } from '../../domain/thread/thread.error.ts';
 import type {
   ThreadActiveRun as StoredActiveRun,
   ThreadInsert,
@@ -251,11 +252,16 @@ export function toThreadSummary(input: ThreadSummaryInput): ThreadSummary {
     thread,
     members.map((member) => member.id),
   );
+  if (!agentId) {
+    throw new ThreadInvariantException(`thread ${thread.id} has no member agents`, {
+      threadId: thread.id,
+    });
+  }
   return {
     id: thread.id,
     orgId: thread.orgId,
     title: thread.title,
-    agentId: agentId ?? '',
+    agentId,
     members,
     autoReplyAgentId: thread.autoReplyAgentId,
     policy: thread.policy,

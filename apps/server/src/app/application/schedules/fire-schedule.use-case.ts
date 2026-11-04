@@ -11,6 +11,7 @@ import {
 } from '../../domain/thread/thread.error.ts';
 import { ThreadEventsPort } from '../../domain/thread/thread-events.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
+import { requireRunAccepted } from '../threads/run-accepted.ts';
 import { mechanicalRunStart } from '../threads/run-attribution.ts';
 import { SendThreadRunUseCase } from '../threads/send-thread-run.use-case.ts';
 import { nextCronRunAt } from './cron-next.ts';
@@ -59,18 +60,20 @@ export class FireScheduleUseCase {
       return { status: 'already_fired' };
     }
     try {
-      const accepted = await this.sendThreadRun.execute({
-        orgId: request.orgId,
-        threadId: schedule.threadId,
-        body: {
-          text: scheduledTaskText(schedule.name, schedule.detail),
-          mode: schedule.modeId,
-          correlationId: request.fireId,
-        },
-        attribution: mechanicalRunStart(schedule.createdByUserId),
-        trigger: { kind: 'schedule', id: request.fireId },
-        expiresAt: request.expiresAt ?? null,
-      });
+      const accepted = requireRunAccepted(
+        await this.sendThreadRun.execute({
+          orgId: request.orgId,
+          threadId: schedule.threadId,
+          body: {
+            text: scheduledTaskText(schedule.name, schedule.detail),
+            mode: schedule.modeId,
+            correlationId: request.fireId,
+          },
+          attribution: mechanicalRunStart(schedule.createdByUserId),
+          trigger: { kind: 'schedule', id: request.fireId },
+          expiresAt: request.expiresAt ?? null,
+        }),
+      );
       this.schedules.recordFireRun(request.orgId, request.fireId, accepted.runId);
       const now = new Date().toISOString();
       const fired = this.schedules.update(request.orgId, schedule.id, {

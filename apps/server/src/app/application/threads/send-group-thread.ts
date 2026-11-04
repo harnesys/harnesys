@@ -6,6 +6,7 @@ import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { AttachmentRepositoryPort } from '../../domain/thread/attachment-repository.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { resolveResponders } from '../../domain/thread/responder-policy.ts';
+import { ThreadInvariantException } from '../../domain/thread/thread.error.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { allowsMentions } from '../../domain/thread/thread-policy.ts';
@@ -73,22 +74,28 @@ export async function sendGroupThread(
       { behavior: 'immediate' },
     ),
   );
-  if (enqueued.duplicate) {
-    return { runId: '', threadId: thread.id, status: 'ignored' };
-  }
-  deps.threads.touch(request.orgId, thread.id);
-  if (responders.length === 0) {
-    return { runId: '', threadId: thread.id, status: 'ignored' };
-  }
-  const drained = await deps.executor.drainMessageQueue(request.orgId, thread.id);
-  const runId = drained.status === 'delivered' ? drained.runId : '';
-  if (runId) {
-    auditRunStart(deps.audit, {
-      orgId: request.orgId,
-      runId,
-      attribution: attributedRun(request.attribution, null),
-      triggerId: request.trigger?.id ?? thread.id,
+  const threadSeq = enqueued.threadSeq;
+  if (threadSeq === null) {
+    throw new ThreadInvariantException(`group send stored no message for thread ${thread.id}`, {
+      threadId: thread.id,
     });
   }
-  return { runId, threadId: thread.id, status: 'queued' };
+  deps.threads.touch(request.orgId, thread.id);
+  if (enqueued.duplicate) {
+    return { status: 'stored', reason: 'duplicate', threadId: thread.id, threadSeq };
+  }
+  if (responders.length === 0) {
+    return { status: 'stored', reason: 'no_responder', threadId: thread.id, threadSeq };
+  }
+  const drained = await deps.executor.drainMessageQueue(request.orgId, thread.id);
+  if (drained.status !== 'delivered') {
+    return { status: 'stored', reason: 'deferred', threadId: thread.id, threadSeq };
+  }
+  auditRunStart(deps.audit, {
+    orgId: request.orgId,
+    runId: drained.runId,
+    attribution: attributedRun(request.attribution, null),
+    triggerId: request.trigger?.id ?? thread.id,
+  });
+  return { status: 'queued', runId: drained.runId, threadId: thread.id };
 }

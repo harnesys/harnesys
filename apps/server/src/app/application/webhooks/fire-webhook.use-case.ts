@@ -14,6 +14,7 @@ import {
   WebhookValidationException,
 } from '../../domain/webhook/webhook.error.ts';
 import { WebhookRepositoryPort } from '../../domain/webhook/webhook-repository.port.ts';
+import { requireRunAccepted } from '../threads/run-accepted.ts';
 import { mechanicalRunStart } from '../threads/run-attribution.ts';
 import { SendThreadRunUseCase } from '../threads/send-thread-run.use-case.ts';
 import { toDeskWebhookEvent } from './webhook.helpers.ts';
@@ -62,16 +63,18 @@ export class FireWebhookUseCase {
     });
     this.deskEvents.emit(request.orgId, toDeskWebhookEvent(fired));
     try {
-      const accepted = await this.sendThreadRun.execute({
-        orgId: request.orgId,
-        threadId: webhook.threadId,
-        body: {
-          text: webhookTaskText(webhook.name, request.text ?? webhook.detail),
-          mode: 'ask',
-        },
-        attribution: mechanicalRunStart(webhook.createdByUserId),
-        trigger: { kind: 'webhook', id: webhook.id },
-      });
+      const accepted = requireRunAccepted(
+        await this.sendThreadRun.execute({
+          orgId: request.orgId,
+          threadId: webhook.threadId,
+          body: {
+            text: webhookTaskText(webhook.name, request.text ?? webhook.detail),
+            mode: 'ask',
+          },
+          attribution: mechanicalRunStart(webhook.createdByUserId),
+          trigger: { kind: 'webhook', id: webhook.id },
+        }),
+      );
       this.threads.touch(request.orgId, webhook.threadId);
       this.clearThreadLaunchError(request.orgId, webhook.threadId, accepted.runId);
       return { runId: accepted.runId, status: 'fired' };

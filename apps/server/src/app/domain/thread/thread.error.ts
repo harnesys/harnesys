@@ -17,6 +17,12 @@ export class ThreadValidationException extends ValidationException {
   }
 }
 
+export class ThreadInvariantException extends DomainException {
+  constructor(message: string, details?: unknown) {
+    super('THREAD_INVARIANT_VIOLATION', message, details);
+  }
+}
+
 export class RunNotFoundException extends EntityNotFoundException {
   constructor(runId: string) {
     super(`Run not found: ${runId}`, { runId });

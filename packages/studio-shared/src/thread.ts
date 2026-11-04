@@ -115,10 +115,20 @@ export function primaryAgentIdOf(thread: ThreadAgentRef): string | undefined {
   }
   return thread.members[0]?.id;
 }
-export interface AcceptedRunResponse {
+export interface RunAcceptedResponse {
+  status: 'queued' | 'waiting' | 'failed';
   runId: string;
-  status: 'queued' | 'waiting' | 'failed' | 'ignored';
+  threadId: string;
+  waitingForProfileId?: string;
 }
+export type StoredMessageReason = 'duplicate' | 'deferred' | 'no_responder';
+export interface StoredMessageResponse {
+  status: 'stored';
+  reason: StoredMessageReason;
+  threadId: string;
+  threadSeq: number;
+}
+export type AcceptedRunResponse = RunAcceptedResponse | StoredMessageResponse;
 export type CompactThreadResponse =
   | {
       compacted: true;

@@ -3,6 +3,7 @@ import type { CreateThreadBody, ThreadKind, ThreadPublic } from '@harnesys/contr
 import { AgentNotFoundException } from '../../domain/agent/agent.error.ts';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
+import { UserNotFoundException } from '../../domain/identity/identity.error.ts';
 import { UserRepository } from '../../domain/identity/user-repository.port.ts';
 import { collectInheritedEvents } from '../../domain/thread/fork-logs.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
@@ -10,6 +11,7 @@ import {
   ThreadNotFoundException,
   ThreadValidationException,
 } from '../../domain/thread/thread.error.ts';
+import type { ThreadParticipantInsert } from '../../domain/thread/thread.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadParticipantRepositoryPort } from '../../domain/thread/thread-participant-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
@@ -46,8 +48,10 @@ export class CreateThreadUseCase {
     const { agent, agentIds, kind } = this.resolveAgents(request);
     const fork = await this.resolveFork(request, kind);
     const now = new Date().toISOString();
+    const threadId = crypto.randomUUID();
+    const participantRows = this.resolveParticipants(request, threadId, now);
     const thread = this.threads.insert({
-      id: crypto.randomUUID(),
+      id: threadId,
       orgId: request.orgId,
       title: request.body.title?.trim() || DEFAULT_THREAD_TITLE,
       kind,
@@ -68,7 +72,9 @@ export class CreateThreadUseCase {
     for (const agentId of agentIds) {
       this.threadAgents.ensure(request.orgId, thread.id, agentId);
     }
-    this.ensureParticipants(request, thread.id, now);
+    for (const row of participantRows) {
+      this.participants.ensure(row);
+    }
     const deps = {
       threadAgents: this.threadAgents,
       participants: this.participants,
@@ -135,13 +141,17 @@ export class CreateThreadUseCase {
     return { parentThreadId, forkAt, inheritedEventCount };
   }
 
-  private ensureParticipants(request: CreateThreadRequest, threadId: string, now: string): void {
-    for (const userId of request.body.participantUserIds ?? []) {
+  private resolveParticipants(
+    request: CreateThreadRequest,
+    threadId: string,
+    now: string,
+  ): ThreadParticipantInsert[] {
+    return (request.body.participantUserIds ?? []).map((userId) => {
       const user = this.users.findById(userId);
       if (!user) {
-        throw new ThreadNotFoundException(userId);
+        throw new UserNotFoundException(userId);
       }
-      this.participants.ensure({
+      return {
         id: crypto.randomUUID(),
         orgId: request.orgId,
         threadId,
@@ -154,7 +164,7 @@ export class CreateThreadUseCase {
         lastSeenAt: now,
         createdAt: now,
         updatedAt: now,
-      });
-    }
+      };
+    });
   }
 }

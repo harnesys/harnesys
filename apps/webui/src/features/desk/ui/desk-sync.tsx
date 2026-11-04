@@ -262,10 +262,7 @@ function fallbackAgentId(projectId: string): string | null {
   const focusedThread = focusedThreadId
     ? (useThreadStore.getState().byId(focusedThreadId) ?? null)
     : null;
-  const candidates = [
-    focusedThread?.agentId ?? null,
-    focusedThread?.originAgentId ?? null,
-    agents.length === 1 ? (agents[0]?.id ?? null) : null,
-  ];
+  const focusedMemberId = focusedThread?.members.find((member) => known.has(member.id))?.id ?? null;
+  const candidates = [focusedMemberId, agents.length === 1 ? (agents[0]?.id ?? null) : null];
   return candidates.find((id) => id && known.has(id)) ?? null;
 }

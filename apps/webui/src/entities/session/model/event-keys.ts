@@ -24,6 +24,22 @@ export function stableKeys(events: SessionEvent[]): string[] {
   }
   return keys;
 }
+export function withThreadSeq(
+  events: SessionEvent[],
+  clientEventId: string,
+  threadSeq: number,
+): SessionEvent[] | null {
+  const key = `ce:${clientEventId}`;
+  let changed = false;
+  const next = events.map((ev) => {
+    if (eventKey(ev) !== key || ev.threadSeq === threadSeq) {
+      return ev;
+    }
+    changed = true;
+    return { ...ev, threadSeq };
+  });
+  return changed ? next : null;
+}
 export function fillSeenAt(
   prev: Record<string, Record<string, number>>,
   threadId: string,

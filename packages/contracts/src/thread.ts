@@ -78,8 +78,8 @@ export const ThreadSummarySchema = z.object({
   id: z.string().uuid(),
   orgId: OrgIdSchema,
   title: z.string().min(1),
-  agentId: z.string(),
-  members: z.array(ThreadMemberSchema),
+  agentId: z.string().uuid(),
+  members: z.array(ThreadMemberSchema).min(1),
   autoReplyAgentId: z.string().uuid().nullable(),
   policy: ThreadPolicySchema,
   participants: z.array(ThreadParticipantSchema),
@@ -239,12 +239,32 @@ export const ThreadFilePathQuerySchema = z.object({
 });
 export type ThreadFilePathQuery = z.infer<typeof ThreadFilePathQuerySchema>;
 
-export const AcceptedRunResponseSchema = z.object({
-  runId: z.string(),
+export const RunAcceptedStatusSchema = z.enum(['queued', 'waiting', 'failed']);
+export type RunAcceptedStatus = z.infer<typeof RunAcceptedStatusSchema>;
+
+export const RunAcceptedResponseSchema = z.object({
+  status: RunAcceptedStatusSchema,
+  runId: z.string().uuid(),
   threadId: z.string().uuid(),
-  status: z.enum(['queued', 'waiting', 'failed', 'ignored']),
   waitingForProfileId: z.string().optional(),
 });
+export type RunAcceptedResponse = z.infer<typeof RunAcceptedResponseSchema>;
+
+export const StoredMessageReasonSchema = z.enum(['duplicate', 'deferred', 'no_responder']);
+export type StoredMessageReason = z.infer<typeof StoredMessageReasonSchema>;
+
+export const StoredMessageResponseSchema = z.object({
+  status: z.literal('stored'),
+  reason: StoredMessageReasonSchema,
+  threadId: z.string().uuid(),
+  threadSeq: z.number().int().nonnegative(),
+});
+export type StoredMessageResponse = z.infer<typeof StoredMessageResponseSchema>;
+
+export const AcceptedRunResponseSchema = z.discriminatedUnion('status', [
+  RunAcceptedResponseSchema,
+  StoredMessageResponseSchema,
+]);
 export type AcceptedRunResponse = z.infer<typeof AcceptedRunResponseSchema>;
 
 export const CancelRunResponseSchema = z.object({

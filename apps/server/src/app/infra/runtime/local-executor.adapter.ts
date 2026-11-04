@@ -1,5 +1,5 @@
 import { Injectable, Logger, type ModuleDestroyHook } from '@harnesys/brix';
-import type { AcceptedRunResponse, CancelRunResponse, RetryRunResponse } from '@harnesys/contracts';
+import type { CancelRunResponse, RetryRunResponse, RunAcceptedResponse } from '@harnesys/contracts';
 import type {
   HostEngineEntry,
   McpServerInfo,
@@ -228,7 +228,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     return (await this.ensure(orgId)).sessionFor(threadId, agentId);
   }
 
-  async send(input: SendLocalRunInput): Promise<AcceptedRunResponse> {
+  async send(input: SendLocalRunInput): Promise<RunAcceptedResponse> {
     const rt = await this.ensure(input.orgId);
     return rt.send({
       threadId: input.threadId,
