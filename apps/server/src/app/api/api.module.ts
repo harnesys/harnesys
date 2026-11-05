@@ -37,6 +37,7 @@ import { UsageUseCaseModule } from '../application/usage/usage.use-case.module.t
 import { BrowserUseCaseModule } from '../application/use-cases/browser/browser.use-case.module.ts';
 import { VaultUseCaseModule } from '../application/vault/vault.use-case.module.ts';
 import { WebhookUseCaseModule } from '../application/webhooks/webhook.use-case.module.ts';
+import { ConnectorModule } from '../infra/connector/connector.module.ts';
 import { DeskModule } from '../infra/desk/desk.module.ts';
 import { FleetHubModule } from '../infra/fleet-hub/fleet-hub.module.ts';
 import { IssueInfraModule } from '../infra/issues/issue.module.ts';
@@ -133,6 +134,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     AudioUseCaseModule,
     IssueUseCaseModule,
     IssueInfraModule,
+    ConnectorModule,
     DeskModule,
     ManagerUseCaseModule,
     KnowledgeUseCaseModule,

@@ -98,7 +98,6 @@ export function insertConnector(db: OrgSqliteDb, rec: ConnectorInsert): Connecto
         pairCodeExpiresAt: rec.pairCodeExpiresAt,
         leaseOwner: rec.leaseOwner,
         leaseUntil: rec.leaseUntil,
-        streamMode: rec.streamMode,
         capabilities: stringifyCapabilities(rec.capabilities),
         policy: stringifyPolicy(rec.policy),
         modeOverride: rec.modeOverride,
@@ -218,9 +217,6 @@ function connectorPatchValues(patch: ConnectorPatch): Record<string, unknown> {
   }
   if (patch.leaseUntil !== undefined) {
     values.leaseUntil = patch.leaseUntil;
-  }
-  if (patch.streamMode !== undefined) {
-    values.streamMode = patch.streamMode;
   }
   if (patch.capabilities !== undefined) {
     values.capabilities = stringifyCapabilities(patch.capabilities);

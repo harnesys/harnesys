@@ -156,7 +156,6 @@ export class UpsertTelegramConnectorUseCase {
       pairCodeExpiresAt: pairExpiresAtIso(nowMs),
       leaseOwner: null,
       leaseUntil: null,
-      streamMode: null,
       capabilities,
       policy: DEFAULT_MIRROR_POLICY,
       modeOverride: null,

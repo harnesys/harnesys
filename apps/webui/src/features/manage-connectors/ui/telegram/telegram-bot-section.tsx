@@ -2,18 +2,15 @@ import type { ConnectorPublic } from '@harnesys/contracts';
 import { SettingsSection } from '@/shared/ui/settings-kit';
 import { TelegramAddBotForm } from './telegram-add-bot-form';
 import { TelegramBotCard } from './telegram-bot-card';
-import type { PairInfo } from './telegram-status';
 
 export function TelegramBotSection({
   orgId,
   connectors,
-  pairByConnector,
   initialThreadId,
   onChanged,
 }: {
   orgId: string;
   connectors: ConnectorPublic[];
-  pairByConnector: Record<string, PairInfo>;
   initialThreadId?: string | null;
   onChanged: () => void;
 }) {
@@ -24,7 +21,6 @@ export function TelegramBotSection({
           key={connector.id}
           orgId={orgId}
           connector={connector}
-          initialPair={pairByConnector[connector.id] ?? null}
           initialThreadId={initialThreadId}
           onChanged={onChanged}
         />

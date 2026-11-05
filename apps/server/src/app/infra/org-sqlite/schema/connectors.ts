@@ -25,7 +25,6 @@ export const connectorsTable = sqliteTable(
     pairCodeExpiresAt: text('pair_code_expires_at'),
     leaseOwner: text('lease_owner'),
     leaseUntil: text('lease_until'),
-    streamMode: text('stream_mode'),
     capabilities: text('capabilities').notNull().default('{}'),
     policy: text('policy').notNull(),
     modeOverride: text('mode_override'),
@@ -37,10 +36,6 @@ export const connectorsTable = sqliteTable(
     statusCheck: check(
       'connectors_status_check',
       sql`${table.status} IN ('awaiting_pair', 'active', 'paused', 'error')`,
-    ),
-    streamModeCheck: check(
-      'connectors_stream_mode_check',
-      sql`${table.streamMode} IS NULL OR ${table.streamMode} IN ('draft', 'edit')`,
     ),
     orgIdx: index('connectors_org_idx').on(table.orgId),
     botUserUnique: uniqueIndex('connectors_org_provider_bot_user_unique')

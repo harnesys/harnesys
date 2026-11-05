@@ -1,12 +1,8 @@
-import type {
-  ConnectorDeliveryRecord,
-  ConnectorRecord,
-  ConnectorStreamMode,
-} from '../../domain/connector/connector.ts';
+import type { ConnectorDeliveryRecord, ConnectorRecord } from '../../domain/connector/connector.ts';
 import { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
 import { nextDraftTick, takeDraftChunk } from '../../domain/connector/draft-buffer.ts';
 import { TelegramApiPort } from '../../domain/connector/telegram-api.port.ts';
-import { retryAfterMs, shouldFallbackToEdit } from './draft-retry.ts';
+import { retryAfterMs } from './draft-retry.ts';
 
 export interface DraftSendState {
   orgId: string;
@@ -19,7 +15,6 @@ export interface DraftSendState {
   topicId: string | null;
   token: string;
   coalesceMs: number;
-  streamMode: ConnectorStreamMode | null;
   textIndex: number;
   draftId: number;
   deliveryId: string | null;
@@ -36,7 +31,6 @@ export interface DraftSendDeps {
   telegram: TelegramApiPort;
   now: () => number;
   sleep: (ms: number) => Promise<void>;
-  updateStreamMode: (orgId: string, connectorId: string, mode: ConnectorStreamMode) => void;
 }
 
 export async function sendThinkingDraft(deps: DraftSendDeps, state: DraftSendState): Promise<void> {
@@ -122,24 +116,11 @@ async function flushDraft(
   await waitRetry(deps, state);
   state.inFlight = true;
   try {
-    if (state.streamMode === 'edit') {
-      await flushEditMode(deps, state, input.text);
-    } else {
-      await flushDraftMode(deps, state, input.text);
-    }
+    await flushEditMode(deps, state, input.text);
     state.lastSent = input.text;
     state.lastSentAt = deps.now();
     persistDelivery(deps, state, input.text);
   } catch (error) {
-    if (shouldFallbackToEdit(error) && state.streamMode !== 'edit') {
-      state.streamMode = 'edit';
-      deps.updateStreamMode(state.orgId, state.connectorId, 'edit');
-      await flushEditMode(deps, state, input.text || '…');
-      state.lastSent = input.text;
-      state.lastSentAt = deps.now();
-      persistDelivery(deps, state, input.text);
-      return;
-    }
     const retryMs = retryAfterMs(error);
     if (retryMs !== null) {
       state.retryUntil = deps.now() + retryMs;
@@ -148,27 +129,6 @@ async function flushDraft(
     throw error;
   } finally {
     state.inFlight = false;
-  }
-}
-
-async function flushDraftMode(
-  deps: DraftSendDeps,
-  state: DraftSendState,
-  text: string,
-): Promise<void> {
-  await deps.telegram.sendMessageDraft(
-    state.token,
-    state.chatId,
-    state.draftId,
-    visibleText(state, text),
-    {
-      canStop: true,
-      topicId: state.topicId,
-    },
-  );
-  if (state.streamMode === null) {
-    state.streamMode = 'draft';
-    deps.updateStreamMode(state.orgId, state.connectorId, 'draft');
   }
 }
 
@@ -200,13 +160,8 @@ async function sendFinalChunk(
       topicId: state.topicId,
     });
     state.externalMessageId = sent.messageId;
-  } else if (state.streamMode === 'edit') {
-    await deps.telegram.editMessageText(state.token, state.chatId, state.externalMessageId, body);
   } else {
-    const sent = await deps.telegram.sendMessage(state.token, state.chatId, body, {
-      topicId: state.topicId,
-    });
-    state.externalMessageId = sent.messageId;
+    await deps.telegram.editMessageText(state.token, state.chatId, state.externalMessageId, body);
   }
   persistDelivery(deps, state, text);
 }
@@ -308,7 +263,6 @@ export function draftStateFromConnector(
     topicId: input.topicId,
     token: input.token,
     coalesceMs: connector.policy.coalesceMs,
-    streamMode: connector.streamMode,
     textIndex: input.delivery ? textIndexOf(input.delivery.blockKey) : 0,
     draftId: input.delivery?.draftId ?? 1,
     deliveryId: input.delivery?.id ?? null,

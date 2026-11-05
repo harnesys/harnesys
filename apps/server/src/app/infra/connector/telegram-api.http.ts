@@ -6,6 +6,30 @@ import {
 
 export const API_ROOT = 'https://api.telegram.org';
 
+export const STOPPED_UPDATE = 'stopped_message_generation';
+
+export const DEFAULT_ALLOWED_UPDATES = [
+  'message',
+  'edited_message',
+  'channel_post',
+  'edited_channel_post',
+  'callback_query',
+  'my_chat_member',
+  STOPPED_UPDATE,
+];
+
+export function rejectsStoppedUpdate(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) {
+    return false;
+  }
+  const rec = error as { statusCode?: unknown; description?: unknown; message?: unknown };
+  if (rec.statusCode !== 400) {
+    return false;
+  }
+  const text = `${String(rec.description ?? '')} ${String(rec.message ?? '')}`.toLowerCase();
+  return text.includes(STOPPED_UPDATE);
+}
+
 interface TelegramApiResponse {
   ok: boolean;
   description?: string;

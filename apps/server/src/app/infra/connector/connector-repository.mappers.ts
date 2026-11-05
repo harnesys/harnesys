@@ -15,7 +15,6 @@ import type {
   ConnectorProvider,
   ConnectorRecord,
   ConnectorStatus,
-  ConnectorStreamMode,
 } from '../../domain/connector/connector.ts';
 import type { MirrorPolicy } from '../../domain/connector/constants.ts';
 import type {
@@ -38,7 +37,6 @@ export function toConnector(row: ConnectorRow): ConnectorRecord {
     pairCodeExpiresAt: row.pairCodeExpiresAt,
     leaseOwner: row.leaseOwner,
     leaseUntil: row.leaseUntil,
-    streamMode: (row.streamMode as ConnectorStreamMode | null) ?? null,
     capabilities: parseChannelCapabilities(row.capabilities),
     policy: parseJson<MirrorPolicy>(row.policy),
     modeOverride: row.modeOverride,

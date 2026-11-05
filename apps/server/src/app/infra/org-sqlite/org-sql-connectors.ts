@@ -12,7 +12,6 @@ CREATE TABLE IF NOT EXISTS connectors (
   pair_code_expires_at TEXT,
   lease_owner TEXT,
   lease_until TEXT,
-  stream_mode TEXT CHECK(stream_mode IS NULL OR stream_mode IN ('draft', 'edit')),
   capabilities TEXT NOT NULL DEFAULT '{}',
   policy TEXT NOT NULL,
   mode_override TEXT,

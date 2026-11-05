@@ -14,6 +14,7 @@ import type {
   ConnectorRecord,
   InsertInboxResult,
 } from '../../domain/connector/connector.ts';
+import { ConnectorEventsPort } from '../../domain/connector/connector-events.port.ts';
 import { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { withOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
@@ -56,7 +57,10 @@ import {
 
 @Injectable()
 export class ConnectorRepositoryAdapter extends ConnectorRepositoryPort {
-  constructor(private readonly layout: HostFsLayoutPort) {
+  constructor(
+    private readonly layout: HostFsLayoutPort,
+    private readonly events: ConnectorEventsPort,
+  ) {
     super();
   }
 
@@ -83,17 +87,26 @@ export class ConnectorRepositoryAdapter extends ConnectorRepositoryPort {
   }
 
   insert(rec: ConnectorInsert): ConnectorRecord {
-    return withOrgSqlite(this.layout, rec.orgId, (db) => insertConnector(db, rec));
+    const created = withOrgSqlite(this.layout, rec.orgId, (db) => insertConnector(db, rec));
+    this.events.emit(rec.orgId);
+    return created;
   }
 
   update(orgId: string, id: string, patch: ConnectorPatch): ConnectorRecord {
-    return withOrgSqlite(this.layout, orgId, (db) => updateConnector(db, orgId, id, patch));
+    const updated = withOrgSqlite(this.layout, orgId, (db) =>
+      updateConnector(db, orgId, id, patch),
+    );
+    if (touchesConnectorView(patch)) {
+      this.events.emit(orgId);
+    }
+    return updated;
   }
 
   delete(orgId: string, id: string): void {
     withOrgSqlite(this.layout, orgId, (db) => {
       deleteConnector(db, orgId, id);
     });
+    this.events.emit(orgId);
   }
 
   listAgentIds(orgId: string, connectorId: string): string[] {
@@ -119,7 +132,9 @@ export class ConnectorRepositoryAdapter extends ConnectorRepositoryPort {
   }
 
   insertBinding(rec: ConnectorBindingInsert): ConnectorBindingRecord {
-    return withOrgSqlite(this.layout, rec.orgId, (db) => insertBindingRow(db, rec));
+    const created = withOrgSqlite(this.layout, rec.orgId, (db) => insertBindingRow(db, rec));
+    this.events.emit(rec.orgId);
+    return created;
   }
 
   findActiveBinding(orgId: string, connectorId: string): ConnectorBindingRecord | undefined {
@@ -169,12 +184,14 @@ export class ConnectorRepositoryAdapter extends ConnectorRepositoryPort {
     withOrgSqlite(this.layout, orgId, (db) => {
       updateBindingTitleRow(db, orgId, bindingId, title, updatedAt);
     });
+    this.events.emit(orgId);
   }
 
   deleteBinding(orgId: string, bindingId: string): void {
     withOrgSqlite(this.layout, orgId, (db) => {
       deleteBindingRow(db, orgId, bindingId);
     });
+    this.events.emit(orgId);
   }
 
   attachBindingThread(
@@ -183,21 +200,25 @@ export class ConnectorRepositoryAdapter extends ConnectorRepositoryPort {
     threadId: string,
     updatedAt: string,
   ): ConnectorBindingRecord {
-    return withOrgSqlite(this.layout, orgId, (db) =>
+    const bound = withOrgSqlite(this.layout, orgId, (db) =>
       attachBindingThreadRow(db, orgId, bindingId, threadId, updatedAt),
     );
+    this.events.emit(orgId);
+    return bound;
   }
 
   detachBinding(orgId: string, bindingId: string, updatedAt: string): void {
     withOrgSqlite(this.layout, orgId, (db) => {
       detachBindingRow(db, orgId, bindingId, updatedAt);
     });
+    this.events.emit(orgId);
   }
 
   clearBindings(orgId: string, connectorId: string): void {
     withOrgSqlite(this.layout, orgId, (db) => {
       clearBindingsRow(db, connectorId);
     });
+    this.events.emit(orgId);
   }
 
   insertInbox(orgId: string, rec: ConnectorInboxInsert): InsertInboxResult {
@@ -243,4 +264,19 @@ export class ConnectorRepositoryAdapter extends ConnectorRepositoryPort {
   listStreaming(orgId: string, connectorId: string): ConnectorDeliveryRecord[] {
     return withOrgSqlite(this.layout, orgId, (db) => listStreamingDeliveries(db, connectorId));
   }
+}
+
+const VIEW_FIELDS = new Set<keyof ConnectorPatch>([
+  'status',
+  'lastError',
+  'pairCodeHash',
+  'pairCodeExpiresAt',
+  'botUsername',
+  'botUserId',
+  'policy',
+  'capabilities',
+]);
+
+function touchesConnectorView(patch: ConnectorPatch): boolean {
+  return (Object.keys(patch) as Array<keyof ConnectorPatch>).some((key) => VIEW_FIELDS.has(key));
 }

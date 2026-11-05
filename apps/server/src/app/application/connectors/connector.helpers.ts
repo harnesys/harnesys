@@ -78,6 +78,7 @@ export function toConnectorPublic(
     botId: rec.botUserId,
     botUsername: rec.botUsername,
     lastError: rec.lastError,
+    pairExpiresAt: rec.pairCodeExpiresAt,
     capabilities: toCapabilitiesPublic(rec.capabilities),
     capabilityWarning: capabilityWarningOf({
       capabilities: rec.capabilities,

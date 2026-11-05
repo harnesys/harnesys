@@ -6,7 +6,7 @@ import { Input } from '@/shared/ui/input';
 import { toast } from '@/shared/ui/toast';
 import { attachChat } from '../../model/connector-api';
 
-export function TelegramAttachChat({
+export function TelegramRegisterChat({
   orgId,
   connectorId,
   onAttached,
@@ -32,11 +32,11 @@ export function TelegramAttachChat({
       setTitle('');
       setOpen(false);
       onAttached();
-      toast.add({ title: 'Chat added', description: 'Connect it to a thread next.' });
+      toast.add({ title: 'Chat registered', description: 'Connect it to a thread next.' });
     },
     onError: (error: unknown) => {
       toast.add({
-        title: 'Could not add the chat',
+        title: 'Could not register the chat',
         description: error instanceof Error ? error.message : 'Request failed',
       });
     },
@@ -47,18 +47,19 @@ export function TelegramAttachChat({
       <Button
         type="button"
         size="sm"
-        variant="outline"
-        data-testid="telegram-attach-chat-open"
+        variant="ghost"
+        className="self-start text-muted-foreground"
+        data-testid="telegram-register-chat-open"
         onClick={() => setOpen(true)}
       >
-        Add chat by id
+        Register a chat manually
       </Button>
     );
   }
   return (
     <form
-      className="flex flex-col gap-2 rounded-md border border-dashed p-2"
-      data-testid="telegram-attach-chat"
+      className="flex flex-col gap-2 rounded-md border border-dashed p-2.5"
+      data-testid="telegram-register-chat"
       onSubmit={(event) => {
         event.preventDefault();
         if (chatId.trim()) {
@@ -67,33 +68,36 @@ export function TelegramAttachChat({
       }}
     >
       <Field className="gap-1">
-        <FieldLabel htmlFor={`attach-chat-${connectorId}`}>Chat id or @username</FieldLabel>
+        <FieldLabel htmlFor={`register-chat-${connectorId}`}>Chat id or @username</FieldLabel>
         <Input
-          id={`attach-chat-${connectorId}`}
+          id={`register-chat-${connectorId}`}
           value={chatId}
-          placeholder="-1001234567890 or @my_group"
+          placeholder="@my_group or -1001234567890"
           onChange={(event) => setChatId(event.target.value)}
         />
       </Field>
       <div className="flex gap-2">
         <Input
           value={topicId}
+          aria-label="Topic id"
           placeholder="Topic id (optional)"
           onChange={(event) => setTopicId(event.target.value)}
         />
         <Input
           value={title}
-          placeholder="Title (optional)"
+          aria-label="Display name"
+          placeholder="Display name (optional)"
           onChange={(event) => setTitle(event.target.value)}
         />
       </div>
-      <p className="text-[11px] text-muted-foreground">
-        Private groups have no username: copy the numeric id with a helper bot, or send a message in
-        the group and refresh.
+      <p className="text-[11px] text-muted-foreground leading-4">
+        Used only when a chat does not appear on its own. Public groups and channels accept their
+        @username. Private ones have no username: open the chat in Telegram Web and copy the number
+        from the address bar.
       </p>
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={!chatId.trim() || mutation.isPending}>
-          Add
+          Register
         </Button>
         <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
           Cancel

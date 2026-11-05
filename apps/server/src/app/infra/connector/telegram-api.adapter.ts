@@ -17,23 +17,17 @@ import {
   asRecord,
   callForm,
   callJson,
+  DEFAULT_ALLOWED_UPDATES,
   isMemberLookupMiss,
   messageIdOf,
-} from './telegram-api.http.ts';
-
-const STOPPED_UPDATE = 'stopped_message_generation';
-const DEFAULT_ALLOWED = [
-  'message',
-  'edited_message',
-  'callback_query',
-  'my_chat_member',
+  rejectsStoppedUpdate,
   STOPPED_UPDATE,
-] as const;
+} from './telegram-api.http.ts';
 
 @Injectable()
 export class TelegramApiAdapter extends TelegramApiPort {
   private readonly log: Logger;
-  private allowedUpdates: string[] = [...DEFAULT_ALLOWED];
+  private allowedUpdates: string[] = [...DEFAULT_ALLOWED_UPDATES];
   private warnedStoppedUpdate = false;
 
   constructor(logger: Logger) {
@@ -126,28 +120,6 @@ export class TelegramApiAdapter extends TelegramApiPort {
       };
     }
     return messageIdOf(await callJson(token, 'sendMessage', body));
-  }
-
-  async sendMessageDraft(
-    token: string,
-    chatId: string,
-    draftId: number,
-    text: string,
-    options?: { canStop?: boolean; topicId?: string | null },
-  ): Promise<TelegramSentMessage> {
-    const body: Record<string, unknown> = {
-      chat_id: chatId,
-      draft_id: draftId,
-      text,
-    };
-    if (options?.topicId) {
-      body.message_thread_id = Number(options.topicId);
-    }
-    if (options?.canStop === true) {
-      body.can_stop = true;
-    }
-    await callJson(token, 'sendMessageDraft', body);
-    return { messageId: String(draftId) };
   }
 
   async editMessageText(
@@ -348,14 +320,6 @@ export class TelegramApiAdapter extends TelegramApiPort {
     if (this.allowedUpdates.includes(STOPPED_UPDATE) === false) {
       return false;
     }
-    if (typeof error !== 'object' || error === null) {
-      return false;
-    }
-    const rec = error as { statusCode?: unknown; description?: unknown; message?: unknown };
-    if (rec.statusCode !== 400) {
-      return false;
-    }
-    const text = `${String(rec.description ?? '')} ${String(rec.message ?? '')}`.toLowerCase();
-    return text.includes(STOPPED_UPDATE);
+    return rejectsStoppedUpdate(error);
   }
 }

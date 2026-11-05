@@ -11,6 +11,7 @@ export function TelegramAgentsPicker({
   agentIds,
   autoReplyAgentId,
   allowAutoReply = true,
+  single = false,
   onAgentIdsChange,
   onAutoReplyChange,
 }: {
@@ -18,6 +19,7 @@ export function TelegramAgentsPicker({
   agentIds: string[];
   autoReplyAgentId: string | null;
   allowAutoReply?: boolean;
+  single?: boolean;
   onAgentIdsChange: (ids: string[]) => void;
   onAutoReplyChange: (id: string | null) => void;
 }) {
@@ -26,6 +28,11 @@ export function TelegramAgentsPicker({
   const selected = new Set(agentIds);
 
   function toggle(agentId: string): void {
+    if (single) {
+      const next = selected.has(agentId) ? [] : [agentId];
+      onAgentIdsChange(next);
+      return;
+    }
     const next = selected.has(agentId)
       ? agentIds.filter((id) => id !== agentId)
       : [...agentIds, agentId];
@@ -57,9 +64,11 @@ export function TelegramAgentsPicker({
           <p className="text-muted-foreground text-xs">This organization has no agents yet.</p>
         ) : null}
       </div>
-      {!allowAutoReply ? (
+      {single || !allowAutoReply ? (
         <p className="text-[11px] text-muted-foreground">
-          Channels are mention-only: a channel post cannot trigger an automatic reply.
+          {single
+            ? 'A direct message holds exactly one agent: it answers every message.'
+            : 'Channels are mention-only: a channel post cannot trigger an automatic reply.'}
         </p>
       ) : (
         <div className="flex items-center gap-2">

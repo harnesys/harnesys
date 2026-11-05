@@ -48,6 +48,11 @@ export interface EventsWatchFleetFrame {
   type: 'fleet-changed';
 }
 
+export interface EventsWatchConnectorFrame {
+  orgId: OrgId;
+  type: 'connectors-changed';
+}
+
 export interface EventsWatchReleaseFrame {
   orgId: OrgId;
   type: 'release-available';

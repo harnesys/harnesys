@@ -13,6 +13,7 @@ export {
 } from './discovery';
 export {
   watchApprovalEvents,
+  watchConnectorChanges,
   watchDeskEvents,
   watchFleetChanged,
   watchKnowledgeIndexState,

@@ -12,7 +12,7 @@ import { TelegramThreadPicker } from './telegram-thread-picker';
 
 type Mode = 'existing' | 'new';
 
-export function TelegramConnectWizard({
+export function TelegramConnectPanel({
   orgId,
   connectorId,
   binding,
@@ -29,6 +29,7 @@ export function TelegramConnectWizard({
 }) {
   const targetKind = binding.chatType === 'private' ? 'chat' : 'group';
   const isChannel = binding.chatType === 'channel';
+  const isDm = binding.chatType === 'private';
   const [mode, setMode] = useState<Mode>(initialThreadId ? 'existing' : 'new');
   const [threadId, setThreadId] = useState<string | null>(initialThreadId ?? null);
   const [title, setTitle] = useState('');
@@ -50,7 +51,7 @@ export function TelegramConnectWizard({
       return connectChat(orgId, connectorId, binding.id, {
         mode: 'new',
         agentIds,
-        autoReplyAgentId: isChannel ? null : autoReplyAgentId,
+        autoReplyAgentId: isChannel || isDm ? null : autoReplyAgentId,
         ...(title.trim() ? { title: title.trim() } : {}),
       });
     },
@@ -84,9 +85,10 @@ export function TelegramConnectWizard({
 
   return (
     <div
-      className="flex flex-col gap-3 rounded-md border p-3"
-      data-testid="telegram-connect-wizard"
+      className="flex flex-col gap-3 rounded-md border border-dashed p-3"
+      data-testid="telegram-connect-panel"
     >
+      <p className="text-[11px] text-muted-foreground">{connectionHint(targetKind, binding)}</p>
       <div className="flex gap-1.5">
         <Button
           type="button"
@@ -117,6 +119,7 @@ export function TelegramConnectWizard({
         <div className="flex flex-col gap-2">
           <Input
             value={title}
+            aria-label="Thread title"
             placeholder={`Thread title (default: “${binding.title ?? 'Telegram'}”)`}
             onChange={(event) => setTitle(event.target.value)}
           />
@@ -125,12 +128,10 @@ export function TelegramConnectWizard({
             agentIds={agentIds}
             autoReplyAgentId={autoReplyAgentId}
             allowAutoReply={!isChannel}
-            onAgentIdsChange={(ids) => setAgentIds(targetKind === 'chat' ? ids.slice(-1) : ids)}
+            single={isDm}
+            onAgentIdsChange={setAgentIds}
             onAutoReplyChange={setAutoReplyAgentId}
           />
-          <p className="text-[11px] text-muted-foreground">
-            {connectionHint(targetKind, binding.chatType)}
-          </p>
         </div>
       )}
 
@@ -155,12 +156,12 @@ function isPromotion(error: ApiError): boolean {
   return error.message.toLowerCase().includes('1:1 thread');
 }
 
-function connectionHint(targetKind: 'chat' | 'group', chatType: string): string {
+function connectionHint(targetKind: 'chat' | 'group', binding: ConnectorBindingPublic): string {
   if (targetKind === 'chat') {
     return 'A direct message connects to a chat thread with exactly one agent.';
   }
-  if (chatType === 'channel') {
+  if (binding.chatType === 'channel') {
     return 'New channel posts appear in the thread. Agents answer only when mentioned with @name; channels never auto-reply.';
   }
-  return 'One agent answers every message; the others answer when mentioned with @name.';
+  return 'One agent can answer every message; the rest answer when mentioned with @name.';
 }

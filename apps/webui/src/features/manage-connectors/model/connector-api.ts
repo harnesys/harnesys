@@ -11,6 +11,8 @@ import type {
   ListConnectorsResponse,
   MirrorPolicyPublic,
   PatchTelegramPolicyBody,
+  RefreshChatsResponse,
+  RenameChatBody,
   TelegramConnectorActionResponse,
   UnpairTelegramConnectorResponse,
   UpsertTelegramConnectorResponse,
@@ -145,6 +147,25 @@ export function createTopic(orgId: string, connectorId: string, bindingId: strin
   return apiJson<CreateTopicResponse>(
     `${connectorsBase(orgId)}/${encodeURIComponent(connectorId)}/telegram/chats/${encodeURIComponent(bindingId)}/topics`,
     { method: 'POST', body: JSON.stringify({ name }) },
+  );
+}
+
+export function refreshTelegramChats(orgId: string, connectorId: string) {
+  return apiJson<RefreshChatsResponse>(
+    `${connectorsBase(orgId)}/${encodeURIComponent(connectorId)}/telegram/chats/refresh`,
+    { method: 'POST' },
+  );
+}
+
+export function renameChat(
+  orgId: string,
+  connectorId: string,
+  bindingId: string,
+  body: RenameChatBody,
+) {
+  return apiJson<ConnectChatResponse>(
+    `${connectorsBase(orgId)}/${encodeURIComponent(connectorId)}/telegram/chats/${encodeURIComponent(bindingId)}`,
+    { method: 'PATCH', body: JSON.stringify(body) },
   );
 }
 

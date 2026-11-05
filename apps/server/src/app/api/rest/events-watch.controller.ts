@@ -3,6 +3,7 @@ import type {
   DeskEvent,
   EventsWatchApprovalFrame,
   EventsWatchApprovalRecord,
+  EventsWatchConnectorFrame,
   EventsWatchDeskFrame,
   EventsWatchFleetFrame,
   EventsWatchIndexStateFrame,
@@ -14,6 +15,7 @@ import type {
 import { SSE_KEEP_ALIVE_MS } from '../../../const.ts';
 import type { ApprovalRecord } from '../../domain/approval/approval.ts';
 import { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
+import { ConnectorEventsPort } from '../../domain/connector/connector-events.port.ts';
 import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import { FleetEventsPort } from '../../domain/fleet/fleet-events.port.ts';
 import type { IssueDomainEvent } from '../../domain/issue/issue-events.port.ts';
@@ -47,6 +49,7 @@ export class EventsWatchController {
     private readonly materializationEvents: MaterializationEventsPort,
     private readonly releaseEvents: ReleaseEventsPort,
     private readonly terminalEvents: TerminalEventsPort,
+    private readonly connectorEvents: ConnectorEventsPort,
   ) {}
 
   @Get('events/watch')
@@ -65,6 +68,7 @@ export class EventsWatchController {
     const materializationEvents = this.materializationEvents;
     const releaseEvents = this.releaseEvents;
     const terminalEvents = this.terminalEvents;
+    const connectorEvents = this.connectorEvents;
     let keepAlive: ReturnType<typeof setInterval> | undefined;
     let unsubscribeIndex: (() => void) | undefined;
     let unsubscribeApprovals: (() => void) | undefined;
@@ -80,6 +84,7 @@ export class EventsWatchController {
     let unsubscribeMaterialization: (() => void) | undefined;
     let unsubscribeRelease: (() => void) | undefined;
     let unsubscribeTerminals: (() => void) | undefined;
+    let unsubscribeConnectors: (() => void) | undefined;
     let releaseSourceWatches: (() => void) | undefined;
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
@@ -155,6 +160,13 @@ export class EventsWatchController {
           const frame: EventsWatchTerminalFrame = { orgId: eventOrgId, event };
           write('terminal', JSON.stringify(frame));
         });
+        unsubscribeConnectors = connectorEvents.subscribe((eventOrgId) => {
+          const frame: EventsWatchConnectorFrame = {
+            orgId: eventOrgId,
+            type: 'connectors-changed',
+          };
+          write('connectors-changed', JSON.stringify(frame));
+        });
         releaseSourceWatches = sourceWatchGate.acquire(orgId);
         keepAlive = setInterval(() => {
           try {
@@ -182,6 +194,7 @@ export class EventsWatchController {
         unsubscribeMaterialization?.();
         unsubscribeRelease?.();
         unsubscribeTerminals?.();
+        unsubscribeConnectors?.();
         releaseSourceWatches?.();
       },
     });

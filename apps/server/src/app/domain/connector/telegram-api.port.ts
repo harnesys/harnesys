@@ -80,14 +80,6 @@ export abstract class TelegramApiPort {
     },
   ): Promise<TelegramSentMessage>;
 
-  abstract sendMessageDraft(
-    token: string,
-    chatId: string,
-    draftId: number,
-    text: string,
-    options?: { canStop?: boolean; topicId?: string | null },
-  ): Promise<TelegramSentMessage>;
-
   abstract editMessageText(
     token: string,
     chatId: string,

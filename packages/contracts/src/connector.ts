@@ -53,6 +53,7 @@ export const ConnectorPublicSchema = z.object({
   botId: z.string(),
   botUsername: z.string(),
   lastError: z.string().nullable(),
+  pairExpiresAt: z.string().nullable(),
   capabilities: ConnectorCapabilitiesSchema,
   capabilityWarning: z.string().nullable(),
   bindings: z.array(ConnectorBindingPublicSchema),
@@ -110,6 +111,23 @@ export const CreateTopicBodySchema = z.object({
   name: z.string().trim().min(1).max(128),
 });
 export type CreateTopicBody = z.infer<typeof CreateTopicBodySchema>;
+
+export const RenameChatBodySchema = z.object({
+  title: z.string().trim().min(1).max(160),
+});
+export type RenameChatBody = z.infer<typeof RenameChatBodySchema>;
+
+export const RefreshChatIssueSchema = z.object({
+  bindingId: z.string().uuid(),
+  message: z.string().min(1),
+});
+export type RefreshChatIssue = z.infer<typeof RefreshChatIssueSchema>;
+
+export const RefreshChatsResponseSchema = z.object({
+  connector: ConnectorPublicSchema,
+  issues: z.array(RefreshChatIssueSchema),
+});
+export type RefreshChatsResponse = z.infer<typeof RefreshChatsResponseSchema>;
 
 export const UpsertTelegramConnectorResponseSchema = z.object({
   connector: ConnectorPublicSchema,

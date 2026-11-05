@@ -19,8 +19,9 @@ import { DisconnectChatUseCase } from './disconnect-chat.use-case.ts';
 import { ForgetChatUseCase } from './forget-chat.use-case.ts';
 import { GetConnectorUseCase, ListConnectorsUseCase } from './list-connectors.use-case.ts';
 import { ProjectConnectorEventsUseCase } from './project-connector-events.use-case.ts';
+import { RefreshChatsUseCase } from './refresh-chats.use-case.ts';
+import { RenameChatUseCase } from './rename-chat.use-case.ts';
 import { RunTelegramCommandUseCase } from './run-telegram-command.use-case.ts';
-import { TelegramToolsProvider } from './telegram-tools.provider.ts';
 import {
   IssuePairCodeUseCase,
   PatchTelegramPolicyUseCase,
@@ -29,6 +30,7 @@ import {
   ResumeTelegramConnectorUseCase,
   UnpairTelegramConnectorUseCase,
 } from './telegram-connector-actions.use-case.ts';
+import { TelegramToolsProvider } from './telegram-tools.provider.ts';
 import { UpsertTelegramConnectorUseCase } from './upsert-telegram-connector.use-case.ts';
 
 const useCases = [
@@ -44,6 +46,8 @@ const useCases = [
   ConnectChatUseCase,
   DisconnectChatUseCase,
   AttachChatUseCase,
+  RefreshChatsUseCase,
+  RenameChatUseCase,
   CreateTopicUseCase,
   ForgetChatUseCase,
   ApplyTelegramUpdateUseCase,

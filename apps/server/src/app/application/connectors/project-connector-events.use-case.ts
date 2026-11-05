@@ -108,7 +108,6 @@ export class ProjectConnectorEventsUseCase
           return;
         }
         state.coalesceMs = live.policy.coalesceMs;
-        state.streamMode = live.streamMode ?? state.streamMode;
         await this.handleEvent(live, state, event);
       }
     } catch (error) {
@@ -261,12 +260,6 @@ export class ProjectConnectorEventsUseCase
       telegram: this.telegram,
       now: () => Date.now(),
       sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-      updateStreamMode: (orgId, connectorId, mode) => {
-        this.connectors.update(orgId, connectorId, {
-          streamMode: mode,
-          updatedAt: new Date().toISOString(),
-        });
-      },
     };
   }
 }

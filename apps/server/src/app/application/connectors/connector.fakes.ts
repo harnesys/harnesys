@@ -37,7 +37,6 @@ export function memoryConnector(overrides: Partial<ConnectorRecord> = {}): Conne
     pairCodeExpiresAt: null,
     leaseOwner: null,
     leaseUntil: null,
-    streamMode: null,
     capabilities: {
       canReadUnmentioned: true,
       supportsTopics: true,
@@ -274,10 +273,6 @@ export class FakeTelegram extends TelegramApiPort {
   }
 
   async sendMessage(): Promise<TelegramSentMessage> {
-    return { messageId: '1' };
-  }
-
-  async sendMessageDraft(): Promise<TelegramSentMessage> {
     return { messageId: '1' };
   }
 

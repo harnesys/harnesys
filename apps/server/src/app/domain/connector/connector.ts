@@ -5,8 +5,6 @@ export type ConnectorProvider = string;
 
 export type ConnectorStatus = 'awaiting_pair' | 'active' | 'paused' | 'error';
 
-export type ConnectorStreamMode = 'draft' | 'edit';
-
 export type ConnectorBindingStatus = 'active' | 'unpaired';
 
 export type ConnectorInboxKind =
@@ -35,7 +33,6 @@ export interface ConnectorRecord {
   pairCodeExpiresAt: string | null;
   leaseOwner: string | null;
   leaseUntil: string | null;
-  streamMode: ConnectorStreamMode | null;
   capabilities: ChannelCapabilities;
   policy: MirrorPolicy;
   modeOverride: string | null;
@@ -55,7 +52,6 @@ export type ConnectorPatch = Partial<{
   pairCodeExpiresAt: string | null;
   leaseOwner: string | null;
   leaseUntil: string | null;
-  streamMode: ConnectorStreamMode | null;
   capabilities: ChannelCapabilities;
   policy: MirrorPolicy;
   modeOverride: string | null;

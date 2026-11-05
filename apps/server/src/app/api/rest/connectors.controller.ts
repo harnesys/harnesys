@@ -21,6 +21,8 @@ import type {
   ListConnectorsQuery,
   ListConnectorsResponse,
   PatchTelegramPolicyBody,
+  RefreshChatsResponse,
+  RenameChatBody,
   TelegramConnectorActionResponse,
   UnpairTelegramConnectorResponse,
   UpsertTelegramConnectorBody,
@@ -32,6 +34,7 @@ import {
   CreateTopicBodySchema,
   ListConnectorsQuerySchema,
   PatchTelegramPolicyBodySchema,
+  RenameChatBodySchema,
   UpsertTelegramConnectorBodySchema,
 } from '@harnesys/contracts';
 import { AttachChatUseCase } from '../../application/connectors/attach-chat.use-case.ts';
@@ -43,6 +46,8 @@ import {
   GetConnectorUseCase,
   ListConnectorsUseCase,
 } from '../../application/connectors/list-connectors.use-case.ts';
+import { RefreshChatsUseCase } from '../../application/connectors/refresh-chats.use-case.ts';
+import { RenameChatUseCase } from '../../application/connectors/rename-chat.use-case.ts';
 import {
   IssuePairCodeUseCase,
   PatchTelegramPolicyUseCase,
@@ -70,6 +75,8 @@ export class ConnectorsController {
     private readonly disconnectChat: DisconnectChatUseCase,
     private readonly createTopic: CreateTopicUseCase,
     private readonly forgetChat: ForgetChatUseCase,
+    private readonly refreshChats: RefreshChatsUseCase,
+    private readonly renameChat: RenameChatUseCase,
   ) {}
 
   @Get()
@@ -159,6 +166,24 @@ export class ConnectorsController {
     @Body(AttachChatBodySchema) body: AttachChatBody,
   ): Promise<AttachChatResponse> {
     return this.attachChat.execute({ orgId, connectorId, body });
+  }
+
+  @Post(':connectorId/telegram/chats/refresh')
+  refresh(
+    @Param('orgId') orgId: string,
+    @Param('connectorId') connectorId: string,
+  ): Promise<RefreshChatsResponse> {
+    return this.refreshChats.execute({ orgId, connectorId });
+  }
+
+  @Patch(':connectorId/telegram/chats/:bindingId')
+  rename(
+    @Param('orgId') orgId: string,
+    @Param('connectorId') connectorId: string,
+    @Param('bindingId') bindingId: string,
+    @Body(RenameChatBodySchema) body: RenameChatBody,
+  ): ConnectChatResponse {
+    return this.renameChat.execute({ orgId, connectorId, bindingId, body });
   }
 
   @Post(':connectorId/telegram/chats/:bindingId/connect')
