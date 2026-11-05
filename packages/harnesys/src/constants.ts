@@ -210,6 +210,7 @@ export const MAP_TOOL = 'map';
 export const WAIT_TOOL = 'wait';
 export const STATE_SPAWNS_KEY = 'spawns';
 export const STATE_SPAWN_RESULTS_KEY = 'spawnResults';
+export const STATE_SPAWN_STARTED_KEY = 'spawnStarted';
 export const STATE_HANDOFF_AGENT_ID_KEY = 'handoffAgentId';
 export const STATE_MAP_ITEMS_KEY = 'mapItems';
 export const STATE_MAP_INSTRUCTION_KEY = 'mapInstruction';

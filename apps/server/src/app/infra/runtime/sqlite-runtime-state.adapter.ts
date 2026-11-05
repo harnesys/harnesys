@@ -147,7 +147,7 @@ export class SqliteRuntimeState extends InMemoryRuntimeState {
     if (existing) {
       return existing;
     }
-    const child = new SqliteRuntimeState(`${this.sessionId}:${spawnId}`, null, this.db);
+    const child = new SqliteRuntimeState(`${this.sessionId}:${spawnId}`, spawnId, this.db);
     this.sqliteChildren.set(spawnId, child);
     return child;
   }

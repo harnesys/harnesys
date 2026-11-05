@@ -257,7 +257,13 @@ describe('executeSpawn', () => {
       ...fakeState(() => snapshot('completed')),
       child: () => fakeState(() => childCurrent),
     };
-    const parent = parentOpts(parentState);
+    const journal: { spawnId: string; type: string }[] = [];
+    const parent: GraphOpts = {
+      ...parentOpts(parentState),
+      childJournal: (spawnId, ev) => {
+        journal.push({ spawnId, type: ev.type });
+      },
+    };
     const prepared = prepareSpawn(node({ maxConcurrency: 1 }), parent, {
       ...SLOTS,
       state: { spawns: calls(1) },
@@ -277,6 +283,8 @@ describe('executeSpawn', () => {
     });
     expect(captured[0]?.startNodeId).toBe('act');
     expect(captured[0]?.outputHint).toEqual(interruptOutput);
+    expect(captured[0]?.runId).toBe(spawnId);
+    expect(journal[0]).toEqual({ spawnId, type: 'child.prepared' });
   });
 
   test('runs children one by one in sequential mode', async () => {

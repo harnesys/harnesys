@@ -15,7 +15,7 @@ export async function respondToAsk(
     askId,
     payload,
     clientEventId: randomUUID(),
-  }).catch(() => {});
+  });
 }
 
 export async function rejectAsk(threadId: string, askId: string, note?: string): Promise<void> {

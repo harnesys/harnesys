@@ -5,6 +5,7 @@ import {
   MEMORY_REMIND_DEFAULT,
   PASSTHROUGH_MODEL_EVENTS,
   STATE_SPAWN_RESULTS_KEY,
+  STATE_SPAWN_STARTED_KEY,
 } from '../constants.ts';
 import type {
   AgentDefinition,
@@ -374,6 +375,7 @@ export interface GraphOpts {
   ackSteerMessages?: (itemIds: string[]) => Promise<void>;
   input: unknown;
   state: RuntimeState;
+  runId?: string;
   permissions?: PermissionMap;
   paths?: PathsConfig;
   permissionGrants?: PermissionGrantsPort;
@@ -472,7 +474,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
   let caps = selectPackOutputs(agent, opts.packOutputs ?? new Map());
   printPackDiagnostics(caps.diagnostics, opts.logger);
   const loaded = await opts.state.load();
-  const runId = loaded?.runId ?? crypto.randomUUID();
+  const runId = loaded?.runId ?? opts.runId ?? crypto.randomUUID();
   const excludedMediaRelPaths = new Map<string, { reason: string; untilTurn: number }>();
   let seq = loaded?.sequence ?? 0;
   const st: Record<string, unknown> = loaded
@@ -1773,7 +1775,15 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
           });
           yield e;
         }
+        const started: string[] = Array.isArray(st[STATE_SPAWN_STARTED_KEY])
+          ? (st[STATE_SPAWN_STARTED_KEY] as string[])
+          : [];
+        st[STATE_SPAWN_STARTED_KEY] = started;
         for (const t of prepared.targets) {
+          if (started.includes(t.spawnId)) {
+            continue;
+          }
+          started.push(t.spawnId);
           const e = await commit('running', 'agent.spawned', 'recorded', {
             agentId: t.call.agentId,
             agentName: t.def.name,
@@ -1908,6 +1918,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
       });
       clearQueuedSpawns(st);
       delete st[STATE_SPAWN_RESULTS_KEY];
+      delete st[STATE_SPAWN_STARTED_KEY];
       const treeUsage = spawnOutcome.results.reduce(
         (acc, item) => ({
           steps: acc.steps + (item.usage?.steps ?? 0),

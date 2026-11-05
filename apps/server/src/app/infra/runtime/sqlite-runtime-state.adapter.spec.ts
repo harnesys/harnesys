@@ -97,6 +97,25 @@ describe('SqliteRuntimeState', () => {
     expect(loaded?.runId).toBe('run-9');
   });
 
+  test('child state persists a parked snapshot across parent instances', async () => {
+    const parent = new SqliteRuntimeState('thread-1', 'run-child-parent', db);
+    const parked = snapOf('spawn-1', 'needs_input', 8);
+    parked.cursor.interrupt = {
+      interruptId: 'perm/spawn-1:act:3/0',
+      reason: 'allow process?',
+      resumeSchema: { type: 'object' },
+      nodeId: 'act',
+      source: 'permission',
+      output: { toolCalls: [{ id: 'call_1', name: 'shell', args: { command: 'echo hi' } }] },
+    };
+    await parent.child('spawn-1').commit(parked, [], { kind: 'recorded', sequence: 8 });
+    const revived = new SqliteRuntimeState('thread-1', 'run-child-parent', db).child('spawn-1');
+    const loaded = await revived.load();
+    expect(loaded?.runId).toBe('spawn-1');
+    expect(loaded?.status).toBe('needs_input');
+    expect(loaded?.cursor.interrupt?.output).toEqual(parked.cursor.interrupt?.output);
+  });
+
   test('load repairs a dangling tool call left by a crash', async () => {
     const snapshot = snapOf('run-1', 'running');
     snapshot.state = {

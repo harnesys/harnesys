@@ -161,14 +161,26 @@ export async function applyPermissionGate(input: {
       return null;
     }
   }
-  if (ctx.sandbox) {
-    throwPermissionAsk(call, ctx, idx, operation, input.subject);
-  }
   const approved = resumeApproved(ctx);
   const resumeMatches = permissionResumeMatches(ctx, idx);
   if (resumeMatches && ctx.resumeRejected === true) {
     ctx.resumePayload = undefined;
     return skippedGateResult(call, ctx);
+  }
+  if (resumeMatches && approved !== null) {
+    const scope = resumeScope(ctx);
+    ctx.resumePayload = undefined;
+    if (!approved) {
+      return skippedGateResult(call, ctx);
+    }
+    recordGranted(ctx.state, ctx.nodeId, call.id);
+    if (operation && scope !== 'once') {
+      recordRunOpGrant(ctx.state, operation);
+    }
+    return null;
+  }
+  if (ctx.sandbox) {
+    throwPermissionAsk(call, ctx, idx, operation, input.subject);
   }
   if (!resumeMatches || approved === null) {
     const request = await emitHook(ctx.hooks, 'PermissionRequest', {
@@ -186,16 +198,5 @@ export async function applyPermissionGate(input: {
     }
     throwPermissionAsk(call, ctx, idx, operation, input.subject);
   }
-  if (approved === false) {
-    const skipped = skippedGateResult(call, ctx);
-    ctx.resumePayload = undefined;
-    return skipped;
-  }
-  const scope = resumeScope(ctx);
-  recordGranted(ctx.state, ctx.nodeId, call.id);
-  if (operation && scope !== 'once') {
-    recordRunOpGrant(ctx.state, operation);
-  }
-  ctx.resumePayload = undefined;
-  return null;
+  throw new Error('unreachable: permission gate fell through without a decision');
 }

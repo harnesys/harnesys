@@ -173,13 +173,19 @@ function meta(ev: Event): Record<string, unknown> {
   return (ev.metadata ?? {}) as Record<string, unknown>;
 }
 
-async function resume(state: InMemoryRuntimeState, ask: Event, payload: unknown): Promise<Event[]> {
+async function resume(
+  state: InMemoryRuntimeState,
+  ask: Event,
+  payload: unknown,
+  opts: Partial<GraphOpts> = {},
+): Promise<Event[]> {
   const snap = await state.load();
   return run(state, {
     startNodeId: snap?.cursor.interrupt?.nodeId,
     outputHint: snap?.cursor.interrupt?.output ?? null,
     resumePayload: payload,
     resumeInterruptId: String(meta(ask).interruptId ?? ''),
+    ...opts,
   });
 }
 
@@ -211,6 +217,48 @@ describe('permission park/resume cycle', () => {
     expect(ask1).toBeDefined();
     const second = await resume(state, ask1 as Event, { approved: true, scope: 'run' });
     expect(exec.count).toBe(1);
+    expect(interrupts(second)).toHaveLength(0);
+    expect(second.some((ev) => ev.type === 'run.completed')).toBe(true);
+  });
+
+  test('sandbox: approved resume executes the parked call instead of re-asking', async () => {
+    installFetch('tool-then-stop');
+    exec.count = 0;
+    const state = new InMemoryRuntimeState('session-3');
+    const first = await run(state, { sandbox: true });
+    const ask1 = interrupts(first)[0] as Event;
+    expect(ask1).toBeDefined();
+    expect(meta(ask1).source).toBe('permission');
+    expect(exec.count).toBe(0);
+    const second = await resume(
+      state,
+      ask1 as Event,
+      { approved: true, scope: 'run' },
+      {
+        sandbox: true,
+      },
+    );
+    expect(exec.count).toBe(1);
+    expect(interrupts(second)).toHaveLength(0);
+    expect(second.some((ev) => ev.type === 'run.completed')).toBe(true);
+  });
+
+  test('sandbox: denied resume skips the call instead of re-asking', async () => {
+    installFetch('tool-then-stop');
+    exec.count = 0;
+    const state = new InMemoryRuntimeState('session-4');
+    const first = await run(state, { sandbox: true });
+    const ask1 = interrupts(first)[0] as Event;
+    expect(ask1).toBeDefined();
+    const second = await resume(
+      state,
+      ask1 as Event,
+      { approved: false, scope: 'run' },
+      {
+        sandbox: true,
+      },
+    );
+    expect(exec.count).toBe(0);
     expect(interrupts(second)).toHaveLength(0);
     expect(second.some((ev) => ev.type === 'run.completed')).toBe(true);
   });

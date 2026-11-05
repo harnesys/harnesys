@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { useAgentStore } from '@/entities/agent';
 import { useActiveOrgStore, useOrgActivityStore } from '@/entities/org-machine';
+import { permissionRulesQueryKey } from '@/entities/permission-rule/api/permission-rule';
 import { useProjects } from '@/entities/project';
 import { toClientThread, useThreadStore } from '@/entities/thread';
 import {
@@ -200,12 +201,17 @@ export function DeskSync() {
       if (frame.type === 'requested') {
         notifyApprovalRequested(frame.approval.id);
       }
+      if (frame.type === 'decided') {
+        void queryClient.invalidateQueries({
+          queryKey: [...permissionRulesQueryKey, activeOrgId],
+        });
+      }
       if (frame.approval.threadId) {
         const force = frame.type !== 'requested';
         void refreshThread(frame.approval.threadId, { force });
       }
     });
-  }, [activeOrgId]);
+  }, [activeOrgId, queryClient]);
   useEffect(() => {
     if (!activeOrgId) {
       return;

@@ -458,6 +458,7 @@ async function runOneChild(input: {
     agent: childDef,
     input: childInput,
     state: childState,
+    runId: target.spawnId,
     permissions: childPermissions({
       grant: target.call.permissions,
       childDef: target.def.permissions,
@@ -510,6 +511,15 @@ async function runOneChild(input: {
   const blockedProp = (): {
     blocked?: DeniedToolEntry[];
   } => (blocked.length > 0 ? { blocked } : {});
+  parent.childJournal?.(target.spawnId, {
+    eventId: crypto.randomUUID(),
+    type: 'child.prepared',
+    timestamp: Date.now(),
+    sessionId: childState.sessionId,
+    runId: target.spawnId,
+    agentId: target.def.id,
+    sequence: 0,
+  });
   try {
     for await (const ev of runChild(childOpts)) {
       if (ev.type === WORK_RESULT_EVENT) {
