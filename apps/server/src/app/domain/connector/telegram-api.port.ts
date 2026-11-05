@@ -52,11 +52,38 @@ export interface TelegramChatInfo {
   type: string;
   title: string | null;
   username: string | null;
+  description: string | null;
+  memberCount: number | null;
 }
 
 export interface TelegramForumTopic {
   chatId: string;
   topicId: string;
+}
+
+export type TelegramParseMode = 'HTML' | 'MarkdownV2';
+
+export type TelegramMediaKind = 'photo' | 'document' | 'video' | 'animation' | 'audio' | 'voice';
+
+export interface TelegramMediaSource {
+  bytes?: Uint8Array;
+  filename?: string;
+  fileId?: string;
+}
+
+export interface TelegramMediaOptions {
+  caption?: string;
+  parseMode?: TelegramParseMode;
+  topicId?: string | null;
+  replyToMessageId?: string | null;
+  disableNotification?: boolean;
+}
+
+export interface TelegramAlbumItem {
+  kind: TelegramMediaKind;
+  source: TelegramMediaSource;
+  caption?: string;
+  parseMode?: TelegramParseMode;
 }
 
 export abstract class TelegramApiPort {
@@ -77,6 +104,10 @@ export abstract class TelegramApiPort {
       replyMarkup?: { inlineKeyboard: TelegramInlineButton[][] };
       topicId?: string | null;
       replyToMessageId?: string | null;
+      parseMode?: TelegramParseMode;
+      disableNotification?: boolean;
+      protectContent?: boolean;
+      linkPreview?: boolean;
     },
   ): Promise<TelegramSentMessage>;
 
@@ -85,6 +116,15 @@ export abstract class TelegramApiPort {
     chatId: string,
     messageId: string,
     text: string,
+    options?: { parseMode?: TelegramParseMode; linkPreview?: boolean },
+  ): Promise<TelegramSentMessage>;
+
+  abstract editMessageCaption(
+    token: string,
+    chatId: string,
+    messageId: string,
+    caption: string,
+    options?: { parseMode?: TelegramParseMode },
   ): Promise<TelegramSentMessage>;
 
   abstract deleteMessage(token: string, chatId: string, messageId: string): Promise<void>;
@@ -96,6 +136,16 @@ export abstract class TelegramApiPort {
     notify?: boolean,
   ): Promise<void>;
 
+  abstract unpinChatMessage(token: string, chatId: string, messageId: string): Promise<void>;
+
+  abstract forwardMessage(
+    token: string,
+    fromChatId: string,
+    messageId: string,
+    toChatId: string,
+    options?: { topicId?: string | null; disableNotification?: boolean },
+  ): Promise<TelegramSentMessage>;
+
   abstract sendChatAction(
     token: string,
     chatId: string,
@@ -106,17 +156,46 @@ export abstract class TelegramApiPort {
   abstract sendPhoto(
     token: string,
     chatId: string,
-    bytes: Uint8Array,
-    filename: string,
-    topicId?: string | null,
+    source: TelegramMediaSource,
+    options?: TelegramMediaOptions,
   ): Promise<TelegramSentMessage>;
 
   abstract sendDocument(
     token: string,
     chatId: string,
-    bytes: Uint8Array,
-    filename: string,
-    topicId?: string | null,
+    source: TelegramMediaSource,
+    options?: TelegramMediaOptions,
+  ): Promise<TelegramSentMessage>;
+
+  abstract sendMedia(
+    token: string,
+    chatId: string,
+    kind: TelegramMediaKind,
+    source: TelegramMediaSource,
+    options?: TelegramMediaOptions,
+  ): Promise<TelegramSentMessage>;
+
+  abstract sendMediaGroup(
+    token: string,
+    chatId: string,
+    items: TelegramAlbumItem[],
+    options?: { topicId?: string | null; disableNotification?: boolean },
+  ): Promise<TelegramSentMessage[]>;
+
+  abstract sendPoll(
+    token: string,
+    chatId: string,
+    input: {
+      question: string;
+      options: string[];
+      anonymous?: boolean;
+      multiple?: boolean;
+      quiz?: boolean;
+      correctOptionId?: number;
+      explanation?: string;
+      topicId?: string | null;
+      disableNotification?: boolean;
+    },
   ): Promise<TelegramSentMessage>;
 
   abstract answerCallbackQuery(
@@ -140,6 +219,19 @@ export abstract class TelegramApiPort {
     chatId: string,
     name: string,
   ): Promise<TelegramForumTopic>;
+
+  abstract editForumTopic(
+    token: string,
+    chatId: string,
+    topicId: string,
+    name: string,
+  ): Promise<void>;
+
+  abstract closeForumTopic(token: string, chatId: string, topicId: string): Promise<void>;
+
+  abstract reopenForumTopic(token: string, chatId: string, topicId: string): Promise<void>;
+
+  abstract deleteForumTopic(token: string, chatId: string, topicId: string): Promise<void>;
 
   abstract setMyCommands(token: string, commands: TelegramBotCommand[]): Promise<void>;
 }

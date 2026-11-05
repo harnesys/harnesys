@@ -201,7 +201,6 @@ function seedValues(ref: AgentModelRef | undefined, providers: ProviderPublic[])
     effort: ref?.effort ?? null,
     temperature: numberString(generation?.temperature),
     topP: numberString(generation?.topP),
-    topK: numberString(generation?.topK),
     frequencyPenalty: numberString(generation?.frequencyPenalty),
     presencePenalty: numberString(generation?.presencePenalty),
     seed: numberString(generation?.seed),
@@ -212,7 +211,6 @@ function nodeGenerationOf(values: AgentFieldsInput): AgentGenerationSettings | n
   const generation: AgentGenerationSettings = {
     temperature: numberOrNull(values.temperature),
     topP: numberOrNull(values.topP),
-    topK: numberOrNull(values.topK),
     frequencyPenalty: numberOrNull(values.frequencyPenalty),
     presencePenalty: numberOrNull(values.presencePenalty),
     seed: numberOrNull(values.seed),

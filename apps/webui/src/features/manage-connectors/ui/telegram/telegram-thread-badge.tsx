@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
+import { identityLinksQuery } from '@/shared/api/identity-links';
 import { studioPath } from '@/shared/config/routes';
 import { Button } from '@/shared/ui/button';
 import {
@@ -33,25 +34,11 @@ export function ThreadTelegramBadge({ orgId, threadId, inline = false }: ThreadT
         .map((binding) => ({ connector, binding })),
     )
     .at(0);
+  const identity = useQuery({ ...identityLinksQuery(), enabled: route !== undefined });
+  const accountLinked = (identity.data?.links ?? []).some((link) => link.provider === 'telegram');
 
-  if (connectors.isPending) {
-    return null;
-  }
   if (!route) {
-    if (items.length === 0) {
-      return null;
-    }
-    return (
-      <div className={shellClassName(inline)} data-testid="thread-telegram-badge-disconnected">
-        {inline ? null : <span className="text-muted-foreground">Not connected to Telegram</span>}
-        <Link
-          to={`${studioPath.connector(orgId, 'telegram')}?threadId=${encodeURIComponent(threadId)}`}
-          className="text-status-info underline-offset-2 hover:underline"
-        >
-          Connect to Telegram
-        </Link>
-      </div>
-    );
+    return null;
   }
 
   async function disconnect(): Promise<void> {
@@ -75,6 +62,15 @@ export function ThreadTelegramBadge({ orgId, threadId, inline = false }: ThreadT
       >
         Open in Telegram
       </a>
+      {identity.isSuccess && !accountLinked ? (
+        <Link
+          to={`${studioPath.connector(orgId, 'telegram')}?threadId=${encodeURIComponent(threadId)}`}
+          className="text-status-info underline-offset-2 hover:underline"
+          data-testid="thread-telegram-badge-unlinked"
+        >
+          Link your Telegram account
+        </Link>
+      ) : null}
       <Button type="button" size="sm" variant="ghost" onClick={() => void disconnect()}>
         Disconnect
       </Button>

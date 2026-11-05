@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS connector_deliveries (
   interrupt_id TEXT,
   draft_id INTEGER,
   last_text TEXT,
+  last_seq INTEGER NOT NULL DEFAULT 0,
   external_message_id TEXT,
   status TEXT NOT NULL DEFAULT 'streaming'
     CHECK(status IN ('streaming', 'final', 'failed')),
@@ -91,3 +92,16 @@ CREATE INDEX IF NOT EXISTS connector_deliveries_streaming_idx
 CREATE INDEX IF NOT EXISTS connector_deliveries_message_idx
   ON connector_deliveries(connector_id, external_message_id);
 `;
+
+export function migrateConnectorDeliveryCursor(
+  exec: (sql: string) => void,
+  all?: (sql: string) => Array<{ name: string }>,
+): void {
+  if (!all) {
+    return;
+  }
+  const present = new Set(all('PRAGMA table_info(connector_deliveries)').map((col) => col.name));
+  if (!present.has('last_seq')) {
+    exec('ALTER TABLE connector_deliveries ADD COLUMN last_seq INTEGER NOT NULL DEFAULT 0');
+  }
+}

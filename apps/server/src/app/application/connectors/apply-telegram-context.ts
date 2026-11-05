@@ -5,6 +5,8 @@ import { ConnectorOutboundPort } from '../../domain/connector/connector-outbound
 import { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
 import { TelegramApiPort } from '../../domain/connector/telegram-api.port.ts';
 import type { CanonicalUpdate } from '../../domain/connector/telegram-update.ts';
+import { IdentityLinkRepository } from '../../domain/identity/identity-link.port.ts';
+import { UserRepository } from '../../domain/identity/user-repository.port.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
@@ -30,6 +32,8 @@ export interface ApplyActionDeps {
   cancelRun: CancelRunUseCase;
   uploadAttachment: UploadThreadAttachmentUseCase;
   outbound: ConnectorOutboundPort;
+  links: IdentityLinkRepository;
+  users: UserRepository;
 }
 
 export interface ApplyActionContext {

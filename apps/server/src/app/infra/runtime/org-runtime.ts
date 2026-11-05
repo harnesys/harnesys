@@ -46,6 +46,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
       orgId: deps.orgId,
       db: session.db,
       ...(deps.threadEvents === undefined ? {} : { threadEvents: deps.threadEvents }),
+      ...(deps.logger === undefined ? {} : { logger: deps.logger }),
     }),
   });
   const stores = createOrgRunStores(
@@ -96,8 +97,11 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
   const engine: RunEngine = createRunEngine({
     lifecycle: runLifecycle,
     events: runEvents,
-    feed,
     instanceId,
+    delivery: () => {
+      const delivery = deps.orgSettings.get(deps.orgId).delivery;
+      return { liveFlushMs: delivery.liveFlushMs, journalBatch: delivery.journalBatch };
+    },
     models: modelsPort,
     toolRegistry: plugin.makeRegistry(),
     skills: plugin.skills,

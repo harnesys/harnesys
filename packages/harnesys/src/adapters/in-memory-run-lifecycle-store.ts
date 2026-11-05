@@ -95,7 +95,7 @@ export class InMemoryRunLifecycleStore implements RunLifecycleStore {
     }
     this.runs.set(run.runId, record);
     if (events.length > 0) {
-      this.eventStore.appendLocked(run.runId, events);
+      this.eventStore.appendLocked(run.runId, events, run.threadId);
     }
     for (const event of events) {
       const clientEventId = clientEventIdOf(event);
@@ -165,7 +165,7 @@ export class InMemoryRunLifecycleStore implements RunLifecycleStore {
     delete record.leaseExpiresAt;
     record.updatedAt = new Date().toISOString();
     if (patch.events && patch.events.length > 0) {
-      this.eventStore.appendLocked(runId, patch.events);
+      this.eventStore.appendLocked(runId, patch.events, record.threadId);
     }
     return Promise.resolve({ ...record });
   }

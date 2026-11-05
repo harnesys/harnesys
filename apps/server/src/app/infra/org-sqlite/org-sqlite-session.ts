@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import type { BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { migrateConnectorDeliveryCursor } from './org-sql-connectors.ts';
 import { ensureOrgSchema } from './org-sql-ensure.ts';
 import * as knowledgeSchema from './schema/index.ts';
 
@@ -36,12 +37,12 @@ export function openOrgSqlite(layout: HostFsLayoutPort, orgId: string): OrgSqlit
   const sqlite = new Database(path, { create: true });
   configureOrgSqlite(sqlite);
   if (!ensuredOrgs.has(orgId)) {
-    ensureOrgSchema(
-      (sql) => {
-        sqlite.exec(sql);
-      },
-      (sql) => sqlite.query(sql).all() as { name: string }[],
-    );
+    const exec = (sql: string) => {
+      sqlite.exec(sql);
+    };
+    const all = (sql: string) => sqlite.query(sql).all() as { name: string }[];
+    ensureOrgSchema(exec, all);
+    migrateConnectorDeliveryCursor(exec, all);
     ensuredOrgs.add(orgId);
   }
   const db = drizzle(sqlite, { schema: knowledgeSchema });

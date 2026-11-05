@@ -39,13 +39,69 @@ const TOOL_META = [
     name: 'telegram_pin_message',
     description: 'Pin a message in a group or channel.',
   },
+  {
+    name: 'telegram_unpin_message',
+    description: 'Unpin a message in a group or channel.',
+  },
+  {
+    name: 'telegram_send_photo',
+    description: 'Post a photo with an optional caption from a file path, file id, or bytes.',
+  },
+  {
+    name: 'telegram_send_document',
+    description: 'Post a document with an optional caption from a file path, file id, or bytes.',
+  },
+  {
+    name: 'telegram_send_video',
+    description: 'Post a video with an optional caption.',
+  },
+  {
+    name: 'telegram_send_animation',
+    description: 'Post a GIF or short silent video as an animation.',
+  },
+  {
+    name: 'telegram_send_audio',
+    description: 'Post an audio track with an optional caption.',
+  },
+  {
+    name: 'telegram_send_voice',
+    description: 'Post a voice message.',
+  },
+  {
+    name: 'telegram_send_album',
+    description: 'Post an album of 2 to 10 photos, videos, or documents with captions.',
+  },
+  {
+    name: 'telegram_edit_caption',
+    description: 'Edit the caption of a media message the bot posted.',
+  },
+  {
+    name: 'telegram_forward_message',
+    description: 'Forward a message to another chat the bot can post to.',
+  },
+  {
+    name: 'telegram_create_topic',
+    description: 'Create a forum topic in a group.',
+  },
+  {
+    name: 'telegram_edit_topic',
+    description: 'Rename, close, or reopen a forum topic.',
+  },
+  {
+    name: 'telegram_delete_topic',
+    description: 'Delete a forum topic and its messages.',
+  },
+  {
+    name: 'telegram_send_poll',
+    description: 'Post a poll or quiz to a group or channel.',
+  },
 ];
 
 export const telegramCapability = definePack<TelegramCapabilityPorts, TelegramPackSpec>({
   name: 'telegram',
   version: '1.0.0',
   description:
-    'Telegram: list chats and channels, read recent messages, post, edit, delete, and pin messages as the organization bot',
+    'Telegram content management: list chats and channels, read recent messages, post and edit text, photos, videos, documents, albums, polls, manage topics, forward, pin, and delete as the organization bot',
   icon: 'telegram',
   specSchema: {
     type: 'object',

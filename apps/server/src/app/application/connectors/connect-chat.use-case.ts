@@ -154,12 +154,12 @@ export class ConnectChatUseCase {
         'Channels are mention-only: a channel post cannot trigger an automatic reply',
       );
     }
-    const autoReplyAgentId =
-      targetKind === 'chat'
-        ? (agentIds[0] ?? null)
-        : binding.chatType === 'channel'
-          ? null
-          : (body.autoReplyAgentId ?? null);
+    const autoReplyAgentId = resolveAutoReply(
+      targetKind,
+      binding.chatType,
+      agentIds[0] ?? null,
+      body.autoReplyAgentId ?? null,
+    );
     if (autoReplyAgentId !== null && !agentIds.includes(autoReplyAgentId)) {
       throw new ConnectorValidationException('The auto-reply agent must belong to this thread');
     }
@@ -245,4 +245,19 @@ export class ConnectChatUseCase {
         : 'Make the bot a group admin or disable privacy mode in BotFather (/setprivacy).',
     );
   }
+}
+
+function resolveAutoReply(
+  targetKind: 'chat' | 'group',
+  chatType: string,
+  firstAgentId: string | null,
+  requestedAgentId: string | null,
+): string | null {
+  if (targetKind === 'chat') {
+    return firstAgentId;
+  }
+  if (chatType === 'channel') {
+    return null;
+  }
+  return requestedAgentId;
 }

@@ -1,5 +1,6 @@
 import { Module } from '@harnesys/brix';
 import { IdentityAudit } from '../../domain/identity/identity-audit.port.ts';
+import { IdentityLinkRepository } from '../../domain/identity/identity-link.port.ts';
 import { MembershipRepository } from '../../domain/identity/membership-repository.port.ts';
 import { PasswordHasher } from '../../domain/identity/password-hasher.port.ts';
 import { SessionStore } from '../../domain/identity/session-store.port.ts';
@@ -7,6 +8,7 @@ import { UserInviteStore } from '../../domain/identity/user-invite-repository.po
 import { LoginAttemptStore, UserRepository } from '../../domain/identity/user-repository.port.ts';
 import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
 import { IdentityAuditAdapter } from './identity-audit.adapter.ts';
+import { IdentityLinkAdapter } from './identity-link.adapter.ts';
 import { MembershipRepositoryAdapter } from './membership-repository.adapter.ts';
 import { PasswordHasherAdapter } from './password-hasher.adapter.ts';
 import { SessionStoreAdapter } from './session-repository.adapter.ts';
@@ -22,6 +24,7 @@ import { LoginAttemptStoreAdapter, UserRepositoryAdapter } from './user-reposito
     { provide: SessionStore, useClass: SessionStoreAdapter },
     { provide: UserInviteStore, useClass: UserInviteRepositoryAdapter },
     { provide: IdentityAudit, useClass: IdentityAuditAdapter },
+    { provide: IdentityLinkRepository, useClass: IdentityLinkAdapter },
     { provide: PasswordHasher, useClass: PasswordHasherAdapter },
   ],
   exports: [
@@ -31,6 +34,7 @@ import { LoginAttemptStoreAdapter, UserRepositoryAdapter } from './user-reposito
     SessionStore,
     UserInviteStore,
     IdentityAudit,
+    IdentityLinkRepository,
     PasswordHasher,
   ],
 })

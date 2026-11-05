@@ -81,6 +81,38 @@ export const userInvites = sqliteTable(
   }),
 );
 
+export const identityLinks = sqliteTable(
+  'identity_links',
+  {
+    userId: text('user_id').notNull(),
+    provider: text('provider').notNull(),
+    providerUserId: text('provider_user_id').notNull(),
+    displayName: text('display_name'),
+    handle: text('handle'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.provider] }),
+    identityUnique: uniqueIndex('identity_links_identity_unique').on(
+      table.provider,
+      table.providerUserId,
+    ),
+  }),
+);
+
+export const identityLinkCodes = sqliteTable(
+  'identity_link_codes',
+  {
+    codeHash: text('code_hash').primaryKey(),
+    userId: text('user_id').notNull(),
+    provider: text('provider').notNull(),
+    expiresAt: text('expires_at').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [index('identity_link_codes_expiry_idx').on(table.expiresAt)],
+);
+
 export const identityAudit = sqliteTable('identity_audit', {
   id: text('id').primaryKey(),
   at: text('at').notNull(),

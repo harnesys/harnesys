@@ -21,13 +21,14 @@ export interface DraftSendState {
   externalMessageId: string | null;
   pending: string;
   lastSent: string;
+  lastSeq: number;
   lastSentAt: number;
   inFlight: boolean;
   retryUntil: number;
 }
 
 export interface DraftSendDeps {
-  connectors: ConnectorRepositoryPort;
+  connectors: Pick<ConnectorRepositoryPort, 'upsertDelivery'>;
   telegram: TelegramApiPort;
   now: () => number;
   sleep: (ms: number) => Promise<void>;
@@ -195,6 +196,7 @@ function persistDelivery(
     interruptId: null,
     draftId: state.draftId,
     lastText,
+    lastSeq: state.lastSeq,
     externalMessageId: state.externalMessageId,
     status: 'streaming',
     updatedAt: new Date(deps.now()).toISOString(),
@@ -215,6 +217,7 @@ function markDeliveryFinal(deps: DraftSendDeps, state: DraftSendState): void {
     interruptId: null,
     draftId: state.draftId,
     lastText: state.pending || state.lastSent,
+    lastSeq: state.lastSeq,
     externalMessageId: state.externalMessageId,
     status: 'final',
     updatedAt: new Date(deps.now()).toISOString(),
@@ -269,6 +272,7 @@ export function draftStateFromConnector(
     externalMessageId: input.delivery?.externalMessageId ?? null,
     pending: input.delivery?.lastText ?? '',
     lastSent: input.delivery?.lastText ?? '',
+    lastSeq: input.delivery?.lastSeq ?? 0,
     lastSentAt: 0,
     inFlight: false,
     retryUntil: 0,

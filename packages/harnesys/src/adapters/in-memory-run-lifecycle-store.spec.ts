@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { RunRecord } from '../ports/run-lifecycle-store.ts';
+import type { SessionEvent } from '../ports/session.ts';
 import { InMemoryRunEventStore } from './in-memory-run-event-store.ts';
 import { InMemoryRunLifecycleStore } from './in-memory-run-lifecycle-store.ts';
 
@@ -46,5 +47,31 @@ describe('in-memory run lifecycle store', () => {
     );
     const stale = await store.listStaleRunning({ now });
     expect(stale.map((rec) => rec.runId)).toEqual(['root-1']);
+  });
+
+  test('publishes create and transition events exactly once', async () => {
+    const batches: Array<{ threadId: string; runId: string; events: SessionEvent[] }> = [];
+    const events = new InMemoryRunEventStore((threadId, runId, batch) => {
+      batches.push({ threadId, runId, events: batch });
+    });
+    const store = new InMemoryRunLifecycleStore(events);
+    const created = await store.create(
+      { runId: 'run-1', threadId: 'thread-1', agentId: 'agent-1', agentName: 'Agent' },
+      [{ type: 'user', text: 'hello' }],
+    );
+    const claimed = await store.claim(created.runId, 'instance-1', 1_000);
+    if (!claimed) {
+      throw new Error('run was not claimed');
+    }
+    await store.transition(claimed.runId, claimed.leaseEpoch, {
+      from: 'running',
+      to: 'completed',
+      events: [{ type: 'run.completed' }],
+    });
+
+    expect(batches).toHaveLength(2);
+    expect(batches[0]?.threadId).toBe('thread-1');
+    expect(batches[0]?.events.map((event) => event.type)).toEqual(['user']);
+    expect(batches[1]?.events.map((event) => event.type)).toEqual(['run.completed']);
   });
 });

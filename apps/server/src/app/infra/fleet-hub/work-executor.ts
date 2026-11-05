@@ -144,9 +144,12 @@ async function runPlaced(
     agent,
   });
 
-  const events = new InMemoryRunEventStore();
+  const bus = createRunEventBus();
+  const events = new InMemoryRunEventStore((threadId, runId, batch) =>
+    bus.publish(threadId, runId, batch),
+  );
   const lifecycle = new InMemoryRunLifecycleStore(events);
-  const feed = createRunEventFeed({ events, lifecycle, bus: createRunEventBus() });
+  const feed = createRunEventFeed({ events, lifecycle, bus });
   const instanceId = `worker-${identity.nodeId}`;
   const agentsResolve = placedAgentsResolve(deps, orgId);
 
@@ -223,7 +226,7 @@ async function runPlaced(
         threadDir: prepared.threadDir,
       },
     });
-    wirePlacedResponder({ active, lifecycle, events, feed, envelope, session });
+    wirePlacedResponder({ active, envelope, session });
 
     try {
       if (active.cancelled) {
@@ -283,15 +286,11 @@ export async function resolvePlacedSecrets(args: {
 
 export function wirePlacedResponder(args: {
   active: PlacedRunGate;
-  lifecycle: InMemoryRunLifecycleStore;
-  events: InMemoryRunEventStore;
-  feed: ReturnType<typeof createRunEventFeed>;
   envelope: TaskEnvelope;
   session: SessionHandle;
 }): void {
-  const { active, lifecycle, events, feed, envelope, session } = args;
+  const { active, envelope, session } = args;
   active.respond = async (resume) => {
-    const before = (await lifecycle.get(envelope.runId))?.lastSeq ?? 0;
     if (resume.action === 'reject') {
       await session.reject(envelope.runId, resume.askId, {
         note: resume.note,
@@ -301,10 +300,6 @@ export function wirePlacedResponder(args: {
       await session.respond(envelope.runId, resume.askId, resume.payload, {
         clientEventId: resume.clientEventId,
       });
-    }
-    const stored = await events.tail(envelope.runId, before);
-    if (stored.length > 0) {
-      feed.publish(envelope.threadId, envelope.runId, stored);
     }
   };
   const pending = active.queued.splice(0);

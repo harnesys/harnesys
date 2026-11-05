@@ -107,30 +107,34 @@ export function createOrgRunStores(
     },
   });
   const runLifecycle = withWaitGateSignal(
-    new SqliteRunLifecycleStore(session.db, (tx, runId, threadId, events, context) => {
-      const assigned = runEvents.appendWithinTx(tx, runId, threadId, events);
-      const approvals = deps.approvals;
-      if (context?.park === true && approvals) {
-        requestRunParkApprovals({
-          orgId: deps.orgId,
-          db: session.db,
-          approvals,
-          approvalEvents: deps.approvalEvents,
-          runId,
-          threadId,
-          events: assigned,
-          ...(fileRuntime === undefined ? {} : { fileRuntime }),
-          onError: (error, park) =>
-            deps.logger
-              ?.child('run-parks')
-              .warn(
-                { error, orgId: deps.orgId, runId, askId: park.askId },
-                'park approval request failed',
-              ),
-        });
-      }
-      return assigned;
-    }),
+    new SqliteRunLifecycleStore(
+      session.db,
+      (tx, runId, threadId, events, context) => {
+        const assigned = runEvents.appendWithinTx(tx, runId, threadId, events);
+        const approvals = deps.approvals;
+        if (context?.park === true && approvals) {
+          requestRunParkApprovals({
+            orgId: deps.orgId,
+            db: session.db,
+            approvals,
+            approvalEvents: deps.approvalEvents,
+            runId,
+            threadId,
+            events: assigned,
+            ...(fileRuntime === undefined ? {} : { fileRuntime }),
+            onError: (error, park) =>
+              deps.logger
+                ?.child('run-parks')
+                .warn(
+                  { error, orgId: deps.orgId, runId, askId: park.askId },
+                  'park approval request failed',
+                ),
+          });
+        }
+        return assigned;
+      },
+      onAppend,
+    ),
     () => deps.waitGate?.hold(deps.orgId),
   );
   return {

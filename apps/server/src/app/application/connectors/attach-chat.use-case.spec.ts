@@ -40,6 +40,8 @@ const GROUP: TelegramChatInfo = {
   type: 'supergroup',
   title: 'Team',
   username: 'team',
+  description: null,
+  memberCount: null,
 };
 
 describe('AttachChatUseCase', () => {

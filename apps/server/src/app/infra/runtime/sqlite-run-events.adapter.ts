@@ -2,6 +2,7 @@ import { and, eq, gt, isNotNull } from 'drizzle-orm';
 import {
   codedRunError,
   type PendingSessionEvent,
+  type RunEventAppendSink,
   type RunEventStore,
   type SessionEvent,
   type TruncateThreadResult,
@@ -30,11 +31,7 @@ export type RunEventPreparer = (
   events: PendingSessionEvent[],
 ) => PendingSessionEvent[];
 
-export type RunEventAppendListener = (
-  threadId: string,
-  runId: string,
-  events: SessionEvent[],
-) => void;
+export type RunEventAppendListener = RunEventAppendSink;
 
 export interface RunEventStoreOptions {
   observe?: RunEventObserver;

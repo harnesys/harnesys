@@ -1,3 +1,4 @@
+import { DEFAULT_JOURNAL_BATCH, DEFAULT_LIVE_FLUSH_MS } from '../constants.ts';
 import type { AgentDefinition } from '../domain/agent-definition.ts';
 import type { HookBinding } from '../domain/hook.ts';
 import type { PackRegistration } from '../domain/pack.ts';
@@ -21,14 +22,21 @@ import type { SteerMessage } from './graph-steer.ts';
 import type { HookRunReport } from './hooks/bus.ts';
 import type { HookEmitCtx } from './hooks/emit-hook.ts';
 import type { LlmNoteProvider } from './llm-notes.ts';
-import type { RunEventFeed } from './run-event-feed.ts';
+export interface DeliverySettings {
+  liveFlushMs: number;
+  journalBatch: number;
+}
+export const DEFAULT_DELIVERY_SETTINGS: DeliverySettings = {
+  liveFlushMs: DEFAULT_LIVE_FLUSH_MS,
+  journalBatch: DEFAULT_JOURNAL_BATCH,
+};
 export interface RunEngineDeps {
   lifecycle: RunLifecycleStore;
   events: RunEventStore;
-  feed: RunEventFeed;
   instanceId: string;
   leaseTtlMs?: number;
   renewMs?: number;
+  delivery?: () => DeliverySettings;
   models: ProviderConfig[] | ModelsPort;
   toolRegistry: Map<string, ToolDefinition>;
   toolMessages: 'barrier' | 'ordered';

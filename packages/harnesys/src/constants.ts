@@ -40,7 +40,11 @@ export const DEFAULT_PATH_BLOCKLIST = [
 export const DEFAULT_TOOL_OUTPUT_MAX_CHARS = 30000;
 export const DEFAULT_TOOL_OUTPUT_HEAD_CHARS = 8000;
 export const DEFAULT_TOOL_OUTPUT_TAIL_CHARS = 8000;
-export const JOURNAL_BATCH = 16;
+export const DEFAULT_JOURNAL_BATCH = 16;
+export const JOURNAL_BATCH = DEFAULT_JOURNAL_BATCH;
+export const DEFAULT_LIVE_FLUSH_MS = 100;
+export const MIN_LIVE_FLUSH_MS = 50;
+export const MAX_LIVE_FLUSH_MS = 2000;
 export const IDLE_BACKSTOP_MS = 5000;
 export const DEFAULT_LIST_LIMIT = 50;
 
@@ -230,7 +234,6 @@ export const SANDBOX_DENIED_STATE_TOOLS: readonly string[] = [
 export const CHAT_GENERATION_PARAMETERS = [
   'temperature',
   'top_p',
-  'top_k',
   'frequency_penalty',
   'presence_penalty',
   'seed',

@@ -29,6 +29,31 @@ export const ToolchainSettingsSchema = z.object({
 });
 export type ToolchainSettings = z.infer<typeof ToolchainSettingsSchema>;
 
+export const LIVE_FLUSH_MS_MIN = 50;
+export const LIVE_FLUSH_MS_MAX = 2000;
+export const LIVE_FLUSH_MS_DEFAULT = 100;
+export const JOURNAL_BATCH_MIN = 1;
+export const JOURNAL_BATCH_MAX = 64;
+export const JOURNAL_BATCH_DEFAULT = 16;
+
+export const DeliverySettingsSchema = z.object({
+  liveFlushMs: z
+    .number()
+    .int()
+    .min(LIVE_FLUSH_MS_MIN)
+    .max(LIVE_FLUSH_MS_MAX)
+    .default(LIVE_FLUSH_MS_DEFAULT),
+  journalBatch: z
+    .number()
+    .int()
+    .min(JOURNAL_BATCH_MIN)
+    .max(JOURNAL_BATCH_MAX)
+    .default(JOURNAL_BATCH_DEFAULT),
+});
+export type DeliverySettings = z.infer<typeof DeliverySettingsSchema>;
+
+export const DELIVERY_DEFAULTS: DeliverySettings = DeliverySettingsSchema.parse({});
+
 export const OrgSettingsSchema = z.object({
   skillsSourceAutoLoad: z.boolean().default(true),
   timezone: z.string().refine(isIanaTimeZone, { message: 'unknown timezone' }).default('UTC'),
@@ -44,6 +69,7 @@ export const OrgSettingsSchema = z.object({
     extraPathDirs: [],
     commandOverrides: {},
   }),
+  delivery: DeliverySettingsSchema.default(DELIVERY_DEFAULTS),
 });
 export type OrgSettings = z.infer<typeof OrgSettingsSchema>;
 

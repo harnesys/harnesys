@@ -38,7 +38,6 @@ export const agentFieldsSchema = z.object({
   effort: z.string().nullable(),
   temperature: optionalAmount,
   topP: optionalAmount,
-  topK: optionalAmount,
   frequencyPenalty: optionalAmount,
   presencePenalty: optionalAmount,
   seed: optionalAmount,
@@ -80,7 +79,6 @@ export type AgentFieldsOutput = z.output<typeof agentFieldsSchema>;
 export type AgentGenerationField =
   | 'temperature'
   | 'topP'
-  | 'topK'
   | 'frequencyPenalty'
   | 'presencePenalty'
   | 'seed'
@@ -96,7 +94,6 @@ export function emptyAgentFields(): AgentFieldsInput {
     effort: null,
     temperature: '',
     topP: '',
-    topK: '',
     frequencyPenalty: '',
     presencePenalty: '',
     seed: '',
@@ -162,7 +159,6 @@ export function agentFieldsFrom(agent: {
     memoryPolicy: agent.memoryPolicy ?? null,
     temperature: stringify(agent.generation?.temperature),
     topP: stringify(agent.generation?.topP),
-    topK: stringify(agent.generation?.topK),
     frequencyPenalty: stringify(agent.generation?.frequencyPenalty),
     presencePenalty: stringify(agent.generation?.presencePenalty),
     seed: stringify(agent.generation?.seed),

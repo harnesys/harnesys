@@ -114,7 +114,6 @@ export async function createPlacedRunStack(input: PlacedRunStackInput): Promise<
   const engine = createRunEngine({
     lifecycle: input.lifecycle,
     events: input.events,
-    feed: input.feed,
     instanceId: input.instanceId,
     models: input.modelsPort,
     toolRegistry: plugin !== undefined ? plugin.makeRegistry() : createToolRegistry([]),

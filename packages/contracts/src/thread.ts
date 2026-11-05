@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { ExecutionProfileIdSchema } from './execution-profile.ts';
 import { OrgIdSchema } from './org-machine.ts';
 
+export const DEFAULT_CONTEXT_WINDOW = 6;
+
 export const ThreadKindSchema = z.enum(['chat', 'group', 'schedule', 'webhook', 'issue']);
 export type ThreadKind = z.infer<typeof ThreadKindSchema>;
 

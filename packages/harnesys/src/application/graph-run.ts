@@ -1,6 +1,5 @@
 import { InMemoryRunEventStore } from '../adapters/in-memory-run-event-store.ts';
 import { InMemoryRunLifecycleStore } from '../adapters/in-memory-run-lifecycle-store.ts';
-import { createRunEventBus } from '../adapters/run-event-bus.ts';
 import type { Attachment } from '../domain/attachment.ts';
 import { codedRunError } from '../domain/errors.ts';
 import type { JsonSchema } from '../domain/json-schema.ts';
@@ -9,7 +8,6 @@ import type { PendingSessionEvent } from '../ports/run-event-store.ts';
 import type { RuntimeState } from '../ports/runtime-state.ts';
 import type { GraphOpts } from './graph.ts';
 import { createRunEngine } from './run-engine.ts';
-import { createRunEventFeed } from './run-event-feed.ts';
 
 function inputToUserEvent(input: unknown): PendingSessionEvent {
   if (typeof input === 'string') {
@@ -34,7 +32,6 @@ export async function runGraph(opts: GraphOpts): Promise<RunResult> {
   }
   const events = new InMemoryRunEventStore();
   const lifecycle = new InMemoryRunLifecycleStore(events);
-  const feed = createRunEventFeed({ events, lifecycle, bus: createRunEventBus() });
   const threadId = opts.state.sessionId;
   const loaded = await opts.state.load();
   const runId = loaded?.runId ?? crypto.randomUUID();
@@ -54,7 +51,6 @@ export async function runGraph(opts: GraphOpts): Promise<RunResult> {
   const engine = createRunEngine({
     lifecycle,
     events,
-    feed,
     instanceId: 'oneshot',
     models: opts.models,
     toolRegistry: opts.toolRegistry,

@@ -3,10 +3,12 @@ import {
   codedRunError,
   type PendingSessionEvent,
   type RunCreateInput,
+  type RunEventAppendSink,
   type RunLifecycleStatus,
   type RunLifecycleStore,
   type RunRecord,
   type RunTransitionPatch,
+  type SessionEvent,
 } from 'harnesys';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
 import { runsTable } from '../org-sqlite/schema/index.ts';
@@ -30,16 +32,37 @@ export class SqliteRunLifecycleStore implements RunLifecycleStore {
   constructor(
     private readonly db: OrgSqliteDb,
     private readonly appendWithinTx: RunEventAppendWithinTx,
+    private readonly onAppend?: RunEventAppendSink,
   ) {}
 
-  create(run: RunCreateInput, events: PendingSessionEvent[] = []): Promise<RunRecord> {
+  private appendCaptured(captured: SessionEvent[]): RunEventAppendWithinTx {
+    return (tx, runId, threadId, events, context) => {
+      const stored = this.appendWithinTx(tx, runId, threadId, events, context);
+      captured.push(...stored);
+      return stored;
+    };
+  }
+
+  private emitAppended(threadId: string, runId: string, events: SessionEvent[]): void {
+    if (this.onAppend === undefined || events.length === 0) {
+      return;
+    }
     try {
-      return Promise.resolve(
-        this.db.transaction(
-          (tx) => createRunInTx(tx as OrgSqliteDb, this.appendWithinTx, run, events),
-          { behavior: 'immediate' },
-        ),
+      this.onAppend(threadId, runId, events);
+    } catch {
+      // events are committed already; realtime fan-out must not fail the transition
+    }
+  }
+
+  create(run: RunCreateInput, events: PendingSessionEvent[] = []): Promise<RunRecord> {
+    const captured: SessionEvent[] = [];
+    try {
+      const record = this.db.transaction(
+        (tx) => createRunInTx(tx as OrgSqliteDb, this.appendCaptured(captured), run, events),
+        { behavior: 'immediate' },
       );
+      this.emitAppended(record.threadId, record.runId, captured);
+      return Promise.resolve(record);
     } catch (error) {
       return Promise.reject(error);
     }
@@ -96,55 +119,51 @@ export class SqliteRunLifecycleStore implements RunLifecycleStore {
   }
 
   transition(runId: string, expectedEpoch: number, patch: RunTransitionPatch): Promise<RunRecord> {
-    return Promise.resolve(
-      this.db.transaction(
-        (tx) => {
-          const current = tx.select().from(runsTable).where(eq(runsTable.runId, runId)).get();
-          if (!current) {
-            throw codedRunError('unknown_run', `run ${runId} not found`);
-          }
-          const record = rowToRecord(current);
-          assertTransitionAllowed(record, expectedEpoch, patch);
-          const stored = this.appendWithinTx(
-            tx as OrgSqliteDb,
-            runId,
-            record.threadId,
-            patch.events ?? [],
-            { park: patch.to === 'needs_input' },
-          );
-          const lastSeq = maxSeqOf(stored, record.lastSeq);
-          let waitFireAt: number | null = record.waitFireAt ?? null;
-          if (patch.waitFireAt === null) {
-            waitFireAt = null;
-          } else if (patch.waitFireAt !== undefined) {
-            waitFireAt = patch.waitFireAt;
-          }
-          tx.update(runsTable)
-            .set({
-              status: patch.to,
-              interruptId:
-                patch.interruptId === null
-                  ? null
-                  : (patch.interruptId ?? record.interruptId ?? null),
-              waitFireAt,
-              attempt: patch.advanceAttempt ? record.attempt + 1 : record.attempt,
-              leaseInstanceId: null,
-              leaseExpiresAt: null,
-              leaseEpoch: record.leaseEpoch + 1,
-              lastSeq,
-              updatedAt: new Date().toISOString(),
-            })
-            .where(eq(runsTable.runId, runId))
-            .run();
-          const row = tx.select().from(runsTable).where(eq(runsTable.runId, runId)).get();
-          if (!row) {
-            throw codedRunError('unknown_run', `run ${runId} not found`);
-          }
-          return rowToRecord(row);
-        },
-        { behavior: 'immediate' },
-      ),
+    const captured: SessionEvent[] = [];
+    const append = this.appendCaptured(captured);
+    const record = this.db.transaction(
+      (tx) => {
+        const current = tx.select().from(runsTable).where(eq(runsTable.runId, runId)).get();
+        if (!current) {
+          throw codedRunError('unknown_run', `run ${runId} not found`);
+        }
+        const record = rowToRecord(current);
+        assertTransitionAllowed(record, expectedEpoch, patch);
+        const stored = append(tx as OrgSqliteDb, runId, record.threadId, patch.events ?? [], {
+          park: patch.to === 'needs_input',
+        });
+        const lastSeq = maxSeqOf(stored, record.lastSeq);
+        let waitFireAt: number | null = record.waitFireAt ?? null;
+        if (patch.waitFireAt === null) {
+          waitFireAt = null;
+        } else if (patch.waitFireAt !== undefined) {
+          waitFireAt = patch.waitFireAt;
+        }
+        tx.update(runsTable)
+          .set({
+            status: patch.to,
+            interruptId:
+              patch.interruptId === null ? null : (patch.interruptId ?? record.interruptId ?? null),
+            waitFireAt,
+            attempt: patch.advanceAttempt ? record.attempt + 1 : record.attempt,
+            leaseInstanceId: null,
+            leaseExpiresAt: null,
+            leaseEpoch: record.leaseEpoch + 1,
+            lastSeq,
+            updatedAt: new Date().toISOString(),
+          })
+          .where(eq(runsTable.runId, runId))
+          .run();
+        const row = tx.select().from(runsTable).where(eq(runsTable.runId, runId)).get();
+        if (!row) {
+          throw codedRunError('unknown_run', `run ${runId} not found`);
+        }
+        return rowToRecord(row);
+      },
+      { behavior: 'immediate' },
     );
+    this.emitAppended(record.threadId, runId, captured);
+    return Promise.resolve(record);
   }
 
   renewLease(runId: string, instanceId: string, ttlMs: number): Promise<boolean> {

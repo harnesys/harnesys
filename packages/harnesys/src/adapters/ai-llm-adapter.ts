@@ -57,9 +57,6 @@ function applyGeneration(
   if (generation.topP !== undefined) {
     streamConfig.topP = generation.topP;
   }
-  if (generation.topK !== undefined) {
-    streamConfig.topK = generation.topK;
-  }
   if (generation.frequencyPenalty !== undefined) {
     streamConfig.frequencyPenalty = generation.frequencyPenalty;
   }

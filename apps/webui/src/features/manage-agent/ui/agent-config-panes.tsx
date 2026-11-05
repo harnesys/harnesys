@@ -158,7 +158,6 @@ export function AgentModelPane({
                   const generation = {
                     temperature: parseOptional(current.temperature),
                     topP: parseOptional(current.topP),
-                    topK: parseOptional(current.topK),
                     frequencyPenalty: parseOptional(current.frequencyPenalty),
                     presencePenalty: parseOptional(current.presencePenalty),
                     seed: parseOptional(current.seed),
@@ -174,7 +173,6 @@ export function AgentModelPane({
                   form.setValue('effort', sanitized.effort);
                   form.setValue('temperature', stringify(sanitized.generation?.temperature));
                   form.setValue('topP', stringify(sanitized.generation?.topP));
-                  form.setValue('topK', stringify(sanitized.generation?.topK));
                   form.setValue(
                     'frequencyPenalty',
                     stringify(sanitized.generation?.frequencyPenalty),

@@ -138,6 +138,7 @@ export const connectorDeliveriesTable = sqliteTable(
     interruptId: text('interrupt_id'),
     draftId: integer('draft_id'),
     lastText: text('last_text'),
+    lastSeq: integer('last_seq').notNull().default(0),
     externalMessageId: text('external_message_id'),
     status: text('status').notNull().default('streaming'),
     updatedAt: text('updated_at').notNull(),

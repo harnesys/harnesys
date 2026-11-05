@@ -25,7 +25,7 @@ describe('connector pure decisions', () => {
     expect(connectorOrigin('c1')).toBe('connector:c1');
     expect(shouldEchoUser('connector:c1', 'c1')).toBe(false);
     expect(shouldEchoUser('web', 'c1')).toBe(true);
-    expect(appEchoText('hi')).toBe('You · Harnesys\n\nhi');
+    expect(appEchoText('You', 'hi')).toBe('You · Harnesys\n\nhi');
   });
 
   test('draft tick coalesces, heartbeats, and splits at 4000', () => {

@@ -9,7 +9,6 @@ export function generationSettingsOf(values: AgentFieldsOutput): AgentGeneration
   return {
     temperature: values.temperature,
     topP: values.topP,
-    topK: values.topK,
     frequencyPenalty: values.frequencyPenalty,
     presencePenalty: values.presencePenalty,
     seed: values.seed,

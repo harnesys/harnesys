@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import type { SessionEvent } from '../ports/session.ts';
 import { InMemoryRunEventStore } from './in-memory-run-event-store.ts';
 
 describe('InMemoryRunEventStore.truncateThreadFrom', () => {
@@ -27,6 +28,23 @@ describe('InMemoryRunEventStore.truncateThreadFrom', () => {
     const store = new InMemoryRunEventStore();
     store.appendLocked('run-1', [{ type: 'user', text: 'hi' }]);
     await expect(store.truncateThreadFrom('', 99)).rejects.toThrow();
+  });
+});
+
+describe('InMemoryRunEventStore append sink', () => {
+  test('publishes each stored batch once with the run thread', () => {
+    const batches: Array<{ threadId: string; runId: string; events: SessionEvent[] }> = [];
+    const store = new InMemoryRunEventStore((threadId, runId, events) => {
+      batches.push({ threadId, runId, events });
+    });
+    store.appendLocked('run-1', [{ type: 'user', text: 'first' }], 'thread-1');
+    store.appendLocked('run-1', [{ type: 'text-delta', text: 'second' }], 'thread-1');
+
+    expect(batches).toHaveLength(2);
+    expect(batches[0]?.threadId).toBe('thread-1');
+    expect(batches[0]?.runId).toBe('run-1');
+    expect(batches[0]?.events.map((event) => event.seq)).toEqual([1]);
+    expect(batches[1]?.events.map((event) => event.seq)).toEqual([2]);
   });
 });
 

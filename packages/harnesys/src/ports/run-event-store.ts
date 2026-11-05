@@ -5,6 +5,7 @@ export type PendingSessionEvent = Distribution<SessionEvent>;
 export interface RunSeqAllocator {
   next(runId: string): number;
 }
+export type RunEventAppendSink = (threadId: string, runId: string, events: SessionEvent[]) => void;
 export interface RunEventStore extends RunSeqAllocator {
   append(runId: string, expectedEpoch: number, events: SessionEvent[]): Promise<SessionEvent[]>;
   tail(runId: string, fromSeq: number): Promise<SessionEvent[]>;

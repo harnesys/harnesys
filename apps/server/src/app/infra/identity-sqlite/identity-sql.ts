@@ -84,7 +84,49 @@ CREATE TABLE IF NOT EXISTS identity_audit (
 );
 `;
 
-export function ensureIdentitySchema(exec: (sql: string) => void): void {
+export const CREATE_IDENTITY_LINKS_SQL = `
+CREATE TABLE IF NOT EXISTS identity_links (
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider TEXT NOT NULL,
+  provider_user_id TEXT NOT NULL,
+  display_name TEXT,
+  handle TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (user_id, provider)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS identity_links_identity_unique
+  ON identity_links(provider, provider_user_id);
+`;
+
+export function migrateIdentityLinkProfileColumns(
+  exec: (sql: string) => void,
+  all: (sql: string) => Array<{ name: string }>,
+): void {
+  const present = new Set(all('PRAGMA table_info(identity_links)').map((column) => column.name));
+  if (!present.has('display_name')) {
+    exec('ALTER TABLE identity_links ADD COLUMN display_name TEXT');
+  }
+  if (!present.has('handle')) {
+    exec('ALTER TABLE identity_links ADD COLUMN handle TEXT');
+  }
+}
+
+export const CREATE_IDENTITY_LINK_CODES_SQL = `
+CREATE TABLE IF NOT EXISTS identity_link_codes (
+  code_hash TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS identity_link_codes_expiry_idx ON identity_link_codes(expires_at);
+`;
+
+export function ensureIdentitySchema(
+  exec: (sql: string) => void,
+  all?: (sql: string) => Array<{ name: string }>,
+): void {
   exec(CREATE_USERS_SQL);
   exec(CREATE_MEMBERSHIPS_SQL);
   exec(CREATE_SESSIONS_SQL);
@@ -92,4 +134,9 @@ export function ensureIdentitySchema(exec: (sql: string) => void): void {
   exec(CREATE_LOGIN_ATTEMPTS_SQL);
   exec(CREATE_USER_INVITES_SQL);
   exec(CREATE_IDENTITY_AUDIT_SQL);
+  exec(CREATE_IDENTITY_LINKS_SQL);
+  if (all) {
+    migrateIdentityLinkProfileColumns(exec, all);
+  }
+  exec(CREATE_IDENTITY_LINK_CODES_SQL);
 }

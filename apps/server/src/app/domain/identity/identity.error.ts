@@ -41,3 +41,15 @@ export class OwnerAlreadyInitializedException extends ConflictException {
     super('Owner is already initialized; the users table is not empty');
   }
 }
+
+export class IdentityLinkConflictException extends ConflictException {
+  constructor(provider: string) {
+    super(`This ${provider} account is already linked to another user`);
+  }
+}
+
+export class IdentityLinkCodeInvalidException extends HttpException {
+  constructor() {
+    super(410, 'LINK_CODE_INVALID', 'Link code is unknown, expired, or already used');
+  }
+}

@@ -5,6 +5,7 @@ import {
   ConnectorValidationException,
 } from '../../domain/connector/connector.error.ts';
 import type { ConnectorBindingRecord } from '../../domain/connector/connector.ts';
+import type { TelegramChatMember } from '../../domain/connector/telegram-api.port.ts';
 import {
   MemoryAgents,
   MemoryThreadMembers,
@@ -13,7 +14,6 @@ import {
   memoryThread,
 } from '../threads/thread.fakes.ts';
 import { ConnectChatUseCase } from './connect-chat.use-case.ts';
-import type { TelegramChatMember } from '../../domain/connector/telegram-api.port.ts';
 import {
   FakeSecrets,
   FakeTelegram,

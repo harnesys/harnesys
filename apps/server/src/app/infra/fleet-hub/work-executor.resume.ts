@@ -122,9 +122,12 @@ async function runResumed(
     agent,
   });
 
-  const events = new InMemoryRunEventStore();
+  const bus = createRunEventBus();
+  const events = new InMemoryRunEventStore((threadId, runId, batch) =>
+    bus.publish(threadId, runId, batch),
+  );
   const lifecycle = new InMemoryRunLifecycleStore(events);
-  const feed = createRunEventFeed({ events, lifecycle, bus: createRunEventBus() });
+  const feed = createRunEventFeed({ events, lifecycle, bus });
   const instanceId = `worker-${identity.nodeId}`;
   const agentsResolve = placedAgentsResolve(deps, orgId);
 
@@ -174,7 +177,6 @@ async function runResumed(
       input,
       stack: { claimer, engine, runtime, state },
       lifecycle,
-      events,
       feed,
       prepared: env.prepared,
       state,
@@ -261,7 +263,6 @@ interface DeliverResumeArgs {
   input: ResumePlacedRunInput;
   stack: PlacedRunStack;
   lifecycle: InMemoryRunLifecycleStore;
-  events: InMemoryRunEventStore;
   feed: ReturnType<typeof createRunEventFeed>;
   prepared: ReturnType<typeof prepareWorkerTarget>;
   state: SqliteRuntimeState;
@@ -290,9 +291,6 @@ async function deliverResume(args: DeliverResumeArgs): Promise<void> {
   });
   wirePlacedResponder({
     active,
-    lifecycle: args.lifecycle,
-    events: args.events,
-    feed: args.feed,
     envelope,
     session,
   });

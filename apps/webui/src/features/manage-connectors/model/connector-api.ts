@@ -187,3 +187,7 @@ export function telegramBotChannelLink(botUsername: string): string {
 export function telegramBotLink(botUsername: string): string {
   return `https://t.me/${botUsername}`;
 }
+
+export function telegramIdentityLink(botUsername: string, code: string): string {
+  return `${telegramBotLink(botUsername)}?start=link_${encodeURIComponent(code)}`;
+}

@@ -1,4 +1,4 @@
-import { JOURNAL_BATCH, RUN_NON_TERMINAL } from '../constants.ts';
+import { RUN_NON_TERMINAL } from '../constants.ts';
 import { AskUserInterrupt } from '../domain/errors.ts';
 import type { Snapshot } from '../domain/snapshot.ts';
 import type { Logger } from '../ports/logger.ts';
@@ -15,12 +15,11 @@ import {
   runCompletedEvent,
   runFailedEvent,
 } from './run-engine-events.ts';
-import type { RunEventFeed } from './run-event-feed.ts';
 export interface SegmentEnv {
   lifecycle: RunLifecycleStore;
   events: RunEventStore;
-  feed: RunEventFeed;
-  threadId: string;
+  liveFlushMs: number;
+  journalBatch: number;
   isLeaseLost: () => boolean;
   sleep: (ms: number) => Promise<void>;
   logger?: Logger;
@@ -35,11 +34,8 @@ interface SegmentTail {
   failMessage?: string;
   cancelReason?: string;
 }
-function isToolTerminal(event: SessionEvent): boolean {
-  return (
-    event.type === 'tool' &&
-    (event.phase === 'completed' || event.phase === 'failed' || event.phase === 'skipped')
-  );
+function isToolBoundary(event: SessionEvent): boolean {
+  return event.type === 'tool' && event.phase !== 'streaming';
 }
 function isJournalBoundaryCard(event: SessionEvent): boolean {
   return (
@@ -89,9 +85,7 @@ function lastText(snap: Snapshot | null): string | undefined {
 }
 export function admit(env: SegmentEnv, runId: string, event: PendingSessionEvent): SessionEvent {
   const seq = env.events.next(runId);
-  const full = { ...event, seq, runId } as SessionEvent;
-  env.feed.publish(env.threadId, runId, [full]);
-  return full;
+  return { ...event, seq, runId } as SessionEvent;
 }
 export async function flushJournal(env: SegmentEnv, ctx: SegmentCtx): Promise<boolean> {
   if (ctx.pending.length === 0) {
@@ -121,7 +115,6 @@ export async function guardedTransition(
   expectedEpoch: number,
   patch: RunTransitionPatch,
 ): Promise<void> {
-  const before = await env.lifecycle.get(runId);
   try {
     await withBusyRetries(env, runId, expectedEpoch, patch);
   } catch (err) {
@@ -135,13 +128,6 @@ export async function guardedTransition(
       return;
     }
     throw err;
-  }
-  if (env.isLeaseLost()) {
-    return;
-  }
-  const stored = await env.events.tail(runId, before?.lastSeq ?? 0);
-  if (stored.length > 0) {
-    env.feed.publish(env.threadId, runId, stored);
   }
 }
 
@@ -361,6 +347,7 @@ export async function runSegment(
 ): Promise<void> {
   const ctx: SegmentCtx = { runId, epoch, pending: [] };
   const tail: SegmentTail = {};
+  let lastFlushAt = Date.now();
   let ask: {
     event: PendingSessionEvent;
     askId: string;
@@ -389,13 +376,15 @@ export async function runSegment(
       }
       ctx.pending.push(admit(env, runId, mapped));
       if (
-        ctx.pending.length >= JOURNAL_BATCH ||
-        isToolTerminal(mapped) ||
-        isJournalBoundaryCard(mapped)
+        ctx.pending.length >= env.journalBatch ||
+        isToolBoundary(mapped) ||
+        isJournalBoundaryCard(mapped) ||
+        Date.now() - lastFlushAt >= env.liveFlushMs
       ) {
         if (!(await flushJournal(env, ctx))) {
           return;
         }
+        lastFlushAt = Date.now();
       }
     }
   } catch (err) {

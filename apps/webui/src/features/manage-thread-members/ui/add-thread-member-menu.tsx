@@ -60,7 +60,11 @@ export function AddThreadMemberMenu({ thread }: { thread: Thread }) {
         <p className="font-medium text-sm">Add to group</p>
         <Field>
           <FieldLabel htmlFor={agentFieldId}>Agent</FieldLabel>
-          <Select value={agentId || null} onValueChange={(value) => setAgentId(value ?? '')}>
+          <Select
+            items={availableAgents.map((agent) => ({ value: agent.id, label: agent.name }))}
+            value={agentId || null}
+            onValueChange={(value) => setAgentId(value ?? '')}
+          >
             <SelectTrigger id={agentFieldId} size="sm" className="w-full">
               <SelectValue placeholder="Select an agent…" />
             </SelectTrigger>
@@ -87,7 +91,14 @@ export function AddThreadMemberMenu({ thread }: { thread: Thread }) {
         </Field>
         <Field>
           <FieldLabel htmlFor={userFieldId}>Person</FieldLabel>
-          <Select value={userId || null} onValueChange={(value) => setUserId(value ?? '')}>
+          <Select
+            items={availableUsers.map((user) => ({
+              value: user.userId,
+              label: user.name || user.login,
+            }))}
+            value={userId || null}
+            onValueChange={(value) => setUserId(value ?? '')}
+          >
             <SelectTrigger id={userFieldId} size="sm" className="w-full">
               <SelectValue placeholder="Select a person…" />
             </SelectTrigger>

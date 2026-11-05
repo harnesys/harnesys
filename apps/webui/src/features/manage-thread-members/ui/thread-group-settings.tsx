@@ -1,3 +1,4 @@
+import { DEFAULT_CONTEXT_WINDOW } from '@harnesys/contracts';
 import { Settings2Icon, Trash2Icon } from 'lucide-react';
 import { useId, useState } from 'react';
 import type { Thread } from '@/entities/thread';
@@ -20,16 +21,17 @@ export function ThreadGroupSettings({ thread }: { thread: Thread }) {
   const { openDesk, openThread } = useStudioNavigation();
   const policy = thread.policy;
   const members = thread.members ?? [];
-  const [contextWindow, setContextWindow] = useState(String(policy?.contextWindow ?? ''));
+  const [contextWindow, setContextWindow] = useState(
+    String(policy?.contextWindow ?? DEFAULT_CONTEXT_WINDOW),
+  );
   const autoReplyFieldId = useId();
   const contextWindowFieldId = useId();
   const saveContextWindow = () => {
     const value = Number(contextWindow);
     void mutateThread(() =>
-      updateThreadPolicy(
-        thread.id,
-        Number.isFinite(value) && value > 0 ? { contextWindow: value } : {},
-      ),
+      updateThreadPolicy(thread.id, {
+        contextWindow: Number.isFinite(value) && value > 0 ? value : DEFAULT_CONTEXT_WINDOW,
+      }),
     );
   };
   const removeThread = () => {
@@ -77,6 +79,10 @@ export function ThreadGroupSettings({ thread }: { thread: Thread }) {
         <Field>
           <FieldLabel htmlFor={autoReplyFieldId}>Auto-reply agent</FieldLabel>
           <Select
+            items={[
+              { value: NONE, label: 'None — every agent decides' },
+              ...members.map((member) => ({ value: member.id, label: member.name })),
+            ]}
             value={thread.autoReplyAgentId ?? NONE}
             onValueChange={(value) =>
               void mutateThread(() =>
@@ -109,13 +115,16 @@ export function ThreadGroupSettings({ thread }: { thread: Thread }) {
               min={1}
               className="h-7 text-xs"
               value={contextWindow}
+              placeholder={String(DEFAULT_CONTEXT_WINDOW)}
               onChange={(event) => setContextWindow(event.target.value)}
             />
             <Button type="button" size="sm" variant="secondary" onClick={saveContextWindow}>
               Save
             </Button>
           </div>
-          <FieldDescription>How many recent messages each agent receives.</FieldDescription>
+          <FieldDescription>
+            How many recent messages each agent receives. Default {DEFAULT_CONTEXT_WINDOW}.
+          </FieldDescription>
         </Field>
         <Field orientation="horizontal" className="items-start justify-between gap-3">
           <FieldContent>

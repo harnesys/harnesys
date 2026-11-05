@@ -5,10 +5,14 @@ import { useAgentStore } from '@/entities/agent';
 import { useActiveOrgStore, useOrgActivityStore } from '@/entities/org-machine';
 import { useProjects } from '@/entities/project';
 import { toClientThread, useThreadStore } from '@/entities/thread';
-import { dispatchThreadEvents } from '@/features/send-message/model/thread-events';
+import {
+  dispatchThreadEvents,
+  resyncThreadEvents,
+} from '@/features/send-message/model/thread-events';
 import { appMetaQuery, listThreads, watchDeskEvents, watchThreadErrors } from '@/shared/api';
 import {
   watchApprovalEvents,
+  watchResync,
   watchSourceChanges,
   watchTerminalEvents,
   watchThreadEvents,
@@ -90,9 +94,7 @@ export function DeskSync() {
       return;
     }
     const cleanups = orgs.map((org) =>
-      watchDeskEvents(org.orgId, (event) =>
-        applyDeskEvent(event, { orgId: org.orgId, navigate }),
-      ),
+      watchDeskEvents(org.orgId, (event) => applyDeskEvent(event, { orgId: org.orgId, navigate })),
     );
     return () => {
       for (const cleanup of cleanups) {
@@ -104,7 +106,31 @@ export function DeskSync() {
     if (orgs.length === 0) {
       return;
     }
-    const cleanups = orgs.map((org) => watchThreadEvents(org.orgId, dispatchThreadEvents));
+    const cleanups = orgs.map((org) =>
+      watchThreadEvents(org.orgId, dispatchThreadEvents, {
+        onOpen: () => {
+          void resyncThreadEvents(org.orgId);
+        },
+      }),
+    );
+    return () => {
+      for (const cleanup of cleanups) {
+        cleanup();
+      }
+    };
+  }, [orgs]);
+  useEffect(() => {
+    if (orgs.length === 0) {
+      return;
+    }
+    const cleanups = orgs.map((org) =>
+      watchResync(org.orgId, (frame) => {
+        if (frame.orgId !== org.orgId) {
+          return;
+        }
+        void resyncThreadEvents(org.orgId);
+      }),
+    );
     return () => {
       for (const cleanup of cleanups) {
         cleanup();

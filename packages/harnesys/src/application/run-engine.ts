@@ -16,9 +16,15 @@ import {
   guardedTransition,
   runSegment,
 } from './run-engine-segment.ts';
-import type { RunEngine, RunEngineDeps, RunTargetOpts } from './run-engine-types.ts';
+import {
+  DEFAULT_DELIVERY_SETTINGS,
+  type DeliverySettings,
+  type RunEngine,
+  type RunEngineDeps,
+  type RunTargetOpts,
+} from './run-engine-types.ts';
 
-export type { RunEngine, RunEngineDeps, RunTargetOpts };
+export type { DeliverySettings, RunEngine, RunEngineDeps, RunTargetOpts };
 
 interface RunRuntime {
   abort: AbortController;
@@ -42,12 +48,12 @@ export function createRunEngine(deps: RunEngineDeps): RunEngine {
   const byRun = new Map<string, RunRuntime>();
   const runLogger = deps.logger ?? CONSOLE_LOGGER;
   const hookCache = new Map<string, HookEmitCtx>();
-  function envWith(leaseLost: () => boolean, threadId: string): SegmentEnv {
+  function envWith(leaseLost: () => boolean, delivery: DeliverySettings): SegmentEnv {
     return {
       lifecycle: deps.lifecycle,
       events: deps.events,
-      feed: deps.feed,
-      threadId,
+      liveFlushMs: delivery.liveFlushMs,
+      journalBatch: delivery.journalBatch,
       isLeaseLost: leaseLost,
       sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
       logger: runLogger,
@@ -97,7 +103,7 @@ export function createRunEngine(deps: RunEngineDeps): RunEngine {
     active.add(run);
     byRun.set(runId, run);
     const signal = run.abort.signal;
-    const env = envWith(() => run.leaseLost, record.threadId);
+    const env = envWith(() => run.leaseLost, deps.delivery?.() ?? DEFAULT_DELIVERY_SETTINGS);
     run.renewTimer = setInterval(() => {
       void deps.lifecycle.renewLease(runId, deps.instanceId, leaseTtl).then((ok) => {
         if (!ok) {
@@ -122,12 +128,13 @@ export function createRunEngine(deps: RunEngineDeps): RunEngine {
           entry = { tail: Promise.resolve(), epoch: 0, closed: false };
           childRuns.set(spawnId, entry);
           const born = entry;
-          entry.tail = deps.lifecycle
+          const childAgent = deps.agents.resolve(ev.agentId, opts.agent);
+        entry.tail = deps.lifecycle
             .create({
               runId: spawnId,
               threadId: record.threadId,
-              agentId: record.agentId ?? '',
-              agentName: record.agentName ?? '',
+              agentId: childAgent?.id ?? ev.agentId ?? record.agentId ?? '',
+              agentName: childAgent?.name ?? record.agentName ?? '',
               parentRunId: runId,
             })
             .then((rec) =>
@@ -152,9 +159,7 @@ export function createRunEngine(deps: RunEngineDeps): RunEngine {
             const withRun = { ...mapped, runId: spawnId } as SessionEvent;
             const seq = deps.events.next(spawnId);
             const full = { ...withRun, seq } as SessionEvent;
-            return Promise.resolve(
-              deps.events.appendForThread(record.threadId, spawnId, [full]),
-            ).then((stored) => deps.feed.publish(record.threadId, spawnId, stored));
+            return Promise.resolve(deps.events.appendForThread(record.threadId, spawnId, [full]));
           })
           .then(() => {
             if (terminal === undefined || journal.closed) {

@@ -6,6 +6,9 @@ import {
   pendingClaimNotice,
   pendingConnectionNotice,
 } from '../../domain/connector/inbound-decision.ts';
+import type { CanonicalAuthor } from '../../domain/connector/telegram-update.ts';
+import type { IdentityLinkRecord } from '../../domain/identity/identity-link.port.ts';
+import type { UserRecord } from '../../domain/identity/user-repository.port.ts';
 import { MAX_ATTACHMENT_BYTES } from '../../domain/thread/attachment.ts';
 import { resolveResponders } from '../../domain/thread/responder-policy.ts';
 import { RunConflictException } from '../../domain/thread/thread.error.ts';
@@ -105,6 +108,12 @@ export async function enqueueInbound(
     autoReplyAgentId: thread.autoReplyAgentId,
     allowMentions: allowsMentions(thread.policy),
   });
+  const link = deps.links.findByIdentity(ctx.connector.provider, update.author.userId);
+  const linked = linkedAuthorOf(
+    link,
+    link === null ? null : (deps.users.findById(link.userId) ?? null),
+    update.author,
+  );
   await deps.sendMessage.execute({
     orgId: ctx.orgId,
     threadId: thread.id,
@@ -115,13 +124,32 @@ export async function enqueueInbound(
     author: {
       provider: ctx.connector.provider,
       providerUserId: update.author.userId,
-      displayName: update.author.displayName,
+      displayName: linked?.displayName ?? update.author.displayName,
     },
     targetAgentIds: responders,
-    attribution: { via: 'agent' },
+    attribution: linked?.attribution ?? { via: 'agent' },
     triggerId: ctx.connector.id,
   });
   deps.connectors.markInbox(ctx.orgId, ctx.inboxId, 'consumed');
+}
+
+export interface LinkedAuthor {
+  attribution: { startedByUserId: string; via: 'agent' };
+  displayName: string;
+}
+
+export function linkedAuthorOf(
+  link: IdentityLinkRecord | null,
+  user: UserRecord | null,
+  author: CanonicalAuthor,
+): LinkedAuthor | null {
+  if (link === null) {
+    return null;
+  }
+  return {
+    attribution: { startedByUserId: link.userId, via: 'agent' },
+    displayName: user?.name ?? author.displayName,
+  };
 }
 
 export async function respondInboundText(

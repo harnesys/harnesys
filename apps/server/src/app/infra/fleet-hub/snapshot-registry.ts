@@ -228,6 +228,7 @@ export function createSnapshotOrgSettings(snapshot: OrgExecutionSnapshot): OrgSe
       timezone: snapshot.runtime.timezone,
       browser: snapshot.runtime.browser,
       toolchain: OrgSettingsSchema.parse({}).toolchain,
+      delivery: OrgSettingsSchema.parse({}).delivery,
     }),
     set: () => {
       throw new Error('org execution replica is read-only');

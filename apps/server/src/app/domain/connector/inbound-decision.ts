@@ -18,6 +18,7 @@ export type InboundDecision =
   | { type: 'enqueue'; text: string; fileId?: string; fileKind?: 'photo' | 'document' }
   | { type: 'respond'; text: string }
   | { type: 'callback'; deliveryId: string }
+  | { type: 'identity_link'; code: string }
   | { type: 'command'; name: PairedCommandName }
   | { type: 'stop' }
   | { type: 'ignore' };
@@ -40,6 +41,8 @@ const FILE_WHILE_ASK = 'Reply with text or a button, then send the file.';
 const NOT_CONNECTED = 'This chat is not connected to a workspace yet.';
 const CLAIMED =
   'This chat is not connected to a workspace yet. An admin can connect it in Harnesys.';
+const LINK_IN_DIRECT_MESSAGE = 'Send /link in a direct message to this bot.';
+const LINK_START_PREFIX = 'link_';
 
 export function decideInbound(input: DecideInboundInput): InboundDecision {
   const { update, binding } = input;
@@ -104,10 +107,13 @@ function decideCommand(
   update: Extract<CanonicalUpdate, { kind: 'command' }>,
 ): InboundDecision {
   if (!isPrivate(update.chatType)) {
-    return { type: 'ignore' };
+    return update.command === 'link' ? reply(LINK_IN_DIRECT_MESSAGE) : { type: 'ignore' };
   }
   if (update.command === 'start') {
     return decideStart(input, update);
+  }
+  if (update.command === 'link') {
+    return { type: 'identity_link', code: update.args.trim() };
   }
   const binding = input.binding;
   if (!binding) {
@@ -129,6 +135,13 @@ function decideStart(
   input: DecideInboundInput,
   update: Extract<CanonicalUpdate, { kind: 'command' }>,
 ): InboundDecision {
+  const payload = update.args.trim();
+  if (payload.startsWith(LINK_START_PREFIX)) {
+    const code = payload.slice(LINK_START_PREFIX.length).trim();
+    if (code.length > 0) {
+      return { type: 'identity_link', code };
+    }
+  }
   const binding = input.binding;
   if (binding?.pairedUserId !== null && binding?.pairedUserId === update.author.userId) {
     return reply(helpText());

@@ -9,6 +9,7 @@ import {
   orgThreadsQueryKey,
 } from '../../model/connector-api';
 import { TelegramBotSection } from './telegram-bot-section';
+import { TelegramIdentityCard } from './telegram-identity-card';
 import { TelegramSetupSteps } from './telegram-setup-steps';
 
 export function TelegramDetail({ orgId }: { orgId: string }) {
@@ -39,6 +40,7 @@ export function TelegramDetail({ orgId }: { orgId: string }) {
   return (
     <div className="flex flex-col gap-6" data-testid="telegram-detail">
       <TelegramSetupSteps connectors={items} />
+      <TelegramIdentityCard botUsername={items[0]?.botUsername} />
       {prefillThreadId ? (
         <p className="rounded-md border border-dashed px-3 py-2 text-[13px] text-muted-foreground">
           Pick a chat below and connect this thread to it. Chats of another kind are offered only

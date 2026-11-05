@@ -6,6 +6,6 @@ export function shouldEchoUser(origin: string, connectorId: string): boolean {
   return origin !== connectorOrigin(connectorId);
 }
 
-export function appEchoText(text: string): string {
-  return `You · Harnesys\n\n${text}`;
+export function appEchoText(author: string, text: string): string {
+  return `${author} · Harnesys\n\n${text}`;
 }

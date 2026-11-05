@@ -203,7 +203,11 @@ async function openSseOnce(conn: FetchSseConnection): Promise<void> {
       current.lastId = frame.id;
     }
     for (const sub of current.listeners.get(frame.event) ?? []) {
-      sub.onData(frame.data);
+      try {
+        sub.onData(frame.data);
+      } catch (error) {
+        trace('sse', `listener failed for ${frame.event}`, error);
+      }
     }
   }
   conn.open = false;

@@ -36,15 +36,6 @@ export const GENERATION_SLIDERS: GenerationSliderSpec[] = [
     format: (value) => value.toFixed(2),
   },
   {
-    name: 'topK',
-    label: 'Top K',
-    min: 1,
-    max: 100,
-    step: 1,
-    fallback: 40,
-    format: (value) => String(Math.round(value)),
-  },
-  {
     name: 'frequencyPenalty',
     label: 'Frequency',
     min: -2,

@@ -1,7 +1,11 @@
 import type { CapabilityScope } from '../../domain/pack.ts';
+import type { TelegramChatsPort } from '../../ports/telegram-chats.ts';
 import type { ToolDefinition } from '../../ports/tools.ts';
 import { tool } from '../../ports/tools.ts';
-import type { TelegramChatTarget, TelegramChatsPort } from '../../ports/telegram-chats.ts';
+import { createTelegramExtraTools } from './extra-tools.ts';
+import { PARSE_MODE_PROPERTY, TARGET_PROPERTIES, targetOf } from './input.ts';
+import { createTelegramMediaTools } from './media-tools.ts';
+import { createTelegramTopicTools } from './topic-tools.ts';
 
 export interface CreateTelegramToolsParams {
   telegram: TelegramChatsPort;
@@ -9,37 +13,12 @@ export interface CreateTelegramToolsParams {
   bot?: string;
 }
 
-const TARGET_PROPERTIES = {
-  chat: {
-    type: 'string',
-    description: 'Chat id, @username, or chat title that the bot already knows',
-  },
-  bot: {
-    type: 'string',
-    description: 'Bot @username when more than one Telegram bot is connected',
-  },
-  topicId: {
-    type: 'string',
-    description: 'Forum topic id when posting into a topic of a group',
-  },
-};
-
-function targetOf(raw: unknown, fallbackBot: string | undefined): TelegramChatTarget {
-  const input = raw as Record<string, unknown>;
-  const bot = typeof input.bot === 'string' && input.bot.trim() !== '' ? input.bot.trim() : undefined;
-  const topicId =
-    typeof input.topicId === 'string' && input.topicId.trim() !== '' ? input.topicId.trim() : null;
-  const resolvedBot = bot ?? fallbackBot;
-  return {
-    chat: typeof input.chat === 'string' ? input.chat : String(input.chat ?? ''),
-    ...(resolvedBot ? { bot: resolvedBot } : {}),
-    ...(topicId ? { topicId } : {}),
-  };
-}
-
 export function createTelegramTools(deps: CreateTelegramToolsParams): ToolDefinition[] {
   const scope = () => deps.scope();
   return [
+    ...createTelegramMediaTools(deps),
+    ...createTelegramTopicTools(deps),
+    ...createTelegramExtraTools(deps),
     tool('telegram_list_chats', {
       group: 'telegram',
       description:
@@ -99,7 +78,8 @@ export function createTelegramTools(deps: CreateTelegramToolsParams): ToolDefini
       sideEffect: 'read',
       execute: async (raw) => {
         const input = raw as { limit?: number };
-        const limit = typeof input.limit === 'number' ? Math.min(100, Math.max(1, input.limit)) : 20;
+        const limit =
+          typeof input.limit === 'number' ? Math.min(100, Math.max(1, input.limit)) : 20;
         return {
           messages: await deps.telegram.readMessages(scope(), {
             ...targetOf(raw, deps.bot),
@@ -117,17 +97,34 @@ export function createTelegramTools(deps: CreateTelegramToolsParams): ToolDefini
         properties: {
           ...TARGET_PROPERTIES,
           text: { type: 'string', description: 'Message text, up to 4096 characters' },
+          parseMode: PARSE_MODE_PROPERTY,
+          disableNotification: { type: 'boolean', description: 'Post silently' },
+          protectContent: { type: 'boolean', description: 'Disable forwarding and saving' },
+          linkPreview: { type: 'boolean', description: 'Set false to hide the link preview' },
+          replyToMessageId: { type: 'string', description: 'Message id to reply to' },
         },
         required: ['chat', 'text'],
         additionalProperties: false,
       },
       sideEffect: 'communication',
       execute: async (raw) => {
-        const input = raw as { text?: string };
+        const input = raw as {
+          text?: string;
+          parseMode?: 'HTML' | 'MarkdownV2';
+          disableNotification?: boolean;
+          protectContent?: boolean;
+          linkPreview?: boolean;
+          replyToMessageId?: string;
+        };
         return {
           post: await deps.telegram.sendMessage(scope(), {
             ...targetOf(raw, deps.bot),
             text: typeof input.text === 'string' ? input.text : '',
+            ...(input.parseMode !== undefined ? { parseMode: input.parseMode } : {}),
+            ...(input.disableNotification === true ? { disableNotification: true } : {}),
+            ...(input.protectContent === true ? { protectContent: true } : {}),
+            ...(input.linkPreview === false ? { linkPreview: false } : {}),
+            ...(input.replyToMessageId ? { replyToMessageId: input.replyToMessageId } : {}),
           }),
         };
       },
@@ -142,25 +139,35 @@ export function createTelegramTools(deps: CreateTelegramToolsParams): ToolDefini
           bot: TARGET_PROPERTIES.bot,
           messageId: { type: 'string', description: 'Telegram message id returned by a send' },
           text: { type: 'string' },
+          parseMode: PARSE_MODE_PROPERTY,
+          linkPreview: { type: 'boolean', description: 'Set false to hide the link preview' },
         },
         required: ['chat', 'messageId', 'text'],
         additionalProperties: false,
       },
       sideEffect: 'communication',
       execute: async (raw) => {
-        const input = raw as { messageId?: string; text?: string };
+        const input = raw as {
+          messageId?: string;
+          text?: string;
+          parseMode?: 'HTML' | 'MarkdownV2';
+          linkPreview?: boolean;
+        };
         return {
           post: await deps.telegram.editMessage(scope(), {
             ...targetOf(raw, deps.bot),
             messageId: typeof input.messageId === 'string' ? input.messageId : '',
             text: typeof input.text === 'string' ? input.text : '',
+            ...(input.parseMode !== undefined ? { parseMode: input.parseMode } : {}),
+            ...(input.linkPreview === false ? { linkPreview: false } : {}),
           }),
         };
       },
     }),
     tool('telegram_delete_message', {
       group: 'telegram',
-      description: 'Delete a message the bot posted. Telegram also allows deleting recent messages.',
+      description:
+        'Delete a message the bot posted. Telegram also allows deleting recent messages.',
       input: {
         type: 'object',
         properties: {

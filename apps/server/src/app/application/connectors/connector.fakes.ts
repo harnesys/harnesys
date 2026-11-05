@@ -11,17 +11,6 @@ import type {
   InsertInboxResult,
 } from '../../domain/connector/connector.ts';
 import { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
-import type {
-  TelegramBotCommand,
-  TelegramBotIdentity,
-  TelegramChatInfo,
-  TelegramChatMember,
-  TelegramFileRef,
-  TelegramForumTopic,
-  TelegramSentMessage,
-} from '../../domain/connector/telegram-api.port.ts';
-import { TelegramApiPort } from '../../domain/connector/telegram-api.port.ts';
-import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 
 export function memoryConnector(overrides: Partial<ConnectorRecord> = {}): ConnectorRecord {
   const now = '2026-01-01T00:00:00.000Z';
@@ -249,81 +238,4 @@ export class MemoryConnectors extends ConnectorRepositoryPort {
   }
 }
 
-export class FakeSecrets extends SecretStorePort {
-  async get(): Promise<string | null> {
-    return 'token';
-  }
-
-  async set(): Promise<void> {}
-
-  async delete(): Promise<void> {}
-
-  async listKeys(): Promise<string[]> {
-    return [];
-  }
-}
-
-export class FakeTelegram extends TelegramApiPort {
-  async getMe(): Promise<TelegramBotIdentity> {
-    return { id: 'bot-1', username: 'coder_bot', canReadAllGroupMessages: true };
-  }
-
-  async getUpdates(): Promise<unknown[]> {
-    return [];
-  }
-
-  async sendMessage(): Promise<TelegramSentMessage> {
-    return { messageId: '1' };
-  }
-
-  async editMessageText(): Promise<TelegramSentMessage> {
-    return { messageId: '1' };
-  }
-
-  async sendChatAction(): Promise<void> {}
-
-  async sendPhoto(): Promise<TelegramSentMessage> {
-    return { messageId: '1' };
-  }
-
-  async sendDocument(): Promise<TelegramSentMessage> {
-    return { messageId: '1' };
-  }
-
-  async answerCallbackQuery(): Promise<void> {}
-
-  async getFile(): Promise<TelegramFileRef & { bytes: Uint8Array }> {
-    return { filePath: '', fileSize: 0, bytes: new Uint8Array() };
-  }
-
-  async getChatMember(
-    _token: string,
-    _chatId: string,
-    _userId: string,
-  ): Promise<TelegramChatMember | null> {
-    return { status: 'administrator', canManageChat: true, canManageTopics: true };
-  }
-
-  async getChat(_token: string, _chatId: string): Promise<TelegramChatInfo> {
-    return { id: '', type: 'supergroup', title: null, username: null };
-  }
-
-  async createForumTopic(
-    _token: string,
-    _chatId: string,
-    _name: string,
-  ): Promise<TelegramForumTopic> {
-    return { chatId: '', topicId: '' };
-  }
-
-  async deleteMessage(_token: string, _chatId: string, _messageId: string): Promise<void> {}
-
-  async pinChatMessage(
-    _token: string,
-    _chatId: string,
-    _messageId: string,
-    _notify?: boolean,
-  ): Promise<void> {}
-
-  async setMyCommands(_token: string, _commands: TelegramBotCommand[]): Promise<void> {}
-}
+export { FakeSecrets, FakeTelegram } from './telegram.fakes.ts';

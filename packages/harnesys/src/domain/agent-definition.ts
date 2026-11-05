@@ -28,7 +28,6 @@ export interface AgentContextSettings {
 export interface AgentGenerationSettings {
   temperature?: number;
   topP?: number;
-  topK?: number;
   frequencyPenalty?: number;
   presencePenalty?: number;
   seed?: number;

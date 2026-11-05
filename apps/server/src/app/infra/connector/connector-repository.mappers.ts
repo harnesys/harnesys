@@ -87,6 +87,7 @@ export function toDelivery(row: ConnectorDeliveryRow): ConnectorDeliveryRecord {
     interruptId: row.interruptId,
     draftId: row.draftId,
     lastText: row.lastText,
+    lastSeq: row.lastSeq,
     externalMessageId: row.externalMessageId,
     status: row.status as ConnectorDeliveryStatus,
     updatedAt: row.updatedAt,

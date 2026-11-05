@@ -13,8 +13,24 @@ export function dispatchThreadEvents(frame: EventsWatchThreadEventsFrame): void 
     return;
   }
   for (const event of frame.events ?? []) {
-    applyEvent(threadId, event, frame.orgId);
+    try {
+      applyEvent(threadId, event, frame.orgId);
+    } catch (error) {
+      trace('thread-events', `apply failed ${event.type}`, error);
+    }
   }
+}
+
+export async function resyncThreadEvents(orgId: string): Promise<void> {
+  const session = useSessionStore.getState();
+  const threads = useThreadStore
+    .getState()
+    .items.filter(
+      (thread) =>
+        thread.orgId === orgId &&
+        (session.activeRuns[thread.id] !== undefined || session.events[thread.id] !== undefined),
+    );
+  await Promise.all(threads.map((thread) => reconcileThread(thread.id)));
 }
 
 function isDuplicate(threadId: string, event: SessionEvent): boolean {

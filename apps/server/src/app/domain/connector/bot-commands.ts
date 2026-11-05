@@ -1,5 +1,6 @@
 export const BOT_COMMANDS = [
   { command: 'start', description: 'Link this chat with the code from Harnesys' },
+  { command: 'link', description: 'Link your Harnesys account to this Telegram user' },
   { command: 'stop', description: 'Stop the current run' },
   { command: 'compact', description: 'Compact this thread' },
   { command: 'stats', description: 'Thread token and cost totals' },
@@ -7,7 +8,7 @@ export const BOT_COMMANDS = [
   { command: 'help', description: 'List commands' },
 ] as const;
 
-export type BotCommandName = 'start' | 'stop' | 'compact' | 'stats' | 'skills' | 'help';
+export type BotCommandName = 'start' | 'link' | 'stop' | 'compact' | 'stats' | 'skills' | 'help';
 
 export const PAIRED_COMMANDS = ['stop', 'compact', 'stats', 'skills', 'help'] as const;
 

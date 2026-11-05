@@ -59,7 +59,7 @@ export function childPermissions(input: {
   const parentMap = input.parent ?? DEFAULT_PERMISSIONS;
   for (const [op, gate] of Object.entries(input.grant)) {
     const parentGate = parentMap[op] ?? DEFAULT_PERMISSIONS[op] ?? 'ask';
-    out[op] = parentGate === 'deny' ? 'deny' : gate;
+    out[op] = GATE_SEVERITY[gate] >= GATE_SEVERITY[parentGate] ? gate : parentGate;
   }
   return out;
 }

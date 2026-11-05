@@ -98,6 +98,7 @@ export interface ConnectorDeliveryRecord {
   interruptId: string | null;
   draftId: number | null;
   lastText: string | null;
+  lastSeq: number;
   externalMessageId: string | null;
   status: ConnectorDeliveryStatus;
   updatedAt: string;

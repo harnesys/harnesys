@@ -1,14 +1,7 @@
-import { createHash, randomInt } from 'node:crypto';
-
-const PAIR_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const PAIR_CODE_LENGTH = 8;
+import { createOneTimeCode, hashOneTimeCode } from '../one-time-code.ts';
 
 export function createPairCode(): { code: string; hash: string } {
-  let code = '';
-  for (let i = 0; i < PAIR_CODE_LENGTH; i += 1) {
-    code += PAIR_ALPHABET[randomInt(PAIR_ALPHABET.length)];
-  }
-  return { code, hash: hashPairCode(code) };
+  return createOneTimeCode();
 }
 
 export function pairCodeMatches(
@@ -23,9 +16,5 @@ export function pairCodeMatches(
   if (now >= expiresAt) {
     return false;
   }
-  return hashPairCode(code) === hash;
-}
-
-function hashPairCode(code: string): string {
-  return createHash('sha256').update(code, 'utf8').digest('hex');
+  return hashOneTimeCode(code) === hash;
 }

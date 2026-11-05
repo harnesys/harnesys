@@ -10,7 +10,6 @@ const FIELD_PARAMS: {
 }[] = [
   { field: 'temperature', params: ['temperature'] },
   { field: 'topP', params: ['top_p'] },
-  { field: 'topK', params: ['top_k'] },
   { field: 'frequencyPenalty', params: ['frequency_penalty'] },
   { field: 'presencePenalty', params: ['presence_penalty'] },
   { field: 'seed', params: ['seed'] },

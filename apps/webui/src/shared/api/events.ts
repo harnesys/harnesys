@@ -46,6 +46,7 @@ export function watchDeskEvents(orgId: string, onEvent: (event: DeskEvent) => vo
 export function watchThreadEvents(
   orgId: string,
   onFrame: (frame: EventsWatchThreadEventsFrame) => void,
+  options?: { onOpen?: () => void },
 ): () => void {
   return watchEventSource(
     eventsWatchUrl,
@@ -57,7 +58,7 @@ export function watchThreadEvents(
         // ignore malformed frames
       }
     },
-    { orgId },
+    { orgId, ...(options?.onOpen === undefined ? {} : { onOpen: options.onOpen }) },
   );
 }
 

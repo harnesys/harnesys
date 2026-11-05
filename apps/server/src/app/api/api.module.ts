@@ -69,6 +69,7 @@ import { FleetNodesController } from './rest/fleet-nodes.controller.ts';
 import { HealthController } from './rest/health.controller.ts';
 import { HostBrowseController } from './rest/host-browse.controller.ts';
 import { HostSkillsController } from './rest/host-skills.controller.ts';
+import { IdentityLinksController } from './rest/identity-links.controller.ts';
 import { IntegrationsController } from './rest/integrations.controller.ts';
 import { IntegrationsGithubController } from './rest/integrations-github.controller.ts';
 import { IntegrationsGoogleCallbackController } from './rest/integrations-google-callback.controller.ts';
@@ -179,6 +180,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     MembersController,
     AuditController,
     InvitesController,
+    IdentityLinksController,
     OrgGitController,
     IntegrationsGoogleCallbackController,
     IntegrationsGithubController,

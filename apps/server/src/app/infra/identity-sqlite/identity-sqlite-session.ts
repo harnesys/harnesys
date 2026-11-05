@@ -26,9 +26,12 @@ export function openIdentitySqlite(layout: HostFsLayoutPort): IdentitySqliteSess
   layout.ensureHome();
   const sqlite = new Database(layout.identityDbPath(), { create: true });
   configureIdentitySqlite(sqlite);
-  ensureIdentitySchema((sql) => {
-    sqlite.exec(sql);
-  });
+  ensureIdentitySchema(
+    (sql) => {
+      sqlite.exec(sql);
+    },
+    (sql) => sqlite.query(sql).all() as { name: string }[],
+  );
   return {
     sqlite,
     db: drizzle(sqlite, { schema: identitySchema }),
@@ -41,9 +44,12 @@ export function withIdentitySqlite<T>(
 ): T {
   const sqlite = new Database(layout.identityDbPath(), { create: true });
   configureIdentitySqlite(sqlite);
-  ensureIdentitySchema((sql) => {
-    sqlite.exec(sql);
-  });
+  ensureIdentitySchema(
+    (sql) => {
+      sqlite.exec(sql);
+    },
+    (sql) => sqlite.query(sql).all() as { name: string }[],
+  );
   const db = drizzle(sqlite, { schema: identitySchema });
   try {
     return fn(db);

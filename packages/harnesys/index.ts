@@ -156,6 +156,7 @@ export type { RunClaimer } from './src/application/run-claimer.ts';
 export { createRunClaimer } from './src/application/run-claimer.ts';
 export { createRunEngine } from './src/application/run-engine.ts';
 export type {
+  DeliverySettings,
   RunEngine,
   RunEngineDeps,
   RunTargetOpts,
@@ -437,6 +438,12 @@ export { planCapability } from './src/packs/plan/index.ts';
 export type { SchedulerCapabilityPorts } from './src/packs/scheduler/index.ts';
 export { schedulerCapability } from './src/packs/scheduler/index.ts';
 export {
+  firstMatchingCommandPattern,
+  matchProgram,
+} from './src/packs/shell/command-glob.ts';
+export { programOf, segmentCommand } from './src/packs/shell/shell-chain.ts';
+export { SHELL_FLOOR_PATTERNS } from './src/packs/shell/shell-floor.ts';
+export {
   type CreateTelegramToolsParams,
   createTelegramTools,
 } from './src/packs/telegram/create-telegram-tools.ts';
@@ -445,12 +452,6 @@ export type {
   TelegramPackSpec,
 } from './src/packs/telegram/index.ts';
 export { telegramCapability } from './src/packs/telegram/index.ts';
-export {
-  firstMatchingCommandPattern,
-  matchProgram,
-} from './src/packs/shell/command-glob.ts';
-export { programOf, segmentCommand } from './src/packs/shell/shell-chain.ts';
-export { SHELL_FLOOR_PATTERNS } from './src/packs/shell/shell-floor.ts';
 export {
   createThreadsHistoryTool,
   THREADS_HISTORY_TOOL,
@@ -611,13 +612,6 @@ export type {
   GoogleYoutubeVideoSummary,
 } from './src/ports/google-youtube.ts';
 export type {
-  TelegramChatSummary,
-  TelegramChatTarget,
-  TelegramMessageSummary,
-  TelegramPostResult,
-} from './src/ports/telegram-chats.ts';
-export { TelegramChatsPort } from './src/ports/telegram-chats.ts';
-export type {
   GeneratedImageArtifact,
   ImageGenerationRequest,
 } from './src/ports/image-generation.ts';
@@ -742,6 +736,7 @@ export type {
 } from './src/ports/plugins.ts';
 export type {
   PendingSessionEvent,
+  RunEventAppendSink,
   RunEventStore,
   RunSeqAllocator,
   TruncateThreadResult,
@@ -788,6 +783,19 @@ export type {
   SessionHandle,
 } from './src/ports/session.ts';
 export type { SkillRegistry } from './src/ports/skills.ts';
+export type {
+  TelegramAlbumItem,
+  TelegramChatSummary,
+  TelegramChatTarget,
+  TelegramMediaKind,
+  TelegramMediaSource,
+  TelegramMessageSummary,
+  TelegramParseMode,
+  TelegramPollInput,
+  TelegramPostResult,
+  TelegramTopicRecord,
+} from './src/ports/telegram-chats.ts';
+export { TelegramChatsPort } from './src/ports/telegram-chats.ts';
 export type {
   ThreadAttachmentPutInput,
   ThreadAttachmentRecord,

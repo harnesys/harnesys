@@ -1,6 +1,10 @@
 import { Injectable, Logger, type ModuleDestroyHook, type ModuleInitHook } from '@harnesys/brix';
 import type { SessionEvent } from 'harnesys';
-import type { ConnectorBindingRecord, ConnectorRecord } from '../../domain/connector/connector.ts';
+import type {
+  ConnectorBindingRecord,
+  ConnectorDeliveryRecord,
+  ConnectorRecord,
+} from '../../domain/connector/connector.ts';
 import { ConnectorOutboundPort } from '../../domain/connector/connector-outbound.port.ts';
 import { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
 import { type ProjectionPlan, planProjection } from '../../domain/connector/project-event.ts';
@@ -17,6 +21,13 @@ import {
   maybeFlushDraft,
   sendThinkingDraft,
 } from './project-connector-draft.ts';
+import { EchoBarrier, echoUserEvents } from './project-connector-echo.ts';
+import {
+  prefixForRoute,
+  prefixOf,
+  type RouteContext,
+  resolveThreadRoutes,
+} from './project-connector-routes.ts';
 import {
   sendAskMessage,
   sendFileMessage,
@@ -24,10 +35,16 @@ import {
   toProjectEvent,
 } from './project-connector-send.ts';
 
-interface RouteContext {
-  connector: ConnectorRecord;
-  binding: ConnectorBindingRecord;
-  agentName: string;
+const TELEGRAM_PROVIDER = 'telegram';
+
+function resumeDeliveryOf(delivery: ConnectorDeliveryRecord): ConnectorDeliveryRecord | undefined {
+  return delivery.blockKey.startsWith('text:') ? delivery : undefined;
+}
+
+function isActiveRun(status: string | undefined): boolean {
+  return (
+    status === 'running' || status === 'queued' || status === 'waiting' || status === 'needs_input'
+  );
 }
 
 @Injectable()
@@ -38,6 +55,7 @@ export class ProjectConnectorEventsUseCase
   private readonly log: Logger;
   private readonly sessions = new Map<string, DraftSendState>();
   private readonly inflight = new Set<string>();
+  private readonly echoBarrier = new EchoBarrier();
   private unsubscribe: (() => void) | null = null;
 
   constructor(
@@ -54,16 +72,32 @@ export class ProjectConnectorEventsUseCase
 
   onModuleInit(): void {
     this.unsubscribe = this.threadEvents.subscribe((orgId, event) => {
-      if (event.type !== 'cleared') {
+      if (event.type === 'cleared') {
+        const { threadId, runId } = event;
+        queueMicrotask(() => {
+          void this.maybeProjectRun(orgId, threadId, runId);
+        });
         return;
       }
-
-      // so no sqlite access is allowed here (a nested connection would
-      // self-deadlock on the open write tx until busy_timeout).
-      const { threadId, runId } = event;
-      queueMicrotask(() => {
-        void this.maybeProjectRun(orgId, threadId, runId);
-      });
+      if (event.type === 'events') {
+        const { threadId, events } = event;
+        if (!events.some((item) => item.type === 'user')) {
+          return;
+        }
+        this.echoBarrier.enqueue(`${orgId}:${threadId}`, () =>
+          echoUserEvents(
+            {
+              connectors: this.connectors,
+              secrets: this.secrets,
+              telegram: this.telegram,
+              log: this.log,
+            },
+            orgId,
+            threadId,
+            events,
+          ),
+        );
+      }
     });
   }
 
@@ -73,35 +107,123 @@ export class ProjectConnectorEventsUseCase
   }
 
   async projectRun(orgId: string, threadId: string, runId: string): Promise<void> {
-    const key = `${orgId}:${runId}`;
-    if (this.inflight.has(key)) {
+    await this.echoBarrier.wait(`${orgId}:${threadId}`);
+    const routes = await this.routesForThread(orgId, threadId, runId);
+    await Promise.all(routes.map((route) => this.projectRoute(route, threadId, runId)));
+  }
+
+  async resumeStreaming(orgId: string, connectorId: string): Promise<void> {
+    const connector = this.connectors.findById(orgId, connectorId);
+    if (!connector) {
       return;
     }
-    const route = await this.routeForRun(orgId, threadId, runId);
-    if (!route) {
-      return;
-    }
-    const token = await this.secrets.get(orgId, route.connector.secretRef);
+    const token = await this.secrets.get(orgId, connector.secretRef);
     if (!token) {
       return;
     }
-    this.inflight.add(key);
-    const state = draftStateFromConnector(route.connector, {
-      orgId,
-      bindingId: route.binding.id,
-      threadId,
-      runId,
-      chatId: route.binding.externalChatId,
-      topicId: route.binding.externalTopicId,
-      token,
-      prefix: prefixForRoute(route),
+    const lifecycle = await this.executor.lifecycle(orgId);
+    for (const delivery of this.connectors.listStreaming(orgId, connectorId)) {
+      const rec = await lifecycle.get(delivery.runId);
+      if (isActiveRun(rec?.status)) {
+        const route = this.routeForConnector(orgId, connectorId, delivery.threadId, rec?.agentName);
+        if (route) {
+          void this.projectRoute(
+            route,
+            delivery.threadId,
+            delivery.runId,
+            resumeDeliveryOf(delivery),
+          );
+        }
+        continue;
+      }
+      await this.finishStaleDelivery(orgId, connectorId, delivery, rec?.agentName, token);
+    }
+  }
+
+  private async finishStaleDelivery(
+    orgId: string,
+    connectorId: string,
+    delivery: ConnectorDeliveryRecord,
+    agentName: string | undefined,
+    token: string,
+  ): Promise<void> {
+    const binding = this.connectors.findBinding(orgId, connectorId, delivery.bindingId);
+    if (delivery.blockKey.startsWith('text:') && delivery.lastText) {
+      await this.deliverStaleText(token, binding, delivery, agentName);
+    }
+    this.connectors.upsertDelivery(orgId, {
+      ...delivery,
+      status: 'final',
+      updatedAt: new Date().toISOString(),
     });
-    this.sessions.set(`${route.connector.id}:${runId}`, state);
-    const draftTick = setInterval(() => {
-      void maybeFlushDraft(this.draftDeps(), state);
-    }, 100);
+  }
+
+  private async deliverStaleText(
+    token: string,
+    binding: ConnectorBindingRecord,
+    delivery: ConnectorDeliveryRecord,
+    agentName: string | undefined,
+  ): Promise<void> {
+    if (delivery.externalMessageId) {
+      await this.telegram.editMessageText(
+        token,
+        binding.externalChatId,
+        delivery.externalMessageId,
+        delivery.lastText ?? '',
+      );
+      return;
+    }
+    await this.telegram.sendMessage(
+      token,
+      binding.externalChatId,
+      prefixOf(binding.chatType, agentName) + (delivery.lastText ?? ''),
+      { topicId: binding.externalTopicId },
+    );
+  }
+
+  async finalizeOpenDraft(connectorId: string, runId: string): Promise<void> {
+    const state = this.sessions.get(`${connectorId}:${runId}`);
+    if (!state) {
+      return;
+    }
+    await finalizeDraftText(this.draftDeps(), state);
+  }
+
+  private async projectRoute(
+    route: RouteContext,
+    threadId: string,
+    runId: string,
+    resume?: ConnectorDeliveryRecord,
+  ): Promise<void> {
+    const orgId = route.connector.orgId;
+    const sessionKey = `${route.connector.id}:${runId}`;
+    const key = `${orgId}:${sessionKey}`;
+    if (this.inflight.has(key)) {
+      return;
+    }
+    this.inflight.add(key);
+    let draftTick: ReturnType<typeof setInterval> | null = null;
     try {
-      const stream = await this.executor.stream(orgId, runId, 0);
+      const token = await this.secrets.get(orgId, route.connector.secretRef);
+      if (!token) {
+        return;
+      }
+      const state = draftStateFromConnector(route.connector, {
+        orgId,
+        bindingId: route.binding.id,
+        threadId,
+        runId,
+        chatId: route.binding.externalChatId,
+        topicId: route.binding.externalTopicId,
+        token,
+        prefix: prefixForRoute(route),
+        ...(resume ? { delivery: resume } : {}),
+      });
+      this.sessions.set(sessionKey, state);
+      draftTick = setInterval(() => {
+        void maybeFlushDraft(this.draftDeps(), state);
+      }, 100);
+      const stream = await this.executor.stream(orgId, runId, state.lastSeq);
       for await (const event of stream) {
         const live = this.connectors.findById(orgId, route.connector.id);
         if (!live || live.status === 'paused') {
@@ -116,57 +238,24 @@ export class ProjectConnectorEventsUseCase
         'connector project failed',
       );
     } finally {
-      clearInterval(draftTick);
+      if (draftTick !== null) {
+        clearInterval(draftTick);
+      }
       this.inflight.delete(key);
-      this.sessions.delete(`${route.connector.id}:${runId}`);
+      this.sessions.delete(sessionKey);
     }
   }
 
-  async resumeStreaming(orgId: string, connectorId: string): Promise<void> {
-    const connector = this.connectors.findById(orgId, connectorId);
-    if (!connector) {
-      return;
-    }
-    const token = await this.secrets.get(orgId, connector.secretRef);
-    if (!token) {
-      return;
-    }
-    const lifecycle = await this.executor.lifecycle(orgId);
-    for (const delivery of this.connectors.listStreaming(orgId, connectorId)) {
-      const binding = this.connectors.findBinding(orgId, connectorId, delivery.bindingId);
-      const rec = await lifecycle.get(delivery.runId);
-      const running =
-        rec !== null &&
-        (rec.status === 'running' ||
-          rec.status === 'queued' ||
-          rec.status === 'waiting' ||
-          rec.status === 'needs_input');
-      if (running) {
-        void this.projectRun(orgId, delivery.threadId, delivery.runId);
-        continue;
-      }
-      if (delivery.lastText) {
-        await this.telegram.sendMessage(
-          token,
-          binding.externalChatId,
-          prefixOf(binding.chatType, rec?.agentName) + delivery.lastText,
-          { topicId: binding.externalTopicId },
-        );
-      }
-      this.connectors.upsertDelivery(orgId, {
-        ...delivery,
-        status: 'final',
-        updatedAt: new Date().toISOString(),
-      });
-    }
-  }
-
-  async finalizeOpenDraft(connectorId: string, runId: string): Promise<void> {
-    const state = this.sessions.get(`${connectorId}:${runId}`);
-    if (!state) {
-      return;
-    }
-    await finalizeDraftText(this.draftDeps(), state);
+  private routeForConnector(
+    orgId: string,
+    connectorId: string,
+    threadId: string,
+    agentName: string | undefined,
+  ): RouteContext | undefined {
+    return resolveThreadRoutes(this.connectors, orgId, threadId, {
+      provider: TELEGRAM_PROVIDER,
+      agentName: agentName ?? 'Agent',
+    }).find((route) => route.connector.id === connectorId);
   }
 
   private async maybeProjectRun(orgId: string, threadId: string, runId: string): Promise<void> {
@@ -178,6 +267,9 @@ export class ProjectConnectorEventsUseCase
     state: DraftSendState,
     event: SessionEvent,
   ): Promise<void> {
+    if (typeof event.seq === 'number' && event.seq > state.lastSeq) {
+      state.lastSeq = event.seq;
+    }
     if (event.type === 'run.started') {
       await sendThinkingDraft(this.draftDeps(), state);
       return;
@@ -229,29 +321,21 @@ export class ProjectConnectorEventsUseCase
     }
   }
 
-  private async routeForRun(
+  private async routesForThread(
     orgId: string,
     threadId: string,
-    runId: string,
-  ): Promise<RouteContext | null> {
+    runId?: string,
+  ): Promise<RouteContext[]> {
+    const agentName = runId === undefined ? 'Agent' : await this.agentNameOf(orgId, runId);
+    return resolveThreadRoutes(this.connectors, orgId, threadId, {
+      provider: TELEGRAM_PROVIDER,
+      agentName,
+    });
+  }
+
+  private async agentNameOf(orgId: string, runId: string): Promise<string> {
     const lifecycle = await this.executor.lifecycle(orgId);
-    const run = await lifecycle.get(runId);
-    const connectorId = run?.originConnectorId;
-    if (!connectorId) {
-      return null;
-    }
-    const connector = this.connectors.findById(orgId, connectorId);
-    if (!connector) {
-      return null;
-    }
-    if (connector.status === 'paused') {
-      return null;
-    }
-    const binding = this.connectors.findBindingForThread(orgId, connector.id, threadId);
-    if (!binding || binding.threadId !== threadId) {
-      return null;
-    }
-    return { connector, binding, agentName: run?.agentName ?? 'Agent' };
+    return (await lifecycle.get(runId))?.agentName ?? 'Agent';
   }
 
   private draftDeps(): DraftSendDeps {
@@ -262,15 +346,4 @@ export class ProjectConnectorEventsUseCase
       sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     };
   }
-}
-
-function prefixForRoute(route: RouteContext): string {
-  return prefixOf(route.binding.chatType, route.agentName);
-}
-
-function prefixOf(chatType: string, agentName: string | undefined): string {
-  if (chatType !== 'group' && chatType !== 'supergroup') {
-    return '';
-  }
-  return `${agentName ?? 'Agent'}: `;
 }

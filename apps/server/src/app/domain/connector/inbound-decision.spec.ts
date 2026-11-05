@@ -210,6 +210,37 @@ describe('decideInbound', () => {
     });
   });
 
+  test('link command works without a binding in a private chat', () => {
+    expect(decideInbound(base({ update: command('link', ' ABC12345 ') }))).toEqual({
+      type: 'identity_link',
+      code: 'ABC12345',
+    });
+    expect(decideInbound(base({ update: command('link', 'ABC12345'), binding: PAIRED }))).toEqual({
+      type: 'identity_link',
+      code: 'ABC12345',
+    });
+    expect(decideInbound(base({ update: command('link', 'ABC12345', GROUP) }))).toEqual({
+      type: 'reply',
+      text: 'Send /link in a direct message to this bot.',
+      inbox: 'rejected',
+    });
+  });
+
+  test('start payload with the link prefix links the account', () => {
+    expect(
+      decideInbound(base({ update: command('start', 'link_ABC12345'), binding: PAIRED })),
+    ).toEqual({ type: 'identity_link', code: 'ABC12345' });
+    expect(decideInbound(base({ update: command('start', 'link_ ABC12345 ') }))).toEqual({
+      type: 'identity_link',
+      code: 'ABC12345',
+    });
+    expect(decideInbound(base({ update: command('start', 'link_') }))).toEqual({
+      type: 'reply',
+      text: 'This bot is not linked yet.',
+      inbox: 'rejected',
+    });
+  });
+
   test('group binding waits for an explicit connect', () => {
     expect(
       decideInbound(

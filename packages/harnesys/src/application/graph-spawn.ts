@@ -450,6 +450,10 @@ async function runOneChild(input: {
   const childSpawnPath = parent.spawnPath
     ? `${parent.spawnPath}/${target.spawnId}`
     : target.spawnId;
+  const childInterruptOutput =
+    childResume?.spawnId === target.spawnId
+      ? ((await childState.load())?.cursor.interrupt?.output ?? null)
+      : undefined;
   const childOpts: GraphOpts = {
     agent: childDef,
     input: childInput,
@@ -483,6 +487,7 @@ async function runOneChild(input: {
     ...(childResume?.spawnId === target.spawnId
       ? {
           startNodeId: childResume.childNodeId,
+          outputHint: childInterruptOutput,
           resumeInterruptId: childResume.childInterruptId,
           resumePayload: {
             approved: childResume.approved,

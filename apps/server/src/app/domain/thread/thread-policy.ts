@@ -1,8 +1,7 @@
-import { type ThreadPolicy, ThreadPolicySchema } from '@harnesys/contracts';
+import { DEFAULT_CONTEXT_WINDOW, type ThreadPolicy, ThreadPolicySchema } from '@harnesys/contracts';
 
-export const DEFAULT_CONTEXT_WINDOW = 6;
 export type { ThreadPolicy };
-export { ThreadPolicySchema };
+export { DEFAULT_CONTEXT_WINDOW, ThreadPolicySchema };
 
 export const EMPTY_THREAD_POLICY: ThreadPolicy = { version: 1 };
 

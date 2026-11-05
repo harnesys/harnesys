@@ -28,6 +28,7 @@ export async function sendAskMessage(
       interruptId: plan.interruptId,
       draftId: null,
       lastText: button.value,
+      lastSeq: state.lastSeq,
       externalMessageId: null,
       status: 'streaming',
       updatedAt: new Date().toISOString(),
@@ -71,6 +72,7 @@ export async function sendStatusMessage(
     interruptId: null,
     draftId: null,
     lastText: text,
+    lastSeq: state.lastSeq,
     externalMessageId: sent.messageId,
     status: 'final',
     updatedAt: new Date().toISOString(),
@@ -98,8 +100,18 @@ export async function sendFileMessage(
   const id = crypto.randomUUID();
   const sent =
     mediaType.startsWith('image/') || looksImage(filename)
-      ? await deps.telegram.sendPhoto(state.token, state.chatId, bytes, filename, state.topicId)
-      : await deps.telegram.sendDocument(state.token, state.chatId, bytes, filename, state.topicId);
+      ? await deps.telegram.sendPhoto(
+          state.token,
+          state.chatId,
+          { bytes, filename },
+          { topicId: state.topicId },
+        )
+      : await deps.telegram.sendDocument(
+          state.token,
+          state.chatId,
+          { bytes, filename },
+          { topicId: state.topicId },
+        );
   deps.connectors.upsertDelivery(state.orgId, {
     id,
     connectorId: state.connectorId,
@@ -110,6 +122,7 @@ export async function sendFileMessage(
     interruptId: null,
     draftId: null,
     lastText: filename,
+    lastSeq: event.seq ?? state.lastSeq,
     externalMessageId: sent.messageId,
     status: 'final',
     updatedAt: new Date().toISOString(),
@@ -123,6 +136,7 @@ export function toProjectEvent(event: SessionEvent, connectorId: string): Projec
       text: event.text,
       origin: event.origin,
       connectorId,
+      ...(event.author ? { authorName: event.author.displayName } : {}),
     };
   }
   if (event.type === 'text-delta') {

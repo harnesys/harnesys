@@ -16,12 +16,15 @@ import {
 } from '../../domain/connector/inbound-decision.ts';
 import { TelegramApiPort } from '../../domain/connector/telegram-api.port.ts';
 import type { CanonicalUpdate } from '../../domain/connector/telegram-update.ts';
+import { IdentityLinkRepository } from '../../domain/identity/identity-link.port.ts';
+import { UserRepository } from '../../domain/identity/user-repository.port.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadParticipantRepositoryPort } from '../../domain/thread/thread-participant-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
+import { ConfirmIdentityLinkUseCase } from '../identity/confirm-identity-link.use-case.ts';
 import { CancelRunUseCase } from '../threads/cancel-run.use-case.ts';
 import { RespondRunUseCase } from '../threads/respond-run.use-case.ts';
 import { SendThreadMessageUseCase } from '../threads/send-thread-message.use-case.ts';
@@ -40,6 +43,7 @@ import {
   connectorMembersOf,
   replyText,
 } from './apply-telegram-context.ts';
+import { applyIdentityLink } from './apply-telegram-identity-link.ts';
 import { discoverChat } from './discover-chat.ts';
 import { RunTelegramCommandUseCase } from './run-telegram-command.use-case.ts';
 
@@ -69,6 +73,9 @@ export class ApplyTelegramUpdateUseCase {
     uploadAttachment: UploadThreadAttachmentUseCase,
     outbound: ConnectorOutboundPort,
     private readonly runCommand: RunTelegramCommandUseCase,
+    links: IdentityLinkRepository,
+    users: UserRepository,
+    private readonly confirmLink: ConfirmIdentityLinkUseCase,
   ) {
     this.deps = {
       connectors,
@@ -84,6 +91,8 @@ export class ApplyTelegramUpdateUseCase {
       cancelRun,
       uploadAttachment,
       outbound,
+      links,
+      users,
     };
   }
 
@@ -187,6 +196,9 @@ export class ApplyTelegramUpdateUseCase {
         return;
       case 'stop':
         await stopActiveRun(this.deps, ctx, false);
+        return;
+      case 'identity_link':
+        await applyIdentityLink(this.deps, this.confirmLink, ctx, decision.code);
         return;
       case 'command': {
         if (!ctx.chatId || !ctx.threadId || !thread) {

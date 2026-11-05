@@ -8,6 +8,7 @@ export interface ProjectEventInput {
   message?: string;
   origin?: string;
   connectorId?: string;
+  authorName?: string;
   askId?: string;
   source?: string;
   schema?: unknown;
@@ -71,7 +72,7 @@ function planForAction(
   event: ProjectEventInput,
 ): ProjectionPlan {
   if (event.type === 'user') {
-    return { type: 'echo', text: appEchoText(event.text ?? '') };
+    return { type: 'echo', text: appEchoText(event.authorName ?? 'You', event.text ?? '') };
   }
   if (action === 'ask' && event.type === 'ask') {
     return {

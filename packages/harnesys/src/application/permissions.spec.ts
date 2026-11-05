@@ -4,11 +4,19 @@ import type { PermissionMap } from '../ports/permissions.ts';
 import { childPermissions, intersectPermissions } from './permissions.ts';
 
 describe('childPermissions', () => {
-  test('a grant lifts the default ask gate for the child', () => {
+  test('a grant cannot lift the default ask gate', () => {
     const out = childPermissions({ grant: { 'fs.write': 'allow' } });
-    expect(out['fs.write']).toBe('allow');
+    expect(out['fs.write']).toBe('ask');
     expect(out['fs.read']).toBe(DEFAULT_PERMISSIONS['fs.read']);
     expect(out.process).toBe(DEFAULT_PERMISSIONS.process);
+  });
+
+  test('a grant cannot lift an explicit parent ask gate', () => {
+    const out = childPermissions({
+      grant: { process: 'allow' },
+      parent: { process: 'ask' },
+    });
+    expect(out.process).toBe('ask');
   });
 
   test('a grant never overrides an explicit parent deny', () => {

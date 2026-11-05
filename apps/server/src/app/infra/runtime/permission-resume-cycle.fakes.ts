@@ -4,8 +4,6 @@ import {
   type AgentDefinition,
   createRunClaimer,
   createRunEngine,
-  createRunEventBus,
-  createRunEventFeed,
   InMemoryRunEventStore,
   InMemoryRunLifecycleStore,
   type ModelsPort,
@@ -198,11 +196,9 @@ export async function approve(
 export function buildStack(): Stack {
   const events = new InMemoryRunEventStore();
   const lifecycle = new InMemoryRunLifecycleStore(events);
-  const feed = createRunEventFeed({ events, lifecycle, bus: createRunEventBus() });
   const engine = createRunEngine({
     lifecycle,
     events,
-    feed,
     instanceId: 'test-node',
     models: MODELS,
     toolRegistry: new Map([

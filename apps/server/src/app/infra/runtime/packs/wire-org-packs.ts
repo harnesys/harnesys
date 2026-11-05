@@ -128,8 +128,7 @@ export function orgPackInputs(
     planDb: db,
     planEvents: deps.planEvents,
     memoryDb: db,
-    ...(deps.permissionRules !== undefined ? { permissionRules: deps.permissionRules } : {}),
-    ...(deps.terminalSessions !== undefined ? { terminalSessions: deps.terminalSessions } : {}),
+    ...optionalInputs(deps),
     createAgent: agentCatalogCreate({
       orgId: deps.orgId,
       agents: deps.agents,
@@ -140,6 +139,13 @@ export function orgPackInputs(
     orgSettings: deps.orgSettings,
     mcpManage: deps.mcpManage,
     modes: deps.modes,
+  };
+}
+
+function optionalInputs(deps: OrgRuntimeDeps): Partial<WireOrgPacksDeps> {
+  return {
+    ...(deps.permissionRules !== undefined ? { permissionRules: deps.permissionRules } : {}),
+    ...(deps.terminalSessions !== undefined ? { terminalSessions: deps.terminalSessions } : {}),
     ...(deps.schedules ? { schedules: deps.schedules } : {}),
     ...(deps.webhooks ? { webhooks: deps.webhooks } : {}),
     ...(deps.deskEvents ? { deskEvents: deps.deskEvents } : {}),

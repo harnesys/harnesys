@@ -1,6 +1,7 @@
 import { codedRunError } from '../domain/errors.ts';
 import type {
   PendingSessionEvent,
+  RunEventAppendSink,
   RunEventStore,
   TruncateThreadResult,
 } from '../ports/run-event-store.ts';
@@ -27,6 +28,10 @@ export class InMemoryRunEventStore implements RunEventStore {
   private threadSeq: Map<string, number> = new Map();
   private insertion: InsertionEntry[] = [];
   private runs: Map<string, RunRecord> | null = null;
+  private readonly sink?: RunEventAppendSink;
+  constructor(sink?: RunEventAppendSink) {
+    this.sink = sink;
+  }
   attachLifecycleRuns(runs: Map<string, RunRecord>): void {
     this.runs = runs;
   }
@@ -44,19 +49,23 @@ export class InMemoryRunEventStore implements RunEventStore {
     runId: string,
     events: PendingSessionEvent[],
   ): Promise<SessionEvent[]> {
-    void threadId;
-    return Promise.resolve(this.appendLocked(runId, events));
+    return Promise.resolve(this.appendLocked(runId, events, threadId));
   }
   next(runId: string): number {
     const seq = (this.nextSeq.get(runId) ?? 0) + 1;
     this.nextSeq.set(runId, seq);
     return seq;
   }
-  appendLocked(runId: string, events: PendingSessionEvent[]): SessionEvent[] {
+  appendLocked(
+    runId: string,
+    events: PendingSessionEvent[],
+    threadIdOverride?: string,
+  ): SessionEvent[] {
     const stored = this.events.get(runId) ?? [];
     const record = this.runs?.get(runId);
+    const threadId = threadIdOverride ?? record?.threadId ?? '';
     let maxSeq = this.nextSeq.get(runId) ?? 0;
-    let threadSeq = this.threadSeq.get(record?.threadId ?? '') ?? 0;
+    let threadSeq = this.threadSeq.get(threadId) ?? 0;
     const assigned: SessionEvent[] = [];
     for (const event of events) {
       const pre = seqOf(event as SessionEvent);
@@ -65,10 +74,10 @@ export class InMemoryRunEventStore implements RunEventStore {
         maxSeq = seq;
       }
       threadSeq += 1;
-      this.threadSeq.set(record?.threadId ?? '', threadSeq);
+      this.threadSeq.set(threadId, threadSeq);
       const full = { ...event, seq, runId, threadSeq } as SessionEvent;
       stored.push(full);
-      this.insertion.push({ threadId: record?.threadId ?? '', event: full });
+      this.insertion.push({ threadId, event: full });
       assigned.push(full);
     }
     this.events.set(runId, stored);
@@ -76,7 +85,18 @@ export class InMemoryRunEventStore implements RunEventStore {
     if (record) {
       record.lastSeq = maxSeq;
     }
+    this.publish(threadId, runId, assigned);
     return assigned.map((event) => ({ ...event }));
+  }
+  private publish(threadId: string, runId: string, events: SessionEvent[]): void {
+    if (this.sink === undefined || events.length === 0) {
+      return;
+    }
+    try {
+      this.sink(threadId, runId, events);
+    } catch {
+      // events are stored already; live fan-out must not fail the append
+    }
   }
   tail(runId: string, fromSeq: number): Promise<SessionEvent[]> {
     return Promise.resolve(

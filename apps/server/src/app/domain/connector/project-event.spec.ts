@@ -23,6 +23,22 @@ describe('planProjection', () => {
     expect(
       planProjection(
         DEFAULT_MIRROR_POLICY,
+        { type: 'user', text: 'hi', origin: 'web', connectorId: 'c1', authorName: 'Ann' },
+        null,
+      ),
+    ).toEqual({ type: 'echo', text: 'Ann · Harnesys\n\nhi' });
+
+    expect(
+      planProjection(
+        DEFAULT_MIRROR_POLICY,
+        { type: 'user', text: 'hi', origin: 'connector:c1', connectorId: 'c1', authorName: 'Ann' },
+        null,
+      ),
+    ).toEqual({ type: 'skip' });
+
+    expect(
+      planProjection(
+        DEFAULT_MIRROR_POLICY,
         {
           type: 'ask',
           askId: 'a1',

@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'bun:test';
 import type { CapabilityScope } from 'harnesys';
-import type { ConnectorInboxRecord, ConnectorRecord } from '../../../domain/connector/connector.ts';
 import {
   FakeSecrets,
   FakeTelegram,
@@ -8,21 +7,70 @@ import {
   memoryBinding,
   memoryConnector,
 } from '../../../application/connectors/connector.fakes.ts';
+import type { ConnectorInboxRecord, ConnectorRecord } from '../../../domain/connector/connector.ts';
+import type {
+  TelegramMediaKind,
+  TelegramMediaOptions,
+  TelegramMediaSource,
+} from '../../../domain/connector/telegram-api.port.ts';
 import { OrgTelegramPort } from './org-telegram.port.ts';
 
 const scope: CapabilityScope = { orgId: 'org-1', agentId: 'a1', sourceIds: [], threadId: 't1' };
 
 class RecordingTelegram extends FakeTelegram {
   readonly sent: Array<{ chatId: string; text: string; topicId?: string | null }> = [];
+  readonly media: Array<{
+    chatId: string;
+    kind: TelegramMediaKind;
+    filename?: string;
+    caption?: string;
+    topicId?: string | null;
+  }> = [];
+  readonly albums: Array<{ chatId: string; count: number; topicId?: string | null }> = [];
 
   override async sendMessage(
     _token: string,
     chatId: string,
     text: string,
-    options?: { topicId?: string | null },
+    options?: {
+      topicId?: string | null;
+      parseMode?: 'HTML' | 'MarkdownV2';
+      disableNotification?: boolean;
+      protectContent?: boolean;
+      linkPreview?: boolean;
+      replyToMessageId?: string | null;
+      replyMarkup?: { inlineKeyboard: Array<Array<{ label: string; value: string }>> };
+    },
   ) {
     this.sent.push({ chatId, text, topicId: options?.topicId ?? null });
     return { messageId: '77' };
+  }
+
+  override async sendMedia(
+    _token: string,
+    chatId: string,
+    kind: TelegramMediaKind,
+    source: TelegramMediaSource,
+    options?: TelegramMediaOptions,
+  ) {
+    this.media.push({
+      chatId,
+      kind,
+      ...(source.filename !== undefined ? { filename: source.filename } : {}),
+      ...(options?.caption !== undefined ? { caption: options.caption } : {}),
+      topicId: options?.topicId ?? null,
+    });
+    return { messageId: '78' };
+  }
+
+  override async sendMediaGroup(
+    _token: string,
+    chatId: string,
+    items: unknown[],
+    options?: { topicId?: string | null; disableNotification?: boolean },
+  ) {
+    this.albums.push({ chatId, count: items.length, topicId: options?.topicId ?? null });
+    return items.map((_, index) => ({ messageId: String(90 + index) }));
   }
 }
 
@@ -118,5 +166,45 @@ describe('OrgTelegramPort', () => {
         receivedAt: '2026-01-01T00:00:00.000Z',
       },
     ]);
+  });
+
+  test('posts media with caption and topic', async () => {
+    const { port, telegram } = build();
+    const result = await port.sendMedia(scope, {
+      chat: '-100',
+      topicId: '9',
+      kind: 'photo',
+      source: { bytes: new Uint8Array([1, 2, 3]), filename: 'cover.png' },
+      caption: 'Cover',
+    });
+
+    expect(result).toEqual({ messageId: '78', chatId: '-100', topicId: '9' });
+    expect(telegram.media).toEqual([
+      { chatId: '-100', kind: 'photo', filename: 'cover.png', caption: 'Cover', topicId: '9' },
+    ]);
+  });
+
+  test('rejects an album outside the 2 to 10 item range', async () => {
+    const { port } = build();
+    await expect(
+      port.sendAlbum(scope, {
+        chat: '-200',
+        items: [{ kind: 'photo', source: { bytes: new Uint8Array([1]) } }],
+      }),
+    ).rejects.toThrow('2 to 10');
+  });
+
+  test('posts an album and returns every message id', async () => {
+    const { port, telegram } = build();
+    const posts = await port.sendAlbum(scope, {
+      chat: '-200',
+      items: [
+        { kind: 'photo', source: { bytes: new Uint8Array([1]) } },
+        { kind: 'document', source: { fileId: 'file-1' } },
+      ],
+    });
+
+    expect(posts.map((post) => post.messageId)).toEqual(['90', '91']);
+    expect(telegram.albums).toEqual([{ chatId: '-200', count: 2, topicId: null }]);
   });
 });

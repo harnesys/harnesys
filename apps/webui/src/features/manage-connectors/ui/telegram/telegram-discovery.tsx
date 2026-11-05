@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { orgScopedAgentsQuery } from '@/shared/api';
-import { Button } from '@/shared/ui/button';
 import { RowHeader } from '@/shared/ui/capability-rows';
 import { Input } from '@/shared/ui/input';
 import { telegramBotChannelLink, telegramBotGroupLink } from '../../model/connector-api';
@@ -18,7 +17,6 @@ export function TelegramDiscovery({
   initialThreadId,
   onChanged,
   onRefresh,
-  refreshing,
   busy,
 }: {
   orgId: string;
@@ -53,11 +51,7 @@ export function TelegramDiscovery({
         label="Chats this bot can see"
         count={bindings.length}
         description="Telegram has no chat list, so this follows every update the bot receives. A chat it has never been seen in must be added by @username, link or id."
-      >
-        <Button type="button" size="sm" variant="outline" disabled={refreshing} onClick={onRefresh}>
-          {refreshing ? 'Checking…' : 'Refresh'}
-        </Button>
-      </RowHeader>
+      />
 
       {bindings.length > 3 ? (
         <Input

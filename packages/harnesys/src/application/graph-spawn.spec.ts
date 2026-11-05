@@ -229,6 +229,49 @@ describe('executeSpawn', () => {
     expect(outcome.timedOut).toBe(false);
   });
 
+  test('resumes a delegated child with the output of its interrupted node', async () => {
+    const interruptOutput = { toolCalls: [{ name: 'shell', args: { command: 'echo ok' } }] };
+    const childSnap: Snapshot = {
+      ...snapshot('needs_input'),
+      cursor: {
+        nodes: {},
+        interrupt: {
+          interruptId: 'perm/child:act:0/0',
+          reason: 'allow process?',
+          resumeSchema: {},
+          nodeId: 'act',
+          source: 'permission',
+          output: interruptOutput,
+        },
+      },
+    };
+    let childCurrent: Snapshot = childSnap;
+    const parentState: RuntimeState = {
+      ...fakeState(() => snapshot('completed')),
+      child: () => fakeState(() => childCurrent),
+    };
+    const parent = parentOpts(parentState);
+    const prepared = prepareSpawn(node({ maxConcurrency: 1 }), parent, {
+      ...SLOTS,
+      state: { spawns: calls(1) },
+    });
+    const spawnId = prepared.targets[0]?.spawnId ?? '';
+    const captured: GraphOpts[] = [];
+    const runner = async function* (opts: GraphOpts): AsyncIterable<Event> {
+      captured.push(opts);
+      childCurrent = snapshot('completed');
+      yield childEvent();
+    };
+    await executeSpawn(prepared, parent, runner, undefined, {
+      spawnId,
+      childInterruptId: 'perm/child:act:0/0',
+      childNodeId: 'act',
+      approved: true,
+    });
+    expect(captured[0]?.startNodeId).toBe('act');
+    expect(captured[0]?.outputHint).toEqual(interruptOutput);
+  });
+
   test('runs children one by one in sequential mode', async () => {
     const probe: ConcurrencyProbe = { peak: 0, started: 0 };
     const parent = parentOpts(fakeState(() => snapshot('completed')));
@@ -347,8 +390,24 @@ describe('executeSpawn child isolation', () => {
 });
 
 describe('spawn permissions', () => {
-  test('applies a per-call grant on top of the default gates', async () => {
+  test('a grant is capped by the parent gate', async () => {
     const parent = parentOpts(fakeState(() => snapshot('completed')));
+    const prepared = prepareSpawn(node(), parent, {
+      ...SLOTS,
+      state: {
+        spawns: [{ agentId: CHILD.id, input: 'task', permissions: { 'fs.write': 'allow' } }],
+      },
+    });
+    const captured: GraphOpts[] = [];
+    await executeSpawn(prepared, parent, captureRunner(captured));
+    expect(captured[0]?.permissions?.['fs.write']).toBe('ask');
+  });
+
+  test('a grant applies up to the parent allow gate', async () => {
+    const parent = {
+      ...parentOpts(fakeState(() => snapshot('completed'))),
+      permissions: { 'fs.write': 'allow' } as const,
+    };
     const prepared = prepareSpawn(node(), parent, {
       ...SLOTS,
       state: {

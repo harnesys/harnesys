@@ -12,9 +12,7 @@ export const useSseConnectionStore = create<SseConnectionStore>((set) => ({
   byOrg: {},
   mark: (orgId, state) =>
     set((current) =>
-      current.byOrg[orgId] === state
-        ? current
-        : { byOrg: { ...current.byOrg, [orgId]: state } },
+      current.byOrg[orgId] === state ? current : { byOrg: { ...current.byOrg, [orgId]: state } },
     ),
   clear: (orgId) =>
     set((current) => {

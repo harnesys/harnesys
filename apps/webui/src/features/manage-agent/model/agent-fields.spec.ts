@@ -30,7 +30,6 @@ describe('generationDefaults', () => {
     const defaults = generationDefaults(MODEL_ID, [provider]);
     expect(defaults.temperature).toBe('1.00');
     expect(defaults.topP).toBe('1.00');
-    expect(defaults.topK).toBe('40');
     expect(defaults.frequencyPenalty).toBe('0.00');
     expect(defaults.presencePenalty).toBe('0.00');
     expect(defaults.seed).toBeUndefined();
@@ -53,7 +52,6 @@ describe('generation save pipeline', () => {
       generation: {
         temperature: 1,
         topP: 1,
-        topK: 40,
         frequencyPenalty: 0,
         presencePenalty: 0,
       },
@@ -63,7 +61,6 @@ describe('generation save pipeline', () => {
     expect(draft.generation).toEqual({
       temperature: 1,
       topP: 1,
-      topK: 40,
       frequencyPenalty: 0,
       presencePenalty: 0,
     });
@@ -82,7 +79,6 @@ describe('generation save pipeline', () => {
     expect(draft.generation).toEqual({
       temperature: 1,
       topP: 1,
-      topK: 40,
       frequencyPenalty: 0,
       presencePenalty: 0,
     });
