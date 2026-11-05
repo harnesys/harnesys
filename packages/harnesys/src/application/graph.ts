@@ -1776,6 +1776,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
         for (const t of prepared.targets) {
           const e = await commit('running', 'agent.spawned', 'recorded', {
             agentId: t.call.agentId,
+            agentName: t.def.name,
             spawnId: t.spawnId,
             taskInput: t.call.input,
             ...(t.quota?.maxSteps === undefined ? {} : { quotaSteps: t.quota.maxSteps }),
@@ -1804,6 +1805,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
                 'recorded',
                 {
                   agentId: item.agentId,
+                  agentName: prepared.targets.find((t) => t.spawnId === item.spawnId)?.def.name,
                   spawnId: item.spawnId,
                   ...(item.error ? { code: item.error.code, message: item.error.message } : {}),
                 },

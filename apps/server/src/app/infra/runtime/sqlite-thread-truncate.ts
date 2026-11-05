@@ -20,12 +20,12 @@ export function rowToEvent(
 ): SessionEvent {
   const meta = row.metadata ? (JSON.parse(row.metadata) as Record<string, unknown>) : {};
   return {
+    ...(agent?.id ? { agentId: agent.id } : {}),
+    ...(agent?.name ? { agentName: agent.name } : {}),
     ...(meta as object),
     type: row.type,
     ...(row.seq === null ? {} : { seq: row.seq }),
     ...(row.runId === null ? {} : { runId: row.runId }),
-    ...(agent?.id ? { agentId: agent.id } : {}),
-    ...(agent?.name ? { agentName: agent.name } : {}),
     threadSeq: row.threadSeq,
     conversational: row.conversational === 1,
   } as SessionEvent;

@@ -4,7 +4,7 @@ import { SPAWN_ITEM_LIMIT, SPAWN_MAX_CONCURRENCY } from '../constants.ts';
 import type { AgentDefinition } from '../domain/agent-definition.ts';
 import type { Event, Snapshot } from '../domain/snapshot.ts';
 import type { AgentsResolve } from '../ports/create-runtime.ts';
-import type { PermissionGrantsPort } from '../ports/permission-grants-port.ts';
+import { PermissionGrantsPort } from '../ports/permission-grants-port.ts';
 import type { RuntimeState } from '../ports/runtime-state.ts';
 import type { GraphOpts } from './graph.ts';
 import { executeSpawn, prepareSpawn, type SpawnNodeSpec } from './graph-spawn.ts';
@@ -49,6 +49,12 @@ function fakeState(load: () => Snapshot | null): RuntimeState {
     commit: async () => {},
     child: () => fakeState(load),
   };
+}
+
+class FixedGrants extends PermissionGrantsPort {
+  override async granted(): Promise<boolean> {
+    return true;
+  }
 }
 
 const AGENTS: AgentsResolve = {
@@ -453,9 +459,7 @@ describe('spawn permissions', () => {
   });
 
   test('a child receives the parent durable permission grants', async () => {
-    const grants = {
-      granted: async (agentId: string, op: string) => agentId === CHILD.id && op === 'process',
-    } as unknown as PermissionGrantsPort;
+    const grants = new FixedGrants();
     const parent = {
       ...parentOpts(fakeState(() => snapshot('completed'))),
       permissionGrants: grants,

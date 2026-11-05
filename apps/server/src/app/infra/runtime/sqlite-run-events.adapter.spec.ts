@@ -60,4 +60,19 @@ describe('SqliteRunEventStore agent events', () => {
     const [stored] = store.appendForThread(THREAD_ID, RUN_ID, [pending]);
     expect(stored?.agentId).toBe(DELEGATE_ID);
   });
+
+  test('keeps the delegate agentName of agent.completed when read back', async () => {
+    const store = storeOf();
+    const pending = {
+      type: 'agent.completed',
+      agentId: DELEGATE_ID,
+      agentName: 'Spawn Tester 1',
+      spawnId: 'spawn-1',
+    } as PendingSessionEvent;
+    store.appendForThread(THREAD_ID, RUN_ID, [pending]);
+    const events = await store.tail(RUN_ID, 0);
+    const completed = events.find((ev) => ev.type === 'agent.completed');
+    expect(completed?.agentId).toBe(DELEGATE_ID);
+    expect(completed?.agentName).toBe('Spawn Tester 1');
+  });
 });
