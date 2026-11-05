@@ -17,6 +17,7 @@ import {
 import { and, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { OrgMachineStore } from '../../domain/machine/org-machine-store.port.ts';
 import {
   type InsertSourceInput,
   type SourceRecord,
@@ -28,7 +29,12 @@ import { configureOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 
 @Injectable()
 export class SourceRegistryAdapter extends SourceRegistryPort {
-  constructor(private readonly layout: HostFsLayoutPort) {
+  private readonly sourceOrgs = new Map<string, string>();
+
+  constructor(
+    private readonly layout: HostFsLayoutPort,
+    private readonly orgs: OrgMachineStore,
+  ) {
     super();
   }
 
@@ -51,10 +57,33 @@ export class SourceRegistryAdapter extends SourceRegistryPort {
         .from(sources)
         .where(and(eq(sources.orgId, orgId), eq(sources.id, sourceId)))
         .get();
-      return row ? mapSource(row) : null;
+      if (!row) {
+        return null;
+      }
+      const source = mapSource(row);
+      this.sourceOrgs.set(source.id, source.orgId);
+      return source;
     } finally {
       sqlite.close();
     }
+  }
+
+  findBySourceId(sourceId: string): SourceRecord | null {
+    const cachedOrgId = this.sourceOrgs.get(sourceId);
+    if (cachedOrgId) {
+      const cached = this.findById(cachedOrgId, sourceId);
+      if (cached) {
+        return cached;
+      }
+      this.sourceOrgs.delete(sourceId);
+    }
+    for (const entry of this.orgs.list()) {
+      const source = this.findById(entry.orgId, sourceId);
+      if (source) {
+        return source;
+      }
+    }
+    return null;
   }
 
   findManagedWorkspace(orgId: string): SourceRecord | null {
@@ -97,6 +126,7 @@ export class SourceRegistryAdapter extends SourceRegistryPort {
           updatedAt: input.updatedAt,
         })
         .run();
+      this.sourceOrgs.set(input.id, input.orgId);
     } finally {
       sqlite.close();
     }
@@ -193,6 +223,7 @@ export class SourceRegistryAdapter extends SourceRegistryPort {
       db.delete(sources)
         .where(and(eq(sources.orgId, orgId), eq(sources.id, sourceId)))
         .run();
+      this.sourceOrgs.delete(sourceId);
     } finally {
       sqlite.close();
     }

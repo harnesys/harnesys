@@ -247,6 +247,9 @@ export class FakeSources extends SourceRegistryPort {
   findById(): null {
     return null;
   }
+  findBySourceId(): null {
+    return null;
+  }
   findManagedWorkspace(): null {
     return null;
   }

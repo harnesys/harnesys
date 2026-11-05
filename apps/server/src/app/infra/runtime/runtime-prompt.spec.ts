@@ -107,6 +107,10 @@ class FakeSources extends SourceRegistryPort {
     throw new Error('not used');
   }
 
+  findBySourceId(sourceId: string): SourceRecord | null {
+    return this.findById(ORG, sourceId);
+  }
+
   findManagedWorkspace(): SourceRecord | null {
     throw new Error('not used');
   }

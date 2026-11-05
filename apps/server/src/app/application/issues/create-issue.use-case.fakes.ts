@@ -175,6 +175,10 @@ export class MemorySources extends SourceRegistryPort {
     return this.source;
   }
 
+  findBySourceId(sourceId: string): SourceRecord | null {
+    return this.source?.id === sourceId ? this.source : null;
+  }
+
   findManagedWorkspace(): null {
     return null;
   }

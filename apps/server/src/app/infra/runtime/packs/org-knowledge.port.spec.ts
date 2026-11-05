@@ -160,6 +160,10 @@ class MemorySources extends SourceRegistryPort {
     return this.items.find((item) => item.orgId === orgId && item.id === sourceId) ?? null;
   }
 
+  findBySourceId(sourceId: string): SourceRecord | null {
+    return this.items.find((item) => item.id === sourceId) ?? null;
+  }
+
   findManagedWorkspace(): SourceRecord | null {
     return null;
   }

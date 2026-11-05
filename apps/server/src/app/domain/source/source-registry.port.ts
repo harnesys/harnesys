@@ -37,6 +37,7 @@ export interface InsertSourceInput {
 export abstract class SourceRegistryPort {
   abstract list(orgId: string): SourceRecord[];
   abstract findById(orgId: string, sourceId: string): SourceRecord | null;
+  abstract findBySourceId(sourceId: string): SourceRecord | null;
   abstract findManagedWorkspace(orgId: string): SourceRecord | null;
   abstract insert(input: InsertSourceInput): void;
   abstract updateVisibility(orgId: string, sourceId: string, uiVisibility: UiVisibility): void;

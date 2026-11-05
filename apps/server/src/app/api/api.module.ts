@@ -39,6 +39,7 @@ import { VaultUseCaseModule } from '../application/vault/vault.use-case.module.t
 import { WebhookUseCaseModule } from '../application/webhooks/webhook.use-case.module.ts';
 import { ConnectorModule } from '../infra/connector/connector.module.ts';
 import { DeskModule } from '../infra/desk/desk.module.ts';
+import { EventsWatchModule } from '../infra/events-watch/events-watch.module.ts';
 import { FleetHubModule } from '../infra/fleet-hub/fleet-hub.module.ts';
 import { IssueInfraModule } from '../infra/issues/issue.module.ts';
 import { MachineHomeModule } from '../infra/machine-home/machine-home.module.ts';
@@ -136,6 +137,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     IssueInfraModule,
     ConnectorModule,
     DeskModule,
+    EventsWatchModule,
     ManagerUseCaseModule,
     KnowledgeUseCaseModule,
     VaultUseCaseModule,

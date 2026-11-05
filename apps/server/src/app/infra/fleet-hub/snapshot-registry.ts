@@ -159,6 +159,7 @@ export function createSnapshotSourceRegistry(snapshot: OrgExecutionSnapshot): So
     list: (orgId) => sources.filter((source) => source.orgId === orgId),
     findById: (orgId, sourceId) =>
       sources.find((source) => source.orgId === orgId && source.id === sourceId) ?? null,
+    findBySourceId: (sourceId) => sources.find((source) => source.id === sourceId) ?? null,
     findManagedWorkspace: (orgId) =>
       sources.find((source) => source.orgId === orgId && source.managed) ?? null,
     insert: () => {

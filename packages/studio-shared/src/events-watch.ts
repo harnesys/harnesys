@@ -1,3 +1,4 @@
+import type { SessionEvent } from 'harnesys';
 import type { DeskEvent } from './desk-events.ts';
 import type { GitFileStatusMap, GitSourceSummary } from './git.ts';
 import type { KnowledgeIndexState } from './knowledge.ts';
@@ -34,6 +35,7 @@ export interface EventsWatchSourceChangeFrame {
   event: SourceWatchEvent;
 }
 export interface EventsWatchIndexStateFrame {
+  orgId: OrgId;
   sourceId: string;
   state: KnowledgeIndexState;
 }
@@ -114,4 +116,18 @@ export type EventsWatchThreadErrorEvent =
 export interface EventsWatchThreadErrorFrame {
   orgId: OrgId;
   event: EventsWatchThreadErrorEvent;
+}
+
+export interface EventsWatchThreadEventsFrame {
+  orgId: OrgId;
+  threadId: string;
+  events: SessionEvent[];
+}
+
+export type EventsWatchResyncReason = 'gap' | 'ahead' | 'slow';
+
+export interface EventsWatchResyncFrame {
+  orgId: OrgId;
+  latestSeq: number;
+  reason: EventsWatchResyncReason;
 }

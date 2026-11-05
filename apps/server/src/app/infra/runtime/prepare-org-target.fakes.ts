@@ -162,6 +162,10 @@ export class StubSources extends SourceRegistryPort {
     return null;
   }
 
+  findBySourceId(): SourceRecord | null {
+    return null;
+  }
+
   findManagedWorkspace(): SourceRecord | null {
     return null;
   }
