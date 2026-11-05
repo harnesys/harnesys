@@ -14,6 +14,10 @@ export function chatOf(
   };
 }
 
+export function chatTitleOf(chat: Record<string, unknown> | null): string {
+  return chat !== null && typeof chat.title === 'string' ? chat.title : '';
+}
+
 export function authorOf(from: Record<string, unknown>, userId: string): CanonicalAuthor {
   const firstName = typeof from.first_name === 'string' ? from.first_name : '';
   const lastName = typeof from.last_name === 'string' ? from.last_name : '';
@@ -47,7 +51,12 @@ export function messageWithFile(
   }
   const fileId = typeof document.file_id === 'string' ? document.file_id : null;
   if (fileId === null) {
-    return { kind: 'unsupported', chatType: base.chatType, chatId: base.chatId };
+    return {
+      kind: 'unsupported',
+      chatType: base.chatType,
+      chatId: base.chatId,
+      chatTitle: base.chatTitle,
+    };
   }
   return {
     kind: 'message',

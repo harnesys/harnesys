@@ -44,6 +44,7 @@ explicit refresh that resolves names through `getChat`.
 - [x] `biome check` clean on every touched file.
 - [x] `bun test` for `application/connectors` + `domain/connector`: 52 pass.
 - [x] Server boot (DI tokens): after adding `ConnectorEventsPort` the live `bun --watch` stand was forced to reload; `/api/health` answers 200 and `/api/events/watch` answers 401 (guard, route mounted).
+- [x] Discovery of existing groups and channels: `my_chat_member` is delivered once and was already lost for a bot added before the connector, so discovery now runs on every chat-bearing update (messages, bot-authored posts, channel posts, topics, callbacks excluded) and creates the named binding before the inbound decision. Chats Telegram never reported are added through `attachChat`, which now accepts `@username`, `t.me/<name>`, `t.me/c/<id>/<msg>` and numeric ids (`chat-ref.ts`) and rejects the chat when Telegram reports the bot is not a member.
 - [x] No duplicated Telegram bubble: `sendMessageDraft` is a 30-second ephemeral preview limited to private chats, so streaming a draft and then sending the final text produced two bubbles until the draft expired. Draft streaming is removed: the run message is created once and edited in place, final text is the last edit.
 
 ## Live-check follow-ups

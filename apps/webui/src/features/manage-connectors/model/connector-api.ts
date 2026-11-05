@@ -180,6 +180,10 @@ export function telegramBotGroupLink(botUsername: string): string {
   return `https://t.me/${botUsername}?startgroup=true`;
 }
 
+export function telegramBotChannelLink(botUsername: string): string {
+  return `https://t.me/${botUsername}?startchannel=true`;
+}
+
 export function telegramBotLink(botUsername: string): string {
   return `https://t.me/${botUsername}`;
 }

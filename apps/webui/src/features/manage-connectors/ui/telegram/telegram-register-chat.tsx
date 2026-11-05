@@ -52,7 +52,7 @@ export function TelegramRegisterChat({
         data-testid="telegram-register-chat-open"
         onClick={() => setOpen(true)}
       >
-        Register a chat manually
+        Add a chat by @username or id
       </Button>
     );
   }
@@ -72,7 +72,7 @@ export function TelegramRegisterChat({
         <Input
           id={`register-chat-${connectorId}`}
           value={chatId}
-          placeholder="@my_group or -1001234567890"
+          placeholder="@my_group, t.me/my_group or -1001234567890"
           onChange={(event) => setChatId(event.target.value)}
         />
       </Field>
@@ -91,9 +91,9 @@ export function TelegramRegisterChat({
         />
       </div>
       <p className="text-[11px] text-muted-foreground leading-4">
-        Used only when a chat does not appear on its own. Public groups and channels accept their
-        @username. Private ones have no username: open the chat in Telegram Web and copy the number
-        from the address bar.
+        Telegram never lists the chats a bot is in, so a group or channel added before this
+        connector existed has to be named here once. Paste @username, a t.me link, or the numeric id
+        from a t.me/c/&lt;id&gt;/… link; the bot must already be a member.
       </p>
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={!chatId.trim() || mutation.isPending}>

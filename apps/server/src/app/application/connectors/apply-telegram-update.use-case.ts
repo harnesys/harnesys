@@ -89,6 +89,7 @@ export class ApplyTelegramUpdateUseCase {
 
   async execute(request: ApplyTelegramUpdateRequest): Promise<void> {
     const connector = this.requireConnector(request.orgId, request.connectorId);
+    discoverChat(this.deps.connectors, request.orgId, connector, request.update);
     const chat = chatOf(request.update);
     const binding =
       chat.chatId === null
@@ -120,7 +121,6 @@ export class ApplyTelegramUpdateUseCase {
     }
 
     if (request.update.kind === 'chat_member' || request.update.kind === 'topic_created') {
-      discoverChat(this.deps.connectors, request.orgId, connector, request.update);
       this.deps.connectors.markInbox(request.orgId, inboxId, 'consumed');
       return;
     }

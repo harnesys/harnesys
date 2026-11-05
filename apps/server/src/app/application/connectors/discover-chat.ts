@@ -2,57 +2,62 @@ import type { ConnectorRecord } from '../../domain/connector/connector.ts';
 import type { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
 import type { CanonicalUpdate } from '../../domain/connector/telegram-update.ts';
 
-type DiscoveryUpdate = Extract<CanonicalUpdate, { kind: 'chat_member' | 'topic_created' }>;
+interface DiscoveredChat {
+  chatId: string;
+  topicId: string | null;
+  chatType: string;
+  title: string;
+}
 
 export function discoverChat(
   connectors: ConnectorRepositoryPort,
   orgId: string,
   connector: ConnectorRecord,
-  update: DiscoveryUpdate,
+  update: CanonicalUpdate,
 ): void {
-  if (update.kind === 'chat_member') {
-    discoverChatMember(connectors, orgId, connector, update);
+  const chat = chatOfUpdate(update);
+  if (chat === null || chat.chatType === 'private') {
     return;
   }
-  discoverTopic(connectors, orgId, connector, update);
+  upsertBinding(connectors, orgId, connector, chat);
 }
 
-function discoverChatMember(
-  connectors: ConnectorRepositoryPort,
-  orgId: string,
-  connector: ConnectorRecord,
-  update: Extract<CanonicalUpdate, { kind: 'chat_member' }>,
-): void {
-  if (update.chatType === 'private') {
-    return;
+function chatOfUpdate(update: CanonicalUpdate): DiscoveredChat | null {
+  if (update.kind === 'topic_created') {
+    return {
+      chatId: update.chatId,
+      topicId: update.topicId,
+      chatType: update.chatType,
+      title: update.title || update.chatTitle,
+    };
   }
-  upsertBinding(connectors, orgId, connector, {
-    chatId: update.chatId,
-    topicId: null,
-    chatType: update.chatType,
-    title: update.chatTitle,
-  });
-}
-
-function discoverTopic(
-  connectors: ConnectorRepositoryPort,
-  orgId: string,
-  connector: ConnectorRecord,
-  update: Extract<CanonicalUpdate, { kind: 'topic_created' }>,
-): void {
-  upsertBinding(connectors, orgId, connector, {
-    chatId: update.chatId,
-    topicId: update.topicId,
-    chatType: update.chatType,
-    title: update.title || update.chatTitle,
-  });
+  if (update.kind === 'chat_member' || update.kind === 'message' || update.kind === 'command') {
+    return {
+      chatId: update.chatId,
+      topicId: null,
+      chatType: update.chatType,
+      title: update.chatTitle,
+    };
+  }
+  if (update.kind === 'ignored' || update.kind === 'unsupported') {
+    if (update.chatId === null) {
+      return null;
+    }
+    return {
+      chatId: update.chatId,
+      topicId: null,
+      chatType: update.chatType,
+      title: update.chatTitle,
+    };
+  }
+  return null;
 }
 
 function upsertBinding(
   connectors: ConnectorRepositoryPort,
   orgId: string,
   connector: ConnectorRecord,
-  input: { chatId: string; topicId: string | null; chatType: string; title: string },
+  input: DiscoveredChat,
 ): void {
   const now = new Date().toISOString();
   const existing = connectors.findBindingByChat(orgId, connector.id, input.chatId, input.topicId);

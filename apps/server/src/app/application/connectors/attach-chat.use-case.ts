@@ -2,6 +2,7 @@ import { Injectable } from '@harnesys/brix';
 import type { AttachChatBody, AttachChatResponse } from '@harnesys/contracts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { ConnectorValidationException } from '../../domain/connector/connector.error.ts';
+import type { ConnectorRecord } from '../../domain/connector/connector.ts';
 import { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
 import {
   TelegramApiPort,
@@ -11,6 +12,7 @@ import {
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
+import { normalizeChatRef } from './chat-ref.ts';
 import { bindingWithThread, connectorView, requireConnector } from './connector-view.ts';
 
 export interface AttachChatRequest {
@@ -30,6 +32,23 @@ export class AttachChatUseCase {
     private readonly telegram: TelegramApiPort,
   ) {}
 
+  private async requireMembership(
+    token: string,
+    connector: ConnectorRecord,
+    info: TelegramChatInfo,
+  ): Promise<void> {
+    if (info.type === 'private' || connector.botUserId.length === 0) {
+      return;
+    }
+    const member = await this.telegram.getChatMember(token, info.id, connector.botUserId);
+    if (member !== null && member.status !== 'left' && member.status !== 'kicked') {
+      return;
+    }
+    throw new ConnectorValidationException(
+      `Telegram reports @${connector.botUsername} is not a member of that chat. Add the bot first, then retry.`,
+    );
+  }
+
   async execute(request: AttachChatRequest): Promise<AttachChatResponse> {
     const connector = requireConnector(this.connectors, request);
     const token = await this.secrets.get(request.orgId, connector.secretRef);
@@ -37,9 +56,10 @@ export class AttachChatUseCase {
       throw new ConnectorValidationException('Connector token is missing');
     }
     const topicId = request.body.topicId ?? null;
+    const chatRef = normalizeChatRef(request.body.chatId);
     let info: TelegramChatInfo;
     try {
-      info = await this.telegram.getChat(token, request.body.chatId);
+      info = await this.telegram.getChat(token, chatRef);
     } catch (error) {
       if (error instanceof TelegramUnauthorizedError) {
         throw new ConnectorValidationException('Telegram rejected the bot token');
@@ -48,6 +68,7 @@ export class AttachChatUseCase {
         'Telegram could not find that chat. Use a numeric id for private chats and groups, or @username for a public one.',
       );
     }
+    await this.requireMembership(token, connector, info);
 
     let binding = this.connectors.findBindingByChat(request.orgId, connector.id, info.id, topicId);
     if (!binding) {

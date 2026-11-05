@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { ConnectorUpdateError, parseTelegramUpdate } from './telegram-update.ts';
+import { parseTelegramUpdate } from './telegram-update.ts';
 
 const privateMessage = {
   update_id: 1,
@@ -86,7 +86,7 @@ describe('parseTelegramUpdate', () => {
       },
     });
 
-    expect(update).toEqual({ kind: 'ignored', chatId: '42', chatType: 'private' });
+    expect(update).toEqual({ kind: 'ignored', chatId: '42', chatType: 'private', chatTitle: '' });
   });
 
   test('strips the bot suffix from commands', () => {

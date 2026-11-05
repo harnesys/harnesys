@@ -4,6 +4,7 @@ import {
   captionOrText,
   chatIdOf,
   chatOf,
+  chatTitleOf,
   hasUnsupportedMedia,
   idString,
   messageIdOf,
@@ -69,8 +70,8 @@ export type CanonicalUpdate =
       title: string;
       author: CanonicalAuthor;
     }
-  | { kind: 'ignored'; chatId: string | null; chatType: string }
-  | { kind: 'unsupported'; chatType: string; chatId: string };
+  | { kind: 'ignored'; chatId: string | null; chatType: string; chatTitle: string }
+  | { kind: 'unsupported'; chatType: string; chatId: string; chatTitle: string };
 
 export class ConnectorUpdateError extends Error {
   constructor(message: string) {
@@ -99,24 +100,9 @@ export function parseTelegramUpdate(update: unknown): CanonicalUpdate {
     return parseCallback(callback);
   }
 
-  const edited = asRecord(root.edited_message);
+  const edited = editedUpdateOf(root);
   if (edited !== null) {
-    const chatId = chatIdOf(edited);
-    const messageId = messageIdOf(edited);
-    if (chatId === null || messageId === null) {
-      throw new ConnectorUpdateError('Empty telegram update');
-    }
-    return { kind: 'edit', chatId, messageId };
-  }
-
-  const editedChannel = asRecord(root.edited_channel_post);
-  if (editedChannel !== null) {
-    const chatId = chatIdOf(editedChannel);
-    const messageId = messageIdOf(editedChannel);
-    if (chatId === null || messageId === null) {
-      throw new ConnectorUpdateError('Empty telegram update');
-    }
-    return { kind: 'edit', chatId, messageId };
+    return edited;
   }
 
   const membership = asRecord(root.my_chat_member);
@@ -135,6 +121,19 @@ export function parseTelegramUpdate(update: unknown): CanonicalUpdate {
   }
 
   throw new ConnectorUpdateError('Empty telegram update');
+}
+
+function editedUpdateOf(root: Record<string, unknown>): CanonicalUpdate | null {
+  const edited = asRecord(root.edited_message) ?? asRecord(root.edited_channel_post);
+  if (edited === null) {
+    return null;
+  }
+  const chatId = chatIdOf(edited);
+  const messageId = messageIdOf(edited);
+  if (chatId === null || messageId === null) {
+    throw new ConnectorUpdateError('Empty telegram update');
+  }
+  return { kind: 'edit', chatId, messageId };
 }
 
 function parseChatMember(membership: Record<string, unknown>): CanonicalUpdate {
@@ -191,13 +190,13 @@ function parseChannelPost(post: Record<string, unknown>): CanonicalUpdate {
   const chatType = 'channel';
   const from = asRecord(post.from);
   if (from !== null && from.is_bot === true) {
-    return { kind: 'ignored', chatId, chatType };
+    return { kind: 'ignored', chatId, chatType, chatTitle: chatTitleOf(chat) };
   }
   const senderChat = asRecord(post.sender_chat);
   const authorRef = from ?? senderChat;
   const authorId = authorRef !== null ? idString(authorRef.id) : null;
   if (authorRef === null || authorId === null) {
-    return { kind: 'ignored', chatId, chatType };
+    return { kind: 'ignored', chatId, chatType, chatTitle: chatTitleOf(chat) };
   }
   const base = {
     ...chatOf(chat, post, chatId, chatType),
@@ -212,10 +211,7 @@ function parseChannelPost(post: Record<string, unknown>): CanonicalUpdate {
   return { kind: 'message', text: captionOrText(post), ...base };
 }
 
-function channelAuthorOf(
-  senderChat: Record<string, unknown>,
-  userId: string,
-): CanonicalAuthor {
+function channelAuthorOf(senderChat: Record<string, unknown>, userId: string): CanonicalAuthor {
   const username = typeof senderChat.username === 'string' ? senderChat.username : null;
   const title = typeof senderChat.title === 'string' ? senderChat.title : '';
   return { userId, displayName: title || username || userId, username };
@@ -238,10 +234,10 @@ function parseMessage(message: Record<string, unknown>): CanonicalUpdate {
     return topic;
   }
   if (from !== null && from.is_bot === true) {
-    return { kind: 'ignored', chatId, chatType };
+    return { kind: 'ignored', chatId, chatType, chatTitle: chatTitleOf(chat) };
   }
   if (hasUnsupportedMedia(message)) {
-    return { kind: 'unsupported', chatType, chatId };
+    return { kind: 'unsupported', chatType, chatId, chatTitle: chatTitleOf(chat) };
   }
   if (userId === null || messageId === null || from === null) {
     throw new ConnectorUpdateError('Empty telegram update');

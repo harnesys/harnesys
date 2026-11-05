@@ -6,7 +6,7 @@ import { orgScopedAgentsQuery } from '@/shared/api';
 import { Button } from '@/shared/ui/button';
 import { RowHeader } from '@/shared/ui/capability-rows';
 import { Input } from '@/shared/ui/input';
-import { telegramBotGroupLink } from '../../model/connector-api';
+import { telegramBotChannelLink, telegramBotGroupLink } from '../../model/connector-api';
 import { TelegramChatRow } from './telegram-chat-row';
 import { TelegramPairSection } from './telegram-pair-section';
 import { TelegramRegisterChat } from './telegram-register-chat';
@@ -52,7 +52,7 @@ export function TelegramDiscovery({
       <RowHeader
         label="Chats this bot can see"
         count={bindings.length}
-        description="Telegram has no chat list, so this list follows the bot: a chat appears as soon as Telegram reports it."
+        description="Telegram has no chat list, so this follows every update the bot receives. A chat it has never been seen in must be added by @username, link or id."
       >
         <Button type="button" size="sm" variant="outline" disabled={refreshing} onClick={onRefresh}>
           {refreshing ? 'Checking…' : 'Refresh'}
@@ -115,9 +115,9 @@ export function TelegramDiscovery({
       >
         {groups.length === 0 ? (
           <Hint>
-            No groups yet. Add @{connector.botUsername} to a group and it appears here on its own. A
-            group the bot joined before this connector existed shows up on its first message; add it
-            manually below if that is not possible.
+            No groups yet. Add @{connector.botUsername} to a group and have a member post there: the
+            group appears here on its own. A group the bot joined before this connector existed is
+            never reported by Telegram — add it below by @username or link.
           </Hint>
         ) : null}
         {roots.map((root) => (
@@ -160,11 +160,25 @@ export function TelegramDiscovery({
         ))}
       </ChatGroup>
 
-      <ChatGroup label="Channels" count={channels.length}>
+      <ChatGroup
+        label="Channels"
+        count={channels.length}
+        action={
+          <a
+            href={telegramBotChannelLink(connector.botUsername)}
+            target="_blank"
+            rel="noreferrer"
+            className="text-status-info text-xs underline-offset-2 hover:underline"
+          >
+            Add to a channel
+          </a>
+        }
+      >
         {channels.length === 0 ? (
           <Hint>
-            No channels yet. Add @{connector.botUsername} to a channel as an admin: it can post and
-            read new posts there, and answers only when an agent is mentioned.
+            No channels yet. Add @{connector.botUsername} to a channel as an admin and post once:
+            the channel appears here on its own. A channel added before this connector existed, or a
+            private one without a username, must be added below by @username or id.
           </Hint>
         ) : null}
         {channels.map((binding) => (
