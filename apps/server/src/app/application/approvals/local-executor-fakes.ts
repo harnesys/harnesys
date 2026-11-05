@@ -95,10 +95,6 @@ export class StubLocalExecutor extends LocalExecutorPort {
     throw new Error('not used');
   }
 
-  publishEvents(): never {
-    throw new Error('not used');
-  }
-
   tickWaitTimers(): never {
     throw new Error('not used');
   }
@@ -182,10 +178,6 @@ export class RecordingExecutor extends LocalExecutorPort {
   }
 
   stream(): never {
-    throw new Error('not used');
-  }
-
-  publishEvents(): never {
     throw new Error('not used');
   }
 

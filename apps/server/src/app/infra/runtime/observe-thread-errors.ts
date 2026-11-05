@@ -4,64 +4,51 @@ import type { ThreadRunEvent } from '../../domain/thread/thread-events.port.ts';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
 import { threadsTable } from '../org-sqlite/schema/index.ts';
 
-export interface ObserveThreadErrorsDeps {
-  orgId: string;
-  onEvent: (event: ThreadRunEvent) => void;
-}
-
-interface ThreadMetadataRow {
-  metadata: string;
-}
-
 export function observeThreadErrors(
   tx: OrgSqliteDb,
-  deps: ObserveThreadErrorsDeps,
   threadId: string,
   runId: string,
   events: SessionEvent[],
-): void {
+): ThreadRunEvent[] {
+  const observed: ThreadRunEvent[] = [];
   for (const event of events) {
-    const observed = observeThreadEvent(tx, deps, threadId, runId, event);
-    if (observed) {
-      return;
+    const threadEvent = observeThreadEvent(tx, threadId, runId, event);
+    if (threadEvent !== null) {
+      observed.push(threadEvent);
     }
   }
+  return observed;
 }
 
 function observeThreadEvent(
   tx: OrgSqliteDb,
-  deps: ObserveThreadErrorsDeps,
   threadId: string,
   runId: string,
   event: SessionEvent,
-): boolean {
+): ThreadRunEvent | null {
   if (event.type === 'run.failed') {
     const message = readMessage(event);
     const at = new Date().toISOString();
     writeLastError(tx, threadId, { runId, message, at });
-    deps.onEvent({ type: 'failed', threadId, runId, message, at });
-    return true;
+    return { type: 'failed', threadId, runId, message, at };
   }
   if (event.type === 'run.completed' || event.type === 'run.cancelled' || event.type === 'done') {
-    deps.onEvent({ type: 'finished', threadId, runId, status: terminalStatusOf(event.type) });
-    return true;
+    return { type: 'finished', threadId, runId, status: terminalStatusOf(event.type) };
   }
   if (event.type === 'ask') {
     const source = (event as { source?: unknown }).source;
-    deps.onEvent({
+    return {
       type: 'parked',
       threadId,
       runId,
       source: typeof source === 'string' ? source : 'interrupt',
-    });
-    return true;
+    };
   }
   if (event.type === 'run.started') {
     clearLastError(tx, threadId);
-    deps.onEvent({ type: 'cleared', threadId, runId });
-    return true;
+    return { type: 'cleared', threadId, runId };
   }
-  return false;
+  return null;
 }
 
 function terminalStatusOf(
@@ -114,6 +101,10 @@ function clearLastError(tx: OrgSqliteDb, threadId: string): void {
     .set({ metadata: JSON.stringify(metadata) })
     .where(eq(threadsTable.id, threadId))
     .run();
+}
+
+interface ThreadMetadataRow {
+  metadata: string;
 }
 
 function parseMetadata(raw: string): Record<string, unknown> {

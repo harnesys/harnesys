@@ -100,9 +100,6 @@ class FakeExecutor extends LocalExecutorPort {
   stream(): never {
     throw new Error('not used');
   }
-  publishEvents(): Promise<void> {
-    return Promise.resolve();
-  }
   tickWaitTimers(): Promise<number> {
     return Promise.resolve(0);
   }

@@ -22,6 +22,7 @@ import { createOrgRunStores } from './org-run-stores.ts';
 import type { OrgRuntime, OrgRuntimeDeps } from './org-runtime.types.ts';
 import { createAgentsResolve } from './org-runtime-agents.ts';
 import { compactThread } from './org-runtime-compact.ts';
+import { createOrgEventPublisher } from './org-runtime-publish.ts';
 import { createSteeringChannel, createThreadQueueDrainer } from './org-runtime-queue.ts';
 import { createRunTargetResolver } from './org-runtime-run-target.ts';
 import { cancelThreadRun, retryThreadRun, sendThreadMessage } from './org-runtime-runs.ts';
@@ -40,10 +41,22 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
   const session = openOrgSqlite(deps.layout, deps.orgId);
   const worktreeBindings = new Map<string, ThreadBinding>();
   const targetCache: TargetCache = new Map();
-  const stores = createOrgRunStores(deps, session, {
-    targetCache,
-    worktreeBindings,
+  const eventBus = createRunEventBus({
+    onPublish: createOrgEventPublisher({
+      orgId: deps.orgId,
+      db: session.db,
+      ...(deps.threadEvents === undefined ? {} : { threadEvents: deps.threadEvents }),
+    }),
   });
+  const stores = createOrgRunStores(
+    deps,
+    session,
+    {
+      targetCache,
+      worktreeBindings,
+    },
+    (threadId, runId, events) => eventBus.publish(threadId, runId, events),
+  );
   const { runEvents, runLifecycle, reconcileApprovals, shouldReap } = stores;
   const resumedRuns = await recoverOrphanedRuns({ db: session.db, lifecycle: runLifecycle });
   await recoverIssueExecutionsIfPresent({
@@ -61,7 +74,6 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     }).catch(() => {});
   }
   reconcileWorkspaces(deps);
-  const eventBus = createRunEventBus();
   const feed = createRunEventFeed({
     events: runEvents,
     lifecycle: runLifecycle,

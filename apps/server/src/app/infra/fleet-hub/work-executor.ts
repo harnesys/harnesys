@@ -304,7 +304,7 @@ export function wirePlacedResponder(args: {
     }
     const stored = await events.tail(envelope.runId, before);
     if (stored.length > 0) {
-      feed.publish(envelope.runId, stored);
+      feed.publish(envelope.threadId, envelope.runId, stored);
     }
   };
   const pending = active.queued.splice(0);

@@ -66,8 +66,8 @@ describe('run event feed subscribe', () => {
     await sleep(IDLE_MS * 3);
     const ev1 = retryEvent(1);
     const ev2 = retryEvent(2);
-    bus.publish('r1', [ev1]);
-    bus.publish('r1', [ev2]);
+    bus.publish('t1', 'r1', [ev1]);
+    bus.publish('t1', 'r1', [ev2]);
     expect((await first).value).toEqual(ev1);
     expect((await it.next()).value).toEqual(ev2);
     closed = true;
@@ -87,7 +87,7 @@ describe('run event feed subscribe', () => {
       seq: 3,
       runId: 'r1',
     } as SessionEvent;
-    bus.publish('r1', [ask]);
+    bus.publish('t1', 'r1', [ask]);
     expect((await pending).value).toEqual(ask);
     const answer = {
       type: 'hitl.answer',
@@ -96,7 +96,7 @@ describe('run event feed subscribe', () => {
       seq: 4,
       runId: 'r1',
     } as SessionEvent;
-    bus.publish('r1', [answer]);
+    bus.publish('t1', 'r1', [answer]);
     expect((await it.next()).value).toEqual(answer);
     await it.return?.(undefined);
   });
@@ -106,9 +106,19 @@ describe('run event feed subscribe', () => {
     const feed = createRunEventFeed({ ...makeDeps(() => null, [ev1]), bus });
     const it = feed.subscribe('r1', 0)[Symbol.asyncIterator]();
     expect((await it.next()).value).toEqual(ev1);
-    bus.publish('r1', [ev1]);
+    bus.publish('t1', 'r1', [ev1]);
     const ev2 = retryEvent(2);
-    bus.publish('r1', [ev2]);
+    bus.publish('t1', 'r1', [ev2]);
     expect((await it.next()).value).toEqual(ev2);
+  });
+  test('forwards threadId and runId to the publish listener', () => {
+    const seen: Array<{ threadId: string; runId: string; count: number }> = [];
+    const bus = createRunEventBus({
+      onPublish: (threadId, runId, events) => {
+        seen.push({ threadId, runId, count: events.length });
+      },
+    });
+    bus.publish('t1', 'r1', [retryEvent(1)]);
+    expect(seen).toEqual([{ threadId: 't1', runId: 'r1', count: 1 }]);
   });
 });

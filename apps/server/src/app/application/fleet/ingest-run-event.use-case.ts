@@ -86,7 +86,6 @@ export class IngestRunEventUseCase {
       leaseEpoch: input.leaseEpoch,
       leaseUntil: new Date(Date.now() + WORK_CLAIM_LEASE_SEC * 1000).toISOString(),
     });
-    await this.executor.publishEvents(input.orgId, input.runId, stored);
     this.requestApprovalsForParks(input.orgId, fresh.threadId, input.runId, fresh.agentId, stored);
     const terminal = incoming.some(
       (event) =>

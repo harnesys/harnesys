@@ -66,7 +66,6 @@ class StubExecutor extends LocalExecutorPort {
   truncateThreadFrom = (): Promise<never> => Promise.reject(new Error('not used'));
   removeThreadEvent = (): Promise<never> => Promise.reject(new Error('not used'));
   stream = (): Promise<never> => Promise.reject(new Error('not used'));
-  publishEvents = (): Promise<never> => Promise.reject(new Error('not used'));
   tickWaitTimers = (): Promise<never> => Promise.reject(new Error('not used'));
   countWaitingTimers = (): Promise<never> => Promise.reject(new Error('not used'));
   listMcpServers = (): Promise<never> => Promise.reject(new Error('not used'));

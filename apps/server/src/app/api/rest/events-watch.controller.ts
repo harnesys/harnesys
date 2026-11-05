@@ -137,6 +137,9 @@ export class EventsWatchController {
           write('skills-changed', JSON.stringify(frame));
         });
         unsubscribeThreadErrors = threadEvents.subscribe((eventOrgId, event) => {
+          if (event.type === 'events') {
+            return;
+          }
           const frame: EventsWatchThreadErrorFrame = { orgId: eventOrgId, event };
           write('thread-error', JSON.stringify(frame));
         });

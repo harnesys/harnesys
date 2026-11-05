@@ -59,11 +59,11 @@ import { openOrgRuntime } from './org-runtime.ts';
 import type { OrgRuntime } from './org-runtime.types.ts';
 import { githubToolsDeps } from './packs/github-tools.holder.ts';
 import { googleToolsDeps } from './packs/google-tools.holder.ts';
-import { telegramToolsDeps } from './packs/telegram-tools.holder.ts';
 import { issueToolsDeps } from './packs/issue-tools.holder.ts';
 import { managerToolsDeps } from './packs/manager-tools.holder.ts';
 import { OrgMcpManagePort } from './packs/org-mcp-manage.port.ts';
 import { skillsToolsDeps } from './packs/skills-tools.holder.ts';
+import { telegramToolsDeps } from './packs/telegram-tools.holder.ts';
 import { countWaitingTimersOf } from './waiting-timers.count.ts';
 
 @Injectable()
@@ -318,14 +318,6 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       throw new RunNotFoundException(runId);
     }
     return rt.stream(runId, fromSeq ?? 0);
-  }
-
-  async publishEvents(orgId: string, runId: string, events: SessionEvent[]): Promise<void> {
-    if (events.length === 0) {
-      return;
-    }
-    const rt = await this.ensure(orgId);
-    rt.feed.publish(runId, events);
   }
 
   async listMcpServers(orgId: string): Promise<McpServerInfo[]> {

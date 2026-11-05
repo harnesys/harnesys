@@ -42,11 +42,12 @@ export function createRunEngine(deps: RunEngineDeps): RunEngine {
   const byRun = new Map<string, RunRuntime>();
   const runLogger = deps.logger ?? CONSOLE_LOGGER;
   const hookCache = new Map<string, HookEmitCtx>();
-  function envWith(leaseLost: () => boolean): SegmentEnv {
+  function envWith(leaseLost: () => boolean, threadId: string): SegmentEnv {
     return {
       lifecycle: deps.lifecycle,
       events: deps.events,
       feed: deps.feed,
+      threadId,
       isLeaseLost: leaseLost,
       sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
       logger: runLogger,
@@ -96,7 +97,7 @@ export function createRunEngine(deps: RunEngineDeps): RunEngine {
     active.add(run);
     byRun.set(runId, run);
     const signal = run.abort.signal;
-    const env = envWith(() => run.leaseLost);
+    const env = envWith(() => run.leaseLost, record.threadId);
     run.renewTimer = setInterval(() => {
       void deps.lifecycle.renewLease(runId, deps.instanceId, leaseTtl).then((ok) => {
         if (!ok) {
@@ -153,7 +154,7 @@ export function createRunEngine(deps: RunEngineDeps): RunEngine {
             const full = { ...withRun, seq } as SessionEvent;
             return Promise.resolve(
               deps.events.appendForThread(record.threadId, spawnId, [full]),
-            ).then((stored) => deps.feed.publish(spawnId, stored));
+            ).then((stored) => deps.feed.publish(record.threadId, spawnId, stored));
           })
           .then(() => {
             if (terminal === undefined || journal.closed) {

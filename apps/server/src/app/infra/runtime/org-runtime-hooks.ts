@@ -1,10 +1,4 @@
-import type {
-  AgentDefinition,
-  HookBinding,
-  HookRunReport,
-  RunEventFeed,
-  RunEventStore,
-} from 'harnesys';
+import type { AgentDefinition, HookBinding, HookRunReport, RunEventStore } from 'harnesys';
 import { createHookReport } from './hook-report.ts';
 import { resolveHookSecrets } from './hook-secrets.ts';
 import type { OrgPluginWiring } from './org-plugin-wiring.ts';
@@ -23,11 +17,9 @@ export async function resolveTargetHooks(input: {
   );
 }
 
-export function targetHookReport(input: {
-  deps: OrgRuntimeDeps;
-  events: RunEventStore;
-  feed: RunEventFeed;
-}): { hookReport?: (report: HookRunReport) => void } {
+export function targetHookReport(input: { deps: OrgRuntimeDeps; events: RunEventStore }): {
+  hookReport?: (report: HookRunReport) => void;
+} {
   if (input.deps.hookRuns === undefined) {
     return {};
   }
@@ -36,7 +28,6 @@ export function targetHookReport(input: {
       orgId: input.deps.orgId,
       hookRuns: input.deps.hookRuns,
       events: input.events,
-      feed: input.feed,
     }),
   };
 }

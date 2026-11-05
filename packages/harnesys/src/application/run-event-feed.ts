@@ -5,7 +5,7 @@ import type { RunLifecycleStore } from '../ports/run-lifecycle-store.ts';
 import type { SessionEvent } from '../ports/session.ts';
 export interface RunEventFeed {
   subscribe(runId: string, fromSeq: number): AsyncIterable<SessionEvent>;
-  publish(runId: string, events: SessionEvent[]): void;
+  publish(threadId: string, runId: string, events: SessionEvent[]): void;
 }
 function seqOf(event: SessionEvent): number {
   return (
@@ -40,8 +40,8 @@ export interface RunEventFeedDeps {
 export function createRunEventFeed(deps: RunEventFeedDeps): RunEventFeed {
   const idleMs = deps.idleMs ?? IDLE_BACKSTOP_MS;
   return {
-    publish(runId, events) {
-      deps.bus.publish(runId, events);
+    publish(threadId, runId, events) {
+      deps.bus.publish(threadId, runId, events);
     },
     async *subscribe(runId, fromSeq) {
       const live = deps.bus.subscribe(runId);

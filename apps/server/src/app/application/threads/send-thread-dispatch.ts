@@ -78,7 +78,9 @@ export async function dispatchLocalRun(input: {
     ...(request.branch ? { branch: request.branch } : {}),
   });
   const events = await executor.events(request.orgId);
-  events.appendForThread(thread.id, accepted.runId, [toPlacementEvent(decision, placementExtras)]);
+  await events.appendForThread(thread.id, accepted.runId, [
+    toPlacementEvent(decision, placementExtras),
+  ]);
   return accepted;
 }
 

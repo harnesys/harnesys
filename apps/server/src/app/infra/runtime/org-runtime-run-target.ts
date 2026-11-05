@@ -117,7 +117,7 @@ export function createRunTargetResolver(ctx: RunTargetResolverContext) {
       universe,
       skills,
       hooks: await resolveTargetHooks({ deps, plugin, agentDef, cwd: prepared.paths.cwd }),
-      ...targetHookReport({ deps, events: ctx.events, feed: ctx.feed }),
+      ...targetHookReport({ deps, events: ctx.events }),
       binDirs: plugin.view.binDirsFor(agentDef),
       scope: prepared.scope,
       fileAccess: runTargetFileAccess(deps, prepared),

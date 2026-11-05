@@ -1,17 +1,32 @@
 import type { SessionEvent } from '../ports/session.ts';
 
+export type RunEventPublishListener = (
+  threadId: string,
+  runId: string,
+  events: SessionEvent[],
+) => void;
+
+export interface RunEventBusOptions {
+  onPublish?: RunEventPublishListener;
+}
+
 export interface RunEventBus {
-  publish(runId: string, events: SessionEvent[]): void;
+  publish(threadId: string, runId: string, events: SessionEvent[]): void;
   subscribe(runId: string): AsyncIterable<SessionEvent>;
 }
 interface BusSubscriber {
   queue: SessionEvent[];
   wake: (() => void) | null;
 }
-export function createRunEventBus(): RunEventBus {
+export function createRunEventBus(options?: RunEventBusOptions): RunEventBus {
   const subscribers = new Map<string, Set<BusSubscriber>>();
   return {
-    publish(runId: string, events: SessionEvent[]): void {
+    publish(threadId: string, runId: string, events: SessionEvent[]): void {
+      try {
+        options?.onPublish?.(threadId, runId, events);
+      } catch {
+        // live fan-out must not break the run that published the event
+      }
       for (const sub of subscribers.get(runId) ?? []) {
         sub.queue.push(...events);
         sub.wake?.();

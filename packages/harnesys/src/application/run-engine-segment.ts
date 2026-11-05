@@ -20,6 +20,7 @@ export interface SegmentEnv {
   lifecycle: RunLifecycleStore;
   events: RunEventStore;
   feed: RunEventFeed;
+  threadId: string;
   isLeaseLost: () => boolean;
   sleep: (ms: number) => Promise<void>;
   logger?: Logger;
@@ -89,7 +90,7 @@ function lastText(snap: Snapshot | null): string | undefined {
 export function admit(env: SegmentEnv, runId: string, event: PendingSessionEvent): SessionEvent {
   const seq = env.events.next(runId);
   const full = { ...event, seq, runId } as SessionEvent;
-  env.feed.publish(runId, [full]);
+  env.feed.publish(env.threadId, runId, [full]);
   return full;
 }
 export async function flushJournal(env: SegmentEnv, ctx: SegmentCtx): Promise<boolean> {
@@ -140,7 +141,7 @@ export async function guardedTransition(
   }
   const stored = await env.events.tail(runId, before?.lastSeq ?? 0);
   if (stored.length > 0) {
-    env.feed.publish(runId, stored);
+    env.feed.publish(env.threadId, runId, stored);
   }
 }
 

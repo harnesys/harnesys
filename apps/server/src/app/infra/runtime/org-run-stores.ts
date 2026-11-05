@@ -12,14 +12,13 @@ import { decisionModelIdOf, embedModelIdOf } from '../memory/org-memory-settings
 import type { OrgSqliteDb, OrgSqliteSession } from '../org-sqlite/org-sqlite-session.ts';
 import { createApprovalReconcile } from './approval-reconcile.ts';
 import { observeRunTerminal } from './observe-run-terminal.ts';
-import { observeThreadErrors } from './observe-thread-errors.ts';
 import { createOrgModelsPort } from './org-models.port.ts';
 import type { OrgRuntimeDeps } from './org-runtime.types.ts';
 import { OrgEpisodicPort } from './packs/org-episodic.port.ts';
 import { cachedTargetOf, type TargetCache } from './prepare-org-target.ts';
 import { prepareUsageEvents } from './prepare-usage-events.ts';
 import { requestRunParkApprovals } from './request-approval-for-park.ts';
-import { SqliteRunEventStore } from './sqlite-run-events.adapter.ts';
+import { type RunEventAppendListener, SqliteRunEventStore } from './sqlite-run-events.adapter.ts';
 import { SqliteRunLifecycleStore } from './sqlite-run-lifecycle.adapter.ts';
 import { withWaitGateSignal } from './wait-ticker.ts';
 import type { ThreadBinding } from './workspace-target.ts';
@@ -40,6 +39,7 @@ export function createOrgRunStores(
   deps: OrgRuntimeDeps,
   session: OrgSqliteSession,
   parkRuntime?: OrgParkRuntimeDeps,
+  onAppend?: RunEventAppendListener,
 ): OrgRunStores {
   const modelsPort = createOrgModelsPort(deps.orgId, deps.providers, deps.models, deps.secrets);
   let consolidate: ConsolidateThreadUseCase | undefined;
@@ -70,22 +70,8 @@ export function createOrgRunStores(
   });
   const runEvents = new SqliteRunEventStore(session.db, {
     prepare: (tx, runId, threadId, events) => prepareUsageEvents(tx, runId, threadId, events),
-    observe: (tx, runId, threadId, events) => {
-      try {
-        observeThreadErrors(
-          tx,
-          {
-            orgId: deps.orgId,
-            onEvent: (event) => deps.threadEvents?.emit(deps.orgId, event),
-          },
-          threadId,
-          runId,
-          events,
-        );
-      } catch {
-        // thread error surfacing is best-effort
-      }
-
+    ...(onAppend === undefined ? {} : { onAppend }),
+    observe: (_tx, runId, threadId, events) => {
       // adapters open their own sqlite connection and would hit SQLITE_BUSY
       // against this transaction's write lock. Defer until after commit.
       queueMicrotask(() => {

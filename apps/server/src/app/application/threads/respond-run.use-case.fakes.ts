@@ -189,9 +189,6 @@ export class StubExecutor extends LocalExecutorPort {
   stream(): Promise<AsyncIterable<SessionEvent>> {
     throw new Error('not used');
   }
-  publishEvents(): Promise<void> {
-    throw new Error('not used');
-  }
   tickWaitTimers(): Promise<number> {
     throw new Error('not used');
   }

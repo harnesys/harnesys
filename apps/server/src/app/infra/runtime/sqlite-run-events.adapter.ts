@@ -30,9 +30,16 @@ export type RunEventPreparer = (
   events: PendingSessionEvent[],
 ) => PendingSessionEvent[];
 
+export type RunEventAppendListener = (
+  threadId: string,
+  runId: string,
+  events: SessionEvent[],
+) => void;
+
 export interface RunEventStoreOptions {
   observe?: RunEventObserver;
   prepare?: RunEventPreparer;
+  onAppend?: RunEventAppendListener;
 }
 
 function clientEventIdOf(event: PendingSessionEvent): string | undefined {
@@ -68,6 +75,17 @@ export class SqliteRunEventStore implements RunEventStore {
     const known = this.seqByRun.get(runId) ?? 0;
     if (seq > known) {
       this.seqByRun.set(runId, seq);
+    }
+  }
+
+  private emitAppended(threadId: string, runId: string, events: SessionEvent[]): void {
+    if (events.length === 0) {
+      return;
+    }
+    try {
+      this.options?.onAppend?.(threadId, runId, events);
+    } catch {
+      // events are committed already; realtime fan-out must not fail the append
     }
   }
 
@@ -124,31 +142,35 @@ export class SqliteRunEventStore implements RunEventStore {
 
   append(runId: string, expectedEpoch: number, events: SessionEvent[]): Promise<SessionEvent[]> {
     try {
-      return Promise.resolve(
-        this.db.transaction(
-          (tx): SessionEvent[] => {
-            const row = tx.select().from(runsTable).where(eq(runsTable.runId, runId)).get();
-            if (row?.status !== 'running' || row?.leaseEpoch !== expectedEpoch) {
-              throw codedRunError(
-                'lease_stale',
-                `run ${runId} not executable by epoch ${expectedEpoch}`,
-              );
-            }
-            return this.appendWithinTx(tx as OrgSqliteDb, runId, row.threadId, events);
-          },
-          { behavior: 'immediate' },
-        ),
+      let threadId = '';
+      const stored = this.db.transaction(
+        (tx): SessionEvent[] => {
+          const row = tx.select().from(runsTable).where(eq(runsTable.runId, runId)).get();
+          if (row?.status !== 'running' || row?.leaseEpoch !== expectedEpoch) {
+            throw codedRunError(
+              'lease_stale',
+              `run ${runId} not executable by epoch ${expectedEpoch}`,
+            );
+          }
+          threadId = row.threadId;
+          return this.appendWithinTx(tx as OrgSqliteDb, runId, row.threadId, events);
+        },
+        { behavior: 'immediate' },
       );
+      this.emitAppended(threadId, runId, stored);
+      return Promise.resolve(stored);
     } catch (error) {
       return Promise.reject(error);
     }
   }
 
   appendForThread(threadId: string, runId: string, events: PendingSessionEvent[]): SessionEvent[] {
-    return this.db.transaction(
+    const stored = this.db.transaction(
       (tx): SessionEvent[] => this.appendWithinTx(tx as OrgSqliteDb, runId, threadId, events),
       { behavior: 'immediate' },
     );
+    this.emitAppended(threadId, runId, stored);
+    return stored;
   }
 
   tail(runId: string, fromSeq: number): Promise<SessionEvent[]> {

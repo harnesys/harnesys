@@ -1,11 +1,10 @@
-import type { HookRunReport, RunEventFeed, RunEventStore } from 'harnesys';
+import type { HookRunReport, RunEventStore } from 'harnesys';
 import { HookRunStorePort } from '../../domain/agent/hook-run-store.port.ts';
 
 export function createHookReport(input: {
   orgId: string;
   hookRuns: HookRunStorePort;
   events: RunEventStore;
-  feed: RunEventFeed;
 }): (report: HookRunReport) => void {
   return (report: HookRunReport): void => {
     try {
@@ -29,10 +28,7 @@ export function createHookReport(input: {
   };
 }
 
-function publishHookEvent(
-  input: { events: RunEventStore; feed: RunEventFeed },
-  report: HookRunReport,
-): void {
+function publishHookEvent(input: { events: RunEventStore }, report: HookRunReport): void {
   const runId = report.runId;
   const threadId = report.threadId;
   if (runId === undefined || threadId === undefined) {
@@ -51,7 +47,7 @@ function publishHookEvent(
           durationMs: report.durationMs,
         },
       ]),
-    ).then((stored) => input.feed.publish(runId, stored));
+    );
   } catch {
     // публикация события не должна ронять прогон
   }
