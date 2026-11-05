@@ -4,6 +4,7 @@ import { SPAWN_ITEM_LIMIT, SPAWN_MAX_CONCURRENCY } from '../constants.ts';
 import type { AgentDefinition } from '../domain/agent-definition.ts';
 import type { Event, Snapshot } from '../domain/snapshot.ts';
 import type { AgentsResolve } from '../ports/create-runtime.ts';
+import type { PermissionGrantsPort } from '../ports/permission-grants-port.ts';
 import type { RuntimeState } from '../ports/runtime-state.ts';
 import type { GraphOpts } from './graph.ts';
 import { executeSpawn, prepareSpawn, type SpawnNodeSpec } from './graph-spawn.ts';
@@ -436,7 +437,39 @@ describe('spawn permissions', () => {
     expect(captured[0]?.permissions?.['fs.write']).toBe('deny');
   });
 
-  test('keeps the legacy intersection when no grant is passed', async () => {
+  test('a child inherits the parent gates without a grant', async () => {
+    const parent = {
+      ...parentOpts(fakeState(() => snapshot('completed'))),
+      permissions: { process: 'allow', 'fs.write': 'deny' } as const,
+    };
+    const prepared = prepareSpawn(node(), parent, {
+      ...SLOTS,
+      state: { spawns: [{ agentId: CHILD.id, input: 'task' }] },
+    });
+    const captured: GraphOpts[] = [];
+    await executeSpawn(prepared, parent, captureRunner(captured));
+    expect(captured[0]?.permissions?.process).toBe('allow');
+    expect(captured[0]?.permissions?.['fs.write']).toBe('deny');
+  });
+
+  test('a child receives the parent durable permission grants', async () => {
+    const grants = {
+      granted: async (agentId: string, op: string) => agentId === CHILD.id && op === 'process',
+    } as unknown as PermissionGrantsPort;
+    const parent = {
+      ...parentOpts(fakeState(() => snapshot('completed'))),
+      permissionGrants: grants,
+    };
+    const prepared = prepareSpawn(node(), parent, {
+      ...SLOTS,
+      state: { spawns: [{ agentId: CHILD.id, input: 'task' }] },
+    });
+    const captured: GraphOpts[] = [];
+    await executeSpawn(prepared, parent, captureRunner(captured));
+    expect(captured[0]?.permissionGrants).toBe(grants);
+  });
+
+  test('a parent deny is inherited without a grant', async () => {
     const parent = {
       ...parentOpts(fakeState(() => snapshot('completed'))),
       permissions: { 'fs.write': 'deny' } as const,

@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { MemoryApprovalEvents, MemoryApprovalStore } from '../approvals/approval-fakes.ts';
+import {
+  MemoryApprovalEvents,
+  MemoryApprovalStore,
+  MemoryPermissionRules,
+} from '../approvals/approval-fakes.ts';
 import {
   APPROVAL_ID,
   ASK_ID,
@@ -87,6 +91,65 @@ describe('RespondRunUseCase', () => {
     expect(row?.status).toBe('denied');
     expect(events.emitted).toHaveLength(1);
     expect(events.emitted[0]?.type).toBe('decided');
+  });
+
+  test('always on a delegated op ask records the op rule for the delegate', async () => {
+    const store = new MemoryApprovalStore();
+    const events = new MemoryApprovalEvents();
+    const rules = new MemoryPermissionRules();
+    store.seed(
+      makeApproval({
+        context: {
+          source: 'permission',
+          ops: ['process'],
+          delegated: { agentId: 'delegate-1', agentType: 'Spawn Tester 1' },
+        },
+      }),
+    );
+    const uc = buildUseCase(store, events, new StubExecutor(), rules);
+
+    await uc.execute({
+      orgId: ORG,
+      threadId: THREAD_ID,
+      runId: RUN_ID,
+      body: {
+        askId: ASK_ID,
+        payload: { approved: true, scope: 'always' },
+        clientEventId: 'ev-always',
+      },
+    });
+
+    expect(rules.rows).toHaveLength(1);
+    expect(rules.rows[0]).toMatchObject({ agentId: 'delegate-1', kind: 'op', pattern: 'process' });
+  });
+
+  test('approve once on a delegated op ask records no rule', async () => {
+    const store = new MemoryApprovalStore();
+    const events = new MemoryApprovalEvents();
+    const rules = new MemoryPermissionRules();
+    store.seed(
+      makeApproval({
+        context: {
+          source: 'permission',
+          ops: ['process'],
+          delegated: { agentId: 'delegate-1' },
+        },
+      }),
+    );
+    const uc = buildUseCase(store, events, new StubExecutor(), rules);
+
+    await uc.execute({
+      orgId: ORG,
+      threadId: THREAD_ID,
+      runId: RUN_ID,
+      body: {
+        askId: ASK_ID,
+        payload: { approved: true, scope: 'once' },
+        clientEventId: 'ev-once',
+      },
+    });
+
+    expect(rules.rows).toHaveLength(0);
   });
 
   test('ask_user without inbox row — store not touched', async () => {

@@ -465,6 +465,7 @@ async function runOneChild(input: {
     }),
     paths: parent.paths,
     process: parent.process,
+    ...(parent.permissionGrants !== undefined ? { permissionGrants: parent.permissionGrants } : {}),
     models: parent.models,
     fileAccess: parent.fileAccessFor?.(childDef) ?? parent.fileAccess,
     toolRegistry: runRegistry,
@@ -578,7 +579,7 @@ async function runOneChild(input: {
       await stopEvent();
       throw new DelegatedPermissionAsk({
         agentId: target.call.agentId,
-        agentType: target.call.agentId,
+        agentType: target.def.name ?? target.call.agentId,
         spawnId: target.spawnId,
         spawnPath: childSpawnPath,
         childInterruptId: interrupt.interruptId,

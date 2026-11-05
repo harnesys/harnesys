@@ -308,8 +308,8 @@ function appendOneEvent(tx: OrgSqliteDb, input: AppendOneInput): AppendOneResult
     ...(input.agentName ? { agentName: input.agentName } : {}),
   };
   const full = {
-    ...input.pending,
     ...agent,
+    ...input.pending,
     seq,
     runId: input.runId,
     threadSeq,
@@ -323,7 +323,7 @@ function appendOneEvent(tx: OrgSqliteDb, input: AppendOneInput): AppendOneResult
       seq,
       type: input.pending.type,
       timestamp: input.now,
-      metadata: JSON.stringify({ ...input.pending, ...agent }),
+      metadata: JSON.stringify({ ...agent, ...input.pending }),
       clientEventId: clientEventId ?? null,
       conversational: conversational ? 1 : 0,
     })

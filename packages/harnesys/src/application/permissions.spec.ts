@@ -35,10 +35,28 @@ describe('childPermissions', () => {
     expect(out.network).toBe('deny');
   });
 
-  test('without a grant the legacy intersection is unchanged', () => {
-    const childDef: PermissionMap = { 'fs.write': 'allow' };
-    const parent: PermissionMap = { 'fs.write': 'deny' };
-    expect(childPermissions({ childDef, parent })).toEqual(intersectPermissions(childDef, parent));
+  test('a child inherits an allow gate from the parent', () => {
+    const out = childPermissions({ parent: { process: 'allow' } });
+    expect(out.process).toBe('allow');
+  });
+
+  test('a child definition can tighten the parent gate', () => {
+    const out = childPermissions({
+      childDef: { process: 'deny' },
+      parent: { process: 'allow' },
+    });
+    expect(out.process).toBe('deny');
+  });
+
+  test('a child definition cannot loosen the parent gate', () => {
+    const out = childPermissions({
+      childDef: { 'fs.write': 'allow' },
+      parent: { 'fs.write': 'ask' },
+    });
+    expect(out['fs.write']).toBe('ask');
+  });
+
+  test('without a grant or parent the defaults apply', () => {
     expect(childPermissions({})).toEqual(DEFAULT_PERMISSIONS);
   });
 });

@@ -8,12 +8,10 @@ export function DelegateBadge({ delegated }: { delegated: DelegatedAskOrigin | u
   if (!delegated) {
     return null;
   }
-  const parts = [delegated.agentType, delegated.spawnPath].filter(
-    (part): part is string => part !== undefined,
-  );
+  const name = delegated.agentType ?? delegated.agentId;
   return (
     <p className="text-[11px] text-muted-foreground" data-testid="delegate-badge">
-      Delegate{parts.length > 0 ? ` ${parts.join(' · ')}` : ''}
+      Delegate{name ? ` ${name}` : ''}
     </p>
   );
 }

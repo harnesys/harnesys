@@ -70,7 +70,7 @@ function ConfirmCard({ pending, threadId }: { pending: PendingHitl; threadId: st
   const detailLines = summary.lines.filter((line) => line.label !== 'path');
   const scoped = pending.source === 'permission';
   const delegatedOnly = pending.tool == null && pending.delegated != null;
-  const promptLine = delegatedOnly && pending.prompt ? truncateText(pending.prompt, 200) : null;
+  const promptLine = pending.prompt ? truncateText(pending.prompt, 200) : null;
   const decide = async (payload: Record<string, unknown>, allow: boolean) => {
     if (busy) {
       return;

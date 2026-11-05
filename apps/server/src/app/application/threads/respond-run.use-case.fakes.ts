@@ -298,6 +298,7 @@ export function buildUseCase(
   store: MemoryApprovalStore,
   events: MemoryApprovalEvents,
   executor: StubExecutor = new StubExecutor(),
+  rules: MemoryPermissionRules = new MemoryPermissionRules(),
 ) {
   return new RespondRunUseCase(
     new StubThreads(),
@@ -308,7 +309,7 @@ export function buildUseCase(
     new StubModes(),
     store,
     events,
-    new MemoryPermissionRules(),
+    rules,
     new StubFileRules(),
     new StubMachineConfig(),
     new StubSourceLocation(),

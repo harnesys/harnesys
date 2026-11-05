@@ -1854,6 +1854,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
             nodeId: cur,
             source: 'permission',
             output,
+            ...(err.tool === undefined ? {} : { tool: err.tool }),
             delegated: {
               agentId: err.agentId,
               agentType: err.agentType,
@@ -1870,6 +1871,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
             reason: err.prompt,
             source: 'permission',
             delegated: snap.cursor.interrupt.delegated,
+            ...(err.tool === undefined ? {} : { tool: err.tool }),
           };
           await opts.state.commit(snap, [ev], { kind: 'recorded', sequence: seq });
           yield ev;

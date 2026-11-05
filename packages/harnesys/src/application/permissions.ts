@@ -49,14 +49,25 @@ export function childPermissions(input: {
   childDef?: PermissionMap;
   parent?: PermissionMap;
 }): PermissionMap {
-  const out = intersectPermissions(
-    input.childDef ?? DEFAULT_PERMISSIONS,
-    input.parent ?? DEFAULT_PERMISSIONS,
-  );
+  const parentMap = input.parent ?? DEFAULT_PERMISSIONS;
+  const childMap = input.childDef ?? {};
+  const out: PermissionMap = {};
+  const ops = new Set([
+    ...Object.keys(DEFAULT_PERMISSIONS),
+    ...Object.keys(parentMap),
+    ...Object.keys(childMap),
+  ]);
+  for (const op of ops) {
+    const parentGate = parentMap[op] ?? DEFAULT_PERMISSIONS[op] ?? 'ask';
+    const childGate = childMap[op];
+    out[op] =
+      childGate !== undefined && GATE_SEVERITY[childGate] > GATE_SEVERITY[parentGate]
+        ? childGate
+        : parentGate;
+  }
   if (input.grant === undefined) {
     return out;
   }
-  const parentMap = input.parent ?? DEFAULT_PERMISSIONS;
   for (const [op, gate] of Object.entries(input.grant)) {
     const parentGate = parentMap[op] ?? DEFAULT_PERMISSIONS[op] ?? 'ask';
     out[op] = GATE_SEVERITY[gate] >= GATE_SEVERITY[parentGate] ? gate : parentGate;
