@@ -12,7 +12,6 @@ import { RunAttributionBadge } from '@/shared/ui/run-attribution-badge';
 import { StatusDot } from '@/shared/ui/status-dot';
 import { ThreadDock } from '@/widgets/thread-dock';
 import { agentFallbackName } from '../model/agent-label';
-import { useSpawnStream } from '../model/use-spawn-stream';
 import { RunTurn } from './run-turn';
 
 const DOT_TONE: Record<SpawnStatus, 'live' | 'idle' | 'danger'> = {
@@ -63,7 +62,6 @@ export function SpawnView({
     void refreshThread(threadId).catch(() => {});
   }, [hasEvents, deskReady, threadId]);
   const running = spawn?.status === 'running';
-  useSpawnStream(threadId, spawnId, Boolean(running));
   if (!spawn) {
     return (
       <div

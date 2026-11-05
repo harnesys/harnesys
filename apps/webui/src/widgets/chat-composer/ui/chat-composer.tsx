@@ -9,7 +9,7 @@ import type { Thread } from '@/entities/thread';
 import { useThreadWorktreeStore } from '@/entities/thread';
 import { useThreadEvents } from '@/features/desk';
 import { ThreadQueueStack } from '@/features/message-queue';
-import { type PendingHitl, pendingHitl, useRunStreamState } from '@/features/send-message';
+import { type PendingHitl, pendingHitl, useRunState } from '@/features/send-message';
 import { providersQuery } from '@/shared/api';
 import { getActiveOrgId } from '@/shared/api/active-org';
 import { getSourceLocation, sourceLocationQueryKey } from '@/shared/api/source-location';
@@ -74,7 +74,7 @@ export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }
   const streaming = useSessionStore((state) =>
     thread ? Boolean(state.activeRuns[thread.id]) : false,
   );
-  const streamState = useRunStreamState(thread?.id ?? null);
+  const streamState = useRunState(thread?.id ?? null);
   const streamLabel = streaming ? streamStatusLabel(streamState) : null;
   const retrying = useRetrySignal(thread?.id ?? null) !== null;
   const activeRunId = useSessionStore((state) =>

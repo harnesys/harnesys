@@ -1,10 +1,8 @@
 import { BotIcon } from 'lucide-react';
 import type { MapInfo, MapItemInfo } from '@/entities/session';
-import { useSpawnStream } from '../model/use-spawn-stream';
 import { type ActivityBadge, ActivityLine } from './activity-line';
 
-function MapItemRow({ threadId, item }: { threadId: string; item: MapItemInfo }) {
-  useSpawnStream(threadId, item.workerId, item.status === 'running');
+function MapItemRow({ item }: { item: MapItemInfo }) {
   const badges: ActivityBadge[] =
     item.status === 'failed' ? [{ text: 'failed', tone: 'destructive' }] : [];
   return (
@@ -26,7 +24,7 @@ function MapItemRow({ threadId, item }: { threadId: string; item: MapItemInfo })
     </ActivityLine>
   );
 }
-export function MapItems({ threadId, map }: { threadId: string; map: MapInfo }) {
+export function MapItems({ map }: { map: MapInfo }) {
   if (map.items.length === 0) {
     return (
       <div className="text-[12px] text-muted-foreground">
@@ -41,7 +39,7 @@ export function MapItems({ threadId, map }: { threadId: string; map: MapInfo }) 
       {[...map.items]
         .sort((a, b) => a.index - b.index)
         .map((item) => (
-          <MapItemRow key={item.workerId} threadId={threadId} item={item} />
+          <MapItemRow key={item.workerId} item={item} />
         ))}
     </div>
   );

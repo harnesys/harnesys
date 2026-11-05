@@ -5,7 +5,7 @@ import { useThreadQueueStore } from '@/features/message-queue';
 import { ApiError, cancelRun, sendThreadRun } from '@/shared/api';
 import { randomUUID } from '@/shared/lib/random-uuid';
 import { preview, trace } from '@/shared/lib/trace';
-import { connectThreadRun } from './client-registry';
+// run tracking now arrives through the unified org event hub
 import { requestRevealMessage, requestScrollToEnd } from './scroll-requests';
 export interface SendMessageOptions {
   threadId: string;
@@ -66,7 +66,12 @@ export async function sendMessage(options: SendMessageOptions) {
       return;
     }
     useThreadStore.getState().touch(threadId);
-    connectThreadRun(threadId, accepted.runId);
+    const store = useSessionStore.getState();
+    if (store.activeRuns[threadId]) {
+      store.setRunId(threadId, accepted.runId);
+    } else {
+      store.startRun(threadId, new AbortController(), accepted.runId);
+    }
     trace('client', 'POST accepted', { runId: accepted.runId, status: accepted.status });
   } catch (error) {
     if (error instanceof ApiError && error.status === 409) {
@@ -119,7 +124,12 @@ function handleConflict(
 ): boolean {
   if (body.runId) {
     useSessionStore.getState().removeEventByClientEventId(threadId, clientEventId);
-    connectThreadRun(threadId, body.runId);
+    const store = useSessionStore.getState();
+    if (store.activeRuns[threadId]) {
+      store.setRunId(threadId, body.runId);
+    } else {
+      store.startRun(threadId, new AbortController(), body.runId);
+    }
     return true;
   }
   if (body.pendingAskId) {

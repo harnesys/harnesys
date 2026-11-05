@@ -7,11 +7,13 @@ import type {
   EventsWatchIndexStateFrame,
   EventsWatchMaterializationFrame,
   EventsWatchReleaseFrame,
+  EventsWatchResyncFrame,
   EventsWatchSkillsFrame,
   EventsWatchSourceChangeFrame,
   EventsWatchTerminalFrame,
   EventsWatchThreadErrorEvent,
   EventsWatchThreadErrorFrame,
+  EventsWatchThreadEventsFrame,
   KnowledgeIndexState,
   TerminalWatchEvent,
 } from '@harnesys/studio-shared';
@@ -22,15 +24,59 @@ export { watchEventSource };
 
 export const eventsWatchUrl = `${env.localHostOrigin}/api/events/watch`;
 
-export function watchDeskEvents(onEvent: (orgId: string, event: DeskEvent) => void): () => void {
-  return watchEventSource(eventsWatchUrl, 'desk', (data) => {
-    try {
-      const frame = JSON.parse(data) as EventsWatchDeskFrame;
-      onEvent(frame.orgId, frame.event);
-    } catch {
-      // ignore malformed frames
-    }
-  });
+export function watchDeskEvents(orgId: string, onEvent: (event: DeskEvent) => void): () => void {
+  return watchEventSource(
+    eventsWatchUrl,
+    'desk',
+    (data) => {
+      try {
+        const frame = JSON.parse(data) as EventsWatchDeskFrame;
+        if (frame.orgId && frame.orgId !== orgId) {
+          return;
+        }
+        onEvent(frame.event);
+      } catch {
+        // ignore malformed frames
+      }
+    },
+    { orgId },
+  );
+}
+
+export function watchThreadEvents(
+  orgId: string,
+  onFrame: (frame: EventsWatchThreadEventsFrame) => void,
+): () => void {
+  return watchEventSource(
+    eventsWatchUrl,
+    'thread-events',
+    (data) => {
+      try {
+        onFrame(JSON.parse(data) as EventsWatchThreadEventsFrame);
+      } catch {
+        // ignore malformed frames
+      }
+    },
+    { orgId },
+  );
+}
+
+export function watchResync(
+  orgId: string,
+  onResync: (frame: EventsWatchResyncFrame) => void,
+): () => void {
+  return watchEventSource(
+    eventsWatchUrl,
+    'resync',
+    (data) => {
+      try {
+        onResync(JSON.parse(data) as EventsWatchResyncFrame);
+      } catch {
+        // ignore malformed frames
+      }
+    },
+    { orgId },
+  );
 }
 
 export function watchConnectorChanges(orgId: string, onChanged: () => void): () => void {

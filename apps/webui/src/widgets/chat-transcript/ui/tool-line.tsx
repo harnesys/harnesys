@@ -222,7 +222,7 @@ export function ToolLine({
         ) : null}
         {map && threadId ? (
           <div className="pb-1">
-            <MapItems threadId={threadId} map={map} />
+            <MapItems map={map} />
           </div>
         ) : null}
         {artifactBodyOf(image, file, threadId) ?? <ToolDetailView detail={detail} />}{' '}

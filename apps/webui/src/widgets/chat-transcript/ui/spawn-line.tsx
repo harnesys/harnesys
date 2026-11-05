@@ -8,7 +8,6 @@ import { ExpandableScroll } from '@/shared/ui/expandable-scroll';
 import { agentFallbackName } from '../model/agent-label';
 import { isAutoOpen } from '../model/feed-detail-open';
 import { useNow } from '../model/use-now';
-import { useSpawnStream } from '../model/use-spawn-stream';
 import { type ActivityBadge, ActivityLine } from './activity-line';
 
 const LIVE_TICK_MS = 5000;
@@ -26,7 +25,6 @@ export function SpawnLine({
 }) {
   const spawn = useFeedSpawn(threadId, spawnId);
   const running = spawn?.status === 'running';
-  useSpawnStream(threadId, spawnId, Boolean(running));
   const feedDetail = useChatPreferences((state) => state.feedDetail);
   const agent = useAgentStore((state) => (spawn ? state.byId(spawn.agentId) : undefined));
   const now = useNow(running ? LIVE_TICK_MS : 0);

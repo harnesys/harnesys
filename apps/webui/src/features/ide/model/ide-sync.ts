@@ -26,10 +26,7 @@ export function useIdeSync() {
   const focusProjectRef = useRef<string | null>(projectId);
   focusProjectRef.current = projectId;
   useEffect(() => {
-    return watchDeskEvents((eventOrgId, event) => {
-      if (eventOrgId !== org) {
-        return;
-      }
+    return watchDeskEvents(org, (event) => {
       if (event.type !== 'terminal') {
         return;
       }

@@ -5,8 +5,14 @@ import { useAgentStore } from '@/entities/agent';
 import { useActiveOrgStore, useOrgActivityStore } from '@/entities/org-machine';
 import { useProjects } from '@/entities/project';
 import { toClientThread, useThreadStore } from '@/entities/thread';
+import { dispatchThreadEvents } from '@/features/send-message/model/thread-events';
 import { appMetaQuery, listThreads, watchDeskEvents, watchThreadErrors } from '@/shared/api';
-import { watchApprovalEvents, watchSourceChanges, watchTerminalEvents } from '@/shared/api/events';
+import {
+  watchApprovalEvents,
+  watchSourceChanges,
+  watchTerminalEvents,
+  watchThreadEvents,
+} from '@/shared/api/events';
 import { isLocalFileWrite, sourceFilesTreeQueryKey } from '@/shared/api/files';
 import { rememberProjectNode, rememberSelfNode } from '@/shared/api/fleet';
 import { gitStatusQueryKey } from '@/shared/api/git';
@@ -26,6 +32,7 @@ export function DeskSync() {
   const queryClient = useQueryClient();
   const { orgId, focus } = useStudioLocation();
   const storeOrgId = useActiveOrgStore((state) => state.orgId);
+  const orgs = useActiveOrgStore((state) => state.orgs);
   const projectId = studioFocusProjectId(focus);
   const activeOrgId = orgId ?? storeOrgId;
   const projectDeskFocus =
@@ -79,23 +86,31 @@ export function DeskSync() {
     void hydrateDeskChrome(activeOrgId).catch(() => {});
   }, [activeOrgId]);
   useEffect(() => {
-    if (!activeOrgId) {
+    if (orgs.length === 0) {
       return;
     }
-    return watchDeskEvents((eventOrgId, event) => {
-      if (eventOrgId === activeOrgId) {
-        applyDeskEvent(event, { orgId: activeOrgId, navigate });
-        return;
+    const cleanups = orgs.map((org) =>
+      watchDeskEvents(org.orgId, (event) =>
+        applyDeskEvent(event, { orgId: org.orgId, navigate }),
+      ),
+    );
+    return () => {
+      for (const cleanup of cleanups) {
+        cleanup();
       }
-      if (event.type === 'run-finish') {
-        useOrgActivityStore.getState().bump(eventOrgId, 1);
-        return;
+    };
+  }, [orgs, navigate]);
+  useEffect(() => {
+    if (orgs.length === 0) {
+      return;
+    }
+    const cleanups = orgs.map((org) => watchThreadEvents(org.orgId, dispatchThreadEvents));
+    return () => {
+      for (const cleanup of cleanups) {
+        cleanup();
       }
-      if (event.type === 'thread' && event.thread.unread) {
-        useOrgActivityStore.getState().bump(eventOrgId, 1);
-      }
-    });
-  }, [activeOrgId, navigate]);
+    };
+  }, [orgs]);
   useEffect(() => {
     if (!activeOrgId) {
       return;

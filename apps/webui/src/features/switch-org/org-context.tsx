@@ -1,4 +1,5 @@
-import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useActiveOrgStore } from '@/entities/org-machine';
 import type { MachineOrgEntry } from '@/shared/api/orgs';
 
 interface OrgContextValue {
@@ -43,6 +44,9 @@ export function OrgProvider({ children }: { children: ReactNode }) {
     [ready, orgs, activeOrgId, upsertOrg],
   );
 
+  useEffect(() => {
+    useActiveOrgStore.setState({ orgs, orgId: activeOrgId, ready });
+  }, [orgs, activeOrgId, ready]);
   return <OrgContext.Provider value={value}>{children}</OrgContext.Provider>;
 }
 

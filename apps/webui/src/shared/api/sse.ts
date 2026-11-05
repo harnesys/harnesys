@@ -5,6 +5,7 @@ import { authenticatedFetch } from './session';
 export interface SseFrame {
   event: string;
   data: string;
+  id?: string;
 }
 
 export async function* readSse(response: Response): AsyncGenerator<SseFrame> {
@@ -50,11 +51,15 @@ interface Subscription {
 }
 
 interface FetchSseConnection {
+  key: string;
+  url: string;
+  orgId: string;
   refs: number;
   listeners: Map<string, Set<Subscription>>;
   abort: AbortController;
   retryTimer?: ReturnType<typeof setTimeout>;
   open: boolean;
+  lastId?: string;
 }
 
 const connections = new Map<string, FetchSseConnection>();
@@ -62,6 +67,7 @@ const connections = new Map<string, FetchSseConnection>();
 export interface WatchEventSourceOptions {
   onOpen?: () => void;
   onError?: () => void;
+  orgId?: string;
 }
 
 function isAbortError(error: unknown): boolean {
@@ -77,12 +83,14 @@ export function watchEventSource(
   onData: (data: string) => void,
   options?: WatchEventSourceOptions,
 ): () => void {
-  let conn = connections.get(url);
+  const orgId = options?.orgId ?? getActiveOrgId() ?? '';
+  const key = `${url}::${orgId}`;
+  let conn = connections.get(key);
   if (!conn) {
     const abort = new AbortController();
-    conn = { refs: 0, listeners: new Map(), abort, open: false };
-    connections.set(url, conn);
-    void maintainConnection(url);
+    conn = { key, url, orgId, refs: 0, listeners: new Map(), abort, open: false };
+    connections.set(key, conn);
+    void maintainConnection(key);
   }
   conn.refs += 1;
   const sub: Subscription = { onData, onOpen: options?.onOpen, onError: options?.onError };
@@ -96,7 +104,7 @@ export function watchEventSource(
     sub.onOpen?.();
   }
   return () => {
-    const current = connections.get(url);
+    const current = connections.get(key);
     if (!current) {
       return;
     }
@@ -106,7 +114,7 @@ export function watchEventSource(
       return;
     }
     void Promise.resolve().then(() => {
-      const still = connections.get(url);
+      const still = connections.get(key);
       if (!still || still !== current || still.refs > 0) {
         return;
       }
@@ -115,26 +123,26 @@ export function watchEventSource(
         still.retryTimer = undefined;
       }
       still.abort.abort();
-      connections.delete(url);
+      connections.delete(key);
     });
   };
 }
 
-async function maintainConnection(url: string): Promise<void> {
+async function maintainConnection(key: string): Promise<void> {
   let attempt = 0;
   while (true) {
-    const conn = connections.get(url);
+    const conn = connections.get(key);
     if (!conn || conn.abort.signal.aborted) {
       return;
     }
     try {
-      await openSseOnce(url, conn);
+      await openSseOnce(conn);
       attempt = 0;
     } catch (error) {
       if (isAbortError(error)) {
         return;
       }
-      const current = connections.get(url);
+      const current = connections.get(key);
       if (!current) {
         return;
       }
@@ -159,13 +167,23 @@ async function maintainConnection(url: string): Promise<void> {
   }
 }
 
-async function openSseOnce(url: string, conn: FetchSseConnection): Promise<void> {
-  const headers = new Headers();
-  const orgId = getActiveOrgId();
-  if (orgId) {
-    headers.set('X-Org-Id', orgId);
+async function openSseOnce(conn: FetchSseConnection): Promise<void> {
+  async function fetchResponse(includeLastId: boolean): Promise<Response> {
+    const headers = new Headers();
+    if (conn.orgId) {
+      headers.set('X-Org-Id', conn.orgId);
+    }
+    if (includeLastId && conn.lastId) {
+      headers.set('Last-Event-ID', conn.lastId);
+    }
+    return authenticatedFetch(conn.url, { headers, signal: conn.abort.signal });
   }
-  const response = await authenticatedFetch(url, { headers, signal: conn.abort.signal });
+  let response = await fetchResponse(true);
+  if (!response.ok && response.status === 400 && conn.lastId !== undefined) {
+    conn.lastId = undefined;
+    trace('sse', 'retrying without stale Last-Event-ID');
+    response = await fetchResponse(false);
+  }
   if (!response.ok) {
     trace('sse', `open failed ${response.status}`);
     throw new Error(`sse open failed ${response.status}`);
@@ -177,9 +195,12 @@ async function openSseOnce(url: string, conn: FetchSseConnection): Promise<void>
     }
   }
   for await (const frame of readSse(response)) {
-    const current = connections.get(url);
+    const current = connections.get(conn.key);
     if (!current) {
       return;
+    }
+    if (frame.id) {
+      current.lastId = frame.id;
     }
     for (const sub of current.listeners.get(frame.event) ?? []) {
       sub.onData(frame.data);
@@ -195,10 +216,14 @@ function nextBackoff(attempt: number): number {
 
 function parseBlock(block: string): SseFrame | undefined {
   let event = 'message';
+  let id: string | undefined;
   const data: string[] = [];
   for (const line of block.split('\n')) {
     if (line.startsWith('event:')) {
       event = line.slice(6).trim();
+    } else if (line.startsWith('id:')) {
+      const value = line.slice(3).trim();
+      id = value || id;
     } else if (line.startsWith('data:')) {
       data.push(line.slice(5).trimStart());
     }
@@ -206,5 +231,5 @@ function parseBlock(block: string): SseFrame | undefined {
   if (data.length === 0) {
     return undefined;
   }
-  return { event, data: data.join('\n') };
+  return { event, data: data.join('\n'), id };
 }
