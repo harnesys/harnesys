@@ -104,7 +104,7 @@ export class ProjectConnectorEventsUseCase
       const stream = await this.executor.stream(orgId, runId, 0);
       for await (const event of stream) {
         const live = this.connectors.findById(orgId, route.connector.id);
-        if (!live || live.status === 'paused' || live.status === 'awaiting_pair') {
+        if (!live || live.status === 'paused') {
           return;
         }
         state.coalesceMs = live.policy.coalesceMs;
@@ -244,7 +244,7 @@ export class ProjectConnectorEventsUseCase
     if (!connector) {
       return null;
     }
-    if (connector.status === 'paused' || connector.status === 'awaiting_pair') {
+    if (connector.status === 'paused') {
       return null;
     }
     const binding = this.connectors.findBindingForThread(orgId, connector.id, threadId);

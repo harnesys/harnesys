@@ -10,7 +10,19 @@ import {
 } from '../../model/connector-api';
 import { chatLabel } from './telegram-status';
 
-export function ThreadTelegramBadge({ orgId, threadId }: { orgId: string; threadId: string }) {
+interface ThreadTelegramBadgeProps {
+  orgId: string;
+  threadId: string;
+  inline?: boolean;
+}
+
+function shellClassName(inline: boolean): string {
+  return inline
+    ? 'flex min-w-0 items-center gap-2 text-xs'
+    : 'flex shrink-0 flex-wrap items-center gap-2 border-border/40 border-b px-3 py-1.5 text-xs';
+}
+
+export function ThreadTelegramBadge({ orgId, threadId, inline = false }: ThreadTelegramBadgeProps) {
   const queryClient = useQueryClient();
   const connectors = useQuery(orgConnectorsQuery(orgId, { provider: 'telegram' }));
   const items = connectors.data?.items ?? [];
@@ -30,11 +42,8 @@ export function ThreadTelegramBadge({ orgId, threadId }: { orgId: string; thread
       return null;
     }
     return (
-      <div
-        className="flex shrink-0 items-center gap-2 border-border/40 border-b px-3 py-1.5 text-xs"
-        data-testid="thread-telegram-badge-disconnected"
-      >
-        <span className="text-muted-foreground">Not connected to Telegram</span>
+      <div className={shellClassName(inline)} data-testid="thread-telegram-badge-disconnected">
+        {inline ? null : <span className="text-muted-foreground">Not connected to Telegram</span>}
         <Link
           to={`${studioPath.connector(orgId, 'telegram')}?threadId=${encodeURIComponent(threadId)}`}
           className="text-status-info underline-offset-2 hover:underline"
@@ -54,10 +63,7 @@ export function ThreadTelegramBadge({ orgId, threadId }: { orgId: string; thread
   }
 
   return (
-    <div
-      className="flex shrink-0 flex-wrap items-center gap-2 border-border/40 border-b px-3 py-1.5 text-xs"
-      data-testid="thread-telegram-badge"
-    >
+    <div className={shellClassName(inline)} data-testid="thread-telegram-badge">
       <span className="min-w-0 truncate">
         Telegram · @{route.connector.botUsername} · {chatLabel(route.binding)}
       </span>

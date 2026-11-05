@@ -59,6 +59,7 @@ export class ConnectChatUseCase {
     } else {
       this.createThread(connector, binding.id, targetKind, request.body);
     }
+    const connected = this.markActive(connector);
 
     syncConnectorAgents(
       { connectors: this.connectors, threadAgents: this.threadAgents },
@@ -74,7 +75,7 @@ export class ConnectChatUseCase {
           threads: this.threads,
           threadAgents: this.threadAgents,
         },
-        connector,
+        connected,
       ),
       binding: bindingWithThread(
         { threads: this.threads, threadAgents: this.threadAgents },
@@ -82,6 +83,16 @@ export class ConnectChatUseCase {
         this.connectors.findBinding(request.orgId, connector.id, binding.id),
       ),
     };
+  }
+
+  private markActive(connector: ConnectorRecord): ConnectorRecord {
+    if (connector.status !== 'awaiting_pair') {
+      return connector;
+    }
+    return this.connectors.update(connector.orgId, connector.id, {
+      status: 'active',
+      updatedAt: new Date().toISOString(),
+    });
   }
 
   private attachExistingThread(

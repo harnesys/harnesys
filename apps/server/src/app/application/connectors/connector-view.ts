@@ -55,7 +55,12 @@ export function connectorView(
   const bindings = deps.connectors
     .listBindings(connector.orgId, connector.id)
     .map((binding) => bindingWithThread(deps, connector, binding));
-  return toConnectorPublic(connector, { bindings });
+  const view = toConnectorPublic(connector, { bindings });
+  const groupBound = bindings.some((binding) => binding.chatType !== 'private');
+  if (view.status === 'awaiting_pair' && groupBound) {
+    return { ...view, status: 'active' };
+  }
+  return view;
 }
 
 export function requireConnector(

@@ -88,15 +88,15 @@ export class ApplyTelegramUpdateUseCase {
   }
 
   async execute(request: ApplyTelegramUpdateRequest): Promise<void> {
-    const connector = this.requireConnector(request.orgId, request.connectorId);
-    discoverChat(this.deps.connectors, request.orgId, connector, request.update);
+    const found = this.requireConnector(request.orgId, request.connectorId);
+    discoverChat(this.deps.connectors, request.orgId, found, request.update);
     const chat = chatOf(request.update);
     const binding =
       chat.chatId === null
         ? undefined
         : this.deps.connectors.findBindingByChat(
             request.orgId,
-            connector.id,
+            found.id,
             chat.chatId,
             chat.topicId,
           );
@@ -104,6 +104,12 @@ export class ApplyTelegramUpdateUseCase {
       binding?.threadId != null
         ? this.deps.threads.findById(request.orgId, binding.threadId)
         : undefined;
+    const connector = activateBound(
+      this.deps.connectors,
+      request.orgId,
+      found,
+      thread !== undefined,
+    );
 
     const inboxId = crypto.randomUUID();
     const inserted = this.deps.connectors.insertInbox(request.orgId, {
@@ -216,6 +222,21 @@ export class ApplyTelegramUpdateUseCase {
     }
     return connector;
   }
+}
+
+function activateBound(
+  connectors: ConnectorRepositoryPort,
+  orgId: string,
+  connector: ConnectorRecord,
+  bound: boolean,
+): ConnectorRecord {
+  if (connector.status !== 'awaiting_pair' || !bound) {
+    return connector;
+  }
+  return connectors.update(orgId, connector.id, {
+    status: 'active',
+    updatedAt: new Date().toISOString(),
+  });
 }
 
 function primaryAgentIdOf(

@@ -110,8 +110,14 @@ function ThreadTabContent({
   if (thread.kind === 'chat' || thread.kind === 'group') {
     return (
       <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-thread">
-        <ThreadTelegramBadge orgId={orgId} threadId={thread.id} />
-        {thread.kind === 'group' ? <ThreadMembersPanel thread={thread} /> : null}
+        {thread.kind === 'group' ? (
+          <ThreadMembersPanel
+            thread={thread}
+            telegram={<ThreadTelegramBadge orgId={orgId} threadId={thread.id} inline />}
+          />
+        ) : (
+          <ThreadTelegramBadge orgId={orgId} threadId={thread.id} />
+        )}
         <div className="min-h-0 flex-1">
           <ThreadPanel threadId={thread.id} agent={agent} active />
         </div>

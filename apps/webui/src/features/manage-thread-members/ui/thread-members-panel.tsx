@@ -1,4 +1,5 @@
 import { UsersIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 import type { Thread } from '@/entities/thread';
 import { cn } from '@/shared/lib/utils';
 import { AddThreadMemberMenu } from './add-thread-member-menu';
@@ -16,7 +17,7 @@ function memberSummary(agents: number, people: number): string {
   return parts.length > 0 ? parts.join(' · ') : 'No members yet';
 }
 
-export function ThreadMembersPanel({ thread }: { thread: Thread }) {
+export function ThreadMembersPanel({ thread, telegram }: { thread: Thread; telegram?: ReactNode }) {
   const members = thread.members ?? [];
   const participants = thread.participants ?? [];
 
@@ -43,6 +44,7 @@ export function ThreadMembersPanel({ thread }: { thread: Thread }) {
           </div>
         </div>
       </div>
+      {telegram ?? null}
       <ThreadMembersPopover thread={thread} />
       <AddThreadMemberMenu thread={thread} />
       <ThreadGroupSettings thread={thread} />
