@@ -129,7 +129,7 @@ export function createRunEngine(deps: RunEngineDeps): RunEngine {
           childRuns.set(spawnId, entry);
           const born = entry;
           const childAgent = deps.agents.resolve(ev.agentId, opts.agent);
-        entry.tail = deps.lifecycle
+          entry.tail = deps.lifecycle
             .create({
               runId: spawnId,
               threadId: record.threadId,

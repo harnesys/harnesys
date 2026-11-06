@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { DEFAULT_PERMISSIONS } from '../constants.ts';
-import type { PermissionMap } from '../ports/permissions.ts';
-import { childPermissions, intersectPermissions } from './permissions.ts';
+import { childPermissions } from './permissions.ts';
 
 describe('childPermissions', () => {
   test('a grant cannot lift the default ask gate', () => {
