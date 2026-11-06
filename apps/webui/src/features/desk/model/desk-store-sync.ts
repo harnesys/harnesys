@@ -1,10 +1,12 @@
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { toClientAgentFromPublic, useAgentStore } from '@/entities/agent';
+import { toClientAutomation, useAutomationStore } from '@/entities/automation';
 import { useIssueBoardStore, useIssueLabelStore, useIssueStore } from '@/entities/issue';
 import { toClientSchedule, useScheduleStore } from '@/entities/schedule';
 import { toClientThread, useThreadStore } from '@/entities/thread';
 import { toClientWebhook, useWebhookStore } from '@/entities/webhook';
+import { watchAutomationsEvents } from '@/shared/api/events';
 import {
   gitFileStatusQueryKey,
   gitOrgSummaryQueryKey,
@@ -13,6 +15,8 @@ import {
 } from '@/shared/api/git';
 import {
   deskAgentsQuery,
+  deskAutomationsQuery,
+  deskAutomationsQueryKey,
   deskBoardsQuery,
   deskGitSummaryQuery,
   deskIssuesQuery,
@@ -87,10 +91,31 @@ export function useDeskStoreSync(
   scopeId: string | null,
   options: { orgEntities?: boolean } = {},
 ): boolean {
+  const queryClient = useQueryClient();
   const { ready, agents, threads, schedules, webhooks, boards, labels, issues } = useDeskSlices(
     scopeId ?? '',
   );
+  const automationsQuery = useQuery({
+    ...deskAutomationsQuery(scopeId ?? ''),
+    enabled: Boolean(scopeId),
+  });
+  useEffect(() => {
+    if (!scopeId) {
+      return;
+    }
+    return watchAutomationsEvents(scopeId, () => {
+      void queryClient.invalidateQueries({ queryKey: deskAutomationsQueryKey(scopeId) });
+    });
+  }, [scopeId, queryClient]);
   const { orgEntities = false } = options;
+  useEffect(() => {
+    if (!scopeId || !automationsQuery.data) {
+      return;
+    }
+    useAutomationStore
+      .getState()
+      .replaceProject(scopeId, automationsQuery.data.map(toClientAutomation));
+  }, [scopeId, automationsQuery.data]);
   useEffect(() => {
     if (!scopeId) {
       return;

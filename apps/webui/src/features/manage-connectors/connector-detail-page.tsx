@@ -16,6 +16,7 @@ import { ConnectorMark } from '@/features/manage-connectors/ui/connector-icon';
 import { GithubDetail } from '@/features/manage-connectors/ui/github-detail';
 import { GoogleDetail } from '@/features/manage-connectors/ui/google-detail';
 import { TelegramDetail } from '@/features/manage-connectors/ui/telegram/telegram-detail';
+import { INTEGRATION_UI_REGISTRY } from '@/integrations/registry';
 import { integrationsQuery } from '@/shared/api/integrations';
 import type { Source } from '@/shared/api/sources';
 import { studioPath } from '@/shared/config/routes';
@@ -127,10 +128,21 @@ function ConnectorDetail({ orgId, connector }: { orgId: string; connector: Conne
               sourcesLoading={sources.isPending}
             />
           ) : null}
+          <IntegrationConnectorSettings orgId={orgId} provider={connector.id} />
         </div>
       </div>
     </div>
   );
+}
+
+function IntegrationConnectorSettings({ orgId, provider }: { orgId: string; provider: string }) {
+  const Settings = INTEGRATION_UI_REGISTRY.find(
+    (item) => item.connectorProvider === provider,
+  )?.settings;
+  if (!Settings) {
+    return null;
+  }
+  return <Settings orgId={orgId} />;
 }
 
 function MetaItem({ label, value }: { label: string; value: ReactNode }) {

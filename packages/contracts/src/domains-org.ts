@@ -1,4 +1,18 @@
 export {
+  type AutomationConnection,
+  AutomationConnectionSchema,
+  type AutomationItem,
+  AutomationItemSchema,
+  type AutomationKind,
+  AutomationKindSchema,
+  type AutomationStatus,
+  AutomationStatusSchema,
+  type ListAutomationKindsResponse,
+  ListAutomationKindsResponseSchema,
+  type ListAutomationsResponse,
+  ListAutomationsResponseSchema,
+} from './automations.ts';
+export {
   type CreateExecutionProfileBody,
   CreateExecutionProfileBodySchema,
   type EffectiveProfile,

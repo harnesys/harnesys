@@ -9,6 +9,7 @@
     "./domain": "./domain.ts",
     "./models": "./models.ts",
     "./packs": "./src/packs/index.ts",
+    "./integration": "./src/integration/index.ts",
     "./plugins-catalog": "./plugins-catalog.ts",
     "./lsp": "./lsp.ts",
     "./skills": "./skills.ts",

@@ -24,7 +24,11 @@ export {
   setDeskWorkspaceReader,
   setDeskWorkspaceWriter,
 } from './model/desk-chrome';
-export { deskGitSummaryQuery, deskTerminalsKey } from './model/desk-queries';
+export {
+  deskAutomationsQueryKey,
+  deskGitSummaryQuery,
+  deskTerminalsKey,
+} from './model/desk-queries';
 export { useDeskReady } from './model/desk-store-sync';
 export { scheduleMarkThreadRead } from './model/mark-thread-read';
 export { resetOrgState } from './model/org-reset';
@@ -37,6 +41,7 @@ export {
 export {
   useAgentsInProjects,
   useAgentThreads,
+  useAutomationsInProjects,
   useDesk,
   useDeskSelection,
   useErroredThreads,

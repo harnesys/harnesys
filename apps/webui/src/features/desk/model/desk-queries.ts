@@ -1,6 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
 import {
   fetchOrgAgents,
+  listAutomations,
   listIssueBoards,
   listIssueLabels,
   listIssues,
@@ -37,6 +38,18 @@ export function deskSchedulesQuery(scopeId: string) {
   return queryOptions({
     queryKey: deskQueryKey('schedules', scopeId),
     queryFn: () => listSchedules(scopeId),
+    enabled: Boolean(scopeId),
+  });
+}
+
+export function deskAutomationsQueryKey(scopeId: string) {
+  return deskQueryKey('automations', scopeId);
+}
+
+export function deskAutomationsQuery(scopeId: string) {
+  return queryOptions({
+    queryKey: deskAutomationsQueryKey(scopeId),
+    queryFn: () => listAutomations(scopeId),
     enabled: Boolean(scopeId),
   });
 }

@@ -1,0 +1,26 @@
+export {
+  defineIntegration,
+  type ResolvedRoute,
+  resolveIntegrationRoute,
+} from './define-integration.ts';
+export type {
+  AddonConnectionState,
+  AddonDatabase,
+  AddonEvents,
+  AddonLogger,
+  AddonRequest,
+  AddonResponse,
+  AddonRunInput,
+  AddonRunResult,
+  AddonRuns,
+  AddonSecrets,
+  AddonThreadCreateInput,
+  AddonThreads,
+  AddonWorkerHandle,
+  AddonWorkerRegistry,
+  AutomationKindContribution,
+  AutomationUpsertInput,
+  IntegrationContext,
+  IntegrationDefinition,
+  IntegrationRoute,
+} from './types.ts';

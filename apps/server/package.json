@@ -14,6 +14,7 @@
     "@ai-sdk/openai-compatible": "3.0.30",
     "@harnesys/brix": "workspace:*",
     "@harnesys/contracts": "workspace:*",
+    "@harnesys/integration-telegram": "workspace:*",
     "@harnesys/studio-shared": "workspace:*",
     "ai": "7.0.47",
     "croner": "^10.0.1",

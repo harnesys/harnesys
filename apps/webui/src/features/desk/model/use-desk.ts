@@ -1,6 +1,7 @@
 import type { SessionEvent } from '@harnesys/studio-shared';
 import { useShallow } from 'zustand/react/shallow';
 import { useAgentStore } from '@/entities/agent';
+import { useAutomationStore } from '@/entities/automation';
 import { useProjects } from '@/entities/project';
 import { useScheduleStore } from '@/entities/schedule';
 import { useSessionStore } from '@/entities/session';
@@ -53,6 +54,11 @@ export function useProjectSchedules(projectId: string | null) {
 }
 export function useSchedulesInProjects(projectIds: string[]) {
   return useScheduleStore(
+    useShallow((state) => state.items.filter((item) => projectIds.includes(item.projectId))),
+  );
+}
+export function useAutomationsInProjects(projectIds: string[]) {
+  return useAutomationStore(
     useShallow((state) => state.items.filter((item) => projectIds.includes(item.projectId))),
   );
 }

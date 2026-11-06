@@ -55,6 +55,13 @@ export interface EventsWatchConnectorFrame {
   type: 'connectors-changed';
 }
 
+export interface EventsWatchAutomationsFrame {
+  orgId: OrgId;
+  type: 'automations-changed';
+  kind: string;
+  action: 'changed' | 'removed';
+}
+
 export interface EventsWatchReleaseFrame {
   orgId: OrgId;
   type: 'release-available';

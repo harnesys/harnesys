@@ -1,3 +1,4 @@
+export { listAutomationKinds, listAutomations } from './automations';
 export { catalogQuery, catalogQueryKey, getCatalog } from './catalog';
 export { ApiError, type ApiJsonOptions, apiJson } from './client';
 export {

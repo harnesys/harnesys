@@ -15,6 +15,7 @@ import { isDesktop, useAppUpdateStore } from '@/features/app-update';
 import { isNewerVersion, releasesQuery } from '@/features/app-update/model/server-update';
 import {
   useAgentsInProjects,
+  useAutomationsInProjects,
   useDeskReady,
   useErroredThreads,
   useOrgTerminals,
@@ -111,6 +112,7 @@ export function ProjectSidebar({
   const agents = useAgentsInProjects(agentScopeIds);
   const schedules = useSchedulesInProjects(automationScopeIds);
   const webhooks = useWebhooksInProjects(automationScopeIds);
+  const automations = useAutomationsInProjects(automationScopeIds);
   const boards = useIssueBoardStore((state) => state.boards);
   const terminals = useOrgTerminals();
   const deskPending = !useDeskReady(orgId);
@@ -267,7 +269,7 @@ export function ProjectSidebar({
             resizer={resizer}
             icon={<Icon />}
             title="Automations"
-            count={schedules.length + webhooks.length}
+            count={automations.length}
             size={shares[id] ?? 1}
             actions={
               <AutomationsSectionActions agents={agents} onDone={() => setOpenMobile(false)} />

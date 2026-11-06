@@ -1,6 +1,7 @@
 import { APP_GUARD, Module } from '@harnesys/brix';
 import { AgentUseCaseModule } from '../application/agents/agent.use-case.module.ts';
 import { ApprovalUseCaseModule } from '../application/approvals/approval.use-case.module.ts';
+import { AutomationUseCaseModule } from '../application/automations/automation.use-case.module.ts';
 import { CapabilitiesUseCaseModule } from '../application/capabilities/capabilities.use-case.module.ts';
 import { ConnectorUseCaseModule } from '../application/connectors/connector.use-case.module.ts';
 import { ContentUseCaseModule } from '../application/content/content.use-case.module.ts';
@@ -41,6 +42,7 @@ import { ConnectorModule } from '../infra/connector/connector.module.ts';
 import { DeskModule } from '../infra/desk/desk.module.ts';
 import { EventsWatchModule } from '../infra/events-watch/events-watch.module.ts';
 import { FleetHubModule } from '../infra/fleet-hub/fleet-hub.module.ts';
+import { IntegrationModule } from '../infra/integrations/integration.module.ts';
 import { IssueInfraModule } from '../infra/issues/issue.module.ts';
 import { MachineHomeModule } from '../infra/machine-home/machine-home.module.ts';
 import { ReleaseModule } from '../infra/release/release.module.ts';
@@ -53,6 +55,7 @@ import { AgentHooksController } from './rest/agent-hooks.controller.ts';
 import { AgentsController } from './rest/agents.controller.ts';
 import { ApprovalsController } from './rest/approvals.controller.ts';
 import { AuditController } from './rest/audit.controller.ts';
+import { AutomationsController } from './rest/automations.controller.ts';
 import { BoardsController } from './rest/boards.controller.ts';
 import { BrowserController } from './rest/browser.controller.ts';
 import { CapabilitiesController } from './rest/capabilities.controller.ts';
@@ -70,6 +73,7 @@ import { HealthController } from './rest/health.controller.ts';
 import { HostBrowseController } from './rest/host-browse.controller.ts';
 import { HostSkillsController } from './rest/host-skills.controller.ts';
 import { IdentityLinksController } from './rest/identity-links.controller.ts';
+import { IntegrationRoutesController } from './rest/integration-routes.controller.ts';
 import { IntegrationsController } from './rest/integrations.controller.ts';
 import { IntegrationsGithubController } from './rest/integrations-github.controller.ts';
 import { IntegrationsGoogleCallbackController } from './rest/integrations-google-callback.controller.ts';
@@ -139,6 +143,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     ConnectorModule,
     DeskModule,
     EventsWatchModule,
+    IntegrationModule,
     ManagerUseCaseModule,
     KnowledgeUseCaseModule,
     VaultUseCaseModule,
@@ -158,6 +163,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     BrowserUseCaseModule,
     ThreadUseCaseModule,
     ApprovalUseCaseModule,
+    AutomationUseCaseModule,
     ScheduleUseCaseModule,
     TeamsUseCaseModule,
     ConnectorUseCaseModule,
@@ -185,6 +191,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     IntegrationsGoogleCallbackController,
     IntegrationsGithubController,
     IntegrationsController,
+    IntegrationRoutesController,
     FleetController,
     FleetCloudController,
     FleetNodesController,
@@ -204,6 +211,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     KnowledgeOrgController,
     VaultController,
     AgentsController,
+    AutomationsController,
     FileRulesController,
     PermissionRulesController,
     CapabilitiesController,
