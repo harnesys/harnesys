@@ -46,6 +46,7 @@ export type {
 } from './model/feed/feed-types.ts';
 export type { LiveTail } from './model/live-tail.ts';
 export { useLiveTail } from './model/live-tail.ts';
+export { hasPendingAppend } from './model/pending-appends.ts';
 export { type ActiveRun, type RunFailure, useSessionStore } from './model/session.store.ts';
 export {
   type CacheRatioInput,

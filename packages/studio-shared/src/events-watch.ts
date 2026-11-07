@@ -6,6 +6,10 @@ import type { ApprovalKind, ApprovalOption, ApprovalStatus, OrgId } from './org-
 import type { ProjectFileEventKind } from './project-files.ts';
 import type { TerminalWatchEvent } from './terminal.ts';
 
+export const SSE_KEEP_ALIVE_MS = 4_000;
+
+export const SSE_STALL_TIMEOUT_MS = SSE_KEEP_ALIVE_MS * 3;
+
 export interface EventsWatchTerminalFrame {
   orgId: OrgId;
   event: TerminalWatchEvent;

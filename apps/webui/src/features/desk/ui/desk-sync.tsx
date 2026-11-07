@@ -6,6 +6,7 @@ import { useActiveOrgStore, useOrgActivityStore } from '@/entities/org-machine';
 import { permissionRulesQueryKey } from '@/entities/permission-rule/api/permission-rule';
 import { useProjects } from '@/entities/project';
 import { toClientThread, useThreadStore } from '@/entities/thread';
+import { syncRunStateFromThread } from '@/features/send-message/model/sync-run-state';
 import {
   dispatchThreadEvents,
   resyncThreadEvents,
@@ -169,22 +170,22 @@ export function DeskSync() {
           at: event.at,
         });
         useThreadStore.getState().markUnread(event.threadId);
-        void refreshThread(event.threadId);
+        void refreshThread(event.threadId, { force: true });
         return;
       }
       if (event.type === 'parked') {
-        void refreshThread(event.threadId);
+        void refreshThread(event.threadId, { force: true });
         void syncThreadsFromServer(activeOrgId);
         return;
       }
       if (event.type === 'finished') {
-        void refreshThread(event.threadId);
+        void refreshThread(event.threadId, { force: true });
         void syncThreadsFromServer(activeOrgId);
         return;
       }
       if (event.type === 'cleared') {
         useThreadStore.getState().setLastError(event.threadId, null);
-        void refreshThread(event.threadId);
+        void refreshThread(event.threadId, { force: true });
         return;
       }
     });
@@ -207,8 +208,7 @@ export function DeskSync() {
         });
       }
       if (frame.approval.threadId) {
-        const force = frame.type !== 'requested';
-        void refreshThread(frame.approval.threadId, { force });
+        void refreshThread(frame.approval.threadId);
       }
     });
   }, [activeOrgId, queryClient]);
@@ -282,6 +282,7 @@ async function syncThreadsFromServer(orgId: string): Promise<void> {
     const store = useThreadStore.getState();
     for (const summary of summaries) {
       const next = toClientThread(summary);
+      syncRunStateFromThread(next.id, next.activeRun ?? null);
       const current = store.byId(next.id);
       if (current && isEqualThreadState(current, next)) {
         continue;

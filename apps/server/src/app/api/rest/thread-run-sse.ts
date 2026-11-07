@@ -1,5 +1,5 @@
+import { SSE_KEEP_ALIVE_MS } from '@harnesys/studio-shared';
 import type { RunLifecycleStore, SessionEvent } from 'harnesys';
-import { SSE_KEEP_ALIVE_MS } from '../../../const.ts';
 
 function isRunEndFrame(event: SessionEvent): boolean {
   return (

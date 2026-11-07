@@ -1,6 +1,6 @@
 import type { BrixContext } from '@harnesys/brix';
 import { Controller, Ctx, Get, UseGuards } from '@harnesys/brix';
-import { SSE_KEEP_ALIVE_MS } from '../../../const.ts';
+import { SSE_KEEP_ALIVE_MS } from '@harnesys/studio-shared';
 import type { EventsWatchFrame } from '../../domain/events-watch/events-watch-frame.ts';
 import { KEEP_ALIVE_FRAME, serializeFrame } from '../../domain/events-watch/events-watch-frame.ts';
 import type { EventsWatchSubscription } from '../../domain/events-watch/events-watch-hub.port.ts';
@@ -40,14 +40,20 @@ export class EventsWatchController {
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
         const encoder = new TextEncoder();
+        const terminate = (error: unknown) => {
+          cleanup();
+          try {
+            controller.error(error);
+          } catch {}
+        };
         const write = (frame: EventsWatchFrame) => {
           if (closed) {
             return;
           }
           try {
             controller.enqueue(encoder.encode(serializeFrame(frame)));
-          } catch {
-            cleanup();
+          } catch (error) {
+            terminate(error);
           }
         };
         const flush = () => {
@@ -67,8 +73,8 @@ export class EventsWatchController {
           }
           try {
             controller.enqueue(encoder.encode(KEEP_ALIVE_FRAME));
-          } catch {
-            cleanup();
+          } catch (error) {
+            terminate(error);
           }
         }, SSE_KEEP_ALIVE_MS);
       },

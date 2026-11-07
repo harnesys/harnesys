@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@harnesys/brix';
 import type { OrgLspListResponse, UpsertOrgLspServerBody } from '@harnesys/contracts';
 import { UpsertOrgLspServerBodySchema } from '@harnesys/contracts';
-import { SSE_KEEP_ALIVE_MS } from '../../../const.ts';
+import { SSE_KEEP_ALIVE_MS } from '@harnesys/studio-shared';
 import { DeleteOrgLspServerUseCase } from '../../application/lsp/delete-org-lsp-server.use-case.ts';
 import { GetOrgLspUseCase } from '../../application/lsp/get-org-lsp.use-case.ts';
 import { GetSourceLspUseCase } from '../../application/lsp/get-source-lsp.use-case.ts';

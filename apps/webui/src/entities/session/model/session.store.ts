@@ -103,37 +103,9 @@ export const useSessionStore = create<SessionStoreState & SessionStoreActions>((
       });
     },
     reconcileEvents(threadId, serverEvents) {
-      clearLiveTail(threadId);
-      const now = Date.now();
-      set((state) => {
-        const base = applyBatches(state, takePending());
-        const existing = base.events[threadId] ?? EMPTY_EVENTS;
-        const byKey = new Map<string, SessionEvent>();
-        for (const ev of existing) {
-          byKey.set(eventKey(ev), ev);
-        }
-        const serverCoalesced = coalesceStreamDeltas(serverEvents);
-        for (const ev of serverCoalesced) {
-          byKey.set(eventKey(ev), ev);
-        }
-        const merged = [...byKey.values()];
-        const ceil = ceilFromEvents(serverEvents);
-        const prevCeil = base.seqCeil[threadId] ?? {};
-        for (const [runId, seq] of Object.entries(prevCeil)) {
-          ceil[runId] = Math.max(ceil[runId] ?? 0, seq);
-        }
-        const seenAt = fillSeenAt(base.seenAt, threadId, stableKeys(merged), now);
-        return {
-          events: { ...base.events, [threadId]: merged },
-          feeds: {
-            ...base.feeds,
-            [threadId]: feedUpdate(threadId, merged, seenAt[threadId] ?? {}, null),
-          },
-          seenAt,
-          seqCeil: { ...base.seqCeil, [threadId]: ceil },
-          contentEpoch: { ...base.contentEpoch, [threadId]: now },
-        };
-      });
+      set((state) =>
+        applyBatches(applyBatches(state, takePending()), new Map([[threadId, serverEvents]])),
+      );
     },
     appendEvent(threadId, event) {
       if (isStreamDeltaType(event.type)) {

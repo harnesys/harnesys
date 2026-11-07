@@ -2,6 +2,7 @@ import type { ThreadActiveRun } from '@harnesys/studio-shared';
 import {
   AlertCircleIcon,
   CircleCheckIcon,
+  CirclePauseIcon,
   LoaderCircleIcon,
   PlayIcon,
   RotateCcwIcon,
@@ -10,7 +11,7 @@ import {
 import { useState } from 'react';
 import { useSessionStore, useThreadFeed } from '@/entities/session';
 import { useThreadStore } from '@/entities/thread';
-import { retryRun } from '@/features/send-message';
+import { type RunPhase, retryRun, useRunPhase } from '@/features/send-message';
 import { cancelRun, nudgeIssueRecord } from '@/shared/api';
 import { useOrgId } from '@/shared/config/location';
 import { Button } from '@/shared/ui/button';
@@ -28,7 +29,7 @@ type BusyAction = 'stop' | 'restart' | 'retry' | null;
 interface BarState {
   mode: 'running' | 'failed' | 'idle' | 'empty';
   runId: string | null;
-  waiting: boolean;
+  phase: RunPhase;
   failureText: string | null;
   lastLabel: string | null;
   showRetry: boolean;
@@ -39,6 +40,7 @@ function useBarState(threadId: string): BarState {
   const liveRunId = useSessionStore((state) => state.activeRuns[threadId]?.runId ?? null);
   const thread = useThreadStore((state) => state.byId(threadId));
   const feed = useThreadFeed(threadId);
+  const phase = useRunPhase(threadId);
   const serverRun = thread?.activeRun ?? null;
   const lastError = thread?.lastError ?? null;
   const runs = feed?.runs ?? [];
@@ -49,7 +51,7 @@ function useBarState(threadId: string): BarState {
     return {
       mode: 'running',
       runId,
-      waiting: !liveRunId && (serverRun?.status === 'waiting' || serverRun?.status === 'queued'),
+      phase,
       failureText: null,
       lastLabel: null,
       showRetry: false,
@@ -61,7 +63,7 @@ function useBarState(threadId: string): BarState {
     return {
       mode: 'failed',
       runId: lastFeedError ? (lastRun?.runId ?? null) : (lastError?.runId ?? null),
-      waiting: false,
+      phase,
       failureText,
       lastLabel: null,
       showRetry: true,
@@ -72,7 +74,7 @@ function useBarState(threadId: string): BarState {
     return {
       mode: 'idle',
       runId: lastRun.runId ?? null,
-      waiting: false,
+      phase,
       failureText: null,
       lastLabel: lastRunLabel(lastRun.terminal ?? 'done'),
       showRetry: false,
@@ -82,7 +84,7 @@ function useBarState(threadId: string): BarState {
   return {
     mode: 'empty',
     runId: null,
-    waiting: false,
+    phase,
     failureText: null,
     lastLabel: null,
     showRetry: false,
@@ -100,12 +102,15 @@ function lastRunLabel(terminal: string): string {
   return 'Last run completed';
 }
 
-function runningLabel(showRetry: boolean, waiting: boolean): string {
+function runningLabel(showRetry: boolean, phase: RunPhase): string {
   if (showRetry) {
     return 'Waiting to retry the model call';
   }
-  if (waiting) {
+  if (phase === 'queued') {
     return 'Run is waiting for placement';
+  }
+  if (phase === 'parked') {
+    return 'Run is parked — waiting for your answer';
   }
   return 'Agent is working';
 }
@@ -136,7 +141,7 @@ export function ThreadRunStatusBar({ threadId, issueId }: ThreadRunStatusBarProp
       {bar.mode === 'running' && bar.runId ? (
         <RunningBar
           runId={bar.runId}
-          waiting={bar.waiting}
+          phase={bar.phase}
           showRetry={Boolean(retry)}
           attribution={bar.attribution}
           {...actions}
@@ -167,22 +172,27 @@ function BarShell({ children }: { children: React.ReactNode }) {
 
 function RunningBar({
   runId,
-  waiting,
+  phase,
   showRetry,
   attribution,
   ...actions
 }: BarActions & {
   runId: string;
-  waiting: boolean;
+  phase: RunPhase;
   showRetry: boolean;
   attribution: ThreadActiveRun | null;
 }) {
   const { threadId, issueId, orgId, busy, setBusy } = actions;
+  const parked = phase === 'parked';
   return (
     <BarShell>
       <div className="flex min-w-0 items-center gap-2 text-muted-foreground text-xs">
-        <LoaderCircleIcon className="size-3 shrink-0 animate-spin" />
-        <span className="truncate">{runningLabel(showRetry, waiting)}</span>
+        {parked ? (
+          <CirclePauseIcon className="size-3 shrink-0" />
+        ) : (
+          <LoaderCircleIcon className="size-3 shrink-0 animate-spin" />
+        )}
+        <span className="truncate">{runningLabel(showRetry, phase)}</span>
         <RunAttributionBadge run={attribution} />
       </div>
       <div className="flex shrink-0 items-center gap-1.5">

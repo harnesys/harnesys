@@ -59,7 +59,6 @@ export const KNOWLEDGE_WATCH_ENSURE_INTERVAL_MS = 30_000;
 export const KNOWLEDGE_INDEX_SLOW_FILE_MS = 5000;
 export const KNOWLEDGE_EMBED_SLOW_MS = 8000;
 export const OLLAMA_EMBED_KEEP_ALIVE = '10m';
-export const SSE_KEEP_ALIVE_MS = 4_000;
 
 export const KNOWLEDGE_TEXT_EXTS = new Set([
   '.txt',

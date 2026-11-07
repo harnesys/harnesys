@@ -1,3 +1,4 @@
+import { SSE_STALL_TIMEOUT_MS } from '@harnesys/studio-shared';
 import { trace } from '../lib/trace';
 import { getActiveOrgId } from './active-org';
 import { authenticatedFetch } from './session';
@@ -8,17 +9,26 @@ export interface SseFrame {
   id?: string;
 }
 
-export async function* readSse(response: Response): AsyncGenerator<SseFrame> {
+export interface ReadSseOptions {
+  idleTimeoutMs?: number;
+}
+
+export async function* readSse(
+  response: Response,
+  options?: ReadSseOptions,
+): AsyncGenerator<SseFrame> {
   if (!response.body) {
     trace('sse', 'no response body');
     return;
   }
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
+  const idleTimeoutMs = options?.idleTimeoutMs ?? 0;
   let buffer = '';
   try {
     while (true) {
-      const chunk = await reader.read();
+      const chunk =
+        idleTimeoutMs > 0 ? await withDeadline(reader.read(), idleTimeoutMs) : await reader.read();
       buffer += decoder.decode(chunk.value ?? new Uint8Array(), { stream: !chunk.done });
       const frames = buffer.split('\n\n');
       buffer = chunk.done ? '' : (frames.pop() ?? '');
@@ -44,6 +54,18 @@ export async function* readSse(response: Response): AsyncGenerator<SseFrame> {
   }
 }
 
+async function withDeadline<T>(read: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('sse stream stalled')), ms);
+  });
+  try {
+    return await Promise.race([read, deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 interface Subscription {
   onData: (data: string) => void;
   onOpen?: () => void;
@@ -57,10 +79,12 @@ interface FetchSseConnection {
   refs: number;
   listeners: Map<string, Set<Subscription>>;
   abort: AbortController;
-  retryTimer?: ReturnType<typeof setTimeout>;
   open: boolean;
   lastId?: string;
 }
+
+const SSE_STABLE_MS = 10_000;
+const SSE_RECONNECT_DELAY_MS = 1_000;
 
 const connections = new Map<string, FetchSseConnection>();
 
@@ -118,10 +142,6 @@ export function watchEventSource(
       if (!still || still !== current || still.refs > 0) {
         return;
       }
-      if (still.retryTimer) {
-        clearTimeout(still.retryTimer);
-        still.retryTimer = undefined;
-      }
       still.abort.abort();
       connections.delete(key);
     });
@@ -135,36 +155,59 @@ async function maintainConnection(key: string): Promise<void> {
     if (!conn || conn.abort.signal.aborted) {
       return;
     }
-    try {
-      await openSseOnce(conn);
+    const openedAt = Date.now();
+    const failure = await runAttempt(conn);
+    if (conn.abort.signal.aborted || (failure !== null && isAbortError(failure))) {
+      return;
+    }
+    const current = connections.get(key);
+    if (!current) {
+      return;
+    }
+    const stable = Date.now() - openedAt >= SSE_STABLE_MS;
+    if (failure === null) {
       attempt = 0;
-    } catch (error) {
-      if (isAbortError(error)) {
-        return;
-      }
-      const current = connections.get(key);
-      if (!current) {
-        return;
-      }
-      for (const set of current.listeners.values()) {
-        for (const sub of set) {
-          sub.onError?.();
-        }
-      }
-      if (current.abort.signal.aborted) {
-        return;
-      }
-      const delay = nextBackoff(attempt);
-      attempt += 1;
-      await new Promise<void>((resolve) => {
-        current.retryTimer = setTimeout(resolve, delay);
-      });
-      if (current.retryTimer) {
-        clearTimeout(current.retryTimer);
-        current.retryTimer = undefined;
-      }
+      await waitForRetry(current, SSE_RECONNECT_DELAY_MS);
+      continue;
+    }
+    notifyError(current);
+    const delay = stable ? SSE_RECONNECT_DELAY_MS : nextBackoff(attempt);
+    attempt = stable ? 0 : attempt + 1;
+    await waitForRetry(current, delay);
+  }
+}
+
+async function runAttempt(conn: FetchSseConnection): Promise<unknown> {
+  try {
+    await openSseOnce(conn);
+    return null;
+  } catch (error) {
+    return error;
+  }
+}
+
+function notifyError(conn: FetchSseConnection): void {
+  for (const set of conn.listeners.values()) {
+    for (const sub of set) {
+      sub.onError?.();
     }
   }
+}
+
+function waitForRetry(conn: FetchSseConnection, ms: number): Promise<void> {
+  if (conn.abort.signal.aborted) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const finish = () => {
+      clearTimeout(timer);
+      conn.abort.signal.removeEventListener('abort', finish);
+      resolve();
+    };
+    timer = setTimeout(finish, ms);
+    conn.abort.signal.addEventListener('abort', finish, { once: true });
+  });
 }
 
 async function openSseOnce(conn: FetchSseConnection): Promise<void> {
@@ -194,23 +237,26 @@ async function openSseOnce(conn: FetchSseConnection): Promise<void> {
       sub.onOpen?.();
     }
   }
-  for await (const frame of readSse(response)) {
-    const current = connections.get(conn.key);
-    if (!current) {
-      return;
-    }
-    if (frame.id) {
-      current.lastId = frame.id;
-    }
-    for (const sub of current.listeners.get(frame.event) ?? []) {
-      try {
-        sub.onData(frame.data);
-      } catch (error) {
-        trace('sse', `listener failed for ${frame.event}`, error);
+  try {
+    for await (const frame of readSse(response, { idleTimeoutMs: SSE_STALL_TIMEOUT_MS })) {
+      const current = connections.get(conn.key);
+      if (!current) {
+        return;
+      }
+      if (frame.id) {
+        current.lastId = frame.id;
+      }
+      for (const sub of current.listeners.get(frame.event) ?? []) {
+        try {
+          sub.onData(frame.data);
+        } catch (error) {
+          trace('sse', `listener failed for ${frame.event}`, error);
+        }
       }
     }
+  } finally {
+    conn.open = false;
   }
-  conn.open = false;
 }
 
 function nextBackoff(attempt: number): number {

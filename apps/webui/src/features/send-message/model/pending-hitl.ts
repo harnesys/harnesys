@@ -1,6 +1,7 @@
 import type { SessionEvent } from '@harnesys/studio-shared';
 export interface PendingHitl {
   askId: string;
+  runId?: string;
   schema: unknown;
   source: string;
   prompt?: string;

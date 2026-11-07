@@ -1,4 +1,4 @@
-import { SSE_KEEP_ALIVE_MS } from '../../../const.ts';
+import { SSE_KEEP_ALIVE_MS } from '@harnesys/studio-shared';
 import type { CompactThreadResult } from '../../domain/thread/local-executor.port.ts';
 
 function writeFrame(

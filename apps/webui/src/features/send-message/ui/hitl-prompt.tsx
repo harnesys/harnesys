@@ -77,7 +77,7 @@ function ConfirmCard({ pending, threadId }: { pending: PendingHitl; threadId: st
     }
     setBusy(true);
     try {
-      await respondToAsk(threadId, pending.askId, {
+      await respondToAsk(threadId, pending, {
         ...payload,
         reason: allow ? undefined : reason.trim() || undefined,
       });
@@ -195,9 +195,9 @@ function BudgetCard({ pending, threadId }: { pending: PendingHitl; threadId: str
     setBusy(true);
     try {
       if (continueRun) {
-        await respondToAsk(threadId, pending.askId, { approved: true });
+        await respondToAsk(threadId, pending, { approved: true });
       } else {
-        await rejectAsk(threadId, pending.askId);
+        await rejectAsk(threadId, pending);
       }
     } catch (error) {
       toast.add({
@@ -276,7 +276,7 @@ function AskCard({ pending, threadId }: { pending: PendingHitl; threadId: string
     }
     setBusy(true);
     try {
-      await respondToAsk(threadId, pending.askId, payload);
+      await respondToAsk(threadId, pending, payload);
     } catch (error) {
       toast.add({
         title: 'Could not answer',

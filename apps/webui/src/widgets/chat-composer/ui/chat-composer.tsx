@@ -9,7 +9,7 @@ import type { Thread } from '@/entities/thread';
 import { useThreadWorktreeStore } from '@/entities/thread';
 import { useThreadEvents } from '@/features/desk';
 import { ThreadQueueStack } from '@/features/message-queue';
-import { type PendingHitl, pendingHitl, useRunState } from '@/features/send-message';
+import { pendingHitl, useRunPhase } from '@/features/send-message';
 import { providersQuery } from '@/shared/api';
 import { getActiveOrgId } from '@/shared/api/active-org';
 import { getSourceLocation, sourceLocationQueryKey } from '@/shared/api/source-location';
@@ -51,6 +51,7 @@ import {
   ComposerShortcutsHint,
   ComposerStreamHint,
   composerPasteIsHandled,
+  composerPlaceholder,
   consumeComposerPaste,
   streamStatusLabel,
   WorktreeBindingBanner,
@@ -71,15 +72,14 @@ export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }
   const providers = useQuery(providersQuery(getActiveOrgId() ?? '')).data ?? [];
   const modelId = agent?.modelId;
   const levels = agentEfforts(modelId, providers);
-  const streaming = useSessionStore((state) =>
-    thread ? Boolean(state.activeRuns[thread.id]) : false,
-  );
-  const streamState = useRunState(thread?.id ?? null);
-  const streamLabel = streaming ? streamStatusLabel(streamState) : null;
+  const phase = useRunPhase(thread?.id ?? null);
+  const streaming = phase === 'live' || phase === 'queued';
+  const streamLabel = streamStatusLabel(phase);
   const retrying = useRetrySignal(thread?.id ?? null) !== null;
-  const activeRunId = useSessionStore((state) =>
-    thread ? (state.activeRuns[thread.id]?.runId ?? null) : null,
-  );
+  const activeRunId =
+    useSessionStore((state) => (thread ? (state.activeRuns[thread.id]?.runId ?? null) : null)) ??
+    thread?.activeRun?.runId ??
+    null;
   const hitl = pendingHitl(events);
   const [hasText, setHasText] = useState(false);
   const [pending, setPending] = useState<File[]>([]);
@@ -96,7 +96,7 @@ export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }
     modelDefaultEffort,
   );
   const verified = agentModelVerified(modelId, providers);
-  const disabled = sending || Boolean(hitl);
+  const disabled = sending || Boolean(hitl) || phase === 'parked';
   const contextWindow = modelContextWindow(modelId, providers);
   const modelIncomplete = contextWindow === 0;
   const usage = composerUsage(events, contextWindow);
@@ -111,6 +111,7 @@ export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }
   const placeholder = composerPlaceholder({
     hitl,
     streaming,
+    parked: phase === 'parked',
     agentName: agent?.name ?? null,
     isGroup: Boolean(isGroupThread),
   });
@@ -336,33 +337,6 @@ export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }
       setSending,
     });
   }
-}
-
-interface ComposerPlaceholderArgs {
-  hitl: PendingHitl | null;
-  streaming: boolean;
-  agentName: string | null;
-  isGroup: boolean;
-}
-
-function composerPlaceholder({
-  hitl,
-  streaming,
-  agentName,
-  isGroup,
-}: ComposerPlaceholderArgs): string {
-  if (hitl) {
-    return hitl.source === 'ask_user'
-      ? 'Answer the prompt above…'
-      : 'Allow or deny the tool above…';
-  }
-  if (streaming) {
-    return 'Agent is running — your message will be queued…';
-  }
-  if (isGroup) {
-    return 'Message the group or @mention a member…';
-  }
-  return agentName ? `Message ${agentName}…` : 'Select an agent to start a thread';
 }
 
 function scheduleModeForThread(

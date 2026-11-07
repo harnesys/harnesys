@@ -1,5 +1,7 @@
 import { LoaderCircleIcon } from 'lucide-react';
 import type { ClipboardEvent } from 'react';
+import type { PendingHitl } from '@/features/send-message/model/pending-hitl';
+import type { RunPhase } from '@/features/send-message/model/run-phase';
 import { Button } from '@/shared/ui/button';
 import { Kbd } from '@/shared/ui/kbd';
 import { filesFromClipboard } from '../model/composer-send';
@@ -74,21 +76,45 @@ export function composerPasteIsHandled(data: DataTransfer, pendingNames: string[
   );
 }
 
-export function streamStatusLabel(state: string | null): string | null {
-  switch (state) {
-    case 'connecting':
-      return 'Connecting…';
-    case 'queued':
-      return 'Queued…';
+interface ComposerPlaceholderArgs {
+  hitl: PendingHitl | null;
+  streaming: boolean;
+  parked: boolean;
+  agentName: string | null;
+  isGroup: boolean;
+}
+
+export function composerPlaceholder({
+  hitl,
+  streaming,
+  parked,
+  agentName,
+  isGroup,
+}: ComposerPlaceholderArgs): string {
+  if (hitl) {
+    return hitl.source === 'ask_user'
+      ? 'Answer the prompt above…'
+      : 'Allow or deny the tool above…';
+  }
+  if (parked) {
+    return 'Waiting for your answer…';
+  }
+  if (streaming) {
+    return 'Agent is running — your message will be queued…';
+  }
+  if (isGroup) {
+    return 'Message the group or @mention a member…';
+  }
+  return agentName ? `Message ${agentName}…` : 'Select an agent to start a thread';
+}
+
+export function streamStatusLabel(phase: RunPhase): string | null {
+  switch (phase) {
     case 'live':
       return 'Agent is working…';
-    case 'paused':
-      return 'Waiting for input…';
-    case 'reconnecting':
-      return 'Reconnecting…';
-    case 'offline':
-      return 'Connection lost';
+    case 'queued':
+      return 'Queued…';
     default:
-      return 'Agent is thinking…';
+      return null;
   }
 }

@@ -30,9 +30,7 @@ export function applyDeskEvent(event: DeskEvent, nav?: DeskEventNavigation): voi
     }
     case 'thread': {
       useThreadStore.getState().upsert(toClientThread(event.thread));
-      if (!useSessionStore.getState().activeRuns[event.thread.id]) {
-        useSessionStore.getState().replaceEvents(event.thread.id, event.thread.events);
-      }
+      useSessionStore.getState().reconcileEvents(event.thread.id, event.thread.events);
       if (useThreadQueueStore.getState().items[event.thread.id]?.length) {
         void useThreadQueueStore.getState().refresh(event.thread.id);
       }

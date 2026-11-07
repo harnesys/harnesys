@@ -33,7 +33,7 @@ export function ShellConfirmCard({
     }
     setBusy(true);
     try {
-      await respondToAsk(threadId, pending.askId, payload);
+      await respondToAsk(threadId, pending, payload);
     } catch (error) {
       toast.add({
         title,
@@ -115,7 +115,7 @@ export function FileConfirmCard({ pending, threadId }: { pending: PendingHitl; t
     }
     setBusy(true);
     try {
-      await respondToAsk(threadId, pending.askId, payload);
+      await respondToAsk(threadId, pending, payload);
     } catch (error) {
       toast.add({
         title,

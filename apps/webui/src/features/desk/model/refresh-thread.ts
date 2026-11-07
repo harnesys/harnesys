@@ -1,6 +1,7 @@
 import type { ThreadRecord } from '@harnesys/studio-shared';
 import { useSessionStore } from '@/entities/session';
 import { toClientThread, useThreadStore } from '@/entities/thread';
+import { syncRunStateFromThread } from '@/features/send-message/model/sync-run-state';
 import { getThread } from '@/shared/api';
 
 const inflight = new Map<string, Promise<ThreadRecord | null>>();
@@ -18,7 +19,8 @@ export function refreshThread(
   const task = getThread(threadId)
     .then((record) => {
       useThreadStore.getState().upsert(toClientThread(record));
-      useSessionStore.getState().replaceEvents(record.id, record.events);
+      syncRunStateFromThread(record.id, record.activeRun ?? null);
+      useSessionStore.getState().reconcileEvents(record.id, record.events);
       return record;
     })
     .finally(() => {

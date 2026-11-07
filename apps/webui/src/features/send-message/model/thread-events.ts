@@ -1,11 +1,13 @@
 import type { EventsWatchThreadEventsFrame, SessionEvent } from '@harnesys/studio-shared';
 import { useAgentStore } from '@/entities/agent';
 import { useActiveOrgStore, useOrgActivityStore } from '@/entities/org-machine';
-import { useSessionStore } from '@/entities/session';
+import { hasPendingAppend, useSessionStore } from '@/entities/session';
 import { toClientThread, useThreadStore } from '@/entities/thread';
 import { useThreadQueueStore } from '@/features/message-queue';
 import { getThread } from '@/shared/api';
 import { trace } from '@/shared/lib/trace';
+import { duplicateDelivery } from './delivery';
+import { syncRunStateFromThread } from './sync-run-state';
 
 export function dispatchThreadEvents(frame: EventsWatchThreadEventsFrame): void {
   const threadId = frame.threadId;
@@ -34,28 +36,14 @@ export async function resyncThreadEvents(orgId: string): Promise<void> {
 }
 
 function isDuplicate(threadId: string, event: SessionEvent): boolean {
-  if (event.runId === undefined || event.seq === undefined) {
-    return false;
-  }
-  const ceiling = useSessionStore.getState().seqCeil[threadId]?.[event.runId] ?? 0;
-  return event.seq <= ceiling;
-}
-
-function updateCeiling(threadId: string, event: SessionEvent): void {
-  if (event.runId === undefined || event.seq === undefined) {
-    return;
-  }
-  const runId = event.runId;
-  const seq = event.seq;
-  useSessionStore.setState((state) => ({
-    seqCeil: {
-      ...state.seqCeil,
-      [threadId]: {
-        ...(state.seqCeil[threadId] ?? {}),
-        [runId]: seq,
-      },
-    },
-  }));
+  const { runId, seq } = event;
+  const ceiling = useSessionStore.getState().seqCeil[threadId];
+  return duplicateDelivery({
+    runId,
+    seq,
+    appliedCeiling: (runId === undefined ? undefined : ceiling?.[runId]) ?? 0,
+    queued: hasPendingAppend(threadId, runId, seq),
+  });
 }
 
 function applyEvent(threadId: string, event: SessionEvent, orgId: string | undefined): void {
@@ -64,7 +52,6 @@ function applyEvent(threadId: string, event: SessionEvent, orgId: string | undef
     return;
   }
   session.appendEvent(threadId, event);
-  updateCeiling(threadId, event);
   handleFollowUps(threadId, event, orgId);
 }
 
@@ -142,6 +129,7 @@ async function reconcileThread(threadId: string): Promise<void> {
   try {
     const record = await getThread(threadId);
     useThreadStore.getState().upsert(toClientThread(record));
+    syncRunStateFromThread(record.id, record.activeRun ?? null);
     useSessionStore.getState().reconcileEvents(threadId, record.events);
     if (record.unread) {
       useThreadStore.getState().markUnread(threadId);

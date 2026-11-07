@@ -8,6 +8,7 @@ import { branchThread } from '@/features/switch-thread';
 import { studioFocusProjectId, useStudioLocation } from '@/shared/config/location';
 import { useStudioNavigation } from '@/shared/config/navigation';
 import { toast } from '@/shared/ui/toast';
+import { liveBlockText } from '../model/live-text';
 import { useStreamText } from '../model/stream-text';
 import { ThreadMarkdown } from '../model/thread-markdown';
 import { ActivityItems } from './activity-items';
@@ -337,6 +338,6 @@ function LiveMarkdown({
     tail.kind === 'text' &&
     tail.text !== '' &&
     (blockId === undefined || tail.id === blockId);
-  const shown = useStreamText(applies ? tail.text : text, applies);
+  const shown = useStreamText(liveBlockText(text, applies ? tail : null), applies);
   return <ThreadMarkdown text={shown} threadId={threadId} streaming={live} />;
 }

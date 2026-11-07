@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@harnesys/brix';
-import { SSE_KEEP_ALIVE_MS } from '../../../const.ts';
+import { SSE_KEEP_ALIVE_MS } from '@harnesys/studio-shared';
 import { AddBrowserAllowlistUseCase } from '../../application/use-cases/browser/add-browser-allowlist.use-case.ts';
 import { CheckAgentBrowserUpdateUseCase } from '../../application/use-cases/browser/check-agent-browser-update.use-case.ts';
 import { GetOrgBrowserUseCase } from '../../application/use-cases/browser/get-org-browser.use-case.ts';
