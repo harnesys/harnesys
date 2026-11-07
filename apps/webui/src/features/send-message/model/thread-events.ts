@@ -61,8 +61,12 @@ function handleFollowUps(threadId: string, event: SessionEvent, orgId: string | 
   } else if (
     event.type === 'run.completed' ||
     event.type === 'run.failed' ||
-    event.type === 'run.cancelled'
+    event.type === 'run.cancelled' ||
+    event.type === 'failed'
   ) {
+    if (event.type === 'run.failed' || event.type === 'failed') {
+      setError(threadId, (event as any).message ?? 'Run failed');
+    }
     handleTerminal(threadId, event, orgId);
   } else if (event.type === 'user') {
     const candidate = event as { clientEventId?: string };
