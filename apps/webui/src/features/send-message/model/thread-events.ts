@@ -30,7 +30,9 @@ export async function resyncThreadEvents(orgId: string): Promise<void> {
     .items.filter(
       (thread) =>
         thread.orgId === orgId &&
-        (session.activeRuns[thread.id] !== undefined || session.events[thread.id] !== undefined),
+        (session.activeRuns[thread.id] !== undefined ||
+          session.events[thread.id] !== undefined ||
+          thread.activeRunId !== null),
     );
   await Promise.all(threads.map((thread) => reconcileThread(thread.id)));
 }
@@ -129,7 +131,7 @@ function setError(threadId: string, message: string): void {
   });
 }
 
-async function reconcileThread(threadId: string): Promise<void> {
+export async function reconcileThread(threadId: string): Promise<void> {
   try {
     const record = await getThread(threadId);
     useThreadStore.getState().upsert(toClientThread(record));

@@ -20,6 +20,7 @@ import {
   scheduleEpochFlush,
   takePending,
 } from './pending-appends';
+import { mergeSeqCeil, reconcileSnapshot, sameThreadLog } from './reconcile-snapshot';
 import { applyBatches, EMPTY_EVENTS, isStreamDeltaType } from './session-batches';
 export interface ActiveRun {
   runId: string;
@@ -103,9 +104,29 @@ export const useSessionStore = create<SessionStoreState & SessionStoreActions>((
       });
     },
     reconcileEvents(threadId, serverEvents) {
-      set((state) =>
-        applyBatches(applyBatches(state, takePending()), new Map([[threadId, serverEvents]])),
-      );
+      set((state) => {
+        const current = state.events[threadId] ?? EMPTY_EVENTS;
+        const merged = reconcileSnapshot(current, serverEvents);
+        if (sameThreadLog(current, merged)) {
+          return state;
+        }
+        const now = Date.now();
+        const seenAt = fillSeenAt(state.seenAt, threadId, stableKeys(merged), now);
+        return {
+          ...state,
+          events: { ...state.events, [threadId]: merged },
+          feeds: {
+            ...state.feeds,
+            [threadId]: feedUpdate(threadId, merged, seenAt[threadId] ?? {}, null),
+          },
+          seenAt,
+          seqCeil: {
+            ...state.seqCeil,
+            [threadId]: mergeSeqCeil(state.seqCeil[threadId] ?? {}, serverEvents),
+          },
+          contentEpoch: { ...state.contentEpoch, [threadId]: now },
+        };
+      });
     },
     appendEvent(threadId, event) {
       if (isStreamDeltaType(event.type)) {
