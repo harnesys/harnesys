@@ -32,14 +32,19 @@ export async function getHandle(
   return handle;
 }
 
+interface LoginRequest {
+  creds: FeedCredentials;
+  readerId: string;
+  phone: string;
+  onPrompt?: (kind: 'code' | 'password') => void;
+}
+
 export async function startLogin(
   ctx: IntegrationContext,
   sessions: LoginSessions,
-  creds: FeedCredentials,
-  readerId: string,
-  phone: string,
-  onPrompt?: (kind: 'code' | 'password') => void,
+  request: LoginRequest,
 ): Promise<ClientHandle> {
+  const { creds, readerId, phone, onPrompt } = request;
   const handle = await loginClient(creds, phone, sessions, readerId, onPrompt);
   handles.set(handleKey(ctx.orgId, readerId), handle);
   return handle;

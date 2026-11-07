@@ -68,18 +68,16 @@ async function finishLogin(
     return;
   }
   try {
-    const handle = await startLogin(
-      ctx,
-      sessions,
-      { apiId: pending.apiId, apiHash: pending.apiHash },
+    const handle = await startLogin(ctx, sessions, {
+      creds: { apiId: pending.apiId, apiHash: pending.apiHash },
       readerId,
       phone,
-      (kind) => {
+      onPrompt: (kind) => {
         updateReader(ctx.db, readerId, {
           status: kind === 'code' ? 'awaiting_code' : 'awaiting_password',
         });
       },
-    );
+    });
     await ctx.secrets.set(`reader:${readerId}:session`, handle.sessionString);
     updateReader(ctx.db, readerId, {
       status: 'authorized',

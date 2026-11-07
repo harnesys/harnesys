@@ -66,7 +66,7 @@ function handleFollowUps(threadId: string, event: SessionEvent, orgId: string | 
     event.type === 'run.cancelled'
   ) {
     if (event.type === 'run.failed') {
-      setError(threadId, (event as any).message ?? 'Run failed');
+      setError(threadId, (event as { message?: string }).message ?? 'Run failed');
     }
     handleTerminal(threadId, event, orgId);
   } else if (event.type === 'user') {
