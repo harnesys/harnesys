@@ -55,8 +55,8 @@ export const GENERATION_SLIDERS: GenerationSliderSpec[] = [
   },
 ];
 export const GENERATION_LIMITS: GenerationLimitSpec[] = [
-  { name: 'maxTokens', label: 'Max tokens', placeholder: '' },
   { name: 'contextWindowTokens', label: 'Context window', placeholder: '' },
+  { name: 'maxTokens', label: 'Max tokens', placeholder: '' },
   { name: 'seed', label: 'Seed', placeholder: '42' },
 ];
 export interface ModelBounds {
