@@ -287,6 +287,17 @@ function AskCard({ pending, threadId }: { pending: PendingHitl; threadId: string
     }
   };
   const canSubmit = selected.length > 0 || text.trim().length > 0;
+  const cancel = async () => {
+    if (busy) {
+      return;
+    }
+    setBusy(true);
+    try {
+      await rejectAsk(threadId, pending);
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <HitlShell>
       <div className="flex flex-col gap-1 px-3 pt-2.5">
@@ -369,6 +380,16 @@ function AskCard({ pending, threadId }: { pending: PendingHitl; threadId: string
       />
 
       <InputGroupAddon align="block-end" className="justify-end gap-1 px-2 pb-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={busy}
+          className="h-7 text-muted-foreground hover:bg-muted hover:text-foreground"
+          onClick={() => void cancel()}
+        >
+          Cancel
+        </Button>
         <Button
           type="button"
           size="sm"

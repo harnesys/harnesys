@@ -24,6 +24,7 @@ import {
   RunConflictException,
   RunNotFoundException,
   ThreadNotFoundException,
+  ThreadValidationException,
 } from '../../domain/thread/thread.error.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
@@ -306,6 +307,9 @@ function mapRunError(runId: string, error: unknown): Error {
   }
   if (code === 'already_resumed' || code === 'run_terminal' || code === 'lease_stale') {
     return new RunConflictException((error as Error).message, { runId });
+  }
+  if (code === 'resume_validation_failed') {
+    return new ThreadValidationException((error as Error).message);
   }
   return error instanceof Error ? error : new RunConflictException('resume failed', { runId });
 }
