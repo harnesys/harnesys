@@ -2,6 +2,7 @@ import { Injectable } from '@harnesys/brix';
 import type { Source } from '@harnesys/contracts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
+import { GitVcsPort } from '../../domain/source/git-vcs.port.ts';
 import {
   SourceDriverMismatchException,
   SourceMaterializationAbsentException,
@@ -12,6 +13,7 @@ import { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
 import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import { hasGitVcs } from '../../domain/source/vcs-capability.ts';
+import { refreshSourceVcs, type SourceVcsRefresherDeps } from './refresh-source-vcs.ts';
 import { toPublicSource } from './to-public-source.ts';
 
 export interface RefreshGitSourceInput {
@@ -28,6 +30,7 @@ export class RefreshGitSourceUseCase {
     private readonly materializations: SourceMaterializationPort,
     private readonly layout: HostFsLayoutPort,
     private readonly machineConfig: MachineConfigPort,
+    private readonly git: GitVcsPort,
     private readonly driver: SourceDriverPort,
   ) {}
 
@@ -48,6 +51,16 @@ export class RefreshGitSourceUseCase {
     const materialization = this.materializations.find(input.orgId, input.sourceId, input.hostId);
     if (!materialization || materialization.state === 'absent') {
       throw new SourceMaterializationAbsentException(input.sourceId, input.hostId);
+    }
+    if (materialization.origin !== 'managed') {
+      // Attached local repo: the managed bare/machine layout does not apply here.
+      // Re-probe VCS metadata in place and leave the user's working tree untouched.
+      const localPath = materialization.localPath ?? '';
+      if (!localPath) {
+        throw new SourceMaterializationAbsentException(input.sourceId, input.hostId);
+      }
+      await refreshSourceVcs(this.deps(), input.orgId, input.sourceId);
+      return toPublicSource(this.sources.findById(input.orgId, input.sourceId) ?? row);
     }
     const gitLayout = {
       bareRepoPath: this.layout.orgSourceDir(input.orgId, input.sourceId),
@@ -74,6 +87,15 @@ export class RefreshGitSourceUseCase {
       updatedAt,
     });
     return toPublicSource(row, updatedAt);
+  }
+
+  private deps(): SourceVcsRefresherDeps {
+    return {
+      sources: this.sources,
+      materializations: this.materializations,
+      git: this.git,
+      localHostId: this.machineConfig.get().id,
+    };
   }
 }
 

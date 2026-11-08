@@ -118,7 +118,7 @@ Requirements: [Bun](https://bun.sh) 1.3+, Rust (desktop builds only).
 
 ```bash
 bun install
-bun run dev        # host API on :47474 + web UI on :5173
+bun run dev        # dev stand: host API on :47473 (home ~/.harnesys-dev) + web UI on :5173; override DEV_SERVER_PORT / DEV_UI_PORT / DEV_HARNEYSYS_HOME in the root .env
 
 bun run lint       # biome check .
 bun run test       # bun test (1500+ unit tests)
