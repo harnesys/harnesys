@@ -4,7 +4,7 @@ import { appSecretPrefix } from '../../domain/apps/app.ts';
 import { AppKindRegistryPort } from '../../domain/apps/app-kind.port.ts';
 import { AppRegistryPort } from '../../domain/apps/app-registry.port.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
-import { mergeAppFields } from './app-fields.ts';
+import { mergeAppFields, nextSecretFields } from './app-fields.ts';
 import { requireApp } from './app-lookup.ts';
 import { appView } from './app-view.ts';
 
@@ -25,13 +25,9 @@ export class UpdateAppUseCase {
     const record = requireApp(this.apps, request.orgId, request.appId);
     const descriptor = this.kinds.require(record.kind);
     const prefix = appSecretPrefix(record.id);
-    const secretKeys = await this.secrets.listKeys(request.orgId);
-    const storedSecretFields = descriptor.fields
-      .filter((field) => field.secret && secretKeys.includes(prefix + field.key))
-      .map((field) => field.key);
     const merged = mergeAppFields(descriptor, {
       currentValues: record.values,
-      storedSecretFields,
+      storedSecretFields: record.secretFields,
       patch: { values: request.values ?? {}, secrets: request.secrets ?? {} },
     });
     for (const [field, value] of Object.entries(merged.secrets)) {
@@ -43,6 +39,7 @@ export class UpdateAppUseCase {
     const updated = this.apps.update(request.orgId, record.id, {
       label: request.label?.trim() ?? record.label,
       values: merged.values,
+      secretFields: nextSecretFields(record.secretFields, merged),
       status: 'configured',
       updatedAt: new Date().toISOString(),
     });
@@ -54,7 +51,6 @@ export class UpdateAppUseCase {
         record: updated,
         descriptor,
         accountCount,
-        secretKeys: await this.secrets.listKeys(request.orgId),
       }),
     };
   }

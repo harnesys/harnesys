@@ -87,3 +87,28 @@ export function migrateIssuesBranchColumns(
     }
   }
 }
+
+export function migrateAppsSecretFieldColumns(
+  exec: (sql: string) => void,
+  all: (sql: string) => ColumnInfo[],
+): void {
+  const accounts = new Set(all('PRAGMA table_info(app_accounts)').map((col) => col.name));
+  if (accounts.size > 0) {
+    const columns = [
+      { name: 'values_json', ddl: `TEXT NOT NULL DEFAULT '{}'` },
+      { name: 'secret_fields_json', ddl: `TEXT NOT NULL DEFAULT '[]'` },
+    ];
+    for (const column of columns) {
+      if (!accounts.has(column.name)) {
+        exec(`ALTER TABLE app_accounts ADD COLUMN ${column.name} ${column.ddl}`);
+      }
+    }
+    if (accounts.has('secret_ref')) {
+      exec('ALTER TABLE app_accounts DROP COLUMN secret_ref');
+    }
+  }
+  const apps = new Set(all('PRAGMA table_info(apps)').map((col) => col.name));
+  if (apps.size > 0 && !apps.has('secret_fields_json')) {
+    exec(`ALTER TABLE apps ADD COLUMN secret_fields_json TEXT NOT NULL DEFAULT '[]'`);
+  }
+}

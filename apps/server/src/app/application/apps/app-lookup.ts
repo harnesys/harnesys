@@ -16,7 +16,7 @@ export function requireAccount(
   orgId: string,
   accountId: string,
 ): AccountRecord {
-  const found = apps.findAccount(orgId, accountId);
+  const found = apps.accountById(orgId, accountId);
   if (!found) {
     throw new AccountNotFoundException(orgId, accountId);
   }

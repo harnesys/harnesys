@@ -1,5 +1,6 @@
 import { Injectable } from '@harnesys/brix';
-import { appSecretPrefix } from '../../domain/apps/app.ts';
+import { accountSecretKey } from '../../domain/apps/account.ts';
+import { appSecretKey } from '../../domain/apps/app.ts';
 import { AppRegistryPort } from '../../domain/apps/app-registry.port.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import { requireApp } from './app-lookup.ts';
@@ -17,19 +18,18 @@ export class DeleteAppUseCase {
   ) {}
 
   async execute(request: DeleteAppRequest): Promise<void> {
-    requireApp(this.apps, request.orgId, request.appId);
+    const record = requireApp(this.apps, request.orgId, request.appId);
     const accounts = this.apps
       .listAccounts(request.orgId)
-      .filter((account) => account.appId === request.appId);
+      .filter((account) => account.appId === record.id);
     for (const account of accounts) {
-      await this.secrets.delete(request.orgId, account.secretRef);
+      for (const field of account.secretFields) {
+        await this.secrets.delete(account.orgId, accountSecretKey(account.id, field));
+      }
       this.apps.removeAccount(request.orgId, account.id);
     }
-    const prefix = appSecretPrefix(request.appId);
-    for (const key of await this.secrets.listKeys(request.orgId)) {
-      if (key.startsWith(prefix)) {
-        await this.secrets.delete(request.orgId, key);
-      }
+    for (const field of record.secretFields) {
+      await this.secrets.delete(record.orgId, appSecretKey(record.id, field));
     }
     this.apps.remove(request.orgId, request.appId);
   }

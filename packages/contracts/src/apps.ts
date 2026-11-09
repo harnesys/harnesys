@@ -25,8 +25,17 @@ export const AppKindSpecSchema = z.object({
 });
 export type AppKindSpec = z.infer<typeof AppKindSpecSchema>;
 
+export const AccountKindSpecSchema = z.object({
+  kind: AppKindSchema,
+  label: z.string().min(1),
+  description: z.string(),
+  fields: z.array(AppKindFieldSchema),
+});
+export type AccountKindSpec = z.infer<typeof AccountKindSpecSchema>;
+
 export const AppKindsResponseSchema = z.object({
   kinds: z.array(AppKindSpecSchema),
+  accountKinds: z.array(AccountKindSpecSchema),
 });
 export type AppKindsResponse = z.infer<typeof AppKindsResponseSchema>;
 
@@ -90,7 +99,8 @@ export const AccountSchema = z.object({
   status: AccountStatusSchema,
   scopes: z.array(z.string()),
   scopeKey: z.string().min(1),
-  hasCredentials: z.boolean(),
+  values: z.record(z.string(), z.string()),
+  secretFields: z.array(z.string()),
   lastError: z.string().nullable(),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
@@ -119,6 +129,7 @@ export const RegisterAccountBodySchema = z.object({
   externalAccountId: z.string().min(1).max(255),
   label: z.string().min(1).max(120),
   scopes: z.array(z.string().min(1)).default([]),
+  values: z.record(z.string(), z.string()).optional(),
   credentials: z.record(z.string(), z.string()).default({}),
 });
 export type RegisterAccountBody = z.infer<typeof RegisterAccountBodySchema>;
@@ -131,7 +142,8 @@ export type RegisterAccountResponse = z.infer<typeof RegisterAccountResponseSche
 
 export const UpdateAccountBodySchema = z.object({
   label: z.string().min(1).max(120).optional(),
-  status: AccountStatusSchema.optional(),
+  values: z.record(z.string(), z.string()).optional(),
+  credentials: z.record(z.string(), z.string()).optional(),
   lastError: z.string().max(500).nullable().optional(),
 });
 export type UpdateAccountBody = z.infer<typeof UpdateAccountBodySchema>;

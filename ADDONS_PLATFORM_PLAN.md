@@ -351,7 +351,7 @@ create table accounts (
 - **Ядро**: список видов приложений (дескриптор полей и признака «секретное»), хранение app/account, секреты по ref, уникальность `(kind, externalAccountId, scopeKey)`, статусы, life-cycle, каскадное удаление, аудит, проверка прав.
 - **Аддон — потребитель**: получает `appId`/`accountId`, выбирает аккаунт по scope и пользуется доступом; client id, api_hash и токены у себя не хранит.
 - Поток подключения (OAuth loopback, manifest, MTProto login) — маршрут аддона, аккаунт он создаёт через `POST /accounts`, а не пишет в `org.db` напрямую.
-- Новый провайдер = строка в каталоге видов ядра (`app-kind.catalog.ts`), не новый аддон и не новый литерал в union.
+- Новый провайдер = свой модуль вида в `infra/apps/providers/<provider>/` (`AppKindProviderPort`), который агрегатор `app-kind-registry.adapter.ts` сводит в один список; не новый аддон и не новый литерал в union.
 
 ### 5.4 API
 

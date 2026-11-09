@@ -138,7 +138,9 @@ export function AppsPane({ orgId }: { orgId: string }) {
                   <>
                     <RowChip tone={ACCOUNT_TONE[account.status]}>{account.status}</RowChip>
                     <RowChip>{account.scopes.length} scopes</RowChip>
-                    {account.hasCredentials ? <RowChip tone="accent">credentials</RowChip> : null}
+                    {account.secretFields.length > 0 ? (
+                      <RowChip tone="accent">{account.secretFields.length} secrets</RowChip>
+                    ) : null}
                   </>
                 }
                 actions={

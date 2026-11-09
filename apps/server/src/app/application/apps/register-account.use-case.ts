@@ -2,12 +2,14 @@ import { Injectable } from '@harnesys/brix';
 import type { RegisterAccountBody, RegisterAccountResponse } from '@harnesys/contracts';
 import {
   type AccountRecord,
-  accountSecretRef,
+  accountSecretKey,
   normalizeAccountScopes,
   scopeKeyOf,
 } from '../../domain/apps/account.ts';
 import { AppRegistryPort } from '../../domain/apps/app-registry.port.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
+import type { AccountFieldMergeResult } from './account-fields.ts';
+import { mergeAccountFields } from './account-fields.ts';
 import { requireApp } from './app-lookup.ts';
 import { accountView } from './app-view.ts';
 
@@ -28,7 +30,10 @@ export class RegisterAccountUseCase {
     }
     const scopes = normalizeAccountScopes(request.scopes);
     const scopeKey = scopeKeyOf(scopes);
-    const credentials = normalizeCredentials(request.credentials);
+    const patch = {
+      values: request.values ?? {},
+      credentials: request.credentials,
+    };
     const externalAccountId = request.externalAccountId.trim();
     const label = request.label.trim();
     const now = new Date().toISOString();
@@ -38,26 +43,26 @@ export class RegisterAccountUseCase {
       scopeKey,
     });
     if (existing) {
-      if (Object.keys(credentials).length > 0) {
-        await this.secrets.set(request.orgId, existing.secretRef, JSON.stringify(credentials));
-      }
-      const secretKeys = await this.secrets.listKeys(request.orgId);
+      const merged = mergeAccountFields({
+        currentValues: existing.values,
+        currentSecretFields: existing.secretFields,
+        patch,
+      });
+      await this.writeSecrets(request.orgId, existing.id, merged);
       const updated = this.apps.updateAccount(request.orgId, existing.id, {
         appId: request.appId ?? existing.appId,
         label,
         scopes,
-        status: secretKeys.includes(existing.secretRef) ? 'connected' : existing.status,
+        values: merged.values,
+        secretFields: merged.secretFields,
         lastError: null,
         updatedAt: now,
       });
-      return { account: accountView(updated, secretKeys), created: false };
+      return { account: accountView(updated), created: false };
     }
     const id = crypto.randomUUID();
-    const secretRef = accountSecretRef(id);
-    const hasCredentials = Object.keys(credentials).length > 0;
-    if (hasCredentials) {
-      await this.secrets.set(request.orgId, secretRef, JSON.stringify(credentials));
-    }
+    const merged = mergeAccountFields({ currentValues: {}, currentSecretFields: [], patch });
+    await this.writeSecrets(request.orgId, id, merged);
     const record: AccountRecord = {
       id,
       orgId: request.orgId,
@@ -65,29 +70,29 @@ export class RegisterAccountUseCase {
       kind: request.kind,
       externalAccountId,
       label,
-      status: hasCredentials ? 'connected' : 'pending',
+      status: 'pending',
       scopes,
       scopeKey,
-      secretRef,
+      values: merged.values,
+      secretFields: merged.secretFields,
       lastError: null,
       createdAt: now,
       updatedAt: now,
     };
     this.apps.insertAccount(record);
-    return {
-      account: accountView(record, await this.secrets.listKeys(request.orgId)),
-      created: true,
-    };
+    return { account: accountView(record), created: true };
   }
-}
 
-function normalizeCredentials(input: Record<string, string>): Record<string, string> {
-  const output: Record<string, string> = {};
-  for (const [key, raw] of Object.entries(input)) {
-    const value = raw.trim();
-    if (value) {
-      output[key] = value;
+  private async writeSecrets(
+    orgId: string,
+    accountId: string,
+    merged: AccountFieldMergeResult,
+  ): Promise<void> {
+    for (const [field, value] of Object.entries(merged.credentials)) {
+      await this.secrets.set(orgId, accountSecretKey(accountId, field), value);
+    }
+    for (const field of merged.removedSecrets) {
+      await this.secrets.delete(orgId, accountSecretKey(accountId, field));
     }
   }
-  return output;
 }

@@ -7,6 +7,7 @@ export interface AppRecord {
   label: string;
   status: AppStatus;
   values: Record<string, string>;
+  secretFields: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -15,6 +16,7 @@ export interface AppUpdatePatch {
   label?: string;
   status?: AppStatus;
   values?: Record<string, string>;
+  secretFields?: string[];
   updatedAt?: string;
 }
 

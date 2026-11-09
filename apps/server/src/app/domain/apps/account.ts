@@ -12,7 +12,8 @@ export interface AccountRecord {
   status: AccountStatus;
   scopes: string[];
   scopeKey: string;
-  secretRef: string;
+  values: Record<string, string>;
+  secretFields: string[];
   lastError: string | null;
   createdAt: string;
   updatedAt: string;
@@ -24,7 +25,8 @@ export interface AccountUpdatePatch {
   status?: AccountStatus;
   scopes?: string[];
   scopeKey?: string;
-  secretRef?: string;
+  values?: Record<string, string>;
+  secretFields?: string[];
   lastError?: string | null;
   updatedAt?: string;
 }
@@ -50,6 +52,15 @@ export function scopeKeyOf(scopes: readonly string[]): string {
   return createHash('sha256').update(normalizeAccountScopes(scopes).join('\n')).digest('hex');
 }
 
-export function accountSecretRef(accountId: string): string {
-  return `account:${accountId}`;
+export function accountSecretPrefix(accountId: string): string {
+  return `account:${accountId}:`;
+}
+
+export function accountSecretKey(accountId: string, field: string): string {
+  return accountSecretPrefix(accountId) + field;
+}
+
+export function scopesCover(granted: readonly string[], required: readonly string[]): boolean {
+  const owned = new Set(normalizeAccountScopes(granted));
+  return normalizeAccountScopes(required).every((scope) => owned.has(scope));
 }

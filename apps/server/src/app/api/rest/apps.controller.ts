@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@harnesys/brix';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@harnesys/brix';
 import type {
   AppResponse,
   AppsListQuery,
@@ -11,7 +22,9 @@ import { CreateAppUseCase } from '../../application/apps/create-app.use-case.ts'
 import { DeleteAppUseCase } from '../../application/apps/delete-app.use-case.ts';
 import { GetAppUseCase, ListAppsUseCase } from '../../application/apps/list-apps.use-case.ts';
 import { UpdateAppUseCase } from '../../application/apps/update-app.use-case.ts';
+import { OrgAccessGuard } from '../guards/org-access.guard.ts';
 
+@UseGuards(OrgAccessGuard)
 @Controller('orgs/:orgId/apps')
 export class AppsController {
   constructor(

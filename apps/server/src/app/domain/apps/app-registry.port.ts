@@ -16,7 +16,19 @@ export abstract class AppRegistryPort {
 
   abstract listAccounts(orgId: string): AccountRecord[];
 
-  abstract findAccount(orgId: string, accountId: string): AccountRecord | null;
+  abstract findAccountByExternalAccount(
+    orgId: string,
+    kind: string,
+    externalAccountId: string,
+  ): AccountRecord | null;
+
+  abstract accountsCoveringScopes(
+    orgId: string,
+    kind: string,
+    requiredScopes: readonly string[],
+  ): AccountRecord[];
+
+  abstract accountById(orgId: string, accountId: string): AccountRecord | null;
 
   abstract findAccountByKey(orgId: string, key: AccountKey): AccountRecord | null;
 

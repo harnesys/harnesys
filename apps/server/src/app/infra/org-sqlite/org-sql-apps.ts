@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS apps (
   label TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'configured',
   config_json TEXT NOT NULL DEFAULT '{}',
+  secret_fields_json TEXT NOT NULL DEFAULT '[]',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   CHECK (status IN ('configured', 'invalid'))
@@ -28,7 +29,8 @@ CREATE TABLE IF NOT EXISTS app_accounts (
   status TEXT NOT NULL DEFAULT 'pending',
   scopes_json TEXT NOT NULL DEFAULT '[]',
   scope_key TEXT NOT NULL,
-  secret_ref TEXT NOT NULL,
+  values_json TEXT NOT NULL DEFAULT '{}',
+  secret_fields_json TEXT NOT NULL DEFAULT '[]',
   last_error TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,

@@ -55,6 +55,18 @@ export function mergeAppFields(
   return { values, secrets, removedSecrets };
 }
 
+export function nextSecretFields(
+  storedSecretFields: readonly string[],
+  merged: AppFieldMergeResult,
+): string[] {
+  const removed = new Set(merged.removedSecrets);
+  const fields = new Set(storedSecretFields.filter((field) => !removed.has(field)));
+  for (const field of Object.keys(merged.secrets)) {
+    fields.add(field);
+  }
+  return [...fields].sort();
+}
+
 interface RequireFieldsInput {
   descriptor: AppKindDescriptor;
   values: Record<string, string>;

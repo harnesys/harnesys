@@ -37,6 +37,7 @@ export class CreateAppUseCase {
       label: request.label.trim(),
       status: 'configured',
       values: resolved.values,
+      secretFields: Object.keys(resolved.secrets).sort(),
       createdAt: now,
       updatedAt: now,
     };
@@ -46,7 +47,6 @@ export class CreateAppUseCase {
         record,
         descriptor,
         accountCount: 0,
-        secretKeys: await this.secrets.listKeys(request.orgId),
       }),
     };
   }

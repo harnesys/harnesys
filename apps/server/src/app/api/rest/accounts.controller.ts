@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@harnesys/brix';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@harnesys/brix';
 import type {
   AccountResponse,
   AccountsListQuery,
@@ -19,7 +30,9 @@ import {
 } from '../../application/apps/list-accounts.use-case.ts';
 import { RegisterAccountUseCase } from '../../application/apps/register-account.use-case.ts';
 import { UpdateAccountUseCase } from '../../application/apps/update-account.use-case.ts';
+import { OrgAccessGuard } from '../guards/org-access.guard.ts';
 
+@UseGuards(OrgAccessGuard)
 @Controller('orgs/:orgId/accounts')
 export class AccountsController {
   constructor(

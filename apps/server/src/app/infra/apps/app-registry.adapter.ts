@@ -1,11 +1,7 @@
 import { Injectable } from '@harnesys/brix';
 import { and, eq } from 'drizzle-orm';
-import type {
-  AccountKey,
-  AccountRecord,
-  AccountStatus,
-  AccountUpdatePatch,
-} from '../../domain/apps/account.ts';
+import type { AccountKey, AccountRecord, AccountUpdatePatch } from '../../domain/apps/account.ts';
+import { scopesCover } from '../../domain/apps/account.ts';
 import type { AppRecord, AppUpdatePatch } from '../../domain/apps/app.ts';
 import { AppRegistryPort } from '../../domain/apps/app-registry.port.ts';
 import { AccountNotFoundException, AppNotFoundException } from '../../domain/apps/apps.error.ts';
@@ -13,12 +9,11 @@ import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { withOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 import {
   type AppAccountInsertRow,
-  type AppAccountRow,
   type AppInsertRow,
-  type AppRow,
   appAccountsTable,
   appsTable,
 } from '../org-sqlite/schema/index.ts';
+import { toAccount, toApp } from './app-registry.mappers.ts';
 
 type AppUpdateRow = Partial<AppInsertRow>;
 type AccountUpdateRow = Partial<AppAccountInsertRow>;
@@ -31,7 +26,7 @@ export class AppRegistryAdapter extends AppRegistryPort {
 
   list(orgId: string): AppRecord[] {
     return withOrgSqlite(this.layout, orgId, (db) =>
-      db.select().from(appsTable).where(eq(appsTable.orgId, orgId)).all().map(mapApp),
+      db.select().from(appsTable).where(eq(appsTable.orgId, orgId)).all().map(toApp),
     );
   }
 
@@ -42,7 +37,7 @@ export class AppRegistryAdapter extends AppRegistryPort {
         .from(appsTable)
         .where(and(eq(appsTable.orgId, orgId), eq(appsTable.kind, kind)))
         .all()
-        .map(mapApp),
+        .map(toApp),
     );
   }
 
@@ -53,7 +48,7 @@ export class AppRegistryAdapter extends AppRegistryPort {
         .from(appsTable)
         .where(and(eq(appsTable.orgId, orgId), eq(appsTable.id, appId)))
         .get();
-      return row ? mapApp(row) : null;
+      return row ? toApp(row) : null;
     });
   }
 
@@ -67,6 +62,7 @@ export class AppRegistryAdapter extends AppRegistryPort {
           label: record.label,
           status: record.status,
           configJson: JSON.stringify(record.values),
+          secretFieldsJson: JSON.stringify(record.secretFields),
           createdAt: record.createdAt,
           updatedAt: record.updatedAt,
         })
@@ -88,7 +84,7 @@ export class AppRegistryAdapter extends AppRegistryPort {
       if (!found) {
         throw new AppNotFoundException(orgId, appId);
       }
-      return mapApp(found);
+      return toApp(found);
     });
   }
 
@@ -107,18 +103,55 @@ export class AppRegistryAdapter extends AppRegistryPort {
         .from(appAccountsTable)
         .where(eq(appAccountsTable.orgId, orgId))
         .all()
-        .map(mapAccount),
+        .map(toAccount),
     );
   }
 
-  findAccount(orgId: string, accountId: string): AccountRecord | null {
+  findAccountByExternalAccount(
+    orgId: string,
+    kind: string,
+    externalAccountId: string,
+  ): AccountRecord | null {
+    return withOrgSqlite(this.layout, orgId, (db) => {
+      const row = db
+        .select()
+        .from(appAccountsTable)
+        .where(
+          and(
+            eq(appAccountsTable.orgId, orgId),
+            eq(appAccountsTable.kind, kind),
+            eq(appAccountsTable.externalAccountId, externalAccountId),
+          ),
+        )
+        .get();
+      return row ? toAccount(row) : null;
+    });
+  }
+
+  accountsCoveringScopes(
+    orgId: string,
+    kind: string,
+    requiredScopes: readonly string[],
+  ): AccountRecord[] {
+    return withOrgSqlite(this.layout, orgId, (db) =>
+      db
+        .select()
+        .from(appAccountsTable)
+        .where(and(eq(appAccountsTable.orgId, orgId), eq(appAccountsTable.kind, kind)))
+        .all()
+        .map(toAccount)
+        .filter((account) => scopesCover(account.scopes, requiredScopes)),
+    );
+  }
+
+  accountById(orgId: string, accountId: string): AccountRecord | null {
     return withOrgSqlite(this.layout, orgId, (db) => {
       const row = db
         .select()
         .from(appAccountsTable)
         .where(and(eq(appAccountsTable.orgId, orgId), eq(appAccountsTable.id, accountId)))
         .get();
-      return row ? mapAccount(row) : null;
+      return row ? toAccount(row) : null;
     });
   }
 
@@ -136,7 +169,7 @@ export class AppRegistryAdapter extends AppRegistryPort {
           ),
         )
         .get();
-      return row ? mapAccount(row) : null;
+      return row ? toAccount(row) : null;
     });
   }
 
@@ -153,7 +186,8 @@ export class AppRegistryAdapter extends AppRegistryPort {
           status: record.status,
           scopesJson: JSON.stringify(record.scopes),
           scopeKey: record.scopeKey,
-          secretRef: record.secretRef,
+          valuesJson: JSON.stringify(record.values),
+          secretFieldsJson: JSON.stringify(record.secretFields),
           lastError: record.lastError,
           createdAt: record.createdAt,
           updatedAt: record.updatedAt,
@@ -176,7 +210,7 @@ export class AppRegistryAdapter extends AppRegistryPort {
       if (!found) {
         throw new AccountNotFoundException(orgId, accountId);
       }
-      return mapAccount(found);
+      return toAccount(found);
     });
   }
 
@@ -200,6 +234,9 @@ function appUpdateRow(patch: AppUpdatePatch): AppUpdateRow {
   if (patch.values !== undefined) {
     row.configJson = JSON.stringify(patch.values);
   }
+  if (patch.secretFields !== undefined) {
+    row.secretFieldsJson = JSON.stringify(patch.secretFields);
+  }
   row.updatedAt = patch.updatedAt ?? new Date().toISOString();
   return row;
 }
@@ -221,84 +258,15 @@ function accountUpdateRow(patch: AccountUpdatePatch): AccountUpdateRow {
   if (patch.scopeKey !== undefined) {
     row.scopeKey = patch.scopeKey;
   }
-  if (patch.secretRef !== undefined) {
-    row.secretRef = patch.secretRef;
+  if (patch.values !== undefined) {
+    row.valuesJson = JSON.stringify(patch.values);
+  }
+  if (patch.secretFields !== undefined) {
+    row.secretFieldsJson = JSON.stringify(patch.secretFields);
   }
   if (patch.lastError !== undefined) {
     row.lastError = patch.lastError;
   }
   row.updatedAt = patch.updatedAt ?? new Date().toISOString();
   return row;
-}
-
-function mapApp(row: AppRow): AppRecord {
-  return {
-    id: row.id,
-    orgId: row.orgId,
-    kind: row.kind,
-    label: row.label,
-    status: row.status === 'invalid' ? 'invalid' : 'configured',
-    values: parseValues(row.configJson),
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
-}
-
-function mapAccount(row: AppAccountRow): AccountRecord {
-  return {
-    id: row.id,
-    orgId: row.orgId,
-    appId: row.appId,
-    kind: row.kind,
-    externalAccountId: row.externalAccountId,
-    label: row.label,
-    status: accountStatus(row.status),
-    scopes: parseScopes(row.scopesJson),
-    scopeKey: row.scopeKey,
-    secretRef: row.secretRef,
-    lastError: row.lastError,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
-}
-
-function parseValues(raw: string): Record<string, string> {
-  const output: Record<string, string> = {};
-  for (const [key, value] of Object.entries(parseObject(raw))) {
-    if (typeof value === 'string') {
-      output[key] = value;
-    }
-  }
-  return output;
-}
-
-function parseScopes(raw: string): string[] {
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed.filter((entry): entry is string => typeof entry === 'string');
-    }
-  } catch {
-    return [];
-  }
-  return [];
-}
-
-function parseObject(raw: string): Record<string, unknown> {
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      return parsed as Record<string, unknown>;
-    }
-  } catch {
-    return {};
-  }
-  return {};
-}
-
-function accountStatus(raw: string): AccountStatus {
-  if (raw === 'connected' || raw === 'expired' || raw === 'error' || raw === 'pending') {
-    return raw;
-  }
-  return 'pending';
 }
