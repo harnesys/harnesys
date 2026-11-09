@@ -1,9 +1,11 @@
-import { ChevronDownIcon, Layers2Icon } from 'lucide-react';
+import { ChevronDownIcon, Layers2Icon, UndoIcon } from 'lucide-react';
 import { useState } from 'react';
 import type { CompactionSegmentMeta } from '@/entities/session';
+import { undoCompact } from '@/features/compact-thread';
 import { Markdown } from '@/shared/ui/markdown';
+import { toast } from '@/shared/ui/toast';
 import { FeedNotice, FeedNoticeMetaSep } from './feed-notice';
-export function CompactionPendingCard() {
+export function CompactionPendingCard({ onCancel }: { onCancel?: () => void }) {
   return (
     <FeedNotice
       testId="compaction-pending"
@@ -11,6 +13,18 @@ export function CompactionPendingCard() {
       icon={Layers2Icon}
       label="Compacting…"
       pending
+      actions={
+        onCancel ? (
+          <button
+            type="button"
+            data-testid="compaction-cancel"
+            onClick={onCancel}
+            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            Cancel
+          </button>
+        ) : undefined
+      }
     />
   );
 }
@@ -24,11 +38,16 @@ export function formatTokenCount(value: number): string {
 export function CompactionMessageCard({
   text,
   meta,
+  threadId,
+  undoable = false,
 }: {
   text: string;
   meta: CompactionSegmentMeta;
+  threadId?: string;
+  undoable?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [undoing, setUndoing] = useState(false);
   const summary = meta.summary?.trim() ?? '';
   const showSummary = summary !== '' && expanded;
   const fallbackText = summary === '' && text.trim() !== '' ? text : '';
@@ -40,6 +59,32 @@ export function CompactionMessageCard({
       tone="accent"
       icon={Layers2Icon}
       label="Compaction"
+      actions={
+        undoable && threadId ? (
+          <button
+            type="button"
+            data-testid="compaction-undo"
+            disabled={undoing}
+            onClick={async () => {
+              setUndoing(true);
+              await undoCompact({
+                threadId,
+                onError: (error) => {
+                  toast.add({
+                    title: 'Could not restore history',
+                    description: error instanceof Error ? error.message : 'Undo compaction failed',
+                  });
+                },
+              });
+              setUndoing(false);
+            }}
+            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+          >
+            <UndoIcon className="size-3" />
+            {undoing ? 'Restoring…' : 'Restore history'}
+          </button>
+        ) : undefined
+      }
       meta={
         <>
           <FeedNoticeMetaSep />

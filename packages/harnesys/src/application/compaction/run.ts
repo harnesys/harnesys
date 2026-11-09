@@ -17,7 +17,7 @@ import { projectCompacted, projectedForEstimate } from '../llm.ts';
 import { estimateTokens, estimateTokensAnchored, type TokenEstimate } from './estimate.ts';
 import { writeCompactionFile } from './file-log.ts';
 import { microcompactToolResults } from './microcompact.ts';
-import { planCut } from './plan-cut.ts';
+import { planCut, protectedWindowCount } from './plan-cut.ts';
 import { priorSummaryBlock, SUMMARY_SYSTEM_PROMPT, streamSummary } from './summarize.ts';
 
 const microcompactNotified = new WeakSet<object>();
@@ -236,9 +236,14 @@ async function* passIfDue(
     yield { type: 'skipped', reason: 'already-covered' };
     return;
   }
-  const protectTokens =
-    reason === 'manual' ? 0 : Math.floor(contextLength * spec.protectRecentRatio);
-  const plan = planCut(messages, { protectTokens, afterIndex });
+  const protectTokens = Math.floor(contextLength * spec.protectRecentRatio);
+  const protectMessages =
+    spec.protectRecentTurns > 0 ? protectedWindowCount(messages, spec.protectRecentTurns) : 0;
+  const plan = planCut(messages, {
+    protectTokens,
+    ...(protectMessages > 0 ? { protectMessages } : {}),
+    afterIndex,
+  });
   if (!plan) {
     yield { type: 'skipped', reason: 'no-cut-plan' };
     return;

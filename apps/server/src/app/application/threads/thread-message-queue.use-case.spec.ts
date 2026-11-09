@@ -61,6 +61,8 @@ class StubExecutor extends LocalExecutorPort {
   sessionFor = (): Promise<never> => Promise.reject(new Error('not used'));
   send = (): Promise<never> => Promise.reject(new Error('not used'));
   compact = (): Promise<never> => Promise.reject(new Error('not used'));
+  cancelCompact = (): Promise<never> => Promise.reject(new Error('not used'));
+  undoThreadCompact = (): Promise<never> => Promise.reject(new Error('not used'));
   cancel = (): Promise<never> => Promise.reject(new Error('not used'));
   retry = (): Promise<never> => Promise.reject(new Error('not used'));
   truncateThreadFrom = (): Promise<never> => Promise.reject(new Error('not used'));

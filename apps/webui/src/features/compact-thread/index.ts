@@ -4,3 +4,4 @@ export {
   compactThread,
 } from './model/compact-thread';
 export { useCompactingStore } from './model/compacting.store';
+export { undoCompact } from './model/undo-compact';

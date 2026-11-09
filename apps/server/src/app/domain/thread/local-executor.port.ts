@@ -42,6 +42,7 @@ export interface SendLocalRunInput {
 export type CompactSkipReason =
   | 'no-context-window'
   | 'invalid-output-reserve'
+  | 'near-threshold'
   | 'empty-history'
   | 'resume-pending'
   | 'already-covered'
@@ -49,7 +50,9 @@ export type CompactSkipReason =
   | 'hook-blocked'
   | 'empty-window'
   | 'breaker-open'
-  | 'rapid-refill';
+  | 'rapid-refill'
+  | 'compaction-in-progress'
+  | 'cancelled';
 
 export type CompactThreadResult =
   | {
@@ -67,7 +70,13 @@ export abstract class LocalExecutorPort {
   abstract events(orgId: string): Promise<RunEventStore>;
   abstract sessionFor(orgId: string, threadId: string, agentId: string): Promise<SessionHandle>;
   abstract send(input: SendLocalRunInput): Promise<RunAcceptedResponse>;
-  abstract compact(orgId: string, threadId: string): Promise<CompactThreadResult>;
+  abstract compact(
+    orgId: string,
+    threadId: string,
+    signal?: AbortSignal,
+  ): Promise<CompactThreadResult>;
+  abstract cancelCompact(orgId: string, threadId: string): Promise<boolean>;
+  abstract undoThreadCompact(orgId: string, threadId: string): Promise<SessionEvent>;
   abstract drainMessageQueue(orgId: string, threadId: string): Promise<ThreadQueueDrainResult>;
   abstract cancel(orgId: string, runId: string): Promise<CancelRunResponse>;
   abstract retry(orgId: string, runId: string): Promise<RetryRunResponse>;

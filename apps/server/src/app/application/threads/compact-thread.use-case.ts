@@ -7,6 +7,7 @@ import {
 export interface CompactThreadRequest {
   orgId: string;
   threadId: string;
+  signal?: AbortSignal;
 }
 
 @Injectable()
@@ -14,6 +15,6 @@ export class CompactThreadUseCase {
   constructor(private readonly executor: LocalExecutorPort) {}
 
   execute(request: CompactThreadRequest): Promise<CompactThreadResult> {
-    return this.executor.compact(request.orgId, request.threadId);
+    return this.executor.compact(request.orgId, request.threadId, request.signal);
   }
 }

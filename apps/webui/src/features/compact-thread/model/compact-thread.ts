@@ -16,12 +16,18 @@ export interface CompactThreadResult {
     | 'already-covered'
     | 'no-cut-plan'
     | 'hook-blocked'
-    | 'empty-window';
+    | 'empty-window'
+    | 'breaker-open'
+    | 'rapid-refill'
+    | 'compaction-in-progress'
+    | 'cancelled';
 }
 export async function compactThread(options: CompactThreadOptions): Promise<CompactThreadResult> {
   const { threadId } = options;
   const controller = new AbortController();
-  useCompactingStore.getState().begin(threadId);
+  if (!useCompactingStore.getState().begin(threadId, controller)) {
+    return { compacted: false, reason: 'compaction-in-progress' };
+  }
   let result: CompactThreadResponse = { compacted: false };
   try {
     const response = await compactThreadStream(threadId, controller.signal);
@@ -46,7 +52,16 @@ export async function compactThread(options: CompactThreadOptions): Promise<Comp
     return result.compacted
       ? { compacted: true }
       : { compacted: false, ...(result.reason ? { reason: result.reason } : {}) };
+  } catch (error) {
+    if (controller.signal.aborted || isAbortError(error)) {
+      return { compacted: false, reason: 'cancelled' };
+    }
+    throw error;
   } finally {
     useCompactingStore.getState().end(threadId);
   }
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError';
 }

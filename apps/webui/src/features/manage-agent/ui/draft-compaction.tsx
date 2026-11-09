@@ -148,9 +148,16 @@ export function DraftCompaction({
             label="Protect recent, %"
             value={draft.protectRecentPercent}
             placeholder="10"
-            description="Recent tail (percent of context) kept out of the summary. Clamp 0–90. Default 10."
-            disabled={!draft.auto}
+            description="Recent tail (percent of context) kept out of every compaction, manual included. Clamp 0–90. Default 10."
             onChange={(protectRecentPercent) => patch({ protectRecentPercent })}
+          />
+          <NumberField
+            id="draft-compaction-protect-turns"
+            label="Protect recent turns"
+            value={draft.protectRecentTurns}
+            placeholder="0"
+            description="Count of trailing user+agent turns kept out of every compaction, manual included. Empty = off."
+            onChange={(protectRecentTurns) => patch({ protectRecentTurns })}
           />
         </div>
         <Field

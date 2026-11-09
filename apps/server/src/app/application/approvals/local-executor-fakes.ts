@@ -1,4 +1,4 @@
-import type { RunLifecycleStore, RunRecord, SessionHandle } from 'harnesys';
+import type { RunLifecycleStore, RunRecord, SessionEvent, SessionHandle } from 'harnesys';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 
 const RUN_RECORD: RunRecord = {
@@ -65,6 +65,14 @@ export class StubLocalExecutor extends LocalExecutorPort {
 
   compact(): never {
     throw new Error('not used');
+  }
+
+  cancelCompact(): Promise<boolean> {
+    return Promise.resolve(false);
+  }
+
+  undoThreadCompact(): Promise<SessionEvent> {
+    return Promise.reject(new Error('not used'));
   }
 
   drainMessageQueue(): never {
@@ -151,6 +159,14 @@ export class RecordingExecutor extends LocalExecutorPort {
 
   compact(): never {
     throw new Error('not used');
+  }
+
+  cancelCompact(): Promise<boolean> {
+    return Promise.resolve(false);
+  }
+
+  undoThreadCompact(): Promise<SessionEvent> {
+    return Promise.reject(new Error('not used'));
   }
 
   drainMessageQueue(): never {

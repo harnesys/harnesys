@@ -78,3 +78,31 @@ test('compaction anchor resets sources alongside messages', () => {
   expect(messages.length).toBe(2);
   expect(sources).toEqual([2, 3]);
 });
+
+test('compaction with a covered boundary keeps the protected tail', () => {
+  const events = [
+    userEvent('old', 'r1', 1),
+    usageEvent('a', 'r1', 2),
+    // boundary: last covered event is r1:2; the later user turn stays visible
+    {
+      type: 'compaction',
+      id: 'c1',
+      reason: 'manual',
+      coveredFrom: 0,
+      coveredUntil: 1,
+      tokensBefore: 10,
+      tokensAfter: 2,
+      summary: 'summary',
+      coveredUntilRunId: 'r1',
+      coveredUntilSeq: 2,
+      runId: 'r2',
+      seq: 4,
+    } as SessionEvent,
+    userEvent('tail', 'r2', 1),
+    usageEvent('reply', 'r3', 2),
+  ];
+  const sources: number[] = [];
+  const messages = rebuildThreadMessages(events, { messageSources: sources });
+  expect(messages.length).toBe(3);
+  expect(sources).toEqual([2, 3, 4]);
+});

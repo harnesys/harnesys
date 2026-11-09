@@ -124,7 +124,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
 
   private browserEnginesDeps(): { snapshot: () => Promise<HostEngineEntry[]> } | undefined {
     const host = this.browserHost;
-    return host !== undefined ? { snapshot: () => host.snapshot() } : undefined;
+    return host === undefined ? undefined : { snapshot: () => host.snapshot() };
   }
 
   private ensure(orgId: string): Promise<OrgRuntime> {
@@ -255,9 +255,19 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     });
   }
 
-  async compact(orgId: string, threadId: string): Promise<CompactThreadResult> {
-    return (await this.ensure(orgId)).compact(threadId);
+  async compact(
+    orgId: string,
+    threadId: string,
+    signal?: AbortSignal,
+  ): Promise<CompactThreadResult> {
+    return (await this.ensure(orgId)).compact(threadId, signal);
   }
+
+  cancelCompact = (orgId: string, threadId: string): Promise<boolean> =>
+    this.ensure(orgId).then((runtime) => runtime.cancelCompact(threadId));
+
+  undoThreadCompact = (orgId: string, threadId: string): Promise<SessionEvent> =>
+    this.ensure(orgId).then((runtime) => runtime.undoThreadCompact(threadId));
 
   async drainMessageQueue(orgId: string, threadId: string): Promise<ThreadQueueDrainResult> {
     return (await this.ensure(orgId)).drainMessageQueue(threadId);

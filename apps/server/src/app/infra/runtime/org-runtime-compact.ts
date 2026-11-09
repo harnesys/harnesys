@@ -33,9 +33,18 @@ export interface CompactThreadDeps {
   ) => Promise<RunTarget | null>;
 }
 
+interface CompactOutcome {
+  completed: CompactionMessage | undefined;
+  failure: string | undefined;
+  skipReason: CompactSkipReason | undefined;
+}
+
+const CANCELLED: CompactThreadResult = { compacted: false, reason: 'cancelled' };
+
 export async function compactThread(
   deps: CompactThreadDeps,
   threadId: string,
+  signal?: AbortSignal,
 ): Promise<CompactThreadResult> {
   const state = await deps.seededThreadState(threadId);
   const target = await deps.resolveRunTarget(threadId, state, { agentId: deps.agentId });
@@ -50,16 +59,20 @@ export async function compactThread(
   const snapshot = await state.load();
   const mutable = mutableStateOf(snapshot);
   const messageCount = Array.isArray(mutable.messages) ? mutable.messages.length : -1;
-  const { completed, skipReason } = await runForcedCompact(deps, {
-    threadId,
-    target,
-    binding,
-    mutable,
-  });
-  if (!completed) {
-    return { compacted: false, ...(skipReason ? { reason: skipReason } : {}) };
+  const outcome = await runForcedCompact(deps, { threadId, target, binding, mutable, signal });
+  const partial = outcomeToCompactResult(outcome, signal);
+  if (partial) {
+    return partial;
   }
-  await persistCompact(deps, { threadId, state, snapshot, mutable, completed, messageCount });
+  const completed = outcome.completed as CompactionMessage;
+  await persistCompact(deps, {
+    threadId,
+    state,
+    snapshot,
+    mutable,
+    completed,
+    messageCount,
+  });
   return {
     compacted: true,
     id: completed.id,
@@ -70,6 +83,24 @@ export async function compactThread(
   };
 }
 
+/** null means the pass completed and the caller should persist the anchor. */
+function outcomeToCompactResult(
+  outcome: CompactOutcome,
+  signal?: AbortSignal,
+): CompactThreadResult | null {
+  const aborted = signal?.aborted ?? false;
+  if (outcome.completed && !aborted) {
+    return null;
+  }
+  if (aborted || outcome.completed) {
+    return CANCELLED;
+  }
+  if (outcome.failure) {
+    throw new Error(outcome.failure);
+  }
+  return { compacted: false, ...(outcome.skipReason ? { reason: outcome.skipReason } : {}) };
+}
+
 async function runForcedCompact(
   deps: CompactThreadDeps,
   input: {
@@ -77,14 +108,14 @@ async function runForcedCompact(
     target: RunTarget;
     binding: ModelBinding;
     mutable: Record<string, unknown>;
+    signal?: AbortSignal;
   },
-): Promise<{
-  completed: CompactionMessage | undefined;
-  skipReason: CompactSkipReason | undefined;
-}> {
-  let completed: CompactionMessage | undefined;
-  let skipReason: CompactSkipReason | undefined;
-  let failure: string | undefined;
+): Promise<CompactOutcome> {
+  const outcome: CompactOutcome = {
+    completed: undefined,
+    failure: undefined,
+    skipReason: undefined,
+  };
   try {
     for await (const event of compactForced({
       agent: input.target.agent,
@@ -94,26 +125,26 @@ async function runForcedCompact(
       models: deps.models,
       toolRegistry: toolRegistryOf(input.target),
       paths: input.target.paths,
-      signal: new AbortController().signal,
+      signal: input.signal ?? new AbortController().signal,
     })) {
       if (event.type === 'completed') {
-        completed = event.message;
+        outcome.completed = event.message;
       } else if (event.type === 'failed') {
-        failure = event.error;
+        outcome.failure = event.error;
       } else if (event.type === 'skipped' && event.reason !== 'near-threshold') {
-        skipReason = event.reason;
+        outcome.skipReason = event.reason;
       }
     }
   } catch (error) {
     if (isCompactionNotConfigured(error)) {
       throw new CompactionNotConfiguredException();
     }
+    if (input.signal?.aborted) {
+      return outcome;
+    }
     throw error;
   }
-  if (failure) {
-    throw new Error(failure);
-  }
-  return { completed, skipReason };
+  return outcome;
 }
 
 async function persistCompact(

@@ -46,6 +46,15 @@ export const SLASH_COMMANDS: SlashCommand[] = [
         if (result.reason === 'empty-history') {
           return 'Nothing to compact: the thread has no messages';
         }
+        if (result.reason === 'compaction-in-progress') {
+          return 'Compaction is already running';
+        }
+        if (result.reason === 'cancelled') {
+          return 'Compaction cancelled';
+        }
+        if (result.reason === 'no-cut-plan') {
+          return 'Nothing to compact: the tail is protected by recent-turn settings';
+        }
         return 'Nothing to compact';
       },
     },

@@ -6,7 +6,6 @@ import type {
   ThreadPublic,
 } from '@harnesys/contracts';
 import type {
-  AcceptedRunResponse,
   SessionEvent,
   ThreadAttachment,
   ThreadPlanRecord,
@@ -151,7 +150,7 @@ export interface SendThreadRunOptions {
   worktreeId?: string;
 }
 
-export function sendThreadRun(options: SendThreadRunOptions): Promise<AcceptedRunResponse> {
+export function sendThreadRun(options: SendThreadRunOptions): Promise<ContractAcceptedRun> {
   const orgId = requireOrgId();
   const { id, text, effort, mode, skills, clientEventId, attachmentIds, sourceId, worktreeId } =
     options;
@@ -336,9 +335,7 @@ export function updateThreadBinding(
 
 export function deleteThreadRecord(id: string): Promise<void> {
   const orgId = requireOrgId();
-  return apiJson<void>(`${threadsBase(orgId)}/${encodeURIComponent(id)}`, {
-    method: 'DELETE',
-  });
+  return apiJson<void>(`${threadsBase(orgId)}/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
 
 export function deleteThreadUserEvent(threadId: string, threadSeq: number): Promise<ThreadRecord> {
