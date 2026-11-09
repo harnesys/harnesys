@@ -1,4 +1,11 @@
 export {
+  type AddonConfigRow,
+  type AddonInsert,
+  type AddonRow,
+  addonConfigTable,
+  addonsTable,
+} from './addons.ts';
+export {
   type MemoryConsolidationInsert,
   type MemoryConsolidationRow,
   type MemoryFactInsert,

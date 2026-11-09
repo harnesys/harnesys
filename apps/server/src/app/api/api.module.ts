@@ -38,6 +38,7 @@ import { UsageUseCaseModule } from '../application/usage/usage.use-case.module.t
 import { BrowserUseCaseModule } from '../application/use-cases/browser/browser.use-case.module.ts';
 import { VaultUseCaseModule } from '../application/vault/vault.use-case.module.ts';
 import { WebhookUseCaseModule } from '../application/webhooks/webhook.use-case.module.ts';
+import { AddonsModule } from '../infra/addons/addons.module.ts';
 import { ConnectorModule } from '../infra/connector/connector.module.ts';
 import { DeskModule } from '../infra/desk/desk.module.ts';
 import { EventsWatchModule } from '../infra/events-watch/events-watch.module.ts';
@@ -51,6 +52,7 @@ import { SkillsModule } from '../infra/skills/skills.module.ts';
 import { SourceWatchModule } from '../infra/source/source-watch.module.ts';
 import { TerminalModule } from '../infra/terminal/terminal.module.ts';
 import { SessionGuard } from './guards/session.guard.ts';
+import { AddonsController } from './rest/addons.controller.ts';
 import { AgentHooksController } from './rest/agent-hooks.controller.ts';
 import { AgentsController } from './rest/agents.controller.ts';
 import { ApprovalsController } from './rest/approvals.controller.ts';
@@ -176,6 +178,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     SourceWatchModule,
     FleetHubModule,
     MachineHomeModule,
+    AddonsModule,
   ],
   controllers: [
     HealthController,
@@ -227,6 +230,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     PresetsController,
     LspController,
     ToolchainController,
+    AddonsController,
     BrowserController,
     ThreadsController,
     ThreadAttachmentsController,

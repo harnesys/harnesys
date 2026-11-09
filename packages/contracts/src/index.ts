@@ -1,3 +1,4 @@
+export * from './addons.ts';
 export * from './domains-agents.ts';
 export * from './domains-org.ts';
 export * from './domains-work.ts';

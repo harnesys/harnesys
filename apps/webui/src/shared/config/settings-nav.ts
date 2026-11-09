@@ -38,6 +38,7 @@ export const WINDOW_SETTINGS_CATEGORIES = [
   'packages',
   'lsp',
   'toolchain',
+  'addons',
   'browser',
   'fleet',
   'profiles',
@@ -157,6 +158,12 @@ export const WINDOW_SETTINGS_GROUPS: SettingsNavGroup[] = [
         label: 'Toolchain',
         description: 'PATH resolution for binaries on this host: shell, node version, extra dirs.',
         icon: BoxesIcon,
+      },
+      {
+        id: 'addons',
+        label: 'Add-ons',
+        description: 'Discovered and enabled add-ons for this organization.',
+        icon: PuzzleIcon,
       },
       {
         id: 'browser',

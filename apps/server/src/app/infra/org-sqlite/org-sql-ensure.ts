@@ -1,4 +1,5 @@
 import {
+  CREATE_ADDONS_SQL,
   CREATE_AGENT_MEMORY_SQL,
   CREATE_AGENTS_SQL,
   CREATE_APPROVALS_SQL,
@@ -269,6 +270,7 @@ export function ensureOrgSchema(
   exec(CREATE_MODE_PRESETS_SQL);
   migrateModePresetToolColumns(exec, all);
   exec(CREATE_PLUGINS_SQL);
+  exec(CREATE_ADDONS_SQL);
   exec(CREATE_KNOWLEDGE_SQL);
   ensureKnowledgeFts(exec);
   exec(CREATE_THREADS_SQL);

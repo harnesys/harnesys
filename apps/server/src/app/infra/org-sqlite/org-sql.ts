@@ -302,6 +302,33 @@ CREATE TABLE IF NOT EXISTS plugin_server_state (
 );
 `;
 
+export const CREATE_ADDONS_SQL = `
+CREATE TABLE IF NOT EXISTS addons (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  version TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  icon TEXT NOT NULL DEFAULT 'puzzle',
+  tags_json TEXT NOT NULL DEFAULT '[]',
+  root TEXT NOT NULL,
+  entry TEXT NOT NULL,
+  state TEXT NOT NULL CHECK(state IN ('discovered', 'installed', 'enabled')),
+  enabled_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS addons_org_id_idx ON addons(org_id);
+
+CREATE TABLE IF NOT EXISTS addon_config (
+  org_id TEXT NOT NULL,
+  addon_id TEXT NOT NULL,
+  values_json TEXT NOT NULL DEFAULT '{}',
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (org_id, addon_id)
+);
+`;
+
 export const CREATE_KNOWLEDGE_SQL = `
 CREATE TABLE IF NOT EXISTS knowledge_chunks (
   id TEXT PRIMARY KEY,
