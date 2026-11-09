@@ -90,6 +90,7 @@ export function AssistantMessageView({
   readOnly = false,
   inherited = false,
   branchChildren,
+  undoable = false,
 }: {
   run: FeedRun;
   runId: string;
@@ -99,6 +100,7 @@ export function AssistantMessageView({
   readOnly?: boolean;
   inherited?: boolean;
   branchChildren?: { id: string; agentId: string; title: string }[];
+  undoable?: boolean;
 }) {
   const segments = run.segments;
   const group = useThreadStore((state) =>
@@ -133,6 +135,7 @@ export function AssistantMessageView({
                 streaming={streaming}
                 readOnly={readOnly}
                 onOpenSpawn={onOpenSpawn}
+                undoable={undoable}
               />
             </div>
           );
@@ -265,6 +268,7 @@ function TurnSegmentView({
   streaming = false,
   readOnly = false,
   onOpenSpawn,
+  undoable = false,
 }: {
   segment: FeedSegment;
   live: boolean;
@@ -274,6 +278,7 @@ function TurnSegmentView({
   streaming?: boolean;
   readOnly?: boolean;
   onOpenSpawn?: (spawnId: string) => void;
+  undoable?: boolean;
 }) {
   if (segment.kind === 'user') {
     return (
@@ -299,7 +304,14 @@ function TurnSegmentView({
     );
   }
   if (segment.kind === 'compaction') {
-    return <CompactionMessageCard text={segment.text} meta={segment.meta} />;
+    return (
+      <CompactionMessageCard
+        text={segment.text}
+        meta={segment.meta}
+        threadId={threadId}
+        undoable={undoable}
+      />
+    );
   }
   if (segment.kind === 'handoff') {
     return (

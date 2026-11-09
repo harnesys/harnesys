@@ -172,6 +172,8 @@ export class StubExecutor extends LocalExecutorPort {
     throw new Error('not used');
   }
   compact = (): Promise<CompactThreadResult> => Promise.reject(new Error('not used'));
+  cancelCompact = (): Promise<boolean> => Promise.resolve(false);
+  undoThreadCompact = (): Promise<SessionEvent> => Promise.reject(new Error('not used'));
   drainMessageQueue = (): Promise<never> => Promise.reject(new Error('not used'));
   steerMessageQueue = (): Promise<never> => Promise.reject(new Error('not used'));
   cancel(): Promise<CancelRunResponse> {

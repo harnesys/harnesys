@@ -3,6 +3,25 @@ export interface CutPlan {
   coveredFrom: number;
   coveredUntil: number;
 }
+
+export function protectedWindowCount(messages: readonly unknown[], turns: number): number {
+  let seen = 0;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (!isUserTurnMessage(messages[i])) {
+      continue;
+    }
+    seen += 1;
+    if (seen === turns) {
+      return messages.length - i;
+    }
+  }
+  return messages.length;
+}
+
+function isUserTurnMessage(item: unknown): boolean {
+  return item !== null && typeof item === 'object' && (item as { role?: unknown }).role === 'user';
+}
+
 export function isClosedBoundary(messages: readonly unknown[], index: number): boolean {
   const m = messages[index] as Record<string, unknown> | null | undefined;
   if (!m || typeof m !== 'object') {
@@ -49,10 +68,14 @@ export function planCut(
   messages: readonly unknown[],
   opts: {
     protectTokens: number;
+    protectMessages?: number;
     afterIndex: number;
   },
 ): CutPlan | null {
   let limit = messages.length - 1;
+  if ((opts.protectMessages ?? 0) > 0) {
+    limit = Math.min(limit, messages.length - 1 - (opts.protectMessages ?? 0));
+  }
   if (opts.protectTokens > 0) {
     let acc = 0;
     for (let i = messages.length - 1; i >= 0; i--) {

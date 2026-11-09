@@ -45,14 +45,21 @@ export function rebuildThreadMessages(
   opts?: ReplayThreadHistoryOpts,
 ): unknown[] {
   const activeRunId = opts?.activeRunId ?? null;
-  const sources = opts?.messageSources;
+  const externalSources = opts?.messageSources;
   const out: unknown[] = [];
+  const sources: number[] = [];
   const emit = (message: unknown): void => {
     out.push(message);
-    if (sources) {
-      sources.push(eventIndex);
-    }
+    sources.push(eventIndex);
   };
+  const boundaries = new Map<string, number>();
+  for (let index = 0; index < events.length; index++) {
+    const event = events[index];
+    const runId = event?.runId ?? '';
+    if (runId && typeof event?.seq === 'number') {
+      boundaries.set(`${runId}:${event.seq}`, index);
+    }
+  }
   const excluded = new Set<string>();
   let eventIndex = -1;
   for (const event of events) {
@@ -134,11 +141,7 @@ export function rebuildThreadMessages(
       if (!event.summary) {
         continue;
       }
-      const dropped = out.length;
-      out.length = 0;
-      if (sources) {
-        sources.length = 0;
-      }
+      const dropped = applyCompactionAnchor(out, sources, event, boundaries);
       buffers.clear();
       emit(toAnchorMessage(event, dropped));
       continue;
@@ -218,6 +221,10 @@ export function rebuildThreadMessages(
     }
   }
   repairOrphanCalls(out, sources);
+  if (externalSources) {
+    externalSources.length = 0;
+    externalSources.push(...sources);
+  }
   return out;
 }
 
@@ -259,6 +266,37 @@ function toAssistantMessage(event: Extract<SessionEvent, { type: 'model.usage' }
     files: event.files,
     usage: event.usage,
   };
+}
+
+function applyCompactionAnchor(
+  out: unknown[],
+  sources: number[],
+  event: Extract<SessionEvent, { type: 'compaction' }>,
+  boundaries: Map<string, number>,
+): number {
+  const key =
+    typeof event.coveredUntilRunId === 'string' && typeof event.coveredUntilSeq === 'number'
+      ? `${event.coveredUntilRunId}:${event.coveredUntilSeq}`
+      : null;
+  const boundaryIndex = key !== null ? (boundaries.get(key) ?? -1) : -1;
+  if (boundaryIndex < 0) {
+    const dropped = out.length;
+    out.length = 0;
+    sources.length = 0;
+    return dropped;
+  }
+  let write = 0;
+  for (let index = 0; index < out.length; index++) {
+    const source = sources[index] ?? -1;
+    if (source > boundaryIndex) {
+      out[write] = out[index];
+      sources[write] = source;
+      write += 1;
+    }
+  }
+  out.length = write;
+  sources.length = write;
+  return out.length - write;
 }
 
 function toAnchorMessage(

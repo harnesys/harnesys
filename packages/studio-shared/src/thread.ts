@@ -148,5 +148,9 @@ export type CompactThreadResponse =
         | 'already-covered'
         | 'no-cut-plan'
         | 'hook-blocked'
-        | 'empty-window';
+        | 'empty-window'
+        | 'breaker-open'
+        | 'rapid-refill'
+        | 'compaction-in-progress'
+        | 'cancelled';
     };

@@ -28,6 +28,25 @@ export async function truncateThreadHistory(
   return result;
 }
 
+export async function undoThreadCompaction(
+  deps: ThreadHistoryDeps,
+  threadId: string,
+): Promise<SessionEvent> {
+  await cancelActiveForTruncate(deps, threadId);
+  const events = await deps.events.listByThread(threadId);
+  let target: SessionEvent | undefined;
+  for (let index = events.length - 1; index >= 0; index--) {
+    if (events[index]?.type === 'compaction') {
+      target = events[index];
+      break;
+    }
+  }
+  if (!target || typeof target.threadSeq !== 'number') {
+    throw new ThreadValidationException('no compaction to undo');
+  }
+  return removeThreadHistoryEvent(deps, threadId, target.threadSeq);
+}
+
 export async function removeThreadHistoryEvent(
   deps: Pick<ThreadHistoryDeps, 'events' | 'sessions'>,
   threadId: string,

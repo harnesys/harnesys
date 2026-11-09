@@ -14,6 +14,7 @@ export function RunTurn({
   readOnly = false,
   inherited = false,
   branchChildren,
+  undoable = false,
 }: {
   run: FeedRun;
   runId: string;
@@ -24,6 +25,7 @@ export function RunTurn({
   readOnly?: boolean;
   inherited?: boolean;
   branchChildren?: BranchChild[];
+  undoable?: boolean;
 }) {
   const deletable = !streaming && !readOnly && !inherited ? errorEventOf(run) : undefined;
   return (
@@ -37,6 +39,7 @@ export function RunTurn({
         readOnly={readOnly}
         inherited={inherited}
         branchChildren={branchChildren}
+        undoable={undoable}
       />
       {run.error ? (
         <FailedMessageView

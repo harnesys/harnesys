@@ -81,6 +81,8 @@ class FakeExecutor extends LocalExecutorPort {
     return Promise.reject(new Error('not used'));
   }
   compact = (): Promise<never> => Promise.reject(new Error('not used'));
+  cancelCompact = (): Promise<never> => Promise.reject(new Error('not used'));
+  undoThreadCompact = (): Promise<never> => Promise.reject(new Error('not used'));
   drainMessageQueue = (): Promise<never> => Promise.reject(new Error('not used'));
   steerMessageQueue(): Promise<never> {
     return Promise.reject(new Error('not used'));

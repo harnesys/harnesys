@@ -8,7 +8,13 @@ import {
 import { type ReactNode, useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { Agent } from '@/entities/agent';
-import { isCompactRun, type RunFailure, useSessionStore, useThreadFeed } from '@/entities/session';
+import {
+  type FeedRun,
+  isCompactRun,
+  type RunFailure,
+  useSessionStore,
+  useThreadFeed,
+} from '@/entities/session';
 import { useThreadStore } from '@/entities/thread';
 import { useCompactingStore } from '@/features/compact-thread';
 import { scheduleMarkThreadRead, useThreadEvents } from '@/features/desk';
@@ -36,6 +42,15 @@ import {
 import { RunDivider } from './run-divider';
 
 const EMPTY_FAILURES: RunFailure[] = [];
+function lastCompactRunKey(runs: FeedRun[]): string | null {
+  for (let index = runs.length - 1; index >= 0; index--) {
+    const run = runs[index];
+    if (run && isCompactRun(run)) {
+      return run.key;
+    }
+  }
+  return null;
+}
 export type TriggerThreadKind = 'schedule' | 'webhook' | 'issue';
 export interface ThreadJournalProps {
   threadId: string;
@@ -72,6 +87,7 @@ export function ThreadJournal({ threadId, agent }: ThreadJournalProps) {
     const lastError = thread?.lastError ?? null;
     const showLaunchError =
       lastError !== null && !streaming && !compacting && (lastRun?.error ?? null) === null;
+    const undoableRunKey = !streaming && !compacting ? lastCompactRunKey(runs) : null;
     body = (
       <MessageScrollerProvider autoScroll>
         <MessageScroller>
@@ -94,6 +110,7 @@ export function ThreadJournal({ threadId, agent }: ThreadJournalProps) {
                       runId={run.runId ?? run.id ?? ''}
                       threadId={threadId}
                       streaming={runStreaming}
+                      undoable={undoableRunKey === run.key}
                       onRetry={
                         run.runId && last && !streaming && !compacting
                           ? () => void retryRun(threadId, run.runId ?? '').catch(() => {})
@@ -125,7 +142,9 @@ export function ThreadJournal({ threadId, agent }: ThreadJournalProps) {
               ) : null}
               {compacting && !compactLive ? (
                 <MessageScrollerItem key="compaction-pending" messageId="compaction-pending">
-                  <CompactionPendingCard />
+                  <CompactionPendingCard
+                    onCancel={() => useCompactingStore.getState().abort(threadId)}
+                  />
                 </MessageScrollerItem>
               ) : null}
               <LiveRunScrollGuard active={streaming || compacting} />

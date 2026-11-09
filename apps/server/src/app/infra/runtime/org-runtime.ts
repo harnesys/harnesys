@@ -22,6 +22,7 @@ import { createOrgRunStores } from './org-run-stores.ts';
 import type { OrgRuntime, OrgRuntimeDeps } from './org-runtime.types.ts';
 import { createAgentsResolve } from './org-runtime-agents.ts';
 import { compactThread } from './org-runtime-compact.ts';
+import { createOrgCompactGuard } from './org-runtime-compact-guard.ts';
 import { createOrgEventPublisher } from './org-runtime-publish.ts';
 import { createSteeringChannel, createThreadQueueDrainer } from './org-runtime-queue.ts';
 import { createRunTargetResolver } from './org-runtime-run-target.ts';
@@ -33,7 +34,11 @@ import { recoverOrphanedRuns } from './recover-orphaned-runs.ts';
 import { recoverStaleWorktrees } from './recover-stale-worktrees.ts';
 import { SqliteRuntimeState } from './sqlite-runtime-state.adapter.ts';
 import { threadSessionKey } from './thread-session-key.ts';
-import { removeThreadHistoryEvent, truncateThreadHistory } from './truncate-thread-state.ts';
+import {
+  removeThreadHistoryEvent,
+  truncateThreadHistory,
+  undoThreadCompaction,
+} from './truncate-thread-state.ts';
 import { sweepWaitTimers, type ThreadSessionRef } from './wait-ticker.ts';
 import { reconcileWorkspaces, type ThreadBinding } from './workspace-target.ts';
 
@@ -255,14 +260,8 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     worktreeBindings,
     kick: runControl.kick,
   });
-  return {
-    orgId: deps.orgId,
-    lifecycle: runLifecycle,
-    events: runEvents,
-    feed,
-    sessionFor,
-    send: (input) => sendThreadMessage(runControl, input),
-    compact: (threadId) => {
+  const compactGuard = createOrgCompactGuard({
+    runCompact: (threadId, guardSignal) => {
       const thread = deps.threads.findById(deps.orgId, threadId);
       const agentId =
         thread === undefined
@@ -280,8 +279,25 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
           resolveRunTarget,
         },
         threadId,
+        guardSignal,
       );
     },
+    undo: (threadId) =>
+      undoThreadCompaction(
+        { lifecycle: runLifecycle, events: runEvents, sessions: threadSessions, sessionFor },
+        threadId,
+      ),
+  });
+  return {
+    orgId: deps.orgId,
+    lifecycle: runLifecycle,
+    events: runEvents,
+    feed,
+    sessionFor,
+    send: (input) => sendThreadMessage(runControl, input),
+    compact: (threadId, signal) => compactGuard.compact(threadId, signal),
+    cancelCompact: (threadId) => compactGuard.cancelCompact(threadId),
+    undoThreadCompact: (threadId) => compactGuard.undoThreadCompact(threadId),
     drainMessageQueue,
     cancel: (runId) =>
       cancelThreadRun({ ...runControl, abortRun: (id) => engine.abort(id) }, runId),

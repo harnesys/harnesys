@@ -16,12 +16,7 @@ import { useThreadStore } from '@/entities/thread';
 import { useCompactingStore } from '@/features/compact-thread';
 import { scheduleMarkThreadRead } from '@/features/desk';
 import { useOpenSpawnTab } from '@/features/ide';
-import {
-  dismissFailure,
-  onRevealMessageRequest,
-  onScrollToEndRequest,
-  retryRun,
-} from '@/features/send-message';
+import { dismissFailure, onScrollToEndRequest, retryRun } from '@/features/send-message';
 import { subscribeAutoRead } from '@/shared/api/voice-prefs';
 import { prefersReducedMotion } from '@/shared/lib/motion';
 import { Button } from '@/shared/ui/button';
@@ -51,6 +46,12 @@ import { ForkSeparator } from './fork-separator';
 import { LiveStatusBar } from './live-status-bar';
 import { RunTurn } from './run-turn';
 import { ThreadEmpty } from './thread-empty';
+import {
+  groupBranchChildren,
+  registerRevealRequest,
+  undoableRunKeyOf,
+  useThreadFeedBoundary,
+} from './thread-panel-aux';
 import { UnseenSeparator } from './unseen-separator';
 
 const EMPTY_FAILURES: RunFailure[] = [];
@@ -111,44 +112,17 @@ export function ThreadPanel({
   const synced = useSyncedThread(active ? threadId : null, agent.orgId);
   const unseenBoundary = useUnseenBoundary(threadId, active, Boolean(thread?.unread), eventsCount);
   const branchChildrenByRun = active
-    ? (() => {
-        const children = allThreads.filter((item) => item.parentThreadId === threadId);
-        if (children.length === 0) {
-          return EMPTY_BRANCH_CHILDREN;
-        }
-        const grouped: Record<string, BranchChild[]> = {};
-        for (const child of children) {
-          if (!child.forkAt) {
-            continue;
-          }
-          const group = grouped[child.forkAt];
-          if (group) {
-            group.push({ id: child.id, agentId: child.agentId, title: child.title });
-          } else {
-            grouped[child.forkAt] = [{ id: child.id, agentId: child.agentId, title: child.title }];
-          }
-        }
-        return grouped;
-      })()
+    ? groupBranchChildren(allThreads, threadId)
     : EMPTY_BRANCH_CHILDREN;
   const failures = active
     ? allFailures.filter((item) => item.threadId === threadId)
     : EMPTY_FAILURES;
+  useThreadFeedBoundary(threadId, active, inheritedCount);
   useEffect(() => {
     if (!active) {
       return;
     }
-    useSessionStore.getState().setThreadFeedBoundary(threadId, inheritedCount);
-  }, [active, threadId, inheritedCount]);
-  useEffect(() => {
-    if (!active) {
-      return;
-    }
-    return onRevealMessageRequest((targetThreadId, messageId) => {
-      if (targetThreadId === threadId) {
-        setRevealState({ threadId, key: messageId });
-      }
-    });
+    return registerRevealRequest(threadId, setRevealState);
   }, [active, threadId]);
   useEffect(() => {
     if (!streaming && revealState.key !== null) {
@@ -157,6 +131,7 @@ export function ThreadPanel({
   }, [streaming, threadId, revealState.key]);
   const inheritedRuns = feeds?.inherited.runs ?? EMPTY_RUNS;
   const ownRuns = feeds?.own.runs ?? EMPTY_RUNS;
+  const undoableRunKey = undoableRunKeyOf(streaming, compacting, ownRuns);
   const threadEvents = useSessionStore((state) => state.events[threadId] ?? EMPTY_EVENTS);
   const coverage = compactionCoverage(threadEvents);
   const dividerIndex = firstLiveRunIndex(inheritedRuns, ownRuns, coverage.boundaryIndex);
@@ -275,6 +250,7 @@ export function ThreadPanel({
                         onOpenSpawn={onOpenSpawn}
                         streaming={runStreaming}
                         branchChildren={branchChildrenByRun[forkAt]}
+                        undoable={undoableRunKey === run.key}
                         onRetry={
                           run.runId && last && !streaming && !compacting
                             ? () => void retryRun(threadId, run.runId ?? '').catch(() => {})
@@ -297,7 +273,9 @@ export function ThreadPanel({
             ))}
             {compacting && !compactLive ? (
               <MessageScrollerItem key="compaction-pending" messageId="compaction-pending">
-                <CompactionPendingCard />
+                <CompactionPendingCard
+                  onCancel={() => useCompactingStore.getState().abort(threadId)}
+                />
               </MessageScrollerItem>
             ) : null}
           </MessageScrollerContent>
