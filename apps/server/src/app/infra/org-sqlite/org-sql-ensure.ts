@@ -54,6 +54,7 @@ import {
   migrateThreadsInheritedEventCount,
   migrateUsageTable,
 } from './org-sql.ts';
+import { ensureAppsSchema } from './org-sql-apps.ts';
 import { CREATE_CONNECTORS_SQL } from './org-sql-connectors.ts';
 import {
   CREATE_INVITES_INDEX_SQL,
@@ -85,44 +86,15 @@ import {
   backfillIntegrationsFromSources,
   CREATE_INTEGRATIONS_SQL,
 } from './org-sql-integrations.ts';
+import {
+  type ColumnInfo,
+  migrateIssuesBranchColumns,
+  migrateModePresetToolColumns,
+  migrateRunsAttributionColumns,
+  migrateThreadsBindingColumns,
+  migrateTriggerOwnerColumns,
+} from './org-sql-migrations.ts';
 import { CREATE_PERMISSION_RULES_SQL, migratePermissionRules } from './org-sql-permission-rules.ts';
-
-interface ColumnInfo {
-  name: string;
-}
-
-function migrateThreadsBindingColumns(
-  exec: (sql: string) => void,
-  all: (sql: string) => ColumnInfo[],
-): void {
-  const present = new Set(all('PRAGMA table_info(threads)').map((col) => col.name));
-  const columns = [
-    { name: 'run_profile_id', ddl: 'TEXT' },
-    { name: 'run_directory', ddl: 'TEXT' },
-  ];
-  for (const column of columns) {
-    if (!present.has(column.name)) {
-      exec(`ALTER TABLE threads ADD COLUMN ${column.name} ${column.ddl}`);
-    }
-  }
-}
-
-function migrateRunsAttributionColumns(
-  exec: (sql: string) => void,
-  all: (sql: string) => ColumnInfo[],
-): void {
-  const present = new Set(all('PRAGMA table_info(runs)').map((col) => col.name));
-  const columns = [
-    { name: 'started_by_user_id', ddl: 'TEXT' },
-    { name: 'via', ddl: `TEXT NOT NULL DEFAULT 'direct'` },
-    { name: 'on_node_id', ddl: 'TEXT' },
-  ];
-  for (const column of columns) {
-    if (!present.has(column.name)) {
-      exec(`ALTER TABLE runs ADD COLUMN ${column.name} ${column.ddl}`);
-    }
-  }
-}
 
 export function migrateAgentMemoryConsolidationColumns(
   exec: (sql: string) => void,
@@ -187,59 +159,6 @@ export function migrateOrgMemorySettingsModelColumns(
   exec('ALTER TABLE org_memory_settings DROP COLUMN embed_model');
 }
 
-function migrateModePresetToolColumns(
-  exec: (sql: string) => void,
-  all?: (sql: string) => ColumnInfo[],
-): void {
-  if (!all) {
-    return;
-  }
-  const present = new Set(all('PRAGMA table_info(mode_presets)').map((col) => col.name));
-  if (present.size === 0) {
-    return;
-  }
-  const columns = [
-    { name: 'disabled_tools_json', ddl: `TEXT NOT NULL DEFAULT '[]'` },
-    { name: 'exposure_json', ddl: `TEXT NOT NULL DEFAULT '{}'` },
-  ];
-  for (const column of columns) {
-    if (!present.has(column.name)) {
-      exec(`ALTER TABLE mode_presets ADD COLUMN ${column.name} ${column.ddl}`);
-    }
-  }
-}
-
-function migrateTriggerOwnerColumns(
-  exec: (sql: string) => void,
-  all: (sql: string) => ColumnInfo[],
-): void {
-  for (const table of ['schedules', 'webhooks']) {
-    const present = new Set(all(`PRAGMA table_info(${table})`).map((col) => col.name));
-    if (present.size > 0 && !present.has('created_by_user_id')) {
-      exec(`ALTER TABLE ${table} ADD COLUMN created_by_user_id TEXT`);
-    }
-  }
-}
-
-function migrateIssuesBranchColumns(
-  exec: (sql: string) => void,
-  all: (sql: string) => ColumnInfo[],
-): void {
-  const present = new Set(all('PRAGMA table_info(issues)').map((col) => col.name));
-  if (present.size === 0) {
-    return;
-  }
-  const columns = [
-    { name: 'branch', ddl: 'TEXT' },
-    { name: 'worktree_on_status', ddl: 'TEXT' },
-  ];
-  for (const column of columns) {
-    if (!present.has(column.name)) {
-      exec(`ALTER TABLE issues ADD COLUMN ${column.name} ${column.ddl}`);
-    }
-  }
-}
-
 export function ensureOrgSchema(
   exec: (sql: string) => void,
   all?: (sql: string) => ColumnInfo[],
@@ -261,6 +180,7 @@ export function ensureOrgSchema(
   exec(CREATE_INTEGRATION_EVENTS_DELIVERY_IDX_SQL);
   exec(CREATE_INTEGRATION_OAUTH_SESSIONS_SQL);
   exec(CREATE_INTEGRATION_OAUTH_SESSIONS_IDX_SQL);
+  ensureAppsSchema(exec);
   exec(CREATE_LLM_PROVIDERS_SQL);
   exec(CREATE_LLM_MODELS_SQL);
   exec(CREATE_AGENTS_SQL);

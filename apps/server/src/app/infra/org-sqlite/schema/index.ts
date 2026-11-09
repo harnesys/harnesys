@@ -34,6 +34,14 @@ export {
   approvalsTable,
 } from './approvals.ts';
 export {
+  type AppAccountInsertRow,
+  type AppAccountRow,
+  type AppInsertRow,
+  type AppRow,
+  appAccountsTable,
+  appsTable,
+} from './apps.ts';
+export {
   type AttachmentInsert,
   type AttachmentRow,
   attachmentsTable,

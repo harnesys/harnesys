@@ -1,4 +1,5 @@
 import {
+  AppWindowIcon,
   BellIcon,
   BlocksIcon,
   BoxesIcon,
@@ -44,6 +45,7 @@ export const WINDOW_SETTINGS_CATEGORIES = [
   'profiles',
   'providers',
   'connectors',
+  'apps',
   'secrets',
   'general',
   'members',
@@ -195,6 +197,12 @@ export const WINDOW_SETTINGS_GROUPS: SettingsNavGroup[] = [
     id: 'integrations',
     label: 'Integrations',
     items: [
+      {
+        id: 'apps',
+        label: 'Apps',
+        description: 'Provider applications and connected accounts shared by add-ons.',
+        icon: AppWindowIcon,
+      },
       {
         id: 'providers',
         label: 'Providers',

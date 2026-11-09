@@ -1,6 +1,7 @@
 import { APP_GUARD, Module } from '@harnesys/brix';
 import { AgentUseCaseModule } from '../application/agents/agent.use-case.module.ts';
 import { ApprovalUseCaseModule } from '../application/approvals/approval.use-case.module.ts';
+import { AppsUseCaseModule } from '../application/apps/apps.use-case.module.ts';
 import { AutomationUseCaseModule } from '../application/automations/automation.use-case.module.ts';
 import { CapabilitiesUseCaseModule } from '../application/capabilities/capabilities.use-case.module.ts';
 import { ConnectorUseCaseModule } from '../application/connectors/connector.use-case.module.ts';
@@ -52,10 +53,13 @@ import { SkillsModule } from '../infra/skills/skills.module.ts';
 import { SourceWatchModule } from '../infra/source/source-watch.module.ts';
 import { TerminalModule } from '../infra/terminal/terminal.module.ts';
 import { SessionGuard } from './guards/session.guard.ts';
+import { AccountsController } from './rest/accounts.controller.ts';
 import { AddonsController } from './rest/addons.controller.ts';
 import { AgentHooksController } from './rest/agent-hooks.controller.ts';
 import { AgentsController } from './rest/agents.controller.ts';
+import { AppKindsController } from './rest/app-kinds.controller.ts';
 import { ApprovalsController } from './rest/approvals.controller.ts';
+import { AppsController } from './rest/apps.controller.ts';
 import { AuditController } from './rest/audit.controller.ts';
 import { AutomationsController } from './rest/automations.controller.ts';
 import { BoardsController } from './rest/boards.controller.ts';
@@ -165,6 +169,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     BrowserUseCaseModule,
     ThreadUseCaseModule,
     ApprovalUseCaseModule,
+    AppsUseCaseModule,
     AutomationUseCaseModule,
     ScheduleUseCaseModule,
     TeamsUseCaseModule,
@@ -195,6 +200,9 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     IntegrationsGithubController,
     IntegrationsController,
     IntegrationRoutesController,
+    AppKindsController,
+    AppsController,
+    AccountsController,
     FleetController,
     FleetCloudController,
     FleetNodesController,

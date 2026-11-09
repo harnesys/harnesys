@@ -120,7 +120,6 @@
 | Семейство | Что описывает | Кто исполняет | Статус в v1 |
 |---|---|---|---|
 | `config` | поля настроек | хост рендерит | стабильно |
-| `app-kind` | вид «App»: поля, секреты, способ проверки | хост хранит, аддон валидирует | стабильно |
 | `route` | HTTP под `/orgs/:orgId/addons/:id/*` | хост проксирует | стабильно |
 | `tool-pack` | pack: имя, spec, список тулов | ядро назначает, аддон исполняет | стабильно |
 | `trigger` | вид триггера + схема конфига + лимиты | ядро диспетчеризует, аддон детектит | стабильно |
@@ -131,6 +130,8 @@
 | `hook` | подписка на событие | шина ядра | стабильно |
 | `view` | декларативные секции страницы аддона | рендерер ядра | стабильно (декларативный) |
 | `mcp`, `lsp` | дескрипторы | реестры ядра | стабильно |
+
+Apps/Accounts — не семейство вкладов и не аддон: это сущность ядра (§5), аддоны её потребляют.
 
 Удаляется из v1: `tool` (по одному тулу) — заменяется на `tool-pack`, потому что единица назначения в ядре — pack (`pack.ts:27,35`), и pack несёт spec, skills, иконку, настройки. Одиночный тул не может быть назначен агенту.
 
@@ -347,62 +348,78 @@ create table accounts (
 
 ### 5.3 Правила владения
 
-- **Ядро**: хранение, секреты (по ref), уникальность, статусы, life-cycle, каскадное удаление, аудит, проверка прав.
-- **Аддон**: как получить (OAuth loopback, MTProto login, BotFather), как проверить живость, что делать с токеном.
-- Ядро **не знает** ни одного `kind`: список видов приходит вкладом `app-kind` (поля, признак «секретное», необязательный validate-обработчик).
-- Добавление провайдера = вклад, не правка ядра.
+- **Ядро**: список видов приложений (дескриптор полей и признака «секретное»), хранение app/account, секреты по ref, уникальность `(kind, externalAccountId, scopeKey)`, статусы, life-cycle, каскадное удаление, аудит, проверка прав.
+- **Аддон — потребитель**: получает `appId`/`accountId`, выбирает аккаунт по scope и пользуется доступом; client id, api_hash и токены у себя не хранит.
+- Поток подключения (OAuth loopback, manifest, MTProto login) — маршрут аддона, аккаунт он создаёт через `POST /accounts`, а не пишет в `org.db` напрямую.
+- Новый провайдер = строка в каталоге видов ядра (`app-kind.catalog.ts`), не новый аддон и не новый литерал в union.
 
 ### 5.4 API
 
 ```
-GET    /orgs/:orgId/apps                  → список приложений (без секретов)
-POST   /orgs/:orgId/apps                  → создание (values + secrets по полям дескриптора)
-DELETE /orgs/:orgId/apps/:id              → каскад: снять accounts, удалить их секреты
-GET    /orgs/:orgId/accounts?kind=&appId= → подключённые аккаунты и статусы
+GET    /orgs/:orgId/app-kinds              → дескрипторы видов (поля, что из них секретное)
+GET    /orgs/:orgId/apps?kind=             → список приложений (без секретов, только имена секретных полей)
+POST   /orgs/:orgId/apps                   → создание (values + secrets по полям дескриптора)
+GET    /orgs/:orgId/apps/:id               → одно приложение
+PATCH  /orgs/:orgId/apps/:id               → правка, ротация секретов (пустая строка удаляет)
+DELETE /orgs/:orgId/apps/:id               → каскад: снять accounts, удалить их секреты
+GET    /orgs/:orgId/accounts?kind=&appId=  → подключённые аккаунты и статусы
+POST   /orgs/:orgId/accounts               → регистрация или переподключение по (kind, externalAccountId, scopeKey)
+GET    /orgs/:orgId/accounts/:id
+PATCH  /orgs/:orgId/accounts/:id           → label, status, lastError от аддона
 DELETE /orgs/:orgId/accounts/:id
 ```
 
-Поток подключения выполняет аддон по своему маршруту: `POST /orgs/:orgId/addons/google-app/oauth/start` → пользователь авторизуется → аддон вызывает `connections.registerAccount({appId, externalAccountId, scopes, secretRef})`. Так каждая интеграция получает свой flow, но общий реестр — как и требует `AGENTS.md`.
+Поток подключения выполняет аддон по своему маршруту: `POST /orgs/:orgId/addons/google-calendar/oauth/start` → пользователь авторизуется → аддон регистрирует аккаунт через `POST /orgs/:orgId/accounts` с `appId`, `externalAccountId`, `scopes` и `credentials`. Флоу у каждого аддона свой, реестр один.
 
 ---
 
 ## 6. Декомпозиция интеграций
 
-Правило деления: один аддон = один вид вклада в одном домене ядра. Аддон, который «умеет всё про Google», ломает и назначение паков, и права, и UI.
+Правило деления: один аддон = один вид вклада в одном домене ядра, а доступ к провайдеру он берёт из Apps и сам его не заводит. Аддон, который «умеет всё про Google», ломает и назначение паков, и права, и UI.
 
-### 6.1 Telegram → 3 аддона (+2 позже)
+### 6.1 Telegram → 2 аддона (+2 позже)
 
 | Аддон | Вклад | Что переносим | Откуда |
 |---|---|---|---|
-| `telegram-app` | `app-kind: telegram-mtproto`, `route` | api_id/api_hash, вход по телефону/коду/паролю, хранение session | `packages/integration-telegram/src/readers.ts`, `telegram/runtime.ts`, `auth/login-sessions.ts` |
 | `telegram-feed` | `trigger: telegram.feed`, `worker`, `view` | источники, правила фильтрации, инgest, диспетчеризация | `packages/integration-telegram/src/{sources,feed,db,publish,routes}.ts` |
 | `telegram-bot` | `transport: telegram`, `route` | Bot API, pairing, топики, публикация | `infra/connector/*` (15 файлов), `application/connectors/*` (46 файлов, из них мост остаётся в ядре) |
 | `telegram-bot-outbound` / `-inbound` | split `telegram-bot` | — | позже, id вкладов закладываем сразу (`telegram.bot.*`) |
 
-Ключевое: `telegram-app` — не «ещё одна форма», а один App на организацию, из которого `telegram-feed` и `telegram-bot` выбирают готовый аккаунт. Сегодня форма читателя собирает api_id/phone заново (`readers.ts:40`), и это повторяется в каждой инсталляции.
+MTProto-сессия — не аддон, а аккаунт вида `telegram-mtproto` в Apps: `telegram-feed` выбирает готовый аккаунт и не спрашивает api_id/phone (`readers.ts:40`), а вход по телефону/коду/паролю выполняет его собственный маршрут поверх `infra/integration/telegram`-файлов, переезжающих в аддон.
 
-### 6.2 Google → 6 аддонов
+### 6.2 Google → 5 аддонов
 
 | Аддон | Вклад | Что переносим | Откуда |
 |---|---|---|---|
-| `google-app` | `app-kind: google-cloud-project`, `route` | OAuth loopback, выбор scope, регистрация аккаунта | `infra/integration/google/*` (11 файлов), `application/integration/*google*` (5 use-case) |
 | `google-drive-sources` | `source-kind: cloud-drive` | Drive API, экспорт документов | `source/drivers/cloud/google-drive.backend.ts:26`, `cloud-sync-back.ts:90,121` |
 | `google-calendar` | `tool-pack: google-calendar` | календарь | `runtime/packs/org-google*.port.ts` (часть) |
 | `google-gmail` | `tool-pack: google-gmail` | почта, вложения | там же |
 | `google-sheets-docs` | `tool-pack: google-sheets-docs` | Sheets, Docs, Search Console | там же + `docs-api.ts`, `sheets-api.ts`, `searchconsole-api.ts` |
 | `google-youtube` | `tool-pack: google-youtube` | видео, плейлисты, комментарии, аналитика | `youtube-*.ts` |
 
-Следствия: `GoogleOAuthServiceSchema` (`integrations.ts:212`) и refine про YouTube (`:223`) переезжают в дескриптор `google-app`; `backend: z.literal('google')` (`source.ts:12`, `:228`) заменяется на строку `backend: string` с реестром; `OrgGooglePort` (286 строк, ~40 методов) распадается по пакам.
+Следствия: `GoogleOAuthServiceSchema` (`integrations.ts:212`) и refine про YouTube (`:223`) распадаются на scope-наборы аккаунтов (§5.2, `scope_key`), а OAuth loopback переезжает в маршрут первого Google-аддона; `backend: z.literal('google')` (`source.ts:12`, `:228`) заменяется на строку `backend: string` с реестром; `OrgGooglePort` (286 строк, ~40 методов) распадается по пакам.
 
-### 6.3 GitHub → 3 аддона
+### 6.3 GitHub → 2 аддона
 
 | Аддон | Вклад | Что переносим | Откуда |
 |---|---|---|---|
-| `github-app` | `app-kind: github-app`, `route` (public callbacks + webhook) | manifest flow, установки, JWT, installation tokens | `infra/integration/github/*` (12 файлов), `application/integration/github-*` (10 файлов) |
 | `github-tools` | `tool-pack: github` | repos, issues, PR, CI, code search | `runtime/packs/org-github.port.ts` (281 строка) |
 | `github-git-credentials` | `route` + резолвер кредов для git | `git-credential`, токен для clone/push | `integrations-github.controller.ts` (public route), `github-token.adapter.ts` |
 
-Сегодня git-креды выдаёт публичный маршрут ядра `/integrations/github/git-credential` — провайдер протёк в URL-пространство ядра. Шов: ядро спрашивает `GitCredentialResolver.resolve(accountId)`, какой аддон это обслуживает — не дело ядра.
+Сегодня git-креды выдаёт публичный маршрут ядра `/integrations/github/git-credential` — провайдер протёк в URL-пространство ядра. Шов: ядро спрашивает `GitCredentialResolver.resolve(accountId)`, какой аддон это обслуживает — не дело ядра. Manifest flow и установки GitHub App — не отдельный аддон: приложение создаётся в Apps, а установка становится её аккаунтом (`infra/integration/github/*`, 12 файлов, переезжают в маршрут `github-tools`).
+
+### 6.4 Apps — ядро, аддоны — потребители
+
+Apps не входит в §6.1–6.3: это не аддон, а сущность ядра (§5.1–5.4). Аддон приносит функциональность и получает доступ через аккаунт этой сущности:
+
+| Что делает аддон | Через что |
+|---|---|
+| выбрать приложение и аккаунт | `GET /apps`, `GET /accounts?kind=` |
+| провести свой флоу подключения | собственный `route`, затем `POST /accounts` |
+| получить секрет по ref | `secret.resolve` (S3) после проверки принадлежности ref |
+| сообщить, что доступ протух | `PATCH /accounts/:id` — `status`, `lastError` |
+
+Правило проверки: если для работы нужен client id, api_hash или installation id — это Apps, ядро уже хранит; аддон не заводит вторую форму с теми же полями.
 
 ---
 
@@ -431,9 +448,10 @@ DELETE /orgs/:orgId/accounts/:id
 
 ### Этап 2 — Apps/Accounts (S2)
 
-- Таблицы `apps`, `accounts` в схеме `org.db`, порты `AppsPort`/`AccountsPort`, REST из §5.4, generic-форма по дескриптору `app-kind`.
-- Первый потребитель — `google-app` (он проще Telegram-логина) **или** `github-app` (уже есть manifest flow). Легаси не трогаем: старые `cloud:google-client` и `github-app.json` продолжают работать.
-- Выход: аддон создаёт App, проводит flow, регистрирует Account, ядро отдаёт `secret.resolve`.
+- Таблицы `apps`, `app_accounts` в схеме `org.db`, порты `AppRegistryPort`/`AppKindRegistryPort`, REST из §5.4, generic-форма по дескриптору вида.
+- Сделано: `infra/apps/*`, `application/apps/*`, `api/rest/{apps,app-kinds,accounts}.controller.ts` — хранение, секреты по полям, `scope_key`, каскад.
+- Осталось: потребители — `google-calendar` (OAuth loopback) **или** `github-tools` (manifest flow уже есть). Легаси не трогаем: `cloud:google-client` и `github-app.json` продолжают работать.
+- Выход: аддон находит App, проводит flow, регистрирует Account, ядро отдаёт `secret.resolve`.
 
 ### Этап 3 — pack и trigger (S5, S6)
 
@@ -443,7 +461,7 @@ DELETE /orgs/:orgId/accounts/:id
 
 ### Этап 4 — пилот Telegram (S1, S3, S4, S9)
 
-- `telegram-app` + `telegram-feed`, переключатель по виду автоматизации (§7.4).
+- `telegram-feed`, переключатель по виду автоматизации (§7.4).
 - Обе реализации живут одновременно; данные — в разных файлах, dual-write не нужен.
 - Выход: те же поведенческие проверки на обеих реализациях (см. §8), карточка автоматизации одна.
 
@@ -454,8 +472,8 @@ DELETE /orgs/:orgId/accounts/:id
 
 ### Этап 6 — Google и GitHub
 
-- `google-app` → `google-drive-sources` → паки по одному (`calendar`, `gmail`, `sheets-docs`, `youtube`).
-- `github-app` + `github-git-credentials` → снятие публичного маршрута из ядра.
+- `google-calendar` → `google-drive-sources` → паки по одному (`gmail`, `sheets-docs`, `youtube`); каждый берёт аккаунт из Apps.
+- `github-tools` + `github-git-credentials` → снятие публичного маршрута из ядра.
 - Выход: ни одного `if (provider === …)` в ядре; ни одного провайдер-литерала в контрактах, кроме исторических значений в данных.
 
 ### Этап 7 — удаление легаси
@@ -509,7 +527,7 @@ kinds.filter((kind) => !legacyOff.has(kind.kind));
 1. **Dependency Rule.** Новый аддон импортирует только `@harnesys/sdk`; `harnesys` и `@harnesys/contracts` ему недоступны. В ядре нет ни одного импорта аддона — вклады приходят данными через реестр. Легаси `harnesys/integration` изолирован и умирает на этапе 7.
 2. **Циклы.** `sdk → (ничего)`, `server infra/addons → sdk`, `add-ons/* → sdk`. `apps/webui` получает дескрипторы по REST, не импортирует аддоны.
 3. **Один писатель.** Для feed — переключатель по виду автоматизации; для бота — поле `runtime` в коннекторе. Двух писателей одновременно не бывает ни в одном сценарии.
-4. **Мёртвые швы.** Ни один шов не открывается «на будущее»: на каждый есть аддон в §6. Остались только §3.3 — и на каждый там указано, почему дешевле сейчас.
+4. **Мёртвые швы.** Ни один шов не открывается «на будущее»: на каждый есть аддон в §6, кроме S2 — её закрывает Apps (§5), а не аддон. Остались только §3.3 — и на каждый там указано, почему дешевле сейчас.
 5. **Необратимые решения.** Их пять: протокол v1, `Apps`/`Accounts`, гранты, `tool-pack` вместо `tool`, разделение «мост в ядре / протокол в аддоне». Всё остальное (имена аддонов, split бота, порядок Google-паков) меняется без переписывания.
 6. **Что проверить до старта.** (а) `add-ons/starter` действительно проходит enable после D1–D7 — иначе этап 1 не закрыт; (б) `resolveIntegrationRoute` переносится в SDK без импорта ядра; (в) SQLite аддона доступна только через `db.*` и не имеет пути к `org.db`; (г) отключение аддона не оставляет процессов (`addon-host.ts:116` → `worker.stop`).
 7. **Чего план не покрывает.** Публикация/маркетплейс, подпись бандлов, миграция версий аддонов, флот (размещение резидентных аддонов). Это не блокеры для Telegram/Google/GitHub и не должно попадать в первые 10 коммитов.
@@ -523,6 +541,6 @@ kinds.filter((kind) => !legacyOff.has(kind.kind));
 3. **PR-3:** D3 + D4 (маршруты с `:param`, `secret.resolve`).
 4. **PR-4:** D6 + D7 (allowlist окружения, host-driven worker) — до первого аддона, который держит долгоживущий цикл.
 5. **PR-5:** `docs/addons/07-addon-contract-v1.md` — то, что читает автор аддона, и то, на что ссылаются все дальнейшие PR.
-6. Решение по `Apps`/`Accounts` (§5) принять **до** написания `telegram-app`: это единственный шов, который нельзя ввести позже без миграции кредов трёх провайдеров.
+6. Решение по `Apps`/`Accounts` (§5) принять **до** написания `telegram-feed`: это единственный шов, который нельзя ввести позже без миграции кредов трёх провайдеров.
 
-Дальше — этап 2 и пилот `telegram-app` + `telegram-feed`. Бот и Google идут после, потому что зависят от транспорта и `source-kind` соответственно.
+Дальше — этап 2 (Apps уже в коде) и пилот `telegram-feed`. Бот и Google идут после, потому что зависят от транспорта и `source-kind` соответственно.
