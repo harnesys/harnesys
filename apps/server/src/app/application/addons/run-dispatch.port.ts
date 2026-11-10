@@ -9,9 +9,16 @@ export interface RunDispatchInput {
   text: string;
   runKey?: string;
   correlationId?: string;
+  payload?: unknown;
   signal?: AbortSignal;
 }
 
+export interface RunDispatchResult {
+  outcome: RunDispatchOutcome;
+  /** Host-side run id of the accepted run; null when nothing was started. */
+  runId: string | null;
+}
+
 export abstract class RunDispatchPort {
-  abstract dispatch(input: RunDispatchInput): Promise<RunDispatchOutcome>;
+  abstract dispatch(input: RunDispatchInput): Promise<RunDispatchResult>;
 }

@@ -14,6 +14,7 @@ import { AddonException } from '../../domain/addons/errors.ts';
 import { AddonCallPort } from '../../domain/addons/ports/addon-call.port.ts';
 import type { AddonRouteMatch } from '../../domain/addons/ports/route-table.port.ts';
 import { AddonRouteTablePort } from '../../domain/addons/ports/route-table.port.ts';
+import { routeSchemaIssues } from '../../domain/addons/route-body-schema.ts';
 import { authorize } from '../../domain/identity/authorize.ts';
 import type { Principal } from '../../domain/identity/principal.ts';
 import { OrgAccessGuard } from '../guards/org-access.guard.ts';
@@ -91,7 +92,26 @@ export class AddonRoutesController {
       throw new AddonException('not_found', 404, `Addon route not found: ${method} /${subPath}`);
     }
     this.assertRole(resolved, callerRole);
+    if (resolved.role === 'admin' && resolved.exposure === 'public') {
+      throw new AddonException(
+        'permission_denied',
+        403,
+        `Route ${method} /${subPath} combines admin role with public exposure, which is not allowed`,
+      );
+    }
     const body = await this.readBody(request, resolved.bodyLimitKb);
+    if (body !== undefined && resolved.requestSchema !== undefined) {
+      const issues = routeSchemaIssues(body, resolved.requestSchema);
+      if (issues.length > 0) {
+        throw new AddonException(
+          'invalid_params',
+          400,
+          `Request body does not match the route schema: ${issues
+            .map((issue) => `${issue.path}: ${issue.message}`)
+            .join('; ')}`,
+        );
+      }
+    }
     const result = await this.calls.callRoute(orgId, addonId, {
       routeId: resolved.routeId,
       request: {

@@ -149,6 +149,14 @@ export class AddonCallService extends AddonCallPort {
         params,
         timeoutMs,
         opts?.signal,
+        opts?.principal || opts?.agentId || opts?.threadId || opts?.runId
+          ? {
+              principal: opts?.principal,
+              agentId: opts?.agentId,
+              threadId: opts?.threadId,
+              runId: opts?.runId,
+            }
+          : undefined,
       );
       this.assertSameGeneration(snapshot, orgId, addonId);
       return result;

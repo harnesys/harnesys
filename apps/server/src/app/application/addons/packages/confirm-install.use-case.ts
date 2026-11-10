@@ -74,7 +74,9 @@ export class ConfirmInstallUseCase {
 
   private writeLock(pkg: InstalledAddonPackage): void {
     const lock = this.catalog.readLock();
-    const rest = lock.entries.filter((entry) => entry.id !== pkg.id);
+    const rest = lock.entries.filter(
+      (entry) => entry.id !== pkg.id || entry.version !== pkg.version,
+    );
     this.catalog.writeLock({
       entries: [
         ...rest,

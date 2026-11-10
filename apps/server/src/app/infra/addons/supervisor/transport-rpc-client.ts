@@ -4,6 +4,8 @@ import type { AddonTransportPort } from '../../../domain/addons/ports/addon-tran
 
 export interface TransportRpcOptions {
   readonly transport: AddonTransportPort;
+  /** Locale stamped into params._meta (§6.3); defaults to 'en'. */
+  readonly locale?: string;
   handleRequest: (line: string, message: JsonRpcRequest) => Promise<string | null>;
   handleNotification: (line: string, message: JsonRpcNotification) => void;
 }
@@ -20,6 +22,57 @@ interface IdleWaiter {
 }
 
 const INTERNAL_ERROR_CODE = -32000;
+const NOTIFY_DEADLINE_MS = 30_000;
+
+interface CallMetaStamp {
+  correlationId: string;
+  deadline: number;
+  principal: { type: 'agent' | 'user' | 'system'; id?: string };
+  locale: string;
+  agentId?: string;
+  threadId?: string;
+  runId?: string;
+}
+
+export interface RpcCallMeta {
+  principal?: { type: 'agent' | 'user' | 'system'; id?: string };
+  agentId?: string;
+  threadId?: string;
+  runId?: string;
+}
+
+function isCallMeta(value: unknown): boolean {
+  return typeof value === 'object' && value !== null && 'correlationId' in value;
+}
+
+/** Stamps params._meta (§6.3) unless the caller already supplied one. */
+function withCallMeta(
+  params: unknown,
+  timeoutMs: number,
+  locale: string,
+  overrides?: RpcCallMeta,
+): unknown {
+  const base = (params ?? {}) as Record<string, unknown>;
+  if (isCallMeta(base._meta)) {
+    return base;
+  }
+  const meta: CallMetaStamp = {
+    correlationId: crypto.randomUUID(),
+    deadline: Date.now() + timeoutMs,
+    principal: overrides?.principal ?? { type: 'system' },
+    locale,
+  };
+  if (overrides?.agentId !== undefined) {
+    meta.agentId = overrides.agentId;
+  }
+  if (overrides?.threadId !== undefined) {
+    meta.threadId = overrides.threadId;
+  }
+  if (overrides?.runId !== undefined) {
+    meta.runId = overrides.runId;
+  }
+  return { ...base, _meta: meta };
+}
 
 export class TransportRpcClient {
   private readonly pending = new Map<string | number, PendingEntry>();
@@ -44,10 +97,12 @@ export class TransportRpcClient {
     this.settleIdleWaiters();
   }
 
-  call<T>(method: string, params: unknown, timeoutMs: number): Promise<T> {
+  call<T>(method: string, params: unknown, timeoutMs: number, meta?: RpcCallMeta): Promise<T> {
     this.nextId += 1;
     const id = this.nextId;
-    const line = encodeMessage(rpcRequest(method, id, params));
+    const line = encodeMessage(
+      rpcRequest(method, id, withCallMeta(params, timeoutMs, this.options.locale ?? 'en', meta)),
+    );
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
@@ -59,7 +114,13 @@ export class TransportRpcClient {
   }
 
   notify(method: string, params: unknown): void {
-    this.options.transport.send(encodeMessage({ jsonrpc: '2.0', method, params }));
+    this.options.transport.send(
+      encodeMessage({
+        jsonrpc: '2.0',
+        method,
+        params: withCallMeta(params, NOTIFY_DEADLINE_MS, this.options.locale ?? 'en'),
+      }),
+    );
   }
 
   waitIdle(deadlineMs: number): Promise<void> {

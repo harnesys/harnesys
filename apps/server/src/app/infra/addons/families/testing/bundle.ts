@@ -2,10 +2,12 @@ import {
   BridgeInboundPort,
   type BridgeInboundRequest,
 } from '../../../../application/addons/bridge/bridge-inbound.port.ts';
+import { AddonJobScheduler } from '../../../../application/addons/jobs/schedule-jobs.service.ts';
 import {
   type AddonNotifyOutcome,
   AddonNotifyPort,
 } from '../../../../domain/addons/ports/addon-notify.port.ts';
+import { ClockPort } from '../../../../domain/apps/ports/clock.port.ts';
 import { ContentContributionPort } from '../../../../domain/content/content-contribution.port.ts';
 import {
   AddonConfigFieldStore,
@@ -18,7 +20,7 @@ import {
   HookDeliveryService,
   HookFamilyModule,
 } from '../hook/hook.family.ts';
-import { AddonJobScheduler, JobFamilyModule } from '../job/job.family.ts';
+import { JobFamilyModule } from '../job/job.family.ts';
 import { AddonLspRegistry, LspFamilyModule } from '../lsp/lsp.family.ts';
 import { AddonMcpRegistry, McpFamilyModule } from '../mcp/mcp.family.ts';
 import { AddonRouteTable, RouteFamilyModule } from '../route/route.family.ts';
@@ -98,7 +100,7 @@ export function buildFamilyBundle(): FamilyBundle {
   const catalog = new FakePackageCatalog();
 
   const triggerContributor = new AddonTriggerCatalogContributor(instances, bindings, orgAddons);
-  const jobScheduler = new AddonJobScheduler(jobState, supervisor, calls, logger);
+  const jobScheduler = new AddonJobScheduler(jobState, calls, new BundleClock(), logger);
   const workerStore = new WorkerDescriptorStore();
   const workerReports = new WorkerReportService(workerStore, calls, logger);
   const routeTable = new AddonRouteTable();
@@ -198,6 +200,12 @@ export class NoopNotifyPort extends AddonNotifyPort {
     _params: unknown,
   ): AddonNotifyOutcome {
     return 'not_running';
+  }
+}
+
+class BundleClock extends ClockPort {
+  override now(): number {
+    return Date.now();
   }
 }
 

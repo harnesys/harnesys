@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from 'bun:test';
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Logger } from '@harnesys/brix';
 import type { AddonInstallRequest } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
@@ -8,7 +8,7 @@ import type { OrgAddonRow } from '../../../domain/addons/ports/org-addon-reposit
 import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import { AddonPackagePruner } from './addon-package-pruner.ts';
 import { AddonPackageStoreAdapter } from './addon-package-store.adapter.ts';
-import { addonPackageDir, addonStagingDir } from './addon-paths.ts';
+import { addonPackageDir, addonStagingDir, addonsHomeDir } from './addon-paths.ts';
 import { BuiltinAddonSourceAdapter } from './addon-staging.ts';
 import { FakeLayout } from './fake-layout.ts';
 import { writeAddonPackage } from './manifest-fixtures.ts';
@@ -91,15 +91,53 @@ describe('AddonPackageStoreAdapter', () => {
   });
 
   test('pruner removes only versions not pinned by any organization', async () => {
-    const _pruner = new AddonPackagePruner(store, new FakeOrgAddons([]));
     const plan = await builtin.stage({ source: 'harnesys.test-addon' });
     store.install(installRequest(plan, { trust: 'local', source: 'dev' }));
     const pinned = new FakeOrgAddons([pinRow('org-1', 'harnesys.test-addon', '1.0.0')]);
-    expect(new AddonPackagePruner(store, pinned).prune(['org-1'])).toEqual([]);
+    expect(new AddonPackagePruner(store, pinned, layout).prune(['org-1'])).toEqual([]);
     expect(store.find('harnesys.test-addon', '1.0.0')).toBeDefined();
-    const removed = new AddonPackagePruner(store, new FakeOrgAddons([])).prune(['org-1']);
+    const removed = new AddonPackagePruner(store, new FakeOrgAddons([]), layout).prune(['org-1']);
     expect(removed.join(',')).toContain('harnesys.test-addon@1.0.0');
     expect(store.readLock().entries.length).toBe(0);
+  });
+
+  test('prune removes stale version dirs missing from the lock but keeps pinned orphans', () => {
+    const home = layout.home();
+    const staleDir = addonPackageDir(home, 'harnesys.stale-addon', '0.9.0');
+    mkdirSync(staleDir, { recursive: true });
+    writeFileSync(join(staleDir, 'leftover.txt'), 'orphan');
+    const orphanPinnedDir = addonPackageDir(home, 'harnesys.orphan-addon', '0.1.0');
+    mkdirSync(orphanPinnedDir, { recursive: true });
+    writeFileSync(join(orphanPinnedDir, 'leftover.txt'), 'orphan');
+    const pinned = new FakeOrgAddons([pinRow('org-1', 'harnesys.orphan-addon', '0.1.0')]);
+    const removed = new AddonPackagePruner(store, pinned, layout).prune(['org-1']);
+    expect(removed).toContain('harnesys.stale-addon@0.9.0');
+    expect(existsSync(staleDir)).toBe(false);
+    expect(existsSync(join(addonsHomeDir(home), 'harnesys.stale-addon'))).toBe(false);
+    expect(removed).not.toContain('harnesys.orphan-addon@0.1.0');
+    expect(existsSync(orphanPinnedDir)).toBe(true);
+    rmSync(orphanPinnedDir, { recursive: true, force: true });
+  });
+
+  test('digest skips symlinks: dangling .bin links do not crash staging', async () => {
+    const sourceDir = writeAddonPackage(join(layout.root, 'sources', 'harnesys.symlink-addon'));
+    const binDir = join(sourceDir, 'dist', '.bin');
+    mkdirSync(binDir, { recursive: true });
+    symlinkSync('/nonexistent/target', join(binDir, 'tsc'));
+    symlinkSync(join(sourceDir, 'addon.json'), join(sourceDir, 'addon-link.json'));
+    const plan = await builtin.stage({ source: 'harnesys.symlink-addon' });
+    const baseline = await builtin.stage({ source: 'harnesys.symlink-addon' });
+    expect(plan.digest).toBe(baseline.digest);
+  });
+
+  test('digest rejects unpackaged packages containing node_modules', async () => {
+    const sourceDir = writeAddonPackage(join(layout.root, 'sources', 'harnesys.unpackaged-addon'));
+    const binDir = join(sourceDir, 'node_modules', '.bin');
+    mkdirSync(binDir, { recursive: true });
+    symlinkSync('/nonexistent/tsc', join(binDir, 'tsc'));
+    await expect(builtin.stage({ source: 'harnesys.unpackaged-addon' })).rejects.toThrow(
+      /unpackaged/,
+    );
   });
 });
 

@@ -25,6 +25,7 @@ export class TriggerFireSinkAdapter extends TriggerFireSink {
       instanceId: input.instanceId,
       runKey: input.runKey,
       text: input.text,
+      ...(input.payload === undefined ? {} : { payload: input.payload }),
     });
   }
 }

@@ -11,25 +11,35 @@ import {
   Put,
 } from '@harnesys/brix';
 import { AddonException } from '../../domain/addons/errors.ts';
+import type { RateSpec } from '../../domain/addons/host-service.ts';
 import { coversGrant } from '../../domain/addons/host-service.ts';
 import type { EffectiveGrants } from '../../domain/addons/permissions.ts';
 import { AddonCallPort } from '../../domain/addons/ports/addon-call.port.ts';
 import type { OrgAddonRow } from '../../domain/addons/ports/org-addon-repository.port.ts';
 import { OrgAddonRepositoryPort } from '../../domain/addons/ports/org-addon-repository.port.ts';
 import { AddonRouteTablePort } from '../../domain/addons/ports/route-table.port.ts';
+import { routeSchemaIssues } from '../../domain/addons/route-body-schema.ts';
+import { ClockPort } from '../../domain/apps/ports/clock.port.ts';
+import { TokenBucketRateLimiter } from '../../infra/addons/dispatcher/rate-limit.ts';
 
 const MAX_PUBLIC_BODY_KB = 64;
 const ROUTES_PUBLIC_PERMISSION = 'routes.public';
 const PUBLIC_MARKER = '/addons/public/';
+const PUBLIC_ROUTE_RATE: RateSpec = { perSec: 20, burst: 40 };
 
 @Public()
-@Controller('api/addons/public/:orgId/:addonId/r')
+@Controller('addons/public/:orgId/:addonId/r')
 export class AddonPublicRoutesController {
+  private readonly limiter: TokenBucketRateLimiter;
+
   constructor(
     private readonly routes: AddonRouteTablePort,
     private readonly calls: AddonCallPort,
     private readonly orgAddons: OrgAddonRepositoryPort,
-  ) {}
+    clock: ClockPort,
+  ) {
+    this.limiter = new TokenBucketRateLimiter(clock);
+  }
 
   @Get('*')
   get(
@@ -88,10 +98,13 @@ export class AddonPublicRoutesController {
       throw new AddonException('not_found', 404, `Addon is not enabled: ${addonId}`);
     }
     this.assertPublicGrant(row);
+    if (!this.limiter.tryAcquire(`${orgId}:${addonId}`, PUBLIC_ROUTE_RATE)) {
+      throw new AddonException('rate_limited', 429, `Too many requests for addon ${addonId}`);
+    }
     const url = new URL(request.url);
     const subPath = this.subPathOf(url.pathname, addonId);
     const resolved = this.routes.resolve(orgId, addonId, method, subPath);
-    if (resolved?.exposure !== 'public') {
+    if (resolved?.exposure !== 'public' || resolved.role === 'admin') {
       throw new AddonException(
         'not_found',
         404,
@@ -99,6 +112,18 @@ export class AddonPublicRoutesController {
       );
     }
     const body = await this.readBody(request, Math.min(resolved.bodyLimitKb, MAX_PUBLIC_BODY_KB));
+    if (body !== undefined && resolved.requestSchema !== undefined) {
+      const issues = routeSchemaIssues(body, resolved.requestSchema);
+      if (issues.length > 0) {
+        throw new AddonException(
+          'invalid_params',
+          400,
+          `Request body does not match the route schema: ${issues
+            .map((issue) => `${issue.path}: ${issue.message}`)
+            .join('; ')}`,
+        );
+      }
+    }
     const result = await this.calls.callRoute(orgId, addonId, {
       routeId: resolved.routeId,
       request: {

@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import type { AddonManifest } from '@harnesys/sdk';
+import { FakeMetrics, FakeRegistry } from '../../../application/addons/addons.fakes.ts';
+import { FireTriggerUseCase } from '../../../application/addons/triggers/fire-trigger.use-case.ts';
+import { FireWindowTracker } from '../../../application/addons/triggers/trigger-limits.ts';
 import { AccountHolderBridge } from '../apps-bridge/account-holder.bridge.ts';
 import { InboundEventBridge } from '../apps-bridge/inbound-event.bridge.ts';
 import { HookDeliveryService, HookFamilyModule } from './hook/hook.family.ts';
@@ -11,7 +14,7 @@ import {
   FakeAccountHolderPort,
   FakeAccountRepository,
 } from './testing/apps-fakes.ts';
-import { buildFamilyBundle } from './testing/bundle.ts';
+import { buildFamilyBundle, type FamilyBundle } from './testing/bundle.ts';
 import { FakeLogger, MANIFEST, OWNER } from './testing/fakes.ts';
 import {
   FakeEventBus,
@@ -44,22 +47,26 @@ describe('hook queue drop-oldest', () => {
   });
 });
 
+function enableOwner(bundle: FamilyBundle): void {
+  bundle.orgAddons.upsert({
+    orgId: OWNER.orgId,
+    addonId: OWNER.addonId,
+    version: OWNER.version,
+    enabled: true,
+    grantsJson: '[]',
+    grantsDigest: '',
+    configJson: '{}',
+    health: 'stopped',
+    lastError: null,
+    createdAt: '',
+    updatedAt: '',
+  });
+}
+
 describe('trigger contributor unavailable-state semantics', () => {
   test('kind disconnected when addon disabled or required connection unbound', () => {
     const bundle = buildFamilyBundle();
-    bundle.orgAddons.upsert({
-      orgId: OWNER.orgId,
-      addonId: OWNER.addonId,
-      version: OWNER.version,
-      enabled: true,
-      grantsJson: '[]',
-      grantsDigest: '',
-      configJson: '{}',
-      health: 'stopped',
-      lastError: null,
-      createdAt: '',
-      updatedAt: '',
-    });
+    enableOwner(bundle);
     const disposable = bundle.trigger.register(OWNER, {
       kind: 'feed',
       title: 'Feed',
@@ -77,19 +84,7 @@ describe('trigger contributor unavailable-state semantics', () => {
 
   test('kind connected when binding exists and addon enabled', () => {
     const bundle = buildFamilyBundle();
-    bundle.orgAddons.upsert({
-      orgId: OWNER.orgId,
-      addonId: OWNER.addonId,
-      version: OWNER.version,
-      enabled: true,
-      grantsJson: '[]',
-      grantsDigest: '',
-      configJson: '{}',
-      health: 'stopped',
-      lastError: null,
-      createdAt: '',
-      updatedAt: '',
-    });
+    enableOwner(bundle);
     bundle.bindings.rows.push(bindingRow('github', 'acc-1'));
     bundle.trigger.register(OWNER, {
       kind: 'feed',
@@ -174,10 +169,22 @@ describe('job scheduler', () => {
 });
 
 describe('trigger fire service', () => {
+  function buildFireService(instances: FakeTriggerInstanceRepository, runs: FakeRunDispatchPort) {
+    const useCase = new FireTriggerUseCase(
+      instances,
+      new FakeRegistry(),
+      runs,
+      new FireWindowTracker(),
+      new FakeMetrics(),
+      new FakeLogger(),
+    );
+    return new TriggerFireService(useCase, new FakeLogger());
+  }
+
   test('deduplicates by runKey and dispatches to the target', async () => {
     const instances = new FakeTriggerInstanceRepository();
     const runs = new FakeRunDispatchPort();
-    const service = new TriggerFireService(instances, runs, new FakeLogger());
+    const service = buildFireService(instances, runs);
     instances.create({
       id: 'inst-1',
       orgId: OWNER.orgId,
@@ -211,8 +218,10 @@ describe('trigger fire service', () => {
   });
 
   test('unknown or foreign instance fails closed', async () => {
-    const instances = new FakeTriggerInstanceRepository();
-    const service = new TriggerFireService(instances, new FakeRunDispatchPort(), new FakeLogger());
+    const service = buildFireService(
+      new FakeTriggerInstanceRepository(),
+      new FakeRunDispatchPort(),
+    );
     const outcome = await service.fire({
       orgId: OWNER.orgId,
       addonId: OWNER.addonId,

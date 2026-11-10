@@ -2,6 +2,7 @@ import { rmSync } from 'node:fs';
 import { Injectable } from '@harnesys/brix';
 import type { HostRequestName } from '@harnesys/sdk';
 import { AddonDataPort } from '../../../application/addons/addon-data.port.ts';
+import type { AddonRpcCallMeta } from '../../../application/addons/addon-rpc.port.ts';
 import { AddonRpcPort } from '../../../application/addons/addon-rpc.port.ts';
 import type { AddonNotifyOutcome } from '../../../domain/addons/ports/addon-notify.port.ts';
 import { AddonNotifyPort } from '../../../domain/addons/ports/addon-notify.port.ts';
@@ -38,8 +39,9 @@ export class SupervisorRpcAdapter extends AddonRpcPort {
     params: unknown,
     timeoutMs: number,
     _signal?: AbortSignal,
+    meta?: AddonRpcCallMeta,
   ): Promise<unknown> {
-    return this.supervisor.request(orgId, addonId, method, params, timeoutMs);
+    return this.supervisor.request(orgId, addonId, method, params, timeoutMs, meta);
   }
 }
 

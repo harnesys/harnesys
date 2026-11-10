@@ -1,5 +1,6 @@
 import { Injectable } from '@harnesys/brix';
-import { RouteDescriptorSchema, type RouteMethod } from '@harnesys/sdk';
+import type { AddonManifest } from '@harnesys/sdk';
+import { RouteDescriptorSchema, type RouteMethod, type Violation } from '@harnesys/sdk';
 import type { z } from 'zod';
 import type { FamilyModule } from '../../../../domain/addons/family-module.ts';
 import type { Disposable, OwnerKey } from '../../../../domain/addons/owner.ts';
@@ -99,6 +100,24 @@ export class RouteFamilyModule implements FamilyModule<RouteSchema> {
 
   schema(_v: number): z.ZodType<RouteSchema> {
     return RouteDescriptorSchema as z.ZodType<RouteSchema>;
+  }
+
+  /**
+   * §5.5/§13.2: a public route has no session, so an admin role can never be
+   * enforced — reject the combination at registration time.
+   */
+  crossCheck(d: RouteSchema, manifest: AddonManifest): readonly Violation[] {
+    if ((d.exposure ?? 'org') === 'public' && (d.role ?? 'member') === 'admin') {
+      return [
+        {
+          path: `${manifest.id}.route.${d.id}.role`,
+          code: 'cross_check_failed',
+          message: 'route exposure "public" cannot be combined with role "admin"',
+          severity: 'error',
+        },
+      ];
+    }
+    return [];
   }
 
   register(owner: OwnerKey, d: RouteSchema): Disposable {

@@ -5,6 +5,7 @@ import { CorePackRegistryModule } from '../../runtime/packs/core-pack-registry.m
 import { AddonCatalogModule } from '../catalog/catalog.module.ts';
 import { OrgSkillContributionAdapter } from '../storage/org-skill-contribution.adapter.ts';
 import { AddonSupervisorModule } from '../supervisor/supervisor.module.ts';
+import { AddonInfraPortsModule } from './addon-infra-ports.module.ts';
 import {
   AddonConfigFieldStore,
   AddonConfigReadModel,
@@ -18,7 +19,7 @@ import {
   HookDeliveryService,
   HookFamilyModule,
 } from './hook/hook.family.ts';
-import { AddonJobScheduler, JobFamilyModule } from './job/job.family.ts';
+import { JobFamilyModule } from './job/job.family.ts';
 import { AddonLspRegistry, LspFamilyModule } from './lsp/lsp.family.ts';
 import { AddonMcpRegistry, McpFamilyModule } from './mcp/mcp.family.ts';
 import { AddonRouteTable, RouteFamilyModule } from './route/route.family.ts';
@@ -45,13 +46,13 @@ import {
   imports: [
     AddonsApplicationModule,
     AddonCatalogModule,
+    AddonInfraPortsModule,
     AddonSupervisorModule,
     CorePackRegistryModule,
   ],
   providers: [
     AddonTriggerCatalogContributor,
     TriggerFireService,
-    AddonJobScheduler,
     WorkerDescriptorStore,
     WorkerReportService,
     AddonRouteTable,
@@ -106,7 +107,6 @@ import {
     FamilyModuleList,
     AddonTriggerCatalogContributor,
     TriggerFireService,
-    AddonJobScheduler,
     WorkerDescriptorStore,
     WorkerReportService,
     AddonRouteTable,

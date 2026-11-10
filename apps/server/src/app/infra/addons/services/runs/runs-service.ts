@@ -57,7 +57,7 @@ export class RunsHostService implements HostServiceModule {
         retryable: true,
       });
     }
-    const outcome = await this.dispatchPort.dispatch({
+    const result = await this.dispatchPort.dispatch({
       orgId: ctx.orgId,
       threadId: params.threadId,
       agentId: params.agentId,
@@ -65,16 +65,16 @@ export class RunsHostService implements HostServiceModule {
       correlationId: ctx.correlationId,
       signal: ctx.signal,
     });
-    if (outcome === 'suppressed') {
+    if (result.outcome === 'suppressed') {
       throw new AddonError('conflict', { detail: 'dispatch suppressed' });
     }
-    if (outcome === 'busy') {
+    if (result.outcome === 'busy') {
       throw new AddonError('rate_limited', { detail: 'dispatch busy', retryable: true });
     }
-    if (outcome === 'failed') {
+    if (result.outcome === 'failed') {
       throw new AddonError('internal', { detail: 'dispatch failed' });
     }
-    return { runId: ctx.correlationId };
+    return { runId: result.runId ?? ctx.correlationId };
   }
 
   private async create(

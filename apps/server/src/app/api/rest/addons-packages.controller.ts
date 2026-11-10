@@ -23,7 +23,7 @@ const PolicyBodySchema = z.object({
 });
 
 @UseGuards(AddonHostAdminGuard)
-@Controller('api/addons')
+@Controller('addons')
 export class AddonsPackagesController {
   constructor(
     private readonly planInstall: PlanInstallUseCase,

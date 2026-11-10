@@ -55,7 +55,11 @@ export class RemovePackageUseCase {
     const lock = this.catalog.readLock();
     const entry = lock.entries.find((candidate) => candidate.id === id);
     if (entry && entry.version === version) {
-      this.catalog.writeLock({ entries: lock.entries.filter((candidate) => candidate.id !== id) });
+      this.catalog.writeLock({
+        entries: lock.entries.filter(
+          (candidate) => !(candidate.id === id && candidate.version === version),
+        ),
+      });
     }
   }
 }

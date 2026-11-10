@@ -37,11 +37,23 @@ export class AddonLock {
 
   confirm(entry: AddonLockEntry): boolean {
     const lock = this.read();
-    const existing = lock.entries.find((candidate) => matches(candidate, entry));
-    if (existing) {
+    const index = lock.entries.findIndex((candidate) => matches(candidate, entry));
+    if (index === -1) {
+      this.write({ entries: [...lock.entries, entry] });
+      return true;
+    }
+    const existing = lock.entries[index];
+    if (
+      !existing ||
+      (existing.digest === entry.digest &&
+        existing.source === entry.source &&
+        existing.trust === entry.trust)
+    ) {
       return false;
     }
-    this.write({ entries: [...lock.entries, entry] });
+    const entries = [...lock.entries];
+    entries[index] = entry;
+    this.write({ entries });
     return true;
   }
 

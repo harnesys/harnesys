@@ -34,6 +34,10 @@ export class ContributionRegistry implements ContributionRegistryPort {
     this.modules = new Map(familyModules.map((module) => [module.family, module]));
   }
 
+  isActive(owner: OwnerKey): boolean {
+    return this.registrations.has(ownerKeyId(owner));
+  }
+
   activate(owner: OwnerKey, manifest: AddonManifest): void {
     const key = ownerKeyId(owner);
     if (this.registrations.has(key)) {

@@ -24,7 +24,11 @@ import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import { type AccountFindQuery, AccountsFacadePort } from '../apps/accounts-facade.port.ts';
 import { AddonDataPort } from './addon-data.port.ts';
 import { AddonRpcPort } from './addon-rpc.port.ts';
-import type { RunDispatchInput, RunDispatchOutcome } from './run-dispatch.port.ts';
+import type {
+  RunDispatchInput,
+  RunDispatchOutcome,
+  RunDispatchResult,
+} from './run-dispatch.port.ts';
 import { RunDispatchPort } from './run-dispatch.port.ts';
 
 export class NullLogger extends Logger {
@@ -180,10 +184,11 @@ export class FakeRpc extends AddonRpcPort {
 
 export class FakeDispatch extends RunDispatchPort {
   outcome: RunDispatchOutcome = 'fired';
+  runId: string | null = null;
   calls: RunDispatchInput[] = [];
-  async dispatch(input: RunDispatchInput): Promise<RunDispatchOutcome> {
+  async dispatch(input: RunDispatchInput): Promise<RunDispatchResult> {
     this.calls.push(input);
-    return this.outcome;
+    return { outcome: this.outcome, runId: this.runId };
   }
 }
 

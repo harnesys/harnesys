@@ -8,6 +8,7 @@ export interface TriggerFireInput {
   instanceId: string;
   runKey: string;
   text?: string;
+  payload?: unknown;
 }
 
 export interface TriggerFireSink {

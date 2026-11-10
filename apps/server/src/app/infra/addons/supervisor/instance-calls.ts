@@ -1,4 +1,5 @@
 import type { InstanceRuntime } from './instance-runtime.ts';
+import type { RpcCallMeta } from './transport-rpc-client.ts';
 
 export interface SupervisorNotifyOutcome {
   delivered: boolean;
@@ -11,11 +12,12 @@ export interface RuntimeCallInput {
   method: string;
   params: unknown;
   timeoutMs: number;
+  meta?: RpcCallMeta;
 }
 
 export function requestOfRuntime(input: RuntimeCallInput): Promise<unknown> {
   const runtime = requireRuntime(input.runtimes, input.orgId, input.addonId);
-  return runtime.request(input.method, input.params, input.timeoutMs);
+  return runtime.request(input.method, input.params, input.timeoutMs, input.meta);
 }
 
 export function notifyRuntime(

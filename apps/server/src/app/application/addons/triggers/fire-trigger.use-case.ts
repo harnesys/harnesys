@@ -14,6 +14,7 @@ export interface FireTriggerInput {
   instanceId: string;
   runKey: string;
   text: string;
+  payload?: unknown;
   correlationId?: string;
 }
 
@@ -70,13 +71,14 @@ export class FireTriggerUseCase {
     if (!target.threadId) {
       return this.suppressed(input, 'no_target');
     }
-    const outcome = await this.dispatch.dispatch({
+    const { outcome } = await this.dispatch.dispatch({
       orgId: input.orgId,
       threadId: target.threadId,
       agentId: target.agentId ?? '',
       text: input.text,
       runKey: input.runKey,
       correlationId: input.correlationId,
+      ...(input.payload === undefined ? {} : { payload: input.payload }),
     });
     this.metrics.increment('addon.trigger.fire', {
       orgId: input.orgId,

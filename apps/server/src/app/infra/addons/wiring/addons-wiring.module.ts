@@ -84,6 +84,7 @@ import { AddonSupervisorModule } from '../supervisor/supervisor.module.ts';
 import { SupervisorHooks } from '../supervisor/supervisor-deps.ts';
 import { OrgAuditAddonAdapter } from './addon-audit.adapter.ts';
 import { AddonDbAccessAdapter } from './addon-db-access.adapter.ts';
+import { AddonEventForwarder } from './addon-event-forwarder.ts';
 import {
   BridgeInboundSinkAdapter,
   TriggerFireSinkAdapter,
@@ -167,6 +168,7 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     { provide: AddonRpcPort, useClass: SupervisorRpcAdapter },
     { provide: AddonDataPort, useClass: AddonDataRemoveAdapter },
     AccountsChangedNotifySink,
+    AddonEventForwarder,
     AddonsLifecycleService,
     DispatcherRequestHandler,
     ManifestPermissionProvider,

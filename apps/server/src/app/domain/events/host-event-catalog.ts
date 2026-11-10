@@ -64,6 +64,30 @@ function accountEvent(name: string): HostEventDefinition {
   return { name, version: 1, payload: accountEventPayload };
 }
 
+const addonStateChangedPayload = z.object({
+  type: z.literal('addon.state_changed'),
+  orgId: z.string(),
+  addonId: z.string(),
+  at: z.string(),
+  state: z.enum(['stopped', 'running', 'failed', 'quarantined']),
+  lastError: z.string().nullable().optional(),
+});
+
+const addonConfigChangedPayload = z.object({
+  orgId: z.string(),
+  addonId: z.string(),
+  keys: z.array(z.string()),
+});
+
+const addonPermissionsChangedPayload = z.object({
+  orgId: z.string(),
+  addonId: z.string(),
+  grants: z.array(
+    z.object({ id: z.string(), scope: z.record(z.string(), z.unknown()).optional() }),
+  ),
+  revoked: z.array(z.string()),
+});
+
 export const HOST_EVENT_CATALOG: readonly HostEventDefinition[] = [
   { name: 'thread.created', version: 1, payload: threadCreatedPayload },
   { name: 'run.started', version: 1, payload: runStartedPayload },
@@ -78,6 +102,9 @@ export const HOST_EVENT_CATALOG: readonly HostEventDefinition[] = [
   accountEvent('account.updated'),
   accountEvent('account.status_changed'),
   accountEvent('account.removed'),
+  { name: 'addon.state_changed', version: 1, payload: addonStateChangedPayload },
+  { name: 'config.changed', version: 1, payload: addonConfigChangedPayload },
+  { name: 'permissions.changed', version: 1, payload: addonPermissionsChangedPayload },
 ];
 
 export function hostEventDefinition(name: string): HostEventDefinition | undefined {

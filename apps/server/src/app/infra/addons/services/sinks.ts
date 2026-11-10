@@ -52,6 +52,21 @@ export interface AddonLogEntry {
 
 export abstract class LogSink {
   abstract append(entry: AddonLogEntry): void;
+
+  /**
+   * Unified raw stderr-line entry point (AddonLogSink shape): every addon
+   * stderr line and supervisor note goes through `write`, persisted as an
+   * info-level entry.
+   */
+  write(orgId: string, addonId: string, line: string): void {
+    this.append({
+      orgId,
+      addonId,
+      level: 'info',
+      message: line,
+      at: new Date().toISOString(),
+    });
+  }
 }
 
 export interface BoundAccountRef {

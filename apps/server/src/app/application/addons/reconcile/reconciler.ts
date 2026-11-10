@@ -6,6 +6,8 @@ import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-r
 import { TriggerInstanceRepositoryPort } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { ClockPort } from '../../../domain/apps/ports/clock.port.ts';
 import { EventBusPort } from '../../../domain/events/event-bus.port.ts';
+import { AddonReasonsToLivePort } from './reasons-to-live.port.ts';
+import { compareVersions } from './version-compare.ts';
 
 const FIRE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const TICK_MS = 30_000;
@@ -23,6 +25,7 @@ export class AddonReconciler {
     private readonly triggers: TriggerInstanceRepositoryPort,
     private readonly clock: ClockPort,
     private readonly events: EventBusPort,
+    private readonly reasons: AddonReasonsToLivePort,
     @Inject(Logger) logger: Logger,
   ) {
     this.logger = logger.child('addons-reconciler');
@@ -76,21 +79,17 @@ export class AddonReconciler {
     }
   }
 
-  private needsProcess(row: { orgId: string; addonId: string; version: string }): boolean {
-    const pkg = this.catalog.find(row.addonId, row.version);
-    if (pkg?.manifest.activation === 'resident') {
-      return true;
-    }
-    return this.triggers.list(row.orgId, row.addonId).some((instance) => instance.enabled);
+  private needsProcess(row: { orgId: string; addonId: string }): boolean {
+    return this.reasons.hasReason(row.orgId, row.addonId);
   }
 
   private publishUpdateAvailable(row: OrgAddonRow): void {
     const installed = this.catalog.listInstalled();
     const current = installed.find((pkg) => pkg.id === row.addonId && pkg.version === row.version);
     const available = installed
-      .filter((pkg) => pkg.id === row.addonId && pkg.version > row.version)
+      .filter((pkg) => pkg.id === row.addonId && compareVersions(pkg.version, row.version) > 0)
       .map((pkg) => pkg.version)
-      .sort()
+      .sort(compareVersions)
       .at(-1);
     if (!current || available === undefined) {
       return;

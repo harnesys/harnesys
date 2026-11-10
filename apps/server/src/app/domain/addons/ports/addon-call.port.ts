@@ -3,6 +3,10 @@ import type { JsonObject, RouteHandleResult, RouteRequest, TransportMessage } fr
 export interface AddonCallOptions {
   timeoutMs?: number;
   signal?: AbortSignal;
+  principal?: { type: 'agent' | 'user' | 'system'; id?: string };
+  agentId?: string;
+  threadId?: string;
+  runId?: string;
 }
 
 export interface ToolCallParams {

@@ -1,6 +1,7 @@
 import type {
   RunDispatchInput,
   RunDispatchOutcome,
+  RunDispatchResult,
 } from '../../../../application/addons/run-dispatch.port.ts';
 import { RunDispatchPort } from '../../../../application/addons/run-dispatch.port.ts';
 import type {
@@ -44,8 +45,9 @@ export class FakePackageCatalog extends AddonPackageCatalogPort {
 export class FakeRunDispatchPort extends RunDispatchPort {
   readonly dispatched: RunDispatchInput[] = [];
   outcome: RunDispatchOutcome = 'fired';
-  override async dispatch(input: RunDispatchInput): Promise<RunDispatchOutcome> {
+  runId: string | null = null;
+  override async dispatch(input: RunDispatchInput): Promise<RunDispatchResult> {
     this.dispatched.push(input);
-    return this.outcome;
+    return { outcome: this.outcome, runId: this.runId };
   }
 }

@@ -99,7 +99,7 @@ export class NeutralBridgeInboundUseCase extends BridgeInboundPort {
     if (thread === undefined) {
       return 'skipped';
     }
-    const outcome = await this.dispatch.dispatch({
+    const { outcome } = await this.dispatch.dispatch({
       orgId: request.orgId,
       threadId: binding.threadId,
       agentId: thread.autoReplyAgentId ?? '',
@@ -135,7 +135,7 @@ export class NeutralBridgeInboundUseCase extends BridgeInboundPort {
       threadId: thread.id,
       createdAt: new Date().toISOString(),
     });
-    const outcome = await this.dispatch.dispatch({
+    const { outcome } = await this.dispatch.dispatch({
       orgId: request.orgId,
       threadId: thread.id,
       agentId: agent.id,

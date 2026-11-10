@@ -2,6 +2,7 @@ import { Logger } from '@harnesys/brix';
 import type {
   RunDispatchInput,
   RunDispatchOutcome,
+  RunDispatchResult,
 } from '../../../application/addons/run-dispatch.port.ts';
 import { RunDispatchPort } from '../../../application/addons/run-dispatch.port.ts';
 import { AccountsFacadePort } from '../../../application/apps/accounts-facade.port.ts';
@@ -179,10 +180,11 @@ export class FakeAudit extends OrgAudit {
 
 export class FakeRuns extends RunDispatchPort {
   outcome: RunDispatchOutcome = 'fired';
+  runId: string | null = null;
   readonly inputs: RunDispatchInput[] = [];
-  override dispatch(input: RunDispatchInput): Promise<RunDispatchOutcome> {
+  override dispatch(input: RunDispatchInput): Promise<RunDispatchResult> {
     this.inputs.push(input);
-    return Promise.resolve(this.outcome);
+    return Promise.resolve({ outcome: this.outcome, runId: this.runId });
   }
 }
 

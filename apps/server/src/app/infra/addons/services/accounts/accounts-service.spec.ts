@@ -8,6 +8,7 @@ import { InMemoryHostServiceRegistry } from '../../dispatcher/host-service-regis
 import { InstanceGenerationPort } from '../../dispatcher/instance-generation.port.ts';
 import { PermissionDefinitionRegistry } from '../../dispatcher/permission-definitions.ts';
 import { TokenBucketRateLimiter } from '../../dispatcher/rate-limit.ts';
+import { FakeGrantPolicy } from '../../dispatcher/spec-fakes.ts';
 import { ADDON, callCtx, FakeAccounts, FakeAudit, FakeBindings, ZeroClock } from '../spec-fakes.ts';
 import { AccountsHostService } from './accounts-service.ts';
 
@@ -90,6 +91,7 @@ describe('dispatcher enforces the high accounts.credentials grant', () => {
       new FakeAudit(),
       new TokenBucketRateLimiter(new ZeroClock()),
       new AlwaysCurrentGeneration(),
+      new FakeGrantPolicy(),
     );
   }
 

@@ -1,9 +1,21 @@
 import { join } from 'node:path';
+import type { AddonTrust } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
 import { AddonPackageCatalogPort } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
 import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import { HostFsLayoutPort } from '../../../domain/machine/host-fs-layout.port.ts';
 import type { SandboxProfile } from '../sandbox/sandbox-launcher.port.ts';
-import type { LaunchTarget } from './instance-runtime.ts';
+
+export interface LaunchTarget {
+  readonly orgId: string;
+  readonly addonId: string;
+  readonly version: string;
+  readonly packageRoot: string;
+  readonly entryPath: string;
+  readonly dataDir: string;
+  readonly platform: number;
+  readonly trust: AddonTrust;
+  readonly profile: SandboxProfile;
+}
 
 export interface LaunchTargetDeps {
   readonly catalog: AddonPackageCatalogPort;

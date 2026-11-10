@@ -4,6 +4,8 @@ import { z } from 'zod';
 import type { HostCallContext, HostMethodSpec } from '../../../domain/addons/host-service.ts';
 import { coversGrant } from '../../../domain/addons/host-service.ts';
 import type { EffectiveGrants } from '../../../domain/addons/permissions.ts';
+import { applyHostPolicyToGrants } from '../../../domain/addons/permissions.ts';
+import { GrantPolicyPort } from '../../../domain/addons/ports/grant-policy.port.ts';
 import { HostServiceRegistryPort } from '../../../domain/addons/ports/host-service-registry.port.ts';
 import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import { ClockPort } from '../../../domain/apps/ports/clock.port.ts';
@@ -37,9 +39,8 @@ export class HostDispatcher {
     private readonly audit: OrgAudit,
     private readonly limiter: TokenBucketRateLimiter,
     private readonly generations: InstanceGenerationPort,
+    private readonly grantPolicy: GrantPolicyPort,
   ) {}
-
-  private readonly timers = new Set<ReturnType<typeof setTimeout>>();
 
   async dispatch(target: DispatchTarget, method: string, params: unknown): Promise<unknown> {
     const spec = this.lookupSpec(method);
@@ -87,7 +88,7 @@ export class HostDispatcher {
     if (!row.enabled) {
       throw new AddonError('unavailable', { detail: `add-on ${target.addonId} is disabled` });
     }
-    return parseGrants(row.grantsJson);
+    return applyHostPolicyToGrants(parseGrants(row.grantsJson), this.grantPolicy.read());
   }
 
   private assertPermission(spec: HostMethodSpec, grants: EffectiveGrants, method: string): void {
@@ -132,21 +133,20 @@ export class HostDispatcher {
     const timeoutMs = spec.limits?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const onOuterAbort = () => controller.abort();
     target.signal?.addEventListener('abort', onOuterAbort, { once: true });
+    // Local to this invocation (§6.6): concurrent calls must not clear each
+    // other's timeout timers.
+    let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
     const timeout = new Promise<never>((_, reject) => {
-      const timer = setTimeout(() => {
+      timeoutTimer = setTimeout(() => {
         controller.abort();
         reject(new AddonError('timeout', { detail: `${spec.name} timed out`, retryable: true }));
       }, timeoutMs);
-      timer.unref?.();
-      this.timers.add(timer);
+      timeoutTimer.unref?.();
     });
     try {
       return await Promise.race([spec.handle(ctx, params), timeout]);
     } finally {
-      for (const timer of this.timers) {
-        clearTimeout(timer);
-      }
-      this.timers.clear();
+      clearTimeout(timeoutTimer);
       target.signal?.removeEventListener('abort', onOuterAbort);
     }
   }

@@ -99,6 +99,11 @@ export class HttpHostService implements HostServiceModule {
     ctx: HostCallContext,
     auth: HttpAuthRequest,
   ): Promise<{ value: string }> {
+    if (!this.engine.grantsCover(ctx.grants, 'accounts.use', { connections: [auth.connection] })) {
+      throw new AddonError('permission_denied', {
+        detail: `permission 'accounts.use' covering connection '${auth.connection}' is required for http.fetch auth`,
+      });
+    }
     const rows = this.bindings.accountsFor(ctx.orgId, ctx.addonId, auth.connection);
     const accountId = resolveBoundAccountId(rows, auth.accountId);
     const { credentials } = await this.accounts.access(ctx.orgId, accountId);

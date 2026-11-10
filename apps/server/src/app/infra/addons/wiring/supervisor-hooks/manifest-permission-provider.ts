@@ -6,6 +6,7 @@ import {
   type GrantRecord,
 } from '../../../../domain/addons/permissions.ts';
 import { AddonPackageCatalogPort } from '../../../../domain/addons/ports/addon-package-catalog.port.ts';
+import { GrantPolicyPort } from '../../../../domain/addons/ports/grant-policy.port.ts';
 import { OrgAddonRepositoryPort } from '../../../../domain/addons/ports/org-addon-repository.port.ts';
 import { PermissionDefinitionRegistry } from '../../dispatcher/permission-definitions.ts';
 import type { SupervisorPermissionsProvider } from '../../supervisor/supervisor-deps.ts';
@@ -36,6 +37,7 @@ export class ManifestPermissionProvider implements SupervisorPermissionsProvider
     private readonly orgAddons: OrgAddonRepositoryPort,
     private readonly catalog: AddonPackageCatalogPort,
     private readonly definitions: PermissionDefinitionRegistry,
+    private readonly grantPolicy: GrantPolicyPort,
   ) {}
 
   effectivePermissions(orgId: string, addonId: string): EffectivePermission[] {
@@ -56,6 +58,7 @@ export class ManifestPermissionProvider implements SupervisorPermissionsProvider
       declaration: pkg.manifest.permissions,
       grant,
       definitions: this.definitions.all(),
+      hostPolicy: this.grantPolicy.read(),
     });
   }
 

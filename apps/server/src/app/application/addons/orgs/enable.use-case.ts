@@ -7,6 +7,7 @@ import {
   type GrantRecord,
   grantDigest,
 } from '../../../domain/addons/permissions.ts';
+import { AddonNotifyPort } from '../../../domain/addons/ports/addon-notify.port.ts';
 import type { InstalledAddonPackage } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
 import { AddonPackageCatalogPort } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
 import { AddonAuditPort } from '../../../domain/addons/ports/audit.port.ts';
@@ -15,7 +16,9 @@ import { GrantPolicyPort } from '../../../domain/addons/ports/grant-policy.port.
 import type { OrgAddonRow } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import { EventBusPort } from '../../../domain/events/event-bus.port.ts';
+import { AddonMigrationsPort } from '../addon-migrations.port.ts';
 import { checkPackageCompatibility } from '../addon-platform.ts';
+import { runAddonDataMigrations } from '../orgs/addon-migrations.ts';
 import { appendAudit, requirePackage } from '../orgs/org-addon.helpers.ts';
 import { publishConsentRequired } from './consent-event.ts';
 
@@ -38,6 +41,8 @@ export class EnableAddonUseCase {
     private readonly policy: GrantPolicyPort,
     private readonly audit: AddonAuditPort,
     private readonly events: EventBusPort,
+    private readonly migrations: AddonMigrationsPort,
+    private readonly notify: AddonNotifyPort,
     @Inject(Logger) logger: Logger,
   ) {
     this.logger = logger.child('addons-enable');
@@ -59,6 +64,18 @@ export class EnableAddonUseCase {
     );
     if (existing?.enabled && existing.version === pkg.version) {
       return existing;
+    }
+    try {
+      runAddonDataMigrations(
+        { migrations: this.migrations, notify: this.notify, logger: this.logger },
+        { orgId: request.orgId, pkg, fromVersion: existing?.version ?? null },
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (existing) {
+        this.orgAddons.updateHealth(request.orgId, request.addonId, 'failed', message);
+      }
+      throw error;
     }
     const now = new Date().toISOString();
     const grantsDigest = grantDigest(pkg.manifest.permissions);

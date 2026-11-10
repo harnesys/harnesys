@@ -2,7 +2,16 @@ import { Injectable } from '@harnesys/brix';
 import type { EffectivePermission } from '@harnesys/sdk';
 
 export interface SupervisorRequestHandler {
-  handle(orgId: string, addonId: string, message: string): Promise<string | null>;
+  /**
+   * `generation` is the generation captured by the transport at adopt/launch
+   * time (§8.4); messages from a dead generation are dropped by the dispatcher.
+   */
+  handle(
+    orgId: string,
+    addonId: string,
+    message: string,
+    generation?: number,
+  ): Promise<string | null>;
 }
 
 export interface SupervisorPermissionsProvider {

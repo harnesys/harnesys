@@ -2,7 +2,6 @@ import { Logger } from '@harnesys/brix';
 import type { InitializeResult } from '@harnesys/sdk';
 import { PROTOCOL_PLATFORM } from '@harnesys/sdk';
 import { AddonException } from '../../../domain/addons/errors.ts';
-import type { AddonTrust } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
 import { AddonTransportPort } from '../../../domain/addons/ports/addon-transport.port.ts';
 import { AddonAuditPort } from '../../../domain/addons/ports/audit.port.ts';
 import { GrantPolicyPort } from '../../../domain/addons/ports/grant-policy.port.ts';
@@ -10,27 +9,16 @@ import type { InstanceState } from '../../../domain/addons/ports/instance-superv
 import { ClockPort } from '../../../domain/apps/ports/clock.port.ts';
 import { resolveLaunchPlan } from '../sandbox/launch-policy.ts';
 import { LauncherNoneAdapter } from '../sandbox/launcher-none.adapter.ts';
-import type { SandboxProfile } from '../sandbox/sandbox-launcher.port.ts';
 import { SandboxLauncherPort } from '../sandbox/sandbox-launcher.port.ts';
 import type { AddonLogSink, ChildHandle } from '../transport/stdio-wiring.ts';
 import { SIGKILL } from '../transport/stdio-wiring.ts';
 import type { TransportFactory } from '../transport/transport-factory.ts';
 import { AddonHandlersMismatchError, AddonIdentityMismatchError } from './handshake-errors.ts';
+import type { LaunchTarget } from './launch-target.ts';
 import type { SupervisorSettings } from './supervisor.config.ts';
 import type { SupervisorHooks, SupervisorTimers } from './supervisor-deps.ts';
+import type { RpcCallMeta } from './transport-rpc-client.ts';
 import { TransportRpcClient } from './transport-rpc-client.ts';
-
-export interface LaunchTarget {
-  readonly orgId: string;
-  readonly addonId: string;
-  readonly version: string;
-  readonly packageRoot: string;
-  readonly entryPath: string;
-  readonly dataDir: string;
-  readonly platform: number;
-  readonly trust: AddonTrust;
-  readonly profile: SandboxProfile;
-}
 
 export interface InstanceRuntimeCallbacks {
   onState(state: InstanceState, detail?: string): void;
@@ -88,7 +76,12 @@ export class InstanceRuntime {
     return this.rpc?.pendingCount ?? 0;
   }
 
-  request(method: string, params: unknown, timeoutMs: number): Promise<unknown> {
+  request(
+    method: string,
+    params: unknown,
+    timeoutMs: number,
+    meta?: RpcCallMeta,
+  ): Promise<unknown> {
     const rpc = this.rpc;
     if (!rpc || this.stopped || this.stopping) {
       return Promise.reject(
@@ -102,7 +95,7 @@ export class InstanceRuntime {
         ),
       );
     }
-    return rpc.call(method, params, timeoutMs);
+    return rpc.call(method, params, timeoutMs, meta);
   }
 
   notify(method: string, params: unknown): void {
@@ -215,10 +208,21 @@ export class InstanceRuntime {
     this.startedAt = new Date(this.deps.clock.now()).toISOString();
     this.rpc = new TransportRpcClient({
       transport,
+      locale: this.deps.settings.config.locale,
       handleRequest: (line, _message) =>
-        this.deps.hooks.requestHandler.handle(this.target.orgId, this.target.addonId, line),
+        this.deps.hooks.requestHandler.handle(
+          this.target.orgId,
+          this.target.addonId,
+          line,
+          this.generation,
+        ),
       handleNotification: (line) =>
-        void this.deps.hooks.requestHandler.handle(this.target.orgId, this.target.addonId, line),
+        void this.deps.hooks.requestHandler.handle(
+          this.target.orgId,
+          this.target.addonId,
+          line,
+          this.generation,
+        ),
     });
     this.rpc.attach();
     if (child) {

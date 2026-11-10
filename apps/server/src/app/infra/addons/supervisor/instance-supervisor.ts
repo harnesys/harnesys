@@ -15,17 +15,22 @@ import { EventBusPort } from '../../../domain/events/event-bus.port.ts';
 import { HostFsLayoutPort } from '../../../domain/machine/host-fs-layout.port.ts';
 import { LauncherNoneAdapter } from '../sandbox/launcher-none.adapter.ts';
 import { SandboxLauncherPort } from '../sandbox/sandbox-launcher.port.ts';
+import { LogSink } from '../services/sinks.ts';
 import { TransportFactory } from '../transport/transport-factory.ts';
 import { notifyRuntime, requestOfRuntime, type SupervisorNotifyOutcome } from './instance-calls.ts';
 import type { InstanceRecord } from './instance-registry.ts';
 import { InstanceRegistry } from './instance-registry.ts';
-import type { LaunchTarget } from './instance-runtime.ts';
 import { InstanceRuntime } from './instance-runtime.ts';
-import type { LaunchTargetDeps } from './launch-target.ts';
-import { buildLaunchTarget, resolvePinnedVersion } from './launch-target.ts';
+import {
+  buildLaunchTarget,
+  type LaunchTarget,
+  type LaunchTargetDeps,
+  resolvePinnedVersion,
+} from './launch-target.ts';
 import { SupervisorSettings } from './supervisor.config.ts';
 import { SupervisorHooks, SupervisorTimers } from './supervisor-deps.ts';
 import { SupervisorRestartPolicy } from './supervisor-restarts.ts';
+import type { RpcCallMeta } from './transport-rpc-client.ts';
 
 @Injectable()
 export class AddonInstanceSupervisor extends InstanceSupervisorPort {
@@ -50,6 +55,7 @@ export class AddonInstanceSupervisor extends InstanceSupervisorPort {
     private readonly grantPolicy: GrantPolicyPort,
     private readonly audit: AddonAuditPort,
     private readonly events: EventBusPort,
+    private readonly logSink: LogSink,
   ) {
     super();
     this.log = logger.child('addon-supervisor');
@@ -125,6 +131,7 @@ export class AddonInstanceSupervisor extends InstanceSupervisorPort {
     method: string,
     params: unknown,
     timeoutMs: number,
+    meta?: RpcCallMeta,
   ): Promise<unknown> {
     return await requestOfRuntime({
       runtimes: this.runtimes,
@@ -133,6 +140,7 @@ export class AddonInstanceSupervisor extends InstanceSupervisorPort {
       method,
       params,
       timeoutMs,
+      meta,
     });
   }
 
@@ -172,7 +180,10 @@ export class AddonInstanceSupervisor extends InstanceSupervisorPort {
         grantPolicy: this.grantPolicy,
         audit: this.audit,
         logSink: {
-          write: (o, a, line) => this.log.info({ orgId: o, addonId: a }, `stderr: ${line}`),
+          write: (o, a, line) => {
+            this.logSink.write(o, a, line);
+            this.log.info({ orgId: o, addonId: a }, `stderr: ${line}`);
+          },
         },
       },
       {

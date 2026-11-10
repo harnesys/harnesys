@@ -10,6 +10,7 @@ import {
   grantDigest,
   needsConsent,
 } from '../../../domain/addons/permissions.ts';
+import { AddonNotifyPort } from '../../../domain/addons/ports/addon-notify.port.ts';
 import { AddonPackageCatalogPort } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
 import { AddonAuditPort } from '../../../domain/addons/ports/audit.port.ts';
 import { ContributionRegistryPort } from '../../../domain/addons/ports/contribution-registry.port.ts';
@@ -17,7 +18,9 @@ import { InstanceSupervisorPort } from '../../../domain/addons/ports/instance-su
 import type { OrgAddonRow } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import { EventBusPort } from '../../../domain/events/event-bus.port.ts';
+import { AddonMigrationsPort } from '../addon-migrations.port.ts';
 import { checkPackageCompatibility } from '../addon-platform.ts';
+import { runAddonDataMigrations } from './addon-migrations.ts';
 import { publishConsentRequired } from './consent-event.ts';
 import { appendAudit, grantsOfRow, requireOrgAddon, requirePackage } from './org-addon.helpers.ts';
 
@@ -40,6 +43,8 @@ export class UpdateAddonUseCase {
     private readonly supervisor: InstanceSupervisorPort,
     private readonly audit: AddonAuditPort,
     private readonly events: EventBusPort,
+    private readonly migrations: AddonMigrationsPort,
+    private readonly notify: AddonNotifyPort,
     @Inject(Logger) logger: Logger,
   ) {
     this.logger = logger.child('addons-update');
@@ -75,6 +80,15 @@ export class UpdateAddonUseCase {
     const oldOwner = { orgId: request.orgId, addonId: request.addonId, version: row.version };
     const newOwner = { orgId: request.orgId, addonId: request.addonId, version: next.version };
     try {
+      runAddonDataMigrations(
+        { migrations: this.migrations, notify: this.notify, logger: this.logger },
+        { orgId: request.orgId, pkg: next, fromVersion: row.version },
+      );
+    } catch (error) {
+      this.rollbackPin(request, row, error);
+      throw error;
+    }
+    try {
       this.registry.swap(oldOwner, newOwner, next.manifest);
     } catch (error) {
       this.rollbackPin(request, row, error);
@@ -95,7 +109,7 @@ export class UpdateAddonUseCase {
       try {
         await this.supervisor.ensureRunning(request.orgId, request.addonId, 'update');
       } catch (error) {
-        this.rollbackPin(request, row, error);
+        await this.restorePreviousVersion(request, row, newOwner, oldOwner, error);
         throw error;
       }
     }
@@ -120,6 +134,52 @@ export class UpdateAddonUseCase {
       lastError: `update to ${request.version} failed, rolled back: ${message}`,
       updatedAt: new Date().toISOString(),
     });
+    this.logger.warn(
+      { orgId: request.orgId, addonId: request.addonId, version: request.version, error: message },
+      'addon update rolled back',
+    );
+  }
+
+  /**
+   * §4.6 atomicity: after the registry swap and pin update succeeded but the
+   * restart failed, put the previous version back (contributions, pin) and
+   * try to bring it up again.
+   */
+  private async restorePreviousVersion(
+    request: UpdateAddonRequest,
+    row: OrgAddonRow,
+    newOwner: { orgId: string; addonId: string; version: string },
+    oldOwner: { orgId: string; addonId: string; version: string },
+    cause: unknown,
+  ): Promise<void> {
+    const message = cause instanceof Error ? cause.message : String(cause);
+    const previous = requirePackage(this.catalog, request.addonId, row.version);
+    try {
+      this.registry.swap(newOwner, oldOwner, previous.manifest);
+    } catch (swapError) {
+      const swapMessage = swapError instanceof Error ? swapError.message : String(swapError);
+      this.logger.error(
+        { orgId: request.orgId, addonId: request.addonId, error: swapMessage },
+        'registry swap back to the previous version failed',
+      );
+    }
+    this.orgAddons.upsert({
+      ...row,
+      health: 'failed',
+      lastError: `update to ${request.version} failed, rolled back: ${message}`,
+      updatedAt: new Date().toISOString(),
+    });
+    try {
+      await this.supervisor.ensureRunning(request.orgId, request.addonId, 'update-rollback');
+    } catch (restartError) {
+      const restartMessage =
+        restartError instanceof Error ? restartError.message : String(restartError);
+      this.supervisor.mirrorHealth(request.orgId, request.addonId, 'failed', restartMessage);
+      this.logger.error(
+        { orgId: request.orgId, addonId: request.addonId, error: restartMessage },
+        'restart of the previous version failed',
+      );
+    }
     this.logger.warn(
       { orgId: request.orgId, addonId: request.addonId, version: request.version, error: message },
       'addon update rolled back',

@@ -109,6 +109,36 @@ function narrowScopeArrays(
   return touched ? narrowed : scope;
 }
 
+/**
+ * Intersects already-granted permissions with the host policy (§7.3): drops
+ * forbidden permission ids, narrows forbidden hosts out of scopes, and drops
+ * grants whose host scope becomes empty. Used at the dispatch point so policy
+ * changes apply to running add-ons immediately.
+ */
+export function applyHostPolicyToGrants(
+  grants: EffectiveGrants,
+  policy: AddonHostPolicy,
+): EffectiveGrants {
+  const forbiddenPermissions = policy.forbiddenPermissions ?? [];
+  const forbiddenHosts = policy.forbiddenHosts ?? [];
+  const result: EffectiveGrants = [];
+  for (const grant of grants) {
+    if (forbiddenPermissions.includes(grant.id)) {
+      continue;
+    }
+    if (forbiddenHosts.length === 0) {
+      result.push(grant);
+      continue;
+    }
+    const narrowed = narrowScopeArrays(grant.scope, forbiddenHosts);
+    if (narrowed !== undefined && stringArray(narrowed.hosts)?.length === 0) {
+      continue;
+    }
+    result.push(narrowed === grant.scope ? grant : { ...grant, scope: narrowed });
+  }
+  return result;
+}
+
 function scopeFromGrant(
   declaration: JsonObject | undefined,
   granted: JsonObject | undefined,

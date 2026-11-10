@@ -126,10 +126,14 @@ export function createAddonRuntime(options: AddonRuntimeOptions): AddonRuntime {
         detail: `handler '${method}' was not declared in initialize.handlers`,
       });
     }
-    const parsed = parseParams(spec, params) as Record<string, unknown>;
-    const meta = isCallMeta(parsed._meta)
-      ? CallMetaSchema.parse(parsed._meta)
-      : fallbackMeta('host-request', now() + FALLBACK_DEADLINE_MS);
+    const incoming = (params ?? {}) as Record<string, unknown>;
+    // Tolerant fallback (§6.3 safety net): hosts that predate mandatory _meta
+    // get a synthesized one so the schema parse below still succeeds.
+    const guarded = isCallMeta(incoming._meta)
+      ? incoming
+      : { ...incoming, _meta: fallbackMeta('host-request', now() + FALLBACK_DEADLINE_MS) };
+    const parsed = parseParams(spec, guarded) as Record<string, unknown>;
+    const meta = CallMetaSchema.parse(parsed._meta);
     if (meta.deadline < now()) {
       throw new AddonError('timeout', { detail: `deadline ${meta.deadline} has passed` });
     }

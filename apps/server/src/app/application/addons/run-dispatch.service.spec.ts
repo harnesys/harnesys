@@ -37,18 +37,21 @@ const INPUT = {
 } as const;
 
 describe('ThreadRunDispatchService', () => {
-  test('maps acceptance to fired and reuses runKey as correlationId', async () => {
+  test('maps acceptance to fired, returns the accepted run id, reuses runKey as correlationId', async () => {
     const service = build([accepted()]);
-    expect(await service.dispatch(INPUT)).toBe('fired');
+    expect(await service.dispatch(INPUT)).toEqual({
+      outcome: 'fired',
+      runId: '00000000-0000-4000-8000-000000000001',
+    });
   });
 
   test('maps run conflict to busy', async () => {
     const service = build([new RunConflictException('run in flight')]);
-    expect(await service.dispatch(INPUT)).toBe('busy');
+    expect(await service.dispatch(INPUT)).toEqual({ outcome: 'busy', runId: null });
   });
 
   test('maps other failures to failed', async () => {
     const service = build([new Error('boom')]);
-    expect(await service.dispatch(INPUT)).toBe('failed');
+    expect(await service.dispatch(INPUT)).toEqual({ outcome: 'failed', runId: null });
   });
 });

@@ -26,6 +26,11 @@ export abstract class ContributionRegistryPort {
 
   abstract swap(oldOwner: OwnerKey, newOwner: OwnerKey, manifest: AddonManifest): void;
 
+  /** Whether this exact owner version is currently registered (§8.2 boot walk). */
+  isActive(_owner: OwnerKey): boolean {
+    return false;
+  }
+
   abstract contributions(orgId: string, family: string): readonly ContributionRecord[];
 
   abstract onChange(orgId: string, family: string, handler: ContributionChangeHandler): () => void;

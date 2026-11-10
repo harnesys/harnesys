@@ -4,7 +4,8 @@ import type {
   HostMethodSpec,
   HostServiceModule,
 } from '../../../domain/addons/host-service.ts';
-import type { EffectiveGrants } from '../../../domain/addons/permissions.ts';
+import type { AddonHostPolicy, EffectiveGrants } from '../../../domain/addons/permissions.ts';
+import { GrantPolicyPort } from '../../../domain/addons/ports/grant-policy.port.ts';
 import type { OrgAddonRow } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import { ClockPort } from '../../../domain/apps/ports/clock.port.ts';
@@ -85,6 +86,18 @@ export class FakeRepo extends OrgAddonRepositoryPort {
   override remove(): void {}
 }
 
+export class FakeGrantPolicy extends GrantPolicyPort {
+  constructor(private policy: AddonHostPolicy = {}) {
+    super();
+  }
+  override read(): AddonHostPolicy {
+    return this.policy;
+  }
+  override write(policy: AddonHostPolicy): void {
+    this.policy = policy;
+  }
+}
+
 export class FixedGeneration extends InstanceGenerationPort {
   private readonly value: number | null;
   constructor(generation: number | null) {
@@ -158,6 +171,7 @@ export function buildDispatcher(
     audit,
     new TokenBucketRateLimiter(clock),
     new FixedGeneration(generation),
+    new FakeGrantPolicy(),
   );
   return { dispatcher, metrics, audit, registry, repo };
 }

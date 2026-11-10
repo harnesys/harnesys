@@ -1,13 +1,16 @@
 import { Inject, Injectable, Logger } from '@harnesys/brix';
 import { AddonIncompatibleException } from '../../../domain/addons/errors.ts';
 import { grantDigest } from '../../../domain/addons/permissions.ts';
+import { AddonNotifyPort } from '../../../domain/addons/ports/addon-notify.port.ts';
 import { AddonPackageCatalogPort } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
 import { AddonAuditPort } from '../../../domain/addons/ports/audit.port.ts';
 import { ContributionRegistryPort } from '../../../domain/addons/ports/contribution-registry.port.ts';
 import { InstanceSupervisorPort } from '../../../domain/addons/ports/instance-supervisor.port.ts';
 import type { OrgAddonRow } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
+import { AddonMigrationsPort } from '../addon-migrations.port.ts';
 import { checkPackageCompatibility } from '../addon-platform.ts';
+import { runAddonDataMigrations } from './addon-migrations.ts';
 import { appendAudit, requireOrgAddon, requirePackage } from './org-addon.helpers.ts';
 
 export interface RollbackAddonRequest {
@@ -27,6 +30,8 @@ export class RollbackAddonUseCase {
     private readonly registry: ContributionRegistryPort,
     private readonly supervisor: InstanceSupervisorPort,
     private readonly audit: AddonAuditPort,
+    private readonly migrations: AddonMigrationsPort,
+    private readonly notify: AddonNotifyPort,
     @Inject(Logger) logger: Logger,
   ) {
     this.logger = logger.child('addons-rollback');
@@ -48,6 +53,16 @@ export class RollbackAddonUseCase {
     const oldOwner = { orgId: request.orgId, addonId: request.addonId, version: row.version };
     const newOwner = { orgId: request.orgId, addonId: request.addonId, version: target.version };
     try {
+      runAddonDataMigrations(
+        { migrations: this.migrations, notify: this.notify, logger: this.logger },
+        { orgId: request.orgId, pkg: target, fromVersion: row.version },
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.orgAddons.updateHealth(request.orgId, request.addonId, 'failed', message);
+      throw error;
+    }
+    try {
       this.registry.swap(oldOwner, newOwner, target.manifest);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -64,7 +79,12 @@ export class RollbackAddonUseCase {
     };
     this.orgAddons.upsert(updated);
     if (wasRunning) {
-      await this.supervisor.ensureRunning(request.orgId, request.addonId, 'rollback');
+      try {
+        await this.supervisor.ensureRunning(request.orgId, request.addonId, 'rollback');
+      } catch (error) {
+        await this.restorePreviousVersion(request, row, newOwner, oldOwner, error);
+        throw error;
+      }
     }
     appendAudit(this.audit, request.orgId, request.actor, {
       action: 'addon.rollback',
@@ -77,5 +97,45 @@ export class RollbackAddonUseCase {
       'addon rolled back',
     );
     return updated;
+  }
+
+  /**
+   * §4.6 atomicity: if the restart of the rolled-back-to version fails, put
+   * the previous contributions and pin back and mirror the failure.
+   */
+  private async restorePreviousVersion(
+    request: RollbackAddonRequest,
+    row: OrgAddonRow,
+    newOwner: { orgId: string; addonId: string; version: string },
+    oldOwner: { orgId: string; addonId: string; version: string },
+    cause: unknown,
+  ): Promise<void> {
+    const message = cause instanceof Error ? cause.message : String(cause);
+    const previous = requirePackage(this.catalog, request.addonId, row.version);
+    try {
+      this.registry.swap(newOwner, oldOwner, previous.manifest);
+    } catch (swapError) {
+      const swapMessage = swapError instanceof Error ? swapError.message : String(swapError);
+      this.logger.error(
+        { orgId: request.orgId, addonId: request.addonId, error: swapMessage },
+        'registry swap back to the previous version failed',
+      );
+    }
+    this.orgAddons.updateHealth(request.orgId, request.addonId, 'failed', message);
+    try {
+      await this.supervisor.ensureRunning(request.orgId, request.addonId, 'rollback-restore');
+    } catch (restartError) {
+      const restartMessage =
+        restartError instanceof Error ? restartError.message : String(restartError);
+      this.supervisor.mirrorHealth(request.orgId, request.addonId, 'failed', restartMessage);
+      this.logger.error(
+        { orgId: request.orgId, addonId: request.addonId, error: restartMessage },
+        'restart of the previous version failed',
+      );
+    }
+    this.logger.warn(
+      { orgId: request.orgId, addonId: request.addonId, version: request.version, error: message },
+      'addon rollback restore failed',
+    );
   }
 }

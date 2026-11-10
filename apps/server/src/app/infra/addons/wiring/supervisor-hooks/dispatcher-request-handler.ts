@@ -5,6 +5,7 @@ import type { DispatchTarget } from '../../dispatcher/host-dispatcher.ts';
 import { HostDispatcher } from '../../dispatcher/host-dispatcher.ts';
 import { InstanceRegistry } from '../../supervisor/instance-registry.ts';
 import type { SupervisorRequestHandler } from '../../supervisor/supervisor-deps.ts';
+import { AddonEventForwarder } from '../addon-event-forwarder.ts';
 
 function errorDataOf(error: unknown): AddonErrorData {
   if (error instanceof AddonError) {
@@ -32,9 +33,16 @@ export class DispatcherRequestHandler implements SupervisorRequestHandler {
   constructor(
     private readonly dispatcher: HostDispatcher,
     private readonly registry: InstanceRegistry,
+    private readonly eventForwarder: AddonEventForwarder,
   ) {}
 
-  async handle(orgId: string, addonId: string, line: string): Promise<string | null> {
+  async handle(
+    orgId: string,
+    addonId: string,
+    line: string,
+    generation?: number,
+  ): Promise<string | null> {
+    this.eventForwarder.ensureOrg(orgId);
     let message: ReturnType<typeof decodeMessage>;
     try {
       message = decodeMessage(line);
@@ -44,12 +52,12 @@ export class DispatcherRequestHandler implements SupervisorRequestHandler {
     if (!('method' in message)) {
       return null;
     }
-    const generation = this.registry.get(orgId, addonId)?.generation ?? 0;
+    const captured = generation ?? this.registry.get(orgId, addonId)?.generation ?? 0;
     const target: DispatchTarget = {
       orgId,
       addonId,
-      instanceId: `${orgId}/${addonId}@${generation}`,
-      generation,
+      instanceId: `${orgId}/${addonId}@${captured}`,
+      generation: captured,
       correlationId: crypto.randomUUID(),
     };
     if (!('id' in message)) {
