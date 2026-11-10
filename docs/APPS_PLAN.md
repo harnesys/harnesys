@@ -105,7 +105,7 @@ CREATE INDEX app_accounts_org_kind ON app_accounts (org_id, kind);
 CREATE INDEX app_accounts_org_app  ON app_accounts (org_id, app_id);
 ```
 
-`expires_at`, `verified_at` — мс epoch; `created_at`, `updated_at` — ISO-строки, как в существующих таблицах. `lastError` — всегда член `AccountErrorCode` (§4.4).
+`expires_at`, `verified_at` — мс epoch; `created_at`, `updated_at` — ISO-строки, как в существующих таблицах. `lastError` — всегда член `AccountErrorCode` (§4.4). Миграция в `org-sql-apps.ts` пересоздаёт обе таблицы, если обнаружена старая схема T1 (нет `metadata_json`); данные T1 не переносятся (допущение 4).
 
 ### 2.4 Правила записи
 
@@ -289,6 +289,7 @@ export interface AccountKindModule {
 ```ts
 export interface ProviderCtx {
   http: ProviderHttp;        // §9.1; егресс-политика вида уже применена
+  mtproto?: MtprotoLoginPort; // §4.7; есть всегда в собранном ctx, провайдер без MTProto его не читает
   now(): number;
   log: ProviderLogger;       // редактирует секреты и query-параметры
 }
@@ -330,7 +331,8 @@ export type ConnectStep<R> =
 export type Launch =
   | { kind: 'redirect'; url: string }
   | { kind: 'html'; html: string; formActionHosts: string[] }   // страница для пользователя (GitHub manifest)
-  | { kind: 'device'; userCode: string; verificationUri: string; intervalSec: number };
+  | { kind: 'device'; userCode: string; verificationUri: string; intervalSec: number }
+  | { kind: 'form'; fields: FieldSpec[]; text?: string };       // ввод пользователя у нас в мастере (код логина, 2FA-пароль)
 
 export interface AccountConnectResult {
   externalAccountId: string;
@@ -352,11 +354,14 @@ export interface AppSetupResult {
 
 Несекретные `inputs` ядро сохраняет в `config` само, по дескриптору. Секреты в хранилище попадают только из `result.secrets` — это решение провайдера, а не магия ядра (Stripe сам кладёт `apiKey` и `webhookSecret`).
 
+Правила `Launch.form` — fail-closed и проверяются при применении `wait`-результата к сессии, а не при статической валидации реестра: поля только `text`/`number`, не `generated`, не `secret`; поле `text` — только отображение, на валидацию не влияет.
+
 ### 4.4 Проверка, доступ, отзыв
 
 ```ts
 export interface AccountVerifyCtx extends ProviderCtx {
   account: AccountRecord; app: AppRecord | null; appSecrets: SecretReader | null;
+  mtproto?: MtprotoLoginPort;             // §4.7; verify use-case вводит порт
   credentials: Credentials;               // ядро уже получило их через AccountAccessService (§7.1)
 }
 export interface VerifyResult {
@@ -364,7 +369,7 @@ export interface VerifyResult {
   scopes?: string[];
   metadata?: JsonObject;
 }
-export interface AppVerifyCtx extends ProviderCtx { app: AppRecord; secrets: SecretReader }
+export interface AppVerifyCtx extends ProviderCtx { app: AppRecord; secrets: SecretReader; mtproto?: MtprotoLoginPort }
 
 export interface AccessCtx extends ProviderCtx {
   account: AccountRecord; app: AppRecord | null; appSecrets: SecretReader | null;
@@ -388,7 +393,7 @@ export interface RevokeCtx extends ProviderCtx { account: AccountRecord; app: Ap
 ```ts
 export interface WebhookCtx extends Omit<ProviderCtx, 'http'> {   // сети нет: обработчик только проверяет и разбирает
   target: { type: 'app'; app: AppRecord } | { type: 'account'; account: AccountRecord; app: AppRecord | null };
-  secrets: SecretReader;                  // секреты цели (и App — для цели-аккаунта)
+  secrets: SecretReader;                  // секреты цели; для цели-аккаунта — секреты вида Account и вида App (композитный читатель редиректит по префиксам `account:`/`app:`, чужие ключи читатель не отдаёт)
   request: { method: string; headers: Record<string, string>; query: Record<string, string>; body: Uint8Array };
 }
 export interface WebhookHandler { handle(ctx: WebhookCtx): Promise<WebhookOutcome> }
@@ -412,10 +417,45 @@ export type AccountErrorCode =
   | 'invalid_signature' | 'invalid_input' | 'session_expired'
   | 'provider_unavailable' | 'invalid_response' | 'unknown';
 
-export class ProviderError extends Error { constructor(readonly code: AccountErrorCode) { super(code); } }
+export class ProviderError extends Error {
+  readonly meta?: { retryAfterSec?: number };
+  constructor(readonly code: AccountErrorCode, meta?: { retryAfterSec?: number }) { super(code); this.meta = meta; }
+}
 ```
 
-Провайдер бросает только `ProviderError`; любое другое исключение ядро превращает в `unknown` и логирует без сообщения. Текст ответа провайдера никуда не попадает. Маппинг «ответ → код» — чистая функция в модуле, покрытая спекой; для типового HTTP есть `classifyHttp` из kit (401 → `invalid_credentials`, 403 → `insufficient_scopes`, 404 → `not_found`, 429 → `rate_limited`, 5xx/timeout/network → `provider_unavailable`, нечитаемое тело → `invalid_response`); API, отвечающие 200 с ошибкой в теле (Slack), переопределяют маппинг своей функцией.
+Провайдер бросает только `ProviderError`; любое другое исключение ядро превращает в `unknown` и логирует без сообщения. Мета опциональна; её носит только провайдер (flood-wait и подобное); фасады ядра переносят её в сессию и в `SessionEvent`. Текст ответа провайдера никуда не попадает. Маппинг «ответ → код» — чистая функция в модуле, покрытая спекой; для типового HTTP есть `classifyHttp` из kit (401 → `invalid_credentials`, 403 → `insufficient_scopes`, 404 → `not_found`, 429 → `rate_limited`, 5xx/timeout/network → `provider_unavailable`, нечитаемое тело → `invalid_response`); API, отвечающие 200 с ошибкой в теле (Slack), переопределяют маппинг своей функцией.
+
+### 4.7 `MtprotoLoginPort` — не-HTTP транспорт (рост §5.4)
+
+Порт в `domain/apps/mtproto-port.ts`, адаптер `infra/apps/mtproto.adapter.ts` (`TeleprotoMtprotoAdapter`, пакет `teleproto`). Провайдер никогда не импортирует `teleproto`.
+
+```ts
+export interface MtprotoApiAccess { apiId: number; apiHash: string; session?: string }
+export interface MtprotoPhoneCode { phoneCodeHash: string }
+export interface MtprotoUserProfile { userId: string; firstName: string | null; lastName: string | null; username: string | null }
+export type MtprotoSignInOutcome = { status: 'done'; profile: MtprotoUserProfile } | { status: 'needsPassword' }
+export interface MtprotoClient {
+  connect(): Promise<void>;
+  sendCode(phone: string): Promise<MtprotoPhoneCode>;
+  signIn(phone: string, phoneCodeHash: string, code: string): Promise<MtprotoSignInOutcome>;
+  signInWithPassword(password: string): Promise<MtprotoSignInOutcome>;
+  me(): Promise<MtprotoUserProfile>;
+  exportSessionString(): Promise<string>;
+  close(): Promise<void>;
+}
+export abstract class MtprotoLoginPort {
+  abstract client(api: MtprotoApiAccess): MtprotoClient;
+  abstract probe(apiId: number, apiHash: string): Promise<number>;            // dcId
+  abstract probeSession(api: MtprotoApiAccess): Promise<MtprotoUserProfile>;  // проверка живой сессии
+}
+```
+
+Правила:
+
+- логин stateless по шагам — клиент создаётся на шаг и умирает; состояние (`session`-строка, `phoneCodeHash`) живёт в `providerState` сессии;
+- сессия-строка — секрет: хранится с `access.source = 'stored'`, ключ `session`;
+- транспорт не HTTP — список хостов (§9.2) MTProto не выражает; границу держит адаптер (только официальные DC Telegram); расширение модели egress на не-HTTP — отдельный PR (§5.4);
+- маппинг ошибок — чистая функция в адаптере: flood → `rate_limited` (+ `retryAfterSec` из `seconds`), `unauthorized`/`AUTH_KEY*`/`SESSION_*` → `invalid_credentials`, `PHONE_*`/`PASSWORD_*`/`BAD_*` → `invalid_input`, остальное → `invalid_response`.
 
 ## 5. Реестр, загрузка, инструментарий
 
@@ -500,7 +540,11 @@ type LaunchView =
 type SessionEvent =
   | { status: 'pending' }
   | { status: 'completed'; target: 'app' | 'account'; id: string }
-  | { status: 'failed'; error: AccountErrorCode };
+  | { status: 'failed'; error: AccountErrorCode; retryAfterSec?: number };
+
+// POST /orgs/:orgId/connect/sessions/:id/resume — ввод пользователя на form-шаге
+interface ConnectResumeBody { inputs: Record<string, FieldValue> }
+interface ConnectResumeResponse { session: SessionEvent; launch?: LaunchView }
 ```
 
 Ошибки старта: `404` — неизвестный вид; `422 { error: 'invalid_fields', fields: { <key>: 'required' | 'pattern' | 'type' | 'option' | 'unknown' } }` — поля вне дескриптора отклоняются; `409 app_required` — вид требует App, а `appId` не передан или не подходит по виду/организации.
@@ -513,6 +557,8 @@ type SessionEvent =
 4. Расчёт `scopes`: запрошенные ∪ уже выданные (при переподключении), все обязаны быть ключами каталога вида.
 5. Создание сессии (state — 32 случайных байта, base64url) и сборка `ConnectStartCtx` (`http` — по егресс-политике вида; `urls.redirectUri` — единый callback §6.6).
 6. `handler.start(ctx)`: `done` → финализация (§6.3), ответ `completed`; `wait` → сессия получает `state` провайдера и TTL, ответ `pending` (`html` превращается в одноразовый URL страницы).
+
+Для `target: 'app'` `appId` генерируется до сборки ctx, чтобы id существовал в setup-контексте. `urls.webhookUrl` в setup-контексте передаётся, только когда `endpoints` вида объявляет `webhookUrl` и базовый URL публичный (https); иначе провайдер получает `null` — GitHub-манифест опускает `hook_attributes`.
 
 ### 6.3 Финализация (одна для App и Account)
 
@@ -534,15 +580,20 @@ type SessionEvent =
 | `target`, `kind`, `appId`, `accountId` | контекст подключения |
 | `inputs`, `scopes` | то, с чем стартовали (живут только в памяти сессии) |
 | `providerState` | JSON провайдера (PKCE verifier и т. п.), ядро его не читает |
+| `launchFormFields`, `launchFormHosts` | поля form-запуска и CSP-хосты html-запуска актуального шага |
+| `resumeCount` | счётчик отправок формы (кап §6.5) |
+| `retryAfterSec` | cooldown, полученный от провайдера |
 | `status`, `result`, `expiresAt` | `pending` → `completed`/`failed(code)` |
 
-TTL задаёт провайдер в `wait.ttlSec` (по умолчанию 600 с, максимум 3600). Завершённые сессии держатся ещё 120 с ради подписчика SSE. Не более 20 живых сессий на организацию. Reaper — Croner, раз в 30 с. Рестарт сервера обрывает незавершённые подключения: пользователь запускает заново; секреты в БД из сессий не попадают — это сделано намеренно.
+TTL задаёт провайдер в `wait.ttlSec` (по умолчанию 600 с, максимум 3600). Завершённые сессии держатся ещё 120 с ради подписчика SSE. Не более 20 живых сессий на организацию. Reaper — Croner, раз в 30 с. Рестарт сервера обрывает незавершённые подключения: пользователь запускает заново; секреты в БД из сессий не попадают — это сделано намеренно. Порт имеет `watch(id, cb)` — SSE-подписка опирается на него (store в памяти, подписка process-local).
 
 ### 6.5 Завершение без опроса
 
 - Возврат с провайдера → `resume` (§6.6). Device code → сервер сам вызывает `poll` по `intervalSec` (серверный таймер, учитывает `slow_down`-подобные ответы провайдера через `pending`) до `done`, ошибки или TTL.
 - `GET /orgs/:orgId/connect/sessions/:id/events` — SSE: первое событие — текущее состояние (поэтому переподписка после обрыва безопасна), затем `pending → completed|failed`; heartbeat раз в 15 с; поток закрывается на терминальном состоянии. `GET /orgs/:orgId/connect/sessions/:id` — одно чтение того же состояния.
 - `DELETE /orgs/:orgId/connect/sessions/:id` — отмена (сессия удаляется, state гасится).
+
+**Форма: продолжение без редиректа.** `POST /orgs/:orgId/connect/sessions/:id/resume` — общий вход для `Launch.form`. Ограничения: сессия владельца, статус `pending`, launch kind = `form`; иначе `404`. `inputs` валидируются по полям запуска тем же правилом, что и на `start` (`422 invalid_fields`). Исполнитель общий с callback (`ConnectResumeExecutor`, порты `ConnectContextPort`/`ConnectFinalizePort`): `done` → финализация → `completed`; `wait` → сессия продолжается; `ProviderError` → `failed` (± `retryAfterSec`). Кап — 25 отправок на сессию; счётчик растёт на каждой отправке, включая `422` (защита от перебора кодов); превышение → `failed session_expired`. Просроченная сессия (за TTL) не `404`: помечается `failed session_expired` с keep-alive 120 с, клиент показывает expiry. Ответ инлайновый `{ session, launch? }` — SSE несёт только статус; следующий form-шаг рендерится из ответа; изменение сессии шлёт `notify()` подписчикам SSE как обычно. Неверный код/пароль провайдер обрабатывает сам, возвращая новый `wait` с той же формой; сессия становится `failed` только по истёкшему TTL или по необработанному `ProviderError`.
 
 ### 6.6 Единый callback
 
@@ -628,7 +679,7 @@ URL выдаёт ядро и показывает в `endpoints.webhookUrl` App/
 
 1. Организация/цель не найдены, у вида нет `webhook` → `404` (одинаково, без утечки причин).
 2. Тело читается как байты, лимит 1 MiB; лимит частоты по `(ip, цель)` (token bucket в памяти).
-3. Сборка `WebhookCtx` (без `http`; `SecretReader` цели) и `handler.handle` под таймаутом 2 с.
+3. Сборка `WebhookCtx` (без `http`; `SecretReader` цели — для цели-аккаунта читатель объединяет ключи вида Account и вида App, §4.5) и `handler.handle` под таймаутом 2 с.
 4. `ProviderError('invalid_signature')` → `401`; `invalid_input` → `400`; прочее → `503` без деталей (провайдеры ретраят). Успех → `response` обработчика уходит немедленно (ack, challenge-ответ Slack/Discord/Graph и т. п.).
 5. Уже после ответа: дедупликация `(цель, deliveryId)` (LRU, TTL 10 мин); `effects` применяются по §7.2 (отзыв установки → `expired`/`revoked`); `AccountRef` резолвится в `accountId` через уникальный индекс аккаунтов организации; `InboundEventPort.publish(orgId, envelope)`.
 6. Событие, чей аккаунт не найден (удалён), отбрасывается с метрикой.
@@ -674,7 +725,7 @@ export interface EgressPolicy {
 }
 ```
 
-Фиксированные хосты — для SaaS (`oauth2.googleapis.com`, `slack.com`). `userHost` — для провайдеров с адресом пользователя: домен магазина (`suffixes: ['.myshopify.com']`), self-hosted GitLab/Jira/Mattermost (`allowPrivate: true`). Адаптер: только `https` (`http` — лишь для loopback при `allowPrivate`); DNS резолвится, соединение идёт на проверенный IP (защита от rebinding); loopback, link-local, metadata-адреса и приватные сети блокируются, если не `allowPrivate`; нарушение → исход `blocked`. Политику вида ядро применяет при сборке `ctx.http`, провайдер её обойти не может.
+Фиксированные хосты — для SaaS (`oauth2.googleapis.com`, `slack.com`). `userHost` — для провайдеров с адресом пользователя: домен магазина (`suffixes: ['.myshopify.com']`), self-hosted GitLab/Jira/Mattermost (`allowPrivate: true`). Адаптер: только `https` (`http` — лишь для loopback при `allowPrivate`); домен резолвится под политикой, приватные/loopback/link-local/metadata-адреса блокируются до запроса, если не `allowPrivate`; но соединение выполняется по имени хоста — rebinding-окно между проверкой и соединением остаётся; pinning требует кастомного dispatcher'а в Bun и добавления зависимости — решение отложено, окно сужено, не закрыто; нарушение → исход `blocked`. Политику вида ядро применяет при сборке `ctx.http`, провайдер её обойти не может. Для не-HTTP транспорта (§4.7) список хостов не применим — границу формирует адаптер транспорта.
 
 ### 9.3 Секреты
 
@@ -708,10 +759,11 @@ export interface EgressPolicy {
 | `DELETE /apps/:appId` | каскад по §7.5; `409 account_referenced` со списком держателей |
 | `POST /apps/:appId/verify` | проверка App |
 | `GET /accounts?kind=&appId=&status=&scopes=` · `GET /accounts/:accountId` | список и карточка Account (`AccountView`) |
-| `PATCH /accounts/:accountId` | `{ label?, config? }` — только поля `editable` |
+| `PATCH /accounts/:accountId` | `{ label?, config? }` — только поля `editable` и не секреты; неизвестные и секретные ключи — `422` |
 | `DELETE /accounts/:accountId` | §7.5 |
 | `POST /accounts/:accountId/verify` | §7.3; ответ `{ account }` |
 | `POST /connect/start` | §6.1; **единственный путь создать Account** и автосоздать App |
+| `POST /connect/sessions/:id/resume` | ввод пользователя на form-шаге (§6.5) |
 | `GET /connect/sessions/:id` · `GET …/events` (SSE) · `DELETE …/:id` | состояние, поток, отмена (§6.5) |
 
 `POST /accounts` отсутствует намеренно: Account без проверки у провайдера не создаётся. Для App ручное создание (`POST /apps`) и автосоздание (`connect/start` с `target: 'app'`) — два входа в одну сущность. Несекретные поля неизменяемы после создания, если не помечены `editable`; секреты можно заменять всегда.
@@ -722,9 +774,9 @@ export interface EgressPolicy {
 | --- | --- |
 | `GET\|POST /oauth/callback` | единый возврат с провайдера (§6.6) |
 | `GET /connect/launch/:token` | одноразовая страница запуска (§6.7) |
-| `ANY /hook/:orgId/apps/:appId` · `ANY /hook/:orgId/accounts/:accountId` | вебхуки (§8) |
+| `GET\|POST\|PUT\|PATCH\|DELETE /hook/:orgId/apps/:appId` · `GET\|POST\|PUT\|PATCH\|DELETE /hook/:orgId/accounts/:accountId` | вебхуки (§8) |
 
-Новый провайдер не добавляет ни одного маршрута.
+Роутер без `ANY` — методы объявлены явно, прочие возвращают `404`. Новый провайдер не добавляет ни одного маршрута.
 
 ## 11. Фасад для аддонов, события, целостность
 
@@ -771,8 +823,8 @@ export abstract class AccountHolderPort {      // реализаций неск�
 features/manage-apps/
   api/       apps-client.ts, connect-events.ts (EventSource), query-keys.ts, hooks.ts
   model/     catalog.ts (селекторы), plan-connect.ts, connect-machine.ts, field-validation.ts, error-text.ts
-  ui/fields/ FieldRenderer.tsx + text, secret, textarea, url, number, select, boolean
-  ui/        AppsPane, ProviderCard, AppList, AccountList, StatusBadge, EndpointsHelp
+  ui/fields/ FieldRenderer.tsx (закрытый набор управлений в одном файле)
+  ui/        ProviderCard (провайдер, его Apps и Accounts в одном компоненте), StatusBadge, EndpointsHelp
   ui/connect/ ConnectDialog, StepApp, StepPickApp, StepInputs, ScopePicker, LaunchPanel, StepDone
   ui/picker/ AccountPicker.tsx
   index.ts   публичный API: AppsPane, AccountPicker
@@ -800,10 +852,10 @@ steps = []
 step 'connect'
 ```
 
-- **`app`**: форма по `AppKindDescriptor.fields`, рядом `help.steps`, `consoleUrl` и `EndpointsHelp` — значения `endpoints` с кнопкой «копировать». Если у вида `capabilities.setup`, основная кнопка — «Создать автоматически» (`connect/start` с `target: 'app'`), ручная форма — вторичный вход.
+- **`app`**: форма по `AppKindDescriptor.fields`, рядом `help.steps` и `consoleUrl`. На не созданном App вместо `EndpointsHelp` — пометка, что значения `endpoints` появятся после создания приложения (`EndpointsHelp` рендерится на созданных App). Если у вида `capabilities.setup`, основная кнопка — «Создать автоматически» (`connect/start` с `target: 'app'`; единым `connect/start.inputs` отправляются и несекретные значения, и введённые секреты — у setup ctx только `inputs`), ручное создание (`POST /apps`) — вторичный вход, сохраняет `values` и `secrets` раздельно.
 - **`inputs`**: `DescriptorForm` по `accountKind.inputs`.
 - **`scopes`**: `ScopePicker` — чекбоксы из `scopes.options`, `defaults` отмечены; при переподключении уже выданные заблокированы.
-- **`connect`**: `POST connect/start` → `completed` сразу в `done`; `pending` → `LaunchPanel`: `redirect`/`page` — `window.open(url)` (если popup заблокирован — кнопка-ссылка), `device` — код, ссылка и копирование. Подписка на SSE сессии.
+- **`connect`**: `POST connect/start` → `completed` сразу в `done`; `pending` → `LaunchPanel`: `redirect`/`page` — `window.open(url)`, окно открывается один раз; если popup заблокирован — кнопка-ссылка остаётся; `device` — код, ссылка и копирование; `form` — рендер по полям запуска, отправка на `resume` (§6.5), инлайновый ответ `{ session, launch? }` рендерит следующий шаг; `failed` с `retryAfterSec` показывает отсчёт cooldown. Подписка на SSE сессии.
 - После `app`-шага мастер автоматически переходит к шагам Account.
 - Закрытие мастера отменяет сессию (`DELETE`).
 
@@ -819,7 +871,7 @@ step 'connect'
 | `failed` | повтор | `starting` |
 | любое | отмена | закрыто (`DELETE` сессии) |
 
-Переподключение запускается из строки аккаунта: тот же мастер с `accountId`, `scopes` = выданные, секретные поля пустые.
+Переподключение запускается из строки аккаунта: тот же мастер с `accountId`, `scopes` = выданные, секретные поля пустые; `planConnect` возвращает только шаг `connect`.
 
 ### 12.4 Рендер полей
 
@@ -839,13 +891,13 @@ step 'connect'
 <AccountPicker kinds={['google-account']} scopes={['calendar']} value={id} onChange={setId} allowCreate />
 ```
 
-Компонент показывает подходящие подключённые аккаунты (`GET /accounts?kind=…&scopes=…`), неподходящие — недоступными с причиной, и по «Подключить новый» открывает тот же мастер. Страница аддона с секцией `connections` использует его, поэтому аддон не заводит вторую форму с теми же полями.
+Компонент показывает подходящие подключённые аккаунты (`GET /accounts?kind=…&scopes=…`), неподходящие — недоступными с причиной, и по «Подключить новый» открывает тот же мастер. Страница аддона с секцией `connections` использует его, поэтому аддон не заводит вторую форму с теми же полями. Мультивидовые pickers запрашивают список аккаунтов организации и фильтруют годность по набору `kinds` на клиенте (сервер фильтрует по одному `kind`); для однокиндового вызывающего авторитетен серверный фильтр `?kind=`.
 
 ### 12.7.1 Проверки фронта
 
-- Скрипт `check-no-provider-names` читает id и виды из `providerModules` и ищет их в `apps/webui/src/features/manage-apps/**` (кроме `__fixtures__`): пусто.
+- `scripts/check-provider-names.ts` (`bun run check:provider-names`) выводит список токенов из каталога `providers/**` (включая `__fixtures__`; родовые токены вроде `webhook` — в блок-листе) и case-insensitively ищет их в `domain`, `application`, `api`, `apps/webui` (кроме легаси-зон §14.1 и задокументированных исключений): пусто.
 - В разделе нет `setInterval` и `refetchInterval` по статусу подключения.
-- Юнит-спеки чистой модели: `planConnect`, `connect-machine`, `buildValidator`, селекторы — на фикстуре каталога тестового провайдера; фикстура генерируется скриптом из реестра, CI проверяет отсутствие дрейфа.
+- Юнит-спеки чистой модели: `planConnect`, `connect-machine`, `buildValidator`, селекторы — на фикстуре каталога тестового провайдера; фикстура коммитится в репозиторий, скрипт проверки дрейфа фикстуры от реестра остаётся гейтом — реализация отложена.
 
 ## 13. Прогон контракта на десяти провайдерах
 
@@ -861,19 +913,20 @@ step 'connect'
 | **Atlassian** | `atlassian-app` → `atlassian-account` | OAuth 3LO с `offline_access` | `stored`, refresh с ротацией: новый refresh-токен обязан попасть в `persist` | — |
 | **Shopify** | `shopify-app` → `shopify-store` | `inputs`: домен магазина до старта; `resume` проверяет HMAC параметров callback | `stored` | уровень App: HMAC тела |
 | **Stripe** | — → `stripe-api-key` | вставка `apiKey` и `webhookSecret` (оба секретные) | `stored` | уровень Account: подпись с timestamp |
-| **Telegram** | — → `telegram-bot` | вставка `botToken`; `secretToken` — `generated`; идентичность — id бота из `getMe` | `stored` | уровень Account: заголовок secret token |
+| **Telegram** | `telegram-app` (apiId/apiHash) → `telegram-bot`, `telegram-user` | бот: вставка `botToken`; user: телефон → код/2FA-пароль через form-запуск и MTProto (§4.7); идентичность: `getMe` у бота, профиль у пользователя | `stored`: bot token; user — живая `session`-строка из SecretStore | бот: заголовок secret token (Account); user: — |
 | **Discord** | `discord-app` (public key) → `discord-bot` | вставка `botToken`; App нужен для interactions | `stored` | уровень App: подпись Ed25519 (не HMAC — проверка в обработчике вида), ответ на PING |
 
-Пограничный случай: IMAP/SMTP и прочие не-HTTP протоколы. Дескрипторы, `connect`, `access`, егресс (`userHost` для адреса сервера) ложатся как есть; сетевой доступ добавляется необязательным `ctx.net` (§5.4) без правок существующих провайдеров.
+Пограничный случай: IMAP/SMTP и прочие не-HTTP протоколы. Дескрипторы, `connect`, `access`, егресс (`userHost` для адреса сервера) ложатся как есть; сетевой доступ добавляется необязательным `ctx.net` (§5.4) без правок существующих провайдеров; MTProto-логин — через `ctx.mtproto` (§4.7).
 
 Что прогон потребовал от фундамента, и всё это уже заложено выше:
 
 1. Обработчики на уровне **вида**, а не провайдера (Slack, Microsoft, GitHub).
 2. Поля до старта подключения (`inputs`: Shopify) и каталог scopes (Google).
-3. Три вида запуска (`redirect`, `html`, `device`) и callback как `GET|POST` (Microsoft `form_post`).
+3. Виды запуска (`redirect`, `html`, `device`, `form`) и callback как `GET|POST` (Microsoft `form_post`).
 4. `derived`-доступ и `AccessGrant.persist` для ротации refresh-токена (GitHub, Microsoft service, Atlassian).
 5. Вебхуки двух уровней (App и Account), ответы-challenge, `effects` отзыва доступа.
 6. `partition`, `generated`-секреты, егресс с адресом из поля формы.
+7. Интерактивные логины без redirect от провайдера — form-запуск + `resume`-маршрут и `ProviderCtx.mtproto` (§4.7) для не-HTTP логина; `ProviderError.meta` для cooldown провайдера.
 
 ## 14. Структура кода и изоляция от легаси
 
@@ -899,26 +952,29 @@ apps/webui/src/shared/api/integrations.ts
 
 ```
 domain/apps/
-  field.ts  descriptors.ts  records.ts  errors.ts  egress.ts  provider-module.ts
+  field.ts  descriptors.ts  records.ts  errors.ts  egress.ts  provider-module.ts  form-launch.ts  mtproto-port.ts
   ports/  provider-registry  app-repository  account-repository  secret-scope  provider-http
           connect-session-store  inbound-event  account-event  account-holder  public-urls  metrics  clock
 application/apps/
   catalog/list-catalog.use-case.ts
   apps/{create,update,delete,verify,get,list}-app.use-case.ts
   accounts/{update,delete,verify,get,list}-account.use-case.ts
-  connect/{start,resume,poll,cancel,get-session}-connect.use-case.ts  connect-finalizer.ts  connect-scheduler.ts
+  connect/{start,resume,poll,cancel,get-session}-connect.use-case.ts  resume-form-connect.use-case.ts
+          connect-finalizer.ts  connect-scheduler.ts  connect-context.port.ts  connect-finalize.port.ts
+          wait-launch.ts  resume-executor.ts  resume-form-connect.spec.ts  resume-form-connect.spec-fakes.ts
   access/account-access.service.ts  status-map.ts
   webhooks/handle-webhook.use-case.ts
   facade/accounts-facade.service.ts
   shared/{field-validation,scope-coverage,record-views}.ts
 infra/apps/
   apps.module.ts  provider-registry.adapter.ts (+ валидация §5.2)  app-repository.adapter.ts  account-repository.adapter.ts
-  scoped-secrets.adapter.ts  connect-session-store.adapter.ts  public-urls.adapter.ts  orphan-sweeper.ts
-  providers/index.ts  providers/_kit/**  providers/<id>/**  providers/__fixtures__/acme/**
+  scoped-secrets.adapter.ts  connect-session-store.adapter.ts  public-urls.adapter.ts  orphan-sweeper.ts  mtproto.adapter.ts
+  providers/index.ts  providers/_kit/**  providers/<id>/** (модуль, errors.ts, <id>.spec.ts)  providers/__fixtures__/acme/**
 infra/http/provider-http.adapter.ts      (+ егресс-охрана)
 infra/org-sqlite/schema/apps.ts  org-sql-apps.ts  (миграция)
-api/rest/  apps-catalog  apps  accounts  connect  apps-oauth-callback  apps-hook  (контроллеры)
+api/rest/  apps-catalog  apps  apps-request  apps-response  apps-pages  apps-oauth-callback  apps-connect-public  apps-hook  (контроллеры и хелперы)
 packages/contracts/src/apps.ts
+scripts/check-provider-names.ts
 docs/PROVIDER_MODULES.md
 ```
 
@@ -926,7 +982,7 @@ docs/PROVIDER_MODULES.md
 
 - Biome `noRestrictedImports`: `providers/**` импортируют только `domain/apps`, `_kit` и стандартные крипто-модули; `domain/apps`, `application/apps` не импортируют `infra`, `api`.
 - Biome `noRestrictedGlobals` на `fetch` в `infra/apps/providers/**`.
-- `check-no-provider-names`: id провайдеров и видов из `providerModules` отсутствуют в `domain`, `application`, `api`, `apps/webui` (исключение — `__fixtures__`).
+- `check-provider-names` (`bun run check:provider-names`): токены каталога `providers/**` отсутствуют в `domain`, `application`, `api`, `apps/webui` (кроме легаси-зон §14.1 и задокументированных исключений).
 - AST-правило на сравнения `account.kind`, `app.kind`, `descriptor.kind`, `provider.id` с литералами и `switch` по ним в `domain`, `application`, `api`: пусто.
 - `grep -rnE "(values|config|metadata)\.[a-zA-Z_]+" domain application api`: нет обращений по литеральному ключу (допустимо `values[field.key]`).
 - Пустой `git diff --stat` по путям §14.1.
@@ -937,12 +993,12 @@ docs/PROVIDER_MODULES.md
 
 ### 15.1 Двойники и тестовый провайдер `acme`
 
-`FakeProviderHttp` (скриптованные ответы), in-memory репозитории, `FakeSecretStore`, `FakeClock`. Провайдер `acme` в `providers/__fixtures__/acme/` в `providerModules` продакшена не входит и покрывает **все** пути ядра: OAuth с PKCE и `form_post`, device code, прямой ввод, `derived`-доступ, ротацию refresh, `setup` App, вебхук с challenge и `effects`, `userHost`, `generated`-поле, `partition`. На нём доказывается, что ядро провайдер-нейтрально.
+`FakeProviderHttp` (скриптованные ответы), in-memory репозитории, `FakeSecretStore`, `FakeClock`. Провайдер `acme` в `providers/__fixtures__/acme/` в `providerModules` продакшена не входит и покрывает **все** пути ядра: OAuth с PKCE и `form_post`, device code, прямой ввод, `derived`-доступ, ротацию refresh, `setup` App, вебхук с challenge и `effects`, `userHost`, `generated`-поле, `partition`, form-запуск с `resume` и капой. На нём доказывается, что ядро провайдер-нейтрально.
 
 ### 15.2 Спеки ядра (на `acme`)
 
 - Реестр: каждое нарушение §5.2 на отдельной фикстуре, сообщение содержит все нарушения сразу.
-- Подключение: одноразовость `state`, TTL, лимит сессий, reaper, снимок первым событием SSE, финализация (upsert, `identity_mismatch`, объединение scopes, порядок «секреты → строка», сбой посередине).
+- Подключение: одноразовость `state`, TTL, лимит сессий, reaper, снимок первым событием SSE, финализация (upsert, `identity_mismatch`, объединение scopes, порядок «секреты → строка», сбой посередине), `resume` формы — валидация `inputs`, капа, инлайновый ответ, просрочка → `failed session_expired`.
 - Доступ: кэш, single-flight, персист ротации до возврата, `expired` без обращения к провайдеру, `insufficient_scopes`.
 - Verify: маппинг каждого кода в статус по таблице §7.2; `identity_mismatch` ничего не пишет; `label` не перезаписывается.
 - Вебхуки: `404/401/400/503`, лимит тела, дедупликация, `effects`, неразрешимый аккаунт.
@@ -997,7 +1053,7 @@ A ─► I  (фронтенд идёт параллельно на фиксту�
 | **F. Подключение** | §6: сессии, finalizer, `start/resume/poll`, callback, launch-страница, SSE | все пути `acme` проходят; `state` одноразовый; опроса клиента нет |
 | **G. Доступ** | §7, §11.1–11.2: access-сервис, verify, report, фасад, события | single-flight и ротация проверены; таблица статусов исчерпывающая |
 | **H. Вебхуки** | §8 | `404/401/400/503`, дедупликация, `effects` на `acme` |
-| **I. Фронтенд** | §12 | `check-no-provider-names` пуст; мастер и picker работают на фикстуре и на реальном бэкенде |
+| **I. Фронтенд** | §12 | `check-provider-names` пуст; мастер и picker работают на фикстуре и на реальном бэкенде |
 | **J. Референсные провайдеры** | Google (OAuth, refresh, partition), GitHub (setup, `derived`, вебхук App), Telegram (direct, `generated`, вебхук Account) | сквозные сценарии §15.6; ни одной правки ядра при их написании сверх уже принятых пакетов |
 | **K. Конформанс, гайд, гейты** | §15.3, `docs/PROVIDER_MODULES.md`, CI-гейты §14.3; контрольное добавление ещё одного тестового провайдера (каталог + строка) | дифф контрольного провайдера не содержит ядра, фронта и других провайдеров |
 
