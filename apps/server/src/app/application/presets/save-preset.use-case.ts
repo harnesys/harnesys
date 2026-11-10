@@ -8,7 +8,7 @@ import {
 } from '../../domain/presets/preset.error.ts';
 import { PresetLibraryPort } from '../../domain/presets/preset-library.port.ts';
 import { toPresetDetail } from '../../domain/presets/preset-view.ts';
-import { missingAgentRefs } from '../../infra/presets/preset-envelope.ts';
+import { missingAgentRefs } from '../../domain/presets/preset-envelope.ts';
 import { ownerOf, type PresetPathInput } from './preset-path.ts';
 import { nextVersion } from './preset-versioning.ts';
 

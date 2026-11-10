@@ -2,7 +2,7 @@ import { Injectable, ValidationException } from '@harnesys/brix';
 import type { OrgLspListResponse } from '@harnesys/contracts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { ToolchainPort } from '../../domain/toolchain/toolchain.port.ts';
-import { readOrgLspFile, writeOrgLspFile } from '../../infra/lsp/org-lsp-file.ts';
+import { readOrgLspFile, writeOrgLspFile } from '../../domain/lsp/org-lsp-file.ts';
 import { toLspListResponse } from './lsp-status.ts';
 
 export interface PutOrgLspRequest {

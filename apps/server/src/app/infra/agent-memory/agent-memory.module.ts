@@ -6,6 +6,7 @@ import {
   OrgMemorySettingsPort,
 } from '../../domain/agent/agent-memory.port.ts';
 import { AgentModule } from '../agent/agent.module.ts';
+import { MemoryCrawlerPort } from '../../domain/agent/memory-crawler.port.ts';
 import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
 import { MemoryCrawler } from '../memory/memory-crawler.ts';
 import { ProviderModule } from '../provider/provider.module.ts';
@@ -18,6 +19,7 @@ import {
 } from './agent-memory.adapter.ts';
 
 @Module({
+  global: true,
   imports: [AgentModule, MachineHomeModule, ProviderModule, SecretModule],
   providers: [
     AgentMemoryAdapter,
@@ -45,6 +47,7 @@ import {
       useFactory: (adapter: OrgMemorySettingsAdapter) => adapter,
       inject: [OrgMemorySettingsAdapter],
     },
+    { provide: MemoryCrawlerPort, useClass: MemoryCrawler },
   ],
   exports: [
     AgentPinStorePort,
@@ -52,6 +55,7 @@ import {
     AgentPromotionStorePort,
     OrgMemorySettingsPort,
     MemoryCrawler,
+    MemoryCrawlerPort,
   ],
 })
 export class AgentMemoryModule {}

@@ -11,6 +11,7 @@ import { OrgMachineStoreAdapter } from '../machine-json/org-machine-store.adapte
 import { OrgDbAdapter } from '../org-sqlite/org-db.adapter.ts';
 
 @Module({
+  global: true,
   providers: [
     { provide: HostFsLayoutPort, useClass: HostFsLayoutAdapter },
     { provide: OrgDataPackPort, useClass: OrgDataPackAdapter },

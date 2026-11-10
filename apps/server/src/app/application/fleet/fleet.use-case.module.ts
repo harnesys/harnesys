@@ -1,22 +1,5 @@
 import { Module } from '@harnesys/brix';
 import { FleetContentProxyPort } from '../../domain/fleet/fleet-content-proxy.port.ts';
-import { AgentModule } from '../../infra/agent/agent.module.ts';
-import { ApprovalModule } from '../../infra/approvals/approval.module.ts';
-import { ExecutionProfileModule } from '../../infra/execution-profile/execution-profile.module.ts';
-import { FileAccessModule } from '../../infra/file-access/file-access.module.ts';
-import { FleetHubModule } from '../../infra/fleet-hub/fleet-hub.module.ts';
-import { FleetWorkerModule } from '../../infra/fleet-hub/fleet-worker.module.ts';
-import { IdentitySqliteModule } from '../../infra/identity-sqlite/identity-sqlite.module.ts';
-import { IntegrationModule } from '../../infra/integration/integration.module.ts';
-import { IssueInfraModule } from '../../infra/issues/issue.module.ts';
-import { MachineHomeModule } from '../../infra/machine-home/machine-home.module.ts';
-import { ModePresetsModule } from '../../infra/mode-presets/mode-presets.module.ts';
-import { ProviderModule } from '../../infra/provider/provider.module.ts';
-import { RuntimeModule } from '../../infra/runtime/runtime.module.ts';
-import { SecretModule } from '../../infra/secret/secret.module.ts';
-import { SkillsModule } from '../../infra/skills/skills.module.ts';
-import { SourceModule } from '../../infra/source/source.module.ts';
-import { ThreadModule } from '../../infra/thread/thread.module.ts';
 import { ExecutionProfileUseCaseModule } from '../execution-profile/execution-profile.use-case.module.ts';
 import { PromoteRelayUseCase } from '../host/promote-relay.use-case.ts';
 import { BuildOrgExecutionSnapshotUseCase } from './build-org-execution-snapshot.use-case.ts';
@@ -50,26 +33,7 @@ import { RevokeInviteUseCase } from './revoke-invite.use-case.ts';
 import { RotateNodeTokenUseCase } from './rotate-node-token.use-case.ts';
 
 @Module({
-  imports: [
-    MachineHomeModule,
-    IdentitySqliteModule,
-    FleetHubModule,
-    FleetWorkerModule,
-    SecretModule,
-    IntegrationModule,
-    RuntimeModule,
-    ApprovalModule,
-    ThreadModule,
-    ExecutionProfileModule,
-    ExecutionProfileUseCaseModule,
-    AgentModule,
-    ProviderModule,
-    SourceModule,
-    SkillsModule,
-    ModePresetsModule,
-    IssueInfraModule,
-    FileAccessModule,
-  ],
+  imports: [ExecutionProfileUseCaseModule],
   providers: [
     IssueInviteUseCase,
     ListInvitesUseCase,

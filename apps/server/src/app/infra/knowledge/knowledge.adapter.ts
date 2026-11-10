@@ -31,7 +31,7 @@ import {
   withOrgSqlite,
   withOrgSqliteAsync,
 } from '../org-sqlite/org-sqlite-session.ts';
-import { StudioEmbeddings } from './embeddings.ts';
+import { StudioEmbeddings } from '../../domain/knowledge/embeddings.ts';
 import { deleteKnowledgeForSource } from './knowledge-delete.ts';
 import { modelRefFromSettings } from './knowledge-embeddings.ts';
 import { SqliteKnowledgeIndexRepo } from './knowledge-index-repo.ts';

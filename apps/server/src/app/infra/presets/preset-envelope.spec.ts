@@ -12,7 +12,7 @@ import {
   missingAgentRefs,
   parseEnvelope,
   resolveEmbeds,
-} from './preset-envelope.ts';
+} from '../../domain/presets/preset-envelope.ts';
 
 const agentBody: AgentPresetBody = {
   name: 'Coder',

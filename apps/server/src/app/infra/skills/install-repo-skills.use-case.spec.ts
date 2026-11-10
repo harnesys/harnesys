@@ -10,6 +10,8 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { SkillsGitAdapter } from './skills-git.adapter.ts';
+import { SkillsWalkAdapter } from './skills-walk.adapter.ts';
 import type { SkillCandidate } from '@harnesys/contracts';
 import type { CursorMcpJson } from 'harnesys';
 import { FsSkillRegistry } from 'harnesys/adapters/node';
@@ -51,9 +53,25 @@ beforeEach(() => {
   executor = new FakeExecutor();
   events = new FakeEvents();
   const runtime = new FakePluginRuntime(layout);
-  discover = new DiscoverRepoSkillsUseCase(layout);
-  install = new InstallRepoSkillsUseCase(layout, skills, runtime, executor, events);
-  update = new UpdateInstalledSkillUseCase(layout, skills, runtime, executor, events);
+  discover = new DiscoverRepoSkillsUseCase(layout, new SkillsGitAdapter(), new SkillsWalkAdapter());
+  install = new InstallRepoSkillsUseCase(
+    layout,
+    skills,
+    runtime,
+    executor,
+    events,
+    new SkillsGitAdapter(),
+    new SkillsWalkAdapter(),
+  );
+  update = new UpdateInstalledSkillUseCase(
+    layout,
+    skills,
+    runtime,
+    executor,
+    events,
+    new SkillsGitAdapter(),
+    new SkillsWalkAdapter(),
+  );
 });
 
 afterAll(() => {

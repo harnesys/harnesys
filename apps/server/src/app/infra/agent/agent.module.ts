@@ -5,6 +5,7 @@ import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
 import { AgentRegistryAdapter } from './agent-registry.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule, DeskModule],
   providers: [{ provide: AgentRegistryPort, useClass: AgentRegistryAdapter }],
   exports: [AgentRegistryPort],

@@ -4,6 +4,7 @@ import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
 import { OrgMcpJsonAdapter } from './org-mcp-json.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule],
   providers: [{ provide: OrgMcpPort, useClass: OrgMcpJsonAdapter }],
   exports: [OrgMcpPort],

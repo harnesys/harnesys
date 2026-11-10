@@ -24,7 +24,7 @@ import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { LlmModelPort, LlmProviderPort } from '../../domain/provider/llm-provider.port.ts';
 import { resolveProviderApiKey } from '../../domain/secret/provider-api-key.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
-import { type EmbeddingModelRef, StudioEmbeddings } from '../knowledge/embeddings.ts';
+import { type EmbeddingModelRef, StudioEmbeddings } from '../../domain/knowledge/embeddings.ts';
 import { OrgMemoryPromotionStore } from '../memory/org-memory-promotion.store.ts';
 import {
   decisionModelIdOf,

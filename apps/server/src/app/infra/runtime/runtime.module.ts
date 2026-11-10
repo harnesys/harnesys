@@ -31,6 +31,7 @@ import { LocalExecutorAdapter } from './local-executor.adapter.ts';
 import { WaitTickerGateAdapter } from './wait-ticker-gate.adapter.ts';
 
 @Module({
+  global: true,
   imports: [
     MachineHomeModule,
     PluginsModule,

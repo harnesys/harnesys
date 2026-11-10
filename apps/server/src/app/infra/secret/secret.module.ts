@@ -4,6 +4,7 @@ import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
 import { SecretStoreAdapter } from './secret-store.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule],
   providers: [{ provide: SecretStorePort, useClass: SecretStoreAdapter }],
   exports: [SecretStorePort],

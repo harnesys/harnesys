@@ -3,6 +3,7 @@ import { PackRegistryPort } from '../../../domain/capabilities/pack-registry.por
 import { CorePackRegistryAdapter } from './core-pack-registry.adapter.ts';
 
 @Module({
+  global: true,
   providers: [{ provide: PackRegistryPort, useClass: CorePackRegistryAdapter }],
   exports: [PackRegistryPort],
 })

@@ -5,6 +5,7 @@ import { TerminalEventsAdapter } from './terminal-events.adapter.ts';
 import { TerminalSessionsAdapter } from './terminal-sessions.adapter.ts';
 
 @Module({
+  global: true,
   providers: [
     { provide: TerminalSessionsPort, useClass: TerminalSessionsAdapter },
     { provide: TerminalEventsPort, useClass: TerminalEventsAdapter },

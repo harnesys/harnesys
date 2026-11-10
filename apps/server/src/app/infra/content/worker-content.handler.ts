@@ -27,7 +27,7 @@ import {
   type WorkerHostBrowseRequest,
   type WorkerRequest,
   WorkerRequestSchema,
-} from './worker-content.protocol.ts';
+} from '../../domain/content/worker-content.protocol.ts';
 import { resolveWorktreeContentRoot } from './worktree-content-root.ts';
 
 const DOMAIN_STATUS: Record<string, number> = {

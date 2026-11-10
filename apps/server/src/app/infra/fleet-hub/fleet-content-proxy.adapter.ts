@@ -6,7 +6,7 @@ import { FleetHubPort } from '../../domain/fleet/fleet-hub.port.ts';
 import {
   isWorkerContentPath,
   PROXY_CONTENT_TIMEOUT_MS,
-} from '../content/worker-content.protocol.ts';
+} from '../../domain/content/worker-content.protocol.ts';
 
 @Injectable()
 export class FleetContentProxyAdapter extends FleetContentProxyPort {

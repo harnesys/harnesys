@@ -7,19 +7,20 @@ import { findDecisionModelCoords } from '../../application/use-cases/memory/prom
 import { ReflectThreadUseCase } from '../../application/use-cases/memory/reflect-thread.use-case.ts';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
+import { MemoryCrawlerPort } from '../../domain/agent/memory-crawler.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { OrgMachineStore } from '../../domain/machine/org-machine-store.port.ts';
 import { LlmModelPort, LlmProviderPort } from '../../domain/provider/llm-provider.port.ts';
 import { resolveProviderApiKey } from '../../domain/secret/provider-api-key.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
-import { StudioEmbeddings } from '../knowledge/embeddings.ts';
+import { StudioEmbeddings } from '../../domain/knowledge/embeddings.ts';
 import {
   type OrgSqliteDb,
   withOrgSqlite,
   withOrgSqliteAsync,
 } from '../org-sqlite/org-sqlite-session.ts';
 import { packsFromConfig } from '../runtime/agent-definition.mapper.ts';
-import { createOrgModelsPort } from '../runtime/org-models.port.ts';
+import { createOrgModelsPort } from '../../domain/provider/org-models.ts';
 import { OrgEpisodicPort } from '../runtime/packs/org-episodic.port.ts';
 import { SqliteRunEventStore } from '../runtime/sqlite-run-events.adapter.ts';
 import {
@@ -48,7 +49,7 @@ interface CrawlTotals {
   promotions: number;
 }
 @Injectable()
-export class MemoryCrawler implements ModuleInitHook, ModuleDestroyHook {
+export class MemoryCrawler extends MemoryCrawlerPort implements ModuleInitHook, ModuleDestroyHook {
   private readonly log: Logger;
   private firstTimer: ReturnType<typeof setTimeout> | null = null;
   private intervalTimer: ReturnType<typeof setInterval> | null = null;
@@ -63,6 +64,7 @@ export class MemoryCrawler implements ModuleInitHook, ModuleDestroyHook {
     private readonly secrets: SecretStorePort,
     logger: Logger,
   ) {
+    super();
     this.log = logger.child('memory-crawler');
   }
 

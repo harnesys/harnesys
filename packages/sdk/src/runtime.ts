@@ -129,7 +129,9 @@ export function createAddonRuntime(options: AddonRuntimeOptions): AddonRuntime {
       });
     }
     const parsed = spec.params.parse(params) as Record<string, unknown>;
-    const meta = CallMetaSchema.parse(parsed._meta);
+    const meta = isCallMeta(parsed._meta)
+      ? CallMetaSchema.parse(parsed._meta)
+      : fallbackMeta('host-request');
     if (meta.deadline < now()) {
       throw new AddonError('timeout', { detail: `deadline ${meta.deadline} has passed` });
     }
@@ -161,7 +163,7 @@ export function createAddonRuntime(options: AddonRuntimeOptions): AddonRuntime {
     if (!handler) {
       return;
     }
-    const ctx = createAddonContextFor(channel, fallbackMeta(), signal);
+    const ctx = createAddonContextFor(channel, fallbackMeta('notification'), signal);
     await handler(parsed as never, ctx);
   }
 
@@ -190,9 +192,13 @@ function withoutMeta<P extends { _meta?: unknown }>(params: P): Omit<P, '_meta'>
   return copy as Omit<P, '_meta'>;
 }
 
-function fallbackMeta(): CallMeta {
+function isCallMeta(value: unknown): boolean {
+  return typeof value === 'object' && value !== null && 'correlationId' in value;
+}
+
+function fallbackMeta(correlationId: string): CallMeta {
   return {
-    correlationId: 'notification',
+    correlationId,
     deadline: Number.MAX_SAFE_INTEGER,
     principal: { type: 'system' },
     locale: 'en',

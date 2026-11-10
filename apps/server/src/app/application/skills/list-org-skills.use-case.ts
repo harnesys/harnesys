@@ -8,7 +8,8 @@ import { OrgSkillsPort } from '../../domain/skills/org-skills.port.ts';
 import { SourceSkillsPort } from '../../domain/skills/source-skills.port.ts';
 import { SourceLocationPort } from '../../domain/source/source-location.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
-import { SkillsTierCache } from '../../infra/skills/skills-tier-cache.ts';
+import { SkillsSeedPort } from '../../domain/skills/skills-seed.port.ts';
+import { SkillsTierCachePort } from '../../domain/skills/skills-tier-cache.port.ts';
 import { buildMergedSkills } from './skills.helpers.ts';
 
 export interface ListOrgSkillsRequest {
@@ -19,7 +20,8 @@ export interface ListOrgSkillsRequest {
 export class ListOrgSkillsUseCase {
   constructor(
     readonly layout: HostFsLayoutPort,
-    readonly tierCache: SkillsTierCache,
+    readonly tierCache: SkillsTierCachePort,
+    readonly seed: SkillsSeedPort,
     readonly skills: OrgSkillsPort,
     readonly pluginRuntime: PluginRuntimePort,
     readonly sources: SourceRegistryPort,

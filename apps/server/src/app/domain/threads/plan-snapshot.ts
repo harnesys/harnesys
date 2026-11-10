@@ -1,6 +1,6 @@
 import type { PlanItem, PlanItemStatus, PlanSnapshot, PlanStatus, SubagentRole } from 'harnesys';
 import { PLAN_ITEM_STATUSES, PLAN_STATUSES } from 'harnesys';
-import type { ThreadPlanRow } from '../../org-sqlite/schema/thread-plans.ts';
+import type { ThreadPlanRow } from './thread-plan-row.ts';
 
 export function toSnapshot(row: ThreadPlanRow): PlanSnapshot | null {
   let parsed: unknown;

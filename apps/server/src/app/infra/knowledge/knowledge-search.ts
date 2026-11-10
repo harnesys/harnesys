@@ -4,7 +4,7 @@ import { KnowledgeValidationException } from '../../domain/knowledge/knowledge.e
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
 import { knowledgeChunksTable } from '../org-sqlite/schema/index.ts';
 import { cosineSimilarity, decodeEmbedding } from './embedding-vec.ts';
-import type { EmbeddingsPort } from './embeddings.ts';
+import type { EmbeddingsPort } from '../../domain/knowledge/embeddings.ts';
 import { buildFtsMatchQuery } from './fts-query.ts';
 import { sqliteClient } from './sqlite-client.ts';
 

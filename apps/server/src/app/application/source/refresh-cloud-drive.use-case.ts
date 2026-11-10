@@ -22,7 +22,7 @@ import { SourceLocationPort } from '../../domain/source/source-location.port.ts'
 import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { SourceOperationGrantPort } from '../../domain/source/source-operation-grant.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
-import { flushCloudMirror } from '../../infra/source/drivers/cloud/cloud-sync-back.ts';
+import { CloudSyncBackPort } from '../../domain/source/cloud-sync-back.port.ts';
 import { markSiblingCloudCopiesRefreshRequired } from './mark-cloud-siblings-refresh.ts';
 import { materializeCloudSourceOnHost } from './materialize-cloud-source.ts';
 import { toPublicSource } from './to-public-source.ts';
@@ -53,6 +53,7 @@ export class RefreshCloudDriveUseCase {
     private readonly tokens: IntegrationTokenPort,
     private readonly grants: SourceOperationGrantPort,
     private readonly commands: NodeCommandQueuePort,
+    private readonly cloudSync: CloudSyncBackPort,
     private readonly hub: FleetHubPort,
     private readonly revisions: OrgConfigRevisionPort,
     private readonly materializationEvents: MaterializationEventsPort,
@@ -130,7 +131,7 @@ export class RefreshCloudDriveUseCase {
     input: RefreshCloudDriveInput,
     distribution: { kind: 'cloud-drive'; remoteFolderId: string; integrationId: string },
   ): Promise<string[]> {
-    const flushed = await flushCloudMirror({
+    const flushed = await this.cloudSync.flushCloudMirror({
       orgId: input.orgId,
       source: {
         id: input.sourceId,

@@ -4,6 +4,7 @@ import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
 import { HookRunAdapter } from '../org-sqlite/hook-run.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule],
   providers: [{ provide: HookRunStorePort, useClass: HookRunAdapter }],
   exports: [HookRunStorePort],

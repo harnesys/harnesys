@@ -5,7 +5,7 @@ import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
 import { SourceNotFoundException } from '../../domain/source/source.error.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import { ToolchainPort } from '../../domain/toolchain/toolchain.port.ts';
-import { readLspJsonText } from '../../infra/lsp/org-lsp-file.ts';
+import { readLspJsonText } from '../../domain/lsp/org-lsp-file.ts';
 import { buildLspView } from './lsp-view.ts';
 
 export interface GetSourceLspRequest {

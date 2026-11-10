@@ -13,7 +13,8 @@ import { SourceSkillsPort } from '../../domain/skills/source-skills.port.ts';
 import { SourceLocationPort } from '../../domain/source/source-location.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
-import { SkillsTierCache } from '../../infra/skills/skills-tier-cache.ts';
+import { SkillsSeedPort } from '../../domain/skills/skills-seed.port.ts';
+import { SkillsTierCachePort } from '../../domain/skills/skills-tier-cache.port.ts';
 import { buildMergedSkills } from './skills.helpers.ts';
 
 export interface DeleteOrgSkillRequest {
@@ -25,7 +26,8 @@ export interface DeleteOrgSkillRequest {
 export class DeleteOrgSkillUseCase {
   constructor(
     readonly layout: HostFsLayoutPort,
-    readonly tierCache: SkillsTierCache,
+    readonly tierCache: SkillsTierCachePort,
+    readonly seed: SkillsSeedPort,
     readonly skills: OrgSkillsPort,
     readonly pluginRuntime: PluginRuntimePort,
     readonly sources: SourceRegistryPort,

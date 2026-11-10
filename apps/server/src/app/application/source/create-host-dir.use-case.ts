@@ -9,7 +9,7 @@ import { FleetHubPort } from '../../domain/fleet/fleet-hub.port.ts';
 import { NodeRepository } from '../../domain/fleet/node-repository.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { SourcePathInvalidException } from '../../domain/source/source.error.ts';
-import { WORKER_CONTENT_PATH } from '../../infra/content/worker-content.protocol.ts';
+import { WORKER_CONTENT_PATH } from '../../domain/content/worker-content.protocol.ts';
 
 export interface CreateHostDirInput {
   orgId: string;

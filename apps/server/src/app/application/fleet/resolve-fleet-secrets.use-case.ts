@@ -12,7 +12,7 @@ import { type NodePrincipal } from '../../domain/identity/principal.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import { LEGACY_PROVIDER_SECRET_PREFIX, vaultStorageKey } from '../../domain/secret/vault-keys.ts';
 import { SourceOperationGrantPort } from '../../domain/source/source-operation-grant.port.ts';
-import { googleCredKey } from '../../infra/integration/google/google-token-access.ts';
+import { GoogleCredKeyPort } from './google-cred-key.port.ts';
 import { hashNodeToken } from './hash-node-token.ts';
 
 export interface ResolveFleetSecretsInput {
@@ -28,6 +28,7 @@ export class ResolveFleetSecretsUseCase {
     private readonly claims: EventClaimPort,
     private readonly secrets: SecretStorePort,
     private readonly grants: SourceOperationGrantPort,
+    private readonly credKeys: GoogleCredKeyPort,
   ) {}
 
   async execute(input: ResolveFleetSecretsInput): Promise<ResolveFleetSecretsResponse> {
@@ -78,7 +79,7 @@ export class ResolveFleetSecretsUseCase {
     if (variable !== null) {
       return variable;
     }
-    return this.secrets.get(orgId, googleCredKey(name));
+    return this.secrets.get(orgId, this.credKeys.credKey(name));
   }
 
   private authorize(orgId: string, nodeId: string, body: ResolveFleetSecretsBody): Set<string> {

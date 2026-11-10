@@ -16,7 +16,7 @@ import { openOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 import { type ApprovalResumeSweep, createApprovalResumeSweep } from './approval-resume-sweep.ts';
 import { createBranchSeed } from './branch-state-seed.ts';
 import { runInHostToolScope } from './host-tool-scope.ts';
-import { createOrgModelsPort } from './org-models.port.ts';
+import { createOrgModelsPort } from '../../domain/provider/org-models.ts';
 import { wireOrgPlugins } from './org-plugin-wiring.ts';
 import { createOrgRunStores } from './org-run-stores.ts';
 import type { OrgRuntime, OrgRuntimeDeps } from './org-runtime.types.ts';

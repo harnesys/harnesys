@@ -20,6 +20,7 @@ import { IssueRepositoryAdapter } from './issue-repository.adapter.ts';
 import { IssueLabelRepositoryAdapter } from './label-repository.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule],
   providers: [
     { provide: IssueRepositoryPort, useClass: IssueRepositoryAdapter },

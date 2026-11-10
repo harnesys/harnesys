@@ -8,6 +8,7 @@ import { ApprovalEventsAdapter } from './approval-events.adapter.ts';
 import { ApprovalStoreAdapter } from './approval-store.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule, PermissionsModule],
   providers: [
     { provide: ApprovalStorePort, useClass: ApprovalStoreAdapter },

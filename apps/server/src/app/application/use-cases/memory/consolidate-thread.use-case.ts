@@ -12,7 +12,7 @@ import {
 } from 'harnesys';
 import type { AgentRecord } from '../../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
-import type { EmbeddingsPort } from '../../../infra/knowledge/embeddings.ts';
+import type { EmbeddingsPort } from '../../../domain/knowledge/embeddings.ts';
 import { OrgMemoryConsolidationStore } from '../../../infra/memory/org-memory-consolidation.store.ts';
 import type { OrgSqliteDb } from '../../../infra/org-sqlite/org-sqlite-session.ts';
 import { memoryFactsTable } from '../../../infra/org-sqlite/schema/agent-memory.ts';

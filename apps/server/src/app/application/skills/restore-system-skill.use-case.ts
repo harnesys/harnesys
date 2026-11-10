@@ -11,13 +11,8 @@ import {
 } from '../../domain/skills/skills.error.ts';
 import { SkillsEventsPort } from '../../domain/skills/skills-events.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
-import { SkillsTierCache } from '../../infra/skills/skills-tier-cache.ts';
-import {
-  bundledSkillNames,
-  readSeedMarker,
-  sha256SkillDir,
-  writeSeedMarker,
-} from '../../infra/skills/system-skills-seed.ts';
+import { SkillsSeedPort } from '../../domain/skills/skills-seed.port.ts';
+import { SkillsTierCachePort } from '../../domain/skills/skills-tier-cache.port.ts';
 
 const SKILL_NAME_RE = /^[a-z0-9][a-z0-9-]*$/;
 
@@ -48,7 +43,8 @@ export class RestoreSystemSkillUseCase {
     private readonly pluginRuntime: PluginRuntimePort,
     private readonly executor: LocalExecutorPort,
     private readonly skillsEvents: SkillsEventsPort,
-    private readonly tierCache: SkillsTierCache,
+    private readonly tierCache: SkillsTierCachePort,
+    private readonly seed: SkillsSeedPort,
     logger: Logger,
   ) {
     this.log = logger.child('restore-system-skill');
@@ -61,7 +57,7 @@ export class RestoreSystemSkillUseCase {
     const bundledDir = join(bundledAssetsRoot(), 'skills', request.name);
     const bundledSkillMd = join(bundledDir, 'SKILL.md');
     if (
-      !bundledSkillNames(bundledAssetsRoot()).includes(request.name) ||
+      !this.seed.bundledSkillNames(bundledAssetsRoot()).includes(request.name) ||
       !existsSync(bundledSkillMd)
     ) {
       throw new SkillNotFoundException(`bundled system skill not found: ${request.name}`);
@@ -94,11 +90,11 @@ export class RestoreSystemSkillUseCase {
   }
 
   private refreshMarker(systemDir: string, name: string): void {
-    const marker = readSeedMarker(systemDir);
+    const marker = this.seed.readSeedMarker(systemDir);
     const now = new Date().toISOString();
-    const bundledHash = sha256SkillDir(join(bundledAssetsRoot(), 'skills', name));
+    const bundledHash = this.seed.sha256SkillDir(join(bundledAssetsRoot(), 'skills', name));
     const entry = marker?.skills[name];
-    writeSeedMarker(systemDir, {
+    this.seed.writeSeedMarker(systemDir, {
       appVersion: marker?.appVersion ?? APP_VERSION,
       seededAt: marker?.seededAt ?? now,
       skills: {

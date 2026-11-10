@@ -6,8 +6,8 @@ import {
   PresetEnvelopeSchema,
   type TeamPresetBody,
 } from '@harnesys/contracts';
-import { PresetValidationException } from '../../domain/presets/preset.error.ts';
-import type { PresetRecord } from '../../domain/presets/preset-library.port.ts';
+import { PresetValidationException } from './preset.error.ts';
+import type { PresetRecord } from './preset-library.port.ts';
 
 const SYSTEM_OWNER = 'harnesys';
 

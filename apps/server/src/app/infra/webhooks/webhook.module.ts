@@ -4,6 +4,7 @@ import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
 import { WebhookRepositoryAdapter } from './webhook-repository.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule],
   providers: [{ provide: WebhookRepositoryPort, useClass: WebhookRepositoryAdapter }],
   exports: [WebhookRepositoryPort],

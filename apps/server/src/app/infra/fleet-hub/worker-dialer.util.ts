@@ -1,4 +1,4 @@
-import { isWorkerContentPath } from '../content/worker-content.protocol.ts';
+import { isWorkerContentPath } from '../../domain/content/worker-content.protocol.ts';
 
 export interface WorkerSocket {
   readyState: number;

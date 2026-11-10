@@ -3,7 +3,7 @@ import type { VoiceOption } from '../../domain/model-execution/voice-catalog.por
 import { VoiceCatalogPort } from '../../domain/model-execution/voice-catalog.port.ts';
 import { LlmModelPort, LlmProviderPort } from '../../domain/provider/llm-provider.port.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
-import { createOrgModelsPort } from '../../infra/runtime/org-models.port.ts';
+import { createOrgModelsPort } from '../../domain/provider/org-models.ts';
 
 export interface ResolveVoicesRequest {
   orgId: string;

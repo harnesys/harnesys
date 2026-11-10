@@ -4,6 +4,7 @@ import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
 import { EulaAdapter } from './eula.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule],
   providers: [{ provide: EulaPort, useClass: EulaAdapter }],
   exports: [EulaPort],

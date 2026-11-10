@@ -1,7 +1,7 @@
 import type { ThreadPlanRecord } from '@harnesys/studio-shared';
 import type { PlanSnapshot } from 'harnesys';
-import type { ThreadPlanRow } from '../../infra/org-sqlite/schema/thread-plans.ts';
-import { toSnapshot } from '../../infra/runtime/packs/plan-snapshot.ts';
+import type { ThreadPlanRow } from '../../domain/threads/thread-plan-row.ts';
+import { toSnapshot } from '../../domain/threads/plan-snapshot.ts';
 
 export function snapshotOfRow(row: ThreadPlanRow): ThreadPlanRecord | null {
   const snapshot: PlanSnapshot | null = toSnapshot(row);

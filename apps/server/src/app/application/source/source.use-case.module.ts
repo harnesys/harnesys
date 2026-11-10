@@ -1,13 +1,5 @@
 import { Module } from '@harnesys/brix';
 import { CloudSyncBackWatchPort } from '../../domain/source/cloud-sync-back-watch.port.ts';
-import { FleetHubModule } from '../../infra/fleet-hub/fleet-hub.module.ts';
-import { IntegrationModule } from '../../infra/integration/integration.module.ts';
-import { KnowledgeModule } from '../../infra/knowledge/knowledge.module.ts';
-import { MachineHomeModule } from '../../infra/machine-home/machine-home.module.ts';
-import { WorkspaceContainerModule } from '../../infra/process-runtime/workspace-container.module.ts';
-import { SecretModule } from '../../infra/secret/secret.module.ts';
-import { CloudSyncBackModule } from '../../infra/source/drivers/cloud/cloud-sync-back.module.ts';
-import { SourceModule } from '../../infra/source/source.module.ts';
 import { AttachCloudDriveUseCase } from './attach-cloud-drive.use-case.ts';
 import { AttachGitUseCase } from './attach-git.use-case.ts';
 import { AttachLocalFolderUseCase } from './attach-local-folder.use-case.ts';
@@ -49,16 +41,6 @@ import { StageGitUseCase } from './stage-git.use-case.ts';
 import { SwitchGitBranchUseCase } from './switch-git-branch.use-case.ts';
 
 @Module({
-  imports: [
-    MachineHomeModule,
-    SourceModule,
-    FleetHubModule,
-    CloudSyncBackModule,
-    SecretModule,
-    IntegrationModule,
-    KnowledgeModule,
-    WorkspaceContainerModule,
-  ],
   providers: [
     EnsureWorkspaceUseCase,
     ListSourcesUseCase,

@@ -1,6 +1,4 @@
 import { Module } from '@harnesys/brix';
-import { ProviderModule } from '../../infra/provider/provider.module.ts';
-import { SecretModule } from '../../infra/secret/secret.module.ts';
 import { CreateProviderUseCase } from './create-provider.use-case.ts';
 import { CreateProviderModelUseCase } from './create-provider-model.use-case.ts';
 import { DeleteProviderUseCase } from './delete-provider.use-case.ts';
@@ -31,7 +29,6 @@ const useCases = [
 ];
 
 @Module({
-  imports: [ProviderModule, SecretModule],
   providers: [ProviderKeys, ...useCases],
   exports: [...useCases],
 })

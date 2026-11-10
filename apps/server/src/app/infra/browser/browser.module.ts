@@ -6,6 +6,7 @@ import { SkillsModule } from '../skills/skills.module.ts';
 import { LocalBrowserHostAdapter } from './local-browser-host.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule, SkillsModule],
   providers: [{ provide: BrowserHostPort, useClass: LocalBrowserHostAdapter }],
   exports: [BrowserHostPort, OrgSettingsPort],

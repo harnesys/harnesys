@@ -3,7 +3,7 @@ import type { OrgLspListResponse } from '@harnesys/contracts';
 import { SourceNotFoundException } from '../../domain/source/source.error.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import { ToolchainPort } from '../../domain/toolchain/toolchain.port.ts';
-import { parseLspServers, readLspJsonText } from '../../infra/lsp/org-lsp-file.ts';
+import { parseLspServers, readLspJsonText } from '../../domain/lsp/org-lsp-file.ts';
 import { toLspListResponse } from './lsp-status.ts';
 
 export interface PutSourceLspRequest {

@@ -1,7 +1,4 @@
 import { Module } from '@harnesys/brix';
-import { FleetHubModule } from '../../infra/fleet-hub/fleet-hub.module.ts';
-import { IdentitySqliteModule } from '../../infra/identity-sqlite/identity-sqlite.module.ts';
-import { MachineHomeModule } from '../../infra/machine-home/machine-home.module.ts';
 import { AcceptUserInviteUseCase } from './accept-user-invite.use-case.ts';
 import { ChangePasswordUseCase } from './change-password.use-case.ts';
 import { ConfirmIdentityLinkUseCase } from './confirm-identity-link.use-case.ts';
@@ -49,7 +46,6 @@ const IDENTITY_USE_CASES = [
 ];
 
 @Module({
-  imports: [IdentitySqliteModule, FleetHubModule, MachineHomeModule],
   providers: [...IDENTITY_USE_CASES],
   exports: [...IDENTITY_USE_CASES],
 })

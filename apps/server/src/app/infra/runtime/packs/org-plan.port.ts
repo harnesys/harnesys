@@ -12,7 +12,7 @@ import { PlanEventsPort } from '../../../domain/plan/plan-events.port.ts';
 import type { OrgSqliteDb } from '../../org-sqlite/org-sqlite-session.ts';
 import { type ThreadPlanRow, threadPlansTable } from '../../org-sqlite/schema/thread-plans.ts';
 import { toRecord } from './plan-record.ts';
-import { toSnapshot } from './plan-snapshot.ts';
+import { toSnapshot } from '../../../domain/threads/plan-snapshot.ts';
 
 export class OrgPlanPort implements PlanPort {
   constructor(

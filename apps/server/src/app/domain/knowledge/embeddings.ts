@@ -1,13 +1,13 @@
 import { isDriver } from 'harnesys';
 import { EMBEDDING_ERROR_PREVIEW_CHARS, OLLAMA_EMBED_KEEP_ALIVE } from '../../../const.ts';
-import { KnowledgeValidationException } from '../../domain/knowledge/knowledge.error.ts';
+import { KnowledgeValidationException } from './knowledge.error.ts';
 import type {
   LlmModel,
   LlmModelPort,
   LlmProvider,
   LlmProviderPort,
-} from '../../domain/provider/llm-provider.port.ts';
-import { parseVaultRef } from '../../domain/secret/vault-keys.ts';
+} from '../provider/llm-provider.port.ts';
+import { parseVaultRef } from '../secret/vault-keys.ts';
 
 export interface EmbeddingModelRef {
   provider: string;

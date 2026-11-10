@@ -152,3 +152,8 @@ export interface LspInstallSpec {
   command: string;
   install: string;
 }
+
+export function lspInstallSpecForCommand(command: string): LspInstallSpec | undefined {
+  const install = installForCommand(command);
+  return install === undefined ? undefined : { command, install };
+}

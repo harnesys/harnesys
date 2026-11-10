@@ -17,7 +17,15 @@ import {
   SourceOperationGrantPort,
   type SourceOperationGrantRecord,
 } from '../../domain/source/source-operation-grant.port.ts';
+import { googleCredKey } from '../../infra/integration/google/google-token-access.ts';
 import { hashNodeToken } from './hash-node-token.ts';
+import { GoogleCredKeyPort } from './google-cred-key.port.ts';
+
+class FakeCredKeys extends GoogleCredKeyPort {
+  override credKey(credRef: string): string {
+    return googleCredKey(credRef);
+  }
+}
 import { ResolveFleetSecretsUseCase } from './resolve-fleet-secrets.use-case.ts';
 
 class FakeGrants extends SourceOperationGrantPort {
@@ -137,6 +145,7 @@ describe('ResolveFleetSecretsUseCase', () => {
       new FakeClaims(null),
       secrets,
       new FakeGrants(),
+      new FakeCredKeys(),
     );
     let caught: unknown;
     try {
@@ -170,6 +179,7 @@ describe('ResolveFleetSecretsUseCase', () => {
       }),
       new FakeSecrets({ 'secret:API_KEY': 'secret-value', 'secret:OTHER': 'x' }),
       new FakeGrants(),
+      new FakeCredKeys(),
     );
     const result = await useCase.execute({
       orgId: 'org-1',
@@ -185,6 +195,7 @@ describe('ResolveFleetSecretsUseCase', () => {
       new FakeClaims(null),
       new FakeSecrets({}),
       new FakeGrants(),
+      new FakeCredKeys(),
     );
     await expect(
       useCase.execute({

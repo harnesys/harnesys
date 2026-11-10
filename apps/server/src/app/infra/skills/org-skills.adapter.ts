@@ -19,7 +19,7 @@ import {
   SkillNotFoundException,
   SkillValidationException,
 } from '../../domain/skills/skills.error.ts';
-import { SKILL_NAME_RE } from './skill-name.ts';
+import { SKILL_NAME_RE } from '../../domain/skills/skill-name.ts';
 
 const SIDECAR_FILE = '.harnesys-skill.json';
 const DIR_MODE = 0o700;

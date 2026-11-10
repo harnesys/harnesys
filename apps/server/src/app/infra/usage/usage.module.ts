@@ -5,6 +5,7 @@ import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
 import { UsageAdapter } from './usage.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule, IdentitySqliteModule],
   providers: [
     {

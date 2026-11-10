@@ -3,7 +3,7 @@ import {
   type EmbeddingsPort,
   StudioEmbeddings,
   type StudioEmbeddingsDeps,
-} from './embeddings.ts';
+} from '../../domain/knowledge/embeddings.ts';
 import type { KnowledgeSettingsRecord } from './knowledge-index-types.ts';
 
 const UNAVAILABLE_EMBEDDINGS: EmbeddingsPort = {

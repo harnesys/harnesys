@@ -1,7 +1,7 @@
 import { access } from 'node:fs/promises';
 import { relative, resolve, sep } from 'node:path';
 import { trace } from '../../libs/trace.ts';
-import type { EmbeddingsPort } from './embeddings.ts';
+import type { EmbeddingsPort } from '../../domain/knowledge/embeddings.ts';
 import { indexKnowledgeFile, upsertWalkEntry } from './knowledge-index-file.ts';
 import type { SqliteKnowledgeIndexRepo } from './knowledge-index-repo.ts';
 import { collectKnowledgePaths, resolveUnderProject, toPosix } from './knowledge-walk.ts';

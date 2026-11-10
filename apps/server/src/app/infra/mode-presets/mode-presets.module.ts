@@ -4,6 +4,7 @@ import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
 import { ModePresetRegistryAdapter } from './mode-preset-registry.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule],
   providers: [{ provide: ModePresetRegistryPort, useClass: ModePresetRegistryAdapter }],
   exports: [ModePresetRegistryPort],

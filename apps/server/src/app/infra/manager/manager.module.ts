@@ -4,6 +4,7 @@ import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
 import { ManagerTailAdapter } from '../org-sqlite/manager-tail.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule],
   providers: [{ provide: ManagerTailPort, useClass: ManagerTailAdapter }],
   exports: [ManagerTailPort],

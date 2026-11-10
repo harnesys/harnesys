@@ -12,9 +12,9 @@ import {
 } from '../../domain/skills/skills.error.ts';
 import { SkillsEventsPort } from '../../domain/skills/skills-events.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
-import { clonePlugin, resolveGitSource } from '../../infra/plugins/plugin-git.ts';
-import { sanitizeSkillName } from '../../infra/skills/skill-name.ts';
-import { type WalkCandidate, walkSkills } from '../../infra/skills/skills-walk.ts';
+import { sanitizeSkillName } from '../../domain/skills/skill-name.ts';
+import { SkillsGitPort } from '../../domain/skills/skills-git.port.ts';
+import { type WalkCandidate, SkillsWalkPort } from '../../domain/skills/skills-walk.port.ts';
 import { resolveSkillSelection, skillSelectionError } from './skill-selection.ts';
 
 export interface InstallRepoSkillsRequest {
@@ -36,20 +36,22 @@ export class InstallRepoSkillsUseCase {
     private readonly pluginRuntime: PluginRuntimePort,
     private readonly executor: LocalExecutorPort,
     private readonly skillsEvents: SkillsEventsPort,
+    private readonly git: SkillsGitPort,
+    private readonly walk: SkillsWalkPort,
   ) {}
 
   async execute(request: InstallRepoSkillsRequest): Promise<InstallSkillsResponse> {
     const staging = join(this.layout.skillsStagingDir(request.orgId), randomUUID());
     try {
-      const { revision } = await clonePlugin({
-        source: resolveGitSource(request.body.url),
+      const { revision } = await this.git.clonePlugin({
+        source: this.git.resolveGitSource(request.body.url),
         dest: staging,
         ref: request.body.ref,
       });
       if (revision !== request.body.revision) {
         throw new SkillConflictException('revision-changed — rerun discover and retry');
       }
-      const walk = await walkSkills(staging);
+      const walk = await this.walk.walkSkills(staging);
       const planned = request.body.selections.map((selection) =>
         planSelection(walk.candidates, selection),
       );

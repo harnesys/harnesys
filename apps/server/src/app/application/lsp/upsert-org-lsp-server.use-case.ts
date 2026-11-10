@@ -9,7 +9,7 @@ import {
   readOrgLspFile,
   withServerUpsert,
   writeOrgLspFile,
-} from '../../infra/lsp/org-lsp-file.ts';
+} from '../../domain/lsp/org-lsp-file.ts';
 import { buildLspView } from './lsp-view.ts';
 
 export interface UpsertOrgLspServerRequest {

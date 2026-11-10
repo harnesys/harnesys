@@ -38,7 +38,7 @@ import type { OrgGoogleDeps } from './org-google.port.ts';
 import type { OrgIssueDeps } from './org-issue.port.ts';
 import type { OrgKnowledgeDeps } from './org-knowledge.port.ts';
 import type { OrgManagerDeps } from './org-manager.port.ts';
-import { orgPackNames } from './org-pack-list.ts';
+import { orgPackNames } from '../../../domain/runtime/org-pack-list.ts';
 import { registrationForPack } from './org-pack-registrations.ts';
 import { isPackSatisfied } from './org-pack-requirements.ts';
 import type { OrgSkillsDeps } from './org-skills.pack.port.ts';

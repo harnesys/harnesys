@@ -4,6 +4,7 @@ import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
 import { FileAccessRuleAdapter } from './file-access-rule.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule],
   providers: [{ provide: FileAccessRulePort, useClass: FileAccessRuleAdapter }],
   exports: [FileAccessRulePort],

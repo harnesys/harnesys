@@ -1,7 +1,4 @@
 import { Module } from '@harnesys/brix';
-import { AgentModule } from '../../infra/agent/agent.module.ts';
-import { AgentMemoryModule } from '../../infra/agent-memory/agent-memory.module.ts';
-import { ProviderModule } from '../../infra/provider/provider.module.ts';
 import { ApprovePromotionUseCase } from './approve-promotion.use-case.ts';
 import { DeletePinUseCase } from './delete-pin.use-case.ts';
 import { DeleteSemanticUseCase } from './delete-semantic.use-case.ts';
@@ -33,7 +30,6 @@ const useCases = [
 ];
 
 @Module({
-  imports: [AgentMemoryModule, AgentModule, ProviderModule],
   providers: [...useCases],
   exports: [...useCases],
 })

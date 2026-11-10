@@ -284,14 +284,3 @@ export {
   TriggerFireOutcomeSchema,
 } from './protocol/shared.ts';
 export { type AddonRuntime, type AddonRuntimeOptions, createAddonRuntime } from './runtime.ts';
-export type {
-  FakeAccount,
-  FakeDb,
-  FakeGrant,
-  FakeHost,
-  FakeHostOptions,
-  FakeHttpHandler,
-  FakeHttpRequest,
-  FakeHttpResponse,
-} from './testing/index.ts';
-export { createFakeDb, createFakeHost, guardSql, SqlAuthorizerError } from './testing/index.ts';

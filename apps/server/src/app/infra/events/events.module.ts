@@ -7,6 +7,7 @@ import { InProcessEventBus } from './host-event-bus.adapter.ts';
 import { ThreadRunEventsBridge } from './thread-run-events-bridge.ts';
 
 @Module({
+  global: true,
   imports: [AppsModule, ThreadModule],
   providers: [
     { provide: EventBusPort, useClass: InProcessEventBus },

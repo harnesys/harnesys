@@ -25,7 +25,7 @@ import { OrgGooglePort } from './org-google.port.ts';
 import { OrgImageGenerationPort } from './org-image.port.ts';
 import { OrgIssuePort } from './org-issue.port.ts';
 import { OrgManagerPort } from './org-manager.port.ts';
-import { isHostWired } from './org-pack-list.ts';
+import { isHostWired } from '../../../domain/runtime/org-pack-list.ts';
 import {
   knowledgeRegistration,
   memoryRegistration,

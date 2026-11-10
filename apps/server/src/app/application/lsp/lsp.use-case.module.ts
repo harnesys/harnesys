@@ -1,9 +1,5 @@
 import { Module } from '@harnesys/brix';
 import { LspPort } from '../../domain/lsp/lsp.port.ts';
-import { LspModule } from '../../infra/lsp/lsp.module.ts';
-import { MachineHomeModule } from '../../infra/machine-home/machine-home.module.ts';
-import { PluginsModule } from '../../infra/plugins/plugins.module.ts';
-import { SourceModule } from '../../infra/source/source.module.ts';
 import { DeleteOrgLspServerUseCase } from './delete-org-lsp-server.use-case.ts';
 import { GetOrgLspUseCase } from './get-org-lsp.use-case.ts';
 import { GetSourceLspUseCase } from './get-source-lsp.use-case.ts';
@@ -39,7 +35,6 @@ const useCases = [
 ];
 
 @Module({
-  imports: [MachineHomeModule, SourceModule, LspModule, PluginsModule],
   providers: [...useCases],
   exports: [...useCases, LspPort],
 })

@@ -39,19 +39,53 @@ import { UsageUseCaseModule } from '../application/usage/usage.use-case.module.t
 import { BrowserUseCaseModule } from '../application/use-cases/browser/browser.use-case.module.ts';
 import { VaultUseCaseModule } from '../application/vault/vault.use-case.module.ts';
 import { WebhookUseCaseModule } from '../application/webhooks/webhook.use-case.module.ts';
+import { AgentMemoryModule } from '../infra/agent-memory/agent-memory.module.ts';
+import { AgentModule } from '../infra/agent/agent.module.ts';
+import { HookRunModule } from '../infra/agent/hook-run.module.ts';
 import { AddonWiringModule } from '../infra/addons/wiring/addons-wiring.module.ts';
+import { ApprovalModule } from '../infra/approvals/approval.module.ts';
+import { AutomationsModule } from '../infra/automations/automations.module.ts';
+import { BrowserModule } from '../infra/browser/browser.module.ts';
 import { ConnectorModule } from '../infra/connector/connector.module.ts';
+import { ContentModule } from '../infra/content/content.module.ts';
 import { DeskModule } from '../infra/desk/desk.module.ts';
+import { EulaInfraModule } from '../infra/eula/eula.module.ts';
+import { EventsModule } from '../infra/events/events.module.ts';
+import { AudioModule } from '../infra/model-execution/audio.module.ts';
+import { ImageModule } from '../infra/model-execution/image.module.ts';
 import { EventsWatchModule } from '../infra/events-watch/events-watch.module.ts';
+import { ExecutionProfileModule } from '../infra/execution-profile/execution-profile.module.ts';
+import { FileAccessModule } from '../infra/file-access/file-access.module.ts';
 import { FleetHubModule } from '../infra/fleet-hub/fleet-hub.module.ts';
-import { IntegrationModule } from '../infra/integrations/integration.module.ts';
+import { FleetWorkerModule } from '../infra/fleet-hub/fleet-worker.module.ts';
+import { IdentitySqliteModule } from '../infra/identity-sqlite/identity-sqlite.module.ts';
+import { IntegrationModule } from '../infra/integration/integration.module.ts';
+import { IntegrationModule as IntegrationAppsModule } from '../infra/integrations/integration.module.ts';
 import { IssueInfraModule } from '../infra/issues/issue.module.ts';
+import { KnowledgeModule } from '../infra/knowledge/knowledge.module.ts';
+import { LegacyPortsModule } from '../infra/legacy-ports/legacy-ports.module.ts';
+import { LspModule } from '../infra/lsp/lsp.module.ts';
 import { MachineHomeModule } from '../infra/machine-home/machine-home.module.ts';
+import { ManagerInfraModule } from '../infra/manager/manager.module.ts';
+import { McpModule } from '../infra/mcp/mcp.module.ts';
+import { ModePresetsModule } from '../infra/mode-presets/mode-presets.module.ts';
+import { PresetsModule } from '../infra/presets/presets.module.ts';
+import { ProviderModule } from '../infra/provider/provider.module.ts';
 import { ReleaseModule } from '../infra/release/release.module.ts';
 import { RuntimeModule } from '../infra/runtime/runtime.module.ts';
+import { CorePackRegistryModule } from '../infra/runtime/packs/core-pack-registry.module.ts';
+import { ScheduleModule } from '../infra/schedules/schedule.module.ts';
+import { SecretModule } from '../infra/secret/secret.module.ts';
 import { SkillsModule } from '../infra/skills/skills.module.ts';
+import { SkillsTierModule } from '../infra/skills/skills-tier.module.ts';
+import { CloudSyncBackModule } from '../infra/source/drivers/cloud/cloud-sync-back.module.ts';
+import { SourceModule } from '../infra/source/source.module.ts';
 import { SourceWatchModule } from '../infra/source/source-watch.module.ts';
 import { TerminalModule } from '../infra/terminal/terminal.module.ts';
+import { ThreadModule } from '../infra/thread/thread.module.ts';
+import { UsageModule } from '../infra/usage/usage.module.ts';
+import { WebhookModule } from '../infra/webhooks/webhook.module.ts';
+import { WorkspaceContainerModule } from '../infra/process-runtime/workspace-container.module.ts';
 import { SessionGuard } from './guards/session.guard.ts';
 import { AccountsController } from './rest/accounts.controller.ts';
 import { AddonPublicRoutesController } from './rest/addon-public-routes.controller.ts';
@@ -160,7 +194,40 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     ConnectorModule,
     DeskModule,
     EventsWatchModule,
+    IntegrationAppsModule,
     IntegrationModule,
+    LegacyPortsModule,
+    AgentModule,
+    HookRunModule,
+    AgentMemoryModule,
+    ApprovalModule,
+    AutomationsModule,
+    BrowserModule,
+    CloudSyncBackModule,
+    ContentModule,
+    CorePackRegistryModule,
+    EulaInfraModule,
+    EventsModule,
+    AudioModule,
+    ImageModule,
+    ExecutionProfileModule,
+    FileAccessModule,
+    FleetWorkerModule,
+    IdentitySqliteModule,
+    KnowledgeModule,
+    LspModule,
+    ManagerInfraModule,
+    McpModule,
+    ModePresetsModule,
+    PresetsModule,
+    ProviderModule,
+    ScheduleModule,
+    SecretModule,
+    SkillsTierModule,
+    ThreadModule,
+    UsageModule,
+    WebhookModule,
+    WorkspaceContainerModule,
     ManagerUseCaseModule,
     KnowledgeUseCaseModule,
     VaultUseCaseModule,

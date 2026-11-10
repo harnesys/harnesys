@@ -1,4 +1,4 @@
-import { SkillValidationException } from '../../domain/skills/skills.error.ts';
+import { SkillValidationException } from './skills.error.ts';
 
 export const SKILL_NAME_RE = /^[a-z0-9][a-z0-9-]*$/;
 

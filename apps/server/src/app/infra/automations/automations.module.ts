@@ -7,6 +7,7 @@ import { CompositeAutomationCatalogAdapter } from './composite-automation-catalo
 import { IntegrationAutomationCatalogAdapter } from './integration-automation-catalog.adapter.ts';
 
 @Module({
+  global: true,
   imports: [IntegrationModule],
   providers: [
     IntegrationAutomationCatalogAdapter,

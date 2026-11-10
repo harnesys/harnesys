@@ -18,7 +18,7 @@ import { GitVcsPort } from '../../domain/source/git-vcs.port.ts';
 import { SourcePathInvalidException } from '../../domain/source/source.error.ts';
 import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
-import { WORKER_CONTENT_PATH } from '../../infra/content/worker-content.protocol.ts';
+import { WORKER_CONTENT_PATH } from '../../domain/content/worker-content.protocol.ts';
 import { hashNodeToken } from '../fleet/hash-node-token.ts';
 import { toPublicSource } from './to-public-source.ts';
 

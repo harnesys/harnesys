@@ -1,5 +1,11 @@
-import { Database } from 'bun:sqlite';
 import type { DbRow, DbStatement, DbWriteResult, SqlParam } from '../addon-context.ts';
+
+type BunDatabaseCtor = new (path: string, options?: Record<string, unknown>) => import('bun:sqlite').Database;
+const loadDatabase = (): BunDatabaseCtor => {
+  // bun:sqlite must not be evaluated in browser bundles — resolved lazily.
+  const mod = require('bun:sqlite') as typeof import('bun:sqlite');
+  return mod.Database as unknown as BunDatabaseCtor;
+};
 
 const FORBIDDEN_SQL = [/\battach\b/i, /\bdetach\b/i, /\bload_extension\s*\(/i];
 const ALLOWED_PRAGMAS = [
@@ -38,7 +44,7 @@ export interface FakeDb {
 }
 
 export function createFakeDb(): FakeDb {
-  const db = new Database(':memory:');
+  const db = new (loadDatabase())(':memory:');
   db.run('pragma foreign_keys = on');
   return {
     exec(sql: string): void {

@@ -1,13 +1,51 @@
-import type {
-  budgetMarksTable,
-  priceOverridesTable,
-  usageTable,
-} from '../../infra/org-sqlite/schema/usage.ts';
+export interface UsageRecord {
+  id: string;
+  ts: string;
+  projectId: string | null;
+  agentId: string | null;
+  runId: string;
+  model: string;
+  modelId: string | null;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number | null;
+  cacheWriteTokens: number | null;
+  reasoningTokens: number | null;
+  images: number | null;
+  costUsd: number;
+  pricingSource: string;
+}
 
-export type UsageRecord = typeof usageTable.$inferSelect;
-export type NewUsageRecord = typeof usageTable.$inferInsert;
-export type BudgetMark = typeof budgetMarksTable.$inferSelect;
-export type PriceOverride = typeof priceOverridesTable.$inferSelect;
+export interface NewUsageRecord {
+  id: string;
+  ts: string;
+  projectId?: string | null;
+  agentId?: string | null;
+  runId: string;
+  model: string;
+  modelId?: string | null;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens?: number | null;
+  cacheWriteTokens?: number | null;
+  reasoningTokens?: number | null;
+  images?: number | null;
+  costUsd?: number;
+  pricingSource?: string;
+}
+
+export interface BudgetMark {
+  entityId: string;
+  scope: string;
+  percent: number;
+  markedAt: string;
+}
+
+export interface PriceOverride {
+  modelId: string;
+  inputPer1M: number;
+  outputPer1M: number;
+}
 
 export interface ManualPrice {
   inputPer1M: number;

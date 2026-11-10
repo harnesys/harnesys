@@ -13,7 +13,7 @@ import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { PackRegistryPort } from '../../domain/capabilities/pack-registry.port.ts';
 import type { LoadedOrgPlugin } from '../../domain/plugin/plugin-runtime.port.ts';
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
-import { isHostWired } from '../../infra/runtime/packs/org-pack-list.ts';
+import { isHostWired } from '../../domain/runtime/org-pack-list.ts';
 import { requireAgent } from '../agents/agent.helpers.ts';
 import { pluginHookBindings } from '../plugins/plugin-grant-gate.ts';
 import { listOrgPackCatalog } from './org-pack-catalog.ts';

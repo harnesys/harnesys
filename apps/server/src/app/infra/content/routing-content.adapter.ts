@@ -24,7 +24,7 @@ import {
   findSourceForContentRoute,
   readyContentHostIds,
 } from './routing-content.route.ts';
-import { WORKER_CONTENT_PATH, type WorkerContentRequest } from './worker-content.protocol.ts';
+import { WORKER_CONTENT_PATH, type WorkerContentRequest } from '../../domain/content/worker-content.protocol.ts';
 
 @Injectable()
 export class RoutingContentAdapter extends OrgContentPort {

@@ -17,6 +17,7 @@ import { WorkerDialerAdapter } from './worker-dialer.adapter.ts';
 import { WorkerWorkExecutor } from './worker-work-executor.ts';
 
 @Module({
+  global: true,
   imports: [
     MachineHomeModule,
     CloudSyncBackModule,

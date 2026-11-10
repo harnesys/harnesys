@@ -14,7 +14,7 @@ import { PluginRegistryPort } from '../../domain/plugin/plugin-registry.port.ts'
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
 import { ToolchainPort } from '../../domain/toolchain/toolchain.port.ts';
 import { toDiagnostic } from './lsp-messages.ts';
-import { readOrgLspFile } from './org-lsp-file.ts';
+import { readOrgLspFile } from '../../domain/lsp/org-lsp-file.ts';
 import {
   extensionOwnerMap,
   type ResolvedLspServer,

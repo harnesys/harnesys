@@ -5,7 +5,7 @@ import {
   readOrgLspFile,
   withoutServer,
   writeOrgLspFile,
-} from '../../infra/lsp/org-lsp-file.ts';
+} from '../../domain/lsp/org-lsp-file.ts';
 
 export interface DeleteOrgLspServerRequest {
   orgId: string;

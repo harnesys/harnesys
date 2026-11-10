@@ -13,7 +13,7 @@ import {
   type RunEventStore,
 } from 'harnesys';
 import type { AgentRecord } from '../../../domain/agent/agent.ts';
-import type { EmbeddingsPort } from '../../../infra/knowledge/embeddings.ts';
+import type { EmbeddingsPort } from '../../../domain/knowledge/embeddings.ts';
 import { OrgMemoryReflectStore } from '../../../infra/memory/org-memory-reflect.store.ts';
 import type { OrgSqliteDb } from '../../../infra/org-sqlite/org-sqlite-session.ts';
 import {

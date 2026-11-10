@@ -5,7 +5,7 @@ import {
   OrgMemorySettingsPort,
 } from '../../domain/agent/agent-memory.port.ts';
 import { LlmModelPort, LlmProviderPort } from '../../domain/provider/llm-provider.port.ts';
-import { StudioEmbeddings } from '../../infra/knowledge/embeddings.ts';
+import { StudioEmbeddings } from '../../domain/knowledge/embeddings.ts';
 import { findDecisionModelCoords } from '../use-cases/memory/promote-triage.ts';
 
 export interface MemoryEmbeddingStatus {

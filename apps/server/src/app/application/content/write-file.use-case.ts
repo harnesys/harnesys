@@ -10,7 +10,7 @@ import { MaterializationEventsPort } from '../../domain/source/materialization-e
 import { SourceLocationPort } from '../../domain/source/source-location.port.ts';
 import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
-import { syncBackCloudFile } from '../../infra/source/drivers/cloud/cloud-sync-back.ts';
+import { CloudSyncBackPort } from '../../domain/source/cloud-sync-back.port.ts';
 import { markSiblingCloudCopiesRefreshRequired } from '../source/mark-cloud-siblings-refresh.ts';
 
 const WRITE_LEASE_TTL_MS = 60_000;
@@ -37,6 +37,7 @@ export class WriteFileUseCase {
     private readonly tokens: IntegrationTokenPort,
     private readonly materializations: SourceMaterializationPort,
     private readonly materializationEvents: MaterializationEventsPort,
+    private readonly cloudSync: CloudSyncBackPort,
     private readonly writeLeases: SourceWriteLeasePort,
     logger: Logger,
   ) {
@@ -75,7 +76,7 @@ export class WriteFileUseCase {
       return;
     }
     try {
-      const syncResult = await syncBackCloudFile(
+      const syncResult = await this.cloudSync.syncBackCloudFile(
         {
           sources: this.sources,
           sourceLocation: this.sourceLocation,

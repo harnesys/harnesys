@@ -10,8 +10,8 @@ import { OrgSkillsPort } from '../../domain/skills/org-skills.port.ts';
 import { SkillValidationException } from '../../domain/skills/skills.error.ts';
 import { SkillsEventsPort } from '../../domain/skills/skills-events.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
-import { clonePlugin, resolveGitSource } from '../../infra/plugins/plugin-git.ts';
-import { walkSkills } from '../../infra/skills/skills-walk.ts';
+import { SkillsGitPort } from '../../domain/skills/skills-git.port.ts';
+import { SkillsWalkPort } from '../../domain/skills/skills-walk.port.ts';
 
 const SIDECAR_FILE = '.harnesys-skill.json';
 
@@ -32,6 +32,8 @@ export class UpdateInstalledSkillUseCase {
     private readonly pluginRuntime: PluginRuntimePort,
     private readonly executor: LocalExecutorPort,
     private readonly skillsEvents: SkillsEventsPort,
+    private readonly git: SkillsGitPort,
+    private readonly walk: SkillsWalkPort,
   ) {}
 
   async execute(request: UpdateInstalledSkillRequest): Promise<UpdateInstalledSkillResponse> {
@@ -41,8 +43,8 @@ export class UpdateInstalledSkillUseCase {
     }
     const staging = join(this.layout.skillsStagingDir(request.orgId), randomUUID());
     try {
-      const { revision } = await clonePlugin({
-        source: resolveGitSource(sidecar.url),
+      const { revision } = await this.git.clonePlugin({
+        source: this.git.resolveGitSource(sidecar.url),
         dest: staging,
         ref: sidecar.ref,
       });
@@ -67,7 +69,7 @@ export class UpdateInstalledSkillUseCase {
   }
 
   private async locate(staging: string, sidecar: SkillSidecar): Promise<string> {
-    const walk = await walkSkills(staging);
+    const walk = await this.walk.walkSkills(staging);
     const rel = sidecar.subPath === '.' ? '' : sidecar.subPath;
     const candidate = walk.candidates.find(
       (c) => c.relativePath === rel && c.invalidReason === undefined,
