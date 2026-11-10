@@ -12,11 +12,11 @@ import type {
   AddonRouteMatch,
 } from '../../../domain/addons/ports/route-table.port.ts';
 import { AddonRouteTablePort } from '../../../domain/addons/ports/route-table.port.ts';
-import type { PermissionDefinitionRegistry } from '../dispatcher/permission-definitions.ts';
-import type { AddonConfigReadModel } from '../families/config/config.family.ts';
-import type { AddonRouteTable } from '../families/route/route.family.ts';
-import type { AddonDbAccessAdapter } from './addon-db-access.adapter.ts';
-import type { AddonLogSinkAdapter } from './addon-log-sink.adapter.ts';
+import { PermissionDefinitionRegistry } from '../dispatcher/permission-definitions.ts';
+import { AddonConfigReadModel } from '../families/config/config.family.ts';
+import { AddonRouteTable } from '../families/route/route.family.ts';
+import { AddonDbAccessAdapter } from './addon-db-access.adapter.ts';
+import { AddonLogSinkAdapter } from './addon-log-sink.adapter.ts';
 
 @Injectable()
 export class RouteTablePortAdapter extends AddonRouteTablePort {

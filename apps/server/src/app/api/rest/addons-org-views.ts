@@ -166,14 +166,17 @@ export function orgAddonSummaryOf(
   };
 }
 
-export function orgAddonDetailOf(
-  deps: AddonViewDeps,
-  row: OrgAddonRow,
-  pkg: InstalledAddonPackage | undefined,
-  latest: InstalledAddonPackage | undefined,
-  bindings: readonly AddonBindingRow[],
-  configValues: Record<string, unknown>,
-): OrgAddonDetail {
+export interface AddonDetailInput {
+  deps: AddonViewDeps;
+  row: OrgAddonRow;
+  pkg: InstalledAddonPackage | undefined;
+  latest: InstalledAddonPackage | undefined;
+  bindings: readonly AddonBindingRow[];
+  configValues: Record<string, unknown>;
+}
+
+export function orgAddonDetailOf(input: AddonDetailInput): OrgAddonDetail {
+  const { deps, row, pkg, latest, bindings, configValues } = input;
   const grants = parseGrants(row.grantsJson);
   const summary = orgAddonSummaryOf(deps, row, pkg, latest?.version ?? null);
   if (!pkg) {

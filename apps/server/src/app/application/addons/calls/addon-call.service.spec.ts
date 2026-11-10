@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import { AddonException } from '../../../domain/addons/errors.ts';
-import { FakeRpc, FakeSupervisor, NullLogger } from '../addons.fakes.ts';
+import { FakeRpc, FakeSupervisor } from '../addons.fakes.ts';
 import { AddonCallService } from './addon-call.service.ts';
 
 function build() {
   const supervisor = new FakeSupervisor();
   const rpc = new FakeRpc();
-  const service = new AddonCallService(supervisor, rpc, new NullLogger());
+  const service = new AddonCallService(supervisor, rpc);
   return { service, supervisor, rpc };
 }
 

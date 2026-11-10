@@ -11,7 +11,7 @@ import { VALID_MANIFEST, writeAddonPackage } from './manifest-fixtures.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'addon-sources-'));
 const layout = new FakeLayout();
-const builtin = new BuiltinAddonSourceAdapter(layout, join(home, 'add-ons'));
+const builtin = new BuiltinAddonSourceAdapter(layout).withAddOnsDir(join(home, 'add-ons'));
 const local = new LocalAddonSourceAdapter(layout);
 const external = new ExternalAddonSourceAdapter();
 

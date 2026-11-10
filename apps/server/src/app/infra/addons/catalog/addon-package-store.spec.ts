@@ -30,7 +30,7 @@ class FakeLogger extends Logger {
 }
 
 const store = new AddonPackageStoreAdapter(layout, new FakeLogger());
-const builtin = new BuiltinAddonSourceAdapter(layout, join(layout.root, 'sources'));
+const builtin = new BuiltinAddonSourceAdapter(layout).withAddOnsDir(join(layout.root, 'sources'));
 
 const _sourceDir = writeAddonPackage(join(layout.root, 'sources', 'harnesys.test-addon'));
 

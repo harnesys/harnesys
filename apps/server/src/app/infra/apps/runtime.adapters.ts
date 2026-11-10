@@ -7,8 +7,6 @@ import { type AccountEvent, AccountEventPort } from '../../domain/apps/ports/acc
 import { AccountHolderPort } from '../../domain/apps/ports/account-holder.port.ts';
 import { ClockPort } from '../../domain/apps/ports/clock.port.ts';
 import {
-  type InboundEnvelope,
-  InboundEventPort,
 } from '../../domain/apps/ports/inbound-event.port.ts';
 import { PublicUrlsPort } from '../../domain/apps/ports/public-urls.port.ts';
 import type { SecretTarget } from '../../domain/apps/ports/secret-scope.port.ts';
@@ -114,13 +112,6 @@ export class InProcessAccountEvents extends AccountEventPort {
     return () => {
       this.allListeners.delete(handler);
     };
-  }
-}
-
-@Injectable()
-export class LoggingInboundEvents extends InboundEventPort {
-  async publish(_orgId: string, envelope: InboundEnvelope): Promise<void> {
-    void envelope;
   }
 }
 

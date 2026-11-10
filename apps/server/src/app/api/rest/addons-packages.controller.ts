@@ -4,6 +4,7 @@ import { resolveL10n } from '@harnesys/sdk';
 import { z } from 'zod';
 import { ConfirmInstallUseCase } from '../../application/addons/packages/confirm-install.use-case.ts';
 import { PlanInstallUseCase } from '../../application/addons/packages/plan-install.use-case.ts';
+import type { PruneResult } from '../../application/addons/packages/prune.use-case.ts';
 import { PrunePackagesUseCase } from '../../application/addons/packages/prune.use-case.ts';
 import { RemovePackageUseCase } from '../../application/addons/packages/remove-package.use-case.ts';
 import type { AddonHostPolicy } from '../../domain/addons/permissions.ts';
@@ -57,7 +58,7 @@ export class AddonsPackagesController {
   }
 
   @Post('packages/prune')
-  prune(): ReturnType<PrunePackagesUseCase['execute']> {
+  prune(): PruneResult {
     return this.prunePackages.execute({ kind: 'user', id: 'host-admin' });
   }
 

@@ -5,10 +5,10 @@ import type {
   AddonStageRequest,
 } from '../../../domain/addons/ports/addon-source.port.ts';
 import { AddonSourcePort } from '../../../domain/addons/ports/addon-source.port.ts';
-import type { GrantPolicyPort } from '../../../domain/addons/ports/grant-policy.port.ts';
-import type { BuiltinAddonSourceAdapter } from '../catalog/addon-staging.ts';
-import type { ExternalAddonSourceAdapter } from '../catalog/external-source.adapter.ts';
-import type { LocalAddonSourceAdapter } from '../catalog/local-source.adapter.ts';
+import { GrantPolicyPort } from '../../../domain/addons/ports/grant-policy.port.ts';
+import { BuiltinAddonSourceAdapter } from '../catalog/addon-staging.ts';
+import { ExternalAddonSourceAdapter } from '../catalog/external-source.adapter.ts';
+import { LocalAddonSourceAdapter } from '../catalog/local-source.adapter.ts';
 import { LOCAL_SOURCE_ALLOWED } from './grant-policy.adapter.ts';
 
 export function isPathLikeAddonSource(source: string): boolean {

@@ -7,6 +7,9 @@ export interface TriggerLimits {
 const DAY_MS = 24 * 60 * 60 * 1000;
 const BURST_WINDOW_MS = 1000;
 
+import { Injectable } from '@harnesys/brix';
+
+@Injectable()
 export class FireWindowTracker {
   private readonly fires = new Map<string, number[]>();
 

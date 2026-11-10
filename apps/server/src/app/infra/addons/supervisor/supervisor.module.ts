@@ -8,7 +8,7 @@ import { LauncherLinuxAdapter } from '../sandbox/launcher-linux.adapter.ts';
 import { LauncherMacosAdapter } from '../sandbox/launcher-macos.adapter.ts';
 import { LauncherNoneAdapter } from '../sandbox/launcher-none.adapter.ts';
 import { SandboxLauncherPort } from '../sandbox/sandbox-launcher.port.ts';
-import { SdkInProcessAddonLoader } from '../transport/sdk-in-process-loader.ts';
+import { SdkInProcessAddonLoader, InProcessAddonLoader } from '../transport/sdk-in-process-loader.ts';
 import { DefaultTransportFactory, TransportFactory } from '../transport/transport-factory.ts';
 import { InstanceRegistry } from './instance-registry.ts';
 import { AddonInstanceSupervisor } from './instance-supervisor.ts';
@@ -34,6 +34,7 @@ function pickOsLauncher(
   providers: [
     InstanceRegistry,
     SdkInProcessAddonLoader,
+    { provide: InProcessAddonLoader, useFactory: (l: SdkInProcessAddonLoader) => l, inject: [SdkInProcessAddonLoader] },
     { provide: TransportFactory, useClass: DefaultTransportFactory },
     LauncherNoneAdapter,
     LauncherMacosAdapter,

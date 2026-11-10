@@ -15,9 +15,9 @@ import { SandboxLauncherPort } from '../sandbox/sandbox-launcher.port.ts';
 import type { AddonLogSink, ChildHandle } from '../transport/stdio-wiring.ts';
 import { SIGKILL } from '../transport/stdio-wiring.ts';
 import type { TransportFactory } from '../transport/transport-factory.ts';
+import { AddonHandlersMismatchError, AddonIdentityMismatchError } from './handshake-errors.ts';
 import type { SupervisorSettings } from './supervisor.config.ts';
 import type { SupervisorHooks, SupervisorTimers } from './supervisor-deps.ts';
-import { AddonHandlersMismatchError, AddonIdentityMismatchError } from './handshake-errors.ts';
 import { TransportRpcClient } from './transport-rpc-client.ts';
 
 export interface LaunchTarget {

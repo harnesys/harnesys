@@ -4,16 +4,18 @@ export interface SupervisorNotifyOutcome {
   delivered: boolean;
 }
 
-export function requestOfRuntime(
-  runtimes: ReadonlyMap<string, InstanceRuntime>,
-  orgId: string,
-  addonId: string,
-  method: string,
-  params: unknown,
-  timeoutMs: number,
-): Promise<unknown> {
-  const runtime = requireRuntime(runtimes, orgId, addonId);
-  return runtime.request(method, params, timeoutMs);
+export interface RuntimeCallInput {
+  runtimes: ReadonlyMap<string, InstanceRuntime>;
+  orgId: string;
+  addonId: string;
+  method: string;
+  params: unknown;
+  timeoutMs: number;
+}
+
+export function requestOfRuntime(input: RuntimeCallInput): Promise<unknown> {
+  const runtime = requireRuntime(input.runtimes, input.orgId, input.addonId);
+  return runtime.request(input.method, input.params, input.timeoutMs);
 }
 
 export function notifyRuntime(

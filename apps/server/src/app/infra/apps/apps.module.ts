@@ -6,7 +6,6 @@ import { AccountRepositoryPort } from '../../domain/apps/ports/account-repositor
 import { AppRepositoryPort } from '../../domain/apps/ports/app-repository.port.ts';
 import { ClockPort } from '../../domain/apps/ports/clock.port.ts';
 import { ConnectSessionStorePort } from '../../domain/apps/ports/connect-session-store.port.ts';
-import { InboundEventPort } from '../../domain/apps/ports/inbound-event.port.ts';
 import { ProviderHttpFactoryPort } from '../../domain/apps/ports/provider-http.port.ts';
 import { ProviderRegistryPort } from '../../domain/apps/ports/provider-registry.port.ts';
 import { PublicUrlsPort } from '../../domain/apps/ports/public-urls.port.ts';
@@ -26,7 +25,6 @@ import {
   AccountHolderRegistry,
   InProcessAccountEvents,
   LoggerMetricsAdapter,
-  LoggingInboundEvents,
   PublicUrlsAdapter,
   SystemClockAdapter,
 } from './runtime.adapters.ts';
@@ -44,7 +42,6 @@ import { ScopedSecretsAdapter } from './scoped-secrets.adapter.ts';
     { provide: ClockPort, useClass: SystemClockAdapter },
     { provide: MetricsPort, useClass: LoggerMetricsAdapter },
     { provide: AccountEventPort, useClass: InProcessAccountEvents },
-    { provide: InboundEventPort, useClass: LoggingInboundEvents },
     { provide: AccountHolderPort, useClass: AccountHolderRegistry },
     { provide: ProviderHttpFactoryPort, useClass: ProviderHttpAdapter },
     { provide: MtprotoLoginPort, useClass: TeleprotoMtprotoAdapter },
@@ -61,7 +58,6 @@ import { ScopedSecretsAdapter } from './scoped-secrets.adapter.ts';
     ClockPort,
     MetricsPort,
     AccountEventPort,
-    InboundEventPort,
     AccountHolderPort,
     ProviderHttpFactoryPort,
     MtprotoLoginPort,

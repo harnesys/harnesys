@@ -1,5 +1,5 @@
-import { Inject, Logger } from '@harnesys/brix';
-import { AddonException, AddonQuarantinedException } from '../../../domain/addons/errors.ts';
+import { Inject, Injectable, Logger } from '@harnesys/brix';
+import { AddonQuarantinedException } from '../../../domain/addons/errors.ts';
 import { AddonPackageCatalogPort } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
 import { AddonAuditPort } from '../../../domain/addons/ports/audit.port.ts';
 import { GrantPolicyPort } from '../../../domain/addons/ports/grant-policy.port.ts';
@@ -15,20 +15,20 @@ import { EventBusPort } from '../../../domain/events/event-bus.port.ts';
 import { HostFsLayoutPort } from '../../../domain/machine/host-fs-layout.port.ts';
 import { LauncherNoneAdapter } from '../sandbox/launcher-none.adapter.ts';
 import { SandboxLauncherPort } from '../sandbox/sandbox-launcher.port.ts';
-import type { TransportFactory } from '../transport/transport-factory.ts';
-import { backoffDelayMs, CrashBreaker } from './crash-breaker.ts';
+import { TransportFactory } from '../transport/transport-factory.ts';
+import { notifyRuntime, requestOfRuntime, type SupervisorNotifyOutcome } from './instance-calls.ts';
 import type { InstanceRecord } from './instance-registry.ts';
 import { InstanceRegistry } from './instance-registry.ts';
 import type { LaunchTarget } from './instance-runtime.ts';
 import { InstanceRuntime } from './instance-runtime.ts';
 import type { LaunchTargetDeps } from './launch-target.ts';
 import { buildLaunchTarget, resolvePinnedVersion } from './launch-target.ts';
-import type { SupervisorSettings } from './supervisor.config.ts';
-import type { SupervisorHooks } from './supervisor-deps.ts';
-import { notifyRuntime, requestOfRuntime, SupervisorNotifyOutcome } from './instance-calls.ts';
-import { SupervisorRestartPolicy } from './supervisor-restarts.ts';
+import { SupervisorSettings } from './supervisor.config.ts';
+import { SupervisorHooks } from './supervisor-deps.ts';
 import { SupervisorTimers } from './supervisor-deps.ts';
+import { SupervisorRestartPolicy } from './supervisor-restarts.ts';
 
+@Injectable()
 export class AddonInstanceSupervisor extends InstanceSupervisorPort {
   private readonly log: Logger;
   private readonly runtimes = new Map<string, InstanceRuntime>();
@@ -106,9 +106,13 @@ export class AddonInstanceSupervisor extends InstanceSupervisorPort {
     this.log.info({ orgId, addonId, reason }, 'addon instance stopped');
   }
 
+  private resetIdleTimer(orgId: string, addonId: string): void {
+    this.restarts.resetIdleTimer(orgId, addonId);
+  }
+
   async restart(orgId: string, addonId: string, reason = 'manual'): Promise<InstanceSnapshot> {
     await this.stop(orgId, addonId, reason);
-    this.breaker(orgId, addonId).reset();
+    this.restarts.breaker(orgId, addonId).reset();
     return await this.ensureRunning(orgId, addonId, reason);
   }
 
@@ -123,7 +127,14 @@ export class AddonInstanceSupervisor extends InstanceSupervisorPort {
     params: unknown,
     timeoutMs: number,
   ): Promise<unknown> {
-    return await requestOfRuntime(this.runtimes, orgId, addonId, method, params, timeoutMs);
+    return await requestOfRuntime({
+      runtimes: this.runtimes,
+      orgId,
+      addonId,
+      method,
+      params,
+      timeoutMs,
+    });
   }
 
   notify(orgId: string, addonId: string, method: string, params: unknown): SupervisorNotifyOutcome {
@@ -244,21 +255,11 @@ export class AddonInstanceSupervisor extends InstanceSupervisorPort {
       this.quarantine(orgId, addonId, record?.restarts ?? 0);
       return;
     }
-    this.scheduleRestart(orgId, addonId, reason);
-  }
-
-  private runtimeOf(orgId: string, addonId: string): InstanceRuntime {
-    const runtime = this.runtimes.get(`${orgId}/${addonId}`);
-    if (!runtime || runtime.isStopped) {
-      throw new AddonException('unavailable', 503, `Addon instance is not running: ${addonId}`, {
-        retryable: true,
-      });
-    }
-    return runtime;
+    this.restarts.scheduleRestart(orgId, addonId, reason);
   }
 
   private quarantine(orgId: string, addonId: string, restarts: number): void {
-    this.breaker(orgId, addonId).reset();
+    this.restarts.breaker(orgId, addonId).reset();
     this.registry.update(orgId, addonId, {
       state: 'quarantined',
       lastError: 'circuit breaker: repeated crashes',

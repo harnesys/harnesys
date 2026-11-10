@@ -1,5 +1,4 @@
 import { Injectable } from '@harnesys/brix';
-import { SupervisorHooks } from '../../supervisor/supervisor-deps.ts';
 import type {
   ReasonsToLiveProvider,
   SupervisorHandlersValidator,
@@ -7,6 +6,7 @@ import type {
   SupervisorReplayHook,
   SupervisorRequestHandler,
 } from '../../supervisor/supervisor-deps.ts';
+import { SupervisorHooks } from '../../supervisor/supervisor-deps.ts';
 
 export interface SupervisorHooksImpl {
   readonly requestHandler: SupervisorRequestHandler;

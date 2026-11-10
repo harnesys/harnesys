@@ -1,8 +1,7 @@
 import { Injectable } from '@harnesys/brix';
 import type { AddonManifest, Violation } from '@harnesys/sdk';
 import type { z } from 'zod';
-import type { HandlerSpec } from '../../../domain/addons/family-module.ts';
-import type { FamilyModule } from '../../../domain/addons/family-module.ts';
+import type { FamilyModule, HandlerSpec } from '../../../domain/addons/family-module.ts';
 import type { Disposable, OwnerKey } from '../../../domain/addons/owner.ts';
 
 export interface AnyFamilyModule {
@@ -15,7 +14,9 @@ export interface AnyFamilyModule {
   crossCheck?(descriptor: never, manifest: AddonManifest): readonly Violation[];
 }
 
-export function domainFamilyModulesOf(modules: readonly AnyFamilyModule[]): readonly FamilyModule[] {
+export function domainFamilyModulesOf(
+  modules: readonly AnyFamilyModule[],
+): readonly FamilyModule[] {
   return modules;
 }
 

@@ -17,9 +17,11 @@ import { UninstallAddonUseCase } from '../../application/addons/orgs/uninstall.u
 import { UpdateAddonUseCase } from '../../application/addons/orgs/update.use-case.ts';
 import { AddonException } from '../../domain/addons/errors.ts';
 import { AddonPackageCatalogPort } from '../../domain/addons/ports/addon-package-catalog.port.ts';
+import { AddonConfigReadPort } from '../../domain/addons/ports/addon-read-models.port.ts';
 import { BindingRepositoryPort } from '../../domain/addons/ports/binding-repository.port.ts';
 import { InstanceSupervisorPort } from '../../domain/addons/ports/instance-supervisor.port.ts';
 import { OrgAddonRepositoryPort } from '../../domain/addons/ports/org-addon-repository.port.ts';
+import { PermissionDefinitionsPort } from '../../domain/addons/ports/permission-definitions.port.ts';
 import { AddonOrgAdminGuard } from '../guards/addon-org-admin.guard.ts';
 import { OrgAccessGuard } from '../guards/org-access.guard.ts';
 import { latestVersionOf, orgAddonDetailOf, orgAddonSummaryOf } from './addons-org-views.ts';
@@ -71,14 +73,14 @@ export class AddonsOrgController {
   @Get(':id')
   detail(@Param('orgId') orgId: string, @Param('id') id: string): OrgAddonDetail {
     const row = this.requireRow(orgId, id);
-    return orgAddonDetailOf(
-      { definitions: this.definitions },
+    return orgAddonDetailOf({
+      deps: { definitions: this.definitions },
       row,
-      this.catalog.find(id, row.version),
-      this.catalog.find(id),
-      this.accountBindings.list(orgId, id),
-      this.configReadModel.values(orgId, id),
-    );
+      pkg: this.catalog.find(id, row.version),
+      latest: this.catalog.find(id),
+      bindings: this.accountBindings.list(orgId, id),
+      configValues: this.configReadModel.values(orgId, id),
+    });
   }
 
   @UseGuards(AddonOrgAdminGuard)

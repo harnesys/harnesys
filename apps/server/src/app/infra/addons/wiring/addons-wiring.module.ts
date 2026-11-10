@@ -42,7 +42,14 @@ import { PermissionDefinitionsPort } from '../../../domain/addons/ports/permissi
 import { AddonRouteTablePort } from '../../../domain/addons/ports/route-table.port.ts';
 import { TriggerInstanceRepositoryPort } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { EventBusPort } from '../../../domain/events/event-bus.port.ts';
+import { InboundEventPort } from '../../../domain/apps/ports/inbound-event.port.ts';
 import { EventsModule } from '../../events/events.module.ts';
+import { MachineHomeModule } from '../../machine-home/machine-home.module.ts';
+import { AppsModule } from '../../apps/apps.module.ts';
+import { SecretModule } from '../../secret/secret.module.ts';
+import { FleetHubModule } from '../../fleet-hub/fleet-hub.module.ts';
+import { ThreadUseCaseModule } from '../../../application/threads/thread.use-case.module.ts';
+import { AppsUseCaseModule } from '../../../application/apps/apps.use-case.module.ts';
 import { AddonAppsBridgeModule } from '../apps-bridge/apps-bridge.module.ts';
 import { AddonCatalogModule } from '../catalog/catalog.module.ts';
 import { DispatcherModule } from '../dispatcher/dispatcher.module.ts';
@@ -94,6 +101,7 @@ import { CompositeAddonSourceAdapter } from './addon-source-composite.adapter.ts
 import { AddonSecretsAdapter, BindingsReaderAdapter } from './addon-storage-sinks.adapter.ts';
 import { AddonsLifecycleService } from './addons-lifecycle.service.ts';
 import { FileGrantPolicyAdapter } from './grant-policy.adapter.ts';
+import { SupervisorHooks } from '../supervisor/supervisor-deps.ts';
 import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.ts';
 
 /**
@@ -112,6 +120,12 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     AddonAppsBridgeModule,
     AddonsApplicationModule,
     EventsModule,
+    MachineHomeModule,
+    AppsModule,
+    ThreadUseCaseModule,
+    SecretModule,
+    AppsUseCaseModule,
+    FleetHubModule,
   ],
   providers: [
     { provide: GrantPolicyPort, useClass: FileGrantPolicyAdapter },
@@ -122,9 +136,11 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
       useFactory: (families: FamilyModuleList) => new ContributionRegistry(families.modules),
       inject: [FamilyModuleList],
     },
-    { provide: AddonDbAccess, useClass: AddonDbAccessAdapter },
+    { provide: AddonDbAccess, useFactory: (db: AddonDbAccessAdapter) => db, inject: [AddonDbAccessAdapter] },
+    AddonDbAccessAdapter,
     { provide: AddonSecrets, useClass: AddonSecretsAdapter },
-    { provide: LogSink, useClass: AddonLogSinkAdapter },
+    { provide: LogSink, useFactory: (log: AddonLogSinkAdapter) => log, inject: [AddonLogSinkAdapter] },
+    AddonLogSinkAdapter,
     { provide: BindingsReader, useClass: BindingsReaderAdapter },
     { provide: TriggerFireSink, useClass: TriggerFireSinkAdapter },
     { provide: BridgeInboundSink, useClass: BridgeInboundSinkAdapter },
@@ -135,16 +151,23 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     AccountsChangedNotifySink,
     AddonsLifecycleService,
     WiredSupervisorHooks,
+    { provide: SupervisorHooks, useFactory: (hooks: WiredSupervisorHooks) => hooks, inject: [WiredSupervisorHooks] },
     RouteTablePortAdapter,
     PermissionDefinitionsPortAdapter,
     AddonLogReaderAdapter,
     AddonDataExportAdapter,
     AddonConfigReadAdapter,
+    { provide: AddonRouteTablePort, useFactory: (a: RouteTablePortAdapter) => a, inject: [RouteTablePortAdapter] },
+    { provide: PermissionDefinitionsPort, useFactory: (a: PermissionDefinitionsPortAdapter) => a, inject: [PermissionDefinitionsPortAdapter] },
+    { provide: AddonLogReaderPort, useFactory: (a: AddonLogReaderAdapter) => a, inject: [AddonLogReaderAdapter] },
+    { provide: AddonDataExportPort, useFactory: (a: AddonDataExportAdapter) => a, inject: [AddonDataExportAdapter] },
+    { provide: AddonConfigReadPort, useFactory: (a: AddonConfigReadAdapter) => a, inject: [AddonConfigReadAdapter] },
   ],
   exports: [
     GrantPolicyPort,
     AddonAuditPort,
     AddonSourcePort,
+    SupervisorHooks,
     ContributionRegistryPort,
     AddonDbAccess,
     AddonDbAccessAdapter,
@@ -158,6 +181,7 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     AddonNotifyPort,
     AddonRpcPort,
     AddonDataPort,
+    InboundEventPort,
     AddonRouteTablePort,
     PermissionDefinitionsPort,
     AddonLogReaderPort,

@@ -5,8 +5,8 @@ import { AddonDataPort } from '../../../application/addons/addon-data.port.ts';
 import { AddonRpcPort } from '../../../application/addons/addon-rpc.port.ts';
 import type { AddonNotifyOutcome } from '../../../domain/addons/ports/addon-notify.port.ts';
 import { AddonNotifyPort } from '../../../domain/addons/ports/addon-notify.port.ts';
-import type { HostFsLayoutPort } from '../../../domain/machine/host-fs-layout.port.ts';
-import type { AddonInstanceSupervisor } from '../supervisor/instance-supervisor.ts';
+import { HostFsLayoutPort } from '../../../domain/machine/host-fs-layout.port.ts';
+import { AddonInstanceSupervisor } from '../supervisor/instance-supervisor.ts';
 import { addonDataDirOf } from './addon-db-access.adapter.ts';
 @Injectable()
 export class SupervisorNotifyAdapter extends AddonNotifyPort {

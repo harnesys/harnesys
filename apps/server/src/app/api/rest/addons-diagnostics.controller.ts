@@ -1,13 +1,15 @@
 import { Controller, Get, Param, UseGuards } from '@harnesys/brix';
-import type { LogLineListResponse, MetricsView } from '@harnesys/contracts';
-import type { AddonMetricPoint } from '@harnesys/contracts';
+import type { AddonMetricPoint, LogLineListResponse, MetricsView } from '@harnesys/contracts';
 import { AddonException } from '../../domain/addons/errors.ts';
 import { AddonPackageCatalogPort } from '../../domain/addons/ports/addon-package-catalog.port.ts';
+import {
+  AddonDataExportPort,
+  type AddonLogLineView,
+  AddonLogReaderPort,
+} from '../../domain/addons/ports/addon-read-models.port.ts';
 import { InstanceSupervisorPort } from '../../domain/addons/ports/instance-supervisor.port.ts';
 import { OrgAddonRepositoryPort } from '../../domain/addons/ports/org-addon-repository.port.ts';
 import { OrgAccessGuard } from '../guards/org-access.guard.ts';
-
-const _MAX_EXPORT_ROWS_PER_TABLE = 1000;
 
 @UseGuards(OrgAccessGuard)
 @Controller('orgs/:orgId/addons/:addonId')

@@ -2,6 +2,7 @@ import { Injectable } from '@harnesys/brix';
 import type { EffectivePermission } from '@harnesys/sdk';
 import {
   computeEffectivePermissions,
+  type GrantEntry,
   type GrantRecord,
 } from '../../../../domain/addons/permissions.ts';
 import type { AddonPackageCatalogPort } from '../../../../domain/addons/ports/addon-package-catalog.port.ts';

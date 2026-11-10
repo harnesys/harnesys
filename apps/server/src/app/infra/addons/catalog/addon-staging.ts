@@ -27,14 +27,18 @@ export interface StagedAddon {
 
 @Injectable()
 export class BuiltinAddonSourceAdapter extends AddonSourcePort {
-  private readonly addOnsDir: string;
+  private readonly layout: HostFsLayoutPort;
+  private addOnsDir: string;
 
-  constructor(
-    private readonly layout: HostFsLayoutPort,
-    addOnsDir?: string,
-  ) {
+  constructor(layout: HostFsLayoutPort) {
     super();
-    this.addOnsDir = addOnsDir ?? monorepoAddOnsDir();
+    this.layout = layout;
+    this.addOnsDir = monorepoAddOnsDir();
+  }
+
+  withAddOnsDir(dir: string): this {
+    this.addOnsDir = dir;
+    return this;
   }
 
   override async stage(request: AddonStageRequest): Promise<AddonStagePlan> {

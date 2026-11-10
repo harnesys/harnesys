@@ -2,6 +2,7 @@ import { Module } from '@harnesys/brix';
 import { AddonsApplicationModule } from '../../../application/addons/addons-application.module.ts';
 import { AddonCatalogModule } from '../catalog/catalog.module.ts';
 import { AddonSupervisorModule } from '../supervisor/supervisor.module.ts';
+import { CorePackRegistryModule } from '../../runtime/packs/core-pack-registry.module.ts';
 import {
   AddonConfigFieldStore,
   AddonConfigReadModel,
@@ -39,7 +40,12 @@ import {
 } from './worker/worker.family.ts';
 
 @Module({
-  imports: [AddonsApplicationModule, AddonCatalogModule, AddonSupervisorModule],
+  imports: [
+    AddonsApplicationModule,
+    AddonCatalogModule,
+    AddonSupervisorModule,
+    CorePackRegistryModule,
+  ],
   providers: [
     AddonTriggerCatalogContributor,
     TriggerFireService,
@@ -97,6 +103,7 @@ import {
     AddonTriggerCatalogContributor,
     TriggerFireService,
     AddonJobScheduler,
+    WorkerDescriptorStore,
     WorkerReportService,
     AddonRouteTable,
     AddonTransportRegistry,
@@ -104,6 +111,8 @@ import {
     AddonHookRoutingTable,
     HookDeliveryService,
     AddonContentRegistry,
+    AddonConfigFieldStore,
+    ConfigNotifier,
     AddonConfigReadModel,
     AddonViewRegistry,
     AddonSourceKindRegistry,

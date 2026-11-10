@@ -224,7 +224,7 @@ describe('fake host services', () => {
           'example.run': async (_input, ctx) => ({
             runId: (await ctx.runs.dispatch({ input: 'do it' })).runId,
             threadId: (
-              await ctx.threads.create({ agentId: '00000000-0000-0000-0000-000000000001' })
+              await ctx.threads.create({ agentId: '00000000-0000-1000-8000-000000000001' })
             ).threadId,
           }),
         },

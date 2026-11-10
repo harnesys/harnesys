@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@harnesys/brix';
+import { Injectable } from '@harnesys/brix';
 import type { HostRequestName, RouteHandleResult, TransportMessage } from '@harnesys/sdk';
 import { AddonException } from '../../../domain/addons/errors.ts';
 import type { AddonCallOptions } from '../../../domain/addons/ports/addon-call.port.ts';
@@ -26,10 +26,8 @@ export class AddonCallService extends AddonCallPort {
   constructor(
     private readonly supervisor: InstanceSupervisorPort,
     private readonly rpc: AddonRpcPort,
-    @Inject(Logger) logger: Logger,
   ) {
     super();
-    this.logger = logger.child('addon-calls');
   }
 
   async callTool(

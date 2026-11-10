@@ -1,7 +1,8 @@
 import { Injectable } from '@harnesys/brix';
 import { AddonTransportPort } from '../../../domain/addons/ports/addon-transport.port.ts';
 import { NdjsonStdioTransport } from './ndjson-stdio.transport.ts';
-import type { InProcessAddonLoader, InProcessLaunchSpec } from './sdk-in-process-loader.ts';
+import type { InProcessLaunchSpec } from './sdk-in-process-loader.ts';
+import { InProcessAddonLoader } from './sdk-in-process-loader.ts';
 import type { AddonLogSink, ChildHandle, SpawnedStdio } from './stdio-wiring.ts';
 
 export interface SpawnedAddonProcess {

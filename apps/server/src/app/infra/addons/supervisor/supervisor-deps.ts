@@ -1,3 +1,4 @@
+import { Injectable } from '@harnesys/brix';
 import type { EffectivePermission } from '@harnesys/sdk';
 
 export interface SupervisorRequestHandler {
@@ -30,6 +31,7 @@ export abstract class SupervisorTimers {
   abstract clearTimeout(handle: unknown): void;
 }
 
+@Injectable()
 export class SystemSupervisorTimers extends SupervisorTimers {
   setTimeout(fn: () => void, ms: number): unknown {
     return globalThis.setTimeout(fn, ms);
