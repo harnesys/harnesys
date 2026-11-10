@@ -88,7 +88,6 @@ import {
 } from './org-sql-integrations.ts';
 import {
   type ColumnInfo,
-  migrateAppsSecretFieldColumns,
   migrateIssuesBranchColumns,
   migrateModePresetToolColumns,
   migrateRunsAttributionColumns,
@@ -181,10 +180,7 @@ export function ensureOrgSchema(
   exec(CREATE_INTEGRATION_EVENTS_DELIVERY_IDX_SQL);
   exec(CREATE_INTEGRATION_OAUTH_SESSIONS_SQL);
   exec(CREATE_INTEGRATION_OAUTH_SESSIONS_IDX_SQL);
-  ensureAppsSchema(exec);
-  if (all) {
-    migrateAppsSecretFieldColumns(exec, all);
-  }
+  ensureAppsSchema(exec, all);
   exec(CREATE_LLM_PROVIDERS_SQL);
   exec(CREATE_LLM_MODELS_SQL);
   exec(CREATE_AGENTS_SQL);

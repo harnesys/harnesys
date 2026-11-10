@@ -14,23 +14,18 @@ import type {
   AccountResponse,
   AccountsListQuery,
   AccountsListResponse,
-  RegisterAccountBody,
-  RegisterAccountResponse,
   UpdateAccountBody,
 } from '@harnesys/contracts';
-import {
-  AccountsListQuerySchema,
-  RegisterAccountBodySchema,
-  UpdateAccountBodySchema,
-} from '@harnesys/contracts';
-import { DeleteAccountUseCase } from '../../application/apps/delete-account.use-case.ts';
+import { AccountsListQuerySchema, UpdateAccountBodySchema } from '@harnesys/contracts';
+import { DeleteAccountUseCase } from '../../application/apps/accounts/delete-account.use-case.ts';
 import {
   GetAccountUseCase,
   ListAccountsUseCase,
-} from '../../application/apps/list-accounts.use-case.ts';
-import { RegisterAccountUseCase } from '../../application/apps/register-account.use-case.ts';
-import { UpdateAccountUseCase } from '../../application/apps/update-account.use-case.ts';
+} from '../../application/apps/accounts/list-account.use-case.ts';
+import { UpdateAccountUseCase } from '../../application/apps/accounts/update-account.use-case.ts';
+import { VerifyAccountUseCase } from '../../application/apps/accounts/verify-account.use-case.ts';
 import { OrgAccessGuard } from '../guards/org-access.guard.ts';
+import { appsResponse } from './apps-response.ts';
 
 @UseGuards(OrgAccessGuard)
 @Controller('orgs/:orgId/accounts')
@@ -38,33 +33,34 @@ export class AccountsController {
   constructor(
     private readonly listAccounts: ListAccountsUseCase,
     private readonly getAccount: GetAccountUseCase,
-    private readonly registerAccount: RegisterAccountUseCase,
     private readonly updateAccount: UpdateAccountUseCase,
     private readonly deleteAccount: DeleteAccountUseCase,
+    private readonly verifyAccount: VerifyAccountUseCase,
   ) {}
 
   @Get()
   list(
     @Param('orgId') orgId: string,
     @Query(AccountsListQuerySchema) query: AccountsListQuery,
-  ): Promise<AccountsListResponse> {
-    return this.listAccounts.execute({ orgId, ...query });
-  }
-
-  @Post()
-  register(
-    @Param('orgId') orgId: string,
-    @Body(RegisterAccountBodySchema) body: RegisterAccountBody,
-  ): Promise<RegisterAccountResponse> {
-    return this.registerAccount.execute({ orgId, ...body });
+  ): AccountsListResponse {
+    return this.listAccounts.execute({
+      orgId,
+      kind: query.kind,
+      appId: query.appId,
+      status: query.status,
+      scopes: query.scopes
+        ?.split(',')
+        .map((scope) => scope.trim())
+        .filter(Boolean),
+    });
   }
 
   @Get(':accountId')
   get(
     @Param('orgId') orgId: string,
     @Param('accountId') accountId: string,
-  ): Promise<AccountResponse> {
-    return this.getAccount.execute({ orgId, accountId });
+  ): Promise<AccountResponse | Response> {
+    return appsResponse(() => this.getAccount.execute({ orgId, accountId }));
   }
 
   @Patch(':accountId')
@@ -72,13 +68,19 @@ export class AccountsController {
     @Param('orgId') orgId: string,
     @Param('accountId') accountId: string,
     @Body(UpdateAccountBodySchema) body: UpdateAccountBody,
-  ): Promise<AccountResponse> {
-    return this.updateAccount.execute({ orgId, accountId, ...body });
+  ) {
+    return appsResponse(() => this.updateAccount.execute({ orgId, accountId, ...body }));
   }
 
   @Delete(':accountId')
   @HttpCode(204)
-  remove(@Param('orgId') orgId: string, @Param('accountId') accountId: string): Promise<void> {
-    return this.deleteAccount.execute({ orgId, accountId });
+  remove(@Param('orgId') orgId: string, @Param('accountId') accountId: string) {
+    return appsResponse(() => this.deleteAccount.execute({ orgId, accountId }));
+  }
+
+  @Post(':accountId/verify')
+  @HttpCode(200)
+  verify(@Param('orgId') orgId: string, @Param('accountId') accountId: string) {
+    return appsResponse(() => this.verifyAccount.execute({ orgId, accountId }));
   }
 }

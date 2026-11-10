@@ -57,15 +57,19 @@ import { AccountsController } from './rest/accounts.controller.ts';
 import { AddonsController } from './rest/addons.controller.ts';
 import { AgentHooksController } from './rest/agent-hooks.controller.ts';
 import { AgentsController } from './rest/agents.controller.ts';
-import { AppKindsController } from './rest/app-kinds.controller.ts';
 import { ApprovalsController } from './rest/approvals.controller.ts';
 import { AppsController } from './rest/apps.controller.ts';
+import { AppsCatalogController } from './rest/apps-catalog.controller.ts';
+import { AppsConnectPublicController } from './rest/apps-connect-public.controller.ts';
+import { AppsHookController } from './rest/apps-hook.controller.ts';
+import { AppsOAuthCallbackController } from './rest/apps-oauth-callback.controller.ts';
 import { AuditController } from './rest/audit.controller.ts';
 import { AutomationsController } from './rest/automations.controller.ts';
 import { BoardsController } from './rest/boards.controller.ts';
 import { BrowserController } from './rest/browser.controller.ts';
 import { CapabilitiesController } from './rest/capabilities.controller.ts';
 import { CatalogController } from './rest/catalog.controller.ts';
+import { ConnectController } from './rest/connect.controller.ts';
 import { ConnectorsController } from './rest/connectors.controller.ts';
 import { ContentController } from './rest/content.controller.ts';
 import { DiscoveryController } from './rest/discovery.controller.ts';
@@ -200,9 +204,13 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     IntegrationsGithubController,
     IntegrationsController,
     IntegrationRoutesController,
-    AppKindsController,
+    AppsCatalogController,
     AppsController,
     AccountsController,
+    ConnectController,
+    AppsOAuthCallbackController,
+    AppsConnectPublicController,
+    AppsHookController,
     FleetController,
     FleetCloudController,
     FleetNodesController,
