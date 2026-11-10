@@ -10,8 +10,6 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { SkillsGitAdapter } from './skills-git.adapter.ts';
-import { SkillsWalkAdapter } from './skills-walk.adapter.ts';
 import type { SkillCandidate } from '@harnesys/contracts';
 import type { CursorMcpJson } from 'harnesys';
 import { FsSkillRegistry } from 'harnesys/adapters/node';
@@ -32,6 +30,8 @@ import { SkillsEventsPort } from '../../domain/skills/skills-events.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { HostFsLayoutAdapter } from '../fs-layout/host-fs-layout.adapter.ts';
 import { OrgSkillsAdapter } from './org-skills.adapter.ts';
+import { SkillsGitAdapter } from './skills-git.adapter.ts';
+import { SkillsWalkAdapter } from './skills-walk.adapter.ts';
 
 const ORG = 'o1';
 
@@ -53,25 +53,11 @@ beforeEach(() => {
   executor = new FakeExecutor();
   events = new FakeEvents();
   const runtime = new FakePluginRuntime(layout);
-  discover = new DiscoverRepoSkillsUseCase(layout, new SkillsGitAdapter(), new SkillsWalkAdapter());
-  install = new InstallRepoSkillsUseCase(
-    layout,
-    skills,
-    runtime,
-    executor,
-    events,
-    new SkillsGitAdapter(),
-    new SkillsWalkAdapter(),
-  );
-  update = new UpdateInstalledSkillUseCase(
-    layout,
-    skills,
-    runtime,
-    executor,
-    events,
-    new SkillsGitAdapter(),
-    new SkillsWalkAdapter(),
-  );
+  const git = new SkillsGitAdapter();
+  const walk = new SkillsWalkAdapter();
+  discover = new DiscoverRepoSkillsUseCase(layout, git, walk);
+  install = new InstallRepoSkillsUseCase(layout, skills, runtime, executor, events, git, walk);
+  update = new UpdateInstalledSkillUseCase(layout, skills, runtime, executor, events, git, walk);
 });
 
 afterAll(() => {

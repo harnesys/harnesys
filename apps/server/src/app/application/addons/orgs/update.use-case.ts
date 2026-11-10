@@ -16,7 +16,9 @@ import { ContributionRegistryPort } from '../../../domain/addons/ports/contribut
 import { InstanceSupervisorPort } from '../../../domain/addons/ports/instance-supervisor.port.ts';
 import type { OrgAddonRow } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
+import { EventBusPort } from '../../../domain/events/event-bus.port.ts';
 import { checkPackageCompatibility } from '../addon-platform.ts';
+import { publishConsentRequired } from './consent-event.ts';
 import { appendAudit, grantsOfRow, requireOrgAddon, requirePackage } from './org-addon.helpers.ts';
 
 export interface UpdateAddonRequest {
@@ -37,6 +39,7 @@ export class UpdateAddonUseCase {
     private readonly registry: ContributionRegistryPort,
     private readonly supervisor: InstanceSupervisorPort,
     private readonly audit: AddonAuditPort,
+    private readonly events: EventBusPort,
     @Inject(Logger) logger: Logger,
   ) {
     this.logger = logger.child('addons-update');
@@ -54,6 +57,13 @@ export class UpdateAddonUseCase {
     }
     const diff = grantDiff(this.declarationOf(row), next.manifest.permissions);
     if (needsConsent(diff) && !request.grants) {
+      publishConsentRequired(this.events, {
+        orgId: request.orgId,
+        addonId: request.addonId,
+        currentVersion: row.version,
+        pendingVersion: request.version,
+        addedPermissions: diff.added,
+      });
       throw new AddonNeedsConsentException(
         request.version,
         diff.added.map((entry) => entry.id),

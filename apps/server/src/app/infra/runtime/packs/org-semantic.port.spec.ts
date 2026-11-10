@@ -2,8 +2,8 @@ import { Database } from 'bun:sqlite';
 import { describe, expect, test } from 'bun:test';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import type { MemoryScopeId, SemanticProjectInput, SemanticProjectQueryInput } from 'harnesys';
-import { decodeEmbedding, encodeEmbedding } from '../../knowledge/embedding-vec.ts';
 import type { EmbeddingModelRef, EmbeddingsPort } from '../../../domain/knowledge/embeddings.ts';
+import { decodeEmbedding, encodeEmbedding } from '../../knowledge/embedding-vec.ts';
 import { CREATE_AGENT_MEMORY_SQL } from '../../org-sqlite/org-sql.ts';
 import {
   migrateAgentMemoryConsolidationColumns,

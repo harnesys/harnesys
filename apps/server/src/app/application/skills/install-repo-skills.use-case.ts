@@ -6,15 +6,15 @@ import type { InstallSkillsBody, InstallSkillsResponse, SkillSidecar } from '@ha
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
 import { OrgSkillsPort } from '../../domain/skills/org-skills.port.ts';
+import { sanitizeSkillName } from '../../domain/skills/skill-name.ts';
 import {
   SkillConflictException,
   SkillValidationException,
 } from '../../domain/skills/skills.error.ts';
 import { SkillsEventsPort } from '../../domain/skills/skills-events.port.ts';
-import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
-import { sanitizeSkillName } from '../../domain/skills/skill-name.ts';
 import { SkillsGitPort } from '../../domain/skills/skills-git.port.ts';
-import { type WalkCandidate, SkillsWalkPort } from '../../domain/skills/skills-walk.port.ts';
+import { SkillsWalkPort, type WalkCandidate } from '../../domain/skills/skills-walk.port.ts';
+import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { resolveSkillSelection, skillSelectionError } from './skill-selection.ts';
 
 export interface InstallRepoSkillsRequest {

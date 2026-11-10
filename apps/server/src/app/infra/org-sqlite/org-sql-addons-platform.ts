@@ -67,10 +67,23 @@ CREATE TABLE IF NOT EXISTS addon_job_state (
 );
 `;
 
+export const CREATE_ADDON_TRANSPORT_BINDINGS_SQL = `
+CREATE TABLE IF NOT EXISTS addon_transport_bindings (
+  org_id           TEXT NOT NULL,
+  addon_id         TEXT NOT NULL,
+  provider         TEXT NOT NULL,
+  external_chat_id TEXT NOT NULL,
+  thread_id        TEXT NOT NULL,
+  created_at       TEXT NOT NULL,
+  PRIMARY KEY (org_id, addon_id, provider, external_chat_id)
+);
+`;
+
 export function ensureAddonsPlatformSchema(exec: (sql: string) => void): void {
   exec(CREATE_ORG_ADDONS_SQL);
   exec(CREATE_ADDON_BINDINGS_SQL);
   exec(CREATE_ADDON_TRIGGER_INSTANCES_SQL);
   exec(CREATE_ADDON_TRIGGER_FIRES_SQL);
   exec(CREATE_ADDON_JOB_STATE_SQL);
+  exec(CREATE_ADDON_TRANSPORT_BINDINGS_SQL);
 }

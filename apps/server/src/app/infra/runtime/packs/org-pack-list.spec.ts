@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { listOrgPackCatalog } from '../../../application/capabilities/org-pack-catalog.ts';
-import { CorePackRegistryAdapter } from './core-pack-registry.adapter.ts';
 import { isHostWired, orgPackNames } from '../../../domain/runtime/org-pack-list.ts';
+import { CorePackRegistryAdapter } from './core-pack-registry.adapter.ts';
 import { wireOrgPackNames } from './wire-org-packs.ts';
 
 describe('org pack single source', () => {

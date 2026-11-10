@@ -4,8 +4,8 @@ import { Injectable } from '@harnesys/brix';
 import type { SkillRegistry } from 'harnesys';
 import { FsSkillRegistry } from 'harnesys/adapters/node';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
-import { SkillsTierCachePort } from '../../domain/skills/skills-tier-cache.port.ts';
 import type { TierEntry } from '../../domain/skills/skills-tier-cache.port.ts';
+import { SkillsTierCachePort } from '../../domain/skills/skills-tier-cache.port.ts';
 
 @Injectable()
 export class SkillsTierCache extends SkillsTierCachePort {

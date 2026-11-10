@@ -1,5 +1,5 @@
-import { trace } from '../../libs/trace.ts';
 import type { EmbeddingsPort } from '../../domain/knowledge/embeddings.ts';
+import { trace } from '../../libs/trace.ts';
 import { embeddingsForSettings } from './knowledge-embeddings.ts';
 import type { SqliteKnowledgeIndexRepo } from './knowledge-index-repo.ts';
 import type {

@@ -8,13 +8,13 @@ import type { LoadedOrgPlugin } from '../../domain/plugin/plugin-runtime.port.ts
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
 import { OrgSkillsPort } from '../../domain/skills/org-skills.port.ts';
+import type { SeedMarker } from '../../domain/skills/skills-seed.port.ts';
+import { SkillsSeedPort } from '../../domain/skills/skills-seed.port.ts';
+import { SkillsTierCachePort } from '../../domain/skills/skills-tier-cache.port.ts';
 import { type SourceSkillDir, SourceSkillsPort } from '../../domain/skills/source-skills.port.ts';
 import { SourceLocationPort } from '../../domain/source/source-location.port.ts';
 import type { SourceRecord } from '../../domain/source/source-registry.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
-import { SkillsSeedPort } from '../../domain/skills/skills-seed.port.ts';
-import { SkillsTierCachePort } from '../../domain/skills/skills-tier-cache.port.ts';
-import type { SeedMarker } from '../../domain/skills/skills-seed.port.ts';
 
 export interface MergedSkillsDeps {
   layout: HostFsLayoutPort;
@@ -61,7 +61,13 @@ async function tierSkills(deps: MergedSkillsDeps): Promise<OrgSkill[]> {
     canUpdate: false,
     loadable: true,
     ...(entry.origin.kind === 'system'
-      ? { updateAvailable: deps.seed.systemSkillUpdateAvailable(systemDir, marker, entry.summary.name) }
+      ? {
+          updateAvailable: deps.seed.systemSkillUpdateAvailable(
+            systemDir,
+            marker,
+            entry.summary.name,
+          ),
+        }
       : {}),
   }));
 }

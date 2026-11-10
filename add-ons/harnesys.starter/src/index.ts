@@ -8,7 +8,7 @@ import type {
 import { type AddonContext, AddonError, defineAddon, startAddonProcess } from '@harnesys/sdk';
 
 const ADDON_ID = 'harnesys.starter';
-const ADDON_VERSION = '1.0.3';
+const ADDON_VERSION = '1.0.0';
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -58,7 +58,7 @@ function ensureSchema(ctx: AddonContext): Promise<void> {
   return schemaReady;
 }
 
-async function diagnose<T>(
+async function _diagnose<T>(
   work: (ctx: AddonContext) => Promise<T>,
   ctx: AddonContext,
 ): Promise<T | { status: number; body: Record<string, unknown> }> {

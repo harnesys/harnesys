@@ -7,6 +7,8 @@ import type { FamilyModule } from '../../../../domain/addons/family-module.ts';
 import type { Disposable, OwnerKey } from '../../../../domain/addons/owner.ts';
 import { ownerKeyId } from '../../../../domain/addons/owner.ts';
 import { AddonPackageCatalogPort } from '../../../../domain/addons/ports/addon-package-catalog.port.ts';
+import { ContentContributionPort } from '../../../../domain/content/content-contribution.port.ts';
+import { l10nText } from '../shared.ts';
 
 type ContentSchema = z.infer<typeof ContentDescriptorSchema>;
 export type AddonContentKind = 'skill' | 'prompt';
@@ -54,6 +56,7 @@ export class ContentFamilyModule implements FamilyModule<ContentSchema> {
   constructor(
     private readonly registry: AddonContentRegistry,
     private readonly catalog: AddonPackageCatalogPort,
+    private readonly contributions: ContentContributionPort,
     private readonly logger: Logger,
   ) {}
 
@@ -63,6 +66,14 @@ export class ContentFamilyModule implements FamilyModule<ContentSchema> {
 
   register(owner: OwnerKey, d: ContentSchema): Disposable {
     const resolvedPath = this.resolvePath(owner, d.path);
+    const contribution =
+      resolvedPath !== null && d.kind === 'skill'
+        ? this.contributions.register(owner.orgId, owner.addonId, {
+            skillId: d.id,
+            title: l10nText(d.title),
+            sourcePath: resolvedPath,
+          })
+        : { dispose: () => {} };
     this.registry.add(owner, d.id, {
       owner,
       contributionId: d.id,
@@ -73,6 +84,7 @@ export class ContentFamilyModule implements FamilyModule<ContentSchema> {
     });
     return {
       dispose: () => {
+        contribution.dispose();
         this.registry.removeOwner(owner);
       },
     };

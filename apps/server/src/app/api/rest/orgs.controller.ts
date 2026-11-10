@@ -19,8 +19,8 @@ import { ListOrgsUseCase } from '../../application/org-machine/list-orgs.use-cas
 import { SetOrgSettingsUseCase } from '../../application/org-machine/set-org-settings.use-case.ts';
 import { UpdateOrgUseCase } from '../../application/org-machine/update-org.use-case.ts';
 import { type UserPrincipal } from '../../domain/identity/principal.ts';
+import { serverVersion } from '../../domain/release/server-version.ts';
 import { SessionPrincipal } from '../guards/session.guard.ts';
-import { serverVersion } from './server-version.ts';
 
 @Controller('orgs')
 export class OrgsController {

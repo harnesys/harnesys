@@ -1,6 +1,6 @@
 import { Module } from '@harnesys/brix';
-import { CloudSyncBackWatchPort } from '../../../../domain/source/cloud-sync-back-watch.port.ts';
 import { CloudSyncBackPort } from '../../../../domain/source/cloud-sync-back.port.ts';
+import { CloudSyncBackWatchPort } from '../../../../domain/source/cloud-sync-back-watch.port.ts';
 import { FilesWatcherModule } from '../../../files-watcher/files-watcher.module.ts';
 import { FleetHubModule } from '../../../fleet-hub/fleet-hub.module.ts';
 import { IntegrationModule } from '../../../integration/integration.module.ts';

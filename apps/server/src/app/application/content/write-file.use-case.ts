@@ -6,11 +6,11 @@ import { SourceWriteLeasePort } from '../../domain/fleet/source-write-lease.port
 import { IntegrationTokenPort } from '../../domain/integration/integration-token.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { applyCloudSyncOutcome } from '../../domain/source/cloud-materialization-state.ts';
+import { CloudSyncBackPort } from '../../domain/source/cloud-sync-back.port.ts';
 import { MaterializationEventsPort } from '../../domain/source/materialization-events.port.ts';
 import { SourceLocationPort } from '../../domain/source/source-location.port.ts';
 import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
-import { CloudSyncBackPort } from '../../domain/source/cloud-sync-back.port.ts';
 import { markSiblingCloudCopiesRefreshRequired } from '../source/mark-cloud-siblings-refresh.ts';
 
 const WRITE_LEASE_TTL_MS = 60_000;

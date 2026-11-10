@@ -184,11 +184,9 @@ export async function startAddonProcess(options: StartAddonProcessOptions): Prom
       if (trimmed.length === 0) {
         continue;
       }
-      try {
-        await handleLine(trimmed);
-      } catch (error) {
+      void handleLine(trimmed).catch((error: unknown) => {
         replyError(null, error);
-      }
+      });
     }
   }
 }

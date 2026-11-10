@@ -9,9 +9,9 @@ import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
 import { OrgSkillsPort } from '../../domain/skills/org-skills.port.ts';
 import { SkillValidationException } from '../../domain/skills/skills.error.ts';
 import { SkillsEventsPort } from '../../domain/skills/skills-events.port.ts';
-import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { SkillsGitPort } from '../../domain/skills/skills-git.port.ts';
 import { SkillsWalkPort } from '../../domain/skills/skills-walk.port.ts';
+import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 
 const SIDECAR_FILE = '.harnesys-skill.json';
 

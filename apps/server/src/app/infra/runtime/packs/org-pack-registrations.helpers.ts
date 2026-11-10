@@ -9,8 +9,8 @@ import {
   webCapability,
   webhookCapability,
 } from 'harnesys';
-import { resolveProviderApiKey } from '../../../domain/secret/provider-api-key.ts';
 import { StudioEmbeddings } from '../../../domain/knowledge/embeddings.ts';
+import { resolveProviderApiKey } from '../../../domain/secret/provider-api-key.ts';
 import { embedModelIdOf } from '../../memory/org-memory-settings.store.ts';
 import type { OrgSqliteDb } from '../../org-sqlite/org-sqlite-session.ts';
 import { OrgEpisodicPort } from './org-episodic.port.ts';

@@ -1,7 +1,9 @@
 import { Module } from '@harnesys/brix';
 import { AddonsApplicationModule } from '../../../application/addons/addons-application.module.ts';
+import { ContentContributionPort } from '../../../domain/content/content-contribution.port.ts';
 import { CorePackRegistryModule } from '../../runtime/packs/core-pack-registry.module.ts';
 import { AddonCatalogModule } from '../catalog/catalog.module.ts';
+import { OrgSkillContributionAdapter } from '../storage/org-skill-contribution.adapter.ts';
 import { AddonSupervisorModule } from '../supervisor/supervisor.module.ts';
 import {
   AddonConfigFieldStore,
@@ -58,6 +60,8 @@ import {
     AddonHookRoutingTable,
     HookDeliveryService,
     AddonContentRegistry,
+    { provide: ContentContributionPort, useClass: OrgSkillContributionAdapter },
+    OrgSkillContributionAdapter,
     AddonConfigFieldStore,
     AddonConfigReadModel,
     ConfigNotifier,

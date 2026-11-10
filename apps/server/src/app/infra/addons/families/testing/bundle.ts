@@ -1,7 +1,12 @@
 import {
+  BridgeInboundPort,
+  type BridgeInboundRequest,
+} from '../../../../application/addons/bridge/bridge-inbound.port.ts';
+import {
   type AddonNotifyOutcome,
   AddonNotifyPort,
 } from '../../../../domain/addons/ports/addon-notify.port.ts';
+import { ContentContributionPort } from '../../../../domain/content/content-contribution.port.ts';
 import {
   AddonConfigFieldStore,
   ConfigFamilyModule,
@@ -98,7 +103,11 @@ export function buildFamilyBundle(): FamilyBundle {
   const workerReports = new WorkerReportService(workerStore, calls, logger);
   const routeTable = new AddonRouteTable();
   const transportRegistry = new AddonTransportRegistry();
-  const transportInbound = new TransportInboundService(transportRegistry, logger);
+  const transportInbound = new TransportInboundService(
+    transportRegistry,
+    new NoopBridgeInbound(),
+    logger,
+  );
   const hookRouting = new AddonHookRoutingTable();
   const hookDelivery = new HookDeliveryService(supervisor, calls, logger);
   const contentRegistry = new AddonContentRegistry();
@@ -135,7 +144,12 @@ export function buildFamilyBundle(): FamilyBundle {
     route: new RouteFamilyModule(routeTable),
     transport: new TransportFamilyModule(transportRegistry, transportInbound, calls),
     hook: new HookFamilyModule(bus, hookRouting, hookDelivery),
-    content: new ContentFamilyModule(contentRegistry, catalog, logger),
+    content: new ContentFamilyModule(
+      contentRegistry,
+      catalog,
+      new NoopContentContributions(),
+      logger,
+    ),
     config: new ConfigFamilyModule(configStore, new ConfigNotifier(new NoopNotifyPort(), logger)),
     view: new ViewFamilyModule(viewRegistry),
     sourceKind: new SourceKindFamilyModule(sourceKindRegistry),
@@ -184,5 +198,17 @@ export class NoopNotifyPort extends AddonNotifyPort {
     _params: unknown,
   ): AddonNotifyOutcome {
     return 'not_running';
+  }
+}
+
+class NoopBridgeInbound extends BridgeInboundPort {
+  override async execute(_request: BridgeInboundRequest): Promise<'skipped'> {
+    return 'skipped';
+  }
+}
+
+class NoopContentContributions extends ContentContributionPort {
+  override register(): { dispose: () => void } {
+    return { dispose: () => {} };
   }
 }

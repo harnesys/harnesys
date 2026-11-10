@@ -5,13 +5,9 @@ import {
   type ModelRecord,
   type ModelsPort,
 } from 'harnesys';
-import { LlmModelPort, LlmProviderPort } from './llm-provider.port.ts';
 import { SecretStorePort } from '../secret/secret-store.port.ts';
-import {
-  legacyProviderSecretKey,
-  parseVaultRef,
-  vaultStorageKey,
-} from '../secret/vault-keys.ts';
+import { legacyProviderSecretKey, parseVaultRef, vaultStorageKey } from '../secret/vault-keys.ts';
+import { LlmModelPort, LlmProviderPort } from './llm-provider.port.ts';
 
 export function createOrgModelsPort(
   orgId: string,

@@ -18,6 +18,7 @@ import { ModePresetRegistryPort } from '../../../domain/mode-presets/mode-preset
 import { PermissionRuleStorePort } from '../../../domain/permissions/permission-rule-store.port.ts';
 import { PlanEventsPort } from '../../../domain/plan/plan-events.port.ts';
 import { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-provider.port.ts';
+import { orgPackNames } from '../../../domain/runtime/org-pack-list.ts';
 import { ScheduleRepositoryPort } from '../../../domain/schedule/schedule-repository.port.ts';
 import { SecretStorePort } from '../../../domain/secret/secret-store.port.ts';
 import { OrgSettingsPort } from '../../../domain/skills/org-settings.port.ts';
@@ -38,7 +39,6 @@ import type { OrgGoogleDeps } from './org-google.port.ts';
 import type { OrgIssueDeps } from './org-issue.port.ts';
 import type { OrgKnowledgeDeps } from './org-knowledge.port.ts';
 import type { OrgManagerDeps } from './org-manager.port.ts';
-import { orgPackNames } from '../../../domain/runtime/org-pack-list.ts';
 import { registrationForPack } from './org-pack-registrations.ts';
 import { isPackSatisfied } from './org-pack-requirements.ts';
 import type { OrgSkillsDeps } from './org-skills.pack.port.ts';

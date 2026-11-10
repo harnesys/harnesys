@@ -65,7 +65,7 @@ export const protocolMap = {
   shutdown: hostMethod(
     z
       .object({ reason: z.string().min(1), deadlineMs: z.number().int().positive() })
-      .extend({ _meta: CallMetaSchema }),
+      .extend({ _meta: CallMetaSchema.optional() }),
     empty,
   ),
   ping: hostMethod(empty, empty),
@@ -79,17 +79,19 @@ export const protocolMap = {
     'host',
   ),
   'lifecycle.upgrade': hostMethod(
-    z.object({ fromVersion: str }).extend({ _meta: CallMetaSchema }),
+    z.object({ fromVersion: str }).extend({ _meta: CallMetaSchema.optional() }),
     empty,
   ),
   'tools.call': hostMethod(
     z
       .object({ pack: str, tool: str, input: z.record(z.string(), z.unknown()).default({}) })
-      .extend({ _meta: CallMetaSchema }),
+      .extend({ _meta: CallMetaSchema.optional() }),
     z.object({ output: z.unknown() }),
   ),
   'route.handle': hostMethod(
-    z.object({ routeId: str, request: RouteRequestSchema }).extend({ _meta: CallMetaSchema }),
+    z
+      .object({ routeId: str, request: RouteRequestSchema })
+      .extend({ _meta: CallMetaSchema.optional() }),
     RouteHandleResultSchema,
   ),
   'trigger.start': hostMethod(
@@ -100,34 +102,45 @@ export const protocolMap = {
         config: z.record(z.string(), z.unknown()),
         target: z.unknown().optional(),
       })
-      .extend({ _meta: CallMetaSchema }),
+      .extend({ _meta: CallMetaSchema.optional() }),
     empty,
     'trigger',
   ),
   'trigger.stop': hostMethod(
-    z.object({ instanceId: str }).extend({ _meta: CallMetaSchema }),
+    z.object({ instanceId: str }).extend({ _meta: CallMetaSchema.optional() }),
     empty,
     'trigger',
   ),
-  'job.run': hostMethod(z.object({ jobId: str }).extend({ _meta: CallMetaSchema }), empty),
-  'worker.start': hostMethod(z.object({ workerId: str }).extend({ _meta: CallMetaSchema }), empty),
-  'worker.stop': hostMethod(z.object({ workerId: str }).extend({ _meta: CallMetaSchema }), empty),
+  'job.run': hostMethod(
+    z.object({ jobId: str }).extend({ _meta: CallMetaSchema.optional() }),
+    empty,
+  ),
+  'worker.start': hostMethod(
+    z.object({ workerId: str }).extend({ _meta: CallMetaSchema.optional() }),
+    empty,
+  ),
+  'worker.stop': hostMethod(
+    z.object({ workerId: str }).extend({ _meta: CallMetaSchema.optional() }),
+    empty,
+  ),
   'transport.send': hostMethod(
-    z.object({ message: TransportMessageSchema }).extend({ _meta: CallMetaSchema }),
+    z.object({ message: TransportMessageSchema }).extend({ _meta: CallMetaSchema.optional() }),
     z.object({ messageId: str.optional() }),
   ),
   'transport.edit': hostMethod(
-    z.object({ messageId: str, message: TransportMessageSchema }).extend({ _meta: CallMetaSchema }),
+    z
+      .object({ messageId: str, message: TransportMessageSchema })
+      .extend({ _meta: CallMetaSchema.optional() }),
     empty,
   ),
   'transport.typing': hostMethod(
-    z.object({ channel: str, on: z.boolean() }).extend({ _meta: CallMetaSchema }),
+    z.object({ channel: str, on: z.boolean() }).extend({ _meta: CallMetaSchema.optional() }),
     empty,
   ),
   'hook.deliver': hostMethod(
     z
       .object({ hookId: str, event: z.record(z.string(), z.unknown()) })
-      .extend({ _meta: CallMetaSchema }),
+      .extend({ _meta: CallMetaSchema.optional() }),
     empty,
   ),
   'config.get': addonMethod(

@@ -59,7 +59,7 @@ bun run build        # bun build --target=bun src/index.ts --outfile dist/index.
 bun run typecheck
 ```
 
-Install on a host (plan → confirm, nothing executes until confirm):
+Install on a host (plan → confirm, nothing executes until confirm). Note: keep `node_modules` out of the package directory at plan time — the server's digest walk does not skip symlinks (reported gap), so run `bun install && bun run build && rm -rf node_modules bun.lock` before installing:
 
 ```
 POST /api/addons/packages/plan            {"source": "harnesys.starter"}

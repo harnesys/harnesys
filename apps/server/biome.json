@@ -66,10 +66,60 @@
                   {
                     "group": ["**/*.adapter", "**/*.adapter.ts"],
                     "message": "application must not import concrete adapters"
+                  },
+                  {
+                    "group": ["**/infra/**", "**/api/**"],
+                    "message": "application must not import infra or api (clean architecture: application -> domain only; APPS_PLAN 14.3 / ADDONS_PLAN 16.3)"
                   }
                 ]
               }
             }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/app/domain/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/application/**", "**/infra/**", "**/api/**"],
+                    "message": "domain must not import application, infra or api (clean architecture: domain is the innermost layer)"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/app/application/integrations/**",
+        "src/app/application/connectors/**",
+        "src/app/application/plugins/**",
+        "src/app/application/integration/**",
+        "src/app/application/threads/send-thread-message.use-case.ts",
+        "src/app/application/threads/thread-message-queue.use-case.ts",
+        "src/app/application/threads/get-thread-plan.use-case.ts",
+        "src/app/application/threads/delete-thread-plan.use-case.ts",
+        "src/app/application/use-cases/memory/**",
+        "src/app/application/source/materialize-cloud-source.ts",
+        "src/app/application/fleet/execute-worker-org-operation.use-case.ts",
+        "src/app/application/issues/issue-tools.provider.ts",
+        "src/app/application/manager/manager-tools.provider.ts",
+        "src/app/application/skills/skills-tools.provider.ts",
+        "src/app/application/**/*.spec.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": "off"
           }
         }
       }

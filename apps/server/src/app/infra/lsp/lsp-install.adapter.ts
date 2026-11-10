@@ -1,7 +1,7 @@
-import { LspInstallPort } from '../../domain/lsp/lsp-install.port.ts';
-import type { LspInstallSpec } from '../../domain/lsp/lsp-catalog.ts';
-import { installLspBinary } from './install-lsp-binary.ts';
 import { Injectable } from '@harnesys/brix';
+import type { LspInstallSpec } from '../../domain/lsp/lsp-catalog.ts';
+import { LspInstallPort } from '../../domain/lsp/lsp-install.port.ts';
+import { installLspBinary } from './install-lsp-binary.ts';
 
 @Injectable()
 export class LspInstallAdapter extends LspInstallPort {

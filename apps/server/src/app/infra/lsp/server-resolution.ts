@@ -1,6 +1,6 @@
 import type { LspServerSpec } from 'harnesys';
-import type { PluginLspEntry } from '../../domain/plugin/plugin-runtime.port.ts';
 import type { LspServerSpec as FileLspSpec } from '../../domain/lsp/org-lsp-file.ts';
+import type { PluginLspEntry } from '../../domain/plugin/plugin-runtime.port.ts';
 
 export type ResolvedLspSpec = LspServerSpec | FileLspSpec;
 

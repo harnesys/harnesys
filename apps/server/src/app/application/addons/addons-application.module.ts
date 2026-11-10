@@ -2,6 +2,8 @@ import { Module } from '@harnesys/brix';
 import { AddonCallPort } from '../../domain/addons/ports/addon-call.port.ts';
 import { AppsUseCaseModule } from '../apps/apps.use-case.module.ts';
 import { ThreadUseCaseModule } from '../threads/thread.use-case.module.ts';
+import { BridgeInboundPort } from './bridge/bridge-inbound.port.ts';
+import { NeutralBridgeInboundUseCase } from './bridge/neutral-bridge-inbound.use-case.ts';
 import { AddonCallService } from './calls/addon-call.service.ts';
 import { RunJobUseCase } from './jobs/run-job.use-case.ts';
 import { AddonJobScheduler } from './jobs/schedule-jobs.service.ts';
@@ -41,6 +43,7 @@ const useCases = [
   ManageTriggerInstanceUseCase,
   FireTriggerUseCase,
   RunJobUseCase,
+  NeutralBridgeInboundUseCase,
 ];
 
 const services = [
@@ -59,7 +62,8 @@ const services = [
     ...services,
     { provide: RunDispatchPort, useClass: ThreadRunDispatchService },
     { provide: AddonCallPort, useClass: AddonCallService },
+    { provide: BridgeInboundPort, useClass: NeutralBridgeInboundUseCase },
   ],
-  exports: [...useCases, ...services, RunDispatchPort, AddonCallPort],
+  exports: [...useCases, ...services, RunDispatchPort, AddonCallPort, BridgeInboundPort],
 })
 export class AddonsApplicationModule {}

@@ -30,7 +30,6 @@ export interface CloudSyncFlushInput {
   getAccessToken: () => Promise<string>;
 }
 
-
 export abstract class CloudSyncBackPort {
   abstract syncBackCloudFile(
     deps: CloudSyncLocalDependencies,

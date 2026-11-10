@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { KNOWLEDGE_EMBED_BATCH_SIZE, KNOWLEDGE_EMBED_SLOW_MS } from '../../../const.ts';
+import type { EmbeddingsPort } from '../../domain/knowledge/embeddings.ts';
 import { trace } from '../../libs/trace.ts';
 import { chunkText } from './chunk-text.ts';
 import { encodeEmbedding } from './embedding-vec.ts';
-import type { EmbeddingsPort } from '../../domain/knowledge/embeddings.ts';
 import type { SqliteKnowledgeIndexRepo } from './knowledge-index-repo.ts';
 import type { KnowledgePath } from './knowledge-walk.ts';
 export function sha1Hex(content: string): string {

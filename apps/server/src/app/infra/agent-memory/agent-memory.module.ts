@@ -5,8 +5,8 @@ import {
   AgentSemanticStorePort,
   OrgMemorySettingsPort,
 } from '../../domain/agent/agent-memory.port.ts';
-import { AgentModule } from '../agent/agent.module.ts';
 import { MemoryCrawlerPort } from '../../domain/agent/memory-crawler.port.ts';
+import { AgentModule } from '../agent/agent.module.ts';
 import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
 import { MemoryCrawler } from '../memory/memory-crawler.ts';
 import { ProviderModule } from '../provider/provider.module.ts';

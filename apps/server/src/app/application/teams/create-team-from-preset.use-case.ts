@@ -11,6 +11,7 @@ import type {
   TeamPresetBody,
 } from '@harnesys/contracts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
+import { rolePresetContract } from '../../domain/agent/role-preset-contract.ts';
 import { IssueBoardRepositoryPort } from '../../domain/issue/board-repository.port.ts';
 import { validateStatuses } from '../../domain/issue/board-validation.ts';
 import { PresetNotFoundException } from '../../domain/presets/preset.error.ts';
@@ -18,7 +19,6 @@ import { PresetCatalogPort } from '../../domain/presets/preset-catalog.port.ts';
 import { LlmModelPort } from '../../domain/provider/llm-provider.port.ts';
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
 import { TeamValidationException } from '../../domain/teams/team.error.ts';
-import { rolePresetContract } from '../../domain/agent/role-preset-contract.ts';
 import { uniqueAgentName } from '../agents/agent.helpers.ts';
 import { CreateAgentUseCase } from '../agents/create-agent.use-case.ts';
 import { DEFAULT_REACT_BUDGET } from '../agents/react-preset.ts';

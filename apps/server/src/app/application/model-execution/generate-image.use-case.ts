@@ -4,8 +4,8 @@ import type { ImageGenerationResult } from '../../domain/model-execution/image.p
 import { ImagePort } from '../../domain/model-execution/image.port.ts';
 import { UnsupportedCapabilityException } from '../../domain/model-execution/model-execution.error.ts';
 import { LlmModelPort, LlmProviderPort } from '../../domain/provider/llm-provider.port.ts';
-import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import { createOrgModelsPort } from '../../domain/provider/org-models.ts';
+import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 
 export interface GenerateImageInput {
   orgId: string;

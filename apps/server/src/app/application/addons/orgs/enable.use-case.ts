@@ -14,8 +14,10 @@ import { ContributionRegistryPort } from '../../../domain/addons/ports/contribut
 import { GrantPolicyPort } from '../../../domain/addons/ports/grant-policy.port.ts';
 import type { OrgAddonRow } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
+import { EventBusPort } from '../../../domain/events/event-bus.port.ts';
 import { checkPackageCompatibility } from '../addon-platform.ts';
 import { appendAudit, requirePackage } from '../orgs/org-addon.helpers.ts';
+import { publishConsentRequired } from './consent-event.ts';
 
 export interface EnableAddonRequest {
   orgId: string;
@@ -35,6 +37,7 @@ export class EnableAddonUseCase {
     private readonly registry: ContributionRegistryPort,
     private readonly policy: GrantPolicyPort,
     private readonly audit: AddonAuditPort,
+    private readonly events: EventBusPort,
     @Inject(Logger) logger: Logger,
   ) {
     this.logger = logger.child('addons-enable');
@@ -46,8 +49,14 @@ export class EnableAddonUseCase {
     if (compat.outcome === 'incompatible') {
       throw new AddonIncompatibleException(compat.reasons);
     }
-    this.assertMandatoryGranted(pkg.manifest, request.grants);
     const existing = this.orgAddons.find(request.orgId, request.addonId);
+    this.assertMandatoryGranted(
+      request.orgId,
+      request.addonId,
+      pkg.manifest,
+      request.grants,
+      existing?.version ?? pkg.version,
+    );
     if (existing?.enabled && existing.version === pkg.version) {
       return existing;
     }
@@ -90,12 +99,27 @@ export class EnableAddonUseCase {
     return row;
   }
 
-  private assertMandatoryGranted(manifest: AddonManifest, grants: readonly GrantEntry[]): void {
+  private assertMandatoryGranted(
+    orgId: string,
+    addonId: string,
+    manifest: AddonManifest,
+    grants: readonly GrantEntry[],
+    currentVersion: string,
+  ): void {
     const grantedIds = new Set(grants.map((entry) => entry.id));
     const missing = manifest.permissions
       .filter((entry) => !entry.optional && !grantedIds.has(entry.id))
       .map((entry) => entry.id);
     if (missing.length > 0) {
+      publishConsentRequired(this.events, {
+        orgId,
+        addonId,
+        currentVersion,
+        pendingVersion: manifest.version,
+        addedPermissions: manifest.permissions.filter(
+          (entry) => !entry.optional && !grantedIds.has(entry.id),
+        ),
+      });
       throw new AddonException(
         'needs_consent',
         409,

@@ -89,9 +89,27 @@ export const addonJobStateTable = sqliteTable(
   }),
 );
 
+export const addonTransportBindingsTable = sqliteTable(
+  'addon_transport_bindings',
+  {
+    orgId: text('org_id').notNull(),
+    addonId: text('addon_id').notNull(),
+    provider: text('provider').notNull(),
+    externalChatId: text('external_chat_id').notNull(),
+    threadId: text('thread_id').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({
+      columns: [table.orgId, table.addonId, table.provider, table.externalChatId],
+    }),
+  }),
+);
+
 export type OrgAddonRowRecord = typeof orgAddonsTable.$inferSelect;
 export type OrgAddonInsert = typeof orgAddonsTable.$inferInsert;
 export type AddonBindingInsert = typeof addonBindingsTable.$inferInsert;
 export type AddonTriggerInstanceInsert = typeof addonTriggerInstancesTable.$inferInsert;
 export type AddonTriggerFireInsert = typeof addonTriggerFiresTable.$inferInsert;
 export type AddonJobStateInsert = typeof addonJobStateTable.$inferInsert;
+export type AddonTransportBindingInsert = typeof addonTransportBindingsTable.$inferSelect;

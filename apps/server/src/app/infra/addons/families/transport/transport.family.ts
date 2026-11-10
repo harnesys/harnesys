@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@harnesys/brix';
 import { TransportDescriptorSchema, type TransportMessage } from '@harnesys/sdk';
 import type { z } from 'zod';
+import { BridgeInboundPort } from '../../../../application/addons/bridge/bridge-inbound.port.ts';
 import type { FamilyModule, HandlerSpec } from '../../../../domain/addons/family-module.ts';
 import { handlerSpec } from '../../../../domain/addons/family-module.ts';
 import type { Disposable, OwnerKey } from '../../../../domain/addons/owner.ts';
@@ -84,9 +85,11 @@ export class AddonTransportRegistry {
 @Injectable()
 export class TransportInboundService implements BridgeInboundSink {
   private readonly queues = new Map<string, BridgeInboundInput[]>();
+  private readonly consuming = new Set<string>();
 
   constructor(
     private readonly registry: AddonTransportRegistry,
+    private readonly bridge: BridgeInboundPort,
     private readonly logger: Logger,
   ) {}
 
@@ -96,6 +99,42 @@ export class TransportInboundService implements BridgeInboundSink {
       return;
     }
     this.enqueue(input);
+    this.consume(input.orgId, input.addonId, transport.provider);
+  }
+
+  private consume(orgId: string, addonId: string, provider: string): void {
+    const key = `${orgId}/${addonId}`;
+    if (this.consuming.has(key)) {
+      return;
+    }
+    this.consuming.add(key);
+    void this.drainIntoBridge(orgId, addonId, provider).finally(() => {
+      this.consuming.delete(key);
+    });
+  }
+
+  private async drainIntoBridge(orgId: string, addonId: string, provider: string): Promise<void> {
+    for (;;) {
+      const pending = this.drain(orgId, addonId);
+      if (pending.length === 0) {
+        return;
+      }
+      for (const input of pending) {
+        try {
+          await this.bridge.execute({
+            orgId: input.orgId,
+            addonId: input.addonId,
+            transportProvider: provider,
+            message: input.message,
+          });
+        } catch (error) {
+          this.logger.warn(
+            { orgId, addonId, error: error instanceof Error ? error.message : String(error) },
+            'bridge inbound failed',
+          );
+        }
+      }
+    }
   }
 
   enqueue(input: BridgeInboundInput): number {

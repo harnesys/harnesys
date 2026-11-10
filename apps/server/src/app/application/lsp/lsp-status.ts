@@ -5,7 +5,6 @@ import type {
   OrgLspListResponse,
   PluginDiagnostic,
 } from '@harnesys/contracts';
-import type { PluginLspEntry } from '../../domain/plugin/plugin-runtime.port.ts';
 import { LSP_CATALOG } from '../../domain/lsp/lsp-catalog.ts';
 import {
   disabledFileEntries,
@@ -13,6 +12,7 @@ import {
   type LspServerSpec,
   type OrgLspFile,
 } from '../../domain/lsp/org-lsp-file.ts';
+import type { PluginLspEntry } from '../../domain/plugin/plugin-runtime.port.ts';
 
 export type HasBinary = (command: string) => boolean;
 

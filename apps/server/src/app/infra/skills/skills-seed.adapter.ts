@@ -1,5 +1,6 @@
-import { SkillsSeedPort } from '../../domain/skills/skills-seed.port.ts';
+import { Injectable } from '@harnesys/brix';
 import type { SeedMarker } from '../../domain/skills/skills-seed.port.ts';
+import { SkillsSeedPort } from '../../domain/skills/skills-seed.port.ts';
 import {
   bundledSkillNames,
   readSeedMarker,
@@ -7,7 +8,6 @@ import {
   systemSkillUpdateAvailable,
   writeSeedMarker,
 } from './system-skills-seed.ts';
-import { Injectable } from '@harnesys/brix';
 
 @Injectable()
 export class SkillsSeedAdapter extends SkillsSeedPort {

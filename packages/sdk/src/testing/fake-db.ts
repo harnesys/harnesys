@@ -1,10 +1,11 @@
+import type { Database } from 'bun:sqlite';
 import type { DbRow, DbStatement, DbWriteResult, SqlParam } from '../addon-context.ts';
 
-type BunDatabaseCtor = new (path: string, options?: Record<string, unknown>) => import('bun:sqlite').Database;
+type BunDatabaseCtor = new (path: string, options?: Record<string, unknown>) => Database;
 const loadDatabase = (): BunDatabaseCtor => {
   // bun:sqlite must not be evaluated in browser bundles — resolved lazily.
-  const mod = require('bun:sqlite') as typeof import('bun:sqlite');
-  return mod.Database as unknown as BunDatabaseCtor;
+  const mod = require('bun:sqlite') as { Database: BunDatabaseCtor };
+  return mod.Database;
 };
 
 const FORBIDDEN_SQL = [/\battach\b/i, /\bdetach\b/i, /\bload_extension\s*\(/i];

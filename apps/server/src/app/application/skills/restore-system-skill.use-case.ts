@@ -10,9 +10,9 @@ import {
   SkillValidationException,
 } from '../../domain/skills/skills.error.ts';
 import { SkillsEventsPort } from '../../domain/skills/skills-events.port.ts';
-import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { SkillsSeedPort } from '../../domain/skills/skills-seed.port.ts';
 import { SkillsTierCachePort } from '../../domain/skills/skills-tier-cache.port.ts';
+import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 
 const SKILL_NAME_RE = /^[a-z0-9][a-z0-9-]*$/;
 

@@ -5,10 +5,6 @@ import {
   ValidationException,
 } from '@harnesys/brix';
 import type { OrgLspListResponse } from '@harnesys/contracts';
-import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
-import { PluginRegistryPort } from '../../domain/plugin/plugin-registry.port.ts';
-import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
-import { ToolchainPort } from '../../domain/toolchain/toolchain.port.ts';
 import { lspInstallSpecForCommand } from '../../domain/lsp/lsp-catalog.ts';
 import { LspInstallPort } from '../../domain/lsp/lsp-install.port.ts';
 import {
@@ -16,6 +12,10 @@ import {
   fileHasServer,
   readOrgLspFile,
 } from '../../domain/lsp/org-lsp-file.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { PluginRegistryPort } from '../../domain/plugin/plugin-registry.port.ts';
+import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
+import { ToolchainPort } from '../../domain/toolchain/toolchain.port.ts';
 import { buildLspView } from './lsp-view.ts';
 
 export interface InstallOrgLspBinaryRequest {

@@ -9,12 +9,12 @@ import {
   SkillReadOnlyException,
 } from '../../domain/skills/skills.error.ts';
 import { SkillsEventsPort } from '../../domain/skills/skills-events.port.ts';
+import { SkillsSeedPort } from '../../domain/skills/skills-seed.port.ts';
+import { SkillsTierCachePort } from '../../domain/skills/skills-tier-cache.port.ts';
 import { SourceSkillsPort } from '../../domain/skills/source-skills.port.ts';
 import { SourceLocationPort } from '../../domain/source/source-location.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
-import { SkillsSeedPort } from '../../domain/skills/skills-seed.port.ts';
-import { SkillsTierCachePort } from '../../domain/skills/skills-tier-cache.port.ts';
 import { buildMergedSkills } from './skills.helpers.ts';
 
 export interface DeleteOrgSkillRequest {

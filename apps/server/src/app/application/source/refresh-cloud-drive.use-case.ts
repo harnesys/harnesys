@@ -11,6 +11,7 @@ import { IntegrationRegistryPort } from '../../domain/integration/integration-re
 import { IntegrationTokenPort } from '../../domain/integration/integration-token.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
+import { CloudSyncBackPort } from '../../domain/source/cloud-sync-back.port.ts';
 import { CloudSyncBackWatchPort } from '../../domain/source/cloud-sync-back-watch.port.ts';
 import { MaterializationEventsPort } from '../../domain/source/materialization-events.port.ts';
 import {
@@ -22,7 +23,6 @@ import { SourceLocationPort } from '../../domain/source/source-location.port.ts'
 import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { SourceOperationGrantPort } from '../../domain/source/source-operation-grant.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
-import { CloudSyncBackPort } from '../../domain/source/cloud-sync-back.port.ts';
 import { markSiblingCloudCopiesRefreshRequired } from './mark-cloud-siblings-refresh.ts';
 import { materializeCloudSourceOnHost } from './materialize-cloud-source.ts';
 import { toPublicSource } from './to-public-source.ts';

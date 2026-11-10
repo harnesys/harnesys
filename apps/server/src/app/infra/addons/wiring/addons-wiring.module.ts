@@ -43,6 +43,7 @@ import { JobStateRepositoryPort } from '../../../domain/addons/ports/job-state-r
 import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import { PermissionDefinitionsPort } from '../../../domain/addons/ports/permission-definitions.port.ts';
 import { AddonRouteTablePort } from '../../../domain/addons/ports/route-table.port.ts';
+import { AddonTransportBindingRepositoryPort } from '../../../domain/addons/ports/transport-binding-repository.port.ts';
 import { TriggerInstanceRepositoryPort } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { ClockPort } from '../../../domain/apps/ports/clock.port.ts';
 import { InboundEventPort } from '../../../domain/apps/ports/inbound-event.port.ts';
@@ -241,6 +242,7 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     AddonPackageCatalogPort,
     OrgAddonRepositoryPort,
     BindingRepositoryPort,
+    AddonTransportBindingRepositoryPort,
     TriggerInstanceRepositoryPort,
     JobStateRepositoryPort,
     InstanceSupervisorPort,

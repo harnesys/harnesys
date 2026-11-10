@@ -8,10 +8,12 @@ export {
 export {
   type AddonBindingInsert,
   type AddonJobStateInsert,
+  type AddonTransportBindingInsert,
   type AddonTriggerFireInsert,
   type AddonTriggerInstanceInsert,
   addonBindingsTable,
   addonJobStateTable,
+  addonTransportBindingsTable,
   addonTriggerFiresTable,
   addonTriggerInstancesTable,
   type OrgAddonInsert,

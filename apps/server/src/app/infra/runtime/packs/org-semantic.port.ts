@@ -11,12 +11,12 @@ import type {
   SemanticUpsertInput,
 } from 'harnesys';
 import { formatFactLine, relevanceScore } from 'harnesys';
+import type { EmbeddingsPort } from '../../../domain/knowledge/embeddings.ts';
 import {
   cosineSimilarity,
   decodeEmbedding,
   encodeEmbedding,
 } from '../../knowledge/embedding-vec.ts';
-import type { EmbeddingsPort } from '../../../domain/knowledge/embeddings.ts';
 import type { OrgSqliteDb } from '../../org-sqlite/org-sqlite-session.ts';
 import { type MemoryFactRow, memoryFactsTable } from '../../org-sqlite/schema/agent-memory.ts';
 import {

@@ -14,12 +14,12 @@ import { SkillSidecarSchema } from '@harnesys/contracts';
 import { parseSkillFile } from 'harnesys';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { OrgSkillsPort } from '../../domain/skills/org-skills.port.ts';
+import { SKILL_NAME_RE } from '../../domain/skills/skill-name.ts';
 import {
   SkillConflictException,
   SkillNotFoundException,
   SkillValidationException,
 } from '../../domain/skills/skills.error.ts';
-import { SKILL_NAME_RE } from '../../domain/skills/skill-name.ts';
 
 const SIDECAR_FILE = '.harnesys-skill.json';
 const DIR_MODE = 0o700;

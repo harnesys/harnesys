@@ -82,9 +82,9 @@ describe('protocol method map conformance', () => {
     expect(protocolMap['log.write'].permission).toBeNull();
   });
 
-  test('host-to-addon request params require _meta', () => {
+  test('host-to-addon request params tolerate missing _meta (host fallback)', () => {
     const result = methodSpec('tools.call')?.params.safeParse({ pack: 'p', tool: 't' });
-    expect(result?.success).toBe(false);
+    expect(result?.success).toBe(true);
     expect(
       CallMetaSchema.safeParse({
         correlationId: 'x',
@@ -114,8 +114,8 @@ describe('envelope and golden fixtures', () => {
       (message as { params: unknown }).params,
     );
     expect(params.pack).toBe('github');
-    expect(params._meta.correlationId).toBe('run-42');
-    expect(params._meta.principal.type).toBe('agent');
+    expect(params._meta?.correlationId).toBe('run-42');
+    expect(params._meta?.principal.type).toBe('agent');
   });
 
   test('triggers.fire fixture validates and produces a typed outcome', async () => {

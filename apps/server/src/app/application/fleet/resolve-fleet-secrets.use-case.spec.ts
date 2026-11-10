@@ -18,14 +18,15 @@ import {
   type SourceOperationGrantRecord,
 } from '../../domain/source/source-operation-grant.port.ts';
 import { googleCredKey } from '../../infra/integration/google/google-token-access.ts';
-import { hashNodeToken } from './hash-node-token.ts';
 import { GoogleCredKeyPort } from './google-cred-key.port.ts';
+import { hashNodeToken } from './hash-node-token.ts';
 
 class FakeCredKeys extends GoogleCredKeyPort {
   override credKey(credRef: string): string {
     return googleCredKey(credRef);
   }
 }
+
 import { ResolveFleetSecretsUseCase } from './resolve-fleet-secrets.use-case.ts';
 
 class FakeGrants extends SourceOperationGrantPort {

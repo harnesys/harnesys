@@ -1,6 +1,6 @@
 {
   "id": "harnesys.starter",
-  "version": "1.0.3",
+  "version": "1.0.0",
   "platform": 1,
   "title": "Starter add-on",
   "description": "Reference implementation of the add-on platform: config with a secret, tools, a periodic job, a trigger kind, routes with :params, and a host-event hook. Runtime profile is 'trusted' on purpose: trust comes from the builtin source (add-ons/ in the monorepo), not from the manifest, and 'trusted' keeps the package runnable on hosts without an OS sandbox mechanism.",

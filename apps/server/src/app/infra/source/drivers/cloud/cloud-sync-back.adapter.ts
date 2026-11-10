@@ -1,11 +1,11 @@
-import { CloudSyncBackPort } from '../../../../domain/source/cloud-sync-back.port.ts';
+import { Injectable } from '@harnesys/brix';
 import type {
   CloudSyncFlushInput,
   CloudSyncLocalDependencies,
   SyncBackResult,
 } from '../../../../domain/source/cloud-sync-back.port.ts';
+import { CloudSyncBackPort } from '../../../../domain/source/cloud-sync-back.port.ts';
 import { flushCloudMirror, syncBackCloudFile } from './cloud-sync-back.ts';
-import { Injectable } from '@harnesys/brix';
 
 @Injectable()
 export class CloudSyncBackAdapter extends CloudSyncBackPort {

@@ -128,10 +128,10 @@ export function createAddonRuntime(options: AddonRuntimeOptions): AddonRuntime {
         detail: `handler '${method}' was not declared in initialize.handlers`,
       });
     }
-    const parsed = spec.params.parse(params) as Record<string, unknown>;
+    const parsed = parseParams(spec, params) as Record<string, unknown>;
     const meta = isCallMeta(parsed._meta)
       ? CallMetaSchema.parse(parsed._meta)
-      : fallbackMeta('host-request');
+      : fallbackMeta('host-request', now() + FALLBACK_DEADLINE_MS);
     if (meta.deadline < now()) {
       throw new AddonError('timeout', { detail: `deadline ${meta.deadline} has passed` });
     }
@@ -141,7 +141,36 @@ export function createAddonRuntime(options: AddonRuntimeOptions): AddonRuntime {
       throw new AddonError('unsupported', { detail: `no handler registered for '${method}'` });
     }
     const raw = await runWithDeadline(target(), meta.deadline, now, signal);
-    return spec.result ? spec.result.parse(raw ?? {}) : raw;
+    return parseResult(spec, raw);
+  }
+
+  function parseResult(
+    spec: { result: { parse(input: unknown): unknown } | null },
+    raw: unknown,
+  ): unknown {
+    if (!spec.result) {
+      return raw;
+    }
+    try {
+      return spec.result.parse(raw ?? {});
+    } catch (error) {
+      throw new AddonError('invalid_response', {
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  function parseParams(
+    spec: { params: { parse(input: unknown): unknown } },
+    params: unknown,
+  ): unknown {
+    try {
+      return spec.params.parse(params);
+    } catch (error) {
+      throw new AddonError('invalid_params', {
+        detail: `${error instanceof Error ? error.message : String(error)}`,
+      });
+    }
   }
 
   async function handleNotification(
@@ -163,7 +192,11 @@ export function createAddonRuntime(options: AddonRuntimeOptions): AddonRuntime {
     if (!handler) {
       return;
     }
-    const ctx = createAddonContextFor(channel, fallbackMeta('notification'), signal);
+    const ctx = createAddonContextFor(
+      channel,
+      fallbackMeta('notification', Number.MAX_SAFE_INTEGER),
+      signal,
+    );
     await handler(parsed as never, ctx);
   }
 
@@ -192,14 +225,16 @@ function withoutMeta<P extends { _meta?: unknown }>(params: P): Omit<P, '_meta'>
   return copy as Omit<P, '_meta'>;
 }
 
+const FALLBACK_DEADLINE_MS = 5 * 60_000;
+
 function isCallMeta(value: unknown): boolean {
   return typeof value === 'object' && value !== null && 'correlationId' in value;
 }
 
-function fallbackMeta(correlationId: string): CallMeta {
+function fallbackMeta(correlationId: string, deadline: number): CallMeta {
   return {
     correlationId,
-    deadline: Number.MAX_SAFE_INTEGER,
+    deadline,
     principal: { type: 'system' },
     locale: 'en',
   };
