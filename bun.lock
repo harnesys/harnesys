@@ -175,6 +175,7 @@
       "name": "@harnesys/contracts",
       "version": "0.1.0",
       "dependencies": {
+        "@harnesys/sdk": "workspace:*",
         "zod": "^4.4.3",
       },
       "devDependencies": {

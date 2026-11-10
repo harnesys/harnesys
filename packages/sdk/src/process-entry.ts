@@ -19,10 +19,19 @@ const ERROR_CODES: Partial<Record<AddonErrorReason, number>> = {
   not_found: -32601,
 };
 
+export type StdioWiringStdin = AsyncIterable<Uint8Array> | ReadableStream<Uint8Array>;
+
 export interface StdioWiring {
-  stdin: AsyncIterable<Uint8Array>;
+  stdin: StdioWiringStdin;
   stdout: { write(chunk: string): unknown };
   stderr: { write(chunk: string): unknown };
+}
+
+function stdinSource(stdin: StdioWiringStdin): AsyncIterable<Uint8Array> {
+  if ('values' in stdin && typeof stdin.values === 'function') {
+    return stdin.values();
+  }
+  return stdin as AsyncIterable<Uint8Array>;
 }
 
 export interface StartAddonProcessOptions {
@@ -168,7 +177,7 @@ export async function startAddonProcess(options: StartAddonProcessOptions): Prom
     }
   }
 
-  for await (const chunk of wiring.stdin) {
+  for await (const chunk of stdinSource(wiring.stdin)) {
     const text = new TextDecoder().decode(chunk);
     for (const line of text.split('\n')) {
       const trimmed = line.trim();

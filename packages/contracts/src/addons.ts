@@ -112,3 +112,5 @@ export const CallAddonToolResponseSchema = z.union([
   z.object({ ok: z.literal(false), error: z.string() }),
 ]);
 export type CallAddonToolResponse = z.infer<typeof CallAddonToolResponseSchema>;
+
+export * from './addons-platform.ts';

@@ -136,7 +136,8 @@ export function createAddonContext(
       dispatch: async (params) => client['runs.dispatch'](params, { signal }),
     },
     threads: {
-      create: async (title?: string) => client['threads.create']({ title }, { signal }),
+      create: async (params: { title?: string; agentId: string }) =>
+        client['threads.create'](params, { signal }),
     },
     triggers: {
       fire: async (params) => client['triggers.fire'](params, { signal }),

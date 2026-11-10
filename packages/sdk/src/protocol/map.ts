@@ -56,10 +56,6 @@ export function notificationSpec<SParams extends z.ZodType>(
   return { direction: 'notification', params, result: null, permission, sender };
 }
 
-function _withMeta<S extends z.ZodObject<z.ZodRawShape>>(schema: S) {
-  return schema.extend({ _meta: CallMetaSchema });
-}
-
 const empty = z.object({});
 const str = z.string().min(1);
 
@@ -203,7 +199,7 @@ export const protocolMap = {
     'runs.dispatch',
   ),
   'threads.create': addonMethod(
-    z.object({ title: str.optional() }),
+    z.object({ title: str.optional(), agentId: z.string().uuid() }),
     z.object({ threadId: str }),
     'threads.create',
   ),

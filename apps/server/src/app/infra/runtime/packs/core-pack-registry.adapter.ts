@@ -18,6 +18,10 @@ export class CorePackRegistryAdapter extends PackRegistryPort {
     this.byName.set(name, registration);
   }
 
+  override unregister(name: string): void {
+    this.byName.delete(name);
+  }
+
   override registrations(): PackRegistration[] {
     return [...this.byName.values()];
   }

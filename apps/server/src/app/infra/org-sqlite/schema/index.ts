@@ -6,6 +6,19 @@ export {
   addonsTable,
 } from './addons.ts';
 export {
+  type AddonBindingInsert,
+  type AddonJobStateInsert,
+  type AddonTriggerFireInsert,
+  type AddonTriggerInstanceInsert,
+  addonBindingsTable,
+  addonJobStateTable,
+  addonTriggerFiresTable,
+  addonTriggerInstancesTable,
+  type OrgAddonInsert,
+  type OrgAddonRowRecord,
+  orgAddonsTable,
+} from './addons-platform.ts';
+export {
   type MemoryConsolidationInsert,
   type MemoryConsolidationRow,
   type MemoryFactInsert,

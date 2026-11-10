@@ -1,0 +1,208 @@
+import { Module } from '@harnesys/brix';
+import { AddonDataPort } from '../../../application/addons/addon-data.port.ts';
+import { AddonRpcPort } from '../../../application/addons/addon-rpc.port.ts';
+import { AddonsApplicationModule } from '../../../application/addons/addons-application.module.ts';
+import { RunJobUseCase } from '../../../application/addons/jobs/run-job.use-case.ts';
+import { AddonJobScheduler } from '../../../application/addons/jobs/schedule-jobs.service.ts';
+import { DisableAddonUseCase } from '../../../application/addons/orgs/disable.use-case.ts';
+import { EnableAddonUseCase } from '../../../application/addons/orgs/enable.use-case.ts';
+import { RollbackAddonUseCase } from '../../../application/addons/orgs/rollback.use-case.ts';
+import { SetBindingsUseCase } from '../../../application/addons/orgs/set-bindings.use-case.ts';
+import { SetConfigUseCase } from '../../../application/addons/orgs/set-config.use-case.ts';
+import { SetGrantsUseCase } from '../../../application/addons/orgs/set-grants.use-case.ts';
+import { UninstallAddonUseCase } from '../../../application/addons/orgs/uninstall.use-case.ts';
+import { UpdateAddonUseCase } from '../../../application/addons/orgs/update.use-case.ts';
+import { ConfirmInstallUseCase } from '../../../application/addons/packages/confirm-install.use-case.ts';
+import { PlanInstallUseCase } from '../../../application/addons/packages/plan-install.use-case.ts';
+import { InstallPlanStore } from '../../../application/addons/packages/plan-store.ts';
+import { PrunePackagesUseCase } from '../../../application/addons/packages/prune.use-case.ts';
+import { RemovePackageUseCase } from '../../../application/addons/packages/remove-package.use-case.ts';
+import { AddonReconciler } from '../../../application/addons/reconcile/reconciler.ts';
+import { RunDispatchPort } from '../../../application/addons/run-dispatch.port.ts';
+import { FireTriggerUseCase } from '../../../application/addons/triggers/fire-trigger.use-case.ts';
+import { ManageTriggerInstanceUseCase } from '../../../application/addons/triggers/manage-instance.use-case.ts';
+import { ContributionRegistry } from '../../../domain/addons/contribution-registry.ts';
+import { AddonCallPort } from '../../../domain/addons/ports/addon-call.port.ts';
+import { AddonNotifyPort } from '../../../domain/addons/ports/addon-notify.port.ts';
+import { AddonPackageCatalogPort } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
+import {
+  AddonConfigReadPort,
+  AddonDataExportPort,
+  AddonLogReaderPort,
+} from '../../../domain/addons/ports/addon-read-models.port.ts';
+import { AddonSourcePort } from '../../../domain/addons/ports/addon-source.port.ts';
+import { AddonAuditPort } from '../../../domain/addons/ports/audit.port.ts';
+import { BindingRepositoryPort } from '../../../domain/addons/ports/binding-repository.port.ts';
+import { ContributionRegistryPort } from '../../../domain/addons/ports/contribution-registry.port.ts';
+import { GrantPolicyPort } from '../../../domain/addons/ports/grant-policy.port.ts';
+import { InstanceSupervisorPort } from '../../../domain/addons/ports/instance-supervisor.port.ts';
+import { JobStateRepositoryPort } from '../../../domain/addons/ports/job-state-repository.port.ts';
+import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
+import { PermissionDefinitionsPort } from '../../../domain/addons/ports/permission-definitions.port.ts';
+import { AddonRouteTablePort } from '../../../domain/addons/ports/route-table.port.ts';
+import { TriggerInstanceRepositoryPort } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
+import { EventBusPort } from '../../../domain/events/event-bus.port.ts';
+import { EventsModule } from '../../events/events.module.ts';
+import { AddonAppsBridgeModule } from '../apps-bridge/apps-bridge.module.ts';
+import { AddonCatalogModule } from '../catalog/catalog.module.ts';
+import { DispatcherModule } from '../dispatcher/dispatcher.module.ts';
+import { PermissionDefinitionRegistry } from '../dispatcher/permission-definitions.ts';
+import { PermissionEngine } from '../dispatcher/permission-engine.ts';
+import { AddonConfigReadModel, ConfigNotifier } from '../families/config/config.family.ts';
+import { AddonFamiliesModule } from '../families/families.module.ts';
+import { FamilyModuleList } from '../families/family-module-list.ts';
+import { HookDeliveryService } from '../families/hook/hook.family.ts';
+import { AddonRouteTable } from '../families/route/route.family.ts';
+import { TransportInboundService } from '../families/transport/transport.family.ts';
+import { TriggerFamilyModule } from '../families/trigger/trigger.family.ts';
+import { TriggerFireService } from '../families/trigger/trigger-fire.sink.ts';
+import { WorkerDescriptorStore, WorkerFamilyModule } from '../families/worker/worker.family.ts';
+import {
+  AddonDbAccess,
+  AddonSecrets,
+  BindingsReader,
+  BridgeInboundSink,
+  LogSink,
+  TriggerFireSink,
+  WorkerReportSink,
+} from '../services/sinks.ts';
+import { AddonSecretService } from '../storage/addon-secret.service.ts';
+import { AddonStorageModule } from '../storage/storage.module.ts';
+import { AddonSupervisorModule } from '../supervisor/supervisor.module.ts';
+import { OrgAuditAddonAdapter } from './addon-audit.adapter.ts';
+import { AddonDbAccessAdapter } from './addon-db-access.adapter.ts';
+import {
+  BridgeInboundSinkAdapter,
+  TriggerFireSinkAdapter,
+  WorkerReportSinkAdapter,
+} from './addon-family-sinks.adapter.ts';
+import { AddonLogSinkAdapter } from './addon-log-sink.adapter.ts';
+import {
+  AccountsChangedNotifySink,
+  AddonDataRemoveAdapter,
+  SupervisorNotifyAdapter,
+  SupervisorRpcAdapter,
+} from './addon-notify.adapter.ts';
+import {
+  AddonConfigReadAdapter,
+  AddonDataExportAdapter,
+  AddonLogReaderAdapter,
+  PermissionDefinitionsPortAdapter,
+  RouteTablePortAdapter,
+} from './addon-read-models.adapter.ts';
+import { CompositeAddonSourceAdapter } from './addon-source-composite.adapter.ts';
+import { AddonSecretsAdapter, BindingsReaderAdapter } from './addon-storage-sinks.adapter.ts';
+import { AddonsLifecycleService } from './addons-lifecycle.service.ts';
+import { FileGrantPolicyAdapter } from './grant-policy.adapter.ts';
+import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.ts';
+
+/**
+ * Composition point of the addon platform: imports every parallel-built
+ * module, binds ports to adapters, and is registered globally so addon
+ * sub-modules and REST controllers can see the addon tokens.
+ */
+@Module({
+  global: true,
+  imports: [
+    AddonCatalogModule,
+    AddonStorageModule,
+    AddonSupervisorModule,
+    DispatcherModule,
+    AddonFamiliesModule,
+    AddonAppsBridgeModule,
+    AddonsApplicationModule,
+    EventsModule,
+  ],
+  providers: [
+    { provide: GrantPolicyPort, useClass: FileGrantPolicyAdapter },
+    { provide: AddonAuditPort, useClass: OrgAuditAddonAdapter },
+    { provide: AddonSourcePort, useClass: CompositeAddonSourceAdapter },
+    {
+      provide: ContributionRegistryPort,
+      useFactory: (families: FamilyModuleList) => new ContributionRegistry(families.modules),
+      inject: [FamilyModuleList],
+    },
+    { provide: AddonDbAccess, useClass: AddonDbAccessAdapter },
+    { provide: AddonSecrets, useClass: AddonSecretsAdapter },
+    { provide: LogSink, useClass: AddonLogSinkAdapter },
+    { provide: BindingsReader, useClass: BindingsReaderAdapter },
+    { provide: TriggerFireSink, useClass: TriggerFireSinkAdapter },
+    { provide: BridgeInboundSink, useClass: BridgeInboundSinkAdapter },
+    { provide: WorkerReportSink, useClass: WorkerReportSinkAdapter },
+    { provide: AddonNotifyPort, useClass: SupervisorNotifyAdapter },
+    { provide: AddonRpcPort, useClass: SupervisorRpcAdapter },
+    { provide: AddonDataPort, useClass: AddonDataRemoveAdapter },
+    AccountsChangedNotifySink,
+    AddonsLifecycleService,
+    WiredSupervisorHooks,
+    RouteTablePortAdapter,
+    PermissionDefinitionsPortAdapter,
+    AddonLogReaderAdapter,
+    AddonDataExportAdapter,
+    AddonConfigReadAdapter,
+  ],
+  exports: [
+    GrantPolicyPort,
+    AddonAuditPort,
+    AddonSourcePort,
+    ContributionRegistryPort,
+    AddonDbAccess,
+    AddonDbAccessAdapter,
+    AddonSecrets,
+    LogSink,
+    AddonLogSinkAdapter,
+    BindingsReader,
+    TriggerFireSink,
+    BridgeInboundSink,
+    WorkerReportSink,
+    AddonNotifyPort,
+    AddonRpcPort,
+    AddonDataPort,
+    AddonRouteTablePort,
+    PermissionDefinitionsPort,
+    AddonLogReaderPort,
+    AddonDataExportPort,
+    AddonConfigReadPort,
+    AddonPackageCatalogPort,
+    OrgAddonRepositoryPort,
+    BindingRepositoryPort,
+    TriggerInstanceRepositoryPort,
+    JobStateRepositoryPort,
+    InstanceSupervisorPort,
+    AddonCallPort,
+    RunDispatchPort,
+    EventBusPort,
+    AddonSecretService,
+    TriggerFireService,
+    WorkerDescriptorStore,
+    WorkerFamilyModule,
+    TriggerFamilyModule,
+    AddonRouteTable,
+    TransportInboundService,
+    HookDeliveryService,
+    ConfigNotifier,
+    AddonConfigReadModel,
+    FamilyModuleList,
+    PermissionEngine,
+    PermissionDefinitionRegistry,
+    InstallPlanStore,
+    PlanInstallUseCase,
+    ConfirmInstallUseCase,
+    RemovePackageUseCase,
+    PrunePackagesUseCase,
+    EnableAddonUseCase,
+    DisableAddonUseCase,
+    UpdateAddonUseCase,
+    RollbackAddonUseCase,
+    UninstallAddonUseCase,
+    SetGrantsUseCase,
+    SetConfigUseCase,
+    SetBindingsUseCase,
+    ManageTriggerInstanceUseCase,
+    FireTriggerUseCase,
+    RunJobUseCase,
+    AddonReconciler,
+    AddonJobScheduler,
+  ],
+})
+export class AddonWiringModule {}

@@ -39,7 +39,7 @@ import { UsageUseCaseModule } from '../application/usage/usage.use-case.module.t
 import { BrowserUseCaseModule } from '../application/use-cases/browser/browser.use-case.module.ts';
 import { VaultUseCaseModule } from '../application/vault/vault.use-case.module.ts';
 import { WebhookUseCaseModule } from '../application/webhooks/webhook.use-case.module.ts';
-import { AddonsModule } from '../infra/addons/addons.module.ts';
+import { AddonWiringModule } from '../infra/addons/wiring/addons-wiring.module.ts';
 import { ConnectorModule } from '../infra/connector/connector.module.ts';
 import { DeskModule } from '../infra/desk/desk.module.ts';
 import { EventsWatchModule } from '../infra/events-watch/events-watch.module.ts';
@@ -54,7 +54,14 @@ import { SourceWatchModule } from '../infra/source/source-watch.module.ts';
 import { TerminalModule } from '../infra/terminal/terminal.module.ts';
 import { SessionGuard } from './guards/session.guard.ts';
 import { AccountsController } from './rest/accounts.controller.ts';
-import { AddonsController } from './rest/addons.controller.ts';
+import { AddonPublicRoutesController } from './rest/addon-public-routes.controller.ts';
+import { AddonRoutesController } from './rest/addon-routes.controller.ts';
+import { AddonsDiagnosticsController } from './rest/addons-diagnostics.controller.ts';
+import { AddonsEventsController } from './rest/addons-events.controller.ts';
+import { AddonsOrgController } from './rest/addons-org.controller.ts';
+import { AddonsOrgJobsController } from './rest/addons-org-jobs.controller.ts';
+import { AddonsOrgTriggersController } from './rest/addons-org-triggers.controller.ts';
+import { AddonsPackagesController } from './rest/addons-packages.controller.ts';
 import { AgentHooksController } from './rest/agent-hooks.controller.ts';
 import { AgentsController } from './rest/agents.controller.ts';
 import { ApprovalsController } from './rest/approvals.controller.ts';
@@ -187,7 +194,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     SourceWatchModule,
     FleetHubModule,
     MachineHomeModule,
-    AddonsModule,
+    AddonWiringModule,
   ],
   controllers: [
     HealthController,
@@ -246,7 +253,14 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     PresetsController,
     LspController,
     ToolchainController,
-    AddonsController,
+    AddonsPackagesController,
+    AddonsOrgController,
+    AddonsOrgTriggersController,
+    AddonsOrgJobsController,
+    AddonsDiagnosticsController,
+    AddonsEventsController,
+    AddonRoutesController,
+    AddonPublicRoutesController,
     BrowserController,
     ThreadsController,
     ThreadAttachmentsController,

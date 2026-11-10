@@ -83,7 +83,7 @@ export interface AddonRuns {
 }
 
 export interface AddonThreads {
-  create(title?: string): Promise<{ threadId: string }>;
+  create(params: { title?: string; agentId: string }): Promise<{ threadId: string }>;
 }
 
 export interface AddonTriggers {

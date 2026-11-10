@@ -88,6 +88,20 @@ export const InboundMessageSchema = z.object({
   payload: z.unknown().optional(),
 });
 
+export interface RouteRequest {
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  path: string;
+  query: Record<string, string>;
+  headers: Record<string, string>;
+  body?: unknown;
+}
+
+export interface RouteHandleResult {
+  status: number;
+  headers?: Record<string, string>;
+  body?: unknown;
+}
+
 export const RouteRequestSchema = z.object({
   method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
   path: z.string().min(1),

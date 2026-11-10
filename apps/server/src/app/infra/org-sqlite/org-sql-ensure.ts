@@ -54,6 +54,7 @@ import {
   migrateThreadsInheritedEventCount,
   migrateUsageTable,
 } from './org-sql.ts';
+import { ensureAddonsPlatformSchema } from './org-sql-addons-platform.ts';
 import { ensureAppsSchema } from './org-sql-apps.ts';
 import { CREATE_CONNECTORS_SQL } from './org-sql-connectors.ts';
 import {
@@ -191,6 +192,7 @@ export function ensureOrgSchema(
   migrateModePresetToolColumns(exec, all);
   exec(CREATE_PLUGINS_SQL);
   exec(CREATE_ADDONS_SQL);
+  ensureAddonsPlatformSchema(exec);
   exec(CREATE_KNOWLEDGE_SQL);
   ensureKnowledgeFts(exec);
   exec(CREATE_THREADS_SQL);

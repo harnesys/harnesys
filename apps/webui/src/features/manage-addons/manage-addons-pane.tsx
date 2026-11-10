@@ -1,238 +1,244 @@
-import type { AddonSummary } from '@harnesys/contracts';
+import type { AddonGrantEntry, OrgAddonDetail } from '@harnesys/contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { Badge } from '@/shared/ui/badge';
+import { useNavigate } from 'react-router';
+import { addonPackagesQuery } from '@/shared/api/addon-packages';
+import {
+  disableOrgAddon,
+  enableOrgAddon,
+  getOrgAddon,
+  orgAddonsQuery,
+  watchAddonEvents,
+} from '@/shared/api/addons';
+import { studioPath } from '@/shared/config/routes';
 import { Button } from '@/shared/ui/button';
-import { Row, RowChip, RowField, RowItem, RowList, RowSection } from '@/shared/ui/capability-rows';
-import { SettingsEmpty, SettingsErrorBanner, SettingsSection } from '@/shared/ui/settings-kit';
-import { AddonConfigForm } from './addon-config-form';
-import { AddonLogPanel } from './addon-log-panel';
-import { disableOrgAddon, enableOrgAddon, getOrgAddon, orgAddonsQuery } from './api';
+import { Row, RowChip, RowList } from '@/shared/ui/capability-rows';
+import {
+  RowListSkeleton,
+  SettingsEmpty,
+  SettingsErrorBanner,
+  SettingsSection,
+} from '@/shared/ui/settings-kit';
+import { ConsentDialog } from './consent-dialog';
+import { HostPackagesCard } from './host-packages-card';
 
 export function ManageAddonsPane({ orgId }: { orgId: string }) {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { data: response, isPending, error } = useQuery(orgAddonsQuery(orgId));
-  const addons = response ?? [];
-  const [selectedAddonId, setSelectedAddonId] = useState<string | null>(null);
+  const list = useQuery(orgAddonsQuery(orgId));
+  const packages = useQuery(addonPackagesQuery());
+  const [consent, setConsent] = useState<OrgAddonDetail | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  if (error) {
-    return (
-      <div className="flex w-full flex-col gap-8" data-testid="manage-addons-pane">
-        <SettingsErrorBanner
-          message={error instanceof Error ? error.message : String(error)}
-          testId="manage-addons-error"
-        />
-      </div>
-    );
-  }
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['addons', orgId] });
+
+  useEffect(() => {
+    const unsubscribe = watchAddonEvents(orgId, {
+      onEvent: () => {
+        void queryClient.invalidateQueries({ queryKey: ['addons', orgId] });
+      },
+    });
+    return unsubscribe;
+  }, [queryClient, orgId]);
+
+  const addons = list.data?.items ?? [];
+
+  const startEnable = async (addonId: string) => {
+    setPending(true);
+    setError(null);
+    try {
+      const detail = await getOrgAddon(orgId, addonId);
+      setConsent(detail);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const confirmEnable = async (grants: AddonGrantEntry[]) => {
+    if (!consent) {
+      return;
+    }
+    setPending(true);
+    setError(null);
+    try {
+      await enableOrgAddon(orgId, consent.addonId, { grants });
+      setConsent(null);
+      await invalidate();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const disable = async (addonId: string) => {
+    setPending(true);
+    setError(null);
+    try {
+      await disableOrgAddon(orgId, addonId);
+      await invalidate();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const enabledIds = new Set(addons.map((addon) => addon.addonId));
+  const available = (packages.data?.items ?? [])
+    .filter((pkg) => !enabledIds.has(pkg.id))
+    .filter((pkg, index, all) => all.findIndex((other) => other.id === pkg.id) === index);
 
   return (
     <div className="flex w-full flex-col gap-8" data-testid="manage-addons-pane">
+      {error ? <SettingsErrorBanner message={error} testId="manage-addons-error" /> : null}
       <SettingsSection
         label="Add-ons"
-        count={isPending ? undefined : addons.length}
-        description="Discovered and enabled add-ons for this organization."
+        count={list.isPending ? undefined : addons.length}
+        description="Add-ons enabled for this organization. State updates arrive live."
         testId="manage-addons"
       >
-        {addons.length === 0 ? (
+        {list.isPending ? <RowListSkeleton rows={3} testId="manage-addons-skeleton" /> : null}
+        {!list.isPending && addons.length === 0 ? (
           <SettingsEmpty
-            title={isPending ? 'Loading add-ons' : 'No add-ons yet'}
-            description={
-              isPending
-                ? 'Reading the org add-on catalog.'
-                : 'Install an add-on into ~/.harnesys/add-ons to see it here.'
-            }
+            title="No add-ons yet"
+            description="Install a package below or enable an installed package for this organization."
             testId="manage-addons-empty"
           />
-        ) : (
+        ) : null}
+        {addons.length > 0 ? (
           <RowList testId="manage-addons-list">
-            {addons.map((addon) => {
-              const selected = addon.id === selectedAddonId;
-              return (
-                <Row
-                  key={addon.id}
-                  testId={`manage-addon-${addon.id}`}
-                  title={addon.title}
-                  mono={false}
-                  summary={addon.id}
-                  chips={
-                    <>
-                      <RowChip>{addon.version}</RowChip>
-                      {addon.state === 'enabled' ? <RowChip tone="ok">enabled</RowChip> : null}
-                    </>
-                  }
-                  expanded={selected}
-                  onToggle={() => setSelectedAddonId(selected ? null : addon.id)}
-                >
-                  {selected ? (
-                    <AddonDetailPanel
-                      key={`${orgId}:${addon.id}`}
-                      orgId={orgId}
-                      addon={addon}
-                      onChanged={async () => {
-                        await queryClient.invalidateQueries({
-                          queryKey: ['orgs', orgId, 'addons'],
-                        });
-                      }}
-                    />
-                  ) : null}
-                </Row>
-              );
-            })}
+            {addons.map((addon) => (
+              <Row
+                key={addon.addonId}
+                testId={`manage-addon-${addon.addonId}`}
+                title={addon.title}
+                mono={false}
+                summary={addon.addonId}
+                alwaysShowActions
+                chips={
+                  <>
+                    <RowChip>{addon.version}</RowChip>
+                    {addon.enabled ? <RowChip tone="ok">enabled</RowChip> : null}
+                    <RowChip tone={healthTone(addon.health)}>{addon.health}</RowChip>
+                    {addon.compatibility.outcome === 'needs_consent' ? (
+                      <RowChip tone="warn">needs consent</RowChip>
+                    ) : null}
+                    {addon.compatibility.outcome === 'incompatible' ? (
+                      <RowChip tone="danger">incompatible</RowChip>
+                    ) : null}
+                    {addon.updateAvailable ? (
+                      <RowChip tone="warn">update: {addon.updateAvailable}</RowChip>
+                    ) : null}
+                  </>
+                }
+                actions={
+                  <>
+                    {addon.enabled ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={pending}
+                        onClick={() => void disable(addon.addonId)}
+                        data-testid={`addon-disable-${addon.addonId}`}
+                      >
+                        Disable
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={pending}
+                        onClick={() => void startEnable(addon.addonId)}
+                        data-testid={`addon-enable-${addon.addonId}`}
+                      >
+                        Enable
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => navigate(studioPath.addon(orgId, addon.addonId))}
+                      data-testid={`addon-open-${addon.addonId}`}
+                    >
+                      Open
+                    </Button>
+                  </>
+                }
+              />
+            ))}
           </RowList>
-        )}
+        ) : null}
       </SettingsSection>
+      {available.length > 0 ? (
+        <SettingsSection
+          label="Available packages"
+          count={available.length}
+          description="Installed on this host but not enabled here."
+          testId="manage-addons-available"
+        >
+          <RowList testId="manage-addons-available-list">
+            {available.map((pkg) => (
+              <Row
+                key={`${pkg.id}@${pkg.version}`}
+                testId={`available-addon-${pkg.id}`}
+                title={pkg.title}
+                mono={false}
+                summary={pkg.description}
+                alwaysShowActions
+                chips={
+                  <>
+                    <RowChip>{pkg.version}</RowChip>
+                    <RowChip>{pkg.trust}</RowChip>
+                  </>
+                }
+                actions={
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={pending}
+                    onClick={() => void startEnable(pkg.id)}
+                    data-testid={`available-addon-enable-${pkg.id}`}
+                  >
+                    Enable
+                  </Button>
+                }
+              />
+            ))}
+          </RowList>
+        </SettingsSection>
+      ) : null}
+      <HostPackagesCard />
+      <ConsentDialog
+        key={consent ? `${consent.addonId}:${consent.version}` : 'consent-none'}
+        open={consent !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConsent(null);
+          }
+        }}
+        title={consent ? `Enable ${consent.title}` : ''}
+        description="Review the rights the add-on requests. Required rights cannot be declined."
+        permissions={consent?.permissions.declared ?? []}
+        pending={pending}
+        confirmLabel="Enable"
+        onConfirm={(grants) => void confirmEnable(grants)}
+      />
     </div>
   );
 }
 
-type AddonDetailState =
-  | { kind: 'loading' }
-  | { kind: 'ready'; value: Awaited<ReturnType<typeof getOrgAddon>> }
-  | { kind: 'error'; message: string };
-
-function AddonDetailPanel({
-  orgId,
-  addon,
-  onChanged,
-}: {
-  orgId: string;
-  addon: AddonSummary;
-  onChanged: () => Promise<void>;
-}) {
-  const [detail, setDetail] = useState<AddonDetailState>({ kind: 'loading' });
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setDetail({ kind: 'loading' });
-    setError(null);
-    getOrgAddon(orgId, addon.id)
-      .then((loaded) => {
-        if (!cancelled) {
-          setDetail({ kind: 'ready', value: loaded });
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setDetail({ kind: 'error', message: err instanceof Error ? err.message : String(err) });
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [addon.id, orgId]);
-
-  const onToggle = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      if (addon.state === 'enabled') {
-        await disableOrgAddon(orgId, addon.id);
-      } else {
-        await enableOrgAddon(orgId, addon.id);
-      }
-      await onChanged();
-      const reloaded = await getOrgAddon(orgId, addon.id);
-      setDetail({ kind: 'ready', value: reloaded });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const detailValue = detail.kind === 'ready' ? detail.value : null;
-  const contributions = detailValue?.contributions ?? [];
-
-  return (
-    <div className="flex min-w-0 flex-col gap-2" data-testid={`addon-detail-${addon.id}`}>
-      {detail.kind === 'error' ? (
-        <SettingsErrorBanner message={detail.message} testId="addon-detail-error" />
-      ) : null}
-      {error ? <SettingsErrorBanner message={error} testId="addon-action-error" /> : null}
-      <RowField label="id" value={addon.id} />
-      <RowField label="version" value={addon.version} />
-      <RowField label="state" value={<Badge variant="outline">{addon.state}</Badge>} />
-      <RowField label="execution" value={addon.execution} />
-      <RowField label="running" value={detailValue?.running ? 'yes' : 'no'} />
-      {addon.description ? (
-        <p className="text-muted-foreground text-xs leading-4">{addon.description}</p>
-      ) : null}
-      {addon.families.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-1">
-          {addon.families.map((family) => (
-            <Badge key={family} variant="secondary">
-              {family}
-            </Badge>
-          ))}
-        </div>
-      ) : null}
-      {addon.tags.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-1">
-          {addon.tags.map((tag) => (
-            <Badge key={tag} variant="outline">
-              {tag}
-            </Badge>
-          ))}
-        </div>
-      ) : null}
-      {detailValue?.lastError ? (
-        <SettingsErrorBanner message={detailValue.lastError} testId="addon-last-error" />
-      ) : null}
-      {detailValue ? (
-        <>
-          <RowSection label="Contributions" count={contributions.length}>
-            {contributions.length === 0 ? (
-              <RowItem title="No contributions declared" />
-            ) : (
-              contributions.map((contribution) => (
-                <RowItem
-                  key={contribution.id}
-                  title={contribution.id}
-                  description={`${contribution.family} — ${JSON.stringify(contribution.descriptor).slice(0, 160)}`}
-                  testId={`addon-contribution-${contribution.id}`}
-                />
-              ))
-            )}
-          </RowSection>
-          {detailValue.config?.fields && detailValue.config.fields.length > 0 ? (
-            <AddonConfigForm
-              key={addon.id}
-              orgId={orgId}
-              addonId={addon.id}
-              fields={detailValue.config.fields}
-              values={detailValue.values}
-              onSaved={async () => {
-                try {
-                  const reloaded = await getOrgAddon(orgId, addon.id);
-                  setDetail({ kind: 'ready', value: reloaded });
-                } catch {
-                  // keep the current snapshot
-                }
-              }}
-            />
-          ) : null}
-        </>
-      ) : null}
-      <RowSection label="Runtime">
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={busy}
-            onClick={() => void onToggle()}
-            data-testid={`addon-toggle-${addon.id}`}
-          >
-            {addon.state === 'enabled' ? 'Disable' : 'Enable'}
-          </Button>
-        </div>
-      </RowSection>
-      {addon.state === 'enabled' ? (
-        <AddonLogPanel key={addon.id} orgId={orgId} addonId={addon.id} />
-      ) : null}
-    </div>
-  );
+function healthTone(health: string): 'ok' | 'warn' | 'danger' {
+  if (health === 'running') {
+    return 'ok';
+  }
+  if (health === 'quarantined' || health === 'failed') {
+    return 'danger';
+  }
+  return 'warn';
 }
