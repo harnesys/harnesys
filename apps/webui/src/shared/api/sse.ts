@@ -13,6 +13,21 @@ export interface ReadSseOptions {
   idleTimeoutMs?: number;
 }
 
+/** A 4xx (except 408/429) will not succeed on retry — reconnecting would be polling. */
+class SsePermanentError extends Error {
+  readonly status: number;
+
+  constructor(status: number) {
+    super(`sse open failed ${status}`);
+    this.name = 'SsePermanentError';
+    this.status = status;
+  }
+}
+
+function isPermanentOpenFailure(status: number): boolean {
+  return status >= 400 && status < 500 && status !== 408 && status !== 429;
+}
+
 export async function* readSse(
   response: Response,
   options?: ReadSseOptions,
@@ -160,6 +175,11 @@ async function maintainConnection(key: string): Promise<void> {
     if (conn.abort.signal.aborted || (failure !== null && isAbortError(failure))) {
       return;
     }
+    if (failure instanceof SsePermanentError) {
+      trace('sse', `giving up after permanent ${failure.status}`);
+      notifyError(conn);
+      return;
+    }
     const current = connections.get(key);
     if (!current) {
       return;
@@ -229,6 +249,9 @@ async function openSseOnce(conn: FetchSseConnection): Promise<void> {
   }
   if (!response.ok) {
     trace('sse', `open failed ${response.status}`);
+    if (isPermanentOpenFailure(response.status)) {
+      throw new SsePermanentError(response.status);
+    }
     throw new Error(`sse open failed ${response.status}`);
   }
   conn.open = true;

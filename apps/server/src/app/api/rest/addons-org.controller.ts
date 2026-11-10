@@ -24,7 +24,12 @@ import { OrgAddonRepositoryPort } from '../../domain/addons/ports/org-addon-repo
 import { PermissionDefinitionsPort } from '../../domain/addons/ports/permission-definitions.port.ts';
 import { AddonOrgAdminGuard } from '../guards/addon-org-admin.guard.ts';
 import { OrgAccessGuard } from '../guards/org-access.guard.ts';
-import { latestVersionOf, orgAddonDetailOf, orgAddonSummaryOf } from './addons-org-views.ts';
+import {
+  latestVersionOf,
+  orgAddonDetailOf,
+  orgAddonSummaryOf,
+  orgAvailableDetailOf,
+} from './addons-org-views.ts';
 
 const EnableBodySchema = AddonGrantBodySchema;
 const GrantsBodySchema = z.object({ grants: AddonGrantBodySchema.shape.grants });
@@ -72,14 +77,29 @@ export class AddonsOrgController {
 
   @Get(':id')
   detail(@Param('orgId') orgId: string, @Param('id') id: string): OrgAddonDetail {
-    const row = this.requireRow(orgId, id);
-    return orgAddonDetailOf({
+    const row = this.orgAddons.find(orgId, id);
+    if (row) {
+      return orgAddonDetailOf({
+        deps: { definitions: this.definitions },
+        row,
+        pkg: this.catalog.find(id, row.version),
+        latest: this.catalog.find(id),
+        bindings: this.accountBindings.list(orgId, id),
+        configValues: this.configReadModel.values(orgId, id),
+      });
+    }
+    const available = this.catalog.find(id);
+    if (!available) {
+      throw new AddonException(
+        'not_found',
+        404,
+        `Addon is not installed in this organization: ${id}`,
+      );
+    }
+    return orgAvailableDetailOf({
       deps: { definitions: this.definitions },
-      row,
-      pkg: this.catalog.find(id, row.version),
-      latest: this.catalog.find(id),
-      bindings: this.accountBindings.list(orgId, id),
-      configValues: this.configReadModel.values(orgId, id),
+      orgId,
+      pkg: available,
     });
   }
 
@@ -209,17 +229,5 @@ export class AddonsOrgController {
   @Post(':id/quarantine/reset')
   async quarantineReset(@Param('orgId') orgId: string, @Param('id') id: string) {
     return await this.supervisor.restart(orgId, id, 'quarantine_reset');
-  }
-
-  private requireRow(orgId: string, id: string) {
-    const row = this.orgAddons.find(orgId, id);
-    if (!row) {
-      throw new AddonException(
-        'not_found',
-        404,
-        `Addon is not installed in this organization: ${id}`,
-      );
-    }
-    return row;
   }
 }

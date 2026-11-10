@@ -84,6 +84,16 @@ export const AddonPackageViewSchema = z.object({
 });
 export type AddonPackageView = z.infer<typeof AddonPackageViewSchema>;
 
+export const AddonDiscoverViewSchema = z.object({
+  source: z.string().min(1),
+  id: z.string().min(1),
+  version: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().default(''),
+  installed: z.boolean().default(false),
+});
+export type AddonDiscoverView = z.infer<typeof AddonDiscoverViewSchema>;
+
 export const InstallPlanSchema = z.object({
   planId: z.string().min(1),
   id: z.string().min(1),

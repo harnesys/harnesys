@@ -1,8 +1,14 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@harnesys/brix';
-import type { AddonPackageView, AddonPolicyView, InstallPlan } from '@harnesys/contracts';
+import type {
+  AddonDiscoverView,
+  AddonPackageView,
+  AddonPolicyView,
+  InstallPlan,
+} from '@harnesys/contracts';
 import { resolveL10n } from '@harnesys/sdk';
 import { z } from 'zod';
 import { ConfirmInstallUseCase } from '../../application/addons/packages/confirm-install.use-case.ts';
+import { DiscoverPackagesUseCase } from '../../application/addons/packages/discover-packages.use-case.ts';
 import { PlanInstallUseCase } from '../../application/addons/packages/plan-install.use-case.ts';
 import type { PruneResult } from '../../application/addons/packages/prune.use-case.ts';
 import { PrunePackagesUseCase } from '../../application/addons/packages/prune.use-case.ts';
@@ -28,6 +34,7 @@ export class AddonsPackagesController {
   constructor(
     private readonly planInstall: PlanInstallUseCase,
     private readonly confirmInstall: ConfirmInstallUseCase,
+    private readonly discoverPackages: DiscoverPackagesUseCase,
     private readonly removePackage: RemovePackageUseCase,
     private readonly prunePackages: PrunePackagesUseCase,
     private readonly catalog: AddonPackageCatalogPort,
@@ -37,6 +44,11 @@ export class AddonsPackagesController {
   @Get('packages')
   list(): { items: AddonPackageView[] } {
     return { items: this.catalog.listInstalled().map((pkg) => this.viewOf(pkg)) };
+  }
+
+  @Get('packages/discover')
+  discover(): { items: AddonDiscoverView[] } {
+    return this.discoverPackages.execute();
   }
 
   @Post('packages/plan')

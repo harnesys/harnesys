@@ -175,6 +175,43 @@ export interface AddonDetailInput {
   configValues: Record<string, unknown>;
 }
 
+/** Detail for a package installed on the host but not yet enabled in the org. */
+export function orgAvailableDetailOf(input: {
+  deps: AddonViewDeps;
+  orgId: string;
+  pkg: InstalledAddonPackage;
+}): OrgAddonDetail {
+  const { deps, orgId, pkg } = input;
+  const compat = compatibilityViewOf(pkg);
+  return {
+    orgId,
+    addonId: pkg.id,
+    version: pkg.version,
+    title: l10nTitle(pkg),
+    description: l10nDescription(pkg),
+    ...(pkg.manifest.icon === undefined ? {} : { icon: pkg.manifest.icon }),
+    enabled: false,
+    health: 'stopped',
+    lastError: null,
+    compatibility: compat,
+    updateAvailable: null,
+    warnings: compat.outcome === 'ok' ? [] : compat.reasons,
+    manifest: manifestSummaryOf(pkg),
+    contributions: pkg.manifest.contributions.map((contribution) => ({
+      id: contribution.id,
+      family: contribution.family,
+      optional: contribution.optional ?? false,
+    })),
+    permissions: {
+      declared: declaredPermissionsOf(deps, pkg, []),
+      granted: [],
+      diff: { added: [], removed: [] },
+    },
+    connections: [],
+    configValues: {},
+  };
+}
+
 export function orgAddonDetailOf(input: AddonDetailInput): OrgAddonDetail {
   const { deps, row, pkg, latest, bindings, configValues } = input;
   const grants = parseGrants(row.grantsJson);

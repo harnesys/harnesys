@@ -3,6 +3,7 @@ import { Injectable } from '@harnesys/brix';
 import type {
   AddonStagePlan,
   AddonStageRequest,
+  BuiltinAddonInfo,
 } from '../../../domain/addons/ports/addon-source.port.ts';
 import { AddonSourcePort } from '../../../domain/addons/ports/addon-source.port.ts';
 import { GrantPolicyPort } from '../../../domain/addons/ports/grant-policy.port.ts';
@@ -49,6 +50,10 @@ export class CompositeAddonSourceAdapter extends AddonSourcePort {
   override release(planId: string): void {
     this.builtin.release(planId);
     this.local.release(planId);
+  }
+
+  override listBuiltins(): BuiltinAddonInfo[] {
+    return this.builtin.listBuiltins();
   }
 
   private assertLocalAllowed(source: string): void {

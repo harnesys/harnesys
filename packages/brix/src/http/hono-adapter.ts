@@ -161,12 +161,10 @@ async function applyGuards(options: GuardRunOptions): Promise<Response | undefin
   return outcome.kind === 'response' ? outcome.response : undefined;
 }
 
-interface RegisterOptions {
-  container: Container;
+interface PendingRoute {
   controller: UnknownClass;
   moduleRef: UnknownClass;
-  globalGuards: CanActivate[];
-  mapError: ErrorMapper;
+  route: RouteDef;
 }
 
 function hasProtectedRoute(controllers: UnknownClass[]): boolean {
@@ -180,20 +178,69 @@ function hasProtectedRoute(controllers: UnknownClass[]): boolean {
   return false;
 }
 
-function registerController(app: Hono<BrixEnv>, options: RegisterOptions): void {
-  const instance = options.container.resolveFrom<Record<string, unknown>>(
-    options.moduleRef,
-    options.controller,
-  );
-  for (const route of getRouteTable(options.controller)) {
+function segmentRank(segment: string): 0 | 1 | 2 {
+  if (segment.startsWith(':')) {
+    return 1;
+  }
+  if (segment.startsWith('*')) {
+    return 2;
+  }
+  return 0;
+}
+
+/**
+ * Orders routes so static segments win over params at the first differing
+ * segment (`orgs/:orgId/addons/events` must shadow `orgs/:orgId/addons/:id`).
+ * Ties keep declaration order (stable sort).
+ */
+function compareRouteSpecificity(left: string, right: string): number {
+  const leftSegments = left.split('/').filter(Boolean);
+  const rightSegments = right.split('/').filter(Boolean);
+  const length = Math.min(leftSegments.length, rightSegments.length);
+  for (let index = 0; index < length; index += 1) {
+    const leftRank = segmentRank(leftSegments[index] as string);
+    const rightRank = segmentRank(rightSegments[index] as string);
+    if (leftRank !== rightRank) {
+      return leftRank - rightRank;
+    }
+  }
+  return 0;
+}
+
+interface PendingRoute {
+  controller: UnknownClass;
+  moduleRef: UnknownClass;
+  route: RouteDef;
+}
+
+function registerRoutes(
+  app: Hono<BrixEnv>,
+  options: {
+    container: Container;
+    globalGuards: CanActivate[];
+    mapError: ErrorMapper;
+    pending: PendingRoute[];
+  },
+): void {
+  const instances = new Map<UnknownClass, Record<string, unknown>>();
+  for (const entry of options.pending) {
+    let instance = instances.get(entry.controller);
+    if (instance === undefined) {
+      instance = options.container.resolveFrom<Record<string, unknown>>(
+        entry.moduleRef,
+        entry.controller,
+      );
+      instances.set(entry.controller, instance);
+    }
+    const route = entry.route;
     const handlerName = route.handlerName;
-    const routeIsPublic = isPublic(options.controller, handlerName);
+    const routeIsPublic = isPublic(entry.controller, handlerName);
     const guards =
       routeIsPublic === true
         ? []
         : [
             ...options.globalGuards,
-            ...resolveRouteGuards(options.container, options.controller, handlerName),
+            ...resolveRouteGuards(options.container, entry.controller, handlerName),
           ];
     app.on(route.method, joinPaths(route.path), async (c) => {
       const traceId = getTraceId(c);
@@ -249,17 +296,21 @@ export function buildHonoWithProviders(args: {
   const globalGuards = hasProtectedRoute(controllers)
     ? resolveGlobalGuards(args.container, providers)
     : [];
+  const pending: PendingRoute[] = [];
   for (const node of graph.nodes) {
     for (const controller of node.controllers) {
-      registerController(app, {
-        container: args.container,
-        controller,
-        moduleRef: node.ref,
-        globalGuards,
-        mapError,
-      });
+      for (const route of getRouteTable(controller)) {
+        pending.push({ controller, moduleRef: node.ref, route });
+      }
     }
   }
+  pending.sort((left, right) => compareRouteSpecificity(left.route.path, right.route.path));
+  registerRoutes(app, {
+    container: args.container,
+    globalGuards,
+    mapError,
+    pending,
+  });
   app.notFound((c) => c.json(mapNotFound(c.req.path, getTraceId(c), mapError), 404));
   return {
     app,
