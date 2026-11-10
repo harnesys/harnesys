@@ -84,14 +84,12 @@ export function createAddonRuntime(options: AddonRuntimeOptions): AddonRuntime {
         }
         return pairTarget(definition.triggers, kind, 'start', params, ctx);
       }
-      case 'trigger.stop':
-        return pairTarget(
-          definition.triggers,
-          activeTriggerKinds.get(str(params.instanceId)) ?? '',
-          'stop',
-          params,
-          ctx,
-        );
+      case 'trigger.stop': {
+        const instanceId = str(params.instanceId);
+        const kind = activeTriggerKinds.get(instanceId) ?? '';
+        activeTriggerKinds.delete(instanceId);
+        return pairTarget(definition.triggers, kind, 'stop', params, ctx);
+      }
       case 'worker.start':
         return pairTarget(definition.workers, str(params.workerId), 'start', params, ctx);
       case 'worker.stop':

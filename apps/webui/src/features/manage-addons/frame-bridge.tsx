@@ -107,5 +107,21 @@ export function AddonFrameBridge({
 }
 
 function respond(frame: HTMLIFrameElement, response: HostResponse): void {
-  frame.contentWindow?.postMessage(response, '*');
+  const targetOrigin = frameOrigin(frame);
+  if (targetOrigin === null) {
+    return;
+  }
+  frame.contentWindow?.postMessage(response, targetOrigin);
+}
+
+function frameOrigin(frame: HTMLIFrameElement): string | null {
+  const src = frame.getAttribute('src');
+  if (src === null || src === '') {
+    return null;
+  }
+  try {
+    return new URL(src, window.location.href).origin;
+  } catch {
+    return null;
+  }
 }

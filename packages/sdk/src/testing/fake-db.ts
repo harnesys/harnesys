@@ -9,11 +9,7 @@ const loadDatabase = (): BunDatabaseCtor => {
 };
 
 const FORBIDDEN_SQL = [/\battach\b/i, /\bdetach\b/i, /\bload_extension\s*\(/i];
-const ALLOWED_PRAGMAS = [
-  /^pragma\s+user_version\b/i,
-  /^pragma\s+foreign_keys\b/i,
-  /^pragma\s+table_info\b/i,
-];
+const ALLOWED_PRAGMAS = ['user_version', 'foreign_keys'] as const;
 
 export class SqlAuthorizerError extends Error {
   readonly reason = 'permission_denied';
@@ -29,10 +25,70 @@ export function guardSql(sql: string): void {
       throw new SqlAuthorizerError(`sql statement is not allowed: ${pattern.source}`);
     }
   }
-  const trimmed = sql.trim().toLowerCase();
-  if (trimmed.startsWith('pragma') && !ALLOWED_PRAGMAS.some((pattern) => pattern.test(trimmed))) {
-    throw new SqlAuthorizerError(`pragma is not allowed: ${sql}`);
+  for (const statement of splitStatements(sql)) {
+    assertStatementAllowed(statement);
   }
+}
+
+// Mirrors apps/server/src/app/infra/addons/storage/sql-guard.ts: the fake and the
+// real host must accept and reject identical statements.
+function assertStatementAllowed(statement: string): void {
+  const match = /^\s*pragma\s+([a-zA-Z_]+)\s*(=\s*(.+))?$/i.exec(statement);
+  if (!match) {
+    return;
+  }
+  const name = (match[1] ?? '').toLowerCase();
+  if ((match[3] ?? null) !== null) {
+    throw new SqlAuthorizerError(`pragma writes are not allowed: ${statement.trim()}`);
+  }
+  if (!ALLOWED_PRAGMAS.includes(name as (typeof ALLOWED_PRAGMAS)[number])) {
+    throw new SqlAuthorizerError(`pragma is not allowed: ${statement.trim()}`);
+  }
+}
+
+function splitStatements(sql: string): string[] {
+  const statements: string[] = [];
+  let current = '';
+  let index = 0;
+  while (index < sql.length) {
+    const char = sql[index] ?? '';
+    if (char === "'" || char === '"' || char === '`') {
+      const end = quotedEnd(sql, index);
+      current += sql.slice(index, end);
+      index = end;
+      continue;
+    }
+    if (char === ';') {
+      statements.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+    index += 1;
+  }
+  if (current.trim().length > 0) {
+    statements.push(current);
+  }
+  return statements.length > 0 ? statements : [sql];
+}
+
+// Returns the index just past the closing quote of a quoted run starting at `start`.
+function quotedEnd(sql: string, start: number): number {
+  const quote = sql[start];
+  let index = start + 1;
+  while (index < sql.length) {
+    const char = sql[index];
+    if (char !== quote) {
+      index += 1;
+      continue;
+    }
+    if (sql[index + 1] === quote) {
+      index += 2;
+      continue;
+    }
+    return index + 1;
+  }
+  return sql.length;
 }
 
 export interface FakeDb {

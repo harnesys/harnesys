@@ -40,7 +40,8 @@ export function ConsentDialog({
 }: ConsentDialogProps) {
   const mandatory = permissions.filter((permission) => !permission.optional);
   const optional = permissions.filter((permission) => permission.optional);
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(optional.map((p) => p.id)));
+  // Least privilege: optional permissions start unchecked; only mandatory stay locked on.
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
 
   if (!open) {
     return null;

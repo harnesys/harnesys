@@ -30,6 +30,10 @@ function normalizeRowid(value: string | number | bigint): string | number {
   return value;
 }
 
+export function isSizeReducingSql(sql: string): boolean {
+  return /^\s*(delete|drop|vacuum)\b/i.test(sql);
+}
+
 export class AddonDb {
   private readonly sqlite: Database;
   private readonly statements = new Map<string, Statement>();
@@ -45,14 +49,14 @@ export class AddonDb {
   }
 
   exec(sql: string): void {
-    this.assertWritable();
+    this.assertWritable(sql);
     this.prepare(sql);
     this.sqlite.exec(sql);
     this.enforceQuota();
   }
 
   run(sql: string, params: unknown[] = []): AddonDbRunResult {
-    this.assertWritable();
+    this.assertWritable(sql);
     const statement = this.prepare(sql);
     const result = this.withTimeout(sql, () => statement.run(...params));
     this.enforceQuota();
@@ -87,7 +91,7 @@ export class AddonDb {
       );
     }
     for (const item of items) {
-      this.assertWritable();
+      this.assertWritable(item.sql);
       this.prepare(item.sql);
     }
     const results: AddonDbRunResult[] = [];
@@ -135,28 +139,40 @@ export class AddonDb {
     return statement;
   }
 
-  private assertWritable(): void {
-    if (this.quotaExceeded) {
-      throw new AddonException(
-        'quota_exceeded',
-        413,
-        'addon database quota exceeded; free space before writing again',
-      );
+  private assertWritable(sql: string): void {
+    if (!this.quotaExceeded) {
+      return;
     }
+    if (isSizeReducingSql(sql)) {
+      return;
+    }
+    if (this.quotaBytes !== null && this.sizeBytes() <= this.quotaBytes) {
+      this.quotaExceeded = false;
+      return;
+    }
+    throw new AddonException(
+      'quota_exceeded',
+      413,
+      'addon database quota exceeded; free space before writing again',
+    );
   }
 
   private enforceQuota(): void {
-    if (this.quotaBytes === null || this.quotaExceeded) {
+    if (this.quotaBytes === null) {
       return;
     }
     if (this.sizeBytes() > this.quotaBytes) {
-      this.quotaExceeded = true;
-      throw new AddonException(
-        'quota_exceeded',
-        413,
-        `addon database exceeds quota of ${this.quotaBytes} bytes`,
-      );
+      if (!this.quotaExceeded) {
+        this.quotaExceeded = true;
+        throw new AddonException(
+          'quota_exceeded',
+          413,
+          `addon database exceeds quota of ${this.quotaBytes} bytes`,
+        );
+      }
+      return;
     }
+    this.quotaExceeded = false;
   }
 
   private withTimeout<T>(sql: string, fn: () => T): T {
