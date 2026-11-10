@@ -16,11 +16,11 @@ import { SetGrantsUseCase } from './orgs/set-grants.use-case.ts';
 import { UninstallAddonUseCase } from './orgs/uninstall.use-case.ts';
 import { UpdateAddonUseCase } from './orgs/update.use-case.ts';
 import { ConfirmInstallUseCase } from './packages/confirm-install.use-case.ts';
-import { DiscoverPackagesUseCase } from './packages/discover-packages.use-case.ts';
 import { PlanInstallUseCase } from './packages/plan-install.use-case.ts';
 import { InstallPlanStore } from './packages/plan-store.ts';
 import { PrunePackagesUseCase } from './packages/prune.use-case.ts';
 import { RemovePackageUseCase } from './packages/remove-package.use-case.ts';
+import { RescanPackagesUseCase } from './packages/rescan-packages.use-case.ts';
 import { AddonReconciler } from './reconcile/reconciler.ts';
 import { RunDispatchPort } from './run-dispatch.port.ts';
 import { ThreadRunDispatchService } from './run-dispatch.service.ts';
@@ -31,7 +31,7 @@ import { FireWindowTracker } from './triggers/trigger-limits.ts';
 const useCases = [
   PlanInstallUseCase,
   ConfirmInstallUseCase,
-  DiscoverPackagesUseCase,
+  RescanPackagesUseCase,
   RemovePackageUseCase,
   PrunePackagesUseCase,
   EnableAddonUseCase,

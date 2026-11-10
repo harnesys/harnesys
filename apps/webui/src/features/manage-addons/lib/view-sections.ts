@@ -60,13 +60,14 @@ export type SectionEntry =
   | { kind: 'unknown'; sectionType: string };
 
 export const DEFAULT_SECTION_ORDER = [
-  'status',
   'permissions',
   'config',
   'connections',
   'automations',
   'jobs',
 ] as const;
+
+const KNOWN_SECTION_TYPES = ['status', ...DEFAULT_SECTION_ORDER] as const;
 
 interface RawContribution {
   id?: unknown;
@@ -149,5 +150,5 @@ export function defaultSectionEntries(): SectionEntry[] {
 }
 
 function isKnownSectionType(sectionType: string): boolean {
-  return DEFAULT_SECTION_ORDER.some((type) => type === sectionType);
+  return KNOWN_SECTION_TYPES.some((type) => type === sectionType);
 }

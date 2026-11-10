@@ -84,15 +84,16 @@ export const AddonPackageViewSchema = z.object({
 });
 export type AddonPackageView = z.infer<typeof AddonPackageViewSchema>;
 
-export const AddonDiscoverViewSchema = z.object({
-  source: z.string().min(1),
+export const AddonRescanAddedSchema = z.object({
   id: z.string().min(1),
   version: z.string().min(1),
-  title: z.string().min(1),
-  description: z.string().default(''),
-  installed: z.boolean().default(false),
 });
-export type AddonDiscoverView = z.infer<typeof AddonDiscoverViewSchema>;
+export type AddonRescanAdded = z.infer<typeof AddonRescanAddedSchema>;
+
+export const AddonRescanResultSchema = z.object({
+  added: z.array(AddonRescanAddedSchema).default([]),
+});
+export type AddonRescanResult = z.infer<typeof AddonRescanResultSchema>;
 
 export const InstallPlanSchema = z.object({
   planId: z.string().min(1),

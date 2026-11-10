@@ -28,15 +28,14 @@ export function confirmAddonInstall(planId: string): Promise<void> {
   });
 }
 
-export function deleteAddonPackage(id: string, version: string): Promise<void> {
-  return apiJson<void>(
-    `${packagesBase()}/${encodeURIComponent(id)}/${encodeURIComponent(version)}`,
-    { method: 'DELETE' },
-  );
-}
-
 export function pruneAddonPackages(): Promise<void> {
   return apiJson<void>(`${packagesBase()}/prune`, { method: 'POST' });
+}
+
+export function rescanAddonPackages(): Promise<{ added: Array<{ id: string; version: string }> }> {
+  return apiJson<{ added: Array<{ id: string; version: string }> }>(`${packagesBase()}/rescan`, {
+    method: 'POST',
+  });
 }
 
 export function getAddonPolicy(): Promise<AddonPolicyView> {

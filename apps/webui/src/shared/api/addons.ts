@@ -320,6 +320,7 @@ export function watchAddonLogStream(
   addonId: string,
   onLine: (line: LogLineView) => void,
   onError?: () => void,
+  onOpen?: () => void,
 ): () => void {
   const url = `${addonBase(orgId, addonId)}/logs/stream`;
   return watchEventSource(
@@ -335,6 +336,6 @@ export function watchAddonLogStream(
         return;
       }
     },
-    { orgId, onError },
+    { orgId, onError, onOpen },
   );
 }

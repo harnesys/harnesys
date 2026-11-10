@@ -1,18 +1,18 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@harnesys/brix';
 import type {
-  AddonDiscoverView,
   AddonPackageView,
   AddonPolicyView,
+  AddonRescanResult,
   InstallPlan,
 } from '@harnesys/contracts';
 import { resolveL10n } from '@harnesys/sdk';
 import { z } from 'zod';
 import { ConfirmInstallUseCase } from '../../application/addons/packages/confirm-install.use-case.ts';
-import { DiscoverPackagesUseCase } from '../../application/addons/packages/discover-packages.use-case.ts';
 import { PlanInstallUseCase } from '../../application/addons/packages/plan-install.use-case.ts';
 import type { PruneResult } from '../../application/addons/packages/prune.use-case.ts';
 import { PrunePackagesUseCase } from '../../application/addons/packages/prune.use-case.ts';
 import { RemovePackageUseCase } from '../../application/addons/packages/remove-package.use-case.ts';
+import { RescanPackagesUseCase } from '../../application/addons/packages/rescan-packages.use-case.ts';
 import type { AddonHostPolicy } from '../../domain/addons/permissions.ts';
 import type { InstalledAddonPackage } from '../../domain/addons/ports/addon-package-catalog.port.ts';
 import { AddonPackageCatalogPort } from '../../domain/addons/ports/addon-package-catalog.port.ts';
@@ -34,7 +34,7 @@ export class AddonsPackagesController {
   constructor(
     private readonly planInstall: PlanInstallUseCase,
     private readonly confirmInstall: ConfirmInstallUseCase,
-    private readonly discoverPackages: DiscoverPackagesUseCase,
+    private readonly rescanPackages: RescanPackagesUseCase,
     private readonly removePackage: RemovePackageUseCase,
     private readonly prunePackages: PrunePackagesUseCase,
     private readonly catalog: AddonPackageCatalogPort,
@@ -46,9 +46,10 @@ export class AddonsPackagesController {
     return { items: this.catalog.listInstalled().map((pkg) => this.viewOf(pkg)) };
   }
 
-  @Get('packages/discover')
-  discover(): { items: AddonDiscoverView[] } {
-    return this.discoverPackages.execute();
+  @UseGuards(AddonHostAdminGuard)
+  @Post('packages/rescan')
+  rescan(): AddonRescanResult {
+    return this.rescanPackages.execute({ actor: { kind: 'user', id: 'host-admin' } });
   }
 
   @Post('packages/plan')

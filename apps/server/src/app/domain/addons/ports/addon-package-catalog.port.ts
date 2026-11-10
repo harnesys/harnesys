@@ -34,6 +34,15 @@ export interface AddonInstallRequest {
   trust: AddonTrust;
 }
 
+export interface AddonRescanAdded {
+  id: string;
+  version: string;
+}
+
+export interface AddonRescanResult {
+  added: AddonRescanAdded[];
+}
+
 export abstract class AddonPackageCatalogPort {
   abstract listInstalled(): InstalledAddonPackage[];
 
@@ -46,4 +55,7 @@ export abstract class AddonPackageCatalogPort {
   abstract removePackage(id: string, version: string): void;
 
   abstract install(request: AddonInstallRequest): InstalledAddonPackage;
+
+  /** Registers package directories placed manually into the host add-ons directory. */
+  abstract rescanHomeDir(): AddonRescanResult;
 }

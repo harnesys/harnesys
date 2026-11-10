@@ -11,23 +11,11 @@ import {
   updateOrgAddon,
 } from '@/shared/api/addons';
 import { alert } from '@/shared/services/overlay';
-import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
-import { DangerZone, SettingsErrorBanner, SettingsWarnBanner } from '@/shared/ui/settings-kit';
+import { DangerZone, SettingsErrorBanner, SettingsSection } from '@/shared/ui/settings-kit';
 import { ConsentDialog } from './consent-dialog';
-import type { AddonBanner } from './lib/banners';
 
-export function DetailActions({
-  orgId,
-  detail,
-  banners,
-  onRemoved,
-}: {
-  orgId: string;
-  detail: OrgAddonDetail;
-  banners: AddonBanner[];
-  onRemoved: () => void;
-}) {
+export function AddonControls({ orgId, detail }: { orgId: string; detail: OrgAddonDetail }) {
   const queryClient = useQueryClient();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,15 +24,17 @@ export function DetailActions({
   const installedVersions = (packages.data?.items ?? [])
     .filter((pkg) => pkg.id === detail.addonId)
     .map((pkg) => pkg.version);
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: orgAddonDetailQueryKey(orgId, detail.addonId) });
+  const candidates = installedVersions.filter((version) => version !== detail.version).sort();
+  const [rollbackVersion, setRollbackVersion] = useState('');
 
   const run = async (action: () => Promise<unknown>) => {
     setPending(true);
     setError(null);
     try {
       await action();
-      await invalidate();
+      await queryClient.invalidateQueries({
+        queryKey: orgAddonDetailQueryKey(orgId, detail.addonId),
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -67,13 +57,9 @@ export function DetailActions({
     );
   };
 
-  const candidates = installedVersions.filter((version) => version !== detail.version).sort();
-  const [rollbackVersion, setRollbackVersion] = useState('');
-
   const rollback = () => {
     const version = rollbackVersion || candidates[candidates.length - 1];
     if (!version) {
-      setError('No other installed version to roll back to');
       return;
     }
     void alert
@@ -88,38 +74,10 @@ export function DetailActions({
       });
   };
 
-  const remove = async (data: 'keep' | 'purge') => {
-    const ok = await alert.confirm({
-      title:
-        data === 'purge' ? 'Remove and erase all add-on data?' : 'Remove and keep add-on data?',
-      description:
-        data === 'purge'
-          ? 'The add-on database, files, secrets, bindings, triggers, and job state are deleted.'
-          : 'Configuration is kept; the add-on is disabled and unregistered.',
-      confirmText: 'Remove',
-      variant: 'destructive',
-      testId: 'addon-remove-confirm',
-    });
-    if (!ok) {
-      return;
-    }
-    setPending(true);
-    setError(null);
-    try {
-      await disableOrgAddon(orgId, detail.addonId);
-      await deleteOrgAddon(orgId, detail.addonId, data);
-      onRemoved();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setPending(false);
-    }
-  };
-
   const needsConsent = detail.compatibility.outcome === 'needs_consent';
 
   return (
-    <div className="flex min-w-0 flex-col gap-2">
+    <div className="flex min-w-0 flex-col gap-2" data-testid="addon-controls">
       {error ? <SettingsErrorBanner message={error} testId="addon-action-error" /> : null}
       <div className="flex flex-wrap items-center gap-2">
         {detail.enabled ? (
@@ -156,24 +114,22 @@ export function DetailActions({
             Update to {detail.updateAvailable}
           </Button>
         ) : null}
-        {detail.updateAvailable ? (
+        {detail.updateAvailable && candidates.length > 0 ? (
           <>
-            {candidates.length > 0 ? (
-              <select
-                className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
-                value={rollbackVersion}
-                onChange={(event) => setRollbackVersion(event.target.value)}
-                aria-label="Rollback version"
-                data-testid="addon-rollback-version"
-              >
-                <option value="">Rollback target...</option>
-                {candidates.map((version) => (
-                  <option key={version} value={version}>
-                    {version}
-                  </option>
-                ))}
-              </select>
-            ) : null}
+            <select
+              className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
+              value={rollbackVersion}
+              onChange={(event) => setRollbackVersion(event.target.value)}
+              aria-label="Rollback version"
+              data-testid="addon-rollback-version"
+            >
+              <option value="">Rollback target...</option>
+              {candidates.map((version) => (
+                <option key={version} value={version}>
+                  {version}
+                </option>
+              ))}
+            </select>
             <Button
               type="button"
               size="sm"
@@ -186,19 +142,7 @@ export function DetailActions({
             </Button>
           </>
         ) : null}
-        <Badge variant="outline">{detail.version}</Badge>
       </div>
-      {banners
-        .filter((banner) => banner.id === 'quarantined')
-        .map((banner) => (
-          <SettingsWarnBanner
-            key={banner.id}
-            title={banner.title}
-            testId="addon-banner-quarantined"
-          >
-            {banner.detail}
-          </SettingsWarnBanner>
-        ))}
       <ConsentDialog
         key={`enable-${detail.addonId}:${detail.version}`}
         open={dialog === 'enable'}
@@ -222,6 +166,53 @@ export function DetailActions({
         confirmLabel="Confirm update"
         onConfirm={update}
       />
+    </div>
+  );
+}
+
+export function AddonDangerZone({
+  orgId,
+  detail,
+  onRemoved,
+}: {
+  orgId: string;
+  detail: OrgAddonDetail;
+  onRemoved: () => void;
+}) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const remove = async (data: 'keep' | 'purge') => {
+    const ok = await alert.confirm({
+      title:
+        data === 'purge' ? 'Remove and erase all add-on data?' : 'Remove and keep add-on data?',
+      description:
+        data === 'purge'
+          ? 'The add-on database, files, secrets, bindings, triggers, and job state are deleted.'
+          : 'Configuration is kept; the add-on is disabled and unregistered.',
+      confirmText: 'Remove',
+      variant: 'destructive',
+      testId: 'addon-remove-confirm',
+    });
+    if (!ok) {
+      return;
+    }
+    setPending(true);
+    setError(null);
+    try {
+      await disableOrgAddon(orgId, detail.addonId);
+      await deleteOrgAddon(orgId, detail.addonId, data);
+      onRemoved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <SettingsSection label="Danger" testId="addon-danger">
+      {error ? <SettingsErrorBanner message={error} testId="addon-remove-error" /> : null}
       <DangerZone
         title="Remove from organization"
         description="Disable, unregister contributions, and stop the instance."
@@ -248,6 +239,6 @@ export function DetailActions({
           Remove, erase data
         </Button>
       </DangerZone>
-    </div>
+    </SettingsSection>
   );
 }

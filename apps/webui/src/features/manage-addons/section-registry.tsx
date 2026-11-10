@@ -12,7 +12,7 @@ import { FrameSection, MarkdownSection } from './sections/static-sections';
 import { StatusSection } from './sections/status-section';
 import { TableSection } from './sections/table-section';
 
-type SectionComponent = (props: SectionProps) => React.ReactNode;
+type SectionComponent = React.ComponentType<SectionProps>;
 
 const REGISTRY: Record<string, SectionComponent> = {
   status: StatusSection,
@@ -33,13 +33,16 @@ export function renderSection(
   props: Omit<SectionProps, 'section'>,
 ): React.ReactNode {
   if (entry.kind === 'unknown') {
-    return <UnknownSectionNote sectionType={entry.sectionType} />;
+    return <UnknownSectionNote key={entry.sectionType} sectionType={entry.sectionType} />;
   }
   const component = REGISTRY[entry.section.type];
   if (!component) {
-    return <UnknownSectionNote sectionType={entry.section.type} />;
+    return <UnknownSectionNote key={entry.section.type} sectionType={entry.section.type} />;
   }
-  return component({ ...props, section: entry.section as Record<string, unknown> });
+  const section = entry.section as Record<string, unknown>;
+  const key = typeof section.id === 'string' ? section.id : entry.section.type;
+  const SectionComponent = component;
+  return <SectionComponent key={key} {...props} section={section} />;
 }
 
 export function isKnownSection(sectionType: string): boolean {

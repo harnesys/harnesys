@@ -1,9 +1,19 @@
-import type { AddonGrantEntry, OrgAddonDetail } from '@harnesys/contracts';
+import type {
+  AddonGrantEntry,
+  AddonPackageView,
+  AddonTrust,
+  OrgAddonDetail,
+  OrgAddonSummary,
+} from '@harnesys/contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { PackageOpenIcon, Trash2Icon } from 'lucide-react';
+import { ChevronRightIcon, PackageOpenIcon, RefreshCwIcon, Trash2Icon } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
-import { addonPackagesQuery, pruneAddonPackages } from '@/shared/api/addon-packages';
+import { Link } from 'react-router';
+import {
+  addonPackagesQuery,
+  pruneAddonPackages,
+  rescanAddonPackages,
+} from '@/shared/api/addon-packages';
 import {
   disableOrgAddon,
   enableOrgAddon,
@@ -12,22 +22,35 @@ import {
   watchAddonEvents,
 } from '@/shared/api/addons';
 import { studioPath } from '@/shared/config/routes';
+import { cn } from '@/shared/lib/utils';
 import { dialog } from '@/shared/services/overlay';
-import { Button } from '@/shared/ui/button';
-import { Row, RowChip, RowHeader, RowList } from '@/shared/ui/capability-rows';
+import { Badge } from '@/shared/ui/badge';
+import { Button, buttonVariants } from '@/shared/ui/button';
+import { RowChip } from '@/shared/ui/capability-rows';
+import { Card } from '@/shared/ui/card';
 import {
   RowListSkeleton,
   SettingsEmpty,
   SettingsErrorBanner,
   SettingsSection,
 } from '@/shared/ui/settings-kit';
+import { StatusDot } from '@/shared/ui/status-dot';
+import { Switch } from '@/shared/ui/switch';
 import { toast } from '@/shared/ui/toast';
+import { AddonMark } from './addon-mark';
 import { ConsentDialog } from './consent-dialog';
-import { HostPackagesCard } from './host-packages-card';
 import { InstallAddonDialog } from './install-addon-dialog';
+import { addonHealthTone } from './lib/health-tone';
+
+interface AddonCardModel {
+  id: string;
+  title: string;
+  description: string;
+  versions: Array<{ version: string; trust: AddonTrust }>;
+  org: OrgAddonSummary | null;
+}
 
 export function ManageAddonsPane({ orgId }: { orgId: string }) {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const list = useQuery(orgAddonsQuery(orgId));
   const packages = useQuery(addonPackagesQuery());
@@ -35,7 +58,10 @@ export function ManageAddonsPane({ orgId }: { orgId: string }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['addons', orgId] });
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: ['addons', orgId] });
+    void queryClient.invalidateQueries({ queryKey: ['addon-packages'] });
+  };
 
   useEffect(() => {
     const unsubscribe = watchAddonEvents(orgId, {
@@ -45,8 +71,6 @@ export function ManageAddonsPane({ orgId }: { orgId: string }) {
     });
     return unsubscribe;
   }, [queryClient, orgId]);
-
-  const addons = list.data?.items ?? [];
 
   const startEnable = async (addonId: string) => {
     setPending(true);
@@ -91,7 +115,25 @@ export function ManageAddonsPane({ orgId }: { orgId: string }) {
     }
   };
 
-  const refreshPackages = () => queryClient.invalidateQueries({ queryKey: ['addon-packages'] });
+  const reload = async () => {
+    setPending(true);
+    setError(null);
+    try {
+      const result = await rescanAddonPackages();
+      toast.add({
+        type: result.added.length > 0 ? 'success' : 'info',
+        title:
+          result.added.length > 0
+            ? `Registered ${result.added.length} new package version(s)`
+            : 'Add-on directories scanned, nothing new found',
+      });
+      await invalidate();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPending(false);
+    }
+  };
 
   const prune = async () => {
     setPending(true);
@@ -99,7 +141,7 @@ export function ManageAddonsPane({ orgId }: { orgId: string }) {
     try {
       await pruneAddonPackages();
       toast.add({ type: 'success', title: 'Pruned unused package versions' });
-      await refreshPackages();
+      await invalidate();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -110,8 +152,9 @@ export function ManageAddonsPane({ orgId }: { orgId: string }) {
   const openInstallDialog = () => {
     void dialog
       .open<boolean, { source?: string }>(InstallAddonDialog, {
-        title: 'Install add-on package',
-        description: 'Plan a package from a path or URL, review it, then confirm the install.',
+        title: 'Install package',
+        description:
+          'Scan a package directory or repository, review its permissions, then install it on this host.',
         className: 'sm:max-w-lg',
         testId: 'install-addon-dialog',
       })
@@ -122,153 +165,91 @@ export function ManageAddonsPane({ orgId }: { orgId: string }) {
       });
   };
 
-  const enabledIds = new Set(addons.map((addon) => addon.addonId));
-  const available = (packages.data?.items ?? [])
-    .filter((pkg) => !enabledIds.has(pkg.id))
-    .filter((pkg, index, all) => all.findIndex((other) => other.id === pkg.id) === index);
+  const cards = buildCards(packages.data?.items ?? [], list.data?.items ?? []);
+  const isPending = list.isPending || packages.isPending;
+  const enabledCards = cards.filter((card) => card.org?.enabled === true);
+  const otherCards = cards.filter((card) => card.org?.enabled !== true);
+
+  const renderTile = (card: AddonCardModel) => (
+    <AddonTile
+      key={card.id}
+      card={card}
+      pending={pending}
+      path={studioPath.addon(orgId, card.id)}
+      onEnable={() => void startEnable(card.id)}
+      onDisable={() => void disable(card.id)}
+    />
+  );
 
   return (
     <div className="flex w-full flex-col gap-8" data-testid="manage-addons-pane">
       {error ? <SettingsErrorBanner message={error} testId="manage-addons-error" /> : null}
-      <RowHeader
+      <SettingsSection
         label="Add-ons"
-        count={list.isPending ? undefined : addons.length}
-        description="Add-ons enabled for this organization. State updates arrive live."
+        count={isPending ? undefined : cards.length}
+        description="System add-ons ship with the app. Enable them for this organization, or install extra packages from a path or URL."
+        actions={
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              disabled={pending}
+              onClick={() => void reload()}
+              data-testid="addon-reload"
+            >
+              <RefreshCwIcon />
+              Reload
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={openInstallDialog}
+              data-testid="addon-install"
+            >
+              <PackageOpenIcon />
+              Install package
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              disabled={pending}
+              onClick={() => void prune()}
+              data-testid="addon-prune"
+            >
+              <Trash2Icon />
+              Prune unused
+            </Button>
+          </>
+        }
       >
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground"
-          onClick={openInstallDialog}
-          data-testid="addon-install"
-        >
-          <PackageOpenIcon />
-          Install package
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground"
-          disabled={pending}
-          onClick={() => void prune()}
-          data-testid="addon-prune"
-        >
-          <Trash2Icon />
-          Prune unused
-        </Button>
-      </RowHeader>
-      {list.isPending ? <RowListSkeleton rows={3} testId="manage-addons-skeleton" /> : null}
-      {!list.isPending && addons.length === 0 ? (
-        <SettingsEmpty
-          title="No add-ons yet"
-          description="Install the starter add-on or a package from source, then enable it here."
-          testId="manage-addons-empty"
-        />
-      ) : null}
-      {addons.length > 0 ? (
-        <RowList testId="manage-addons-list">
-          {addons.map((addon) => (
-            <Row
-              key={addon.addonId}
-              testId={`manage-addon-${addon.addonId}`}
-              title={addon.title}
-              mono={false}
-              summary={addon.addonId}
-              alwaysShowActions
-              chips={
-                <>
-                  <RowChip>{addon.version}</RowChip>
-                  {addon.enabled ? <RowChip tone="ok">enabled</RowChip> : null}
-                  <RowChip tone={healthTone(addon.health)}>{addon.health}</RowChip>
-                  {addon.compatibility.outcome === 'needs_consent' ? (
-                    <RowChip tone="warn">needs consent</RowChip>
-                  ) : null}
-                  {addon.compatibility.outcome === 'incompatible' ? (
-                    <RowChip tone="danger">incompatible</RowChip>
-                  ) : null}
-                  {addon.updateAvailable ? (
-                    <RowChip tone="warn">update: {addon.updateAvailable}</RowChip>
-                  ) : null}
-                </>
-              }
-              actions={
-                <>
-                  {addon.enabled ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={pending}
-                      onClick={() => void disable(addon.addonId)}
-                      data-testid={`addon-disable-${addon.addonId}`}
-                    >
-                      Disable
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={pending}
-                      onClick={() => void startEnable(addon.addonId)}
-                      data-testid={`addon-enable-${addon.addonId}`}
-                    >
-                      Enable
-                    </Button>
-                  )}
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => navigate(studioPath.addon(orgId, addon.addonId))}
-                    data-testid={`addon-open-${addon.addonId}`}
-                  >
-                    Open
-                  </Button>
-                </>
-              }
-            />
-          ))}
-        </RowList>
-      ) : null}
-      {available.length > 0 ? (
-        <SettingsSection
-          label="Available packages"
-          count={available.length}
-          description="Installed on this host but not enabled here."
-          testId="manage-addons-available"
-        >
-          <RowList testId="manage-addons-available-list">
-            {available.map((pkg) => (
-              <Row
-                key={`${pkg.id}@${pkg.version}`}
-                testId={`available-addon-${pkg.id}`}
-                title={pkg.title}
-                mono={false}
-                summary={pkg.description}
-                alwaysShowActions
-                chips={
-                  <>
-                    <RowChip>{pkg.version}</RowChip>
-                    <RowChip>{pkg.trust}</RowChip>
-                  </>
-                }
-                actions={
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={pending}
-                    onClick={() => void startEnable(pkg.id)}
-                    data-testid={`available-addon-enable-${pkg.id}`}
-                  >
-                    Enable
-                  </Button>
-                }
-              />
-            ))}
-          </RowList>
+        {isPending ? <RowListSkeleton rows={3} testId="manage-addons-skeleton" /> : null}
+        {!isPending && cards.length === 0 ? (
+          <SettingsEmpty
+            title="No add-ons found"
+            description="System add-ons appear here automatically from the add-ons directory. Use Reload after adding packages manually, or install from a path or URL."
+            testId="manage-addons-empty"
+          />
+        ) : null}
+      </SettingsSection>
+      {!isPending && enabledCards.length > 0 ? (
+        <SettingsSection label="Enabled" count={enabledCards.length} testId="manage-addons-enabled">
+          <div className="grid gap-3 sm:grid-cols-2">{enabledCards.map(renderTile)}</div>
         </SettingsSection>
       ) : null}
-      <HostPackagesCard />
+      {!isPending && otherCards.length > 0 ? (
+        <SettingsSection
+          label="Available"
+          count={otherCards.length}
+          testId="manage-addons-available"
+        >
+          <div className="grid gap-3 sm:grid-cols-2" data-testid="manage-addons-list">
+            {otherCards.map(renderTile)}
+          </div>
+        </SettingsSection>
+      ) : null}
       <ConsentDialog
         key={consent ? `${consent.addonId}:${consent.version}` : 'consent-none'}
         open={consent !== null}
@@ -288,12 +269,118 @@ export function ManageAddonsPane({ orgId }: { orgId: string }) {
   );
 }
 
-function healthTone(health: string): 'ok' | 'warn' | 'danger' {
-  if (health === 'running') {
-    return 'ok';
+interface AddonTileProps {
+  card: AddonCardModel;
+  pending: boolean;
+  path: string;
+  onEnable: () => void;
+  onDisable: () => void;
+}
+
+function AddonTile({ card, pending, path, onEnable, onDisable }: AddonTileProps) {
+  const latest = card.versions[0];
+  const org = card.org;
+  const enabled = org?.enabled === true;
+  return (
+    <Card className="gap-3 bg-popover p-4" data-testid={`manage-addon-${card.id}`}>
+      <div className="flex min-w-0 items-start gap-3">
+        <AddonMark size="sm" />
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <div className="flex min-w-0 items-center gap-2">
+            <Link
+              to={path}
+              data-testid={`addon-open-${card.id}`}
+              className="truncate font-medium text-sm hover:underline"
+            >
+              {card.title}
+            </Link>
+            {enabled ? (
+              <Badge variant="secondary" data-testid={`addon-state-${card.id}`}>
+                Enabled
+              </Badge>
+            ) : null}
+            {latest?.trust === 'builtin' ? <Badge variant="outline">System</Badge> : null}
+          </div>
+          <p className="line-clamp-2 text-[13px] text-muted-foreground">
+            {card.description || card.id}
+          </p>
+        </div>
+        {org ? (
+          <Switch
+            size="sm"
+            checked={enabled}
+            disabled={pending}
+            onCheckedChange={(value) => (value === true ? onEnable() : onDisable())}
+            data-testid={`addon-switch-${card.id}`}
+            aria-label={enabled ? `Disable ${card.title}` : `Enable ${card.title}`}
+          />
+        ) : null}
+      </div>
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-border/40 border-t pt-2.5">
+        <span className="flex min-w-0 flex-wrap items-center gap-2">
+          {org ? <StatusDot tone={addonHealthTone(org.health)} label={org.health} /> : null}
+          <span className="font-mono text-[11px] text-muted-foreground">
+            {org?.version ?? latest?.version ?? card.id}
+          </span>
+          {card.versions.length > 1 ? (
+            <RowChip>{`${card.versions.length} versions`}</RowChip>
+          ) : null}
+          {latest && latest.trust !== 'builtin' ? <RowChip>{latest.trust}</RowChip> : null}
+          {org && org.compatibility.outcome === 'needs_consent' ? (
+            <RowChip tone="warn">needs consent</RowChip>
+          ) : null}
+          {org && org.compatibility.outcome === 'incompatible' ? (
+            <RowChip tone="danger">incompatible</RowChip>
+          ) : null}
+          {org?.updateAvailable ? (
+            <RowChip tone="warn">update {org.updateAvailable}</RowChip>
+          ) : null}
+        </span>
+        <Link
+          to={path}
+          className={cn(
+            buttonVariants({ variant: 'ghost', size: 'sm' }),
+            'shrink-0 text-muted-foreground',
+          )}
+          data-testid={`addon-details-${card.id}`}
+        >
+          Details
+          <ChevronRightIcon data-icon="inline-end" />
+        </Link>
+      </div>
+    </Card>
+  );
+}
+
+function buildCards(packages: AddonPackageView[], orgAddons: OrgAddonSummary[]): AddonCardModel[] {
+  const byId = new Map<string, AddonCardModel>();
+  for (const pkg of packages) {
+    const existing = byId.get(pkg.id);
+    if (existing) {
+      existing.versions.push({ version: pkg.version, trust: pkg.trust });
+      continue;
+    }
+    byId.set(pkg.id, {
+      id: pkg.id,
+      title: pkg.title,
+      description: pkg.description,
+      versions: [{ version: pkg.version, trust: pkg.trust }],
+      org: null,
+    });
   }
-  if (health === 'quarantined' || health === 'failed') {
-    return 'danger';
+  for (const org of orgAddons) {
+    const existing = byId.get(org.addonId);
+    if (existing) {
+      existing.org = org;
+      continue;
+    }
+    byId.set(org.addonId, {
+      id: org.addonId,
+      title: org.title,
+      description: org.description,
+      versions: [],
+      org,
+    });
   }
-  return 'warn';
+  return [...byId.values()].sort((a, b) => a.title.localeCompare(b.title));
 }

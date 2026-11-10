@@ -16,21 +16,8 @@ export interface AddonStagePlan {
   warnings: string[];
 }
 
-export interface BuiltinAddonInfo {
-  source: string;
-  id: string;
-  version: string;
-  title: string;
-  description: string;
-}
-
 export abstract class AddonSourcePort {
   abstract stage(request: AddonStageRequest): Promise<AddonStagePlan>;
 
   abstract release(planId: string): void;
-
-  /** Discoverable packages shipped with the host; only the builtin source lists any. */
-  listBuiltins(): BuiltinAddonInfo[] {
-    return [];
-  }
 }

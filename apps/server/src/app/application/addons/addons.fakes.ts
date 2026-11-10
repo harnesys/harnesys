@@ -1,4 +1,5 @@
 import type { OwnerKey } from '../../domain/addons/owner.ts';
+import type { AddonRescanResult } from '../../domain/addons/ports/addon-package-catalog.port.ts';
 import {
   type AddonInstallRequest,
   type AddonLockFile,
@@ -102,6 +103,9 @@ export class InMemoryCatalog extends AddonPackageCatalogPort {
   removed: string[] = [];
   listInstalled(): InstalledAddonPackage[] {
     return [...this.packages.values()];
+  }
+  rescanHomeDir(): AddonRescanResult {
+    return { added: [] };
   }
   find(id: string, version?: string): InstalledAddonPackage | undefined {
     const all = [...this.packages.values()].filter((pkg) => pkg.id === id);

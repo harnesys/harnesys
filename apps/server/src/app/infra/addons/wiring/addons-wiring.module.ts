@@ -2,7 +2,6 @@ import { Module } from '@harnesys/brix';
 import { AddonDataPort } from '../../../application/addons/addon-data.port.ts';
 import { AddonRpcPort } from '../../../application/addons/addon-rpc.port.ts';
 import { AddonsApplicationModule } from '../../../application/addons/addons-application.module.ts';
-import { DiscoverPackagesUseCase } from '../../../application/addons/packages/discover-packages.use-case.ts';
 import { RunJobUseCase } from '../../../application/addons/jobs/run-job.use-case.ts';
 import { AddonJobScheduler } from '../../../application/addons/jobs/schedule-jobs.service.ts';
 import { DisableAddonUseCase } from '../../../application/addons/orgs/disable.use-case.ts';
@@ -18,6 +17,7 @@ import { PlanInstallUseCase } from '../../../application/addons/packages/plan-in
 import { InstallPlanStore } from '../../../application/addons/packages/plan-store.ts';
 import { PrunePackagesUseCase } from '../../../application/addons/packages/prune.use-case.ts';
 import { RemovePackageUseCase } from '../../../application/addons/packages/remove-package.use-case.ts';
+import { RescanPackagesUseCase } from '../../../application/addons/packages/rescan-packages.use-case.ts';
 import { AddonReconciler } from '../../../application/addons/reconcile/reconciler.ts';
 import { RunDispatchPort } from '../../../application/addons/run-dispatch.port.ts';
 import { FireTriggerUseCase } from '../../../application/addons/triggers/fire-trigger.use-case.ts';
@@ -268,7 +268,7 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     InstallPlanStore,
     PlanInstallUseCase,
     ConfirmInstallUseCase,
-    DiscoverPackagesUseCase,
+    RescanPackagesUseCase,
     RemovePackageUseCase,
     PrunePackagesUseCase,
     EnableAddonUseCase,

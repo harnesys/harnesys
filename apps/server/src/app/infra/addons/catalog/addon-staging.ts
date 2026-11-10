@@ -1,11 +1,11 @@
 import { cpSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { Injectable } from '@harnesys/brix';
-import { type AddonManifest, resolveL10n } from '@harnesys/sdk';
+import { type AddonManifest } from '@harnesys/sdk';
+import type { InstalledAddonPackage } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
 import type {
   AddonStagePlan,
   AddonStageRequest,
-  BuiltinAddonInfo,
 } from '../../../domain/addons/ports/addon-source.port.ts';
 import { AddonSourcePort } from '../../../domain/addons/ports/addon-source.port.ts';
 import { HostFsLayoutPort } from '../../../domain/machine/host-fs-layout.port.ts';
@@ -30,6 +30,7 @@ export interface StagedAddon {
 export class BuiltinAddonSourceAdapter extends AddonSourcePort {
   private readonly layout: HostFsLayoutPort;
   private addOnsDir: string;
+  private scanned: InstalledAddonPackage[] | null = null;
 
   constructor(layout: HostFsLayoutPort) {
     super();
@@ -39,7 +40,44 @@ export class BuiltinAddonSourceAdapter extends AddonSourcePort {
 
   withAddOnsDir(dir: string): this {
     this.addOnsDir = dir;
+    this.scanned = null;
     return this;
+  }
+
+  /** System add-ons shipped in the monorepo `add-ons/` directory are installed by definition. */
+  scanPackages(): InstalledAddonPackage[] {
+    if (this.scanned) {
+      return this.scanned;
+    }
+    const found: InstalledAddonPackage[] = [];
+    if (existsSync(this.addOnsDir)) {
+      for (const entry of readdirSync(this.addOnsDir, { withFileTypes: true })) {
+        if (!entry.isDirectory()) {
+          continue;
+        }
+        const root = join(this.addOnsDir, entry.name);
+        const loaded = loadAddonManifest(root);
+        if (!loaded.manifest) {
+          continue;
+        }
+        found.push({
+          id: loaded.manifest.id,
+          version: loaded.manifest.version,
+          digest: computeAddonDigest(root),
+          source: entry.name,
+          trust: 'builtin',
+          root,
+          manifest: loaded.manifest,
+          installedAt: '',
+        });
+      }
+    }
+    this.scanned = found.sort((a, b) => a.id.localeCompare(b.id));
+    return this.scanned;
+  }
+
+  invalidateScanCache(): void {
+    this.scanned = null;
   }
 
   override async stage(request: AddonStageRequest): Promise<AddonStagePlan> {
@@ -59,30 +97,6 @@ export class BuiltinAddonSourceAdapter extends AddonSourcePort {
 
   override release(planId: string): void {
     releaseStaging(this.layout.home(), planId);
-  }
-
-  override listBuiltins(): BuiltinAddonInfo[] {
-    if (!existsSync(this.addOnsDir)) {
-      return [];
-    }
-    const found: BuiltinAddonInfo[] = [];
-    for (const entry of readdirSync(this.addOnsDir, { withFileTypes: true })) {
-      if (!entry.isDirectory()) {
-        continue;
-      }
-      const { manifest } = loadAddonManifest(join(this.addOnsDir, entry.name));
-      if (!manifest) {
-        continue;
-      }
-      found.push({
-        source: entry.name,
-        id: manifest.id,
-        version: manifest.version,
-        title: resolveL10n(manifest.title, { locale: 'en' }),
-        description: resolveL10n(manifest.description, { locale: 'en' }),
-      });
-    }
-    return found;
   }
 }
 

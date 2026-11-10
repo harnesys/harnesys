@@ -38,7 +38,7 @@ const ConfigBodySchema = z.object({
   values: z.record(z.string(), z.unknown()),
   secrets: z.record(z.string(), z.string().nullable()).optional(),
 });
-const BindingsBodySchema = z.object({ accountIds: z.array(z.string().min(1)).min(1) });
+const BindingsBodySchema = z.object({ accountIds: z.array(z.string().min(1)) });
 
 @UseGuards(OrgAccessGuard)
 @Controller('orgs/:orgId/addons')

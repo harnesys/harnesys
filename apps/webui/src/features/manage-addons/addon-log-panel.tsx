@@ -29,10 +29,10 @@ export function AddonLogPanel({ orgId, addonId }: { orgId: string; addonId: stri
       orgId,
       addonId,
       (line) => {
-        setStreamError(null);
         setLines((current) => [...current, line].slice(-LOG_LIMIT));
       },
       () => setStreamError('Log stream unavailable'),
+      () => setStreamError(null),
     );
     return () => {
       cancelled = true;

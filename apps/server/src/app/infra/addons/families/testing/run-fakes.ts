@@ -7,6 +7,7 @@ import { RunDispatchPort } from '../../../../application/addons/run-dispatch.por
 import type {
   AddonInstallRequest,
   AddonLockFile,
+  AddonRescanResult,
   InstalledAddonPackage,
 } from '../../../../domain/addons/ports/addon-package-catalog.port.ts';
 import { AddonPackageCatalogPort } from '../../../../domain/addons/ports/addon-package-catalog.port.ts';
@@ -15,6 +16,9 @@ export class FakePackageCatalog extends AddonPackageCatalogPort {
   installed: InstalledAddonPackage[] = [];
   override listInstalled(): InstalledAddonPackage[] {
     return this.installed;
+  }
+  override rescanHomeDir(): AddonRescanResult {
+    return { added: [] };
   }
   override find(id: string, version?: string): InstalledAddonPackage | undefined {
     return this.installed.find(

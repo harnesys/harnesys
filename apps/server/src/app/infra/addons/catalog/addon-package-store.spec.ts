@@ -29,9 +29,8 @@ class FakeLogger extends Logger {
   override error(): void {}
 }
 
-const store = new AddonPackageStoreAdapter(layout, new FakeLogger());
 const builtin = new BuiltinAddonSourceAdapter(layout).withAddOnsDir(join(layout.root, 'sources'));
-
+const store = new AddonPackageStoreAdapter(layout, builtin, new FakeLogger());
 const _sourceDir = writeAddonPackage(join(layout.root, 'sources', 'harnesys.test-addon'));
 
 afterAll(() => {
