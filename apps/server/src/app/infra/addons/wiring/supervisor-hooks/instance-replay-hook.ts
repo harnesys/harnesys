@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@harnesys/brix';
 import { OrgAddonRepositoryPort } from '../../../../domain/addons/ports/org-addon-repository.port.ts';
 import { TriggerInstanceRepositoryPort } from '../../../../domain/addons/ports/trigger-instance-repository.port.ts';
-import type { TriggerFamilyModule } from '../../families/trigger/trigger.family.ts';
-import type { WorkerFamilyModule } from '../../families/worker/worker.family.ts';
+import { TriggerFamilyModule } from '../../families/trigger/trigger.family.ts';
+import { WorkerFamilyModule } from '../../families/worker/worker.family.ts';
 import type { SupervisorReplayHook } from '../../supervisor/supervisor-deps.ts';
 
 function parseJsonObject(json: string): Record<string, unknown> {

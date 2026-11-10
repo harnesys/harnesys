@@ -5,9 +5,9 @@ import {
   type GrantEntry,
   type GrantRecord,
 } from '../../../../domain/addons/permissions.ts';
-import type { AddonPackageCatalogPort } from '../../../../domain/addons/ports/addon-package-catalog.port.ts';
-import type { OrgAddonRepositoryPort } from '../../../../domain/addons/ports/org-addon-repository.port.ts';
-import type { PermissionDefinitionRegistry } from '../../dispatcher/permission-definitions.ts';
+import { AddonPackageCatalogPort } from '../../../../domain/addons/ports/addon-package-catalog.port.ts';
+import { OrgAddonRepositoryPort } from '../../../../domain/addons/ports/org-addon-repository.port.ts';
+import { PermissionDefinitionRegistry } from '../../dispatcher/permission-definitions.ts';
 import type { SupervisorPermissionsProvider } from '../../supervisor/supervisor-deps.ts';
 
 function parseGrants(grantsJson: string): GrantEntry[] {

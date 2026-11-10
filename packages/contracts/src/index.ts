@@ -1,4 +1,4 @@
-export * from './addons.ts';
+export * from './addons-platform.ts';
 export * from './apps.ts';
 export * from './domains-agents.ts';
 export * from './domains-org.ts';

@@ -34,8 +34,11 @@ export class AddonsOrgTriggersController {
   ) {}
 
   @Get()
-  list(@Param('orgId') orgId: string, @Param('addonId') addonId: string): TriggerInstanceView[] {
-    return this.instances.list(orgId, addonId).map((row) => this.viewOf(row));
+  list(
+    @Param('orgId') orgId: string,
+    @Param('addonId') addonId: string,
+  ): { items: TriggerInstanceView[] } {
+    return { items: this.instances.list(orgId, addonId).map((row) => this.viewOf(row)) };
   }
 
   @UseGuards(AddonOrgAdminGuard)

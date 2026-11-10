@@ -5,6 +5,7 @@ import type { OrgAddonRow } from '../../../domain/addons/ports/org-addon-reposit
 import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import { TriggerInstanceRepositoryPort } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { ClockPort } from '../../../domain/apps/ports/clock.port.ts';
+import { EventBusPort } from '../../../domain/events/event-bus.port.ts';
 
 const FIRE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const TICK_MS = 30_000;
@@ -12,6 +13,7 @@ const TICK_MS = 30_000;
 @Injectable()
 export class AddonReconciler {
   private readonly logger: Logger;
+  private readonly notifiedUpdates = new Set<string>();
   private timer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
@@ -20,6 +22,7 @@ export class AddonReconciler {
     private readonly supervisor: InstanceSupervisorPort,
     private readonly triggers: TriggerInstanceRepositoryPort,
     private readonly clock: ClockPort,
+    private readonly events: EventBusPort,
     @Inject(Logger) logger: Logger,
   ) {
     this.logger = logger.child('addons-reconciler');
@@ -39,6 +42,7 @@ export class AddonReconciler {
       clearInterval(this.timer);
       this.timer = null;
     }
+    this.notifiedUpdates.clear();
   }
 
   async reconcile(): Promise<void> {
@@ -49,6 +53,7 @@ export class AddonReconciler {
   }
 
   private async reconcileRow(row: OrgAddonRow): Promise<void> {
+    this.publishUpdateAvailable(row);
     const snapshot = this.supervisor.snapshot(row.orgId, row.addonId);
     if (!row.enabled) {
       if (snapshot && (snapshot.state === 'running' || snapshot.state === 'starting')) {
@@ -77,5 +82,31 @@ export class AddonReconciler {
       return true;
     }
     return this.triggers.list(row.orgId, row.addonId).some((instance) => instance.enabled);
+  }
+
+  private publishUpdateAvailable(row: OrgAddonRow): void {
+    const installed = this.catalog.listInstalled();
+    const current = installed.find((pkg) => pkg.id === row.addonId && pkg.version === row.version);
+    const available = installed
+      .filter((pkg) => pkg.id === row.addonId && pkg.version > row.version)
+      .map((pkg) => pkg.version)
+      .sort()
+      .at(-1);
+    if (!current || available === undefined) {
+      return;
+    }
+    const key = `${row.orgId}:${row.addonId}:${available}`;
+    if (this.notifiedUpdates.has(key)) {
+      return;
+    }
+    this.notifiedUpdates.add(key);
+    this.events.publish(row.orgId, 'addon.update_available', {
+      type: 'addon.update_available',
+      orgId: row.orgId,
+      addonId: row.addonId,
+      at: new Date(this.clock.now()).toISOString(),
+      currentVersion: row.version,
+      availableVersion: available,
+    });
   }
 }

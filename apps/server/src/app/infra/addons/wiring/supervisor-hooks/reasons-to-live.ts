@@ -1,9 +1,9 @@
 import { Injectable } from '@harnesys/brix';
-import type { AddonPackageCatalogPort } from '../../../../domain/addons/ports/addon-package-catalog.port.ts';
+import { AddonPackageCatalogPort } from '../../../../domain/addons/ports/addon-package-catalog.port.ts';
 import { OrgAddonRepositoryPort } from '../../../../domain/addons/ports/org-addon-repository.port.ts';
 import { TriggerInstanceRepositoryPort } from '../../../../domain/addons/ports/trigger-instance-repository.port.ts';
-import type { AddonTransportRegistry } from '../../families/transport/transport.family.ts';
-import type { WorkerDescriptorStore } from '../../families/worker/worker.family.ts';
+import { AddonTransportRegistry } from '../../families/transport/transport.family.ts';
+import { WorkerDescriptorStore } from '../../families/worker/worker.family.ts';
 import type { ReasonsToLiveProvider } from '../../supervisor/supervisor-deps.ts';
 
 function grantsInclude(grantsJson: string, permissionId: string): boolean {

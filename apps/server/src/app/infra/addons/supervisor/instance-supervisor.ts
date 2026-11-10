@@ -24,8 +24,7 @@ import { InstanceRuntime } from './instance-runtime.ts';
 import type { LaunchTargetDeps } from './launch-target.ts';
 import { buildLaunchTarget, resolvePinnedVersion } from './launch-target.ts';
 import { SupervisorSettings } from './supervisor.config.ts';
-import { SupervisorHooks } from './supervisor-deps.ts';
-import { SupervisorTimers } from './supervisor-deps.ts';
+import { SupervisorHooks, SupervisorTimers } from './supervisor-deps.ts';
 import { SupervisorRestartPolicy } from './supervisor-restarts.ts';
 
 @Injectable()

@@ -31,6 +31,7 @@ import {
 import { ScopedSecretsAdapter } from './scoped-secrets.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule, SecretModule],
   providers: [
     { provide: ProviderRegistryPort, useClass: ProviderRegistryAdapter },

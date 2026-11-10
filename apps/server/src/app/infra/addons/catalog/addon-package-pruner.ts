@@ -1,6 +1,6 @@
 import { Injectable } from '@harnesys/brix';
 import { AddonPackageCatalogPort } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
-import type { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
+import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 
 @Injectable()
 export class AddonPackagePruner {

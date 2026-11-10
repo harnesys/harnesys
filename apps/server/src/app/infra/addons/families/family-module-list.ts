@@ -1,4 +1,3 @@
-import { Injectable } from '@harnesys/brix';
 import type { AddonManifest, Violation } from '@harnesys/sdk';
 import type { z } from 'zod';
 import type { FamilyModule, HandlerSpec } from '../../../domain/addons/family-module.ts';
@@ -20,7 +19,6 @@ export function domainFamilyModulesOf(
   return modules;
 }
 
-@Injectable()
 export class FamilyModuleList {
   constructor(readonly modules: readonly AnyFamilyModule[]) {}
 }

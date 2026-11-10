@@ -1,10 +1,5 @@
 import { Module } from '@harnesys/brix';
 import { AddonCallPort } from '../../domain/addons/ports/addon-call.port.ts';
-import { AddonCatalogModule } from '../../infra/addons/catalog/catalog.module.ts';
-import { AddonSupervisorModule } from '../../infra/addons/supervisor/supervisor.module.ts';
-import { AppsModule } from '../../infra/apps/apps.module.ts';
-import { EventsModule } from '../../infra/events/events.module.ts';
-import { SecretModule } from '../../infra/secret/secret.module.ts';
 import { AppsUseCaseModule } from '../apps/apps.use-case.module.ts';
 import { ThreadUseCaseModule } from '../threads/thread.use-case.module.ts';
 import { AddonCallService } from './calls/addon-call.service.ts';
@@ -58,15 +53,7 @@ const services = [
 ];
 
 @Module({
-  imports: [
-    ThreadUseCaseModule,
-    AddonCatalogModule,
-    AddonSupervisorModule,
-    AppsModule,
-    SecretModule,
-    AppsUseCaseModule,
-    EventsModule,
-  ],
+  imports: [ThreadUseCaseModule, AppsUseCaseModule],
   providers: [
     ...useCases,
     ...services,

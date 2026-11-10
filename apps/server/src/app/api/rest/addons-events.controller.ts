@@ -56,7 +56,7 @@ export class AddonsEventsController {
           while (queue.length > 0 && writer !== null) {
             const event = queue.shift();
             if (event) {
-              writer(`data: ${JSON.stringify(event)}\n\n`);
+              writer(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
             }
           }
         }, FLUSH_MS);

@@ -1,8 +1,9 @@
 import { Injectable } from '@harnesys/brix';
 import type { AddonErrorData } from '@harnesys/sdk';
 import { AddonError, decodeMessage, encodeMessage, errorResponse, response } from '@harnesys/sdk';
-import type { DispatchTarget, HostDispatcher } from '../../dispatcher/host-dispatcher.ts';
-import type { InstanceRegistry } from '../../supervisor/instance-registry.ts';
+import type { DispatchTarget } from '../../dispatcher/host-dispatcher.ts';
+import { HostDispatcher } from '../../dispatcher/host-dispatcher.ts';
+import { InstanceRegistry } from '../../supervisor/instance-registry.ts';
 import type { SupervisorRequestHandler } from '../../supervisor/supervisor-deps.ts';
 
 function errorDataOf(error: unknown): AddonErrorData {

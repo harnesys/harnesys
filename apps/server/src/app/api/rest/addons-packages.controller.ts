@@ -35,8 +35,8 @@ export class AddonsPackagesController {
   ) {}
 
   @Get('packages')
-  list(): AddonPackageView[] {
-    return this.catalog.listInstalled().map((pkg) => this.viewOf(pkg));
+  list(): { items: AddonPackageView[] } {
+    return { items: this.catalog.listInstalled().map((pkg) => this.viewOf(pkg)) };
   }
 
   @Post('packages/plan')

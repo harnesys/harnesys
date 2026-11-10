@@ -12,6 +12,7 @@ import { BridgeHostService } from '../services/bridge/bridge-service.ts';
 import { ConfigHostService } from '../services/config/config-service.ts';
 import { DbHostService } from '../services/db/db-service.ts';
 import { EventsHostService } from '../services/events/events-service.ts';
+import { AddonHttpFetchPort, SystemAddonFetch } from '../services/http/addon-fetch.port.ts';
 import { HttpHostService } from '../services/http/http-service.ts';
 import { HostServicesIndex } from '../services/index.ts';
 import { LogHostService } from '../services/log/log-service.ts';
@@ -44,6 +45,7 @@ import { TokenBucketRateLimiter } from './rate-limit.ts';
     PermissionEngine,
     { provide: HostServiceRegistryPort, useClass: InMemoryHostServiceRegistry },
     { provide: InstanceGenerationPort, useClass: InstanceRegistryGenerationAdapter },
+    { provide: AddonHttpFetchPort, useClass: SystemAddonFetch },
     TokenBucketRateLimiter,
     ConfigHostService,
     SecretsHostService,

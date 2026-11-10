@@ -25,10 +25,13 @@ export class AddonsOrgJobsController {
   ) {}
 
   @Get()
-  list(@Param('orgId') orgId: string, @Param('addonId') addonId: string): AddonJobView[] {
+  list(
+    @Param('orgId') orgId: string,
+    @Param('addonId') addonId: string,
+  ): { items: AddonJobView[] } {
     this.assertRow(orgId, addonId);
     const descriptors = this.descriptorsOf(orgId, addonId);
-    return this.jobs.list(orgId, addonId).flatMap((row) => {
+    const items = this.jobs.list(orgId, addonId).flatMap((row) => {
       const descriptor = descriptors.get(row.jobId);
       if (!descriptor) {
         return [];
@@ -50,6 +53,7 @@ export class AddonsOrgJobsController {
         } satisfies AddonJobView,
       ];
     });
+    return { items };
   }
 
   @UseGuards(AddonOrgAdminGuard)

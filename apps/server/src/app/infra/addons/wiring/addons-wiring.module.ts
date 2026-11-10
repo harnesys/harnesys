@@ -21,6 +21,9 @@ import { AddonReconciler } from '../../../application/addons/reconcile/reconcile
 import { RunDispatchPort } from '../../../application/addons/run-dispatch.port.ts';
 import { FireTriggerUseCase } from '../../../application/addons/triggers/fire-trigger.use-case.ts';
 import { ManageTriggerInstanceUseCase } from '../../../application/addons/triggers/manage-instance.use-case.ts';
+import { AccountsFacadePort } from '../../../application/apps/accounts-facade.port.ts';
+import { AppsUseCaseModule } from '../../../application/apps/apps.use-case.module.ts';
+import { ThreadUseCaseModule } from '../../../application/threads/thread.use-case.module.ts';
 import { ContributionRegistry } from '../../../domain/addons/contribution-registry.ts';
 import { AddonCallPort } from '../../../domain/addons/ports/addon-call.port.ts';
 import { AddonNotifyPort } from '../../../domain/addons/ports/addon-notify.port.ts';
@@ -41,15 +44,16 @@ import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-r
 import { PermissionDefinitionsPort } from '../../../domain/addons/ports/permission-definitions.port.ts';
 import { AddonRouteTablePort } from '../../../domain/addons/ports/route-table.port.ts';
 import { TriggerInstanceRepositoryPort } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
-import { EventBusPort } from '../../../domain/events/event-bus.port.ts';
+import { ClockPort } from '../../../domain/apps/ports/clock.port.ts';
 import { InboundEventPort } from '../../../domain/apps/ports/inbound-event.port.ts';
-import { EventsModule } from '../../events/events.module.ts';
-import { MachineHomeModule } from '../../machine-home/machine-home.module.ts';
+import { EventBusPort } from '../../../domain/events/event-bus.port.ts';
+import { MetricsPort } from '../../../domain/metrics/metrics.port.ts';
+import { SecretStorePort } from '../../../domain/secret/secret-store.port.ts';
 import { AppsModule } from '../../apps/apps.module.ts';
-import { SecretModule } from '../../secret/secret.module.ts';
+import { EventsModule } from '../../events/events.module.ts';
 import { FleetHubModule } from '../../fleet-hub/fleet-hub.module.ts';
-import { ThreadUseCaseModule } from '../../../application/threads/thread.use-case.module.ts';
-import { AppsUseCaseModule } from '../../../application/apps/apps.use-case.module.ts';
+import { MachineHomeModule } from '../../machine-home/machine-home.module.ts';
+import { SecretModule } from '../../secret/secret.module.ts';
 import { AddonAppsBridgeModule } from '../apps-bridge/apps-bridge.module.ts';
 import { AddonCatalogModule } from '../catalog/catalog.module.ts';
 import { DispatcherModule } from '../dispatcher/dispatcher.module.ts';
@@ -76,6 +80,7 @@ import {
 import { AddonSecretService } from '../storage/addon-secret.service.ts';
 import { AddonStorageModule } from '../storage/storage.module.ts';
 import { AddonSupervisorModule } from '../supervisor/supervisor.module.ts';
+import { SupervisorHooks } from '../supervisor/supervisor-deps.ts';
 import { OrgAuditAddonAdapter } from './addon-audit.adapter.ts';
 import { AddonDbAccessAdapter } from './addon-db-access.adapter.ts';
 import {
@@ -101,7 +106,11 @@ import { CompositeAddonSourceAdapter } from './addon-source-composite.adapter.ts
 import { AddonSecretsAdapter, BindingsReaderAdapter } from './addon-storage-sinks.adapter.ts';
 import { AddonsLifecycleService } from './addons-lifecycle.service.ts';
 import { FileGrantPolicyAdapter } from './grant-policy.adapter.ts';
-import { SupervisorHooks } from '../supervisor/supervisor-deps.ts';
+import { ContributionHandlersValidator } from './supervisor-hooks/contribution-handlers-validator.ts';
+import { DispatcherRequestHandler } from './supervisor-hooks/dispatcher-request-handler.ts';
+import { InstanceReplayHook } from './supervisor-hooks/instance-replay-hook.ts';
+import { ManifestPermissionProvider } from './supervisor-hooks/manifest-permission-provider.ts';
+import { AddonReasonsToLive } from './supervisor-hooks/reasons-to-live.ts';
 import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.ts';
 
 /**
@@ -136,10 +145,18 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
       useFactory: (families: FamilyModuleList) => new ContributionRegistry(families.modules),
       inject: [FamilyModuleList],
     },
-    { provide: AddonDbAccess, useFactory: (db: AddonDbAccessAdapter) => db, inject: [AddonDbAccessAdapter] },
+    {
+      provide: AddonDbAccess,
+      useFactory: (db: AddonDbAccessAdapter) => db,
+      inject: [AddonDbAccessAdapter],
+    },
     AddonDbAccessAdapter,
     { provide: AddonSecrets, useClass: AddonSecretsAdapter },
-    { provide: LogSink, useFactory: (log: AddonLogSinkAdapter) => log, inject: [AddonLogSinkAdapter] },
+    {
+      provide: LogSink,
+      useFactory: (log: AddonLogSinkAdapter) => log,
+      inject: [AddonLogSinkAdapter],
+    },
     AddonLogSinkAdapter,
     { provide: BindingsReader, useClass: BindingsReaderAdapter },
     { provide: TriggerFireSink, useClass: TriggerFireSinkAdapter },
@@ -150,18 +167,47 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     { provide: AddonDataPort, useClass: AddonDataRemoveAdapter },
     AccountsChangedNotifySink,
     AddonsLifecycleService,
+    DispatcherRequestHandler,
+    ManifestPermissionProvider,
+    ContributionHandlersValidator,
+    InstanceReplayHook,
+    AddonReasonsToLive,
     WiredSupervisorHooks,
-    { provide: SupervisorHooks, useFactory: (hooks: WiredSupervisorHooks) => hooks, inject: [WiredSupervisorHooks] },
+    {
+      provide: SupervisorHooks,
+      useFactory: (hooks: WiredSupervisorHooks) => hooks,
+      inject: [WiredSupervisorHooks],
+    },
     RouteTablePortAdapter,
     PermissionDefinitionsPortAdapter,
     AddonLogReaderAdapter,
     AddonDataExportAdapter,
     AddonConfigReadAdapter,
-    { provide: AddonRouteTablePort, useFactory: (a: RouteTablePortAdapter) => a, inject: [RouteTablePortAdapter] },
-    { provide: PermissionDefinitionsPort, useFactory: (a: PermissionDefinitionsPortAdapter) => a, inject: [PermissionDefinitionsPortAdapter] },
-    { provide: AddonLogReaderPort, useFactory: (a: AddonLogReaderAdapter) => a, inject: [AddonLogReaderAdapter] },
-    { provide: AddonDataExportPort, useFactory: (a: AddonDataExportAdapter) => a, inject: [AddonDataExportAdapter] },
-    { provide: AddonConfigReadPort, useFactory: (a: AddonConfigReadAdapter) => a, inject: [AddonConfigReadAdapter] },
+    {
+      provide: AddonRouteTablePort,
+      useFactory: (a: RouteTablePortAdapter) => a,
+      inject: [RouteTablePortAdapter],
+    },
+    {
+      provide: PermissionDefinitionsPort,
+      useFactory: (a: PermissionDefinitionsPortAdapter) => a,
+      inject: [PermissionDefinitionsPortAdapter],
+    },
+    {
+      provide: AddonLogReaderPort,
+      useFactory: (a: AddonLogReaderAdapter) => a,
+      inject: [AddonLogReaderAdapter],
+    },
+    {
+      provide: AddonDataExportPort,
+      useFactory: (a: AddonDataExportAdapter) => a,
+      inject: [AddonDataExportAdapter],
+    },
+    {
+      provide: AddonConfigReadPort,
+      useFactory: (a: AddonConfigReadAdapter) => a,
+      inject: [AddonConfigReadAdapter],
+    },
   ],
   exports: [
     GrantPolicyPort,
@@ -187,6 +233,11 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     AddonLogReaderPort,
     AddonDataExportPort,
     AddonConfigReadPort,
+    AddonAuditPort,
+    SecretStorePort,
+    ClockPort,
+    MetricsPort,
+    AccountsFacadePort,
     AddonPackageCatalogPort,
     OrgAddonRepositoryPort,
     BindingRepositoryPort,

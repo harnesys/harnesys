@@ -146,7 +146,11 @@ export class Container {
     }
     const definition = this.definitions.get(token);
     if (definition === undefined) {
-      throw new Error(`Cannot resolve token ${describeToken(token)}: no provider registered`);
+      const chain = path.map((entry) => describeToken(entry)).join(' -> ');
+      throw new Error(
+        `Cannot resolve token ${describeToken(token)}: no provider registered` +
+          (chain ? ` (resolution path: ${chain})` : ''),
+      );
     }
     if (path.includes(token)) {
       const cycle = [...path, token].map((entry) => this.describeInCycle(entry));

@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@harnesys/brix';
 import { RunConflictException } from '../../domain/thread/thread.error.ts';
 import { requireRunAccepted } from '../threads/run-accepted.ts';
 import { mechanicalRunStart } from '../threads/run-attribution.ts';
-import type { SendThreadRunUseCase } from '../threads/send-thread-run.use-case.ts';
+import { SendThreadRunUseCase } from '../threads/send-thread-run.use-case.ts';
 import type { RunDispatchInput, RunDispatchOutcome } from './run-dispatch.port.ts';
 import { RunDispatchPort } from './run-dispatch.port.ts';
 

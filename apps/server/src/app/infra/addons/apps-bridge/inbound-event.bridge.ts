@@ -6,8 +6,7 @@ import { BindingRepositoryPort } from '../../../domain/addons/ports/binding-repo
 import { AccountRepositoryPort } from '../../../domain/apps/ports/account-repository.port.ts';
 import type { InboundEnvelope } from '../../../domain/apps/ports/inbound-event.port.ts';
 import { InboundEventPort } from '../../../domain/apps/ports/inbound-event.port.ts';
-import { AddonHookRoutingTable } from '../families/hook/hook.family.ts';
-import { HookDeliveryService } from '../families/hook/hook.family.ts';
+import { AddonHookRoutingTable, HookDeliveryService } from '../families/hook/hook.family.ts';
 @Injectable()
 export class InboundEventBridge extends InboundEventPort {
   constructor(

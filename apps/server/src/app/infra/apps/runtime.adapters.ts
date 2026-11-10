@@ -6,8 +6,6 @@ import type { AccountHolderRef } from '../../domain/apps/errors.ts';
 import { type AccountEvent, AccountEventPort } from '../../domain/apps/ports/account-event.port.ts';
 import { AccountHolderPort } from '../../domain/apps/ports/account-holder.port.ts';
 import { ClockPort } from '../../domain/apps/ports/clock.port.ts';
-import {
-} from '../../domain/apps/ports/inbound-event.port.ts';
 import { PublicUrlsPort } from '../../domain/apps/ports/public-urls.port.ts';
 import type { SecretTarget } from '../../domain/apps/ports/secret-scope.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';

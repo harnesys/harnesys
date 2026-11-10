@@ -131,6 +131,15 @@ describe('envelope and golden fixtures', () => {
     expect(result.outcome).toBe('fired');
   });
 
+  test('threads.create fixture validates and accepts agentId', async () => {
+    const raw = await import('./__fixtures__/threads-create.request.json');
+    const message = decodeMessage(JSON.stringify(raw.default));
+    const params: HostServiceParams<'threads.create'> = protocolMap['threads.create'].params.parse(
+      (message as { params: unknown }).params,
+    );
+    expect(params.agentId).toBe('00000000-0000-1000-8000-000000000001');
+  });
+
   test('initialize result validates', () => {
     const result = InitializeResultSchema.parse({
       addon: { id: 'harnesys.demo', version: '1.0.0' },

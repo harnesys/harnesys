@@ -1,5 +1,4 @@
 import { Module } from '@harnesys/brix';
-import { AppsModule } from '../../infra/apps/apps.module.ts';
 import { AccountAccessService } from './access/account-access.service.ts';
 import { DeleteAccountUseCase } from './accounts/delete-account.use-case.ts';
 import { GetAccountUseCase, ListAccountsUseCase } from './accounts/list-account.use-case.ts';
@@ -51,7 +50,6 @@ const useCases = [
 const services = [AccountAccessService, ConnectScheduler, ConnectResumeExecutor];
 
 @Module({
-  imports: [AppsModule],
   providers: [
     ...useCases,
     ...services,

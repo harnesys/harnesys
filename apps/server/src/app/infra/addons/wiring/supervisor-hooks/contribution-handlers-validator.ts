@@ -1,6 +1,6 @@
 import { Injectable } from '@harnesys/brix';
-import type { AddonPackageCatalogPort } from '../../../../domain/addons/ports/addon-package-catalog.port.ts';
-import type { FamilyModuleList } from '../../families/family-module-list.ts';
+import { AddonPackageCatalogPort } from '../../../../domain/addons/ports/addon-package-catalog.port.ts';
+import { FamilyModuleList } from '../../families/family-module-list.ts';
 import type { SupervisorHandlersValidator } from '../../supervisor/supervisor-deps.ts';
 
 /**

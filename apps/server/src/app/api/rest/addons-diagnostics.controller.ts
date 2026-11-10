@@ -64,7 +64,7 @@ export class AddonsDiagnosticsController {
         interval = setInterval(() => {
           for (const line of this.logs.tail(orgId, addonId, cursor)) {
             cursor = line.seq;
-            push(`data: ${JSON.stringify(line)}\n\n`);
+            push(`event: log\ndata: ${JSON.stringify(line)}\n\n`);
           }
         }, 1000);
       },

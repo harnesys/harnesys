@@ -150,8 +150,8 @@ export const PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
 export class PermissionDefinitionRegistry {
   private readonly byId: ReadonlyMap<string, PermissionDefinition>;
 
-  constructor(definitions: readonly PermissionDefinition[] = PERMISSION_DEFINITIONS) {
-    this.byId = new Map(definitions.map((definition) => [definition.id, definition]));
+  constructor() {
+    this.byId = new Map(PERMISSION_DEFINITIONS.map((definition) => [definition.id, definition]));
   }
 
   get(id: string): PermissionDefinition | undefined {

@@ -1,9 +1,9 @@
-import type { LogLevelValue } from '../../../infra/addons/services/sinks.ts';
+import type { AddonLogLevelValue } from './addon-read-models.port.ts';
 
 export interface AddonLogLineView {
   seq: number;
   at: string;
-  level: LogLevelValue;
+  level: AddonLogLevelValue;
   message: string;
   fields: Record<string, unknown>;
 }
