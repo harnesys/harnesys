@@ -4,7 +4,6 @@ import type { AccountErrorCode } from '../../../domain/apps/errors.ts';
 import { ProviderError, providerRetryAfterSec } from '../../../domain/apps/errors.ts';
 import { ClockPort } from '../../../domain/apps/ports/clock.port.ts';
 import { ConnectSessionStorePort } from '../../../domain/apps/ports/connect-session-store.port.ts';
-import { MetricsPort } from '../../../domain/apps/ports/metrics.port.ts';
 import { ProviderRegistryPort } from '../../../domain/apps/ports/provider-registry.port.ts';
 import { PublicUrlsPort } from '../../../domain/apps/ports/public-urls.port.ts';
 import type {
@@ -16,6 +15,7 @@ import type {
   Launch,
 } from '../../../domain/apps/provider-module.ts';
 import type { AppRecord, ConnectSession, JsonObject } from '../../../domain/apps/records.ts';
+import { MetricsPort } from '../../../domain/metrics/metrics.port.ts';
 import { ConnectContextPort } from './connect-context.port.ts';
 import { ConnectFinalizePort } from './connect-finalize.port.ts';
 import { applyWaitLaunch } from './wait-launch.ts';

@@ -1,0 +1,11 @@
+{
+  "jsonrpc": "2.0",
+  "id": 11,
+  "method": "triggers.fire",
+  "params": {
+    "instanceId": "instance-5",
+    "runKey": "message-9001",
+    "text": "deploy finished",
+    "payload": { "channel": "general" }
+  }
+}

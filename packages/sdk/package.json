@@ -1,11 +1,12 @@
 {
   "name": "@harnesys/sdk",
   "version": "0.1.0",
-  "module": "index.ts",
+  "module": "./src/index.ts",
   "type": "module",
   "private": true,
   "exports": {
-    ".": "./index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

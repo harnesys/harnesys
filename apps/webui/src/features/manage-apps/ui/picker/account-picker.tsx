@@ -1,8 +1,14 @@
-import type { AccountView, CatalogResponse } from '@harnesys/contracts';
+import type { AccountKindDescriptor, AccountView, CatalogResponse } from '@harnesys/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { accountsQuery, catalogQuery } from '@/shared/api/apps';
 import { Button } from '@/shared/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/shared/ui/dropdown-menu';
 import { ConnectDialog } from '../connect/connect-dialog.tsx';
 
 interface AccountPickerProps {
@@ -22,16 +28,20 @@ export function AccountPicker({
   onChange,
   allowCreate = true,
 }: AccountPickerProps) {
-  const [creating, setCreating] = useState(false);
+  const [creatingKind, setCreatingKind] = useState<AccountKindDescriptor | null>(null);
   const catalogResult = useQuery(catalogQuery(orgId));
-  const accountsResult = useQuery(accountsQuery(orgId));
-  const accounts = accountsResult.data?.accounts ?? [];
   const catalog: CatalogResponse | undefined = catalogResult.data;
-  const kind = catalog
+  const singleKind = kinds.length === 1;
+  const accountsResult = useQuery(
+    singleKind ? accountsQuery(orgId, { kind: kinds[0] }) : accountsQuery(orgId),
+  );
+  const accounts = accountsResult.data?.accounts ?? [];
+  const kindOptions = catalog
     ? catalog.providers
         .flatMap((provider) => provider.accountKinds)
-        .find((entry) => entry.kind === kinds[0])
-    : undefined;
+        .filter((entry) => kinds.includes(entry.kind))
+    : [];
+  const soleKind = kindOptions.length === 1 ? kindOptions[0] : undefined;
 
   const usable = (account: AccountView) =>
     account.status === 'connected' &&
@@ -58,18 +68,32 @@ export function AccountPicker({
           );
         })}
       </select>
-      {allowCreate && kind ? (
-        <Button type="button" size="sm" variant="outline" onClick={() => setCreating(true)}>
+      {allowCreate && soleKind ? (
+        <Button type="button" size="sm" variant="outline" onClick={() => setCreatingKind(soleKind)}>
           Connect new
         </Button>
       ) : null}
-      {creating && catalog && kind ? (
+      {allowCreate && kindOptions.length > 1 ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button type="button" size="sm" variant="outline" />}>
+            Connect new
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {kindOptions.map((kind) => (
+              <DropdownMenuItem key={kind.kind} onClick={() => setCreatingKind(kind)}>
+                {kind.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
+      {creatingKind && catalog ? (
         <ConnectDialog
           orgId={orgId}
           catalog={catalog}
-          kind={kind}
+          kind={creatingKind}
           reconnect={null}
-          onClose={() => setCreating(false)}
+          onClose={() => setCreatingKind(null)}
         />
       ) : null}
     </div>

@@ -5,8 +5,8 @@ import type {
   FieldSpec,
   FieldValue,
 } from '@harnesys/contracts';
+import { FieldRenderer } from '@/shared/descriptor-forms';
 import { Button } from '@/shared/ui/button';
-import { FieldRenderer } from '../fields/field-renderer.tsx';
 
 interface StepAppProps {
   kinds: AppKindDescriptor[];

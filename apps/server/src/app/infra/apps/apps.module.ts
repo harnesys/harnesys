@@ -7,11 +7,11 @@ import { AppRepositoryPort } from '../../domain/apps/ports/app-repository.port.t
 import { ClockPort } from '../../domain/apps/ports/clock.port.ts';
 import { ConnectSessionStorePort } from '../../domain/apps/ports/connect-session-store.port.ts';
 import { InboundEventPort } from '../../domain/apps/ports/inbound-event.port.ts';
-import { MetricsPort } from '../../domain/apps/ports/metrics.port.ts';
 import { ProviderHttpFactoryPort } from '../../domain/apps/ports/provider-http.port.ts';
 import { ProviderRegistryPort } from '../../domain/apps/ports/provider-registry.port.ts';
 import { PublicUrlsPort } from '../../domain/apps/ports/public-urls.port.ts';
 import { SecretScopePort } from '../../domain/apps/ports/secret-scope.port.ts';
+import { MetricsPort } from '../../domain/metrics/metrics.port.ts';
 import { ProviderHttpAdapter } from '../http/provider-http.adapter.ts';
 import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
 import { SecretModule } from '../secret/secret.module.ts';

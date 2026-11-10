@@ -1,4 +1,4 @@
-import type { AccountErrorCode, FieldErrorCode } from '@harnesys/contracts';
+import type { AccountErrorCode } from '@harnesys/contracts';
 
 export interface ErrorCopy {
   title: string;
@@ -77,14 +77,6 @@ export const ACCOUNT_ERROR_TEXT: Record<AccountErrorCode, ErrorCopy> = {
     hint: 'An unexpected error stopped the connection. Try again.',
     action: 'retry',
   },
-};
-
-export const FIELD_ERROR_TEXT: Record<FieldErrorCode, string> = {
-  required: 'This field is required',
-  pattern: 'The value does not match the expected format',
-  type: 'The value has the wrong type',
-  option: 'Pick one of the listed options',
-  unknown: 'The value was rejected',
 };
 
 export function errorCopy(code: AccountErrorCode): ErrorCopy {

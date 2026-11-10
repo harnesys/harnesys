@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { Injectable } from '@harnesys/brix';
-import { type AddonManifest, parseAddonManifest } from '@harnesys/sdk';
+import { type AddonManifest, parseAddonManifest, resolveL10n } from '@harnesys/sdk';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MONOREPO_ADDONS_DIR } from './addon-paths.ts';
 
@@ -71,11 +71,11 @@ export class AddonDiscovery {
       return {
         id: manifest.id,
         version: manifest.version,
-        title: manifest.title ?? manifest.id,
-        description: manifest.description ?? '',
+        title: resolveL10n(manifest.title, { locale: 'en' }) || manifest.id,
+        description: resolveL10n(manifest.description, { locale: 'en' }),
         icon: manifest.icon ?? 'puzzle',
-        tags: manifest.tags,
-        entry: resolveEntry(root, manifest.entry),
+        tags: manifest.features ?? [],
+        entry: resolveEntry(root, manifest.runtime.entry),
         root,
         origin,
         manifest,

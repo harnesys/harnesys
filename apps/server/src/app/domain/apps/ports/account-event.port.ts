@@ -21,4 +21,5 @@ export interface AccountEvent {
 export abstract class AccountEventPort {
   abstract publish(event: AccountEvent): void;
   abstract subscribe(orgId: string, handler: (event: AccountEvent) => void): () => void;
+  abstract subscribeAll(handler: (event: AccountEvent) => void): () => void;
 }

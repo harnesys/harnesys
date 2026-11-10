@@ -10,10 +10,10 @@ import {
   type InboundEnvelope,
   InboundEventPort,
 } from '../../domain/apps/ports/inbound-event.port.ts';
-import { type MetricLabels, MetricsPort } from '../../domain/apps/ports/metrics.port.ts';
 import { PublicUrlsPort } from '../../domain/apps/ports/public-urls.port.ts';
 import type { SecretTarget } from '../../domain/apps/ports/secret-scope.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { type MetricLabels, MetricsPort } from '../../domain/metrics/metrics.port.ts';
 
 @Injectable()
 export class SystemClockAdapter extends ClockPort {
@@ -89,9 +89,13 @@ export class LoggerMetricsAdapter extends MetricsPort {
 @Injectable()
 export class InProcessAccountEvents extends AccountEventPort {
   private readonly listeners = new Map<string, Set<(event: AccountEvent) => void>>();
+  private readonly allListeners = new Set<(event: AccountEvent) => void>();
 
   publish(event: AccountEvent): void {
     for (const listener of this.listeners.get(event.orgId) ?? []) {
+      listener(event);
+    }
+    for (const listener of this.allListeners) {
       listener(event);
     }
   }
@@ -102,6 +106,13 @@ export class InProcessAccountEvents extends AccountEventPort {
     this.listeners.set(orgId, set);
     return () => {
       set.delete(handler);
+    };
+  }
+
+  subscribeAll(handler: (event: AccountEvent) => void): () => void {
+    this.allListeners.add(handler);
+    return () => {
+      this.allListeners.delete(handler);
     };
   }
 }

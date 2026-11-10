@@ -1,0 +1,18 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "platform": 1,
+    "host": { "version": "1.0.0", "features": ["family:trigger@1"] },
+    "instance": {
+      "orgId": "org-1",
+      "generation": 3,
+      "dataDir": "/data/org-1/addons/harnesys.demo",
+      "locale": "en"
+    },
+    "permissions": [{ "id": "http.fetch", "scope": { "hosts": ["api.github.com"] } }],
+    "experimental": [],
+    "deprecations": []
+  }
+}

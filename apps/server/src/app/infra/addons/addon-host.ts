@@ -65,7 +65,7 @@ export class AddonHost extends AddonHostPort {
       id: addon.id,
       version: addon.version,
       state: record?.state ?? 'discovered',
-      execution: addon.manifest.execution,
+      execution: 'process',
       title: addon.title,
       description: addon.description,
       icon: addon.icon,
@@ -186,7 +186,7 @@ export class AddonHost extends AddonHostPort {
       id: addon.id,
       version: addon.version,
       state: record?.state ?? 'discovered',
-      execution: addon.manifest.execution,
+      execution: 'process',
       title: record?.title ?? addon.title,
       description: record?.description ?? addon.description,
       icon: record?.icon ?? addon.icon,
@@ -266,7 +266,7 @@ function toRecord(
 function manifestContributions(addon: DiscoveredAddon): AddonContribution[] {
   return addon.manifest.contributions.map((entry) => ({
     id: entry.id,
-    family: entry.family,
+    family: entry.family as AddonFamily,
     descriptor: entry.descriptor,
   }));
 }
@@ -296,5 +296,5 @@ function familiesOf(contributions: AddonContribution[], addon: DiscoveredAddon):
   if (fromRunning.size > 0) {
     return [...fromRunning];
   }
-  return [...new Set(addon.manifest.contributions.map((entry) => entry.family))];
+  return [...new Set(addon.manifest.contributions.map((entry) => entry.family))] as AddonFamily[];
 }

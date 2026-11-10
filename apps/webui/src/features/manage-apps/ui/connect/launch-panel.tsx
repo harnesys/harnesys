@@ -1,8 +1,8 @@
 import type { FieldSpec, FieldValue, LaunchView } from '@harnesys/contracts';
 import { CopyIcon, ExternalLinkIcon } from 'lucide-react';
 import { useState } from 'react';
+import { FieldRenderer } from '@/shared/descriptor-forms';
 import { Button } from '@/shared/ui/button';
-import { FieldRenderer } from '../fields/field-renderer.tsx';
 
 export interface LaunchPanelProps {
   launch: LaunchView;

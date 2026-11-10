@@ -12,7 +12,6 @@ import { AccountRepositoryPort } from '../../../domain/apps/ports/account-reposi
 import { AppRepositoryPort } from '../../../domain/apps/ports/app-repository.port.ts';
 import { ClockPort } from '../../../domain/apps/ports/clock.port.ts';
 import { ConnectSessionStorePort } from '../../../domain/apps/ports/connect-session-store.port.ts';
-import { MetricsPort } from '../../../domain/apps/ports/metrics.port.ts';
 import { ProviderRegistryPort } from '../../../domain/apps/ports/provider-registry.port.ts';
 import { PublicUrlsPort } from '../../../domain/apps/ports/public-urls.port.ts';
 import type {
@@ -29,6 +28,7 @@ import type {
   ConnectSession,
   ConnectTarget,
 } from '../../../domain/apps/records.ts';
+import { MetricsPort } from '../../../domain/metrics/metrics.port.ts';
 import { resolveInputFields } from '../shared/field-validation.ts';
 import { assertKnownScopes, unionScopes } from '../shared/scope-coverage.ts';
 import { ConnectContextPort } from './connect-context.port.ts';

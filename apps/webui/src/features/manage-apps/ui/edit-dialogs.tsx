@@ -10,10 +10,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { appsQueryKey, updateAccount, updateApp } from '@/shared/api/apps';
 import { ApiError } from '@/shared/api/client';
+import { FieldRenderer, initialFieldValues } from '@/shared/descriptor-forms';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
-import { initialFieldValues } from '../model/field-value.ts';
-import { FieldRenderer } from './fields/field-renderer.tsx';
 
 export function EditAppDialog({
   orgId,

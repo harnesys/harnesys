@@ -11,7 +11,6 @@ import { AccountRepositoryPort } from '../../../domain/apps/ports/account-reposi
 import { AppRepositoryPort } from '../../../domain/apps/ports/app-repository.port.ts';
 import { ClockPort } from '../../../domain/apps/ports/clock.port.ts';
 import { InboundEventPort } from '../../../domain/apps/ports/inbound-event.port.ts';
-import { MetricsPort } from '../../../domain/apps/ports/metrics.port.ts';
 import { ProviderRegistryPort } from '../../../domain/apps/ports/provider-registry.port.ts';
 import { SecretScopePort } from '../../../domain/apps/ports/secret-scope.port.ts';
 import type {
@@ -25,6 +24,7 @@ import type {
   WebhookOutcome,
 } from '../../../domain/apps/provider-module.ts';
 import type { AccountRecord, AppRecord } from '../../../domain/apps/records.ts';
+import { MetricsPort } from '../../../domain/metrics/metrics.port.ts';
 import { statusForError } from '../access/status-map.ts';
 import { withTimeout } from '../shared/concurrency.ts';
 import { createdProviderLogger } from '../shared/provider-context.ts';

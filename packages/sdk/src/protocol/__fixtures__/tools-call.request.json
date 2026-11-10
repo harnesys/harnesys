@@ -1,0 +1,19 @@
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "tools.call",
+  "params": {
+    "pack": "github",
+    "tool": "github.list_repos",
+    "input": { "perPage": 10 },
+    "_meta": {
+      "correlationId": "run-42",
+      "deadline": 1730000000000,
+      "principal": { "type": "agent", "id": "agent-9" },
+      "agentId": "agent-9",
+      "threadId": "thread-1",
+      "runId": "run-42",
+      "locale": "en"
+    }
+  }
+}

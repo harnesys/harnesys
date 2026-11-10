@@ -8,11 +8,10 @@ import type {
 import type { QueryClient } from '@tanstack/react-query';
 import { appsQueryKey, createApp, startConnect } from '@/shared/api/apps';
 import { ApiError } from '@/shared/api/client';
+import { buildValidator, fieldErrorsFromBody, fieldInputs } from '@/shared/descriptor-forms';
 import type { ConnectEvent, ConnectState } from './connect-machine.ts';
 import { currentStep } from './connect-machine.ts';
 import { ACCOUNT_ERROR_TEXT } from './error-text.ts';
-import { buildValidator, fieldErrorsFromBody } from './field-validation.ts';
-import { fieldInputs } from './field-value.ts';
 
 export interface ConnectSetters {
   dispatch: (event: ConnectEvent) => void;

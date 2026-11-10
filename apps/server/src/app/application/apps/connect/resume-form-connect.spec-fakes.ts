@@ -3,7 +3,6 @@ import { ProviderError } from '../../../domain/apps/errors.ts';
 import type { FieldSpec } from '../../../domain/apps/field.ts';
 import { ClockPort } from '../../../domain/apps/ports/clock.port.ts';
 import { ConnectSessionStorePort } from '../../../domain/apps/ports/connect-session-store.port.ts';
-import { MetricsPort } from '../../../domain/apps/ports/metrics.port.ts';
 import { ProviderRegistryPort } from '../../../domain/apps/ports/provider-registry.port.ts';
 import { PublicUrlsPort } from '../../../domain/apps/ports/public-urls.port.ts';
 import type {
@@ -15,6 +14,7 @@ import type {
   ProviderModule,
 } from '../../../domain/apps/provider-module.ts';
 import type { AccountRecord, AppRecord, ConnectSession } from '../../../domain/apps/records.ts';
+import { MetricsPort } from '../../../domain/metrics/metrics.port.ts';
 import { silentLogger } from '../../approvals/approval-fakes.ts';
 import { ConnectContextPort } from './connect-context.port.ts';
 import type { ConnectContextInput } from './connect-context.ts';

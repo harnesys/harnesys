@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { AccountKindDescriptor, AppView } from '@harnesys/contracts';
+import { buildValidator } from '@/shared/descriptor-forms';
 import { connectReducer, currentStep, initialConnectState } from './connect-machine.ts';
-import { buildValidator } from './field-validation.ts';
 import { planConnect } from './plan-connect.ts';
 
 const KIND: AccountKindDescriptor = {

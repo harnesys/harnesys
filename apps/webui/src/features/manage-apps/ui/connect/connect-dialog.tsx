@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { appsQuery, cancelConnect, resumeConnect, watchConnectSession } from '@/shared/api/apps';
 import { ApiError } from '@/shared/api/client';
+import { fieldErrorsFromBody, initialFieldValues } from '@/shared/descriptor-forms';
 import { Button } from '@/shared/ui/button';
 import {
   Dialog,
@@ -27,8 +28,6 @@ import {
   startAccountConnection,
 } from '../../model/connect-actions.ts';
 import { connectReducer, currentStep, initialConnectState } from '../../model/connect-machine.ts';
-import { fieldErrorsFromBody } from '../../model/field-validation.ts';
-import { initialFieldValues } from '../../model/field-value.ts';
 import { planConnect } from '../../model/plan-connect.ts';
 import { ConnectBody } from './connect-body.tsx';
 
