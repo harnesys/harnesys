@@ -18,9 +18,11 @@ export type MessageFormat = 'text' | 'markdown' | 'html';
 export interface TransportAttachment {
   id?: string;
   kind?: string;
-  url: string;
   name?: string;
   mimeType?: string;
+  url?: string;
+  path?: string;
+  dataBase64?: string;
 }
 
 export interface TransportOption {
@@ -52,13 +54,21 @@ export interface TransportMessage {
   options?: TransportOption[];
 }
 
-export const TransportAttachmentSchema = z.object({
-  id: z.string().optional(),
-  kind: z.string().optional(),
-  url: z.string().min(1),
-  name: z.string().optional(),
-  mimeType: z.string().optional(),
-});
+export const TransportAttachmentSchema = z
+  .object({
+    id: z.string().optional(),
+    kind: z.string().optional(),
+    name: z.string().optional(),
+    mimeType: z.string().optional(),
+    url: z.string().min(1).optional(),
+    path: z.string().min(1).optional(),
+    dataBase64: z.string().min(1).optional(),
+  })
+  .refine(
+    (value) =>
+      [value.url, value.path, value.dataBase64].filter((entry) => entry !== undefined).length === 1,
+    { message: 'exactly one of url, path or dataBase64 is required' },
+  );
 
 export const TransportOptionSchema = z.object({
   id: z.string().min(1),
@@ -78,9 +88,10 @@ export const TransportMessageSchema = z.object({
 export const HttpAuthSchema = z.object({
   connection: z.string().min(1),
   accountId: z.string().optional(),
-  scheme: z.enum(['bearer', 'basic', 'header']),
+  scheme: z.enum(['bearer', 'basic', 'header', 'path']),
   credentialKey: z.string().optional(),
   header: z.string().optional(),
+  placeholder: z.string().min(1).optional(),
 });
 
 export const HttpFetchParamsSchema = z.object({

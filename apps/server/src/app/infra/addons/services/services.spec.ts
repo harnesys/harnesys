@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import type { OrgAddonRow } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
+import type { WorkerLeaseState } from '../../../domain/addons/ports/worker-lease.port.ts';
+import { AddonWorkerLeasePort } from '../../../domain/addons/ports/worker-lease.port.ts';
 import { ClockPort } from '../../../domain/apps/ports/clock.port.ts';
 import { BridgeHostService } from './bridge/bridge-service.ts';
 import { ConfigHostService } from './config/config-service.ts';
@@ -184,6 +186,16 @@ describe('triggers service', () => {
   });
 });
 
+class StubWorkerLease extends AddonWorkerLeasePort {
+  override claim(): WorkerLeaseState {
+    return { held: true, epoch: 1, expiresAt: null };
+  }
+
+  override release(): boolean {
+    return true;
+  }
+}
+
 describe('bridge and workers services', () => {
   test('bridge.inbound delegates with correlation', async () => {
     const sink = new FakeBridgeSink();
@@ -194,7 +206,7 @@ describe('bridge and workers services', () => {
 
   test('workers.report delegates state', async () => {
     const sink = new FakeWorkerSink();
-    const svc = new WorkersHostService(sink);
+    const svc = new WorkersHostService(sink, new StubWorkerLease());
     await svc.methods[0]?.handle(callCtx(), { workerId: 'w1', state: 'failed', code: 'boom' });
     expect(sink.reports).toEqual([{ workerId: 'w1', state: 'failed', code: 'boom' }]);
   });

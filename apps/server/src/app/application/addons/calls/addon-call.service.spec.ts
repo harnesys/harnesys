@@ -1,12 +1,27 @@
 import { describe, expect, test } from 'bun:test';
 import { AddonException } from '../../../domain/addons/errors.ts';
+import type {
+  AttachmentSourceInput,
+  AttachmentSourceResult,
+} from '../../../domain/addons/ports/attachment-source.port.ts';
+import { AddonAttachmentSourcePort } from '../../../domain/addons/ports/attachment-source.port.ts';
 import { FakeRpc, FakeSupervisor } from '../addons.fakes.ts';
 import { AddonCallService } from './addon-call.service.ts';
+
+class StubAttachmentSource extends AddonAttachmentSourcePort {
+  override read(input: AttachmentSourceInput): Promise<AttachmentSourceResult> {
+    return Promise.resolve({
+      name: input.path,
+      mediaType: 'text/plain',
+      bytes: new TextEncoder().encode('stub'),
+    });
+  }
+}
 
 function build() {
   const supervisor = new FakeSupervisor();
   const rpc = new FakeRpc();
-  const service = new AddonCallService(supervisor, rpc);
+  const service = new AddonCallService(supervisor, rpc, new StubAttachmentSource());
   return { service, supervisor, rpc };
 }
 

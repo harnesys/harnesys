@@ -31,6 +31,7 @@ export class ThreadRunDispatchService extends RunDispatchPort {
             ...(input.attachmentIds !== undefined && input.attachmentIds.length > 0
               ? { attachmentIds: input.attachmentIds }
               : {}),
+            ...(input.mode === undefined ? {} : { mode: input.mode }),
           },
           attribution: mechanicalRunStart(null),
           trigger: { kind: 'connector', id: triggerId },

@@ -49,6 +49,10 @@ export class AddonEventForwarder {
     this.subscriptions.set(orgId, subscription);
   }
 
+  progress(orgId: string, addonId: string, token: string, value: unknown): void {
+    this.bus.publish(orgId, 'addon.progress', { orgId, addonId, token, value });
+  }
+
   stop(): void {
     for (const subscription of this.subscriptions.values()) {
       subscription.close();

@@ -109,6 +109,14 @@ export class FakeSecrets extends AddonSecrets {
   override get(orgId: string, addonId: string, key: string): Promise<string | null> {
     return Promise.resolve(this.values[`${orgId}:${addonId}:${key}`] ?? null);
   }
+  override set(orgId: string, addonId: string, key: string, value: string): Promise<void> {
+    this.values[`${orgId}:${addonId}:${key}`] = value;
+    return Promise.resolve();
+  }
+  override delete(orgId: string, addonId: string, key: string): Promise<void> {
+    delete this.values[`${orgId}:${addonId}:${key}`];
+    return Promise.resolve();
+  }
 }
 
 export class FakeBindings extends BindingsReader {

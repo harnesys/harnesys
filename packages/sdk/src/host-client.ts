@@ -45,6 +45,7 @@ export function createAddonContextFor(
     createHostClient(channel, () => meta),
     meta,
     signal,
+    (method, params) => channel.notify(method, params),
   );
 }
 

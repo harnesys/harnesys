@@ -32,6 +32,8 @@ export { addonMethod, hostMethod, notificationSpec } from './method-spec.ts';
 
 const empty = z.object({});
 const str = z.string().min(1);
+const secretKey = z.string().regex(/^[A-Za-z0-9_.-]{1,128}$/);
+const MAX_SECRET_BYTES = 8 * 1024;
 
 export const protocolMap = {
   ...sourceMethods,
@@ -111,10 +113,16 @@ export const protocolMap = {
     null,
   ),
   'secrets.get': addonMethod(
-    z.object({ key: str }),
+    z.object({ key: secretKey }),
     z.object({ value: z.string().nullable() }),
     null,
   ),
+  'secrets.set': addonMethod(
+    z.object({ key: secretKey, value: z.string().min(1).max(MAX_SECRET_BYTES) }),
+    empty,
+    null,
+  ),
+  'secrets.delete': addonMethod(z.object({ key: secretKey }), empty, null),
   'db.exec': addonMethod(z.object({ sql: str }), empty, null),
   'db.all': addonMethod(
     z.object({ sql: str, params: z.array(SqlParamSchema).optional() }),
@@ -206,6 +214,19 @@ export const protocolMap = {
     empty,
     'bridge.inbound',
   ),
+  'workers.lease': addonMethod(
+    z.object({
+      workerId: str,
+      ttlMs: z.number().int().min(5_000).max(3_600_000).optional(),
+    }),
+    z.object({
+      held: z.boolean(),
+      epoch: z.number().int().nonnegative(),
+      expiresAt: z.string().nullable(),
+    }),
+    'worker',
+  ),
+  'workers.release': addonMethod(z.object({ workerId: str }), empty, 'worker'),
   'workers.report': addonMethod(
     z.object({
       workerId: str,

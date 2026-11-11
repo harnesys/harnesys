@@ -53,8 +53,11 @@ A fresh context is built per call. Fields:
   the detail page, SSE stream `/logs/stream`). Baseline permission.
 - `ctx.config.get(keys?: string[])` — config values for this org (defaults merged over
   stored). Baseline permission `config.read`.
-- `ctx.secrets.get(key)` — secret values set through the config UI (`type: 'secret'`);
-  returns `null` when unset. Baseline `secrets.own`. Read-only: there is no write API.
+- `ctx.secrets.get(key)` / `ctx.secrets.set(key, value)` / `ctx.secrets.delete(key)` —
+  secrets in the add-on's own namespace (also used by the config UI for `type: 'secret'`
+  fields); `get` returns `null` when unset. Baseline `secrets.own`. Keys match
+  `[A-Za-z0-9_.-]{1,128}`, values are capped at 8 KiB. The add-on can never read or write
+  another add-on's secrets.
 - `ctx.db` — per-org SQLite (`exec`, `all`, `get`, `run`, `batch` ≤ 100 statements).
   Baseline `db`. Params are `string | number | boolean | null`. Every query is
   SQL-guarded (no PRAGMA, no ATTACH, quota rules) and capped at 8 MiB results / 5s.
@@ -63,7 +66,12 @@ A fresh context is built per call. Fields:
 - `ctx.http.fetch({ url, method?, headers?, body?, bodyBase64?, responseEncoding?, auth? })` — outbound HTTP. Returns
   `{ status, headers, body, bodyBase64? }`. Requires `http.fetch` scoped to the host
   (egress policy; violations fail with `permission_denied`). `auth` injects stored
-  connection credentials host-side: `{ connection, accountId?, scheme: 'bearer' | 'basic' | 'header', credentialKey?, header? }` — the add-on never sees raw credentials.
+  connection credentials host-side: `{ connection, accountId?, scheme: 'bearer' | 'basic' | 'header' | 'path', credentialKey?, header?, placeholder? }` — the add-on
+  never sees raw credentials. `scheme: 'path'` substitutes the credential into the URL
+  where `placeholder` (default `{token}`) appears, for APIs that carry the token in the
+  path (Telegram Bot API); the URL must contain the placeholder, and the credential must
+  consist of path-safe characters (`A-Za-z0-9._~:-`), otherwise `invalid_params` is
+  returned and no request is sent.
   Use `responseEncoding: 'base64'` (and `bodyBase64` for the request body) for binary payloads;
   the default is text decoding, and responses are capped at 8 MiB.
 - `ctx.files` — organization workspace files. `stat(path)` → `{ path, name, size, mediaType,
@@ -90,7 +98,8 @@ A fresh context is built per call. Fields:
   no topic axis yet: a topic-aware add-on encodes the topic inside `channel`.
 - `ctx.triggers.fire({ instanceId, runKey, text?, payload? })` →
   `{ outcome: 'fired' | 'suppressed' | 'busy' | 'failed' }` — fire an automation run from
-  a trigger instance (permission `trigger`); `runKey` deduplicates.
+  a trigger instance (permission `trigger`); `runKey` deduplicates. The instance target
+  accepts `threadId`, `agentId` and `modeId`; `modeId` is forwarded as the run mode.
 - `ctx.bridge.inbound({ channel, from?, text, payload?, attachments? })` — inject an
   inbound message into the core bridge (permission `bridge.inbound`). Each attachment is
   `{ name, mediaType?, path?, dataBase64? }` with exactly one of `path` (workspace file,
@@ -99,11 +108,24 @@ A fresh context is built per call. Fields:
   `attachmentIds` with the dispatched run. Oversized, empty or escaping paths are
   rejected with `invalid_params`/`not_found`.
 - `ctx.workers.report(workerId, state, code?)` — worker state (permission `worker`).
+- `ctx.workers.lease(workerId, ttlMs?)` → `{ held, epoch, expiresAt }` — durable poller
+  lease keyed by add-on + worker in org SQLite (`ttlMs` 5s–1h, default 60s; permission
+  `worker`). Call it before each poll; when `held` is `false`, another instance of the
+  worker holds the lease until `expiresAt`. `ctx.workers.release(workerId)` drops the
+  lease held by the current instance.
+- `ctx.progress(token, value)` — send a `$/progress` notification for long-running work;
+  the host publishes it as the org event `addon.progress` (`{ orgId, addonId, token,
+  value }`). Fire-and-forget; no permission, no response.
+- Transport handlers receive `transport.send` / `transport.edit` messages whose
+  `attachments` are already materialized: the host resolves a workspace `path` into
+  `dataBase64` (plus `name` and `mimeType` defaults), so the add-on never touches host
+  files for outbound media. Attachments behave as exactly one of `url`, `path` or
+  `dataBase64`; files are capped at 20 MiB and escape attempts fail with
+  `invalid_params`/`not_found`.
 
 Not available: clock (use `ctx.meta.deadline` + `ctx.signal`), metrics (host-side
-read-model), secrets/config writes, HITL approvals, progress notifications. Inbound chat
-attachments are supported through `ctx.bridge.inbound`; outbound attachments still accept
-`url` only (workspace `path` and inline bytes are the next delta).
+read-model), config writes, HITL approvals. Inbound chat attachments go through
+`ctx.bridge.inbound`; outbound attachments go through transport `send`/`edit`.
 
 ## Error model
 

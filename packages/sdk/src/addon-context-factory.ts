@@ -31,6 +31,7 @@ export type {
   AddonInboundAttachment,
   AddonLog,
   AddonLogLevel,
+  AddonProgress,
   AddonRuns,
   AddonSecrets,
   AddonThreads,
@@ -84,10 +85,13 @@ function createLog(
   };
 }
 
+export type ProgressNotify = (method: string, params: unknown) => void;
+
 export function createAddonContext(
   client: HostServiceClient,
   meta: CallMeta,
   signal: AbortSignal,
+  notify?: ProgressNotify,
 ): AddonContext {
   const config: AddonConfig = {
     get: async (keys?: string[]) => {
@@ -99,6 +103,12 @@ export function createAddonContext(
     get: async (key: string) => {
       const result = await client['secrets.get']({ key }, { signal });
       return result.value;
+    },
+    set: async (key: string, value: string) => {
+      await client['secrets.set']({ key, value }, { signal });
+    },
+    delete: async (key: string) => {
+      await client['secrets.delete']({ key }, { signal });
     },
   };
   const log: AddonLog = {
@@ -168,9 +178,19 @@ export function createAddonContext(
         await client['bridge.inbound']({ message }, { signal });
       },
     },
+    progress: {
+      progress: (token: string, value: unknown) => {
+        notify?.('$/progress', { token, value });
+      },
+    },
     workers: {
       report: async (workerId: string, state: 'running' | 'stopped' | 'failed', code?: string) => {
         await client['workers.report']({ workerId, state, code }, { signal });
+      },
+      lease: async (workerId: string, ttlMs?: number) =>
+        client['workers.lease']({ workerId, ttlMs }, { signal }),
+      release: async (workerId: string) => {
+        await client['workers.release']({ workerId }, { signal });
       },
     },
   };

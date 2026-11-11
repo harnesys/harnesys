@@ -114,6 +114,19 @@ CREATE TABLE IF NOT EXISTS addon_transport_outbound (
 );
 `;
 
+export const CREATE_ADDON_WORKER_LEASES_SQL = `
+CREATE TABLE IF NOT EXISTS addon_worker_leases (
+  org_id     TEXT NOT NULL,
+  addon_id   TEXT NOT NULL,
+  worker_id  TEXT NOT NULL,
+  holder_id  TEXT NOT NULL,
+  epoch      INTEGER NOT NULL DEFAULT 1,
+  expires_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (org_id, addon_id, worker_id)
+);
+`;
+
 export function ensureAddonsPlatformSchema(exec: (sql: string) => void): void {
   exec(CREATE_ORG_ADDONS_SQL);
   exec(CREATE_ADDON_BINDINGS_SQL);
@@ -123,4 +136,5 @@ export function ensureAddonsPlatformSchema(exec: (sql: string) => void): void {
   exec(CREATE_ADDON_TRANSPORT_BINDINGS_SQL);
   exec(CREATE_ADDON_TRANSPORT_SESSIONS_SQL);
   exec(CREATE_ADDON_TRANSPORT_OUTBOUND_SQL);
+  exec(CREATE_ADDON_WORKER_LEASES_SQL);
 }

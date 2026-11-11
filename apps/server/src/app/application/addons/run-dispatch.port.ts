@@ -8,6 +8,7 @@ export interface RunDispatchInput {
   agentId: string;
   text: string;
   attachmentIds?: string[];
+  mode?: string;
   runKey?: string;
   correlationId?: string;
   payload?: unknown;

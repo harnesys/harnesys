@@ -54,6 +54,8 @@ describe('protocol method map conformance', () => {
       'source.export',
       'config.get',
       'secrets.get',
+      'secrets.set',
+      'secrets.delete',
       'db.exec',
       'db.all',
       'db.get',
@@ -74,6 +76,8 @@ describe('protocol method map conformance', () => {
       'threads.create',
       'triggers.fire',
       'bridge.inbound',
+      'workers.lease',
+      'workers.release',
       'workers.report',
       '$/cancel',
       '$/progress',
@@ -91,6 +95,9 @@ describe('protocol method map conformance', () => {
     expect(protocolMap['bridge.inbound'].permission).toBe('bridge.inbound');
     expect(protocolMap['triggers.fire'].permission).toBe('trigger');
     expect(protocolMap['workers.report'].permission).toBe('worker');
+    expect(protocolMap['workers.lease'].permission).toBe('worker');
+    expect(protocolMap['secrets.set'].permission).toBeNull();
+    expect(protocolMap['secrets.delete'].permission).toBeNull();
     expect(protocolMap['source.list'].permission).toBe('source');
     expect(protocolMap['source.upload'].permission).toBe('source');
     expect(protocolMap['files.read'].permission).toBe('files.read');

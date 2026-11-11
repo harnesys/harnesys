@@ -19,9 +19,10 @@ const HTTP_LIMITS = { timeoutMs: 30000, maxResultKb: 8192 };
 interface HttpAuthRequest {
   connection: string;
   accountId?: string;
-  scheme: 'bearer' | 'basic' | 'header';
+  scheme: 'bearer' | 'basic' | 'header' | 'path';
   credentialKey?: string;
   header?: string;
+  placeholder?: string;
 }
 
 interface HttpFetchParams {
@@ -62,9 +63,15 @@ export class HttpHostService implements HostServiceModule {
     body: string | null;
     bodyBase64?: string;
   }> {
-    const url = new URL(params.url);
+    const url =
+      params.auth?.scheme === 'path'
+        ? await this.urlWithPathCredential(ctx, params.url, params.auth)
+        : new URL(params.url);
     await this.checkEgress(url, this.allowedHosts(ctx));
-    const authHeader = params.auth ? await this.buildAuthHeader(ctx, params.auth) : null;
+    const authHeader =
+      params.auth && params.auth.scheme !== 'path'
+        ? await this.buildAuthHeader(ctx, params.auth)
+        : null;
     const headers: Record<string, string> = { ...(params.headers ?? {}) };
     if (authHeader) {
       headers.authorization = authHeader.value;
@@ -106,10 +113,10 @@ export class HttpHostService implements HostServiceModule {
     return Array.isArray(hosts) ? hosts.map(String) : null;
   }
 
-  private async buildAuthHeader(
+  private async credentialsOf(
     ctx: HostCallContext,
     auth: HttpAuthRequest,
-  ): Promise<{ value: string }> {
+  ): Promise<Record<string, string>> {
     if (!this.engine.grantsCover(ctx.grants, 'accounts.use', { connections: [auth.connection] })) {
       throw new AddonError('permission_denied', {
         detail: `permission 'accounts.use' covering connection '${auth.connection}' is required for http.fetch auth`,
@@ -118,6 +125,14 @@ export class HttpHostService implements HostServiceModule {
     const rows = this.bindings.accountsFor(ctx.orgId, ctx.addonId, auth.connection);
     const accountId = resolveBoundAccountId(rows, auth.accountId);
     const { credentials } = await this.accounts.access(ctx.orgId, accountId);
+    return credentials;
+  }
+
+  private async buildAuthHeader(
+    ctx: HostCallContext,
+    auth: HttpAuthRequest,
+  ): Promise<{ value: string }> {
+    const credentials = await this.credentialsOf(ctx, auth);
     switch (auth.scheme) {
       case 'bearer':
         return { value: `Bearer ${pickCredential(credentials, auth.credentialKey ?? 'token')}` };
@@ -135,7 +150,28 @@ export class HttpHostService implements HostServiceModule {
         }
         return { value: pickCredential(credentials, auth.credentialKey ?? name) };
       }
+      case 'path':
+        throw new AddonError('invalid_params', {
+          detail: 'scheme path injects the credential into the URL and sends no header',
+        });
     }
+  }
+
+  private async urlWithPathCredential(
+    ctx: HostCallContext,
+    rawUrl: string,
+    auth: HttpAuthRequest,
+  ): Promise<URL> {
+    const placeholder = auth.placeholder ?? '{token}';
+    if (!rawUrl.includes(placeholder)) {
+      throw new AddonError('invalid_params', {
+        detail: `url does not contain the auth placeholder '${placeholder}'`,
+      });
+    }
+    const credentials = await this.credentialsOf(ctx, auth);
+    const credential = pickCredential(credentials, auth.credentialKey ?? 'token');
+    assertPathCredential(credential);
+    return new URL(rawUrl.replaceAll(placeholder, credential));
   }
 
   private async reportAuthFailure(
@@ -160,6 +196,16 @@ export class HttpHostService implements HostServiceModule {
         'failed to report auth failure to accounts',
       );
     }
+  }
+}
+
+const PATH_CREDENTIAL = /^[A-Za-z0-9._~:-]+$/;
+
+function assertPathCredential(value: string): void {
+  if (!PATH_CREDENTIAL.test(value)) {
+    throw new AddonError('invalid_params', {
+      detail: 'credential contains characters that are not safe in a URL path',
+    });
   }
 }
 

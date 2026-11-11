@@ -21,6 +21,8 @@ export interface AddonDb {
 
 export interface AddonSecrets {
   get(key: string): Promise<string | null>;
+  set(key: string, value: string): Promise<void>;
+  delete(key: string): Promise<void>;
 }
 
 export interface AddonConfig {
@@ -51,9 +53,10 @@ export interface AddonHttp {
     auth?: {
       connection: string;
       accountId?: string;
-      scheme: 'bearer' | 'basic' | 'header';
+      scheme: 'bearer' | 'basic' | 'header' | 'path';
       credentialKey?: string;
       header?: string;
+      placeholder?: string;
     };
   }): Promise<{
     status: number;
@@ -137,6 +140,10 @@ export interface AddonInboundAttachment {
   dataBase64?: string;
 }
 
+export interface AddonProgress {
+  progress(token: string, value: unknown): void;
+}
+
 export interface AddonBridge {
   inbound(message: {
     channel: string;
@@ -147,8 +154,16 @@ export interface AddonBridge {
   }): Promise<void>;
 }
 
+export interface AddonWorkerLease {
+  held: boolean;
+  epoch: number;
+  expiresAt: string | null;
+}
+
 export interface AddonWorkers {
   report(workerId: string, state: 'running' | 'stopped' | 'failed', code?: string): Promise<void>;
+  lease(workerId: string, ttlMs?: number): Promise<AddonWorkerLease>;
+  release(workerId: string): Promise<void>;
 }
 
 export interface AddonContext {
@@ -168,4 +183,5 @@ export interface AddonContext {
   readonly triggers: AddonTriggers;
   readonly bridge: AddonBridge;
   readonly workers: AddonWorkers;
+  readonly progress: AddonProgress;
 }

@@ -37,6 +37,10 @@ export abstract class AddonDbAccess {
 
 export abstract class AddonSecrets {
   abstract get(orgId: string, addonId: string, key: string): Promise<string | null>;
+
+  abstract set(orgId: string, addonId: string, key: string, value: string): Promise<void>;
+
+  abstract delete(orgId: string, addonId: string, key: string): Promise<void>;
 }
 
 export type LogLevelValue = 'debug' | 'info' | 'warn' | 'error';

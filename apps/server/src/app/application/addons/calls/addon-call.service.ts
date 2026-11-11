@@ -3,6 +3,7 @@ import type {
   HostRequestName,
   JsonObject,
   RouteHandleResult,
+  TransportAttachment,
   TransportMessage,
 } from '@harnesys/sdk';
 import { AddonException } from '../../../domain/addons/errors.ts';
@@ -16,6 +17,7 @@ import {
   type ToolCallResult,
   type TriggerStartParams,
 } from '../../../domain/addons/ports/addon-call.port.ts';
+import { AddonAttachmentSourcePort } from '../../../domain/addons/ports/attachment-source.port.ts';
 import type { InstanceSnapshot } from '../../../domain/addons/ports/instance-supervisor.port.ts';
 import { InstanceSupervisorPort } from '../../../domain/addons/ports/instance-supervisor.port.ts';
 import { AddonRpcPort } from '../addon-rpc.port.ts';
@@ -32,6 +34,7 @@ export class AddonCallService extends AddonCallPort {
   constructor(
     private readonly supervisor: InstanceSupervisorPort,
     private readonly rpc: AddonRpcPort,
+    private readonly attachmentSource: AddonAttachmentSourcePort,
   ) {
     super();
   }
@@ -115,7 +118,8 @@ export class AddonCallService extends AddonCallPort {
     message: TransportMessage,
     opts?: AddonCallOptions,
   ): Promise<{ messageId?: string }> {
-    const result = await this.request(orgId, addonId, 'transport.send', message, opts);
+    const resolved = await this.resolveAttachments(orgId, message);
+    const result = await this.request(orgId, addonId, 'transport.send', resolved, opts);
     return result && typeof result === 'object' ? (result as { messageId?: string }) : {};
   }
 
@@ -125,7 +129,8 @@ export class AddonCallService extends AddonCallPort {
     params: { messageId: string; message: TransportMessage },
     opts?: AddonCallOptions,
   ): Promise<void> {
-    await this.request(orgId, addonId, 'transport.edit', params, opts);
+    const message = await this.resolveAttachments(orgId, params.message);
+    await this.request(orgId, addonId, 'transport.edit', { ...params, message }, opts);
   }
 
   async transportTyping(
@@ -146,6 +151,32 @@ export class AddonCallService extends AddonCallPort {
   ): Promise<JsonObject> {
     const result = await this.request(orgId, addonId, method, params, opts);
     return result !== null && typeof result === 'object' ? (result as JsonObject) : {};
+  }
+
+  private async resolveAttachments(
+    orgId: string,
+    message: TransportMessage,
+  ): Promise<TransportMessage> {
+    const attachments = message.attachments;
+    if (attachments === undefined || attachments.length === 0) {
+      return message;
+    }
+    const resolved: TransportAttachment[] = [];
+    for (const attachment of attachments) {
+      if (attachment.path === undefined) {
+        resolved.push(attachment);
+        continue;
+      }
+      const file = await this.attachmentSource.read({ orgId, path: attachment.path });
+      resolved.push({
+        ...(attachment.id === undefined ? {} : { id: attachment.id }),
+        ...(attachment.kind === undefined ? {} : { kind: attachment.kind }),
+        name: attachment.name ?? file.name,
+        mimeType: attachment.mimeType ?? file.mediaType,
+        dataBase64: Buffer.from(file.bytes).toString('base64'),
+      });
+    }
+    return { ...message, attachments: resolved };
   }
 
   private async request(

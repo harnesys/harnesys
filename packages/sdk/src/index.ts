@@ -12,6 +12,7 @@ export {
   type AddonHttp,
   type AddonLog,
   type AddonLogLevel,
+  type AddonProgress,
   type AddonRuns,
   type AddonSecrets,
   type AddonThreads,

@@ -13,6 +13,14 @@ export class AddonSecretsAdapter extends AddonSecrets {
   override async get(orgId: string, addonId: string, key: string): Promise<string | null> {
     return await this.secrets.get(orgId, addonId, key);
   }
+
+  override async set(orgId: string, addonId: string, key: string, value: string): Promise<void> {
+    await this.secrets.set(orgId, addonId, key, value);
+  }
+
+  override async delete(orgId: string, addonId: string, key: string): Promise<void> {
+    await this.secrets.delete(orgId, addonId, key);
+  }
 }
 
 @Injectable()

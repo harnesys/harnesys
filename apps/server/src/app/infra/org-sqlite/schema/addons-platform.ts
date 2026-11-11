@@ -154,6 +154,22 @@ export const addonTransportOutboundTable = sqliteTable(
   }),
 );
 
+export const addonWorkerLeasesTable = sqliteTable(
+  'addon_worker_leases',
+  {
+    orgId: text('org_id').notNull(),
+    addonId: text('addon_id').notNull(),
+    workerId: text('worker_id').notNull(),
+    holderId: text('holder_id').notNull(),
+    epoch: integer('epoch').notNull().default(1),
+    expiresAt: text('expires_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.orgId, table.addonId, table.workerId] }),
+  }),
+);
+
 export type OrgAddonRowRecord = typeof orgAddonsTable.$inferSelect;
 export type OrgAddonInsert = typeof orgAddonsTable.$inferInsert;
 export type AddonBindingInsert = typeof addonBindingsTable.$inferInsert;

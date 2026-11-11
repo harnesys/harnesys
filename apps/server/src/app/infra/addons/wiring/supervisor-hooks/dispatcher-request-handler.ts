@@ -1,6 +1,13 @@
 import { Injectable } from '@harnesys/brix';
 import type { AddonErrorData } from '@harnesys/sdk';
-import { AddonError, decodeMessage, encodeMessage, errorResponse, response } from '@harnesys/sdk';
+import {
+  AddonError,
+  decodeMessage,
+  encodeMessage,
+  errorResponse,
+  ProgressNotificationSchema,
+  response,
+} from '@harnesys/sdk';
 import type { DispatchTarget } from '../../dispatcher/host-dispatcher.ts';
 import { HostDispatcher } from '../../dispatcher/host-dispatcher.ts';
 import { InstanceRegistry } from '../../supervisor/instance-registry.ts';
@@ -61,6 +68,13 @@ export class DispatcherRequestHandler implements SupervisorRequestHandler {
       correlationId: crypto.randomUUID(),
     };
     if (!('id' in message)) {
+      if (message.method === '$/progress') {
+        const parsed = ProgressNotificationSchema.safeParse(message.params);
+        if (parsed.success) {
+          this.eventForwarder.progress(orgId, addonId, parsed.data.token, parsed.data.value);
+        }
+        return null;
+      }
       await this.dispatcher.dispatch(target, message.method, message.params).catch(() => undefined);
       return null;
     }

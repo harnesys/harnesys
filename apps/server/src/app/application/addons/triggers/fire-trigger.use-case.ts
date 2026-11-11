@@ -25,6 +25,7 @@ export interface FireTriggerResult {
 interface FireTarget {
   agentId?: string;
   threadId?: string;
+  modeId?: string;
 }
 
 const NO_LIMITS: TriggerLimits = {};
@@ -78,6 +79,7 @@ export class FireTriggerUseCase {
       text: input.text,
       runKey: input.runKey,
       correlationId: input.correlationId,
+      ...(target.modeId === undefined ? {} : { mode: target.modeId }),
       ...(input.payload === undefined ? {} : { payload: input.payload }),
     });
     this.metrics.increment('addon.trigger.fire', {
