@@ -1,9 +1,10 @@
 import type { AddonPermissionRisk } from '@harnesys/contracts';
 import { useQueryClient } from '@tanstack/react-query';
+import { ShieldCheckIcon, ShieldIcon } from 'lucide-react';
 import { useState } from 'react';
 import { orgAddonDetailQueryKey, putOrgAddonGrants } from '@/shared/api/addons';
 import { Button } from '@/shared/ui/button';
-import { RowChip, RowItem, RowSection } from '@/shared/ui/capability-rows';
+import { Row, RowChip, RowItem, RowSection } from '@/shared/ui/capability-rows';
 import { SettingsErrorBanner } from '@/shared/ui/settings-kit';
 import { ConsentDialog } from '../consent-dialog';
 import { grantedIdsOf } from '../lib/grant-diff';
@@ -64,21 +65,32 @@ export function PermissionsSection({ orgId, detail }: SectionProps) {
         declared.map((permission) => {
           const isGranted = grantedIds.has(permission.id);
           return (
-            <div
+            <Row
               key={permission.id}
-              className="flex min-w-0 flex-col gap-0.5 px-1 py-0.5"
-              data-testid={`addon-permission-${permission.id}`}
-            >
-              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                <p className="truncate font-mono text-[12px] leading-snug">{permission.id}</p>
-                <RowChip tone={RISK_TONE[permission.risk]}>{permission.risk}</RowChip>
-                {permission.optional ? null : <RowChip>required</RowChip>}
-                <RowChip tone={isGranted ? 'ok' : 'neutral'}>
-                  {isGranted ? 'granted' : 'not granted'}
-                </RowChip>
-              </div>
-              <p className="text-[11px] text-muted-foreground leading-snug">{permission.reason}</p>
-            </div>
+              testId={`addon-permission-${permission.id}`}
+              icon={
+                isGranted ? (
+                  <ShieldCheckIcon className="text-status-ok" />
+                ) : (
+                  <ShieldIcon className="text-muted-foreground/60" />
+                )
+              }
+              title={permission.id}
+              chips={
+                <>
+                  <RowChip tone={RISK_TONE[permission.risk]}>{permission.risk}</RowChip>
+                  {permission.optional ? (
+                    <RowChip>optional</RowChip>
+                  ) : (
+                    <RowChip tone="info">required</RowChip>
+                  )}
+                  <RowChip tone={isGranted ? 'ok' : 'neutral'}>
+                    {isGranted ? 'granted' : 'not granted'}
+                  </RowChip>
+                </>
+              }
+              summary={permission.reason}
+            />
           );
         })
       )}

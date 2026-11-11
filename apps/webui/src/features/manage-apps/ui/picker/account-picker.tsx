@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { ConnectDialog } from '../connect/connect-dialog.tsx';
 
 interface AccountPickerProps {
@@ -50,24 +51,35 @@ export function AccountPicker({
 
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <select
-        className="h-8 min-w-0 flex-1 rounded-md border border-input bg-transparent px-2 text-sm"
-        value={value ?? ''}
-        onChange={(event) => onChange(event.target.value || null)}
-        data-testid="account-picker"
+      <Select
+        value={value ?? null}
+        onValueChange={(next) => onChange(typeof next === 'string' && next !== '' ? next : null)}
       >
-        <option value="">No account</option>
-        {accounts.map((account) => {
-          const eligible = usable(account);
-          const reason = account.status !== 'connected' ? account.status : 'missing scopes or kind';
-          return (
-            <option key={account.id} value={account.id} disabled={!eligible}>
-              {account.label}
-              {eligible ? '' : ` — ${reason}`}
-            </option>
-          );
-        })}
-      </select>
+        <SelectTrigger size="sm" className="min-w-0 flex-1" data-testid="account-picker">
+          <SelectValue placeholder="No account" />
+        </SelectTrigger>
+        <SelectContent align="start" className="min-w-(--select-width) max-w-72">
+          {accounts.length === 0 ? (
+            <p className="px-2 py-1.5 text-muted-foreground text-xs">No connected accounts</p>
+          ) : null}
+          {accounts.map((account) => {
+            const eligible = usable(account);
+            const reason =
+              account.status !== 'connected' ? account.status : 'missing scopes or kind';
+            return (
+              <SelectItem key={account.id} value={account.id} disabled={!eligible}>
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="truncate text-sm">{account.label}</span>
+                  <span className="truncate text-[11px] text-muted-foreground">
+                    {account.scopes.length > 0 ? account.scopes.join(' · ') : 'no scopes'}
+                    {eligible ? '' : ` — ${reason}`}
+                  </span>
+                </div>
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
       {allowCreate && soleKind ? (
         <Button type="button" size="sm" variant="outline" onClick={() => setCreatingKind(soleKind)}>
           Connect new
