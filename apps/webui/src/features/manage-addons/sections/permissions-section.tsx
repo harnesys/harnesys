@@ -16,7 +16,7 @@ const RISK_TONE: Record<AddonPermissionRisk, 'danger' | 'warn' | 'neutral'> = {
   low: 'neutral',
 };
 
-export function PermissionsSection({ orgId, detail }: SectionProps) {
+export function PermissionsSection({ orgId, detail, installed }: SectionProps) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [pending, setPending] = useState(false);
@@ -25,6 +25,7 @@ export function PermissionsSection({ orgId, detail }: SectionProps) {
   const declared = detail.permissions.declared;
   const granted = detail.permissions.granted;
   const grantedIds = grantedIdsOf(granted);
+  const grantedKey = [...grantedIds].sort().join('|');
 
   const saveGrants = async (grants: { id: string; scope?: Record<string, unknown> }[]) => {
     setPending(true);
@@ -44,19 +45,20 @@ export function PermissionsSection({ orgId, detail }: SectionProps) {
 
   return (
     <RowSection
-      label="Permissions"
+      label={installed ? 'Permissions' : 'Requested permissions'}
       count={declared.length}
       actions={
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={declared.length === 0}
-          onClick={() => setEditing(true)}
-          data-testid="addon-grants-edit"
-        >
-          Edit grants
-        </Button>
+        installed && declared.length > 0 ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setEditing(true)}
+            data-testid="addon-grants-edit"
+          >
+            Edit grants
+          </Button>
+        ) : undefined
       }
     >
       {declared.length === 0 ? (
@@ -84,9 +86,11 @@ export function PermissionsSection({ orgId, detail }: SectionProps) {
                   ) : (
                     <RowChip tone="info">required</RowChip>
                   )}
-                  <RowChip tone={isGranted ? 'ok' : 'neutral'}>
-                    {isGranted ? 'granted' : 'not granted'}
-                  </RowChip>
+                  {installed ? (
+                    <RowChip tone={isGranted ? 'ok' : 'neutral'}>
+                      {isGranted ? 'granted' : 'not granted'}
+                    </RowChip>
+                  ) : null}
                 </>
               }
               summary={permission.reason}
@@ -94,7 +98,8 @@ export function PermissionsSection({ orgId, detail }: SectionProps) {
           );
         })
       )}
-      {detail.permissions.diff.added.length > 0 || detail.permissions.diff.removed.length > 0 ? (
+      {installed &&
+      (detail.permissions.diff.added.length > 0 || detail.permissions.diff.removed.length > 0) ? (
         <div className="rounded-md border border-status-warn/40 bg-status-warn/10 px-3 py-2 text-xs">
           <p className="font-medium text-status-warn">Pending grant change</p>
           {detail.permissions.diff.added.length > 0 ? (
@@ -107,12 +112,13 @@ export function PermissionsSection({ orgId, detail }: SectionProps) {
       ) : null}
       {error ? <SettingsErrorBanner message={error} testId="addon-grants-error" /> : null}
       <ConsentDialog
-        key={`${detail.addonId}:${grantedIds.size}:${detail.version}`}
+        key={`${detail.addonId}:${grantedKey}:${detail.version}`}
         open={editing}
         onOpenChange={setEditing}
         title="Grant rights"
-        description="Choose which declared rights the add-on receives. Required rights cannot be declined."
+        description="Choose which declared rights the add-on receives in this organization. Required rights cannot be declined."
         permissions={declared}
+        initialGranted={[...grantedIds]}
         pending={pending}
         confirmLabel="Save grants"
         onConfirm={(grants) => void saveGrants(grants)}

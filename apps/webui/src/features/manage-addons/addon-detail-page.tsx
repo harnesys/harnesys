@@ -1,32 +1,39 @@
-import type { OrgAddonDetail } from '@harnesys/contracts';
+import type { AddonTrust, OrgAddonDetail, OrgAddonHealth } from '@harnesys/contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeftIcon, ChevronRightIcon, PuzzleIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { Fragment } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router';
-import {
-  orgAddonDataExportUrl,
-  orgAddonDetailQuery,
-  orgAddonDetailQueryKey,
-  orgAddonMetricsQuery,
-} from '@/shared/api/addons';
-import { apiUrl } from '@/shared/api/client';
+import { addonPackagesQuery } from '@/shared/api/addon-packages';
+import { orgAddonDetailQuery } from '@/shared/api/addons';
 import { studioPath } from '@/shared/config/routes';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { RowChip } from '@/shared/ui/capability-rows';
 import { Card } from '@/shared/ui/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/shared/ui/collapsible';
 import { SettingsErrorBanner, SettingsWarnBanner } from '@/shared/ui/settings-kit';
 import { StatusDot } from '@/shared/ui/status-dot';
 import { AddonLogPanel } from './addon-log-panel';
 import { AddonMark } from './addon-mark';
 import { AddonControls } from './detail-actions';
 import { KnowledgeSourcesSection } from './knowledge-sources-section';
+import {
+  ADDON_TRUST_LABEL,
+  activationLabel,
+  addonHealthLabel,
+  addonHealthTone,
+  runtimeProfileLabel,
+} from './lib/addon-labels';
+import { invalidateAddonScope } from './lib/addon-scope';
 import type { AddonBanner } from './lib/banners';
 import { deriveAddonBanners } from './lib/banners';
-import { addonHealthTone } from './lib/health-tone';
-import { defaultSectionEntries, viewSectionsFromDetail } from './lib/view-sections';
+import {
+  defaultSectionEntries,
+  isPreviewSection,
+  viewSectionsFromDetail,
+} from './lib/view-sections';
 import { renderSection } from './section-registry';
+import { DiagnosticsSection } from './sections/diagnostics-section';
 
 export function AddonDetailPage() {
   const { orgId, addonId } = useParams();
@@ -48,13 +55,13 @@ function AddonDetail({
 }) {
   const queryClient = useQueryClient();
   const detail = useQuery(orgAddonDetailQuery(orgId, addonId));
+  const packages = useQuery(addonPackagesQuery());
   const backPath = studioPath.settings(orgId, 'addons');
   const goBack = () => navigate(backPath);
 
   if (detail.isPending) {
     return (
       <DetailShell
-        orgId={orgId}
         onBack={goBack}
         testId="addon-detail-loading"
         body={<p className="px-6 py-8 text-muted-foreground text-sm">Loading add-on...</p>}
@@ -64,7 +71,6 @@ function AddonDetail({
   if (detail.isError) {
     return (
       <DetailShell
-        orgId={orgId}
         onBack={goBack}
         body={
           <div className="px-6 py-8">
@@ -80,39 +86,67 @@ function AddonDetail({
   }
 
   const value = detail.data;
-  const banners = deriveAddonBanners(value);
-  const entries = viewSectionsFromDetail(value) ?? defaultSectionEntries();
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: orgAddonDetailQueryKey(orgId, addonId) });
+  const installed = value.installed;
+  const installedPackages = packages.data?.items ?? [];
+  const trust =
+    (
+      installedPackages.find((pkg) => pkg.id === addonId && pkg.version === value.version) ??
+      installedPackages.find((pkg) => pkg.id === addonId)
+    )?.trust ?? null;
+  const banners = deriveAddonBanners(value, trust);
+  const entries = (viewSectionsFromDetail(value) ?? defaultSectionEntries()).filter(
+    (entry) => installed || isPreviewSection(entry),
+  );
+  const invalidate = () => void invalidateAddonScope(queryClient, orgId);
 
   return (
     <DetailShell
-      orgId={orgId}
       onBack={goBack}
+      title={value.title}
       body={
-        <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-8">
-          <AddonHero
-            detail={value}
-            controls={<AddonControls orgId={orgId} detail={value} onRemoved={goBack} />}
-          />
-          {banners.map((banner) => (
-            <AddonBannerBlock key={banner.id} banner={banner} />
-          ))}
-          {entries.map((entry, index) => (
-            <div
-              key={
-                entry.kind === 'known'
-                  ? `${entry.section.type}-${index}`
-                  : `${entry.sectionType}-${index}`
-              }
-              className="flex min-w-0 flex-col gap-1"
-            >
-              {renderSection(entry, { orgId, addonId, detail: value, onRefresh: invalidate })}
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-8">
+          <AddonHero detail={value} trust={trust}>
+            <AddonControls orgId={orgId} detail={value} onRemoved={goBack} />
+          </AddonHero>
+          {banners.length > 0 ? (
+            <div className="flex flex-col gap-3">
+              {banners.map((banner) => (
+                <AddonBannerBlock key={banner.id} banner={banner} />
+              ))}
             </div>
-          ))}
-          <KnowledgeSourcesSection orgId={orgId} addonId={addonId} detail={value} />
-          <DiagnosticsSection orgId={orgId} addonId={addonId} />
-          <AddonLogPanel orgId={orgId} addonId={addonId} />
+          ) : null}
+          <div className="flex min-w-0 flex-col">
+            {entries.map((entry, index) => (
+              <Fragment
+                key={
+                  entry.kind === 'known'
+                    ? `${entry.section.type}-${index}`
+                    : `${entry.sectionType}-${index}`
+                }
+              >
+                {renderSection(entry, {
+                  orgId,
+                  addonId,
+                  detail: value,
+                  installed,
+                  onRefresh: invalidate,
+                })}
+              </Fragment>
+            ))}
+            {installed ? (
+              <KnowledgeSourcesSection orgId={orgId} addonId={addonId} detail={value} />
+            ) : null}
+          </div>
+          {installed ? (
+            <div
+              className="flex min-w-0 flex-col gap-3 border-t pt-6"
+              data-testid="addon-operations"
+            >
+              <p className="font-heading font-medium text-sm">Operations</p>
+              <DiagnosticsSection orgId={orgId} addonId={addonId} />
+              <AddonLogPanel orgId={orgId} addonId={addonId} />
+            </div>
+          ) : null}
         </div>
       }
     />
@@ -120,14 +154,14 @@ function AddonDetail({
 }
 
 function DetailShell({
-  orgId,
   onBack,
   body,
+  title,
   testId,
 }: {
-  orgId: string;
   onBack: () => void;
   body: ReactNode;
+  title?: string;
   testId?: string;
 }) {
   return (
@@ -144,40 +178,53 @@ function DetailShell({
           data-testid="addon-detail-back"
         >
           <ArrowLeftIcon data-icon="inline-start" />
-          Back to settings
-        </Button>
-        <span className="flex items-center gap-1.5 text-muted-foreground text-sm">
-          <PuzzleIcon className="size-4" />
           Add-ons
+        </Button>
+        <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground/50" />
+        <span className="flex min-w-0 items-center gap-1.5 text-sm">
+          <PuzzleIcon className="size-4 shrink-0 text-muted-foreground" />
+          <span className="truncate font-medium">{title ?? 'Add-on'}</span>
         </span>
-        <span className="sr-only">{orgId}</span>
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto">{body}</div>
     </div>
   );
 }
 
-function AddonHero({ detail, controls }: { detail: OrgAddonDetail; controls?: ReactNode }) {
+function stateLabel(detail: OrgAddonDetail): string {
+  if (!detail.installed) {
+    return 'Not enabled';
+  }
+  return detail.enabled ? 'Enabled' : 'Disabled';
+}
+
+function AddonHero({
+  detail,
+  trust,
+  children,
+}: {
+  detail: OrgAddonDetail;
+  trust: AddonTrust | null;
+  children?: ReactNode;
+}) {
   return (
-    <Card className="gap-4 bg-popover p-5" data-testid="addon-detail-hero">
+    <Card className="gap-5 bg-popover p-5" data-testid="addon-detail-hero">
       <div className="flex items-start gap-4">
         <AddonMark size="lg" />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <h1 className="truncate font-heading font-medium text-xl">{detail.title}</h1>
-            {detail.enabled ? (
-              <Badge variant="secondary" data-testid="addon-state">
-                Enabled
-              </Badge>
-            ) : (
-              <Badge variant="outline">Not enabled</Badge>
-            )}
+            <Badge variant={detail.enabled ? 'secondary' : 'outline'} data-testid="addon-state">
+              {stateLabel(detail)}
+            </Badge>
+            {trust ? <Badge variant="outline">{ADDON_TRUST_LABEL[trust]}</Badge> : null}
           </div>
+          <p className="truncate font-mono text-[11px] text-muted-foreground">{detail.addonId}</p>
           {detail.description ? (
             <p className="line-clamp-2 text-[13px] text-muted-foreground">{detail.description}</p>
           ) : null}
         </div>
-        {controls ? <div className="shrink-0">{controls}</div> : null}
+        {detail.enabled ? <HealthValue health={detail.health} /> : null}
       </div>
       {detail.lastError ? (
         <p
@@ -188,7 +235,6 @@ function AddonHero({ detail, controls }: { detail: OrgAddonDetail; controls?: Re
         </p>
       ) : null}
       <div className="flex flex-wrap gap-x-10 gap-y-3 border-t pt-4">
-        <MetaItem label="Status" value={<StatusValue detail={detail} />} />
         <MetaItem
           label="Version"
           value={
@@ -200,21 +246,40 @@ function AddonHero({ detail, controls }: { detail: OrgAddonDetail; controls?: Re
             </span>
           }
         />
-        <MetaItem label="Runtime profile" value={detail.manifest.runtimeProfile} />
-        <MetaItem label="Activation" value={detail.manifest.activation} />
+        <MetaItem
+          label="Runtime profile"
+          value={runtimeProfileLabel(detail.manifest.runtimeProfile)}
+        />
+        <MetaItem label="Activation" value={activationLabel(detail.manifest.activation)} />
+        {detail.manifest.license ? (
+          <MetaItem label="License" value={detail.manifest.license} />
+        ) : null}
         {detail.manifest.homepage ? (
-          <MetaItem label="Homepage" value={detail.manifest.homepage} />
+          <MetaItem
+            label="Homepage"
+            value={
+              <a
+                className="inline-block max-w-64 truncate align-bottom text-primary underline-offset-4 hover:underline"
+                href={detail.manifest.homepage}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {detail.manifest.homepage}
+              </a>
+            }
+          />
         ) : null}
       </div>
+      {children}
     </Card>
   );
 }
 
-function StatusValue({ detail }: { detail: OrgAddonDetail }) {
+function HealthValue({ health }: { health: OrgAddonHealth }) {
   return (
-    <span className="flex items-center gap-2" data-testid="addon-health">
-      <StatusDot tone={addonHealthTone(detail.health)} label={detail.health} />
-      {detail.health}
+    <span className="flex shrink-0 items-center gap-1.5 text-[13px]" data-testid="addon-health">
+      <StatusDot tone={addonHealthTone(health)} label={addonHealthLabel(health)} />
+      {addonHealthLabel(health)}
     </span>
   );
 }
@@ -229,10 +294,38 @@ function MetaItem({ label, value }: { label: string; value: ReactNode }) {
 }
 
 function AddonBannerBlock({ banner }: { banner: AddonBanner }) {
+  const body = (
+    <>
+      {banner.detail ? <p className="text-xs leading-4">{banner.detail}</p> : null}
+      {banner.notes && banner.notes.length > 0 ? (
+        <ul className="flex list-disc flex-col gap-0.5 pl-4 text-xs leading-4">
+          {banner.notes.map((note) => (
+            <li key={note} className="wrap-anywhere">
+              {note}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </>
+  );
+
+  if (banner.tone === 'danger') {
+    return (
+      <SettingsErrorBanner
+        testId={`addon-banner-${banner.id}`}
+        message={
+          <div className="flex flex-col gap-1">
+            <p className="font-medium">{banner.title}</p>
+            {body}
+          </div>
+        }
+      />
+    );
+  }
   if (banner.tone === 'warning') {
     return (
       <SettingsWarnBanner title={banner.title} testId={`addon-banner-${banner.id}`}>
-        {banner.detail}
+        <div className="flex flex-col gap-1">{body}</div>
       </SettingsWarnBanner>
     );
   }
@@ -242,58 +335,8 @@ function AddonBannerBlock({ banner }: { banner: AddonBanner }) {
       className="flex flex-col gap-1 rounded-md border bg-muted/30 px-3 py-2"
       data-testid={`addon-banner-${banner.id}`}
     >
-      <p className="font-medium text-muted-foreground text-sm">{banner.title}</p>
-      {banner.detail ? <p className="text-xs leading-4">{banner.detail}</p> : null}
+      <p className="font-medium text-sm">{banner.title}</p>
+      {body}
     </div>
-  );
-}
-
-function DiagnosticsSection({ orgId, addonId }: { orgId: string; addonId: string }) {
-  const metrics = useQuery(orgAddonMetricsQuery(orgId, addonId));
-  const counters = metrics.data?.counters ?? [];
-  if (counters.length === 0) {
-    return (
-      <a
-        className="w-fit text-muted-foreground text-sm underline decoration-dotted"
-        href={apiUrl(orgAddonDataExportUrl(orgId, addonId))}
-        data-testid="addon-data-export"
-      >
-        Download add-on data
-      </a>
-    );
-  }
-  return (
-    <Collapsible className="mt-2 flex min-w-0 flex-col gap-1 border-border/40 border-t pt-2">
-      <CollapsibleTrigger
-        className="group flex w-full items-center gap-1.5 rounded-md px-1 py-1 font-medium text-[11px] text-muted-foreground uppercase tracking-wide hover:text-foreground"
-        data-testid="addon-diagnostics-toggle"
-      >
-        <ChevronRightIcon className="size-3.5 shrink-0 transition-transform group-data-[panel-open]:rotate-90" />
-        Diagnostics
-        <span className="font-mono font-normal normal-case tabular-nums">{counters.length}</span>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="flex min-w-0 flex-col gap-0.5 pt-1" data-testid="addon-metrics">
-          {counters.slice(0, 12).map((point) => (
-            <div
-              key={`${point.name}:${JSON.stringify(point.labels)}`}
-              className="flex min-w-0 items-baseline justify-between gap-3"
-            >
-              <span className="truncate font-mono text-[11px] text-muted-foreground">
-                {point.name}
-              </span>
-              <span className="shrink-0 font-mono text-[12px] tabular-nums">{point.value}</span>
-            </div>
-          ))}
-          <a
-            className="w-fit pt-1 text-muted-foreground text-sm underline decoration-dotted"
-            href={apiUrl(orgAddonDataExportUrl(orgId, addonId))}
-            data-testid="addon-data-export"
-          >
-            Download data
-          </a>
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
   );
 }

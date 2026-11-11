@@ -149,6 +149,16 @@ export function defaultSectionEntries(): SectionEntry[] {
   }));
 }
 
+const PREVIEW_SECTION_TYPES = new Set(['permissions', 'connections', 'markdown']);
+
+/**
+ * Sections that stay readable while the organization has no row for the add-on:
+ * they describe what enabling would do and never mutate state.
+ */
+export function isPreviewSection(entry: SectionEntry): boolean {
+  return entry.kind === 'known' && PREVIEW_SECTION_TYPES.has(entry.section.type);
+}
+
 function isKnownSectionType(sectionType: string): boolean {
   return KNOWN_SECTION_TYPES.some((type) => type === sectionType);
 }

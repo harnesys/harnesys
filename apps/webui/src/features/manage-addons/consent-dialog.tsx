@@ -18,6 +18,8 @@ export interface ConsentDialogProps {
   title: string;
   description?: string;
   permissions: AddonPermissionView[];
+  /** Right ids that are already granted; optional rights start checked. */
+  initialGranted?: readonly string[];
   /** Removed right ids shown when an update narrows the grant set. */
   removed?: string[];
   confirmLabel?: string;
@@ -32,6 +34,7 @@ export function ConsentDialog({
   title,
   description,
   permissions,
+  initialGranted = [],
   removed = [],
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
@@ -40,8 +43,8 @@ export function ConsentDialog({
 }: ConsentDialogProps) {
   const mandatory = permissions.filter((permission) => !permission.optional);
   const optional = permissions.filter((permission) => permission.optional);
-  // Least privilege: optional permissions start unchecked; only mandatory stay locked on.
-  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  // Least privilege: optional permissions start unchecked unless they are already granted.
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(initialGranted));
 
   if (!open) {
     return null;

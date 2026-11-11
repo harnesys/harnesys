@@ -42,10 +42,16 @@ export const AddonPermissionViewSchema = z.object({
 });
 export type AddonPermissionView = z.infer<typeof AddonPermissionViewSchema>;
 
+export const AddonActivationSchema = z.enum(['lazy', 'resident']);
+export type AddonActivation = z.infer<typeof AddonActivationSchema>;
+
+export const AddonRuntimeProfileSchema = z.enum(['trusted', 'restricted']);
+export type AddonRuntimeProfile = z.infer<typeof AddonRuntimeProfileSchema>;
+
 export const AddonManifestSummarySchema = z.object({
   platform: z.number().int().positive(),
-  activation: z.enum(['lazy', 'resident']),
-  runtimeProfile: z.enum(['trusted', 'restricted']),
+  activation: AddonActivationSchema,
+  runtimeProfile: AddonRuntimeProfileSchema,
   homepage: z.string().optional(),
   license: z.string().optional(),
   features: z.array(z.string()).default([]),
@@ -161,6 +167,8 @@ export const OrgAddonSummarySchema = z.object({
   description: z.string().default(''),
   icon: z.string().optional(),
   enabled: z.boolean().default(false),
+  /** True once the organization owns a row for this add-on (enabled or previously enabled). */
+  installed: z.boolean().default(false),
   health: OrgAddonHealthSchema.default('stopped'),
   lastError: z.string().nullable().default(null),
   compatibility: AddonCompatibilityViewSchema,

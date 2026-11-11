@@ -18,7 +18,7 @@ function accountTitle(account: AccountView | undefined, accountId: string): stri
   return account.label || account.externalAccountId || accountId;
 }
 
-export function ConnectionsSection({ orgId, detail, section }: SectionProps) {
+export function ConnectionsSection({ orgId, detail, section, installed }: SectionProps) {
   const queryClient = useQueryClient();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -98,27 +98,30 @@ export function ConnectionsSection({ orgId, detail, section }: SectionProps) {
                     {account && account.status !== 'connected' ? (
                       <RowChip tone="danger">{account.status}</RowChip>
                     ) : null}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={`Unbind ${accountTitle(account, accountId)}`}
-                      disabled={pendingId === connection.connectionId}
-                      onClick={() =>
-                        void saveBinding(
-                          connection.connectionId,
-                          connection.accountIds.filter((id) => id !== accountId),
-                        )
-                      }
-                    >
-                      <XIcon />
-                    </Button>
+                    {installed ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Unbind ${accountTitle(account, accountId)}`}
+                        disabled={pendingId === connection.connectionId}
+                        onClick={() =>
+                          void saveBinding(
+                            connection.connectionId,
+                            connection.accountIds.filter((id) => id !== accountId),
+                          )
+                        }
+                      >
+                        <XIcon />
+                      </Button>
+                    ) : null}
                   </div>
                 );
               })
             )}
           </div>
-          {connection.cardinality === 'many' || connection.accountIds.length === 0 ? (
+          {installed &&
+          (connection.cardinality === 'many' || connection.accountIds.length === 0) ? (
             <AccountPicker
               key={`${connection.connectionId}:${connection.accountIds.length}`}
               orgId={orgId}
@@ -141,7 +144,13 @@ export function ConnectionsSection({ orgId, detail, section }: SectionProps) {
         </div>
       ))}
       {connections.every((connection) => connection.accountIds.length === 0) ? (
-        <RowItem title="Bind accounts to let the add-on act on your behalf" />
+        <RowItem
+          title={
+            installed
+              ? 'Bind accounts to let the add-on act on your behalf'
+              : 'Enable the add-on to bind accounts for these connections'
+          }
+        />
       ) : null}
     </RowSection>
   );

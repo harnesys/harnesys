@@ -141,6 +141,7 @@ export function orgAddonSummaryOf(
       title: row.addonId,
       description: '',
       enabled: row.enabled,
+      installed: true,
       health: row.health,
       lastError: row.lastError,
       compatibility: { outcome: 'incompatible', reasons: ['package_missing'], skipped: [] },
@@ -158,6 +159,7 @@ export function orgAddonSummaryOf(
     description: l10nDescription(pkg),
     ...(pkg.manifest.icon === undefined ? {} : { icon: pkg.manifest.icon }),
     enabled: row.enabled,
+    installed: true,
     health: row.health,
     lastError: row.lastError,
     compatibility: compat,
@@ -191,6 +193,7 @@ export function orgAvailableDetailOf(input: {
     description: l10nDescription(pkg),
     ...(pkg.manifest.icon === undefined ? {} : { icon: pkg.manifest.icon }),
     enabled: false,
+    installed: false,
     health: 'stopped',
     lastError: null,
     compatibility: compat,
@@ -207,7 +210,7 @@ export function orgAvailableDetailOf(input: {
       granted: [],
       diff: { added: [], removed: [] },
     },
-    connections: [],
+    connections: connectionsViewOf(pkg, []),
     configValues: {},
   };
 }

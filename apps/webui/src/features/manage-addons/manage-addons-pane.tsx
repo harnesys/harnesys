@@ -40,7 +40,7 @@ import { toast } from '@/shared/ui/toast';
 import { AddonMark } from './addon-mark';
 import { ConsentDialog } from './consent-dialog';
 import { InstallAddonDialog } from './install-addon-dialog';
-import { addonHealthTone } from './lib/health-tone';
+import { ADDON_TRUST_LABEL, addonHealthLabel, addonHealthTone } from './lib/addon-labels';
 
 interface AddonCardModel {
   id: string;
@@ -318,16 +318,17 @@ function AddonTile({ card, pending, path, onEnable, onDisable }: AddonTileProps)
       </div>
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-border/40 border-t pt-2.5">
         <span className="flex min-w-0 flex-wrap items-center gap-2">
-          {org ? <StatusDot tone={addonHealthTone(org.health)} label={org.health} /> : null}
+          {org ? (
+            <StatusDot tone={addonHealthTone(org.health)} label={addonHealthLabel(org.health)} />
+          ) : null}
           <span className="font-mono text-[11px] text-muted-foreground">
             {org?.version ?? latest?.version ?? card.id}
           </span>
           {card.versions.length > 1 ? (
             <RowChip>{`${card.versions.length} versions`}</RowChip>
           ) : null}
-          {latest && latest.trust !== 'builtin' ? <RowChip>{latest.trust}</RowChip> : null}
-          {org && org.compatibility.outcome === 'needs_consent' ? (
-            <RowChip tone="warn">needs consent</RowChip>
+          {latest && latest.trust !== 'builtin' ? (
+            <RowChip>{ADDON_TRUST_LABEL[latest.trust]}</RowChip>
           ) : null}
           {org && org.compatibility.outcome === 'incompatible' ? (
             <RowChip tone="danger">incompatible</RowChip>

@@ -1,40 +1,26 @@
-import type { OrgAddonHealth } from '@harnesys/contracts';
-import { Badge } from '@/shared/ui/badge';
 import { RowField, RowSection } from '@/shared/ui/capability-rows';
-
 import type { SectionProps } from '../lib/section-props';
 
+/**
+ * Operational facts for an installed add-on. Identity, the pinned version and
+ * the last error live on the page hero, so they are not repeated here.
+ */
 export function StatusSection({ detail }: SectionProps) {
+  const compatibility = detail.compatibility.reasons;
+  const skipped = detail.compatibility.skipped.length;
+  const hasFacts = detail.updateAvailable !== null || compatibility.length > 0 || skipped > 0;
+  if (!hasFacts) {
+    return null;
+  }
   return (
-    <RowSection label="Status">
-      <RowField label="Pinned version" value={detail.version} />
-      <RowField
-        label="State"
-        value={
-          <span className="flex items-center gap-1.5">
-            <Badge variant={detail.enabled ? 'default' : 'outline'}>
-              {detail.enabled ? 'enabled' : 'disabled'}
-            </Badge>
-            <Badge variant={healthVariant(detail.health)}>{detail.health}</Badge>
-          </span>
-        }
-      />
-      <RowField label="Runtime profile" value={detail.manifest.runtimeProfile} />
-      <RowField label="Activation" value={detail.manifest.activation} />
+    <RowSection label="Runtime">
       {detail.updateAvailable ? (
         <RowField label="Update available" value={detail.updateAvailable} />
       ) : null}
-      {detail.lastError ? <RowField label="Last error" value={detail.lastError} /> : null}
-      {detail.compatibility.reasons.length > 0 ? (
-        <RowField label="Compatibility" value={detail.compatibility.reasons.join('; ')} />
+      {compatibility.length > 0 ? (
+        <RowField label="Compatibility" value={compatibility.join('; ')} />
       ) : null}
+      {skipped > 0 ? <RowField label="Skipped capabilities" value={String(skipped)} /> : null}
     </RowSection>
   );
-}
-
-function healthVariant(health: OrgAddonHealth): 'secondary' | 'destructive' | 'outline' {
-  if (health === 'quarantined' || health === 'failed') {
-    return 'destructive';
-  }
-  return health === 'running' ? 'secondary' : 'outline';
 }
