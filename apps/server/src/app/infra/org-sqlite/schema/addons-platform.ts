@@ -106,6 +106,54 @@ export const addonTransportBindingsTable = sqliteTable(
   }),
 );
 
+export const addonTransportSessionsTable = sqliteTable(
+  'addon_transport_sessions',
+  {
+    orgId: text('org_id').notNull(),
+    addonId: text('addon_id').notNull(),
+    provider: text('provider').notNull(),
+    externalChatId: text('external_chat_id').notNull(),
+    threadId: text('thread_id').notNull(),
+    runId: text('run_id').notNull(),
+    draft: text('draft').notNull().default(''),
+    lastSeq: integer('last_seq').notNull().default(0),
+    messageId: text('message_id'),
+    status: text('status').notNull().default('streaming'),
+    askId: text('ask_id'),
+    askOptionsJson: text('ask_options_json'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({
+      columns: [table.orgId, table.threadId, table.runId, table.addonId],
+    }),
+    openIdx: index('addon_transport_sessions_open').on(table.status, table.updatedAt),
+    chatIdx: index('addon_transport_sessions_chat').on(
+      table.orgId,
+      table.addonId,
+      table.externalChatId,
+    ),
+    statusCheck: check(
+      'addon_transport_sessions_status_check',
+      sql`${table.status} IN ('streaming', 'parked', 'closed')`,
+    ),
+  }),
+);
+
+export const addonTransportOutboundTable = sqliteTable(
+  'addon_transport_outbound',
+  {
+    orgId: text('org_id').notNull(),
+    addonId: text('addon_id').notNull(),
+    messageId: text('message_id').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.orgId, table.addonId, table.messageId] }),
+  }),
+);
+
 export type OrgAddonRowRecord = typeof orgAddonsTable.$inferSelect;
 export type OrgAddonInsert = typeof orgAddonsTable.$inferInsert;
 export type AddonBindingInsert = typeof addonBindingsTable.$inferInsert;

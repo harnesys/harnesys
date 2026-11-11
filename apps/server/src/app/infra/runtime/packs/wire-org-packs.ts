@@ -11,6 +11,7 @@ import type {
 import { createProcessJobRegistry } from 'harnesys';
 import type { AgentRecord } from '../../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
+import { PackRegistryPort } from '../../../domain/capabilities/pack-registry.port.ts';
 import { DeskEventsPort } from '../../../domain/desk/desk-events.port.ts';
 import { LspPort } from '../../../domain/lsp/lsp.port.ts';
 import { HostFsLayoutPort } from '../../../domain/machine/host-fs-layout.port.ts';
@@ -18,7 +19,7 @@ import { ModePresetRegistryPort } from '../../../domain/mode-presets/mode-preset
 import { PermissionRuleStorePort } from '../../../domain/permissions/permission-rule-store.port.ts';
 import { PlanEventsPort } from '../../../domain/plan/plan-events.port.ts';
 import { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-provider.port.ts';
-import { orgPackNames } from '../../../domain/runtime/org-pack-list.ts';
+import { isHostWired, orgPackNames } from '../../../domain/runtime/org-pack-list.ts';
 import { ScheduleRepositoryPort } from '../../../domain/schedule/schedule-repository.port.ts';
 import { SecretStorePort } from '../../../domain/secret/secret-store.port.ts';
 import { OrgSettingsPort } from '../../../domain/skills/org-settings.port.ts';
@@ -79,6 +80,7 @@ export interface WireOrgPacksDeps {
   createAgent?: (input: AgentCatalogCreateInput, scope: CapabilityScope) => Promise<AgentRecord>;
   plugins?: OrgPluginRuntimeSource;
   engineSnapshot?: HostEngineEntry[];
+  packRegistry?: PackRegistryPort;
 }
 
 export interface WireOrgPackFilter {
@@ -139,6 +141,7 @@ export function orgPackInputs(
     orgSettings: deps.orgSettings,
     mcpManage: deps.mcpManage,
     modes: deps.modes,
+    ...(deps.packRegistry !== undefined ? { packRegistry: deps.packRegistry } : {}),
   };
 }
 
@@ -210,7 +213,25 @@ export function wireOrgPacks(deps: WireOrgPacksDeps): WiredOrgPacks {
     return registration ? [registration] : [];
   }) as PackRegistration[];
 
-  return { registrations, jobs };
+  return { registrations: mergePackRegistry(registrations, deps.packRegistry), jobs };
+}
+
+/**
+ * Add-on tool packs are registered dynamically in the shared {@link PackRegistryPort}
+ * (`tool-pack` family), not by the host pack list. Merge them into the run-time set so
+ * an agent that grants an add-on pack actually receives its tools.
+ */
+function mergePackRegistry(
+  host: PackRegistration[],
+  registry: PackRegistryPort | undefined,
+): PackRegistration[] {
+  if (registry === undefined) {
+    return host;
+  }
+  const addons = registry
+    .registrations()
+    .filter((registration) => !isHostWired(registration.pack.name));
+  return [...host, ...addons];
 }
 
 export function wireOrgPackNames(deps: WireOrgPackFilter): string[] {

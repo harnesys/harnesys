@@ -8,4 +8,6 @@ export abstract class PackRegistryPort {
   abstract registrations(): PackRegistration[];
 
   abstract find(name: string): PackRegistration | undefined;
+
+  abstract revision(): number;
 }

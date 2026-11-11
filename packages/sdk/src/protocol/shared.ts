@@ -23,6 +23,11 @@ export interface TransportAttachment {
   mimeType?: string;
 }
 
+export interface TransportOption {
+  id: string;
+  label: string;
+}
+
 export interface TransportMessage {
   channel: string;
   text: string;
@@ -30,6 +35,7 @@ export interface TransportMessage {
   replyTo?: string;
   topic?: string;
   attachments?: TransportAttachment[];
+  options?: TransportOption[];
 }
 
 export const TransportAttachmentSchema = z.object({
@@ -40,6 +46,11 @@ export const TransportAttachmentSchema = z.object({
   mimeType: z.string().optional(),
 });
 
+export const TransportOptionSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+});
+
 export const TransportMessageSchema = z.object({
   channel: z.string().min(1),
   text: z.string(),
@@ -47,6 +58,7 @@ export const TransportMessageSchema = z.object({
   replyTo: z.string().optional(),
   topic: z.string().optional(),
   attachments: z.array(TransportAttachmentSchema).optional(),
+  options: z.array(TransportOptionSchema).optional(),
 });
 
 export const HttpAuthSchema = z.object({

@@ -34,6 +34,7 @@ import {
   TransportFamilyModule,
   TransportInboundService,
 } from '../transport/transport.family.ts';
+import { TransportAskRegistry } from '../transport/transport-ask.registry.ts';
 import { AddonTriggerCatalogContributor, TriggerFamilyModule } from '../trigger/trigger.family.ts';
 import { AddonViewRegistry, ViewFamilyModule } from '../view/view.family.ts';
 import {
@@ -108,6 +109,7 @@ export function buildFamilyBundle(): FamilyBundle {
   const transportInbound = new TransportInboundService(
     transportRegistry,
     new NoopBridgeInbound(),
+    new TransportAskRegistry(),
     logger,
   );
   const hookRouting = new AddonHookRoutingTable();

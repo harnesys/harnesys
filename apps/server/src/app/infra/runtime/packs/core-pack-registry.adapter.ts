@@ -7,6 +7,8 @@ import { CORE_PACKS } from './core-packs.ts';
 export class CorePackRegistryAdapter extends PackRegistryPort {
   private readonly byName = new Map<string, PackRegistration>();
 
+  private revisionCounter = 0;
+
   constructor() {
     super();
     for (const entry of CORE_PACKS) {
@@ -16,10 +18,13 @@ export class CorePackRegistryAdapter extends PackRegistryPort {
 
   override register(name: string, registration: PackRegistration): void {
     this.byName.set(name, registration);
+    this.revisionCounter += 1;
   }
 
   override unregister(name: string): void {
-    this.byName.delete(name);
+    if (this.byName.delete(name)) {
+      this.revisionCounter += 1;
+    }
   }
 
   override registrations(): PackRegistration[] {
@@ -28,5 +33,9 @@ export class CorePackRegistryAdapter extends PackRegistryPort {
 
   override find(name: string): PackRegistration | undefined {
     return this.byName.get(name);
+  }
+
+  override revision(): number {
+    return this.revisionCounter;
   }
 }

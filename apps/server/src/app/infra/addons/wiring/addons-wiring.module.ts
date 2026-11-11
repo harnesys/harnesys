@@ -85,6 +85,9 @@ import {
   TriggerFireSink,
   WorkerReportSink,
 } from '../services/sinks.ts';
+import { TransportSessionAsk } from '../sessions/transport-session.ask.ts';
+import { TransportSessionDrafts } from '../sessions/transport-session.drafts.ts';
+import { TransportSessionService } from '../sessions/transport-session.service.ts';
 import { AddonSourceModule } from '../source/addon-source.module.ts';
 import { AddonSecretService } from '../storage/addon-secret.service.ts';
 import { AddonStorageModule } from '../storage/storage.module.ts';
@@ -179,6 +182,9 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     AccountsChangedNotifySink,
     AddonEventForwarder,
     AddonsLifecycleService,
+    TransportSessionDrafts,
+    TransportSessionAsk,
+    TransportSessionService,
     DispatcherRequestHandler,
     ManifestPermissionProvider,
     ContributionHandlersValidator,
@@ -267,6 +273,9 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     TriggerFamilyModule,
     AddonRouteTable,
     TransportInboundService,
+    TransportSessionDrafts,
+    TransportSessionAsk,
+    TransportSessionService,
     HookDeliveryService,
     ConfigNotifier,
     AddonConfigReadModel,

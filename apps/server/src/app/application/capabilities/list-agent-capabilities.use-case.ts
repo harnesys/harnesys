@@ -13,7 +13,6 @@ import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { PackRegistryPort } from '../../domain/capabilities/pack-registry.port.ts';
 import type { LoadedOrgPlugin } from '../../domain/plugin/plugin-runtime.port.ts';
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
-import { isHostWired } from '../../domain/runtime/org-pack-list.ts';
 import { requireAgent } from '../agents/agent.helpers.ts';
 import { pluginHookBindings } from '../plugins/plugin-grant-gate.ts';
 import { listOrgPackCatalog } from './org-pack-catalog.ts';
@@ -147,18 +146,6 @@ function pushPackEntries(
     return;
   }
   const source = `pack:${pack.name}`;
-  if (!isHostWired(pack.name)) {
-    for (const tool of pack.tools) {
-      explain.push({
-        item: tool.name,
-        kind: 'tool',
-        source,
-        status: 'denied-by-universe',
-        reason: 'pack not wired by host',
-      });
-    }
-    return;
-  }
   const override = overrideOf(packs[pack.name]);
   for (const tool of pack.tools) {
     const disabled = override.disabledTools?.includes(tool.name) ?? false;

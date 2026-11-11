@@ -48,17 +48,24 @@ export class FakeLogger extends Logger {
 
 export class FakePackRegistry extends PackRegistryPort {
   readonly map = new Map<string, PackRegistration>();
+  private revisionCounter = 0;
   override register(name: string, registration: PackRegistration): void {
     this.map.set(name, registration);
+    this.revisionCounter += 1;
   }
   override unregister(name: string): void {
-    this.map.delete(name);
+    if (this.map.delete(name)) {
+      this.revisionCounter += 1;
+    }
   }
   override registrations(): PackRegistration[] {
     return [...this.map.values()];
   }
   override find(name: string): PackRegistration | undefined {
     return this.map.get(name);
+  }
+  override revision(): number {
+    return this.revisionCounter;
   }
 }
 

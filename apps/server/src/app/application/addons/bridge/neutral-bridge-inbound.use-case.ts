@@ -5,6 +5,7 @@ import {
 } from '../../../domain/addons/ports/addon-call.port.ts';
 import type { AddonTransportBindingRow } from '../../../domain/addons/ports/transport-binding-repository.port.ts';
 import { AddonTransportBindingRepositoryPort } from '../../../domain/addons/ports/transport-binding-repository.port.ts';
+import { AddonTransportSessionRepositoryPort } from '../../../domain/addons/ports/transport-session-repository.port.ts';
 import { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
 import { connectorOrigin, shouldEchoUser } from '../../../domain/connector/echo.ts';
 import { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
@@ -17,14 +18,12 @@ import {
 } from './bridge-inbound.port.ts';
 
 const TRANSPORT_CALL_TIMEOUT_MS = 30_000;
-const OUTBOUND_ECHO_MEMORY_LIMIT = 256;
 const NO_AGENT_NOTICE =
   'No agent is available in this workspace yet, so the message cannot be delivered.';
 
 @Injectable()
 export class NeutralBridgeInboundUseCase extends BridgeInboundPort {
   private readonly logger: Logger;
-  private readonly outboundMessageIds = new Map<string, Set<string>>();
 
   constructor(
     private readonly bindings: AddonTransportBindingRepositoryPort,
@@ -33,6 +32,7 @@ export class NeutralBridgeInboundUseCase extends BridgeInboundPort {
     private readonly createThread: CreateThreadUseCase,
     private readonly dispatch: RunDispatchPort,
     private readonly calls: AddonCallPort,
+    private readonly outbound: AddonTransportSessionRepositoryPort,
     @Inject(Logger) logger: Logger,
   ) {
     super();
@@ -63,20 +63,7 @@ export class NeutralBridgeInboundUseCase extends BridgeInboundPort {
     if (messageId === undefined) {
       return;
     }
-    const key = `${orgId}/${addonId}`;
-    let ids = this.outboundMessageIds.get(key);
-    if (ids === undefined) {
-      ids = new Set<string>();
-      this.outboundMessageIds.set(key, ids);
-    }
-    ids.add(messageId);
-    while (ids.size > OUTBOUND_ECHO_MEMORY_LIMIT) {
-      const oldest = ids.values().next().value;
-      if (oldest === undefined) {
-        break;
-      }
-      ids.delete(oldest);
-    }
+    this.outbound.rememberOutbound(orgId, addonId, messageId);
   }
 
   private isSelfEcho(request: BridgeInboundRequest): boolean {
@@ -84,8 +71,7 @@ export class NeutralBridgeInboundUseCase extends BridgeInboundPort {
     if (replyTo === undefined) {
       return false;
     }
-    const sent = this.outboundMessageIds.get(`${request.orgId}/${request.addonId}`);
-    const isSelf = sent?.has(replyTo) === true;
+    const isSelf = this.outbound.isOutbound(request.orgId, request.addonId, replyTo);
     // Domain echo contract: self-originated messages are never mirrored into the thread.
     const origin = isSelf ? connectorOrigin(request.addonId) : 'external';
     return !shouldEchoUser(origin, request.addonId);

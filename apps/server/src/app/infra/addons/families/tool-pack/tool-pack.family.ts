@@ -17,7 +17,6 @@ type ToolEntry = ToolDescriptor;
 const HANDLERS: readonly HandlerSpec[] = [handlerSpec('tools.call')];
 const DEFAULT_TOOL_TIMEOUT_MS = 60_000;
 const MAX_TOOL_TIMEOUT_MS = 600_000;
-const DEFAULT_MAX_RESULT_KB = 256;
 
 @Injectable()
 export class ToolPackFamilyModule implements FamilyModule<ToolPackSchema> {
@@ -92,11 +91,6 @@ export class ToolPackFamilyModule implements FamilyModule<ToolPackSchema> {
         create: () => ({
           tools: d.tools.map((tool) => this.buildTool(owner, d, tool)),
         }),
-      },
-      ports: {
-        resultLimits: Object.fromEntries(
-          d.tools.map((tool) => [tool.name, tool.maxResultKb ?? DEFAULT_MAX_RESULT_KB]),
-        ),
       },
     };
   }

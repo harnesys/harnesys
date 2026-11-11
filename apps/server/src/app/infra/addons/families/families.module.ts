@@ -33,6 +33,7 @@ import {
   TransportFamilyModule,
   TransportInboundService,
 } from './transport/transport.family.ts';
+import { TransportAskRegistry } from './transport/transport-ask.registry.ts';
 import { AddonTriggerCatalogContributor, TriggerFamilyModule } from './trigger/trigger.family.ts';
 import { TriggerFireService } from './trigger/trigger-fire.sink.ts';
 import { AddonViewRegistry, ViewFamilyModule } from './view/view.family.ts';
@@ -58,6 +59,7 @@ import {
     AddonRouteTable,
     AddonTransportRegistry,
     TransportInboundService,
+    TransportAskRegistry,
     AddonHookRoutingTable,
     HookDeliveryService,
     AddonContentRegistry,
@@ -112,6 +114,7 @@ import {
     AddonRouteTable,
     AddonTransportRegistry,
     TransportInboundService,
+    TransportAskRegistry,
     AddonHookRoutingTable,
     HookDeliveryService,
     AddonContentRegistry,

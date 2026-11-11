@@ -11,6 +11,7 @@ import { AddonCallPort } from '../../../../domain/addons/ports/addon-call.port.t
 import type { ChannelCapabilities } from '../../../../domain/connector/channel-capabilities.ts';
 import { l10nText } from '../shared.ts';
 import type { BridgeInboundInput, BridgeInboundSink } from '../sinks-reference.ts';
+import { TransportAskRegistry } from './transport-ask.registry.ts';
 
 type TransportSchema = z.infer<typeof TransportDescriptorSchema>;
 
@@ -90,6 +91,7 @@ export class TransportInboundService implements BridgeInboundSink {
   constructor(
     private readonly registry: AddonTransportRegistry,
     private readonly bridge: BridgeInboundPort,
+    private readonly asks: TransportAskRegistry,
     private readonly logger: Logger,
   ) {}
 
@@ -121,6 +123,16 @@ export class TransportInboundService implements BridgeInboundSink {
       }
       for (const input of pending) {
         try {
+          const answered = await this.asks.tryAnswer({
+            orgId: input.orgId,
+            addonId: input.addonId,
+            provider,
+            channel: input.message.channel,
+            text: input.message.text,
+          });
+          if (answered) {
+            continue;
+          }
           await this.bridge.execute({
             orgId: input.orgId,
             addonId: input.addonId,

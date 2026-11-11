@@ -47,13 +47,18 @@ through connections (see accounts-and-connections.md); they do not replace OAuth
 2. **Cancel a running run.** Resolved: `ctx.runs.cancel({ threadId, runId })` on the host
    service map (permission `runs.dispatch`, served by `CancelRunUseCase`). The connector's
    `/stop` flow is now portable.
-3. **Streaming run output back to a channel.** The connector streams run deltas to
-   Telegram (draft buffers, echo barriers, resume after restart). Addons get only
-   discrete events (`run.finished` etc.) and a non-streaming transport
-   (`capabilities.streaming` is always false). A chat addon can send final replies, not
-   live-typed ones.
-   → Needs run-delta events on the bus (subscribable via `events.subscribe`) and/or a
-     streaming transport capability.
+3. ~~**Streaming run output back to a channel.**~~ **Resolved in the host.**
+   `TransportSessionService` (`infra/addons/sessions/`) projects run deltas onto every
+   transport binding of a thread: `text-delta` frames buffer into a persisted draft,
+   flush every 1s or at 200 chars via `transport.send` then `transport.edit`, typing
+   follows the buffer, terminal events close with `[stopped]`/`[error]`, and open
+   sessions replay from the run event store after a restart. The echo barrier is now
+   persistent (`addon_transport_outbound`). HITL asks park the run, render the approval
+   options as a numbered list via `transport.send` with `message.options`, and route the
+   next numbered/labelled inbound text to `RespondRunUseCase` before the bridge sees it.
+   Channel-native streaming (`capabilities.streaming`) is still `false`; that is the
+   optional `transport.stream`/`transport.stream.ack` slice, not a blocker for chat
+   addons.
 4. **Identity linking** (`/link <code>` in Telegram). `ConfirmIdentityLinkUseCase` is
    core; addons have no surface to confirm identity links.
    → Needs a host-service method or keeping the flow in core.

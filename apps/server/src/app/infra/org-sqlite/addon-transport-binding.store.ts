@@ -28,6 +28,13 @@ export class AddonTransportBindingStore {
     return row ? toRow(row) : null;
   }
 
+  findByThread(orgId: string, threadId: string): AddonTransportBindingRow[] {
+    const rows = this.db
+      .query('SELECT * FROM addon_transport_bindings WHERE org_id = ? AND thread_id = ?')
+      .all(orgId, threadId) as AddonTransportBindingRecord[];
+    return rows.map(toRow);
+  }
+
   add(row: AddonTransportBindingRow): void {
     this.db
       .query(

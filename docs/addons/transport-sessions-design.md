@@ -1,6 +1,7 @@
 # Transport sessions: host-side projection of runs onto chat channels
 
-Status: design proposal, no code. Replaces per-addon reimplementations of the five
+Status: implemented as a host projection (`infra/addons/sessions/`), slices 1–6; the
+optional channel-native `transport.stream`/`ack` slice is not built. Replaces per-addon reimplementations of the five
 behaviors the legacy Telegram connector implements by hand: streaming run output
 (drafts), echo suppression, HITL ask routing, resume after restart, and run cancel
 via channel command.

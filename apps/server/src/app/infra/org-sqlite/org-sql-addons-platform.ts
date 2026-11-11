@@ -79,6 +79,41 @@ CREATE TABLE IF NOT EXISTS addon_transport_bindings (
 );
 `;
 
+export const CREATE_ADDON_TRANSPORT_SESSIONS_SQL = `
+CREATE TABLE IF NOT EXISTS addon_transport_sessions (
+  org_id           TEXT NOT NULL,
+  addon_id         TEXT NOT NULL,
+  provider         TEXT NOT NULL,
+  external_chat_id TEXT NOT NULL,
+  thread_id        TEXT NOT NULL,
+  run_id           TEXT NOT NULL,
+  draft            TEXT NOT NULL DEFAULT '',
+  last_seq         INTEGER NOT NULL DEFAULT 0,
+  message_id       TEXT,
+  status           TEXT NOT NULL DEFAULT 'streaming'
+                   CHECK(status IN ('streaming','parked','closed')),
+  ask_id           TEXT,
+  ask_options_json TEXT,
+  created_at       TEXT NOT NULL,
+  updated_at       TEXT NOT NULL,
+  PRIMARY KEY (org_id, thread_id, run_id, addon_id)
+);
+CREATE INDEX IF NOT EXISTS addon_transport_sessions_open
+  ON addon_transport_sessions (status, updated_at);
+CREATE INDEX IF NOT EXISTS addon_transport_sessions_chat
+  ON addon_transport_sessions (org_id, addon_id, external_chat_id);
+`;
+
+export const CREATE_ADDON_TRANSPORT_OUTBOUND_SQL = `
+CREATE TABLE IF NOT EXISTS addon_transport_outbound (
+  org_id     TEXT NOT NULL,
+  addon_id   TEXT NOT NULL,
+  message_id TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (org_id, addon_id, message_id)
+);
+`;
+
 export function ensureAddonsPlatformSchema(exec: (sql: string) => void): void {
   exec(CREATE_ORG_ADDONS_SQL);
   exec(CREATE_ADDON_BINDINGS_SQL);
@@ -86,4 +121,6 @@ export function ensureAddonsPlatformSchema(exec: (sql: string) => void): void {
   exec(CREATE_ADDON_TRIGGER_FIRES_SQL);
   exec(CREATE_ADDON_JOB_STATE_SQL);
   exec(CREATE_ADDON_TRANSPORT_BINDINGS_SQL);
+  exec(CREATE_ADDON_TRANSPORT_SESSIONS_SQL);
+  exec(CREATE_ADDON_TRANSPORT_OUTBOUND_SQL);
 }
