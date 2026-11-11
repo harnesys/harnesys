@@ -168,13 +168,13 @@ describe('family modules conformance', () => {
       tools?: Array<{ name: string; sideEffect?: string }>;
     };
     expect(tools.tools?.map((tool) => tool.name)).toEqual([
-      'acme.test.create_issue',
-      'acme.test.list_repos',
+      'acme_test_create_issue',
+      'acme_test_list_repos',
     ]);
-    expect(tools.tools?.find((tool) => tool.name === 'acme.test.create_issue')?.sideEffect).toBe(
+    expect(tools.tools?.find((tool) => tool.name === 'acme_test_create_issue')?.sideEffect).toBe(
       'destructive',
     );
-    expect(tools.tools?.find((tool) => tool.name === 'acme.test.list_repos')?.sideEffect).toBe(
+    expect(tools.tools?.find((tool) => tool.name === 'acme_test_list_repos')?.sideEffect).toBe(
       'read',
     );
     disposable.dispose();

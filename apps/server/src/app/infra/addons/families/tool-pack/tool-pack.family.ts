@@ -18,6 +18,18 @@ const HANDLERS: readonly HandlerSpec[] = [handlerSpec('tools.call')];
 const DEFAULT_TOOL_TIMEOUT_MS = 60_000;
 const MAX_TOOL_TIMEOUT_MS = 600_000;
 
+/**
+ * LLM providers accept only `[a-zA-Z0-9_-]` in function names (Nvidia rejects dots
+ * outright), while add-on ids are dot-namespaced. The agent-facing tool name is the
+ * add-on id joined to the descriptor tool name with every unsafe character collapsed
+ * to `_`; the add-on call still uses the original descriptor name.
+ */
+const UNSAFE_TOOL_NAME_CHAR = /[^a-zA-Z0-9_-]/g;
+
+function exposedToolName(addonId: string, toolName: string): string {
+  return `${addonId}.${toolName}`.replace(UNSAFE_TOOL_NAME_CHAR, '_');
+}
+
 @Injectable()
 export class ToolPackFamilyModule implements FamilyModule<ToolPackSchema> {
   readonly family = 'tool-pack';
@@ -82,7 +94,7 @@ export class ToolPackFamilyModule implements FamilyModule<ToolPackSchema> {
         icon: d.icon,
         meta: {
           tools: d.tools.map((tool) => ({
-            name: `${owner.addonId}.${tool.name}`,
+            name: exposedToolName(owner.addonId, tool.name),
             description: l10nText(tool.description),
           })),
           skills: d.skills ?? [],
@@ -97,7 +109,7 @@ export class ToolPackFamilyModule implements FamilyModule<ToolPackSchema> {
 
   private buildTool(owner: OwnerKey, d: ToolPackSchema, tool: ToolEntry) {
     return {
-      name: `${owner.addonId}.${tool.name}`,
+      name: exposedToolName(owner.addonId, tool.name),
       description: l10nText(tool.description),
       input: tool.inputSchema as JsonSchema,
       sideEffect: tool.effect,

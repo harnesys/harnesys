@@ -37,6 +37,11 @@ handlers:
 
 Registers agent tools. Pack id becomes `<addonId>.<name>`.
 
+The agent-facing tool name is `<addonId>.<tool name>` with every character outside
+`[a-zA-Z0-9_-]` replaced by `_`, because LLM providers reject dots in function names:
+add-on `harnesys.google-calendar`, tool `create_event` → `harnesys_google-calendar_create_event`.
+The add-on call still uses the original descriptor `name`.
+
 ```json
 {
   "id": "pack", "family": "tool-pack",
