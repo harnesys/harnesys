@@ -48,6 +48,8 @@ export const KNOWN_PERMISSION_IDS = [
   'runs.dispatch',
   'threads.create',
   'events.subscribe',
+  'files.read',
+  'files.write',
   'bridge.inbound',
   'routes.public',
   'lifecycle.resident',

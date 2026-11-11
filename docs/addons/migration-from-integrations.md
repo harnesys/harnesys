@@ -75,6 +75,13 @@ through connections (see accounts-and-connections.md); they do not replace OAuth
 9. **External install sources** (URL/registry) are disabled until signature
    verification exists; distribution is monorepo builtins + manual home-catalog
    placement (or path install).
+10. ~~**File access for add-ons.**~~ **Resolved.** `ctx.files` (`files.stat`,
+    `files.read`, `files.write`; permissions `files.read` / `files.write`) exposes the
+    organization workspace through the shared host path guard
+    (`harnesys/file-access`: canonicalization, escape rejection, host blocklist).
+    Gmail attachments are written into the workspace and YouTube uploads read video and
+    thumbnail files from it. Attaching a file to a chat message (thread attachments)
+    remains core-only: add-ons can produce workspace files, not chat attachments.
 
 ## Recommended migration order
 

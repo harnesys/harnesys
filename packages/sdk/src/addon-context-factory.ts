@@ -3,6 +3,7 @@ import type {
   AddonContext,
   AddonDb,
   AddonEvents,
+  AddonFiles,
   AddonHttp,
   AddonLog,
   AddonLogLevel,
@@ -21,6 +22,10 @@ export type {
   AddonContext,
   AddonDb,
   AddonEvents,
+  AddonFileChunk,
+  AddonFileStat,
+  AddonFiles,
+  AddonFileWriteResult,
   AddonHttp,
   AddonLog,
   AddonLogLevel,
@@ -109,6 +114,11 @@ export function createAddonContext(
     fetch: async (params) =>
       client['http.fetch']({ ...params, method: params.method ?? 'GET' }, { signal }),
   };
+  const files: AddonFiles = {
+    stat: async (path: string) => client['files.stat']({ path }, { signal }),
+    read: async (params) => client['files.read'](params, { signal }),
+    write: async (params) => client['files.write'](params, { signal }),
+  };
   const accounts = {
     list: async (connection: string) => {
       const result = await client['accounts.list']({ connection }, { signal });
@@ -131,6 +141,7 @@ export function createAddonContext(
     log,
     events,
     http,
+    files,
     accounts,
     runs: {
       dispatch: async (params) => client['runs.dispatch'](params, { signal }),

@@ -48,6 +48,7 @@ export interface FakeHostOptions {
   secrets?: Record<string, string>;
   accounts?: FakeAccount[];
   http?: FakeHttpHandler;
+  files?: Record<string, string>;
   grants?: FakeGrant[];
   now?(): number;
 }
@@ -62,6 +63,8 @@ export interface FakeHost {
   accountReports: Array<{ connection: string; accountId?: string; code: string }>;
   workerReports: Array<{ workerId: string; state: string; code?: string }>;
   inboundMessages: Array<{ channel: string; from?: string; text: string; payload?: unknown }>;
+  fileWrites: Array<{ path: string; size: number }>;
+  files: Record<string, string>;
   progress: Array<{ token: string; value: unknown }>;
   now(): number;
   advanceTime(ms: number): void;
@@ -119,8 +122,17 @@ export function createFakeHost(options: FakeHostOptions): FakeHost {
       text: string;
       payload?: unknown;
     }>,
+    fileWrites: [] as Array<{ path: string; size: number }>,
   };
-  const services = createFakeServices({ manifest, options, db, sinks, startedTriggers, firedKeys });
+  const files: Record<string, string> = options.files ?? {};
+  const services = createFakeServices({
+    manifest,
+    options: { ...options, files },
+    db,
+    sinks,
+    startedTriggers,
+    firedKeys,
+  });
   const fakeChannel: HostChannel = {
     request(method: string, params: unknown): Promise<unknown> {
       return dispatchAddonToHost(method, params);
@@ -148,6 +160,8 @@ export function createFakeHost(options: FakeHostOptions): FakeHost {
     accountReports: sinks.accountReports,
     workerReports: sinks.workerReports,
     inboundMessages: sinks.inboundMessages,
+    fileWrites: sinks.fileWrites,
+    files,
     progress,
     now,
     advanceTime(ms: number) {

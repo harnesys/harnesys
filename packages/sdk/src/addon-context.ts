@@ -63,6 +63,32 @@ export interface AddonHttp {
   }>;
 }
 
+export interface AddonFileStat {
+  path: string;
+  name: string;
+  size: number;
+  mediaType: string;
+  modifiedAt: string;
+}
+
+export interface AddonFileChunk {
+  data: string;
+  eof: boolean;
+  size: number;
+  mediaType: string;
+}
+
+export interface AddonFileWriteResult {
+  path: string;
+  size: number;
+}
+
+export interface AddonFiles {
+  stat(path: string): Promise<AddonFileStat>;
+  read(params: { path: string; offset?: number; length?: number }): Promise<AddonFileChunk>;
+  write(params: { path: string; data: string; append?: boolean }): Promise<AddonFileWriteResult>;
+}
+
 export interface AddonAccounts {
   list(
     connection: string,
@@ -120,6 +146,7 @@ export interface AddonContext {
   readonly log: AddonLog;
   readonly events: AddonEvents;
   readonly http: AddonHttp;
+  readonly files: AddonFiles;
   readonly accounts: AddonAccounts;
   readonly runs: AddonRuns;
   readonly threads: AddonThreads;

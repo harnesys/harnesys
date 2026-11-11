@@ -66,6 +66,14 @@ A fresh context is built per call. Fields:
   connection credentials host-side: `{ connection, accountId?, scheme: 'bearer' | 'basic' | 'header', credentialKey?, header? }` — the add-on never sees raw credentials.
   Use `responseEncoding: 'base64'` (and `bodyBase64` for the request body) for binary payloads;
   the default is text decoding, and responses are capped at 8 MiB.
+- `ctx.files` — organization workspace files. `stat(path)` → `{ path, name, size, mediaType,
+  modifiedAt }`; `read({ path, offset?, length? })` → `{ data, eof, size, mediaType }` with
+  base64 data and 4 MiB per call; `write({ path, data, append? })` → `{ path, size }` with
+  base64 data capped at 4 MiB per call (parent directories are created). Paths are relative
+  to the organization workspace root (`~/.harnesys/data/orgs/<orgId>/workspace`); absolute
+  paths are accepted only inside it. The host canonicalizes the path, rejects escapes and
+  enforces the host path blocklist (`.env`, `.ssh`, `.git`, `node_modules`, ...). Permissions:
+  `files.read` for stat/read, `files.write` for write. Chunk large files instead of one call.
 - `ctx.accounts.list(connection)` — bound accounts (label, externalAccountId, status);
   `ctx.accounts.report(connection, code, accountId?)` — report account errors
   (`account_failed` etc.); `ctx.accounts.access(connection, accountId?)` — raw
@@ -83,7 +91,8 @@ A fresh context is built per call. Fields:
 - `ctx.workers.report(workerId, state, code?)` — worker state (permission `worker`).
 
 Not available: clock (use `ctx.meta.deadline` + `ctx.signal`), metrics (host-side
-read-model), secrets/config writes, HITL approvals, progress notifications.
+read-model), secrets/config writes, HITL approvals, progress notifications, chat thread
+attachments (add-ons produce workspace files instead).
 
 ## Error model
 

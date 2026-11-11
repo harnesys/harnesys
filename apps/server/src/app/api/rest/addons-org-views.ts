@@ -14,6 +14,7 @@ import type { InstalledAddonPackage } from '../../domain/addons/ports/addon-pack
 import type { AddonBindingRow } from '../../domain/addons/ports/binding-repository.port.ts';
 import type { OrgAddonRow } from '../../domain/addons/ports/org-addon-repository.port.ts';
 import type { PermissionDefinitionsPort } from '../../domain/addons/ports/permission-definitions.port.ts';
+import { capabilitiesViewOf } from './addon-capabilities-view.ts';
 
 export interface AddonViewDeps {
   readonly definitions: PermissionDefinitionsPort;
@@ -205,6 +206,7 @@ export function orgAvailableDetailOf(input: {
       family: contribution.family,
       optional: contribution.optional ?? false,
     })),
+    capabilities: capabilitiesViewOf(pkg),
     permissions: {
       declared: declaredPermissionsOf(deps, pkg, []),
       granted: [],
@@ -229,6 +231,7 @@ export function orgAddonDetailOf(input: AddonDetailInput): OrgAddonDetail {
         features: [],
       },
       contributions: [],
+      capabilities: [],
       permissions: { declared: [], granted: grants, diff: { added: [], removed: [] } },
       connections: [],
       configValues,
@@ -242,6 +245,7 @@ export function orgAddonDetailOf(input: AddonDetailInput): OrgAddonDetail {
       family: contribution.family,
       optional: contribution.optional ?? false,
     })),
+    capabilities: capabilitiesViewOf(pkg),
     permissions: {
       declared: declaredPermissionsOf(deps, pkg, grants),
       granted: grants,

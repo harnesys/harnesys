@@ -20,6 +20,8 @@ unknown ids fail manifest validation.
 | `http.fetch` | medium | `{ hosts: string[] }` with `*.host` / `*` wildcards | `ctx.http.fetch` (egress allow-list) |
 | `accounts.use` | medium | `{ connections: string[] }` | `ctx.accounts.list`, `ctx.accounts.report` |
 | `accounts.credentials` | high | — | `ctx.accounts.access` (raw credentials; audited) |
+| `files.read` | medium | — | `ctx.files.stat`, `ctx.files.read` (organization workspace only) |
+| `files.write` | high | — | `ctx.files.write` (organization workspace only) |
 | `events.subscribe` | low | `{ patterns: string[] }` | `hook` family event subscriptions |
 | `bridge.inbound` | medium | — | `ctx.bridge.inbound` |
 | `runs.dispatch` | medium | — | `ctx.runs.dispatch` |

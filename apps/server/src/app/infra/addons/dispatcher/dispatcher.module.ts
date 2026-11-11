@@ -13,6 +13,7 @@ import { BridgeHostService } from '../services/bridge/bridge-service.ts';
 import { ConfigHostService } from '../services/config/config-service.ts';
 import { DbHostService } from '../services/db/db-service.ts';
 import { EventsHostService } from '../services/events/events-service.ts';
+import { FilesHostService } from '../services/files/files-service.ts';
 import { AddonHttpFetchPort, SystemAddonFetch } from '../services/http/addon-fetch.port.ts';
 import { HttpHostService } from '../services/http/http-service.ts';
 import { HostServicesIndex } from '../services/index.ts';
@@ -53,6 +54,7 @@ import { PermissionEngine } from './permission-engine.ts';
     LogHostService,
     EventsHostService,
     HttpHostService,
+    FilesHostService,
     AccountsHostService,
     RunsHostService,
     TriggersHostService,

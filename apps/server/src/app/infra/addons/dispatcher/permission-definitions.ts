@@ -140,6 +140,8 @@ export const PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
   simple('threads.create', 'medium', 'Create conversation threads'),
   eventsSubscribeDefinition,
   simple('bridge.inbound', 'medium', 'Deliver inbound chat messages from the transport'),
+  simple('files.read', 'medium', 'Read files in the organization workspace'),
+  simple('files.write', 'high', 'Write files in the organization workspace'),
   simple('routes.public', 'high', 'Expose public HTTP routes without org authentication'),
   simple('lifecycle.resident', 'medium', 'Keep a resident process'),
   simple('trigger', 'medium', 'Run trigger instances and fire automation runs'),

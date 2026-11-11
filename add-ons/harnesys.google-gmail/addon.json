@@ -1,0 +1,145 @@
+{
+  "id": "harnesys.google-gmail",
+  "version": "1.0.0",
+  "platform": 1,
+  "title": "Gmail",
+  "description": "Search and read Gmail messages and threads, send mail, and save attachments into the organization workspace. The add-on calls the Gmail API; the token is injected by the host and never enters the add-on process.",
+  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "activation": "lazy",
+  "permissions": [
+    {
+      "id": "http.fetch",
+      "scope": { "hosts": ["www.googleapis.com"] },
+      "reason": "Call the Gmail API with the bound account"
+    },
+    {
+      "id": "accounts.use",
+      "scope": { "connections": ["google"] },
+      "reason": "Use the Google account bound to the mail connection"
+    },
+    {
+      "id": "files.write",
+      "reason": "Save downloaded attachments into the organization workspace"
+    }
+  ],
+  "connections": [
+    {
+      "id": "google",
+      "label": "Google account",
+      "accountKinds": ["google-account"],
+      "scopes": ["gmail-readonly", "gmail-send"],
+      "cardinality": "many"
+    }
+  ],
+  "contributions": [
+    {
+      "id": "pack",
+      "family": "tool-pack",
+      "descriptor": {
+        "name": "gmail",
+        "title": "Gmail tools",
+        "description": "Search and read Gmail, send mail, and save attachments to the workspace",
+        "connection": "google",
+        "tools": [
+          {
+            "name": "search_messages",
+            "description": "Search Gmail with the Gmail search syntax (e.g. \"from:alice is:unread newer_than:7d\"). Returns id, threadId, snippet, subject, from and date per match.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "query": { "type": "string", "description": "Gmail search query" },
+                "maxResults": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 25,
+                  "description": "Maximum number of messages to return (default 10)"
+                },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              },
+              "required": ["query"]
+            }
+          },
+          {
+            "name": "read_message",
+            "description": "Read one Gmail message: headers (from/to/cc/subject/date), the text/plain body, and the attachment list with attachmentId, filename, mimeType and size.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "messageId": { "type": "string", "description": "Message id from search_messages" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              },
+              "required": ["messageId"]
+            }
+          },
+          {
+            "name": "read_thread",
+            "description": "Read a Gmail thread: every message in order with headers, text/plain bodies and attachment lists.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "threadId": { "type": "string", "description": "Thread id from search_messages" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              },
+              "required": ["threadId"]
+            }
+          },
+          {
+            "name": "send_message",
+            "description": "Send a plain-text email from the bound account. to and cc accept one address or several comma-separated addresses.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "to": { "type": "string", "description": "Recipient address or comma-separated addresses" },
+                "subject": { "type": "string", "description": "Subject line" },
+                "body": { "type": "string", "description": "Plain-text body" },
+                "cc": { "type": "string", "description": "Cc address or comma-separated addresses" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              },
+              "required": ["to", "subject", "body"]
+            }
+          },
+          {
+            "name": "save_attachment",
+            "description": "Download a Gmail attachment into the organization workspace. Get messageId and attachmentId from the attachments list of read_message or read_thread. Files up to 6 MB are supported.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "messageId": { "type": "string", "description": "Message id from search_messages" },
+                "attachmentId": { "type": "string", "description": "attachmentId from the attachments list" },
+                "path": {
+                  "type": "string",
+                  "description": "Workspace-relative destination path, e.g. inbox/invoice.pdf"
+                },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              },
+              "required": ["messageId", "attachmentId", "path"]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

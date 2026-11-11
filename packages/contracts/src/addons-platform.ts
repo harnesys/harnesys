@@ -65,6 +65,28 @@ export const AddonContributionViewSchema = z.object({
 });
 export type AddonContributionView = z.infer<typeof AddonContributionViewSchema>;
 
+export const AddonCapabilityEffectSchema = z.enum(['read', 'write', 'destructive']);
+export type AddonCapabilityEffect = z.infer<typeof AddonCapabilityEffectSchema>;
+
+export const AddonCapabilityItemSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().default(''),
+  effect: AddonCapabilityEffectSchema.optional(),
+});
+export type AddonCapabilityItem = z.infer<typeof AddonCapabilityItemSchema>;
+
+/** One declared contribution of the package, normalized for display. */
+export const AddonCapabilityViewSchema = z.object({
+  family: AddonPlatformFamilySchema,
+  id: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().default(''),
+  optional: z.boolean().default(false),
+  items: z.array(AddonCapabilityItemSchema).default([]),
+});
+export type AddonCapabilityView = z.infer<typeof AddonCapabilityViewSchema>;
+
 export const AddonConnectionViewSchema = z.object({
   connectionId: z.string().min(1),
   label: z.string().min(1),
@@ -180,6 +202,7 @@ export type OrgAddonSummary = z.infer<typeof OrgAddonSummarySchema>;
 export const OrgAddonDetailSchema = OrgAddonSummarySchema.extend({
   manifest: AddonManifestSummarySchema,
   contributions: z.array(AddonContributionViewSchema).default([]),
+  capabilities: z.array(AddonCapabilityViewSchema).default([]),
   permissions: z.object({
     declared: z.array(AddonPermissionViewSchema).default([]),
     granted: z.array(AddonGrantEntrySchema).default([]),

@@ -203,3 +203,39 @@ export const RouteHandleResultSchema = z.object({
   headers: z.record(z.string(), z.string()).optional(),
   body: z.unknown().optional(),
 });
+
+export const FileStatParamsSchema = z.object({
+  path: z.string().min(1),
+});
+
+export const FileStatResultSchema = z.object({
+  path: z.string().min(1),
+  name: z.string().min(1),
+  size: z.number().int().nonnegative(),
+  mediaType: z.string().min(1),
+  modifiedAt: z.string().min(1),
+});
+
+export const FileReadParamsSchema = z.object({
+  path: z.string().min(1),
+  offset: z.number().int().nonnegative().optional(),
+  length: z.number().int().positive().optional(),
+});
+
+export const FileReadResultSchema = z.object({
+  data: z.string(),
+  eof: z.boolean(),
+  size: z.number().int().nonnegative(),
+  mediaType: z.string().min(1),
+});
+
+export const FileWriteParamsSchema = z.object({
+  path: z.string().min(1),
+  data: z.string(),
+  append: z.boolean().optional(),
+});
+
+export const FileWriteResultSchema = z.object({
+  path: z.string().min(1),
+  size: z.number().int().nonnegative(),
+});

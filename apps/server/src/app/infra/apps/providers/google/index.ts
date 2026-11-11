@@ -25,9 +25,16 @@ const SCOPE_MAP: Record<string, string> = {
   email: 'email',
   profile: 'profile',
   'gmail-readonly': 'https://www.googleapis.com/auth/gmail.readonly',
+  'gmail-send': 'https://www.googleapis.com/auth/gmail.send',
   calendar: 'https://www.googleapis.com/auth/calendar',
   drive: 'https://www.googleapis.com/auth/drive',
   youtube: 'https://www.googleapis.com/auth/youtube',
+  'youtube-upload': 'https://www.googleapis.com/auth/youtube.upload',
+  'youtube-manage': 'https://www.googleapis.com/auth/youtube.force-ssl',
+  'yt-analytics': 'https://www.googleapis.com/auth/yt-analytics.readonly',
+  spreadsheets: 'https://www.googleapis.com/auth/spreadsheets',
+  documents: 'https://www.googleapis.com/auth/documents',
+  webmasters: 'https://www.googleapis.com/auth/webmasters.readonly',
 };
 
 const SCOPES = [
@@ -35,9 +42,20 @@ const SCOPES = [
   { key: 'email', label: 'Email address', description: 'Primary email address' },
   { key: 'profile', label: 'Profile', description: 'Name and picture' },
   { key: 'gmail-readonly', label: 'Gmail (read)', description: 'Read messages and threads' },
+  { key: 'gmail-send', label: 'Gmail (send)', description: 'Send mail from the account' },
   { key: 'calendar', label: 'Calendar', description: 'Read and write calendars' },
   { key: 'drive', label: 'Drive', description: 'Files in Google Drive' },
   { key: 'youtube', label: 'YouTube', description: 'YouTube channel data' },
+  { key: 'youtube-upload', label: 'YouTube (upload)', description: 'Upload videos' },
+  {
+    key: 'youtube-manage',
+    label: 'YouTube (manage)',
+    description: 'Manage playlists, comments and video settings',
+  },
+  { key: 'yt-analytics', label: 'YouTube Analytics', description: 'Read channel analytics' },
+  { key: 'spreadsheets', label: 'Sheets', description: 'Read and write spreadsheets' },
+  { key: 'documents', label: 'Docs', description: 'Read and edit documents' },
+  { key: 'webmasters', label: 'Search Console', description: 'Read Search Console data' },
 ];
 
 const appKind: AppKindModule = {

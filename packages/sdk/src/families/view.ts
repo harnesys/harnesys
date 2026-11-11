@@ -27,6 +27,7 @@ export interface Action {
 
 export type ViewSection =
   | { type: 'status' }
+  | { type: 'capabilities' }
   | { type: 'permissions' }
   | { type: 'config'; fields?: string[] }
   | { type: 'connections'; connections?: string[] }
@@ -73,6 +74,7 @@ export const ActionSchema = z.object({
 
 const baseSections = {
   status: z.object({ type: z.literal('status') }),
+  capabilities: z.object({ type: z.literal('capabilities') }),
   permissions: z.object({ type: z.literal('permissions') }),
   config: z.object({ type: z.literal('config'), fields: z.array(z.string()).optional() }),
   connections: z.object({
@@ -110,6 +112,7 @@ const baseSections = {
 
 export const ViewSectionSchema = z.union([
   baseSections.status,
+  baseSections.capabilities,
   baseSections.permissions,
   baseSections.config,
   baseSections.connections,

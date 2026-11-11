@@ -254,11 +254,13 @@ export function RowItem({
   title,
   icon,
   description,
+  chips,
   testId,
 }: {
   title: string;
   icon?: ReactNode;
   description?: ReactNode;
+  chips?: ReactNode;
   testId?: string;
 }) {
   return (
@@ -267,7 +269,8 @@ export function RowItem({
         {icon ? (
           <span className="shrink-0 self-center text-muted-foreground [&_svg]:size-3">{icon}</span>
         ) : null}
-        <p className="truncate font-mono text-[12px] leading-snug">{title}</p>
+        <p className="min-w-0 truncate font-mono text-[12px] leading-snug">{title}</p>
+        {chips}
       </div>
       {description ? (
         <p className="line-clamp-2 text-[11px] text-muted-foreground leading-snug">{description}</p>

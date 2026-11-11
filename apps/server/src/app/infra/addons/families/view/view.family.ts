@@ -11,6 +11,7 @@ type ViewSchema = z.infer<typeof ViewDescriptorSchema>;
 
 export const DEFAULT_PAGE_SECTIONS: readonly ViewSection[] = [
   { type: 'status' },
+  { type: 'capabilities' },
   { type: 'permissions' },
   { type: 'config' },
   { type: 'connections' },

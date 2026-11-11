@@ -6,6 +6,7 @@ import { BridgeHostService } from './bridge/bridge-service.ts';
 import { ConfigHostService } from './config/config-service.ts';
 import { DbHostService } from './db/db-service.ts';
 import { EventsHostService } from './events/events-service.ts';
+import { FilesHostService } from './files/files-service.ts';
 import { HttpHostService } from './http/http-service.ts';
 import { LogHostService } from './log/log-service.ts';
 import { RunsHostService } from './runs/runs-service.ts';
@@ -25,6 +26,7 @@ export class HostServicesIndex {
     log: LogHostService,
     events: EventsHostService,
     http: HttpHostService,
+    files: FilesHostService,
     accounts: AccountsHostService,
     runs: RunsHostService,
     triggers: TriggersHostService,
@@ -38,6 +40,7 @@ export class HostServicesIndex {
       log,
       events,
       http,
+      files,
       accounts,
       runs,
       triggers,

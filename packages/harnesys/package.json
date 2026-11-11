@@ -13,7 +13,8 @@
     "./plugins-catalog": "./plugins-catalog.ts",
     "./lsp": "./lsp.ts",
     "./skills": "./skills.ts",
-    "./adapters/node": "./src/adapters/node/index.ts"
+    "./adapters/node": "./src/adapters/node/index.ts",
+    "./file-access": "./src/adapters/actions/file-access.ts"
   },
   "dependencies": {
     "@ai-sdk/alibaba": "2.0.32",

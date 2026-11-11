@@ -3,6 +3,7 @@ import type { SectionProps } from './lib/section-props';
 import type { SectionEntry } from './lib/view-sections';
 import { ActionsSection } from './sections/actions-section';
 import { AutomationsSection } from './sections/automations-section';
+import { CapabilitiesSection } from './sections/capabilities-section';
 import { ConfigSection } from './sections/config-section';
 import { ConnectionsSection } from './sections/connections-section';
 import { FormSection } from './sections/form-section';
@@ -16,6 +17,7 @@ type SectionComponent = React.ComponentType<SectionProps>;
 
 const REGISTRY: Record<string, SectionComponent> = {
   status: StatusSection,
+  capabilities: CapabilitiesSection,
   permissions: PermissionsSection,
   config: ConfigSection,
   connections: ConnectionsSection,

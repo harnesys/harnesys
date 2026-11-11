@@ -8,6 +8,12 @@ import { addonMethod, hostMethod, notificationSpec } from './method-spec.ts';
 import {
   AccountSummarySchema,
   DbRowSchema,
+  FileReadParamsSchema,
+  FileReadResultSchema,
+  FileStatParamsSchema,
+  FileStatResultSchema,
+  FileWriteParamsSchema,
+  FileWriteResultSchema,
   HttpFetchParamsSchema,
   HttpFetchResultSchema,
   InboundMessageSchema,
@@ -36,7 +42,7 @@ export const protocolMap = {
       .extend({ _meta: CallMetaSchema }),
     empty,
   ),
-  ping: hostMethod(empty, empty),
+  ping: hostMethod(empty.extend({ _meta: CallMetaSchema }), empty),
   'config.changed': notificationSpec(z.object({ keys: z.array(z.string()) }), 'host'),
   'permissions.changed': notificationSpec(
     z.object({ permissions: z.array(EffectivePermissionSchema) }),
@@ -146,6 +152,9 @@ export const protocolMap = {
   'log.write': addonMethod(LogWriteParamsSchema, empty, null),
   'events.emit': addonMethod(z.object({ name: str, payload: z.unknown() }), empty, null),
   'http.fetch': addonMethod(HttpFetchParamsSchema, HttpFetchResultSchema, 'http.fetch'),
+  'files.stat': addonMethod(FileStatParamsSchema, FileStatResultSchema, 'files.read'),
+  'files.read': addonMethod(FileReadParamsSchema, FileReadResultSchema, 'files.read'),
+  'files.write': addonMethod(FileWriteParamsSchema, FileWriteResultSchema, 'files.write'),
   'accounts.list': addonMethod(
     z.object({ connection: str }),
     z.object({ accounts: z.array(AccountSummarySchema) }),

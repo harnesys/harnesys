@@ -23,6 +23,7 @@ export interface AddonSectionAction {
 
 export type AddonViewSection =
   | { type: 'status' }
+  | { type: 'capabilities' }
   | { type: 'permissions' }
   | { type: 'config'; fields?: string[] }
   | { type: 'connections'; connections?: string[] }
@@ -60,6 +61,7 @@ export type SectionEntry =
   | { kind: 'unknown'; sectionType: string };
 
 export const DEFAULT_SECTION_ORDER = [
+  'capabilities',
   'permissions',
   'config',
   'connections',
@@ -149,7 +151,7 @@ export function defaultSectionEntries(): SectionEntry[] {
   }));
 }
 
-const PREVIEW_SECTION_TYPES = new Set(['permissions', 'connections', 'markdown']);
+const PREVIEW_SECTION_TYPES = new Set(['permissions', 'connections', 'markdown', 'capabilities']);
 
 /**
  * Sections that stay readable while the organization has no row for the add-on:

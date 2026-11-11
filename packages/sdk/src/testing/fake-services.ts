@@ -2,6 +2,7 @@ import type { AddonManifest } from '../manifest/manifest.ts';
 import { isBaselinePermissionId } from '../permissions/permissions.ts';
 import { AddonError } from '../protocol/error.ts';
 import type { FakeDb } from './fake-db.ts';
+import { executeFilesService } from './fake-files.ts';
 import type { FakeAccount, FakeHostOptions } from './fake-host.ts';
 
 export interface FakeServiceSinks {
@@ -11,6 +12,7 @@ export interface FakeServiceSinks {
   cancelledRuns: Array<{ threadId: string; runId: string }>;
   createdThreads: string[];
   accountReports: Array<{ connection: string; accountId?: string; code: string }>;
+  fileWrites: Array<{ path: string; size: number }>;
   workerReports: Array<{ workerId: string; state: string; code?: string }>;
   inboundMessages: Array<{ channel: string; from?: string; text: string; payload?: unknown }>;
 }
@@ -73,6 +75,13 @@ export function createFakeServices(context: FakeServiceContext): {
         return executeAccounts(method, params);
       case 'http.fetch':
         return executeHttp(params);
+      case 'files.stat':
+      case 'files.read':
+      case 'files.write':
+        return executeFilesService(method, params, {
+          options: context.options,
+          writes: context.sinks.fileWrites,
+        });
       case 'triggers.fire':
         return fireTrigger(params);
       default:

@@ -62,6 +62,9 @@ describe('protocol method map conformance', () => {
       'log.write',
       'events.emit',
       'http.fetch',
+      'files.stat',
+      'files.read',
+      'files.write',
       'accounts.list',
       'accounts.report',
       'accounts.access',
@@ -89,6 +92,8 @@ describe('protocol method map conformance', () => {
     expect(protocolMap['workers.report'].permission).toBe('worker');
     expect(protocolMap['source.list'].permission).toBe('source');
     expect(protocolMap['source.upload'].permission).toBe('source');
+    expect(protocolMap['files.read'].permission).toBe('files.read');
+    expect(protocolMap['files.write'].permission).toBe('files.write');
     expect(protocolMap['db.run'].permission).toBeNull();
     expect(protocolMap['log.write'].permission).toBeNull();
   });
