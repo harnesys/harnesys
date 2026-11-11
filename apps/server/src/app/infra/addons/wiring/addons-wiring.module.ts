@@ -74,7 +74,10 @@ import { FamilyModuleList } from '../families/family-module-list.ts';
 import { HookDeliveryService } from '../families/hook/hook.family.ts';
 import { AddonRouteTable } from '../families/route/route.family.ts';
 import { TransportInboundService } from '../families/transport/transport.family.ts';
-import { TriggerFamilyModule } from '../families/trigger/trigger.family.ts';
+import {
+  AddonTriggerCatalogContributor,
+  TriggerFamilyModule,
+} from '../families/trigger/trigger.family.ts';
 import { TriggerFireService } from '../families/trigger/trigger-fire.sink.ts';
 import { WorkerDescriptorStore, WorkerFamilyModule } from '../families/worker/worker.family.ts';
 import {
@@ -273,6 +276,7 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     WorkerDescriptorStore,
     WorkerFamilyModule,
     TriggerFamilyModule,
+    AddonTriggerCatalogContributor,
     AddonRouteTable,
     TransportInboundService,
     TransportSessionDrafts,

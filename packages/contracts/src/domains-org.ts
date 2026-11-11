@@ -5,6 +5,8 @@ export {
   AutomationItemSchema,
   type AutomationKind,
   AutomationKindSchema,
+  type AutomationSource,
+  AutomationSourceSchema,
   type AutomationStatus,
   AutomationStatusSchema,
   type ListAutomationKindsResponse,

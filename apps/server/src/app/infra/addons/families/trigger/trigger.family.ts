@@ -54,6 +54,7 @@ export class AddonTriggerCatalogContributor extends AutomationCatalogContributor
       kinds.push({
         kind: globalTriggerKind(entry.owner.addonId, entry.descriptor.kind),
         integrationId: entry.owner.addonId,
+        source: 'addon',
         label: l10nText(entry.descriptor.title),
         description: l10nText(entry.descriptor.description),
         icon: 'zap',
@@ -95,6 +96,7 @@ export class AddonTriggerCatalogContributor extends AutomationCatalogContributor
       orgId,
       integrationId: entry.owner.addonId,
       kind: globalTriggerKind(entry.owner.addonId, row.triggerId),
+      source: 'addon',
       label: row.label,
       description: '',
       status: row.enabled ? 'active' : 'paused',

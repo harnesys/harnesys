@@ -61,7 +61,7 @@ describe('ManageTriggerInstanceUseCase', () => {
       triggerId: 'feed',
       label: 'Feed',
       config: { url: 'https://acme.dev' },
-      target: { threadId: 'th1' },
+      target: { threadId: 'th1', agentId: 'ag1' },
       actor: ACTOR,
     });
     expect(row.enabled).toBe(true);
@@ -105,6 +105,7 @@ describe('ManageTriggerInstanceUseCase', () => {
       triggerId: 'feed',
       label: 'Feed',
       config: {},
+      target: { threadId: 'th1', agentId: 'ag1' },
       actor: ACTOR,
     });
     await useCase.disable({ orgId: 'org1', instanceId: row.id });
@@ -120,6 +121,7 @@ describe('ManageTriggerInstanceUseCase', () => {
       triggerId: 'feed',
       label: 'Feed',
       config: {},
+      target: { threadId: 'th1', agentId: 'ag1' },
       actor: ACTOR,
     });
     await useCase.delete({ orgId: 'org1', instanceId: row.id });
@@ -135,6 +137,7 @@ describe('ManageTriggerInstanceUseCase', () => {
       triggerId: 'feed',
       label: 'Feed',
       config: {},
+      target: { threadId: 'th1', agentId: 'ag1' },
       enabled: false,
       actor: ACTOR,
     });

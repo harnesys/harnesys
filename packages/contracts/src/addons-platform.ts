@@ -62,6 +62,7 @@ export const AddonContributionViewSchema = z.object({
   id: z.string().min(1),
   family: AddonPlatformFamilySchema,
   optional: z.boolean().default(false),
+  descriptor: z.record(z.string(), z.unknown()).optional(),
 });
 export type AddonContributionView = z.infer<typeof AddonContributionViewSchema>;
 

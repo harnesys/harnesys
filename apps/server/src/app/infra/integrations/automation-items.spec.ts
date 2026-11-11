@@ -135,6 +135,7 @@ test('integration kind contributions default from connection presence', () => {
     {
       kind: 'telegram.feed',
       integrationId: 'telegram',
+      source: 'integration',
       label: 'Feed',
       description: '',
       icon: 'zap',

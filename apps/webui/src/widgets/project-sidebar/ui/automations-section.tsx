@@ -154,8 +154,9 @@ export function AutomationsSection({
           void configure({
             integrationId: item.integrationId,
             kind: item.kind,
+            source: item.source,
             scopeId: orgId,
-            agents: projectAgentsFor(item.projectId),
+            agents,
             automation: item,
           });
         }}

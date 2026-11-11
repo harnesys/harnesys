@@ -205,6 +205,7 @@ export function orgAvailableDetailOf(input: {
       id: contribution.id,
       family: contribution.family,
       optional: contribution.optional ?? false,
+      descriptor: contribution.descriptor,
     })),
     capabilities: capabilitiesViewOf(pkg),
     permissions: {
@@ -244,6 +245,7 @@ export function orgAddonDetailOf(input: AddonDetailInput): OrgAddonDetail {
       id: contribution.id,
       family: contribution.family,
       optional: contribution.optional ?? false,
+      descriptor: contribution.descriptor,
     })),
     capabilities: capabilitiesViewOf(pkg),
     permissions: {

@@ -1,6 +1,13 @@
 import type { AutomationKind } from '@harnesys/contracts';
-import { useQueryClient } from '@tanstack/react-query';
-import { ArrowRightIcon, CalendarClockIcon, PlusIcon, WebhookIcon, ZapIcon } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  ArrowRightIcon,
+  CalendarClockIcon,
+  PlusIcon,
+  PuzzleIcon,
+  WebhookIcon,
+  ZapIcon,
+} from 'lucide-react';
 import type { ComponentType } from 'react';
 import type { Agent } from '@/entities/agent';
 import { CORE_AUTOMATION_INTEGRATION_ID } from '@/entities/automation';
@@ -15,6 +22,7 @@ import { createWebhook, openWebhookConfigDialog } from '@/features/manage-webhoo
 import type { WebuiIntegrationDescriptor } from '@/integrations/registry';
 import { findIntegrationUi } from '@/integrations/registry';
 import { listAutomationKinds } from '@/shared/api';
+import { orgAddonsQuery } from '@/shared/api/addons';
 import { useOrgId } from '@/shared/config/location';
 import { useStudioNavigation } from '@/shared/config/navigation';
 import { softTint } from '@/shared/lib/color';
@@ -23,23 +31,29 @@ import { dialog } from '@/shared/services/overlay';
 import { Button } from '@/shared/ui/button';
 
 interface PickerData {
+  orgId: string;
   kinds: AutomationKind[];
 }
 type PickerChoice =
   | { source: 'core'; kind: 'scheduler' | 'webhook' }
-  | { source: 'integration'; integrationId: string; kind: string };
+  | { source: 'integration'; integrationId: string; kind: string }
+  | { source: 'addon'; integrationId: string; kind: string };
 
 const CORE_CARD_COLOR = '#f59e0b';
 const WEBHOOK_CARD_COLOR = '#0ea5e9';
 const INTEGRATION_CARD_COLOR = '#8b5cf6';
+const ADDON_CARD_COLOR = '#10b981';
 
 function AutomationCreatePickerDialog({
   onResolve,
   data,
 }: DialogComponentProps<PickerChoice | null, PickerData>) {
+  const addons = useQuery(orgAddonsQuery(data?.orgId ?? ''));
   const contributions = (data?.kinds ?? []).filter(
     (kind) => kind.integrationId !== CORE_AUTOMATION_INTEGRATION_ID,
   );
+  const addonTitle = (addonId: string) =>
+    addons.data?.items.find((item) => item.addonId === addonId)?.title ?? addonId;
   return (
     <div className="grid grid-cols-2 gap-2.5">
       <AutomationCard
@@ -60,24 +74,47 @@ function AutomationCreatePickerDialog({
         description="Trigger from an HTTP endpoint"
         onPick={() => onResolve?.({ source: 'core', kind: 'webhook' })}
       />
-      {contributions.map((kind) => (
-        <AutomationCard
-          key={`${kind.integrationId}:${kind.kind}`}
-          testId={`automation-create-${kind.kind}`}
-          icon={integrationCardIcon(findIntegrationUi(kind.integrationId))}
-          color={INTEGRATION_CARD_COLOR}
-          title={kind.label}
-          meta={findIntegrationUi(kind.integrationId)?.title ?? kind.integrationId}
-          description={kind.description}
-          onPick={() =>
-            onResolve?.({
-              source: 'integration',
-              integrationId: kind.integrationId,
-              kind: kind.kind,
-            })
-          }
-        />
-      ))}
+      {contributions.map((kind) =>
+        kind.source === 'addon' ? (
+          <AutomationCard
+            key={`${kind.integrationId}:${kind.kind}`}
+            testId={`automation-create-${kind.kind}`}
+            icon={PuzzleIcon}
+            color={ADDON_CARD_COLOR}
+            title={kind.label}
+            meta={
+              kind.requiresConnection && !kind.connected
+                ? `${addonTitle(kind.integrationId)} · Connect required`
+                : addonTitle(kind.integrationId)
+            }
+            description={kind.description}
+            onPick={() =>
+              onResolve?.({
+                source: 'addon',
+                integrationId: kind.integrationId,
+                kind: kind.kind,
+              })
+            }
+          />
+        ) : (
+          <AutomationCard
+            key={`${kind.integrationId}:${kind.kind}`}
+            testId={`automation-create-${kind.kind}`}
+            icon={integrationCardIcon(findIntegrationUi(kind.integrationId))}
+            color={INTEGRATION_CARD_COLOR}
+            title={kind.label}
+            meta={findIntegrationUi(kind.integrationId)?.title ?? kind.integrationId}
+            description={kind.description}
+            onPick={() =>
+              onResolve?.({
+                source: 'integration',
+                integrationId: kind.integrationId,
+                kind: kind.kind,
+              })
+            }
+          />
+        ),
+      )}
     </div>
   );
 }
@@ -129,13 +166,13 @@ function AutomationCard({
     </button>
   );
 }
-function openAutomationCreatePicker(kinds: AutomationKind[]) {
+function openAutomationCreatePicker(kinds: AutomationKind[], orgId: string) {
   return dialog.open(AutomationCreatePickerDialog, {
     title: 'New automation',
     description: 'Choose how the agent should be triggered.',
     className: 'sm:max-w-md',
     testId: 'automation-create-picker',
-    data: { kinds },
+    data: { orgId, kinds },
   });
 }
 export function useCreateAutomation(agents: Agent[], onDone?: () => void): () => void {
@@ -160,10 +197,15 @@ export function useCreateAutomation(agents: Agent[], onDone?: () => void): () =>
     const refreshAutomations = () => {
       void queryClient.invalidateQueries({ queryKey: deskAutomationsQueryKey(scopeId) });
     };
-    const createFromIntegration = async (choice: { integrationId: string; kind: string }) => {
+    const createFromIntegration = async (choice: {
+      source: 'integration' | 'addon';
+      integrationId: string;
+      kind: string;
+    }) => {
       await configure({
         integrationId: choice.integrationId,
         kind: choice.kind,
+        source: choice.source,
         scopeId,
         agents: orgAgents,
         automation: null,
@@ -201,11 +243,11 @@ export function useCreateAutomation(agents: Agent[], onDone?: () => void): () =>
     };
     void (async () => {
       const kinds = orgId ? await listAutomationKinds(orgId).catch(() => []) : [];
-      const choice = await openAutomationCreatePicker(kinds);
+      const choice = await openAutomationCreatePicker(kinds, orgId);
       if (!choice) {
         return;
       }
-      if (choice.source === 'integration') {
+      if (choice.source === 'integration' || choice.source === 'addon') {
         await createFromIntegration(choice);
         return;
       }

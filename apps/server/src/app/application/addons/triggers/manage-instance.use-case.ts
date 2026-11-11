@@ -29,6 +29,8 @@ export interface TriggerInstanceActionInput {
   instanceId: string;
 }
 
+const TARGET_FIELDS = ['threadId', 'agentId'] as const;
+
 @Injectable()
 export class ManageTriggerInstanceUseCase {
   private readonly logger: Logger;
@@ -51,6 +53,7 @@ export class ManageTriggerInstanceUseCase {
     }
     const pkg = requirePackage(this.catalog, input.addonId, row.version);
     this.assertTriggerDeclared(pkg.manifest, input.triggerId);
+    this.assertTarget(input.target);
     const now = new Date().toISOString();
     const created = this.triggers.create({
       id: randomUUID(),
@@ -100,6 +103,9 @@ export class ManageTriggerInstanceUseCase {
 
   patch(orgId: string, instanceId: string, patch: TriggerInstancePatch): void {
     this.require(orgId, instanceId);
+    if (patch.targetJson !== undefined) {
+      this.assertTarget(this.parseTarget(patch.targetJson));
+    }
     this.triggers.update(orgId, instanceId, patch);
   }
 
@@ -153,6 +159,31 @@ export class ManageTriggerInstanceUseCase {
     );
     if (!declared) {
       throw new AddonException('not_found', 404, `Trigger kind is not declared: ${triggerId}`);
+    }
+  }
+
+  private assertTarget(target: unknown): void {
+    if (target === null || typeof target !== 'object' || Array.isArray(target)) {
+      throw new AddonException(
+        'invalid_params',
+        422,
+        'target must be an object with threadId and agentId',
+      );
+    }
+    const record = target as Record<string, unknown>;
+    for (const field of TARGET_FIELDS) {
+      const value = record[field];
+      if (typeof value !== 'string' || value.length === 0) {
+        throw new AddonException('invalid_params', 422, `target.${field} is required`);
+      }
+    }
+  }
+
+  private parseTarget(json: string): unknown {
+    try {
+      return JSON.parse(json) as unknown;
+    } catch {
+      return null;
     }
   }
 }

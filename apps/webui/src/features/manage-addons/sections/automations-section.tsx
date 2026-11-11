@@ -1,7 +1,11 @@
 import type { FieldValue, OrgAddonDetail, TriggerInstanceView } from '@harnesys/contracts';
+import { DEFAULT_MODE_ID } from '@harnesys/studio-shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { AccountPicker } from '@/features/manage-apps';
+import {
+  resolveTriggerThread,
+  TriggerTargetField,
+} from '@/features/manage-automations/ui/trigger-target-field';
 import {
   createOrgAddonTrigger,
   deleteOrgAddonTrigger,
@@ -117,6 +121,8 @@ function TriggerCreateForm({
   const [kind, setKind] = useState(descriptors[0]?.kind ?? '');
   const [label, setLabel] = useState('');
   const [agentId, setAgentId] = useState('');
+  const [threadId, setThreadId] = useState('');
+  const [modeId, setModeId] = useState(DEFAULT_MODE_ID);
   const [config, setConfig] = useState<Record<string, FieldValue>>({});
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -132,19 +138,26 @@ function TriggerCreateForm({
       setError('Label is required');
       return;
     }
+    if (!agentId) {
+      setError('Target agent is required');
+      return;
+    }
     setPending(true);
     setError(null);
     try {
+      const resolvedThreadId = await resolveTriggerThread({ agentId, threadId, label });
       await createOrgAddonTrigger(orgId, detail.addonId, {
         triggerId: descriptor.kind,
         label,
         config: config as Record<string, unknown>,
-        target: agentId ? { agentId } : undefined,
+        target: { threadId: resolvedThreadId, agentId, modeId },
         enabled: true,
       });
       setLabel('');
       setConfig({});
       setAgentId('');
+      setThreadId('');
+      setModeId(DEFAULT_MODE_ID);
       await queryClient.invalidateQueries({
         queryKey: orgAddonDetailQueryKey(orgId, detail.addonId),
       });
@@ -201,20 +214,22 @@ function TriggerCreateForm({
           label={`Account for ${connectionDescriptor.label}`}
           description="The trigger listens through this connection. Manage bindings in Connections."
         >
-          <AccountPicker
-            orgId={orgId}
-            kinds={connectionDescriptor.accountKinds}
-            value={null}
-            allowCreate
-            onChange={() => undefined}
-          />
+          <p className="text-muted-foreground text-sm">
+            {connectionDescriptor.accountIds.length === 0
+              ? 'No account bound'
+              : connectionDescriptor.accountIds.join(', ')}
+          </p>
         </SettingsField>
       ) : null}
       <SettingsField label="Target agent" description="Which agent handles the fired trigger.">
         <select
           className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm"
           value={agentId}
-          onChange={(event) => setAgentId(event.target.value)}
+          onChange={(event) => {
+            setAgentId(event.target.value);
+            setThreadId('');
+            setModeId(DEFAULT_MODE_ID);
+          }}
           data-testid="addon-trigger-agent"
         >
           <option value="">Select an agent...</option>
@@ -227,6 +242,7 @@ function TriggerCreateForm({
             ))}
         </select>
       </SettingsField>
+      <TriggerTargetField orgId={orgId} agentId={agentId} value={threadId} onChange={setThreadId} />
       {error ? <SettingsErrorBanner message={error} testId="addon-trigger-create-error" /> : null}
       <div>
         <Button
