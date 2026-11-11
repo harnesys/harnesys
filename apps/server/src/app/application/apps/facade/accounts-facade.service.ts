@@ -5,7 +5,7 @@ import { AccountEventPort } from '../../../domain/apps/ports/account-event.port.
 import { AccountRepositoryPort } from '../../../domain/apps/ports/account-repository.port.ts';
 import { ProviderRegistryPort } from '../../../domain/apps/ports/provider-registry.port.ts';
 import { PublicUrlsPort } from '../../../domain/apps/ports/public-urls.port.ts';
-import type { Credentials } from '../../../domain/apps/provider-module.ts';
+import type { AppCredentials, Credentials } from '../../../domain/apps/provider-module.ts';
 import type { AccountView } from '../../../domain/apps/records.ts';
 import { AccountAccessService } from '../access/account-access.service.ts';
 import { type AccountFindQuery, AccountsFacadePort } from '../accounts-facade.port.ts';
@@ -46,7 +46,7 @@ export class AccountsFacadeService extends AccountsFacadePort {
     orgId: string,
     accountId: string,
     opts?: { scopes?: string[] },
-  ): Promise<{ credentials: Credentials; expiresAt: number | null }> {
+  ): Promise<{ credentials: Credentials; expiresAt: number | null; app?: AppCredentials | null }> {
     return this.accessService.access(orgId, accountId, opts);
   }
 

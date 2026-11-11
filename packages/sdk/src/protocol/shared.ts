@@ -204,6 +204,18 @@ export const AccountSummarySchema = z.object({
   status: z.string(),
 });
 
+export interface AppCredentials {
+  kind: string;
+  values: Record<string, unknown>;
+  credentials: Record<string, string>;
+}
+
+export const AppCredentialsSchema = z.object({
+  kind: z.string().min(1),
+  values: z.record(z.string(), z.unknown()),
+  credentials: z.record(z.string(), z.string()),
+});
+
 export const TriggerFireOutcomeSchema = z.enum(['fired', 'suppressed', 'busy', 'failed']);
 
 export const InboundAttachmentSchema = z

@@ -1,0 +1,184 @@
+{
+  "id": "harnesys.telegram-feed",
+  "version": "1.0.0",
+  "platform": 1,
+  "title": "Telegram feed",
+  "description": "Watches Telegram channels and groups with a user account (MTProto), stores new posts, filters them by keywords and fires a telegram.feed trigger with the post text. The account session comes from the bound telegram-user account; independent of the bot add-on: an organization can run only the feed, only the bot, or both.",
+  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "activation": "resident",
+  "permissions": [
+    {
+      "id": "worker",
+      "reason": "Keep the resident poller that reads new channel posts"
+    },
+    {
+      "id": "lifecycle.resident",
+      "reason": "Stay running to keep polling the watched channels"
+    },
+    {
+      "id": "trigger",
+      "reason": "Fire telegram.feed instances for matching posts"
+    },
+    {
+      "id": "accounts.use",
+      "scope": { "connections": ["telegram-user"] },
+      "reason": "Resolve the bound telegram-user account for the feed session"
+    },
+    {
+      "id": "accounts.credentials",
+      "scope": { "connections": ["telegram-user"] },
+      "reason": "Read the MTProto session and the linked telegram-app credentials"
+    }
+  ],
+  "connections": [
+    {
+      "id": "telegram-user",
+      "label": "Telegram user account",
+      "accountKinds": ["telegram-user"],
+      "cardinality": "one",
+      "optional": true
+    }
+  ],
+  "data": { "migrations": "migrations", "quotaMb": 64 },
+  "contributions": [
+    {
+      "id": "config",
+      "family": "config",
+      "descriptor": {
+        "fields": [
+          {
+            "key": "channels",
+            "label": "Channels and groups",
+            "type": "textarea",
+            "required": true,
+            "placeholder": "@channel\nhttps://t.me/group",
+            "help": "One @username, t.me link or numeric id per line"
+          },
+          {
+            "key": "poll_sec",
+            "label": "Poll interval, seconds",
+            "type": "number",
+            "required": false,
+            "default": 120
+          },
+          {
+            "key": "backfill",
+            "label": "Backfill posts on first sync",
+            "type": "number",
+            "required": false,
+            "default": 0,
+            "help": "How many of the newest posts to fire when a channel is first watched (0 keeps the history silent and only fires new posts)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "feed",
+      "family": "trigger",
+      "descriptor": {
+        "kind": "telegram.feed",
+        "title": "Telegram feed post",
+        "description": "Fires when a watched channel posts new text that matches the keywords",
+        "connection": "telegram-user",
+        "configFields": [
+          {
+            "key": "keywords",
+            "label": "Keywords",
+            "type": "text",
+            "required": false,
+            "placeholder": "release, hiring",
+            "help": "Comma-separated terms; empty matches every post"
+          },
+          {
+            "key": "exclude",
+            "label": "Exclude words",
+            "type": "text",
+            "required": false,
+            "help": "Comma-separated terms; a post containing any of them is skipped"
+          },
+          {
+            "key": "match",
+            "label": "Keyword match",
+            "type": "select",
+            "required": false,
+            "default": "any",
+            "options": [
+              { "value": "any", "label": "Any keyword" },
+              { "value": "all", "label": "All keywords" }
+            ]
+          },
+          {
+            "key": "sources",
+            "label": "Only these channels",
+            "type": "text",
+            "required": false,
+            "help": "Comma-separated channel usernames; empty means every watched channel"
+          }
+        ],
+        "limits": { "perDay": 200, "throttleSec": 5 }
+      }
+    },
+    {
+      "id": "feed-poller",
+      "family": "worker",
+      "descriptor": {
+        "id": "feed-poller",
+        "title": "Channel feed poller",
+        "autostart": true,
+        "restart": "on-failure"
+      }
+    },
+    {
+      "id": "main",
+      "family": "view",
+      "descriptor": {
+        "id": "main",
+        "title": "Telegram feed",
+        "sections": [
+          { "type": "status" },
+          { "type": "config" },
+          { "type": "connections", "connections": ["telegram-user"] },
+          { "type": "automations", "triggers": ["telegram.feed"] },
+          {
+            "type": "table",
+            "title": "Sources",
+            "source": { "route": "/sources" },
+            "columns": [
+              { "key": "peer", "label": "Channel", "format": "text" },
+              { "key": "title", "label": "Title", "format": "text" },
+              { "key": "kind", "label": "Kind", "format": "badge" },
+              { "key": "lastPostId", "label": "Last post", "format": "number" },
+              { "key": "updatedAt", "label": "Synced", "format": "datetime" }
+            ]
+          },
+          {
+            "type": "table",
+            "title": "Posts",
+            "source": { "route": "/posts" },
+            "columns": [
+              { "key": "peer", "label": "Channel", "format": "text" },
+              { "key": "postId", "label": "Post", "format": "number" },
+              { "key": "text", "label": "Text", "format": "text" },
+              { "key": "publishedAt", "label": "Published", "format": "datetime" },
+              { "key": "fires", "label": "Fires", "format": "number" }
+            ]
+          },
+          {
+            "type": "markdown",
+            "body": "Connect a Telegram user account in the connections section (phone login with a code from the Telegram app). The session is stored by the account layer; this add-on never asks for the code. Polling reads the newest 20 posts of every watched channel and fires the telegram.feed trigger for posts published after the trigger instance was created. On first sync the backfill setting decides how many of the newest posts fire; 0 keeps history silent."
+          }
+        ]
+      }
+    },
+    {
+      "id": "posts",
+      "family": "route",
+      "descriptor": { "id": "posts", "method": "GET", "path": "/posts", "role": "member" }
+    },
+    {
+      "id": "sources",
+      "family": "route",
+      "descriptor": { "id": "sources", "method": "GET", "path": "/sources", "role": "member" }
+    }
+  ]
+}

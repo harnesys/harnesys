@@ -1,4 +1,5 @@
 import type { CallMeta } from './protocol/meta.ts';
+import type { AppCredentials } from './protocol/shared.ts';
 
 export type DbRow = Record<string, unknown>;
 export type SqlParam = string | number | boolean | null;
@@ -108,7 +109,7 @@ export interface AddonAccounts {
   access(
     connection: string,
     accountId?: string,
-  ): Promise<{ credentials: unknown; expiresAt?: string }>;
+  ): Promise<{ credentials: unknown; expiresAt?: string; app?: AppCredentials | null }>;
 }
 
 export interface AddonRuns {

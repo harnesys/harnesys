@@ -29,6 +29,12 @@ export interface SecretReader {
 
 export type Credentials = Record<string, string>;
 
+export interface AppCredentials {
+  kind: string;
+  values: Record<string, FieldValue>;
+  credentials: Credentials;
+}
+
 export interface HttpRequest {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   url: string;

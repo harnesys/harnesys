@@ -15,6 +15,7 @@ import { ProviderRegistryPort } from '../../../domain/apps/ports/provider-regist
 import { SecretScopePort } from '../../../domain/apps/ports/secret-scope.port.ts';
 import type {
   AccountKindModule,
+  AppCredentials,
   AppKindModule,
   Credentials,
   SecretReader,
@@ -28,6 +29,7 @@ import { statusForError } from './status-map.ts';
 export interface AccessResult {
   credentials: Credentials;
   expiresAt: number | null;
+  app: AppCredentials | null;
 }
 
 interface CachedAccess {
@@ -70,22 +72,27 @@ export class AccountAccessService {
     if (account.status === 'expired') {
       throw new AccountAccessException(account.lastError ?? 'expired');
     }
+    const app = account.appId ? this.apps.findById(orgId, account.appId) : null;
+    const appModule = app ? this.registry.appKind(app.kind) : null;
+    const appSecrets =
+      app && appModule
+        ? this.secrets.reader(orgId, { type: 'app', id: app.id }, appModule.secrets)
+        : null;
+    const appCredentials = await appCredentialsOf(app, appModule, appSecrets);
     const cached = this.cache.get(account.id);
     if (
       cached &&
       cached.expiresAt !== null &&
       cached.expiresAt - RENEW_WINDOW_MS > this.clock.now()
     ) {
-      return { credentials: cached.credentials, expiresAt: cached.expiresAt };
+      return {
+        credentials: cached.credentials,
+        expiresAt: cached.expiresAt,
+        app: appCredentials,
+      };
     }
-    const app = account.appId ? this.apps.findById(orgId, account.appId) : null;
     const target = { type: 'account' as const, id: account.id };
     const stored = this.secrets.reader(orgId, target, module.secrets);
-    const appModule = app ? this.registry.appKind(app.kind) : null;
-    const appSecrets =
-      app && appModule
-        ? this.secrets.reader(orgId, { type: 'app', id: app.id }, appModule.secrets)
-        : null;
     try {
       const resolved = await this.resolveAccess({
         orgId,
@@ -99,7 +106,7 @@ export class AccountAccessService {
       });
       this.cache.set(account.id, resolved);
       this.logger.info({ accountId: account.id, outcome: 'ok' }, 'account access resolved');
-      return resolved;
+      return { ...resolved, app: appCredentials };
     } catch (error) {
       const code = error instanceof ProviderError ? error.code : 'unknown';
       this.applyStatus(orgId, account, code);
@@ -290,6 +297,24 @@ async function readCredentials(
     credentials[key] = value;
   }
   return credentials;
+}
+
+async function appCredentialsOf(
+  app: AppRecord | null,
+  appModule: AppKindModule | null,
+  appSecrets: SecretReader | null,
+): Promise<AppCredentials | null> {
+  if (app === null || appModule === null || appSecrets === null) {
+    return null;
+  }
+  const credentials: Credentials = {};
+  for (const key of appModule.secrets) {
+    const value = await appSecrets.get(key);
+    if (value !== null) {
+      credentials[key] = value;
+    }
+  }
+  return { kind: app.kind, values: app.values, credentials };
 }
 
 function assertPersistedSecrets(module: AccountKindModule, secrets: Record<string, string>): void {

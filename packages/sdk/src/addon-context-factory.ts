@@ -147,7 +147,7 @@ export function createAddonContext(
     },
     access: async (connection: string, accountId?: string) => {
       const result = await client['accounts.access']({ connection, accountId }, { signal });
-      return { credentials: result.credentials, expiresAt: result.expiresAt };
+      return { credentials: result.credentials, expiresAt: result.expiresAt, app: result.app };
     },
   };
   return {

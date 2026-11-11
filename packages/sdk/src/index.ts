@@ -272,6 +272,8 @@ export {
 export { type CallMeta, CallMetaSchema } from './protocol/meta.ts';
 export {
   AccountSummarySchema,
+  type AppCredentials,
+  AppCredentialsSchema,
   CloudRemoteEntrySchema,
   type CloudRemoteEntryWire,
   FileReadParamsSchema,

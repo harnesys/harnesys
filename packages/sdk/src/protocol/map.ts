@@ -7,6 +7,7 @@ import type { MethodDirection, MethodSpec } from './method-spec.ts';
 import { addonMethod, hostMethod, notificationSpec } from './method-spec.ts';
 import {
   AccountSummarySchema,
+  AppCredentialsSchema,
   DbRowSchema,
   FileReadParamsSchema,
   FileReadResultSchema,
@@ -181,7 +182,11 @@ export const protocolMap = {
   ),
   'accounts.access': addonMethod(
     z.object({ connection: str, accountId: str.optional() }),
-    z.object({ credentials: z.unknown(), expiresAt: str.optional() }),
+    z.object({
+      credentials: z.unknown(),
+      expiresAt: str.optional(),
+      app: AppCredentialsSchema.nullable().optional(),
+    }),
     'accounts.credentials',
   ),
   'runs.dispatch': addonMethod(

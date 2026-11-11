@@ -76,10 +76,18 @@ export class AccountsHostService implements HostServiceModule {
   private async access(
     ctx: HostCallContext,
     params: { connection: string; accountId?: string },
-  ): Promise<{ credentials: unknown; expiresAt?: string }> {
+  ): Promise<{
+    credentials: unknown;
+    expiresAt?: string;
+    app?: {
+      kind: string;
+      values: Record<string, unknown>;
+      credentials: Record<string, string>;
+    } | null;
+  }> {
     const rows = this.bindings.accountsFor(ctx.orgId, ctx.addonId, params.connection);
     const accountId = resolveBoundAccountId(rows, params.accountId);
-    const { credentials, expiresAt } = await this.accounts.access(ctx.orgId, accountId);
+    const { credentials, expiresAt, app } = await this.accounts.access(ctx.orgId, accountId);
     this.audit.append(ctx.orgId, {
       id: crypto.randomUUID(),
       at: new Date().toISOString(),
@@ -95,6 +103,7 @@ export class AccountsHostService implements HostServiceModule {
       ...(expiresAt !== null && expiresAt !== undefined
         ? { expiresAt: new Date(expiresAt).toISOString() }
         : {}),
+      ...(app !== null && app !== undefined ? { app } : {}),
     };
   }
 }
