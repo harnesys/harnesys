@@ -44,9 +44,9 @@ through connections (see accounts-and-connections.md); they do not replace OAuth
    (`infra/approvals/`, core `domain/approval/`). Addons have no API to raise, list, or
    resolve approvals; the Telegram connector's `/ask` flow cannot move as-is.
    → Needs an approval port for addons (or keeping HITL in core).
-2. **Cancel a running run.** The connector's `/stop` command cancels runs. Addons have
-   `runs.dispatch` but no cancel/interrupt API.
-   → Needs `runs.cancel` (or an event-driven stop contract) on the host service map.
+2. **Cancel a running run.** Resolved: `ctx.runs.cancel({ threadId, runId })` on the host
+   service map (permission `runs.dispatch`, served by `CancelRunUseCase`). The connector's
+   `/stop` flow is now portable.
 3. **Streaming run output back to a channel.** The connector streams run deltas to
    Telegram (draft buffers, echo barriers, resume after restart). Addons get only
    discrete events (`run.finished` etc.) and a non-streaming transport
@@ -79,9 +79,10 @@ through connections (see accounts-and-connections.md); they do not replace OAuth
 2. **GitHub webhook trigger** — public route + `ctx.db` dedup; drops the legacy
    `integration_events` table usage.
 3. **Telegram chat transport** — `transport` + `bridge.inbound` + trigger instances for
-   message notifications. Requires gaps 2–4 to be resolved (or consciously dropped)
-   before removing the legacy connector: HITL, `/stop`, streaming, identity link, and
-   lease fencing are all connector-only behaviors today.
+   message notifications. Requires gaps 1, 3–4 to be resolved (or consciously dropped)
+   before removing the legacy connector: HITL, streaming, identity link, and
+   lease fencing are connector-only behaviors today (`/stop` is portable via
+   `ctx.runs.cancel`).
 4. Leave the Apps provider layer untouched — it is the account/connect substrate for
    every addon connection.
 

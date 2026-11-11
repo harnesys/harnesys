@@ -6,6 +6,7 @@ import type {
 } from '../../../application/addons/run-dispatch.port.ts';
 import { RunDispatchPort } from '../../../application/addons/run-dispatch.port.ts';
 import { AccountsFacadePort } from '../../../application/apps/accounts-facade.port.ts';
+import { CancelRunUseCase } from '../../../application/threads/cancel-run.use-case.ts';
 import { CreateThreadUseCase } from '../../../application/threads/create-thread.use-case.ts';
 import type { HostCallContext } from '../../../domain/addons/host-service.ts';
 import type { EffectiveGrants } from '../../../domain/addons/permissions.ts';
@@ -284,4 +285,21 @@ export function stubThreads(
     },
   };
   return Object.assign(Object.create(CreateThreadUseCase.prototype), stub);
+}
+
+export function stubCancelRun(
+  error: Error | null = null,
+): CancelRunUseCase & { requests: Array<Record<string, unknown>> } {
+  const requests: Array<Record<string, unknown>> = [];
+  const stub = {
+    requests,
+    execute: (request: { orgId: string; threadId: string; runId: string }) => {
+      requests.push(request as Record<string, unknown>);
+      if (error) {
+        return Promise.reject(error);
+      }
+      return Promise.resolve({ ok: true as const });
+    },
+  };
+  return Object.assign(Object.create(CancelRunUseCase.prototype), stub);
 }

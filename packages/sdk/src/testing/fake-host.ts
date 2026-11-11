@@ -57,6 +57,7 @@ export interface FakeHost {
   logs: Array<{ level: string; message: string; fields?: Record<string, unknown> }>;
   emitted: Array<{ name: string; payload: unknown }>;
   dispatchedRuns: Array<{ threadId?: string; agentId?: string; input: string }>;
+  cancelledRuns: Array<{ threadId: string; runId: string }>;
   createdThreads: string[];
   accountReports: Array<{ connection: string; accountId?: string; code: string }>;
   workerReports: Array<{ workerId: string; state: string; code?: string }>;
@@ -108,6 +109,7 @@ export function createFakeHost(options: FakeHostOptions): FakeHost {
     logs: [] as Array<{ level: string; message: string; fields?: Record<string, unknown> }>,
     emitted: [] as Array<{ name: string; payload: unknown }>,
     dispatchedRuns: [] as Array<{ threadId?: string; agentId?: string; input: string }>,
+    cancelledRuns: [] as Array<{ threadId: string; runId: string }>,
     createdThreads: [] as string[],
     accountReports: [] as Array<{ connection: string; accountId?: string; code: string }>,
     workerReports: [] as Array<{ workerId: string; state: string; code?: string }>,
@@ -141,6 +143,7 @@ export function createFakeHost(options: FakeHostOptions): FakeHost {
     logs: sinks.logs,
     emitted: sinks.emitted,
     dispatchedRuns: sinks.dispatchedRuns,
+    cancelledRuns: sinks.cancelledRuns,
     createdThreads: sinks.createdThreads,
     accountReports: sinks.accountReports,
     workerReports: sinks.workerReports,

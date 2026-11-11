@@ -8,6 +8,7 @@ export interface FakeServiceSinks {
   logs: Array<{ level: string; message: string; fields?: Record<string, unknown> }>;
   emitted: Array<{ name: string; payload: unknown }>;
   dispatchedRuns: Array<{ threadId?: string; agentId?: string; input: string }>;
+  cancelledRuns: Array<{ threadId: string; runId: string }>;
   createdThreads: string[];
   accountReports: Array<{ connection: string; accountId?: string; code: string }>;
   workerReports: Array<{ workerId: string; state: string; code?: string }>;
@@ -210,6 +211,9 @@ export function createFakeServices(context: FakeServiceContext): {
       case 'runs.dispatch':
         sinks.dispatchedRuns.push(params as never);
         return { runId: `run-${sinks.dispatchedRuns.length}` };
+      case 'runs.cancel':
+        sinks.cancelledRuns.push(params as never);
+        return { ok: true };
       case 'threads.create': {
         const threadId = `thread-${sinks.createdThreads.length + 1}`;
         sinks.createdThreads.push(threadId);

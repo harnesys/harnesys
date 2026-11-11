@@ -134,6 +134,7 @@ export function createAddonContext(
     accounts,
     runs: {
       dispatch: async (params) => client['runs.dispatch'](params, { signal }),
+      cancel: async (params) => client['runs.cancel'](params, { signal }),
     },
     threads: {
       create: async (params: { title?: string; agentId: string }) =>

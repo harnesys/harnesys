@@ -241,6 +241,30 @@ describe('fake host services', () => {
     host.close();
   });
 
+  test('runs.cancel records the cancelled run behind the runs.dispatch grant', async () => {
+    const make = (grants: Array<{ id: string }>) =>
+      createFakeHost({
+        grants,
+        definition: defineAddon({
+          tools: {
+            'example.cancel': async (_input, ctx) =>
+              (await ctx.runs.cancel({ threadId: 't-1', runId: 'run-1' })).ok,
+          },
+        }),
+        manifest: validManifest(),
+      });
+    const host = make([{ id: 'runs.dispatch' }]);
+    const output = (await host.callTool('example', 'example.cancel')).output as boolean;
+    expect(output).toBe(true);
+    expect(host.cancelledRuns[0]).toEqual({ threadId: 't-1', runId: 'run-1' });
+    host.close();
+    const denied = make([]);
+    await expect(denied.callTool('example', 'example.cancel')).rejects.toMatchObject({
+      reason: 'permission_denied',
+    });
+    denied.close();
+  });
+
   test('hook.deliver reaches addon handlers and notifications reach notification handlers', async () => {
     let seen: string | undefined;
     let changedKeys: string[] | undefined;

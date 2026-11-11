@@ -198,6 +198,11 @@ export const protocolMap = {
     z.object({ runId: str }),
     'runs.dispatch',
   ),
+  'runs.cancel': addonMethod(
+    z.object({ threadId: str, runId: str }),
+    z.object({ ok: z.literal(true) }),
+    'runs.dispatch',
+  ),
   'threads.create': addonMethod(
     z.object({ title: str.optional(), agentId: z.string().uuid() }),
     z.object({ threadId: str }),

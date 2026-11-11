@@ -2,6 +2,7 @@ import { Injectable } from '@harnesys/brix';
 import { AddonError, protocolMap } from '@harnesys/sdk';
 import { z } from 'zod';
 import { RunDispatchPort } from '../../../../application/addons/run-dispatch.port.ts';
+import { CancelRunUseCase } from '../../../../application/threads/cancel-run.use-case.ts';
 import { CreateThreadUseCase } from '../../../../application/threads/create-thread.use-case.ts';
 import type {
   HostCallContext,
@@ -9,6 +10,7 @@ import type {
   HostServiceModule,
 } from '../../../../domain/addons/host-service.ts';
 import { ClockPort } from '../../../../domain/apps/ports/clock.port.ts';
+import { ThreadNotFoundException } from '../../../../domain/thread/thread.error.ts';
 import { MinuteQuota } from '../../dispatcher/rate-limit.ts';
 import { serviceMethod } from '../method.ts';
 
@@ -28,11 +30,13 @@ export class RunsHostService implements HostServiceModule {
   constructor(
     private readonly dispatchPort: RunDispatchPort,
     private readonly createThread: CreateThreadUseCase,
+    private readonly cancelRun: CancelRunUseCase,
     clock: ClockPort,
   ) {
     this.quota = new MinuteQuota(clock);
     this.methods = [
       serviceMethod('runs.dispatch', RUNS_LIMITS, (ctx, params) => this.dispatch(ctx, params)),
+      serviceMethod('runs.cancel', RUNS_LIMITS, (ctx, params) => this.cancel(ctx, params)),
       {
         name: 'threads.create',
         params: ThreadsCreateParamsSchema,
@@ -75,6 +79,24 @@ export class RunsHostService implements HostServiceModule {
       throw new AddonError('internal', { detail: 'dispatch failed' });
     }
     return { runId: result.runId ?? ctx.correlationId };
+  }
+
+  private async cancel(
+    ctx: HostCallContext,
+    params: { threadId: string; runId: string },
+  ): Promise<{ ok: true }> {
+    try {
+      return await this.cancelRun.execute({
+        orgId: ctx.orgId,
+        threadId: params.threadId,
+        runId: params.runId,
+      });
+    } catch (error) {
+      if (error instanceof ThreadNotFoundException) {
+        throw new AddonError('not_found', { detail: error.message });
+      }
+      throw error;
+    }
   }
 
   private async create(

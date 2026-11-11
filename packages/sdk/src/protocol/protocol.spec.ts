@@ -59,6 +59,7 @@ describe('protocol method map conformance', () => {
       'accounts.report',
       'accounts.access',
       'runs.dispatch',
+      'runs.cancel',
       'threads.create',
       'triggers.fire',
       'bridge.inbound',
@@ -74,6 +75,7 @@ describe('protocol method map conformance', () => {
     expect(protocolMap['accounts.list'].permission).toBe('accounts.use');
     expect(protocolMap['accounts.access'].permission).toBe('accounts.credentials');
     expect(protocolMap['runs.dispatch'].permission).toBe('runs.dispatch');
+    expect(protocolMap['runs.cancel'].permission).toBe('runs.dispatch');
     expect(protocolMap['threads.create'].permission).toBe('threads.create');
     expect(protocolMap['bridge.inbound'].permission).toBe('bridge.inbound');
     expect(protocolMap['triggers.fire'].permission).toBe('trigger');

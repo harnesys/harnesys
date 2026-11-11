@@ -46,6 +46,8 @@ export interface AddonHttp {
     method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD';
     headers?: Record<string, string>;
     body?: string;
+    bodyBase64?: string;
+    responseEncoding?: 'text' | 'base64';
     auth?: {
       connection: string;
       accountId?: string;
@@ -80,6 +82,7 @@ export interface AddonRuns {
     agentId?: string;
     input: string;
   }): Promise<{ runId: string }>;
+  cancel(params: { threadId: string; runId: string }): Promise<{ ok: true }>;
 }
 
 export interface AddonThreads {

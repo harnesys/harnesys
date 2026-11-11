@@ -69,6 +69,8 @@ A fresh context is built per call. Fields:
   credentials + `expiresAt` (permission `accounts.credentials`, audited).
 - `ctx.runs.dispatch({ threadId?, agentId?, input })` → `{ runId }` — start an agent run
   (permission `runs.dispatch`).
+- `ctx.runs.cancel({ threadId, runId })` → `{ ok: true }` — cancel a running or pending
+  run (permission `runs.dispatch`). Unknown thread/run → `not_found`.
 - `ctx.threads.create({ title?, agentId })` → `{ threadId }` (permission `threads.create`).
 - `ctx.triggers.fire({ instanceId, runKey, text?, payload? })` →
   `{ outcome: 'fired' | 'suppressed' | 'busy' | 'failed' }` — fire an automation run from
