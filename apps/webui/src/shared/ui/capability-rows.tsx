@@ -278,7 +278,7 @@ export function RowItem({
 export function RowField({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex min-w-0 gap-2 px-1 py-0.5">
-      <span className="w-16 shrink-0 pt-px font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
+      <span className="w-20 shrink-0 pt-px font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
         {label}
       </span>
       <span className="wrap-anywhere min-w-0 font-mono text-[12px] leading-snug">{value}</span>

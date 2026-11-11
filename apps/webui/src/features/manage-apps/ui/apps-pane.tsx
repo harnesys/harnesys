@@ -130,6 +130,10 @@ function providerViews(
   });
 }
 
+function plural(count: number, word: string): string {
+  return count === 1 ? `1 ${word}` : `${count} ${word}s`;
+}
+
 interface ProviderTileProps {
   orgId: string;
   provider: ProviderCatalogEntry;
@@ -156,7 +160,7 @@ function ProviderTile({ orgId, provider, counts }: ProviderTileProps) {
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-border/40 border-t pt-2.5">
         <span className="flex min-w-0 flex-wrap items-center gap-2">
           <span className="font-mono text-[11px] text-muted-foreground">
-            {counts.apps} apps · {counts.accounts} accounts
+            {plural(counts.apps, 'app')} · {plural(counts.accounts, 'account')}
           </span>
           {counts.problems.map((problem) => (
             <RowChip key={problem} tone="danger">
