@@ -17,6 +17,8 @@ export abstract class AddonTransportBindingRepositoryPort {
 
   abstract findByThread(orgId: string, threadId: string): AddonTransportBindingRow[];
 
+  abstract listByAddon(orgId: string, addonId: string): AddonTransportBindingRow[];
+
   abstract add(row: AddonTransportBindingRow): void;
 
   abstract remove(orgId: string, addonId: string, provider: string, externalChatId: string): void;

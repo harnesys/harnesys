@@ -2,6 +2,7 @@ import { Injectable } from '@harnesys/brix';
 import type { InboundMessageSchema, TriggerFireOutcomeSchema } from '@harnesys/sdk';
 import type { z } from 'zod';
 import type { HostCallContext } from '../../../domain/addons/host-service.ts';
+import { InboundAttachmentResolver } from '../bridge/inbound-attachment.resolver.ts';
 import type { BridgeInboundInput } from '../families/sinks-reference.ts';
 import { TransportInboundService } from '../families/transport/transport.family.ts';
 import { TriggerFireService } from '../families/trigger/trigger-fire.sink.ts';
@@ -32,15 +33,20 @@ export class TriggerFireSinkAdapter extends TriggerFireSink {
 
 @Injectable()
 export class BridgeInboundSinkAdapter extends BridgeInboundSink {
-  constructor(private readonly inboundService: TransportInboundService) {
+  constructor(
+    private readonly inboundService: TransportInboundService,
+    private readonly attachments: InboundAttachmentResolver,
+  ) {
     super();
   }
 
   override async inbound(ctx: HostCallContext, message: InboundMessage): Promise<void> {
+    const resolved = await this.attachments.resolve(ctx.orgId, message.attachments ?? []);
     const input: BridgeInboundInput = {
       orgId: ctx.orgId,
       addonId: ctx.addonId,
       message: { channel: message.channel, text: message.text },
+      ...(resolved.length === 0 ? {} : { attachments: resolved }),
     };
     await this.inboundService.inbound(input);
   }

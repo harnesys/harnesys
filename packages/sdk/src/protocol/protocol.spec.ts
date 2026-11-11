@@ -65,6 +65,7 @@ describe('protocol method map conformance', () => {
       'files.stat',
       'files.read',
       'files.write',
+      'bindings.channels',
       'accounts.list',
       'accounts.report',
       'accounts.access',
@@ -94,6 +95,7 @@ describe('protocol method map conformance', () => {
     expect(protocolMap['source.upload'].permission).toBe('source');
     expect(protocolMap['files.read'].permission).toBe('files.read');
     expect(protocolMap['files.write'].permission).toBe('files.write');
+    expect(protocolMap['bindings.channels'].permission).toBeNull();
     expect(protocolMap['db.run'].permission).toBeNull();
     expect(protocolMap['log.write'].permission).toBeNull();
   });

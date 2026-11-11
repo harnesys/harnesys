@@ -83,16 +83,27 @@ A fresh context is built per call. Fields:
 - `ctx.runs.cancel({ threadId, runId })` → `{ ok: true }` — cancel a running or pending
   run (permission `runs.dispatch`). Unknown thread/run → `not_found`.
 - `ctx.threads.create({ title?, agentId })` → `{ threadId }` (permission `threads.create`).
+- `ctx.bindings.channels(provider?)` → bound transport channels of this add-on
+  (`{ provider, channel, threadId, createdAt }`); read-only, no permission, scoped to the
+  caller. The host writes these rows when `ctx.bridge.inbound` first sees a channel, so an
+  add-on renders its chat list and settings without its own binding table. Bindings carry
+  no topic axis yet: a topic-aware add-on encodes the topic inside `channel`.
 - `ctx.triggers.fire({ instanceId, runKey, text?, payload? })` →
   `{ outcome: 'fired' | 'suppressed' | 'busy' | 'failed' }` — fire an automation run from
   a trigger instance (permission `trigger`); `runKey` deduplicates.
-- `ctx.bridge.inbound({ channel, from?, text, payload? })` — inject an inbound message
-  into the core bridge (permission `bridge.inbound`).
+- `ctx.bridge.inbound({ channel, from?, text, payload?, attachments? })` — inject an
+  inbound message into the core bridge (permission `bridge.inbound`). Each attachment is
+  `{ name, mediaType?, path?, dataBase64? }` with exactly one of `path` (workspace file,
+  chunked there through `ctx.files.write({ append: true })`) or `dataBase64` (small files);
+  the host caps one file at 20 MiB, stores it as a thread attachment and passes
+  `attachmentIds` with the dispatched run. Oversized, empty or escaping paths are
+  rejected with `invalid_params`/`not_found`.
 - `ctx.workers.report(workerId, state, code?)` — worker state (permission `worker`).
 
 Not available: clock (use `ctx.meta.deadline` + `ctx.signal`), metrics (host-side
-read-model), secrets/config writes, HITL approvals, progress notifications, chat thread
-attachments (add-ons produce workspace files instead).
+read-model), secrets/config writes, HITL approvals, progress notifications. Inbound chat
+attachments are supported through `ctx.bridge.inbound`; outbound attachments still accept
+`url` only (workspace `path` and inline bytes are the next delta).
 
 ## Error model
 

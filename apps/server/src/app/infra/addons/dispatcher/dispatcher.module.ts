@@ -9,6 +9,7 @@ import { EventsModule } from '../../events/events.module.ts';
 import { FleetHubModule } from '../../fleet-hub/fleet-hub.module.ts';
 import { AddonCatalogModule } from '../catalog/catalog.module.ts';
 import { AccountsHostService } from '../services/accounts/accounts-service.ts';
+import { BindingsHostService } from '../services/bindings/bindings-service.ts';
 import { BridgeHostService } from '../services/bridge/bridge-service.ts';
 import { ConfigHostService } from '../services/config/config-service.ts';
 import { DbHostService } from '../services/db/db-service.ts';
@@ -56,6 +57,7 @@ import { PermissionEngine } from './permission-engine.ts';
     HttpHostService,
     FilesHostService,
     AccountsHostService,
+    BindingsHostService,
     RunsHostService,
     TriggersHostService,
     BridgeHostService,

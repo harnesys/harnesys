@@ -35,6 +35,16 @@ export class AddonTransportBindingStore {
     return rows.map(toRow);
   }
 
+  listByAddon(orgId: string, addonId: string): AddonTransportBindingRow[] {
+    const rows = this.db
+      .query(
+        `SELECT * FROM addon_transport_bindings
+         WHERE org_id = ? AND addon_id = ? ORDER BY created_at ASC`,
+      )
+      .all(orgId, addonId) as AddonTransportBindingRecord[];
+    return rows.map(toRow);
+  }
+
   add(row: AddonTransportBindingRow): void {
     this.db
       .query(

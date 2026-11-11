@@ -10,6 +10,7 @@ import { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts'
 import { connectorOrigin, shouldEchoUser } from '../../../domain/connector/echo.ts';
 import { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
 import { CreateThreadUseCase } from '../../threads/create-thread.use-case.ts';
+import { UploadThreadAttachmentUseCase } from '../../threads/upload-thread-attachment.use-case.ts';
 import { type RunDispatchOutcome, RunDispatchPort } from '../run-dispatch.port.ts';
 import {
   type BridgeInboundOutcome,
@@ -33,6 +34,7 @@ export class NeutralBridgeInboundUseCase extends BridgeInboundPort {
     private readonly dispatch: RunDispatchPort,
     private readonly calls: AddonCallPort,
     private readonly outbound: AddonTransportSessionRepositoryPort,
+    private readonly uploads: UploadThreadAttachmentUseCase,
     @Inject(Logger) logger: Logger,
   ) {
     super();
@@ -85,12 +87,14 @@ export class NeutralBridgeInboundUseCase extends BridgeInboundPort {
     if (thread === undefined) {
       return 'skipped';
     }
+    const attachmentIds = await this.uploadAttachments(request, binding.threadId);
     const { outcome } = await this.dispatch.dispatch({
       orgId: request.orgId,
       threadId: binding.threadId,
       agentId: thread.autoReplyAgentId ?? '',
       text: request.message.text,
       correlationId: request.correlationId,
+      ...(attachmentIds.length > 0 ? { attachmentIds } : {}),
     });
     this.logDispatch(request, binding.threadId, outcome);
     return 'dispatched';
@@ -121,15 +125,36 @@ export class NeutralBridgeInboundUseCase extends BridgeInboundPort {
       threadId: thread.id,
       createdAt: new Date().toISOString(),
     });
+    const attachmentIds = await this.uploadAttachments(request, thread.id);
     const { outcome } = await this.dispatch.dispatch({
       orgId: request.orgId,
       threadId: thread.id,
       agentId: agent.id,
       text: request.message.text,
       correlationId: request.correlationId,
+      ...(attachmentIds.length > 0 ? { attachmentIds } : {}),
     });
     this.logDispatch(request, thread.id, outcome);
     return 'dispatched';
+  }
+
+  private async uploadAttachments(
+    request: BridgeInboundRequest,
+    threadId: string,
+  ): Promise<string[]> {
+    const attachments = request.attachments ?? [];
+    const ids: string[] = [];
+    for (const attachment of attachments) {
+      const uploaded = await this.uploads.execute({
+        orgId: request.orgId,
+        threadId,
+        name: attachment.name,
+        mediaType: attachment.mediaType,
+        bytes: attachment.bytes,
+      });
+      ids.push(uploaded.id);
+    }
+    return ids;
   }
 
   private async autoReply(request: BridgeInboundRequest, text: string): Promise<void> {

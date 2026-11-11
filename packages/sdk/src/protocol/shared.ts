@@ -28,6 +28,20 @@ export interface TransportOption {
   label: string;
 }
 
+export interface TransportBindingSummary {
+  provider: string;
+  channel: string;
+  threadId: string;
+  createdAt: string;
+}
+
+export const TransportBindingSummarySchema = z.object({
+  provider: z.string().min(1),
+  channel: z.string().min(1),
+  threadId: z.string().min(1),
+  createdAt: z.string().min(1),
+});
+
 export interface TransportMessage {
   channel: string;
   text: string;
@@ -181,11 +195,25 @@ export const AccountSummarySchema = z.object({
 
 export const TriggerFireOutcomeSchema = z.enum(['fired', 'suppressed', 'busy', 'failed']);
 
+export const InboundAttachmentSchema = z
+  .object({
+    name: z.string().min(1),
+    mediaType: z.string().min(1).optional(),
+    path: z.string().min(1).optional(),
+    dataBase64: z.string().min(1).optional(),
+  })
+  .refine((value) => (value.path === undefined) !== (value.dataBase64 === undefined), {
+    message: 'exactly one of path or dataBase64 is required',
+  });
+
+export type InboundAttachment = z.infer<typeof InboundAttachmentSchema>;
+
 export const InboundMessageSchema = z.object({
   channel: z.string().min(1),
   from: z.string().optional(),
   text: z.string(),
   payload: z.unknown().optional(),
+  attachments: z.array(InboundAttachmentSchema).max(10).optional(),
 });
 
 export interface RouteRequest {

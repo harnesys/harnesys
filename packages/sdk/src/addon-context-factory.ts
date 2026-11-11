@@ -17,6 +17,7 @@ import type { CallMeta } from './protocol/meta.ts';
 
 export type {
   AddonAccounts,
+  AddonBindings,
   AddonBridge,
   AddonConfig,
   AddonContext,
@@ -27,6 +28,7 @@ export type {
   AddonFiles,
   AddonFileWriteResult,
   AddonHttp,
+  AddonInboundAttachment,
   AddonLog,
   AddonLogLevel,
   AddonRuns,
@@ -119,6 +121,12 @@ export function createAddonContext(
     read: async (params) => client['files.read'](params, { signal }),
     write: async (params) => client['files.write'](params, { signal }),
   };
+  const bindings = {
+    channels: async (provider?: string) => {
+      const result = await client['bindings.channels']({ provider }, { signal });
+      return result.channels;
+    },
+  };
   const accounts = {
     list: async (connection: string) => {
       const result = await client['accounts.list']({ connection }, { signal });
@@ -143,6 +151,7 @@ export function createAddonContext(
     http,
     files,
     accounts,
+    bindings,
     runs: {
       dispatch: async (params) => client['runs.dispatch'](params, { signal }),
       cancel: async (params) => client['runs.cancel'](params, { signal }),

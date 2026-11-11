@@ -21,6 +21,7 @@ import {
   RouteHandleResultSchema,
   RouteRequestSchema,
   SqlParamSchema,
+  TransportBindingSummarySchema,
   TransportMessageSchema,
   TriggerFireOutcomeSchema,
 } from './shared.ts';
@@ -155,6 +156,11 @@ export const protocolMap = {
   'files.stat': addonMethod(FileStatParamsSchema, FileStatResultSchema, 'files.read'),
   'files.read': addonMethod(FileReadParamsSchema, FileReadResultSchema, 'files.read'),
   'files.write': addonMethod(FileWriteParamsSchema, FileWriteResultSchema, 'files.write'),
+  'bindings.channels': addonMethod(
+    z.object({ provider: str.optional() }),
+    z.object({ channels: z.array(TransportBindingSummarySchema) }),
+    null,
+  ),
   'accounts.list': addonMethod(
     z.object({ connection: str }),
     z.object({ accounts: z.array(AccountSummarySchema) }),

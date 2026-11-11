@@ -24,6 +24,10 @@ export class AddonTransportBindingRepositoryAdapter extends AddonTransportBindin
     return this.withStore(orgId, (store) => store.findByThread(orgId, threadId));
   }
 
+  override listByAddon(orgId: string, addonId: string): AddonTransportBindingRow[] {
+    return this.withStore(orgId, (store) => store.listByAddon(orgId, addonId));
+  }
+
   override add(row: AddonTransportBindingRow): void {
     this.withStore(row.orgId, (store) => store.add(row));
   }

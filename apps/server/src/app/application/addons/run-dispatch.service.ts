@@ -28,6 +28,9 @@ export class ThreadRunDispatchService extends RunDispatchPort {
           body: {
             text: input.text,
             correlationId: input.runKey ?? input.correlationId,
+            ...(input.attachmentIds !== undefined && input.attachmentIds.length > 0
+              ? { attachmentIds: input.attachmentIds }
+              : {}),
           },
           attribution: mechanicalRunStart(null),
           trigger: { kind: 'connector', id: triggerId },

@@ -89,6 +89,12 @@ export interface AddonFiles {
   write(params: { path: string; data: string; append?: boolean }): Promise<AddonFileWriteResult>;
 }
 
+export interface AddonBindings {
+  channels(
+    provider?: string,
+  ): Promise<Array<{ provider: string; channel: string; threadId: string; createdAt: string }>>;
+}
+
 export interface AddonAccounts {
   list(
     connection: string,
@@ -124,12 +130,20 @@ export interface AddonTriggers {
   }): Promise<{ outcome: 'fired' | 'suppressed' | 'busy' | 'failed' }>;
 }
 
+export interface AddonInboundAttachment {
+  name: string;
+  mediaType?: string;
+  path?: string;
+  dataBase64?: string;
+}
+
 export interface AddonBridge {
   inbound(message: {
     channel: string;
     from?: string;
     text: string;
     payload?: unknown;
+    attachments?: AddonInboundAttachment[];
   }): Promise<void>;
 }
 
@@ -148,6 +162,7 @@ export interface AddonContext {
   readonly http: AddonHttp;
   readonly files: AddonFiles;
   readonly accounts: AddonAccounts;
+  readonly bindings: AddonBindings;
   readonly runs: AddonRuns;
   readonly threads: AddonThreads;
   readonly triggers: AddonTriggers;

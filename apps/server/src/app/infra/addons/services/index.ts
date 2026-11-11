@@ -2,6 +2,7 @@ import { Injectable } from '@harnesys/brix';
 import type { HostServiceModule } from '../../../domain/addons/host-service.ts';
 import { HostServiceRegistryPort } from '../../../domain/addons/ports/host-service-registry.port.ts';
 import { AccountsHostService } from './accounts/accounts-service.ts';
+import { BindingsHostService } from './bindings/bindings-service.ts';
 import { BridgeHostService } from './bridge/bridge-service.ts';
 import { ConfigHostService } from './config/config-service.ts';
 import { DbHostService } from './db/db-service.ts';
@@ -28,6 +29,7 @@ export class HostServicesIndex {
     http: HttpHostService,
     files: FilesHostService,
     accounts: AccountsHostService,
+    bindings: BindingsHostService,
     runs: RunsHostService,
     triggers: TriggersHostService,
     bridge: BridgeHostService,
@@ -42,6 +44,7 @@ export class HostServicesIndex {
       http,
       files,
       accounts,
+      bindings,
       runs,
       triggers,
       bridge,

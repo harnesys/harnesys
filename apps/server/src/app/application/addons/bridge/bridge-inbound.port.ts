@@ -1,10 +1,17 @@
 import type { TransportMessage } from '@harnesys/sdk';
 
+export interface InboundAttachmentBytes {
+  name: string;
+  mediaType: string;
+  bytes: Uint8Array;
+}
+
 export interface BridgeInboundRequest {
   orgId: string;
   addonId: string;
   transportProvider: string;
   message: TransportMessage;
+  attachments?: InboundAttachmentBytes[];
   correlationId?: string;
 }
 

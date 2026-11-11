@@ -122,30 +122,40 @@ export class TransportInboundService implements BridgeInboundSink {
         return;
       }
       for (const input of pending) {
-        try {
-          const answered = await this.asks.tryAnswer({
-            orgId: input.orgId,
-            addonId: input.addonId,
-            provider,
-            channel: input.message.channel,
-            text: input.message.text,
-          });
-          if (answered) {
-            continue;
-          }
-          await this.bridge.execute({
-            orgId: input.orgId,
-            addonId: input.addonId,
-            transportProvider: provider,
-            message: input.message,
-          });
-        } catch (error) {
-          this.logger.warn(
-            { orgId, addonId, error: error instanceof Error ? error.message : String(error) },
-            'bridge inbound failed',
-          );
-        }
+        await this.deliver(orgId, addonId, provider, input);
       }
+    }
+  }
+
+  private async deliver(
+    orgId: string,
+    addonId: string,
+    provider: string,
+    input: BridgeInboundInput,
+  ): Promise<void> {
+    try {
+      const answered = await this.asks.tryAnswer({
+        orgId: input.orgId,
+        addonId: input.addonId,
+        provider,
+        channel: input.message.channel,
+        text: input.message.text,
+      });
+      if (answered) {
+        return;
+      }
+      await this.bridge.execute({
+        orgId: input.orgId,
+        addonId: input.addonId,
+        transportProvider: provider,
+        message: input.message,
+        ...(input.attachments === undefined ? {} : { attachments: input.attachments }),
+      });
+    } catch (error) {
+      this.logger.warn(
+        { orgId, addonId, error: error instanceof Error ? error.message : String(error) },
+        'bridge inbound failed',
+      );
     }
   }
 

@@ -63,6 +63,7 @@ import { FleetHubModule } from '../../fleet-hub/fleet-hub.module.ts';
 import { MachineHomeModule } from '../../machine-home/machine-home.module.ts';
 import { SecretModule } from '../../secret/secret.module.ts';
 import { AddonAppsBridgeModule } from '../apps-bridge/apps-bridge.module.ts';
+import { InboundAttachmentResolver } from '../bridge/inbound-attachment.resolver.ts';
 import { AddonCatalogModule } from '../catalog/catalog.module.ts';
 import { DispatcherModule } from '../dispatcher/dispatcher.module.ts';
 import { PermissionDefinitionRegistry } from '../dispatcher/permission-definitions.ts';
@@ -174,6 +175,7 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     AddonLogSinkAdapter,
     { provide: BindingsReader, useClass: BindingsReaderAdapter },
     { provide: TriggerFireSink, useClass: TriggerFireSinkAdapter },
+    InboundAttachmentResolver,
     { provide: BridgeInboundSink, useClass: BridgeInboundSinkAdapter },
     { provide: WorkerReportSink, useClass: WorkerReportSinkAdapter },
     { provide: AddonNotifyPort, useClass: SupervisorNotifyAdapter },
