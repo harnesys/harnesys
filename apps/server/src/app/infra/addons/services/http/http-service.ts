@@ -29,6 +29,8 @@ interface HttpFetchParams {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD';
   headers?: Record<string, string>;
   body?: string;
+  bodyBase64?: string;
+  responseEncoding?: 'text' | 'base64';
   auth?: HttpAuthRequest;
 }
 
@@ -58,6 +60,7 @@ export class HttpHostService implements HostServiceModule {
     status: number;
     headers: Record<string, string>;
     body: string | null;
+    bodyBase64?: string;
   }> {
     const url = new URL(params.url);
     await this.checkEgress(url, this.allowedHosts(ctx));
@@ -69,7 +72,7 @@ export class HttpHostService implements HostServiceModule {
     const response = await this.fetcher.fetch(url, {
       method: params.method ?? 'GET',
       headers,
-      body: params.body,
+      body: requestBody(params),
       signal: ctx.signal,
       redirect: 'manual',
     });
@@ -77,6 +80,14 @@ export class HttpHostService implements HostServiceModule {
     const bytes = new Uint8Array(await response.arrayBuffer());
     if (bytes.byteLength > MAX_RESPONSE_BYTES) {
       throw new AddonError('invalid_response', { detail: 'response exceeds 8 MiB' });
+    }
+    if (params.responseEncoding === 'base64') {
+      return {
+        status: response.status,
+        headers: Object.fromEntries(response.headers.entries()),
+        body: null,
+        bodyBase64: bytes.byteLength === 0 ? '' : Buffer.from(bytes).toString('base64'),
+      };
     }
     return {
       status: response.status,
@@ -150,6 +161,13 @@ export class HttpHostService implements HostServiceModule {
       );
     }
   }
+}
+
+function requestBody(params: HttpFetchParams): string | Uint8Array | undefined {
+  if (params.bodyBase64 !== undefined) {
+    return Uint8Array.from(Buffer.from(params.bodyBase64, 'base64'));
+  }
+  return params.body;
 }
 
 function pickCredential(credentials: Record<string, string>, key: string): string {

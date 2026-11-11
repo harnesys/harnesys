@@ -32,6 +32,15 @@ import { SupervisorHooks, SupervisorTimers } from './supervisor-deps.ts';
 import { SupervisorRestartPolicy } from './supervisor-restarts.ts';
 import type { RpcCallMeta } from './transport-rpc-client.ts';
 
+export interface SupervisorRpcCall {
+  orgId: string;
+  addonId: string;
+  method: string;
+  params: unknown;
+  timeoutMs: number;
+  meta?: RpcCallMeta;
+}
+
 @Injectable()
 export class AddonInstanceSupervisor extends InstanceSupervisorPort {
   private readonly log: Logger;
@@ -125,22 +134,15 @@ export class AddonInstanceSupervisor extends InstanceSupervisorPort {
     return this.registry.snapshot(orgId, addonId);
   }
 
-  async request(
-    orgId: string,
-    addonId: string,
-    method: string,
-    params: unknown,
-    timeoutMs: number,
-    meta?: RpcCallMeta,
-  ): Promise<unknown> {
+  async request(call: SupervisorRpcCall): Promise<unknown> {
     return await requestOfRuntime({
       runtimes: this.runtimes,
-      orgId,
-      addonId,
-      method,
-      params,
-      timeoutMs,
-      meta,
+      orgId: call.orgId,
+      addonId: call.addonId,
+      method: call.method,
+      params: call.params,
+      timeoutMs: call.timeoutMs,
+      meta: call.meta,
     });
   }
 

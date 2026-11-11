@@ -34,7 +34,7 @@ function addonsBase(orgId: string) {
   return `/api/orgs/${encodeURIComponent(orgId)}/addons`;
 }
 
-function addonBase(orgId: string, addonId: string) {
+export function addonBase(orgId: string, addonId: string) {
   return `${addonsBase(orgId)}/${encodeURIComponent(addonId)}`;
 }
 

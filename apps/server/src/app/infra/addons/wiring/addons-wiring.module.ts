@@ -20,6 +20,12 @@ import { RemovePackageUseCase } from '../../../application/addons/packages/remov
 import { RescanPackagesUseCase } from '../../../application/addons/packages/rescan-packages.use-case.ts';
 import { AddonReconciler } from '../../../application/addons/reconcile/reconciler.ts';
 import { RunDispatchPort } from '../../../application/addons/run-dispatch.port.ts';
+import { AddonCloudMaterializer } from '../../../application/addons/sources/addon-cloud.materializer.ts';
+import { AttachAddonCloudSourceUseCase } from '../../../application/addons/sources/attach-addon-cloud-source.use-case.ts';
+import { BrowseAddonCloudFolderUseCase } from '../../../application/addons/sources/browse-addon-cloud-folder.use-case.ts';
+import { ListAddonCloudSourcesUseCase } from '../../../application/addons/sources/list-addon-cloud-sources.use-case.ts';
+import { PrepareAddonCloudSourceUseCase } from '../../../application/addons/sources/prepare-addon-cloud-source.use-case.ts';
+import { RefreshAddonCloudSourceUseCase } from '../../../application/addons/sources/refresh-addon-cloud-source.use-case.ts';
 import { FireTriggerUseCase } from '../../../application/addons/triggers/fire-trigger.use-case.ts';
 import { ManageTriggerInstanceUseCase } from '../../../application/addons/triggers/manage-instance.use-case.ts';
 import { AccountsFacadePort } from '../../../application/apps/accounts-facade.port.ts';
@@ -79,6 +85,7 @@ import {
   TriggerFireSink,
   WorkerReportSink,
 } from '../services/sinks.ts';
+import { AddonSourceModule } from '../source/addon-source.module.ts';
 import { AddonSecretService } from '../storage/addon-secret.service.ts';
 import { AddonStorageModule } from '../storage/storage.module.ts';
 import { AddonSupervisorModule } from '../supervisor/supervisor.module.ts';
@@ -129,6 +136,7 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     AddonSupervisorModule,
     DispatcherModule,
     AddonFamiliesModule,
+    AddonSourceModule,
     AddonAppsBridgeModule,
     AddonsApplicationModule,
     EventsModule,
@@ -279,6 +287,12 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     SetGrantsUseCase,
     SetConfigUseCase,
     SetBindingsUseCase,
+    AttachAddonCloudSourceUseCase,
+    BrowseAddonCloudFolderUseCase,
+    ListAddonCloudSourcesUseCase,
+    PrepareAddonCloudSourceUseCase,
+    RefreshAddonCloudSourceUseCase,
+    AddonCloudMaterializer,
     ManageTriggerInstanceUseCase,
     FireTriggerUseCase,
     RunJobUseCase,

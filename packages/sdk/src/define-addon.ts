@@ -50,6 +50,37 @@ export interface TransportHandlers {
   typing?(params: HostMethodParams<'transport.typing'>, ctx: AddonContext): Promise<void> | void;
 }
 
+export interface SourceBackendHandlers {
+  list(
+    params: Omit<HostMethodParams<'source.list'>, '_meta'>,
+    ctx: AddonContext,
+  ): HostMethodResult<'source.list'> | Promise<HostMethodResult<'source.list'>>;
+  stat(
+    params: Omit<HostMethodParams<'source.stat'>, '_meta'>,
+    ctx: AddonContext,
+  ): HostMethodResult<'source.stat'> | Promise<HostMethodResult<'source.stat'>>;
+  download(
+    params: Omit<HostMethodParams<'source.download'>, '_meta'>,
+    ctx: AddonContext,
+  ): HostMethodResult<'source.download'> | Promise<HostMethodResult<'source.download'>>;
+  upload?(
+    params: Omit<HostMethodParams<'source.upload'>, '_meta'>,
+    ctx: AddonContext,
+  ): HostMethodResult<'source.upload'> | Promise<HostMethodResult<'source.upload'>>;
+  mkdir?(
+    params: Omit<HostMethodParams<'source.mkdir'>, '_meta'>,
+    ctx: AddonContext,
+  ): HostMethodResult<'source.mkdir'> | Promise<HostMethodResult<'source.mkdir'>>;
+  remove?(
+    params: Omit<HostMethodParams<'source.remove'>, '_meta'>,
+    ctx: AddonContext,
+  ): Promise<void> | void;
+  export?(
+    params: Omit<HostMethodParams<'source.export'>, '_meta'>,
+    ctx: AddonContext,
+  ): HostMethodResult<'source.export'> | Promise<HostMethodResult<'source.export'>>;
+}
+
 export interface LifecycleHandlers {
   upgrade?(params: HostMethodParams<'lifecycle.upgrade'>, ctx: AddonContext): Promise<void> | void;
 }
@@ -77,6 +108,7 @@ export interface AddonDefinition {
   workers?: Record<string, WorkerPair>;
   hooks?: Record<string, HookHandler>;
   transport?: TransportHandlers;
+  sources?: Record<string, SourceBackendHandlers>;
   lifecycle?: LifecycleHandlers;
   notifications?: NotificationHandlers;
 }
@@ -116,10 +148,27 @@ export function deriveHandlers(definition: AddonDefinition): string[] {
   if (hasKeys(definition.hooks)) {
     handlers.push('hook.deliver');
   }
+  handlers.push(...sourceHandlerNames(definition.sources));
   if (definition.lifecycle?.upgrade !== undefined) {
     handlers.push('lifecycle.upgrade');
   }
   return handlers;
+}
+
+function sourceHandlerNames(sources: Record<string, SourceBackendHandlers> | undefined): string[] {
+  if (sources === undefined || Object.keys(sources).length === 0) {
+    return [];
+  }
+  const names = ['source.list', 'source.stat', 'source.download'];
+  const implementations = Object.values(sources);
+  const anyOp = (op: keyof SourceBackendHandlers): boolean =>
+    implementations.some((backend) => backend[op] !== undefined);
+  for (const op of ['upload', 'mkdir', 'remove', 'export'] as const) {
+    if (anyOp(op)) {
+      names.push(`source.${op}`);
+    }
+  }
+  return names;
 }
 
 export function defineAddon(definition: AddonDefinition): ResolvedAddonDefinition {

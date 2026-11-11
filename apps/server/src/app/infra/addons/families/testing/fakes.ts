@@ -1,5 +1,5 @@
 import { Logger } from '@harnesys/brix';
-import type { AddonManifest, TransportMessage } from '@harnesys/sdk';
+import type { AddonManifest, JsonObject, TransportMessage } from '@harnesys/sdk';
 import type { PackRegistration } from 'harnesys';
 import type { OwnerKey } from '../../../../domain/addons/owner.ts';
 import {
@@ -7,6 +7,7 @@ import {
   AddonCallPort,
   type HookDeliverParams,
   type RouteCallParams,
+  type SourceRequestMethod,
   type ToolCallParams,
   type ToolCallResult,
   type TriggerStartParams,
@@ -184,5 +185,16 @@ export class FakeAddonCallPort extends AddonCallPort {
     opts?: AddonCallOptions,
   ): Promise<void> {
     this.record('transport.typing', params, opts);
+  }
+
+  override async sourceRequest(
+    _orgId: string,
+    _addonId: string,
+    method: SourceRequestMethod,
+    params: JsonObject,
+    opts?: AddonCallOptions,
+  ): Promise<JsonObject> {
+    this.record(method, params, opts);
+    return {};
   }
 }

@@ -1,5 +1,9 @@
 import type { AddonContext } from './addon-context.ts';
-import type { NotificationHandlers, ResolvedAddonDefinition } from './define-addon.ts';
+import type {
+  NotificationHandlers,
+  ResolvedAddonDefinition,
+  SourceBackendHandlers,
+} from './define-addon.ts';
 import { createAddonContextFor, type HostChannel } from './host-client.ts';
 import { AddonError, type AddonErrorReason } from './protocol/error.ts';
 import {
@@ -46,29 +50,35 @@ export function createAddonRuntime(options: AddonRuntimeOptions): AddonRuntime {
     params: Record<string, unknown>,
     ctx: AddonContext,
   ): Target | undefined {
-    switch (method) {
-      case 'tools.call': {
-        const handler = definition.tools?.[str(params.tool)];
-        if (!handler) {
-          return null;
-        }
-        return async () => ({ output: await handler(asInput(params.input), ctx) });
-      }
-      case 'route.handle': {
-        const handler = definition.routes?.[str(params.routeId)];
-        return handler ? () => handler(withoutMeta(params) as never, ctx) : null;
-      }
-      case 'job.run': {
-        const handler = definition.jobs?.[str(params.jobId)];
-        return handler ? () => handler(withoutMeta(params) as never, ctx) : null;
-      }
-      case 'hook.deliver': {
-        const handler = definition.hooks?.[str(params.hookId)];
-        return handler ? () => handler(withoutMeta(params) as never, ctx) : null;
-      }
-      default:
-        return undefined;
+    if (method.startsWith('source.')) {
+      return sourceLookup(method, params, ctx);
     }
+    const lookups: Record<string, () => Target | undefined> = {
+      'tools.call': () => toolTarget(params, ctx),
+      'route.handle': () => handlerTarget(definition.routes?.[str(params.routeId)], params, ctx),
+      'job.run': () => handlerTarget(definition.jobs?.[str(params.jobId)], params, ctx),
+      'hook.deliver': () => handlerTarget(definition.hooks?.[str(params.hookId)], params, ctx),
+    };
+    return lookups[method]?.();
+  }
+
+  function toolTarget(params: Record<string, unknown>, ctx: AddonContext): Target {
+    const handler = definition.tools?.[str(params.tool)];
+    if (handler === undefined) {
+      return null;
+    }
+    return async () => ({ output: await handler(asInput(params.input), ctx) });
+  }
+
+  function sourceLookup(
+    method: string,
+    params: Record<string, unknown>,
+    ctx: AddonContext,
+  ): Target | undefined {
+    const op = method.slice('source.'.length) as keyof SourceBackendHandlers;
+    const backend = definition.sources?.[str(params.sourceKind)];
+    const handler = backend?.[op];
+    return handler ? () => handler(withoutMeta(params) as never, ctx) : null;
   }
 
   function dispatchManaged(
@@ -225,6 +235,18 @@ function withoutMeta<P extends { _meta?: unknown }>(params: P): Omit<P, '_meta'>
   const copy = { ...params };
   delete copy._meta;
   return copy as Omit<P, '_meta'>;
+}
+
+function handlerTarget(
+  handler: unknown,
+  params: Record<string, unknown>,
+  ctx: AddonContext,
+): Target {
+  if (typeof handler !== 'function') {
+    return null;
+  }
+  return () =>
+    (handler as (p: Record<string, unknown>, c: AddonContext) => unknown)(withoutMeta(params), ctx);
 }
 
 const FALLBACK_DEADLINE_MS = 5 * 60_000;

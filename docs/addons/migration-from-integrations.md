@@ -57,10 +57,14 @@ through connections (see accounts-and-connections.md); they do not replace OAuth
 4. **Identity linking** (`/link <code>` in Telegram). `ConfirmIdentityLinkUseCase` is
    core; addons have no surface to confirm identity links.
    → Needs a host-service method or keeping the flow in core.
-5. **Knowledge-source backends (Google Drive).** Materialization/sync-back lives in the
-   separate `source` subsystem; the `source-kind` contribution family is a registry stub.
-   → Needs the `source-kind` family to gain real semantics, or Drive stays a source
-     driver.
+5. ~~**Knowledge-source backends (Google Drive).**~~ **Resolved.** The `source-kind` family
+   is consumed: an add-on implements the `source.*` handlers, the core wraps them in
+   `AddonCloudBackend extends CloudRemoteBackendPort`, and `distribution.kind = 'addon-cloud'`
+   sources reuse the existing mirror engine, sync-back and materialization. Reference
+   implementation: [`add-ons/harnesys.google-drive`](../../add-ons/harnesys.google-drive).
+   Trade-offs: add-on sources materialize on the host that runs the add-on (no remote fleet
+   placement), and upload through the bridge is capped at 4 MiB per call (download is chunked
+   and unbounded).
 6. **Multi-node lease fencing.** The Telegram poller fences with machine leases
    (15s TTL). Addon workers have no lease primitive; running two host nodes would double
    poll. Acceptable for single-node hosts.

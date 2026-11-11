@@ -10,7 +10,6 @@ import {
 import { InstanceSupervisorPort } from '../../domain/addons/ports/instance-supervisor.port.ts';
 import { OrgAddonRepositoryPort } from '../../domain/addons/ports/org-addon-repository.port.ts';
 import { MetricsPort } from '../../domain/metrics/metrics.port.ts';
-import { LoggerMetricsAdapter } from '../../infra/apps/runtime.adapters.ts';
 import { AddonOrgAdminGuard } from '../guards/addon-org-admin.guard.ts';
 import { OrgAccessGuard } from '../guards/org-access.guard.ts';
 
@@ -134,9 +133,6 @@ export class AddonsDiagnosticsController {
    * per addon/method/outcome), aggregated by outcome for this addon.
    */
   private rpcCountersOf(addonId: string): AddonMetricPoint[] {
-    if (!(this.metricsPort instanceof LoggerMetricsAdapter)) {
-      return [];
-    }
     const byOutcome = new Map<string, number>();
     for (const entry of this.metricsPort.snapshot()) {
       if (entry.name !== 'addons_host_call_total' || entry.labels.addon !== addonId) {

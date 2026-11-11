@@ -18,6 +18,7 @@ const addon = defineAddon({
 | `jobs` | `Record<string, (params: { jobId }, ctx) => void>` |
 | `workers` | `Record<string, { start(params: { workerId }, ctx), stop(params: { workerId }, ctx) }>` |
 | `hooks` | `Record<string, (params: { hookId, event }, ctx) => void>` |
+| `sources` | `Record<sourceKindId, { list, stat, download, upload?, mkdir?, remove?, export? }>` |
 | `transport` | `{ send?, edit?, typing? }` |
 | `lifecycle` | `{ upgrade?({ fromVersion }, ctx) }` |
 | `notifications` | `{ 'config.changed'?, 'permissions.changed'?, 'accounts.changed'? }` |
@@ -59,10 +60,12 @@ A fresh context is built per call. Fields:
   SQL-guarded (no PRAGMA, no ATTACH, quota rules) and capped at 8 MiB results / 5s.
 - `ctx.events.emit(name, payload)` — emit an addon event; names are forced under the
   `<addonId>.` prefix, payload ≤ 64 KiB. Baseline `events.emit.own`.
-- `ctx.http.fetch({ url, method?, headers?, body?, auth? })` — outbound HTTP. Returns
+- `ctx.http.fetch({ url, method?, headers?, body?, bodyBase64?, responseEncoding?, auth? })` — outbound HTTP. Returns
   `{ status, headers, body, bodyBase64? }`. Requires `http.fetch` scoped to the host
   (egress policy; violations fail with `permission_denied`). `auth` injects stored
   connection credentials host-side: `{ connection, accountId?, scheme: 'bearer' | 'basic' | 'header', credentialKey?, header? }` — the add-on never sees raw credentials.
+  Use `responseEncoding: 'base64'` (and `bodyBase64` for the request body) for binary payloads;
+  the default is text decoding, and responses are capped at 8 MiB.
 - `ctx.accounts.list(connection)` — bound accounts (label, externalAccountId, status);
   `ctx.accounts.report(connection, code, accountId?)` — report account errors
   (`account_failed` etc.); `ctx.accounts.access(connection, accountId?)` — raw

@@ -1,11 +1,17 @@
 import { Injectable } from '@harnesys/brix';
-import type { HostRequestName, RouteHandleResult, TransportMessage } from '@harnesys/sdk';
+import type {
+  HostRequestName,
+  JsonObject,
+  RouteHandleResult,
+  TransportMessage,
+} from '@harnesys/sdk';
 import { AddonException } from '../../../domain/addons/errors.ts';
 import type { AddonCallOptions } from '../../../domain/addons/ports/addon-call.port.ts';
 import {
   AddonCallPort,
   type HookDeliverParams,
   type RouteCallParams,
+  type SourceRequestMethod,
   type ToolCallParams,
   type ToolCallResult,
   type TriggerStartParams,
@@ -131,6 +137,17 @@ export class AddonCallService extends AddonCallPort {
     await this.request(orgId, addonId, 'transport.typing', params, opts);
   }
 
+  async sourceRequest(
+    orgId: string,
+    addonId: string,
+    method: SourceRequestMethod,
+    params: JsonObject,
+    opts?: AddonCallOptions,
+  ): Promise<JsonObject> {
+    const result = await this.request(orgId, addonId, method, params, opts);
+    return result !== null && typeof result === 'object' ? (result as JsonObject) : {};
+  }
+
   private async request(
     orgId: string,
     addonId: string,
@@ -142,22 +159,23 @@ export class AddonCallService extends AddonCallPort {
     this.assertRunning(snapshot);
     const timeoutMs = opts?.timeoutMs ?? DEFAULT_TIMEOUTS[method] ?? 30_000;
     try {
-      const result = await this.rpc.request(
+      const result = await this.rpc.request({
         orgId,
         addonId,
         method,
         params,
         timeoutMs,
-        opts?.signal,
-        opts?.principal || opts?.agentId || opts?.threadId || opts?.runId
-          ? {
-              principal: opts?.principal,
-              agentId: opts?.agentId,
-              threadId: opts?.threadId,
-              runId: opts?.runId,
-            }
-          : undefined,
-      );
+        signal: opts?.signal,
+        meta:
+          opts?.principal || opts?.agentId || opts?.threadId || opts?.runId
+            ? {
+                principal: opts?.principal,
+                agentId: opts?.agentId,
+                threadId: opts?.threadId,
+                runId: opts?.runId,
+              }
+            : undefined,
+      });
       this.assertSameGeneration(snapshot, orgId, addonId);
       return result;
     } catch (error) {

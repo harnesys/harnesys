@@ -74,6 +74,7 @@ import { AddonsDiagnosticsController } from './rest/addons-diagnostics.controlle
 import { AddonsEventsController } from './rest/addons-events.controller.ts';
 import { AddonsOrgController } from './rest/addons-org.controller.ts';
 import { AddonsOrgJobsController } from './rest/addons-org-jobs.controller.ts';
+import { AddonsOrgSourcesController } from './rest/addons-org-sources.controller.ts';
 import { AddonsOrgTriggersController } from './rest/addons-org-triggers.controller.ts';
 import { AddonsPackagesController } from './rest/addons-packages.controller.ts';
 import { AgentHooksController } from './rest/agent-hooks.controller.ts';
@@ -285,6 +286,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     AddonsOrgController,
     AddonsOrgTriggersController,
     AddonsOrgJobsController,
+    AddonsOrgSourcesController,
     AddonsDiagnosticsController,
     AddonsEventsController,
     AddonRoutesController,

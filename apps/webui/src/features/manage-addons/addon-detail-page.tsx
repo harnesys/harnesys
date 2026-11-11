@@ -21,6 +21,7 @@ import { StatusDot } from '@/shared/ui/status-dot';
 import { AddonLogPanel } from './addon-log-panel';
 import { AddonMark } from './addon-mark';
 import { AddonControls, AddonDangerZone } from './detail-actions';
+import { KnowledgeSourcesSection } from './knowledge-sources-section';
 import type { AddonBanner } from './lib/banners';
 import { deriveAddonBanners } from './lib/banners';
 import { addonHealthTone } from './lib/health-tone';
@@ -108,6 +109,7 @@ function AddonDetail({
               {renderSection(entry, { orgId, addonId, detail: value, onRefresh: invalidate })}
             </div>
           ))}
+          <KnowledgeSourcesSection orgId={orgId} addonId={addonId} detail={value} />
           <DiagnosticsSection orgId={orgId} addonId={addonId} />
           <AddonLogPanel orgId={orgId} addonId={addonId} />
           <AddonDangerZone orgId={orgId} detail={value} onRemoved={goBack} />

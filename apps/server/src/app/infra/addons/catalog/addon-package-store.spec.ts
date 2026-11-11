@@ -1,11 +1,12 @@
 import { afterAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Logger } from '@harnesys/brix';
 import type { AddonInstallRequest } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
 import type { AddonStagePlan } from '../../../domain/addons/ports/addon-source.port.ts';
 import type { OrgAddonRow } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
+import { computeAddonDigest } from './addon-digest.ts';
 import { AddonPackagePruner } from './addon-package-pruner.ts';
 import { AddonPackageStoreAdapter } from './addon-package-store.adapter.ts';
 import { addonPackageDir, addonStagingDir, addonsHomeDir } from './addon-paths.ts';
@@ -118,6 +119,26 @@ describe('AddonPackageStoreAdapter', () => {
     rmSync(orphanPinnedDir, { recursive: true, force: true });
   });
 
+  test('digest covers the §4.1 payload only: dev files are ignored, dist changes it', async () => {
+    const sourceDir = writeAddonPackage(join(layout.root, 'sources', 'harnesys.devfiles-addon'));
+    const baseline = await builtin.stage({ source: 'harnesys.devfiles-addon' });
+    const devFiles = join(sourceDir, 'node_modules', '.bin');
+    mkdirSync(devFiles, { recursive: true });
+    writeFileSync(join(devFiles, 'tsc'), 'bin stub');
+    mkdirSync(join(sourceDir, 'src'), { recursive: true });
+    writeFileSync(join(sourceDir, 'src', 'index.ts'), 'export {};');
+    writeFileSync(join(sourceDir, 'package.json'), '{}');
+    writeFileSync(join(sourceDir, 'tsconfig.json'), '{}');
+    const withDevFiles = await builtin.stage({ source: 'harnesys.devfiles-addon' });
+    expect(withDevFiles.digest).toBe(baseline.digest);
+    expect(existsSync(join(withDevFiles.stagingRef, 'src'))).toBe(false);
+    expect(existsSync(join(withDevFiles.stagingRef, 'node_modules'))).toBe(false);
+    expect(existsSync(join(withDevFiles.stagingRef, 'dist', 'index.js'))).toBe(true);
+    writeFileSync(join(sourceDir, 'dist', 'index.js'), 'export const changed = true;');
+    const rebuilt = await builtin.stage({ source: 'harnesys.devfiles-addon' });
+    expect(rebuilt.digest).not.toBe(baseline.digest);
+  });
+
   test('digest skips symlinks: dangling .bin links do not crash staging', async () => {
     const sourceDir = writeAddonPackage(join(layout.root, 'sources', 'harnesys.symlink-addon'));
     const binDir = join(sourceDir, 'dist', '.bin');
@@ -129,14 +150,22 @@ describe('AddonPackageStoreAdapter', () => {
     expect(plan.digest).toBe(baseline.digest);
   });
 
-  test('digest rejects unpackaged packages containing node_modules', async () => {
-    const sourceDir = writeAddonPackage(join(layout.root, 'sources', 'harnesys.unpackaged-addon'));
-    const binDir = join(sourceDir, 'node_modules', '.bin');
-    mkdirSync(binDir, { recursive: true });
-    symlinkSync('/nonexistent/tsc', join(binDir, 'tsc'));
-    await expect(builtin.stage({ source: 'harnesys.unpackaged-addon' })).rejects.toThrow(
-      /unpackaged/,
-    );
+  test('replacing an installed version moves the new package in and rewrites the lock', async () => {
+    const plan = await builtin.stage({ source: 'harnesys.test-addon' });
+    store.install(installRequest(plan));
+    const rebuilt = await builtin.stage({ source: 'harnesys.test-addon' });
+    expect(rebuilt.digest).toBe(plan.digest);
+    writeFileSync(join(rebuilt.stagingRef, 'dist', 'index.js'), 'export const next = true;');
+    const nextDigest = computeAddonDigest(rebuilt.stagingRef);
+    store.install(installRequest({ ...rebuilt, digest: nextDigest }));
+    const installedRoot = addonPackageDir(layout.home(), 'harnesys.test-addon', '1.0.0');
+    expect(readFileSync(join(installedRoot, 'dist', 'index.js'), 'utf8')).toContain('next');
+    expect(store.readLock().entries).toHaveLength(1);
+    expect(store.readLock().entries[0]).toMatchObject({
+      id: 'harnesys.test-addon',
+      digest: nextDigest,
+    });
+    expect(existsSync(addonStagingDir(layout.home(), rebuilt.planId))).toBe(false);
   });
 });
 

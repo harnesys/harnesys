@@ -24,6 +24,12 @@ import { RescanPackagesUseCase } from './packages/rescan-packages.use-case.ts';
 import { AddonReconciler } from './reconcile/reconciler.ts';
 import { RunDispatchPort } from './run-dispatch.port.ts';
 import { ThreadRunDispatchService } from './run-dispatch.service.ts';
+import { AddonCloudMaterializer } from './sources/addon-cloud.materializer.ts';
+import { AttachAddonCloudSourceUseCase } from './sources/attach-addon-cloud-source.use-case.ts';
+import { BrowseAddonCloudFolderUseCase } from './sources/browse-addon-cloud-folder.use-case.ts';
+import { ListAddonCloudSourcesUseCase } from './sources/list-addon-cloud-sources.use-case.ts';
+import { PrepareAddonCloudSourceUseCase } from './sources/prepare-addon-cloud-source.use-case.ts';
+import { RefreshAddonCloudSourceUseCase } from './sources/refresh-addon-cloud-source.use-case.ts';
 import { FireTriggerUseCase } from './triggers/fire-trigger.use-case.ts';
 import { ManageTriggerInstanceUseCase } from './triggers/manage-instance.use-case.ts';
 import { FireWindowTracker } from './triggers/trigger-limits.ts';
@@ -46,6 +52,11 @@ const useCases = [
   FireTriggerUseCase,
   RunJobUseCase,
   NeutralBridgeInboundUseCase,
+  AttachAddonCloudSourceUseCase,
+  BrowseAddonCloudFolderUseCase,
+  ListAddonCloudSourcesUseCase,
+  PrepareAddonCloudSourceUseCase,
+  RefreshAddonCloudSourceUseCase,
 ];
 
 const services = [
@@ -55,6 +66,7 @@ const services = [
   AddonReconciler,
   ThreadRunDispatchService,
   AddonCallService,
+  AddonCloudMaterializer,
 ];
 
 @Module({

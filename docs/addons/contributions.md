@@ -29,7 +29,7 @@ handlers:
 | `content` | — (host-side) | registered as org skills |
 | `config` | — (host-side) | config UI + `config.changed` notification |
 | `view` | — (host-side) | detail page sections |
-| `source-kind` | — | **stub, not consumed** |
+| `source-kind` | `sources` | `source.list` / `stat` / `download` / `upload` / `mkdir` / `remove` / `export` |
 | `mcp` | — | **stub, not consumed** |
 | `lsp` | — | **stub, not consumed** |
 
@@ -227,7 +227,49 @@ Sections: `status`, `permissions`, `config`, `connections`, `automations`, `jobs
 `table` (source route + columns), `form`, `actions`, `markdown`, `frame`.
 Default set: status, permissions, config, connections, automations, jobs.
 
-## source-kind / mcp / lsp
+## source-kind
+
+A knowledge-source backend: the add-on serves a remote cloud folder and the core source
+pipeline (mirror engine, sync-back, conflict handling) drives it.
+
+```json
+{
+  "id": "google-drive", "family": "source-kind",
+  "descriptor": { "id": "google-drive", "title": "Google Drive folder", "connection": "google" }
+}
+```
+
+- Handlers (`defineAddon` key `sources`, keyed by the descriptor id — one add-on may declare
+  several kinds):
+
+  | Op | Protocol method | Required |
+  |---|---|---|
+  | `list` | `source.list` | yes |
+  | `stat` | `source.stat` | yes |
+  | `download` | `source.download` | yes |
+  | `upload` | `source.upload` | no |
+  | `mkdir` | `source.mkdir` | no |
+  | `remove` | `source.remove` | no |
+  | `export` | `source.export` | no |
+
+- Capabilities are not declared twice: the host derives them from the handlers the add-on
+  reports in `initialize`. An add-on that does not implement `upload`/`mkdir`/`remove` is a
+  read-only source and sync-back is skipped for it.
+- The full seven methods require the `source` permission.
+- Bytes move in base64 chunks (`offset`/`length`, 4 MiB per call in the host bridge), so file
+  size is not bounded by the 8 MiB message cap. Return `eof: true` on the last chunk.
+- Entries returned by `list`/`stat` carry `{ id, name, kind: 'file' | 'folder', size?, modifiedAt?, mimeType? }`;
+  `mimeType` is what the host uses to decide about exporting vendor-native documents.
+- The add-on owns vendor auth: it calls the vendor through `ctx.http.fetch` with
+  `auth: { connection, accountId, scheme: 'bearer', credentialKey }`. The core never sees the
+  token, and the mirror runs on the host that runs the add-on.
+- Attach/browse/refresh for org members:
+  `GET /api/orgs/:orgId/addons/:addonId/source-kinds`,
+  `POST .../source-kinds/:sourceKindId/browse`,
+  `POST .../source-kinds/:sourceKindId/attach`,
+  `GET .../sources`, `POST .../sources/:sourceId/refresh`.
+
+## mcp / lsp
 
 Accepted and registered, but stubs — descriptors are `{ id, title, connection? }` and
 nothing consumes them yet. Do not build integration behavior on them.

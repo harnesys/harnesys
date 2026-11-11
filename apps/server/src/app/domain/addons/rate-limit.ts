@@ -1,6 +1,6 @@
 import { Injectable } from '@harnesys/brix';
-import type { RateSpec } from '../../../domain/addons/host-service.ts';
-import { ClockPort } from '../../../domain/apps/ports/clock.port.ts';
+import { ClockPort } from '../apps/ports/clock.port.ts';
+import type { RateSpec } from './host-service.ts';
 
 interface TokenBucket {
   tokens: number;

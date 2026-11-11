@@ -1,8 +1,8 @@
 import { Injectable } from '@harnesys/brix';
 import { AddonError } from '@harnesys/sdk';
 import type { HostMethodSpec, HostServiceModule } from '../../../../domain/addons/host-service.ts';
+import { MinuteQuota } from '../../../../domain/addons/rate-limit.ts';
 import { ClockPort } from '../../../../domain/apps/ports/clock.port.ts';
-import { MinuteQuota } from '../../dispatcher/rate-limit.ts';
 import { serviceMethod } from '../method.ts';
 import type { AddonLogEntry } from '../sinks.ts';
 import { LogSink } from '../sinks.ts';

@@ -1,10 +1,11 @@
 import { Logger } from '@harnesys/brix';
-import type { AddonManifest, RouteHandleResult, TransportMessage } from '@harnesys/sdk';
+import type { AddonManifest, JsonObject, RouteHandleResult, TransportMessage } from '@harnesys/sdk';
 import type { AddonHostPolicy } from '../../domain/addons/permissions.ts';
 import {
   AddonCallPort,
   type HookDeliverParams,
   type RouteCallParams,
+  type SourceRequestMethod,
   type ToolCallParams,
   type ToolCallResult,
   type TriggerStartParams,
@@ -23,6 +24,7 @@ import { type MetricLabels, MetricsPort } from '../../domain/metrics/metrics.por
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import { type AccountFindQuery, AccountsFacadePort } from '../apps/accounts-facade.port.ts';
 import { AddonDataPort } from './addon-data.port.ts';
+import type { AddonRpcCall } from './addon-rpc.port.ts';
 import { AddonRpcPort } from './addon-rpc.port.ts';
 import type {
   RunDispatchInput,
@@ -170,14 +172,8 @@ export class FakeMetrics extends MetricsPort {
 export class FakeRpc extends AddonRpcPort {
   requests: Array<{ method: string; params: unknown; timeoutMs: number }> = [];
   result: unknown = { ok: true };
-  async request(
-    _orgId: string,
-    _addonId: string,
-    method: string,
-    params: unknown,
-    timeoutMs: number,
-  ): Promise<unknown> {
-    this.requests.push({ method, params, timeoutMs });
+  async request(call: AddonRpcCall): Promise<unknown> {
+    this.requests.push({ method: call.method, params: call.params, timeoutMs: call.timeoutMs });
     return this.result;
   }
 }
@@ -231,6 +227,15 @@ export class NoopCalls extends AddonCallPort {
   }
   async transportEdit(): Promise<void> {}
   async transportTyping(): Promise<void> {}
+  async sourceRequest(
+    _orgId: string,
+    _addonId: string,
+    method: SourceRequestMethod,
+    _params: JsonObject,
+  ): Promise<JsonObject> {
+    this.calls.push(method);
+    return {};
+  }
 }
 
 export interface TestManifest {

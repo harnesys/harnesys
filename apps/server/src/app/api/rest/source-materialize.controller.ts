@@ -16,6 +16,7 @@ import {
   type PrepareGitSourceResponse,
   type Source,
 } from '@harnesys/contracts';
+import { PrepareAddonCloudSourceUseCase } from '../../application/addons/sources/prepare-addon-cloud-source.use-case.ts';
 import {
   NodeTicketAccess,
   ticketCredentialOf,
@@ -34,6 +35,7 @@ export class SourceMaterializeController {
     private readonly getSource: GetSourceUseCase,
     private readonly prepareGit: PrepareGitSourceUseCase,
     private readonly prepareCloud: PrepareCloudSourceUseCase,
+    private readonly prepareAddonCloud: PrepareAddonCloudSourceUseCase,
     private readonly tickets: NodeTicketAccess,
   ) {}
 
@@ -102,6 +104,13 @@ export class SourceMaterializeController {
     const source = this.getSource.execute({ orgId, sourceId, surfaceHostId });
     if (source.distribution.kind === 'cloud-drive') {
       return this.prepareCloud.execute({
+        orgId,
+        sourceId,
+        hostId: body.hostId,
+      });
+    }
+    if (source.distribution.kind === 'addon-cloud') {
+      return this.prepareAddonCloud.execute({
         orgId,
         sourceId,
         hostId: body.hostId,

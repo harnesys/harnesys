@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@harnesys/brix';
 import type { InstallPlan } from '@harnesys/contracts';
-import { AddonException, AddonInUseException } from '../../../domain/addons/errors.ts';
+import { AddonException } from '../../../domain/addons/errors.ts';
 import type { InstalledAddonPackage } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
 import { AddonPackageCatalogPort } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
 import { AddonSourcePort } from '../../../domain/addons/ports/addon-source.port.ts';
@@ -54,13 +54,10 @@ export class ConfirmInstallUseCase {
   }
 
   private installPackage(plan: StagedInstallPlan): InstalledAddonPackage {
+    // §4.6 confirm is idempotent: identical digest keeps the installed copy,
+    // a rebuilt package (same version, new digest) replaces it in place.
     const existing = this.catalog.find(plan.manifest.id, plan.manifest.version);
-    if (existing) {
-      if (existing.digest !== plan.digest) {
-        throw new AddonInUseException(
-          `Package ${plan.manifest.id}@${plan.manifest.version} is already installed with another digest`,
-        );
-      }
+    if (existing && existing.digest === plan.digest) {
       return existing;
     }
     return this.catalog.install({

@@ -1,16 +1,22 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable, Logger } from '@harnesys/brix';
 import type { ContentWriteResponse } from '@harnesys/contracts';
+import { AddonCloudBackendPort } from '../../domain/addons/ports/addon-cloud-backend.port.ts';
 import { OrgContentPort } from '../../domain/content/org-content.port.ts';
 import { SourceWriteLeasePort } from '../../domain/fleet/source-write-lease.port.ts';
 import { IntegrationTokenPort } from '../../domain/integration/integration-token.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { applyCloudSyncOutcome } from '../../domain/source/cloud-materialization-state.ts';
+import type {
+  CloudSyncLocalDependencies,
+  CloudSyncSourceDistribution,
+} from '../../domain/source/cloud-sync-back.port.ts';
 import { CloudSyncBackPort } from '../../domain/source/cloud-sync-back.port.ts';
 import { MaterializationEventsPort } from '../../domain/source/materialization-events.port.ts';
 import { SourceLocationPort } from '../../domain/source/source-location.port.ts';
 import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+import { unusedAccessToken } from '../addons/sources/addon-source.helpers.ts';
 import { markSiblingCloudCopiesRefreshRequired } from '../source/mark-cloud-siblings-refresh.ts';
 
 const WRITE_LEASE_TTL_MS = 60_000;
@@ -39,6 +45,7 @@ export class WriteFileUseCase {
     private readonly materializationEvents: MaterializationEventsPort,
     private readonly cloudSync: CloudSyncBackPort,
     private readonly writeLeases: SourceWriteLeasePort,
+    private readonly addonBackends: AddonCloudBackendPort,
     logger: Logger,
   ) {
     this.log = logger.child('write-file');
@@ -57,10 +64,40 @@ export class WriteFileUseCase {
     return { path: input.path, etag: result.etag };
   }
 
+  private syncDependencies(
+    orgId: string,
+    distribution: CloudSyncSourceDistribution,
+  ): CloudSyncLocalDependencies {
+    if (distribution.kind === 'addon-cloud') {
+      return {
+        sources: this.sources,
+        sourceLocation: this.sourceLocation,
+        machine: this.machine,
+        getAccessToken: unusedAccessToken,
+        createBackend: () =>
+          this.addonBackends.create({
+            orgId,
+            addonId: distribution.addonId,
+            sourceKindId: distribution.sourceKindId,
+            accountId: distribution.accountId,
+          }),
+      };
+    }
+    return {
+      sources: this.sources,
+      sourceLocation: this.sourceLocation,
+      machine: this.machine,
+      getAccessToken: () => this.tokens.getAccessToken(orgId, distribution.integrationId),
+    };
+  }
+
   private async maybeSyncCloud(orgId: string, sourceId: string, path: string): Promise<void> {
     const record = this.sources.findById(orgId, sourceId);
     const distribution = record?.distribution;
-    if (distribution?.kind !== 'cloud-drive') {
+    if (
+      distribution === undefined ||
+      (distribution.kind !== 'cloud-drive' && distribution.kind !== 'addon-cloud')
+    ) {
       return;
     }
     const hostId = this.machine.get().id;
@@ -77,12 +114,7 @@ export class WriteFileUseCase {
     }
     try {
       const syncResult = await this.cloudSync.syncBackCloudFile(
-        {
-          sources: this.sources,
-          sourceLocation: this.sourceLocation,
-          machine: this.machine,
-          getAccessToken: () => this.tokens.getAccessToken(orgId, distribution.integrationId),
-        },
+        this.syncDependencies(orgId, distribution),
         orgId,
         sourceId,
         path,

@@ -100,7 +100,9 @@ export class AddonPackageStoreAdapter extends AddonPackageCatalogPort {
         installedAt: new Date().toISOString(),
       }),
     );
-    const installed = this.find(request.manifest.id, request.manifest.version);
+    const installed = this.readInstalled(
+      this.lock.entry(request.manifest.id, request.manifest.version),
+    );
     if (!installed) {
       throw new Error(
         `package not found after install: ${request.manifest.id}@${request.manifest.version}`,

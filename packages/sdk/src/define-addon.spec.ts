@@ -18,6 +18,9 @@ describe('defineAddon handlers derivation', () => {
       'job.run',
       'transport.typing',
       'hook.deliver',
+      'source.list',
+      'source.stat',
+      'source.download',
     ]);
   });
 

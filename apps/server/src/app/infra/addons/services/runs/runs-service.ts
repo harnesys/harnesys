@@ -9,9 +9,9 @@ import type {
   HostMethodSpec,
   HostServiceModule,
 } from '../../../../domain/addons/host-service.ts';
+import { MinuteQuota } from '../../../../domain/addons/rate-limit.ts';
 import { ClockPort } from '../../../../domain/apps/ports/clock.port.ts';
 import { ThreadNotFoundException } from '../../../../domain/thread/thread.error.ts';
-import { MinuteQuota } from '../../dispatcher/rate-limit.ts';
 import { serviceMethod } from '../method.ts';
 
 const DISPATCH_PER_MINUTE = 60;

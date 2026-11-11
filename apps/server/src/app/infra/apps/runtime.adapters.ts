@@ -9,7 +9,11 @@ import { ClockPort } from '../../domain/apps/ports/clock.port.ts';
 import { PublicUrlsPort } from '../../domain/apps/ports/public-urls.port.ts';
 import type { SecretTarget } from '../../domain/apps/ports/secret-scope.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
-import { type MetricLabels, MetricsPort } from '../../domain/metrics/metrics.port.ts';
+import {
+  type MetricEntry,
+  type MetricLabels,
+  MetricsPort,
+} from '../../domain/metrics/metrics.port.ts';
 
 @Injectable()
 export class SystemClockAdapter extends ClockPort {
@@ -69,7 +73,7 @@ export class LoggerMetricsAdapter extends MetricsPort {
     void value;
   }
 
-  snapshot(): Array<{ name: string; labels: MetricLabels; value: number }> {
+  override snapshot(): MetricEntry[] {
     return [...this.counters.entries()].map(([key, value]) => {
       const [name, serialized] = key.split('|');
       return { name: name ?? '', labels: JSON.parse(serialized ?? '{}') as MetricLabels, value };

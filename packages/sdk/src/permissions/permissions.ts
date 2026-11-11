@@ -53,6 +53,7 @@ export const KNOWN_PERMISSION_IDS = [
   'lifecycle.resident',
   'trigger',
   'worker',
+  'source',
 ] as const;
 
 export type KnownPermissionId = (typeof KNOWN_PERMISSION_IDS)[number];

@@ -6,13 +6,14 @@ import { testManifest } from '../addons.fakes.ts';
 export class FakeSource extends AddonSourcePort {
   released: string[] = [];
   trust: AddonTrust = 'local';
+  digest = 'digest-1';
 
   async stage(): Promise<AddonStagePlan> {
     const { manifest } = testManifest();
     return {
       planId: `staged-${this.released.length + 1}`,
       manifest,
-      digest: 'digest-1',
+      digest: this.digest,
       trust: this.trust,
       stagingRef: '/tmp/staging/acme.tool',
       warnings: [],

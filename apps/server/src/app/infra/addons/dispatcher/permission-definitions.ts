@@ -144,6 +144,7 @@ export const PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
   simple('lifecycle.resident', 'medium', 'Keep a resident process'),
   simple('trigger', 'medium', 'Run trigger instances and fire automation runs'),
   simple('worker', 'medium', 'Run background workers'),
+  simple('source', 'medium', 'Serve as a knowledge-source backend for mounted cloud folders'),
 ];
 
 @Injectable()

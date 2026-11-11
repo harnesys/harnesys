@@ -18,9 +18,9 @@ import { AddonCallPort } from '../../domain/addons/ports/addon-call.port.ts';
 import type { OrgAddonRow } from '../../domain/addons/ports/org-addon-repository.port.ts';
 import { OrgAddonRepositoryPort } from '../../domain/addons/ports/org-addon-repository.port.ts';
 import { AddonRouteTablePort } from '../../domain/addons/ports/route-table.port.ts';
+import { TokenBucketRateLimiter } from '../../domain/addons/rate-limit.ts';
 import { routeSchemaIssues } from '../../domain/addons/route-body-schema.ts';
 import { ClockPort } from '../../domain/apps/ports/clock.port.ts';
-import { TokenBucketRateLimiter } from '../../infra/addons/dispatcher/rate-limit.ts';
 
 const MAX_PUBLIC_BODY_KB = 64;
 const ROUTES_PUBLIC_PERMISSION = 'routes.public';

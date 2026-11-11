@@ -1,5 +1,5 @@
-import { cpSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
 import { Injectable } from '@harnesys/brix';
 import { type AddonManifest } from '@harnesys/sdk';
 import type { InstalledAddonPackage } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
@@ -9,7 +9,7 @@ import type {
 } from '../../../domain/addons/ports/addon-source.port.ts';
 import { AddonSourcePort } from '../../../domain/addons/ports/addon-source.port.ts';
 import { HostFsLayoutPort } from '../../../domain/machine/host-fs-layout.port.ts';
-import { computeAddonDigest } from './addon-digest.ts';
+import { computeAddonDigest, packageFiles } from './addon-digest.ts';
 import {
   addonPackageDir,
   addonStagingDir,
@@ -115,23 +115,32 @@ export async function stageAddonDirectory(home: string, sourceDir: string): Prom
   }
   const planId = crypto.randomUUID();
   const stagingRef = addonStagingDir(home, planId);
-  mkdirSync(stagingRef, { recursive: true });
-  cpSync(sourceDir, stagingRef, { recursive: true });
-  const loaded = loadAddonManifest(stagingRef);
-  if (!loaded.manifest) {
+  try {
+    mkdirSync(stagingRef, { recursive: true });
+    // §4.1: only the runtime payload is staged, not the developer workspace.
+    for (const filePath of packageFiles(sourceDir)) {
+      const target = join(stagingRef, relative(sourceDir, filePath));
+      mkdirSync(dirname(target), { recursive: true });
+      copyFileSync(filePath, target);
+    }
+    const loaded = loadAddonManifest(stagingRef);
+    if (!loaded.manifest) {
+      throw new Error(
+        `manifest invalid: ${loaded.violations.map((violation) => `${violation.path}: ${violation.message}`).join('; ')}`,
+      );
+    }
+    assertSafeVersion(loaded.manifest.version);
+    return {
+      planId,
+      manifest: loaded.manifest,
+      digest: computeAddonDigest(stagingRef),
+      stagingRef,
+      warnings: loaded.violations.map((violation) => `${violation.path}: ${violation.message}`),
+    };
+  } catch (error) {
     rmSync(stagingRef, { recursive: true, force: true });
-    throw new Error(
-      `manifest invalid: ${loaded.violations.map((violation) => `${violation.path}: ${violation.message}`).join('; ')}`,
-    );
+    throw error;
   }
-  assertSafeVersion(loaded.manifest.version);
-  return {
-    planId,
-    manifest: loaded.manifest,
-    digest: computeAddonDigest(stagingRef),
-    stagingRef,
-    warnings: loaded.violations.map((violation) => `${violation.path}: ${violation.message}`),
-  };
 }
 
 export function releaseStaging(home: string, planId: string): void {
@@ -144,10 +153,16 @@ export function moveStagedToPackageDir(
   stagingRef: string,
 ): string {
   const target = addonPackageDir(home, manifest.id, manifest.version);
-  if (existsSync(target)) {
-    rmSync(stagingRef, { recursive: true, force: true });
-    return target;
+  if (!existsSync(stagingRef)) {
+    // Staging already consumed (repeat confirm): the installed copy stays.
+    if (existsSync(target)) {
+      return target;
+    }
+    throw new Error(`addon staging not found: ${stagingRef}`);
   }
+  // Same id@version replaces the installed copy (§4.6 confirm is idempotent;
+  // a rebuilt package with a new digest replaces, confirm-install owns the check).
+  rmSync(target, { recursive: true, force: true });
   mkdirSync(dirname(target), { recursive: true });
   renameSync(stagingRef, target);
   return target;

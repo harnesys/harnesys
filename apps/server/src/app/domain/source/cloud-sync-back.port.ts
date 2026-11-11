@@ -1,8 +1,19 @@
 import type { MachineConfigPort } from '../machine/machine-config.port.ts';
+import type { CloudRemoteBackendPort } from './cloud-remote-backend.port.ts';
 import type { SourceLocationPort } from './source-location.port.ts';
 import type { SourceRegistryPort } from './source-registry.port.ts';
 
 export type CloudChangeKind = 'create' | 'change' | 'delete';
+
+export type CloudSyncSourceDistribution =
+  | { kind: 'cloud-drive'; remoteFolderId: string; integrationId: string }
+  | {
+      kind: 'addon-cloud';
+      addonId: string;
+      sourceKindId: string;
+      accountId?: string;
+      remoteFolderId: string;
+    };
 
 export interface SyncBackResult {
   status: 'uploaded' | 'keep-both' | 'revision-unknown' | 'folder-created' | 'deleted';
@@ -17,17 +28,19 @@ export interface CloudSyncLocalDependencies {
   sourceLocation: SourceLocationPort;
   machine: MachineConfigPort;
   getAccessToken: () => Promise<string>;
+  createBackend?: (distribution: CloudSyncSourceDistribution) => CloudRemoteBackendPort;
 }
 
 export interface CloudSyncFlushInput {
   orgId: string;
   source: {
     id: string;
-    distribution: { kind: 'cloud-drive'; remoteFolderId: string; integrationId: string };
+    distribution: CloudSyncSourceDistribution;
   };
   sourceLocation: SourceLocationPort;
   machine: MachineConfigPort;
   getAccessToken: () => Promise<string>;
+  createBackend?: (distribution: CloudSyncSourceDistribution) => CloudRemoteBackendPort;
 }
 
 export abstract class CloudSyncBackPort {

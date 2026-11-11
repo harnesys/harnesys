@@ -8,6 +8,7 @@ import type { AddonHostPolicy, EffectiveGrants } from '../../../domain/addons/pe
 import { GrantPolicyPort } from '../../../domain/addons/ports/grant-policy.port.ts';
 import type { OrgAddonRow } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
+import { TokenBucketRateLimiter } from '../../../domain/addons/rate-limit.ts';
 import { ClockPort } from '../../../domain/apps/ports/clock.port.ts';
 import type { OrgAuditRow } from '../../../domain/fleet/org-audit.port.ts';
 import { OrgAudit } from '../../../domain/fleet/org-audit.port.ts';
@@ -16,7 +17,6 @@ import { HostDispatcher } from './host-dispatcher.ts';
 import { InMemoryHostServiceRegistry } from './host-service-registry.adapter.ts';
 import { InstanceGenerationPort } from './instance-generation.port.ts';
 import { PermissionDefinitionRegistry } from './permission-definitions.ts';
-import { TokenBucketRateLimiter } from './rate-limit.ts';
 
 export class FakeClock extends ClockPort {
   constructor(private current = 1_000_000) {

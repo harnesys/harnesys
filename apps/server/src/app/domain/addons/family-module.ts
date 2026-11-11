@@ -15,15 +15,22 @@ export interface HandlerSpec {
   readonly params: z.ZodType;
   readonly result: z.ZodType | null;
   readonly permission: string | null;
+  readonly required: boolean;
 }
 
-export function handlerSpec(method: HostRequestName): HandlerSpec {
+export function handlerSpec(method: HostRequestName, opts?: { required?: boolean }): HandlerSpec {
   const spec: unknown = protocolMap[method];
   const typed = spec as MethodSpec<z.ZodType, z.ZodType | null, 'host-to-addon'>;
   if (typed?.direction !== 'host-to-addon') {
     throw new Error(`Protocol method is not host-to-addon: ${method}`);
   }
-  return { method, params: typed.params, result: typed.result, permission: typed.permission };
+  return {
+    method,
+    params: typed.params,
+    result: typed.result,
+    permission: typed.permission,
+    required: opts?.required ?? true,
+  };
 }
 
 export interface FamilyModule<D extends JsonObject = JsonObject> {

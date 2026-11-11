@@ -56,6 +56,29 @@ describe('addon runtime', () => {
     expect(output.output.echo.a).toBe(1);
   });
 
+  test('dispatches source calls to the named source backend', async () => {
+    const runtime = runtimeWithNow(() => 1_000);
+    const listed = (await runtime.handleRequest(
+      'source.list',
+      { sourceKind: 'example', folderId: 'root', _meta: meta() },
+      new AbortController().signal,
+    )) as { entries: Array<{ id: string }> };
+    expect(listed.entries[0]?.id).toBe('file-1');
+    const stat = (await runtime.handleRequest(
+      'source.stat',
+      { sourceKind: 'example', fileId: 'file-9', _meta: meta() },
+      new AbortController().signal,
+    )) as { entry: { id: string } };
+    expect(stat.entry.id).toBe('file-9');
+    await expect(
+      runtime.handleRequest(
+        'source.upload',
+        { sourceKind: 'example', parentId: 'root', name: 'a.txt', data: '', _meta: meta() },
+        new AbortController().signal,
+      ),
+    ).rejects.toMatchObject({ reason: 'unsupported' });
+  });
+
   test('rejects methods that are not declared in handlers', async () => {
     const runtime = createAddonRuntime({
       definition: { handlers: ['ping', 'shutdown'] },

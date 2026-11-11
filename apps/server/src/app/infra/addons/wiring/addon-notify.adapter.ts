@@ -1,8 +1,7 @@
 import { rmSync } from 'node:fs';
 import { Injectable } from '@harnesys/brix';
-import type { HostRequestName } from '@harnesys/sdk';
 import { AddonDataPort } from '../../../application/addons/addon-data.port.ts';
-import type { AddonRpcCallMeta } from '../../../application/addons/addon-rpc.port.ts';
+import type { AddonRpcCall } from '../../../application/addons/addon-rpc.port.ts';
 import { AddonRpcPort } from '../../../application/addons/addon-rpc.port.ts';
 import type { AddonNotifyOutcome } from '../../../domain/addons/ports/addon-notify.port.ts';
 import { AddonNotifyPort } from '../../../domain/addons/ports/addon-notify.port.ts';
@@ -32,16 +31,15 @@ export class SupervisorRpcAdapter extends AddonRpcPort {
     super();
   }
 
-  override request(
-    orgId: string,
-    addonId: string,
-    method: HostRequestName,
-    params: unknown,
-    timeoutMs: number,
-    _signal?: AbortSignal,
-    meta?: AddonRpcCallMeta,
-  ): Promise<unknown> {
-    return this.supervisor.request(orgId, addonId, method, params, timeoutMs, meta);
+  override request(call: AddonRpcCall): Promise<unknown> {
+    return this.supervisor.request({
+      orgId: call.orgId,
+      addonId: call.addonId,
+      method: call.method,
+      params: call.params,
+      timeoutMs: call.timeoutMs,
+      meta: call.meta,
+    });
   }
 }
 

@@ -72,6 +72,15 @@ export function demoDefinition(): ResolvedAddonDefinition {
     hooks: {
       onThread: async () => undefined,
     },
+    sources: {
+      example: {
+        list: async () => ({ entries: [{ id: 'file-1', name: 'notes.txt', kind: 'file' }] }),
+        stat: async (params) => ({
+          entry: { id: params.fileId, name: 'notes.txt', kind: 'file' },
+        }),
+        download: async () => ({ data: '', eof: true }),
+      },
+    },
     transport: {
       typing: async () => undefined,
     },

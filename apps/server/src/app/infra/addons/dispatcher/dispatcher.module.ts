@@ -3,6 +3,7 @@ import { AddonsApplicationModule } from '../../../application/addons/addons-appl
 import { AppsUseCaseModule } from '../../../application/apps/apps.use-case.module.ts';
 import { ThreadUseCaseModule } from '../../../application/threads/thread.use-case.module.ts';
 import { HostServiceRegistryPort } from '../../../domain/addons/ports/host-service-registry.port.ts';
+import { TokenBucketRateLimiter } from '../../../domain/addons/rate-limit.ts';
 import { AppsModule } from '../../apps/apps.module.ts';
 import { EventsModule } from '../../events/events.module.ts';
 import { FleetHubModule } from '../../fleet-hub/fleet-hub.module.ts';
@@ -27,7 +28,6 @@ import { InstanceRegistryGenerationAdapter } from './instance-generation.adapter
 import { InstanceGenerationPort } from './instance-generation.port.ts';
 import { PermissionDefinitionRegistry } from './permission-definitions.ts';
 import { PermissionEngine } from './permission-engine.ts';
-import { TokenBucketRateLimiter } from './rate-limit.ts';
 
 @Module({
   imports: [

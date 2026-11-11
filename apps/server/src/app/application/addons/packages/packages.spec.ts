@@ -89,6 +89,19 @@ describe('ConfirmInstallUseCase', () => {
     expect(buildSource.released).toHaveLength(2);
   });
 
+  test('same version with a different digest replaces the installed package', async () => {
+    const { plan, confirm, catalog, source } = build();
+    const first = await plan.execute({ source: 'local:/tmp/acme', actor: HOST });
+    await confirm.execute({ planId: first.planId, actor: HOST });
+    source.digest = 'digest-2';
+    const second = await plan.execute({ source: 'local:/tmp/acme', actor: HOST });
+    const confirmed = await confirm.execute({ planId: second.planId, actor: HOST });
+    expect(catalog.listInstalled()).toHaveLength(1);
+    expect(catalog.find('acme.tool', '1.0.0')?.digest).toBe('digest-2');
+    expect(confirmed.digest).toBe('digest-2');
+    expect(catalog.readLock().entries[0]).toMatchObject({ id: 'acme.tool', digest: 'digest-2' });
+  });
+
   test('unknown plan id is not found', async () => {
     const { confirm } = build();
     await expect(confirm.execute({ planId: 'nope', actor: HOST })).rejects.toThrow(AddonException);

@@ -7,14 +7,16 @@ export interface AddonRpcCallMeta {
   runId?: string;
 }
 
+export interface AddonRpcCall {
+  orgId: string;
+  addonId: string;
+  method: HostRequestName;
+  params: unknown;
+  timeoutMs: number;
+  signal?: AbortSignal;
+  meta?: AddonRpcCallMeta;
+}
+
 export abstract class AddonRpcPort {
-  abstract request(
-    orgId: string,
-    addonId: string,
-    method: HostRequestName,
-    params: unknown,
-    timeoutMs: number,
-    signal?: AbortSignal,
-    meta?: AddonRpcCallMeta,
-  ): Promise<unknown>;
+  abstract request(call: AddonRpcCall): Promise<unknown>;
 }

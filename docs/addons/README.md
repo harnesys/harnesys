@@ -44,9 +44,9 @@ and a host-event hook. When in doubt, copy the starter.
 
 ## Current limitations (plan accordingly)
 
-- `mcp`, `lsp`, and `source-kind` contribution families are registry stubs; descriptors are
-  accepted but nothing consumes them yet.
+- `mcp` and `lsp` contribution families are registry stubs; descriptors are accepted but
+  nothing consumes them yet. `source-kind` is live: see [Contributions](contributions.md#source-kind).
 - External install sources (URL/registry) are disabled until signature verification exists.
-- There is no add-on API for HITL approvals, identity linking, or knowledge-source backends.
+- There is no add-on API for HITL approvals or identity linking.
 - `$/progress` notifications exist in the protocol but are not reachable from `AddonContext`.
 - Transport channels are non-streaming (`capabilities.streaming` is always `false`).

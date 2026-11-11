@@ -62,6 +62,8 @@ export const HttpFetchParamsSchema = z.object({
   method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD']).default('GET'),
   headers: z.record(z.string(), z.string()).optional(),
   body: z.string().optional(),
+  bodyBase64: z.string().optional(),
+  responseEncoding: z.enum(['text', 'base64']).optional(),
   auth: HttpAuthSchema.optional(),
 });
 
@@ -70,6 +72,92 @@ export const HttpFetchResultSchema = z.object({
   headers: z.record(z.string(), z.string()),
   body: z.string().nullable(),
   bodyBase64: z.string().optional(),
+});
+
+export const CloudRemoteEntrySchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  kind: z.enum(['file', 'folder']),
+  size: z.number().int().nonnegative().optional(),
+  modifiedAt: z.string().min(1).optional(),
+  mimeType: z.string().min(1).optional(),
+});
+export type CloudRemoteEntryWire = z.infer<typeof CloudRemoteEntrySchema>;
+
+const sourceSelector = {
+  sourceKind: z.string().min(1),
+  accountId: z.string().min(1).optional(),
+};
+
+export const SourceListParamsSchema = z.object({
+  ...sourceSelector,
+  folderId: z.string().min(1),
+  pageToken: z.string().optional(),
+});
+
+export const SourceListResultSchema = z.object({
+  entries: z.array(CloudRemoteEntrySchema),
+  nextPageToken: z.string().optional(),
+});
+
+export const SourceStatParamsSchema = z.object({
+  ...sourceSelector,
+  fileId: z.string().min(1),
+});
+
+export const SourceStatResultSchema = z.object({
+  entry: CloudRemoteEntrySchema,
+});
+
+export const SourceReadParamsSchema = z.object({
+  ...sourceSelector,
+  fileId: z.string().min(1),
+  offset: z.number().int().nonnegative().optional(),
+  length: z.number().int().positive().optional(),
+});
+
+export const SourceBytesResultSchema = z.object({
+  data: z.string(),
+  eof: z.boolean(),
+});
+
+export const SourceUploadParamsSchema = z.object({
+  ...sourceSelector,
+  parentId: z.string().min(1),
+  fileId: z.string().min(1).optional(),
+  name: z.string().min(1),
+  data: z.string(),
+  mimeType: z.string().min(1).optional(),
+});
+
+export const SourceUploadResultSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  modifiedAt: z.string().min(1).optional(),
+});
+
+export const SourceMkdirParamsSchema = z.object({
+  ...sourceSelector,
+  parentId: z.string().min(1),
+  name: z.string().min(1),
+});
+
+export const SourceMkdirResultSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+});
+
+export const SourceRemoveParamsSchema = z.object({
+  ...sourceSelector,
+  fileId: z.string().min(1),
+});
+
+export const SourceExportParamsSchema = z.object({
+  ...sourceSelector,
+  fileId: z.string().min(1),
+  mimeType: z.string().min(1),
+  offset: z.number().int().nonnegative().optional(),
+  length: z.number().int().positive().optional(),
 });
 
 export const AccountSummarySchema = z.object({

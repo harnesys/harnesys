@@ -3,6 +3,8 @@ import { EffectivePermissionSchema } from '../permissions/permissions.ts';
 import { CancelNotificationSchema, ProgressNotificationSchema } from './envelope.ts';
 import { InitializeParamsSchema, InitializeResultSchema } from './handshake.ts';
 import { CallMetaSchema } from './meta.ts';
+import type { MethodDirection, MethodSpec } from './method-spec.ts';
+import { addonMethod, hostMethod, notificationSpec } from './method-spec.ts';
 import {
   AccountSummarySchema,
   DbRowSchema,
@@ -16,50 +18,16 @@ import {
   TransportMessageSchema,
   TriggerFireOutcomeSchema,
 } from './shared.ts';
+import { sourceMethods } from './source-methods.ts';
 
-export type MethodDirection = 'host-to-addon' | 'addon-to-host' | 'notification';
-export type NotificationSender = 'host' | 'addon' | 'both';
-
-export interface MethodSpec<
-  SParams extends z.ZodType,
-  SResult extends z.ZodType | null,
-  D extends MethodDirection = MethodDirection,
-> {
-  readonly direction: D;
-  readonly params: SParams;
-  readonly result: SResult;
-  readonly permission: string | null;
-  readonly sender?: NotificationSender;
-}
-
-export function hostMethod<SParams extends z.ZodType, SResult extends z.ZodType>(
-  params: SParams,
-  result: SResult,
-  permission: string | null = null,
-): MethodSpec<SParams, SResult, 'host-to-addon'> {
-  return { direction: 'host-to-addon', params, result, permission };
-}
-
-export function addonMethod<SParams extends z.ZodType, SResult extends z.ZodType>(
-  params: SParams,
-  result: SResult,
-  permission: string | null,
-): MethodSpec<SParams, SResult, 'addon-to-host'> {
-  return { direction: 'addon-to-host', params, result, permission };
-}
-
-export function notificationSpec<SParams extends z.ZodType>(
-  params: SParams,
-  sender: NotificationSender,
-  permission: string | null = null,
-): MethodSpec<SParams, null, 'notification'> {
-  return { direction: 'notification', params, result: null, permission, sender };
-}
+export type { MethodDirection, MethodSpec, NotificationSender } from './method-spec.ts';
+export { addonMethod, hostMethod, notificationSpec } from './method-spec.ts';
 
 const empty = z.object({});
 const str = z.string().min(1);
 
 export const protocolMap = {
+  ...sourceMethods,
   initialize: hostMethod(InitializeParamsSchema, InitializeResultSchema),
   initialized: notificationSpec(empty, 'host'),
   shutdown: hostMethod(

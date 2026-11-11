@@ -45,6 +45,13 @@ describe('protocol method map conformance', () => {
       'transport.edit',
       'transport.typing',
       'hook.deliver',
+      'source.list',
+      'source.stat',
+      'source.download',
+      'source.upload',
+      'source.mkdir',
+      'source.remove',
+      'source.export',
       'config.get',
       'secrets.get',
       'db.exec',
@@ -80,6 +87,8 @@ describe('protocol method map conformance', () => {
     expect(protocolMap['bridge.inbound'].permission).toBe('bridge.inbound');
     expect(protocolMap['triggers.fire'].permission).toBe('trigger');
     expect(protocolMap['workers.report'].permission).toBe('worker');
+    expect(protocolMap['source.list'].permission).toBe('source');
+    expect(protocolMap['source.upload'].permission).toBe('source');
     expect(protocolMap['db.run'].permission).toBeNull();
     expect(protocolMap['log.write'].permission).toBeNull();
   });

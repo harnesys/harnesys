@@ -8,13 +8,13 @@ import { applyHostPolicyToGrants } from '../../../domain/addons/permissions.ts';
 import { GrantPolicyPort } from '../../../domain/addons/ports/grant-policy.port.ts';
 import { HostServiceRegistryPort } from '../../../domain/addons/ports/host-service-registry.port.ts';
 import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
+import { TokenBucketRateLimiter } from '../../../domain/addons/rate-limit.ts';
 import { ClockPort } from '../../../domain/apps/ports/clock.port.ts';
 import type { OrgAuditRow } from '../../../domain/fleet/org-audit.port.ts';
 import { OrgAudit } from '../../../domain/fleet/org-audit.port.ts';
 import type { MetricLabels } from '../../../domain/metrics/metrics.port.ts';
 import { MetricsPort } from '../../../domain/metrics/metrics.port.ts';
 import { InstanceGenerationPort } from './instance-generation.port.ts';
-import { TokenBucketRateLimiter } from './rate-limit.ts';
 
 export interface DispatchTarget {
   orgId: string;

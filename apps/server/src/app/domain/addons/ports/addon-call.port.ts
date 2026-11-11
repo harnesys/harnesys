@@ -36,6 +36,15 @@ export interface HookDeliverParams {
   event: JsonObject;
 }
 
+export type SourceRequestMethod =
+  | 'source.list'
+  | 'source.stat'
+  | 'source.download'
+  | 'source.upload'
+  | 'source.mkdir'
+  | 'source.remove'
+  | 'source.export';
+
 export abstract class AddonCallPort {
   abstract callTool(
     orgId: string,
@@ -113,4 +122,12 @@ export abstract class AddonCallPort {
     params: { channel: string; on: boolean },
     opts?: AddonCallOptions,
   ): Promise<void>;
+
+  abstract sourceRequest(
+    orgId: string,
+    addonId: string,
+    method: SourceRequestMethod,
+    params: JsonObject,
+    opts?: AddonCallOptions,
+  ): Promise<JsonObject>;
 }

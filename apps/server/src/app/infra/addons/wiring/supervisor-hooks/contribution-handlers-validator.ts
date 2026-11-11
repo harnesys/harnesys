@@ -34,6 +34,9 @@ export class ContributionHandlersValidator implements SupervisorHandlersValidato
         continue;
       }
       for (const handler of family.handlers) {
+        if (!handler.required) {
+          continue;
+        }
         if (!provided.has(handler.method)) {
           missing.add(handler.method);
         }

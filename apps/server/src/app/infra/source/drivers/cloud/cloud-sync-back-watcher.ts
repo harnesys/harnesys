@@ -19,6 +19,7 @@ import {
   type CloudChangeKind,
   type CloudDriveSyncSource,
   type CloudSyncStateFrame,
+  integrationIdOfCloudSource,
   syncBackCloudPath,
 } from './cloud-sync-back.ts';
 import type { PendingCloudChange } from './cloud-sync-back-queue.ts';
@@ -92,7 +93,7 @@ export class CloudSyncBackWatcher extends CloudSyncBackWatchPort {
     });
     this.syncSources(orgId, sources, {
       resolveAccessToken: (source) =>
-        this.tokens.getAccessToken(orgId, source.distribution.integrationId),
+        this.tokens.getAccessToken(orgId, integrationIdOfCloudSource(source)),
       reconcile: true,
     });
   }
@@ -266,7 +267,7 @@ export class CloudSyncBackWatcher extends CloudSyncBackWatchPort {
     if (!lease.ok) {
       throw new Error('cloud source write lease is held');
     }
-    const credentialKey = googleCredKey(context.source.distribution.integrationId);
+    const credentialKey = googleCredKey(integrationIdOfCloudSource(context.source));
     let temporaryCredential = false;
     let credentialLease: CloudSyncCredentialLease | undefined;
     try {
