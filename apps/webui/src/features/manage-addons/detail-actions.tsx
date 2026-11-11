@@ -1,6 +1,14 @@
 import type { AddonGrantEntry, OrgAddonDetail } from '@harnesys/contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { MoreHorizontalIcon } from 'lucide-react';
+import {
+  ArrowUpCircleIcon,
+  EllipsisIcon,
+  PowerIcon,
+  RefreshCwIcon,
+  Trash2Icon,
+  TriangleAlertIcon,
+  Undo2Icon,
+} from 'lucide-react';
 import { useState } from 'react';
 import { addonPackagesQuery } from '@/shared/api/addon-packages';
 import {
@@ -22,13 +30,24 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
-import { DangerZone, SettingsErrorBanner, SettingsSection } from '@/shared/ui/settings-kit';
+import { toast } from '@/shared/ui/toast';
 import { ConsentDialog } from './consent-dialog';
 
-export function AddonControls({ orgId, detail }: { orgId: string; detail: OrgAddonDetail }) {
+function failureMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+export function AddonControls({
+  orgId,
+  detail,
+  onRemoved,
+}: {
+  orgId: string;
+  detail: OrgAddonDetail;
+  onRemoved: () => void;
+}) {
   const queryClient = useQueryClient();
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [dialog, setDialog] = useState<'enable' | 'update' | null>(null);
   const packages = useQuery(addonPackagesQuery());
   const installedVersions = (packages.data?.items ?? [])
@@ -38,14 +57,13 @@ export function AddonControls({ orgId, detail }: { orgId: string; detail: OrgAdd
 
   const run = async (action: () => Promise<unknown>) => {
     setPending(true);
-    setError(null);
     try {
       await action();
       await queryClient.invalidateQueries({
         queryKey: orgAddonDetailQueryKey(orgId, detail.addonId),
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      toast.add({ title: 'Add-on action failed', description: failureMessage(err) });
     } finally {
       setPending(false);
     }
@@ -79,98 +97,123 @@ export function AddonControls({ orgId, detail }: { orgId: string; detail: OrgAdd
       });
   };
 
-  const needsConsent = detail.compatibility.outcome === 'needs_consent';
-  const menuVisible = candidates.length > 0 || detail.enabled;
+  const remove = async (data: 'keep' | 'purge') => {
+    const ok = await alert.confirm({
+      title:
+        data === 'purge' ? 'Remove and erase all add-on data?' : 'Remove and keep add-on data?',
+      description:
+        data === 'purge'
+          ? 'The add-on database, files, secrets, bindings, triggers, and job state are deleted.'
+          : 'Configuration is kept; the add-on is disabled and unregistered.',
+      confirmText: 'Remove',
+      variant: 'destructive',
+      testId: 'addon-remove-confirm',
+    });
+    if (!ok) {
+      return;
+    }
+    setPending(true);
+    try {
+      await disableOrgAddon(orgId, detail.addonId);
+      await deleteOrgAddon(orgId, detail.addonId, data);
+      onRemoved();
+    } catch (err) {
+      toast.add({ title: 'Add-on removal failed', description: failureMessage(err) });
+    } finally {
+      setPending(false);
+    }
+  };
 
   return (
     <div className="flex min-w-0 flex-col gap-2" data-testid="addon-controls">
-      {error ? <SettingsErrorBanner message={error} testId="addon-action-error" /> : null}
-      <div className="flex flex-wrap items-center gap-2">
-        {detail.enabled ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={pending}
-            onClick={() => void run(() => disableOrgAddon(orgId, detail.addonId))}
-            data-testid="addon-disable"
-          >
-            Disable
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            size="sm"
-            disabled={pending}
-            onClick={() => setDialog('enable')}
-            data-testid="addon-enable"
-          >
-            Enable
-          </Button>
-        )}
-        {detail.updateAvailable ? (
-          <Button
-            type="button"
-            size="sm"
-            variant={needsConsent ? 'default' : 'outline'}
-            disabled={pending}
-            onClick={() => setDialog('update')}
-            data-testid="addon-update"
-          >
-            Update to {detail.updateAvailable}
-          </Button>
-        ) : null}
-        {menuVisible ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  type="button"
-                  size="icon-sm"
-                  variant="ghost"
-                  disabled={pending}
-                  aria-label="Add-on actions"
-                  data-testid="addon-menu"
-                >
-                  <MoreHorizontalIcon />
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end">
-              {detail.enabled ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              disabled={pending}
+              aria-label="Add-on actions"
+              data-testid="addon-menu"
+            >
+              <EllipsisIcon />
+            </Button>
+          }
+        />
+        <DropdownMenuContent align="end" className="min-w-52">
+          {detail.enabled ? (
+            <DropdownMenuItem
+              onClick={() => void run(() => disableOrgAddon(orgId, detail.addonId))}
+              data-testid="addon-disable"
+            >
+              <PowerIcon />
+              Disable
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem onClick={() => setDialog('enable')} data-testid="addon-enable">
+              <PowerIcon />
+              Enable
+            </DropdownMenuItem>
+          )}
+          {detail.updateAvailable ? (
+            <DropdownMenuItem onClick={() => setDialog('update')} data-testid="addon-update">
+              <ArrowUpCircleIcon />
+              Update to {detail.updateAvailable}
+            </DropdownMenuItem>
+          ) : null}
+          {detail.enabled ? (
+            <DropdownMenuItem
+              onClick={() => void run(() => restartOrgAddon(orgId, detail.addonId))}
+              data-testid="addon-restart"
+            >
+              <RefreshCwIcon />
+              Restart
+            </DropdownMenuItem>
+          ) : null}
+          {detail.enabled && detail.health === 'quarantined' ? (
+            <DropdownMenuItem
+              onClick={() => void run(() => resetOrgAddonQuarantine(orgId, detail.addonId))}
+              data-testid="addon-quarantine-reset"
+            >
+              <TriangleAlertIcon />
+              Reset quarantine
+            </DropdownMenuItem>
+          ) : null}
+          {candidates.length > 0 ? (
+            <>
+              <DropdownMenuSeparator />
+              {candidates.map((version) => (
                 <DropdownMenuItem
-                  onClick={() => void run(() => restartOrgAddon(orgId, detail.addonId))}
-                  data-testid="addon-restart"
+                  key={version}
+                  onClick={() => rollback(version)}
+                  data-testid={`addon-rollback-${version}`}
                 >
-                  Restart
+                  <Undo2Icon />
+                  Roll back to {version}
                 </DropdownMenuItem>
-              ) : null}
-              {detail.enabled && detail.health === 'quarantined' ? (
-                <DropdownMenuItem
-                  onClick={() => void run(() => resetOrgAddonQuarantine(orgId, detail.addonId))}
-                  data-testid="addon-quarantine-reset"
-                >
-                  Reset quarantine
-                </DropdownMenuItem>
-              ) : null}
-              {candidates.length > 0 ? (
-                <>
-                  <DropdownMenuSeparator />
-                  {candidates.map((version) => (
-                    <DropdownMenuItem
-                      key={version}
-                      onClick={() => rollback(version)}
-                      data-testid={`addon-rollback-${version}`}
-                    >
-                      Roll back to {version}
-                    </DropdownMenuItem>
-                  ))}
-                </>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : null}
-      </div>
+              ))}
+            </>
+          ) : null}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            variant="destructive"
+            onClick={() => void remove('keep')}
+            data-testid="addon-remove-keep"
+          >
+            <Trash2Icon />
+            Remove, keep data
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            variant="destructive"
+            onClick={() => void remove('purge')}
+            data-testid="addon-remove-purge"
+          >
+            <Trash2Icon />
+            Remove, erase data
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <ConsentDialog
         key={`enable-${detail.addonId}:${detail.version}`}
         open={dialog === 'enable'}
@@ -195,78 +238,5 @@ export function AddonControls({ orgId, detail }: { orgId: string; detail: OrgAdd
         onConfirm={update}
       />
     </div>
-  );
-}
-
-export function AddonDangerZone({
-  orgId,
-  detail,
-  onRemoved,
-}: {
-  orgId: string;
-  detail: OrgAddonDetail;
-  onRemoved: () => void;
-}) {
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const remove = async (data: 'keep' | 'purge') => {
-    const ok = await alert.confirm({
-      title:
-        data === 'purge' ? 'Remove and erase all add-on data?' : 'Remove and keep add-on data?',
-      description:
-        data === 'purge'
-          ? 'The add-on database, files, secrets, bindings, triggers, and job state are deleted.'
-          : 'Configuration is kept; the add-on is disabled and unregistered.',
-      confirmText: 'Remove',
-      variant: 'destructive',
-      testId: 'addon-remove-confirm',
-    });
-    if (!ok) {
-      return;
-    }
-    setPending(true);
-    setError(null);
-    try {
-      await disableOrgAddon(orgId, detail.addonId);
-      await deleteOrgAddon(orgId, detail.addonId, data);
-      onRemoved();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setPending(false);
-    }
-  };
-
-  return (
-    <SettingsSection label="Danger" testId="addon-danger">
-      {error ? <SettingsErrorBanner message={error} testId="addon-remove-error" /> : null}
-      <DangerZone
-        title="Remove from organization"
-        description="Disable, unregister contributions, and stop the instance."
-        testId="addon-remove-zone"
-      >
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={pending}
-          onClick={() => void remove('keep')}
-          data-testid="addon-remove-keep"
-        >
-          Remove, keep data
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="destructive"
-          disabled={pending}
-          onClick={() => void remove('purge')}
-          data-testid="addon-remove-purge"
-        >
-          Remove, erase data
-        </Button>
-      </DangerZone>
-    </SettingsSection>
   );
 }

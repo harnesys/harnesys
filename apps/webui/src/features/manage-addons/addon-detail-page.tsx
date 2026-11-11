@@ -20,7 +20,7 @@ import { SettingsErrorBanner, SettingsWarnBanner } from '@/shared/ui/settings-ki
 import { StatusDot } from '@/shared/ui/status-dot';
 import { AddonLogPanel } from './addon-log-panel';
 import { AddonMark } from './addon-mark';
-import { AddonControls, AddonDangerZone } from './detail-actions';
+import { AddonControls } from './detail-actions';
 import { KnowledgeSourcesSection } from './knowledge-sources-section';
 import type { AddonBanner } from './lib/banners';
 import { deriveAddonBanners } from './lib/banners';
@@ -91,9 +91,10 @@ function AddonDetail({
       onBack={goBack}
       body={
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-8">
-          <AddonHero detail={value}>
-            <AddonControls orgId={orgId} detail={value} />
-          </AddonHero>
+          <AddonHero
+            detail={value}
+            controls={<AddonControls orgId={orgId} detail={value} onRemoved={goBack} />}
+          />
           {banners.map((banner) => (
             <AddonBannerBlock key={banner.id} banner={banner} />
           ))}
@@ -112,7 +113,6 @@ function AddonDetail({
           <KnowledgeSourcesSection orgId={orgId} addonId={addonId} detail={value} />
           <DiagnosticsSection orgId={orgId} addonId={addonId} />
           <AddonLogPanel orgId={orgId} addonId={addonId} />
-          <AddonDangerZone orgId={orgId} detail={value} onRemoved={goBack} />
         </div>
       }
     />
@@ -157,7 +157,7 @@ function DetailShell({
   );
 }
 
-function AddonHero({ detail, children }: { detail: OrgAddonDetail; children?: ReactNode }) {
+function AddonHero({ detail, controls }: { detail: OrgAddonDetail; controls?: ReactNode }) {
   return (
     <Card className="gap-4 bg-popover p-5" data-testid="addon-detail-hero">
       <div className="flex items-start gap-4">
@@ -177,10 +177,7 @@ function AddonHero({ detail, children }: { detail: OrgAddonDetail; children?: Re
             <p className="line-clamp-2 text-[13px] text-muted-foreground">{detail.description}</p>
           ) : null}
         </div>
-        <span className="flex shrink-0 items-center gap-1.5 text-[13px]">
-          <StatusDot tone={addonHealthTone(detail.health)} label={detail.health} />
-          {detail.health}
-        </span>
+        {controls ? <div className="shrink-0">{controls}</div> : null}
       </div>
       {detail.lastError ? (
         <p
@@ -190,8 +187,8 @@ function AddonHero({ detail, children }: { detail: OrgAddonDetail; children?: Re
           {detail.lastError}
         </p>
       ) : null}
-      {children}
       <div className="flex flex-wrap gap-x-10 gap-y-3 border-t pt-4">
+        <MetaItem label="Status" value={<StatusValue detail={detail} />} />
         <MetaItem
           label="Version"
           value={
@@ -210,6 +207,15 @@ function AddonHero({ detail, children }: { detail: OrgAddonDetail; children?: Re
         ) : null}
       </div>
     </Card>
+  );
+}
+
+function StatusValue({ detail }: { detail: OrgAddonDetail }) {
+  return (
+    <span className="flex items-center gap-2" data-testid="addon-health">
+      <StatusDot tone={addonHealthTone(detail.health)} label={detail.health} />
+      {detail.health}
+    </span>
   );
 }
 
