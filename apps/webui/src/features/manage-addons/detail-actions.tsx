@@ -1,5 +1,6 @@
 import type { AddonGrantEntry, OrgAddonDetail } from '@harnesys/contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { MoreHorizontalIcon } from 'lucide-react';
 import { useState } from 'react';
 import { addonPackagesQuery } from '@/shared/api/addon-packages';
 import {
@@ -7,11 +8,20 @@ import {
   disableOrgAddon,
   enableOrgAddon,
   orgAddonDetailQueryKey,
+  resetOrgAddonQuarantine,
+  restartOrgAddon,
   rollbackOrgAddon,
   updateOrgAddon,
 } from '@/shared/api/addons';
 import { alert } from '@/shared/services/overlay';
 import { Button } from '@/shared/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/shared/ui/dropdown-menu';
 import { DangerZone, SettingsErrorBanner, SettingsSection } from '@/shared/ui/settings-kit';
 import { ConsentDialog } from './consent-dialog';
 
@@ -25,7 +35,6 @@ export function AddonControls({ orgId, detail }: { orgId: string; detail: OrgAdd
     .filter((pkg) => pkg.id === detail.addonId)
     .map((pkg) => pkg.version);
   const candidates = installedVersions.filter((version) => version !== detail.version).sort();
-  const [rollbackVersion, setRollbackVersion] = useState('');
 
   const run = async (action: () => Promise<unknown>) => {
     setPending(true);
@@ -57,11 +66,7 @@ export function AddonControls({ orgId, detail }: { orgId: string; detail: OrgAdd
     );
   };
 
-  const rollback = () => {
-    const version = rollbackVersion || candidates[candidates.length - 1];
-    if (!version) {
-      return;
-    }
+  const rollback = (version: string) => {
     void alert
       .confirm({
         title: `Roll back ${detail.title} to ${version}?`,
@@ -75,6 +80,7 @@ export function AddonControls({ orgId, detail }: { orgId: string; detail: OrgAdd
   };
 
   const needsConsent = detail.compatibility.outcome === 'needs_consent';
+  const menuVisible = candidates.length > 0 || detail.enabled;
 
   return (
     <div className="flex min-w-0 flex-col gap-2" data-testid="addon-controls">
@@ -114,33 +120,55 @@ export function AddonControls({ orgId, detail }: { orgId: string; detail: OrgAdd
             Update to {detail.updateAvailable}
           </Button>
         ) : null}
-        {detail.updateAvailable && candidates.length > 0 ? (
-          <>
-            <select
-              className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
-              value={rollbackVersion}
-              onChange={(event) => setRollbackVersion(event.target.value)}
-              aria-label="Rollback version"
-              data-testid="addon-rollback-version"
-            >
-              <option value="">Rollback target...</option>
-              {candidates.map((version) => (
-                <option key={version} value={version}>
-                  {version}
-                </option>
-              ))}
-            </select>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              disabled={pending}
-              onClick={rollback}
-              data-testid="addon-rollback"
-            >
-              Roll back
-            </Button>
-          </>
+        {menuVisible ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  disabled={pending}
+                  aria-label="Add-on actions"
+                  data-testid="addon-menu"
+                >
+                  <MoreHorizontalIcon />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              {detail.enabled ? (
+                <DropdownMenuItem
+                  onClick={() => void run(() => restartOrgAddon(orgId, detail.addonId))}
+                  data-testid="addon-restart"
+                >
+                  Restart
+                </DropdownMenuItem>
+              ) : null}
+              {detail.enabled && detail.health === 'quarantined' ? (
+                <DropdownMenuItem
+                  onClick={() => void run(() => resetOrgAddonQuarantine(orgId, detail.addonId))}
+                  data-testid="addon-quarantine-reset"
+                >
+                  Reset quarantine
+                </DropdownMenuItem>
+              ) : null}
+              {candidates.length > 0 ? (
+                <>
+                  <DropdownMenuSeparator />
+                  {candidates.map((version) => (
+                    <DropdownMenuItem
+                      key={version}
+                      onClick={() => rollback(version)}
+                      data-testid={`addon-rollback-${version}`}
+                    >
+                      Roll back to {version}
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : null}
       </div>
       <ConsentDialog

@@ -1,12 +1,19 @@
+import type { AddonPermissionRisk } from '@harnesys/contracts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { orgAddonDetailQueryKey, putOrgAddonGrants } from '@/shared/api/addons';
 import { Button } from '@/shared/ui/button';
-import { RowItem, RowSection } from '@/shared/ui/capability-rows';
+import { RowChip, RowItem, RowSection } from '@/shared/ui/capability-rows';
 import { SettingsErrorBanner } from '@/shared/ui/settings-kit';
 import { ConsentDialog } from '../consent-dialog';
 import { grantedIdsOf } from '../lib/grant-diff';
 import type { SectionProps } from '../lib/section-props';
+
+const RISK_TONE: Record<AddonPermissionRisk, 'danger' | 'warn' | 'neutral'> = {
+  high: 'danger',
+  medium: 'warn',
+  low: 'neutral',
+};
 
 export function PermissionsSection({ orgId, detail }: SectionProps) {
   const queryClient = useQueryClient();
@@ -35,28 +42,43 @@ export function PermissionsSection({ orgId, detail }: SectionProps) {
   };
 
   return (
-    <RowSection label="Permissions" count={declared.length}>
+    <RowSection
+      label="Permissions"
+      count={declared.length}
+      actions={
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={declared.length === 0}
+          onClick={() => setEditing(true)}
+          data-testid="addon-grants-edit"
+        >
+          Edit grants
+        </Button>
+      }
+    >
       {declared.length === 0 ? (
         <RowItem title="No rights declared" />
       ) : (
         declared.map((permission) => {
           const isGranted = grantedIds.has(permission.id);
           return (
-            <RowItem
+            <div
               key={permission.id}
-              title={permission.id}
-              description={
-                <>
-                  {permission.reason}
-                  <span className="ml-1 font-mono">
-                    [{permission.risk}
-                    {permission.optional ? '' : ', required'},{' '}
-                    {isGranted ? 'granted' : 'not granted'}]
-                  </span>
-                </>
-              }
-              testId={`addon-permission-${permission.id}`}
-            />
+              className="flex min-w-0 flex-col gap-0.5 px-1 py-0.5"
+              data-testid={`addon-permission-${permission.id}`}
+            >
+              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                <p className="truncate font-mono text-[12px] leading-snug">{permission.id}</p>
+                <RowChip tone={RISK_TONE[permission.risk]}>{permission.risk}</RowChip>
+                {permission.optional ? null : <RowChip>required</RowChip>}
+                <RowChip tone={isGranted ? 'ok' : 'neutral'}>
+                  {isGranted ? 'granted' : 'not granted'}
+                </RowChip>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-snug">{permission.reason}</p>
+            </div>
           );
         })
       )}
@@ -72,18 +94,6 @@ export function PermissionsSection({ orgId, detail }: SectionProps) {
         </div>
       ) : null}
       {error ? <SettingsErrorBanner message={error} testId="addon-grants-error" /> : null}
-      <div>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={declared.length === 0}
-          onClick={() => setEditing(true)}
-          data-testid="addon-grants-edit"
-        >
-          Edit grants
-        </Button>
-      </div>
       <ConsentDialog
         key={`${detail.addonId}:${grantedIds.size}:${detail.version}`}
         open={editing}

@@ -1,23 +1,21 @@
 import type { OrgAddonDetail } from '@harnesys/contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeftIcon, PuzzleIcon } from 'lucide-react';
+import { ArrowLeftIcon, ChevronRightIcon, PuzzleIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router';
 import {
   orgAddonDataExportUrl,
   orgAddonDetailQuery,
   orgAddonDetailQueryKey,
   orgAddonMetricsQuery,
-  resetOrgAddonQuarantine,
-  restartOrgAddon,
 } from '@/shared/api/addons';
 import { apiUrl } from '@/shared/api/client';
 import { studioPath } from '@/shared/config/routes';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
-import { RowChip, RowSection } from '@/shared/ui/capability-rows';
+import { RowChip } from '@/shared/ui/capability-rows';
 import { Card } from '@/shared/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/shared/ui/collapsible';
 import { SettingsErrorBanner, SettingsWarnBanner } from '@/shared/ui/settings-kit';
 import { StatusDot } from '@/shared/ui/status-dot';
 import { AddonLogPanel } from './addon-log-panel';
@@ -49,7 +47,6 @@ function AddonDetail({
 }) {
   const queryClient = useQueryClient();
   const detail = useQuery(orgAddonDetailQuery(orgId, addonId));
-  const [actionError, setActionError] = useState<string | null>(null);
   const backPath = studioPath.settings(orgId, 'addons');
   const goBack = () => navigate(backPath);
 
@@ -93,14 +90,12 @@ function AddonDetail({
       onBack={goBack}
       body={
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-8">
-          <AddonHero detail={value} />
+          <AddonHero detail={value}>
+            <AddonControls orgId={orgId} detail={value} />
+          </AddonHero>
           {banners.map((banner) => (
             <AddonBannerBlock key={banner.id} banner={banner} />
           ))}
-          {actionError ? (
-            <SettingsErrorBanner message={actionError} testId="addon-detail-action-error" />
-          ) : null}
-          <AddonControls orgId={orgId} detail={value} />
           {entries.map((entry, index) => (
             <div
               key={
@@ -113,7 +108,7 @@ function AddonDetail({
               {renderSection(entry, { orgId, addonId, detail: value, onRefresh: invalidate })}
             </div>
           ))}
-          <DiagnosticsSection orgId={orgId} addonId={addonId} onError={setActionError} />
+          <DiagnosticsSection orgId={orgId} addonId={addonId} />
           <AddonLogPanel orgId={orgId} addonId={addonId} />
           <AddonDangerZone orgId={orgId} detail={value} onRemoved={goBack} />
         </div>
@@ -160,7 +155,7 @@ function DetailShell({
   );
 }
 
-function AddonHero({ detail }: { detail: OrgAddonDetail }) {
+function AddonHero({ detail, children }: { detail: OrgAddonDetail; children?: ReactNode }) {
   return (
     <Card className="gap-4 bg-popover p-5" data-testid="addon-detail-hero">
       <div className="flex items-start gap-4">
@@ -177,7 +172,7 @@ function AddonHero({ detail }: { detail: OrgAddonDetail }) {
             )}
           </div>
           {detail.description ? (
-            <p className="truncate text-[13px] text-muted-foreground">{detail.description}</p>
+            <p className="line-clamp-2 text-[13px] text-muted-foreground">{detail.description}</p>
           ) : null}
         </div>
         <span className="flex shrink-0 items-center gap-1.5 text-[13px]">
@@ -193,6 +188,7 @@ function AddonHero({ detail }: { detail: OrgAddonDetail }) {
           {detail.lastError}
         </p>
       ) : null}
+      {children}
       <div className="flex flex-wrap gap-x-10 gap-y-3 border-t pt-4">
         <MetaItem
           label="Version"
@@ -244,65 +240,33 @@ function AddonBannerBlock({ banner }: { banner: AddonBanner }) {
   );
 }
 
-function DiagnosticsSection({
-  orgId,
-  addonId,
-  onError,
-}: {
-  orgId: string;
-  addonId: string;
-  onError: (message: string) => void;
-}) {
-  const queryClient = useQueryClient();
+function DiagnosticsSection({ orgId, addonId }: { orgId: string; addonId: string }) {
   const metrics = useQuery(orgAddonMetricsQuery(orgId, addonId));
-  const [pending, setPending] = useState(false);
-
-  const act = async (action: () => Promise<void>) => {
-    setPending(true);
-    try {
-      await action();
-      await queryClient.invalidateQueries({ queryKey: orgAddonDetailQueryKey(orgId, addonId) });
-    } catch (err) {
-      onError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setPending(false);
-    }
-  };
-
+  const counters = metrics.data?.counters ?? [];
+  if (counters.length === 0) {
+    return (
+      <a
+        className="w-fit text-muted-foreground text-sm underline decoration-dotted"
+        href={apiUrl(orgAddonDataExportUrl(orgId, addonId))}
+        data-testid="addon-data-export"
+      >
+        Download add-on data
+      </a>
+    );
+  }
   return (
-    <RowSection label="Diagnostics">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={pending}
-          onClick={() => void act(() => restartOrgAddon(orgId, addonId))}
-          data-testid="addon-restart"
-        >
-          Restart
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={pending}
-          onClick={() => void act(() => resetOrgAddonQuarantine(orgId, addonId))}
-          data-testid="addon-quarantine-reset"
-        >
-          Reset quarantine
-        </Button>
-        <a
-          className="text-muted-foreground text-sm underline decoration-dotted"
-          href={apiUrl(orgAddonDataExportUrl(orgId, addonId))}
-          data-testid="addon-data-export"
-        >
-          Download data
-        </a>
-      </div>
-      {metrics.data && metrics.data.counters.length > 0 ? (
+    <Collapsible className="mt-2 flex min-w-0 flex-col gap-1 border-border/40 border-t pt-2">
+      <CollapsibleTrigger
+        className="group flex w-full items-center gap-1.5 rounded-md px-1 py-1 font-medium text-[11px] text-muted-foreground uppercase tracking-wide hover:text-foreground"
+        data-testid="addon-diagnostics-toggle"
+      >
+        <ChevronRightIcon className="size-3.5 shrink-0 transition-transform group-data-[panel-open]:rotate-90" />
+        Diagnostics
+        <span className="font-mono font-normal normal-case tabular-nums">{counters.length}</span>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
         <div className="flex min-w-0 flex-col gap-0.5 pt-1" data-testid="addon-metrics">
-          {metrics.data.counters.slice(0, 12).map((point) => (
+          {counters.slice(0, 12).map((point) => (
             <div
               key={`${point.name}:${JSON.stringify(point.labels)}`}
               className="flex min-w-0 items-baseline justify-between gap-3"
@@ -313,8 +277,15 @@ function DiagnosticsSection({
               <span className="shrink-0 font-mono text-[12px] tabular-nums">{point.value}</span>
             </div>
           ))}
+          <a
+            className="w-fit pt-1 text-muted-foreground text-sm underline decoration-dotted"
+            href={apiUrl(orgAddonDataExportUrl(orgId, addonId))}
+            data-testid="addon-data-export"
+          >
+            Download data
+          </a>
         </div>
-      ) : null}
-    </RowSection>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

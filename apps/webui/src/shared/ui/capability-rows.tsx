@@ -227,20 +227,25 @@ export function Row({
 export function RowSection({
   label,
   count,
+  actions,
   children,
 }: {
   label: string;
   count?: number;
+  actions?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className="mt-2 flex flex-col gap-1 border-border/40 border-t pt-2 first-of-type:mt-0 first-of-type:border-t-0 first-of-type:pt-1">
-      <p className="flex items-baseline gap-1.5 font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
-        {label}
-        {typeof count === 'number' ? (
-          <span className="font-mono font-normal normal-case tabular-nums">{count}</span>
-        ) : null}
-      </p>
+      <div className="flex items-baseline gap-2">
+        <p className="flex min-w-0 flex-1 items-baseline gap-1.5 font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
+          {label}
+          {typeof count === 'number' ? (
+            <span className="font-mono font-normal normal-case tabular-nums">{count}</span>
+          ) : null}
+        </p>
+        {actions ? <div className="flex shrink-0 items-center gap-1">{actions}</div> : null}
+      </div>
       {children}
     </div>
   );
