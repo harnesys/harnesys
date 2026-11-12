@@ -29,6 +29,7 @@ import type { AddonBanner } from './lib/banners';
 import { deriveAddonBanners } from './lib/banners';
 import {
   defaultSectionEntries,
+  ensurePermissionsSection,
   isPreviewSection,
   viewSectionsFromDetail,
 } from './lib/view-sections';
@@ -94,8 +95,10 @@ function AddonDetail({
       installedPackages.find((pkg) => pkg.id === addonId)
     )?.trust ?? null;
   const banners = deriveAddonBanners(value, trust);
-  const entries = (viewSectionsFromDetail(value) ?? defaultSectionEntries()).filter(
-    (entry) => installed || isPreviewSection(entry),
+  const entries = ensurePermissionsSection(
+    (viewSectionsFromDetail(value) ?? defaultSectionEntries()).filter(
+      (entry) => installed || isPreviewSection(entry),
+    ),
   );
   const invalidate = () => void invalidateAddonScope(queryClient, orgId);
 

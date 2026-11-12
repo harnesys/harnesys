@@ -142,8 +142,29 @@ export class TransportSessionService {
     runId: string,
     suffix: string,
   ): Promise<void> {
+    const text = await this.authoritativeDraft(orgId, runId);
     for (const binding of this.bindingsOf(orgId, threadId)) {
-      await this.drafts.close(orgId, binding, runId, suffix);
+      await this.drafts.close(orgId, binding, runId, suffix, text ?? undefined);
+    }
+  }
+
+  private async authoritativeDraft(orgId: string, runId: string): Promise<string | null> {
+    try {
+      const store = await this.executor.events(orgId);
+      const tail = await store.tail(runId, 0);
+      let text = '';
+      for (const event of tail) {
+        if (event.type === 'text-delta' && event.text !== '') {
+          text += event.text;
+        }
+      }
+      return text === '' ? null : text;
+    } catch (error) {
+      this.logger.warn(
+        { orgId, runId, error: error instanceof Error ? error.message : String(error) },
+        'transport session draft rebuild failed',
+      );
+      return null;
     }
   }
 

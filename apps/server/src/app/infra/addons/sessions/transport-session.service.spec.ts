@@ -8,10 +8,13 @@ import {
 } from '../../../domain/addons/ports/transport-binding-repository.port.ts';
 import {
   AddonTransportSessionRepositoryPort,
-  type TransportSessionRow,
 } from '../../../domain/addons/ports/transport-session-repository.port.ts';
+import type { TransportSessionRow } from '../../../domain/addons/transport-session.ts';
 import { LocalExecutorPort } from '../../../domain/thread/local-executor.port.ts';
-import { ThreadEventsPort, type ThreadRunEvent } from '../../../domain/thread/thread-events.port.ts';
+import {
+  ThreadEventsPort,
+  type ThreadRunEvent,
+} from '../../../domain/thread/thread-events.port.ts';
 import { AddonTransportRegistry } from '../families/transport/transport.family.ts';
 import { TransportAskRegistry } from '../families/transport/transport-ask.registry.ts';
 import { TransportSessionAsk } from './transport-session.ask.ts';
@@ -107,9 +110,16 @@ class FakeSessionsRepo extends AddonTransportSessionRepositoryPort {
     return [];
   }
 
-  override patch(orgId: string, threadId: string, runId: string, addonId: string): void {
+  override patch(
+    orgId: string,
+    threadId: string,
+    runId: string,
+    addonId: string,
+    patch: Record<string, unknown>,
+  ): void {
     const existing = this.find(orgId, threadId, runId, addonId);
     if (existing) {
+      Object.assign(existing, patch);
       existing.updatedAt = new Date().toISOString();
     }
   }
@@ -123,10 +133,10 @@ class FakeSessionsRepo extends AddonTransportSessionRepositoryPort {
   }
 }
 
-class SlowCalls extends AddonCallPort {
+class SlowCalls {
   readonly typingCalls: number[] = [];
 
-  override async transportTyping(
+  async transportTyping(
     _orgId: string,
     _addonId: string,
     _params: { channel: string; on: boolean },
@@ -136,11 +146,11 @@ class SlowCalls extends AddonCallPort {
     await new Promise((resolve) => setTimeout(resolve, 5));
   }
 
-  override async transportSend(): Promise<{ messageId?: string }> {
+  async transportSend(): Promise<{ messageId?: string }> {
     return {};
   }
 
-  override async transportEdit(): Promise<void> {}
+  async transportEdit(): Promise<void> {}
 }
 
 function silence(): Logger {
@@ -155,7 +165,17 @@ function silence(): Logger {
   } as unknown as Logger;
 }
 
-function harness(): {
+class FakeStore {
+  constructor(readonly events: unknown[]) {}
+
+  tail(runId: string, fromSeq: number): Promise<unknown[]> {
+    return Promise.resolve(
+      (this.events as Array<{ seq?: number }>).filter((event) => (event.seq ?? 0) > fromSeq),
+    );
+  }
+}
+
+function harness(store: FakeStore): {
   service: TransportSessionService;
   events: FakeEvents;
   calls: SlowCalls;
@@ -166,17 +186,18 @@ function harness(): {
   const repo = new FakeSessionsRepo();
   const drafts = new TransportSessionDrafts(
     repo,
-    calls,
+    calls as unknown as AddonCallPort,
     new AddonTransportRegistry(),
     silence(),
   );
+  const executor = { events: async () => store } as unknown as LocalExecutorPort;
   const service = new TransportSessionService(
     events,
     new FakeBindings(),
     repo,
     drafts,
     {} as TransportSessionAsk,
-    {} as LocalExecutorPort,
+    executor,
     new TransportAskRegistry(),
     silence(),
   );
@@ -194,7 +215,7 @@ function frame(text: string, seq: number): ThreadRunEvent {
 
 describe('transport session service', () => {
   test('applies frames in emit order even when calls suspend mid-frame', async () => {
-    const { events, repo } = harness();
+    const { events, repo } = harness(new FakeStore([]));
     events.emit(ORG, frame('a', 1));
     events.emit(ORG, frame('b', 2));
     events.emit(ORG, frame('c', 3));
@@ -202,8 +223,37 @@ describe('transport session service', () => {
     expect(repo.find(ORG, THREAD, RUN, ADDON)?.draft).toBe('abc');
   });
 
+  test('rebuilds the final draft from the run event store on close', async () => {
+    const store = new FakeStore([
+      { type: 'text-delta', text: 'a', seq: 1, runId: RUN },
+      { type: 'text-delta', text: 'b', seq: 2, runId: RUN },
+      { type: 'tool', seq: 3, runId: RUN },
+      { type: 'text-delta', text: 'c', seq: 4, runId: RUN },
+      { type: 'text-delta', text: 'd', seq: 5, runId: RUN },
+    ]);
+    const { events, repo } = harness(store);
+    events.emit(ORG, frame('a', 1));
+    events.emit(ORG, frame('b', 2));
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    events.emit(ORG, { type: 'finished', threadId: THREAD, runId: RUN, status: 'completed' });
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    const row = repo.find(ORG, THREAD, RUN, ADDON);
+    expect(row?.status).toBe('closed');
+    expect(row?.draft).toBe('abcd');
+  });
+
+  test('appends the stopped suffix to the rebuilt draft on cancellation', async () => {
+    const store = new FakeStore([{ type: 'text-delta', text: 'ab', seq: 1, runId: RUN }]);
+    const { events, repo } = harness(store);
+    events.emit(ORG, frame('ab', 1));
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    events.emit(ORG, { type: 'finished', threadId: THREAD, runId: RUN, status: 'cancelled' });
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(repo.find(ORG, THREAD, RUN, ADDON)?.draft).toBe('ab\n\n[stopped]');
+  });
+
   test('still drops a genuine replayed delta', async () => {
-    const { events, repo } = harness();
+    const { events, repo } = harness(new FakeStore([]));
     events.emit(ORG, frame('a', 1));
     events.emit(ORG, frame('b', 2));
     events.emit(ORG, frame('b-replay', 2));

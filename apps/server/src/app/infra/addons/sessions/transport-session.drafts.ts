@@ -121,6 +121,7 @@ export class TransportSessionDrafts {
     binding: AddonTransportBindingRow,
     runId: string,
     suffix: string,
+    text?: string,
   ): Promise<void> {
     const key = sessionKey(orgId, binding.threadId, runId, binding.addonId);
     const live = this.sessions.get(key);
@@ -129,7 +130,8 @@ export class TransportSessionDrafts {
       return;
     }
     const session = live ?? (await this.ensure(orgId, binding, runId));
-    session.row.draft = `${existing.draft}${suffix}`;
+    const base = text ?? existing.draft;
+    session.row.draft = `${base}${suffix}`;
     await this.flush(orgId, session);
     await this.setTyping(orgId, session, false);
     this.repo.patch(orgId, binding.threadId, runId, binding.addonId, {

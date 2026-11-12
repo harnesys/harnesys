@@ -159,6 +159,24 @@ export function defaultSectionEntries(): SectionEntry[] {
   }));
 }
 
+/**
+ * Permissions are a core security surface: the grant review and editing must be
+ * reachable on every add-on page, even when the add-on declares its own view
+ * sections and omits the permissions block.
+ */
+export function ensurePermissionsSection(entries: SectionEntry[]): SectionEntry[] {
+  if (entries.some((entry) => entry.kind === 'known' && entry.section.type === 'permissions')) {
+    return entries;
+  }
+  const result = [...entries];
+  const beforeConfig = result.findIndex(
+    (entry) => entry.kind === 'known' && entry.section.type === 'config',
+  );
+  const insertAt = beforeConfig === -1 ? result.length : beforeConfig;
+  result.splice(insertAt, 0, { kind: 'known', section: { type: 'permissions' } });
+  return result;
+}
+
 const PREVIEW_SECTION_TYPES = new Set(['permissions', 'connections', 'markdown', 'capabilities']);
 
 /**
