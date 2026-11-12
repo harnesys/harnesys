@@ -1,9 +1,9 @@
 {
   "id": "harnesys.telegram-bot",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "platform": 1,
   "title": "Telegram bot",
-  "description": "Runs a Telegram bot inside chats: transport send/edit/typing with forum topics, inbound messages bridged into Harnesys threads, pairing and commands, and agent tools for chats, messages, media, albums, topics, polls, pins and forwards. The bot token comes from the bound telegram-bot account; the Telegram user account feed is a separate add-on.",
+  "description": "Direct-message bot: a personal Telegram bot whose private chats mirror Harnesys threads one-to-one. Chats pair through a pair code (send /start in the DM, then enter the code in this settings page), agent replies come back as the bot with drafts, HITL asks and attachments, and the agent gets 12 chat tools. This add-on binds its own telegram-bot account with its own BotFather token; never share one bot token between this add-on and Telegram groups (getUpdates returns 409 for two pollers on one token).",
   "runtime": { "entry": "dist/index.js", "profile": "trusted" },
   "activation": "resident",
   "permissions": [
@@ -15,7 +15,7 @@
     {
       "id": "accounts.use",
       "scope": { "connections": ["telegram-bot"] },
-      "reason": "Resolve the bot token bound to the telegram-bot connection"
+      "reason": "Resolve the bot token bound to the telegram-bot connection owned by this add-on"
     },
     {
       "id": "worker",
@@ -36,12 +36,28 @@
     {
       "id": "files.write",
       "reason": "Save files downloaded from Telegram into the organization workspace"
+    },
+    {
+      "id": "runs.read",
+      "reason": "Find the active run to stop in reply to /stop"
+    },
+    {
+      "id": "threads.compact",
+      "reason": "Compact the paired thread history in reply to /compact"
+    },
+    {
+      "id": "usage.read",
+      "reason": "Report token and cost usage in reply to /stats"
+    },
+    {
+      "id": "skills.read",
+      "reason": "List skills available to the paired agent in reply to /skills"
     }
   ],
   "connections": [
     {
       "id": "telegram-bot",
-      "label": "Telegram bot",
+      "label": "Telegram bot (direct messages)",
       "accountKinds": ["telegram-bot"],
       "cardinality": "one",
       "optional": true
@@ -60,7 +76,7 @@
             "type": "boolean",
             "required": false,
             "default": true,
-            "help": "Handle /start, /help and /id before bridging text to the thread"
+            "help": "Handle /start, /help, /id, /stop, /compact, /stats and /skills before bridging text to the thread"
           },
           {
             "key": "media_limit_mb",
@@ -324,22 +340,45 @@
           { "type": "status" },
           { "type": "config" },
           { "type": "connections", "connections": ["telegram-bot"] },
+          {
+            "type": "form",
+            "title": "Pair a chat",
+            "fields": [
+              {
+                "key": "code",
+                "label": "Pair code",
+                "type": "text",
+                "required": true,
+                "help": "Send /start in a direct message to this bot and enter the 8-character code it replies with"
+              }
+            ],
+            "submit": { "route": "/pair" }
+          },
           { "type": "jobs" },
           {
             "type": "table",
-            "title": "Known chats",
+            "title": "Paired chats",
             "source": { "route": "/chats" },
             "columns": [
-              { "key": "channel", "label": "Channel", "format": "text" },
-              { "key": "kind", "label": "Kind", "format": "badge" },
-              { "key": "title", "label": "Title", "format": "text" },
+              { "key": "id", "label": "Chat", "format": "text" },
+              { "key": "status", "label": "Status", "format": "badge" },
+              { "key": "user", "label": "Telegram user", "format": "text" },
               { "key": "threadId", "label": "Thread", "format": "text" },
-              { "key": "updatedAt", "label": "Last seen", "format": "datetime" }
+              { "key": "updatedAt", "label": "Updated", "format": "datetime" }
+            ],
+            "rowActions": [
+              {
+                "id": "unbind",
+                "label": "Unpair",
+                "route": { "route": "/chats/:id/unbind", "params": { "id": "id" } },
+                "confirm": "Unpair this chat? The bot stops reading it until it is paired again.",
+                "destructive": true
+              }
             ]
           },
           {
             "type": "markdown",
-            "body": "Connect the bot in the connections section: bind a telegram-bot account created from a @BotFather token. Add the bot to a group or start a private chat and send any message: the chat is bridged to its Harnesys thread and agent replies are delivered back as the bot. In groups the bot must be an admin or have privacy mode disabled to read messages."
+            "body": "Pairing flow: 1) bind a telegram-bot account created from a @BotFather token in the connections section; 2) send /start in a private chat with the bot — it replies with a pair code; 3) enter the code above. The first message after pairing connects the chat to its Harnesys thread, and agent replies come back here. This add-on must own its own bot token: sharing one token with the Telegram groups add-on breaks both pollers (Telegram returns 409)."
           }
         ]
       }
@@ -348,6 +387,21 @@
       "id": "chats",
       "family": "route",
       "descriptor": { "id": "chats", "method": "GET", "path": "/chats", "role": "member" }
+    },
+    {
+      "id": "pair",
+      "family": "route",
+      "descriptor": { "id": "pair", "method": "POST", "path": "/pair", "role": "member" }
+    },
+    {
+      "id": "unbind",
+      "family": "route",
+      "descriptor": {
+        "id": "unbind",
+        "method": "POST",
+        "path": "/chats/:id/unbind",
+        "role": "member"
+      }
     }
   ]
 }

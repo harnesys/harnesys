@@ -38,7 +38,9 @@
       "descriptor": {
         "id": "google-drive",
         "title": "Google Drive folder",
-        "connection": "google"
+        "connection": "google",
+        "supportsRootMount": true,
+        "rootTitle": "My Drive"
       }
     }
   ]

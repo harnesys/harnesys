@@ -19,6 +19,7 @@ export interface CreateTriggerInstanceInput {
   triggerId: string;
   label: string;
   config: JsonObject;
+  instructions?: string;
   target?: unknown;
   enabled?: boolean;
   actor: { kind: 'user' | 'system' | 'host'; id: string };
@@ -62,6 +63,7 @@ export class ManageTriggerInstanceUseCase {
       triggerId: input.triggerId,
       label: input.label,
       configJson: JSON.stringify(input.config),
+      instructions: input.instructions ?? '',
       targetJson: JSON.stringify(input.target ?? null),
       enabled: input.enabled ?? true,
       createdAt: now,

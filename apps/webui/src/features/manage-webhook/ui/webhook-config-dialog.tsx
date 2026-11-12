@@ -156,8 +156,13 @@ export function WebhookConfigDialog({
             </div>
           </Field>
           <Field>
-            <FieldLabel>Thread</FieldLabel>
-            <div className="grid items-start gap-1.5 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.5fr)]">
+            <FieldLabel>Wake thread</FieldLabel>
+            <div
+              className={cn(
+                'grid items-start gap-1.5',
+                linkedThread && 'sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.5fr)]',
+              )}
+            >
               <div className="flex min-w-0 flex-col gap-1">
                 <span className="text-[11px] text-muted-foreground">Thread</span>
                 <Select
@@ -204,7 +209,7 @@ export function WebhookConfigDialog({
             </FieldDescription>
           </Field>
           <Field>
-            <FieldLabel htmlFor="webhook-detail">Notes</FieldLabel>
+            <FieldLabel htmlFor="webhook-detail">Instructions</FieldLabel>
             <Textarea
               id="webhook-detail"
               value={draft.detail}

@@ -30,16 +30,17 @@ CREATE INDEX IF NOT EXISTS addon_bindings_account ON addon_bindings (org_id, acc
 
 export const CREATE_ADDON_TRIGGER_INSTANCES_SQL = `
 CREATE TABLE IF NOT EXISTS addon_trigger_instances (
-  id          TEXT PRIMARY KEY,
-  org_id      TEXT NOT NULL,
-  addon_id    TEXT NOT NULL,
-  trigger_id  TEXT NOT NULL,
-  label       TEXT NOT NULL,
-  config_json TEXT NOT NULL DEFAULT '{}',
-  target_json TEXT NOT NULL DEFAULT '{}',
-  enabled     INTEGER NOT NULL DEFAULT 1,
-  created_at  TEXT NOT NULL,
-  updated_at  TEXT NOT NULL
+  id           TEXT PRIMARY KEY,
+  org_id       TEXT NOT NULL,
+  addon_id     TEXT NOT NULL,
+  trigger_id   TEXT NOT NULL,
+  label        TEXT NOT NULL,
+  config_json  TEXT NOT NULL DEFAULT '{}',
+  instructions TEXT NOT NULL DEFAULT '',
+  target_json  TEXT NOT NULL DEFAULT '{}',
+  enabled      INTEGER NOT NULL DEFAULT 1,
+  created_at   TEXT NOT NULL,
+  updated_at   TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS addon_trigger_instances_addon
   ON addon_trigger_instances (org_id, addon_id);
@@ -126,6 +127,18 @@ CREATE TABLE IF NOT EXISTS addon_worker_leases (
   PRIMARY KEY (org_id, addon_id, worker_id)
 );
 `;
+
+import type { ColumnInfo } from './org-sql-migrations.ts';
+
+export function migrateTriggerInstructionsColumn(
+  exec: (sql: string) => void,
+  all: (sql: string) => ColumnInfo[],
+): void {
+  const present = new Set(all('PRAGMA table_info(addon_trigger_instances)').map((col) => col.name));
+  if (present.size > 0 && !present.has('instructions')) {
+    exec(`ALTER TABLE addon_trigger_instances ADD COLUMN instructions TEXT NOT NULL DEFAULT ''`);
+  }
+}
 
 export function ensureAddonsPlatformSchema(exec: (sql: string) => void): void {
   exec(CREATE_ORG_ADDONS_SQL);

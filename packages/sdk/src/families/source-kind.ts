@@ -8,12 +8,18 @@ export interface SourceKindDescriptor {
   id: string;
   title: L10n;
   connection?: string;
+  supportsRootMount?: boolean;
+  supportsSearch?: boolean;
+  rootTitle?: string;
 }
 
 export const SourceKindDescriptorSchema = z.object({
   id: z.string().min(1),
   title: L10nSchema,
   connection: z.string().min(1).optional(),
+  supportsRootMount: z.boolean().optional(),
+  supportsSearch: z.boolean().optional(),
+  rootTitle: z.string().min(1).optional(),
 });
 
 export const sourceKindFamily = {

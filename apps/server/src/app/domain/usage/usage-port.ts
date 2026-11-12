@@ -183,8 +183,28 @@ export function clampRunsLimit(limit: number | undefined): number {
   return Math.min(Math.max(Math.trunc(limit), 1), USAGE_RUNS_LIMIT_MAX);
 }
 
+export interface UsageSummaryRequest {
+  threadId?: string;
+  since?: string;
+}
+
+export interface UsageSummaryModelRow {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+}
+
+export interface UsageSummary {
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  byModel: UsageSummaryModelRow[];
+}
+
 export abstract class UsagePort {
   abstract report(orgId: string, request: UsageReportRequest): UsageReport;
+  abstract summary(orgId: string, request: UsageSummaryRequest): UsageSummary;
   abstract record(orgId: string, record: NewUsageRecord): void;
   abstract sumRunTokens(orgId: string, runId: string): number;
   abstract sumCostUsdByRunIds(orgId: string, runIds: string[]): number;

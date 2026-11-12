@@ -1,13 +1,9 @@
 import type { AddonContext, WorkerPair } from '@harnesys/sdk';
 import { AddonError } from '@harnesys/sdk';
 import { call, deleteWebhook, getMe, setMyCommands } from './bot-api.ts';
-import { BOT_COMMANDS } from './commands.ts';
-import {
-  groupMessages,
-  handleGroup,
-  type TelegramMessage,
-  type TelegramUpdate,
-} from './inbound.ts';
+import { botCommands, commandsScope } from './commands.ts';
+import { handleGroup } from './inbound.ts';
+import { groupMessages, type TelegramMessage, type TelegramUpdate } from './telegram.ts';
 
 const WORKER_ID = 'poller';
 const LEASE_MS = 60_000;
@@ -110,7 +106,7 @@ async function ensureReady(ctx: AddonContext): Promise<void> {
   await deleteWebhook(ctx, false);
   const me = await getMe(ctx);
   await ctx.log.info('telegram bot connected', { id: me.id, username: me.username ?? null });
-  await setMyCommands(ctx, BOT_COMMANDS);
+  await setMyCommands(ctx, botCommands(), commandsScope());
 }
 
 async function pauseAfterFailure(

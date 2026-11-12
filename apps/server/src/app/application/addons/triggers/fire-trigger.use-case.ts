@@ -76,7 +76,7 @@ export class FireTriggerUseCase {
       orgId: input.orgId,
       threadId: target.threadId,
       agentId: target.agentId ?? '',
-      text: input.text,
+      text: withInstructions(input.text, instance.instructions),
       runKey: input.runKey,
       correlationId: input.correlationId,
       ...(target.modeId === undefined ? {} : { mode: target.modeId }),
@@ -128,4 +128,9 @@ export class FireTriggerUseCase {
       return {};
     }
   }
+}
+
+function withInstructions(text: string, instructions: string): string {
+  const trimmed = instructions.trim();
+  return trimmed.length > 0 ? `${text}\n\n<instructions>\n${trimmed}\n</instructions>` : text;
 }

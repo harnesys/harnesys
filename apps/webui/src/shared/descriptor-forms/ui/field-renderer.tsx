@@ -2,7 +2,17 @@ import type { FieldSpec, FieldValue } from '@harnesys/contracts';
 import { EyeIcon, EyeOffIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/shared/ui/button';
+import { Checkbox } from '@/shared/ui/checkbox';
+import { Field, FieldDescription, FieldError, FieldLabel } from '@/shared/ui/field';
 import { Input } from '@/shared/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select';
 import { Textarea } from '@/shared/ui/textarea';
 
 interface FieldRendererProps {
@@ -31,12 +41,12 @@ export function FieldRenderer({
   }
   const id = `field-${field.key}`;
   return (
-    <div className="flex min-w-0 flex-col gap-1.5" data-invalid={error ? true : undefined}>
-      <label htmlFor={id} className="font-medium text-sm leading-5">
+    <Field data-invalid={error ? true : undefined}>
+      <FieldLabel htmlFor={id}>
         {field.label}
         {field.required ? <span className="text-destructive"> *</span> : null}
-      </label>
-      {field.help ? <p className="text-muted-foreground text-xs leading-4">{field.help}</p> : null}
+      </FieldLabel>
+      {field.help ? <FieldDescription>{field.help}</FieldDescription> : null}
       <FieldControl
         field={field}
         id={id}
@@ -47,8 +57,8 @@ export function FieldRenderer({
         onChange={onChange}
         onSecretChange={onSecretChange}
       />
-      {error ? <p className="text-destructive text-xs leading-4">{error}</p> : null}
-    </div>
+      {error ? <FieldError>{error}</FieldError> : null}
+    </Field>
   );
 }
 
@@ -97,35 +107,48 @@ function FieldControl({
     );
   }
   if (field.type === 'select') {
+    const options = field.options ?? [];
     return (
-      <select
-        id={id}
-        className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring"
-        value={String(displayed ?? '')}
+      <Select
+        items={options.map((option) => ({ value: option.value, label: option.label }))}
+        value={
+          displayed === undefined || displayed === '' || displayed === null
+            ? null
+            : String(displayed)
+        }
         disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-        data-testid={id}
+        onValueChange={(next) => {
+          if (typeof next === 'string') {
+            onChange(next);
+          }
+        }}
       >
-        <option value="">Select…</option>
-        {(field.options ?? []).map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger id={id} className="w-full" data-testid={id}>
+          <SelectValue placeholder={field.placeholder ?? 'Select...'} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {options.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
     );
   }
   if (field.type === 'boolean') {
     return (
-      <input
-        id={id}
-        type="checkbox"
-        className="size-4 accent-primary"
-        checked={Boolean(displayed)}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.checked)}
-        data-testid={id}
-      />
+      <div className="flex pt-1">
+        <Checkbox
+          id={id}
+          checked={Boolean(displayed)}
+          disabled={disabled}
+          onCheckedChange={(checked) => onChange(checked === true)}
+          data-testid={id}
+        />
+      </div>
     );
   }
   return (

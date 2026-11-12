@@ -3,6 +3,9 @@ export interface AddonSourceKindView {
   id: string;
   title: string;
   connection?: string;
+  supportsRootMount?: boolean;
+  supportsSearch?: boolean;
+  rootTitle?: string;
 }
 
 export abstract class AddonSourceKindsPort {

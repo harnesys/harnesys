@@ -1,11 +1,11 @@
 {
   "id": "harnesys.google-gmail",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "platform": 1,
   "title": "Gmail",
-  "description": "Search and read Gmail messages and threads, send mail, and save attachments into the organization workspace. The add-on calls the Gmail API; the token is injected by the host and never enters the add-on process.",
+  "description": "Search and read Gmail messages and threads, send mail, save attachments into the organization workspace, and fire the gmail.message trigger when new mail matching the filters arrives. The add-on calls the Gmail API; the token is injected by the host and never enters the add-on process.",
   "runtime": { "entry": "dist/index.js", "profile": "trusted" },
-  "activation": "lazy",
+  "activation": "resident",
   "permissions": [
     {
       "id": "http.fetch",
@@ -20,6 +20,18 @@
     {
       "id": "files.write",
       "reason": "Save downloaded attachments into the organization workspace"
+    },
+    {
+      "id": "worker",
+      "reason": "Keep the resident poller that reads new mail from Gmail"
+    },
+    {
+      "id": "lifecycle.resident",
+      "reason": "Stay running to keep polling the bound accounts for new mail"
+    },
+    {
+      "id": "trigger",
+      "reason": "Fire gmail.message instances for matching new mail"
     }
   ],
   "connections": [
@@ -31,7 +43,70 @@
       "cardinality": "many"
     }
   ],
+  "data": { "migrations": "migrations", "quotaMb": 64 },
   "contributions": [
+    {
+      "id": "message",
+      "family": "trigger",
+      "descriptor": {
+        "kind": "gmail.message",
+        "title": "New Gmail message",
+        "description": "Fires when a new message matching the filters arrives in a bound Gmail account",
+        "connection": "google",
+        "configFields": [
+          {
+            "key": "query",
+            "label": "Gmail search query",
+            "type": "text",
+            "required": false,
+            "placeholder": "from:alice has:attachment",
+            "help": "Gmail search syntax applied by Gmail itself; empty matches every new message"
+          },
+          {
+            "key": "labels",
+            "label": "Required labels",
+            "type": "text",
+            "required": false,
+            "placeholder": "INBOX, Work",
+            "help": "Comma-separated Gmail labels (system or user); a message must carry every listed label"
+          },
+          {
+            "key": "exclude",
+            "label": "Exclude terms",
+            "type": "text",
+            "required": false,
+            "help": "Comma-separated terms checked by the add-on against subject, sender and snippet; a message containing any of them is skipped (Gmail search cannot express this part)"
+          }
+        ],
+        "limits": { "perDay": 200, "throttleSec": 5 }
+      }
+    },
+    {
+      "id": "gmail-mail-poller",
+      "family": "worker",
+      "descriptor": {
+        "id": "gmail-mail-poller",
+        "title": "Gmail mail poller",
+        "autostart": true,
+        "restart": "on-failure"
+      }
+    },
+    {
+      "id": "main",
+      "family": "view",
+      "descriptor": {
+        "id": "main",
+        "title": "Gmail",
+        "sections": [
+          { "type": "connections", "connections": ["google"] },
+          { "type": "automations", "triggers": ["gmail.message"] },
+          {
+            "type": "markdown",
+            "body": "Connect a Google account in the connections section. The poller syncs new mail with the Gmail history API using a historyId watermark per account; when Gmail expires the watermark it falls back to a full search with the configured query and resets the watermark. Trigger instances match messages with the Gmail search query and required labels server-side; exclude terms are checked in the add-on. On the first sync of an account only the watermark is stored and existing mail stays silent."
+          }
+        ]
+      }
+    },
     {
       "id": "pack",
       "family": "tool-pack",

@@ -9,6 +9,9 @@ export interface AddonSourceKind {
   connection?: string;
   accountIds: string[];
   attached: number;
+  supportsRootMount?: boolean;
+  supportsSearch?: boolean;
+  rootTitle?: string;
 }
 
 export interface AddonSourceKindsResponse {
@@ -111,4 +114,14 @@ export function refreshOrgAddonSource(
     `${addonBase(orgId, addonId)}/sources/${encodeURIComponent(sourceId)}/refresh`,
     { method: 'POST' },
   );
+}
+
+export function detachOrgAddonSource(
+  orgId: string,
+  addonId: string,
+  sourceId: string,
+): Promise<void> {
+  return apiJson<void>(`${addonBase(orgId, addonId)}/sources/${encodeURIComponent(sourceId)}`, {
+    method: 'DELETE',
+  });
 }

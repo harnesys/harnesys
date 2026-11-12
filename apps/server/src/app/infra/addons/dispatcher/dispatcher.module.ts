@@ -1,6 +1,7 @@
 import { Module } from '@harnesys/brix';
 import { AddonsApplicationModule } from '../../../application/addons/addons-application.module.ts';
 import { AppsUseCaseModule } from '../../../application/apps/apps.use-case.module.ts';
+import { SkillsUseCaseModule } from '../../../application/skills/skills.use-case.module.ts';
 import { ThreadUseCaseModule } from '../../../application/threads/thread.use-case.module.ts';
 import { HostServiceRegistryPort } from '../../../domain/addons/ports/host-service-registry.port.ts';
 import { TokenBucketRateLimiter } from '../../../domain/addons/rate-limit.ts';
@@ -21,7 +22,9 @@ import { HostServicesIndex } from '../services/index.ts';
 import { LogHostService } from '../services/log/log-service.ts';
 import { RunsHostService } from '../services/runs/runs-service.ts';
 import { SecretsHostService } from '../services/secrets/secrets-service.ts';
+import { SkillsHostService } from '../services/skills/skills-service.ts';
 import { TriggersHostService } from '../services/triggers/triggers-service.ts';
+import { UsageHostService } from '../services/usage/usage-service.ts';
 import { WorkersHostService } from '../services/workers/workers-service.ts';
 import { AddonSupervisorModule } from '../supervisor/supervisor.module.ts';
 import { HostDispatcher } from './host-dispatcher.ts';
@@ -38,6 +41,7 @@ import { PermissionEngine } from './permission-engine.ts';
     EventsModule,
     ThreadUseCaseModule,
     AppsUseCaseModule,
+    SkillsUseCaseModule,
     AddonsApplicationModule,
     AddonCatalogModule,
     AddonSupervisorModule,
@@ -62,6 +66,8 @@ import { PermissionEngine } from './permission-engine.ts';
     TriggersHostService,
     BridgeHostService,
     WorkersHostService,
+    UsageHostService,
+    SkillsHostService,
     HostServicesIndex,
     HostDispatcher,
   ],

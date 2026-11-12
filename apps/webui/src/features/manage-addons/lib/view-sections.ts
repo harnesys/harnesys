@@ -61,15 +61,23 @@ export type SectionEntry =
   | { kind: 'unknown'; sectionType: string };
 
 export const DEFAULT_SECTION_ORDER = [
+  'connections',
   'capabilities',
   'permissions',
   'config',
-  'connections',
   'automations',
   'jobs',
 ] as const;
 
-const KNOWN_SECTION_TYPES = ['status', ...DEFAULT_SECTION_ORDER] as const;
+const KNOWN_SECTION_TYPES = [
+  'status',
+  ...DEFAULT_SECTION_ORDER,
+  'table',
+  'form',
+  'actions',
+  'markdown',
+  'frame',
+] as const;
 
 interface RawContribution {
   id?: unknown;

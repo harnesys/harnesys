@@ -225,6 +225,7 @@ export const TriggerInstanceViewSchema = z.object({
   triggerId: z.string().min(1),
   label: z.string().min(1),
   config: z.record(z.string(), z.unknown()).default({}),
+  instructions: z.string().default(''),
   target: z.unknown().optional(),
   enabled: z.boolean().default(true),
   createdAt: z.string().min(1),
@@ -236,6 +237,7 @@ export const TriggerInstanceUpsertBodySchema = z.object({
   triggerId: z.string().min(1),
   label: z.string().min(1),
   config: z.record(z.string(), z.unknown()).default({}),
+  instructions: z.string().default(''),
   target: z.unknown().optional(),
   enabled: z.boolean().default(true),
 });

@@ -12,7 +12,9 @@ import { HttpHostService } from './http/http-service.ts';
 import { LogHostService } from './log/log-service.ts';
 import { RunsHostService } from './runs/runs-service.ts';
 import { SecretsHostService } from './secrets/secrets-service.ts';
+import { SkillsHostService } from './skills/skills-service.ts';
 import { TriggersHostService } from './triggers/triggers-service.ts';
+import { UsageHostService } from './usage/usage-service.ts';
 import { WorkersHostService } from './workers/workers-service.ts';
 
 @Injectable()
@@ -34,6 +36,8 @@ export class HostServicesIndex {
     triggers: TriggersHostService,
     bridge: BridgeHostService,
     workers: WorkersHostService,
+    usage: UsageHostService,
+    skills: SkillsHostService,
   ) {
     this.modules = [
       config,
@@ -49,6 +53,8 @@ export class HostServicesIndex {
       triggers,
       bridge,
       workers,
+      usage,
+      skills,
     ];
     assertUniqueMethodNames(this.modules);
     this.registry = registry;

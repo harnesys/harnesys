@@ -27,6 +27,7 @@ import {
   TriggerFireOutcomeSchema,
 } from './shared.ts';
 import { sourceMethods } from './source-methods.ts';
+import { orgServiceMethods } from './org-service-methods.ts';
 
 export type { MethodDirection, MethodSpec, NotificationSender } from './method-spec.ts';
 export { addonMethod, hostMethod, notificationSpec } from './method-spec.ts';
@@ -38,6 +39,7 @@ const MAX_SECRET_BYTES = 8 * 1024;
 
 export const protocolMap = {
   ...sourceMethods,
+  ...orgServiceMethods,
   initialize: hostMethod(InitializeParamsSchema, InitializeResultSchema),
   initialized: notificationSpec(empty, 'host'),
   shutdown: hostMethod(

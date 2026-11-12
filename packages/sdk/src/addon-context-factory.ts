@@ -34,8 +34,10 @@ export type {
   AddonProgress,
   AddonRuns,
   AddonSecrets,
+  AddonSkills,
   AddonThreads,
   AddonTriggers,
+  AddonUsage,
   AddonWorkers,
   DbRow,
   DbStatement,
@@ -165,10 +167,21 @@ export function createAddonContext(
     runs: {
       dispatch: async (params) => client['runs.dispatch'](params, { signal }),
       cancel: async (params) => client['runs.cancel'](params, { signal }),
+      list: async (params) => (await client['runs.list'](params, { signal })).runs,
     },
     threads: {
       create: async (params: { title?: string; agentId: string }) =>
         client['threads.create'](params, { signal }),
+      compact: async (params: { threadId: string }) =>
+        client['threads.compact'](params, { signal }),
+    },
+    usage: {
+      summary: async (params: { threadId?: string; since?: string }) =>
+        client['usage.summary'](params, { signal }),
+    },
+    skills: {
+      list: async (params: { threadId?: string }) =>
+        (await client['skills.list'](params, { signal })).skills,
     },
     triggers: {
       fire: async (params) => client['triggers.fire'](params, { signal }),

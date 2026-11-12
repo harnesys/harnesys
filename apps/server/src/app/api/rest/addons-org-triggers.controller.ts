@@ -14,12 +14,14 @@ const UpsertBodySchema = z.object({
   triggerId: z.string().min(1),
   label: z.string().min(1),
   config: z.record(z.string(), z.unknown()).default({}),
+  instructions: z.string().default(''),
   target: z.unknown().optional(),
   enabled: z.boolean().default(true),
 });
 const PatchBodySchema = z.object({
   label: z.string().min(1).optional(),
   config: z.record(z.string(), z.unknown()).optional(),
+  instructions: z.string().optional(),
   target: z.unknown().optional(),
   enabled: z.boolean().optional(),
 });
@@ -54,6 +56,7 @@ export class AddonsOrgTriggersController {
       triggerId: body.triggerId,
       label: body.label,
       config: body.config as JsonObject,
+      instructions: body.instructions,
       ...(body.target === undefined ? {} : { target: body.target }),
       enabled: body.enabled,
       actor: { kind: 'user', id: 'admin' },
@@ -76,6 +79,9 @@ export class AddonsOrgTriggersController {
     }
     if (body.config !== undefined) {
       patch.configJson = JSON.stringify(body.config);
+    }
+    if (body.instructions !== undefined) {
+      patch.instructions = body.instructions;
     }
     if (body.target !== undefined) {
       patch.targetJson = JSON.stringify(body.target);
@@ -122,6 +128,7 @@ export class AddonsOrgTriggersController {
     triggerId: string;
     label: string;
     configJson: string;
+    instructions: string;
     targetJson: string;
     enabled: boolean;
     createdAt: string;
@@ -133,6 +140,7 @@ export class AddonsOrgTriggersController {
       triggerId: row.triggerId,
       label: row.label,
       config: this.jsonOf(row.configJson),
+      instructions: row.instructions,
       target: JSON.parse(row.targetJson) as unknown,
       enabled: row.enabled,
       createdAt: row.createdAt,

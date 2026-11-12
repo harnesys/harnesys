@@ -17,6 +17,7 @@ import type {
   NewUsageRecord,
   UsageReport,
   UsageRunsReport,
+  UsageSummary,
 } from '../../../domain/usage/usage-port.ts';
 import { UsagePort } from '../../../domain/usage/usage-port.ts';
 import { OrgManagerPort } from './org-manager.port.ts';
@@ -29,6 +30,9 @@ export class FakeUsage extends UsagePort {
 
   report(_orgId: string, _request: { groupBy?: string }): UsageReport {
     return this.reportResult;
+  }
+  summary(): UsageSummary {
+    return { inputTokens: 0, outputTokens: 0, costUsd: 0, byModel: [] };
   }
   record(_orgId: string, _record: NewUsageRecord): void {}
   sumRunTokens(_orgId: string, _runId: string): number {

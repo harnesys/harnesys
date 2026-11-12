@@ -11,6 +11,7 @@ interface TriggerInstancesRecord {
   trigger_id: string;
   label: string;
   config_json: string;
+  instructions: string;
   target_json: string;
   enabled: number;
   created_at: string;
@@ -60,9 +61,9 @@ export class AddonTriggerInstanceStore {
     this.db
       .query(
         `INSERT INTO addon_trigger_instances
-           (id, org_id, addon_id, trigger_id, label, config_json, target_json,
+           (id, org_id, addon_id, trigger_id, label, config_json, instructions, target_json,
             enabled, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         effective.id,
@@ -71,6 +72,7 @@ export class AddonTriggerInstanceStore {
         effective.triggerId,
         effective.label,
         effective.configJson,
+        effective.instructions,
         effective.targetJson,
         effective.enabled ? 1 : 0,
         effective.createdAt,
@@ -87,12 +89,13 @@ export class AddonTriggerInstanceStore {
     this.db
       .query(
         `UPDATE addon_trigger_instances
-         SET label = ?, config_json = ?, target_json = ?, enabled = ?, updated_at = ?
+         SET label = ?, config_json = ?, instructions = ?, target_json = ?, enabled = ?, updated_at = ?
          WHERE org_id = ? AND id = ?`,
       )
       .run(
         patch.label ?? current.label,
         patch.configJson ?? current.configJson,
+        patch.instructions ?? current.instructions,
         patch.targetJson ?? current.targetJson,
         (patch.enabled ?? current.enabled) ? 1 : 0,
         new Date().toISOString(),
@@ -146,6 +149,7 @@ function toRow(record: TriggerInstancesRecord): TriggerInstanceRow {
     triggerId: record.trigger_id,
     label: record.label,
     configJson: record.config_json,
+    instructions: record.instructions,
     targetJson: record.target_json,
     enabled: record.enabled === 1,
     createdAt: record.created_at,

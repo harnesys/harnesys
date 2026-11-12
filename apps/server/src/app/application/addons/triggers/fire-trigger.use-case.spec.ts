@@ -18,6 +18,7 @@ function instanceRow(id: string, triggerId = 'feed') {
     triggerId,
     label: triggerId,
     configJson: '{}',
+    instructions: '',
     targetJson: JSON.stringify({ threadId: 'th1', agentId: 'ag1' }),
     enabled: true,
     createdAt: 't0',

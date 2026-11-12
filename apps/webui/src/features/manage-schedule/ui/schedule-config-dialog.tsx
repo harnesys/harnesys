@@ -155,7 +155,12 @@ export function ScheduleConfigDialog({
           {projectId ? (
             <Field>
               <FieldLabel>Wake thread</FieldLabel>
-              <div className="grid items-start gap-1.5 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.5fr)]">
+              <div
+                className={cn(
+                  'grid items-start gap-1.5',
+                  linkedThread && 'sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.5fr)]',
+                )}
+              >
                 <div className="flex min-w-0 flex-col gap-1">
                   <span className="text-[11px] text-muted-foreground">Thread</span>
                   <ScheduleThreadField
@@ -227,7 +232,7 @@ export function ScheduleConfigDialog({
             />
           </div>
           <Field>
-            <FieldLabel htmlFor="schedule-detail">Notes</FieldLabel>
+            <FieldLabel htmlFor="schedule-detail">Instructions</FieldLabel>
             <Textarea
               id="schedule-detail"
               value={draft.detail}

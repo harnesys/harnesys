@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@harnesys/brix';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, UseGuards } from '@harnesys/brix';
 import type { Source } from '@harnesys/contracts';
 import { z } from 'zod';
 import { AttachAddonCloudSourceUseCase } from '../../application/addons/sources/attach-addon-cloud-source.use-case.ts';
 import { BrowseAddonCloudFolderUseCase } from '../../application/addons/sources/browse-addon-cloud-folder.use-case.ts';
 import { ListAddonCloudSourcesUseCase } from '../../application/addons/sources/list-addon-cloud-sources.use-case.ts';
 import { RefreshAddonCloudSourceUseCase } from '../../application/addons/sources/refresh-addon-cloud-source.use-case.ts';
+import { DetachSourceUseCase } from '../../application/source/detach-source.use-case.ts';
 import { AddonException } from '../../domain/addons/errors.ts';
 import { AddonSourceKindsPort } from '../../domain/addons/ports/addon-source-kinds.port.ts';
 import { BindingRepositoryPort } from '../../domain/addons/ports/binding-repository.port.ts';
@@ -30,6 +31,9 @@ interface AddonSourceKindResponse {
   connection?: string;
   accountIds: string[];
   attached: number;
+  supportsRootMount?: boolean;
+  supportsSearch?: boolean;
+  rootTitle?: string;
 }
 
 @UseGuards(OrgAccessGuard)
@@ -43,6 +47,7 @@ export class AddonsOrgSourcesController {
     private readonly attachSource: AttachAddonCloudSourceUseCase,
     private readonly listSources: ListAddonCloudSourcesUseCase,
     private readonly refreshSource: RefreshAddonCloudSourceUseCase,
+    private readonly detachSource: DetachSourceUseCase,
     private readonly machine: MachineConfigPort,
   ) {}
 
@@ -70,6 +75,11 @@ export class AddonsOrgSourcesController {
             source.distribution.kind === 'addon-cloud' &&
             source.distribution.sourceKindId === kind.id,
         ).length,
+        ...(kind.supportsRootMount === undefined
+          ? {}
+          : { supportsRootMount: kind.supportsRootMount }),
+        ...(kind.supportsSearch === undefined ? {} : { supportsSearch: kind.supportsSearch }),
+        ...(kind.rootTitle === undefined ? {} : { rootTitle: kind.rootTitle }),
       }));
     return { kinds };
   }
@@ -111,6 +121,26 @@ export class AddonsOrgSourcesController {
   @Get('sources')
   sources(@Param('orgId') orgId: string, @Param('addonId') addonId: string): { sources: Source[] } {
     return { sources: this.listSources.execute({ orgId, addonId }) };
+  }
+
+  @Delete('sources/:sourceId')
+  @HttpCode(204)
+  detach(
+    @Param('orgId') orgId: string,
+    @Param('addonId') addonId: string,
+    @Param('sourceId') sourceId: string,
+  ): void {
+    const owned = this.listSources
+      .execute({ orgId, addonId })
+      .some((source) => source.id === sourceId);
+    if (!owned) {
+      throw new AddonException(
+        'not_found',
+        404,
+        `source ${sourceId} is not attached to ${addonId}`,
+      );
+    }
+    this.detachSource.execute({ orgId, sourceId });
   }
 
   @Post('sources/:sourceId/refresh')

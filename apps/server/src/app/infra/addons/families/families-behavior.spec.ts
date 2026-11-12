@@ -192,6 +192,7 @@ describe('trigger fire service', () => {
       triggerId: 'feed',
       label: 'Feed',
       configJson: '{}',
+      instructions: '',
       targetJson: JSON.stringify({ threadId: 't-1', agentId: 'a-1' }),
       enabled: true,
       createdAt: '',

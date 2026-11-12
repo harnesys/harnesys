@@ -8,7 +8,6 @@ import { DEFAULT_MODE_ID } from '@harnesys/studio-shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import type { Agent } from '@/entities/agent';
 import type { ClientAutomation } from '@/entities/automation';
 import { deskAutomationsQueryKey } from '@/features/desk';
 import {
@@ -23,6 +22,7 @@ import {
   orgAddonTriggersQuery,
   patchOrgAddonTrigger,
 } from '@/shared/api/addons';
+import { orgAgentsQuery } from '@/shared/api/org-agents';
 import { studioPath } from '@/shared/config/routes';
 import { buildValidator, FieldRenderer } from '@/shared/descriptor-forms';
 import { resolveL10n } from '@/shared/lib/l10n';
@@ -30,8 +30,20 @@ import { type DialogComponentProps, dialog } from '@/shared/services/overlay';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { DialogFooter } from '@/shared/ui/dialog';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/shared/ui/field';
+import { Input } from '@/shared/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select';
 import { RowListSkeleton, SettingsErrorBanner } from '@/shared/ui/settings-kit';
+import { Textarea } from '@/shared/ui/textarea';
 import type {
+  AddonTriggerAgentOption,
   AddonTriggerDialogData,
   AddonTriggerDialogResult,
   AddonTriggerDraft,
@@ -59,7 +71,7 @@ export function openAddonTriggerConfigDialog(
 ): Promise<AddonTriggerDialogResult | null> {
   return dialog.open(AddonTriggerConfigDialog, {
     title: data.automation ? 'Edit automation' : 'New automation',
-    className: 'sm:max-w-lg',
+    className: 'sm:max-w-2xl',
     data,
   });
 }
@@ -70,6 +82,7 @@ export function AddonTriggerConfigDialog({
 }: DialogComponentProps<AddonTriggerDialogResult, AddonTriggerDialogData>) {
   const detail = useQuery(orgAddonDetailQuery(data?.orgId ?? '', data?.addonId ?? ''));
   const instances = useQuery(orgAddonTriggersQuery(data?.orgId ?? '', data?.addonId ?? ''));
+  const agentsQuery = useQuery(orgAgentsQuery);
   if (!data) {
     return null;
   }
@@ -98,7 +111,7 @@ export function AddonTriggerConfigDialog({
     <AddonTriggerForm
       orgId={data.orgId}
       addonId={data.addonId}
-      agents={data.agents}
+      agents={(agentsQuery.data ?? []).filter((agent) => agent.status === 'active')}
       automation={data.automation}
       instance={instance}
       descriptor={descriptor}
@@ -120,7 +133,7 @@ function AddonTriggerForm({
 }: {
   orgId: string;
   addonId: string;
-  agents: Agent[];
+  agents: AddonTriggerAgentOption[];
   automation: ClientAutomation | null;
   instance: TriggerInstanceView | null;
   descriptor: AddonTriggerDescriptor;
@@ -136,6 +149,7 @@ function AddonTriggerForm({
     agentId: firstAgent?.id ?? '',
     threadId: target.threadId ?? '',
     modeId: target.modeId ?? firstAgent?.defaultModeId ?? DEFAULT_MODE_ID,
+    instructions: instance?.instructions ?? '',
     config: (instance?.config ?? {}) as Record<string, FieldValue>,
   });
   const [error, setError] = useState<string | null>(null);
@@ -168,6 +182,7 @@ function AddonTriggerForm({
         triggerId: descriptor.kind,
         label: draft.label.trim(),
         config: draft.config,
+        instructions: draft.instructions.trim(),
         target: { threadId, agentId: draft.agentId, modeId: draft.modeId },
         enabled: true,
       };
@@ -203,114 +218,143 @@ function AddonTriggerForm({
   };
 
   return (
-    <div className="flex min-h-0 flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <Badge variant="outline">{detail.title}</Badge>
-        <span className="text-muted-foreground text-xs">{resolveL10n(descriptor.title, 'en')}</span>
-      </div>
-      {error ? <SettingsErrorBanner message={error} testId="addon-trigger-error" /> : null}
-      {missingConnection ? (
-        <div className="flex flex-col gap-2 rounded-lg border p-3">
-          <p className="text-destructive text-sm">
-            Connect a {connection?.label ?? descriptor.connection} account on the add-on page first.
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="self-start"
-            onClick={() => {
-              onResolve?.();
-              void navigate(studioPath.addon(orgId, addonId));
-            }}
-          >
-            Open add-on
-          </Button>
-        </div>
-      ) : null}
-      <div className="flex flex-col gap-1.5">
-        <label className="font-medium text-xs" htmlFor="addon-trigger-label">
-          Label
-        </label>
-        <input
-          id="addon-trigger-label"
-          className="h-9 rounded-md border bg-transparent px-3 text-sm"
-          value={draft.label}
-          onChange={(event) => update('label', event.target.value)}
-        />
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <label className="font-medium text-xs" htmlFor="addon-trigger-agent">
-            Agent
-          </label>
-          <select
-            id="addon-trigger-agent"
-            className="h-9 rounded-md border bg-transparent px-2 text-sm"
-            value={draft.agentId}
-            onChange={(event) => {
-              const agent = agents.find((entry) => entry.id === event.target.value);
-              setDraft((current) => ({
-                ...current,
-                agentId: event.target.value,
-                threadId: '',
-                modeId: agent?.defaultModeId ?? DEFAULT_MODE_ID,
-              }));
-            }}
-          >
-            {agents.map((agent) => (
-              <option key={agent.id} value={agent.id}>
-                {agent.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <TriggerTargetField
-          orgId={orgId}
-          agentId={draft.agentId}
-          value={draft.threadId}
-          onChange={(threadId) => update('threadId', threadId)}
-          currentThreadId={target.threadId}
-        />
-      </div>
-      {fields.length > 0 ? (
-        <div className="flex flex-col gap-3">
-          <p className="font-medium text-xs">{resolveL10n(descriptor.title, 'en')} settings</p>
-          {fields.map((field: FieldSpec) => (
-            <FieldRenderer
-              key={field.key}
-              field={field}
-              value={draft.config[field.key]}
-              onChange={(value) => setConfig(field.key, value)}
-              disabled={false}
+    <>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <FieldGroup>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline">{detail.title}</Badge>
+            <span className="text-muted-foreground text-xs">
+              {resolveL10n(descriptor.title, 'en')}
+            </span>
+          </div>
+          {error ? <SettingsErrorBanner message={error} testId="addon-trigger-error" /> : null}
+          {missingConnection ? (
+            <div className="flex flex-col gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-3">
+              <p className="text-destructive text-sm">
+                Connect a {connection?.label ?? descriptor.connection} account on the add-on page
+                first.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="self-start"
+                onClick={() => {
+                  onResolve?.();
+                  void navigate(studioPath.addon(orgId, addonId));
+                }}
+              >
+                Open add-on
+              </Button>
+            </div>
+          ) : null}
+          <Field data-invalid={draft.label.trim().length === 0 || undefined}>
+            <FieldLabel htmlFor="addon-trigger-label">Name</FieldLabel>
+            <div className="grid items-start gap-1.5 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="text-[11px] text-muted-foreground">Name</span>
+                <Input
+                  id="addon-trigger-label"
+                  value={draft.label}
+                  placeholder="New Gmail message"
+                  aria-invalid={draft.label.trim().length === 0 || undefined}
+                  onChange={(event) => update('label', event.target.value)}
+                />
+              </div>
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="text-[11px] text-muted-foreground">Agent</span>
+                <Select
+                  items={agents.map((agent) => ({ value: agent.id, label: agent.name }))}
+                  value={draft.agentId || null}
+                  onValueChange={(value) => {
+                    if (typeof value === 'string') {
+                      const agent = agents.find((entry) => entry.id === value);
+                      setDraft((current) => ({
+                        ...current,
+                        agentId: value,
+                        threadId: '',
+                        modeId: agent?.defaultModeId ?? DEFAULT_MODE_ID,
+                      }));
+                    }
+                  }}
+                >
+                  <SelectTrigger id="addon-trigger-agent" className="w-full">
+                    <SelectValue placeholder="Select agent" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {agents.map((agent) => (
+                        <SelectItem key={agent.id} value={agent.id}>
+                          {agent.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </Field>
+          <TriggerTargetField
+            orgId={orgId}
+            agentId={draft.agentId}
+            value={draft.threadId}
+            onChange={(threadId) => update('threadId', threadId)}
+            currentThreadId={target.threadId}
+          />
+          {fields.length > 0 ? (
+            <div className="flex flex-col gap-3 border-border/40 border-t pt-3">
+              <p className="font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
+                {resolveL10n(descriptor.title, 'en')} settings
+              </p>
+              {fields.map((field: FieldSpec) => (
+                <FieldRenderer
+                  key={field.key}
+                  field={field}
+                  value={draft.config[field.key]}
+                  onChange={(value) => setConfig(field.key, value)}
+                  disabled={false}
+                />
+              ))}
+            </div>
+          ) : null}
+          <Field>
+            <FieldLabel htmlFor="addon-trigger-instructions">Instructions</FieldLabel>
+            <Textarea
+              id="addon-trigger-instructions"
+              value={draft.instructions}
+              onChange={(event) => update('instructions', event.target.value)}
+              placeholder="What the agent should do with the trigger data"
+              className="min-h-20"
+              data-testid="addon-trigger-instructions"
             />
-          ))}
-        </div>
-      ) : null}
-      {Object.keys(validation).length > 0 ? (
-        <p className="text-destructive text-xs">Fill the required settings before saving.</p>
-      ) : null}
+            <FieldDescription>
+              Sent to the agent with every fired trigger, on top of the event data.
+            </FieldDescription>
+          </Field>
+          {Object.keys(validation).length > 0 ? (
+            <p className="text-destructive text-xs">Fill the required settings before saving.</p>
+          ) : null}
+        </FieldGroup>
+      </div>
       <DialogFooter>
         {automation ? (
           <Button
             type="button"
             variant="ghost"
-            className="text-destructive"
+            className="mr-auto text-destructive hover:text-destructive"
             onClick={() => void remove()}
             disabled={!detail.installed}
           >
             Delete
           </Button>
         ) : null}
-        <div className="ml-auto flex items-center gap-2">
-          <Button type="button" variant="outline" onClick={() => onResolve?.()}>
-            Cancel
-          </Button>
-          <Button type="button" onClick={() => void save()} disabled={!canSave}>
-            {automation ? 'Save' : 'Create automation'}
-          </Button>
-        </div>
+        <Button type="button" variant="outline" onClick={() => onResolve?.()}>
+          Cancel
+        </Button>
+        <Button type="button" onClick={() => void save()} disabled={!canSave}>
+          {automation ? 'Save' : 'Create automation'}
+        </Button>
       </DialogFooter>
-    </div>
+    </>
   );
 }

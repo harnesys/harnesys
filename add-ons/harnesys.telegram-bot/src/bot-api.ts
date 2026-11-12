@@ -104,8 +104,12 @@ export async function deleteWebhook(ctx: AddonContext, dropPendingUpdates: boole
 export async function setMyCommands(
   ctx: AddonContext,
   commands: Array<{ command: string; description: string }>,
+  scope?: Record<string, string>,
 ): Promise<void> {
-  await call<boolean>(ctx, 'setMyCommands', { commands });
+  await call<boolean>(ctx, 'setMyCommands', {
+    commands,
+    ...(scope !== undefined ? { scope } : {}),
+  });
 }
 
 export function buildMultipart(fields: Record<string, string>, file: MultipartFile): MultipartBody {

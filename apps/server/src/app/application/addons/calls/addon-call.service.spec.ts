@@ -109,4 +109,28 @@ describe('AddonCallService', () => {
       'job.run',
     ]);
   });
+
+  test('wraps transport.send params in the protocol envelope and unwraps messageId', async () => {
+    const { service, rpc } = build();
+    rpc.result = { messageId: 'tg-42' };
+    const sent = await service.transportSend('org1', 'acme.chat', {
+      channel: '315051038',
+      text: 'hello',
+    });
+    expect(rpc.requests[0]?.method).toBe('transport.send');
+    expect(rpc.requests[0]?.params).toEqual({ message: { channel: '315051038', text: 'hello' } });
+    expect(sent).toEqual({ messageId: 'tg-42' });
+  });
+
+  test('keeps transport.edit envelope flat over the message field', async () => {
+    const { service, rpc } = build();
+    await service.transportEdit('org1', 'acme.chat', {
+      messageId: 'tg-42',
+      message: { channel: '315051038', text: 'edited' },
+    });
+    expect(rpc.requests[0]?.params).toEqual({
+      messageId: 'tg-42',
+      message: { channel: '315051038', text: 'edited' },
+    });
+  });
 });

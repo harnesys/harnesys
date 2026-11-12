@@ -43,5 +43,12 @@ function toView(addonId: string, descriptor: SourceKindDescriptor): AddonSourceK
     id: descriptor.id,
     title: l10nText(descriptor.title),
     connection: descriptor.connection,
+    ...(descriptor.supportsRootMount === undefined
+      ? {}
+      : { supportsRootMount: descriptor.supportsRootMount }),
+    ...(descriptor.supportsSearch === undefined
+      ? {}
+      : { supportsSearch: descriptor.supportsSearch }),
+    ...(descriptor.rootTitle === undefined ? {} : { rootTitle: descriptor.rootTitle }),
   };
 }

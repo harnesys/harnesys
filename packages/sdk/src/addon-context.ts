@@ -119,10 +119,47 @@ export interface AddonRuns {
     input: string;
   }): Promise<{ runId: string }>;
   cancel(params: { threadId: string; runId: string }): Promise<{ ok: true }>;
+  list(params: {
+    threadId: string;
+    status?: string;
+  }): Promise<
+    Array<{ runId: string; status: string; startedAt: string | null; agentId: string | null }>
+  >;
 }
 
 export interface AddonThreads {
   create(params: { title?: string; agentId: string }): Promise<{ threadId: string }>;
+  compact(params: { threadId: string }): Promise<
+    | {
+        compacted: true;
+        id: string;
+        coveredFrom: number;
+        coveredUntil: number;
+        tokensBefore: number;
+        tokensAfter: number;
+      }
+    | { compacted: false; reason?: string }
+  >;
+}
+
+export interface AddonUsage {
+  summary(params: { threadId?: string; since?: string }): Promise<{
+    inputTokens: number;
+    outputTokens: number;
+    costUsd: number;
+    byModel: Array<{
+      model: string;
+      inputTokens: number;
+      outputTokens: number;
+      costUsd: number;
+    }>;
+  }>;
+}
+
+export interface AddonSkills {
+  list(params: {
+    threadId?: string;
+  }): Promise<Array<{ id: string; name: string; description: string | null; source: string }>>;
 }
 
 export interface AddonTriggers {
@@ -181,6 +218,8 @@ export interface AddonContext {
   readonly bindings: AddonBindings;
   readonly runs: AddonRuns;
   readonly threads: AddonThreads;
+  readonly usage: AddonUsage;
+  readonly skills: AddonSkills;
   readonly triggers: AddonTriggers;
   readonly bridge: AddonBridge;
   readonly workers: AddonWorkers;

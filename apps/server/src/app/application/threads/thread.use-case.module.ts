@@ -16,6 +16,7 @@ import { GetThreadRawModelRequestUseCase } from './get-thread-raw-model-request.
 import { ListThreadAttachmentsUseCase } from './list-thread-attachments.use-case.ts';
 import { ListThreadFilesUseCase } from './list-thread-files.use-case.ts';
 import { ListThreadRawModelRequestsUseCase } from './list-thread-raw-model-requests.use-case.ts';
+import { ListThreadRunsUseCase } from './list-thread-runs.use-case.ts';
 import { ListThreadsUseCase } from './list-threads.use-case.ts';
 import { MarkThreadReadUseCase } from './mark-thread-read.use-case.ts';
 import { ReadThreadFileUseCase } from './read-thread-file.use-case.ts';
@@ -60,6 +61,7 @@ const useCases = [
   ListThreadFilesUseCase,
   ReadThreadFileUseCase,
   ListThreadRawModelRequestsUseCase,
+  ListThreadRunsUseCase,
   GetThreadRawModelRequestUseCase,
   GetThreadAttachmentUseCase,
   ThreadMessageQueueUseCase,

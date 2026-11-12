@@ -97,6 +97,7 @@ export function listUrl(query: string, pageToken?: string): string {
   url.searchParams.set('q', query);
   url.searchParams.set('fields', `nextPageToken,files(${FILE_FIELDS})`);
   url.searchParams.set('pageSize', '1000');
+  url.searchParams.set('orderBy', 'folder,name');
   url.searchParams.set('supportsAllDrives', 'true');
   url.searchParams.set('includeItemsFromAllDrives', 'true');
   if (pageToken !== undefined && pageToken !== '') {

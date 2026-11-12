@@ -1,167 +1,145 @@
-import type { AddonContext, InboundAttachment } from '@harnesys/sdk';
-import { call, downloadFile } from './bot-api.ts';
-import { handleCommand, isCommand } from './commands.ts';
+import type { AddonContext } from '@harnesys/sdk';
+import { call } from './bot-api.ts';
+import { commandNameOf, handleCommand, isCommand } from './commands.ts';
+import { createPairCode } from './pair-code.ts';
+import {
+  channelOf,
+  fileRefOf,
+  firstText,
+  inboundAttachments,
+  type TelegramMessage,
+} from './telegram.ts';
 
-const DEFAULT_MEDIA_LIMIT_MB = 5;
-const MAX_MEDIA_LIMIT_MB = 8;
-const MAX_ATTACHMENTS = 10;
+export type { TelegramMessage, TelegramUpdate } from './telegram.ts';
+export { groupMessages, mimeOf } from './telegram.ts';
 
-export interface TelegramChat {
-  id: number;
-  type: string;
-  title?: string;
-  username?: string;
+export interface PairingRow {
+  chatId: string;
+  userId: string;
+  status: 'pending' | 'paired';
+  codeHash: string | null;
+  expiresAt: string | null;
 }
 
-export interface TelegramFileRef {
-  file_id: string;
-  file_size?: number;
-  mime_type?: string;
-  file_name?: string;
-}
+export type PairingGate = 'allow' | 'pending' | 'not_paired' | 'other_user';
 
-export interface TelegramMessage {
-  message_id: number;
-  date: number;
-  text?: string;
-  caption?: string;
-  chat: TelegramChat;
-  message_thread_id?: number;
-  media_group_id?: string;
-  from?: { id: number; is_bot?: boolean; username?: string; first_name?: string };
-  photo?: Array<{ file_id: string; file_size?: number }>;
-  document?: TelegramFileRef;
-  audio?: TelegramFileRef;
-  voice?: TelegramFileRef;
-  video?: TelegramFileRef;
-}
-
-export interface TelegramChatMemberUpdate {
-  chat: TelegramChat;
-  from?: { id: number };
-  new_chat_member?: { status?: string };
-}
-
-export interface TelegramUpdate {
-  update_id: number;
-  message?: TelegramMessage;
-  my_chat_member?: TelegramChatMemberUpdate;
-}
-
-export function channelOf(message: TelegramMessage): string {
-  const chat = String(message.chat.id);
-  return message.message_thread_id === undefined ? chat : `${chat}:${message.message_thread_id}`;
-}
-
-function firstText(messages: TelegramMessage[]): string {
-  for (const message of messages) {
-    const value = message.text ?? message.caption ?? '';
-    if (value.length > 0) {
-      return value;
-    }
+export function pairingGate(row: PairingRow | null, userId: string | null): PairingGate {
+  if (row === null || row.status !== 'paired') {
+    return row === null ? 'not_paired' : 'pending';
   }
-  return '';
+  if (userId === null || row.userId !== userId) {
+    return 'other_user';
+  }
+  return 'allow';
 }
 
-function fileRefOf(message: TelegramMessage): TelegramFileRef | null {
-  if (message.document !== undefined) {
-    return message.document;
-  }
-  if (message.video !== undefined) {
-    return message.video;
-  }
-  if (message.audio !== undefined) {
-    return message.audio;
-  }
-  if (message.voice !== undefined) {
-    return message.voice;
-  }
-  const photos = message.photo ?? [];
-  const largest = photos.reduce<{ file_id: string; file_size?: number } | null>(
-    (best, entry) =>
-      best === null || (entry.file_size ?? 0) > (best.file_size ?? 0) ? entry : best,
-    null,
+export const NOT_PAIRED = [
+  'This chat is not paired with a Harnesys workspace yet.',
+  'Send /start to get a pair code, then enter it in the Harnesys add-on settings.',
+].join('\n');
+
+const OTHER_ACCOUNT = 'This chat is paired with a different Telegram account.';
+
+const PENDING_PAIRING = [
+  'A pair code was already issued for this chat.',
+  'Enter it in Harnesys: Settings → Add-ons → Telegram bot → "Pair a chat".',
+  'If the code expired, send /start again for a new one.',
+].join('\n');
+
+interface GateContext {
+  chatId: string;
+  userId: string | null;
+  single: boolean;
+  first: TelegramMessage;
+  text: string;
+  channel: string;
+}
+
+async function loadPairing(ctx: AddonContext, chatId: string): Promise<PairingRow | null> {
+  const row = await ctx.db.get(
+    'select chat_id as chatId, user_id as userId, status, code_hash as codeHash, expires_at as expiresAt from pairings where chat_id = ?',
+    [chatId],
   );
-  return largest === null ? null : { file_id: largest.file_id, file_size: largest.file_size };
-}
-
-async function mediaLimitMb(ctx: AddonContext): Promise<number> {
-  const config = await ctx.config.get(['media_limit_mb']);
-  const value = config.media_limit_mb;
-  return typeof value === 'number' && value > 0
-    ? Math.min(value, MAX_MEDIA_LIMIT_MB)
-    : DEFAULT_MEDIA_LIMIT_MB;
-}
-
-async function inboundAttachments(
-  ctx: AddonContext,
-  messages: TelegramMessage[],
-): Promise<InboundAttachment[]> {
-  const limit = (await mediaLimitMb(ctx)) * 1024 * 1024;
-  const attachments: InboundAttachment[] = [];
-  for (const message of messages) {
-    if (attachments.length >= MAX_ATTACHMENTS) {
-      break;
-    }
-    const ref = fileRefOf(message);
-    if (ref === null) {
-      continue;
-    }
-    if ((ref.file_size ?? 0) > limit) {
-      await ctx.log.warn('inbound attachment skipped: over the media limit', {
-        chatId: message.chat.id,
-        messageId: message.message_id,
-        size: ref.file_size ?? 0,
-      });
-      continue;
-    }
-    const file = await call<{ file_path?: string }>(ctx, 'getFile', { file_id: ref.file_id });
-    if (file.file_path === undefined) {
-      continue;
-    }
-    const dataBase64 = await downloadFile(ctx, file.file_path);
-    attachments.push({
-      name: ref.file_name ?? `telegram-${message.message_id}`,
-      mediaType: ref.mime_type ?? 'application/octet-stream',
-      dataBase64,
-    });
+  if (row === null) {
+    return null;
   }
-  return attachments;
+  return {
+    chatId: String(row.chatId),
+    userId: String(row.userId),
+    status: row.status === 'paired' ? 'paired' : 'pending',
+    codeHash: typeof row.codeHash === 'string' ? row.codeHash : null,
+    expiresAt: typeof row.expiresAt === 'string' ? row.expiresAt : null,
+  };
 }
 
-async function rememberChat(ctx: AddonContext, message: TelegramMessage): Promise<void> {
+async function startPairing(ctx: AddonContext, message: TelegramMessage): Promise<void> {
+  const chatId = String(message.chat.id);
+  const userId = String(message.from?.id ?? '');
+  if (userId.length === 0) {
+    return;
+  }
+  const { code, hash, expiresAt } = createPairCode();
   await ctx.db.run(
-    'insert into chats (channel, chat_id, kind, title, topic_id, updated_at) values (?, ?, ?, ?, ?, ?) on conflict(channel) do update set kind = excluded.kind, title = excluded.title, updated_at = excluded.updated_at',
-    [
-      channelOf(message),
-      String(message.chat.id),
-      message.chat.type,
-      message.chat.title ?? message.chat.username ?? String(message.chat.id),
-      message.message_thread_id === undefined ? null : String(message.message_thread_id),
-      new Date().toISOString(),
-    ],
+    'insert into pairings (chat_id, user_id, status, code_hash, expires_at, updated_at) values (?, ?, ?, ?, ?, ?) on conflict(chat_id) do update set user_id = excluded.user_id, status = excluded.status, code_hash = excluded.code_hash, expires_at = excluded.expires_at, updated_at = excluded.updated_at',
+    [chatId, userId, 'pending', hash, expiresAt, new Date().toISOString()],
   );
+  await ctx.log.info('pair code issued', { chatId });
+  await call(ctx, 'sendMessage', {
+    chat_id: chatId,
+    text: [
+      `Pair code: ${code}`,
+      '',
+      'Enter this code in Harnesys: Settings → Add-ons → Telegram bot → "Pair a chat".',
+      'The code expires in 30 minutes.',
+    ].join('\n'),
+  });
 }
 
-export function groupMessages(messages: TelegramMessage[]): TelegramMessage[][] {
-  const groups: TelegramMessage[][] = [];
-  const byGroupId = new Map<string, TelegramMessage[]>();
-  for (const message of messages) {
-    const groupId = message.media_group_id;
-    if (groupId === undefined) {
-      groups.push([message]);
-      continue;
+async function handleGate(ctx: AddonContext, parts: GateContext): Promise<boolean> {
+  const pairing = await loadPairing(ctx, parts.chatId);
+  const gate = pairingGate(pairing, parts.userId);
+  const isStart = parts.single && isCommand(parts.text) && commandNameOf(parts.text) === 'start';
+  if (isStart) {
+    if (gate === 'allow') {
+      await call(ctx, 'sendMessage', {
+        chat_id: parts.chatId,
+        text: 'This chat is already paired. Send /help for the command list.',
+      });
+    } else {
+      await startPairing(ctx, parts.first);
     }
-    const existing = byGroupId.get(groupId);
-    if (existing === undefined) {
-      const created = [message];
-      byGroupId.set(groupId, created);
-      groups.push(created);
-      continue;
-    }
-    existing.push(message);
+    return true;
   }
-  return groups;
+  if (gate === 'other_user') {
+    await call(ctx, 'sendMessage', { chat_id: parts.chatId, text: OTHER_ACCOUNT });
+    return true;
+  }
+  if (gate === 'pending') {
+    await call(ctx, 'sendMessage', { chat_id: parts.chatId, text: PENDING_PAIRING });
+    return true;
+  }
+  if (gate !== 'allow') {
+    await call(ctx, 'sendMessage', { chat_id: parts.chatId, text: NOT_PAIRED });
+    return true;
+  }
+  return false;
+}
+
+async function handleDmCommands(
+  ctx: AddonContext,
+  parts: GateContext,
+  commandsEnabled: boolean,
+): Promise<boolean> {
+  if (!commandsEnabled || !isCommand(parts.text)) {
+    return false;
+  }
+  return handleCommand(ctx, {
+    chatId: parts.chatId,
+    topicId:
+      parts.first.message_thread_id === undefined ? null : String(parts.first.message_thread_id),
+    text: parts.text,
+    channel: parts.channel,
+  });
 }
 
 export async function handleGroup(ctx: AddonContext, messages: TelegramMessage[]): Promise<void> {
@@ -170,27 +148,46 @@ export async function handleGroup(ctx: AddonContext, messages: TelegramMessage[]
     return;
   }
   const text = firstText(messages);
+  const chatId = String(first.chat.id);
+  if (first.chat.type !== 'private') {
+    await ctx.log.warn('telegram-bot ignores non-private chats', { chatId, kind: first.chat.type });
+    return;
+  }
+  const parts: GateContext = {
+    chatId,
+    userId: first.from === undefined ? null : String(first.from.id),
+    single: messages.length === 1,
+    first,
+    text,
+    channel: channelOf(first),
+  };
+  if (await handleGate(ctx, parts)) {
+    return;
+  }
   const hasFile = messages.some((entry) => fileRefOf(entry) !== null);
   if (text.length === 0 && !hasFile) {
     return;
   }
-  await rememberChat(ctx, first);
-  const channel = channelOf(first);
   const commandsEnabled = (await ctx.config.get(['commands'])).commands !== false;
-  if (messages.length === 1 && commandsEnabled && isCommand(text)) {
-    const handled = await handleCommand(ctx, {
-      chatId: String(first.chat.id),
-      topicId: first.message_thread_id === undefined ? null : String(first.message_thread_id),
-      text,
-      channel,
-    });
-    if (handled) {
-      return;
-    }
+  if (parts.single && (await handleDmCommands(ctx, parts, commandsEnabled))) {
+    return;
+  }
+  await bridgeMessages(ctx, messages);
+}
+
+async function bridgeMessages(ctx: AddonContext, messages: TelegramMessage[]): Promise<void> {
+  const first = messages[0];
+  if (first === undefined) {
+    return;
+  }
+  const text = firstText(messages);
+  const hasFile = messages.some((entry) => fileRefOf(entry) !== null);
+  if (text.length === 0 && !hasFile) {
+    return;
   }
   const attachments = await inboundAttachments(ctx, messages);
   await ctx.bridge.inbound({
-    channel,
+    channel: channelOf(first),
     from: first.from === undefined ? undefined : `telegram:${first.from.id}`,
     text: text.length === 0 ? '[attachment]' : text,
     payload: {

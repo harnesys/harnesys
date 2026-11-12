@@ -136,6 +136,7 @@ describe('AddonTriggerInstanceStore', () => {
         triggerId: 'trg',
         label: 'L',
         configJson: '{}',
+        instructions: '',
         targetJson: '{}',
         enabled: true,
         createdAt: '2026-11-10T00:00:00.000Z',

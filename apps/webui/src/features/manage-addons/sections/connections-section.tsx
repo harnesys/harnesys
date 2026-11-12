@@ -59,7 +59,7 @@ export function ConnectionsSection({ orgId, detail, section, installed }: Sectio
       {connections.map((connection) => (
         <div
           key={connection.connectionId}
-          className="flex min-w-0 flex-col gap-2.5 rounded-lg border px-3 py-2.5"
+          className="flex min-w-0 flex-col gap-1 rounded-lg border bg-muted/20 px-3 py-2.5"
           data-testid={`addon-connection-${connection.connectionId}`}
         >
           <div className="flex min-w-0 items-center gap-2">
@@ -68,16 +68,16 @@ export function ConnectionsSection({ orgId, detail, section, installed }: Sectio
             {connection.optional ? <RowChip>optional</RowChip> : null}
             <RowChip>{connection.cardinality === 'one' ? 'single' : 'multi'}</RowChip>
           </div>
-          <div className="flex min-w-0 flex-col gap-1">
-            {connection.accountIds.length === 0 ? (
-              <p className="text-muted-foreground text-xs leading-4">No accounts bound</p>
-            ) : (
-              connection.accountIds.map((accountId) => {
+          {connection.accountIds.length === 0 ? (
+            <p className="text-muted-foreground text-xs leading-4">No accounts bound</p>
+          ) : (
+            <div className="flex min-w-0 flex-col divide-y divide-border/40">
+              {connection.accountIds.map((accountId) => {
                 const account = accountById.get(accountId);
                 return (
                   <div
                     key={accountId}
-                    className="flex min-w-0 items-center gap-2 rounded-md border bg-muted/30 py-1 pr-1 pl-1.5"
+                    className="flex min-w-0 items-center gap-2 py-1.5"
                     data-testid={`addon-binding-${accountId}`}
                   >
                     <Avatar className="size-6">
@@ -117,29 +117,31 @@ export function ConnectionsSection({ orgId, detail, section, installed }: Sectio
                     ) : null}
                   </div>
                 );
-              })
-            )}
-          </div>
+              })}
+            </div>
+          )}
           {installed &&
           (connection.cardinality === 'many' || connection.accountIds.length === 0) ? (
-            <AccountPicker
-              key={`${connection.connectionId}:${connection.accountIds.length}`}
-              orgId={orgId}
-              kinds={connection.accountKinds}
-              value={null}
-              allowCreate
-              onChange={(accountId) => {
-                if (!accountId) {
-                  return;
-                }
-                void saveBinding(
-                  connection.connectionId,
-                  connection.cardinality === 'one'
-                    ? [accountId]
-                    : [...connection.accountIds, accountId],
-                );
-              }}
-            />
+            <div className="mt-1.5">
+              <AccountPicker
+                key={`${connection.connectionId}:${connection.accountIds.length}`}
+                orgId={orgId}
+                kinds={connection.accountKinds}
+                value={null}
+                allowCreate
+                onChange={(accountId) => {
+                  if (!accountId) {
+                    return;
+                  }
+                  void saveBinding(
+                    connection.connectionId,
+                    connection.cardinality === 'one'
+                      ? [accountId]
+                      : [...connection.accountIds, accountId],
+                  );
+                }}
+              />
+            </div>
           ) : null}
         </div>
       ))}

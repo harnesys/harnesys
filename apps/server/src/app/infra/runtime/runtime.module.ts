@@ -1,6 +1,7 @@
 import { Module } from '@harnesys/brix';
 import { PlanEventsPort } from '../../domain/plan/plan-events.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
+import { RunLifecycleReaderPort } from '../../domain/thread/run-lifecycle-reader.port.ts';
 import { ThreadEventsPort } from '../../domain/thread/thread-events.port.ts';
 import { WaitTickerGatePort } from '../../domain/thread/wait-ticker-gate.port.ts';
 import { AgentModule } from '../agent/agent.module.ts';
@@ -28,6 +29,7 @@ import { TerminalModule } from '../terminal/terminal.module.ts';
 import { ThreadModule } from '../thread/thread.module.ts';
 import { WebhookModule } from '../webhooks/webhook.module.ts';
 import { LocalExecutorAdapter } from './local-executor.adapter.ts';
+import { RunLifecycleReaderAdapter } from './run-lifecycle-reader.adapter.ts';
 import { WaitTickerGateAdapter } from './wait-ticker-gate.adapter.ts';
 
 @Module({
@@ -61,7 +63,14 @@ import { WaitTickerGateAdapter } from './wait-ticker-gate.adapter.ts';
   providers: [
     { provide: WaitTickerGatePort, useClass: WaitTickerGateAdapter },
     { provide: LocalExecutorPort, useClass: LocalExecutorAdapter },
+    { provide: RunLifecycleReaderPort, useClass: RunLifecycleReaderAdapter },
   ],
-  exports: [LocalExecutorPort, PlanEventsPort, ThreadEventsPort, WaitTickerGatePort],
+  exports: [
+    LocalExecutorPort,
+    RunLifecycleReaderPort,
+    PlanEventsPort,
+    ThreadEventsPort,
+    WaitTickerGatePort,
+  ],
 })
 export class RuntimeModule {}

@@ -264,7 +264,7 @@ export function RowItem({
   testId?: string;
 }) {
   return (
-    <div className="min-w-0 px-1 py-0.5" data-testid={testId}>
+    <div className="min-w-0 px-1 py-1" data-testid={testId}>
       <div className="flex min-w-0 items-baseline gap-1.5">
         {icon ? (
           <span className="shrink-0 self-center text-muted-foreground [&_svg]:size-3">{icon}</span>

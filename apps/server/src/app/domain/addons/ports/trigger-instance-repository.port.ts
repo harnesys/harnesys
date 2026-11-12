@@ -5,6 +5,7 @@ export interface TriggerInstanceRow {
   triggerId: string;
   label: string;
   configJson: string;
+  instructions: string;
   targetJson: string;
   enabled: boolean;
   createdAt: string;
@@ -14,6 +15,7 @@ export interface TriggerInstanceRow {
 export interface TriggerInstancePatch {
   label?: string;
   configJson?: string;
+  instructions?: string;
   targetJson?: string;
   enabled?: boolean;
 }
