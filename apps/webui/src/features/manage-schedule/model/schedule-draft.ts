@@ -1,6 +1,6 @@
 import { DEFAULT_MODE_ID } from '@harnesys/studio-shared';
 import type { Agent } from '@/entities/agent';
-import type { Schedule, ScheduleHistory, ScheduleStatus } from '@/entities/schedule';
+import type { Schedule, ScheduleStatus } from '@/entities/schedule';
 export interface ScheduleFormDraft {
   name: string;
   status: ScheduleStatus;
@@ -8,8 +8,6 @@ export interface ScheduleFormDraft {
   detail: string;
   cron: string;
   modeId: string;
-  history: ScheduleHistory;
-  historyLast: number;
   threadId: string;
 }
 export function draftFrom(item: Schedule): ScheduleFormDraft {
@@ -20,8 +18,6 @@ export function draftFrom(item: Schedule): ScheduleFormDraft {
     detail: item.detail,
     cron: item.cron,
     modeId: item.modeId,
-    history: item.history,
-    historyLast: item.historyLast,
     threadId: item.threadId,
   };
 }
@@ -33,8 +29,6 @@ export function emptyScheduleDraft(agents: Agent[]): ScheduleFormDraft {
     detail: '',
     cron: '0 * * * *',
     modeId: DEFAULT_MODE_ID,
-    history: 'none',
-    historyLast: 1,
     threadId: '',
   };
 }

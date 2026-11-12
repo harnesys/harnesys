@@ -3,7 +3,6 @@ import {
   type AnySQLiteColumn,
   check,
   index,
-  integer,
   sqliteTable,
   text,
   uniqueIndex,
@@ -26,10 +25,6 @@ export const schedulesTable = sqliteTable(
     detail: text('detail').notNull().default(''),
     cron: text('cron').notNull(),
     modeId: text('mode_id').notNull().default('default'),
-    history: text('history', { enum: ['none', 'last', 'all'] })
-      .notNull()
-      .default('none'),
-    historyLast: integer('history_last').notNull().default(1),
     missPolicy: text('miss_policy', { enum: ['catch-up', 'skip', 'escalate'] })
       .notNull()
       .default('catch-up'),
@@ -46,10 +41,6 @@ export const schedulesTable = sqliteTable(
     statusCheck: check(
       'schedules_status_check',
       sql`${table.status} IN ('active', 'paused', 'failed')`,
-    ),
-    historyCheck: check(
-      'schedules_history_check',
-      sql`${table.history} IN ('none', 'last', 'all')`,
     ),
     missPolicyCheck: check(
       'schedules_miss_policy_check',

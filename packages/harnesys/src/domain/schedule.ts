@@ -1,5 +1,4 @@
-import { PERMISSION_MODES, SCHEDULE_HISTORIES } from '../constants.ts';
+import { PERMISSION_MODES } from '../constants.ts';
 
-export { PERMISSION_MODES, SCHEDULE_HISTORIES };
+export { PERMISSION_MODES };
 export type PermissionMode = (typeof PERMISSION_MODES)[number];
-export type ScheduleHistory = (typeof SCHEDULE_HISTORIES)[number];

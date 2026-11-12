@@ -2,12 +2,10 @@ import type { RunEventStore, RunLifecycleStore, RuntimeState } from 'harnesys';
 import { InMemoryRuntimeState, rebuildThreadMessages } from 'harnesys';
 import { collectInheritedEvents, seedMessagesFromEvents } from '../../domain/thread/fork-logs.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
-import { contextWindowOf } from '../../domain/thread/thread-policy.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
 import { latestDeliveredThreadMessage } from '../org-sqlite/thread-message-queue.store.ts';
-import { listConversationalBefore } from '../org-sqlite/thread-transcript.store.ts';
-import { groupWindowMessages } from './group-window.ts';
+import { sliceThreadHistory, threadSliceOptsOf } from './thread-history-slice.ts';
 import { threadSessionKey } from './thread-session-key.ts';
 import type { ThreadSessionRef } from './wait-ticker.ts';
 
@@ -82,7 +80,12 @@ export function createBranchSeed(deps: BranchSeedDeps) {
       await seedForkState(threadId, state, thread.parentThreadId, thread.forkAt);
       return;
     }
-    await seedReplayState(threadId, state, runId);
+    await seedReplayState(thread, state, runId);
+  }
+
+  async function activeRunIdOf(threadId: string): Promise<string | null> {
+    const active = await deps.lifecycle.activeByThread(threadId).catch(() => null);
+    return active?.runId ?? null;
   }
 
   async function seedGroupState(
@@ -94,11 +97,13 @@ export function createBranchSeed(deps: BranchSeedDeps) {
     if (!deps.db) {
       return;
     }
-    const db = deps.db;
-    const trigger = agentId ? latestDeliveredThreadMessage(db, thread.id, agentId) : null;
+    const trigger = agentId ? latestDeliveredThreadMessage(deps.db, thread.id, agentId) : null;
     const before = trigger?.threadSeq ?? thread.lastThreadSeq + 1;
-    const rows = listConversationalBefore(db, thread.id, before, contextWindowOf(thread.policy));
-    const messages = groupWindowMessages(rows);
+    const activeRunId = await activeRunIdOf(thread.id);
+    const events = await deps.events.listByThread(thread.id);
+    const journal = events.filter((event) => (event.threadSeq ?? Number.MAX_SAFE_INTEGER) < before);
+    const sliced = sliceThreadHistory(journal, threadSliceOptsOf(thread, activeRunId));
+    const messages = rebuildThreadMessages(sliced, { activeRunId, speakerAttribution: true });
     const initialInput = trigger
       ? {
           text: trigger.text,
@@ -132,13 +137,14 @@ export function createBranchSeed(deps: BranchSeedDeps) {
   }
 
   async function seedReplayState(
-    threadId: string,
+    thread: ThreadRecord,
     state: RuntimeState,
     runId: string | null,
   ): Promise<void> {
-    const active = await deps.lifecycle.activeByThread(threadId).catch(() => null);
-    const events = await deps.events.listByThread(threadId);
-    const messages = rebuildThreadMessages(events, { activeRunId: active?.runId ?? null });
+    const activeRunId = await activeRunIdOf(thread.id);
+    const events = await deps.events.listByThread(thread.id);
+    const sliced = sliceThreadHistory(events, threadSliceOptsOf(thread, activeRunId));
+    const messages = rebuildThreadMessages(sliced, { activeRunId });
     if (messages.length === 0 && runId === null) {
       return;
     }

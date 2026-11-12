@@ -1,5 +1,3 @@
-import type { ScheduleHistory } from 'harnesys';
-import { SCHEDULE_HISTORIES } from 'harnesys/domain';
 import type { ThreadRecord } from './thread.ts';
 
 export const SCHEDULE_STATUSES = ['active', 'paused', 'failed'] as const;
@@ -13,8 +11,6 @@ export interface ScheduleRecord {
   detail: string;
   cron: string;
   modeId: string;
-  history: ScheduleHistory;
-  historyLast: number;
   threadId: string;
   nextRunAt?: string | null;
   lastFiredAt?: string | null;
@@ -42,7 +38,4 @@ export interface WebhookRecord {
 export interface CreateWebhookResponse {
   webhook: WebhookRecord;
   thread: ThreadRecord;
-}
-export function isScheduleHistory(value: string): value is ScheduleHistory {
-  return (SCHEDULE_HISTORIES as readonly string[]).includes(value);
 }

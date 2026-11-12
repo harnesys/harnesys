@@ -30,8 +30,6 @@ export async function updateSchedule(
     detail: patch.detail,
     cron,
     modeId: patch.modeId,
-    history: patch.history,
-    historyLast: patch.historyLast,
     threadId: patch.threadId,
   });
   const schedule = toClientSchedule(record);

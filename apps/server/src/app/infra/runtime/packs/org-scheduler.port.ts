@@ -4,7 +4,6 @@ import type {
   PermissionMode,
   ScheduleCreatedRecord,
   ScheduleCreateInput,
-  ScheduleHistory,
   SchedulePeekFire,
   SchedulePeekRecord,
   ScheduleRecord,
@@ -13,12 +12,14 @@ import type {
   ScheduleUpdateInput,
 } from 'harnesys';
 import { PERMISSION_MODES } from 'harnesys';
+import { occupiedTriggerInstanceThreadId } from '../../../application/schedules/bind-schedule-thread.ts';
 import { isValidCron, nextCronRunAt } from '../../../application/schedules/cron-next.ts';
 import {
   toDeskScheduleDeletedEvent,
   toDeskScheduleEvent,
 } from '../../../application/schedules/schedule.helpers.ts';
 import { insertAgentThread } from '../../../application/threads/thread.helpers.ts';
+import { TriggerInstanceRepositoryPort } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { AgentNotFoundException } from '../../../domain/agent/agent.error.ts';
 import { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
 import { DeskEventsPort } from '../../../domain/desk/desk-events.port.ts';
@@ -35,6 +36,7 @@ import { OrgSettingsPort } from '../../../domain/skills/org-settings.port.ts';
 import type { ThreadRecord } from '../../../domain/thread/thread.ts';
 import { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
+import { WebhookRepositoryPort } from '../../../domain/webhook/webhook-repository.port.ts';
 
 export interface OrgSchedulerPortDeps {
   schedules: ScheduleRepositoryPort;
@@ -43,6 +45,8 @@ export interface OrgSchedulerPortDeps {
   agents: AgentRegistryPort;
   orgSettings: OrgSettingsPort;
   deskEvents?: DeskEventsPort;
+  webhooks?: WebhookRepositoryPort;
+  triggerInstances?: TriggerInstanceRepositoryPort;
 }
 
 export class OrgSchedulerPort implements SchedulerPort {
@@ -114,8 +118,6 @@ export class OrgSchedulerPort implements SchedulerPort {
       detail: input.detail?.trim() || '',
       cron,
       modeId: input.mode ?? agent.defaultModeId ?? DEFAULT_MODE_ID,
-      history: input.history ?? 'none',
-      historyLast: clampHistoryLast(input.historyLast ?? 1),
       missPolicy: 'catch-up',
       threadId: thread.id,
       nextRunAt: nextCronRunAt(cron, new Date(now), timezone),
@@ -191,6 +193,16 @@ export class OrgSchedulerPort implements SchedulerPort {
     if (occupied) {
       throw new ScheduleValidationException('thread already has a schedule');
     }
+    const webhookOccupied = this.deps.webhooks?.findByThreadId(orgId, thread.id);
+    if (webhookOccupied) {
+      throw new ScheduleValidationException('thread already has a webhook');
+    }
+    const instanceOccupied = this.deps.triggerInstances
+      ? occupiedTriggerInstanceThreadId(this.deps.triggerInstances.list(orgId), thread.id)
+      : undefined;
+    if (instanceOccupied) {
+      throw new ScheduleValidationException('thread already has a trigger');
+    }
     return thread;
   }
 }
@@ -208,7 +220,6 @@ function buildSchedulePatch(
   applyPatchDetail(patch, patchInput.detail);
   applyPatchCron(patch, patchInput.cron, timezone);
   applyPatchMode(patch, patchInput.mode);
-  applyPatchHistory(patch, patchInput.history, patchInput.historyLast);
   return patch;
 }
 
@@ -269,19 +280,6 @@ function applyPatchMode(patch: SchedulePatch, mode: PermissionMode | undefined):
   }
 }
 
-function applyPatchHistory(
-  patch: SchedulePatch,
-  history: ScheduleHistory | undefined,
-  historyLast: number | undefined,
-): void {
-  if (history !== undefined) {
-    patch.history = history;
-  }
-  if (historyLast !== undefined) {
-    patch.historyLast = clampHistoryLast(historyLast);
-  }
-}
-
 function toPortRecord(row: ServerScheduleRecord): ScheduleRecord {
   return {
     id: row.id,
@@ -292,8 +290,6 @@ function toPortRecord(row: ServerScheduleRecord): ScheduleRecord {
     detail: row.detail,
     cron: row.cron,
     mode: toPermissionMode(row.modeId),
-    history: row.history,
-    historyLast: row.historyLast,
     threadId: row.threadId,
     nextRunAt: row.nextRunAt,
     lastFiredAt: row.lastFiredAt,
@@ -304,8 +300,4 @@ function toPortRecord(row: ServerScheduleRecord): ScheduleRecord {
 
 function toPermissionMode(modeId: string): PermissionMode {
   return PERMISSION_MODES.find((mode) => mode === modeId) ?? 'ask';
-}
-
-function clampHistoryLast(value: number): number {
-  return Math.min(Math.max(value, 1), 99);
 }

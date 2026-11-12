@@ -19,7 +19,13 @@ import {
   ThreadNotFoundException,
   ThreadValidationException,
 } from '../../domain/thread/thread.error.ts';
+import type { ThreadRecord } from '../../domain/thread/thread.ts';
 import type { RunTargetSelector } from './org-runtime-run-target.ts';
+import {
+  sliceThreadHistory,
+  type ThreadSliceOpts,
+  threadSliceOptsOf,
+} from './thread-history-slice.ts';
 
 export interface CompactThreadDeps {
   models: ModelsPort;
@@ -31,6 +37,8 @@ export interface CompactThreadDeps {
     state: InMemoryRuntimeState,
     selector?: RunTargetSelector,
   ) => Promise<RunTarget | null>;
+  findThread?: (threadId: string) => ThreadRecord | null | undefined;
+  activeRunIdOf?: (threadId: string) => Promise<string | null>;
 }
 
 export async function compactThread(
@@ -50,6 +58,7 @@ export async function compactThread(
   const snapshot = await state.load();
   const mutable = mutableStateOf(snapshot);
   const messageCount = Array.isArray(mutable.messages) ? mutable.messages.length : -1;
+  const sliceOpts = await compactSliceOpts(deps, threadId);
   const { completed, skipReason } = await runForcedCompact(deps, {
     threadId,
     target,
@@ -59,7 +68,15 @@ export async function compactThread(
   if (!completed) {
     return { compacted: false, ...(skipReason ? { reason: skipReason } : {}) };
   }
-  await persistCompact(deps, { threadId, state, snapshot, mutable, completed, messageCount });
+  await persistCompact(deps, {
+    threadId,
+    state,
+    snapshot,
+    mutable,
+    completed,
+    messageCount,
+    sliceOpts,
+  });
   return {
     compacted: true,
     id: completed.id,
@@ -125,6 +142,7 @@ async function persistCompact(
     mutable: Record<string, unknown>;
     completed: CompactionMessage;
     messageCount: number;
+    sliceOpts: ThreadSliceOpts | null;
   },
 ): Promise<void> {
   const sequence = (input.snapshot?.sequence ?? 0) + 1;
@@ -153,6 +171,7 @@ async function persistCompact(
     input.threadId,
     input.completed.coveredUntil,
     input.messageCount,
+    input.sliceOpts ?? undefined,
   );
   await deps.events.appendForThread(input.threadId, runId, [
     {
@@ -179,10 +198,15 @@ export async function resolveCompactBoundary(
   threadId: string,
   coveredUntil: number,
   messageCount: number,
+  sliceOpts?: ThreadSliceOpts,
 ): Promise<CompactionBoundary | null> {
   const listed = await events.listByThread(threadId);
+  const sliced = sliceOpts ? sliceThreadHistory(listed, sliceOpts) : listed;
   const sources: number[] = [];
-  const messages = rebuildThreadMessages(listed, { messageSources: sources });
+  const messages = rebuildThreadMessages(sliced, {
+    messageSources: sources,
+    ...(sliceOpts?.activeRunId ? { activeRunId: sliceOpts.activeRunId } : {}),
+  });
   if (messages.length !== messageCount) {
     return null;
   }
@@ -190,10 +214,10 @@ export async function resolveCompactBoundary(
     return null;
   }
   const sourceIndex = sources[coveredUntil];
-  if (sourceIndex === undefined || sourceIndex < 0 || sourceIndex >= listed.length) {
+  if (sourceIndex === undefined || sourceIndex < 0 || sourceIndex >= sliced.length) {
     return null;
   }
-  const event = listed[sourceIndex];
+  const event = sliced[sourceIndex];
   if (!event) {
     return null;
   }
@@ -203,6 +227,21 @@ export async function resolveCompactBoundary(
     return null;
   }
   return { runId, seq };
+}
+
+async function compactSliceOpts(
+  deps: CompactThreadDeps,
+  threadId: string,
+): Promise<ThreadSliceOpts | null> {
+  if (!deps.findThread || !deps.activeRunIdOf) {
+    return null;
+  }
+  const thread = deps.findThread(threadId);
+  if (!thread) {
+    return null;
+  }
+  const activeRunId = await deps.activeRunIdOf(threadId).catch(() => null);
+  return threadSliceOptsOf(thread, activeRunId);
 }
 
 function mutableStateOf(snapshot: Snapshot | null): Record<string, unknown> {

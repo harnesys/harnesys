@@ -1,8 +1,6 @@
 export {
-  SCHEDULE_HISTORIES,
   SCHEDULE_STATUSES,
   type Schedule,
-  type ScheduleHistory,
   type ScheduleStatus,
   scheduleInk,
   scheduleStatusLabel,

@@ -18,8 +18,6 @@ function scheduleFixture(overrides: Partial<ScheduleRecord> = {}): ScheduleRecor
     detail: 'Summarize overnight',
     cron: '0 9 * * *',
     modeId: 'default',
-    history: 'none',
-    historyLast: 1,
     missPolicy: 'catch-up',
     threadId: 'thread-1',
     nextRunAt: '2026-11-07T09:00:00.000Z',

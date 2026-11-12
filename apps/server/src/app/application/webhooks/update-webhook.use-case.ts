@@ -1,8 +1,10 @@
 import { Injectable } from '@harnesys/brix';
 import type { UpdateWebhookBody, WebhookPublic } from '@harnesys/contracts';
+import { TriggerInstanceRepositoryPort } from '../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { AgentNotFoundException } from '../../domain/agent/agent.error.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
+import { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repository.port.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import {
@@ -28,6 +30,8 @@ export class UpdateWebhookUseCase {
     private readonly webhooks: WebhookRepositoryPort,
     private readonly threads: ThreadRepositoryPort,
     private readonly threadAgents: ThreadAgentRepositoryPort,
+    private readonly schedules: ScheduleRepositoryPort,
+    private readonly triggerInstances: TriggerInstanceRepositoryPort,
     private readonly agents: AgentRegistryPort,
     private readonly deskEvents: DeskEventsPort,
   ) {}
@@ -68,6 +72,8 @@ export class UpdateWebhookUseCase {
         threads: this.threads,
         threadAgents: this.threadAgents,
         webhooks: this.webhooks,
+        schedules: this.schedules,
+        triggerInstances: this.triggerInstances,
         orgId: request.orgId,
         agentId: nextAgentId,
         threadId: request.body.threadId,

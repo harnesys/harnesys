@@ -8,6 +8,8 @@ import {
   FakeSchedules,
   FakeThreadAgents,
   FakeThreads,
+  FakeTriggerInstances,
+  FakeWebhooks,
 } from './schedule.use-case.fakes.ts';
 import { UpdateScheduleUseCase } from './update-schedule.use-case.ts';
 
@@ -57,6 +59,8 @@ function harness(timezone: string) {
   const schedules = new FakeSchedules();
   const threads = new FakeThreads();
   const threadAgents = new FakeThreadAgents();
+  const webhooks = new FakeWebhooks();
+  const triggerInstances = new FakeTriggerInstances();
   const agents = new FakeAgents();
   const orgSettings = new FakeOrgSettings();
   orgSettings.timezone = timezone;
@@ -66,6 +70,8 @@ function harness(timezone: string) {
     schedules,
     threads,
     threadAgents,
+    webhooks,
+    triggerInstances,
     agents,
     orgSettings,
     deskEvents,
@@ -74,6 +80,8 @@ function harness(timezone: string) {
     schedules,
     threads,
     threadAgents,
+    webhooks,
+    triggerInstances,
     agents,
     orgSettings,
     deskEvents,

@@ -1,6 +1,7 @@
 import { Injectable } from '@harnesys/brix';
 import type { CreateScheduleBody, CreateScheduleResponse } from '@harnesys/contracts';
 import { DEFAULT_MODE_ID } from '@harnesys/contracts';
+import { TriggerInstanceRepositoryPort } from '../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { AgentNotFoundException } from '../../domain/agent/agent.error.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
@@ -9,6 +10,7 @@ import { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repositor
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
+import { WebhookRepositoryPort } from '../../domain/webhook/webhook-repository.port.ts';
 import { insertAgentThread, toThreadPublicForAgent } from '../threads/thread.helpers.ts';
 import { requireBindableScheduleThread } from './bind-schedule-thread.ts';
 import { isValidCron, nextCronRunAt } from './cron-next.ts';
@@ -26,6 +28,8 @@ export class CreateScheduleUseCase {
     private readonly schedules: ScheduleRepositoryPort,
     private readonly threads: ThreadRepositoryPort,
     private readonly threadAgents: ThreadAgentRepositoryPort,
+    private readonly webhooks: WebhookRepositoryPort,
+    private readonly triggerInstances: TriggerInstanceRepositoryPort,
     private readonly agents: AgentRegistryPort,
     private readonly orgSettings: OrgSettingsPort,
     private readonly deskEvents: DeskEventsPort,
@@ -43,16 +47,19 @@ export class CreateScheduleUseCase {
       throw new ScheduleValidationException('invalid cron');
     }
     const modeId = request.body.modeId?.trim() || agent.defaultModeId || DEFAULT_MODE_ID;
-    const history = request.body.history ?? 'none';
-    const historyLast = Math.min(Math.max(request.body.historyLast ?? 1, 1), 99);
     const missPolicy = request.body.missPolicy ?? 'catch-up';
     const now = new Date().toISOString();
     const existingThread = request.body.threadId
       ? requireBindableScheduleThread({
           threads: this.threads,
           threadAgents: this.threadAgents,
-          schedules: this.schedules,
-          orgId: request.orgId,
+          occupancy: {
+            orgId: request.orgId,
+            threadId: request.body.threadId,
+            schedules: this.schedules,
+            webhooks: this.webhooks,
+            triggerInstances: this.triggerInstances,
+          },
           agentId: agent.id,
           threadId: request.body.threadId,
         })
@@ -87,8 +94,6 @@ export class CreateScheduleUseCase {
       detail: request.body.detail?.trim() || '',
       cron,
       modeId,
-      history,
-      historyLast,
       missPolicy,
       threadId: thread.id,
       nextRunAt: nextCronRunAt(cron, new Date(now), timezone),

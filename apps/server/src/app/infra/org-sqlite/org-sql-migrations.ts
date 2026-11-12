@@ -112,3 +112,158 @@ export function migrateAppsSecretFieldColumns(
     exec(`ALTER TABLE apps ADD COLUMN secret_fields_json TEXT NOT NULL DEFAULT '[]'`);
   }
 }
+
+export function migrateThreadsPolicyContextWindow(
+  exec: (sql: string) => void,
+  all: (sql: string) => ColumnInfo[],
+): void {
+  if (all('PRAGMA table_info(threads)').length === 0) {
+    return;
+  }
+  const rows = all('SELECT id, policy FROM threads') as Array<{ id?: unknown; policy?: unknown }>;
+  for (const row of rows) {
+    const id = typeof row.id === 'string' ? row.id : undefined;
+    const policy = typeof row.policy === 'string' ? row.policy : undefined;
+    if (!id || !policy) {
+      continue;
+    }
+    const next = policyWithoutContextWindow(policy);
+    if (!next) {
+      continue;
+    }
+    exec(`UPDATE threads SET policy = '${escapeSql(next)}' WHERE id = '${escapeSql(id)}'`);
+  }
+}
+
+export function migrateSchedulesHistoryToThreads(
+  exec: (sql: string) => void,
+  all: (sql: string) => ColumnInfo[],
+): void {
+  const schedules = new Set(all('PRAGMA table_info(schedules)').map((col) => col.name));
+  if (schedules.size === 0 || !schedules.has('history') || !threadsTableExists(all)) {
+    return;
+  }
+  const policies = threadPolicies(all);
+  for (const row of scheduleHistoryRows(all)) {
+    applyScheduleHistoryPolicy(exec, policies, row);
+  }
+  if (schedules.has('history')) {
+    exec('ALTER TABLE schedules DROP COLUMN history');
+  }
+  if (schedules.has('history_last')) {
+    exec('ALTER TABLE schedules DROP COLUMN history_last');
+  }
+}
+
+interface ScheduleHistoryRow {
+  threadId?: string;
+  history?: string;
+  historyLast?: unknown;
+}
+
+function threadsTableExists(all: (sql: string) => ColumnInfo[]): boolean {
+  return all('PRAGMA table_info(threads)').length > 0;
+}
+
+function threadPolicies(all: (sql: string) => ColumnInfo[]): Map<string, string> {
+  const policies = new Map<string, string>();
+  const rows = all('SELECT id, policy FROM threads') as Array<{ id?: unknown; policy?: unknown }>;
+  for (const row of rows) {
+    if (typeof row.id === 'string' && typeof row.policy === 'string') {
+      policies.set(row.id, row.policy);
+    }
+  }
+  return policies;
+}
+
+function scheduleHistoryRows(all: (sql: string) => ColumnInfo[]): ScheduleHistoryRow[] {
+  const rows = all('SELECT thread_id, history, history_last FROM schedules') as Array<{
+    thread_id?: unknown;
+    history?: unknown;
+    history_last?: unknown;
+  }>;
+  return rows.map((row) => ({
+    threadId: typeof row.thread_id === 'string' ? row.thread_id : undefined,
+    history: typeof row.history === 'string' ? row.history : undefined,
+    historyLast: row.history_last,
+  }));
+}
+
+function applyScheduleHistoryPolicy(
+  exec: (sql: string) => void,
+  policies: Map<string, string>,
+  row: ScheduleHistoryRow,
+): void {
+  const rawPolicy = row.threadId ? policies.get(row.threadId) : undefined;
+  if (!row.threadId || rawPolicy === undefined) {
+    return;
+  }
+  const next = policyWithMigratedHistory(rawPolicy, row.history, row.historyLast);
+  if (!next) {
+    return;
+  }
+  exec(`UPDATE threads SET policy = '${escapeSql(next)}' WHERE id = '${escapeSql(row.threadId)}'`);
+}
+
+export function migrateWebhooksModeColumn(
+  exec: (sql: string) => void,
+  all: (sql: string) => ColumnInfo[],
+): void {
+  const present = new Set(all('PRAGMA table_info(webhooks)').map((col) => col.name));
+  if (present.size > 0 && !present.has('mode')) {
+    exec(`ALTER TABLE webhooks ADD COLUMN mode TEXT NOT NULL DEFAULT 'ask'`);
+  }
+}
+
+const SCHEDULE_HISTORY_TO_HISTORY_MODE: Record<string, string> = {
+  none: 'none',
+  last: 'last',
+  all: 'full',
+};
+
+function policyWithoutContextWindow(rawPolicy: string): string | null {
+  const parsed = parsePolicyObject(rawPolicy);
+  if (!parsed || typeof parsed.contextWindow !== 'number') {
+    return null;
+  }
+  const next: Record<string, unknown> = { ...parsed, version: 2, historyMode: 'last' };
+  delete next.contextWindow;
+  next.historyLast = Math.ceil(parsed.contextWindow / 2);
+  return JSON.stringify(next);
+}
+
+function policyWithMigratedHistory(
+  rawPolicy: string,
+  history: string | undefined,
+  historyLast: unknown,
+): string | null {
+  const parsed = parsePolicyObject(rawPolicy);
+  if (!parsed || history === undefined) {
+    return null;
+  }
+  const historyMode = SCHEDULE_HISTORY_TO_HISTORY_MODE[history];
+  if (!historyMode || 'historyMode' in parsed) {
+    return null;
+  }
+  const next = { ...parsed, version: 2, historyMode } as Record<string, unknown>;
+  if (historyMode === 'last' && typeof historyLast === 'number' && historyLast > 0) {
+    next.historyLast = historyLast;
+  }
+  return JSON.stringify(next);
+}
+
+function parsePolicyObject(rawPolicy: string): Record<string, unknown> | null {
+  try {
+    const parsed: unknown = JSON.parse(rawPolicy);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return { ...(parsed as Record<string, unknown>) };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function escapeSql(value: string): string {
+  return value.replace(/'/g, "''");
+}

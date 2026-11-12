@@ -95,8 +95,11 @@ import {
   migrateIssuesBranchColumns,
   migrateModePresetToolColumns,
   migrateRunsAttributionColumns,
+  migrateSchedulesHistoryToThreads,
   migrateThreadsBindingColumns,
+  migrateThreadsPolicyContextWindow,
   migrateTriggerOwnerColumns,
+  migrateWebhooksModeColumn,
 } from './org-sql-migrations.ts';
 import { CREATE_PERMISSION_RULES_SQL, migratePermissionRules } from './org-sql-permission-rules.ts';
 
@@ -252,6 +255,9 @@ export function ensureOrgSchema(
   exec(CREATE_WEBHOOKS_SQL);
   if (all) {
     migrateTriggerOwnerColumns(exec, all);
+    migrateThreadsPolicyContextWindow(exec, all);
+    migrateSchedulesHistoryToThreads(exec, all);
+    migrateWebhooksModeColumn(exec, all);
   }
   exec(CREATE_CONNECTORS_SQL);
   assertConnectorsAgentSet(all);

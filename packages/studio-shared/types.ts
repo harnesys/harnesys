@@ -19,8 +19,8 @@ export type {
   SemanticScope,
   ToolCatalogEntry as ProjectTool,
 } from 'harnesys';
-export type { PermissionMode, ScheduleHistory } from 'harnesys/domain';
-export { PERMISSION_MODES, SCHEDULE_HISTORIES } from 'harnesys/domain';
+export type { PermissionMode } from 'harnesys/domain';
+export { PERMISSION_MODES } from 'harnesys/domain';
 export type {
   AgentBudget,
   AgentGraph,

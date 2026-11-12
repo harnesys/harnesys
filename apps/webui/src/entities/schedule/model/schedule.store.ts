@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Schedule, ScheduleHistory, ScheduleStatus } from './schedule';
+import type { Schedule, ScheduleStatus } from './schedule';
 export interface SchedulePatch {
   name?: string;
   status?: ScheduleStatus;
@@ -7,8 +7,6 @@ export interface SchedulePatch {
   detail?: string;
   cron?: string;
   modeId?: string;
-  history?: ScheduleHistory;
-  historyLast?: number;
   threadId?: string;
 }
 interface ScheduleStore {

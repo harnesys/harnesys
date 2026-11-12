@@ -45,8 +45,8 @@ export {
 } from './src/domain/hook-gate.ts';
 export type { PlanItemStatus, PlanStatus, SubagentRole } from './src/domain/plan.ts';
 export { PLAN_ITEM_STATUSES, PLAN_STATUSES, SUBAGENT_ROLES } from './src/domain/plan.ts';
-export type { PermissionMode, ScheduleHistory } from './src/domain/schedule.ts';
-export { PERMISSION_MODES, SCHEDULE_HISTORIES } from './src/domain/schedule.ts';
+export type { PermissionMode } from './src/domain/schedule.ts';
+export { PERMISSION_MODES } from './src/domain/schedule.ts';
 export {
   DEFAULT_TOOL_OUTPUT_HEAD_CHARS,
   DEFAULT_TOOL_OUTPUT_MAX_CHARS,

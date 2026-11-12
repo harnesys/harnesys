@@ -22,7 +22,6 @@ import { confirmDeleteSchedule } from '../model/delete-schedule';
 import type { ScheduleConfigResult } from '../model/schedule-dialogs';
 import { draftFrom, emptyScheduleDraft, type ScheduleFormDraft } from '../model/schedule-draft';
 import { CronComposer } from './cron-composer';
-import { ScheduleHistoryFields } from './schedule-history-fields';
 import { ScheduleThreadField } from './schedule-thread-field';
 
 interface AgentModesLike {
@@ -198,39 +197,31 @@ export function ScheduleConfigDialog({
             <FieldLabel htmlFor="schedule-cron-raw">Cron</FieldLabel>
             <CronComposer value={draft.cron} onChange={(cron) => setDraft({ ...draft, cron })} />
           </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field>
-              <FieldLabel htmlFor="schedule-mode">Mode</FieldLabel>
-              <Select
-                items={modeItems}
-                value={draft.modeId}
-                onValueChange={(value) => {
-                  if (typeof value === 'string') {
-                    setDraft({ ...draft, modeId: value });
-                  }
-                }}
-              >
-                <SelectTrigger id="schedule-mode" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {modeItems.map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </Field>
-            <ScheduleHistoryFields
-              history={draft.history}
-              historyLast={draft.historyLast}
-              onHistory={(history) => setDraft({ ...draft, history })}
-              onHistoryLast={(historyLast) => setDraft({ ...draft, historyLast })}
-            />
-          </div>
+          <Field>
+            <FieldLabel htmlFor="schedule-mode">Mode</FieldLabel>
+            <Select
+              items={modeItems}
+              value={draft.modeId}
+              onValueChange={(value) => {
+                if (typeof value === 'string') {
+                  setDraft({ ...draft, modeId: value });
+                }
+              }}
+            >
+              <SelectTrigger id="schedule-mode" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {modeItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
           <Field>
             <FieldLabel htmlFor="schedule-detail">Instructions</FieldLabel>
             <Textarea

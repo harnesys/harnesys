@@ -11,8 +11,13 @@ import type {
 export type { Event, RequestPlan, RequestSection, SessionEvent, SessionEventType, Snapshot };
 export const THREAD_KINDS = ['chat', 'group', 'schedule', 'webhook', 'issue'] as const;
 export type ThreadKind = (typeof THREAD_KINDS)[number];
+export type ThreadHistoryMode = 'full' | 'none' | 'last';
 export interface ThreadPolicy {
-  version: 1;
+  version: 1 | 2;
+  historyMode?: ThreadHistoryMode;
+  historyLast?: number;
+  historyFromRunId?: string;
+  /** @deprecated migrated to historyMode/historyLast by org-sql migrations */
   contextWindow?: number;
   mentionGating?: boolean;
 }
