@@ -9,7 +9,7 @@ export function MarkdownSection({ section }: SectionProps) {
   const body = isL10n(section.body) ? section.body : '';
   return (
     <RowSection label="Notes">
-      <Markdown text={resolveL10nText(body)} className="opacity-80"/>
+      <Markdown text={resolveL10nText(body)} className="text-[13px] opacity-80" />
     </RowSection>
   );
 }

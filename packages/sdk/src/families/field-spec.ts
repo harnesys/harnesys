@@ -29,7 +29,28 @@ export interface FieldVisibleWhen {
 /** Rich editor registered on the client; unknown kinds fall back to the base type. */
 export interface FieldWidget {
   kind: string;
+  params?: Record<string, string | number | boolean>;
 }
+
+/**
+ * Declarative option source resolved by the host: an add-on-owned GET route
+ * or the add-on's connected accounts. No per-provider client code.
+ */
+export type FieldOptionsFrom =
+  | {
+      /** Route id served under `/orgs/:orgId/addons/:addonId/r/<route>`. */
+      kind: 'addonRoute';
+      route: string;
+      /** Field keys passed to the route as query params. */
+      dependsOn?: string[];
+      /** Response body key holding the rows. Defaults to `rows`. */
+      listKey?: string;
+      /** Row field used as the option value. */
+      valueKey: string;
+      /** Row field used as the option label. Defaults to `valueKey`. */
+      labelKey?: string;
+    }
+  | { kind: 'connections' };
 
 export interface FieldSpec {
   key: string;
@@ -40,6 +61,10 @@ export interface FieldSpec {
   help?: string;
   default?: FieldValue;
   options?: FieldOption[];
+  /** Option-valued field accepting several values, stored as one comma-separated string. */
+  multi?: boolean;
+  /** Options resolved by the host at render time; static `options` stay the fallback. */
+  optionsFrom?: FieldOptionsFrom;
   pattern?: { regex: string; hint: string };
   editable?: boolean;
   generated?: boolean;
@@ -80,7 +105,22 @@ export const FieldVisibleWhenSchema = z.object({
   oneOf: z.array(z.string()).optional(),
 });
 
-export const FieldWidgetSchema = z.object({ kind: z.string().min(1) });
+export const FieldWidgetSchema = z.object({
+  kind: z.string().min(1),
+  params: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
+});
+
+export const FieldOptionsFromSchema: z.ZodType<FieldOptionsFrom> = z.union([
+  z.object({
+    kind: z.literal('addonRoute'),
+    route: z.string().min(1),
+    dependsOn: z.array(z.string().min(1)).optional(),
+    listKey: z.string().min(1).optional(),
+    valueKey: z.string().min(1),
+    labelKey: z.string().min(1).optional(),
+  }),
+  z.object({ kind: z.literal('connections') }),
+]);
 
 export const FieldSpecSchema: z.ZodType<FieldSpec> = z.object({
   key: z.string().min(1),
@@ -91,6 +131,8 @@ export const FieldSpecSchema: z.ZodType<FieldSpec> = z.object({
   help: z.string().optional(),
   default: FieldValueSchema.optional(),
   options: z.array(FieldOptionSchema).optional(),
+  multi: z.boolean().optional(),
+  optionsFrom: FieldOptionsFromSchema.optional(),
   pattern: z.object({ regex: z.string(), hint: z.string() }).optional(),
   editable: z.boolean().optional(),
   generated: z.boolean().optional(),

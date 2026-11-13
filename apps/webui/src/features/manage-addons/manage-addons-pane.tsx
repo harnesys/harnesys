@@ -187,7 +187,7 @@ export function ManageAddonsPane({ orgId }: { orgId: string }) {
       <SettingsSection
         label="Add-ons"
         count={isPending ? undefined : cards.length}
-        description="System add-ons ship with the app. Enable them for this organization, or install extra packages from a path or URL."
+        description="Turn add-ons on for this organization, or install your own packages."
         actions={
           <>
             <Button
@@ -229,7 +229,7 @@ export function ManageAddonsPane({ orgId }: { orgId: string }) {
         {!isPending && cards.length === 0 ? (
           <SettingsEmpty
             title="No add-ons found"
-            description="System add-ons appear here automatically from the add-ons directory. Use Reload after adding packages manually, or install from a path or URL."
+            description="Add-ons from the host directory appear here automatically. Use Reload after adding packages manually, or install one from a path or URL."
             testId="manage-addons-empty"
           />
         ) : null}

@@ -468,6 +468,8 @@
             "type": "text",
             "required": true,
             "placeholder": "owner/name",
+            "optionsFrom": { "kind": "addonRoute", "route": "repos", "valueKey": "fullName" },
+            "widget": { "kind": "combobox" },
             "pattern": {
               "regex": "^[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*$",
               "hint": "Repository as owner/name"
@@ -479,7 +481,14 @@
             "type": "text",
             "required": false,
             "default": "issues,pull_requests,workflow_runs",
-            "help": "Comma-separated selection from issues, pull_requests, workflow_runs; empty means all"
+            "multi": true,
+            "options": [
+              { "value": "issues", "label": "Issues" },
+              { "value": "pull_requests", "label": "Pull requests" },
+              { "value": "workflow_runs", "label": "Workflow runs" }
+            ],
+            "widget": { "kind": "chips" },
+            "help": "Which events to watch; selecting none means all"
           },
           {
             "key": "branch",
@@ -493,14 +502,17 @@
             "label": "Labels",
             "type": "text",
             "required": false,
-            "help": "Only issues and pull requests carrying at least one of these comma-separated labels"
+            "widget": { "kind": "tags" },
+            "help": "Only issues and pull requests carrying at least one of these labels"
           },
           {
             "key": "accountId",
-            "label": "Installation account id",
+            "label": "Installation account",
             "type": "text",
             "required": false,
-            "help": "Only needed when several GitHub installations are connected: the bound account id to poll with"
+            "optionsFrom": { "kind": "connections" },
+            "widget": { "kind": "combobox" },
+            "help": "Only needed when several GitHub installations are connected: the bound account to poll with"
           }
         ],
         "limits": { "perDay": 500, "throttleSec": 5 }

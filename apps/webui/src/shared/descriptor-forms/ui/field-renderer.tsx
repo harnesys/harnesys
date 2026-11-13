@@ -14,7 +14,12 @@ import {
   SelectValue,
 } from '@/shared/ui/select';
 import { Textarea } from '@/shared/ui/textarea';
-import { formWidget } from './widget-registry';
+import { type AddonFormContext, fieldControlId, formWidget } from './widget-registry';
+import { registerBuiltinFormWidgets } from './widgets/register-builtin-widgets';
+
+registerBuiltinFormWidgets();
+
+export { fieldControlId };
 
 interface FieldRendererProps {
   field: FieldSpec;
@@ -25,12 +30,12 @@ interface FieldRendererProps {
   disabled?: boolean;
   /** Render only the control: the host row owns label, description, and error. */
   bare?: boolean;
+  /** Whole form values, passed to widgets for `optionsFrom.dependsOn`. */
+  values?: Record<string, FieldValue>;
+  /** Add-on identity, passed through to widgets. */
+  addon?: AddonFormContext;
   onChange: (value: FieldValue) => void;
   onSecretChange?: (value: string) => void;
-}
-
-export function fieldControlId(key: string): string {
-  return `field-${key}`;
 }
 
 export function RequiredMark() {
@@ -45,6 +50,8 @@ export function FieldRenderer({
   error,
   disabled = false,
   bare = false,
+  values,
+  addon,
   onChange,
   onSecretChange,
 }: FieldRendererProps) {
@@ -60,6 +67,8 @@ export function FieldRenderer({
       secretValue={secretValue}
       existingSecret={existingSecret}
       disabled={disabled}
+      values={values}
+      addon={addon}
       onChange={onChange}
       onSecretChange={onSecretChange}
     />
@@ -87,6 +96,8 @@ function FieldControl({
   secretValue,
   existingSecret,
   disabled,
+  values,
+  addon,
   onChange,
   onSecretChange,
 }: {
@@ -96,6 +107,8 @@ function FieldControl({
   secretValue?: string;
   existingSecret: boolean;
   disabled: boolean;
+  values: Record<string, FieldValue> | undefined;
+  addon: AddonFormContext | undefined;
   onChange: (value: FieldValue) => void;
   onSecretChange?: (value: string) => void;
 }) {
@@ -113,7 +126,16 @@ function FieldControl({
   const widget = formWidget(field.widget?.kind);
   if (widget) {
     const Widget = widget;
-    return <Widget field={field} value={value} disabled={disabled} onChange={onChange} />;
+    return (
+      <Widget
+        field={field}
+        value={value}
+        disabled={disabled}
+        values={values ?? (value === undefined ? {} : { [field.key]: value })}
+        addon={addon}
+        onChange={onChange}
+      />
+    );
   }
   const displayed = value === undefined ? field.default : value;
   if (field.type === 'textarea') {

@@ -58,12 +58,18 @@ export {
   defaultConfigValues,
   type FieldOption,
   FieldOptionSchema,
+  type FieldOptionsFrom,
+  FieldOptionsFromSchema,
   type FieldSpec,
   FieldSpecSchema,
   type FieldType,
   FieldTypeSchema,
   type FieldValue,
   FieldValueSchema,
+  type FieldVisibleWhen,
+  FieldVisibleWhenSchema,
+  type FieldWidget,
+  FieldWidgetSchema,
 } from './families/field-spec.ts';
 export {
   HOOK_SCHEMA_VERSION,

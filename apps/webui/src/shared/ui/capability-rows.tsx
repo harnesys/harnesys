@@ -224,15 +224,17 @@ export function Row({
     </div>
   );
 }
-export const ROW_SECTION_DIVIDER = 'mt-2 border-border/40 border-t pt-2';
+export const ROW_SECTION_DIVIDER = 'mt-5 border-border/40 border-t pt-3';
 export function RowSection({
   label,
   count,
   actions,
+  className,
   children,
 }: {
   label: string;
   count?: number;
+  className?: string,
   actions?: ReactNode;
   children: ReactNode;
 }) {
@@ -240,7 +242,8 @@ export function RowSection({
     <div
       className={cn(
         ROW_SECTION_DIVIDER,
-        'flex flex-col gap-1 first-of-type:mt-0 first-of-type:border-t-0 first-of-type:pt-1',
+        'flex flex-col gap-2 first-of-type:mt-0 first-of-type:border-t-0 first-of-type:pt-1',
+        className
       )}
     >
       <div className="flex items-baseline gap-2">

@@ -43,6 +43,7 @@ export function PermissionsSection({ orgId, detail, installed }: SectionProps) {
     <RowSection
       label={installed ? 'Permissions' : 'Requested permissions'}
       count={declared.length}
+      className="gap-0"
       actions={
         installed && declared.length > 0 ? (
           <Button
@@ -112,7 +113,7 @@ function PermissionLine({
   const declined = showState && !granted;
   return (
     <div
-      className="-mx-2 flex min-w-0 items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
+      className="-mx-2 flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-muted/40"
       data-testid={`addon-permission-${permission.id}`}
     >
       {granted ? (

@@ -14,7 +14,7 @@ import { handleSectionResult, resolveL10nText, routeParamsOf } from '../lib/rout
 import type { SectionProps } from '../lib/section-props';
 import type { AddonRouteRef, SectionL10n } from '../lib/view-sections';
 
-export function FormSection({ orgId, addonId, section, onRefresh }: SectionProps) {
+export function FormSection({ orgId, addonId, detail, section, onRefresh }: SectionProps) {
   const [values, setValues] = useState<Record<string, FieldValue>>({});
   const [secrets, setSecrets] = useState<Record<string, string>>({});
   const [pending, setPending] = useState(false);
@@ -83,6 +83,8 @@ export function FormSection({ orgId, addonId, section, onRefresh }: SectionProps
             field={field}
             value={field.type === 'secret' ? undefined : values[field.key]}
             secretValue={secrets[field.key]}
+            values={values}
+            addon={{ orgId, addonId, connections: detail.connections }}
             onChange={(next) => setValues((current) => ({ ...current, [field.key]: next }))}
             onSecretChange={(next) => setSecrets((current) => ({ ...current, [field.key]: next }))}
           />

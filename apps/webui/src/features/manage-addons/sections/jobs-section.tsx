@@ -96,7 +96,7 @@ export function JobsSection({ orgId, detail }: SectionProps) {
                 onClick={() => void runNow(job)}
                 data-testid={`addon-job-run-${job.jobId}`}
               >
-                <Play/>
+                <Play />
               </Button>
             </div>
             <p className="text-muted-foreground text-xs leading-4">

@@ -96,7 +96,7 @@ function TriggerList({ orgId, addonId }: { orgId: string; addonId: string }) {
         instances.map((instance) => (
           <div
             key={instance.instanceId}
-            className="flex min-w-0 items-center gap-2 rounded-md border px-2 py-1.5"
+            className="flex min-w-0 items-center gap-2 rounded-md border px-3 py-2"
             data-testid={`addon-trigger-${instance.instanceId}`}
           >
             <Switch
@@ -160,7 +160,7 @@ function NewTriggerButton({
         data-testid="addon-trigger-new"
         className="text-muted-foreground"
       >
-        <PlusIcon/>
+        <PlusIcon />
         New trigger
       </Button>
     );

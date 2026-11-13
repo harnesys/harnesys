@@ -271,6 +271,7 @@ function AddonTriggerForm({
                 fields={fields}
                 values={draft.config}
                 errors={validation}
+                addon={{ orgId, addonId, connections: detail.connections }}
                 onChange={setConfig}
               />
             </div>

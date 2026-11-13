@@ -164,7 +164,7 @@ export const WINDOW_SETTINGS_GROUPS: SettingsNavGroup[] = [
       {
         id: 'addons',
         label: 'Add-ons',
-        description: 'System add-ons and installed packages, with per-organization enable state.',
+        description: 'Connect integrations and enable add-ons for this organization.',
         icon: PuzzleIcon,
       },
       {

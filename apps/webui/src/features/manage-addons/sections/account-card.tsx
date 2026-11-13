@@ -44,7 +44,7 @@ export function AccountCard({
   const added = account ? new Date(account.createdAt).toLocaleDateString() : null;
   return (
     <div
-      className="flex min-w-0 flex-col gap-1.5 rounded-md border px-3 py-2.5"
+      className="flex min-w-0 flex-col gap-2 rounded-lg border bg-popover px-4 py-3"
       data-testid={`addon-binding-${accountId}`}
     >
       <div className="flex min-w-0 items-center gap-2">
@@ -59,6 +59,11 @@ export function AccountCard({
             </p>
           ) : null}
         </div>
+        {kindLabel ? (
+          <RowChip tone="info" testId="addon-binding-kind">
+            {kindLabel}
+          </RowChip>
+        ) : null}
         {account ? (
           <RowChip tone={account.status === 'connected' ? 'ok' : 'danger'}>
             {account.status}
@@ -82,7 +87,6 @@ export function AccountCard({
       {account ? (
         <>
           <div className="flex flex-wrap items-center gap-1">
-            {kindLabel ? <RowChip tone="info">{kindLabel}</RowChip> : null}
             {account.scopes.map((scope) => (
               <RowChip key={scope} testId={`addon-binding-scope-${scope}`}>
                 {scope}

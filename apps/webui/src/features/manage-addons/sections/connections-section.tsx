@@ -106,24 +106,24 @@ export function ConnectionsSection({ orgId, detail, section, installed }: Sectio
           key={connection.connectionId}
           className={
             index === 0
-              ? 'flex min-w-0 flex-col gap-1.5'
-              : 'mt-1 flex min-w-0 flex-col gap-1.5 border-t pt-2'
+              ? 'flex min-w-0 flex-col gap-2'
+              : 'mt-3 flex min-w-0 flex-col gap-2 border-t pt-3'
           }
           data-testid={`addon-connection-${connection.connectionId}`}
         >
-          <div className="flex min-w-0 items-center gap-2 px-1">
-            <span className="min-w-0 flex-1 truncate font-medium text-sm">{connection.label}</span>
-            {connection.needsSetup ? <RowChip tone="danger">needs setup</RowChip> : null}
-            {connection.optional ? <RowChip>optional</RowChip> : null}
-            <RowChip>{connection.cardinality === 'one' ? 'single' : 'multi'}</RowChip>
-          </div>
           {connection.accountIds.length === 0 ? (
             <RowItem
-              title={installed ? 'No accounts bound' : 'Enable the add-on to bind accounts'}
+              title={`${connection.label}: ${installed ? 'no accounts bound' : 'enable the add-on to bind accounts'}`}
               description={
                 installed
                   ? 'Use "Add account" to bind an existing account or connect a new one.'
                   : undefined
+              }
+              chips={
+                <>
+                  {connection.needsSetup ? <RowChip tone="danger">needs setup</RowChip> : null}
+                  {connection.optional ? <RowChip>optional</RowChip> : null}
+                </>
               }
             />
           ) : (

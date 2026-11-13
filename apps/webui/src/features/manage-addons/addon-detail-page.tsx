@@ -110,7 +110,7 @@ function AddonDetail({
       onBack={goBack}
       title={value.title}
       body={
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-8">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-7 py-10">
           <AddonHero detail={value} trust={trust}>
             <AddonControls orgId={orgId} detail={value} onRemoved={goBack} />
           </AddonHero>
@@ -142,17 +142,9 @@ function AddonDetail({
             {installed ? (
               <KnowledgeSourcesSection orgId={orgId} addonId={addonId} detail={value} />
             ) : null}
+            {installed ? <DiagnosticsSection orgId={orgId} addonId={addonId} /> : null}
+            {installed ? <AddonLogPanel orgId={orgId} addonId={addonId} /> : null}
           </div>
-          {installed ? (
-            <div
-              className="flex min-w-0 flex-col gap-3 border-t pt-6"
-              data-testid="addon-operations"
-            >
-              <p className="font-heading font-medium text-sm">Operations</p>
-              <DiagnosticsSection orgId={orgId} addonId={addonId} />
-              <AddonLogPanel orgId={orgId} addonId={addonId} />
-            </div>
-          ) : null}
         </div>
       }
     />

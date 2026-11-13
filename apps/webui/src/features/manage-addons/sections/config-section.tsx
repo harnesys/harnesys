@@ -103,6 +103,8 @@ export function ConfigSection({ orgId, detail, section }: SectionProps) {
             secretValue={secrets[field.key]}
             existingSecret={false}
             disabled={pending}
+            values={values}
+            addon={{ orgId, addonId: detail.addonId, connections: detail.connections }}
             onChange={(next) => setValues((current) => ({ ...current, [field.key]: next }))}
             onSecretChange={(next) => setSecrets((current) => ({ ...current, [field.key]: next }))}
           />

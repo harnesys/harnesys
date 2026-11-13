@@ -1,5 +1,6 @@
 import type { FieldErrorCode, FieldSpec, FieldValue } from '@harnesys/contracts';
 import { fieldVisible } from '@harnesys/contracts';
+import { parseCommaList } from './comma-list.ts';
 import { FIELD_ERROR_TEXT } from './field-error-text.ts';
 import { fieldValue } from './field-value.ts';
 
@@ -71,7 +72,16 @@ function validateTypedValue(field: FieldSpec, value: FieldValue): string | null 
   if (field.type === 'number' && !Number.isFinite(Number(value))) {
     return 'Enter a number';
   }
-  if (field.type === 'select' && !field.options?.some((option) => option.value === String(value))) {
+  if (field.multi && field.options) {
+    const allowed = new Set(field.options.map((option) => option.value));
+    const tokens = parseCommaList(value);
+    return tokens.every((token) => allowed.has(token)) ? null : FIELD_ERROR_TEXT.option;
+  }
+  if (
+    field.type === 'select' &&
+    !field.optionsFrom &&
+    !field.options?.some((option) => option.value === String(value))
+  ) {
     return FIELD_ERROR_TEXT.option;
   }
   return validatePattern(field, String(value));

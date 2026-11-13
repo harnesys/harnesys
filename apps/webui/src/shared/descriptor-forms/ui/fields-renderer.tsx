@@ -3,6 +3,16 @@ import { fieldVisible } from '@harnesys/contracts';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import { FieldRenderer } from './field-renderer';
+import type { AddonFormContext } from './widget-registry';
+
+interface RenderContext {
+  values: Record<string, FieldValue>;
+  errors: Record<string, string>;
+  disabled: boolean;
+  /** Add-on identity for widgets resolving `optionsFrom`. */
+  addon?: AddonFormContext;
+  onChange: (key: string, value: FieldValue) => void;
+}
 
 /**
  * Recursive descriptor-form renderer: flat fields, `group` containers,
@@ -14,71 +24,48 @@ export function FieldsRenderer({
   values,
   errors = {},
   disabled = false,
+  addon,
   onChange,
 }: {
   fields: FieldSpec[];
   values: Record<string, FieldValue>;
   errors?: Record<string, string>;
   disabled?: boolean;
+  addon?: AddonFormContext;
   onChange: (key: string, value: FieldValue) => void;
 }) {
-  return <>{renderFields(fields, values, errors, disabled, onChange)}</>;
+  return <>{renderFields(fields, { values, errors, disabled, addon, onChange })}</>;
 }
 
-function renderFields(
-  fields: FieldSpec[],
-  values: Record<string, FieldValue>,
-  errors: Record<string, string>,
-  disabled: boolean,
-  onChange: (key: string, value: FieldValue) => void,
-): ReactNode[] {
+function renderFields(fields: FieldSpec[], context: RenderContext): ReactNode[] {
   const output: ReactNode[] = [];
   for (const field of fields) {
-    if (field.generated || !fieldVisible(field, values)) {
+    if (field.generated || !fieldVisible(field, context.values)) {
       continue;
     }
     if (field.type === 'group') {
-      output.push(
-        <GroupField
-          key={field.key}
-          field={field}
-          values={values}
-          errors={errors}
-          disabled={disabled}
-          onChange={onChange}
-        />,
-      );
+      output.push(<GroupField key={field.key} field={field} context={context} />);
       continue;
     }
     output.push(
       <FieldRenderer
         key={field.key}
         field={field}
-        value={values[field.key]}
-        error={errors[field.key]}
-        disabled={disabled}
-        onChange={(value) => onChange(field.key, value)}
+        value={context.values[field.key]}
+        error={context.errors[field.key]}
+        disabled={context.disabled}
+        values={context.values}
+        addon={context.addon}
+        onChange={(value) => context.onChange(field.key, value)}
       />,
     );
   }
   return output;
 }
 
-function GroupField({
-  field,
-  values,
-  errors,
-  disabled,
-  onChange,
-}: {
-  field: FieldSpec;
-  values: Record<string, FieldValue>;
-  errors: Record<string, string>;
-  disabled: boolean;
-  onChange: (key: string, value: FieldValue) => void;
-}) {
+function GroupField({ field, context }: { field: FieldSpec; context: RenderContext }) {
   const [open, setOpen] = useState(!field.collapsible);
-  const children = renderFields(field.fields ?? [], values, errors, disabled, onChange);
+  const children = renderFields(field.fields ?? [], context);
   const body = (
     <div
       className={gridClass(field.columns)}
