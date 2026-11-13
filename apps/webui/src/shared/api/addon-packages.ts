@@ -21,6 +21,12 @@ export function planAddonInstall(body: { source: string }): Promise<InstallPlan>
   });
 }
 
+export function uploadAddonPackage(file: File): Promise<InstallPlan> {
+  const form = new FormData();
+  form.append('file', file);
+  return apiJson<InstallPlan>(`${packagesBase()}/upload`, { method: 'POST', body: form });
+}
+
 export function confirmAddonInstall(planId: string): Promise<void> {
   return apiJson<void>(`${packagesBase()}/plan/${encodeURIComponent(planId)}/confirm`, {
     method: 'POST',

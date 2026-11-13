@@ -13,6 +13,7 @@ export const DEFAULT_ADDON_HOST_POLICY: AddonHostPolicy = {
 
 const POLICY_FILE_NAME = 'addons-policy.json';
 export const LOCAL_SOURCE_ALLOWED = 'local-dir';
+export const ARCHIVE_SOURCE_ALLOWED = 'archive';
 
 /**
  * Durable host policy: a small JSON file in the host home (§7.3).

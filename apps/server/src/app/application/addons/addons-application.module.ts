@@ -21,6 +21,7 @@ import { InstallPlanStore } from './packages/plan-store.ts';
 import { PrunePackagesUseCase } from './packages/prune.use-case.ts';
 import { RemovePackageUseCase } from './packages/remove-package.use-case.ts';
 import { RescanPackagesUseCase } from './packages/rescan-packages.use-case.ts';
+import { UploadInstallArchiveUseCase } from './packages/upload-install-archive.use-case.ts';
 import { AddonReconciler } from './reconcile/reconciler.ts';
 import { RunDispatchPort } from './run-dispatch.port.ts';
 import { ThreadRunDispatchService } from './run-dispatch.service.ts';
@@ -36,6 +37,7 @@ import { FireWindowTracker } from './triggers/trigger-limits.ts';
 
 const useCases = [
   PlanInstallUseCase,
+  UploadInstallArchiveUseCase,
   ConfirmInstallUseCase,
   RescanPackagesUseCase,
   RemovePackageUseCase,

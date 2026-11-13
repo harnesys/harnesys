@@ -14,6 +14,7 @@ import { OrgAddonRepositoryAdapter } from '../../org-sqlite/org-addon-repository
 import { AddonPackagePruner } from './addon-package-pruner.ts';
 import { AddonPackageStoreAdapter } from './addon-package-store.adapter.ts';
 import { BuiltinAddonSourceAdapter } from './addon-staging.ts';
+import { ArchiveAddonSourceAdapter } from './archive-source.adapter.ts';
 import { ExternalAddonSourceAdapter } from './external-source.adapter.ts';
 import { LocalAddonSourceAdapter } from './local-source.adapter.ts';
 
@@ -32,6 +33,7 @@ import { LocalAddonSourceAdapter } from './local-source.adapter.ts';
     BuiltinAddonSourceAdapter,
     LocalAddonSourceAdapter,
     ExternalAddonSourceAdapter,
+    ArchiveAddonSourceAdapter,
     AddonPackagePruner,
   ],
   exports: [
@@ -44,6 +46,7 @@ import { LocalAddonSourceAdapter } from './local-source.adapter.ts';
     BuiltinAddonSourceAdapter,
     LocalAddonSourceAdapter,
     ExternalAddonSourceAdapter,
+    ArchiveAddonSourceAdapter,
     AddonPackagePruner,
   ],
 })

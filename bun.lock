@@ -153,7 +153,7 @@
     },
     "add-ons/harnesys.webhook": {
       "name": "harnesys.webhook",
-      "version": "1.0.0",
+      "version": "2.0.0",
       "dependencies": {
         "@harnesys/sdk": "file:../../packages/sdk",
         "@harnesys/studio-shared": "file:../../packages/studio-shared",
@@ -192,6 +192,7 @@
         "ai": "7.0.47",
         "croner": "^10.0.1",
         "drizzle-orm": "^0.45.2",
+        "fflate": "^0.8.3",
         "harnesys": "workspace:*",
         "hono": "^4.13.2",
         "ignore": "^7.0.6",

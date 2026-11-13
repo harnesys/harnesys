@@ -3,6 +3,7 @@ import { join } from 'node:path';
 const ADDONS_DIR = 'add-ons';
 const LOCK_FILE = 'addons.lock.json';
 const STAGING_DIR = '.staging';
+const EXTRACT_DIR = '.extract';
 const ADDON_DATA_DIR = 'addons';
 const ADDON_DB_FILE = 'data.db';
 const ADDON_FILES_DIR = 'files';
@@ -39,6 +40,11 @@ export function addonLockPath(home: string): string {
 export function addonStagingDir(home: string, planId: string): string {
   assertSafeAddonId(planId);
   return join(addonsHomeDir(home), STAGING_DIR, planId);
+}
+
+export function addonExtractDir(home: string, extractId: string): string {
+  assertSafeAddonId(extractId);
+  return join(addonsHomeDir(home), EXTRACT_DIR, extractId);
 }
 
 export function orgAddonDataDir(orgDataDir: string, addonId: string): string {

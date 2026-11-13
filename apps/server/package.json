@@ -20,6 +20,7 @@
     "ai": "7.0.47",
     "croner": "^10.0.1",
     "drizzle-orm": "^0.45.2",
+    "fflate": "^0.8.3",
     "harnesys": "workspace:*",
     "hono": "^4.13.2",
     "ignore": "^7.0.6",

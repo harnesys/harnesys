@@ -6,7 +6,13 @@ import type {
   OrgAddonSummary,
 } from '@harnesys/contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronRightIcon, PackageOpenIcon, RefreshCwIcon, Trash2Icon } from 'lucide-react';
+import {
+  ChevronRightIcon,
+  PackageOpenIcon,
+  RefreshCwIcon,
+  ShieldCheckIcon,
+  Trash2Icon,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import {
@@ -39,6 +45,7 @@ import { Switch } from '@/shared/ui/switch';
 import { toast } from '@/shared/ui/toast';
 import { AddonMark } from './addon-mark';
 import { ConsentDialog } from './consent-dialog';
+import { HostPolicyDialog } from './host-policy-dialog';
 import { InstallAddonDialog } from './install-addon-dialog';
 import { ADDON_TRUST_LABEL, addonHealthLabel, addonHealthTone } from './lib/addon-labels';
 
@@ -55,6 +62,7 @@ export function ManageAddonsPane({ orgId }: { orgId: string }) {
   const list = useQuery(orgAddonsQuery(orgId));
   const packages = useQuery(addonPackagesQuery());
   const [consent, setConsent] = useState<OrgAddonDetail | null>(null);
+  const [policyOpen, setPolicyOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -222,6 +230,16 @@ export function ManageAddonsPane({ orgId }: { orgId: string }) {
               <Trash2Icon />
               Prune unused
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={() => setPolicyOpen(true)}
+              data-testid="addon-source-policy"
+            >
+              <ShieldCheckIcon />
+              Source policy
+            </Button>
           </>
         }
       >
@@ -265,6 +283,7 @@ export function ManageAddonsPane({ orgId }: { orgId: string }) {
         confirmLabel="Enable"
         onConfirm={(grants) => void confirmEnable(grants)}
       />
+      {policyOpen ? <HostPolicyDialog onResolve={() => setPolicyOpen(false)} /> : null}
     </div>
   );
 }

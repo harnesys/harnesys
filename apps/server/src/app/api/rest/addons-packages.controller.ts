@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@harnesys/brix';
+import { Body, Controller, Ctx, Delete, Get, Param, Post, Put, UseGuards } from '@harnesys/brix';
 import type {
   AddonPackageView,
   AddonPolicyView,
@@ -6,6 +6,7 @@ import type {
   InstallPlan,
 } from '@harnesys/contracts';
 import { resolveL10n } from '@harnesys/sdk';
+import type { Context } from 'hono';
 import { z } from 'zod';
 import { ConfirmInstallUseCase } from '../../application/addons/packages/confirm-install.use-case.ts';
 import { PlanInstallUseCase } from '../../application/addons/packages/plan-install.use-case.ts';
@@ -13,6 +14,8 @@ import type { PruneResult } from '../../application/addons/packages/prune.use-ca
 import { PrunePackagesUseCase } from '../../application/addons/packages/prune.use-case.ts';
 import { RemovePackageUseCase } from '../../application/addons/packages/remove-package.use-case.ts';
 import { RescanPackagesUseCase } from '../../application/addons/packages/rescan-packages.use-case.ts';
+import { UploadInstallArchiveUseCase } from '../../application/addons/packages/upload-install-archive.use-case.ts';
+import { AddonException } from '../../domain/addons/errors.ts';
 import type { AddonHostPolicy } from '../../domain/addons/permissions.ts';
 import type { InstalledAddonPackage } from '../../domain/addons/ports/addon-package-catalog.port.ts';
 import { AddonPackageCatalogPort } from '../../domain/addons/ports/addon-package-catalog.port.ts';
@@ -33,6 +36,7 @@ const PolicyBodySchema = z.object({
 export class AddonsPackagesController {
   constructor(
     private readonly planInstall: PlanInstallUseCase,
+    private readonly uploadInstallArchive: UploadInstallArchiveUseCase,
     private readonly confirmInstall: ConfirmInstallUseCase,
     private readonly rescanPackages: RescanPackagesUseCase,
     private readonly removePackage: RemovePackageUseCase,
@@ -56,6 +60,24 @@ export class AddonsPackagesController {
   async plan(@Body(PlanBodySchema) body: z.infer<typeof PlanBodySchema>): Promise<InstallPlan> {
     return await this.planInstall.execute({
       source: body.source,
+      actor: { kind: 'user', id: 'host-admin' },
+    });
+  }
+
+  @Post('packages/upload')
+  async upload(@Ctx() ctx: Context): Promise<InstallPlan> {
+    const body = await ctx.req.parseBody();
+    const file = body.file;
+    if (!(file instanceof File)) {
+      throw new AddonException(
+        'invalid_params',
+        400,
+        'Multipart form must include a "file" field with a .zip archive',
+      );
+    }
+    return await this.uploadInstallArchive.execute({
+      name: file.name || 'upload.zip',
+      bytes: new Uint8Array(await file.arrayBuffer()),
       actor: { kind: 'user', id: 'host-admin' },
     });
   }

@@ -18,6 +18,7 @@ import { InstallPlanStore } from '../../../application/addons/packages/plan-stor
 import { PrunePackagesUseCase } from '../../../application/addons/packages/prune.use-case.ts';
 import { RemovePackageUseCase } from '../../../application/addons/packages/remove-package.use-case.ts';
 import { RescanPackagesUseCase } from '../../../application/addons/packages/rescan-packages.use-case.ts';
+import { UploadInstallArchiveUseCase } from '../../../application/addons/packages/upload-install-archive.use-case.ts';
 import { AddonReconciler } from '../../../application/addons/reconcile/reconciler.ts';
 import { RunDispatchPort } from '../../../application/addons/run-dispatch.port.ts';
 import { AddonCloudMaterializer } from '../../../application/addons/sources/addon-cloud.materializer.ts';
@@ -290,6 +291,7 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     PermissionDefinitionRegistry,
     InstallPlanStore,
     PlanInstallUseCase,
+    UploadInstallArchiveUseCase,
     ConfirmInstallUseCase,
     RescanPackagesUseCase,
     RemovePackageUseCase,

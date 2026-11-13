@@ -1,7 +1,10 @@
 import { Inject, Injectable, Logger } from '@harnesys/brix';
 import type { InstallPlan } from '@harnesys/contracts';
 import { AddonException } from '../../../domain/addons/errors.ts';
-import { AddonSourcePort } from '../../../domain/addons/ports/addon-source.port.ts';
+import {
+  AddonSourcePort,
+  isAddonSourceAllowed,
+} from '../../../domain/addons/ports/addon-source.port.ts';
 import { GrantPolicyPort } from '../../../domain/addons/ports/grant-policy.port.ts';
 import { checkPackageCompatibility } from '../addon-platform.ts';
 import { InstallPlanStore } from './plan-store.ts';
@@ -30,7 +33,7 @@ export class PlanInstallUseCase {
     if (
       hostPolicy.allowedSources &&
       hostPolicy.allowedSources.length > 0 &&
-      !hostPolicy.allowedSources.includes(request.source)
+      !isAddonSourceAllowed(hostPolicy.allowedSources, request.source)
     ) {
       throw new AddonException('unsupported', 409, `Source is not allowed: ${request.source}`);
     }

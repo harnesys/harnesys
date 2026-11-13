@@ -1,27 +1,26 @@
-import { isAbsolute } from 'node:path';
 import { Injectable } from '@harnesys/brix';
 import type {
   AddonStagePlan,
   AddonStageRequest,
 } from '../../../domain/addons/ports/addon-source.port.ts';
-import { AddonSourcePort } from '../../../domain/addons/ports/addon-source.port.ts';
+import {
+  AddonSourcePort,
+  isAddonSourceAllowed,
+  kindOfAddonSource,
+} from '../../../domain/addons/ports/addon-source.port.ts';
 import { GrantPolicyPort } from '../../../domain/addons/ports/grant-policy.port.ts';
 import { BuiltinAddonSourceAdapter } from '../catalog/addon-staging.ts';
+import { ArchiveAddonSourceAdapter } from '../catalog/archive-source.adapter.ts';
 import { ExternalAddonSourceAdapter } from '../catalog/external-source.adapter.ts';
 import { LocalAddonSourceAdapter } from '../catalog/local-source.adapter.ts';
-import { LOCAL_SOURCE_ALLOWED } from './grant-policy.adapter.ts';
-
-export function isPathLikeAddonSource(source: string): boolean {
-  return (
-    source.includes('/') || source.includes('\\') || source.startsWith('.') || isAbsolute(source)
-  );
-}
+import { ARCHIVE_SOURCE_ALLOWED, LOCAL_SOURCE_ALLOWED } from './grant-policy.adapter.ts';
 
 /**
- * Composite install source: path-like sources go to the `local` adapter,
- * bare names resolve from the built-in add-ons directory. External sources
- * (url/registry) stay disabled until the package verifier ships.
- * Local staging is only allowed when the host policy lists `local-dir` (§13.1).
+ * Composite install source: `.zip` sources go to the `archive` adapter, other
+ * path-like sources to the `local` adapter, bare names resolve from the
+ * built-in add-ons directory. External sources (url/registry) stay disabled
+ * until the package verifier ships. Archive and local staging are only allowed
+ * when the host policy lists the kind token (§13.1).
  */
 @Injectable()
 export class CompositeAddonSourceAdapter extends AddonSourcePort {
@@ -29,15 +28,20 @@ export class CompositeAddonSourceAdapter extends AddonSourcePort {
     private readonly builtin: BuiltinAddonSourceAdapter,
     private readonly local: LocalAddonSourceAdapter,
     private readonly external: ExternalAddonSourceAdapter,
+    private readonly archive: ArchiveAddonSourceAdapter,
     private readonly policy: GrantPolicyPort,
   ) {
     super();
   }
 
   override async stage(request: AddonStageRequest): Promise<AddonStagePlan> {
-    const kind = this.kindOf(request.source);
+    const kind = kindOfAddonSource(request.source);
+    if (kind === 'archive') {
+      this.assertAllowed(request.source, ARCHIVE_SOURCE_ALLOWED, 'archive');
+      return await this.archive.stage(request);
+    }
     if (kind === 'local-dir') {
-      this.assertLocalAllowed(request.source);
+      this.assertAllowed(request.source, LOCAL_SOURCE_ALLOWED, 'local');
       return await this.local.stage(request);
     }
     if (kind === 'builtin') {
@@ -49,25 +53,16 @@ export class CompositeAddonSourceAdapter extends AddonSourcePort {
   override release(planId: string): void {
     this.builtin.release(planId);
     this.local.release(planId);
+    this.archive.release(planId);
   }
 
-  private assertLocalAllowed(source: string): void {
+  private assertAllowed(source: string, token: string, label: string): void {
     const allowed = this.policy.read().allowedSources ?? [];
-    if (allowed.includes(LOCAL_SOURCE_ALLOWED) || allowed.includes(source)) {
+    if (isAddonSourceAllowed(allowed, source)) {
       return;
     }
     throw new Error(
-      `local addon sources are disabled by host policy (add '${LOCAL_SOURCE_ALLOWED}' to allowedSources): ${source}`,
+      `${label} addon sources are disabled by host policy (add '${token}' to allowedSources): ${source}`,
     );
-  }
-
-  private kindOf(source: string): 'builtin' | 'local-dir' | 'url' | 'registry' {
-    if (isPathLikeAddonSource(source)) {
-      return 'local-dir';
-    }
-    if (source.startsWith('http://') || source.startsWith('https://')) {
-      return 'url';
-    }
-    return 'builtin';
   }
 }
