@@ -18,6 +18,7 @@ export interface CreateWebhookInput {
   name: string;
   targetAgentId: string;
   detail?: string;
+  mode?: string;
   threadId?: string;
 }
 
@@ -26,6 +27,7 @@ export interface UpdateWebhookInput {
   status?: WebhookStatus;
   targetAgentId?: string;
   detail?: string;
+  mode?: string;
   threadId?: string;
 }
 
@@ -50,6 +52,7 @@ function toStudioWebhook(record: WebhookPublic): WebhookRecord {
     targetAgentId: record.targetAgentId,
     detail: record.detail,
     endpoint: record.endpoint,
+    mode: record.mode,
     threadId: record.threadId,
     lastFiredAt: record.lastFiredAt,
     createdAt: record.createdAt,
@@ -102,6 +105,7 @@ export function createWebhookRecord(orgId: string, body: CreateWebhookInput) {
     name: body.name,
     targetAgentId: body.targetAgentId,
     detail: body.detail,
+    mode: body.mode,
     threadId: body.threadId,
   };
   return apiJson<ContractCreateWebhookResponse>(webhooksBase(resolved), {
@@ -117,6 +121,7 @@ export function updateWebhookRecord(orgId: string, webhookId: string, body: Upda
     status: body.status,
     targetAgentId: body.targetAgentId,
     detail: body.detail,
+    mode: body.mode,
     threadId: body.threadId,
   };
   return apiJson<WebhookPublic>(`${webhooksBase(resolved)}/${encodeURIComponent(webhookId)}`, {

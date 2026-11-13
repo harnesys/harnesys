@@ -3,8 +3,8 @@ import type { ReactNode } from 'react';
 import type { Thread } from '@/entities/thread';
 import { cn } from '@/shared/lib/utils';
 import { AddThreadMemberMenu } from './add-thread-member-menu';
-import { ThreadGroupSettings } from './thread-group-settings';
 import { ThreadMembersPopover } from './thread-member-avatars';
+import { ThreadSettings } from './thread-settings';
 
 function memberSummary(agents: number, people: number): string {
   const parts: string[] = [];
@@ -47,7 +47,7 @@ export function ThreadMembersPanel({ thread, telegram }: { thread: Thread; teleg
       {telegram ?? null}
       <ThreadMembersPopover thread={thread} />
       <AddThreadMemberMenu thread={thread} />
-      <ThreadGroupSettings thread={thread} />
+      <ThreadSettings thread={thread} />
     </header>
   );
 }

@@ -4,6 +4,7 @@ import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { RunLifecycleReaderPort } from '../../domain/thread/run-lifecycle-reader.port.ts';
 import { ThreadEventsPort } from '../../domain/thread/thread-events.port.ts';
 import { WaitTickerGatePort } from '../../domain/thread/wait-ticker-gate.port.ts';
+import { AddonCatalogModule } from '../addons/catalog/catalog.module.ts';
 import { AgentModule } from '../agent/agent.module.ts';
 import { HookRunModule } from '../agent/hook-run.module.ts';
 import { ApprovalModule } from '../approvals/approval.module.ts';
@@ -52,6 +53,7 @@ import { WaitTickerGateAdapter } from './wait-ticker-gate.adapter.ts';
     TerminalModule,
     ScheduleModule,
     WebhookModule,
+    AddonCatalogModule,
     KnowledgeModule,
     LspModule,
     McpModule,

@@ -36,15 +36,15 @@
 
 ## Порт планировщика (`packages/harnesys/src/ports/scheduler.ts`)
 
-`SchedulerPort`: `list(scope)`, `peek(scope, id, last?)`, `create(scope, input)`, `update(scope, id, patch)`, `remove(scope, id)`. `ScheduleRecord` с полями `id`, `orgId`, `name`, `status` (`active`|`paused`|`failed`), `targetAgentId`, `detail`, `cron`, `mode` (`PermissionMode`), `history` (`none`|`last`|`all`), `historyLast`, `threadId`, `nextRunAt`, `lastFiredAt`, `createdAt`, `updatedAt`. `SchedulePeekRecord` с массивом `fires` (`{at, detail}`).
+`SchedulerPort`: `list(scope)`, `peek(scope, id, last?)`, `create(scope, input)`, `update(scope, id, patch)`, `remove(scope, id)`. `ScheduleRecord` с полями `id`, `orgId`, `name`, `status` (`active`|`paused`|`failed`), `targetAgentId`, `detail`, `cron`, `mode` (`PermissionMode`), `threadId`, `nextRunAt`, `lastFiredAt`, `createdAt`, `updatedAt`. История срабатываний живёт в policy привязанного потока (`threads.policy.historyMode/historyLast`), а не в расписании. `SchedulePeekRecord` с массивом `fires` (`{at, detail}`).
 
 ## Контракты (`packages/contracts/src/schedules.ts`)
 
-`SchedulePublic`, `ScheduleStatus` (`active`|`paused`|`failed`), `ScheduleMissPolicy` (`catch-up`|`skip`|`escalate`), `ScheduleHistory` (`none`|`last`|`all`), `historyLast` 1..99, `CreateScheduleBody`, `CreateScheduleResponse` (расписание + поток), `UpdateScheduleBody`, `ListSchedulesResponse`.
+`SchedulePublic`, `ScheduleStatus` (`active`|`paused`|`failed`), `ScheduleMissPolicy` (`catch-up`|`skip`|`escalate`), `CreateScheduleBody`, `CreateScheduleResponse` (расписание + поток), `UpdateScheduleBody`, `ListSchedulesResponse`.
 
 ## Расписание и пропуск срабатывания
 
-`ScheduleStatus` — `active`, `paused`, `failed`. `ScheduleMissPolicy` — `catch-up` (догнать), `skip` (пропустить), `escalate` (входящая). `ScheduleHistory` — `none`, `last`, `all`. Cron-выражение задаёт расписание; часовой пояс берётся из `orgSettings.get(orgId).timezone` (`org-settings.port.ts`).
+`ScheduleStatus` — `active`, `paused`, `failed`. `ScheduleMissPolicy` — `catch-up` (догнать), `skip` (пропустить), `escalate` (входящая). Cron-выражение задаёт расписание; часовой пояс берётся из `orgSettings.get(orgId).timezone` (`org-settings.port.ts`).
 
 Политика пропуска (`planner.ts`, `decideDue`):
 - если время срабатывания ещё не наступило (`nextDueAt > now`) → `wait` (пропуск итерации);

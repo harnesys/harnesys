@@ -10,6 +10,7 @@ import type {
   TruncateThreadResult,
 } from 'harnesys';
 import { resolveMcpVaultEntry } from '../../application/mcp/resolve-mcp-vault-placeholders.ts';
+import { TriggerInstanceRepositoryPort } from '../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { HookRunStorePort } from '../../domain/agent/hook-run-store.port.ts';
 import { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
@@ -104,6 +105,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     private readonly terminalSessions: TerminalSessionsPort,
     private readonly schedules: ScheduleRepositoryPort,
     private readonly webhooks: WebhookRepositoryPort,
+    private readonly triggerInstances: TriggerInstanceRepositoryPort,
     private readonly knowledgeSearch: KnowledgeSearchPort,
     private readonly knowledgeStore: KnowledgeStorePort,
     private readonly waitGate: WaitTickerGatePort,
@@ -203,6 +205,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       terminalSessions: this.terminalSessions,
       schedules: this.schedules,
       webhooks: this.webhooks,
+      triggerInstances: this.triggerInstances,
       knowledge: {
         search: this.knowledgeSearch,
         store: this.knowledgeStore,
@@ -240,6 +243,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       threadId: input.threadId,
       text: input.text,
       effort: input.effort,
+      ...(input.mode ? { mode: input.mode } : {}),
       attachments: input.attachments,
       ...(input.skills?.length ? { skills: input.skills } : {}),
       clientEventId: input.clientEventId,

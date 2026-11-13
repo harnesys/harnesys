@@ -16,7 +16,6 @@ export {
   AddThreadAgentBodySchema,
   type AddThreadParticipantBody,
   AddThreadParticipantBodySchema,
-  DEFAULT_CONTEXT_WINDOW,
   type ThreadHistoryMode,
   ThreadHistoryModeSchema,
   type ThreadKind,

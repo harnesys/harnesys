@@ -67,6 +67,9 @@ export class UpdateWebhookUseCase {
     if (request.body.detail !== undefined) {
       patch.detail = request.body.detail.trim();
     }
+    if (request.body.mode !== undefined) {
+      patch.mode = request.body.mode;
+    }
     if (request.body.threadId !== undefined) {
       const bound = requireBindableWebhookThread({
         threads: this.threads,

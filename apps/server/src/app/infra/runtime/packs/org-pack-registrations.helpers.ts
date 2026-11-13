@@ -123,6 +123,8 @@ export function schedulerRegistration(ctx: WireOrgPackContext) {
         agents: ctx.deps.agents,
         orgSettings: ctx.deps.orgSettings,
         ...(ctx.deps.deskEvents ? { deskEvents: ctx.deps.deskEvents } : {}),
+        ...(ctx.deps.webhooks ? { webhooks: ctx.deps.webhooks } : {}),
+        ...(ctx.deps.triggerInstances ? { triggerInstances: ctx.deps.triggerInstances } : {}),
       }),
     },
     resolveScope: ctx.liveScope,

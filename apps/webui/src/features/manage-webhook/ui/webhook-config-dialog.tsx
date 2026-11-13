@@ -1,3 +1,4 @@
+import { type AgentMode, DEFAULT_MODE, DEFAULT_MODE_ID } from '@harnesys/studio-shared';
 import { useState } from 'react';
 import type { Agent } from '@/entities/agent';
 import { ThreadBindingSelects, useThreadStore } from '@/entities/thread';
@@ -24,13 +25,24 @@ import {
 import { Textarea } from '@/shared/ui/textarea';
 import { confirmDeleteWebhook } from '../model/delete-webhook';
 import type { WebhookConfigResult } from '../model/webhook-dialogs';
-import { draftFrom, emptyWebhookDraft, type WebhookFormDraft } from '../model/webhook-draft';
+import {
+  defaultWebhookMode,
+  draftFrom,
+  emptyWebhookDraft,
+  type WebhookFormDraft,
+} from '../model/webhook-draft';
 export interface WebhookConfigData {
   agents: Agent[];
   projectId: string;
   webhook: Webhook | null;
 }
 const NEW_THREAD_VALUE = 'new';
+interface AgentModesLike {
+  modes?: AgentMode[];
+}
+function hasAgentModes(agent: Agent): agent is Agent & AgentModesLike {
+  return 'modes' in agent;
+}
 export function WebhookConfigDialog({
   onResolve,
   data,
@@ -70,6 +82,12 @@ export function WebhookConfigDialog({
         })),
       ];
   const canSave = draft.name.trim().length > 0 && agents.length > 0;
+  const agent = agents.find((item) => item.id === draft.targetAgentId);
+  const agentModes = agent !== undefined && hasAgentModes(agent) ? (agent.modes ?? []) : [];
+  const modeItems = [
+    { value: DEFAULT_MODE_ID, label: DEFAULT_MODE.name },
+    ...agentModes.map((mode) => ({ value: mode.id, label: mode.name })),
+  ];
   return (
     <>
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -101,9 +119,11 @@ export function WebhookConfigDialog({
                   value={draft.targetAgentId}
                   onValueChange={(value) => {
                     if (typeof value === 'string') {
+                      const next = agents.find((item) => item.id === value);
                       setDraft({
                         ...draft,
                         targetAgentId: value,
+                        mode: defaultWebhookMode(next),
                         threadId: undefined,
                       });
                     }
@@ -207,6 +227,31 @@ export function WebhookConfigDialog({
                 ? 'Profile and folder apply to webhook-triggered runs.'
                 : 'Binding can be set after the first run creates the thread.'}
             </FieldDescription>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="webhook-mode">Mode</FieldLabel>
+            <Select
+              items={modeItems}
+              value={draft.mode}
+              onValueChange={(value) => {
+                if (typeof value === 'string') {
+                  setDraft({ ...draft, mode: value });
+                }
+              }}
+            >
+              <SelectTrigger id="webhook-mode" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {modeItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </Field>
           <Field>
             <FieldLabel htmlFor="webhook-detail">Instructions</FieldLabel>

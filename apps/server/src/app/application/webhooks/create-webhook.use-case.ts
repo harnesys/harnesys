@@ -80,6 +80,7 @@ export class CreateWebhookUseCase {
       targetAgentId: agent.id,
       detail: request.body.detail?.trim() || '',
       endpoint: webhookEndpointFor(request.orgId, id),
+      mode: request.body.mode ?? 'ask',
       threadId: thread.id,
       lastFiredAt: null,
       createdByUserId: request.actorUserId ?? null,

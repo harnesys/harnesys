@@ -40,6 +40,7 @@ export interface RunTargetResolverContext {
   agentsResolve: ReturnType<typeof createAgentsResolve>;
   packRegistrations: PackRegistration[];
   worktreeBindings: Map<string, ThreadBinding>;
+  requestedModes: Map<string, string | undefined>;
   targetCache: TargetCache;
   sessionRequested: Map<string, string[]>;
   events: RunEventStore;
@@ -61,17 +62,15 @@ export function createRunTargetResolver(ctx: RunTargetResolverContext) {
   ) {
     const { deps, plugin } = ctx;
     const binding = ctx.worktreeBindings.get(threadId);
+    const modeOverride = ctx.requestedModes.get(threadId);
     const agentId = await resolveAgentId(ctx, selector);
     if (agentId === undefined) {
       return null;
     }
-    const prepared = prepareTarget(
-      deps,
-      threadId,
-      agentId,
-      ctx.targetCache,
-      runtimeOptionsOf(binding),
-    );
+    const prepared = prepareTarget(deps, threadId, agentId, ctx.targetCache, {
+      ...runtimeOptionsOf(binding),
+      ...(modeOverride !== undefined ? { mode: modeOverride } : {}),
+    });
     if (!prepared) {
       return null;
     }

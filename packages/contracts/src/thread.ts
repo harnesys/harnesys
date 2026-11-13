@@ -2,8 +2,6 @@ import { z } from 'zod';
 import { ExecutionProfileIdSchema } from './execution-profile.ts';
 import { OrgIdSchema } from './org-machine.ts';
 
-export const DEFAULT_CONTEXT_WINDOW = 6;
-
 export const ThreadKindSchema = z.enum(['chat', 'group', 'schedule', 'webhook', 'issue']);
 export type ThreadKind = z.infer<typeof ThreadKindSchema>;
 
@@ -15,7 +13,6 @@ export const ThreadPolicySchema = z.object({
   historyMode: ThreadHistoryModeSchema.optional(),
   historyLast: z.number().int().min(0).max(100).optional(),
   historyFromRunId: z.string().uuid().optional(),
-  contextWindow: z.number().int().min(1).max(40).optional(),
   mentionGating: z.boolean().optional(),
 });
 export type ThreadPolicy = z.infer<typeof ThreadPolicySchema>;
@@ -138,7 +135,6 @@ export type AddThreadParticipantBody = z.infer<typeof AddThreadParticipantBodySc
 
 export const UpdateThreadPolicyBodySchema = z.object({
   autoReplyAgentId: z.string().uuid().nullable().optional(),
-  contextWindow: z.number().int().min(1).max(40).nullable().optional(),
   mentionGating: z.boolean().optional(),
   historyMode: ThreadHistoryModeSchema.optional(),
   historyLast: z.number().int().min(0).max(100).nullable().optional(),

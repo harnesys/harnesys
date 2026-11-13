@@ -68,6 +68,7 @@ export async function dispatchLocalRun(input: {
     attribution: attributedRun(request.attribution, decision.nodeId),
     text: runText,
     effort: request.body.effort,
+    ...(request.body.mode ? { mode: request.body.mode } : {}),
     ...(attachments.length > 0 ? { attachments } : {}),
     ...(skills.length > 0 ? { skills } : {}),
     clientEventId: request.body.clientEventId,

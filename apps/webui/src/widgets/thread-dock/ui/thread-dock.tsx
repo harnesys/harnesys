@@ -36,10 +36,12 @@ export function ThreadDock({
   identity,
   threadId,
   issueId,
+  settings,
 }: {
   identity: ThreadDockIdentity;
   threadId?: string;
   issueId?: string | null;
+  settings?: ReactNode;
 }) {
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-3" data-testid="thread-dock">
@@ -59,6 +61,7 @@ export function ThreadDock({
             ) : null}
           </div>
           {identity.actions}
+          {settings}
         </div>
         {threadId ? (
           <div className="border-border/40 border-t">
@@ -74,10 +77,12 @@ export function ThreadTriggerDock({
   threadId,
   projectId,
   issueId,
+  settings,
 }: {
   threadId: string;
   projectId: string;
   issueId?: string | null;
+  settings?: ReactNode;
 }) {
   const thread = useThreadStore((state) => state.byId(threadId) ?? undefined);
   const schedule = useScheduleStore((state) =>
@@ -115,6 +120,7 @@ export function ThreadTriggerDock({
         }}
         threadId={threadId}
         issueId={issueId}
+        settings={settings}
       />
     );
   }
@@ -146,6 +152,7 @@ export function ThreadTriggerDock({
         }}
         threadId={threadId}
         issueId={issueId}
+        settings={settings}
       />
     );
   }
@@ -158,6 +165,7 @@ export function ThreadTriggerDock({
       }}
       threadId={threadId}
       issueId={issueId}
+      settings={settings}
     />
   );
 }

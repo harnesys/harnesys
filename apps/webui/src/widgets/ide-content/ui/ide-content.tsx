@@ -7,7 +7,7 @@ import { GitCommitDiffView } from '@/features/git-commit';
 import { type IdeTab, useIdeStore } from '@/features/ide';
 import { ThreadTelegramBadge } from '@/features/manage-connectors/ui/telegram/telegram-thread-badge';
 import { BoardSurface } from '@/features/manage-issues';
-import { ThreadMembersPanel } from '@/features/manage-thread-members';
+import { ThreadMembersPanel, ThreadSettings } from '@/features/manage-thread-members';
 import { openFileKind } from '@/features/open-file';
 import { HitlPrompt } from '@/features/send-message';
 import { ApiError, getOrgAgent, getThread } from '@/shared/api';
@@ -24,7 +24,7 @@ import {
 } from '@/widgets/file-pane';
 import { TerminalView } from '@/widgets/terminal-pane';
 import { ThreadTriggerDock } from '@/widgets/thread-dock';
-import { ThreadJournal } from '@/widgets/thread-journal';
+import { JournalComposer, ThreadJournal } from '@/widgets/thread-journal';
 import { ScheduleSurface, WebhookSurface } from './automation-surface';
 import { ThreadFileTabContent } from './thread-file-tab';
 
@@ -116,7 +116,10 @@ function ThreadTabContent({
             telegram={<ThreadTelegramBadge orgId={orgId} threadId={thread.id} inline />}
           />
         ) : (
-          <ThreadTelegramBadge orgId={orgId} threadId={thread.id} />
+          <div className="flex shrink-0 items-center border-border/40 border-b py-1 pr-2">
+            <ThreadTelegramBadge orgId={orgId} threadId={thread.id} inline />
+            <ThreadSettings thread={thread} className="ml-auto" />
+          </div>
         )}
         <div className="min-h-0 flex-1">
           <ThreadPanel threadId={thread.id} agent={agent} active />
@@ -130,7 +133,13 @@ function ThreadTabContent({
     <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-thread">
       <ThreadJournal threadId={thread.id} agent={agent} kind={thread.kind} />
       <HitlPrompt />
-      <ThreadTriggerDock threadId={thread.id} projectId={tab.projectId} issueId={thread.issueId} />
+      <JournalComposer thread={thread} agent={agent} />
+      <ThreadTriggerDock
+        threadId={thread.id}
+        projectId={tab.projectId}
+        issueId={thread.issueId}
+        settings={<ThreadSettings thread={thread} />}
+      />
     </div>
   );
 }

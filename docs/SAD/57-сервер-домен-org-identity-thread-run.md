@@ -40,7 +40,7 @@ export abstract class OrgDbPort {
 - `ThreadRecord`: id, orgId, title, kind (`chat|group|schedule|webhook|issue`), policy, lastThreadSeq, conversationCount, parentThreadId, forkAt, runProfileId, runDirectory, метаданные.
 - `ThreadActiveRunStatus = queued | running | needs_input | waiting`; `ThreadActiveRun { runId, threadId, status, leaseExpired, waitingForProfileId, startedByUserId, startedByName, via:'direct'|'agent', onNodeId }`.
 - `ThreadAgentRecord`, `ThreadParticipantRecord` (роль 'member'|'blocked').
-- `thread-policy.ts`: парсинг `ThreadPolicy` (Zod), `contextWindowOf`, `allowsMentions`.
+- `thread-policy.ts`: парсинг `ThreadPolicy` (Zod), `historyModeOf` (kind-based default: `chat → full`, `group → last`, `schedule/webhook → none`, `issue → full`), `historyLastOf`, `allowsMentions`.
 - `local-executor.port.ts`: `CompactThreadResult`, `ThreadQueueDrainResult` — компакция, дренаж очереди сообщений.
 
 Порты: `thread-repository.port.ts`, `thread-agent-repository.port.ts`, `thread-participant-repository.port.ts`, `thread-events.port.ts`, `attachment-repository.port.ts`, `attachment-storage.port.ts`, `wait-ticker-gate.port.ts`.

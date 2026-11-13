@@ -17,8 +17,6 @@ export interface ThreadPolicy {
   historyMode?: ThreadHistoryMode;
   historyLast?: number;
   historyFromRunId?: string;
-  /** @deprecated migrated to historyMode/historyLast by org-sql migrations */
-  contextWindow?: number;
   mentionGating?: boolean;
 }
 export interface ThreadMemberRef {

@@ -14,6 +14,7 @@ export interface ScheduleThreadOccupancy {
   webhooks: WebhookRepositoryPort;
   triggerInstances: TriggerInstanceRepositoryPort;
   exceptScheduleId?: string;
+  exceptInstanceId?: string;
 }
 
 export function occupiedTriggerInstanceThreadId(
@@ -80,6 +81,7 @@ export function assertScheduleThreadFree(input: ScheduleThreadOccupancy): void {
   const instanceOccupied = occupiedTriggerInstanceThreadId(
     input.triggerInstances.list(input.orgId),
     input.threadId,
+    input.exceptInstanceId,
   );
   if (instanceOccupied) {
     throw new ScheduleValidationException('thread already has a trigger');

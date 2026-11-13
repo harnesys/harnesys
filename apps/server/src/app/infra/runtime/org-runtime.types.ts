@@ -15,6 +15,7 @@ import type {
   TruncateThreadResult,
   UrlEntry,
 } from 'harnesys';
+import { TriggerInstanceRepositoryPort } from '../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { HookRunStorePort } from '../../domain/agent/hook-run-store.port.ts';
 import { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
@@ -73,6 +74,7 @@ export interface OrgRuntime {
     threadId: string;
     text?: string;
     effort?: string;
+    mode?: string;
     attachments?: Attachment[];
     skills?: string[];
     clientEventId?: string;
@@ -140,6 +142,7 @@ export interface OrgRuntimeDeps {
   terminalSessions?: TerminalSessionsPort;
   schedules?: ScheduleRepositoryPort;
   webhooks?: WebhookRepositoryPort;
+  triggerInstances?: TriggerInstanceRepositoryPort;
   knowledge?: OrgKnowledgeDeps;
   issues?: OrgIssueDeps;
   issueExecutions?: IssueExecutionPort;

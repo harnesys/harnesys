@@ -30,6 +30,7 @@ export interface WebhookRecord {
   targetAgentId: string;
   detail: string;
   endpoint: string;
+  mode: string;
   threadId: string;
   lastFiredAt?: string | null;
   createdAt: string;

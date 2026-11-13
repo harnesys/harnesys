@@ -83,6 +83,7 @@ export class OrgWebhookPort implements WebhookPort {
       targetAgentId: agent.id,
       detail: input.detail?.trim() || '',
       endpoint: webhookEndpointFor(scope.orgId, id),
+      mode: 'ask',
       threadId: thread.id,
       lastFiredAt: null,
       createdByUserId: null,

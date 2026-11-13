@@ -58,7 +58,7 @@ export class CreateThreadUseCase {
       title: request.body.title?.trim() || DEFAULT_THREAD_TITLE,
       kind,
       autoReplyAgentId: agent.id,
-      policy: { version: 1 },
+      policy: request.body.policy ? { version: 2, ...request.body.policy } : { version: 2 },
       lastThreadSeq: 0,
       conversationCount: 0,
       parentThreadId: fork.parentThreadId,

@@ -14,7 +14,7 @@
 | `title` | string | название |
 | `kind` | ThreadKind | `chat` \| `group` \| `schedule` \| `webhook` \| `issue` |
 | `autoReplyAgentId` | string \| null | агент автоответа |
-| `policy` | ThreadPolicy | `{ version: 1, contextWindow?: 1..40, mentionGating? }` |
+| `policy` | ThreadPolicy | `{ version: 2, historyMode?: 'full'\|'none'\|'last', historyLast?: 0..100, historyFromRunId?: uuid, mentionGating? }` |
 | `lastThreadSeq` | number | последняя последовательность событий |
 | `conversationCount` | number | счётчик разговоров |
 | `parentThreadId` | string \| null | родительский поток (форк) |
@@ -27,7 +27,7 @@
 | `createdAt`, `updatedAt`, `lastReadAt` | string | временные метки |
 
 `ThreadInsert = Omit<ThreadRecord, 'autoReplyAgentId' | 'policy' | 'lastThreadSeq' | 'conversationCount'> & Partial<Pick<...>>`.
-Функция `toThreadRecord(rec)` — нормализация с дефолтами: `autoReplyAgentId: null`, `policy: { version: 1 }`, `lastThreadSeq: 0`, `conversationCount: 0`.
+Функция `toThreadRecord(rec)` — нормализация с дефолтами: `autoReplyAgentId: null`, `policy: { version: 2 }`, `lastThreadSeq: 0`, `conversationCount: 0`.
 
 **`ThreadActiveRun`** (`thread.ts:44`):
 | Поле | Тип | Описание |
@@ -43,7 +43,7 @@
 ## Контракты (`packages/contracts/src/thread.ts`)
 
 - `ThreadKindSchema = z.enum(['chat', 'group', 'schedule', 'webhook', 'issue'])`.
-- `ThreadPolicySchema = z.object({ version: z.literal(1).default(1), contextWindow: z.number().int().min(1).max(40).optional(), mentionGating: z.boolean().optional() })`.
+- `ThreadPolicySchema = z.object({ version: z.union([z.literal(1), z.literal(2)]).default(2), historyMode: z.enum(['full', 'none', 'last']).optional(), historyLast: z.number().int().min(0).max(100).optional(), historyFromRunId: z.string().uuid().optional(), mentionGating: z.boolean().optional() })`. Режим по умолчанию — на уровне вида потока: `chat → full`, `group → last`, `schedule/webhook → none`, `issue → full`.
 - `RunLifecycleStatusSchema = z.enum(['queued', 'running', 'needs_input', 'waiting', 'completed', 'failed', 'cancelled', 'dead_lettered'])`.
 - `RunViaSchema = z.enum(['direct', 'agent'])`.
 - `ThreadActiveRunSchema`, `ThreadLastErrorSchema`, `ThreadSummarySchema`, `ThreadPublicSchema` (с событиями).

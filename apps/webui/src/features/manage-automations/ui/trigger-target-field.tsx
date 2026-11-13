@@ -26,6 +26,7 @@ export async function resolveTriggerThread(input: {
     agentId: input.agentId,
     kind: 'chat',
     title: input.label,
+    policy: { historyMode: 'none' },
   });
   return thread.id;
 }

@@ -11,7 +11,13 @@ import type {
   TriggerInstanceRow,
 } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { TriggerInstanceRepositoryPort } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
+import { ScheduleRepositoryPort } from '../../../domain/schedule/schedule-repository.port.ts';
+import { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
+import { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
+import { WebhookRepositoryPort } from '../../../domain/webhook/webhook-repository.port.ts';
+import { assertScheduleThreadFree } from '../../schedules/bind-schedule-thread.ts';
 import { requirePackage } from '../orgs/org-addon.helpers.ts';
+import { TriggerTargetSchema } from './trigger-target.schema.ts';
 
 export interface CreateTriggerInstanceInput {
   orgId: string;
@@ -30,8 +36,6 @@ export interface TriggerInstanceActionInput {
   instanceId: string;
 }
 
-const TARGET_FIELDS = ['threadId', 'agentId'] as const;
-
 @Injectable()
 export class ManageTriggerInstanceUseCase {
   private readonly logger: Logger;
@@ -42,6 +46,10 @@ export class ManageTriggerInstanceUseCase {
     private readonly triggers: TriggerInstanceRepositoryPort,
     private readonly calls: AddonCallPort,
     private readonly audit: AddonAuditPort,
+    private readonly threads: ThreadRepositoryPort,
+    private readonly threadAgents: ThreadAgentRepositoryPort,
+    private readonly schedules: ScheduleRepositoryPort,
+    private readonly webhooks: WebhookRepositoryPort,
     @Inject(Logger) logger: Logger,
   ) {
     this.logger = logger.child('addons-trigger-instances');
@@ -54,7 +62,7 @@ export class ManageTriggerInstanceUseCase {
     }
     const pkg = requirePackage(this.catalog, input.addonId, row.version);
     this.assertTriggerDeclared(pkg.manifest, input.triggerId);
-    this.assertTarget(input.target);
+    this.assertTarget(input.orgId, input.target);
     const now = new Date().toISOString();
     const created = this.triggers.create({
       id: randomUUID(),
@@ -106,7 +114,7 @@ export class ManageTriggerInstanceUseCase {
   patch(orgId: string, instanceId: string, patch: TriggerInstancePatch): void {
     this.require(orgId, instanceId);
     if (patch.targetJson !== undefined) {
-      this.assertTarget(this.parseTarget(patch.targetJson));
+      this.assertTarget(orgId, this.parseTarget(patch.targetJson), instanceId);
     }
     this.triggers.update(orgId, instanceId, patch);
   }
@@ -164,20 +172,38 @@ export class ManageTriggerInstanceUseCase {
     }
   }
 
-  private assertTarget(target: unknown): void {
-    if (target === null || typeof target !== 'object' || Array.isArray(target)) {
+  private assertTarget(orgId: string, target: unknown, exceptInstanceId?: string): void {
+    const parsed = TriggerTargetSchema.safeParse(target);
+    if (!parsed.success) {
       throw new AddonException(
         'invalid_params',
         422,
-        'target must be an object with threadId and agentId',
+        'target must be an object with threadId, agentId and optional modeId',
       );
     }
-    const record = target as Record<string, unknown>;
-    for (const field of TARGET_FIELDS) {
-      const value = record[field];
-      if (typeof value !== 'string' || value.length === 0) {
-        throw new AddonException('invalid_params', 422, `target.${field} is required`);
-      }
+    const thread = this.threads.findById(orgId, parsed.data.threadId);
+    if (!thread || thread.orgId !== orgId) {
+      throw new AddonException('invalid_params', 422, 'target.threadId not found');
+    }
+    const members = this.threadAgents.listByThread(orgId, thread.id);
+    if (!members.some((member) => member.agentId === parsed.data.agentId)) {
+      throw new AddonException('invalid_params', 422, 'target.agentId is not a thread member');
+    }
+    try {
+      assertScheduleThreadFree({
+        orgId,
+        threadId: thread.id,
+        schedules: this.schedules,
+        webhooks: this.webhooks,
+        triggerInstances: this.triggers,
+        ...(exceptInstanceId !== undefined ? { exceptInstanceId } : {}),
+      });
+    } catch (error) {
+      throw new AddonException(
+        'invalid_params',
+        422,
+        error instanceof Error ? error.message : 'thread is occupied by another trigger',
+      );
     }
   }
 

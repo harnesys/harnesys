@@ -84,6 +84,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
   const modelsPort = createOrgModelsPort(deps.orgId, deps.providers, deps.models, deps.secrets);
   const threadSessions = new Map<string, ThreadSessionRef>();
   const sessionRequested = new Map<string, string[]>();
+  const sessionRequestedModes = new Map<string, string | undefined>();
   const engineSnapshot =
     deps.browserEngines !== undefined ? await deps.browserEngines.snapshot() : undefined;
   const { registrations: packRegistrations } = wireOrgPacks(
@@ -118,6 +119,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     agentsResolve,
     packRegistrations,
     worktreeBindings,
+    requestedModes: sessionRequestedModes,
     targetCache,
     sessionRequested,
     events: runEvents,
@@ -242,6 +244,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
   const runControl = {
     lifecycle: runLifecycle,
     requestedSkills: sessionRequested,
+    requestedModes: sessionRequestedModes,
     worktreeBindings,
     sessionFor,
     kick: () => claimer?.kick(),
@@ -252,6 +255,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     lifecycle: runLifecycle,
     sessionFor,
     requestedSkills: sessionRequested,
+    requestedModes: sessionRequestedModes,
     worktreeBindings,
     kick: runControl.kick,
   });
@@ -278,6 +282,12 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
           agentId,
           seededThreadState: (id) => branchSeed.seededThreadState(id),
           resolveRunTarget,
+          findThread: (id) => deps.threads.findById(deps.orgId, id),
+          activeRunIdOf: (id) =>
+            runLifecycle
+              .activeByThread(id)
+              .then((record) => record?.runId ?? null)
+              .catch(() => null),
         },
         threadId,
       );
@@ -327,6 +337,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     threadSessions.clear();
     targetCache.clear();
     sessionRequested.clear();
+    sessionRequestedModes.clear();
     worktreeBindings.clear();
   }
 }

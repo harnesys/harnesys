@@ -1,3 +1,4 @@
+export { JournalComposer } from './ui/journal-composer';
 export type { RunDividerProps } from './ui/run-divider';
 export { RunDivider } from './ui/run-divider';
 export type { ThreadJournalProps, TriggerThreadKind } from './ui/thread-journal';

@@ -41,6 +41,7 @@ export interface Webhook {
   targetAgentId: string;
   detail: string;
   endpoint: string;
+  mode: string;
   threadId: string;
   lastFiredAt?: string;
   updatedAt: string;
@@ -54,6 +55,7 @@ export function toClientWebhook(record: WebhookRecord): Webhook {
     targetAgentId: record.targetAgentId,
     detail: record.detail,
     endpoint: record.endpoint,
+    mode: record.mode,
     threadId: record.threadId,
     lastFiredAt: record.lastFiredAt ?? undefined,
     updatedAt: record.updatedAt ?? record.createdAt ?? '',

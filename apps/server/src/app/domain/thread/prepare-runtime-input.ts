@@ -12,6 +12,7 @@ export interface PrepareTargetOptions {
   sourceId?: string;
   directory?: string;
   triggerKind?: RunTriggerKind;
+  mode?: string;
 }
 
 export interface RuntimePrimary {

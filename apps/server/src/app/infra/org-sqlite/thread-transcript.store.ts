@@ -1,4 +1,4 @@
-import { and, asc, eq, lt, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { Attachment } from 'harnesys';
 import { ThreadValidationException } from '../../domain/thread/thread.error.ts';
 import type { OrgSqliteDb } from './org-sqlite-session.ts';
@@ -101,36 +101,6 @@ export interface ConversationalEventRow {
   threadSeq: number;
   type: string;
   metadata: Record<string, unknown>;
-}
-
-export function listConversationalBefore(
-  db: OrgSqliteDb,
-  threadId: string,
-  beforeSeq: number,
-  limit: number,
-): ConversationalEventRow[] {
-  const rows = db
-    .select({
-      threadSeq: runEventsTable.threadSeq,
-      type: runEventsTable.type,
-      metadata: runEventsTable.metadata,
-    })
-    .from(runEventsTable)
-    .where(
-      and(
-        eq(runEventsTable.threadId, threadId),
-        eq(runEventsTable.conversational, 1),
-        lt(runEventsTable.threadSeq, beforeSeq),
-      ),
-    )
-    .orderBy(asc(runEventsTable.threadSeq))
-    .all();
-  const tail = limit > 0 ? rows.slice(-limit) : [];
-  return tail.map((row) => ({
-    threadSeq: row.threadSeq,
-    type: row.type,
-    metadata: parseMetadata(row.metadata),
-  }));
 }
 
 export function getThreadEventRow(

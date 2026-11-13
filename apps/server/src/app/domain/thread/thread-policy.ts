@@ -1,7 +1,12 @@
-import { DEFAULT_CONTEXT_WINDOW, type ThreadHistoryMode, type ThreadKind, type ThreadPolicy, ThreadPolicySchema } from '@harnesys/contracts';
+import {
+  type ThreadHistoryMode,
+  type ThreadKind,
+  type ThreadPolicy,
+  ThreadPolicySchema,
+} from '@harnesys/contracts';
 
 export type { ThreadHistoryMode, ThreadPolicy };
-export { DEFAULT_CONTEXT_WINDOW, ThreadPolicySchema };
+export { ThreadPolicySchema };
 
 export const EMPTY_THREAD_POLICY: ThreadPolicy = { version: 2 };
 
@@ -37,10 +42,6 @@ export function historyModeOf(policy: ThreadPolicy, kind: ThreadKind): ThreadHis
 
 export function historyLastOf(policy: ThreadPolicy): number {
   return policy.historyLast ?? DEFAULT_HISTORY_LAST;
-}
-
-export function contextWindowOf(policy: ThreadPolicy): number {
-  return policy.contextWindow ?? DEFAULT_CONTEXT_WINDOW;
 }
 
 export function allowsMentions(policy: ThreadPolicy): boolean {

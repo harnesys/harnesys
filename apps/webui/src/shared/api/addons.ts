@@ -124,7 +124,15 @@ export function putOrgAddonBindings(
   );
 }
 
-// --- Triggers ---------------------------------------------------------------
+export interface AddonTriggerTarget {
+  threadId: string;
+  agentId: string;
+  modeId?: string;
+}
+
+export type AddonTriggerUpsertBody = Omit<TriggerInstanceUpsertBody, 'target'> & {
+  target: AddonTriggerTarget;
+};
 
 export function orgAddonTriggersQuery(orgId: string, addonId: string) {
   return queryOptions({
@@ -138,7 +146,7 @@ export function orgAddonTriggersQuery(orgId: string, addonId: string) {
 export function createOrgAddonTrigger(
   orgId: string,
   addonId: string,
-  body: TriggerInstanceUpsertBody,
+  body: AddonTriggerUpsertBody,
 ): Promise<TriggerInstanceView> {
   return apiJson<TriggerInstanceView>(`${addonBase(orgId, addonId)}/triggers`, {
     method: 'POST',
@@ -150,7 +158,7 @@ export function patchOrgAddonTrigger(
   orgId: string,
   addonId: string,
   instanceId: string,
-  body: TriggerInstanceUpsertBody,
+  body: AddonTriggerUpsertBody,
 ): Promise<TriggerInstanceView> {
   return apiJson<TriggerInstanceView>(
     `${addonBase(orgId, addonId)}/triggers/${encodeURIComponent(instanceId)}`,

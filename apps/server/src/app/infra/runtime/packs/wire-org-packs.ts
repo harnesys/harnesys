@@ -9,6 +9,7 @@ import type {
   RunEventStore,
 } from 'harnesys';
 import { createProcessJobRegistry } from 'harnesys';
+import { TriggerInstanceRepositoryPort } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
 import type { AgentRecord } from '../../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
 import { PackRegistryPort } from '../../../domain/capabilities/pack-registry.port.ts';
@@ -58,6 +59,7 @@ export interface WireOrgPacksDeps {
   schedules?: ScheduleRepositoryPort;
   webhooks?: WebhookRepositoryPort;
   deskEvents?: DeskEventsPort;
+  triggerInstances?: TriggerInstanceRepositoryPort;
   issues?: OrgIssueDeps;
   issueTracker?: IssueTrackerPort;
   manager?: OrgManagerDeps;
@@ -151,6 +153,7 @@ function optionalInputs(deps: OrgRuntimeDeps): Partial<WireOrgPacksDeps> {
     ...(deps.terminalSessions !== undefined ? { terminalSessions: deps.terminalSessions } : {}),
     ...(deps.schedules ? { schedules: deps.schedules } : {}),
     ...(deps.webhooks ? { webhooks: deps.webhooks } : {}),
+    ...(deps.triggerInstances ? { triggerInstances: deps.triggerInstances } : {}),
     ...(deps.deskEvents ? { deskEvents: deps.deskEvents } : {}),
     ...(deps.secrets ? { secrets: deps.secrets } : {}),
     ...(deps.knowledge ? { knowledge: deps.knowledge } : {}),

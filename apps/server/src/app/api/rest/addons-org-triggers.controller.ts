@@ -3,6 +3,7 @@ import type { TriggerInstanceView } from '@harnesys/contracts';
 import type { JsonObject } from '@harnesys/sdk';
 import { z } from 'zod';
 import { ManageTriggerInstanceUseCase } from '../../application/addons/triggers/manage-instance.use-case.ts';
+import { TriggerTargetSchema } from '../../application/addons/triggers/trigger-target.schema.ts';
 import { AddonException } from '../../domain/addons/errors.ts';
 import { OrgAddonRepositoryPort } from '../../domain/addons/ports/org-addon-repository.port.ts';
 import type { TriggerInstancePatch } from '../../domain/addons/ports/trigger-instance-repository.port.ts';
@@ -15,14 +16,14 @@ const UpsertBodySchema = z.object({
   label: z.string().min(1),
   config: z.record(z.string(), z.unknown()).default({}),
   instructions: z.string().default(''),
-  target: z.unknown().optional(),
+  target: TriggerTargetSchema.optional(),
   enabled: z.boolean().default(true),
 });
 const PatchBodySchema = z.object({
   label: z.string().min(1).optional(),
   config: z.record(z.string(), z.unknown()).optional(),
   instructions: z.string().optional(),
-  target: z.unknown().optional(),
+  target: TriggerTargetSchema.optional(),
   enabled: z.boolean().optional(),
 });
 
@@ -89,7 +90,7 @@ export class AddonsOrgTriggersController {
     if (body.enabled !== undefined) {
       patch.enabled = body.enabled;
     }
-    this.instances.update(orgId, tid, patch);
+    this.manage.patch(orgId, tid, patch);
     const row = this.instances.find(orgId, tid);
     if (!row) {
       throw new AddonException('not_found', 404, `Trigger instance not found: ${tid}`);
