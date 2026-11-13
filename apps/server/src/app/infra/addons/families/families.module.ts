@@ -37,6 +37,7 @@ import { TransportAskRegistry } from './transport/transport-ask.registry.ts';
 import { AddonTriggerCatalogContributor, TriggerFamilyModule } from './trigger/trigger.family.ts';
 import { TriggerFireService } from './trigger/trigger-fire.sink.ts';
 import { AddonViewRegistry, ViewFamilyModule } from './view/view.family.ts';
+import { AddonViewerTable, ViewerFamilyModule } from './viewer/viewer.family.ts';
 import {
   WorkerDescriptorStore,
   WorkerFamilyModule,
@@ -72,6 +73,7 @@ import {
     AddonSourceKindRegistry,
     AddonMcpRegistry,
     AddonLspRegistry,
+    AddonViewerTable,
     ToolPackFamilyModule,
     TriggerFamilyModule,
     JobFamilyModule,
@@ -85,6 +87,7 @@ import {
     SourceKindFamilyModule,
     McpFamilyModule,
     LspFamilyModule,
+    ViewerFamilyModule,
     {
       provide: FamilyModuleList,
       useFactory: (...modules: readonly AnyFamilyModule[]) => new FamilyModuleList([...modules]),
@@ -102,6 +105,7 @@ import {
         SourceKindFamilyModule,
         McpFamilyModule,
         LspFamilyModule,
+        ViewerFamilyModule,
       ],
     },
   ],
@@ -125,6 +129,7 @@ import {
     AddonSourceKindRegistry,
     AddonMcpRegistry,
     AddonLspRegistry,
+    AddonViewerTable,
     TriggerFamilyModule,
     WorkerFamilyModule,
     TransportFamilyModule,

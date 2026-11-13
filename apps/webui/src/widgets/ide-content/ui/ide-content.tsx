@@ -16,11 +16,13 @@ import { useStudioNavigation } from '@/shared/config/navigation';
 import { ChatComposer } from '@/widgets/chat-composer';
 import { SpawnView, ThreadPanel } from '@/widgets/chat-transcript';
 import {
+  AddonViewerFrame,
   AttachmentPreview,
   attachmentPreviewKind,
   DxfPreview,
   MediaPreview,
   TextEditor,
+  useAddonViewer,
 } from '@/widgets/file-pane';
 import { TerminalView } from '@/widgets/terminal-pane';
 import { ThreadTriggerDock } from '@/widgets/thread-dock';
@@ -155,7 +157,22 @@ function FileTabContent({
   dirty: boolean;
   worktreeId?: string;
 }) {
+  const orgId = useOrgId();
+  const viewer = useAddonViewer(orgId, path);
   const kind = openFileKind(path);
+  if (orgId && viewer) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-file">
+        <AddonViewerFrame
+          key={path}
+          orgId={orgId}
+          projectId={projectId}
+          path={path}
+          viewer={viewer}
+        />
+      </div>
+    );
+  }
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-file">
       {kind === 'text' ? (

@@ -53,6 +53,7 @@ import { PermissionDefinitionsPort } from '../../../domain/addons/ports/permissi
 import { AddonRouteTablePort } from '../../../domain/addons/ports/route-table.port.ts';
 import { AddonTransportBindingRepositoryPort } from '../../../domain/addons/ports/transport-binding-repository.port.ts';
 import { TriggerInstanceRepositoryPort } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
+import { AddonViewerTablePort } from '../../../domain/addons/ports/viewer-table.port.ts';
 import { ClockPort } from '../../../domain/apps/ports/clock.port.ts';
 import { InboundEventPort } from '../../../domain/apps/ports/inbound-event.port.ts';
 import { EventBusPort } from '../../../domain/events/event-bus.port.ts';
@@ -119,6 +120,7 @@ import {
   AddonLogReaderAdapter,
   PermissionDefinitionsPortAdapter,
   RouteTablePortAdapter,
+  ViewerTablePortAdapter,
 } from './addon-read-models.adapter.ts';
 import { CompositeAddonSourceAdapter } from './addon-source-composite.adapter.ts';
 import { AddonSecretsAdapter, BindingsReaderAdapter } from './addon-storage-sinks.adapter.ts';
@@ -204,6 +206,7 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     },
     RouteTablePortAdapter,
     PermissionDefinitionsPortAdapter,
+    ViewerTablePortAdapter,
     AddonLogReaderAdapter,
     AddonDataExportAdapter,
     AddonConfigReadAdapter,
@@ -211,6 +214,11 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
       provide: AddonRouteTablePort,
       useFactory: (a: RouteTablePortAdapter) => a,
       inject: [RouteTablePortAdapter],
+    },
+    {
+      provide: AddonViewerTablePort,
+      useFactory: (a: ViewerTablePortAdapter) => a,
+      inject: [ViewerTablePortAdapter],
     },
     {
       provide: PermissionDefinitionsPort,
@@ -253,6 +261,7 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     AddonDataPort,
     InboundEventPort,
     AddonRouteTablePort,
+    AddonViewerTablePort,
     PermissionDefinitionsPort,
     AddonLogReaderPort,
     AddonDataExportPort,

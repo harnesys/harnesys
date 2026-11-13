@@ -11,6 +11,7 @@ import { toolPackFamily } from './tool-pack.ts';
 import { transportFamily } from './transport.ts';
 import { triggerFamily } from './trigger.ts';
 import { viewFamily } from './view.ts';
+import { viewerFamily } from './viewer.ts';
 import { workerFamily } from './worker.ts';
 
 export interface FamilyDefinition {
@@ -33,6 +34,7 @@ export const familyRegistry: Record<string, FamilyDefinition> = {
   'source-kind': sourceKindFamily,
   mcp: mcpFamily,
   lsp: lspFamily,
+  viewer: viewerFamily,
 };
 
 export const FAMILY_NAMES = Object.keys(familyRegistry) as Array<keyof typeof familyRegistry>;

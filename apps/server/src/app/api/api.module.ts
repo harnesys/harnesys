@@ -70,6 +70,7 @@ import { SessionGuard } from './guards/session.guard.ts';
 import { AccountsController } from './rest/accounts.controller.ts';
 import { AddonPublicRoutesController } from './rest/addon-public-routes.controller.ts';
 import { AddonRoutesController } from './rest/addon-routes.controller.ts';
+import { AddonViewersController } from './rest/addon-viewers.controller.ts';
 import { AddonsDiagnosticsController } from './rest/addons-diagnostics.controller.ts';
 import { AddonsEventsController } from './rest/addons-events.controller.ts';
 import { AddonsOrgController } from './rest/addons-org.controller.ts';
@@ -291,6 +292,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     AddonsEventsController,
     AddonRoutesController,
     AddonPublicRoutesController,
+    AddonViewersController,
     BrowserController,
     ThreadsController,
     ThreadAttachmentsController,

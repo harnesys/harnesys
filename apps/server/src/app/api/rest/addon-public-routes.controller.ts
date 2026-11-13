@@ -21,6 +21,7 @@ import { AddonRouteTablePort } from '../../domain/addons/ports/route-table.port.
 import { TokenBucketRateLimiter } from '../../domain/addons/rate-limit.ts';
 import { routeSchemaIssues } from '../../domain/addons/route-body-schema.ts';
 import { ClockPort } from '../../domain/apps/ports/clock.port.ts';
+import { routeResponse } from './addon-route-response.ts';
 
 const MAX_PUBLIC_BODY_KB = 512;
 const ROUTES_PUBLIC_PERMISSION = 'routes.public';
@@ -135,10 +136,7 @@ export class AddonPublicRoutesController {
         ...(body?.raw === undefined ? {} : { rawBody: body.raw }),
       },
     });
-    return new Response(JSON.stringify(result.body ?? {}), {
-      status: result.status,
-      headers: { 'Content-Type': 'application/json', ...(result.headers ?? {}) },
-    });
+    return routeResponse(result);
   }
 
   private assertPublicGrant(row: OrgAddonRow): void {

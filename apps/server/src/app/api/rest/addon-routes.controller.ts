@@ -19,6 +19,7 @@ import { authorize } from '../../domain/identity/authorize.ts';
 import type { Principal } from '../../domain/identity/principal.ts';
 import { OrgAccessGuard } from '../guards/org-access.guard.ts';
 import { PRINCIPAL_CONTEXT_KEY } from '../guards/session.guard.ts';
+import { routeResponse } from './addon-route-response.ts';
 
 export type RouteHttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -122,10 +123,7 @@ export class AddonRoutesController {
         ...(body === undefined ? {} : { body }),
       },
     });
-    return new Response(JSON.stringify(result.body ?? {}), {
-      status: result.status,
-      headers: { 'Content-Type': 'application/json', ...(result.headers ?? {}) },
-    });
+    return routeResponse(result);
   }
 
   private callerRoleOf(ctx: BrixContext, orgId: string): 'member' | 'admin' {

@@ -163,6 +163,13 @@ export {
   viewFamily,
 } from './families/view.ts';
 export {
+  VIEWER_SCHEMA_VERSION,
+  type ViewerDescriptor,
+  ViewerDescriptorSchema,
+  ViewerExtensionSchema,
+  viewerFamily,
+} from './families/viewer.ts';
+export {
   WORKER_SCHEMA_VERSION,
   type WorkerDescriptor,
   WorkerDescriptorSchema,

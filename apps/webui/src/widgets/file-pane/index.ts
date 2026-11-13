@@ -1,3 +1,5 @@
+export { useAddonViewer } from './model/use-addon-viewer';
+export { AddonViewerFrame } from './ui/addon-viewer-frame';
 export type { AttachmentPreviewKind } from './ui/attachment-preview';
 export { AttachmentPreview, attachmentPreviewKind } from './ui/attachment-preview';
 export { DxfPreview } from './ui/dxf-preview';

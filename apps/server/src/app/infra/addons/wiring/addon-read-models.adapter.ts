@@ -12,9 +12,12 @@ import type {
   AddonRouteMatch,
 } from '../../../domain/addons/ports/route-table.port.ts';
 import { AddonRouteTablePort } from '../../../domain/addons/ports/route-table.port.ts';
+import type { AddonViewerEntryView } from '../../../domain/addons/ports/viewer-table.port.ts';
+import { AddonViewerTablePort } from '../../../domain/addons/ports/viewer-table.port.ts';
 import { PermissionDefinitionRegistry } from '../dispatcher/permission-definitions.ts';
 import { AddonConfigReadModel } from '../families/config/config.family.ts';
 import { AddonRouteTable } from '../families/route/route.family.ts';
+import { AddonViewerTable } from '../families/viewer/viewer.family.ts';
 import { AddonDbAccessAdapter } from './addon-db-access.adapter.ts';
 import { AddonLogSinkAdapter } from './addon-log-sink.adapter.ts';
 
@@ -41,6 +44,25 @@ export class RouteTablePortAdapter extends AddonRouteTablePort {
       role: entry.role,
       exposure: entry.exposure,
       bodyLimitKb: entry.bodyLimitKb,
+    }));
+  }
+}
+
+@Injectable()
+export class ViewerTablePortAdapter extends AddonViewerTablePort {
+  constructor(private readonly table: AddonViewerTable) {
+    super();
+  }
+
+  override list(orgId: string): AddonViewerEntryView[] {
+    return this.table.list(orgId).map((entry) => ({
+      addonId: entry.owner.addonId,
+      viewerId: entry.viewerId,
+      title: entry.title,
+      extensions: [...entry.extensions],
+      route: entry.route,
+      mode: entry.mode,
+      create: entry.create,
     }));
   }
 }
