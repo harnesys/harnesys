@@ -185,6 +185,22 @@ describe('thread-history-slice', () => {
     expect(sliced).toEqual([pick(events, 3), pick(events, 4), pick(events, 5)]);
   });
 
+  test('the active run is exempt from the anchor cut', () => {
+    const events = [
+      ...runEvents('run-old', [user('old'), delta('x')]),
+      ...runEvents('run-live', [
+        user('live'),
+        compaction('c1', 'fold', 'run-live'),
+        delta('after'),
+      ]),
+    ];
+    const sliced = sliceThreadHistory(events, {
+      mode: 'none',
+      activeRunId: 'run-live',
+    });
+    expect(texts(sliced)).toEqual(['live', 'fold', 'after']);
+  });
+
   test('threadSliceOptsOf maps policy and kind defaults', () => {
     expect(threadSliceOptsOf(threadRecord({ version: 2 }, 'chat'), null)).toEqual({
       mode: 'full',
@@ -193,6 +209,7 @@ describe('thread-history-slice', () => {
     expect(threadSliceOptsOf(threadRecord({ version: 2 }, 'group'), null)).toEqual({
       mode: 'last',
       historyLast: 10,
+      beforeThreadSeq: 1,
     });
     expect(
       threadSliceOptsOf(

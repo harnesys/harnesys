@@ -8,7 +8,7 @@ export interface WebhookRecord {
   targetAgentId: string;
   detail: string;
   endpoint: string;
-  mode: string;
+  mode: string | null;
   threadId: string;
   lastFiredAt: string | null;
   createdByUserId: string | null;
@@ -24,7 +24,7 @@ export type WebhookPatch = Partial<{
   targetAgentId: string;
   detail: string;
   endpoint: string;
-  mode: string;
+  mode: string | null;
   threadId: string;
   lastFiredAt: string | null;
   createdByUserId: string | null;

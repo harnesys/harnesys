@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
+import { AttachmentStoragePort } from '../../domain/thread/attachment-storage.port.ts';
+import { StubLayout } from '../../infra/runtime/prepare-org-target.fixtures.ts';
+import { MemoryConnectors } from '../connectors/connector.fakes.ts';
+import { DeleteThreadUseCase } from '../threads/delete-thread.use-case.ts';
+import { StubExecutor } from '../threads/respond-run.use-case.fakes.ts';
 import { CreateScheduleUseCase } from './create-schedule.use-case.ts';
 import {
   FakeAgents,
@@ -66,6 +71,15 @@ function harness(timezone: string) {
   orgSettings.timezone = timezone;
   const agent = agents.insert(agentRecord());
   const deskEvents = new FakeDeskEvents();
+  const deleteThread = new DeleteThreadUseCase(
+    threads,
+    new NoAttachmentStorage(),
+    new StubLayout(''),
+    new StubExecutor(),
+    new MemoryConnectors(),
+    threadAgents,
+    triggerInstances,
+  );
   const create = new CreateScheduleUseCase(
     schedules,
     threads,
@@ -85,8 +99,24 @@ function harness(timezone: string) {
     agents,
     orgSettings,
     deskEvents,
+    deleteThread,
   );
   return { schedules, threads, agents, orgSettings, agent, create, update };
+}
+
+class NoAttachmentStorage extends AttachmentStoragePort {
+  write(): Promise<string> {
+    return Promise.reject(new Error('not used'));
+  }
+  read(): Promise<Uint8Array | undefined> {
+    return Promise.resolve(undefined);
+  }
+  removeOne(): Promise<void> {
+    return Promise.resolve();
+  }
+  removeThread(): Promise<void> {
+    return Promise.resolve();
+  }
 }
 
 describe('schedule next run in the org timezone', () => {
@@ -111,13 +141,13 @@ describe('schedule next run in the org timezone', () => {
     expect(localClock(nextRunAt, 'UTC')).toBe('09:00');
   });
 
-  test('update recomputes the next run in the org timezone', () => {
+  test('update recomputes the next run in the org timezone', async () => {
     const h = harness('Europe/Moscow');
     const created = h.create.execute({
       orgId: ORG_ID,
       body: { name: 'Daily', targetAgentId: h.agent.id, cron: '0 9 * * *' },
     });
-    const updated = h.update.execute({
+    const updated = await h.update.execute({
       orgId: ORG_ID,
       scheduleId: created.schedule.id,
       body: { cron: '30 18 * * *' },

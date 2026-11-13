@@ -37,7 +37,7 @@ function webhookFixture(overrides: Partial<WebhookRecord> = {}): WebhookRecord {
     status: 'paused',
     targetAgentId: 'agent-1',
     detail: '',
-    mode: 'ask',
+    mode: null,
     endpoint: '/api/orgs/org-1/hooks/wh-1',
     threadId: 'thread-2',
     lastFiredAt: null,

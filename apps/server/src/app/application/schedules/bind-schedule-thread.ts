@@ -33,7 +33,7 @@ export function occupiedTriggerInstanceThreadId(
   return undefined;
 }
 
-function triggerInstanceThreadId(instance: TriggerInstanceRow): string | undefined {
+export function triggerInstanceThreadId(instance: TriggerInstanceRow): string | undefined {
   try {
     const parsed: unknown = JSON.parse(instance.targetJson);
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {

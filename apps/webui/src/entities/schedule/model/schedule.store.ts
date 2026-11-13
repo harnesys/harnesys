@@ -7,7 +7,7 @@ export interface SchedulePatch {
   detail?: string;
   cron?: string;
   modeId?: string;
-  threadId?: string;
+  threadId?: string | null;
 }
 interface ScheduleStore {
   items: Schedule[];

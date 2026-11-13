@@ -14,6 +14,8 @@ import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { WebhookRepositoryPort } from '../../domain/webhook/webhook-repository.port.ts';
+import { insertDedicatedThread } from '../threads/create-dedicated-thread.ts';
+import { DeleteThreadUseCase } from '../threads/delete-thread.use-case.ts';
 import { recordOwnerOnWrite } from '../threads/run-attribution.ts';
 import { requireBindableScheduleThread } from './bind-schedule-thread.ts';
 import { isValidCron, nextCronRunAt } from './cron-next.ts';
@@ -37,9 +39,10 @@ export class UpdateScheduleUseCase {
     private readonly agents: AgentRegistryPort,
     private readonly orgSettings: OrgSettingsPort,
     private readonly deskEvents: DeskEventsPort,
+    private readonly deleteThread: DeleteThreadUseCase,
   ) {}
 
-  execute(request: UpdateScheduleRequest): SchedulePublic {
+  async execute(request: UpdateScheduleRequest): Promise<SchedulePublic> {
     const current = this.schedules.findById(request.orgId, request.scheduleId);
     if (!current) {
       throw new ScheduleNotFoundException(request.scheduleId);
@@ -58,6 +61,7 @@ export class UpdateScheduleUseCase {
       body: request.body,
       currentId: current.id,
       agentId: nextAgentId,
+      title: rename ?? current.name,
       threads: this.threads,
       threadAgents: this.threadAgents,
       schedules: this.schedules,
@@ -69,16 +73,16 @@ export class UpdateScheduleUseCase {
       this.threads.patch(request.orgId, updated.threadId, { title: rename });
     }
     if (request.body.threadId !== undefined && updated.threadId !== current.threadId) {
-      this.deleteAbandonedThread(request.orgId, current.threadId);
+      await this.deleteAbandonedThread(request.orgId, current.threadId);
     }
     this.deskEvents.emit(request.orgId, toDeskScheduleEvent(updated));
     return toSchedulePublic(updated);
   }
 
-  private deleteAbandonedThread(orgId: string, threadId: string): void {
+  private async deleteAbandonedThread(orgId: string, threadId: string): Promise<void> {
     const abandoned = this.threads.findById(orgId, threadId);
     if (abandoned?.kind === 'schedule') {
-      this.threads.delete(orgId, abandoned.id);
+      await this.deleteThread.execute({ orgId, threadId: abandoned.id });
     }
   }
 }
@@ -155,6 +159,7 @@ function applyThreadBind(
     body: UpdateScheduleBody;
     currentId: string;
     agentId: string;
+    title: string;
     threads: ThreadRepositoryPort;
     threadAgents: ThreadAgentRepositoryPort;
     schedules: ScheduleRepositoryPort;
@@ -163,6 +168,13 @@ function applyThreadBind(
   },
 ): void {
   if (input.body.threadId === undefined) {
+    return;
+  }
+  if (input.body.threadId === null) {
+    patch.threadId = insertDedicatedThread(
+      { threads: input.threads, threadAgents: input.threadAgents },
+      { orgId: input.orgId, agentId: input.agentId, title: input.title, kind: 'schedule' },
+    ).id;
     return;
   }
   const bound = requireBindableScheduleThread({

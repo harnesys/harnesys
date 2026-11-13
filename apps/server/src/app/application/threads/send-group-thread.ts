@@ -55,6 +55,7 @@ export async function sendGroupThread(
     ...(attachments.length > 0 ? { attachments } : {}),
     ...(request.body.origin ? { origin: request.body.origin } : {}),
     ...(request.body.clientEventId ? { clientEventId: request.body.clientEventId } : {}),
+    ...(request.body.mode ? { mode: request.body.mode } : {}),
     ...(author ? { author } : {}),
     targetAgentIds: responders,
     attribution: request.attribution,

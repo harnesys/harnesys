@@ -41,7 +41,7 @@ export interface Webhook {
   targetAgentId: string;
   detail: string;
   endpoint: string;
-  mode: string;
+  mode: string | null;
   threadId: string;
   lastFiredAt?: string;
   updatedAt: string;

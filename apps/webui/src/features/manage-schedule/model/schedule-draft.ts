@@ -8,7 +8,7 @@ export interface ScheduleFormDraft {
   detail: string;
   cron: string;
   modeId: string;
-  threadId: string;
+  threadId: string | null;
 }
 export function draftFrom(item: Schedule): ScheduleFormDraft {
   return {
@@ -29,6 +29,6 @@ export function emptyScheduleDraft(agents: Agent[]): ScheduleFormDraft {
     detail: '',
     cron: '0 * * * *',
     modeId: DEFAULT_MODE_ID,
-    threadId: '',
+    threadId: null,
   };
 }

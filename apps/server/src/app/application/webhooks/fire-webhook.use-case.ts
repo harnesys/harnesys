@@ -69,7 +69,7 @@ export class FireWebhookUseCase {
           threadId: webhook.threadId,
           body: {
             text: webhookTaskText(webhook.name, request.text ?? webhook.detail),
-            mode: webhook.mode,
+            mode: webhook.mode ?? undefined,
           },
           attribution: mechanicalRunStart(webhook.createdByUserId),
           trigger: { kind: 'webhook', id: webhook.id },

@@ -4,10 +4,11 @@ import type {
   OrgAddonDetail,
   TriggerInstanceView,
 } from '@harnesys/contracts';
-import { DEFAULT_MODE_ID } from '@harnesys/studio-shared';
+import { type AgentMode, DEFAULT_MODE, DEFAULT_MODE_ID } from '@harnesys/studio-shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import type { Agent } from '@/entities/agent';
 import type { ClientAutomation } from '@/entities/automation';
 import { deskAutomationsQueryKey } from '@/features/desk';
 import {
@@ -22,7 +23,6 @@ import {
   orgAddonTriggersQuery,
   patchOrgAddonTrigger,
 } from '@/shared/api/addons';
-import { orgAgentsQuery } from '@/shared/api/org-agents';
 import { studioPath } from '@/shared/config/routes';
 import { buildValidator, FieldRenderer } from '@/shared/descriptor-forms';
 import { resolveL10n } from '@/shared/lib/l10n';
@@ -43,7 +43,6 @@ import {
 import { RowListSkeleton, SettingsErrorBanner } from '@/shared/ui/settings-kit';
 import { Textarea } from '@/shared/ui/textarea';
 import type {
-  AddonTriggerAgentOption,
   AddonTriggerDialogData,
   AddonTriggerDialogResult,
   AddonTriggerDraft,
@@ -82,7 +81,7 @@ export function AddonTriggerConfigDialog({
 }: DialogComponentProps<AddonTriggerDialogResult, AddonTriggerDialogData>) {
   const detail = useQuery(orgAddonDetailQuery(data?.orgId ?? '', data?.addonId ?? ''));
   const instances = useQuery(orgAddonTriggersQuery(data?.orgId ?? '', data?.addonId ?? ''));
-  const agentsQuery = useQuery(orgAgentsQuery);
+  const agents = data?.agents ?? [];
   if (!data) {
     return null;
   }
@@ -111,7 +110,7 @@ export function AddonTriggerConfigDialog({
     <AddonTriggerForm
       orgId={data.orgId}
       addonId={data.addonId}
-      agents={(agentsQuery.data ?? []).filter((agent) => agent.status === 'active')}
+      agents={agents}
       automation={data.automation}
       instance={instance}
       descriptor={descriptor}
@@ -133,7 +132,7 @@ function AddonTriggerForm({
 }: {
   orgId: string;
   addonId: string;
-  agents: AddonTriggerAgentOption[];
+  agents: Agent[];
   automation: ClientAutomation | null;
   instance: TriggerInstanceView | null;
   descriptor: AddonTriggerDescriptor;
@@ -152,6 +151,13 @@ function AddonTriggerForm({
     instructions: instance?.instructions ?? '',
     config: (instance?.config ?? {}) as Record<string, FieldValue>,
   });
+  const selectedAgent = agents.find((agent) => agent.id === draft.agentId);
+  const agentModes =
+    selectedAgent && 'modes' in selectedAgent ? ((selectedAgent.modes ?? []) as AgentMode[]) : [];
+  const modeItems = [
+    { value: DEFAULT_MODE_ID, label: DEFAULT_MODE.name },
+    ...agentModes.map((mode) => ({ value: mode.id, label: mode.name })),
+  ];
   const [error, setError] = useState<string | null>(null);
   const fields = descriptor.configFields ?? [];
   const connection = descriptor.connection
@@ -301,6 +307,31 @@ function AddonTriggerForm({
             onChange={(threadId) => update('threadId', threadId)}
             currentThreadId={target.threadId}
           />
+          <Field>
+            <FieldLabel htmlFor="addon-trigger-mode">Mode</FieldLabel>
+            <Select
+              items={modeItems}
+              value={draft.modeId}
+              onValueChange={(value) => {
+                if (typeof value === 'string') {
+                  update('modeId', value);
+                }
+              }}
+            >
+              <SelectTrigger id="addon-trigger-mode" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {modeItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
           {fields.length > 0 ? (
             <div className="flex flex-col gap-3 border-border/40 border-t pt-3">
               <p className="font-medium text-[11px] text-muted-foreground uppercase tracking-wide">

@@ -1,4 +1,5 @@
 import { Injectable } from '@harnesys/brix';
+import { TriggerInstanceRepositoryPort } from '../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { AttachmentStoragePort } from '../../domain/thread/attachment-storage.port.ts';
@@ -7,6 +8,7 @@ import { ThreadNotFoundException } from '../../domain/thread/thread.error.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { syncConnectorAgents } from '../connectors/sync-connector-agents.ts';
+import { triggerInstanceThreadId } from '../schedules/bind-schedule-thread.ts';
 
 export interface DeleteThreadRequest {
   orgId: string;
@@ -22,6 +24,7 @@ export class DeleteThreadUseCase {
     private readonly executor: LocalExecutorPort,
     private readonly connectors: ConnectorRepositoryPort,
     private readonly threadAgents: ThreadAgentRepositoryPort,
+    private readonly triggerInstances: TriggerInstanceRepositoryPort,
   ) {}
 
   async execute(request: DeleteThreadRequest): Promise<void> {
@@ -59,6 +62,11 @@ export class DeleteThreadUseCase {
         orgId,
         connectorId,
       );
+    }
+    for (const instance of this.triggerInstances.list(orgId)) {
+      if (triggerInstanceThreadId(instance) === threadId && instance.enabled) {
+        this.triggerInstances.update(orgId, instance.id, { enabled: false });
+      }
     }
   }
 

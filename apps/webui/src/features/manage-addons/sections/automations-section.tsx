@@ -2,6 +2,7 @@ import type { OrgAddonDetail, TriggerInstanceView } from '@harnesys/contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import type { ClientAutomation } from '@/entities/automation';
+import { useAgentStore } from '@/entities/agent';
 import { openAddonTriggerConfigDialog } from '@/features/manage-automations/ui/addon-trigger-config-dialog';
 import {
   deleteOrgAddonTrigger,
@@ -80,6 +81,7 @@ function TriggerList({ orgId, addonId }: { orgId: string; addonId: string }) {
       orgId,
       addonId,
       kind: `${addonId}.${instance.triggerId}`,
+      agents: useAgentStore.getState().inOrg(orgId),
       automation: automationFromInstance(instance, orgId, addonId),
     });
   };
@@ -143,6 +145,7 @@ function NewTriggerButton({
       orgId,
       addonId: detail.addonId,
       kind: `${detail.addonId}.${kind}`,
+      agents: useAgentStore.getState().inOrg(orgId),
       automation: null,
     });
   };

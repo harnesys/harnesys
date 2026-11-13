@@ -1,5 +1,7 @@
 export interface ColumnInfo {
   name: string;
+  notnull?: number;
+  dflt_value?: string | null;
 }
 
 export function migrateThreadsBindingColumns(
@@ -209,9 +211,29 @@ export function migrateWebhooksModeColumn(
   exec: (sql: string) => void,
   all: (sql: string) => ColumnInfo[],
 ): void {
-  const present = new Set(all('PRAGMA table_info(webhooks)').map((col) => col.name));
+  const columns = all('PRAGMA table_info(webhooks)');
+  if (columns.length === 0) {
+    return;
+  }
+  const mode = columns.find((col) => col.name === 'mode');
+  if (!mode) {
+    exec(`ALTER TABLE webhooks ADD COLUMN mode TEXT`);
+    return;
+  }
+  if (!mode.notnull && (mode.dflt_value === null || mode.dflt_value === undefined)) {
+    return;
+  }
+  exec(`ALTER TABLE webhooks DROP COLUMN mode`);
+  exec(`ALTER TABLE webhooks ADD COLUMN mode TEXT`);
+}
+
+export function migrateThreadMessageQueueModeColumn(
+  exec: (sql: string) => void,
+  all: (sql: string) => ColumnInfo[],
+): void {
+  const present = new Set(all('PRAGMA table_info(thread_message_queue)').map((col) => col.name));
   if (present.size > 0 && !present.has('mode')) {
-    exec(`ALTER TABLE webhooks ADD COLUMN mode TEXT NOT NULL DEFAULT 'ask'`);
+    exec(`ALTER TABLE thread_message_queue ADD COLUMN mode TEXT`);
   }
 }
 

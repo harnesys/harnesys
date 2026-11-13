@@ -5,7 +5,7 @@ export interface WebhookDraft {
   targetAgentId: string;
   detail?: string;
   mode?: string;
-  threadId?: string;
+  threadId?: string | null;
 }
 export interface WebhookPatch {
   name?: string;

@@ -34,7 +34,7 @@ export async function updateSchedule(
   });
   const schedule = toClientSchedule(record);
   useScheduleStore.getState().upsert(schedule);
-  if (patch.threadId && patch.threadId !== current.threadId) {
+  if (patch.threadId !== undefined && patch.threadId !== current.threadId) {
     const previous = useThreadStore.getState().items.find((item) => item.id === current.threadId);
     if (previous?.kind === 'schedule') {
       useThreadStore.getState().remove(current.threadId);

@@ -648,6 +648,7 @@ CREATE TABLE IF NOT EXISTS thread_message_queue (
   attachments TEXT,
   origin TEXT,
   client_event_id TEXT,
+  mode TEXT,
   queued_at TEXT NOT NULL,
   delivered_at TEXT,
   FOREIGN KEY (thread_id, thread_seq)
@@ -798,7 +799,7 @@ CREATE TABLE IF NOT EXISTS webhooks (
   target_agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
   detail TEXT NOT NULL DEFAULT '',
   endpoint TEXT NOT NULL,
-  mode TEXT NOT NULL DEFAULT 'ask',
+  mode TEXT,
   thread_id TEXT NOT NULL REFERENCES threads(id),
   last_fired_at TEXT,
   created_by_user_id TEXT,

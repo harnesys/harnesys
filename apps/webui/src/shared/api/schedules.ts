@@ -32,7 +32,7 @@ export interface UpdateScheduleInput {
   cron?: string;
   modeId?: string;
   missPolicy?: 'catch-up' | 'skip' | 'escalate';
-  threadId?: string;
+  threadId?: string | null;
 }
 
 function requireOrgId(orgId?: string): string {

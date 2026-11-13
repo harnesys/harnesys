@@ -1,3 +1,4 @@
+import { DEFAULT_MODE_ID } from '@harnesys/studio-shared';
 import type { Agent } from '@/entities/agent';
 import type { Webhook, WebhookStatus } from '@/entities/webhook';
 export interface WebhookFormDraft {
@@ -6,7 +7,7 @@ export interface WebhookFormDraft {
   targetAgentId: string;
   detail: string;
   mode: string;
-  threadId?: string;
+  threadId: string | null;
 }
 export function draftFrom(item: Webhook): WebhookFormDraft {
   return {
@@ -14,7 +15,7 @@ export function draftFrom(item: Webhook): WebhookFormDraft {
     status: item.status,
     targetAgentId: item.targetAgentId,
     detail: item.detail,
-    mode: item.mode,
+    mode: item.mode ?? DEFAULT_MODE_ID,
     threadId: item.threadId,
   };
 }
@@ -25,9 +26,9 @@ export function emptyWebhookDraft(agents: Agent[]): WebhookFormDraft {
     targetAgentId: agents[0]?.id ?? '',
     detail: '',
     mode: defaultWebhookMode(agents[0]),
-    threadId: undefined,
+    threadId: null,
   };
 }
 export function defaultWebhookMode(agent: Agent | undefined): string {
-  return agent?.defaultModeId || 'ask';
+  return agent?.defaultModeId || DEFAULT_MODE_ID;
 }

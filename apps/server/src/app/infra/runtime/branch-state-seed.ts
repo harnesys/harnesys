@@ -101,8 +101,8 @@ export function createBranchSeed(deps: BranchSeedDeps) {
     const before = trigger?.threadSeq ?? thread.lastThreadSeq + 1;
     const activeRunId = await activeRunIdOf(thread.id);
     const events = await deps.events.listByThread(thread.id);
-    const journal = events.filter((event) => (event.threadSeq ?? Number.MAX_SAFE_INTEGER) < before);
-    const sliced = sliceThreadHistory(journal, threadSliceOptsOf(thread, activeRunId));
+    const opts = { ...threadSliceOptsOf(thread, activeRunId), beforeThreadSeq: before };
+    const sliced = sliceThreadHistory(events, opts);
     const messages = rebuildThreadMessages(sliced, { activeRunId, speakerAttribution: true });
     const initialInput = trigger
       ? {

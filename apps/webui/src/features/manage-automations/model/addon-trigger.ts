@@ -1,16 +1,12 @@
 import type { FieldValue } from '@harnesys/contracts';
+import type { Agent } from '@/entities/agent';
 import type { ClientAutomation } from '@/entities/automation';
-
-export interface AddonTriggerAgentOption {
-  id: string;
-  name: string;
-  defaultModeId?: string | null;
-}
 
 export interface AddonTriggerDialogData {
   orgId: string;
   addonId: string;
   kind: string;
+  agents: Agent[];
   automation: ClientAutomation | null;
 }
 

@@ -87,7 +87,7 @@ export function TriggerTargetField({
   const linkedThread = value ? byId.get(value) : undefined;
   const threadsForAgent = [...byId.values()].filter((thread) => thread.agentId === agentId);
   const items = [
-    { value: NEW_TRIGGER_THREAD_VALUE, label: 'New thread' },
+    { value: NEW_TRIGGER_THREAD_VALUE, label: 'New dedicated thread' },
     ...threadsForAgent.map((thread) => ({
       value: thread.id,
       label: thread.title.trim() || 'Untitled',
@@ -143,8 +143,8 @@ export function TriggerTargetField({
       </div>
       <FieldDescription>
         {linkedThread
-          ? 'Profile and folder apply to the runs this automation wakes.'
-          : 'A new chat thread is created for the first matching event.'}
+          ? 'Profile and folder apply to the runs this trigger wakes.'
+          : 'A new dedicated thread is created for this trigger.'}
       </FieldDescription>
     </Field>
   );

@@ -11,7 +11,8 @@ import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { WebhookRepositoryPort } from '../../domain/webhook/webhook-repository.port.ts';
-import { insertAgentThread, toThreadPublicForAgent } from '../threads/thread.helpers.ts';
+import { insertDedicatedThread } from '../threads/create-dedicated-thread.ts';
+import { toThreadPublicForAgent } from '../threads/thread.helpers.ts';
 import { requireBindableScheduleThread } from './bind-schedule-thread.ts';
 import { isValidCron, nextCronRunAt } from './cron-next.ts';
 import { toDeskScheduleEvent, toSchedulePublic } from './schedule.helpers.ts';
@@ -66,24 +67,9 @@ export class CreateScheduleUseCase {
       : undefined;
     const thread =
       existingThread ??
-      insertAgentThread(
+      insertDedicatedThread(
         { threads: this.threads, threadAgents: this.threadAgents },
-        {
-          id: crypto.randomUUID(),
-          orgId: request.orgId,
-          title: name,
-          kind: 'schedule',
-          parentThreadId: null,
-          forkAt: null,
-          inheritedEventCount: 0,
-          metadata: {},
-          runProfileId: null,
-          runDirectory: null,
-          createdAt: now,
-          updatedAt: now,
-          lastReadAt: now,
-        },
-        agent.id,
+        { orgId: request.orgId, agentId: agent.id, title: name, kind: 'schedule' },
       );
     const schedule = this.schedules.insert({
       id: crypto.randomUUID(),

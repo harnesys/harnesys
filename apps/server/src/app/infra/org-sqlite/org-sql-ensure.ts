@@ -96,6 +96,7 @@ import {
   migrateModePresetToolColumns,
   migrateRunsAttributionColumns,
   migrateSchedulesHistoryToThreads,
+  migrateThreadMessageQueueModeColumn,
   migrateThreadsBindingColumns,
   migrateThreadsPolicyContextWindow,
   migrateTriggerOwnerColumns,
@@ -258,6 +259,7 @@ export function ensureOrgSchema(
     migrateThreadsPolicyContextWindow(exec, all);
     migrateSchedulesHistoryToThreads(exec, all);
     migrateWebhooksModeColumn(exec, all);
+    migrateThreadMessageQueueModeColumn(exec, all);
   }
   exec(CREATE_CONNECTORS_SQL);
   assertConnectorsAgentSet(all);

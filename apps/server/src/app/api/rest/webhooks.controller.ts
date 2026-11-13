@@ -58,12 +58,12 @@ export class WebhooksController {
   }
 
   @Patch(':webhookId')
-  update(
+  async update(
     @Param('orgId') orgId: string,
     @Param('webhookId') webhookId: string,
     @SessionPrincipal() principal: Principal,
     @Body(UpdateWebhookBodySchema) body: UpdateWebhookBody,
-  ): WebhookPublic {
+  ): Promise<WebhookPublic> {
     return this.updateWebhook.execute({
       orgId,
       webhookId,

@@ -9,6 +9,7 @@ export interface ThreadSliceOpts {
   historyLast?: number;
   historyFromRunId?: string;
   activeRunId?: string;
+  beforeThreadSeq?: number;
 }
 
 export interface ThreadHistorySegment {
@@ -48,6 +49,7 @@ export function threadSliceOptsOf(
     historyLast: historyLastOf(thread.policy),
     ...(thread.policy.historyFromRunId ? { historyFromRunId: thread.policy.historyFromRunId } : {}),
     ...(activeRunId ? { activeRunId } : {}),
+    ...(thread.kind === 'group' ? { beforeThreadSeq: thread.lastThreadSeq + 1 } : {}),
   };
 }
 
@@ -58,8 +60,7 @@ export function sliceThreadHistory(events: SessionEvent[], opts: ThreadSliceOpts
   }
   const { excludedRuns, markerEventIndex, markerSegmentIndex } = sliceExclusions(events, segments);
   const anchorIndex = newestAnchorIndex(events);
-  const cut = anchorIndex >= 0 ? anchorIndex : 0;
-  const kept = new Set<number>(baseSegments(segments, opts));
+  const kept = new Set<number>(baseSegments(events, segments, opts));
   for (const index of segmentIndexesOfRun(segments, opts.activeRunId ?? null)) {
     kept.add(index);
   }
@@ -68,48 +69,112 @@ export function sliceThreadHistory(events: SessionEvent[], opts: ThreadSliceOpts
   if (anchorIndex >= 0) {
     forced.add(anchorIndex);
   }
-  const indexes = new Set<number>(forced);
+  const indexes = segmentEventIndexes(segments, kept, anchorIndex, opts);
+  for (const index of forced) {
+    indexes.add(index);
+  }
+  return eventsAtIndexes(events, indexes, opts.beforeThreadSeq);
+}
+
+function segmentEventIndexes(
+  segments: ThreadHistorySegment[],
+  kept: Set<number>,
+  anchorIndex: number,
+  opts: ThreadSliceOpts,
+): Set<number> {
+  const cut = anchorIndex >= 0 ? anchorIndex : 0;
+  const indexes = new Set<number>();
   for (const index of kept) {
     const segment = segments[index];
     if (!segment) {
       continue;
     }
-    for (let i = Math.max(segment.start, cut); i < segment.end; i += 1) {
+    const exempt = segment.runId !== null && segment.runId === opts.activeRunId;
+    for (let i = exempt ? segment.start : Math.max(segment.start, cut); i < segment.end; i += 1) {
       indexes.add(i);
     }
   }
+  return indexes;
+}
+
+function eventsAtIndexes(
+  events: SessionEvent[],
+  indexes: Set<number>,
+  beforeThreadSeq: number | undefined,
+): SessionEvent[] {
   const out: SessionEvent[] = [];
   for (const index of [...indexes].sort((a, b) => a - b)) {
     const event = events[index];
-    if (event) {
+    if (event && eventInWindow(event, beforeThreadSeq)) {
       out.push(event);
     }
   }
   return out;
 }
 
-function baseSegments(segments: ThreadHistorySegment[], opts: ThreadSliceOpts): number[] {
-  const hinted = opts.historyFromRunId ? segmentIndexesOfRun(segments, opts.historyFromRunId) : [];
+function baseSegments(
+  events: SessionEvent[],
+  segments: ThreadHistorySegment[],
+  opts: ThreadSliceOpts,
+): number[] {
+  const universe = windowSegmentIndexes(events, segments, opts.beforeThreadSeq);
+  const visible = new Set(universe);
+  const hinted = opts.historyFromRunId
+    ? segmentIndexesOfRun(segments, opts.historyFromRunId).filter((index) => visible.has(index))
+    : [];
   if (hinted.length > 0) {
     const from = Math.min(...hinted);
-    const out: number[] = [];
-    for (let index = from; index < segments.length; index += 1) {
-      out.push(index);
-    }
-    return out;
+    return universe.filter((index) => index >= from);
   }
   if (opts.mode === 'last') {
     const count = Math.max(0, Math.floor(opts.historyLast ?? 0));
-    const out: number[] = [];
-    for (let index = Math.max(0, segments.length - count); index < segments.length; index += 1) {
-      out.push(index);
-    }
-    return out;
+    return universe.slice(Math.max(0, universe.length - count));
   }
   if (opts.mode === 'full') {
-    return segments.map((_, index) => index);
+    return universe;
   }
   return [];
+}
+
+function windowSegmentIndexes(
+  events: SessionEvent[],
+  segments: ThreadHistorySegment[],
+  beforeThreadSeq: number | undefined,
+): number[] {
+  const out: number[] = [];
+  segments.forEach((segment, index) => {
+    if (segmentInWindow(events, segment, beforeThreadSeq)) {
+      out.push(index);
+    }
+  });
+  return out;
+}
+
+function segmentInWindow(
+  events: SessionEvent[],
+  segment: ThreadHistorySegment,
+  beforeThreadSeq: number | undefined,
+): boolean {
+  if (beforeThreadSeq === undefined) {
+    return true;
+  }
+  for (let index = segment.start; index < segment.end; index += 1) {
+    if (!eventInWindow(events[index], beforeThreadSeq)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function eventInWindow(
+  event: SessionEvent | undefined,
+  beforeThreadSeq: number | undefined,
+): boolean {
+  if (beforeThreadSeq === undefined) {
+    return true;
+  }
+  const seq = event?.threadSeq;
+  return typeof seq === 'number' && seq < beforeThreadSeq;
 }
 
 function coKeepMarkerRuns(

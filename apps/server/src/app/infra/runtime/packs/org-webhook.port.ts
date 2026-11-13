@@ -83,7 +83,7 @@ export class OrgWebhookPort implements WebhookPort {
       targetAgentId: agent.id,
       detail: input.detail?.trim() || '',
       endpoint: webhookEndpointFor(scope.orgId, id),
-      mode: 'ask',
+      mode: input.mode ?? null,
       threadId: thread.id,
       lastFiredAt: null,
       createdByUserId: null,
@@ -142,6 +142,9 @@ function buildWebhookPatch(
   applyPatchStatus(patch, patchInput);
   applyPatchAgent(patch, agents, orgId, patchInput.targetAgentId);
   applyPatchDetail(patch, patchInput.detail);
+  if (patchInput.mode !== undefined) {
+    patch.mode = patchInput.mode;
+  }
   return patch;
 }
 
@@ -193,6 +196,7 @@ function toPortRecord(row: ServerWebhookRecord): WebhookRecord {
     targetAgentId: row.targetAgentId,
     detail: row.detail,
     endpoint: row.endpoint || webhookEndpointFor(row.orgId, row.id),
+    mode: row.mode,
     threadId: row.threadId,
     lastFiredAt: row.lastFiredAt,
     createdAt: row.createdAt,

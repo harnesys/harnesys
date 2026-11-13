@@ -73,6 +73,7 @@ export function useAutomationConfig(): (input: AutomationConfigInput) => Promise
         orgId: input.scopeId,
         addonId: input.integrationId,
         kind: input.kind,
+        agents: input.agents,
         automation: input.automation,
       });
       if (!result) {

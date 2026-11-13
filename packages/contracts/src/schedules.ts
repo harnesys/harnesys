@@ -45,7 +45,7 @@ export const UpdateScheduleBodySchema = z.object({
   cron: z.string().trim().min(1).optional(),
   modeId: z.string().trim().min(1).max(48).optional(),
   missPolicy: ScheduleMissPolicySchema.optional(),
-  threadId: z.string().uuid().optional(),
+  threadId: z.string().uuid().nullable().optional(),
 });
 export type UpdateScheduleBody = z.infer<typeof UpdateScheduleBodySchema>;
 

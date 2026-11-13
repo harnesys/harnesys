@@ -14,6 +14,7 @@ export interface QueuedThreadMessage {
   origin: string | null;
   originConnectorId: string | null;
   clientEventId: string | null;
+  mode: string | null;
   queuedAt: string;
   deliveredAt: string | null;
 }
@@ -25,6 +26,7 @@ export interface EnqueueThreadMessageInput {
   origin?: string | null;
   originConnectorId?: string | null;
   clientEventId?: string | null;
+  mode?: string | null;
   author?: { provider: string; providerUserId: string; displayName: string } | null;
   targetAgentIds?: string[];
   threadScoped?: boolean;
@@ -51,6 +53,7 @@ function insertTargets(
         threadId: input.threadId,
         threadSeq,
         targetAgentId,
+        ...(input.mode ? { mode: input.mode } : {}),
         queuedAt: new Date().toISOString(),
       })
       .onConflictDoNothing()
@@ -91,6 +94,7 @@ function enqueueSingle(
       ...(input.attachments ? { attachments: JSON.stringify(input.attachments) } : {}),
       ...(input.origin ? { origin: input.origin } : {}),
       ...(input.clientEventId ? { clientEventId: input.clientEventId } : {}),
+      ...(input.mode ? { mode: input.mode } : {}),
       ...(input.targetAgentIds?.[0] ? { targetAgentId: input.targetAgentIds[0] } : {}),
       queuedAt: new Date().toISOString(),
     })
@@ -269,6 +273,7 @@ function mapRow(row: QueueJoinRow): QueuedThreadMessage {
     clientEventId:
       row.queue.clientEventId ??
       (typeof meta.clientEventId === 'string' ? meta.clientEventId : null),
+    mode: row.queue.mode ?? (typeof meta.mode === 'string' ? meta.mode : null),
     queuedAt: row.queue.queuedAt,
     deliveredAt: row.queue.deliveredAt ?? null,
   };

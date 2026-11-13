@@ -45,7 +45,7 @@ export class SchedulesController {
     @Param('scheduleId') scheduleId: string,
     @SessionPrincipal() principal: Principal,
     @Body(UpdateScheduleBodySchema) body: UpdateScheduleBody,
-  ): SchedulePublic {
+  ): Promise<SchedulePublic> {
     return this.updateSchedule.execute({
       orgId,
       scheduleId,

@@ -28,7 +28,7 @@ export interface UpdateWebhookInput {
   targetAgentId?: string;
   detail?: string;
   mode?: string;
-  threadId?: string;
+  threadId?: string | null;
 }
 
 function requireOrgId(orgId?: string): string {
