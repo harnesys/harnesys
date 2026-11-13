@@ -10,6 +10,7 @@ import { EventsModule } from '../../events/events.module.ts';
 import { FleetHubModule } from '../../fleet-hub/fleet-hub.module.ts';
 import { AddonCatalogModule } from '../catalog/catalog.module.ts';
 import { AccountsHostService } from '../services/accounts/accounts-service.ts';
+import { ApprovalsHostService } from '../services/approvals/approvals-service.ts';
 import { BindingsHostService } from '../services/bindings/bindings-service.ts';
 import { BridgeHostService } from '../services/bridge/bridge-service.ts';
 import { ConfigHostService } from '../services/config/config-service.ts';
@@ -20,6 +21,7 @@ import { AddonHttpFetchPort, SystemAddonFetch } from '../services/http/addon-fet
 import { HttpHostService } from '../services/http/http-service.ts';
 import { HostServicesIndex } from '../services/index.ts';
 import { LogHostService } from '../services/log/log-service.ts';
+import { OrgHostService } from '../services/org/org-service.ts';
 import { RunsHostService } from '../services/runs/runs-service.ts';
 import { SecretsHostService } from '../services/secrets/secrets-service.ts';
 import { SkillsHostService } from '../services/skills/skills-service.ts';
@@ -68,6 +70,8 @@ import { PermissionEngine } from './permission-engine.ts';
     WorkersHostService,
     UsageHostService,
     SkillsHostService,
+    OrgHostService,
+    ApprovalsHostService,
     HostServicesIndex,
     HostDispatcher,
   ],

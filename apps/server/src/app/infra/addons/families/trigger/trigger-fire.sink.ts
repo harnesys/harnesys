@@ -24,10 +24,13 @@ export class TriggerFireService implements TriggerFireSink {
         text: input.text ?? '',
         ...(input.payload === undefined ? {} : { payload: input.payload }),
       });
-      return result.outcome;
+      return {
+        outcome: result.outcome,
+        ...(result.runId === undefined ? {} : { runId: result.runId }),
+      };
     } catch (error) {
       this.logger.error({ err: error, instanceId: input.instanceId }, 'trigger fire failed');
-      return 'failed';
+      return { outcome: 'failed' };
     }
   }
 }

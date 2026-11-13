@@ -212,8 +212,8 @@ describe('trigger fire service', () => {
       runKey: 'rk-1',
       text: 'hello',
     });
-    expect(first).toBe('fired');
-    expect(second).toBe('suppressed');
+    expect(first.outcome).toBe('fired');
+    expect(second.outcome).toBe('suppressed');
     expect(runs.dispatched).toHaveLength(1);
     expect(runs.dispatched[0]).toMatchObject({ threadId: 't-1', agentId: 'a-1', text: 'hello' });
   });
@@ -229,7 +229,7 @@ describe('trigger fire service', () => {
       instanceId: 'nope',
       runKey: 'rk',
     });
-    expect(outcome).toBe('failed');
+    expect(outcome.outcome).toBe('failed');
   });
 });
 

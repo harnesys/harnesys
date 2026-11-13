@@ -5,6 +5,7 @@ import { InitializeParamsSchema, InitializeResultSchema } from './handshake.ts';
 import { CallMetaSchema } from './meta.ts';
 import type { MethodDirection, MethodSpec } from './method-spec.ts';
 import { addonMethod, hostMethod, notificationSpec } from './method-spec.ts';
+import { orgServiceMethods } from './org-service-methods.ts';
 import {
   AccountSummarySchema,
   AppCredentialsSchema,
@@ -27,7 +28,6 @@ import {
   TriggerFireOutcomeSchema,
 } from './shared.ts';
 import { sourceMethods } from './source-methods.ts';
-import { orgServiceMethods } from './org-service-methods.ts';
 
 export type { MethodDirection, MethodSpec, NotificationSender } from './method-spec.ts';
 export { addonMethod, hostMethod, notificationSpec } from './method-spec.ts';
@@ -213,7 +213,7 @@ export const protocolMap = {
       text: str.optional(),
       payload: z.unknown().optional(),
     }),
-    z.object({ outcome: TriggerFireOutcomeSchema }),
+    TriggerFireOutcomeSchema,
     'trigger',
   ),
   'bridge.inbound': addonMethod(

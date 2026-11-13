@@ -17,6 +17,7 @@ import type { CallMeta } from './protocol/meta.ts';
 
 export type {
   AddonAccounts,
+  AddonApprovals,
   AddonBindings,
   AddonBridge,
   AddonConfig,
@@ -31,6 +32,7 @@ export type {
   AddonInboundAttachment,
   AddonLog,
   AddonLogLevel,
+  AddonOrg,
   AddonProgress,
   AddonRuns,
   AddonSecrets,
@@ -205,6 +207,12 @@ export function createAddonContext(
       release: async (workerId: string) => {
         await client['workers.release']({ workerId }, { signal });
       },
+    },
+    org: {
+      settings: async () => client['org.settings.get']({}, { signal }),
+    },
+    approvals: {
+      request: async (params) => client['approvals.request'](params, { signal }),
     },
   };
 }

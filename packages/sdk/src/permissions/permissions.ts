@@ -36,6 +36,7 @@ export const BASELINE_PERMISSION_IDS = [
   'db',
   'secrets.own',
   'events.emit.own',
+  'org.read',
 ] as const;
 
 export type BaselinePermissionId = (typeof BASELINE_PERMISSION_IDS)[number];
@@ -58,6 +59,7 @@ export const KNOWN_PERMISSION_IDS = [
   'routes.public',
   'lifecycle.resident',
   'trigger',
+  'approvals.request',
   'worker',
   'source',
 ] as const;

@@ -133,6 +133,7 @@ export const PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
   baseline('db', 'Use the add-on database'),
   baseline('secrets.own', 'Read the add-on own secrets'),
   baseline('events.emit.own', 'Emit events in the add-on namespace'),
+  baseline('org.read', 'Read organization settings like the timezone'),
   httpFetchDefinition,
   accountsUseDefinition,
   accountsCredentialsDefinition,
@@ -149,6 +150,7 @@ export const PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
   simple('routes.public', 'high', 'Expose public HTTP routes without org authentication'),
   simple('lifecycle.resident', 'medium', 'Keep a resident process'),
   simple('trigger', 'medium', 'Run trigger instances and fire automation runs'),
+  simple('approvals.request', 'medium', 'Open approval inbox items for review'),
   simple('worker', 'medium', 'Run background workers'),
   simple('source', 'medium', 'Serve as a knowledge-source backend for mounted cloud folders'),
 ];

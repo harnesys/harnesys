@@ -1,7 +1,10 @@
 import type { TransportMessage } from '@harnesys/sdk';
 import type { ResolvedInboundAttachment } from '../bridge/inbound-attachment.resolver.ts';
 
-export type TriggerFireOutcome = 'fired' | 'suppressed' | 'busy' | 'failed';
+export interface TriggerFireOutcome {
+  outcome: 'fired' | 'suppressed' | 'busy' | 'failed';
+  runId?: string | null;
+}
 
 export interface TriggerFireInput {
   orgId: string;

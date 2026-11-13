@@ -168,7 +168,33 @@ export interface AddonTriggers {
     runKey: string;
     text?: string;
     payload?: unknown;
-  }): Promise<{ outcome: 'fired' | 'suppressed' | 'busy' | 'failed' }>;
+  }): Promise<{ outcome: 'fired' | 'suppressed' | 'busy' | 'failed'; runId?: string | null }>;
+}
+
+export interface AddonOrg {
+  settings(): Promise<{ timezone: string }>;
+}
+
+export interface AddonApprovals {
+  request(params: {
+    interruptId: string;
+    agentId: string;
+    threadId?: string;
+    kind: 'tool' | 'spend' | 'memory' | 'question' | 'file_access';
+    question: string;
+    options: Array<'approve' | 'approve_once' | 'deny' | 'block_path' | 'close'>;
+    context: {
+      source: string;
+      ops?: string[];
+      tool?: {
+        name: string;
+        inputPreview?: string;
+        command?: string;
+        truncated?: boolean;
+      };
+      note?: string;
+    };
+  }): Promise<{ id: string }>;
 }
 
 export interface AddonInboundAttachment {
@@ -223,5 +249,7 @@ export interface AddonContext {
   readonly triggers: AddonTriggers;
   readonly bridge: AddonBridge;
   readonly workers: AddonWorkers;
+  readonly org: AddonOrg;
+  readonly approvals: AddonApprovals;
   readonly progress: AddonProgress;
 }

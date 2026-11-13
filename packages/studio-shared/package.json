@@ -4,7 +4,9 @@
   "version": "0.0.1",
   "type": "module",
   "exports": {
-    ".": "./types.ts"
+    ".": "./types.ts",
+    "./schedule-prompt": "./src/schedule-prompt.ts",
+    "./webhook-prompt": "./src/webhook-prompt.ts"
   },
   "scripts": {
     "typecheck": "bunx tsc -p tsconfig.json --noEmit",

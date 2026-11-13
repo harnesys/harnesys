@@ -7,6 +7,7 @@ export interface CallMeta {
   agentId?: string;
   threadId?: string;
   runId?: string;
+  orgId?: string;
   locale: string;
 }
 
@@ -20,5 +21,6 @@ export const CallMetaSchema = z.object({
   agentId: z.string().optional(),
   threadId: z.string().optional(),
   runId: z.string().optional(),
+  orgId: z.string().optional(),
   locale: z.string().min(1),
 });

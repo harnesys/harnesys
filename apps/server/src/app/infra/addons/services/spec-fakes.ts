@@ -18,7 +18,7 @@ import { EventBusPort } from '../../../domain/events/event-bus.port.ts';
 import type { OrgAuditRow } from '../../../domain/fleet/org-audit.port.ts';
 import { OrgAudit } from '../../../domain/fleet/org-audit.port.ts';
 import { AddonHttpFetchPort } from './http/addon-fetch.port.ts';
-import type { AddonLogEntry } from './sinks.ts';
+import type { AddonLogEntry, TriggerFireOutcome } from './sinks.ts';
 import {
   AddonDbAccess,
   AddonSecrets,
@@ -230,12 +230,12 @@ export class FakeTriggerRepo extends TriggerInstanceRepositoryPort {
 }
 
 export class FakeTriggerSink extends TriggerFireSink {
-  outcome = 'fired' as const;
+  outcome: TriggerFireOutcome = { outcome: 'fired' };
   readonly fired: Array<{ instanceId: string; runKey: string; correlationId: string }> = [];
   override fire(
     ctx: HostCallContext,
     input: { instanceId: string; runKey: string },
-  ): Promise<'fired' | 'suppressed' | 'busy' | 'failed'> {
+  ): Promise<TriggerFireOutcome> {
     this.fired.push({
       instanceId: input.instanceId,
       runKey: input.runKey,

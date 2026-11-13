@@ -1,0 +1,95 @@
+{
+  "id": "harnesys.webhook",
+  "version": "1.0.0",
+  "platform": 1,
+  "title": "Webhook",
+  "description": "HTTP triggers for agent threads. Every webhook.http trigger instance is bound to a thread and exposed on a public POST endpoint; a request wakes the thread with the payload text. A busy thread reports queued-behind-active-run, a paused instance reports paused.",
+  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "activation": "lazy",
+  "connections": [],
+  "permissions": [
+    {
+      "id": "trigger",
+      "reason": "Fire webhook.http instances when their public endpoint is called"
+    },
+    {
+      "id": "routes.public",
+      "reason": "Expose the public POST endpoint that wakes the thread"
+    }
+  ],
+  "data": { "migrations": "migrations", "quotaMb": 8 },
+  "contributions": [
+    {
+      "id": "http",
+      "family": "trigger",
+      "descriptor": {
+        "kind": "webhook.http",
+        "title": "Webhook",
+        "description": "Trigger from an HTTP POST endpoint",
+        "configFields": [
+          {
+            "key": "name",
+            "label": "Webhook name",
+            "type": "text",
+            "required": true,
+            "placeholder": "Deploy hook",
+            "help": "Shown to the agent in the run prompt"
+          },
+          {
+            "key": "detail",
+            "label": "Fallback payload",
+            "type": "textarea",
+            "required": false,
+            "help": "Sent when the request has no text"
+          }
+        ]
+      }
+    },
+    {
+      "id": "hook",
+      "family": "route",
+      "descriptor": {
+        "id": "hook",
+        "method": "POST",
+        "path": "/:instanceId",
+        "role": "member",
+        "exposure": "public",
+        "bodyLimitKb": 64
+      }
+    },
+    {
+      "id": "instances",
+      "family": "route",
+      "descriptor": { "id": "instances", "method": "GET", "path": "/instances", "role": "member" }
+    },
+    {
+      "id": "main",
+      "family": "view",
+      "descriptor": {
+        "id": "main",
+        "title": "Webhook",
+        "sections": [
+          { "type": "status" },
+          { "type": "automations", "triggers": ["webhook.http"] },
+          {
+            "type": "table",
+            "title": "Webhooks",
+            "source": { "route": "/instances" },
+            "columns": [
+              { "key": "name", "label": "Name", "format": "text" },
+              { "key": "endpoint", "label": "Endpoint", "format": "text" },
+              { "key": "status", "label": "Status", "format": "badge" },
+              { "key": "lastFiredAt", "label": "Last fired", "format": "datetime" },
+              { "key": "fires", "label": "Fires", "format": "number" },
+              { "key": "threadId", "label": "Thread", "format": "text" }
+            ]
+          },
+          {
+            "type": "markdown",
+            "body": "Every webhook is a trigger instance bound to a thread and a public POST endpoint. Send a JSON body like {\"text\": \"...\"} (or any raw text) to wake the thread; the response is 202 with the fire status. A paused instance reports paused, a thread with an active run reports queued-behind-active-run. The endpoint is unauthenticated: anyone with the URL can wake the thread, so treat the URL as a secret."
+          }
+        ]
+      }
+    }
+  ]
+}

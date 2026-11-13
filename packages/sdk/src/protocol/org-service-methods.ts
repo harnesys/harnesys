@@ -65,4 +65,30 @@ export const orgServiceMethods = {
     }),
     'skills.read',
   ),
+  'org.settings.get': addonMethod(z.object({}), z.object({ timezone: str }), 'org.read'),
+  'approvals.request': addonMethod(
+    z.object({
+      interruptId: str,
+      agentId: str,
+      threadId: str.optional(),
+      kind: z.enum(['tool', 'spend', 'memory', 'question', 'file_access']),
+      question: str,
+      options: z.array(z.enum(['approve', 'approve_once', 'deny', 'block_path', 'close'])).min(1),
+      context: z.object({
+        source: str,
+        ops: z.array(str).optional(),
+        tool: z
+          .object({
+            name: str,
+            inputPreview: z.string().optional(),
+            command: z.string().optional(),
+            truncated: z.boolean().optional(),
+          })
+          .optional(),
+        note: z.string().optional(),
+      }),
+    }),
+    z.object({ id: str }),
+    'approvals.request',
+  ),
 };

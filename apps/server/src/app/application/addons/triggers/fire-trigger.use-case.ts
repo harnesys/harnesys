@@ -20,6 +20,7 @@ export interface FireTriggerInput {
 
 export interface FireTriggerResult {
   outcome: RunDispatchOutcome;
+  runId?: string | null;
 }
 
 interface FireTarget {
@@ -72,7 +73,7 @@ export class FireTriggerUseCase {
     if (!target.threadId) {
       return this.suppressed(input, 'no_target');
     }
-    const { outcome } = await this.dispatch.dispatch({
+    const { outcome, runId } = await this.dispatch.dispatch({
       orgId: input.orgId,
       threadId: target.threadId,
       agentId: target.agentId ?? '',
@@ -91,7 +92,7 @@ export class FireTriggerUseCase {
       { orgId: input.orgId, instanceId: input.instanceId, runKey: input.runKey, outcome },
       'trigger fired',
     );
-    return { outcome };
+    return runId === undefined ? { outcome } : { outcome, runId };
   }
 
   private suppressed(input: FireTriggerInput, reason: string): FireTriggerResult {

@@ -31,12 +31,12 @@ export class TriggersHostService implements HostServiceModule {
     if (!row || row.addonId !== ctx.addonId) {
       throw new AddonError('not_found', { detail: 'trigger instance not found for this add-on' });
     }
-    const outcome = await this.sink.fire(ctx, {
+    const result = await this.sink.fire(ctx, {
       instanceId: params.instanceId,
       runKey: params.runKey,
       text: params.text,
       payload: params.payload,
     });
-    return { outcome };
+    return result;
   }
 }

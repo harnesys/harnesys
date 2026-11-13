@@ -36,6 +36,7 @@ export function createAddonRuntime(options: AddonRuntimeOptions): AddonRuntime {
   const now = options.now ?? (() => Date.now());
   const declared = new Set(definition.handlers);
   const activeTriggerKinds = new Map<string, string>();
+  let instanceOrgId: string | undefined;
 
   function dispatch(method: string, params: Record<string, unknown>, ctx: AddonContext): Target {
     const lookup = dispatchLookup(method, params, ctx);
@@ -144,6 +145,9 @@ export function createAddonRuntime(options: AddonRuntimeOptions): AddonRuntime {
       : { ...incoming, _meta: fallbackMeta('host-request', now() + FALLBACK_DEADLINE_MS) };
     const parsed = parseParams(spec, guarded) as Record<string, unknown>;
     const meta = CallMetaSchema.parse(parsed._meta);
+    if (instanceOrgId !== undefined) {
+      meta.orgId = instanceOrgId;
+    }
     if (meta.deadline < now()) {
       throw new AddonError('timeout', { detail: `deadline ${meta.deadline} has passed` });
     }
@@ -213,7 +217,7 @@ export function createAddonRuntime(options: AddonRuntimeOptions): AddonRuntime {
   }
 
   function initialize(params: InitializeParams): InitializeResult {
-    void params;
+    instanceOrgId = params.instance.orgId;
     return InitializeResultSchema.parse({
       addon: { id: addon.id, version: addon.version },
       handlers: definition.handlers,

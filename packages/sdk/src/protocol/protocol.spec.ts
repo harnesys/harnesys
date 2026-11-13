@@ -62,6 +62,8 @@ describe('protocol method map conformance', () => {
       'db.run',
       'db.batch',
       'log.write',
+      'org.settings.get',
+      'approvals.request',
       'events.emit',
       'http.fetch',
       'files.stat',

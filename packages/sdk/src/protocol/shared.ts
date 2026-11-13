@@ -216,7 +216,10 @@ export const AppCredentialsSchema = z.object({
   credentials: z.record(z.string(), z.string()),
 });
 
-export const TriggerFireOutcomeSchema = z.enum(['fired', 'suppressed', 'busy', 'failed']);
+export const TriggerFireOutcomeSchema = z.object({
+  outcome: z.enum(['fired', 'suppressed', 'busy', 'failed']),
+  runId: z.string().nullable().optional(),
+});
 
 export const InboundAttachmentSchema = z
   .object({
