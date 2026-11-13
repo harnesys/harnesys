@@ -10,7 +10,7 @@ export interface AddonRouteRef {
 export interface AddonColumn {
   key: string;
   label: SectionL10n;
-  format: 'text' | 'datetime' | 'number' | 'badge' | 'link';
+  format: 'text' | 'datetime' | 'number' | 'badge' | 'link' | 'copy';
 }
 
 export interface AddonSectionAction {

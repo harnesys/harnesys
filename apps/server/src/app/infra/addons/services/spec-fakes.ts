@@ -208,6 +208,7 @@ export class FakeTriggerRepo extends TriggerInstanceRepositoryPort {
     instructions: '',
     targetJson: '{}',
     enabled: true,
+    createdByUserId: null,
     createdAt: '',
     updatedAt: '',
   };

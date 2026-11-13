@@ -1,6 +1,6 @@
 {
   "id": "harnesys.scheduler",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "platform": 1,
   "title": "Scheduler",
   "description": "Cron schedules for agent threads. Every scheduler.cron trigger instance is bound to a thread and fires it when its cron expression is due, evaluated in the organization timezone. Missed runs follow the selected policy: catch up within an hour, skip, or skip and open an approval inbox item.",

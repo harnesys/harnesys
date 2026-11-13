@@ -153,14 +153,21 @@ export class UpdateAddonUseCase {
     cause: unknown,
   ): Promise<void> {
     const message = cause instanceof Error ? cause.message : String(cause);
-    const previous = requirePackage(this.catalog, request.addonId, row.version);
-    try {
-      this.registry.swap(newOwner, oldOwner, previous.manifest);
-    } catch (swapError) {
-      const swapMessage = swapError instanceof Error ? swapError.message : String(swapError);
+    const previous = this.catalog.find(request.addonId, row.version);
+    if (previous) {
+      try {
+        this.registry.swap(newOwner, oldOwner, previous.manifest);
+      } catch (swapError) {
+        const swapMessage = swapError instanceof Error ? swapError.message : String(swapError);
+        this.logger.error(
+          { orgId: request.orgId, addonId: request.addonId, error: swapMessage },
+          'registry swap back to the previous version failed',
+        );
+      }
+    } else {
       this.logger.error(
-        { orgId: request.orgId, addonId: request.addonId, error: swapMessage },
-        'registry swap back to the previous version failed',
+        { orgId: request.orgId, addonId: request.addonId, version: row.version },
+        'previous version cannot be restored: its package is no longer installed',
       );
     }
     this.orgAddons.upsert({
@@ -186,7 +193,22 @@ export class UpdateAddonUseCase {
     );
   }
 
+  /**
+   * Consent baseline for the update: the currently pinned package declaration.
+   * Built-in packages are scanned from the monorepo manifest, so after a
+   * version bump the pinned declaration no longer resolves; the live grants
+   * are then the only baseline left, and the diff flags exactly the
+   * permissions the add-on does not hold yet.
+   */
   private declarationOf(row: OrgAddonRow): readonly PermissionRequest[] {
-    return requirePackage(this.catalog, row.addonId, row.version).manifest.permissions;
+    const pkg = this.catalog.find(row.addonId, row.version);
+    if (pkg) {
+      return pkg.manifest.permissions;
+    }
+    return grantsOfRow(row).map((grant) => ({
+      id: grant.id,
+      ...(grant.scope === undefined ? {} : { scope: grant.scope }),
+      reason: 'granted before this update',
+    }));
   }
 }

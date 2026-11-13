@@ -33,7 +33,7 @@ export class ThreadRunDispatchService extends RunDispatchPort {
               : {}),
             ...(input.mode === undefined ? {} : { mode: input.mode }),
           },
-          attribution: mechanicalRunStart(null),
+          attribution: mechanicalRunStart(input.actorUserId ?? null),
           trigger: { kind: 'connector', id: triggerId },
           expiresAt: null,
         }),

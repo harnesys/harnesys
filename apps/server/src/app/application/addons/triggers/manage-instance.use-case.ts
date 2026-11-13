@@ -29,6 +29,7 @@ export interface CreateTriggerInstanceInput {
   target?: unknown;
   enabled?: boolean;
   actor: { kind: 'user' | 'system' | 'host'; id: string };
+  actorUserId?: string | null;
 }
 
 export interface TriggerInstanceActionInput {
@@ -74,6 +75,7 @@ export class ManageTriggerInstanceUseCase {
       instructions: input.instructions ?? '',
       targetJson: JSON.stringify(input.target ?? null),
       enabled: input.enabled ?? true,
+      createdByUserId: input.actorUserId ?? null,
       createdAt: now,
       updatedAt: now,
     });
@@ -117,6 +119,14 @@ export class ManageTriggerInstanceUseCase {
       this.assertTarget(orgId, this.parseTarget(patch.targetJson), instanceId);
     }
     this.triggers.update(orgId, instanceId, patch);
+    const resynced = this.require(orgId, instanceId);
+    const contentChanged =
+      patch.label !== undefined ||
+      patch.configJson !== undefined ||
+      patch.instructions !== undefined;
+    if (resynced.enabled && contentChanged) {
+      void this.start(resynced);
+    }
   }
 
   private async start(instance: TriggerInstanceRow): Promise<void> {

@@ -22,7 +22,7 @@ import { TokenBucketRateLimiter } from '../../domain/addons/rate-limit.ts';
 import { routeSchemaIssues } from '../../domain/addons/route-body-schema.ts';
 import { ClockPort } from '../../domain/apps/ports/clock.port.ts';
 
-const MAX_PUBLIC_BODY_KB = 64;
+const MAX_PUBLIC_BODY_KB = 512;
 const ROUTES_PUBLIC_PERMISSION = 'routes.public';
 const PUBLIC_MARKER = '/addons/public/';
 const PUBLIC_ROUTE_RATE: RateSpec = { perSec: 20, burst: 40 };
@@ -112,8 +112,8 @@ export class AddonPublicRoutesController {
       );
     }
     const body = await this.readBody(request, Math.min(resolved.bodyLimitKb, MAX_PUBLIC_BODY_KB));
-    if (body !== undefined && resolved.requestSchema !== undefined) {
-      const issues = routeSchemaIssues(body, resolved.requestSchema);
+    if (body?.value !== undefined && resolved.requestSchema !== undefined) {
+      const issues = routeSchemaIssues(body.value, resolved.requestSchema);
       if (issues.length > 0) {
         throw new AddonException(
           'invalid_params',
@@ -131,7 +131,8 @@ export class AddonPublicRoutesController {
         path: subPath,
         query: Object.fromEntries(url.searchParams.entries()),
         headers: Object.fromEntries(request.headers.entries()),
-        ...(body === undefined ? {} : { body }),
+        ...(body?.value === undefined ? {} : { body: body.value }),
+        ...(body?.raw === undefined ? {} : { rawBody: body.raw }),
       },
     });
     return new Response(JSON.stringify(result.body ?? {}), {
@@ -170,22 +171,28 @@ export class AddonPublicRoutesController {
     return index >= 0 ? pathname.slice(index + marker.length) : '';
   }
 
-  private async readBody(request: Request, bodyLimitKb: number): Promise<unknown> {
+  private async readBody(
+    request: Request,
+    bodyLimitKb: number,
+  ): Promise<{ value?: unknown; raw?: string }> {
     const contentLength = Number(request.headers.get('content-length') ?? '0');
     if (contentLength > bodyLimitKb * 1024) {
       throw new AddonException('invalid_params', 413, `Request body exceeds ${bodyLimitKb} KiB`);
     }
     if (contentLength === 0) {
-      return undefined;
+      return {};
     }
     const text = await request.text();
     if (Buffer.byteLength(text) > bodyLimitKb * 1024) {
       throw new AddonException('invalid_params', 413, `Request body exceeds ${bodyLimitKb} KiB`);
     }
+    if (text.length === 0) {
+      return {};
+    }
     try {
-      return text.length === 0 ? undefined : JSON.parse(text);
+      return { value: JSON.parse(text), raw: text };
     } catch {
-      return text;
+      return { value: text, raw: text };
     }
   }
 }

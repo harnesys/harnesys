@@ -53,6 +53,7 @@ export const addonTriggerInstancesTable = sqliteTable(
     configJson: text('config_json').notNull().default('{}'),
     targetJson: text('target_json').notNull().default('{}'),
     enabled: integer('enabled').notNull().default(1),
+    createdByUserId: text('created_by_user_id'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },

@@ -1,9 +1,9 @@
 {
   "id": "harnesys.webhook",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "platform": 1,
   "title": "Webhook",
-  "description": "HTTP triggers for agent threads. Every webhook.http trigger instance is bound to a thread and exposed on a public POST endpoint; a request wakes the thread with the payload text. A busy thread reports queued-behind-active-run, a paused instance reports paused.",
+  "description": "HTTP webhook triggers for agent threads. Every webhook.http instance gets its own public endpoint with a generated token, optional HMAC or API key verification, payload-to-task text shaping (path, template, fallback), dedupe, idempotency replay, throttling, custom success responses and a delivery log.",
   "runtime": { "entry": "dist/index.js", "profile": "trusted" },
   "activation": "lazy",
   "connections": [],
@@ -25,16 +25,208 @@
       "descriptor": {
         "kind": "webhook.http",
         "title": "Webhook",
-        "description": "Trigger from an HTTP POST endpoint",
+        "description": "Wake the thread when a public HTTP endpoint is called",
         "configFields": [
           {
-            "key": "detail",
-            "label": "Fallback payload",
-            "type": "textarea",
+            "key": "auth",
+            "label": "Verification",
+            "type": "select",
             "required": false,
-            "help": "Sent when the request has no text"
+            "default": "none",
+            "options": [
+              {
+                "value": "none",
+                "label": "None",
+                "help": "Anyone with the URL can wake the thread. The URL is the secret: rotate it if it leaks."
+              },
+              {
+                "value": "hmac",
+                "label": "HMAC signature",
+                "help": "Verify a signature header computed as HMAC over the exact raw request body with this webhook's secret."
+              },
+              {
+                "value": "apiKey",
+                "label": "API key header",
+                "help": "Require this webhook's secret in a request header."
+              }
+            ]
+          },
+          {
+            "key": "signatureHeader",
+            "label": "Signature header",
+            "type": "text",
+            "required": false,
+            "default": "x-hub-signature-256",
+            "help": "Header carrying the signature; an algo= prefix such as sha256= is stripped before comparison",
+            "visibleWhen": { "key": "auth", "equals": "hmac" }
+          },
+          {
+            "key": "signatureAlgo",
+            "label": "Signature algorithm",
+            "type": "select",
+            "required": false,
+            "default": "sha256",
+            "options": [
+              { "value": "sha256", "label": "sha256" },
+              { "value": "sha1", "label": "sha1" },
+              { "value": "sha512", "label": "sha512" }
+            ],
+            "visibleWhen": { "key": "auth", "equals": "hmac" }
+          },
+          {
+            "key": "signatureEncoding",
+            "label": "Signature encoding",
+            "type": "select",
+            "required": false,
+            "default": "hex",
+            "options": [
+              { "value": "hex", "label": "hex" },
+              { "value": "base64", "label": "base64" }
+            ],
+            "visibleWhen": { "key": "auth", "equals": "hmac" }
+          },
+          {
+            "key": "keyHeader",
+            "label": "Key header",
+            "type": "text",
+            "required": false,
+            "default": "x-harnesys-key",
+            "help": "Header that must carry the webhook secret",
+            "visibleWhen": { "key": "auth", "equals": "apiKey" }
+          },
+          {
+            "key": "payload",
+            "label": "Payload",
+            "type": "group",
+            "required": false,
+            "fields": [
+              {
+                "key": "textPath",
+                "label": "Text path",
+                "type": "text",
+                "required": false,
+                "placeholder": "issue.title",
+                "help": "Dot path into the JSON payload used as the task text"
+              },
+              {
+                "key": "textTemplate",
+                "label": "Text template",
+                "type": "textarea",
+                "required": false,
+                "help": "Rendered with {{text}} and {{payload}} placeholders; wins over the text path",
+                "placeholder": "PR {{payload}} needs review"
+              },
+              {
+                "key": "detail",
+                "label": "Fallback payload",
+                "type": "textarea",
+                "required": false,
+                "help": "Sent when the request carries no text"
+              },
+              {
+                "key": "maxTextKb",
+                "label": "Max text, KB",
+                "type": "number",
+                "required": false,
+                "default": 8,
+                "help": "Payload-derived task text is truncated to this size"
+              },
+              {
+                "key": "samplePayload",
+                "label": "Test payload",
+                "type": "textarea",
+                "required": false,
+                "help": "Body used by the Send test action; parsed as JSON when possible",
+                "placeholder": "{\"text\": \"hello\"}"
+              }
+            ]
+          },
+          {
+            "key": "noise",
+            "label": "Noise control",
+            "type": "group",
+            "required": false,
+            "advanced": true,
+            "collapsible": true,
+            "fields": [
+              {
+                "key": "dedupeWindowSec",
+                "label": "Dedupe window, sec",
+                "type": "number",
+                "required": false,
+                "default": 0,
+                "help": "Identical payloads inside the window replay the previous result instead of firing again (0 disables)"
+              },
+              {
+                "key": "throttleSec",
+                "label": "Throttle, sec",
+                "type": "number",
+                "required": false,
+                "default": 0,
+                "help": "Requests closer than this to the previous fired request get 429 (0 disables)"
+              },
+              {
+                "key": "honorIdempotencyKey",
+                "label": "Honor Idempotency-Key",
+                "type": "boolean",
+                "required": false,
+                "default": true,
+                "widget": { "kind": "switch" },
+                "help": "A repeated Idempotency-Key header within 24h replays the stored result instead of firing again"
+              },
+              {
+                "key": "allowGet",
+                "label": "Accept GET",
+                "type": "boolean",
+                "required": false,
+                "default": false,
+                "widget": { "kind": "switch" },
+                "help": "Also fire on GET requests; the task text comes from the text query parameter"
+              }
+            ]
+          },
+          {
+            "key": "response",
+            "label": "Response",
+            "type": "group",
+            "required": false,
+            "advanced": true,
+            "fields": [
+              {
+                "key": "respondMode",
+                "label": "Success response",
+                "type": "select",
+                "required": false,
+                "default": "default",
+                "options": [
+                  { "value": "default", "label": "Default 202" },
+                  {
+                    "value": "custom",
+                    "label": "Custom body",
+                    "help": "Return your own status and JSON body when the fire succeeds"
+                  }
+                ]
+              },
+              {
+                "key": "responseStatus",
+                "label": "Response status",
+                "type": "number",
+                "required": false,
+                "default": 200,
+                "visibleWhen": { "key": "respondMode", "equals": "custom" }
+              },
+              {
+                "key": "responseBody",
+                "label": "Response body (JSON)",
+                "type": "textarea",
+                "required": false,
+                "visibleWhen": { "key": "respondMode", "equals": "custom" },
+                "help": "Returned when the fire succeeds; raw text is sent as {\"text\": ...} if it is not valid JSON"
+              }
+            ]
           }
-        ]
+        ],
+        "limits": { "throttleSec": 2, "maxBurst": 20 }
       }
     },
     {
@@ -43,16 +235,56 @@
       "descriptor": {
         "id": "hook",
         "method": "POST",
-        "path": "/:instanceId",
-        "role": "member",
+        "path": "/:token",
         "exposure": "public",
-        "bodyLimitKb": 64
+        "bodyLimitKb": 512
+      }
+    },
+    {
+      "id": "hook-get",
+      "family": "route",
+      "descriptor": {
+        "id": "hook-get",
+        "method": "GET",
+        "path": "/:token",
+        "exposure": "public",
+        "bodyLimitKb": 1
       }
     },
     {
       "id": "instances",
       "family": "route",
       "descriptor": { "id": "instances", "method": "GET", "path": "/instances", "role": "member" }
+    },
+    {
+      "id": "deliveries",
+      "family": "route",
+      "descriptor": { "id": "deliveries", "method": "GET", "path": "/deliveries", "role": "member" }
+    },
+    {
+      "id": "rotate-url",
+      "family": "route",
+      "descriptor": {
+        "id": "rotate-url",
+        "method": "POST",
+        "path": "/rotate-url/:token",
+        "role": "admin"
+      }
+    },
+    {
+      "id": "rotate-secret",
+      "family": "route",
+      "descriptor": {
+        "id": "rotate-secret",
+        "method": "POST",
+        "path": "/rotate-secret/:token",
+        "role": "admin"
+      }
+    },
+    {
+      "id": "test",
+      "family": "route",
+      "descriptor": { "id": "test", "method": "POST", "path": "/test/:token", "role": "admin" }
     },
     {
       "id": "main",
@@ -71,16 +303,50 @@
             "source": { "route": "/instances" },
             "columns": [
               { "key": "name", "label": "Name", "format": "text" },
-              { "key": "endpoint", "label": "Endpoint", "format": "text" },
+              { "key": "endpoint", "label": "Endpoint", "format": "copy" },
+              { "key": "auth", "label": "Auth", "format": "text" },
               { "key": "status", "label": "Status", "format": "badge" },
               { "key": "lastFiredAt", "label": "Last fired", "format": "datetime" },
               { "key": "fires", "label": "Fires", "format": "number" },
-              { "key": "threadId", "label": "Thread", "format": "text" }
+              { "key": "lastError", "label": "Last error", "format": "text" }
+            ],
+            "rowActions": [
+              {
+                "id": "test",
+                "label": "Send test",
+                "route": { "route": "/test/:token" }
+              },
+              {
+                "id": "rotate-url",
+                "label": "Rotate URL",
+                "route": { "route": "/rotate-url/:token" },
+                "confirm": "Rotate this webhook URL? The old URL stops working immediately."
+              },
+              {
+                "id": "rotate-secret",
+                "label": "Rotate secret",
+                "route": { "route": "/rotate-secret/:token" },
+                "confirm": "Rotate this webhook secret? Senders must recompute signatures or keys with the new secret.",
+                "destructive": false
+              }
+            ]
+          },
+          {
+            "type": "table",
+            "title": "Recent deliveries",
+            "source": { "route": "/deliveries" },
+            "columns": [
+              { "key": "receivedAt", "label": "Received", "format": "datetime" },
+              { "key": "webhook", "label": "Webhook", "format": "text" },
+              { "key": "outcome", "label": "Outcome", "format": "badge" },
+              { "key": "method", "label": "Method", "format": "text" },
+              { "key": "summary", "label": "Summary", "format": "text" },
+              { "key": "error", "label": "Error", "format": "text" }
             ]
           },
           {
             "type": "markdown",
-            "body": "Every webhook is a trigger instance bound to a thread and a public POST endpoint. Send a JSON body like {\"text\": \"...\"} (or any raw text) to wake the thread; the response is 202 with the fire status. A paused instance reports paused, a thread with an active run reports queued-behind-active-run. The endpoint is unauthenticated: anyone with the URL can wake the thread, so treat the URL as a secret."
+            "body": "Every webhook is a trigger instance bound to a thread and exposed on a public endpoint with a generated token: the endpoint is a secret, rotate the URL if it leaks. curl example: curl -X POST -H 'Content-Type: application/json' -d '{\"text\": \"...\"}' https://<host>/addons/public/<orgId>/harnesys.webhook/r/<token> — the fast path reads the top-level .text field; use the text path or template fields for other payloads. With HMAC verification the sender signs the exact raw body and sends it in the signature header, for example X-Hub-Signature-256: sha256=<hmac-hex>, computed with the webhook secret (shown once on rotate). Noise control: a repeated Idempotency-Key header within 24h replays the stored result, identical payloads inside the dedupe window are not re-fired, and requests inside the throttle window get 429. GET fires only when enabled, with the task text in ?text=.... A busy thread reports queued-behind-active-run, a paused instance reports paused, and every request is recorded in recent deliveries."
           }
         ]
       }

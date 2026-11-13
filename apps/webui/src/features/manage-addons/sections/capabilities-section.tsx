@@ -98,13 +98,13 @@ function CapabilityCard({
     >
       <button
         type="button"
-        className={cn('flex min-w-0 items-center gap-2 text-left', !expandable && 'cursor-default')}
+        className={cn('flex min-w-0 items-start gap-2 text-left', !expandable && 'cursor-default')}
         aria-expanded={expandable ? expanded : undefined}
         disabled={!expandable}
         onClick={expandable ? onToggle : undefined}
       >
         {FamilyIcon ? (
-          <FamilyIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <FamilyIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
         ) : null}
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -119,7 +119,7 @@ function CapabilityCard({
         {expandable ? (
           <ChevronRightIcon
             className={cn(
-              'size-3.5 shrink-0 text-muted-foreground transition-transform duration-150',
+              'mt-0.5 size-3.5 shrink-0 text-muted-foreground transition-transform duration-150',
               expanded && 'rotate-90',
             )}
           />

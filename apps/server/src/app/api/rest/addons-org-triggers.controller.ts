@@ -4,12 +4,15 @@ import type { JsonObject } from '@harnesys/sdk';
 import { z } from 'zod';
 import { ManageTriggerInstanceUseCase } from '../../application/addons/triggers/manage-instance.use-case.ts';
 import { TriggerTargetSchema } from '../../application/addons/triggers/trigger-target.schema.ts';
+import { principalUserId } from '../../application/threads/run-attribution.ts';
 import { AddonException } from '../../domain/addons/errors.ts';
 import { OrgAddonRepositoryPort } from '../../domain/addons/ports/org-addon-repository.port.ts';
 import type { TriggerInstancePatch } from '../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { TriggerInstanceRepositoryPort } from '../../domain/addons/ports/trigger-instance-repository.port.ts';
+import type { Principal } from '../../domain/identity/principal.ts';
 import { AddonOrgAdminGuard } from '../guards/addon-org-admin.guard.ts';
 import { OrgAccessGuard } from '../guards/org-access.guard.ts';
+import { SessionPrincipal } from '../guards/session.guard.ts';
 
 const UpsertBodySchema = z.object({
   triggerId: z.string().min(1),
@@ -49,6 +52,7 @@ export class AddonsOrgTriggersController {
   create(
     @Param('orgId') orgId: string,
     @Param('addonId') addonId: string,
+    @SessionPrincipal() principal: Principal,
     @Body(UpsertBodySchema) body: z.infer<typeof UpsertBodySchema>,
   ): TriggerInstanceView {
     const created = this.manage.create({
@@ -60,7 +64,8 @@ export class AddonsOrgTriggersController {
       instructions: body.instructions,
       ...(body.target === undefined ? {} : { target: body.target }),
       enabled: body.enabled,
-      actor: { kind: 'user', id: 'admin' },
+      actor: { kind: 'user', id: principalUserId(principal) ?? 'admin' },
+      actorUserId: principalUserId(principal),
     });
     return this.viewOf(created);
   }

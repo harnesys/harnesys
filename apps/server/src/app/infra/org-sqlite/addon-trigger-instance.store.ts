@@ -14,6 +14,7 @@ interface TriggerInstancesRecord {
   instructions: string;
   target_json: string;
   enabled: number;
+  created_by_user_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -62,8 +63,8 @@ export class AddonTriggerInstanceStore {
       .query(
         `INSERT INTO addon_trigger_instances
            (id, org_id, addon_id, trigger_id, label, config_json, instructions, target_json,
-            enabled, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            enabled, created_by_user_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         effective.id,
@@ -75,6 +76,7 @@ export class AddonTriggerInstanceStore {
         effective.instructions,
         effective.targetJson,
         effective.enabled ? 1 : 0,
+        effective.createdByUserId,
         effective.createdAt,
         effective.updatedAt,
       );
@@ -152,6 +154,7 @@ function toRow(record: TriggerInstancesRecord): TriggerInstanceRow {
     instructions: record.instructions,
     targetJson: record.target_json,
     enabled: record.enabled === 1,
+    createdByUserId: record.created_by_user_id ?? null,
     createdAt: record.created_at,
     updatedAt: record.updated_at,
   };

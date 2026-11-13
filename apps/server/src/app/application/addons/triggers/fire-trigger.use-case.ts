@@ -82,6 +82,7 @@ export class FireTriggerUseCase {
       correlationId: input.correlationId,
       ...(target.modeId === undefined ? {} : { mode: target.modeId }),
       ...(input.payload === undefined ? {} : { payload: input.payload }),
+      actorUserId: instance.createdByUserId,
     });
     this.metrics.increment('addon.trigger.fire', {
       orgId: input.orgId,

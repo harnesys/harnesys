@@ -8,6 +8,7 @@ export interface TriggerInstanceRow {
   instructions: string;
   targetJson: string;
   enabled: boolean;
+  createdByUserId: string | null;
   createdAt: string;
   updatedAt: string;
 }

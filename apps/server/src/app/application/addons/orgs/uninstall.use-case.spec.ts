@@ -60,6 +60,7 @@ function build() {
     triggerId: 'feed',
     label: 'feed',
     configJson: '{}',
+    createdByUserId: null,
     instructions: '',
     targetJson: '{}',
     enabled: true,

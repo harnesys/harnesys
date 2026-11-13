@@ -266,8 +266,9 @@ export function orgAddonRouteUrl(
   route: string,
   params: Record<string, string> = {},
 ): string {
-  const resolved = route.replace(/:([A-Za-z][A-Za-z0-9_]*)/g, (name, key: string) => {
-    return params[key] ?? name;
+  const resolved = route.replace(/:([A-Za-z][A-Za-z0-9_]*)/g, (match, key: string) => {
+    const value = params[key];
+    return value === undefined ? match : encodeURIComponent(value);
   });
   const suffix = resolved.startsWith('/') ? resolved : `/${resolved}`;
   return `${addonBase(orgId, addonId)}/r${suffix}`;

@@ -195,6 +195,7 @@ describe('trigger fire service', () => {
       instructions: '',
       targetJson: JSON.stringify({ threadId: 't-1', agentId: 'a-1' }),
       enabled: true,
+      createdByUserId: null,
       createdAt: '',
       updatedAt: '',
     });

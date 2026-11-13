@@ -1,10 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { CheckIcon, CopyIcon } from 'lucide-react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { fetchAddonRoute, orgAddonDetailQueryKey } from '@/shared/api/addons';
 import { alert } from '@/shared/services/overlay';
 import { Button } from '@/shared/ui/button';
-import { RowItem, RowSection } from '@/shared/ui/capability-rows';
+import { RowChip, RowItem, RowSection } from '@/shared/ui/capability-rows';
 import { SettingsErrorBanner } from '@/shared/ui/settings-kit';
+import { toast } from '@/shared/ui/toast';
 import { handleSectionResult, resolveL10nText, routeParamsOf } from '../lib/route-call';
 import type { SectionProps } from '../lib/section-props';
 import type { AddonColumn, AddonSectionAction, SectionL10n } from '../lib/view-sections';
@@ -110,7 +112,9 @@ export function TableSection({ orgId, addonId, section }: SectionProps) {
               {columns.map((column) => (
                 <span
                   key={column.key}
-                  className={column.format === 'number' ? 'font-mono text-xs' : 'text-xs'}
+                  className={
+                    column.format === 'number' ? 'min-w-0 font-mono text-xs' : 'min-w-0 text-xs'
+                  }
                 >
                   {formatCell(column, row[column.key])}
                 </span>
@@ -158,7 +162,7 @@ export function TableSection({ orgId, addonId, section }: SectionProps) {
   );
 }
 
-function formatCell(column: AddonColumn, value: unknown): string {
+function formatCell(column: AddonColumn, value: unknown): ReactNode {
   if (value === undefined || value === null) {
     return '—';
   }
@@ -166,5 +170,65 @@ function formatCell(column: AddonColumn, value: unknown): string {
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
   }
+  if (column.format === 'badge') {
+    const text = String(value);
+    return <RowChip tone={badgeToneOf(text)}>{text}</RowChip>;
+  }
+  if (column.format === 'copy') {
+    return <CopyCell value={String(value)} />;
+  }
   return String(value);
+}
+
+const BADGE_TONES: Record<string, 'ok' | 'warn' | 'danger' | 'neutral'> = {
+  active: 'ok',
+  fired: 'ok',
+  ok: 'ok',
+  success: 'ok',
+  paused: 'warn',
+  queued: 'warn',
+  deduped: 'warn',
+  throttled: 'warn',
+  suppressed: 'warn',
+  failed: 'danger',
+  rejected: 'danger',
+  error: 'danger',
+  none: 'neutral',
+  empty: 'neutral',
+};
+
+function badgeToneOf(value: string): 'ok' | 'warn' | 'danger' | 'neutral' {
+  return BADGE_TONES[value.toLowerCase()] ?? 'neutral';
+}
+
+function CopyCell({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.add({ title: 'Could not copy value' });
+    }
+  };
+  return (
+    <span className="flex min-w-0 items-center gap-1">
+      <span className="min-w-0 truncate font-mono text-xs" title={value}>
+        {value}
+      </span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-xs"
+        className="shrink-0 text-muted-foreground hover:text-foreground"
+        title="Copy"
+        onClick={() => {
+          void copy();
+        }}
+      >
+        {copied ? <CheckIcon className="size-3 text-chart-1" /> : <CopyIcon className="size-3" />}
+      </Button>
+    </span>
+  );
 }

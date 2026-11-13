@@ -139,6 +139,7 @@ describe('AddonTriggerInstanceStore', () => {
         instructions: '',
         targetJson: '{}',
         enabled: true,
+        createdByUserId: null,
         createdAt: '2026-11-10T00:00:00.000Z',
         updatedAt: '2026-11-10T00:00:00.000Z',
       });

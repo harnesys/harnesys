@@ -5,7 +5,7 @@ import { tick } from './tick.ts';
 import { schedulerTrigger } from './trigger.ts';
 
 const ADDON_ID = 'harnesys.scheduler';
-const ADDON_VERSION = '1.0.0';
+const ADDON_VERSION = '1.1.0';
 
 const schedules: RouteHandler = async (_request, ctx: AddonContext) => {
   const rows = await listSchedules(ctx);

@@ -12,6 +12,7 @@ export interface RunDispatchInput {
   runKey?: string;
   correlationId?: string;
   payload?: unknown;
+  actorUserId?: string | null;
   signal?: AbortSignal;
 }
 

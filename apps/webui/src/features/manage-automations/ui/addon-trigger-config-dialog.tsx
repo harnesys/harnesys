@@ -33,7 +33,7 @@ import type {
   AddonTriggerDraft,
 } from '../model/addon-trigger';
 import { useAddonTriggerActions } from '../model/addon-trigger';
-import { ModeBlock, NameAgentBlock } from './trigger-standard-blocks';
+import { ConnectionMissingBanner, ModeBlock, NameAgentBlock } from './trigger-standard-blocks';
 import { resolveTriggerThread, TriggerTargetField } from './trigger-target-field';
 
 function CronField({ value, onChange }: FormWidgetProps) {

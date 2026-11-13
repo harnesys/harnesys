@@ -234,7 +234,7 @@ export function RowSection({
 }: {
   label: string;
   count?: number;
-  className?: string,
+  className?: string;
   actions?: ReactNode;
   children: ReactNode;
 }) {
@@ -243,7 +243,7 @@ export function RowSection({
       className={cn(
         ROW_SECTION_DIVIDER,
         'flex flex-col gap-2 first-of-type:mt-0 first-of-type:border-t-0 first-of-type:pt-1',
-        className
+        className,
       )}
     >
       <div className="flex items-baseline gap-2">

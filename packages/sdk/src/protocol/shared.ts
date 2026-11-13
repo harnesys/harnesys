@@ -248,6 +248,12 @@ export interface RouteRequest {
   query: Record<string, string>;
   headers: Record<string, string>;
   body?: unknown;
+  /**
+   * Original request body as text, before JSON parsing. Signature verifiers
+   * need the exact bytes: re-serialized JSON does not match what the sender
+   * signed.
+   */
+  rawBody?: string;
 }
 
 export interface RouteHandleResult {
@@ -262,6 +268,7 @@ export const RouteRequestSchema = z.object({
   query: z.record(z.string(), z.string()),
   headers: z.record(z.string(), z.string()),
   body: z.unknown().optional(),
+  rawBody: z.string().optional(),
 });
 
 export const RouteHandleResultSchema = z.object({

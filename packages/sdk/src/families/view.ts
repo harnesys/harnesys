@@ -14,7 +14,7 @@ export interface RouteRef {
 export interface Column {
   key: string;
   label: L10n;
-  format: 'text' | 'datetime' | 'number' | 'badge' | 'link';
+  format: 'text' | 'datetime' | 'number' | 'badge' | 'link' | 'copy';
 }
 
 export interface Action {
@@ -61,7 +61,7 @@ export const RouteRefSchema = z.object({
 export const ColumnSchema = z.object({
   key: z.string().min(1),
   label: L10nSchema,
-  format: z.enum(['text', 'datetime', 'number', 'badge', 'link']),
+  format: z.enum(['text', 'datetime', 'number', 'badge', 'link', 'copy']),
 });
 
 export const ActionSchema = z.object({
