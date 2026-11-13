@@ -17,7 +17,7 @@ export function SettingsNav({
   return (
     <nav
       className={cn(
-        'flex flex-row gap-4 overflow-x-auto px-2 py-2 md:flex-col md:gap-5 md:overflow-visible',
+        'flex flex-row gap-4 overflow-x-auto px-2 py-2 md:h-full md:flex-col md:gap-5 md:overflow-y-auto',
         className,
       )}
       data-testid={`${testIdPrefix}`}
