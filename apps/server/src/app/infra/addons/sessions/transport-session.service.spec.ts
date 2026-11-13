@@ -6,9 +6,7 @@ import {
   AddonTransportBindingRepositoryPort,
   type AddonTransportBindingRow,
 } from '../../../domain/addons/ports/transport-binding-repository.port.ts';
-import {
-  AddonTransportSessionRepositoryPort,
-} from '../../../domain/addons/ports/transport-session-repository.port.ts';
+import { AddonTransportSessionRepositoryPort } from '../../../domain/addons/ports/transport-session-repository.port.ts';
 import type { TransportSessionRow } from '../../../domain/addons/transport-session.ts';
 import { LocalExecutorPort } from '../../../domain/thread/local-executor.port.ts';
 import {
@@ -37,7 +35,7 @@ function bindingRow(): AddonTransportBindingRow {
   };
 }
 
-function row(): TransportSessionRow {
+function _row(): TransportSessionRow {
   return {
     orgId: ORG,
     addonId: ADDON,
@@ -168,7 +166,7 @@ function silence(): Logger {
 class FakeStore {
   constructor(readonly events: unknown[]) {}
 
-  tail(runId: string, fromSeq: number): Promise<unknown[]> {
+  tail(_runId: string, fromSeq: number): Promise<unknown[]> {
     return Promise.resolve(
       (this.events as Array<{ seq?: number }>).filter((event) => (event.seq ?? 0) > fromSeq),
     );

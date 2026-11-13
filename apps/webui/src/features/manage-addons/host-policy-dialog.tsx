@@ -89,7 +89,9 @@ export function HostPolicyDialog({ onResolve }: HostPolicyDialogProps) {
       <DialogContent className="sm:max-w-md" data-testid="host-policy-dialog">
         <DialogHeader>
           <DialogTitle>Host source policy</DialogTitle>
-          <DialogDescription>Choose which add-on install sources this host allows.</DialogDescription>
+          <DialogDescription>
+            Choose which add-on install sources this host allows.
+          </DialogDescription>
         </DialogHeader>
         {error ? <SettingsErrorBanner message={error} /> : null}
         {loaded ? (

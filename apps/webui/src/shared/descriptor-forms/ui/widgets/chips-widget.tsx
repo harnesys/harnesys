@@ -49,7 +49,7 @@ export function ChipsWidget({ field, value, disabled, onChange, values, addon }:
           key={option.value}
           variant="outline"
           size="sm"
-          className="aria-pressed:border-transparent aria-pressed:bg-live aria-pressed:text-white rounded-full"
+          className="rounded-full aria-pressed:border-transparent aria-pressed:bg-live aria-pressed:text-white"
           pressed={selected.has(option.value)}
           disabled={disabled}
           onPressedChange={() => toggle(option.value)}

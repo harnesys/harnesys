@@ -31,7 +31,6 @@ export class TransportSessionService {
   private readonly logger: Logger;
   private unsubscribe: (() => void) | null = null;
   private unregisterAsk: (() => void) | null = null;
-  private pipeline: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly events: ThreadEventsPort,

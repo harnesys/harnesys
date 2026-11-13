@@ -119,7 +119,13 @@ export class AddonCallService extends AddonCallPort {
     opts?: AddonCallOptions,
   ): Promise<{ messageId?: string }> {
     const resolved = await this.resolveAttachments(orgId, message);
-    const result = await this.request(orgId, addonId, 'transport.send', { message: resolved }, opts);
+    const result = await this.request(
+      orgId,
+      addonId,
+      'transport.send',
+      { message: resolved },
+      opts,
+    );
     return result && typeof result === 'object' ? (result as { messageId?: string }) : {};
   }
 
