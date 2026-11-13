@@ -12,6 +12,33 @@ export interface TriggerLimits {
   maxBurst?: number;
 }
 
+/**
+ * Overrides for the standard trigger-form blocks the host renders for every
+ * trigger (name + agent, wake thread, run mode, instructions). Developers get
+ * them out of the box; each block can be relabeled or disabled.
+ */
+export interface StandardFieldOverride {
+  disabled?: boolean;
+  label?: string;
+  help?: string;
+  required?: boolean;
+}
+
+export interface TriggerStandardBlocks {
+  name?: StandardFieldOverride;
+  agent?: StandardFieldOverride;
+  target?: StandardFieldOverride;
+  mode?: StandardFieldOverride;
+  instructions?: StandardFieldOverride;
+}
+
+export const StandardFieldOverrideSchema = z.object({
+  disabled: z.boolean().optional(),
+  label: z.string().optional(),
+  help: z.string().optional(),
+  required: z.boolean().optional(),
+});
+
 export interface TriggerDescriptor {
   kind: string;
   title: L10n;
@@ -19,6 +46,7 @@ export interface TriggerDescriptor {
   configFields: FieldSpec[];
   connection?: string;
   limits?: TriggerLimits;
+  standard?: TriggerStandardBlocks;
 }
 
 export const TriggerDescriptorSchema = z.object({
@@ -32,6 +60,15 @@ export const TriggerDescriptorSchema = z.object({
       perDay: z.number().int().positive().optional(),
       throttleSec: z.number().int().nonnegative().optional(),
       maxBurst: z.number().int().positive().optional(),
+    })
+    .optional(),
+  standard: z
+    .object({
+      name: StandardFieldOverrideSchema.optional(),
+      agent: StandardFieldOverrideSchema.optional(),
+      target: StandardFieldOverrideSchema.optional(),
+      mode: StandardFieldOverrideSchema.optional(),
+      instructions: StandardFieldOverrideSchema.optional(),
     })
     .optional(),
 });

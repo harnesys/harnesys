@@ -1,5 +1,6 @@
 import type { AddonJobView } from '@harnesys/contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Play } from 'lucide-react';
 import { useState } from 'react';
 import {
   orgAddonDetailQueryKey,
@@ -89,13 +90,13 @@ export function JobsSection({ orgId, detail }: SectionProps) {
               </span>
               <Button
                 type="button"
-                size="sm"
-                variant="outline"
+                size="icon-xs"
+                variant="secondary"
                 disabled={busyId === job.jobId}
                 onClick={() => void runNow(job)}
                 data-testid={`addon-job-run-${job.jobId}`}
               >
-                Run now
+                <Play/>
               </Button>
             </div>
             <p className="text-muted-foreground text-xs leading-4">

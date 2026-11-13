@@ -2,9 +2,20 @@ import type { FieldValue } from '@harnesys/contracts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { orgAddonDetailQueryKey, putOrgAddonConfig } from '@/shared/api/addons';
-import { buildValidator, FieldRenderer, initialFieldValues } from '@/shared/descriptor-forms';
-import { RowSection } from '@/shared/ui/capability-rows';
-import { SettingsErrorBanner, SettingsField, SettingsSave } from '@/shared/ui/settings-kit';
+import {
+  buildValidator,
+  FieldRenderer,
+  fieldControlId,
+  initialFieldValues,
+  RequiredMark,
+} from '@/shared/descriptor-forms';
+import { ROW_SECTION_DIVIDER } from '@/shared/ui/capability-rows';
+import {
+  SettingsErrorBanner,
+  SettingsField,
+  SettingsSave,
+  SettingsSection,
+} from '@/shared/ui/settings-kit';
 import type { SectionProps } from '../lib/section-props';
 import { configFieldsFromDetail } from '../lib/view-sections';
 
@@ -70,17 +81,24 @@ export function ConfigSection({ orgId, detail, section }: SectionProps) {
   }
 
   return (
-    <RowSection label="Configuration" count={fields.length}>
+    <SettingsSection label="Configuration" className={ROW_SECTION_DIVIDER}>
       {fields.map((field) => (
         <SettingsField
           key={field.key}
-          label={field.label}
+          label={
+            <>
+              {field.label}
+              {field.required ? <RequiredMark /> : null}
+            </>
+          }
           description={field.help}
           error={errors[field.key]}
+          htmlFor={fieldControlId(field.key)}
           testId={`addon-config-${field.key}`}
         >
           <FieldRenderer
             field={field}
+            bare
             value={field.type === 'secret' ? undefined : values[field.key]}
             secretValue={secrets[field.key]}
             existingSecret={false}
@@ -103,6 +121,6 @@ export function ConfigSection({ orgId, detail, section }: SectionProps) {
         }}
         testId="addon-config-save"
       />
-    </RowSection>
+    </SettingsSection>
   );
 }

@@ -54,6 +54,7 @@ export class InstanceReplayHook implements SupervisorReplayHook {
           addonId,
           instanceId: instance.id,
           kind: instance.triggerId,
+          label: instance.label,
           config,
           target,
         });

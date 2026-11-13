@@ -1,20 +1,16 @@
-import type { AddonPermissionRisk } from '@harnesys/contracts';
+import type { AddonPermissionView } from '@harnesys/contracts';
 import { useQueryClient } from '@tanstack/react-query';
 import { ShieldCheckIcon, ShieldIcon } from 'lucide-react';
 import { useState } from 'react';
 import { orgAddonDetailQueryKey, putOrgAddonGrants } from '@/shared/api/addons';
+import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
-import { Row, RowChip, RowItem, RowSection } from '@/shared/ui/capability-rows';
+import { RowChip, RowItem, RowSection } from '@/shared/ui/capability-rows';
 import { SettingsErrorBanner } from '@/shared/ui/settings-kit';
 import { ConsentDialog } from '../consent-dialog';
 import { grantedIdsOf } from '../lib/grant-diff';
+import { PERMISSION_RISK_TONE } from '../lib/permission-risk';
 import type { SectionProps } from '../lib/section-props';
-
-const RISK_TONE: Record<AddonPermissionRisk, 'danger' | 'warn' | 'neutral'> = {
-  high: 'danger',
-  medium: 'warn',
-  low: 'neutral',
-};
 
 export function PermissionsSection({ orgId, detail, installed }: SectionProps) {
   const queryClient = useQueryClient();
@@ -52,10 +48,12 @@ export function PermissionsSection({ orgId, detail, installed }: SectionProps) {
           <Button
             type="button"
             size="sm"
-            variant="outline"
+            variant="ghost"
             onClick={() => setEditing(true)}
             data-testid="addon-grants-edit"
+            className="text-muted-foreground"
           >
+            <ShieldCheckIcon />
             Edit grants
           </Button>
         ) : undefined
@@ -64,39 +62,14 @@ export function PermissionsSection({ orgId, detail, installed }: SectionProps) {
       {declared.length === 0 ? (
         <RowItem title="No rights declared" />
       ) : (
-        declared.map((permission) => {
-          const isGranted = grantedIds.has(permission.id);
-          return (
-            <Row
-              key={permission.id}
-              testId={`addon-permission-${permission.id}`}
-              icon={
-                isGranted ? (
-                  <ShieldCheckIcon className="text-status-ok" />
-                ) : (
-                  <ShieldIcon className="text-muted-foreground/60" />
-                )
-              }
-              title={permission.id}
-              chips={
-                <>
-                  <RowChip tone={RISK_TONE[permission.risk]}>{permission.risk}</RowChip>
-                  {permission.optional ? (
-                    <RowChip>optional</RowChip>
-                  ) : (
-                    <RowChip tone="info">required</RowChip>
-                  )}
-                  {installed ? (
-                    <RowChip tone={isGranted ? 'ok' : 'neutral'}>
-                      {isGranted ? 'granted' : 'not granted'}
-                    </RowChip>
-                  ) : null}
-                </>
-              }
-              summary={permission.reason}
-            />
-          );
-        })
+        declared.map((permission) => (
+          <PermissionLine
+            key={permission.id}
+            permission={permission}
+            granted={grantedIds.has(permission.id)}
+            showState={installed}
+          />
+        ))
       )}
       {installed &&
       (detail.permissions.diff.added.length > 0 || detail.permissions.diff.removed.length > 0) ? (
@@ -124,5 +97,42 @@ export function PermissionsSection({ orgId, detail, installed }: SectionProps) {
         onConfirm={(grants) => void saveGrants(grants)}
       />
     </RowSection>
+  );
+}
+
+function PermissionLine({
+  permission,
+  granted,
+  showState,
+}: {
+  permission: AddonPermissionView;
+  granted: boolean;
+  showState: boolean;
+}) {
+  const declined = showState && !granted;
+  return (
+    <div
+      className="-mx-2 flex min-w-0 items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
+      data-testid={`addon-permission-${permission.id}`}
+    >
+      {granted ? (
+        <ShieldCheckIcon className="size-3.5 shrink-0 text-status-ok" aria-hidden />
+      ) : (
+        <ShieldIcon
+          className={cn(
+            'size-3.5 shrink-0',
+            declined ? 'text-status-warn' : 'text-muted-foreground/60',
+          )}
+          aria-hidden
+        />
+      )}
+      <span className="min-w-0 truncate font-mono text-[13px] leading-5">{permission.id}</span>
+      <span className="min-w-0 flex-1 truncate text-muted-foreground text-xs leading-4">
+        {permission.reason}
+      </span>
+      {permission.optional ? <RowChip>optional</RowChip> : null}
+      {declined ? <RowChip tone="warn">not granted</RowChip> : null}
+      <RowChip tone={PERMISSION_RISK_TONE[permission.risk]}>{permission.risk}</RowChip>
+    </div>
   );
 }

@@ -48,29 +48,88 @@ export type AddonViewSection =
   | { type: 'markdown'; body: SectionL10n }
   | { type: 'frame'; route: string; height?: number };
 
+export interface StandardBlockOverride {
+  disabled?: boolean;
+  label?: string;
+  help?: string;
+  required?: boolean;
+}
+
+export interface TriggerStandardOverrides {
+  name?: StandardBlockOverride;
+  agent?: StandardBlockOverride;
+  target?: StandardBlockOverride;
+  mode?: StandardBlockOverride;
+  instructions?: StandardBlockOverride;
+}
+
 export interface AddonTriggerDescriptor {
   kind: string;
   title: SectionL10n;
   description?: SectionL10n;
   configFields?: FieldSpec[];
   connection?: string;
+  standard?: TriggerStandardOverrides;
 }
 
 export type SectionEntry =
   | { kind: 'known'; section: AddonViewSection }
   | { kind: 'unknown'; sectionType: string };
 
+/**
+ * The single layout rule for every add-on page: runtime facts first, then what
+ * the add-on does and needs, then setup (connections before config), then its
+ * active surfaces (automations, jobs), then add-on-specific blocks in
+ * declaration order, then notes last.
+ */
 export const DEFAULT_SECTION_ORDER = [
-  'connections',
+  'status',
   'capabilities',
   'permissions',
+  'connections',
   'config',
   'automations',
   'jobs',
 ] as const;
 
+const SECTION_RANK: Record<string, number> = {
+  status: 0,
+  capabilities: 1,
+  permissions: 2,
+  connections: 3,
+  config: 4,
+  automations: 5,
+  jobs: 6,
+  table: 7,
+  form: 7,
+  actions: 7,
+  frame: 7,
+  markdown: 9,
+};
+
+function sectionRank(entry: SectionEntry): number {
+  if (entry.kind === 'unknown') {
+    return 8;
+  }
+  return SECTION_RANK[entry.section.type] ?? 7;
+}
+
+/**
+ * Sections that stay readable while the organization has no row for the add-on:
+ * they describe what enabling would do and never mutate state.
+ */
+export function isPreviewSection(entry: SectionEntry): boolean {
+  return entry.kind === 'known' && PREVIEW_SECTION_TYPES.has(entry.section.type);
+}
+
+export function sortSectionEntries(entries: SectionEntry[]): SectionEntry[] {
+  return entries
+    .map((entry, index) => ({ entry, index }))
+    .sort((a, b) => sectionRank(a.entry) - sectionRank(b.entry) || a.index - b.index)
+    .map((item) => item.entry);
+}
+
 const KNOWN_SECTION_TYPES = [
-  'status',
   ...DEFAULT_SECTION_ORDER,
   'table',
   'form',
@@ -126,6 +185,9 @@ export function triggerDescriptorsFromDetail(detail: OrgAddonDetail): AddonTrigg
         ? (descriptor.configFields as FieldSpec[])
         : [],
       connection: typeof descriptor.connection === 'string' ? descriptor.connection : undefined,
+      standard: isRecord(descriptor.standard)
+        ? (descriptor.standard as TriggerStandardOverrides)
+        : undefined,
     });
   }
   return output;
@@ -178,14 +240,6 @@ export function ensurePermissionsSection(entries: SectionEntry[]): SectionEntry[
 }
 
 const PREVIEW_SECTION_TYPES = new Set(['permissions', 'connections', 'markdown', 'capabilities']);
-
-/**
- * Sections that stay readable while the organization has no row for the add-on:
- * they describe what enabling would do and never mutate state.
- */
-export function isPreviewSection(entry: SectionEntry): boolean {
-  return entry.kind === 'known' && PREVIEW_SECTION_TYPES.has(entry.section.type);
-}
 
 function isKnownSectionType(sectionType: string): boolean {
   return KNOWN_SECTION_TYPES.some((type) => type === sectionType);

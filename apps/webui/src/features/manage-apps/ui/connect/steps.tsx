@@ -46,7 +46,7 @@ export function StepApp({
         <label className="flex flex-col gap-1.5">
           <span className="font-medium text-sm">Kind</span>
           <select
-            className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
+            className="h-7 rounded-md border border-input bg-transparent px-2 text-sm"
             value={kind.kind}
             onChange={(event) => onKind(event.target.value)}
           >
@@ -89,7 +89,7 @@ export function StepApp({
       <label className="flex flex-col gap-1.5">
         <span className="font-medium text-sm">Name</span>
         <input
-          className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
+          className="h-7 rounded-md border border-input bg-transparent px-2 text-sm"
           value={label}
           placeholder={kind.label}
           autoComplete="off"

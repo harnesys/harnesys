@@ -31,6 +31,7 @@ import {
   defaultSectionEntries,
   ensurePermissionsSection,
   isPreviewSection,
+  sortSectionEntries,
   viewSectionsFromDetail,
 } from './lib/view-sections';
 import { renderSection } from './section-registry';
@@ -95,9 +96,11 @@ function AddonDetail({
       installedPackages.find((pkg) => pkg.id === addonId)
     )?.trust ?? null;
   const banners = deriveAddonBanners(value, trust);
-  const entries = ensurePermissionsSection(
-    (viewSectionsFromDetail(value) ?? defaultSectionEntries()).filter(
-      (entry) => installed || isPreviewSection(entry),
+  const entries = sortSectionEntries(
+    ensurePermissionsSection(
+      (viewSectionsFromDetail(value) ?? defaultSectionEntries()).filter(
+        (entry) => installed || isPreviewSection(entry),
+      ),
     ),
   );
   const invalidate = () => void invalidateAddonScope(queryClient, orgId);

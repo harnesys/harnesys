@@ -77,6 +77,7 @@ export const protocolMap = {
       .object({
         instanceId: str,
         kind: str,
+        label: str.optional(),
         config: z.record(z.string(), z.unknown()),
         target: z.unknown().optional(),
       })

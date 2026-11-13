@@ -98,6 +98,9 @@
         "id": "main",
         "title": "Gmail",
         "sections": [
+          { "type": "status" },
+          { "type": "capabilities" },
+          { "type": "permissions" },
           { "type": "connections", "connections": ["google"] },
           { "type": "automations", "triggers": ["gmail.message"] },
           {

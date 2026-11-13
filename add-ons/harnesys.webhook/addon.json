@@ -28,14 +28,6 @@
         "description": "Trigger from an HTTP POST endpoint",
         "configFields": [
           {
-            "key": "name",
-            "label": "Webhook name",
-            "type": "text",
-            "required": true,
-            "placeholder": "Deploy hook",
-            "help": "Shown to the agent in the run prompt"
-          },
-          {
             "key": "detail",
             "label": "Fallback payload",
             "type": "textarea",
@@ -70,6 +62,8 @@
         "title": "Webhook",
         "sections": [
           { "type": "status" },
+          { "type": "capabilities" },
+          { "type": "permissions" },
           { "type": "automations", "triggers": ["webhook.http"] },
           {
             "type": "table",

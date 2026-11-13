@@ -338,8 +338,11 @@
         "title": "Telegram bot",
         "sections": [
           { "type": "status" },
-          { "type": "config" },
+          { "type": "capabilities" },
+          { "type": "permissions" },
           { "type": "connections", "connections": ["telegram-bot"] },
+          { "type": "config" },
+          { "type": "jobs" },
           {
             "type": "form",
             "title": "Pair a chat",
@@ -354,7 +357,6 @@
             ],
             "submit": { "route": "/pair" }
           },
-          { "type": "jobs" },
           {
             "type": "table",
             "title": "Paired chats",

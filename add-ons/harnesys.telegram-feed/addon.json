@@ -136,8 +136,10 @@
         "title": "Telegram feed",
         "sections": [
           { "type": "status" },
-          { "type": "config" },
+          { "type": "capabilities" },
+          { "type": "permissions" },
           { "type": "connections", "connections": ["telegram-user"] },
+          { "type": "config" },
           { "type": "automations", "triggers": ["telegram.feed"] },
           {
             "type": "table",

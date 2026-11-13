@@ -165,7 +165,7 @@ function AgentFilter({
 }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 font-medium text-sm shadow-xs outline-none hover:bg-muted disabled:opacity-50">
+      <DropdownMenuTrigger className="inline-flex h-7 items-center gap-1.5 rounded-md border border-input bg-background px-3 font-medium text-sm shadow-xs outline-none hover:bg-muted disabled:opacity-50">
         <UsersIcon className="size-3.5 text-muted-foreground" />
         {selected.length === 0 ? 'All agents' : `${selected.length} selected`}
         <ChevronsUpDownIcon className="size-3 text-muted-foreground" />

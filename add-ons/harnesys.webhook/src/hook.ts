@@ -14,7 +14,12 @@ export function instanceIdFromPath(path: string): string {
 
 export const webhookTrigger: TriggerPair = {
   start: async (params, ctx: AddonContext) => {
-    await upsertWebhook(ctx, params.instanceId, params.config);
+    await upsertWebhook(
+      ctx,
+      params.instanceId,
+      typeof params.label === 'string' ? params.label : '',
+      params.config,
+    );
     await ctx.log.info('webhook instance started', { instanceId: params.instanceId });
   },
   stop: async (params, ctx: AddonContext) => {

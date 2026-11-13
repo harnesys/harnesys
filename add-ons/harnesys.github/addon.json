@@ -524,8 +524,10 @@
         "title": "GitHub",
         "sections": [
           { "type": "status" },
-          { "type": "config" },
+          { "type": "capabilities" },
+          { "type": "permissions" },
           { "type": "connections", "connections": ["github"] },
+          { "type": "config" },
           { "type": "automations", "triggers": ["github.repo-events"] },
           {
             "type": "table",

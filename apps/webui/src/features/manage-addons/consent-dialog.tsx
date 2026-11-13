@@ -1,5 +1,5 @@
 import type { AddonGrantEntry, AddonPermissionView } from '@harnesys/contracts';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Button } from '@/shared/ui/button';
 import {
   Dialog,
@@ -66,6 +66,8 @@ export function ConsentDialog({
     onConfirm(grantsFromBody(permissions, selected));
   };
 
+  const grantedCount = mandatory.length + optional.filter((p) => selected.has(p.id)).length;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl" data-testid="addon-consent-dialog">
@@ -73,29 +75,45 @@ export function ConsentDialog({
           <DialogTitle>{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
-        <div className="flex max-h-[50vh] min-w-0 flex-col gap-2 overflow-y-auto pr-1">
+        <div className="flex max-h-[55vh] min-w-0 flex-col gap-1 overflow-y-auto pr-1">
           {permissions.length === 0 ? (
             <p className="text-muted-foreground text-sm">No new rights are requested.</p>
           ) : null}
-          {mandatory.map((permission) => (
-            <PermissionRow key={permission.id} permission={permission} locked checked />
-          ))}
-          {optional.map((permission) => (
-            <PermissionRow
-              key={permission.id}
-              permission={permission}
-              checked={selected.has(permission.id)}
-              onToggle={(checked) => toggle(permission.id, checked)}
-            />
-          ))}
+          {mandatory.length > 0 ? (
+            <ConsentGroup label="Required" count={mandatory.length}>
+              {mandatory.map((permission) => (
+                <PermissionRow key={permission.id} permission={permission} locked checked />
+              ))}
+            </ConsentGroup>
+          ) : null}
+          {optional.length > 0 ? (
+            <ConsentGroup label="Optional" count={optional.length}>
+              {optional.map((permission) => (
+                <PermissionRow
+                  key={permission.id}
+                  permission={permission}
+                  checked={selected.has(permission.id)}
+                  onToggle={(checked) => toggle(permission.id, checked)}
+                />
+              ))}
+            </ConsentGroup>
+          ) : null}
           {removed.length > 0 ? (
-            <div className="rounded-md border px-3 py-2 text-muted-foreground text-xs">
+            <div className="mt-1 rounded-md bg-muted/40 px-3 py-2 text-muted-foreground text-xs">
               <p className="font-medium">No longer requested:</p>
-              <p>{removed.join(', ')}</p>
+              <p className="font-mono text-[11px]">{removed.join(', ')}</p>
             </div>
           ) : null}
         </div>
         <DialogFooter>
+          {optional.length > 0 ? (
+            <p
+              className="mr-auto text-muted-foreground text-xs tabular-nums"
+              data-testid="addon-consent-summary"
+            >
+              {grantedCount} of {permissions.length} rights granted
+            </p>
+          ) : null}
           <Button
             type="button"
             variant="ghost"
@@ -116,5 +134,25 @@ export function ConsentDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ConsentGroup({
+  label,
+  count,
+  children,
+}: {
+  label: string;
+  count: number;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex min-w-0 flex-col">
+      <p className="sticky top-0 z-10 flex items-baseline gap-1.5 bg-popover py-1.5 font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
+        {label}
+        <span className="font-mono font-normal normal-case tabular-nums">{count}</span>
+      </p>
+      {children}
+    </div>
   );
 }

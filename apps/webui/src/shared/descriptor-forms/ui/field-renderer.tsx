@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/shared/ui/select';
 import { Textarea } from '@/shared/ui/textarea';
+import { formWidget } from './widget-registry';
 
 interface FieldRendererProps {
   field: FieldSpec;
@@ -22,8 +23,18 @@ interface FieldRendererProps {
   existingSecret?: boolean;
   error?: string;
   disabled?: boolean;
+  /** Render only the control: the host row owns label, description, and error. */
+  bare?: boolean;
   onChange: (value: FieldValue) => void;
   onSecretChange?: (value: string) => void;
+}
+
+export function fieldControlId(key: string): string {
+  return `field-${key}`;
+}
+
+export function RequiredMark() {
+  return <span className="text-destructive"> *</span>;
 }
 
 export function FieldRenderer({
@@ -33,30 +44,37 @@ export function FieldRenderer({
   existingSecret = false,
   error,
   disabled = false,
+  bare = false,
   onChange,
   onSecretChange,
 }: FieldRendererProps) {
   if (field.generated) {
     return null;
   }
-  const id = `field-${field.key}`;
+  const id = fieldControlId(field.key);
+  const control = (
+    <FieldControl
+      field={field}
+      id={id}
+      value={value}
+      secretValue={secretValue}
+      existingSecret={existingSecret}
+      disabled={disabled}
+      onChange={onChange}
+      onSecretChange={onSecretChange}
+    />
+  );
+  if (bare) {
+    return control;
+  }
   return (
     <Field data-invalid={error ? true : undefined}>
       <FieldLabel htmlFor={id}>
         {field.label}
-        {field.required ? <span className="text-destructive"> *</span> : null}
+        {field.required ? <RequiredMark /> : null}
       </FieldLabel>
       {field.help ? <FieldDescription>{field.help}</FieldDescription> : null}
-      <FieldControl
-        field={field}
-        id={id}
-        value={value}
-        secretValue={secretValue}
-        existingSecret={existingSecret}
-        disabled={disabled}
-        onChange={onChange}
-        onSecretChange={onSecretChange}
-      />
+      {control}
       {error ? <FieldError>{error}</FieldError> : null}
     </Field>
   );
@@ -92,6 +110,11 @@ function FieldControl({
       />
     );
   }
+  const widget = formWidget(field.widget?.kind);
+  if (widget) {
+    const Widget = widget;
+    return <Widget field={field} value={value} disabled={disabled} onChange={onChange} />;
+  }
   const displayed = value === undefined ? field.default : value;
   if (field.type === 'textarea') {
     return (
@@ -108,34 +131,42 @@ function FieldControl({
   }
   if (field.type === 'select') {
     const options = field.options ?? [];
+    const selectedHint = options.find((option) => option.value === String(displayed))?.help;
     return (
-      <Select
-        items={options.map((option) => ({ value: option.value, label: option.label }))}
-        value={
-          displayed === undefined || displayed === '' || displayed === null
-            ? null
-            : String(displayed)
-        }
-        disabled={disabled}
-        onValueChange={(next) => {
-          if (typeof next === 'string') {
-            onChange(next);
+      <div className="flex w-full flex-col gap-1.5">
+        <Select
+          items={options.map((option) => ({ value: option.value, label: option.label }))}
+          value={
+            displayed === undefined || displayed === '' || displayed === null
+              ? null
+              : String(displayed)
           }
-        }}
-      >
-        <SelectTrigger id={id} className="w-full" data-testid={id}>
-          <SelectValue placeholder={field.placeholder ?? 'Select...'} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            {options.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
+          disabled={disabled}
+          onValueChange={(next) => {
+            if (typeof next === 'string') {
+              onChange(next);
+            }
+          }}
+        >
+          <SelectTrigger id={id} className="w-full" data-testid={id}>
+            <SelectValue placeholder={field.placeholder ?? 'Select...'} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {options.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        {selectedHint ? (
+          <p className="text-muted-foreground text-xs" data-testid={`${id}-hint`}>
+            {selectedHint}
+          </p>
+        ) : null}
+      </div>
     );
   }
   if (field.type === 'boolean') {
@@ -188,7 +219,7 @@ function SecretInput({
 }) {
   const [visible, setVisible] = useState(false);
   return (
-    <div className="relative">
+    <div className="relative w-full">
       <Input
         id={id}
         type={visible ? 'text' : 'password'}
@@ -203,8 +234,8 @@ function SecretInput({
       <Button
         type="button"
         variant="ghost"
-        size="icon-sm"
-        className="absolute top-0.5 right-0.5"
+        size="icon-xs"
+        className="absolute top-1 right-1"
         aria-label={visible ? 'Hide value' : 'Show value'}
         onClick={() => setVisible((current) => !current)}
       >

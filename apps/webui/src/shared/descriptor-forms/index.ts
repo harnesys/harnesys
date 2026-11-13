@@ -6,4 +6,7 @@ export {
   isHttpUrl,
 } from './model/field-validation.ts';
 export { fieldInputs, fieldValue, initialFieldValues } from './model/field-value.ts';
-export { FieldRenderer } from './ui/field-renderer.tsx';
+export { FieldRenderer, fieldControlId, RequiredMark } from './ui/field-renderer.tsx';
+export { FieldsRenderer } from './ui/fields-renderer.tsx';
+export type { FormWidget, FormWidgetProps } from './ui/widget-registry.ts';
+export { formWidget, registerFormWidget } from './ui/widget-registry.ts';

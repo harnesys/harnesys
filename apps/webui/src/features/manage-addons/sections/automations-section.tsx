@@ -1,8 +1,9 @@
 import type { OrgAddonDetail, TriggerInstanceView } from '@harnesys/contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { PlusIcon } from 'lucide-react';
 import { useState } from 'react';
-import type { ClientAutomation } from '@/entities/automation';
 import { useAgentStore } from '@/entities/agent';
+import type { ClientAutomation } from '@/entities/automation';
 import { openAddonTriggerConfigDialog } from '@/features/manage-automations/ui/addon-trigger-config-dialog';
 import {
   deleteOrgAddonTrigger,
@@ -153,11 +154,13 @@ function NewTriggerButton({
     return (
       <Button
         type="button"
-        variant="outline"
+        variant="ghost"
         size="sm"
         onClick={() => open(descriptors[0].kind)}
         data-testid="addon-trigger-new"
+        className="text-muted-foreground"
       >
+        <PlusIcon/>
         New trigger
       </Button>
     );

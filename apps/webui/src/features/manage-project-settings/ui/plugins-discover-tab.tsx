@@ -67,7 +67,7 @@ export function PluginsDiscoverTab({ projectId }: { projectId: string }) {
         <div className="relative min-w-0 max-w-sm grow basis-52">
           <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
-            className="h-8 pr-8 pl-8 font-mono text-sm"
+            className="pr-8 pl-8 font-mono text-sm"
             placeholder="Search plugins…"
             value={q}
             onChange={(event) => setQ(event.target.value)}
@@ -97,7 +97,7 @@ export function PluginsDiscoverTab({ projectId }: { projectId: string }) {
           }}
         >
           <SelectTrigger
-            className="h-8 w-40"
+            className="w-40"
             data-testid="plugin-category-filter"
             aria-label="Filter by category"
           >
@@ -127,7 +127,7 @@ export function PluginsDiscoverTab({ projectId }: { projectId: string }) {
           }}
         >
           <SelectTrigger
-            className="h-8 w-36"
+            className="w-36"
             data-testid="plugin-format-filter"
             aria-label="Filter by format"
           >

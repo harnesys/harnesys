@@ -13,8 +13,8 @@ export const DEFAULT_PAGE_SECTIONS: readonly ViewSection[] = [
   { type: 'status' },
   { type: 'capabilities' },
   { type: 'permissions' },
-  { type: 'config' },
   { type: 'connections' },
+  { type: 'config' },
   { type: 'automations' },
   { type: 'jobs' },
 ];

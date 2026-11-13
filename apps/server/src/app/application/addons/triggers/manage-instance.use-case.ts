@@ -123,6 +123,7 @@ export class ManageTriggerInstanceUseCase {
     await this.calls.triggerStart(instance.orgId, instance.addonId, {
       instanceId: instance.id,
       kind: instance.triggerId,
+      label: instance.label,
       config: this.configOf(instance),
       target: this.targetOf(instance),
     });

@@ -20,20 +20,6 @@ export interface ScheduleRow {
   target: ScheduleTarget;
 }
 
-interface InstanceRow {
-  instanceId: string;
-  config: Record<string, unknown>;
-  target: ScheduleTarget;
-}
-
-interface StateRow {
-  cron: string;
-  status: 'active' | 'failed';
-  nextRunAt: string | null;
-  lastFiredAt: string | null;
-  error: string | null;
-}
-
 function parseJson(raw: unknown): Record<string, unknown> {
   if (typeof raw !== 'string') {
     return {};
@@ -69,14 +55,31 @@ function missPolicyOf(config: Record<string, unknown>): MissPolicy {
 
 export async function listSchedules(ctx: AddonContext): Promise<ScheduleRow[]> {
   const instanceRows = await ctx.db.all(
-    'select instance_id as instanceId, config, target from instances',
+    'select instance_id as instanceId, label, config, target from instances',
   );
+  const stateById = await stateMap(ctx);
+  const rows: ScheduleRow[] = [];
+  for (const row of instanceRows) {
+    rows.push(scheduleFromRow(row, stateById));
+  }
+  return rows.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+interface StateRow {
+  cron: string;
+  status: 'active' | 'failed';
+  nextRunAt: string | null;
+  lastFiredAt: string | null;
+  error: string | null;
+}
+
+async function stateMap(ctx: AddonContext): Promise<Map<string, StateRow>> {
   const stateRows = await ctx.db.all(
     'select instance_id as instanceId, cron, status, next_run_at as nextRunAt, last_fired_at as lastFiredAt, error from schedule_state',
   );
-  const stateById = new Map<string, StateRow>();
+  const byId = new Map<string, StateRow>();
   for (const row of stateRows) {
-    stateById.set(String(row.instanceId), {
+    byId.set(String(row.instanceId), {
       cron: String(row.cron),
       status: row.status === 'failed' ? 'failed' : 'active',
       nextRunAt: typeof row.nextRunAt === 'string' ? row.nextRunAt : null,
@@ -84,39 +87,47 @@ export async function listSchedules(ctx: AddonContext): Promise<ScheduleRow[]> {
       error: typeof row.error === 'string' ? row.error : null,
     });
   }
-  const rows: ScheduleRow[] = [];
-  for (const row of instanceRows) {
-    const instance: InstanceRow = {
-      instanceId: String(row.instanceId),
-      config: parseJson(row.config),
-      target: parseTarget(row.target),
-    };
-    const state = stateById.get(instance.instanceId);
-    rows.push({
-      instanceId: instance.instanceId,
-      name: configText(instance.config, 'name'),
-      cron: state?.cron ?? configText(instance.config, 'cron'),
-      detail: configText(instance.config, 'detail'),
-      missPolicy: missPolicyOf(instance.config),
-      status: state?.status ?? 'active',
-      nextRunAt: state?.nextRunAt ?? null,
-      lastFiredAt: state?.lastFiredAt ?? null,
-      error: state?.error ?? null,
-      target: instance.target,
-    });
-  }
-  return rows.sort((a, b) => a.name.localeCompare(b.name));
+  return byId;
+}
+
+function scheduleFromRow(
+  row: Record<string, unknown>,
+  stateById: Map<string, StateRow>,
+): ScheduleRow {
+  const config = parseJson(row.config);
+  const instanceId = String(row.instanceId);
+  const label = typeof row.label === 'string' ? row.label : '';
+  const state = stateById.get(instanceId);
+  return {
+    instanceId,
+    name: label || configText(config, 'name') || instanceId,
+    cron: state?.cron ?? configText(config, 'cron'),
+    detail: configText(config, 'detail'),
+    missPolicy: missPolicyOf(config),
+    status: state?.status ?? 'active',
+    nextRunAt: state?.nextRunAt ?? null,
+    lastFiredAt: state?.lastFiredAt ?? null,
+    error: state?.error ?? null,
+    target: parseTarget(row.target),
+  };
 }
 
 export async function upsertInstance(
   ctx: AddonContext,
   instanceId: string,
+  label: string,
   config: Record<string, unknown>,
   target: unknown,
 ): Promise<void> {
   await ctx.db.run(
-    'insert into instances (instance_id, config, target, started_at) values (?, ?, ?, ?) on conflict(instance_id) do update set config = excluded.config, target = excluded.target',
-    [instanceId, JSON.stringify(config), JSON.stringify(target ?? {}), new Date().toISOString()],
+    'insert into instances (instance_id, label, config, target, started_at) values (?, ?, ?, ?, ?) on conflict(instance_id) do update set label = excluded.label, config = excluded.config, target = excluded.target',
+    [
+      instanceId,
+      label,
+      JSON.stringify(config),
+      JSON.stringify(target ?? {}),
+      new Date().toISOString(),
+    ],
   );
 }
 

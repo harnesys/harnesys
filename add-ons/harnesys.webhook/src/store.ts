@@ -12,7 +12,6 @@ export interface WebhookRow {
 interface WebhookRecord extends WebhookRow {
   config: Record<string, unknown>;
 }
-
 function parseConfig(raw: unknown): Record<string, unknown> {
   if (typeof raw !== 'string') {
     return {};
@@ -37,7 +36,7 @@ function mapRow(row: Record<string, unknown>): WebhookRecord {
   return {
     instanceId: String(row.instanceId),
     config,
-    name: text(config, 'name'),
+    name: typeof row.label === 'string' && row.label ? row.label : text(config, 'name'),
     detail: text(config, 'detail'),
     status: row.status === 'paused' ? 'paused' : 'active',
     lastFiredAt: typeof row.last_fired_at === 'string' ? row.last_fired_at : null,
@@ -47,7 +46,7 @@ function mapRow(row: Record<string, unknown>): WebhookRecord {
 
 export async function listWebhooks(ctx: AddonContext): Promise<WebhookRow[]> {
   const rows = await ctx.db.all(
-    'select instance_id as instanceId, config, status, last_fired_at as lastFiredAt, fires from webhooks order by instance_id',
+    'select instance_id as instanceId, label, config, status, last_fired_at as lastFiredAt, fires from webhooks order by instance_id',
   );
   return rows.map(mapRow);
 }
@@ -57,7 +56,7 @@ export async function findWebhook(
   instanceId: string,
 ): Promise<WebhookRecord | null> {
   const row = await ctx.db.get(
-    'select instance_id as instanceId, config, status, last_fired_at as lastFiredAt, fires from webhooks where instance_id = ?',
+    'select instance_id as instanceId, label, config, status, last_fired_at as lastFiredAt, fires from webhooks where instance_id = ?',
     [instanceId],
   );
   return row ? mapRow(row) : null;
@@ -66,11 +65,12 @@ export async function findWebhook(
 export async function upsertWebhook(
   ctx: AddonContext,
   instanceId: string,
+  label: string,
   config: Record<string, unknown>,
 ): Promise<void> {
   await ctx.db.run(
-    "insert into webhooks (instance_id, config, status, updated_at) values (?, ?, 'active', ?) on conflict(instance_id) do update set config = excluded.config, status = 'active', updated_at = excluded.updated_at",
-    [instanceId, JSON.stringify(config), new Date().toISOString()],
+    "insert into webhooks (instance_id, label, config, status, updated_at) values (?, ?, ?, 'active', ?) on conflict(instance_id) do update set label = excluded.label, config = excluded.config, status = 'active', updated_at = excluded.updated_at",
+    [instanceId, label, JSON.stringify(config), new Date().toISOString()],
   );
 }
 

@@ -7,12 +7,24 @@ export function fieldValue(
   return field.key in values ? values[field.key] : field.default;
 }
 
+export function flatFields(fields: readonly FieldSpec[]): FieldSpec[] {
+  const output: FieldSpec[] = [];
+  for (const field of fields) {
+    if (field.type === 'group') {
+      output.push(...flatFields(field.fields ?? []));
+      continue;
+    }
+    output.push(field);
+  }
+  return output;
+}
+
 export function initialFieldValues(
   fields: readonly FieldSpec[],
   existing: Record<string, FieldValue> = {},
 ): Record<string, FieldValue> {
   const output: Record<string, FieldValue> = {};
-  for (const field of fields) {
+  for (const field of flatFields(fields)) {
     if (field.type === 'secret' || field.generated) {
       continue;
     }
@@ -30,7 +42,7 @@ export function fieldInputs(
   secrets: Record<string, string>,
 ): Record<string, FieldValue> {
   const output: Record<string, FieldValue> = {};
-  for (const field of fields) {
+  for (const field of flatFields(fields)) {
     if (field.generated) {
       continue;
     }

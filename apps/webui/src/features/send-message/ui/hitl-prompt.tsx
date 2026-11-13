@@ -136,7 +136,7 @@ function ConfirmCard({ pending, threadId }: { pending: PendingHitl; threadId: st
         className="min-h-0 py-1.5 text-sm"
       />
 
-      <InputGroupAddon align="block-end" className="justify-end gap-1 px-2 pb-2">
+      <InputGroupAddon align="block-end" className="justify-end gap-1.5 px-2 pb-2">
         <Button
           type="button"
           variant="ghost"
@@ -216,7 +216,7 @@ function BudgetCard({ pending, threadId }: { pending: PendingHitl; threadId: str
           <Markdown text={pending.prompt} className="px-0 text-[11px] text-muted-foreground" />
         ) : null}
       </div>
-      <InputGroupAddon align="block-end" className="justify-end gap-1 px-2 pb-2">
+      <InputGroupAddon align="block-end" className="justify-end gap-1.5 px-2 pb-2">
         <Button
           type="button"
           variant="ghost"
@@ -379,7 +379,7 @@ function AskCard({ pending, threadId }: { pending: PendingHitl; threadId: string
         }}
       />
 
-      <InputGroupAddon align="block-end" className="justify-end gap-1 px-2 pb-2">
+      <InputGroupAddon align="block-end" className="justify-end gap-1.5 px-2 pb-2">
         <Button
           type="button"
           variant="ghost"

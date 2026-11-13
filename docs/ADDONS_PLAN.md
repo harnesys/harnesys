@@ -726,7 +726,7 @@ export interface ConnectionRequirement {
 
 ### 11.2 Страница аддона
 
-Вклад `view` (не более одного на аддон) описывает секции. Если вклада нет, страница строится по умолчанию из манифеста: `status`, `permissions`, `config`, `connections`, `automations`, `jobs`.
+Вклад `view` (не более одного на аддон) описывает секции. Единое правило расположения для всех страниц: `status`, `capabilities`, `permissions`, `connections`, `config`, `automations`, `jobs`, затем аддонские блоки (`table`, `form`, `actions`, `frame`) в порядке объявления, `markdown` — последним. Фронтенд сортирует секции по этому правилу независимо от порядка в манифесте. Если вклада нет, страница строится по умолчанию из манифеста: `status`, `capabilities`, `permissions`, `connections`, `config`, `automations`, `jobs`.
 
 ```ts
 export interface ViewDescriptor { id: string; title: L10n; icon?: string; sections: ViewSection[] }

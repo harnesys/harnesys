@@ -67,7 +67,7 @@ export function VoicePicker({ id, value, onChange }: VoicePickerProps) {
             ref={searchRef}
             value={query}
             placeholder="Search voices"
-            className="h-8 pl-8"
+            className="pl-8"
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>

@@ -151,6 +151,7 @@ export interface TriggerInstanceStartInput {
   addonId: string;
   instanceId: string;
   kind: string;
+  label?: string;
   config: Record<string, unknown>;
   target?: unknown;
 }
@@ -182,12 +183,18 @@ export class TriggerFamilyModule implements FamilyModule<TriggerSchema> {
   }
 
   async startInstance(input: TriggerInstanceStartInput, opts?: AddonCallOptions): Promise<void> {
-    const { orgId, addonId, instanceId, kind, config, target } = input;
+    const { orgId, addonId, instanceId, kind, label, config, target } = input;
     await this.supervisor.ensureRunning(orgId, addonId, `trigger-instance:${instanceId}`);
     await this.calls.triggerStart(
       orgId,
       addonId,
-      { instanceId, kind, config, target },
+      {
+        instanceId,
+        kind,
+        config,
+        target,
+        ...(label === undefined ? {} : { label }),
+      },
       opts ?? { timeoutMs: TRIGGER_CALL_TIMEOUT_MS },
     );
   }

@@ -36,38 +36,36 @@
         "description": "Run an agent on a cron schedule",
         "configFields": [
           {
-            "key": "name",
-            "label": "Schedule name",
-            "type": "text",
-            "required": true,
-            "placeholder": "Nightly digest",
-            "help": "Shown to the agent in the run prompt"
-          },
-          {
             "key": "cron",
-            "label": "Cron expression",
+            "label": "Cron",
             "type": "text",
             "required": true,
-            "placeholder": "*/15 * * * *",
-            "help": "5-field cron, evaluated in the organization timezone"
-          },
-          {
-            "key": "detail",
-            "label": "Task prompt",
-            "type": "textarea",
-            "required": false,
-            "help": "Sent to the thread on every fire"
+            "default": "0 9 * * *",
+            "widget": { "kind": "cron" },
+            "help": "Evaluated in the organization timezone"
           },
           {
             "key": "miss_policy",
-            "label": "Missed run policy",
+            "label": "If a run is missed",
             "type": "select",
             "required": false,
             "default": "catch-up",
             "options": [
-              { "value": "catch-up", "label": "Catch up within an hour" },
-              { "value": "skip", "label": "Skip missed runs" },
-              { "value": "escalate", "label": "Skip and ask in the approval inbox" }
+              {
+                "value": "catch-up",
+                "label": "Catch up",
+                "help": "Runs missed while the host was asleep still fire within the next hour."
+              },
+              {
+                "value": "skip",
+                "label": "Skip",
+                "help": "Missed runs are dropped; the next scheduled run fires as usual."
+              },
+              {
+                "value": "escalate",
+                "label": "Skip and ask",
+                "help": "Missed runs are dropped and an approval inbox item asks what to do."
+              }
             ]
           }
         ]
@@ -98,6 +96,8 @@
         "title": "Scheduler",
         "sections": [
           { "type": "status" },
+          { "type": "capabilities" },
+          { "type": "permissions" },
           { "type": "automations", "triggers": ["scheduler.cron"] },
           { "type": "jobs" },
           {

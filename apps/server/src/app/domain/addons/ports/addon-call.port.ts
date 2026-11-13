@@ -27,6 +27,7 @@ export interface RouteCallParams {
 export interface TriggerStartParams {
   instanceId: string;
   kind: string;
+  label?: string;
   config: JsonObject;
   target?: unknown;
 }

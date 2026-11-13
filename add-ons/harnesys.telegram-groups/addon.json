@@ -364,8 +364,10 @@
         "title": "Telegram groups",
         "sections": [
           { "type": "status" },
-          { "type": "config" },
+          { "type": "capabilities" },
+          { "type": "permissions" },
           { "type": "connections", "connections": ["telegram-bot"] },
+          { "type": "config" },
           { "type": "jobs" },
           {
             "type": "table",

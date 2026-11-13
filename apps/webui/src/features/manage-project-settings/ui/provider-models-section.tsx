@@ -108,7 +108,7 @@ export function ProviderModelsSection({
             placeholder="Search models…"
             value={modelSearch}
             onChange={(e) => setModelSearch(e.target.value)}
-            className="h-8 pr-8 pl-8 text-sm"
+            className="pr-8 pl-8 text-sm"
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
                 setSearchOpen(false);

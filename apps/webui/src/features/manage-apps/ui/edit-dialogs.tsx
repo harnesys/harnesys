@@ -60,7 +60,7 @@ export function EditAppDialog({
         <label className="flex flex-col gap-1.5">
           <span className="font-medium text-sm">Name</span>
           <input
-            className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
+            className="h-7 rounded-md border border-input bg-transparent px-2 text-sm"
             value={label}
             onChange={(event) => setLabel(event.target.value)}
           />
@@ -141,7 +141,7 @@ export function EditAccountDialog({
         <label className="flex flex-col gap-1.5">
           <span className="font-medium text-sm">Name</span>
           <input
-            className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
+            className="h-7 rounded-md border border-input bg-transparent px-2 text-sm"
             value={label}
             onChange={(event) => setLabel(event.target.value)}
           />

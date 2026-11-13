@@ -1,4 +1,5 @@
 import type { FieldErrorCode, FieldSpec, FieldValue } from '@harnesys/contracts';
+import { fieldVisible } from '@harnesys/contracts';
 import { FIELD_ERROR_TEXT } from './field-error-text.ts';
 import { fieldValue } from './field-value.ts';
 
@@ -10,14 +11,31 @@ export function buildValidator(
 ): (values: Record<string, FieldValue>, secrets: Record<string, string>) => FieldErrors {
   return (values, secrets) => {
     const errors: FieldErrors = {};
-    for (const field of fields) {
-      const error = validateField(field, values, secrets, existingSecrets);
-      if (error) {
-        errors[field.key] = error;
-      }
-    }
+    collectErrors(fields, values, secrets, existingSecrets, errors);
     return errors;
   };
+}
+
+function collectErrors(
+  fields: FieldSpec[],
+  values: Record<string, FieldValue>,
+  secrets: Record<string, string>,
+  existingSecrets: string[],
+  errors: FieldErrors,
+): void {
+  for (const field of fields) {
+    if (field.generated || !fieldVisible(field, values)) {
+      continue;
+    }
+    if (field.type === 'group') {
+      collectErrors(field.fields ?? [], values, secrets, existingSecrets, errors);
+      continue;
+    }
+    const error = validateField(field, values, secrets, existingSecrets);
+    if (error) {
+      errors[field.key] = error;
+    }
+  }
 }
 
 function validateField(
