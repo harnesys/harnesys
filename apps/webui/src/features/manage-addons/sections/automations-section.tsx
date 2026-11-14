@@ -60,7 +60,8 @@ function TriggerList({ orgId, addonId }: { orgId: string; addonId: string }) {
   const toggle = async (instance: TriggerInstanceView) => {
     setError(null);
     try {
-      await setOrgAddonTriggerEnabled(orgId, addonId, instance.instanceId, !instance.enabled);
+      const nextActive = instance.status !== 'active';
+      await setOrgAddonTriggerEnabled(orgId, addonId, instance.instanceId, nextActive);
       await invalidate();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -100,7 +101,7 @@ function TriggerList({ orgId, addonId }: { orgId: string; addonId: string }) {
             data-testid={`addon-trigger-${instance.instanceId}`}
           >
             <Switch
-              checked={instance.enabled}
+              checked={instance.status === 'active'}
               onCheckedChange={() => void toggle(instance)}
               aria-label={`Toggle ${instance.label}`}
             />
@@ -198,7 +199,7 @@ function automationFromInstance(
     source: 'addon',
     label: instance.label,
     description: '',
-    status: instance.enabled ? 'active' : 'paused',
+    status: instance.status,
     threadId: null,
     targetAgentId: null,
     connection: { required: false, connected: true },

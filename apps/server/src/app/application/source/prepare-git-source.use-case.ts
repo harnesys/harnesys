@@ -8,7 +8,6 @@ import { NodeCommandQueuePort } from '../../domain/fleet/node-command-queue.port
 import { NodeRepository } from '../../domain/fleet/node-repository.port.ts';
 import { OrgConfigRevisionPort } from '../../domain/fleet/org-config-revision.port.ts';
 import type { WorkerCommand } from '../../domain/fleet/worker-command.ts';
-import { IntegrationRegistryPort } from '../../domain/integration/integration-registry.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
@@ -50,7 +49,6 @@ export class PrepareGitSourceUseCase {
     private readonly revisions: OrgConfigRevisionPort,
     private readonly materializationEvents: MaterializationEventsPort,
     private readonly secrets: SecretStorePort,
-    private readonly registry: IntegrationRegistryPort,
     @Configuration() private readonly config: AppConfig & { server?: { port?: number } },
   ) {}
 
@@ -143,12 +141,16 @@ export class PrepareGitSourceUseCase {
     };
   }
 
-  private gitCredentialUrl(orgId: string, integrationId: string): string | undefined {
-    const key = ensureGitCredentialKey(this.registry, orgId, integrationId);
-    if (!key) {
+  private gitCredentialUrl(orgId: string, row: SourceRecord): string | undefined {
+    const vcs = row.vcs;
+    if (!vcs?.accountId) {
       return undefined;
     }
-    return gitCredentialUrl(this.config, integrationId, key);
+    const key = ensureGitCredentialKey(vcs.credentialKey);
+    if (key !== vcs.credentialKey) {
+      this.sources.updateVcs(orgId, row.id, { ...vcs, credentialKey: key });
+    }
+    return gitCredentialUrl(this.config, orgId, row.id, key);
   }
 
   private async materializeLocal(
@@ -175,11 +177,8 @@ export class PrepareGitSourceUseCase {
         return this.secrets.get(input.orgId, vaultStorageKey('secret', credRef));
       },
       credRef: row.vcs?.credRef ?? undefined,
-      integrationId: row.vcs?.integrationId ?? undefined,
-      integrationCredentialUrl:
-        row.vcs?.integrationId !== undefined && row.vcs.integrationId !== null
-          ? this.gitCredentialUrl(input.orgId, row.vcs.integrationId)
-          : undefined,
+      accountId: row.vcs?.accountId ?? undefined,
+      credentialUrl: this.gitCredentialUrl(input.orgId, row),
     });
     this.materializations.upsertProjection({
       orgId: input.orgId,

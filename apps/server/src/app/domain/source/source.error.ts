@@ -82,6 +82,21 @@ export class SourceMaterializationFailedException extends DomainException {
   }
 }
 
+export class SourceAccountNotFoundException extends DomainException {
+  constructor(orgId: string, accountId: string) {
+    super('SOURCE_ACCOUNT_NOT_FOUND', `Account not found: ${accountId}`, { orgId, accountId });
+  }
+}
+
+export class SourceAccountUnavailableException extends DomainException {
+  constructor(orgId: string, accountId: string, cause: string) {
+    super('SOURCE_ACCOUNT_UNAVAILABLE', `Account ${accountId} is not available: ${cause}`, {
+      orgId,
+      accountId,
+    });
+  }
+}
+
 export class WorktreeNotFoundException extends EntityNotFoundException {
   constructor(worktreeId: string) {
     super(`Worktree not found: ${worktreeId}`, { worktreeId });

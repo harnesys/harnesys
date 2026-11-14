@@ -1,6 +1,4 @@
 import { Module } from '@harnesys/brix';
-import { CloudSyncBackWatchPort } from '../../domain/source/cloud-sync-back-watch.port.ts';
-import { AttachCloudDriveUseCase } from './attach-cloud-drive.use-case.ts';
 import { AttachGitUseCase } from './attach-git.use-case.ts';
 import { AttachLocalFolderUseCase } from './attach-local-folder.use-case.ts';
 import { BrowseHostDirsUseCase } from './browse-host-dirs.use-case.ts';
@@ -25,12 +23,10 @@ import { InitGitUseCase } from './init-git.use-case.ts';
 import { ListGitBranchesUseCase } from './list-git-branches.use-case.ts';
 import { ListRepositoryWorktreesUseCase } from './list-repository-worktrees.use-case.ts';
 import { ListSourcesUseCase } from './list-sources.use-case.ts';
-import { PrepareCloudSourceUseCase } from './prepare-cloud-source.use-case.ts';
 import { PrepareGitSourceUseCase } from './prepare-git-source.use-case.ts';
 import { PullGitUseCase } from './pull-git.use-case.ts';
 import { PushGitUseCase } from './push-git.use-case.ts';
 import { RefreshAllSourceVcsUseCase } from './refresh-all-source-vcs.use-case.ts';
-import { RefreshCloudDriveUseCase } from './refresh-cloud-drive.use-case.ts';
 import { RefreshGitSourceUseCase } from './refresh-git-source.use-case.ts';
 import { RefreshSourceVcsUseCase } from './refresh-source-vcs.use-case.ts';
 import { RenameSourceUseCase } from './rename-source.use-case.ts';
@@ -51,14 +47,11 @@ import { SwitchGitBranchUseCase } from './switch-git-branch.use-case.ts';
     CreateHostDirUseCase,
     AttachLocalFolderUseCase,
     AttachGitUseCase,
-    AttachCloudDriveUseCase,
     PrepareGitSourceUseCase,
-    PrepareCloudSourceUseCase,
     GitWorktreeResolver,
     RefreshAllSourceVcsUseCase,
     RefreshSourceVcsUseCase,
     RefreshGitSourceUseCase,
-    RefreshCloudDriveUseCase,
     SwitchGitBranchUseCase,
     ListGitBranchesUseCase,
     GetGitStatusUseCase,
@@ -92,14 +85,11 @@ import { SwitchGitBranchUseCase } from './switch-git-branch.use-case.ts';
     CreateHostDirUseCase,
     AttachLocalFolderUseCase,
     AttachGitUseCase,
-    AttachCloudDriveUseCase,
     PrepareGitSourceUseCase,
-    PrepareCloudSourceUseCase,
     GitWorktreeResolver,
     RefreshAllSourceVcsUseCase,
     RefreshSourceVcsUseCase,
     RefreshGitSourceUseCase,
-    RefreshCloudDriveUseCase,
     SwitchGitBranchUseCase,
     ListGitBranchesUseCase,
     GetGitStatusUseCase,
@@ -122,7 +112,6 @@ import { SwitchGitBranchUseCase } from './switch-git-branch.use-case.ts';
     RenameSourceUseCase,
     SetGitRemoteUseCase,
     SetSourceAvailabilityUseCase,
-    CloudSyncBackWatchPort,
   ],
 })
 export class SourceUseCaseModule {}

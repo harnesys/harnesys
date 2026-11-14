@@ -14,14 +14,11 @@ import {
 } from './cloud-mirror-engine.ts';
 import { scanCloudMirrorChanges } from './cloud-mirror-scan.ts';
 import { syncBackFile, syncBackFolder, syncDeletePath } from './cloud-mirror-sync.ts';
-import { GoogleDriveBackend } from './google-drive.backend.ts';
 
 export interface CloudSyncBackSource {
   id: string;
   distribution: CloudSyncSourceDistribution;
 }
-
-export type CloudDriveSyncSource = CloudSyncBackSource;
 
 export interface CloudSyncPathInput {
   orgId: string;
@@ -29,7 +26,7 @@ export interface CloudSyncPathInput {
   sourceLocation: SourceLocationPort;
   machine: MachineConfigPort;
   getAccessToken: () => Promise<string>;
-  createBackend?: (distribution: CloudSyncSourceDistribution) => CloudRemoteBackendPort;
+  createBackend: (distribution: CloudSyncSourceDistribution) => CloudRemoteBackendPort;
   path: string;
   kind: CloudChangeKind;
 }
@@ -39,7 +36,7 @@ export interface CloudSyncLocalDependencies {
   sourceLocation: SourceLocationPort;
   machine: MachineConfigPort;
   getAccessToken: () => Promise<string>;
-  createBackend?: (distribution: CloudSyncSourceDistribution) => CloudRemoteBackendPort;
+  createBackend: (distribution: CloudSyncSourceDistribution) => CloudRemoteBackendPort;
 }
 
 export type CloudChangeKind = 'create' | 'change' | 'delete';
@@ -66,7 +63,7 @@ export async function syncBackCloudFile(
     return null;
   }
   const distribution = record.distribution;
-  if (distribution.kind !== 'cloud-drive' && distribution.kind !== 'addon-cloud') {
+  if (distribution.kind !== 'addon-cloud') {
     return null;
   }
   const source: CloudSyncBackSource = { id: record.id, distribution };
@@ -88,7 +85,7 @@ export async function syncBackCloudFile(
   }
   const bytes = new Uint8Array(readFileSync(abs));
   const meta = readMirrorMeta(mirrorRoot, path);
-  if (isExportedGoogleDoc(meta)) {
+  if (meta?.readOnly === true) {
     return null;
   }
   if (meta?.remoteId && meta.localHash === contentHash(bytes)) {
@@ -118,7 +115,7 @@ export async function syncBackCloudPath(deps: CloudSyncPathInput): Promise<SyncB
     return null;
   }
   const meta = readMirrorMeta(mirrorRoot, path);
-  if (isExportedGoogleDoc(meta) && deps.kind !== 'delete') {
+  if (meta?.readOnly === true && deps.kind !== 'delete') {
     return null;
   }
   const kind = effectiveChangeKind(deps.kind, abs);
@@ -147,29 +144,18 @@ export async function syncBackCloudPath(deps: CloudSyncPathInput): Promise<SyncB
   });
 }
 
-function isExportedGoogleDoc(meta: ReturnType<typeof readMirrorMeta>): boolean {
-  return Boolean(meta?.mimeType?.startsWith('application/vnd.google-apps.'));
-}
-
 /**
- * Remote backend of a cloud mirror source: add-on provided source kinds resolve
- * through `createBackend`; every other source keeps the built-in Google Drive backend.
+ * Remote backend of a cloud mirror source: every cloud source is backed by the
+ * add-on that owns its source kind, so `createBackend` is always supplied.
  */
 function cloudBackendFor(
   source: CloudSyncBackSource,
   deps: {
     getAccessToken: () => Promise<string>;
-    createBackend?: (distribution: CloudSyncSourceDistribution) => CloudRemoteBackendPort;
+    createBackend: (distribution: CloudSyncSourceDistribution) => CloudRemoteBackendPort;
   },
 ): CloudRemoteBackendPort {
-  return deps.createBackend?.(source.distribution) ?? new GoogleDriveBackend(deps.getAccessToken);
-}
-
-export function integrationIdOfCloudSource(source: CloudSyncBackSource): string {
-  if (source.distribution.kind !== 'cloud-drive') {
-    throw new Error(`source ${source.id} is not a google drive cloud source`);
-  }
-  return source.distribution.integrationId;
+  return deps.createBackend(source.distribution);
 }
 
 function effectiveChangeKind(kind: CloudChangeKind, absPath: string): CloudChangeKind {
@@ -226,7 +212,7 @@ export interface CloudSyncFlushInput {
   sourceLocation: SourceLocationPort;
   machine: MachineConfigPort;
   getAccessToken: () => Promise<string>;
-  createBackend?: (distribution: CloudSyncSourceDistribution) => CloudRemoteBackendPort;
+  createBackend: (distribution: CloudSyncSourceDistribution) => CloudRemoteBackendPort;
 }
 
 export async function flushCloudMirror(input: CloudSyncFlushInput): Promise<SyncBackResult[]> {
@@ -250,7 +236,7 @@ export async function flushCloudMirror(input: CloudSyncFlushInput): Promise<Sync
         sourceLocation: input.sourceLocation,
         machine: input.machine,
         getAccessToken: input.getAccessToken,
-        ...(input.createBackend === undefined ? {} : { createBackend: input.createBackend }),
+        createBackend: input.createBackend,
         path: change.path,
         kind: change.kind,
       });

@@ -47,7 +47,6 @@ export function handleWorkerCommand(input: {
   onOrgDropped: (orgId: string) => void;
   matDeps: WorkerMaterializeDeps;
   worktreeDeps: WorkerWorktreeDeps;
-  onCloudMaterialized: () => void;
 }): void {
   const { session, frame } = input;
   if (typeof frame.commandId !== 'string') {
@@ -101,13 +100,11 @@ export function handleWorkerCommand(input: {
   } else if (isApprovalResumeCommand(frame.command)) {
     input.workExecutor.resumeApproval(frame.command);
   } else if (isSourceMaterializeCommand(frame.command)) {
-    void runSourceMaterialize(input.matDeps, session, frame.command).finally(
-      input.onCloudMaterialized,
-    );
+    void runSourceMaterialize(input.matDeps, session, frame.command);
   } else if (isSourceAttachCommand(frame.command)) {
     runSourceAttach(input.matDeps, session, frame.command);
   } else if (isSourceRefreshCommand(frame.command)) {
-    void runSourceRefresh(input.matDeps, session, frame.command).finally(input.onCloudMaterialized);
+    void runSourceRefresh(input.matDeps, session, frame.command);
   } else if (isSourceWorktreeCreateCommand(frame.command)) {
     void runSourceWorktreeCreate(input.worktreeDeps, session, frame.command);
   } else if (isSourceWorktreeRemoveCommand(frame.command)) {

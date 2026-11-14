@@ -16,13 +16,15 @@ export function decideSourceVcsUpdate(
     remoteUrl: probe.remoteUrl,
     credRef: current?.credRef ?? null,
     defaultBranch: probe.defaultBranch,
-    integrationId: current?.integrationId ?? null,
+    accountId: current?.accountId ?? null,
+    credentialKey: current?.credentialKey ?? null,
   };
   const same =
     current !== null &&
     current.remoteUrl === next.remoteUrl &&
     current.credRef === next.credRef &&
     current.defaultBranch === next.defaultBranch &&
-    current.integrationId === next.integrationId;
+    current.accountId === next.accountId &&
+    current.credentialKey === next.credentialKey;
   return same ? undefined : next;
 }

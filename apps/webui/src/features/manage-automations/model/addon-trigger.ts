@@ -26,6 +26,7 @@ export interface AddonTriggerDraft {
   threadId: string;
   modeId: string;
   instructions: string;
+  enabled: boolean;
   config: Record<string, FieldValue>;
 }
 

@@ -8,7 +8,8 @@ const current: SourceVcs = {
   remoteUrl: 'https://github.com/x/y.git',
   credRef: 'gh:default',
   defaultBranch: 'main',
-  integrationId: null,
+  accountId: null,
+  credentialKey: null,
 };
 
 describe('decideSourceVcsUpdate', () => {
@@ -23,7 +24,8 @@ describe('decideSourceVcsUpdate', () => {
       remoteUrl: 'https://github.com/x/z.git',
       credRef: 'gh:default',
       defaultBranch: 'trunk',
-      integrationId: null,
+      accountId: null,
+      credentialKey: null,
     });
     expect(
       decideSourceVcsUpdate(null, { isGit: true, defaultBranch: 'main', remoteUrl: null }),
@@ -32,7 +34,8 @@ describe('decideSourceVcsUpdate', () => {
       remoteUrl: null,
       credRef: null,
       defaultBranch: 'main',
-      integrationId: null,
+      accountId: null,
+      credentialKey: null,
     });
   });
 

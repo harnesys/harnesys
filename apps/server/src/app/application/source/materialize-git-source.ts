@@ -15,8 +15,8 @@ export interface MaterializeGitSourceInput {
   materializations: SourceMaterializationPort;
   resolveCredential: ((credRef: string) => Promise<string | null>) | null;
   credRef?: string;
-  integrationId?: string;
-  integrationCredentialUrl?: string;
+  accountId?: string;
+  credentialUrl?: string;
 }
 
 export interface MaterializeGitSourceResult {
@@ -31,7 +31,7 @@ export async function materializeGitSourceOnHost(
 ): Promise<MaterializeGitSourceResult> {
   const existing = input.materializations.find(input.orgId, input.sourceId, input.hostId);
   if (existing?.state === 'ready') {
-    if (input.integrationId && input.integrationCredentialUrl) {
+    if (input.accountId && input.credentialUrl) {
       await input.driver
         .configureCredentialHelper({
           layout: {
@@ -39,7 +39,7 @@ export async function materializeGitSourceOnHost(
             worktreesRoot: input.layout.sourceWorktreesDir(input.orgId, input.sourceId),
           },
           remoteUrl: input.url,
-          credentialUrl: input.integrationCredentialUrl,
+          credentialUrl: input.credentialUrl,
         })
         .catch(() => {});
     }
@@ -65,8 +65,8 @@ export async function materializeGitSourceOnHost(
   try {
     let url = input.url;
     let credentialUrl: string | null = null;
-    if (input.integrationId && input.integrationCredentialUrl) {
-      credentialUrl = input.integrationCredentialUrl;
+    if (input.accountId && input.credentialUrl) {
+      credentialUrl = input.credentialUrl;
     } else if (input.credRef && input.resolveCredential) {
       const secret = await input.resolveCredential(input.credRef);
       if (secret) {

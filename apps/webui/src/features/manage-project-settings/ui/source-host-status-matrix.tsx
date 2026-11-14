@@ -1,10 +1,12 @@
+import type { SourceDistributionKind } from '@harnesys/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { fleetNodesQuery, watchFleetChanged, watchMaterializationChanged } from '@/shared/api';
+import { refreshOrgAddonSource } from '@/shared/api/addon-sources';
 import {
   listSources,
   prepareGitSource,
-  refreshCloudDrive,
+  refreshGitSource,
   sourceHostStatusQuery,
   sourceHostStatusQueryKey,
   updateSourceAvailability,
@@ -14,7 +16,7 @@ import { availabilityActionError, HostStatusRow } from './source-host-status-row
 interface SourceHostStatusMatrixProps {
   orgId: string;
   sourceId: string;
-  distributionKind: 'host-bound' | 'cloud-drive';
+  distributionKind: SourceDistributionKind;
   hasRemote: boolean;
   originHostId: string | null;
 }
@@ -44,7 +46,14 @@ export function SourceHostStatusMatrix({
     },
   });
   const refreshMutation = useMutation({
-    mutationFn: (hostId: string) => refreshCloudDrive(orgId, sourceId, hostId),
+    mutationFn: async (hostId: string): Promise<{ conflicts?: string[] } | undefined> => {
+      const distribution = source?.distribution;
+      if (distribution?.kind === 'addon-cloud') {
+        return refreshOrgAddonSource(orgId, distribution.addonId, sourceId);
+      }
+      await refreshGitSource(orgId, sourceId, hostId);
+      return undefined;
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: sourceHostStatusQueryKey(orgId, sourceId) });
     },
@@ -56,7 +65,8 @@ export function SourceHostStatusMatrix({
       void queryClient.invalidateQueries({ queryKey: sourceHostStatusQueryKey(orgId, sourceId) });
     },
   });
-  const showActions = distributionKind === 'cloud-drive' || hasRemote;
+  const isMirrored = distributionKind !== 'host-bound';
+  const showActions = isMirrored || hasRemote;
 
   useEffect(() => {
     if (!orgId || !sourceId) {
@@ -111,10 +121,10 @@ export function SourceHostStatusMatrix({
           toggle them in the Allowed column.
         </p>
       ) : null}
-      {distributionKind === 'cloud-drive' ? (
+      {isMirrored ? (
         <p className="text-muted-foreground text-xs">
-          Cloud copies are independent mirrors. Refresh pulls provider changes; conflicts keep both
-          versions.
+          Mirrored copies follow the add-on that serves the source. Refresh pulls provider changes;
+          conflicts keep both versions.
         </p>
       ) : null}
       {statusQuery.isError ? (
@@ -146,7 +156,7 @@ export function SourceHostStatusMatrix({
                 distributionKind={distributionKind}
                 showActions={showActions}
                 isOrigin={row.hostId === originHostId}
-                canAllow={distributionKind === 'cloud-drive' || hasRemote}
+                canAllow={isMirrored || hasRemote}
                 allowed={allowlist.includes(row.hostId)}
                 allowBusy={
                   availabilityMutation.isPending &&
@@ -168,7 +178,7 @@ export function SourceHostStatusMatrix({
                     : undefined
                 }
                 onRefresh={
-                  distributionKind === 'cloud-drive'
+                  isMirrored
                     ? () => {
                         refreshMutation.mutate(row.hostId);
                       }

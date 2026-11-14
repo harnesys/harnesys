@@ -23,7 +23,6 @@ import {
 } from '../../application/identity/node-ticket-access.ts';
 import { AttachLocalFolderUseCase } from '../../application/source/attach-local-folder.use-case.ts';
 import { GetSourceUseCase } from '../../application/source/get-source.use-case.ts';
-import { PrepareCloudSourceUseCase } from '../../application/source/prepare-cloud-source.use-case.ts';
 import { PrepareGitSourceUseCase } from '../../application/source/prepare-git-source.use-case.ts';
 import { BearerToken } from '../org-id.ts';
 import { SurfaceHostIdHeader } from '../surface-host.ts';
@@ -34,7 +33,6 @@ export class SourceMaterializeController {
     private readonly attachLocalFolder: AttachLocalFolderUseCase,
     private readonly getSource: GetSourceUseCase,
     private readonly prepareGit: PrepareGitSourceUseCase,
-    private readonly prepareCloud: PrepareCloudSourceUseCase,
     private readonly prepareAddonCloud: PrepareAddonCloudSourceUseCase,
     private readonly tickets: NodeTicketAccess,
   ) {}
@@ -102,13 +100,6 @@ export class SourceMaterializeController {
       });
     }
     const source = this.getSource.execute({ orgId, sourceId, surfaceHostId });
-    if (source.distribution.kind === 'cloud-drive') {
-      return this.prepareCloud.execute({
-        orgId,
-        sourceId,
-        hostId: body.hostId,
-      });
-    }
     if (source.distribution.kind === 'addon-cloud') {
       return this.prepareAddonCloud.execute({
         orgId,

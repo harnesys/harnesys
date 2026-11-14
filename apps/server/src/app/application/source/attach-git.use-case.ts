@@ -15,7 +15,7 @@ export interface AttachGitInput {
   uiVisibility?: UiVisibility;
   branch?: string;
   credRef?: string;
-  integrationId?: string;
+  accountId?: string;
   repo?: string;
 }
 
@@ -58,15 +58,15 @@ export class AttachGitUseCase {
     remoteUrl: string;
     credRef: string | null;
     defaultBranch: string | null;
-    integrationId: string | null;
+    accountId: string | null;
   } {
-    if (input.integrationId) {
+    if (input.accountId) {
       return {
         engine: 'git',
         remoteUrl: githubRemoteUrl(input.repo),
         credRef: null,
         defaultBranch: input.branch?.trim() || null,
-        integrationId: input.integrationId,
+        accountId: input.accountId,
       };
     }
     const url = input.url?.trim() ?? '';
@@ -78,7 +78,7 @@ export class AttachGitUseCase {
       remoteUrl: url,
       credRef: input.credRef?.trim() || null,
       defaultBranch: input.branch?.trim() || null,
-      integrationId: null,
+      accountId: null,
     };
   }
 }

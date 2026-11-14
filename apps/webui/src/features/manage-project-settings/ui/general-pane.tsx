@@ -166,7 +166,7 @@ function GeneralSection({ project }: { project: Project }) {
         });
       });
   };
-  const distributionLabel = project.driver === 'cloud-drive' ? 'Google Drive' : 'On this computer';
+  const distributionLabel = project.driver === 'host-bound' ? 'On this computer' : 'Cloud mirror';
   return (
     <SettingsSection
       label="Source"
@@ -262,7 +262,7 @@ function LifecycleSection({ project, onClose }: { project: Project; onClose: () 
       .confirm({
         title: `Detach ${project.name}?`,
         description:
-          project.hasGit || project.driver === 'cloud-drive'
+          project.hasGit || project.driver !== 'host-bound'
             ? 'Removes this source from the org and deletes its managed materialization cache. Your original remote / cloud data stays.'
             : 'Removes this source from the org. The folder on disk stays.',
         confirmText: 'Detach',

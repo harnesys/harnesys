@@ -294,6 +294,8 @@ export {
   AppCredentialsSchema,
   CloudRemoteEntrySchema,
   type CloudRemoteEntryWire,
+  CloudRemoteExportSchema,
+  type CloudRemoteExportWire,
   FileReadParamsSchema,
   FileReadResultSchema,
   FileStatParamsSchema,

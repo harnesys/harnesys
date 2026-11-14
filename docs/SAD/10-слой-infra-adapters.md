@@ -68,7 +68,7 @@ exports: [Port]
 ## Драйверы источников (`infra/source/drivers`)
 
 - `git/`: `git.driver.ts` (`kind='git'`, `ensureMaterialized` клонирует bare-репо, `refresh` тянет изменения, worktree), `git-engine.ts`, `git-standalone-worktree.ts`, `vcs/git-cli.adapter.ts`, `vcs/git-diff.ts`, `vcs/git-exec.ts`, `vcs/git-helpers.ts`, `vcs/git-status.ts`.
-- `cloud/`: `cloud-mirror-engine.ts`, `cloud-mirror-reconcile.ts`, `cloud-sync-back-*`, `google-drive.backend.ts` (Google Drive API v3).
+- `cloud/`: `cloud-mirror-engine.ts`, `cloud-mirror-reconcile.ts`, `cloud-sync-back.ts` — провайдер-агностичное зеркало; вызовы вендора идут через аддон (`infra/addons/source/`).
 
 ## Пример модуля адаптеров (thread)
 

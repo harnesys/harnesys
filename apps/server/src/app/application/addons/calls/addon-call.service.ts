@@ -16,6 +16,7 @@ import {
   type ToolCallParams,
   type ToolCallResult,
   type TriggerStartParams,
+  type TriggerStopParams,
 } from '../../../domain/addons/ports/addon-call.port.ts';
 import { AddonAttachmentSourcePort } from '../../../domain/addons/ports/attachment-source.port.ts';
 import type { InstanceSnapshot } from '../../../domain/addons/ports/instance-supervisor.port.ts';
@@ -70,7 +71,7 @@ export class AddonCallService extends AddonCallPort {
   async triggerStop(
     orgId: string,
     addonId: string,
-    params: { instanceId: string },
+    params: TriggerStopParams,
     opts?: AddonCallOptions,
   ): Promise<void> {
     await this.request(orgId, addonId, 'trigger.stop', params, opts);

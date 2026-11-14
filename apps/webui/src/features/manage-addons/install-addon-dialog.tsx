@@ -180,7 +180,7 @@ export function InstallAddonDialog({
             <Input
               id="install-addon-source"
               className="font-mono text-xs"
-              placeholder="/path/to/add-on or https://github.com/org/repo"
+              placeholder="/path/to/add-on or https://git.example.com/org/repo"
               value={source}
               onChange={(event) => setSource(event.target.value)}
               data-testid="install-addon-source"

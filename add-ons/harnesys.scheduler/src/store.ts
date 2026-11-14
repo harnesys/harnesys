@@ -140,6 +140,10 @@ export async function upsertInstance(
 
 export async function removeInstance(ctx: AddonContext, instanceId: string): Promise<void> {
   await ctx.db.run('delete from instances where instance_id = ?', [instanceId]);
+  await ctx.db.run('delete from schedule_state where instance_id = ?', [instanceId]);
+}
+
+export async function pauseInstance(ctx: AddonContext, instanceId: string): Promise<void> {
   await ctx.db.run(
     "update schedule_state set status = 'paused', next_run_at = null, updated_at = ? where instance_id = ?",
     [new Date().toISOString(), instanceId],

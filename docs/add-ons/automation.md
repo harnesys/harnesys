@@ -10,9 +10,12 @@
 
 ```
 создание/включение → ensureRunning → trigger.start { instanceId, kind, config, target }
-выключение/удаление → trigger.stop { instanceId }
+пауза (выключение) → trigger.stop { instanceId, reason: 'paused' }
+удаление → trigger.stop { instanceId, reason: 'removed' }
 рестарт процесса → повтор trigger.start (idempotent!)
 ```
+
+Единственный источник состояния — ядро: экземпляр либо `active`, либо `paused` (`TriggerInstanceView.status`, REST `POST .../triggers/:tid/enable|disable`). `trigger.stop` с `reason: 'paused'` — это пауза, а не удаление: сохраняйте состояние и данные экземпляра, чтобы после `trigger.start` продолжить с того же места; `reason: 'removed'` — окончательное удаление, строки экземпляра можно стирать. `reason` опционален; при его отсутствии безопасное поведение — пауза. Агентские инструменты pause/resume должны менять состояние через `ctx.triggers.update { enabled }`, а не жить отдельным локальным статусом.
 
 Аддон детектирует событие (webhook-маршрут, поллер, слушатель) и зовёт `ctx.triggers.fire`. Ядро на этом пути владеет всем:
 
@@ -30,7 +33,7 @@
 
 Форма экземпляра: стандартные блоки (name+agent, wake thread, run mode, instructions) рисует хост; дескриптор может их переопределять через `standard`: `{ target: { disabled: true }, instructions: { label: 'Message' } }`.
 
-Экземпляры из REST: `GET/POST/PATCH/DELETE /api/orgs/:orgId/addons/:addonId/triggers`, `POST .../triggers/:tid/enable|disable` (id экземпляра — UUID).
+Экземпляры из REST: `GET/POST/PATCH/DELETE /api/orgs/:orgId/addons/:addonId/triggers`, `POST .../triggers/:tid/enable|disable` (id экземпляра — UUID). В `TriggerInstanceView` состояние отдаётся полем `status: 'active' | 'paused'`; форма автоматизации показывает Pause/Resume, сохранение формы статус не сбрасывает.
 
 ## Job: расписанием владеет ядро
 

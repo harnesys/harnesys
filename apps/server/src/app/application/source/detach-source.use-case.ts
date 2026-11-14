@@ -5,7 +5,6 @@ import { KnowledgeStorePort } from '../../domain/knowledge/knowledge-store.port.
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { WorkspaceContainerPort } from '../../domain/process-runtime/workspace-container.port.ts';
-import { CloudSyncBackWatchPort } from '../../domain/source/cloud-sync-back-watch.port.ts';
 import {
   ManagedSourceDetachForbiddenException,
   SourceNotFoundException,
@@ -30,7 +29,6 @@ export class DetachSourceUseCase {
     private readonly machineConfig: MachineConfigPort,
     private readonly knowledge: KnowledgeStorePort,
     private readonly containers: WorkspaceContainerPort,
-    private readonly cloudSyncBackWatcher: CloudSyncBackWatchPort,
     logger: Logger,
   ) {
     this.log = logger.child('detach-source');
@@ -48,9 +46,7 @@ export class DetachSourceUseCase {
     const materialization = this.materializations.find(input.orgId, input.sourceId, hostId);
     if (
       materialization?.origin === 'managed' &&
-      (hasGitVcs(row) ||
-        row.distribution.kind === 'cloud-drive' ||
-        row.distribution.kind === 'addon-cloud')
+      (hasGitVcs(row) || row.distribution.kind === 'addon-cloud')
     ) {
       this.removeManagedRoot(input.orgId, input.sourceId, materialization.localPath);
       this.releaseContainer(input.orgId, input.sourceId, hostId);
@@ -58,7 +54,6 @@ export class DetachSourceUseCase {
     this.knowledge.deleteForSource(input.orgId, input.sourceId);
     this.materializations.removeForSource(input.orgId, input.sourceId);
     this.sources.remove(input.orgId, input.sourceId);
-    this.cloudSyncBackWatcher.syncOrg(input.orgId);
   }
 
   private releaseContainer(orgId: string, sourceId: string, hostId: string): void {

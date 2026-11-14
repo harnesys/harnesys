@@ -11,6 +11,7 @@ import {
   type ToolCallParams,
   type ToolCallResult,
   type TriggerStartParams,
+  type TriggerStopParams,
 } from '../../../../domain/addons/ports/addon-call.port.ts';
 import { PackRegistryPort } from '../../../../domain/capabilities/pack-registry.port.ts';
 
@@ -124,7 +125,7 @@ export class FakeAddonCallPort extends AddonCallPort {
   override async triggerStop(
     _orgId: string,
     _addonId: string,
-    params: { instanceId: string },
+    params: TriggerStopParams,
     opts?: AddonCallOptions,
   ): Promise<void> {
     this.record('trigger.stop', params, opts);

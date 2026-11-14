@@ -191,5 +191,5 @@ curl -X POST http://127.0.0.1:47473/api/orgs/$ORG_ID/addons/acme.greeter/enable 
 ## Что дальше
 
 - [Анатомия аддона](anatomy.md) — разбор реального `harnesys.webhook` от манифеста до миграций.
-- [Contributions](contributions.md) — все 13 семейств вкладов.
+- [Contributions](contributions.md) — все 14 семейств вкладов.
 - [AddonContext](context.md) — работа с данными, HTTP, аккаунтами, агентами.

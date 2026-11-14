@@ -84,7 +84,9 @@ terminal:     run.completed → финальный edit; cancelled → "[stopped
 parked (HITL) → transport.send(c текстом вопроса + options[]) → следующий inbound с цифрой/label → RespondRunUseCase
 ```
 
-Что это значит для автора транспорта: ничего не делать для стриминга. Нужно только честно объявить `capabilities` (edit — можно редактировать, typing — есть индикатор) и корректно реализовать send/edit. Сессии живут в `addon_transport_sessions` (draft, lastSeq, status `streaming|parked|closed`) и переживают рестарт: при загрузке открытые сессии replay'ются из run event store. Отвергнутый edit засчитывается как неудачный flush; после трёх подряд сессия закрывается. Статус доставки сообщения на стороне коннектора держит `ConnectorDeliveryRecord.status` (`deliveryStatus`: `streaming | final | failed`).
+Что это значит для автора транспорта: ничего не делать для стриминга. Нужно только честно объявить `capabilities` (edit — можно редактировать, typing — есть индикатор) и корректно реализовать send/edit. Сессии живут в `addon_transport_sessions` (draft, lastSeq, status `streaming|parked|closed`) и переживают рестарт: при загрузке открытые сессии replay'ются из run event store. Отвергнутый edit засчитывается как неудачный flush; после трёх подряд сессия закрывается.
+
+Закрытие терминально: `close` перечитывает хвост event store, пишет в сессию authoritative-текст и `lastSeq`, ставит `status: 'closed'` и делает финальный flush. После закрытия поздние `text-delta` того же запуска отбрасываются — они не могут вернуть сессию в `streaming` или продублировать уже отстримленный хвост. События одного треда обрабатываются последовательно (очередь на тред), поэтому терминальное событие не обгоняет дельты, даже если те пришли позже по времени обработки.
 
 `message.options` (`[{ id, label }]`) — структурированный HITL-вопрос; аддон рендерит inline-клавиатуру (Telegram) или пронумерованный список (plain-канал). Совпадение ответа разбирает ядро — approval store аддону не отдаётся.
 

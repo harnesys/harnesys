@@ -160,6 +160,7 @@ function toEntry(wire: CloudRemoteEntryWire): CloudRemoteEntry {
     ...(wire.size === undefined ? {} : { size: wire.size }),
     ...(wire.modifiedAt === undefined ? {} : { modifiedAt: wire.modifiedAt }),
     ...(wire.mimeType === undefined ? {} : { mimeType: wire.mimeType }),
+    ...(wire.export === undefined ? {} : { export: wire.export }),
   };
 }
 

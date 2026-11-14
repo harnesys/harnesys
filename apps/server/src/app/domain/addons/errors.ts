@@ -39,11 +39,11 @@ export function rpcReasonOf(code: AddonErrorCode): AddonErrorReason {
 export class AddonException extends DomainException {
   constructor(
     readonly reason: AddonErrorCode,
-    readonly status: number,
+    override readonly status: number,
     message: string,
     details?: unknown,
   ) {
-    super(reason, message, details);
+    super(reason, message, details, status);
     this.name = new.target.name;
   }
 }

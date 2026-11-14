@@ -19,6 +19,7 @@ import {
   type UpsertMaterializationInput,
 } from '../../domain/source/source-materialization.port.ts';
 import { StubLayout } from '../../infra/runtime/prepare-org-target.fixtures.ts';
+import { readMirrorMeta } from '../../infra/source/drivers/cloud/cloud-mirror-engine.ts';
 import { materializeCloudSourceOnHost } from './materialize-cloud-source.ts';
 
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -109,7 +110,7 @@ class FakeMaterializations extends SourceMaterializationPort {
   }
 }
 
-describe('materializeCloudSourceOnHost google docs export', () => {
+describe('materializeCloudSourceOnHost document export', () => {
   let root: string;
 
   beforeAll(() => {
@@ -137,7 +138,7 @@ describe('materializeCloudSourceOnHost google docs export', () => {
     };
   }
 
-  test('exports google docs to office formats instead of skipping', async () => {
+  test('materializes entries the add-on marks for export and keeps them read-only', async () => {
     const { backend, input } = makeInput([
       {
         id: 'doc1',
@@ -145,6 +146,7 @@ describe('materializeCloudSourceOnHost google docs export', () => {
         kind: 'file',
         mimeType: 'application/vnd.google-apps.document',
         modifiedAt: '2026-01-01T00:00:00Z',
+        export: { mimeType: DOCX_MIME, extension: 'docx' },
       },
       {
         id: 'sheet1',
@@ -152,13 +154,10 @@ describe('materializeCloudSourceOnHost google docs export', () => {
         kind: 'file',
         mimeType: 'application/vnd.google-apps.spreadsheet',
         modifiedAt: '2026-01-01T00:00:00Z',
-      },
-      {
-        id: 'form1',
-        name: 'Survey',
-        kind: 'file',
-        mimeType: 'application/vnd.google-apps.form',
-        modifiedAt: '2026-01-01T00:00:00Z',
+        export: {
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          extension: 'xlsx',
+        },
       },
       {
         id: 'file1',
@@ -171,7 +170,6 @@ describe('materializeCloudSourceOnHost google docs export', () => {
     expect(supportsDocumentExport(backend)).toBe(true);
     const result = await materializeCloudSourceOnHost(input);
     expect(result.state).toBe('ready');
-    expect(result.skippedGoogleApps).toBe(1);
     expect(backend.exported).toEqual([
       { fileId: 'doc1', mimeType: DOCX_MIME },
       {
@@ -184,6 +182,8 @@ describe('materializeCloudSourceOnHost google docs export', () => {
     expect(existsSync(path.join(mirror, 'Proposal.docx'))).toBe(true);
     expect(existsSync(path.join(mirror, 'Budget.xlsx'))).toBe(true);
     expect(existsSync(path.join(mirror, 'notes.txt'))).toBe(true);
+    expect(readMirrorMeta(mirror, 'Proposal.docx')?.readOnly).toBe(true);
+    expect(readMirrorMeta(mirror, 'notes.txt')?.readOnly).toBeUndefined();
     expect(readFileSync(path.join(mirror, 'Proposal.docx'), 'utf8')).toContain('exported:doc1');
   });
 });

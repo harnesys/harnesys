@@ -5,6 +5,7 @@ import { Logger } from '../logging/logger';
 import {
   BusinessRuleException,
   ConflictException,
+  DomainException,
   EntityNotFoundException,
   ForbiddenException,
   UnauthorizedException,
@@ -47,6 +48,19 @@ describe('mapToErrorResponse', () => {
       expect(body.errorCode).toBe(row.code);
       expect(typeof body.message).toBe('string');
     }
+  });
+
+  test('explicit domain status wins over the code table', () => {
+    class TimedOutException extends DomainException {
+      constructor() {
+        super('timeout', 'Addon call timed out', { retryable: true }, 504);
+      }
+    }
+
+    const body = mapToErrorResponse(new TimedOutException(), { path: '/x' });
+
+    expect(body).toMatchObject({ statusCode: 504, errorCode: 'timeout' });
+    expect(body.details).toEqual({ retryable: true });
   });
 
   test('HttpException passes status, code, message, and details through', () => {

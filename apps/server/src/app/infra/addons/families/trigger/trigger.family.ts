@@ -6,7 +6,10 @@ import type { FamilyModule, HandlerSpec } from '../../../../domain/addons/family
 import { handlerSpec } from '../../../../domain/addons/family-module.ts';
 import type { Disposable, OwnerKey } from '../../../../domain/addons/owner.ts';
 import { ownerKeyId } from '../../../../domain/addons/owner.ts';
-import type { AddonCallOptions } from '../../../../domain/addons/ports/addon-call.port.ts';
+import type {
+  AddonCallOptions,
+  TriggerStopReason,
+} from '../../../../domain/addons/ports/addon-call.port.ts';
 import { AddonCallPort } from '../../../../domain/addons/ports/addon-call.port.ts';
 import { AddonPackageCatalogPort } from '../../../../domain/addons/ports/addon-package-catalog.port.ts';
 import { BindingRepositoryPort } from '../../../../domain/addons/ports/binding-repository.port.ts';
@@ -207,12 +210,13 @@ export class TriggerFamilyModule implements FamilyModule<TriggerSchema> {
     orgId: string,
     addonId: string,
     instanceId: string,
+    reason?: TriggerStopReason,
     opts?: AddonCallOptions,
   ): Promise<void> {
     await this.calls.triggerStop(
       orgId,
       addonId,
-      { instanceId },
+      { instanceId, ...(reason === undefined ? {} : { reason }) },
       opts ?? { timeoutMs: TRIGGER_CALL_TIMEOUT_MS },
     );
   }

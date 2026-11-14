@@ -70,7 +70,7 @@ export abstract class OrgDbPort {
 - `repository-worktree.ts`: `RepositoryWorktreeState = creating|ready|failed|removing`, `canDeleteWorktree`, `decideStaleCreatingRecovery`.
 - Порты: `cloud-remote-backend.port.ts`, `cloud-sync-back-watch.port.ts`, `git-watch-events.port.ts`, `source-watch-gate.port.ts`, `source-location.port.ts`, `source-registry.port.ts`, `decide-source-vcs.ts`, `source-host-status.ts`, `vcs-capability.ts`, `materialization-events.port.ts`, `source.error.ts`, `ui-visibility.policy.ts`.
 
-Адаптеры: `infra/source/source-materialization.adapter.ts` (таблицы `source_materializations`, `source_materialization_projections`), `infra/source/source-registry.adapter.ts` (`sources`), `infra/source/source-location.adapter.ts`, драйверы `infra/source/drivers/git/git.driver.ts` + `git-engine.ts` (реализация `SourceDriverPort` через git CLI/werktrees), `infra/source/drivers/cloud/google-drive.backend.ts`, `cloud-mirror-*.ts`, `cloud-sync-back-*.ts`.
+Адаптеры: `infra/source/source-materialization.adapter.ts` (таблицы `source_materializations`, `source_materialization_projections`), `infra/source/source-registry.adapter.ts` (`sources`), `infra/source/source-location.adapter.ts`, драйверы `infra/source/drivers/git/git.driver.ts` + `git-engine.ts` (реализация `SourceDriverPort` через git CLI/werktrees), `infra/source/drivers/cloud/cloud-mirror-*.ts`, `cloud-sync-back.ts` (вендор — через `infra/addons/source/`).
 
 Материализация: `source-materialization.adapter.ts` пишет в таблицы `source_materializations` и `source_materialization_projections`. Worktree привязки — `repository_worktrees` (`org-sql.ts`).
 

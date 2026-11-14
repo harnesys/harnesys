@@ -1,3 +1,8 @@
+export interface CloudRemoteExport {
+  mimeType: string;
+  extension: string;
+}
+
 export interface CloudRemoteEntry {
   id: string;
   name: string;
@@ -5,6 +10,7 @@ export interface CloudRemoteEntry {
   size?: number;
   modifiedAt?: string;
   mimeType?: string;
+  export?: CloudRemoteExport;
 }
 
 export interface CloudRemoteUploadInput {
@@ -54,6 +60,6 @@ export interface CloudDocumentExporter {
 
 export function supportsDocumentExport(
   backend: CloudRemoteBackendPort,
-): backend is CloudRemoteBackendPort & Partial<CloudDocumentExporter> {
+): backend is CloudRemoteBackendPort & CloudDocumentExporter {
   return typeof (backend as Partial<CloudDocumentExporter>).exportDocument === 'function';
 }

@@ -1,4 +1,3 @@
-import { telegramUi } from './telegram';
 import type { WebuiIntegrationDescriptor } from './types';
 
 export type {
@@ -7,7 +6,7 @@ export type {
   WebuiIntegrationDescriptor,
 } from './types';
 
-export const INTEGRATION_UI_REGISTRY: WebuiIntegrationDescriptor[] = [telegramUi];
+export const INTEGRATION_UI_REGISTRY: WebuiIntegrationDescriptor[] = [];
 
 export function findIntegrationUi(integrationId: string): WebuiIntegrationDescriptor | undefined {
   return INTEGRATION_UI_REGISTRY.find((item) => item.id === integrationId);

@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { MaterializationState } from '@harnesys/contracts';
+import { isAddonError } from '@harnesys/sdk';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import type {
   CloudRemoteBackendPort,
@@ -17,10 +18,6 @@ import {
   readMirrorMeta,
 } from '../../infra/source/drivers/cloud/cloud-mirror-engine.ts';
 import { pruneRemovedRemoteEntries } from '../../infra/source/drivers/cloud/cloud-mirror-reconcile.ts';
-import {
-  GOOGLE_APPS_EXPORTS,
-  GoogleDriveBackend,
-} from '../../infra/source/drivers/cloud/google-drive.backend.ts';
 
 export interface MaterializeCloudSourceInput {
   orgId: string;
@@ -31,14 +28,13 @@ export interface MaterializeCloudSourceInput {
   layout: HostFsLayoutPort;
   materializations: SourceMaterializationPort;
   force?: boolean;
-  createBackend?: (getToken: () => Promise<string>) => CloudRemoteBackendPort;
+  createBackend: (getToken: () => Promise<string>) => CloudRemoteBackendPort;
 }
 
 export interface MaterializeCloudSourceResult {
   state: MaterializationState;
   revision: number;
   errorCode?: string;
-  skippedGoogleApps: number;
   localPath: string | null;
 }
 
@@ -50,7 +46,6 @@ export async function materializeCloudSourceOnHost(
     return {
       state: 'ready',
       revision: existing.revision,
-      skippedGoogleApps: 0,
       localPath: existing.localPath,
     };
   }
@@ -72,16 +67,9 @@ export async function materializeCloudSourceOnHost(
   try {
     const materializeRoot = input.layout.ensureOrgSourceDir(input.orgId, input.sourceId);
     const mirror = ensureMirrorRoot(materializeRoot);
-    const createBackend = input.createBackend ?? ((getToken) => new GoogleDriveBackend(getToken));
-    const drive = createBackend(input.getAccessToken);
+    const drive = input.createBackend(input.getAccessToken);
     const remotePaths = new Set<string>();
-    const skippedGoogleApps = await hydrateCloudChildren(
-      drive,
-      mirror,
-      input.remoteFolderId,
-      '',
-      remotePaths,
-    );
+    await hydrateCloudChildren(drive, mirror, input.remoteFolderId, '', remotePaths);
     pruneRemovedRemoteEntries(mirror, remotePaths);
     const readyRevision = nextRevision + 1;
     const readyAt = new Date().toISOString();
@@ -101,7 +89,6 @@ export async function materializeCloudSourceOnHost(
     return {
       state: 'ready',
       revision: readyRevision,
-      skippedGoogleApps,
       localPath: mirror,
     };
   } catch (err) {
@@ -124,21 +111,25 @@ export async function materializeCloudSourceOnHost(
       state: 'failed',
       revision: failedRevision,
       errorCode,
-      skippedGoogleApps: 0,
       localPath: existing?.localPath ?? null,
     };
   }
 }
 
 export function classifyCloudError(err: unknown): string {
+  if (isAddonError(err)) {
+    if (err.reason === 'account_failed' || err.reason === 'permission_revoked') {
+      return 'CLOUD_CREDENTIALS_INVALID';
+    }
+    if (err.reason === 'rate_limited' || err.reason === 'quota_exceeded') {
+      return 'CLOUD_QUOTA_EXCEEDED';
+    }
+  }
   const raw = err instanceof Error ? err.message : String(err);
-  if (raw.includes('invalid_grant') || raw.includes('Missing Google credentials')) {
+  if (raw.includes('invalid_grant')) {
     return 'CLOUD_CREDENTIALS_INVALID';
   }
-  if (raw.includes('SERVICE_DISABLED') || raw.includes('accessNotConfigured')) {
-    return 'CLOUD_API_DISABLED';
-  }
-  if (raw.includes('quota') || raw.includes('rateLimitExceeded')) {
+  if (raw.includes('quota')) {
     return 'CLOUD_QUOTA_EXCEEDED';
   }
   return raw.slice(0, 200) || 'materialize_failed';
@@ -150,14 +141,11 @@ async function hydrateCloudChildren(
   parentRemoteId: string,
   relativeDir: string,
   remotePaths: Set<string>,
-): Promise<number> {
+): Promise<void> {
   const children = await drive.listChildren(parentRemoteId);
-  let skippedGoogleApps = 0;
   for (const entry of children) {
-    const skippedInEntry = await hydrateCloudEntry(drive, mirror, relativeDir, entry, remotePaths);
-    skippedGoogleApps += skippedInEntry;
+    await hydrateCloudEntry(drive, mirror, relativeDir, entry, remotePaths);
   }
-  return skippedGoogleApps;
 }
 
 async function hydrateCloudEntry(
@@ -166,11 +154,8 @@ async function hydrateCloudEntry(
   relativeDir: string,
   entry: CloudRemoteEntry,
   remotePaths: Set<string>,
-): Promise<number> {
-  const exportTarget = entry.mimeType ? GOOGLE_APPS_EXPORTS[entry.mimeType] : undefined;
-  if (entry.mimeType?.startsWith('application/vnd.google-apps.') && !exportTarget) {
-    return 1;
-  }
+): Promise<void> {
+  const exportTarget = entry.export;
   const mirrorName = exportTarget ? `${entry.name}.${exportTarget.extension}` : entry.name;
   assertSafeCloudName(entry.name);
   assertSafeCloudName(mirrorName);
@@ -184,10 +169,11 @@ async function hydrateCloudEntry(
       remoteId: entry.id,
       kind: entry.kind,
     });
-    return hydrateCloudChildren(drive, mirror, entry.id, relativePath, remotePaths);
+    await hydrateCloudChildren(drive, mirror, entry.id, relativePath, remotePaths);
+    return;
   }
   if (isUnchangedMirrorEntry(mirror, relativePath, entry)) {
-    return 0;
+    return;
   }
   const fileMeta = readMirrorMeta(mirror, relativePath);
   if (
@@ -195,7 +181,7 @@ async function hydrateCloudEntry(
     fileMeta.remoteModifiedAt === entry.modifiedAt &&
     !existsSync(join(mirror, relativePath))
   ) {
-    return 0;
+    return;
   }
   preserveDirtyLocalFile(mirror, relativePath);
   await hydratePath({
@@ -204,9 +190,8 @@ async function hydrateCloudEntry(
     relativePath,
     remoteId: entry.id,
     kind: entry.kind,
-    ...(exportTarget?.exportMime ? { exportMime: exportTarget.exportMime } : {}),
+    ...(exportTarget === undefined ? {} : { exportMime: exportTarget.mimeType }),
   });
-  return 0;
 }
 
 function isUnchangedMirrorEntry(

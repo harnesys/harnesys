@@ -24,13 +24,29 @@ import {
 const DEFAULT_CHUNK_BYTES = 4 * 1024 * 1024;
 const FILE_FIELDS = 'id,name,mimeType,size,modifiedTime,trashed';
 
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+/**
+ * Google-native documents have no binary payload: they are materialized by
+ * exporting them to a concrete office format. Entries that Google exposes as
+ * editable-only objects without an export target (forms, scripts, sites) are
+ * not mirrored at all.
+ */
+const DOCUMENT_EXPORTS: Record<string, { mimeType: string; extension: string }> = {
+  'application/vnd.google-apps.document': { mimeType: DOCX_MIME, extension: 'docx' },
+  'application/vnd.google-apps.spreadsheet': { mimeType: XLSX_MIME, extension: 'xlsx' },
+  'application/vnd.google-apps.presentation': { mimeType: 'application/pdf', extension: 'pdf' },
+  'application/vnd.google-apps.drawing': { mimeType: 'application/pdf', extension: 'pdf' },
+};
+
 export const googleDriveSource: SourceBackendHandlers = {
   async list(params, ctx) {
     const json = await driveJson<DriveListResponse>(ctx, {
       accountId: params.accountId,
       url: listUrl(childrenQuery(params.folderId), params.pageToken),
     });
-    const entries = (json.files ?? []).map(toEntry);
+    const entries = (json.files ?? []).flatMap(toMirroredEntry);
     return json.nextPageToken === undefined || json.nextPageToken === ''
       ? { entries }
       : { entries, nextPageToken: json.nextPageToken };
@@ -137,11 +153,21 @@ async function readRange(
   return { data: encodeBase64(bytes), eof: bytes.byteLength < requested };
 }
 
+function toMirroredEntry(file: DriveFile): CloudRemoteEntryWire[] {
+  const exportTarget = file.mimeType === undefined ? undefined : DOCUMENT_EXPORTS[file.mimeType];
+  const googleNative = file.mimeType?.startsWith('application/vnd.google-apps.') === true;
+  if (googleNative && exportTarget === undefined && file.mimeType !== FOLDER_MIME) {
+    return [];
+  }
+  return [toEntry(file)];
+}
+
 function toEntry(file: DriveFile): CloudRemoteEntryWire {
   if (typeof file.id !== 'string' || file.id === '') {
     throw new AddonError('invalid_response', { detail: 'Drive entry has no id' });
   }
   const size = file.size === undefined ? undefined : Number(file.size);
+  const exportTarget = file.mimeType === undefined ? undefined : DOCUMENT_EXPORTS[file.mimeType];
   return {
     id: file.id,
     name: typeof file.name === 'string' && file.name !== '' ? file.name : file.id,
@@ -149,5 +175,6 @@ function toEntry(file: DriveFile): CloudRemoteEntryWire {
     ...(size === undefined || Number.isNaN(size) ? {} : { size }),
     ...(typeof file.modifiedTime === 'string' ? { modifiedAt: file.modifiedTime } : {}),
     ...(typeof file.mimeType === 'string' ? { mimeType: file.mimeType } : {}),
+    ...(exportTarget === undefined ? {} : { export: exportTarget }),
   };
 }

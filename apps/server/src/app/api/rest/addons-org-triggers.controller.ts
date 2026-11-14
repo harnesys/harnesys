@@ -148,7 +148,7 @@ export class AddonsOrgTriggersController {
       config: this.jsonOf(row.configJson),
       instructions: row.instructions,
       target: JSON.parse(row.targetJson) as unknown,
-      enabled: row.enabled,
+      status: row.enabled ? 'active' : 'paused',
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };

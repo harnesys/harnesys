@@ -1,4 +1,4 @@
-import type { FleetNode, SourceHostStatus } from '@harnesys/contracts';
+import type { FleetNode, SourceDistributionKind, SourceHostStatus } from '@harnesys/contracts';
 import { LockIcon } from 'lucide-react';
 import { useOrgTimeZone } from '@/features/switch-org/org-time-zone';
 import { formatDayTime } from '@/shared/lib/format-clock';
@@ -16,7 +16,7 @@ import {
 export interface HostStatusRowProps {
   row: SourceHostStatus;
   node: FleetNode | undefined;
-  distributionKind: 'host-bound' | 'cloud-drive';
+  distributionKind: SourceDistributionKind;
   showActions: boolean;
   isOrigin: boolean;
   canAllow: boolean;
@@ -55,11 +55,11 @@ export function HostStatusRow({
     row.nodeStatus === 'online' &&
     (row.materialization === 'absent' ||
       row.materialization === 'failed' ||
-      (distributionKind === 'cloud-drive' && row.refreshRequired)) &&
+      (distributionKind !== 'host-bound' && row.refreshRequired)) &&
     !preparing &&
     !refreshing;
   const canRefresh =
-    distributionKind === 'cloud-drive' &&
+    distributionKind !== 'host-bound' &&
     onRefresh &&
     row.nodeStatus === 'online' &&
     row.materialization === 'ready' &&

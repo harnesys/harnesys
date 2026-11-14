@@ -3,7 +3,6 @@ import { FleetHubPort } from '../../domain/fleet/fleet-hub.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { OrgMachineStore } from '../../domain/machine/org-machine-store.port.ts';
 import { OrgNotFoundException } from '../../domain/org/org.error.ts';
-import { CloudSyncBackWatchPort } from '../../domain/source/cloud-sync-back-watch.port.ts';
 
 export interface DeleteOrgInput {
   orgId: string;
@@ -15,7 +14,6 @@ export class DeleteOrgUseCase {
     private readonly store: OrgMachineStore,
     private readonly layout: HostFsLayoutPort,
     private readonly hub: FleetHubPort,
-    private readonly cloudSyncBackWatch: CloudSyncBackWatchPort,
   ) {}
 
   execute(input: DeleteOrgInput): void {
@@ -32,7 +30,6 @@ export class DeleteOrgUseCase {
         }
       }
     }
-    this.cloudSyncBackWatch.stopOrg(input.orgId);
     this.store.remove(input.orgId);
     this.layout.removeOrgDir(input.orgId);
     this.layout.removeOrgDataDir(input.orgId);

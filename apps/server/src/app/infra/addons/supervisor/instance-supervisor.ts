@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@harnesys/brix';
+import { AddonMigrationsPort } from '../../../application/addons/addon-migrations.port.ts';
 import { AddonQuarantinedException } from '../../../domain/addons/errors.ts';
 import { AddonPackageCatalogPort } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
 import { AddonAuditPort } from '../../../domain/addons/ports/audit.port.ts';
@@ -27,6 +28,7 @@ import {
   type LaunchTargetDeps,
   resolvePinnedVersion,
 } from './launch-target.ts';
+import { ensureInstanceSchema } from './schema-guard.ts';
 import { SupervisorSettings } from './supervisor.config.ts';
 import { SupervisorHooks, SupervisorTimers } from './supervisor-deps.ts';
 import { SupervisorRestartPolicy } from './supervisor-restarts.ts';
@@ -65,6 +67,7 @@ export class AddonInstanceSupervisor extends InstanceSupervisorPort {
     private readonly audit: AddonAuditPort,
     private readonly events: EventBusPort,
     private readonly logSink: LogSink,
+    private readonly migrations: AddonMigrationsPort,
   ) {
     super();
     this.log = logger.child('addon-supervisor');
@@ -165,9 +168,10 @@ export class AddonInstanceSupervisor extends InstanceSupervisorPort {
     reason: string,
   ): Promise<InstanceSnapshot> {
     const record = this.registry.ensure(orgId, addonId, this.resolveVersion(orgId, addonId));
+    const target = this.buildTarget(orgId, addonId);
+    this.ensureSchema(orgId, addonId, target);
     const generation = record.generation + 1;
     this.registry.update(orgId, addonId, { generation, state: 'starting', lastError: undefined });
-    const target = this.buildTarget(orgId, addonId);
     const runtime = new InstanceRuntime(
       {
         target,
@@ -210,6 +214,17 @@ export class AddonInstanceSupervisor extends InstanceSupervisorPort {
     this.restarts.resetIdleTimer(orgId, addonId);
     this.log.info({ orgId, addonId, generation, reason }, 'addon instance started');
     return this.snapshotOrThrow(orgId, addonId);
+  }
+
+  private ensureSchema(orgId: string, addonId: string, target: LaunchTarget): void {
+    try {
+      ensureInstanceSchema(this.migrations, this.log, target);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.registry.update(orgId, addonId, { state: 'failed', lastError: message });
+      this.mirror(orgId, addonId, 'failed', message);
+      throw error instanceof Error ? error : new Error(message);
+    }
   }
 
   private async teardownFailedStart(

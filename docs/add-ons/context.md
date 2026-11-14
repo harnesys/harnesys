@@ -167,6 +167,15 @@ const result = await ctx.triggers.fire({
 
 Хост проверяет: экземпляр включён и принадлежит аддону, дедупликация по `(instanceId, runKey)` (окно 7 суток), лимиты `perDay`/`throttleSec`/`maxBurst` и политика организации; затем диспатчит запуск. `busy` — в тред-цели уже идёт активный запуск.
 
+## ctx.triggers.create / update
+
+```ts
+const { instanceId } = await ctx.triggers.create({ kind, label, config, target });
+await ctx.triggers.update({ instanceId, label?, config?, target?, instructions?, enabled? });
+```
+
+`enabled: false` ставит экземпляр на паузу (хост шлёт `trigger.stop { reason: 'paused' }`), `enabled: true` возобновляет (`trigger.start` с пересчётом состояния). Это единственный правильный путь для агентских инструментов pause/resume: локальный статус аддона не должен расходиться с состоянием ядра.
+
 ## ctx.bridge.inbound — приём входящих сообщений
 
 ```ts
@@ -212,7 +221,7 @@ await ctx.events.emit('harnesys.acme.build.finished', { id: 42 }); // имя о�
 
 ≤ 64 KiB payload, публикуется на шине организации, видно в SSE-стриме `addon.*`, подписывается хуками других аддонов (право `events.subscribe`).
 
-## ctx.usage, ctx.skills, ctx.org
+## ctx.usage, ctx.skills, ctx.agents, ctx.org
 
 ```ts
 const usage = await ctx.usage.summary({ threadId?, since? });
@@ -220,6 +229,9 @@ const usage = await ctx.usage.summary({ threadId?, since? });
 
 const skills = await ctx.skills.list({ threadId });
 // [{ id, name, description, source }]
+
+const agents = await ctx.agents.list();
+// [{ id, name, status? }] — агенты организации
 
 const { timezone } = await ctx.org.settings(); // например, для вычисления cron в зоне организации
 ```
@@ -267,6 +279,8 @@ if (!Number.isInteger(input.count)) {
 | `account_failed` | аккаунт сломан; добавьте `accountCode` |
 | `unavailable` | временная недоступность, `retryable: true` |
 | `internal` | всё прочее |
+
+Ошибки вызовов сервисов `ctx.*` приходят как `AddonError` с причиной и `detail` от хоста: их можно проверять через `instanceof AddonError` и ветвить по `error.reason` (например, `not_found` для устаревшего watermark или `account_failed` для отзыва токена). В журнал пишите `error.detail`, а не `error.message` у произвольного исключения.
 
 Результат инструмента, не прошедший `outputSchema` хоста, — `invalid_response`. Полный список причин и маппинг кодов — [Протокол](protocol.md#ошибки).
 

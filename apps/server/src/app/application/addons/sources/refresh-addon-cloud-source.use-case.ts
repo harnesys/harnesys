@@ -11,7 +11,6 @@ export interface RefreshAddonCloudSourceRequest {
 
 export interface RefreshAddonCloudSourceResult {
   source: Source;
-  skippedGoogleApps: number;
   state: 'materializing' | 'ready' | 'failed';
   conflicts: string[];
 }
@@ -27,7 +26,6 @@ export class RefreshAddonCloudSourceUseCase {
     const outcome = await this.materializer.materialize(record, input.hostId, { force: true });
     return {
       source: toPublicSource(record, new Date().toISOString()),
-      skippedGoogleApps: outcome.skippedGoogleApps,
       state: outcome.state,
       conflicts,
     };

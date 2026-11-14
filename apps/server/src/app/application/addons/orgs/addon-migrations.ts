@@ -10,10 +10,21 @@ export interface AddonMigrationDeps {
   logger: Logger;
 }
 
+export interface AddonSchemaDeps {
+  migrations: AddonMigrationsPort;
+  logger: Logger;
+}
+
 export interface AddonMigrationInput {
   orgId: string;
   pkg: InstalledAddonPackage;
   fromVersion: string | null;
+}
+
+export interface AddonSchemaInput {
+  orgId: string;
+  addonId: string;
+  migrationsDir: string;
 }
 
 /**
@@ -22,19 +33,34 @@ export interface AddonMigrationInput {
  * failure), then notify a version change via lifecycle.upgrade {fromVersion}
  * for code-level migrations. `fromVersion` is null on first enable.
  */
+export function ensureAddonDataMigrations(
+  deps: AddonSchemaDeps,
+  input: AddonSchemaInput,
+): readonly number[] {
+  const result = deps.migrations.run({
+    orgId: input.orgId,
+    addonId: input.addonId,
+    migrationsDir: input.migrationsDir,
+  });
+  if (result.applied.length > 0) {
+    deps.logger.info(
+      { orgId: input.orgId, addonId: input.addonId, applied: result.applied },
+      'addon data migrations applied',
+    );
+  }
+  return result.applied;
+}
+
 export function runAddonDataMigrations(deps: AddonMigrationDeps, input: AddonMigrationInput): void {
   if (input.pkg.manifest.data !== undefined) {
-    const result = deps.migrations.run({
-      orgId: input.orgId,
-      addonId: input.pkg.id,
-      migrationsDir: join(input.pkg.root, input.pkg.manifest.data.migrations),
-    });
-    if (result.applied.length > 0) {
-      deps.logger.info(
-        { orgId: input.orgId, addonId: input.pkg.id, applied: result.applied },
-        'addon data migrations applied',
-      );
-    }
+    ensureAddonDataMigrations(
+      { migrations: deps.migrations, logger: deps.logger },
+      {
+        orgId: input.orgId,
+        addonId: input.pkg.id,
+        migrationsDir: join(input.pkg.root, input.pkg.manifest.data.migrations),
+      },
+    );
   }
   if (input.fromVersion !== null && input.fromVersion !== input.pkg.version) {
     const outcome = deps.notify.notify(input.orgId, input.pkg.id, 'lifecycle.upgrade', {

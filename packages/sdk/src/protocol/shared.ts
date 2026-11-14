@@ -124,6 +124,11 @@ export const HttpFetchResultSchema = z.object({
   bodyBase64: z.string().optional(),
 });
 
+export const CloudRemoteExportSchema = z.object({
+  mimeType: z.string().min(1),
+  extension: z.string().min(1),
+});
+
 export const CloudRemoteEntrySchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -131,8 +136,10 @@ export const CloudRemoteEntrySchema = z.object({
   size: z.number().int().nonnegative().optional(),
   modifiedAt: z.string().min(1).optional(),
   mimeType: z.string().min(1).optional(),
+  export: CloudRemoteExportSchema.optional(),
 });
 export type CloudRemoteEntryWire = z.infer<typeof CloudRemoteEntrySchema>;
+export type CloudRemoteExportWire = z.infer<typeof CloudRemoteExportSchema>;
 
 const sourceSelector = {
   sourceKind: z.string().min(1),

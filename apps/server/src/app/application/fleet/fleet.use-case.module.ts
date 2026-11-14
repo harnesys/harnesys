@@ -12,7 +12,6 @@ import { FetchRunAttachmentUseCase } from './fetch-run-attachment.use-case.ts';
 import { GetActiveHostUseCase } from './get-active-host.use-case.ts';
 import { HeartbeatUseCase } from './heartbeat.use-case.ts';
 import { IngestRunEventUseCase } from './ingest-run-event.use-case.ts';
-import { IssueCloudSourceSyncGrantUseCase } from './issue-cloud-source-sync-grant.use-case.ts';
 import { IssueInviteUseCase } from './issue-invite.use-case.ts';
 import { IssueRemoteRunUseCase } from './issue-remote-run.use-case.ts';
 import { IssueWaitingRunUseCase } from './issue-waiting-run.use-case.ts';
@@ -24,7 +23,6 @@ import { PairWithRelayUseCase } from './pair-with-relay.use-case.ts';
 import { PlacePendingRunUseCase } from './place-pending-run.use-case.ts';
 import { PlacementQueueWatcher } from './placement-queue-watcher.ts';
 import { ReapExpiredRunClaimsUseCase } from './reap-expired-run-claims.use-case.ts';
-import { ReleaseCloudSourceSyncGrantUseCase } from './release-cloud-source-sync-grant.use-case.ts';
 import { RemoveFleetNodeUseCase } from './remove-fleet-node.use-case.ts';
 import { ReschedulePlacementQueueUseCase } from './reschedule-placement-queue.use-case.ts';
 import { ResolveFleetSecretsUseCase } from './resolve-fleet-secrets.use-case.ts';
@@ -47,8 +45,6 @@ import { RotateNodeTokenUseCase } from './rotate-node-token.use-case.ts';
     RetargetUseCase,
     PromoteRelayUseCase,
     ResolveFleetSecretsUseCase,
-    IssueCloudSourceSyncGrantUseCase,
-    ReleaseCloudSourceSyncGrantUseCase,
     ClaimWorkUseCase,
     IngestRunEventUseCase,
     IssueRemoteRunUseCase,
@@ -79,8 +75,6 @@ import { RotateNodeTokenUseCase } from './rotate-node-token.use-case.ts';
     RetargetUseCase,
     PromoteRelayUseCase,
     ResolveFleetSecretsUseCase,
-    IssueCloudSourceSyncGrantUseCase,
-    ReleaseCloudSourceSyncGrantUseCase,
     ClaimWorkUseCase,
     IngestRunEventUseCase,
     IssueRemoteRunUseCase,

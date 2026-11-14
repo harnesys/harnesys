@@ -216,6 +216,7 @@ export interface AddonTriggers {
     config?: Record<string, unknown>;
     target?: AddonTriggerTarget;
     instructions?: string;
+    enabled?: boolean;
   }): Promise<{ instanceId: string }>;
 }
 

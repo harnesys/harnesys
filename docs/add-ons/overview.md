@@ -17,7 +17,7 @@
 
 ## Модель в трёх абзацах
 
-**Пакет** — каталог с манифестом `addon.json` и самодостаточным JS-бандлом. Манифест статически описывает: что аддон даёт (`contributions` — вклады в 13 семейств), что ему нужно (`permissions`, `connections`), как его запускать (`runtime.profile`, `activation`) и где его данные (`data.migrations`, `quotaMb`).
+**Пакет** — каталог с манифестом `addon.json` и самодостаточным JS-бандлом. Манифест статически описывает: что аддон даёт (`contributions` — вклады в 14 семейств), что ему нужно (`permissions`, `connections`), как его запускать (`runtime.profile`, `activation`) и где его данные (`data.migrations`, `quotaMb`).
 
 **Хост** — ядро сервера. Считает пакеты в каталог (`addons.lock.json` + версии на диске), включает аддон организации с явной выдачей прав, регистрирует вклады в реестрах ядра **как данные, не запуская код**, и по требованию поднимает изолированный процесс аддона. Общение — JSON-RPC 2.0 по stdio: хост вызывает обработчики (`tools.call`, `route.handle`, …), аддон — сервисы хоста (`db.*`, `http.fetch`, …). Каждая точка входа проверяет право, схему, частоту, дедлайн; наружу из процесса идут только коды ошибок.
 
@@ -58,22 +58,23 @@
 8. Секреты провайдеров не уходят аддону по умолчанию (токен можно вообще не отдавать — инъекция в `http.fetch`).
 9. Обновление с расширением прав не применяется молча.
 10. Контракт растёт аддитивно; слом семантики — новый `platform`.
-11. Наружу идут коды `AddonErrorReason`, а не тексты исключений.
+11. Наружу идут коды `AddonErrorReason` вместе с явным `detail`; произвольный текст исключения границу не пересекает.
 12. Fail-closed: неизвестный platform/семейство, битый манифест, дрейф digest — отказ.
 
 ## Экосистема уже в поставке
 
-Тринадцать встроенных аддонов в `add-ons/` — не демо, а рабочие части продукта:
+Четырнадцать встроенных аддонов в `add-ons/` — не демо, а рабочие части продукта:
 
 | Аддон | Что демонстрирует |
 |---|---|
-| `harnesys.webhook` | минимальный аддон: trigger + public route + view-таблица |
+| `harnesys.webhook` | trigger + публичный маршрут со своей проверкой подписи + org-маршруты + `tool-pack` из 9 инструментов |
 | `harnesys.scheduler` | cron-планировщик на job+trigger, org timezone, HITL-эскалация пропусков |
 | `harnesys.telegram-bot` | транспорт чата: transport + worker-поллер + 12 tool-ов + привязка чатов + исходящие вложения |
 | `harnesys.telegram-feed` | MTProto-аккаунт как connection (`telegram-user`), чтение каналов в треды |
 | `harnesys.telegram-groups` | бот-транспорт для групп (connection `telegram-bot`), привязка чатов, tools |
-| `harnesys.github` | GitHub App: installation-аккаунты, пака tools (21 инструмент), события через опрос (worker-poller + trigger `github.repo`) |
+| `harnesys.github` | GitHub App: installation-аккаунты, пака tools (21 инструмент), события через опрос (worker `repo-poller` + trigger `github.repo-events`) |
 | `harnesys.google-*` (7) | tool-pack поверх OAuth-аккаунтов; `google-drive` — `source-kind` (облачный диск как знания) |
+| `harnesys.drawio` | семейство `viewer`: `.drawio`-файлы открываются в редакторе прямо из дерева источников, `mode: "edit"` + `create` |
 
 Разбор `harnesys.webhook` построчно — в [Анатомии аддона](anatomy.md).
 

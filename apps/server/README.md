@@ -1,6 +1,6 @@
 # @harnesys/server
 
-Host API for Harnesys: organizations, fleet relay/worker pairing, sources (git/Google Drive), files, terminals, LLM providers, knowledge/RAG, vault, agents, skills, MCP, LSP, threads/runs, approvals, schedules, webhooks, issues/boards/labels, usage.
+Host API for Harnesys: organizations, fleet relay/worker pairing, sources (git/add-on cloud), files, terminals, LLM providers, knowledge/RAG, vault, agents, skills, MCP, LSP, threads/runs, approvals, schedules, webhooks, issues/boards/labels, usage.
 
 Stack: Bun runtime, Hono (HTTP), Brix (DI/modules), Drizzle + SQLite (`bun:sqlite`), Zod, Pino, Croner.
 
@@ -40,7 +40,7 @@ DI contract: ports are `abstract class` in `domain`, adapters extend them, modul
 
 ## API
 
-All routes live under `/api`. Controller groups (see `src/app/api/rest/`): health, orgs, fleet/discovery, sources (git + Google Drive), content, terminals, providers, knowledge, vault, agents/capabilities/memory, skills, MCP, mode-presets, plugins, LSP, threads (runs, attachments, compaction, files, message queue, raw model requests), approvals, schedules, webhooks, issues/boards/labels, usage, events.
+All routes live under `/api`. Controller groups (see `src/app/api/rest/`): health, orgs, fleet/discovery, sources (git + add-on cloud sources), content, terminals, providers, knowledge, vault, agents/capabilities/memory, skills, MCP, mode-presets, plugins, LSP, threads (runs, attachments, compaction, files, message queue, raw model requests), approvals, schedules, webhooks, issues/boards/labels, usage, events.
 
 Realtime is push-only: SSE for run events, `/api/events/watch`, LSP diagnostics; WebSockets for fleet workers and terminals. There is no polling anywhere.
 
@@ -56,7 +56,6 @@ Errors follow one contract: `{ statusCode, errorCode, message, path, timestamp, 
 | `HARNESYS_HOME` | `~/.harnesys` | machine home: `config.json`, `machine.json`, `orgs/<id>/org.db`, `nodes/` |
 | `HARNESYS_MASTER_KEY` | `~/.harnesys/master.key` | master key for the secret store (base64, 32 bytes) |
 | `PUBLIC_URL` | — | public origin override |
-| `HARNESYS_GOOGLE_CLIENT_ID` / `_SECRET` / `_API_KEY` / `_APP_ID` | — | Google Drive OAuth + Picker |
 | `HARNESYS_BUNDLED_ASSETS` | sibling `assets/` | presets and system skills root |
 
 Logs: `logs/app.log` (10 MB × 5 rotation), request log `method path statusCode durationMs traceId`, `x-request-id` echoed.

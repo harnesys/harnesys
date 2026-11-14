@@ -12,6 +12,7 @@ export interface LaunchTarget {
   readonly packageRoot: string;
   readonly entryPath: string;
   readonly dataDir: string;
+  readonly migrationsDir: string | null;
   readonly platform: number;
   readonly trust: AddonTrust;
   readonly profile: SandboxProfile;
@@ -41,6 +42,7 @@ export function buildLaunchTarget(
   if (!installed) {
     throw new Error(`addon package not installed: ${addonId}@${version}`);
   }
+  const migrations = installed.manifest.data?.migrations;
   return {
     orgId,
     addonId,
@@ -48,6 +50,7 @@ export function buildLaunchTarget(
     packageRoot: installed.root,
     entryPath: join(installed.root, installed.manifest.runtime.entry),
     dataDir: join(deps.layout.orgDataDir(orgId), 'addons', addonId),
+    migrationsDir: migrations === undefined ? null : join(installed.root, migrations),
     platform: installed.manifest.platform,
     trust: installed.trust,
     profile: installed.manifest.runtime.profile as SandboxProfile,

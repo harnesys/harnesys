@@ -1,5 +1,7 @@
 export const ADDON_ID = 'harnesys.webhook';
 
+export const HOST_API_PREFIX = '/api';
+
 export const TOKEN_PATTERN = /^[0-9a-f]{24}$/;
 
 export function tokenFromPath(path: string): string {
@@ -8,23 +10,19 @@ export function tokenFromPath(path: string): string {
 }
 
 export function publicEndpointPath(orgId: string, token: string): string {
-  return `/addons/public/${orgId}/${ADDON_ID}/r/${token}`;
+  return `${HOST_API_PREFIX}/addons/public/${orgId}/${ADDON_ID}/r/${token}`;
+}
+
+function publicOriginOf(headers: Record<string, string>): string {
+  const origin = headers.origin ?? '';
+  if (origin && origin !== 'null') {
+    return origin.replace(/\/+$/, '');
+  }
+  const proto = headers['x-forwarded-proto'] ?? 'http';
+  const host = headers['x-forwarded-host'] ?? headers.host ?? '';
+  return host ? `${proto}://${host}` : '';
 }
 
 export function endpointUrl(orgId: string, token: string, headers: Record<string, string>): string {
-  const path = publicEndpointPath(orgId, token);
-  const origin = headers.origin ?? '';
-  if (origin) {
-    return `${origin.replace(/\/+$/, '')}${path}`;
-  }
-  const proto = headers['x-forwarded-proto'] ?? '';
-  const forwardedHost = headers['x-forwarded-host'] ?? '';
-  if (proto && forwardedHost) {
-    return `${proto}://${forwardedHost}${path}`;
-  }
-  const host = headers.host ?? '';
-  if (host) {
-    return `://${host}${path}`;
-  }
-  return path;
+  return `${publicOriginOf(headers)}${publicEndpointPath(orgId, token)}`;
 }

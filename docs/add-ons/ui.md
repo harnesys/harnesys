@@ -35,7 +35,7 @@
 | `connections` | `connections?: string[]` | AccountPicker по требованиям | `PUT .../bindings/:id` |
 | `automations` | `triggers?: string[]` | экземпляры триггеров вида | CRUD `/triggers` |
 | `jobs` | — | расписания, enable/disable, Run now | `PATCH/POST .../jobs` |
-| `table` | `title, source, columns, rowActions?, pageSize?` | таблица + пагинация + действия | `source` route: `{ rows, nextCursor? }` |
+| `table` | `title, source, columns, rowActions?, pageSize?` | карточки: первая не-`badge` колонка — заголовок, `badge`-колонки — чипы рядом, остальные — пары label/value; `rowActions` — кнопки справа, `Load more` при `nextCursor` | `source` route: `{ rows, nextCursor? }` |
 | `form` | `title, fields, submit, confirm?` | форма, submit-маршрут | submit route: `{ toast?, refresh? }` |
 | `actions` | `actions: Action[]` | кнопки | `{ toast?, refresh? }` |
 | `markdown` | `body: L10n` | текст (последним); при наличии `notes.md` файл перекрывает `body` | — |

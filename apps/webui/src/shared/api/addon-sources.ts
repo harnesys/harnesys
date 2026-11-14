@@ -52,7 +52,6 @@ export type AddonSourceRefreshState = 'materializing' | 'ready' | 'failed';
 
 export interface AddonSourceRefreshResult {
   source: Source;
-  skippedGoogleApps: number;
   state: AddonSourceRefreshState;
   conflicts: string[];
 }

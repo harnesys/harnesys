@@ -1,6 +1,6 @@
 import type { AddonContext, TriggerPair } from '@harnesys/sdk';
 import { isValidCron, nextCronRunAt } from './cron.ts';
-import { removeInstance, saveState, upsertInstance } from './store.ts';
+import { pauseInstance, removeInstance, saveState, upsertInstance } from './store.ts';
 
 function cronOf(config: Record<string, unknown>): string {
   const value = config.cron;
@@ -70,7 +70,12 @@ export const schedulerTrigger: TriggerPair = {
     }
   },
   stop: async (params, ctx: AddonContext) => {
-    await removeInstance(ctx, params.instanceId);
-    await ctx.log.info('scheduler instance stopped', { instanceId: params.instanceId });
+    if (params.reason === 'removed') {
+      await removeInstance(ctx, params.instanceId);
+      await ctx.log.info('scheduler instance removed', { instanceId: params.instanceId });
+      return;
+    }
+    await pauseInstance(ctx, params.instanceId);
+    await ctx.log.info('scheduler instance paused', { instanceId: params.instanceId });
   },
 };

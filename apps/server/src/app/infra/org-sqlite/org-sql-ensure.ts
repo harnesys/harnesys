@@ -83,10 +83,7 @@ import {
   CREATE_INTEGRATION_OAUTH_SESSIONS_IDX_SQL,
   CREATE_INTEGRATION_OAUTH_SESSIONS_SQL,
 } from './org-sql-integration-sessions.ts';
-import {
-  backfillIntegrationsFromSources,
-  CREATE_INTEGRATIONS_SQL,
-} from './org-sql-integrations.ts';
+import { CREATE_INTEGRATIONS_SQL } from './org-sql-integrations.ts';
 import {
   type ColumnInfo,
   migrateIssuesBranchColumns,
@@ -177,7 +174,6 @@ export function ensureOrgSchema(
   const worktreeBranchDupes = ensureSourcesSchema(exec, all);
   migrateSourcesVcsColumns(exec, all);
   exec(CREATE_INTEGRATIONS_SQL);
-  backfillIntegrationsFromSources(exec, all);
   exec(CREATE_INTEGRATION_EVENTS_SQL);
   exec(CREATE_INTEGRATION_EVENTS_DELIVERY_IDX_SQL);
   exec(CREATE_INTEGRATION_OAUTH_SESSIONS_SQL);

@@ -8,12 +8,6 @@ export const SourceDistributionSchema = z.discriminatedUnion('kind', [
     hostId: z.string().uuid(),
   }),
   z.object({
-    kind: z.literal('cloud-drive'),
-    backend: z.literal('google'),
-    remoteFolderId: z.string().min(1),
-    integrationId: z.string().uuid(),
-  }),
-  z.object({
     kind: z.literal('addon-cloud'),
     addonId: z.string().min(1),
     sourceKindId: z.string().min(1),
@@ -22,13 +16,15 @@ export const SourceDistributionSchema = z.discriminatedUnion('kind', [
   }),
 ]);
 export type SourceDistribution = z.infer<typeof SourceDistributionSchema>;
+export type SourceDistributionKind = SourceDistribution extends { kind: infer Kind } ? Kind : never;
 
 export const SourceVcsSchema = z.object({
   engine: z.literal('git'),
   remoteUrl: z.string().min(1).nullable(),
   credRef: z.string().min(1).nullable(),
   defaultBranch: z.string().min(1).nullable(),
-  integrationId: z.string().uuid().nullish(),
+  accountId: z.string().min(1).nullish(),
+  credentialKey: z.string().min(1).nullish(),
 });
 export type SourceVcs = z.infer<typeof SourceVcsSchema>;
 
@@ -140,7 +136,7 @@ export const AttachGitBodySchema = z
     uiVisibility: UiVisibilitySchema.optional(),
     branch: z.string().min(1).optional(),
     credRef: z.string().min(1).optional(),
-    integrationId: z.string().uuid().optional(),
+    accountId: z.string().min(1).optional(),
     repo: z
       .string()
       .min(1)
@@ -149,28 +145,28 @@ export const AttachGitBodySchema = z
   })
   .superRefine((body, ctx) => {
     const hasUrl = body.url !== undefined && body.url !== '';
-    const hasIntegration = body.integrationId !== undefined;
-    if (hasUrl === hasIntegration) {
+    const hasAccount = body.accountId !== undefined;
+    if (hasUrl === hasAccount) {
       ctx.addIssue({
         code: 'custom',
-        path: hasUrl ? ['integrationId'] : ['url'],
-        message: 'provide either url or integrationId+repo, not both',
+        path: hasUrl ? ['accountId'] : ['url'],
+        message: 'provide either url or accountId+repo, not both',
       });
       return;
     }
-    if (hasIntegration && body.repo === undefined) {
+    if (hasAccount && body.repo === undefined) {
       ctx.addIssue({
         code: 'custom',
         path: ['repo'],
-        message: 'repo is required with integrationId',
+        message: 'repo is required with accountId',
       });
       return;
     }
-    if (hasIntegration && body.credRef !== undefined) {
+    if (hasAccount && body.credRef !== undefined) {
       ctx.addIssue({
         code: 'custom',
         path: ['credRef'],
-        message: 'credRef cannot be combined with integrationId',
+        message: 'credRef cannot be combined with accountId',
       });
     }
   });
@@ -224,77 +220,6 @@ export const PrepareGitSourceResponseSchema = z.object({
   worktreeId: z.string().min(1).nullable(),
 });
 export type PrepareGitSourceResponse = z.infer<typeof PrepareGitSourceResponseSchema>;
-
-export const RefreshCloudDriveBodySchema = z.object({
-  hostId: z.string().uuid(),
-});
-export type RefreshCloudDriveBody = z.infer<typeof RefreshCloudDriveBodySchema>;
-
-export const AttachCloudDriveBodySchema = z.object({
-  name: z.string().min(1).optional(),
-  backend: z.literal('google').default('google'),
-  remoteFolderId: z.string().min(1).default('root'),
-  integrationId: z.string().uuid(),
-  hostId: z.string().min(1).optional(),
-  uiVisibility: UiVisibilitySchema.optional(),
-});
-export type AttachCloudDriveBody = z.infer<typeof AttachCloudDriveBodySchema>;
-
-export const GoogleOAuthLoopbackStartResponseSchema = z.object({
-  flow: z.literal('loopback'),
-  sessionId: z.string().min(1),
-  authUrl: z.string().min(1),
-  expiresIn: z.number().int().positive(),
-});
-export type GoogleOAuthLoopbackStartResponse = z.infer<
-  typeof GoogleOAuthLoopbackStartResponseSchema
->;
-
-export const GoogleAppConfigBodySchema = z.object({
-  clientId: z.string().trim().min(1),
-  clientSecret: z.string().trim().min(1),
-  apiKey: z.string().trim().default(''),
-  appId: z.string().trim().default(''),
-});
-export type GoogleAppConfigBody = z.infer<typeof GoogleAppConfigBodySchema>;
-
-export const GoogleAppConfigStatusResponseSchema = z.object({
-  configured: z.boolean(),
-  redirectUri: z.string().min(1),
-  clientId: z.string(),
-  hasClientSecret: z.boolean(),
-  hasApiKey: z.boolean(),
-  hasAppId: z.boolean(),
-});
-export type GoogleAppConfigStatusResponse = z.infer<typeof GoogleAppConfigStatusResponseSchema>;
-
-export const GoogleOAuthStatusResponseSchema = z.discriminatedUnion('status', [
-  z.object({ status: z.literal('pending') }),
-  z.object({ status: z.literal('denied') }),
-  z.object({ status: z.literal('expired') }),
-  z.object({
-    status: z.literal('ready'),
-    integrationId: z.string().uuid(),
-  }),
-]);
-export type GoogleOAuthStatusResponse = z.infer<typeof GoogleOAuthStatusResponseSchema>;
-
-export const GoogleOAuthStatusQuerySchema = z.object({
-  sessionId: z.string().min(1),
-});
-export type GoogleOAuthStatusQuery = z.infer<typeof GoogleOAuthStatusQuerySchema>;
-
-export const GooglePickerSessionQuerySchema = z.object({
-  integrationId: z.string().uuid(),
-});
-export type GooglePickerSessionQuery = z.infer<typeof GooglePickerSessionQuerySchema>;
-
-export const GooglePickerSessionResponseSchema = z.object({
-  accessToken: z.string().min(1),
-  apiKey: z.string().min(1),
-  appId: z.string().min(1),
-});
-export type GooglePickerSessionResponse = z.infer<typeof GooglePickerSessionResponseSchema>;
 
 export const SetSourceVisibilityBodySchema = z.object({
   uiVisibility: UiVisibilitySchema,

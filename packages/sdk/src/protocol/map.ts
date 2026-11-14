@@ -90,7 +90,12 @@ export const protocolMap = {
     'trigger',
   ),
   'trigger.stop': hostMethod(
-    z.object({ instanceId: str }).extend({ _meta: CallMetaSchema }),
+    z
+      .object({
+        instanceId: str,
+        reason: z.enum(['paused', 'removed']).optional(),
+      })
+      .extend({ _meta: CallMetaSchema }),
     empty,
     'trigger',
   ),

@@ -44,6 +44,7 @@ export interface ProjectCapabilitiesResponse {
 export type BridgedProject = ProjectRecord & {
   managed?: boolean;
   driver?: SourceDistributionKind;
+  addonId?: string;
   activeBranch?: string;
   hostId?: string;
   uiVisibility?: 'org' | 'host';
@@ -60,6 +61,7 @@ function toBridgedProject(source: Source): BridgedProject {
     color: null,
     managed: source.managed,
     driver: source.distribution.kind,
+    addonId: source.distribution.kind === 'addon-cloud' ? source.distribution.addonId : undefined,
     hostId: sourceBoundHostId(source) ?? undefined,
     uiVisibility: source.uiVisibility,
     activeBranch: source.vcs?.defaultBranch ?? undefined,

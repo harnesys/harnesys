@@ -19,7 +19,6 @@ import { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
 import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { WorkerContentHandler } from '../content/worker-content.handler.ts';
 import { probeDocker } from './docker-probe.util.ts';
-import { WorkerCloudSyncWatch } from './worker-cloud-sync-watch.ts';
 import { handleWorkerCommand } from './worker-dialer.commands.ts';
 import { replayMaterializationStates } from './worker-dialer.materialize.ts';
 import { flushDeferredPlaces } from './worker-dialer.place-run.ts';
@@ -62,7 +61,6 @@ export class WorkerDialerAdapter implements ModuleInitHook, ModuleDestroyHook {
     private readonly materializations: SourceMaterializationPort,
     private readonly secrets: SecretStorePort,
     private readonly containers: WorkspaceContainerPort,
-    private readonly cloudSyncWatch: WorkerCloudSyncWatch,
     @Configuration() readonly _appConfig: AppConfig,
     logger: Logger,
   ) {
@@ -94,7 +92,6 @@ export class WorkerDialerAdapter implements ModuleInitHook, ModuleDestroyHook {
       this.heartbeatTimer = null;
     }
     for (const session of this.sessions.values()) {
-      this.cloudSyncWatch.stop(session.identity.orgId);
       teardownDialerSession(session, 'stopped', (s) => this.clearSessionTimers(s));
     }
     this.sessions.clear();
@@ -236,7 +233,6 @@ export class WorkerDialerAdapter implements ModuleInitHook, ModuleDestroyHook {
         pendingEvents: this.pendingEvents,
         layout: this.layout,
       });
-      this.cloudSyncWatch.sync(session, true);
     }
   }
 
@@ -247,7 +243,6 @@ export class WorkerDialerAdapter implements ModuleInitHook, ModuleDestroyHook {
       return;
     }
     this.applySnapshot(session, parsed.data.snapshot);
-    this.cloudSyncWatch.sync(session, false);
     if (session.snapshotReady) {
       flushDeferredPlaces({
         session,
@@ -283,7 +278,6 @@ export class WorkerDialerAdapter implements ModuleInitHook, ModuleDestroyHook {
       onOrgDropped: (orgId) => this.dropSession(orgId),
       matDeps: this.matDeps(),
       worktreeDeps: this.worktreeDeps(),
-      onCloudMaterialized: () => this.cloudSyncWatch.sync(session, true),
     });
   }
 
@@ -292,7 +286,6 @@ export class WorkerDialerAdapter implements ModuleInitHook, ModuleDestroyHook {
     if (!session) {
       return;
     }
-    this.cloudSyncWatch.stop(orgId);
     teardownDialerSession(session, 'org removed', (s) => this.clearSessionTimers(s));
     this.sessions.delete(orgId);
   }

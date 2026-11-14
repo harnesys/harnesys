@@ -112,7 +112,7 @@ graph LR
 | GET/POST/PATCH/PUT/DELETE | `/orgs/:orgId/integrations/:integrationId/*` | IntegrationRoutesController | IntegrationHostPort (прокси аддона) |
 | GET | `/orgs/:orgId/sources` | SourcesController | ListSourcesUseCase |
 | POST | `/orgs/:orgId/sources/git` | SourcesController | AttachGitUseCase |
-| POST | `/orgs/:orgId/sources/cloud` | SourcesController | AttachCloudDriveUseCase |
+| POST | `/orgs/:orgId/addons/:addonId/source-kinds/:sourceKindId/attach` | AddonsOrgSourcesController | AttachAddonCloudSourceUseCase |
 | GET | `/orgs/:orgId/sources/:sourceId` | SourcesController | GetSourceUseCase |
 | GET | `/orgs/:orgId/sources/:sourceId/host-status` | SourcesController | GetSourceHostStatusUseCase |
 | GET | `/orgs/:orgId/sources/:sourceId/location` | SourcesController | GetSourceLocationUseCase |
@@ -120,7 +120,7 @@ graph LR
 | GET | `/orgs/:orgId/sources/:sourceId/git/branches` | SourcesController | ListGitBranchesUseCase |
 | POST | `/orgs/:orgId/sources/:sourceId/git/branch` | SourcesController | SwitchGitBranchUseCase |
 | POST | `/orgs/:orgId/sources/:sourceId/git/branch/delete` | SourcesController | DeleteGitBranchUseCase |
-| POST | `/orgs/:orgId/sources/:sourceId/cloud/refresh` | SourcesController | RefreshCloudDriveUseCase |
+| POST | `/orgs/:orgId/addons/:addonId/sources/:sourceId/refresh` | AddonsOrgSourcesController | RefreshAddonCloudSourceUseCase |
 | DELETE | `/orgs/:orgId/sources/:sourceId` | SourcesController | DetachSourceUseCase |
 | PATCH | `/orgs/:orgId/sources/:sourceId/visibility` | SourcesController | SetSourceVisibilityUseCase |
 | PATCH | `/orgs/:orgId/sources/:sourceId` | SourcesController | RenameSourceUseCase |

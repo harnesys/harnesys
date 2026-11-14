@@ -6,7 +6,7 @@ import { schedulerTools } from './tools.ts';
 import { schedulerTrigger } from './trigger.ts';
 
 const ADDON_ID = 'harnesys.scheduler';
-const ADDON_VERSION = '1.2.0';
+const ADDON_VERSION = '1.3.0';
 
 const schedules: RouteHandler = async (_request, ctx: AddonContext) => {
   const rows = await listSchedules(ctx);

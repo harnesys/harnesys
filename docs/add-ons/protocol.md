@@ -72,7 +72,7 @@ interface CallMeta {
 | `lifecycle.upgrade` | — | `{ fromVersion }` → `{}` | хост шлёт уведомлением, ответа не ждёт |
 | `tools.call` | `tool-pack` | `{ pack, tool, input }` → `{ output }` | 60 с (дескриптор: до 600 с) |
 | `route.handle` | `route` | `{ routeId, request }` → `{ status, headers?, body? }` | 30 с |
-| `trigger.start` / `trigger.stop` | `trigger` | `{ instanceId, kind, label?, config, target? }` / `{ instanceId }` → `{}` | 15 с; требует права `trigger` |
+| `trigger.start` / `trigger.stop` | `trigger` | `{ instanceId, kind, label?, config, target? }` / `{ instanceId, reason? }` → `{}` | 15 с; требует права `trigger`; `reason` — `'paused'` (выключение экземпляра, данные сохраняются) или `'removed'` (удаление) |
 | `job.run` | `job` | `{ jobId }` → `{}` | по дескриптору (до 3600 с) |
 | `worker.start` / `worker.stop` | `worker` | `{ workerId }` → `{}` | 15 с |
 | `transport.send` | `transport` | `{ message }` → `{ messageId? }` | 30 с |
@@ -152,14 +152,20 @@ interface TransportMessage {
 interface AddonErrorData {
   reason: AddonErrorReason;   // см. ниже
   retryable: boolean;
-  detail?: string;            // короткий диагностический текст; пользователю не показывается
+  detail?: string;            // короткий диагностический текст; уходит в REST message/details
   accountCode?: string;       // для account_failed — код ошибки Apps/Accounts
 }
 ```
 
 16 причин `AddonErrorReason`: `invalid_params`, `invalid_response`, `permission_denied`, `not_found`, `conflict`, `quota_exceeded`, `rate_limited`, `timeout`, `cancelled`, `unavailable`, `unsupported`, `account_failed`, `incompatible_handlers`, `migration_failed`, `permission_revoked`, `internal`.
 
-Маппинг в JSON-RPC коды: `invalid_params` → `-32602`, `unsupported`/`not_found` → `-32601`, остальное → `-32000`. Из аддона бросается `new AddonError(reason, { retryable, detail })` — наружу из процесса уходят только коды, не тексты исключений (инвариант платформы).
+Маппинг в JSON-RPC коды: `invalid_params` → `-32602`, `unsupported`/`not_found` → `-32601`, остальное → `-32000`. Из аддона бросается `new AddonError(reason, { retryable, detail })` — через границу уходит `AddonErrorData`, произвольный текст исключения не передаётся.
+
+На стороне хоста `TransportRpcClient` разбирает `error.data` схемой `AddonErrorDataSchema` и пересобирает типизированное исключение `AddonException`: REST отдаёт `errorCode = reason`, `message`/`details` из `detail` и самого `data`, а HTTP-статус фильтр берёт из самого исключения (`DomainException.status`, `packages/brix/src/errors/error-filter.ts`). Для ошибок, пришедших из аддона по RPC, статус вычисляет `statusOfAddonReason`: `invalid_params` → 400, `not_found` → 404, `permission_denied`/`permission_revoked` → 403, `conflict`/`account_failed` → 409, `quota_exceeded`/`rate_limited` → 429, `timeout` → 504, `unavailable` → 503, `unsupported` → 501, `invalid_response` → 502, `cancelled`/`incompatible_handlers`/`migration_failed`/`internal` → 500. Хостовые броски `AddonException` объявляют статус по месту (`413` для превышения body-limit, `429` для rate limit публичного маршрута, `404` для неизвестного маршрута аддона). Ответ без валидного `data` остаётся обычной ошибкой. Исключение, не являющееся `AddonError`, сериализуется как `internal`, а его стек пишется в stderr процесса аддона: типизированная ошибка — единственный способ донести причину до клиента.
+
+Обратное направление работает так же: `createStdioChannel` в SDK разбирает `error.data` ответа хоста и отклоняет вызов сервиса `ctx.*` экземпляром `AddonError` с тем же `reason`, `retryable`, `detail` и `accountCode`. Поэтому в аддоне можно ветвиться по причине (`error instanceof AddonError && error.reason === 'not_found'`) и писать в журнал `error.detail` вместо безликого текста причины; обычный `Error` остаётся только для ответа без валидного `data`. Ошибка, не являющаяся `AddonError` на стороне хоста (например, исключение SQLite), доезжает до аддона как `AddonError('internal', { detail })` с исходным текстом в `detail`.
+
+`isAddonError(error)` в SDK проверяет ошибку структурно (имя `AddonError`, поле `reason`, метод `toData`), а не только через `instanceof`: собранный аддон бандлит собственную копию SDK, поэтому класс в рантайме аддона и класс на хосте — разные конструкторы.
 
 ## Совместимость версий
 

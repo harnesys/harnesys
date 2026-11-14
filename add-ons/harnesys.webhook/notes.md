@@ -5,7 +5,7 @@ Each webhook is a trigger instance bound to a thread and exposed on a public end
 ```sh
 curl -X POST -H 'Content-Type: application/json' \
   -d '{"text": "..."}' \
-  https://<host>/addons/public/<orgId>/harnesys.webhook/r/<token>
+  https://<host>/api/addons/public/<orgId>/harnesys.webhook/r/<token>
 ```
 
 The fast path reads the top-level `.text` field; use the text path or template fields for other payloads. `GET` fires only when the instance is enabled, with the task text in `?text=...`.

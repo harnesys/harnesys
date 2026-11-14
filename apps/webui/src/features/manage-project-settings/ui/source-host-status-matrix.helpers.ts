@@ -1,5 +1,6 @@
 import type {
   MaterializationState,
+  SourceDistributionKind,
   SourceHostNodeStatus,
   SourceHostStatus,
 } from '@harnesys/contracts';
@@ -34,7 +35,7 @@ export function nodeRoleLabel(role: 'relay' | 'worker' | undefined): string {
 
 export function detailCopy(
   row: SourceHostStatus,
-  distributionKind: 'host-bound' | 'cloud-drive',
+  distributionKind: SourceDistributionKind,
 ): string {
   if (row.errorCode) {
     return row.errorCode;
@@ -52,9 +53,9 @@ export function detailCopy(
     return 'Last confirmed state; node is not online';
   }
   if (row.materialization === 'ready') {
-    return distributionKind === 'cloud-drive'
-      ? 'Mirror confirmed ready'
-      : 'Directory confirmed ready';
+    return distributionKind === 'host-bound'
+      ? 'Directory confirmed ready'
+      : 'Mirror confirmed ready';
   }
   if (row.materialization === 'materializing') {
     return 'Materialization in progress';

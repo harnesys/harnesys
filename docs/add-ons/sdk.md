@@ -33,7 +33,7 @@ type RouteHandler   = (params: { routeId: string; request: RouteRequest }, ctx) 
 type JobHandler     = (params: { jobId: string }, ctx) => void | Promise<void>;
 type HookHandler    = (params: { hookId: string; event: Record<string, unknown> }, ctx) => void | Promise<void>;
 interface TriggerPair { start(params: { instanceId; kind; label?; config; target? }, ctx): void|Promise<void>;
-                        stop(params:  { instanceId }, ctx): void|Promise<void>; }
+                        stop(params:  { instanceId; reason?: 'paused' | 'removed' }, ctx): void|Promise<void>; }
 interface WorkerPair  { start(params: { workerId }, ctx): void|Promise<void>;
                         stop(params:  { workerId }, ctx): void|Promise<void>; }
 interface TransportHandlers {
@@ -88,9 +88,10 @@ class AddonError extends Error {
   constructor(reason: AddonErrorReason, options?: { retryable?: boolean; detail?: string; accountCode?: string });
   toData(): AddonErrorData;
 }
+function isAddonError(error: unknown): error is AddonError;
 ```
 
-16 причин — `AddonErrorReason`: `invalid_params`, `invalid_response`, `permission_denied`, `not_found`, `conflict`, `quota_exceeded`, `rate_limited`, `timeout`, `cancelled`, `unavailable`, `unsupported`, `account_failed`, `incompatible_handlers`, `migration_failed`, `permission_revoked`, `internal`. Наружу из процесса уходят только коды (инвариант платформы), `detail` — в журнал.
+16 причин — `AddonErrorReason`: `invalid_params`, `invalid_response`, `permission_denied`, `not_found`, `conflict`, `quota_exceeded`, `rate_limited`, `timeout`, `cancelled`, `unavailable`, `unsupported`, `account_failed`, `incompatible_handlers`, `migration_failed`, `permission_revoked`, `internal`. Через границу уходит `AddonErrorData`; произвольный текст исключения в протокол не попадает. `detail` — часть контракта, а не только журнал: хост кладёт его в REST `message`/`details` (см. [Протокол → Ошибки](protocol.md#ошибки)). Ошибки, которыми отклоняются вызовы сервисов `ctx.*`, SDK пересобирает из `error.data` хоста в `AddonError`: в аддоне работают `instanceof AddonError`, `error.reason`, `error.detail`, `error.accountCode`. `isAddonError` нужен, когда ошибку проверяет хост или тест: бандл аддона несёт свою копию SDK, и `instanceof` между копиями не срабатывает.
 
 ## Манифест как код
 

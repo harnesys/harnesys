@@ -17,11 +17,12 @@ import { useState } from 'react';
 import { useOpenNewTerminal } from '@/features/ide';
 import { openProjectSettingsDialog } from '@/features/manage-project-settings';
 import { getActiveOrgId } from '@/shared/api/active-org';
+import { refreshOrgAddonSource } from '@/shared/api/addon-sources';
 import { revealProjectEntry, sourceFilesTreeQueryKey } from '@/shared/api/files';
 import { selfNodeCached } from '@/shared/api/fleet';
 import { invalidateGitOrgSummary, pushGit, setGitRemote } from '@/shared/api/git';
 import { type BridgedProject, projectQueryKey } from '@/shared/api/projects';
-import { getSourceHostStatus, refreshCloudDrive, refreshGitSource } from '@/shared/api/sources';
+import { getSourceHostStatus, refreshGitSource } from '@/shared/api/sources';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import {
@@ -60,10 +61,10 @@ export function ProjectRootMenu({
   const hasGit = project?.hasGit === true;
   const hasRemote = project?.gitRemote != null;
   const mayHaveGit = project ? project.driver === 'host-bound' || hasGit : false;
-  const isCloud = project?.driver === 'cloud-drive';
+  const isCloud = project?.driver === 'addon-cloud';
   const label = dirPath || 'project root';
   const refreshMutation = useMutation({
-    mutationFn: async (): Promise<{ skippedGoogleApps?: number } | undefined> => {
+    mutationFn: async (): Promise<{ conflicts?: string[] } | undefined> => {
       const orgId = getActiveOrgId();
       if (!orgId) {
         throw new Error('No active org');
@@ -72,8 +73,8 @@ export function ProjectRootMenu({
       if (!hostId) {
         throw new Error('Host id is required');
       }
-      if (isCloud) {
-        return refreshCloudDrive(orgId, projectId, hostId);
+      if (isCloud && project?.addonId) {
+        return refreshOrgAddonSource(orgId, project.addonId, projectId);
       }
       const status = await getSourceHostStatus(orgId, projectId);
       const row = status.statuses.find((item) => item.hostId === hostId) ?? status.statuses[0];
@@ -90,10 +91,6 @@ export function ProjectRootMenu({
       await queryClient.invalidateQueries({
         queryKey: ['source-file-content', projectId],
       });
-      const skipped =
-        result && typeof result === 'object' && 'skippedGoogleApps' in result
-          ? result.skippedGoogleApps
-          : undefined;
       const conflicts =
         result && typeof result === 'object' && 'conflicts' in result
           ? (result.conflicts as string[]).length
@@ -102,13 +99,6 @@ export function ProjectRootMenu({
         toast.add({
           title: 'Synced with conflicts',
           description: `${conflicts} conflict copies saved next to the originals (both versions kept).`,
-        });
-        return;
-      }
-      if (isCloud && typeof skipped === 'number' && skipped > 0) {
-        toast.add({
-          title: 'Refreshed',
-          description: `${skipped} Google Doc/Sheet/Slide skipped (export later)`,
         });
         return;
       }

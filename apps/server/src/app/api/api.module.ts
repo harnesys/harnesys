@@ -12,7 +12,6 @@ import { FleetUseCaseModule } from '../application/fleet/fleet.use-case.module.t
 import { WorkerOrgOpsModule } from '../application/fleet/worker-org-ops.module.ts';
 import { HookUseCaseModule } from '../application/hooks/hook.use-case.module.ts';
 import { IdentityUseCaseModule } from '../application/identity/identity.use-case.module.ts';
-import { IntegrationUseCaseModule } from '../application/integration/integration.use-case.module.ts';
 import { IssueUseCaseModule } from '../application/issues/issue.use-case.module.ts';
 import { KnowledgeUseCaseModule } from '../application/knowledge/knowledge.use-case.module.ts';
 import { LspUseCaseModule } from '../application/lsp/lsp.use-case.module.ts';
@@ -47,7 +46,6 @@ import { ExecutionProfileModule } from '../infra/execution-profile/execution-pro
 import { FleetHubModule } from '../infra/fleet-hub/fleet-hub.module.ts';
 import { FleetWorkerModule } from '../infra/fleet-hub/fleet-worker.module.ts';
 import { IdentitySqliteModule } from '../infra/identity-sqlite/identity-sqlite.module.ts';
-import { IntegrationModule as IntegrationAppsModule } from '../infra/integrations/integration.module.ts';
 import { IssueInfraModule } from '../infra/issues/issue.module.ts';
 import { LegacyPortsModule } from '../infra/legacy-ports/legacy-ports.module.ts';
 import { MachineHomeModule } from '../infra/machine-home/machine-home.module.ts';
@@ -95,16 +93,11 @@ import { EulaController } from './rest/eula.controller.ts';
 import { EventsWatchController } from './rest/events-watch.controller.ts';
 import { FileRulesController } from './rest/file-rules.controller.ts';
 import { FleetController } from './rest/fleet.controller.ts';
-import { FleetCloudController } from './rest/fleet-cloud.controller.ts';
 import { FleetNodesController } from './rest/fleet-nodes.controller.ts';
 import { HealthController } from './rest/health.controller.ts';
 import { HostBrowseController } from './rest/host-browse.controller.ts';
 import { HostSkillsController } from './rest/host-skills.controller.ts';
 import { IdentityLinksController } from './rest/identity-links.controller.ts';
-import { IntegrationRoutesController } from './rest/integration-routes.controller.ts';
-import { IntegrationsController } from './rest/integrations.controller.ts';
-import { IntegrationsGithubController } from './rest/integrations-github.controller.ts';
-import { IntegrationsGoogleCallbackController } from './rest/integrations-google-callback.controller.ts';
 import { IssuesController } from './rest/issues.controller.ts';
 import { KnowledgeController } from './rest/knowledge.controller.ts';
 import { KnowledgeOrgController } from './rest/knowledge-org.controller.ts';
@@ -160,7 +153,7 @@ import { VaultController } from './rest/vault.controller.ts';
     ExecutionProfileUseCaseModule,
     WorkerOrgOpsModule,
     SourceUseCaseModule,
-    IntegrationUseCaseModule,
+    AutomationUseCaseModule,
     ContentUseCaseModule,
     ProviderUseCaseModule,
     ImageUseCaseModule,
@@ -169,7 +162,6 @@ import { VaultController } from './rest/vault.controller.ts';
     IssueInfraModule,
     DeskModule,
     EventsWatchModule,
-    IntegrationAppsModule,
     LegacyPortsModule,
     AgentMemoryModule,
     AutomationsModule,
@@ -204,7 +196,6 @@ import { VaultController } from './rest/vault.controller.ts';
     ThreadUseCaseModule,
     ApprovalUseCaseModule,
     AppsUseCaseModule,
-    AutomationUseCaseModule,
     TeamsUseCaseModule,
     IdentityUseCaseModule,
     UsageUseCaseModule,
@@ -227,10 +218,7 @@ import { VaultController } from './rest/vault.controller.ts';
     InvitesController,
     IdentityLinksController,
     OrgGitController,
-    IntegrationsGoogleCallbackController,
-    IntegrationsGithubController,
-    IntegrationsController,
-    IntegrationRoutesController,
+    AutomationsController,
     AppsCatalogController,
     AppsController,
     AccountsController,
@@ -239,7 +227,6 @@ import { VaultController } from './rest/vault.controller.ts';
     AppsConnectPublicController,
     AppsHookController,
     FleetController,
-    FleetCloudController,
     FleetNodesController,
     PlacementQueueController,
     DiscoveryController,
@@ -257,7 +244,6 @@ import { VaultController } from './rest/vault.controller.ts';
     KnowledgeOrgController,
     VaultController,
     AgentsController,
-    AutomationsController,
     FileRulesController,
     PermissionRulesController,
     CapabilitiesController,

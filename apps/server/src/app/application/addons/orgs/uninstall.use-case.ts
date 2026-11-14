@@ -77,7 +77,10 @@ export class UninstallAddonUseCase {
         continue;
       }
       try {
-        await this.calls.triggerStop(orgId, addonId, { instanceId: instance.id });
+        await this.calls.triggerStop(orgId, addonId, {
+          instanceId: instance.id,
+          reason: 'removed',
+        });
       } catch (error) {
         this.logger.warn(
           { orgId, addonId, instanceId: instance.id, error: String(error) },

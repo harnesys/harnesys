@@ -17,7 +17,6 @@ export interface AddonCloudMaterializeOutcome {
   state: 'materializing' | 'ready' | 'failed';
   revision: number;
   errorCode?: string;
-  skippedGoogleApps: number;
 }
 
 export interface AddonCloudMaterializeResult extends AddonCloudMaterializeOutcome {
@@ -109,7 +108,6 @@ export class AddonCloudMaterializer {
       state: result.state === 'absent' ? 'failed' : result.state,
       revision: result.revision,
       errorCode: result.errorCode,
-      skippedGoogleApps: result.skippedGoogleApps,
     };
   }
 

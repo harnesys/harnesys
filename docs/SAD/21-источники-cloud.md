@@ -1,94 +1,120 @@
-# 21. Источники облака (Google Drive)
+# 21. Cloud sources (add-on provided)
 
-## Назначение
+## Purpose
 
-Облачные источники подключают облачные хранилища (в текущей реализации — Google Drive) как материализуемые источники данных. Домен: `apps/server/src/app/domain/source/`. Драйверы и зеркало: `apps/server/src/app/infra/source/drivers/cloud/`. Облачный источник всегда привязан к интеграции Google (`integrationId` в `SourceDistribution.cloud-drive`), через которую получается access-токен.
+A cloud source mirrors a remote folder into a local directory. The core owns the mirror
+engine and the materialization state; the vendor API belongs to the add-on that contributes
+the source kind. Core code never names a provider.
 
-## Записи и контракты
+Domain: `apps/server/src/app/domain/source/`. Mirror engine and sync-back:
+`apps/server/src/app/infra/source/drivers/cloud/`. Add-on bridge:
+`apps/server/src/app/infra/addons/source/`. Add-on side of the contract: `@harnesys/sdk`
+`source.*` handlers.
 
-**Контракты** `packages/contracts/src/source.ts`:
-- `SourceDistribution` (`cloud-drive`): `backend: 'google'`, `remoteFolderId` (строка min 1, по умолчанию `'root'` при attach), `integrationId` (UUID).
-- `AttachCloudDriveBody`: `name?`, `backend: 'google'` (default), `remoteFolderId?`, `integrationId` (обязателен), `hostId?`, `uiVisibility?`.
-- `RefreshCloudDriveBody` (`hostId`).
+## Contracts
+
+`packages/contracts/src/source.ts`:
+
+- `SourceDistribution` (`addon-cloud`): `addonId`, `sourceKindId`, `accountId?`, `remoteFolderId`.
 - `MaterializationState`: `absent` | `materializing` | `ready` | `failed`.
-- `MaterializationStateFrame`, `MaterializationProjection` (`sourceId`, `hostId`, `state`, `revision`, `lastConfirmedAt`, `lastErrorCode?`, `lastConflictPaths?`, `refreshRequired?`).
-- `SourceHostStatus`: `hostId`, `nodeStatus` (`online` | `offline` | `draining`), `materialization`, `lastConfirmedAt?`, `errorCode?`, `stale`, `defaultWorktreeId?`, `lastConflictPaths`, `refreshRequired`, `availabilityReason?` (`origin` | `allowed` | `excluded` | `needs-remote`).
-- `SourceHostNodeStatus`: `online` | `offline` | `draining`.
+- `MaterializationStateFrame`, `MaterializationProjection` (`sourceId`, `hostId`, `state`,
+  `revision`, `lastConfirmedAt`, `lastErrorCode?`, `lastConflictPaths?`, `refreshRequired?`).
+- `SourceHostStatus`: `hostId`, `nodeStatus` (`online` | `offline` | `draining`),
+  `materialization`, `lastConfirmedAt?`, `errorCode?`, `stale`, `defaultWorktreeId?`,
+  `lastConflictPaths`, `refreshRequired`, `availabilityReason?`
+  (`origin` | `allowed` | `excluded` | `needs-remote`).
 
-## Порты (`app/domain/source/`)
+Attach and refresh are add-on routes, not core source routes:
+`POST /orgs/:orgId/addons/:addonId/source-kinds/:sourceKindId/attach` and
+`POST /orgs/:orgId/addons/:addonId/sources/:sourceId/refresh`.
 
-| Порт | Назначение |
-|------|------------|
-| `cloud-remote-backend.port.ts` | `CloudRemoteBackendPort` (`readonly vendor: CloudVendor`, `CloudVendor = 'google' | 'dropbox' | 'onedrive'`): `listChildren`, `download`, `upload`, `createFolder`, `delete`, `getMetadata`; `CloudDocumentExporter.exportDocument(fileId, mimeType)`; хелпер `supportsDocumentExport` |
-| `cloud-sync-back-watch.port.ts` | `CloudSyncBackWatchPort`: `syncOrg(orgId)`, `stopOrg(orgId)` — наблюдение за изменениями облака |
-| `source-driver.port.ts` | общий порт драйвера источника (`kind: 'git'`) |
-| `source-location.port.ts` | resolución корня зеркала источника на хосте |
-| `source-materialization.port.ts` | состояние и проекция материализации источника |
+## Ports (`app/domain/source/`)
 
-## Движок зеркала облака (`infra/source/drivers/cloud/`)
+| Port | Purpose |
+|------|---------|
+| `cloud-remote-backend.port.ts` | `CloudRemoteBackendPort` (`readonly vendor: string`): `listChildren`, `download`, `upload`, `createFolder`, `delete`, `getMetadata`. `CloudRemoteEntry.export` (`{ mimeType, extension }`) marks an entry the backend can only produce by export. `CloudDocumentExporter.exportDocument(fileId, mimeType)` + `supportsDocumentExport`. |
+| `cloud-sync-back.port.ts` | `CloudSyncBackPort`: `syncBackCloudFile`, `flushCloudMirror`. `createBackend` is required and always provided by the add-on bridge. |
+| `source-driver.port.ts` | git driver port (`kind: 'git'`) |
+| `source-location.port.ts` | mirror root resolution for a source on a host |
+| `source-materialization.port.ts` | materialization state and projection |
 
-- `cloud-mirror-engine.ts` — зеркало между облачным хранилищем и локальным каталогом:
-  - корень зеркала `<materializeRoot>/mirror`, метаданные в `.harnesys-mirror/` (`mode: 0o600`).
-  - `MirrorMetaFile`: `remoteId`, `kind` (`file` | `folder`), `remoteModifiedAt?`, `mimeType?`, `localHash?` (sha256 содержимого).
-  - `hydratePath`: скачивание файла (`backend.download`) или экспорт документа (`backend.exportDocument`, если поддерживает), запись мета, проверка симлинков (`assertSafeCloudPath` запрещает `/`, `\`, `\0`, `.`, `..`, `.harnesys-mirror`, `.git`).
+## Mirror engine (`infra/source/drivers/cloud/`)
+
+- `cloud-mirror-engine.ts` — mirrors a remote tree into `<materializeRoot>/mirror` with
+  metadata under `.harnesys-mirror/` (`mode: 0o600`).
+  - `MirrorMetaFile`: `remoteId`, `kind` (`file` | `folder`), `remoteModifiedAt?`, `mimeType?`,
+    `localHash?` (sha256 of content), `readOnly?`.
+  - `hydratePath`: downloads via `backend.download`, or exports via
+    `backend.exportDocument(remoteId, entry.export.mimeType)` when the entry declares `export`;
+    exported files are recorded with `readOnly: true`.
+  - `assertSafeCloudPath` rejects `/`, `\`, `\0`, `.`, `..`, `.harnesys-mirror`, `.git`.
   - `contentHash` (sha256 hex), `conflictLocalName` (`<name> (conflict, <stamp>)`).
-- `cloud-mirror-scan.ts` — `scanCloudMirrorChanges(mirror)`: обход локального каталога (пропуск `.harnesys-mirror` и `.git`), сравнение хеша файлов с метаданными; формирует изменения `create` | `change` | `delete`; удалённые мета без локального файла → `delete`.
-- `cloud-mirror-sync.ts` — обратная синхронизация изменений:
-  - `syncBackFile`: отслеживаемый файл — проверка ревизии удалённого файла (`remote.modifiedAt` vs `meta.remoteModifiedAt`); при несовпадении — `preserveBothVersions` (локальный и удалённый сохраняются под разными именами); при совпадении — `updateRemoteFile` (`PATCH upload`, `fileId`); неизвестный файл — `uploadLocalFile` (создание).
-  - `syncBackFolder`: создание папки в облаке, если мета отсутствует.
-  - `syncDeletePath`: удаление удалённого файла/папки с проверкой ревизии и непустых папок (`CLOUD_FOLDER_NOT_EMPTY`, `CLOUD_REVISION_CHANGED`).
-- `cloud-mirror-reconcile.ts` — примирение состояний зеркала.
+- `cloud-mirror-scan.ts` — `scanCloudMirrorChanges(mirror)`: walks the local tree (skipping
+  `.harnesys-mirror` and `.git`), compares file hashes with metadata, emits `create` | `change` |
+  `delete`.
+- `cloud-mirror-sync.ts` — reverse sync:
+  - `syncBackFile`: revision check (`remote.modifiedAt` vs `meta.remoteModifiedAt`); on mismatch
+    `preserveBothVersions`, otherwise `updateRemoteFile` (`PATCH upload`, `fileId`); unknown file —
+    `uploadLocalFile`.
+  - `syncBackFolder`: creates the remote folder when metadata is missing.
+  - `syncDeletePath`: deletes with revision and non-empty folder checks
+    (`CLOUD_FOLDER_NOT_EMPTY`, `CLOUD_REVISION_CHANGED`).
+- `cloud-mirror-reconcile.ts` — prunes mirror entries that disappeared remotely.
 
-## Обратная синхронизация (cloud sync back)
+## Sync back
 
-- `cloud-sync-back.ts` — `syncBackCloudFile` / `syncBackCloudPath` / `flushCloudMirror`: разрешение корня через `sourceLocation.resolve`, чтение файлов, пропуск экспортированных Google-документов (`mimeType` начинается с `application/vnd.google-apps.`), построение `GoogleDriveBackend` с провайдером токена.
-- `cloud-sync-back-queue.ts` — очередь изменений (`PendingCloudChange`), обработка с коалесценцией путей (`coalescePaths`).
-- `cloud-sync-back-state.ts` — `recordCloudSyncResult` / `recordCloudSyncFailure`: запись в `source-materialization` и событие через `materializationEvents`.
-- `cloud-sync-back-tokens.ts` — `CloudSyncCredentialLease`, `leasedTokenReader`: временное хранение учётных данных в секретах организации на время синхронизации (`googleCredKey(integrationId)`), удаление после завершения.
-- `cloud-sync-back-watcher.ts` — `@Injectable() CloudSyncBackWatcher extends CloudSyncBackWatchPort`:
-  - `onModuleInit`: `syncOrg` для каждой организации.
-  - `syncOrg`: список источников `cloud-drive`, `resolveAccessToken` через `IntegrationTokenPort.getAccessToken(orgId, integrationId)`.
-  - `watchCloudSource`: наблюдатель `filesWatcher.watch(sourceId, mirrorRoot)` — каждая локальная операция попадает в очередь (`create`/`change`/`delete`); при старте или `reconcile` — полное сканирование `scanCloudMirrorChanges`.
-  - `processQueuedChange`: захват `SourceWriteLeasePort` (TTL 60_000 мс), временная учетная запись, `syncBackCloudPath`, release аренды и секрета.
-  - `stopOrg` / `onModuleDestroy`: остановка наблюдателей по организации.
-- `cloud-sync-back.module.ts` — регистрация модуля.
-- `cloud-sync-back-watcher.spec.ts`, `cloud-mirror-engine.spec.ts` — тесты.
+- `cloud-sync-back.ts` — `syncBackCloudFile` / `syncBackCloudPath` / `flushCloudMirror`. Resolves
+  the mirror root through `sourceLocation.resolve`, skips `readOnly` entries (exported documents
+  are never written back), and calls the backend from `createBackend`.
+- `cloud-sync-back.adapter.ts` / `cloud-sync-back.module.ts` — `CloudSyncBackPort` registration.
 
-## Бэкенд Google Drive
+Local edits are flushed on explicit refresh (`AddonCloudMaterializer.flushLocalEdits`) and on
+every content write (`WriteFileUseCase`). There is no background watcher for `addon-cloud`
+sources: the add-on only exists on the host that runs it.
 
-- `google-drive.backend.ts` — `class GoogleDriveBackend extends CloudRemoteBackendPort implements CloudDocumentExporter`, `vendor = 'google'`:
-  - `DRIVE_API = 'https://www.googleapis.com/drive/v3'`, `UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3'`.
-  - `listChildren(folderId)`: запрос `files` с `q = '<folderId> in parents and trashed = false'`, постранично (`nextPageToken`, `pageSize 1000`).
-  - `download(fileId)`: `alt=media`.
-  - `upload`: создание (`multipart/related`) или обновление (`PATCH`, `fileId`, `uploadType=media`).
-  - `createFolder`: `mimeType = 'application/vnd.google-apps.folder'`.
-  - `delete`: `DELETE`, игнор 404.
-  - `getMetadata`, `driveJson` (Bearer токен).
-  - `GOOGLE_APPS_EXPORTS`: Document → DOCX (`docx`), Spreadsheet → XLSX (`xlsx`), Presentation/Drawing → PDF.
+## Add-on bridge (`infra/addons/source/`)
 
-## Use-cases (`application/source/`)
+- `addon-cloud.backend.ts` — `AddonCloudBackend extends CloudRemoteBackendPort implements
+  CloudDocumentExporter`: maps `listChildren`/`getMetadata`/`download`/`exportDocument`/`upload`/
+  `createFolder`/`delete` to `source.list`/`source.stat`/`source.download`/`source.export`/
+  `source.upload`/`source.mkdir`/`source.remove`, chunked at 4 MiB, 60 s timeout. Entries pass
+  `export` through unchanged.
+- `addon-source.adapters.ts` — `AddonCloudBackendPort` and `AddonSourceKindsPort` adapters.
+- Credentials never leave the add-on: the backend call carries `sourceKind` and `accountId`, and
+  the add-on resolves the account token through `ctx.http.fetch` `auth`.
 
-`attach-cloud-drive.use-case.ts`, `prepare-cloud-source.use-case.ts`, `refresh-cloud-drive.use-case.ts`, `materialize-cloud-source.ts`, `mark-cloud-siblings-refresh.ts`, `browse-host-dirs.use-case.ts`, `create-host-dir.use-case.ts`, `ensure-workspace.use-case.ts`.
+## Use-cases (`application/addons/sources/`, `application/source/`)
 
-## Поток данных зеркала облака
+`attach-addon-cloud-source`, `browse-addon-cloud-folder`, `list-addon-cloud-sources`,
+`prepare-addon-cloud-source`, `refresh-addon-cloud-source`, `AddonCloudMaterializer`
+(local-host only), plus the provider-agnostic `materialize-cloud-source.ts`, `write-file.use-case.ts`
+and `mark-cloud-siblings-refresh.ts`.
+
+## Document export
+
+Which remote entries need export, and into what, is add-on knowledge. The
+`harnesys.google-drive` add-on maps Google-native documents to DOCX/XLSX/PDF and omits entries it
+cannot materialize; the core only reads `entry.export`. Adding a new cloud vendor is an add-on
+with a `source-kind` contribution, no core change.
+
+## Data flow
 
 ```mermaid
 graph TD
-    C[Клиент: attach-cloud-drive / refresh-cloud-drive] --> UC[attach-cloud-drive.use-case / refresh-cloud-drive.use-case]
-    UC --> SRP[source-registry: источник cloud-drive + integrationId]
-    UC --> ITP[integration-token.port: getAccessToken(orgId, integrationId)]
-    UC --> CME[cloud-mirror-engine: hydratePath download/export]
-    CME --> SMP[source-materialization.port: upsertProjection applied|ignored|idempotent]
-    CSW[cloud-sync-back-watcher: filesWatcher на miroir] --> CSQ[cloud-sync-back-queue]
-    CSQ --> CSB[cloud-sync-back: syncBackCloudPath write-lease 60с]
-    CSB --> GDB[google-drive.backend: Drive API upload/update/delete]
+    C[Client: add-on sources UI] --> UC[attach-addon-cloud-source / refresh-addon-cloud-source]
+    UC --> ACM[AddonCloudMaterializer]
+    ACM --> CME[cloud-mirror-engine: hydratePath download/export]
+    ACM --> CB[AddonCloudBackend: source.* bridge]
+    CB --> AD[Add-on process: vendor API + account token]
+    CME --> SMP[source-materialization.port: upsertProjection]
+    ACM --> CSB[cloud-sync-back: flushLocalEdits write-lease 60s]
+    CSB --> CB
     CSB --> SMP
     UC --> C
 ```
 
-## Связанные разделы
+## Related sections
 
 - [19-источники-и-материализация.md](./19-источники-и-материализация.md)
-- [25-интеграция-google.md](./25-интеграция-google.md) (отдельная интеграция Google API, не путать с источником Google Drive)
-- [22-интеграции-общая-модель.md](./22-интеграции-общая-модель.md) (собственная SQLite интеграции)
 - [27-файловый-доступ-и-политики.md](./27-файловый-доступ-и-политики.md)
+- `docs/add-ons/contributions.md` (source-kind contribution)

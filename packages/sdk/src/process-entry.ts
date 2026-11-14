@@ -84,7 +84,16 @@ export function createStdioChannel(
       }
       pending.delete(message.id);
       if (message.error) {
-        call.reject(new Error(message.error.message));
+        const data = message.error.data;
+        call.reject(
+          data === undefined
+            ? new Error(message.error.message)
+            : new AddonError(data.reason, {
+                retryable: data.retryable,
+                detail: data.detail,
+                accountCode: data.accountCode,
+              }),
+        );
       } else {
         call.resolve(message.result);
       }

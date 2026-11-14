@@ -130,6 +130,7 @@ export const orgServiceMethods = {
         })
         .optional(),
       instructions: str.optional(),
+      enabled: z.boolean().optional(),
     }),
     z.object({ instanceId: str }),
     'trigger',

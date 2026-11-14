@@ -27,10 +27,11 @@ describe('contentRouteTarget', () => {
       contentRouteTarget({
         localHostId: 'relay',
         distribution: {
-          kind: 'cloud-drive',
-          backend: 'google',
+          kind: 'addon-cloud',
+          addonId: 'harnesys.google-drive',
+          sourceKindId: 'google-drive',
           remoteFolderId: 'folder-1',
-          integrationId: '00000000-0000-4000-8000-000000000001',
+          accountId: '00000000-0000-4000-8000-000000000001',
         },
       }),
     ).toEqual({ hostId: 'relay', remote: false });

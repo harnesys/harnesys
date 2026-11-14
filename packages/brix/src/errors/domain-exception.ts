@@ -3,6 +3,7 @@ export abstract class DomainException extends Error {
     readonly errorCode: string,
     message: string,
     readonly details?: unknown,
+    readonly status?: number,
   ) {
     super(message);
     this.name = new.target.name;

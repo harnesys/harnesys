@@ -149,7 +149,7 @@ export class AddonsOrgSourcesController {
     @Param('addonId') addonId: string,
     @Param('sourceId') sourceId: string,
     @SurfaceHostIdHeader() surfaceHostId: string | null,
-  ): Promise<{ source: Source; skippedGoogleApps: number; state: string; conflicts: string[] }> {
+  ): Promise<{ source: Source; state: string; conflicts: string[] }> {
     const record = this.orgAddons.find(orgId, addonId);
     if (!record) {
       throw new AddonException('not_found', 404, `add-on ${addonId} is not enabled`);

@@ -4,7 +4,6 @@ import type { ContentWriteResponse } from '@harnesys/contracts';
 import { AddonCloudBackendPort } from '../../domain/addons/ports/addon-cloud-backend.port.ts';
 import { OrgContentPort } from '../../domain/content/org-content.port.ts';
 import { SourceWriteLeasePort } from '../../domain/fleet/source-write-lease.port.ts';
-import { IntegrationTokenPort } from '../../domain/integration/integration-token.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { applyCloudSyncOutcome } from '../../domain/source/cloud-materialization-state.ts';
 import type {
@@ -40,7 +39,6 @@ export class WriteFileUseCase {
     private readonly sources: SourceRegistryPort,
     private readonly sourceLocation: SourceLocationPort,
     private readonly machine: MachineConfigPort,
-    private readonly tokens: IntegrationTokenPort,
     private readonly materializations: SourceMaterializationPort,
     private readonly materializationEvents: MaterializationEventsPort,
     private readonly cloudSync: CloudSyncBackPort,
@@ -68,36 +66,25 @@ export class WriteFileUseCase {
     orgId: string,
     distribution: CloudSyncSourceDistribution,
   ): CloudSyncLocalDependencies {
-    if (distribution.kind === 'addon-cloud') {
-      return {
-        sources: this.sources,
-        sourceLocation: this.sourceLocation,
-        machine: this.machine,
-        getAccessToken: unusedAccessToken,
-        createBackend: () =>
-          this.addonBackends.create({
-            orgId,
-            addonId: distribution.addonId,
-            sourceKindId: distribution.sourceKindId,
-            accountId: distribution.accountId,
-          }),
-      };
-    }
     return {
       sources: this.sources,
       sourceLocation: this.sourceLocation,
       machine: this.machine,
-      getAccessToken: () => this.tokens.getAccessToken(orgId, distribution.integrationId),
+      getAccessToken: unusedAccessToken,
+      createBackend: () =>
+        this.addonBackends.create({
+          orgId,
+          addonId: distribution.addonId,
+          sourceKindId: distribution.sourceKindId,
+          accountId: distribution.accountId,
+        }),
     };
   }
 
   private async maybeSyncCloud(orgId: string, sourceId: string, path: string): Promise<void> {
     const record = this.sources.findById(orgId, sourceId);
     const distribution = record?.distribution;
-    if (
-      distribution === undefined ||
-      (distribution.kind !== 'cloud-drive' && distribution.kind !== 'addon-cloud')
-    ) {
+    if (distribution === undefined || distribution.kind !== 'addon-cloud') {
       return;
     }
     const hostId = this.machine.get().id;

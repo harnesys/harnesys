@@ -13,6 +13,7 @@ export interface MirrorMetaFile {
   remoteModifiedAt?: string;
   mimeType?: string;
   localHash?: string;
+  readOnly?: boolean;
 }
 
 export interface SyncBackResult {
@@ -129,9 +130,10 @@ export async function hydratePath(input: {
     return;
   }
   mkdirSync(dirname(abs), { recursive: true });
+  const exported = exportMime !== undefined && supportsDocumentExport(backend);
   const bytes =
-    exportMime && supportsDocumentExport(backend)
-      ? await backend.exportDocument?.(remoteId, exportMime)
+    exported && exportMime !== undefined
+      ? await backend.exportDocument(remoteId, exportMime)
       : await backend.download(remoteId);
   if (!bytes) {
     throw new Error('CLOUD_EXPORT_FAILED');
@@ -144,6 +146,7 @@ export async function hydratePath(input: {
     remoteModifiedAt: remote.modifiedAt,
     mimeType: remote.mimeType,
     localHash: contentHash(bytes),
+    ...(exported ? { readOnly: true } : {}),
   });
 }
 

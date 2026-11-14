@@ -1,8 +1,8 @@
 import type { AddonContext, AddonTriggerTarget, ToolHandler } from '@harnesys/sdk';
 import { AddonError } from '@harnesys/sdk';
-import { isValidCron, nextCronRunAt } from './cron.ts';
+import { isValidCron } from './cron.ts';
 import type { MissPolicy } from './planner.ts';
-import { listSchedules, type ScheduleRow, saveState } from './store.ts';
+import { listSchedules, type ScheduleRow } from './store.ts';
 import { orgTimezone } from './trigger.ts';
 
 const MISS_POLICIES: readonly MissPolicy[] = ['catch-up', 'skip', 'escalate'];
@@ -78,41 +78,18 @@ const list: ToolHandler = async (_input, ctx: AddonContext) => {
 
 const pause: ToolHandler = async (input, ctx: AddonContext) => {
   const row = await resolveSchedule(ctx, input);
-  if (row.status === 'paused') {
-    return { ok: true, instanceId: row.instanceId, status: 'paused' };
-  }
-  await saveState(ctx, {
-    instanceId: row.instanceId,
-    cron: row.cron,
-    status: 'paused',
-    nextRunAt: null,
-    error: null,
-  });
+  await ctx.triggers.update({ instanceId: row.instanceId, enabled: false });
   return { ok: true, instanceId: row.instanceId, status: 'paused' };
 };
 
 const resume: ToolHandler = async (input, ctx: AddonContext) => {
   const row = await resolveSchedule(ctx, input);
-  const timezone = await orgTimezone(ctx);
-  if (!isValidCron(row.cron, timezone)) {
-    await saveState(ctx, {
-      instanceId: row.instanceId,
-      cron: row.cron,
-      status: 'failed',
-      nextRunAt: null,
-      error: `invalid cron: ${row.cron}`,
-    });
+  await ctx.triggers.update({ instanceId: row.instanceId, enabled: true });
+  const next = await readBack(ctx, row.instanceId);
+  if (next.status === 'failed') {
     throw new AddonError('invalid_params', { detail: `invalid cron: ${row.cron}` });
   }
-  const nextRunAt = nextCronRunAt(row.cron, new Date(), timezone);
-  await saveState(ctx, {
-    instanceId: row.instanceId,
-    cron: row.cron,
-    status: 'active',
-    nextRunAt,
-    error: null,
-  });
-  return { ok: true, instanceId: row.instanceId, status: 'active', nextRunAt };
+  return next;
 };
 
 async function readBack(ctx: AddonContext, instanceId: string): Promise<Record<string, unknown>> {

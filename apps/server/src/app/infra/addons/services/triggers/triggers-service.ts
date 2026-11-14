@@ -88,6 +88,7 @@ export class TriggersHostService implements HostServiceModule {
       config?: Record<string, unknown>;
       target?: TriggerTargetParams;
       instructions?: string;
+      enabled?: boolean;
     },
   ): Promise<{ instanceId: string }> {
     const row = this.instances.find(ctx.orgId, params.instanceId);
@@ -99,6 +100,7 @@ export class TriggersHostService implements HostServiceModule {
       ...(params.config !== undefined ? { configJson: JSON.stringify(params.config) } : {}),
       ...(params.target !== undefined ? { targetJson: JSON.stringify(params.target) } : {}),
       ...(params.instructions !== undefined ? { instructions: params.instructions } : {}),
+      ...(params.enabled !== undefined ? { enabled: params.enabled } : {}),
     });
     return { instanceId: params.instanceId };
   }

@@ -32,6 +32,13 @@ export interface TriggerStartParams {
   target?: unknown;
 }
 
+export type TriggerStopReason = 'paused' | 'removed';
+
+export interface TriggerStopParams {
+  instanceId: string;
+  reason?: TriggerStopReason;
+}
+
 export interface HookDeliverParams {
   hookId: string;
   event: JsonObject;
@@ -71,7 +78,7 @@ export abstract class AddonCallPort {
   abstract triggerStop(
     orgId: string,
     addonId: string,
-    params: { instanceId: string },
+    params: TriggerStopParams,
     opts?: AddonCallOptions,
   ): Promise<void>;
 

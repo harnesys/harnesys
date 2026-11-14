@@ -1,5 +1,4 @@
 import { Module } from '@harnesys/brix';
-import { GoogleCredKeyPort } from '../../application/fleet/google-cred-key.port.ts';
 import { NodeTicketAccess } from '../../application/identity/node-ticket-access.ts';
 import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
 import { FleetContentProxyPort } from '../../domain/fleet/fleet-content-proxy.port.ts';
@@ -37,7 +36,6 @@ import { SourceModule } from '../source/source.module.ts';
 import { FleetContentProxyAdapter } from './fleet-content-proxy.adapter.ts';
 import { FleetEventsAdapter } from './fleet-events.adapter.ts';
 import { FleetHubAdapter } from './fleet-hub.adapter.ts';
-import { GoogleCredKeyAdapter } from './google-cred-key.adapter.ts';
 import { PromoteSessionAdapter } from './promote-session.adapter.ts';
 
 @Module({
@@ -64,7 +62,6 @@ import { PromoteSessionAdapter } from './promote-session.adapter.ts';
     NodeTicketAccess,
     NodeTicketAccess,
     WorkerContentHandler,
-    { provide: GoogleCredKeyPort, useClass: GoogleCredKeyAdapter },
   ],
   exports: [
     InviteRepository,
@@ -86,7 +83,6 @@ import { PromoteSessionAdapter } from './promote-session.adapter.ts';
     OrgAudit,
     NodeTicketAccess,
     WorkerContentHandler,
-    GoogleCredKeyPort,
   ],
 })
 export class FleetHubModule {}

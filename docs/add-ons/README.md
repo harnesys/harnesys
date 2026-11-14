@@ -20,7 +20,7 @@
 | Документ | О чём |
 |---|---|
 | [Манифест addon.json](manifest.md) | все поля, id, версии, валидация |
-| [Contributions: семейства вкладов](contributions.md) | все 13 семейств с дескрипторами и примерами |
+| [Contributions: семейства вкладов](contributions.md) | все 14 семейств с дескрипторами и примерами |
 | [SDK API: @harnesys/sdk](sdk.md) | справочник пакета: `defineAddon`, точка входа, манифест, ошибки |
 | [AddonContext](context.md) | справочник `ctx.*`: db, http, files, accounts, runs, triggers, bridge, approvals… |
 | [Протокол](protocol.md) | JSON-RPC: рукопожатие, методы, `_meta`, ошибки, лимиты, совместимость |
@@ -44,7 +44,7 @@
 - Эта вики самодостаточна: источник истины — код (`packages/sdk`, `apps/server/src/app/infra/addons`), ссылки ведут только на страницы документации.
 - `packages/sdk/` — код SDK: манифест, протокол, семейства, контекст, testing.
 - `apps/server/src/app/infra/addons/` — host-сторона: каталог, супервизор, диспетчер, сервисы, семейства, хранение.
-- `add-ons/` — 13 встроенных аддонов как образцы (`harnesys.webhook`, `harnesys.scheduler`, `harnesys.telegram-bot`, `harnesys.github`, `harnesys.google-*`).
+- `add-ons/` — 14 встроенных аддонов как образцы (`harnesys.webhook`, `harnesys.scheduler`, `harnesys.telegram-bot`, `harnesys.github`, `harnesys.google-*`, `harnesys.drawio`).
 
 ## Ориентиры по коду
 

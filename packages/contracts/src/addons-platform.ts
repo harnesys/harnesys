@@ -223,6 +223,9 @@ export const OrgAddonListResponseSchema = z.object({
 });
 export type OrgAddonListResponse = z.infer<typeof OrgAddonListResponseSchema>;
 
+export const TriggerInstanceStatusSchema = z.enum(['active', 'paused']);
+export type TriggerInstanceStatus = z.infer<typeof TriggerInstanceStatusSchema>;
+
 export const TriggerInstanceViewSchema = z.object({
   instanceId: z.string().min(1),
   addonId: z.string().min(1),
@@ -231,7 +234,7 @@ export const TriggerInstanceViewSchema = z.object({
   config: z.record(z.string(), z.unknown()).default({}),
   instructions: z.string().default(''),
   target: z.unknown().optional(),
-  enabled: z.boolean().default(true),
+  status: TriggerInstanceStatusSchema,
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
 });

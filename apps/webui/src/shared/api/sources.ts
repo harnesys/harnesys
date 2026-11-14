@@ -1,43 +1,24 @@
-import type { SourceHostStatus, SourceHostStatusResponse } from '@harnesys/contracts';
+import type {
+  Source,
+  SourceDistribution,
+  SourceDistributionKind,
+  SourceHostStatus,
+  SourceHostStatusResponse,
+  SourceVcs,
+} from '@harnesys/contracts';
 import { queryOptions } from '@tanstack/react-query';
 import { apiUrl } from './client';
 import { selfNodeCached } from './fleet';
 import { authenticatedFetch } from './session';
 
-export type { SourceHostStatus, SourceHostStatusResponse };
-
-export type SourceDistributionKind = 'host-bound' | 'cloud-drive';
-
-export type SourceDistribution =
-  | { kind: 'host-bound'; hostId: string }
-  | {
-      kind: 'cloud-drive';
-      backend: 'google';
-      remoteFolderId: string;
-      integrationId: string;
-    };
-
-export interface SourceVcs {
-  engine: 'git';
-  remoteUrl: string | null;
-  credRef: string | null;
-  defaultBranch: string | null;
-  integrationId?: string | null;
-}
-
-export interface Source {
-  id: string;
-  orgId: string;
-  name: string;
-  description: string | null;
-  distribution: SourceDistribution;
-  uiVisibility: 'org' | 'host';
-  managed: boolean;
-  vcs: SourceVcs | null;
-  availability: { hostIds: string[] };
-  createdAt: string;
-  updatedAt: string;
-}
+export type {
+  Source,
+  SourceDistribution,
+  SourceDistributionKind,
+  SourceHostStatus,
+  SourceHostStatusResponse,
+  SourceVcs,
+};
 
 export interface SourcesListResponse {
   sources: Source[];
@@ -57,17 +38,8 @@ export interface AttachGitInput {
   uiVisibility?: 'org' | 'host';
   branch?: string;
   credRef?: string;
-  integrationId?: string;
+  accountId?: string;
   repo?: string;
-}
-
-export interface AttachCloudDriveInput {
-  name?: string;
-  backend?: 'google';
-  remoteFolderId?: string;
-  integrationId: string;
-  hostId?: string;
-  uiVisibility?: 'org' | 'host';
 }
 
 async function apiJson<T>(path: string, init?: RequestInit & { orgId?: string }): Promise<T> {
@@ -182,13 +154,6 @@ export function attachGit(orgId: string, input: AttachGitInput): Promise<Source>
   });
 }
 
-export function attachCloudDrive(orgId: string, input: AttachCloudDriveInput): Promise<Source> {
-  return apiJson(`/api/orgs/${encodeURIComponent(orgId)}/sources/cloud`, {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
-}
-
 export function refreshGitSource(
   orgId: string,
   sourceId: string,
@@ -200,27 +165,6 @@ export function refreshGitSource(
     {
       method: 'POST',
       body: JSON.stringify({ hostId, ...(worktreeId ? { worktreeId } : {}) }),
-    },
-  );
-}
-
-export interface CloudRefreshResult {
-  source: Source;
-  skippedGoogleApps: number;
-  state: 'materializing' | 'ready' | 'failed';
-  conflicts: string[];
-}
-
-export function refreshCloudDrive(
-  orgId: string,
-  sourceId: string,
-  hostId: string,
-): Promise<CloudRefreshResult> {
-  return apiJson(
-    `/api/orgs/${encodeURIComponent(orgId)}/sources/${encodeURIComponent(sourceId)}/cloud/refresh`,
-    {
-      method: 'POST',
-      body: JSON.stringify({ hostId }),
     },
   );
 }
@@ -322,8 +266,8 @@ export function sourceBoundHostId(source: Source): string | null {
 }
 
 export function sourceDisplayPath(source: Source): string {
-  if (source.distribution.kind === 'cloud-drive') {
-    return `google:${source.distribution.remoteFolderId}`;
+  if (source.distribution.kind === 'host-bound') {
+    return `host:${source.distribution.hostId}`;
   }
-  return `host:${source.distribution.hostId}`;
+  return `remote:${source.distribution.remoteFolderId}`;
 }

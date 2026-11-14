@@ -24,7 +24,7 @@ function SourceKindIcon({ source }: { source: Source | null }): React.ReactNode 
   }
   return (
     <span className="flex shrink-0 items-center gap-1">
-      {source.distribution.kind === 'cloud-drive' ? (
+      {source.distribution.kind !== 'host-bound' ? (
         <CloudIcon className="size-3.5 text-muted-foreground" />
       ) : (
         <FolderIcon className="size-3.5 text-muted-foreground" />

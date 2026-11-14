@@ -19,6 +19,7 @@
 | `content` | — (файлы пакета) | хост регистрирует скиллы | — |
 | `config` | — (`notifications['config.changed']`) | уведомление | `config.read` (базовое) |
 | `view` | — (данные через `route`) | рендер секций | — |
+| `viewer` | — (документ редактора через `route`) | открытие файла из дерева источников | — |
 | `mcp`, `lsp` | — | **заглушки**: дескрипторы принимаются, потребителя нет | — |
 
 Правило соответствия: вклад без обработчика → `incompatible_handlers` на рукопожатии; обработчик без вклада → хост его никогда не зовёт. `optional: true` на вкладе с неизвестным семейством — warning и пропуск, а не отказ.
@@ -76,7 +77,7 @@ const addon = defineAddon({
 
 ## trigger — виды триггеров автоматизаций
 
-Глобальный kind — `<addonId>.<descriptor.kind>`. Вклад появляется в каталоге автоматизаций (`AddonTriggerCatalogContributor`), карточка показывается только при включённом аддоне. Пользователь создаёт **экземпляры** (конфиг по `configFields` + цель), хост вызывает `trigger.start` при включении экземпляра и при каждом старте процесса (replay — будьте идемпотентны).
+Глобальный kind — `<addonId>.<descriptor.kind>`. Вклад появляется в каталоге автоматизаций (`AddonTriggerCatalogContributor`), карточка показывается только при включённом аддоне. Пользователь создаёт **экземпляры** (конфиг по `configFields` + цель), хост вызывает `trigger.start` при включении экземпляра и при каждом старте процесса (replay — будьте идемпотентны). Пауза экземпляра — это `trigger.stop { reason: 'paused' }` (данные экземпляра сохраняются), удаление — `reason: 'removed'`.
 
 ```json
 {
@@ -275,6 +276,16 @@ const addon = defineAddon({
 ```
 
 Не более одного view на аддон. Закрытый набор типов секций, порядок расставляет фронтенд. Подробности — [UI аддона](ui.md).
+
+## viewer — редактор файлов проекта
+
+```json
+{ "id": "drawio", "family": "viewer",
+  "descriptor": { "id": "drawio", "title": "Draw.io diagram", "extensions": [".drawio"],
+                  "route": "/viewer", "mode": "edit", "create": true } }
+```
+
+Аддон заявляет расширения файлов, которые умеет открывать: `extensions` (dot-prefixed, lowercase), `route` — GET-маршрут аддона, отдающий HTML-документ редактора, `mode: "view" | "edit"`, `create` — добавлять ли «New <title> file» в меню источников. Хост собирает таблицу зрителей на организацию и отдаёт её `GET /api/orgs/:orgId/addon-viewers` (`{ viewers: [{ addonId, id, title, extensions, route, mode, create }] }`); фронтенд сам решает, чем открыть файл из дерева источников. Одно расширение — один владелец: второй аддон с тем же `.ext` получает `addon_manifest_invalid` (`viewer_extension_conflict`) на рукопожатии. Референс — `harnesys.drawio`.
 
 ## source-kind — облачные знание-источники
 

@@ -49,12 +49,12 @@ export function providerRetryAfterSec(error: ProviderError): number | null {
 export class AppsException extends DomainException {
   constructor(
     readonly error: string,
-    readonly status: number,
+    override readonly status: number,
     message: string,
     readonly fields?: Record<string, FieldErrorCode>,
     readonly holders?: AccountHolderRef[],
   ) {
-    super(error.toUpperCase().replaceAll('-', '_'), message);
+    super(error.toUpperCase().replaceAll('-', '_'), message, undefined, status);
     this.name = new.target.name;
   }
 }

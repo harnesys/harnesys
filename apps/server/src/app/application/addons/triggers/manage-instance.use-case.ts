@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@harnesys/brix';
 import type { JsonObject } from '@harnesys/sdk';
 import { AddonException } from '../../../domain/addons/errors.ts';
+import type { TriggerStopReason } from '../../../domain/addons/ports/addon-call.port.ts';
 import { AddonCallPort } from '../../../domain/addons/ports/addon-call.port.ts';
 import { AddonPackageCatalogPort } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
 import { AddonAuditPort } from '../../../domain/addons/ports/audit.port.ts';
@@ -97,22 +98,25 @@ export class ManageTriggerInstanceUseCase {
 
   async disable(input: TriggerInstanceActionInput): Promise<void> {
     const instance = this.require(input.orgId, input.instanceId);
-    await this.stop(instance.id, input.orgId, instance.addonId);
+    await this.stop(instance.id, input.orgId, instance.addonId, 'paused');
     this.triggers.update(input.orgId, input.instanceId, { enabled: false });
   }
 
   async delete(input: TriggerInstanceActionInput): Promise<void> {
     const instance = this.require(input.orgId, input.instanceId);
-    if (instance.enabled) {
-      await this.stop(instance.id, input.orgId, instance.addonId);
-    }
+    await this.stop(instance.id, input.orgId, instance.addonId, 'removed');
     this.triggers.remove(input.orgId, input.instanceId);
   }
 
   async patch(orgId: string, instanceId: string, patch: TriggerInstancePatch): Promise<void> {
-    this.require(orgId, instanceId);
+    const current = this.require(orgId, instanceId);
     if (patch.targetJson !== undefined) {
       this.assertTarget(orgId, this.parseTarget(patch.targetJson), instanceId);
+    }
+    const disabling = patch.enabled === false && current.enabled;
+    const enabling = patch.enabled === true && !current.enabled;
+    if (disabling) {
+      await this.stop(instanceId, orgId, current.addonId, 'paused');
     }
     this.triggers.update(orgId, instanceId, patch);
     const resynced = this.require(orgId, instanceId);
@@ -120,7 +124,7 @@ export class ManageTriggerInstanceUseCase {
       patch.label !== undefined ||
       patch.configJson !== undefined ||
       patch.instructions !== undefined;
-    if (resynced.enabled && contentChanged) {
+    if (resynced.enabled && (contentChanged || enabling)) {
       await this.start(resynced);
     }
   }
@@ -154,9 +158,14 @@ export class ManageTriggerInstanceUseCase {
     }
   }
 
-  private async stop(instanceId: string, orgId: string, addonId: string): Promise<void> {
+  private async stop(
+    instanceId: string,
+    orgId: string,
+    addonId: string,
+    reason: TriggerStopReason,
+  ): Promise<void> {
     try {
-      await this.calls.triggerStop(orgId, addonId, { instanceId });
+      await this.calls.triggerStop(orgId, addonId, { instanceId, reason });
     } catch (error) {
       this.logger.warn({ orgId, addonId, instanceId, error: String(error) }, 'trigger stop failed');
     }

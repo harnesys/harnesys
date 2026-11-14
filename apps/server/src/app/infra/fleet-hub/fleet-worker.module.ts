@@ -12,7 +12,6 @@ import { SkillsModule } from '../skills/skills.module.ts';
 import { CloudSyncBackModule } from '../source/drivers/cloud/cloud-sync-back.module.ts';
 import { SourceModule } from '../source/source.module.ts';
 import { FleetHubModule } from './fleet-hub.module.ts';
-import { WorkerCloudSyncWatch } from './worker-cloud-sync-watch.ts';
 import { WorkerDialerAdapter } from './worker-dialer.adapter.ts';
 import { WorkerWorkExecutor } from './worker-work-executor.ts';
 
@@ -33,7 +32,6 @@ import { WorkerWorkExecutor } from './worker-work-executor.ts';
     { provide: OrgExecutionReplicaPort, useClass: OrgExecutionReplicaAdapter },
     { provide: PendingRunEventPort, useClass: PendingRunEventAdapter },
     WorkerWorkExecutor,
-    WorkerCloudSyncWatch,
     WorkerDialerAdapter,
   ],
   exports: [OrgExecutionReplicaPort, PendingRunEventPort],

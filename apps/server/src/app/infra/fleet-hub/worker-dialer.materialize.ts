@@ -8,7 +8,6 @@ import { SourceMaterializationPort } from '../../domain/source/source-materializ
 import { hasGitVcs, sourceHostAvailability } from '../../domain/source/vcs-capability.ts';
 import { sanitizeGitText } from '../source/drivers/git/git-engine.ts';
 import { resolveFleetSecretByOperation } from './fleet-secret-resolver.ts';
-import { runCloudSourceMaterialize } from './worker-dialer.cloud-materialize.ts';
 import type { DialerSession } from './worker-dialer.session.ts';
 
 export interface WorkerMaterializeDeps {
@@ -75,7 +74,7 @@ export function replayMaterializationStates(
     return;
   }
   for (const source of snapshot.sources) {
-    if (!hasGitVcs(source) && source.distribution.kind !== 'cloud-drive') {
+    if (!hasGitVcs(source)) {
       continue;
     }
     const mat = deps.materializations.find(session.identity.orgId, source.id, hostId);
@@ -102,12 +101,6 @@ export async function runSourceMaterialize(
   const snapshot = deps.replica.get(session.identity.orgId);
   const source = snapshot?.sources.find((item) => item.id === command.sourceId);
   const hostId = deps.machineConfig.get().id;
-  if (source?.distribution.kind === 'cloud-drive') {
-    await runCloudSourceMaterialize(deps, session, command, false, (frame) =>
-      emitMaterialization(session, frame),
-    );
-    return;
-  }
   const failRevision = command.projectionRevision + 1;
   const accepted = deps.replica.acceptedRevision(session.identity.orgId);
   if (!snapshot || accepted === null || accepted < command.sourceRevision) {
@@ -193,12 +186,6 @@ export async function runSourceRefresh(
   const source = snapshot?.sources.find((item) => item.id === command.sourceId);
   const hostId = deps.machineConfig.get().id;
   const failRevision = command.projectionRevision + 1;
-  if (source?.distribution.kind === 'cloud-drive') {
-    await runCloudSourceMaterialize(deps, session, command, true, (frame) =>
-      emitMaterialization(session, frame),
-    );
-    return;
-  }
   if (!source || !hasGitVcs(source)) {
     emitMaterialization(session, {
       sourceId: command.sourceId,

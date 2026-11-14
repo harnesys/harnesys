@@ -16,7 +16,7 @@ function DistributionBadge({
   managed: boolean;
   isLocal: boolean;
 }) {
-  if (kind === 'cloud-drive') {
+  if (kind === 'addon-cloud') {
     return <BadgeIcon icon={CloudIcon} color="text-sky-500/75" />;
   }
   if (hasGit) {

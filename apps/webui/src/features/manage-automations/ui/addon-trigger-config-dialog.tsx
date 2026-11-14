@@ -10,7 +10,11 @@ import {
   triggerDescriptorsFromDetail,
 } from '@/features/manage-addons/lib/view-sections';
 import { CronComposer } from '@/features/manage-automations/ui/cron-composer';
-import { orgAddonDetailQuery, orgAddonTriggersQuery } from '@/shared/api/addons';
+import {
+  orgAddonDetailQuery,
+  orgAddonTriggersQuery,
+  setOrgAddonTriggerEnabled,
+} from '@/shared/api/addons';
 import { studioPath } from '@/shared/config/routes';
 import {
   buildValidator,
@@ -22,8 +26,6 @@ import {
 import { resolveL10n } from '@/shared/lib/l10n';
 import { type DialogComponentProps, dialog } from '@/shared/services/overlay';
 import { Badge } from '@/shared/ui/badge';
-import { Button } from '@/shared/ui/button';
-import { DialogFooter } from '@/shared/ui/dialog';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/shared/ui/field';
 import { RowListSkeleton, SettingsErrorBanner } from '@/shared/ui/settings-kit';
 import { Textarea } from '@/shared/ui/textarea';
@@ -33,6 +35,7 @@ import type {
   AddonTriggerDraft,
 } from '../model/addon-trigger';
 import { useAddonTriggerActions } from '../model/addon-trigger';
+import { AddonTriggerFooter } from './addon-trigger-footer';
 import { ConnectionMissingBanner, ModeBlock, NameAgentBlock } from './trigger-standard-blocks';
 import { resolveTriggerThread, TriggerTargetField } from './trigger-target-field';
 
@@ -182,7 +185,7 @@ function AddonTriggerForm({
           config: draft.config,
           instructions: draft.instructions.trim(),
           target: { threadId, agentId: draft.agentId, modeId: draft.modeId },
-          enabled: true,
+          enabled: draft.enabled,
         },
         threadId,
       );
@@ -205,6 +208,20 @@ function AddonTriggerForm({
   };
   const setConfig = (key: string, value: FieldValue) => {
     setDraft((current) => ({ ...current, config: { ...current.config, [key]: value } }));
+  };
+  const toggleStatus = async () => {
+    if (!automation) {
+      return;
+    }
+    setError(null);
+    try {
+      const next = !draft.enabled;
+      await setOrgAddonTriggerEnabled(orgId, addonId, automation.id, next);
+      update('enabled', next);
+      await actions.invalidate();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
   };
 
   return (
@@ -308,25 +325,16 @@ function AddonTriggerForm({
           ) : null}
         </FieldGroup>
       </div>
-      <DialogFooter>
-        {automation ? (
-          <Button
-            type="button"
-            variant="ghost"
-            className="mr-auto text-destructive hover:text-destructive"
-            onClick={() => void remove()}
-            disabled={!detail.installed}
-          >
-            Delete
-          </Button>
-        ) : null}
-        <Button type="button" variant="outline" onClick={() => onResolve?.()}>
-          Cancel
-        </Button>
-        <Button type="button" onClick={() => void save()} disabled={!canSave}>
-          {automation ? 'Save' : 'Create automation'}
-        </Button>
-      </DialogFooter>
+      <AddonTriggerFooter
+        automation={automation}
+        installed={detail.installed}
+        active={draft.enabled}
+        canSave={canSave}
+        onRemove={() => void remove()}
+        onToggle={() => void toggleStatus()}
+        onCancel={() => onResolve?.()}
+        onSave={() => void save()}
+      />
     </>
   );
 }
@@ -346,6 +354,7 @@ function initialDraft(input: {
     threadId: input.target.threadId ?? '',
     modeId: input.target.modeId ?? firstAgent?.defaultModeId ?? DEFAULT_MODE_ID,
     instructions: input.instance?.instructions ?? '',
+    enabled: input.instance?.status !== 'paused',
     config: initialFieldValues(
       input.descriptor.configFields ?? [],
       (input.instance?.config ?? {}) as Record<string, FieldValue>,

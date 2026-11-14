@@ -7,7 +7,7 @@ Git-источник подключает удалённые и локальны
 ## Записи и контракты
 
 **Контракты** `packages/contracts/src/source.ts`:
-- `SourceDistribution`: `host-bound` с `hostId` (UUID) либо `cloud-drive` с `backend: 'google'`, `remoteFolderId`, `integrationId` (UUID).
+- `SourceDistribution`: `host-bound` с `hostId` (UUID) либо `addon-cloud` с `addonId`, `sourceKindId`, `remoteFolderId`, `accountId?`.
 - `SourceVcs`: `engine: 'git'`, `remoteUrl?` (строка), `credRef?`, `defaultBranch?`, `integrationId?` (UUID).
 - `SourceAvailability`: `hostIds: string[]` (UUID).
 - `Source`: `id`, `orgId`, `name`, `description?`, `distribution`, `uiVisibility`, `managed`, `vcs?` (null), `availability`, `createdAt`, `updatedAt`.

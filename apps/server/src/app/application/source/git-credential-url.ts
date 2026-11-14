@@ -1,31 +1,26 @@
-import { IntegrationRegistryPort } from '../../domain/integration/integration-registry.port.ts';
-
 interface ServerConfig {
   server?: { port?: number };
 }
 
-export function ensureGitCredentialKey(
-  registry: IntegrationRegistryPort,
-  orgId: string,
-  integrationId: string,
-): string | undefined {
-  const record = registry.findById(orgId, integrationId);
-  if (record?.provider !== 'github') {
-    return undefined;
+/**
+ * Opaque key that ties a git credential-helper URL to one source. The source
+ * stores it in its VCS config; the public credential endpoint only returns an
+ * account token when the presented key matches.
+ */
+export function ensureGitCredentialKey(current: string | null | undefined): string {
+  if (current !== null && current !== undefined && current !== '') {
+    return current;
   }
-  const existing = record.providerJson?.gitCredentialKey;
-  if (typeof existing === 'string' && existing !== '') {
-    return existing;
-  }
-  const key = crypto.randomUUID();
-  registry.update(orgId, record.id, {
-    providerJson: { ...record.providerJson, gitCredentialKey: key },
-  });
-  return key;
+  return crypto.randomUUID();
 }
 
-export function gitCredentialUrl(config: ServerConfig, integrationId: string, key: string): string {
+export function gitCredentialUrl(
+  config: ServerConfig,
+  orgId: string,
+  sourceId: string,
+  key: string,
+): string {
   const port = config.server?.port ?? 47474;
-  const params = new URLSearchParams({ integrationId, key });
-  return `http://127.0.0.1:${port}/api/integrations/github/git-credential?${params.toString()}`;
+  const params = new URLSearchParams({ key });
+  return `http://127.0.0.1:${port}/api/orgs/${orgId}/sources/${sourceId}/git-credential?${params.toString()}`;
 }
