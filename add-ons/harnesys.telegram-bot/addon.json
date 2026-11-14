@@ -4,17 +4,28 @@
   "platform": 1,
   "title": "Telegram bot",
   "description": "Direct-message bot: a personal Telegram bot whose private chats mirror Harnesys threads one-to-one. Chats pair through a pair code (send /start in the DM, then enter the code in this settings page), agent replies come back as the bot with drafts, HITL asks and attachments, and the agent gets 12 chat tools. This add-on binds its own telegram-bot account with its own BotFather token; never share one bot token between this add-on and Telegram groups (getUpdates returns 409 for two pollers on one token).",
-  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "runtime": {
+    "entry": "dist/index.js",
+    "profile": "trusted"
+  },
   "activation": "resident",
   "permissions": [
     {
       "id": "http.fetch",
-      "scope": { "hosts": ["api.telegram.org"] },
+      "scope": {
+        "hosts": [
+          "api.telegram.org"
+        ]
+      },
       "reason": "Call the Telegram Bot API"
     },
     {
       "id": "accounts.use",
-      "scope": { "connections": ["telegram-bot"] },
+      "scope": {
+        "connections": [
+          "telegram-bot"
+        ]
+      },
       "reason": "Resolve the bot token bound to the telegram-bot connection owned by this add-on"
     },
     {
@@ -58,12 +69,17 @@
     {
       "id": "telegram-bot",
       "label": "Telegram bot (direct messages)",
-      "accountKinds": ["telegram-bot"],
+      "accountKinds": [
+        "telegram-bot"
+      ],
       "cardinality": "one",
       "optional": true
     }
   ],
-  "data": { "migrations": "migrations", "quotaMb": 32 },
+  "data": {
+    "migrations": "migrations",
+    "quotaMb": 32
+  },
   "contributions": [
     {
       "id": "config",
@@ -105,7 +121,9 @@
           "reactions": false,
           "readReceipts": false
         },
-        "limits": { "textMax": 4096 }
+        "limits": {
+          "textMax": 4096
+        }
       }
     },
     {
@@ -134,9 +152,14 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "chat": { "type": "string", "description": "Chat id or @username" }
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id or @username"
+                }
               },
-              "required": ["chat"]
+              "required": [
+                "chat"
+              ]
             }
           },
           {
@@ -146,19 +169,43 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "chat": { "type": "string", "description": "Chat id or @username" },
-                "text": { "type": "string", "description": "Message text, up to 4096 characters" },
-                "topicId": { "type": "string", "description": "Forum topic id" },
-                "replyToMessageId": { "type": "string", "description": "Message id to reply to" },
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id or @username"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Message text, up to 4096 characters"
+                },
+                "topicId": {
+                  "type": "string",
+                  "description": "Forum topic id"
+                },
+                "replyToMessageId": {
+                  "type": "string",
+                  "description": "Message id to reply to"
+                },
                 "parseMode": {
                   "type": "string",
-                  "enum": ["HTML", "MarkdownV2"],
+                  "enum": [
+                    "HTML",
+                    "MarkdownV2"
+                  ],
                   "description": "Telegram parse mode"
                 },
-                "disableNotification": { "type": "boolean", "description": "Send silently" },
-                "linkPreview": { "type": "boolean", "description": "Set false to hide the link preview" }
+                "disableNotification": {
+                  "type": "boolean",
+                  "description": "Send silently"
+                },
+                "linkPreview": {
+                  "type": "boolean",
+                  "description": "Set false to hide the link preview"
+                }
               },
-              "required": ["chat", "text"]
+              "required": [
+                "chat",
+                "text"
+              ]
             }
           },
           {
@@ -168,16 +215,32 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "chat": { "type": "string", "description": "Chat id or @username" },
-                "messageId": { "type": "string", "description": "Message id returned by a send" },
-                "text": { "type": "string", "description": "New text, up to 4096 characters" },
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id or @username"
+                },
+                "messageId": {
+                  "type": "string",
+                  "description": "Message id returned by a send"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "New text, up to 4096 characters"
+                },
                 "parseMode": {
                   "type": "string",
-                  "enum": ["HTML", "MarkdownV2"],
+                  "enum": [
+                    "HTML",
+                    "MarkdownV2"
+                  ],
                   "description": "Telegram parse mode"
                 }
               },
-              "required": ["chat", "messageId", "text"]
+              "required": [
+                "chat",
+                "messageId",
+                "text"
+              ]
             }
           },
           {
@@ -187,10 +250,19 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "chat": { "type": "string", "description": "Chat id or @username" },
-                "messageId": { "type": "string", "description": "Message id to delete" }
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id or @username"
+                },
+                "messageId": {
+                  "type": "string",
+                  "description": "Message id to delete"
+                }
               },
-              "required": ["chat", "messageId"]
+              "required": [
+                "chat",
+                "messageId"
+              ]
             }
           },
           {
@@ -200,20 +272,46 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "chat": { "type": "string", "description": "Chat id or @username" },
-                "topicId": { "type": "string", "description": "Forum topic id" },
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id or @username"
+                },
+                "topicId": {
+                  "type": "string",
+                  "description": "Forum topic id"
+                },
                 "kind": {
                   "type": "string",
-                  "enum": ["photo", "document"],
+                  "enum": [
+                    "photo",
+                    "document"
+                  ],
                   "description": "Photo or document, default document"
                 },
-                "url": { "type": "string", "description": "Public file URL" },
-                "path": { "type": "string", "description": "Workspace-relative file path" },
-                "dataBase64": { "type": "string", "description": "File bytes in base64" },
-                "name": { "type": "string", "description": "File name for documents" },
-                "caption": { "type": "string", "description": "Caption, up to 1024 characters" }
+                "url": {
+                  "type": "string",
+                  "description": "Public file URL"
+                },
+                "path": {
+                  "type": "string",
+                  "description": "Workspace-relative file path"
+                },
+                "dataBase64": {
+                  "type": "string",
+                  "description": "File bytes in base64"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "File name for documents"
+                },
+                "caption": {
+                  "type": "string",
+                  "description": "Caption, up to 1024 characters"
+                }
               },
-              "required": ["chat"]
+              "required": [
+                "chat"
+              ]
             }
           },
           {
@@ -223,16 +321,30 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "chat": { "type": "string", "description": "Chat id or @username" },
-                "topicId": { "type": "string", "description": "Forum topic id" },
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id or @username"
+                },
+                "topicId": {
+                  "type": "string",
+                  "description": "Forum topic id"
+                },
                 "urls": {
                   "type": "array",
-                  "items": { "type": "string" },
+                  "items": {
+                    "type": "string"
+                  },
                   "description": "Public file URLs, 2 to 10 entries"
                 },
-                "caption": { "type": "string", "description": "Album caption, up to 1024 characters" }
+                "caption": {
+                  "type": "string",
+                  "description": "Album caption, up to 1024 characters"
+                }
               },
-              "required": ["chat", "urls"]
+              "required": [
+                "chat",
+                "urls"
+              ]
             }
           },
           {
@@ -242,13 +354,19 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "fileId": { "type": "string", "description": "Telegram file_id" },
+                "fileId": {
+                  "type": "string",
+                  "description": "Telegram file_id"
+                },
                 "path": {
                   "type": "string",
                   "description": "Workspace-relative destination path, e.g. inbox/report.pdf"
                 }
               },
-              "required": ["fileId", "path"]
+              "required": [
+                "fileId",
+                "path"
+              ]
             }
           },
           {
@@ -258,11 +376,24 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "fromChat": { "type": "string", "description": "Source chat id or @username" },
-                "messageId": { "type": "string", "description": "Message id in the source chat" },
-                "toChat": { "type": "string", "description": "Destination chat id or @username" }
+                "fromChat": {
+                  "type": "string",
+                  "description": "Source chat id or @username"
+                },
+                "messageId": {
+                  "type": "string",
+                  "description": "Message id in the source chat"
+                },
+                "toChat": {
+                  "type": "string",
+                  "description": "Destination chat id or @username"
+                }
               },
-              "required": ["fromChat", "messageId", "toChat"]
+              "required": [
+                "fromChat",
+                "messageId",
+                "toChat"
+              ]
             }
           },
           {
@@ -272,11 +403,23 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "chat": { "type": "string", "description": "Chat id or @username" },
-                "messageId": { "type": "string", "description": "Message id to pin" },
-                "notify": { "type": "boolean", "description": "Notify members about the pin" }
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id or @username"
+                },
+                "messageId": {
+                  "type": "string",
+                  "description": "Message id to pin"
+                },
+                "notify": {
+                  "type": "boolean",
+                  "description": "Notify members about the pin"
+                }
               },
-              "required": ["chat", "messageId"]
+              "required": [
+                "chat",
+                "messageId"
+              ]
             }
           },
           {
@@ -286,10 +429,19 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "chat": { "type": "string", "description": "Supergroup id or @username" },
-                "name": { "type": "string", "description": "Topic title" }
+                "chat": {
+                  "type": "string",
+                  "description": "Supergroup id or @username"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Topic title"
+                }
               },
-              "required": ["chat", "name"]
+              "required": [
+                "chat",
+                "name"
+              ]
             }
           },
           {
@@ -299,12 +451,27 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "chat": { "type": "string", "description": "Supergroup id or @username" },
-                "topicId": { "type": "string", "description": "Topic id" },
-                "name": { "type": "string", "description": "New title" },
-                "closed": { "type": "boolean", "description": "true closes the topic, false reopens it" }
+                "chat": {
+                  "type": "string",
+                  "description": "Supergroup id or @username"
+                },
+                "topicId": {
+                  "type": "string",
+                  "description": "Topic id"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "New title"
+                },
+                "closed": {
+                  "type": "boolean",
+                  "description": "true closes the topic, false reopens it"
+                }
               },
-              "required": ["chat", "topicId"]
+              "required": [
+                "chat",
+                "topicId"
+              ]
             }
           },
           {
@@ -314,17 +481,35 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "chat": { "type": "string", "description": "Chat id or @username" },
-                "question": { "type": "string", "description": "Poll question, up to 300 characters" },
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id or @username"
+                },
+                "question": {
+                  "type": "string",
+                  "description": "Poll question, up to 300 characters"
+                },
                 "options": {
                   "type": "array",
-                  "items": { "type": "string" },
+                  "items": {
+                    "type": "string"
+                  },
                   "description": "2 to 10 answer options"
                 },
-                "anonymous": { "type": "boolean", "description": "Anonymous poll, default true" },
-                "multiple": { "type": "boolean", "description": "Allow several answers" }
+                "anonymous": {
+                  "type": "boolean",
+                  "description": "Anonymous poll, default true"
+                },
+                "multiple": {
+                  "type": "boolean",
+                  "description": "Allow several answers"
+                }
               },
-              "required": ["chat", "question", "options"]
+              "required": [
+                "chat",
+                "question",
+                "options"
+              ]
             }
           }
         ]
@@ -337,12 +522,27 @@
         "id": "main",
         "title": "Telegram bot",
         "sections": [
-          { "type": "status" },
-          { "type": "capabilities" },
-          { "type": "permissions" },
-          { "type": "connections", "connections": ["telegram-bot"] },
-          { "type": "config" },
-          { "type": "jobs" },
+          {
+            "type": "status"
+          },
+          {
+            "type": "capabilities"
+          },
+          {
+            "type": "permissions"
+          },
+          {
+            "type": "connections",
+            "connections": [
+              "telegram-bot"
+            ]
+          },
+          {
+            "type": "config"
+          },
+          {
+            "type": "jobs"
+          },
           {
             "type": "form",
             "title": "Pair a chat",
@@ -355,24 +555,53 @@
                 "help": "Send /start in a direct message to this bot and enter the 8-character code it replies with"
               }
             ],
-            "submit": { "route": "/pair" }
+            "submit": {
+              "route": "/pair"
+            }
           },
           {
             "type": "table",
             "title": "Paired chats",
-            "source": { "route": "/chats" },
+            "source": {
+              "route": "/chats"
+            },
             "columns": [
-              { "key": "id", "label": "Chat", "format": "text" },
-              { "key": "status", "label": "Status", "format": "badge" },
-              { "key": "user", "label": "Telegram user", "format": "text" },
-              { "key": "threadId", "label": "Thread", "format": "text" },
-              { "key": "updatedAt", "label": "Updated", "format": "datetime" }
+              {
+                "key": "id",
+                "label": "Chat",
+                "format": "text"
+              },
+              {
+                "key": "status",
+                "label": "Status",
+                "format": "badge"
+              },
+              {
+                "key": "user",
+                "label": "Telegram user",
+                "format": "text"
+              },
+              {
+                "key": "threadId",
+                "label": "Thread",
+                "format": "text"
+              },
+              {
+                "key": "updatedAt",
+                "label": "Updated",
+                "format": "datetime"
+              }
             ],
             "rowActions": [
               {
                 "id": "unbind",
                 "label": "Unpair",
-                "route": { "route": "/chats/:id/unbind", "params": { "id": "id" } },
+                "route": {
+                  "route": "/chats/:id/unbind",
+                  "params": {
+                    "id": "id"
+                  }
+                },
                 "confirm": "Unpair this chat? The bot stops reading it until it is paired again.",
                 "destructive": true
               }
@@ -388,12 +617,22 @@
     {
       "id": "chats",
       "family": "route",
-      "descriptor": { "id": "chats", "method": "GET", "path": "/chats", "role": "member" }
+      "descriptor": {
+        "id": "chats",
+        "method": "GET",
+        "path": "/chats",
+        "role": "member"
+      }
     },
     {
       "id": "pair",
       "family": "route",
-      "descriptor": { "id": "pair", "method": "POST", "path": "/pair", "role": "member" }
+      "descriptor": {
+        "id": "pair",
+        "method": "POST",
+        "path": "/pair",
+        "role": "member"
+      }
     },
     {
       "id": "unbind",
@@ -405,5 +644,7 @@
         "role": "member"
       }
     }
-  ]
+  ],
+  "icon": "assets/icon.svg",
+  "color": "#229ED9"
 }

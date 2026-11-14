@@ -8,7 +8,7 @@ import { ThreadNotFoundException } from '../../domain/thread/thread.error.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { syncConnectorAgents } from '../connectors/sync-connector-agents.ts';
-import { triggerInstanceThreadId } from '../schedules/bind-schedule-thread.ts';
+import { triggerInstanceThreadId } from './trigger-thread-binding.ts';
 
 export interface DeleteThreadRequest {
   orgId: string;

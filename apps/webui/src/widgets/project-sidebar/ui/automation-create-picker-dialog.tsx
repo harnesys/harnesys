@@ -1,7 +1,7 @@
 import type { AutomationKind } from '@harnesys/contracts';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRightIcon, PlusIcon, PuzzleIcon, ZapIcon } from 'lucide-react';
-import type { ComponentType } from 'react';
+import { ArrowRightIcon, PlusIcon } from 'lucide-react';
+import type { ComponentType, ReactNode } from 'react';
 import type { Agent } from '@/entities/agent';
 import { CORE_AUTOMATION_INTEGRATION_ID } from '@/entities/automation';
 import { useActiveOrgStore } from '@/entities/org-machine';
@@ -15,6 +15,7 @@ import { softTint } from '@/shared/lib/color';
 import type { DialogComponentProps } from '@/shared/services/overlay';
 import { dialog } from '@/shared/services/overlay';
 import { Button } from '@/shared/ui/button';
+import { IconRef } from '@/shared/ui/icon';
 
 interface PickerData {
   orgId: string;
@@ -38,14 +39,14 @@ function AutomationCreatePickerDialog({
   const addonTitle = (addonId: string) =>
     addons.data?.items.find((item) => item.addonId === addonId)?.title ?? addonId;
   return (
-    <div className="grid grid-cols-2 gap-2.5">
+    <div className="grid grid-cols-3 gap-2.5">
       {contributions.map((kind) =>
         kind.source === 'addon' ? (
           <AutomationCard
             key={`${kind.integrationId}:${kind.kind}`}
             testId={`automation-create-${kind.kind}`}
-            icon={PuzzleIcon}
-            color={ADDON_CARD_COLOR}
+            iconSlot={<IconRef icon={kind.icon || 'puzzle'} className="size-4.5" />}
+            color={kind.color || ADDON_CARD_COLOR}
             title={kind.label}
             meta={
               kind.requiresConnection && !kind.connected
@@ -65,8 +66,8 @@ function AutomationCreatePickerDialog({
           <AutomationCard
             key={`${kind.integrationId}:${kind.kind}`}
             testId={`automation-create-${kind.kind}`}
-            icon={integrationCardIcon(findIntegrationUi(kind.integrationId))}
-            color={INTEGRATION_CARD_COLOR}
+            iconSlot={integrationCardSlot(kind, findIntegrationUi(kind.integrationId))}
+            color={kind.color || INTEGRATION_CARD_COLOR}
             title={kind.label}
             meta={findIntegrationUi(kind.integrationId)?.title ?? kind.integrationId}
             description={kind.description}
@@ -84,15 +85,20 @@ function AutomationCreatePickerDialog({
   );
 }
 
-function integrationCardIcon(
+function integrationCardSlot(
+  kind: AutomationKind,
   descriptor: WebuiIntegrationDescriptor | undefined,
-): ComponentType<{ className?: string }> {
-  return descriptor?.icon ?? ZapIcon;
+): ReactNode {
+  if (descriptor) {
+    const Icon: ComponentType<{ className?: string }> = descriptor.icon;
+    return <Icon className="size-4.5" />;
+  }
+  return <IconRef icon={kind.icon} className="size-4.5" />;
 }
 
 function AutomationCard({
   testId,
-  icon: Icon,
+  iconSlot,
   color,
   title,
   meta,
@@ -100,7 +106,7 @@ function AutomationCard({
   onPick,
 }: {
   testId: string;
-  icon: ComponentType<{ className?: string }>;
+  iconSlot: ReactNode;
   color: string;
   title: string;
   meta: string;
@@ -112,22 +118,22 @@ function AutomationCard({
       type="button"
       data-testid={testId}
       onClick={onPick}
-      className="group flex flex-col gap-2.5 rounded-xl border bg-popover p-3.5 text-left outline-none transition-all hover:border-foreground/20 hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring/50"
+      className="group flex h-full flex-col gap-2.5 rounded-xl border bg-popover p-3.5 text-left outline-none transition-all hover:border-foreground/20 hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring/50"
     >
       <span className="flex items-center gap-2.5">
         <span
           className="flex size-9 shrink-0 items-center justify-center rounded-lg"
           style={{ backgroundColor: softTint(color), color }}
         >
-          <Icon className="size-4.5" />
+          {iconSlot}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block font-medium text-sm">{title}</span>
-          <span className="block text-[11px] text-muted-foreground">{meta}</span>
+          <span className="block truncate font-medium text-sm">{title}</span>
+          <span className="block truncate text-[11px] text-muted-foreground">{meta}</span>
         </span>
         <ArrowRightIcon className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
       </span>
-      <span className="text-muted-foreground text-xs">{description}</span>
+      <span className="line-clamp-3 text-muted-foreground text-xs">{description}</span>
     </button>
   );
 }
@@ -135,7 +141,7 @@ function openAutomationCreatePicker(kinds: AutomationKind[], orgId: string) {
   return dialog.open(AutomationCreatePickerDialog, {
     title: 'New automation',
     description: 'Choose how the agent should be triggered.',
-    className: 'sm:max-w-md',
+    className: 'sm:max-w-3xl',
     testId: 'automation-create-picker',
     data: { orgId, kinds },
   });

@@ -4,17 +4,28 @@
   "platform": 1,
   "title": "Google Docs",
   "description": "Reads Google Docs documents as plain text and appends text blocks with the org's bound Google account. The add-on calls the Docs API; the token stays host-side.",
-  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "runtime": {
+    "entry": "dist/index.js",
+    "profile": "trusted"
+  },
   "activation": "lazy",
   "permissions": [
     {
       "id": "http.fetch",
-      "scope": { "hosts": ["www.googleapis.com"] },
+      "scope": {
+        "hosts": [
+          "www.googleapis.com"
+        ]
+      },
       "reason": "Call the Google Docs API with the bound account"
     },
     {
       "id": "accounts.use",
-      "scope": { "connections": ["google"] },
+      "scope": {
+        "connections": [
+          "google"
+        ]
+      },
       "reason": "Use the Google account bound to the documents connection"
     }
   ],
@@ -22,8 +33,12 @@
     {
       "id": "google",
       "label": "Google account",
-      "accountKinds": ["google-account"],
-      "scopes": ["documents"],
+      "accountKinds": [
+        "google-account"
+      ],
+      "scopes": [
+        "documents"
+      ],
       "cardinality": "many"
     }
   ],
@@ -45,13 +60,18 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "documentId": { "type": "string", "description": "Document id from its URL" },
+                "documentId": {
+                  "type": "string",
+                  "description": "Document id from its URL"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound Google account id; required only when several accounts are bound"
                 }
               },
-              "required": ["documentId"]
+              "required": [
+                "documentId"
+              ]
             }
           },
           {
@@ -61,18 +81,29 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "documentId": { "type": "string", "description": "Document id" },
-                "text": { "type": "string", "description": "Text to append" },
+                "documentId": {
+                  "type": "string",
+                  "description": "Document id"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Text to append"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound Google account id; required only when several accounts are bound"
                 }
               },
-              "required": ["documentId", "text"]
+              "required": [
+                "documentId",
+                "text"
+              ]
             }
           }
         ]
       }
     }
-  ]
+  ],
+  "icon": "assets/icon.svg",
+  "color": "#4285F4"
 }

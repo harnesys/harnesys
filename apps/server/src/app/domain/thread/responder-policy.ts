@@ -10,6 +10,8 @@ export interface ResponderInput {
   members: ResponderMember[];
   autoReplyAgentId?: string | null;
   allowMentions?: boolean;
+  /** When false (responder mode 'mention'), the pinned agent never answers unaddressed messages. */
+  autoFallback?: boolean;
 }
 
 const MENTION_PATTERN = /@([\p{L}\p{N}._-]{1,64})/gu;
@@ -67,6 +69,9 @@ export function resolveResponders(input: ResponderInput): string[] {
   push(input.repliedToAgentId ?? null);
   if (addressed.length > 0) {
     return addressed;
+  }
+  if (input.autoFallback === false) {
+    return [];
   }
   const autoReply = input.autoReplyAgentId ?? null;
   return autoReply && members.has(autoReply) ? [autoReply] : [];

@@ -15,15 +15,6 @@ import type {
   IssueLabelRecord,
 } from '../../domain/issue/label.ts';
 import { IssueLabelRepositoryPort } from '../../domain/issue/label-repository.port.ts';
-import type {
-  ScheduleFireRecord,
-  ScheduleInsert,
-  ScheduleRecord,
-} from '../../domain/schedule/schedule.ts';
-import { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repository.port.ts';
-import type { ThreadActiveRun, ThreadInsert, ThreadRecord } from '../../domain/thread/thread.ts';
-import { toThreadRecord } from '../../domain/thread/thread.ts';
-import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 
 export class FakeBoards extends IssueBoardRepositoryPort {
   readonly items = new Map<string, IssueBoardRecord>();
@@ -196,98 +187,4 @@ export class FakeEvents extends IssueEventsPort {
   }
 
   emit(): void {}
-}
-
-export class FakeSchedules extends ScheduleRepositoryPort {
-  readonly items = new Map<string, ScheduleRecord>();
-
-  listByOrg(): ScheduleRecord[] {
-    return [...this.items.values()];
-  }
-
-  listDue(): ScheduleRecord[] {
-    return [];
-  }
-
-  findById(_orgId: string, id: string): ScheduleRecord | undefined {
-    return this.items.get(id);
-  }
-
-  findByThreadId(): ScheduleRecord | undefined {
-    return undefined;
-  }
-
-  listFiresBySchedule(): ScheduleFireRecord[] {
-    return [];
-  }
-
-  insert(rec: ScheduleInsert): ScheduleRecord {
-    this.items.set(rec.id, rec);
-    return rec;
-  }
-
-  update(): ScheduleRecord {
-    throw new Error('not implemented');
-  }
-
-  delete(): void {}
-  claimFire(): boolean {
-    return false;
-  }
-
-  recordFireRun(): void {}
-  releaseFire(): void {}
-}
-
-export class FakeThreads extends ThreadRepositoryPort {
-  readonly items = new Map<string, ThreadRecord>();
-
-  listByOrg(): ThreadRecord[] {
-    return [...this.items.values()];
-  }
-
-  listActiveRuns(): ThreadActiveRun[] {
-    return [];
-  }
-
-  findActiveRun(): ThreadActiveRun | undefined {
-    return undefined;
-  }
-
-  findById(_orgId: string, id: string): ThreadRecord | undefined {
-    return this.items.get(id);
-  }
-
-  insert(rec: ThreadInsert): ThreadRecord {
-    const thread = toThreadRecord(rec);
-    this.items.set(rec.id, thread);
-    return thread;
-  }
-
-  patch(): ThreadRecord {
-    throw new Error('not implemented');
-  }
-
-  markRead(): ThreadRecord {
-    throw new Error('not implemented');
-  }
-
-  updateTitle(): ThreadRecord {
-    throw new Error('not implemented');
-  }
-
-  touch(): void {}
-  delete(): void {}
-  deleteByAgent(): void {}
-  listByIssue(): ThreadRecord[] {
-    return [];
-  }
-
-  findByIssueAndAgent(): ThreadRecord | undefined {
-    return undefined;
-  }
-
-  threadIdsWithRuns(): Set<string> {
-    return new Set();
-  }
 }

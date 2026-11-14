@@ -18,6 +18,7 @@ export interface ThreadPolicy {
   historyLast?: number;
   historyFromRunId?: string;
   mentionGating?: boolean;
+  responderMode?: 'auto' | 'mention';
 }
 export interface ThreadMemberRef {
   id: string;

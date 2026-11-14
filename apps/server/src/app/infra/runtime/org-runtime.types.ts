@@ -37,7 +37,6 @@ import { PlanEventsPort } from '../../domain/plan/plan-events.port.ts';
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
 import { WorkspaceContainerPort } from '../../domain/process-runtime/workspace-container.port.ts';
 import { LlmModelPort, LlmProviderPort } from '../../domain/provider/llm-provider.port.ts';
-import { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repository.port.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
 import { SourceSkillsPort } from '../../domain/skills/source-skills.port.ts';
@@ -55,7 +54,6 @@ import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repo
 import { ThreadEventsPort } from '../../domain/thread/thread-events.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { WaitTickerGatePort } from '../../domain/thread/wait-ticker-gate.port.ts';
-import { WebhookRepositoryPort } from '../../domain/webhook/webhook-repository.port.ts';
 import type { OrgGithubDeps } from './packs/org-github.port.ts';
 import type { OrgGoogleDeps } from './packs/org-google.port.ts';
 import type { OrgIssueDeps } from './packs/org-issue.port.ts';
@@ -142,8 +140,6 @@ export interface OrgRuntimeDeps {
   threadEvents?: ThreadEventsPort;
   deskEvents?: DeskEventsPort;
   terminalSessions?: TerminalSessionsPort;
-  schedules?: ScheduleRepositoryPort;
-  webhooks?: WebhookRepositoryPort;
   triggerInstances?: TriggerInstanceRepositoryPort;
   knowledge?: OrgKnowledgeDeps;
   issues?: OrgIssueDeps;

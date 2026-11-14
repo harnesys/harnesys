@@ -21,7 +21,7 @@ import type { InstalledAddonPackage } from '../../domain/addons/ports/addon-pack
 import { AddonPackageCatalogPort } from '../../domain/addons/ports/addon-package-catalog.port.ts';
 import { GrantPolicyPort } from '../../domain/addons/ports/grant-policy.port.ts';
 import { AddonHostAdminGuard } from '../guards/addon-host-admin.guard.ts';
-import { manifestSummaryOf } from './addons-org-views.ts';
+import { brandingOf, manifestSummaryOf } from './addons-org-views.ts';
 
 const PlanBodySchema = z.object({ source: z.string().min(1) });
 const PolicyBodySchema = z.object({
@@ -133,7 +133,7 @@ export class AddonsPackagesController {
       trust: pkg.trust,
       title: resolveL10n(pkg.manifest.title, { locale: 'en' }),
       description: resolveL10n(pkg.manifest.description, { locale: 'en' }),
-      ...(pkg.manifest.icon === undefined ? {} : { icon: pkg.manifest.icon }),
+      ...brandingOf(pkg),
       manifest: manifestSummaryOf(pkg),
       warnings: [],
     };

@@ -1,34 +1,5 @@
 import type { AutomationConnection, AutomationItem, AutomationKind } from '@harnesys/contracts';
 import type { AutomationUpsertInput, IntegrationDefinition } from 'harnesys/integration';
-import type { ScheduleRecord } from '../../domain/schedule/schedule.ts';
-import type { WebhookRecord } from '../../domain/webhook/webhook.ts';
-
-export const CORE_INTEGRATION_ID = 'core';
-export const CORE_SCHEDULE_KIND = 'schedule';
-export const CORE_WEBHOOK_KIND = 'webhook';
-
-export const CORE_AUTOMATION_KINDS: AutomationKind[] = [
-  {
-    kind: CORE_SCHEDULE_KIND,
-    integrationId: CORE_INTEGRATION_ID,
-    source: 'core',
-    label: 'Scheduler',
-    description: 'Cron schedule',
-    icon: 'calendar-clock',
-    requiresConnection: false,
-    connected: true,
-  },
-  {
-    kind: CORE_WEBHOOK_KIND,
-    integrationId: CORE_INTEGRATION_ID,
-    source: 'core',
-    label: 'Webhook',
-    description: 'HTTP trigger',
-    icon: 'webhook',
-    requiresConnection: false,
-    connected: true,
-  },
-];
 
 export interface AutomationSnapshotSource {
   integrationId: string;
@@ -38,8 +9,6 @@ export interface AutomationSnapshotSource {
 
 export interface MergeAutomationInput {
   orgId: string;
-  schedules: ScheduleRecord[];
-  webhooks: WebhookRecord[];
   addons: AutomationSnapshotSource[];
 }
 
@@ -72,10 +41,7 @@ export class AutomationSnapshots {
 }
 
 export function mergeAutomationItems(input: MergeAutomationInput): AutomationItem[] {
-  const items: AutomationItem[] = [
-    ...input.schedules.map(toScheduleAutomationItem),
-    ...input.webhooks.map(toWebhookAutomationItem),
-  ];
+  const items: AutomationItem[] = [];
   for (const source of input.addons) {
     for (const snapshot of source.items) {
       items.push(
@@ -84,44 +50,6 @@ export function mergeAutomationItems(input: MergeAutomationInput): AutomationIte
     }
   }
   return items;
-}
-
-export function toScheduleAutomationItem(schedule: ScheduleRecord): AutomationItem {
-  return {
-    id: schedule.id,
-    orgId: schedule.orgId,
-    integrationId: CORE_INTEGRATION_ID,
-    kind: CORE_SCHEDULE_KIND,
-    source: 'core',
-    label: schedule.name,
-    description: schedule.detail,
-    status: schedule.status,
-    threadId: schedule.threadId,
-    targetAgentId: schedule.targetAgentId,
-    connection: { required: false, connected: true },
-    meta: metaOf({ cron: schedule.cron, nextRunAt: schedule.nextRunAt }),
-    availableAt: schedule.nextRunAt,
-    updatedAt: schedule.updatedAt,
-  };
-}
-
-export function toWebhookAutomationItem(webhook: WebhookRecord): AutomationItem {
-  return {
-    id: webhook.id,
-    orgId: webhook.orgId,
-    integrationId: CORE_INTEGRATION_ID,
-    kind: CORE_WEBHOOK_KIND,
-    source: 'core',
-    label: webhook.name,
-    description: webhook.detail,
-    status: webhook.status,
-    threadId: webhook.threadId,
-    targetAgentId: webhook.targetAgentId,
-    connection: { required: false, connected: true },
-    meta: metaOf({ endpoint: webhook.endpoint }),
-    availableAt: null,
-    updatedAt: webhook.updatedAt,
-  };
 }
 
 export function toAddonAutomationItem(
@@ -157,17 +85,8 @@ export function toAutomationKindContributions(definition: IntegrationDefinition)
     label: contribution.label,
     description: contribution.description ?? '',
     icon: contribution.icon ?? 'zap',
+    color: '',
     requiresConnection: contribution.requiresConnection ?? requiresConnection,
     connected: true,
   }));
-}
-
-function metaOf(values: Record<string, string | null>): Record<string, string> {
-  const meta: Record<string, string> = {};
-  for (const [key, value] of Object.entries(values)) {
-    if (value !== null) {
-      meta[key] = value;
-    }
-  }
-  return meta;
 }

@@ -29,10 +29,8 @@ import { OrgManagerPort } from './org-manager.port.ts';
 import {
   knowledgeRegistration,
   memoryRegistration,
-  schedulerRegistration,
   threadAttachmentPortOf,
   threadsRegistration,
-  webhookRegistration,
   webRegistration,
 } from './org-pack-registrations.helpers.ts';
 import { OrgPlanPort } from './org-plan.port.ts';
@@ -88,10 +86,6 @@ export function registrationForPack(packName: string, ctx: WireOrgPackContext) {
       return memoryRegistration(packName, ctx);
     case 'threads':
       return threadsRegistration(ctx);
-    case 'scheduler':
-      return schedulerRegistration(ctx);
-    case 'webhook':
-      return webhookRegistration(ctx);
     case 'issues':
       return issuesRegistration(ctx);
     case 'manager':

@@ -58,7 +58,13 @@ export class CreateThreadUseCase {
       title: request.body.title?.trim() || DEFAULT_THREAD_TITLE,
       kind,
       autoReplyAgentId: agent.id,
-      policy: request.body.policy ? { version: 2, ...request.body.policy } : { version: 2 },
+      policy: {
+        version: 2,
+        ...request.body.policy,
+        // Stored explicitly so the legacy-row backfill never flips new rows.
+        responderMode:
+          request.body.policy?.responderMode ?? (kind === 'group' ? 'mention' : 'auto'),
+      },
       lastThreadSeq: 0,
       conversationCount: 0,
       parentThreadId: fork.parentThreadId,

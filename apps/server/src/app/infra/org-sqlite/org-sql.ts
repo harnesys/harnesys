@@ -496,6 +496,17 @@ export function migrateThreadsInheritedEventCount(
   }
 }
 
+/**
+ * Existing threads keep their historical responder behavior: group threads
+ * answered unaddressed messages via the auto-reply fallback, chat threads
+ * always answered. Both map to 'auto' in the unified responder-mode model,
+ * so backfill explicitly; the 'mention' kind default only affects new rows.
+ */
+export function backfillThreadsResponderMode(exec: (sql: string) => void): void {
+  exec(`UPDATE threads SET policy = json_set(policy, '$.responderMode', 'auto')
+    WHERE json_extract(policy, '$.responderMode') IS NULL`);
+}
+
 export const CREATE_BOARD_STATUSES_SQL = `
 CREATE TABLE IF NOT EXISTS board_statuses (
   id TEXT PRIMARY KEY,
@@ -698,35 +709,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS approvals_run_interrupt
   WHERE status <> 'superseded';
 CREATE INDEX IF NOT EXISTS approvals_status ON approvals(status);
 `;
-export const CREATE_SCHEDULES_SQL = `
-CREATE TABLE IF NOT EXISTS schedules (
-  id TEXT PRIMARY KEY,
-  org_id TEXT NOT NULL,
-  name TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'paused', 'failed')),
-  target_agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
-  detail TEXT NOT NULL DEFAULT '',
-  cron TEXT NOT NULL,
-  mode_id TEXT NOT NULL DEFAULT 'default',
-  miss_policy TEXT NOT NULL DEFAULT 'catch-up' CHECK(miss_policy IN ('catch-up', 'skip', 'escalate')),
-  thread_id TEXT NOT NULL REFERENCES threads(id),
-  next_run_at TEXT,
-  last_fired_at TEXT,
-  created_by_user_id TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS schedules_org_idx ON schedules(org_id);
-CREATE INDEX IF NOT EXISTS schedules_due_idx ON schedules(status, next_run_at);
-CREATE UNIQUE INDEX IF NOT EXISTS schedules_thread_idx ON schedules(thread_id);
-CREATE TABLE IF NOT EXISTS schedule_fires (
-  fire_id TEXT PRIMARY KEY,
-  schedule_id TEXT NOT NULL REFERENCES schedules(id) ON DELETE CASCADE,
-  run_id TEXT,
-  created_at TEXT NOT NULL
-);
-`;
-
 export const CREATE_USAGE_SQL = `
 CREATE TABLE IF NOT EXISTS usage (
   id TEXT PRIMARY KEY,
@@ -790,24 +772,10 @@ export function migrateApprovalsResumeStateColumn(
   exec(`UPDATE approvals SET resume_state = 'applied' WHERE status <> 'pending'`);
 }
 
-export const CREATE_WEBHOOKS_SQL = `
-CREATE TABLE IF NOT EXISTS webhooks (
-  id TEXT PRIMARY KEY,
-  org_id TEXT NOT NULL,
-  name TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'paused', 'failed')),
-  target_agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
-  detail TEXT NOT NULL DEFAULT '',
-  endpoint TEXT NOT NULL,
-  mode TEXT,
-  thread_id TEXT NOT NULL REFERENCES threads(id),
-  last_fired_at TEXT,
-  created_by_user_id TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS webhooks_org_idx ON webhooks(org_id);
-CREATE UNIQUE INDEX IF NOT EXISTS webhooks_thread_idx ON webhooks(thread_id);
+export const DROP_LEGACY_TRIGGERS_SQL = `
+DROP TABLE IF EXISTS schedules;
+DROP TABLE IF EXISTS schedule_fires;
+DROP TABLE IF EXISTS webhooks;
 `;
 
 export const CREATE_THREAD_PLANS_SQL = `

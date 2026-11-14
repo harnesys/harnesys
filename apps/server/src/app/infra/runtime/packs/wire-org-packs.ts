@@ -21,14 +21,12 @@ import { PermissionRuleStorePort } from '../../../domain/permissions/permission-
 import { PlanEventsPort } from '../../../domain/plan/plan-events.port.ts';
 import { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-provider.port.ts';
 import { isHostWired, orgPackNames } from '../../../domain/runtime/org-pack-list.ts';
-import { ScheduleRepositoryPort } from '../../../domain/schedule/schedule-repository.port.ts';
 import { SecretStorePort } from '../../../domain/secret/secret-store.port.ts';
 import { OrgSettingsPort } from '../../../domain/skills/org-settings.port.ts';
 import { SourceRegistryPort } from '../../../domain/source/source-registry.port.ts';
 import { TerminalSessionsPort } from '../../../domain/terminal/terminal-session.port.ts';
 import { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
-import { WebhookRepositoryPort } from '../../../domain/webhook/webhook-repository.port.ts';
 import { ExecutionProfileAdapter } from '../../execution-profile/execution-profile.adapter.ts';
 import type { OrgSqliteDb } from '../../org-sqlite/org-sqlite-session.ts';
 import { requireHostToolScope } from '../host-tool-scope.ts';
@@ -56,8 +54,6 @@ export interface WireOrgPacksDeps {
   threads?: ThreadRepositoryPort;
   threadAgents?: ThreadAgentRepositoryPort;
   events?: RunEventStore;
-  schedules?: ScheduleRepositoryPort;
-  webhooks?: WebhookRepositoryPort;
   deskEvents?: DeskEventsPort;
   triggerInstances?: TriggerInstanceRepositoryPort;
   issues?: OrgIssueDeps;
@@ -89,8 +85,6 @@ export interface WireOrgPackFilter {
   threads?: ThreadRepositoryPort;
   threadAgents?: ThreadAgentRepositoryPort;
   lsp?: LspPort;
-  schedules?: ScheduleRepositoryPort;
-  webhooks?: WebhookRepositoryPort;
   deskEvents?: DeskEventsPort;
   issues?: OrgIssueDeps;
   issueTracker?: IssueTrackerPort;
@@ -151,8 +145,6 @@ function optionalInputs(deps: OrgRuntimeDeps): Partial<WireOrgPacksDeps> {
   return {
     ...(deps.permissionRules !== undefined ? { permissionRules: deps.permissionRules } : {}),
     ...(deps.terminalSessions !== undefined ? { terminalSessions: deps.terminalSessions } : {}),
-    ...(deps.schedules ? { schedules: deps.schedules } : {}),
-    ...(deps.webhooks ? { webhooks: deps.webhooks } : {}),
     ...(deps.triggerInstances ? { triggerInstances: deps.triggerInstances } : {}),
     ...(deps.deskEvents ? { deskEvents: deps.deskEvents } : {}),
     ...(deps.secrets ? { secrets: deps.secrets } : {}),

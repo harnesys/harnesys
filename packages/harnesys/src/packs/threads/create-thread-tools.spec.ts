@@ -24,7 +24,6 @@ class FakeThreads implements ThreadsPort {
         kind: 'chat',
         agentId: 'agent-1',
         agentName: 'coder',
-        hasSchedule: false,
       },
     ]);
   }
@@ -71,7 +70,7 @@ describe('threads pack tools', () => {
     const port = new FakeThreads();
     const byName = toolMap(port);
     const listed = await byName.get('threads_list')?.execute({}, ctx);
-    expect(listed).toMatchObject({ threads: [{ current: true, hasSchedule: false }] });
+    expect(listed).toMatchObject({ threads: [{ current: true }] });
     await byName.get('threads_history')?.execute({ beforeSeq: 4, limit: 2 }, ctx);
     await byName.get('threads_search')?.execute({ query: 'deploy', scope: 'org' }, ctx);
     await byName.get('threads_tail')?.execute({ threadId: 'thread-2' }, ctx);

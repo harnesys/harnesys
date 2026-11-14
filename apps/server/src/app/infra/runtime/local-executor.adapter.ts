@@ -35,7 +35,6 @@ import { PlanEventsPort } from '../../domain/plan/plan-events.port.ts';
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
 import { WorkspaceContainerPort } from '../../domain/process-runtime/workspace-container.port.ts';
 import { LlmModelPort, LlmProviderPort } from '../../domain/provider/llm-provider.port.ts';
-import { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repository.port.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
 import { SourceSkillsPort } from '../../domain/skills/source-skills.port.ts';
@@ -56,7 +55,6 @@ import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repo
 import { ThreadEventsPort } from '../../domain/thread/thread-events.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { WaitTickerGatePort } from '../../domain/thread/wait-ticker-gate.port.ts';
-import { WebhookRepositoryPort } from '../../domain/webhook/webhook-repository.port.ts';
 import { openOrgRuntime } from './org-runtime.ts';
 import type { OrgRuntime } from './org-runtime.types.ts';
 import {
@@ -98,8 +96,6 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     private readonly threadEvents: ThreadEventsPort,
     private readonly deskEvents: DeskEventsPort,
     private readonly terminalSessions: TerminalSessionsPort,
-    private readonly schedules: ScheduleRepositoryPort,
-    private readonly webhooks: WebhookRepositoryPort,
     private readonly triggerInstances: TriggerInstanceRepositoryPort,
     private readonly knowledgeSearch: KnowledgeSearchPort,
     private readonly knowledgeStore: KnowledgeStorePort,
@@ -192,8 +188,6 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       threadEvents: this.threadEvents,
       deskEvents: this.deskEvents,
       terminalSessions: this.terminalSessions,
-      schedules: this.schedules,
-      webhooks: this.webhooks,
       triggerInstances: this.triggerInstances,
       knowledge: {
         search: this.knowledgeSearch,

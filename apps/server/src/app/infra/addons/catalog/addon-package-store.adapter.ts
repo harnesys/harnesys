@@ -12,6 +12,7 @@ import type {
 import { AddonPackageCatalogPort } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
 import { HostFsLayoutPort } from '../../../domain/machine/host-fs-layout.port.ts';
 import { computeAddonDigest } from './addon-digest.ts';
+import { addonBranding } from './addon-icon.ts';
 import { AddonLock, lockEntryFor } from './addon-lock.ts';
 import {
   addonPackageDir,
@@ -49,7 +50,9 @@ export class AddonPackageStoreAdapter extends AddonPackageCatalogPort {
         packages.push(installed);
       }
     }
-    return packages.sort((a, b) => a.id.localeCompare(b.id));
+    return packages
+      .map((pkg) => ({ ...pkg, ...addonBranding(pkg) }))
+      .sort((a, b) => a.id.localeCompare(b.id));
   }
 
   override find(id: string, version?: string): InstalledAddonPackage | undefined {
@@ -58,7 +61,7 @@ export class AddonPackageStoreAdapter extends AddonPackageCatalogPort {
         .scanPackages()
         .find((pkg) => pkg.id === id && pkg.version === version);
       if (builtin) {
-        return builtin;
+        return { ...builtin, ...addonBranding(builtin) };
       }
       return this.readInstalled(this.lock.entry(id, version));
     }
@@ -70,7 +73,8 @@ export class AddonPackageStoreAdapter extends AddonPackageCatalogPort {
         .map((entry) => this.readInstalled(entry))
         .filter((installed) => installed !== undefined),
     ].sort((a, b) => b.version.localeCompare(a.version));
-    return candidates[0];
+    const found = candidates[0];
+    return found ? { ...found, ...addonBranding(found) } : undefined;
   }
 
   override readLock(): AddonLockFile {

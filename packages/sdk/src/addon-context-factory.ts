@@ -177,10 +177,22 @@ export function createAddonContext(
       list: async (params) => (await client['runs.list'](params, { signal })).runs,
     },
     threads: {
-      create: async (params: { title?: string; agentId: string }) =>
-        client['threads.create'](params, { signal }),
+      create: async (params: {
+        title?: string;
+        agentId: string;
+        kind?: 'chat' | 'group';
+        responderMode?: 'auto' | 'mention';
+      }) => client['threads.create'](params, { signal }),
+      get: async (params: { threadId: string }) =>
+        (await client['threads.get'](params, { signal })).thread ?? null,
+      patch: async (params: { threadId: string; responderMode?: 'auto' | 'mention' }) => {
+        await client['threads.patch'](params, { signal });
+      },
       compact: async (params: { threadId: string }) =>
         client['threads.compact'](params, { signal }),
+    },
+    agents: {
+      list: async () => (await client['agents.list']({}, { signal })).agents,
     },
     usage: {
       summary: async (params: { threadId?: string; since?: string }) =>

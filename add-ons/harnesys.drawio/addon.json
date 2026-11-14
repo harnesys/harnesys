@@ -4,7 +4,10 @@
   "platform": 1,
   "title": "Draw.io",
   "description": "draw.io diagram editor for .drawio files in the project workspace. Opens .drawio files from the sources tree in the embedded draw.io editor and saves changes back; new diagrams can be created from the folder menu.",
-  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "runtime": {
+    "entry": "dist/index.js",
+    "profile": "trusted"
+  },
   "activation": "lazy",
   "connections": [],
   "permissions": [],
@@ -15,7 +18,9 @@
       "descriptor": {
         "id": "drawio",
         "title": "Draw.io diagram",
-        "extensions": [".drawio"],
+        "extensions": [
+          ".drawio"
+        ],
         "route": "/viewer",
         "mode": "edit",
         "create": true
@@ -39,5 +44,7 @@
         "path": "/template"
       }
     }
-  ]
+  ],
+  "icon": "assets/icon.svg",
+  "color": "#F08705"
 }

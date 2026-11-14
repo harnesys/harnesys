@@ -1,5 +1,4 @@
 import type { AddonContext } from '@harnesys/sdk';
-import { call } from './bot-api.ts';
 import {
   type CommandMessage,
   handleCommand,
@@ -7,15 +6,10 @@ import {
   isStartCommand,
   registerChat,
 } from './commands.ts';
-import {
-  attributedText,
-  authorLabel,
-  isMentioned,
-  type RoutingPolicy,
-  routeDecision,
-} from './routing.ts';
+import { attributedText, authorLabel } from './routing.ts';
 import {
   channelOf,
+  channelOfParts,
   fileRefOf,
   firstText,
   inboundAttachments,
@@ -28,15 +22,6 @@ export { groupMessages, mimeOf } from './telegram.ts';
 export interface BotIdentityState {
   botId: number;
   botUsername: string | null;
-}
-
-const UNBOUND_HINT =
-  'This group is not connected yet. Send /start to register it, then an admin binds it to a thread in Harnesys.';
-
-async function routingPolicyOf(ctx: AddonContext): Promise<RoutingPolicy> {
-  const config = await ctx.config.get(['routing']);
-  const value = config.routing;
-  return value === 'always' || value === 'reply' || value === 'commands' ? value : 'mention';
 }
 
 async function chatStatus(ctx: AddonContext, chatId: string): Promise<string | null> {
@@ -71,19 +56,40 @@ async function handleCommands(
   if (!single || !commandsEnabled || !isCommand(parts.text)) {
     return false;
   }
-  const policy = await routingPolicyOf(ctx);
   const message = await commandMessageOf(parts);
   if (isStartCommand(parts.text)) {
     await registerChat(ctx, message);
     return true;
   }
-  return handleCommand(ctx, message, policy);
+  return handleCommand(ctx, message);
+}
+
+/**
+ * Resolves the channel a group message bridges through: an exact topic
+ * connection wins, otherwise the whole-group connection catches every topic
+ * of the group. No connection — nothing mirrors.
+ */
+async function resolveChannel(
+  ctx: AddonContext,
+  chatId: string,
+  topicId: string | null,
+): Promise<string | null> {
+  if (topicId !== null) {
+    const exact = await ctx.db.get('select channel from connections where channel = ?', [
+      channelOfParts(chatId, topicId),
+    ]);
+    if (exact !== null) {
+      return String(exact.channel);
+    }
+  }
+  const group = await ctx.db.get('select channel from connections where channel = ?', [chatId]);
+  return group === null ? null : String(group.channel);
 }
 
 export async function handleGroup(
   ctx: AddonContext,
   messages: TelegramMessage[],
-  identity: BotIdentityState,
+  _identity: BotIdentityState,
 ): Promise<void> {
   const first = messages[0];
   if (first === undefined || messages.every((entry) => entry.from?.is_bot === true)) {
@@ -100,42 +106,22 @@ export async function handleGroup(
   if (await handleCommands(ctx, parts, messages.length === 1, commandsEnabled)) {
     return;
   }
-  const policy = await routingPolicyOf(ctx);
-  if (!shouldBridge(first, text, identity, policy)) {
-    return;
-  }
   if ((await chatStatus(ctx, chatId)) !== 'bound') {
-    await call(ctx, 'sendMessage', {
-      chat_id: chatId,
-      text: UNBOUND_HINT,
-      ...(first.message_thread_id !== undefined
-        ? { message_thread_id: first.message_thread_id }
-        : {}),
-      reply_to_message_id: first.message_id,
-    });
     return;
   }
-  await bridgeMessages(ctx, messages);
+  const topicId = first.message_thread_id === undefined ? null : String(first.message_thread_id);
+  const channel = await resolveChannel(ctx, chatId, topicId);
+  if (channel === null) {
+    return;
+  }
+  await bridgeMessages(ctx, messages, channel);
 }
 
-function shouldBridge(
-  first: TelegramMessage,
-  text: string,
-  identity: BotIdentityState,
-  policy: RoutingPolicy,
-): boolean {
-  const replyToBot = first.reply_to_message?.from?.id === identity.botId;
-  const mentioned = identity.botUsername !== null && isMentioned(text, identity.botUsername);
-  const decision = routeDecision(policy, {
-    text,
-    isCommand: false,
-    mentioned,
-    replyToBot,
-  });
-  return decision === 'bridge';
-}
-
-async function bridgeMessages(ctx: AddonContext, messages: TelegramMessage[]): Promise<void> {
+async function bridgeMessages(
+  ctx: AddonContext,
+  messages: TelegramMessage[],
+  channel: string,
+): Promise<void> {
   const first = messages[0];
   if (first === undefined) {
     return;
@@ -153,7 +139,7 @@ async function bridgeMessages(ctx: AddonContext, messages: TelegramMessage[]): P
     : plain;
   const attachments = await inboundAttachments(ctx, messages);
   await ctx.bridge.inbound({
-    channel: channelOf(first),
+    channel,
     from: first.from === undefined ? undefined : `telegram:${first.from.id}`,
     text: bridgeText,
     payload: {

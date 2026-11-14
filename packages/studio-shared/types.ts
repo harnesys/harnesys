@@ -189,7 +189,6 @@ export type {
   ProviderPublic,
   ProviderRecord,
 } from './src/provider.ts';
-export * from './src/schedule.ts';
 export {
   isScheduledHumanText,
   SCHEDULE_HUMAN_ORIGIN,

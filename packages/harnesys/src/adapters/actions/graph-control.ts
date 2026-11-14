@@ -101,7 +101,7 @@ export function mapTool(): ToolDefinition {
 export function wait(): ToolDefinition {
   return tool(WAIT_TOOL, {
     description:
-      'Park this run until a wall-clock time (control:wait). delayMs is relative sleep (1..7d). Prefer this for mid-pipeline pauses; use schedule_set for recurring or next-session wakes after the run ends. Does not replace ask_user.',
+      'Park this run until a wall-clock time (control:wait). delayMs is relative sleep (1..7d). Prefer this for mid-pipeline pauses. Does not replace ask_user.',
     group: 'control',
     input: {
       type: 'object',

@@ -4,17 +4,28 @@
   "platform": 1,
   "title": "YouTube",
   "description": "Manages a YouTube channel with the org's bound Google account: channel and video stats, metadata updates, resumable video uploads from the organization workspace, thumbnails, playlists, comments, and analytics. Tokens stay host-side.",
-  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "runtime": {
+    "entry": "dist/index.js",
+    "profile": "trusted"
+  },
   "activation": "lazy",
   "permissions": [
     {
       "id": "http.fetch",
-      "scope": { "hosts": ["www.googleapis.com"] },
+      "scope": {
+        "hosts": [
+          "www.googleapis.com"
+        ]
+      },
       "reason": "Call the YouTube Data and Analytics APIs with the bound account"
     },
     {
       "id": "accounts.use",
-      "scope": { "connections": ["google"] },
+      "scope": {
+        "connections": [
+          "google"
+        ]
+      },
       "reason": "Use the Google account bound to the channel connection"
     },
     {
@@ -26,8 +37,15 @@
     {
       "id": "google",
       "label": "Google account",
-      "accountKinds": ["google-account"],
-      "scopes": ["youtube", "youtube-upload", "youtube-manage", "yt-analytics"],
+      "accountKinds": [
+        "google-account"
+      ],
+      "scopes": [
+        "youtube",
+        "youtube-upload",
+        "youtube-manage",
+        "yt-analytics"
+      ],
       "cardinality": "many"
     }
   ],
@@ -85,13 +103,18 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "videoId": { "type": "string", "description": "Video id from list_videos" },
+                "videoId": {
+                  "type": "string",
+                  "description": "Video id from list_videos"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound Google account id; required only when several accounts are bound"
                 }
               },
-              "required": ["videoId"]
+              "required": [
+                "videoId"
+              ]
             }
           },
           {
@@ -101,17 +124,33 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "videoId": { "type": "string", "description": "Video id from list_videos" },
-                "title": { "type": "string", "description": "New title" },
-                "description": { "type": "string", "description": "New description" },
-                "tags": { "type": "string", "description": "Comma-separated tags" },
+                "videoId": {
+                  "type": "string",
+                  "description": "Video id from list_videos"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "New title"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "New description"
+                },
+                "tags": {
+                  "type": "string",
+                  "description": "Comma-separated tags"
+                },
                 "categoryId": {
                   "type": "string",
                   "description": "YouTube category id, e.g. 22 = People & Blogs"
                 },
                 "privacyStatus": {
                   "type": "string",
-                  "enum": ["public", "unlisted", "private"],
+                  "enum": [
+                    "public",
+                    "unlisted",
+                    "private"
+                  ],
                   "description": "New privacy status"
                 },
                 "accountId": {
@@ -119,7 +158,9 @@
                   "description": "Bound Google account id; required only when several accounts are bound"
                 }
               },
-              "required": ["videoId"]
+              "required": [
+                "videoId"
+              ]
             }
           },
           {
@@ -133,16 +174,29 @@
                   "type": "string",
                   "description": "Workspace-relative path of the video file (mp4, mov, webm, avi, mpeg)"
                 },
-                "title": { "type": "string", "description": "Video title" },
-                "description": { "type": "string", "description": "Video description" },
-                "tags": { "type": "string", "description": "Comma-separated tags" },
+                "title": {
+                  "type": "string",
+                  "description": "Video title"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Video description"
+                },
+                "tags": {
+                  "type": "string",
+                  "description": "Comma-separated tags"
+                },
                 "categoryId": {
                   "type": "string",
                   "description": "YouTube category id, default 22 (People & Blogs)"
                 },
                 "privacyStatus": {
                   "type": "string",
-                  "enum": ["public", "unlisted", "private"],
+                  "enum": [
+                    "public",
+                    "unlisted",
+                    "private"
+                  ],
                   "description": "Privacy status, default private"
                 },
                 "accountId": {
@@ -150,7 +204,10 @@
                   "description": "Bound Google account id; required only when several accounts are bound"
                 }
               },
-              "required": ["path", "title"]
+              "required": [
+                "path",
+                "title"
+              ]
             }
           },
           {
@@ -160,14 +217,23 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "videoId": { "type": "string", "description": "Video id from list_videos" },
-                "path": { "type": "string", "description": "Workspace-relative path to a .jpg/.jpeg/.png file" },
+                "videoId": {
+                  "type": "string",
+                  "description": "Video id from list_videos"
+                },
+                "path": {
+                  "type": "string",
+                  "description": "Workspace-relative path to a .jpg/.jpeg/.png file"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound Google account id; required only when several accounts are bound"
                 }
               },
-              "required": ["videoId", "path"]
+              "required": [
+                "videoId",
+                "path"
+              ]
             }
           },
           {
@@ -198,14 +264,23 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "playlistId": { "type": "string", "description": "Playlist id from list_playlists" },
-                "videoId": { "type": "string", "description": "Video id from list_videos" },
+                "playlistId": {
+                  "type": "string",
+                  "description": "Playlist id from list_playlists"
+                },
+                "videoId": {
+                  "type": "string",
+                  "description": "Video id from list_videos"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound Google account id; required only when several accounts are bound"
                 }
               },
-              "required": ["playlistId", "videoId"]
+              "required": [
+                "playlistId",
+                "videoId"
+              ]
             }
           },
           {
@@ -216,7 +291,10 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "videoId": { "type": "string", "description": "Video id from list_videos" },
+                "videoId": {
+                  "type": "string",
+                  "description": "Video id from list_videos"
+                },
                 "maxResults": {
                   "type": "integer",
                   "minimum": 1,
@@ -228,7 +306,9 @@
                   "description": "Bound Google account id; required only when several accounts are bound"
                 }
               },
-              "required": ["videoId"]
+              "required": [
+                "videoId"
+              ]
             }
           },
           {
@@ -238,14 +318,23 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "commentId": { "type": "string", "description": "Top-level comment id from list_comments" },
-                "text": { "type": "string", "description": "Reply text" },
+                "commentId": {
+                  "type": "string",
+                  "description": "Top-level comment id from list_comments"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Reply text"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound Google account id; required only when several accounts are bound"
                 }
               },
-              "required": ["commentId", "text"]
+              "required": [
+                "commentId",
+                "text"
+              ]
             }
           },
           {
@@ -256,11 +345,26 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "startDate": { "type": "string", "description": "YYYY-MM-DD" },
-                "endDate": { "type": "string", "description": "YYYY-MM-DD" },
-                "metrics": { "type": "string", "description": "Comma-separated metrics, e.g. views,estimatedMinutesWatched" },
-                "dimensions": { "type": "string", "description": "Comma-separated dimensions, e.g. day,video,country" },
-                "filters": { "type": "string", "description": "Analytics filter, e.g. video==VIDEO_ID" },
+                "startDate": {
+                  "type": "string",
+                  "description": "YYYY-MM-DD"
+                },
+                "endDate": {
+                  "type": "string",
+                  "description": "YYYY-MM-DD"
+                },
+                "metrics": {
+                  "type": "string",
+                  "description": "Comma-separated metrics, e.g. views,estimatedMinutesWatched"
+                },
+                "dimensions": {
+                  "type": "string",
+                  "description": "Comma-separated dimensions, e.g. day,video,country"
+                },
+                "filters": {
+                  "type": "string",
+                  "description": "Analytics filter, e.g. video==VIDEO_ID"
+                },
                 "maxResults": {
                   "type": "integer",
                   "minimum": 1,
@@ -272,11 +376,17 @@
                   "description": "Bound Google account id; required only when several accounts are bound"
                 }
               },
-              "required": ["startDate", "endDate", "metrics"]
+              "required": [
+                "startDate",
+                "endDate",
+                "metrics"
+              ]
             }
           }
         ]
       }
     }
-  ]
+  ],
+  "icon": "assets/icon.svg",
+  "color": "#FF0000"
 }

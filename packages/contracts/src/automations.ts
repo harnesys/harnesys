@@ -45,6 +45,8 @@ export const AutomationKindSchema = z.object({
   label: z.string().min(1),
   description: z.string().default(''),
   icon: z.string().default('zap'),
+  /** Brand color as `#RRGGBB` (addon/integration identity); empty = platform default. */
+  color: z.string().default(''),
   requiresConnection: z.boolean().default(false),
   connected: z.boolean().default(true),
 });

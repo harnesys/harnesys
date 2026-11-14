@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@harnesys/brix';
 import type { SessionEvent } from 'harnesys';
+import { AddonCallPort } from '../../../domain/addons/ports/addon-call.port.ts';
 import type { AddonTransportBindingRow } from '../../../domain/addons/ports/transport-binding-repository.port.ts';
 import { AddonTransportBindingRepositoryPort } from '../../../domain/addons/ports/transport-binding-repository.port.ts';
 import { AddonTransportSessionRepositoryPort } from '../../../domain/addons/ports/transport-session-repository.port.ts';
@@ -7,6 +8,7 @@ import type {
   TransportAskReply,
   TransportSessionRow,
 } from '../../../domain/addons/transport-session.ts';
+import { appEchoText } from '../../../domain/connector/echo.ts';
 import { LocalExecutorPort } from '../../../domain/thread/local-executor.port.ts';
 import {
   ThreadEventsPort,
@@ -19,6 +21,7 @@ import { bindingOf, TransportSessionDrafts } from './transport-session.drafts.ts
 
 const STOPPED_SUFFIX = '\n\n[stopped]';
 const ERROR_SUFFIX = '\n\n[error] ';
+const USER_RELAY_TIMEOUT_MS = 30_000;
 
 interface TerminalEvent {
   kind: 'completed' | 'cancelled' | 'failed';
@@ -28,6 +31,7 @@ interface TerminalEvent {
 @Injectable()
 export class TransportSessionService {
   private readonly bindingsCache = new Map<string, AddonTransportBindingRow[]>();
+  private readonly lastMirrored = new Map<string, string>();
   private readonly logger: Logger;
   private unsubscribe: (() => void) | null = null;
   private unregisterAsk: (() => void) | null = null;
@@ -40,6 +44,7 @@ export class TransportSessionService {
     private readonly ask: TransportSessionAsk,
     private readonly executor: LocalExecutorPort,
     private readonly askRouting: TransportAskRegistry,
+    private readonly calls: AddonCallPort,
     @Inject(Logger) logger: Logger,
   ) {
     this.logger = logger.child('addon-transport-sessions');
@@ -113,6 +118,10 @@ export class TransportSessionService {
       return;
     }
     for (const event of events) {
+      if (event.type === 'user') {
+        await this.mirrorUserMessage(orgId, threadId, event, bindings);
+        continue;
+      }
       if (event.type !== 'text-delta' || event.text === '') {
         continue;
       }
@@ -178,6 +187,57 @@ export class TransportSessionService {
       this.bindingsCache.set(key, rows);
     }
     return rows;
+  }
+
+  /**
+   * Two-way mirror: messages typed in the app reach the bound transports.
+   * Messages that arrived through a transport (connector origin or non-app
+   * author) are skipped — they are already visible on the other side. The
+   * relayed message is remembered as outbound so the transport's own echo
+   * never re-enters the thread.
+   */
+  private async mirrorUserMessage(
+    orgId: string,
+    threadId: string,
+    event: Extract<SessionEvent, { type: 'user' }>,
+    bindings: readonly AddonTransportBindingRow[],
+  ): Promise<void> {
+    if (event.text.trim() === '' || (event.origin ?? '').startsWith('connector:')) {
+      return;
+    }
+    if (event.author !== undefined && event.author.provider !== 'app') {
+      return;
+    }
+    const text =
+      event.author === undefined ? event.text : appEchoText(event.author.displayName, event.text);
+    const last = this.lastMirrored.get(threadId);
+    if (last === text) {
+      return;
+    }
+    this.lastMirrored.set(threadId, text);
+    for (const binding of bindings) {
+      try {
+        const sent = await this.calls.transportSend(
+          orgId,
+          binding.addonId,
+          { channel: binding.externalChatId, text },
+          { timeoutMs: USER_RELAY_TIMEOUT_MS },
+        );
+        if (sent.messageId !== undefined) {
+          this.repo.rememberOutbound(orgId, binding.addonId, sent.messageId);
+        }
+      } catch (error) {
+        this.logger.warn(
+          {
+            orgId,
+            addonId: binding.addonId,
+            channel: binding.externalChatId,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          'user message relay failed',
+        );
+      }
+    }
   }
 
   private async resumeOpenSessions(): Promise<void> {

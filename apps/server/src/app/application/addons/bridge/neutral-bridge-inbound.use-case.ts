@@ -93,6 +93,7 @@ export class NeutralBridgeInboundUseCase extends BridgeInboundPort {
       threadId: binding.threadId,
       agentId: thread.autoReplyAgentId ?? '',
       text: request.message.text,
+      origin: connectorOrigin(request.addonId),
       correlationId: request.correlationId,
       ...(attachmentIds.length > 0 ? { attachmentIds } : {}),
     });
@@ -131,6 +132,7 @@ export class NeutralBridgeInboundUseCase extends BridgeInboundPort {
       threadId: thread.id,
       agentId: agent.id,
       text: request.message.text,
+      origin: connectorOrigin(request.addonId),
       correlationId: request.correlationId,
       ...(attachmentIds.length > 0 ? { attachmentIds } : {}),
     });

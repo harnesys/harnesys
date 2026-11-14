@@ -185,22 +185,6 @@ export {
 } from './plugins.ts';
 export * from './presets.ts';
 export {
-  type CreateScheduleBody,
-  CreateScheduleBodySchema,
-  type CreateScheduleResponse,
-  CreateScheduleResponseSchema,
-  type ListSchedulesResponse,
-  ListSchedulesResponseSchema,
-  type ScheduleMissPolicy,
-  ScheduleMissPolicySchema,
-  type SchedulePublic,
-  SchedulePublicSchema,
-  type ScheduleStatus,
-  ScheduleStatusSchema,
-  type UpdateScheduleBody,
-  UpdateScheduleBodySchema,
-} from './schedules.ts';
-export {
   type AttachCloudDriveBody,
   AttachCloudDriveBodySchema,
   type AttachGitBody,

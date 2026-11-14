@@ -26,8 +26,6 @@ export type { SemanticMemoryPorts } from './memory/semantic.ts';
 export { semanticMemoryCapability } from './memory/semantic.ts';
 export type { PlanCapabilityPorts } from './plan/index.ts';
 export { planCapability } from './plan/index.ts';
-export type { SchedulerCapabilityPorts } from './scheduler/index.ts';
-export { schedulerCapability } from './scheduler/index.ts';
 export type {
   TelegramCapabilityPorts,
   TelegramPackSpec,
@@ -41,5 +39,3 @@ export {
   webCapability,
 } from './web/index.ts';
 export type { WebSearchPackSpec } from './web/search.ts';
-export type { WebhookCapabilityPorts } from './webhook/index.ts';
-export { webhookCapability } from './webhook/index.ts';

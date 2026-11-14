@@ -100,7 +100,12 @@ export function buildFamilyBundle(): FamilyBundle {
   const bus = new FakeEventBus();
   const catalog = new FakePackageCatalog();
 
-  const triggerContributor = new AddonTriggerCatalogContributor(instances, bindings, orgAddons);
+  const triggerContributor = new AddonTriggerCatalogContributor(
+    instances,
+    bindings,
+    orgAddons,
+    catalog,
+  );
   const jobScheduler = new AddonJobScheduler(jobState, calls, new BundleClock(), logger);
   const workerStore = new WorkerDescriptorStore();
   const workerReports = new WorkerReportService(workerStore, calls, logger);

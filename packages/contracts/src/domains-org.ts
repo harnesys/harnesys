@@ -248,24 +248,6 @@ export {
   VaultListResponseSchema,
 } from './vault.ts';
 export {
-  type CreateWebhookBody,
-  CreateWebhookBodySchema,
-  type CreateWebhookResponse,
-  CreateWebhookResponseSchema,
-  type FireWebhookBody,
-  FireWebhookBodySchema,
-  type FireWebhookResponse,
-  FireWebhookResponseSchema,
-  type ListWebhooksResponse,
-  ListWebhooksResponseSchema,
-  type UpdateWebhookBody,
-  UpdateWebhookBodySchema,
-  type WebhookPublic,
-  WebhookPublicSchema,
-  type WebhookStatus,
-  WebhookStatusSchema,
-} from './webhooks.ts';
-export {
   type FetchRunAttachmentBody,
   FetchRunAttachmentBodySchema,
   type RemoteRunAttachmentMeta,

@@ -113,13 +113,22 @@ export class RunsHostService implements HostServiceModule {
 
   private async create(
     ctx: HostCallContext,
-    params: { title?: string; agentId: string },
+    params: {
+      title?: string;
+      agentId: string;
+      kind?: 'chat' | 'group';
+      responderMode?: 'auto' | 'mention';
+    },
   ): Promise<{ threadId: string }> {
     const thread = await this.createThread.execute({
       orgId: ctx.orgId,
       body: {
         agentId: params.agentId,
         title: params.title,
+        ...(params.kind === undefined ? {} : { kind: params.kind }),
+        ...(params.responderMode === undefined
+          ? {}
+          : { policy: { responderMode: params.responderMode } }),
       },
     });
     return { threadId: thread.id };

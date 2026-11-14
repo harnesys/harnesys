@@ -14,7 +14,6 @@ import { ToolchainPort } from '../../domain/toolchain/toolchain.port.ts';
 import { GetOrgLspUseCase } from '../lsp/get-org-lsp.use-case.ts';
 import { PutOrgLspUseCase } from '../lsp/put-org-lsp.use-case.ts';
 import { SetOrgSettingsUseCase } from '../org-machine/set-org-settings.use-case.ts';
-import { FakeDeskEvents, FakeSchedules } from '../schedules/schedule.use-case.fakes.ts';
 
 const emptyPluginRuntime = Object.assign(Object.create(PluginRuntimePort.prototype), {
   bundle: async () => ({
@@ -131,13 +130,7 @@ describe('toolchain settings roundtrip', () => {
     const layout = createLayout(home);
     const settings = new MemoryOrgSettings();
     const toolchain = new StubbedToolchain(settings, join(home, 'managed-bin'));
-    const setSettings = new SetOrgSettingsUseCase(
-      settings,
-      new FakeSchedules(),
-      new FakeDeskEvents(),
-      toolchain,
-      new DumbLsp(),
-    );
+    const setSettings = new SetOrgSettingsUseCase(settings, toolchain, new DumbLsp());
     const putOrgLsp = new PutOrgLspUseCase(layout, toolchain);
     const getOrgLsp = new GetOrgLspUseCase(
       layout,

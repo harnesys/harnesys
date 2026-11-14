@@ -24,6 +24,10 @@ export interface InstalledAddonPackage {
   root: string;
   manifest: AddonManifest;
   installedAt: string;
+  /** Manifest icon resolved for display: lucide name or inline SVG data URI. */
+  icon?: string;
+  /** Manifest brand color as `#RRGGBB`. */
+  color?: string;
 }
 
 export interface AddonInstallRequest {

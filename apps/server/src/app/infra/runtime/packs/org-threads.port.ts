@@ -17,7 +17,6 @@ import {
 } from 'harnesys';
 import { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
 import { ManagerTailPort } from '../../../domain/manager/manager-tail.port.ts';
-import { ScheduleRepositoryPort } from '../../../domain/schedule/schedule-repository.port.ts';
 import { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
 
@@ -25,7 +24,6 @@ export interface OrgThreadsPortDeps {
   threads: ThreadRepositoryPort;
   threadAgents: ThreadAgentRepositoryPort;
   agents: AgentRegistryPort;
-  schedules?: ScheduleRepositoryPort;
   events?: RunEventStore;
   episodic?: EpisodicPort;
   tail?: ManagerTailPort;
@@ -37,8 +35,6 @@ export class OrgThreadsPort implements ThreadsPort {
   constructor(private readonly deps: OrgThreadsPortDeps) {}
 
   list(scope: CapabilityScope): Promise<ThreadSummary[]> {
-    const schedules = this.deps.schedules?.listByOrg(scope.orgId) ?? [];
-    const occupied = new Set(schedules.map((row) => row.threadId));
     const rows = this.deps.threads.listByOrg(scope.orgId);
     const agentIdByThread = new Map<string, string>();
     for (const member of this.deps.threadAgents.listByThreads(
@@ -58,7 +54,6 @@ export class OrgThreadsPort implements ThreadsPort {
         kind: row.kind,
         agentId,
         agentName: agent?.name ?? agentId,
-        hasSchedule: occupied.has(row.id),
       };
     });
     return Promise.resolve(items);

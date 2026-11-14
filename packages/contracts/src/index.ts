@@ -28,6 +28,8 @@ export {
   ThreadParticipantSchema,
   type ThreadPolicy,
   ThreadPolicySchema,
+  type ThreadResponderMode,
+  ThreadResponderModeSchema,
   type UpdateThreadPolicyBody,
   UpdateThreadPolicyBodySchema,
 } from './thread.ts';

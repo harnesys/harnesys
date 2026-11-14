@@ -4,17 +4,28 @@
   "platform": 1,
   "title": "Gmail",
   "description": "Search and read Gmail messages and threads, send mail, save attachments into the organization workspace, and fire the gmail.message trigger when new mail matching the filters arrives. The add-on calls the Gmail API; the token is injected by the host and never enters the add-on process.",
-  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "runtime": {
+    "entry": "dist/index.js",
+    "profile": "trusted"
+  },
   "activation": "resident",
   "permissions": [
     {
       "id": "http.fetch",
-      "scope": { "hosts": ["www.googleapis.com"] },
+      "scope": {
+        "hosts": [
+          "www.googleapis.com"
+        ]
+      },
       "reason": "Call the Gmail API with the bound account"
     },
     {
       "id": "accounts.use",
-      "scope": { "connections": ["google"] },
+      "scope": {
+        "connections": [
+          "google"
+        ]
+      },
       "reason": "Use the Google account bound to the mail connection"
     },
     {
@@ -38,12 +49,20 @@
     {
       "id": "google",
       "label": "Google account",
-      "accountKinds": ["google-account"],
-      "scopes": ["gmail-readonly", "gmail-send"],
+      "accountKinds": [
+        "google-account"
+      ],
+      "scopes": [
+        "gmail-readonly",
+        "gmail-send"
+      ],
       "cardinality": "many"
     }
   ],
-  "data": { "migrations": "migrations", "quotaMb": 64 },
+  "data": {
+    "migrations": "migrations",
+    "quotaMb": 64
+  },
   "contributions": [
     {
       "id": "message",
@@ -78,7 +97,12 @@
             "help": "Comma-separated terms checked by the add-on against subject, sender and snippet; a message containing any of them is skipped (Gmail search cannot express this part)"
           }
         ],
-        "limits": { "perDay": 200, "throttleSec": 5 }
+        "limits": {
+          "perDay": 200,
+          "throttleSec": 5
+        },
+        "icon": "mail",
+        "color": "#ea4335"
       }
     },
     {
@@ -98,11 +122,27 @@
         "id": "main",
         "title": "Gmail",
         "sections": [
-          { "type": "status" },
-          { "type": "capabilities" },
-          { "type": "permissions" },
-          { "type": "connections", "connections": ["google"] },
-          { "type": "automations", "triggers": ["gmail.message"] },
+          {
+            "type": "status"
+          },
+          {
+            "type": "capabilities"
+          },
+          {
+            "type": "permissions"
+          },
+          {
+            "type": "connections",
+            "connections": [
+              "google"
+            ]
+          },
+          {
+            "type": "automations",
+            "triggers": [
+              "gmail.message"
+            ]
+          },
           {
             "type": "markdown",
             "body": "Connect a Google account in the connections section. The poller syncs new mail with the Gmail history API using a historyId watermark per account; when Gmail expires the watermark it falls back to a full search with the configured query and resets the watermark. Trigger instances match messages with the Gmail search query and required labels server-side; exclude terms are checked in the add-on. On the first sync of an account only the watermark is stored and existing mail stays silent."
@@ -127,7 +167,10 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "query": { "type": "string", "description": "Gmail search query" },
+                "query": {
+                  "type": "string",
+                  "description": "Gmail search query"
+                },
                 "maxResults": {
                   "type": "integer",
                   "minimum": 1,
@@ -139,7 +182,9 @@
                   "description": "Bound Google account id; required only when several accounts are bound"
                 }
               },
-              "required": ["query"]
+              "required": [
+                "query"
+              ]
             }
           },
           {
@@ -150,13 +195,18 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "messageId": { "type": "string", "description": "Message id from search_messages" },
+                "messageId": {
+                  "type": "string",
+                  "description": "Message id from search_messages"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound Google account id; required only when several accounts are bound"
                 }
               },
-              "required": ["messageId"]
+              "required": [
+                "messageId"
+              ]
             }
           },
           {
@@ -167,13 +217,18 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "threadId": { "type": "string", "description": "Thread id from search_messages" },
+                "threadId": {
+                  "type": "string",
+                  "description": "Thread id from search_messages"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound Google account id; required only when several accounts are bound"
                 }
               },
-              "required": ["threadId"]
+              "required": [
+                "threadId"
+              ]
             }
           },
           {
@@ -183,16 +238,32 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "to": { "type": "string", "description": "Recipient address or comma-separated addresses" },
-                "subject": { "type": "string", "description": "Subject line" },
-                "body": { "type": "string", "description": "Plain-text body" },
-                "cc": { "type": "string", "description": "Cc address or comma-separated addresses" },
+                "to": {
+                  "type": "string",
+                  "description": "Recipient address or comma-separated addresses"
+                },
+                "subject": {
+                  "type": "string",
+                  "description": "Subject line"
+                },
+                "body": {
+                  "type": "string",
+                  "description": "Plain-text body"
+                },
+                "cc": {
+                  "type": "string",
+                  "description": "Cc address or comma-separated addresses"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound Google account id; required only when several accounts are bound"
                 }
               },
-              "required": ["to", "subject", "body"]
+              "required": [
+                "to",
+                "subject",
+                "body"
+              ]
             }
           },
           {
@@ -202,8 +273,14 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "messageId": { "type": "string", "description": "Message id from search_messages" },
-                "attachmentId": { "type": "string", "description": "attachmentId from the attachments list" },
+                "messageId": {
+                  "type": "string",
+                  "description": "Message id from search_messages"
+                },
+                "attachmentId": {
+                  "type": "string",
+                  "description": "attachmentId from the attachments list"
+                },
                 "path": {
                   "type": "string",
                   "description": "Workspace-relative destination path, e.g. inbox/invoice.pdf"
@@ -213,11 +290,17 @@
                   "description": "Bound Google account id; required only when several accounts are bound"
                 }
               },
-              "required": ["messageId", "attachmentId", "path"]
+              "required": [
+                "messageId",
+                "attachmentId",
+                "path"
+              ]
             }
           }
         ]
       }
     }
-  ]
+  ],
+  "icon": "assets/icon.svg",
+  "color": "#EA4335"
 }

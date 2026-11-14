@@ -129,8 +129,24 @@ export interface AddonRuns {
   >;
 }
 
+export interface AddonThreadView {
+  threadId: string;
+  kind: string;
+  title: string;
+  responderMode: 'auto' | 'mention';
+  autoReplyAgentId: string | null;
+  agents: Array<{ id: string; name: string }>;
+}
+
 export interface AddonThreads {
-  create(params: { title?: string; agentId: string }): Promise<{ threadId: string }>;
+  create(params: {
+    title?: string;
+    agentId: string;
+    kind?: 'chat' | 'group';
+    responderMode?: 'auto' | 'mention';
+  }): Promise<{ threadId: string }>;
+  get(params: { threadId: string }): Promise<AddonThreadView | null>;
+  patch(params: { threadId: string; responderMode?: 'auto' | 'mention' }): Promise<void>;
   compact(params: { threadId: string }): Promise<
     | {
         compacted: true;
@@ -142,6 +158,16 @@ export interface AddonThreads {
       }
     | { compacted: false; reason?: string }
   >;
+}
+
+export interface AddonAgentView {
+  id: string;
+  name: string;
+  status?: string;
+}
+
+export interface AddonAgents {
+  list(): Promise<AddonAgentView[]>;
 }
 
 export interface AddonUsage {
@@ -266,6 +292,7 @@ export interface AddonContext {
   readonly bindings: AddonBindings;
   readonly runs: AddonRuns;
   readonly threads: AddonThreads;
+  readonly agents: AddonAgents;
   readonly usage: AddonUsage;
   readonly skills: AddonSkills;
   readonly triggers: AddonTriggers;

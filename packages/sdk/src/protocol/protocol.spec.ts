@@ -80,6 +80,9 @@ describe('protocol method map conformance', () => {
       'runs.list',
       'threads.create',
       'threads.compact',
+      'threads.get',
+      'threads.patch',
+      'agents.list',
       'usage.summary',
       'skills.list',
       'triggers.fire',
@@ -102,6 +105,9 @@ describe('protocol method map conformance', () => {
     expect(protocolMap['runs.dispatch'].permission).toBe('runs.dispatch');
     expect(protocolMap['runs.cancel'].permission).toBe('runs.dispatch');
     expect(protocolMap['threads.create'].permission).toBe('threads.create');
+    expect(protocolMap['threads.get'].permission).toBe('threads.read');
+    expect(protocolMap['threads.patch'].permission).toBe('threads.write');
+    expect(protocolMap['agents.list'].permission).toBe('agents.read');
     expect(protocolMap['bridge.inbound'].permission).toBe('bridge.inbound');
     expect(protocolMap['triggers.fire'].permission).toBe('trigger');
     expect(protocolMap['triggers.create'].permission).toBe('trigger');

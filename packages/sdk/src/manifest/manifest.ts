@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { PermissionRequest } from '../permissions/permissions.ts';
 import { PermissionRequestSchema } from '../permissions/permissions.ts';
+import { AddonIconRefSchema, HexColorSchema } from './branding.ts';
 import { type ConnectionRequirement, ConnectionRequirementSchema } from './connections.ts';
 import { type L10n, L10nSchema } from './l10n.ts';
 
@@ -30,7 +31,10 @@ export interface AddonManifest {
   platform: number;
   title: L10n;
   description: L10n;
+  /** Lucide icon name or an SVG shipped with the package (`assets/*.svg`). */
   icon?: string;
+  /** Brand color as `#RRGGBB`. */
+  color?: string;
   homepage?: string;
   license?: string;
   runtime: AddonRuntimeSpec;
@@ -72,7 +76,8 @@ export const AddonManifestSchema = z.object({
   platform: z.number().int().positive(),
   title: L10nSchema,
   description: L10nSchema,
-  icon: z.string().optional(),
+  icon: AddonIconRefSchema.optional(),
+  color: HexColorSchema.optional(),
   homepage: z.string().optional(),
   license: z.string().optional(),
   runtime: AddonRuntimeSpecSchema,

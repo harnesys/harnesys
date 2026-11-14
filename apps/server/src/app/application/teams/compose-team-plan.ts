@@ -23,25 +23,16 @@ export interface TeamPlanBoard {
   statuses: BoardStatus[];
 }
 
-export interface TeamPlanSchedule {
-  agentRoleKey: string;
-  name: string;
-  cron: string;
-  detail: string;
-}
-
 export interface TeamPlan {
   agents: TeamPlanAgent[];
   board: TeamPlanBoard;
   rules: PresetBoardRule[];
-  schedule: TeamPlanSchedule | null;
 }
 
 export interface ComposeTeamPlanInput {
   preset: TeamPresetBody;
   name: string;
   models: Record<string, string>;
-  digestCron: string | null;
 }
 
 export function composeTeamPlan(input: ComposeTeamPlanInput): TeamPlan {
@@ -50,7 +41,6 @@ export function composeTeamPlan(input: ComposeTeamPlanInput): TeamPlan {
     agents: input.preset.roles.map((role) => toPlanAgent(role, input)),
     board: toPlanBoard(input),
     rules: input.preset.board.rules.map((rule) => toPlanRule(rule, roleByKey)),
-    schedule: input.digestCron === null ? null : toPlanSchedule(input, roleByKey),
   };
 }
 
@@ -94,23 +84,4 @@ function toPlanRule(
     }
   }
   return rule;
-}
-
-function toPlanSchedule(
-  input: ComposeTeamPlanInput,
-  roleByKey: Map<string, TeamPresetRole>,
-): TeamPlanSchedule {
-  if (input.digestCron === null) {
-    throw new TeamValidationException('digest cron is required for digest schedule');
-  }
-  const digestRoleKey = input.preset.digest.roleKey;
-  if (!roleByKey.has(digestRoleKey)) {
-    throw new TeamValidationException(`digest references unknown role ${digestRoleKey}`);
-  }
-  return {
-    agentRoleKey: digestRoleKey,
-    name: input.name,
-    cron: input.digestCron,
-    detail: input.preset.digest.detail,
-  };
 }

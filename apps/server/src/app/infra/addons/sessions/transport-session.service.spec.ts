@@ -151,6 +151,7 @@ function harness(store: FakeStore): {
     {} as TransportSessionAsk,
     new FakeExecutor(store),
     new TransportAskRegistry(),
+    calls,
     new SilentLogger(),
   );
   service.onModuleInit();

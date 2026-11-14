@@ -1,6 +1,5 @@
 import type { AddonContext } from '@harnesys/sdk';
 import { call } from './bot-api.ts';
-import type { RoutingPolicy } from './routing.ts';
 
 export interface CommandMessage {
   chatId: string;
@@ -34,8 +33,8 @@ const HELP = [
   '/skills - skills available to the thread agent',
   '/compact - compact the thread history',
   '',
-  'After an admin binds the group in Harnesys, messages that match the routing policy',
-  'are delivered to the bound thread agent and its replies come back here.',
+  'After an admin connects the group in Harnesys, messages mirror into the bound thread',
+  'and agent replies come back here. Who answers is set by the thread responder mode.',
 ].join('\n');
 
 export function botCommands(): Array<{ command: string; description: string }> {
@@ -281,11 +280,50 @@ export async function compactCommand(ctx: AddonContext, message: CommandMessage)
   );
 }
 
-export async function handleCommand(
-  ctx: AddonContext,
-  message: CommandMessage,
-  policy: RoutingPolicy,
-): Promise<boolean> {
+interface ConnectionRow {
+  channel: string;
+  thread_title: string;
+}
+
+function isConnectionRow(row: unknown): row is ConnectionRow {
+  return (
+    typeof row === 'object' &&
+    row !== null &&
+    typeof (row as ConnectionRow).channel === 'string' &&
+    typeof (row as ConnectionRow).thread_title === 'string'
+  );
+}
+
+async function agentCommand(ctx: AddonContext, message: CommandMessage): Promise<void> {
+  const rows = await ctx.db.all(
+    'select channel, thread_title from connections where chat_id = ? order by channel',
+    [message.chatId],
+  );
+  const connections = rows.filter(isConnectionRow);
+  const parts = [`chat: ${message.chatId}`, `channel: ${message.channel}`];
+  if (message.topicId !== null) {
+    parts.push(`topic: ${message.topicId}`);
+  }
+  if (connections.length === 0) {
+    parts.push('No connections yet — an admin connects the group in Harnesys settings.');
+  } else {
+    for (const row of connections) {
+      parts.push(`connected: ${row.channel} -> ${row.thread_title}`);
+    }
+    parts.push('Who answers is set by the thread responder mode in Harnesys.');
+  }
+  await reply(ctx, message, parts.join('\n'));
+}
+
+async function idCommand(ctx: AddonContext, message: CommandMessage): Promise<void> {
+  const parts = [`chat: ${message.chatId}`, `channel: ${message.channel}`];
+  if (message.topicId !== null) {
+    parts.push(`topic: ${message.topicId}`);
+  }
+  await reply(ctx, message, parts.join('\n'));
+}
+
+export async function handleCommand(ctx: AddonContext, message: CommandMessage): Promise<boolean> {
   const name = commandName(message.text);
   if (name === 'start' || name === 'join') {
     await registerChat(ctx, message);
@@ -296,25 +334,11 @@ export async function handleCommand(
     return true;
   }
   if (name === 'id') {
-    const parts = [`chat: ${message.chatId}`, `channel: ${message.channel}`];
-    if (message.topicId !== null) {
-      parts.push(`topic: ${message.topicId}`);
-    }
-    await reply(ctx, message, parts.join('\n'));
+    await idCommand(ctx, message);
     return true;
   }
   if (name === 'agent') {
-    const row = await ctx.db.get('select status from chats where chat_id = ?', [message.chatId]);
-    const status = row === null ? 'not registered' : String(row.status);
-    await reply(
-      ctx,
-      message,
-      [
-        `Routing policy: ${policy}`,
-        `Group status: ${status}`,
-        'Messages that match the policy are delivered to the bound thread agent.',
-      ].join('\n'),
-    );
+    await agentCommand(ctx, message);
     return true;
   }
   if (name === 'stop') {

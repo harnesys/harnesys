@@ -31,6 +31,13 @@ export function manifestSummaryOf(pkg: InstalledAddonPackage) {
   };
 }
 
+export function brandingOf(pkg: InstalledAddonPackage): { icon?: string; color?: string } {
+  return {
+    ...(pkg.icon === undefined ? {} : { icon: pkg.icon }),
+    ...(pkg.color === undefined ? {} : { color: pkg.color }),
+  };
+}
+
 export function compatibilityViewOf(pkg: InstalledAddonPackage): AddonCompatibilityView {
   const compat: CompatibilityResult = checkPackageCompatibility(pkg);
   return {
@@ -158,7 +165,7 @@ export function orgAddonSummaryOf(
     version: row.version,
     title: l10nTitle(pkg),
     description: l10nDescription(pkg),
-    ...(pkg.manifest.icon === undefined ? {} : { icon: pkg.manifest.icon }),
+    ...brandingOf(pkg),
     enabled: row.enabled,
     installed: true,
     health: row.health,
@@ -192,7 +199,7 @@ export function orgAvailableDetailOf(input: {
     version: pkg.version,
     title: l10nTitle(pkg),
     description: l10nDescription(pkg),
-    ...(pkg.manifest.icon === undefined ? {} : { icon: pkg.manifest.icon }),
+    ...brandingOf(pkg),
     enabled: false,
     installed: false,
     health: 'stopped',

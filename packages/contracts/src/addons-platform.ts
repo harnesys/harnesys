@@ -108,6 +108,7 @@ export const AddonPackageViewSchema = z.object({
   title: z.string().min(1),
   description: z.string().default(''),
   icon: z.string().optional(),
+  color: z.string().optional(),
   manifest: AddonManifestSummarySchema,
   warnings: z.array(z.string()).default([]),
 });
@@ -189,6 +190,7 @@ export const OrgAddonSummarySchema = z.object({
   title: z.string().min(1),
   description: z.string().default(''),
   icon: z.string().optional(),
+  color: z.string().optional(),
   enabled: z.boolean().default(false),
   /** True once the organization owns a row for this add-on (enabled or previously enabled). */
   installed: z.boolean().default(false),

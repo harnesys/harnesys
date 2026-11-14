@@ -28,7 +28,6 @@ import { PluginsUseCaseModule } from '../application/plugins/plugins.use-case.mo
 import { PresetUseCaseModule } from '../application/presets/preset.use-case.module.ts';
 import { ProviderUseCaseModule } from '../application/providers/provider.use-case.module.ts';
 import { ReleaseUseCaseModule } from '../application/release/release.use-case.module.ts';
-import { ScheduleUseCaseModule } from '../application/schedules/schedule.use-case.module.ts';
 import { SkillsUseCaseModule } from '../application/skills/skills.use-case.module.ts';
 import { SourceUseCaseModule } from '../application/source/source.use-case.module.ts';
 import { TeamsUseCaseModule } from '../application/teams/teams.use-case.module.ts';
@@ -38,7 +37,6 @@ import { ToolchainUseCaseModule } from '../application/toolchain/toolchain.use-c
 import { UsageUseCaseModule } from '../application/usage/usage.use-case.module.ts';
 import { BrowserUseCaseModule } from '../application/use-cases/browser/browser.use-case.module.ts';
 import { VaultUseCaseModule } from '../application/vault/vault.use-case.module.ts';
-import { WebhookUseCaseModule } from '../application/webhooks/webhook.use-case.module.ts';
 import { AddonWiringModule } from '../infra/addons/wiring/addons-wiring.module.ts';
 import { AgentMemoryModule } from '../infra/agent-memory/agent-memory.module.ts';
 import { AutomationsModule } from '../infra/automations/automations.module.ts';
@@ -134,7 +132,7 @@ import {
 import { PluginsController } from './rest/plugins.controller.ts';
 import { PresetsController } from './rest/presets.controller.ts';
 import { ProvidersController } from './rest/providers.controller.ts';
-import { SchedulesController } from './rest/schedules.controller.ts';
+
 import { SessionController } from './rest/session.controller.ts';
 import { SkillsController } from './rest/skills.controller.ts';
 import { SkillsSearchController } from './rest/skills-search.controller.ts';
@@ -154,7 +152,6 @@ import { ThreadsController } from './rest/threads.controller.ts';
 import { ToolchainController } from './rest/toolchain.controller.ts';
 import { UsageController } from './rest/usage.controller.ts';
 import { VaultController } from './rest/vault.controller.ts';
-import { OrgHooksController, WebhooksController } from './rest/webhooks.controller.ts';
 
 @Module({
   imports: [
@@ -212,10 +209,8 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     ApprovalUseCaseModule,
     AppsUseCaseModule,
     AutomationUseCaseModule,
-    ScheduleUseCaseModule,
     TeamsUseCaseModule,
     ConnectorUseCaseModule,
-    WebhookUseCaseModule,
     IdentityUseCaseModule,
     UsageUseCaseModule,
     MemoryUseCaseModule,
@@ -301,13 +296,10 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     ThreadMessageQueueController,
     ThreadRawModelRequestsController,
     ApprovalsController,
-    SchedulesController,
     ConnectorsController,
-    WebhooksController,
     BoardsController,
     IssuesController,
     LabelsController,
-    OrgHooksController,
     EventsWatchController,
     UsageController,
     MemoryController,

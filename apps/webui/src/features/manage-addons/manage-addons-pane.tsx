@@ -303,7 +303,7 @@ function AddonTile({ card, pending, path, onEnable, onDisable }: AddonTileProps)
   return (
     <Card className="gap-3 bg-popover p-4" data-testid={`manage-addon-${card.id}`}>
       <div className="flex min-w-0 items-start gap-3">
-        <AddonMark size="sm" />
+        <AddonMark size="sm" icon={card.org?.icon} color={card.org?.color} />
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <div className="flex min-w-0 items-center gap-2">
             <Link

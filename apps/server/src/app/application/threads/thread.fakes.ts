@@ -238,3 +238,102 @@ export function memoryAgent(
     ...overrides,
   };
 }
+
+export class FakeThreads extends ThreadRepositoryPort {
+  readonly items = new Map<string, ThreadRecord>();
+
+  listByOrg(): ThreadRecord[] {
+    return [...this.items.values()];
+  }
+
+  listActiveRuns(): ThreadActiveRun[] {
+    return [];
+  }
+
+  findActiveRun(): ThreadActiveRun | undefined {
+    return undefined;
+  }
+
+  findById(_orgId: string, id: string): ThreadRecord | undefined {
+    return this.items.get(id);
+  }
+
+  insert(rec: ThreadInsert): ThreadRecord {
+    const thread = toThreadRecord(rec);
+    this.items.set(rec.id, thread);
+    return thread;
+  }
+
+  patch(_orgId: string, id: string, patch: ThreadPatch): ThreadRecord {
+    const current = this.items.get(id);
+    if (!current) {
+      throw new Error(`thread not found: ${id}`);
+    }
+    const next = { ...current, ...patch };
+    this.items.set(id, next);
+    return next;
+  }
+
+  markRead(): ThreadRecord {
+    throw new Error('not implemented');
+  }
+
+  updateTitle(): ThreadRecord {
+    throw new Error('not implemented');
+  }
+
+  touch(): void {}
+
+  delete(): void {}
+
+  deleteByAgent(): void {}
+
+  listByIssue(): ThreadRecord[] {
+    return [];
+  }
+
+  findByIssueAndAgent(): ThreadRecord | undefined {
+    return undefined;
+  }
+
+  threadIdsWithRuns(): Set<string> {
+    return new Set();
+  }
+}
+
+export class FakeThreadAgents implements ThreadAgentRepositoryPort {
+  readonly items: ThreadAgentRecord[] = [];
+
+  listByThread(_orgId: string, threadId: string): ThreadAgentRecord[] {
+    return this.items.filter((record) => record.threadId === threadId);
+  }
+
+  listByThreads(_orgId: string, threadIds: string[]): ThreadAgentRecord[] {
+    return this.items.filter((record) => threadIds.includes(record.threadId));
+  }
+
+  ensure(_orgId: string, threadId: string, agentId: string): ThreadAgentRecord {
+    const found = this.items.find((record) => record.threadId === threadId);
+    if (found) {
+      return found;
+    }
+    const record = { threadId, agentId, createdAt: new Date().toISOString() };
+    this.items.push(record);
+    return record;
+  }
+
+  remove(_orgId: string, threadId: string, agentId: string): void {
+    const index = this.items.findIndex(
+      (record) => record.threadId === threadId && record.agentId === agentId,
+    );
+    if (index >= 0) {
+      this.items.splice(index, 1);
+    }
+  }
+
+  listThreadIdsByAgent(_orgId: string, agentId: string): string[] {
+    return this.items
+      .filter((record) => record.agentId === agentId)
+      .map((record) => record.threadId);
+  }
+}

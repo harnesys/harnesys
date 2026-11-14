@@ -16,14 +16,6 @@ import { authorize } from '../../domain/identity/authorize.ts';
 import { type NodePrincipal } from '../../domain/identity/principal.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { issueToolsDeps } from '../../infra/runtime/packs/issue-tools.holder.ts';
-import { CreateScheduleUseCase } from '../schedules/create-schedule.use-case.ts';
-import { DeleteScheduleUseCase } from '../schedules/delete-schedule.use-case.ts';
-import { ListSchedulesUseCase } from '../schedules/list-schedules.use-case.ts';
-import { UpdateScheduleUseCase } from '../schedules/update-schedule.use-case.ts';
-import { CreateWebhookUseCase } from '../webhooks/create-webhook.use-case.ts';
-import { DeleteWebhookUseCase } from '../webhooks/delete-webhook.use-case.ts';
-import { ListWebhooksUseCase } from '../webhooks/list-webhooks.use-case.ts';
-import { UpdateWebhookUseCase } from '../webhooks/update-webhook.use-case.ts';
 import { hashNodeToken } from './hash-node-token.ts';
 
 export interface ExecuteWorkerOrgOperationInput {
@@ -39,14 +31,6 @@ export class ExecuteWorkerOrgOperationUseCase {
     private readonly claims: EventClaimPort,
     private readonly receipts: WorkerOrgOperationReceiptPort,
     private readonly executor: LocalExecutorPort,
-    private readonly listSchedules: ListSchedulesUseCase,
-    private readonly createSchedule: CreateScheduleUseCase,
-    private readonly updateSchedule: UpdateScheduleUseCase,
-    private readonly deleteSchedule: DeleteScheduleUseCase,
-    private readonly listWebhooks: ListWebhooksUseCase,
-    private readonly createWebhook: CreateWebhookUseCase,
-    private readonly updateWebhook: UpdateWebhookUseCase,
-    private readonly deleteWebhook: DeleteWebhookUseCase,
   ) {}
 
   async execute(input: ExecuteWorkerOrgOperationInput): Promise<WorkerOrgOperationResponse> {
@@ -100,10 +84,7 @@ export class ExecuteWorkerOrgOperationUseCase {
     if (operation.kind.startsWith('issue.')) {
       return this.dispatchIssue(orgId, actorAgentId, operation);
     }
-    if (operation.kind.startsWith('schedule.')) {
-      return this.dispatchSchedule(orgId, operation);
-    }
-    return this.dispatchWebhook(orgId, operation);
+    throw new HttpException(400, 'ORG_OPERATION_UNKNOWN', 'unsupported operation');
   }
 
   private dispatchIssue(
@@ -200,44 +181,6 @@ export class ExecuteWorkerOrgOperationUseCase {
           boardId: operation.boardId,
           ruleId: operation.ruleId,
         });
-      default:
-        throw new HttpException(400, 'ORG_OPERATION_UNKNOWN', 'unsupported operation');
-    }
-  }
-
-  private dispatchSchedule(orgId: string, operation: WorkerOrgOperation): unknown {
-    switch (operation.kind) {
-      case 'schedule.list':
-        return this.listSchedules.execute({ orgId });
-      case 'schedule.create':
-        return this.createSchedule.execute({ orgId, body: operation.body });
-      case 'schedule.update':
-        return this.updateSchedule.execute({
-          orgId,
-          scheduleId: operation.scheduleId,
-          body: operation.body,
-        });
-      case 'schedule.remove':
-        return this.deleteSchedule.execute({ orgId, scheduleId: operation.scheduleId });
-      default:
-        throw new HttpException(400, 'ORG_OPERATION_UNKNOWN', 'unsupported operation');
-    }
-  }
-
-  private dispatchWebhook(orgId: string, operation: WorkerOrgOperation): unknown {
-    switch (operation.kind) {
-      case 'webhook.list':
-        return this.listWebhooks.execute({ orgId });
-      case 'webhook.create':
-        return this.createWebhook.execute({ orgId, body: operation.body });
-      case 'webhook.update':
-        return this.updateWebhook.execute({
-          orgId,
-          webhookId: operation.webhookId,
-          body: operation.body,
-        });
-      case 'webhook.remove':
-        return this.deleteWebhook.execute({ orgId, webhookId: operation.webhookId });
       default:
         throw new HttpException(400, 'ORG_OPERATION_UNKNOWN', 'unsupported operation');
     }

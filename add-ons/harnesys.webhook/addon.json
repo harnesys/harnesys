@@ -4,7 +4,10 @@
   "platform": 1,
   "title": "Webhook",
   "description": "HTTP webhook triggers for agent threads. Every webhook.http instance gets its own public endpoint with a generated token, optional HMAC or API key verification, payload-to-task text shaping (path, template, fallback), dedupe, idempotency replay, throttling, custom success responses and a delivery log.",
-  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "runtime": {
+    "entry": "dist/index.js",
+    "profile": "trusted"
+  },
   "activation": "lazy",
   "connections": [],
   "permissions": [
@@ -17,7 +20,10 @@
       "reason": "Expose the public POST endpoint that wakes the thread"
     }
   ],
-  "data": { "migrations": "migrations", "quotaMb": 8 },
+  "data": {
+    "migrations": "migrations",
+    "quotaMb": 8
+  },
   "contributions": [
     {
       "id": "http",
@@ -58,7 +64,10 @@
             "required": false,
             "default": "x-hub-signature-256",
             "help": "Header carrying the signature; an algo= prefix such as sha256= is stripped before comparison",
-            "visibleWhen": { "key": "auth", "equals": "hmac" }
+            "visibleWhen": {
+              "key": "auth",
+              "equals": "hmac"
+            }
           },
           {
             "key": "signatureAlgo",
@@ -67,11 +76,23 @@
             "required": false,
             "default": "sha256",
             "options": [
-              { "value": "sha256", "label": "sha256" },
-              { "value": "sha1", "label": "sha1" },
-              { "value": "sha512", "label": "sha512" }
+              {
+                "value": "sha256",
+                "label": "sha256"
+              },
+              {
+                "value": "sha1",
+                "label": "sha1"
+              },
+              {
+                "value": "sha512",
+                "label": "sha512"
+              }
             ],
-            "visibleWhen": { "key": "auth", "equals": "hmac" }
+            "visibleWhen": {
+              "key": "auth",
+              "equals": "hmac"
+            }
           },
           {
             "key": "signatureEncoding",
@@ -80,10 +101,19 @@
             "required": false,
             "default": "hex",
             "options": [
-              { "value": "hex", "label": "hex" },
-              { "value": "base64", "label": "base64" }
+              {
+                "value": "hex",
+                "label": "hex"
+              },
+              {
+                "value": "base64",
+                "label": "base64"
+              }
             ],
-            "visibleWhen": { "key": "auth", "equals": "hmac" }
+            "visibleWhen": {
+              "key": "auth",
+              "equals": "hmac"
+            }
           },
           {
             "key": "keyHeader",
@@ -92,7 +122,10 @@
             "required": false,
             "default": "x-harnesys-key",
             "help": "Header that must carry the webhook secret",
-            "visibleWhen": { "key": "auth", "equals": "apiKey" }
+            "visibleWhen": {
+              "key": "auth",
+              "equals": "apiKey"
+            }
           },
           {
             "key": "payload",
@@ -171,7 +204,9 @@
                 "type": "boolean",
                 "required": false,
                 "default": true,
-                "widget": { "kind": "switch" },
+                "widget": {
+                  "kind": "switch"
+                },
                 "help": "A repeated Idempotency-Key header within 24h replays the stored result instead of firing again"
               },
               {
@@ -180,7 +215,9 @@
                 "type": "boolean",
                 "required": false,
                 "default": false,
-                "widget": { "kind": "switch" },
+                "widget": {
+                  "kind": "switch"
+                },
                 "help": "Also fire on GET requests; the task text comes from the text query parameter"
               }
             ]
@@ -199,7 +236,10 @@
                 "required": false,
                 "default": "default",
                 "options": [
-                  { "value": "default", "label": "Default 202" },
+                  {
+                    "value": "default",
+                    "label": "Default 202"
+                  },
                   {
                     "value": "custom",
                     "label": "Custom body",
@@ -213,20 +253,31 @@
                 "type": "number",
                 "required": false,
                 "default": 200,
-                "visibleWhen": { "key": "respondMode", "equals": "custom" }
+                "visibleWhen": {
+                  "key": "respondMode",
+                  "equals": "custom"
+                }
               },
               {
                 "key": "responseBody",
                 "label": "Response body (JSON)",
                 "type": "textarea",
                 "required": false,
-                "visibleWhen": { "key": "respondMode", "equals": "custom" },
+                "visibleWhen": {
+                  "key": "respondMode",
+                  "equals": "custom"
+                },
                 "help": "Returned when the fire succeeds; raw text is sent as {\"text\": ...} if it is not valid JSON"
               }
             ]
           }
         ],
-        "limits": { "throttleSec": 2, "maxBurst": 20 }
+        "limits": {
+          "throttleSec": 2,
+          "maxBurst": 20
+        },
+        "icon": "webhook",
+        "color": "#38bdf8"
       }
     },
     {
@@ -254,12 +305,22 @@
     {
       "id": "instances",
       "family": "route",
-      "descriptor": { "id": "instances", "method": "GET", "path": "/instances", "role": "member" }
+      "descriptor": {
+        "id": "instances",
+        "method": "GET",
+        "path": "/instances",
+        "role": "member"
+      }
     },
     {
       "id": "deliveries",
       "family": "route",
-      "descriptor": { "id": "deliveries", "method": "GET", "path": "/deliveries", "role": "member" }
+      "descriptor": {
+        "id": "deliveries",
+        "method": "GET",
+        "path": "/deliveries",
+        "role": "member"
+      }
     },
     {
       "id": "rotate-url",
@@ -284,7 +345,12 @@
     {
       "id": "test",
       "family": "route",
-      "descriptor": { "id": "test", "method": "POST", "path": "/test/:token", "role": "admin" }
+      "descriptor": {
+        "id": "test",
+        "method": "POST",
+        "path": "/test/:token",
+        "role": "admin"
+      }
     },
     {
       "id": "pack",
@@ -299,7 +365,9 @@
             "description": "List this addon's webhooks: name, public endpoint path, auth mode, status, last fire time, fire count and last error.",
             "effect": "read",
             "idempotent": true,
-            "inputSchema": { "type": "object" }
+            "inputSchema": {
+              "type": "object"
+            }
           },
           {
             "name": "deliveries",
@@ -325,14 +393,21 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "name": { "type": "string", "description": "Webhook name" },
+                "name": {
+                  "type": "string",
+                  "description": "Webhook name"
+                },
                 "threadId": {
                   "type": "string",
                   "description": "Thread to fire; defaults to the calling thread"
                 },
                 "auth": {
                   "type": "string",
-                  "enum": ["none", "hmac", "apiKey"],
+                  "enum": [
+                    "none",
+                    "hmac",
+                    "apiKey"
+                  ],
                   "description": "Verification mode, default none"
                 },
                 "detail": {
@@ -374,7 +449,9 @@
                   "description": "Also fire on GET requests, default false"
                 }
               },
-              "required": ["name"]
+              "required": [
+                "name"
+              ]
             }
           },
           {
@@ -384,10 +461,17 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "webhook": { "type": "string", "description": "Webhook token or instance id" },
+                "webhook": {
+                  "type": "string",
+                  "description": "Webhook token or instance id"
+                },
                 "auth": {
                   "type": "string",
-                  "enum": ["none", "hmac", "apiKey"],
+                  "enum": [
+                    "none",
+                    "hmac",
+                    "apiKey"
+                  ],
                   "description": "Verification mode"
                 },
                 "detail": {
@@ -429,7 +513,9 @@
                   "description": "Also fire on GET requests"
                 }
               },
-              "required": ["webhook"]
+              "required": [
+                "webhook"
+              ]
             }
           },
           {
@@ -439,9 +525,14 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "webhook": { "type": "string", "description": "Webhook token or instance id" }
+                "webhook": {
+                  "type": "string",
+                  "description": "Webhook token or instance id"
+                }
               },
-              "required": ["webhook"]
+              "required": [
+                "webhook"
+              ]
             }
           },
           {
@@ -451,9 +542,14 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "webhook": { "type": "string", "description": "Webhook token or instance id" }
+                "webhook": {
+                  "type": "string",
+                  "description": "Webhook token or instance id"
+                }
               },
-              "required": ["webhook"]
+              "required": [
+                "webhook"
+              ]
             }
           },
           {
@@ -463,9 +559,14 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "webhook": { "type": "string", "description": "Webhook token or instance id" }
+                "webhook": {
+                  "type": "string",
+                  "description": "Webhook token or instance id"
+                }
               },
-              "required": ["webhook"]
+              "required": [
+                "webhook"
+              ]
             }
           },
           {
@@ -475,9 +576,14 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "webhook": { "type": "string", "description": "Webhook token or instance id" }
+                "webhook": {
+                  "type": "string",
+                  "description": "Webhook token or instance id"
+                }
               },
-              "required": ["webhook"]
+              "required": [
+                "webhook"
+              ]
             }
           },
           {
@@ -487,13 +593,18 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "webhook": { "type": "string", "description": "Webhook token or instance id" },
+                "webhook": {
+                  "type": "string",
+                  "description": "Webhook token or instance id"
+                },
                 "body": {
                   "type": "string",
                   "description": "Optional test payload overriding the configured test payload"
                 }
               },
-              "required": ["webhook"]
+              "required": [
+                "webhook"
+              ]
             }
           }
         ]
@@ -506,39 +617,86 @@
         "id": "main",
         "title": "Webhook",
         "sections": [
-          { "type": "status" },
-          { "type": "capabilities" },
-          { "type": "permissions" },
-          { "type": "automations", "triggers": ["webhook.http"] },
+          {
+            "type": "status"
+          },
+          {
+            "type": "capabilities"
+          },
+          {
+            "type": "permissions"
+          },
+          {
+            "type": "automations",
+            "triggers": [
+              "webhook.http"
+            ]
+          },
           {
             "type": "table",
             "title": "Webhooks",
-            "source": { "route": "/instances" },
+            "source": {
+              "route": "/instances"
+            },
             "columns": [
-              { "key": "name", "label": "Name", "format": "text" },
-              { "key": "endpoint", "label": "Endpoint", "format": "copy" },
-              { "key": "auth", "label": "Auth", "format": "text" },
-              { "key": "status", "label": "Status", "format": "badge" },
-              { "key": "lastFiredAt", "label": "Last fired", "format": "datetime" },
-              { "key": "fires", "label": "Fires", "format": "number" },
-              { "key": "lastError", "label": "Last error", "format": "text" }
+              {
+                "key": "name",
+                "label": "Name",
+                "format": "text"
+              },
+              {
+                "key": "endpoint",
+                "label": "Endpoint",
+                "format": "copy"
+              },
+              {
+                "key": "auth",
+                "label": "Auth",
+                "format": "text"
+              },
+              {
+                "key": "status",
+                "label": "Status",
+                "format": "badge"
+              },
+              {
+                "key": "lastFiredAt",
+                "label": "Last fired",
+                "format": "datetime"
+              },
+              {
+                "key": "fires",
+                "label": "Fires",
+                "format": "number"
+              },
+              {
+                "key": "lastError",
+                "label": "Last error",
+                "format": "text"
+              }
             ],
             "rowActions": [
               {
                 "id": "test",
                 "label": "Send test",
-                "route": { "route": "/test/:token" }
+                "route": {
+                  "route": "/test/:token"
+                }
               },
               {
                 "id": "rotate-url",
                 "label": "Rotate URL",
-                "route": { "route": "/rotate-url/:token" },
+                "route": {
+                  "route": "/rotate-url/:token"
+                },
                 "confirm": "Rotate this webhook URL? The old URL stops working immediately."
               },
               {
                 "id": "rotate-secret",
                 "label": "Rotate secret",
-                "route": { "route": "/rotate-secret/:token" },
+                "route": {
+                  "route": "/rotate-secret/:token"
+                },
                 "confirm": "Rotate this webhook secret? Senders must recompute signatures or keys with the new secret.",
                 "destructive": false
               }
@@ -547,14 +705,40 @@
           {
             "type": "table",
             "title": "Recent deliveries",
-            "source": { "route": "/deliveries" },
+            "source": {
+              "route": "/deliveries"
+            },
             "columns": [
-              { "key": "receivedAt", "label": "Received", "format": "datetime" },
-              { "key": "webhook", "label": "Webhook", "format": "text" },
-              { "key": "outcome", "label": "Outcome", "format": "badge" },
-              { "key": "method", "label": "Method", "format": "text" },
-              { "key": "summary", "label": "Summary", "format": "text" },
-              { "key": "error", "label": "Error", "format": "text" }
+              {
+                "key": "receivedAt",
+                "label": "Received",
+                "format": "datetime"
+              },
+              {
+                "key": "webhook",
+                "label": "Webhook",
+                "format": "text"
+              },
+              {
+                "key": "outcome",
+                "label": "Outcome",
+                "format": "badge"
+              },
+              {
+                "key": "method",
+                "label": "Method",
+                "format": "text"
+              },
+              {
+                "key": "summary",
+                "label": "Summary",
+                "format": "text"
+              },
+              {
+                "key": "error",
+                "label": "Error",
+                "format": "text"
+              }
             ]
           },
           {
@@ -564,5 +748,7 @@
         ]
       }
     }
-  ]
+  ],
+  "icon": "webhook",
+  "color": "#38bdf8"
 }

@@ -20,6 +20,7 @@ interface SentMessage {
 
 interface FakeServices {
   bindings?: Array<{ channel: string; threadId: string }>;
+  agents?: Array<{ id: string; name: string; status?: string }>;
   runs?: Array<{
     runId: string;
     status: string;
@@ -83,7 +84,12 @@ function makeContext(services: FakeServices): { ctx: AddonContext; sent: SentMes
     },
     threads: {
       create: async () => ({ threadId: 't-new' }),
+      get: async () => null,
+      patch: async () => undefined,
       compact: async () => services.compact ?? { compacted: false },
+    },
+    agents: {
+      list: async () => services.agents ?? [],
     },
     log,
     http: {
@@ -216,7 +222,7 @@ describe('command dispatch', () => {
       bindings: [{ channel: '100', threadId: 't-1' }],
       usage: { inputTokens: 10, outputTokens: 5, costUsd: 0.001, byModel: [] },
     });
-    expect(await handleCommand(ctx, command('/stats'), 'mention')).toBe(true);
+    expect(await handleCommand(ctx, command('/stats'))).toBe(true);
     expect(sent).toHaveLength(1);
     expect(sent[0]?.method).toBe('sendMessage');
     expect(String(sent[0]?.payload.text)).toContain('Cost: $0.0010');
@@ -232,7 +238,7 @@ describe('command dispatch', () => {
       ],
       cancelled,
     });
-    expect(await handleCommand(ctx, command('/stop'), 'commands')).toBe(true);
+    expect(await handleCommand(ctx, command('/stop'))).toBe(true);
     expect(cancelled).toEqual([{ threadId: 't-1', runId: 'new' }]);
     expect(String(sent[0]?.payload.text)).toContain('Cancelled run new');
   });
@@ -246,7 +252,7 @@ describe('command dispatch', () => {
       ],
       cancelled,
     });
-    await handleCommand(ctx, command('/stop'), 'always');
+    await handleCommand(ctx, command('/stop'));
     expect(cancelled).toHaveLength(0);
     expect(String(sent[0]?.payload.text)).toContain('No active run');
   });
@@ -255,7 +261,7 @@ describe('command dispatch', () => {
     const { ctx, sent } = makeContext({});
     for (const text of ['/stop', '/stats', '/skills', '/compact']) {
       sent.length = 0;
-      expect(await handleCommand(ctx, command(text), 'mention')).toBe(true);
+      expect(await handleCommand(ctx, command(text))).toBe(true);
       expect(String(sent[0]?.payload.text)).toContain('not bound');
     }
   });
@@ -265,7 +271,7 @@ describe('command dispatch', () => {
       bindings: [{ channel: '100', threadId: 't-1' }],
       compact: { compacted: false, reason: 'thread is too short' },
     });
-    await handleCommand(ctx, command('/compact'), 'mention');
+    await handleCommand(ctx, command('/compact'));
     expect(String(sent[0]?.payload.text)).toContain('thread is too short');
   });
 
@@ -274,13 +280,13 @@ describe('command dispatch', () => {
       bindings: [{ channel: '100', threadId: 't-1' }],
       failUsage: true,
     });
-    await handleCommand(ctx, command('/stats'), 'mention');
+    await handleCommand(ctx, command('/stats'));
     expect(String(sent[0]?.payload.text)).toContain('command failed');
     expect(String(sent[0]?.payload.text)).toContain('usage service is down');
   });
 
   test('unknown commands are not handled', async () => {
     const { ctx } = makeContext({});
-    expect(await handleCommand(ctx, command('/nope'), 'mention')).toBe(false);
+    expect(await handleCommand(ctx, command('/nope'))).toBe(false);
   });
 });

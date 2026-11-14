@@ -21,17 +21,9 @@ import type {
   LlmProviderPatch,
 } from '../../../domain/provider/llm-provider.port.ts';
 import { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-provider.port.ts';
-import type {
-  ScheduleFireRecord,
-  SchedulePatch,
-  ScheduleRecord,
-} from '../../../domain/schedule/schedule.ts';
-import { ScheduleRepositoryPort } from '../../../domain/schedule/schedule-repository.port.ts';
 import { SourceRegistryPort } from '../../../domain/source/source-registry.port.ts';
 import type { ThreadActiveRun, ThreadPatch, ThreadRecord } from '../../../domain/thread/thread.ts';
 import { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
-import type { WebhookPatch, WebhookRecord } from '../../../domain/webhook/webhook.ts';
-import { WebhookRepositoryPort } from '../../../domain/webhook/webhook-repository.port.ts';
 import { CREATE_ORG_MEMORY_SETTINGS_SQL } from '../../org-sqlite/org-sql.ts';
 import type { OrgSqliteDb } from '../../org-sqlite/org-sqlite-session.ts';
 import * as schema from '../../org-sqlite/schema/index.ts';
@@ -173,71 +165,6 @@ export class MemoryThreads extends ThreadRepositoryPort {
     this.rows = this.rows.filter((row) => !(row.orgId === orgId && row.id === id));
   }
   deleteByAgent(): void {}
-}
-
-export class MemorySchedules extends ScheduleRepositoryPort {
-  rows: ScheduleRecord[] = [];
-  listByOrg(orgId: string): ScheduleRecord[] {
-    return this.rows.filter((row) => row.orgId === orgId);
-  }
-  listDue(): ScheduleRecord[] {
-    return [];
-  }
-  findById(orgId: string, id: string): ScheduleRecord | undefined {
-    return this.rows.find((row) => row.orgId === orgId && row.id === id);
-  }
-  findByThreadId(orgId: string, threadId: string): ScheduleRecord | undefined {
-    return this.rows.find((row) => row.orgId === orgId && row.threadId === threadId);
-  }
-  listFiresBySchedule(): ScheduleFireRecord[] {
-    return [];
-  }
-  insert(rec: ScheduleRecord): ScheduleRecord {
-    this.rows.push(rec);
-    return rec;
-  }
-  update(orgId: string, id: string, patch: SchedulePatch): ScheduleRecord {
-    const current = this.findById(orgId, id);
-    if (!current) {
-      throw new Error(`missing schedule ${id}`);
-    }
-    return { ...current, ...patch };
-  }
-  delete(orgId: string, id: string): void {
-    this.rows = this.rows.filter((row) => !(row.orgId === orgId && row.id === id));
-  }
-  claimFire(): boolean {
-    return true;
-  }
-  recordFireRun(): void {}
-  releaseFire(): void {}
-}
-
-export class MemoryWebhooks extends WebhookRepositoryPort {
-  rows: WebhookRecord[] = [];
-  listByOrg(orgId: string): WebhookRecord[] {
-    return this.rows.filter((row) => row.orgId === orgId);
-  }
-  findById(orgId: string, id: string): WebhookRecord | undefined {
-    return this.rows.find((row) => row.orgId === orgId && row.id === id);
-  }
-  findByThreadId(orgId: string, threadId: string): WebhookRecord | undefined {
-    return this.rows.find((row) => row.orgId === orgId && row.threadId === threadId);
-  }
-  insert(rec: WebhookRecord): WebhookRecord {
-    this.rows.push(rec);
-    return rec;
-  }
-  update(orgId: string, id: string, patch: WebhookPatch): WebhookRecord {
-    const current = this.findById(orgId, id);
-    if (!current) {
-      throw new Error(`missing webhook ${id}`);
-    }
-    return { ...current, ...patch };
-  }
-  delete(orgId: string, id: string): void {
-    this.rows = this.rows.filter((row) => !(row.orgId === orgId && row.id === id));
-  }
 }
 
 export class FakeSources extends SourceRegistryPort {

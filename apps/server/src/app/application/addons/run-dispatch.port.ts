@@ -9,6 +9,8 @@ export interface RunDispatchInput {
   text: string;
   attachmentIds?: string[];
   mode?: string;
+  /** Marks the message source, e.g. `connector:<addonId>`, echoed back on thread events. */
+  origin?: string;
   runKey?: string;
   correlationId?: string;
   payload?: unknown;

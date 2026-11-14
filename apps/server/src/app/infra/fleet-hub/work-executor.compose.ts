@@ -20,13 +20,11 @@ import {
 } from '../../domain/mode-presets/preset-shell-merge.ts';
 import { WorkspaceContainerPort } from '../../domain/process-runtime/workspace-container.port.ts';
 import { LlmModelPort, LlmProviderPort } from '../../domain/provider/llm-provider.port.ts';
-import { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repository.port.ts';
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
 import { SourceSkillsPort } from '../../domain/skills/source-skills.port.ts';
 import { SourceLocationPort } from '../../domain/source/source-location.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
-import { WebhookRepositoryPort } from '../../domain/webhook/webhook-repository.port.ts';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
 import { toAgentDefinition } from '../runtime/agent-definition.mapper.ts';
 import { composeRunSkills } from '../runtime/compose-run-skills.ts';
@@ -52,8 +50,6 @@ export interface WorkExecutorDeps {
   logger: Logger;
   fileRules?: FileAccessRulePort;
   threads?: ThreadRepositoryPort;
-  schedules?: ScheduleRepositoryPort;
-  webhooks?: WebhookRepositoryPort;
   knowledge?: OrgKnowledgeDeps;
   fetchImpl?: (url: string | URL | Request, init?: RequestInit) => Promise<Response>;
   modelsPort?: ModelsPort;
@@ -111,9 +107,7 @@ export function placedWireDeps(
       models: deps.models,
     }),
     ...(deps.threads ? { threads: deps.threads } : {}),
-    ...(deps.schedules ? { schedules: deps.schedules } : {}),
     ...(deps.orgSettings ? { orgSettings: deps.orgSettings } : {}),
-    ...(deps.webhooks ? { webhooks: deps.webhooks } : {}),
     ...(deps.knowledge ? { knowledge: deps.knowledge } : {}),
     ...(deps.plugins ? { plugins: deps.plugins } : {}),
     ...(deps.issueTracker ? { issueTracker: deps.issueTracker } : {}),

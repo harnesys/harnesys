@@ -4,17 +4,28 @@
   "platform": 1,
   "title": "Google Search Console",
   "description": "Reads Search Console properties and search analytics (clicks, impressions, CTR, position) with the org's bound Google account. The add-on calls the Search Console API; the token stays host-side.",
-  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "runtime": {
+    "entry": "dist/index.js",
+    "profile": "trusted"
+  },
   "activation": "lazy",
   "permissions": [
     {
       "id": "http.fetch",
-      "scope": { "hosts": ["www.googleapis.com"] },
+      "scope": {
+        "hosts": [
+          "www.googleapis.com"
+        ]
+      },
       "reason": "Call the Google Search Console API with the bound account"
     },
     {
       "id": "accounts.use",
-      "scope": { "connections": ["google"] },
+      "scope": {
+        "connections": [
+          "google"
+        ]
+      },
       "reason": "Use the Google account bound to the search console connection"
     }
   ],
@@ -22,8 +33,12 @@
     {
       "id": "google",
       "label": "Google account",
-      "accountKinds": ["google-account"],
-      "scopes": ["webmasters"],
+      "accountKinds": [
+        "google-account"
+      ],
+      "scopes": [
+        "webmasters"
+      ],
       "cardinality": "many"
     }
   ],
@@ -60,9 +75,18 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "siteUrl": { "type": "string", "description": "Property URL from list_sites" },
-                "startDate": { "type": "string", "description": "YYYY-MM-DD" },
-                "endDate": { "type": "string", "description": "YYYY-MM-DD" },
+                "siteUrl": {
+                  "type": "string",
+                  "description": "Property URL from list_sites"
+                },
+                "startDate": {
+                  "type": "string",
+                  "description": "YYYY-MM-DD"
+                },
+                "endDate": {
+                  "type": "string",
+                  "description": "YYYY-MM-DD"
+                },
                 "dimensions": {
                   "type": "string",
                   "description": "Comma-separated dimensions: query, page, date, device, country"
@@ -78,11 +102,17 @@
                   "description": "Bound Google account id; required only when several accounts are bound"
                 }
               },
-              "required": ["siteUrl", "startDate", "endDate"]
+              "required": [
+                "siteUrl",
+                "startDate",
+                "endDate"
+              ]
             }
           }
         ]
       }
     }
-  ]
+  ],
+  "icon": "assets/icon.svg",
+  "color": "#4285F4"
 }

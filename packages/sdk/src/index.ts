@@ -177,6 +177,7 @@ export {
   workerFamily,
 } from './families/worker.ts';
 export { createHostClient, type HostChannel } from './host-client.ts';
+export { AddonIconRefSchema, HexColorSchema, LucideIconNameSchema } from './manifest/branding.ts';
 export { type ConnectionRequirement, ConnectionRequirementSchema } from './manifest/connections.ts';
 export { contributionDescriptorJsonSchema, manifestJsonSchema } from './manifest/json-schema.ts';
 export { type L10n, L10nSchema, l10nKeys, resolveL10n } from './manifest/l10n.ts';

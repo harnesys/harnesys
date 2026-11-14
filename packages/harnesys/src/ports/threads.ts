@@ -7,7 +7,6 @@ export interface ThreadSummary {
   kind: string;
   agentId: string;
   agentName: string;
-  hasSchedule: boolean;
 }
 
 export interface ThreadHistoryQuery {

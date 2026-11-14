@@ -20,10 +20,8 @@ import {
   MemoryAgents,
   MemoryModels,
   MemoryProviders,
-  MemorySchedules,
   MemoryThreadAgents,
   MemoryThreads,
-  MemoryWebhooks,
   memoryDb,
 } from './wire-org-packs.fakes.ts';
 import { type WireOrgPacksDeps, wireOrgPacks } from './wire-org-packs.ts';
@@ -49,9 +47,7 @@ function fullDeps(): WireOrgPacksDeps {
     models: new MemoryModels(),
     threads: new MemoryThreads(),
     threadAgents: new MemoryThreadAgents(),
-    schedules: new MemorySchedules(),
     orgSettings: new FakeOrgSettings(),
-    webhooks: new MemoryWebhooks(),
     issues: {} as OrgIssueDeps,
     manager: {} as OrgManagerDeps,
     google: {} as OrgGoogleDeps,

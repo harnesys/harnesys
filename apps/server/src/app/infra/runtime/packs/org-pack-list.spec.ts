@@ -31,14 +31,12 @@ describe('org pack single source', () => {
       'mcp',
       'pin-memory',
       'plan',
-      'scheduler',
       'semantic-memory',
       'shell',
       'skills',
       'telegram',
       'threads',
       'web',
-      'webhook',
     ]);
     expect(wireOrgPackNames({}).sort()).toEqual([
       'agents',

@@ -50,4 +50,28 @@ describe('resolveResponders', () => {
   it('returns no responders without a mention, a target, or an auto-reply', () => {
     expect(resolveResponders({ text: 'hello', members, autoReplyAgentId: null })).toEqual([]);
   });
+
+  it('skips the auto-reply fallback in mention mode', () => {
+    expect(
+      resolveResponders({
+        text: 'hello',
+        members,
+        autoReplyAgentId: 'a2',
+        allowMentions: true,
+        autoFallback: false,
+      }),
+    ).toEqual([]);
+  });
+
+  it('still routes explicit mentions in mention mode', () => {
+    expect(
+      resolveResponders({
+        text: '@Atlas ping',
+        members,
+        autoReplyAgentId: 'a2',
+        allowMentions: true,
+        autoFallback: false,
+      }),
+    ).toEqual(['a1']);
+  });
 });

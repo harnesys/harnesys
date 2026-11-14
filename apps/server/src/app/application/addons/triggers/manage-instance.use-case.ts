@@ -11,11 +11,9 @@ import type {
   TriggerInstanceRow,
 } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { TriggerInstanceRepositoryPort } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
-import { ScheduleRepositoryPort } from '../../../domain/schedule/schedule-repository.port.ts';
 import { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
-import { WebhookRepositoryPort } from '../../../domain/webhook/webhook-repository.port.ts';
-import { assertScheduleThreadFree } from '../../schedules/bind-schedule-thread.ts';
+import { occupiedTriggerInstanceThreadId } from '../../threads/trigger-thread-binding.ts';
 import { requirePackage } from '../orgs/org-addon.helpers.ts';
 import { TriggerTargetSchema } from './trigger-target.schema.ts';
 
@@ -49,8 +47,6 @@ export class ManageTriggerInstanceUseCase {
     private readonly audit: AddonAuditPort,
     private readonly threads: ThreadRepositoryPort,
     private readonly threadAgents: ThreadAgentRepositoryPort,
-    private readonly schedules: ScheduleRepositoryPort,
-    private readonly webhooks: WebhookRepositoryPort,
     @Inject(Logger) logger: Logger,
   ) {
     this.logger = logger.child('addons-trigger-instances');
@@ -200,21 +196,13 @@ export class ManageTriggerInstanceUseCase {
     if (!members.some((member) => member.agentId === parsed.data.agentId)) {
       throw new AddonException('invalid_params', 422, 'target.agentId is not a thread member');
     }
-    try {
-      assertScheduleThreadFree({
-        orgId,
-        threadId: thread.id,
-        schedules: this.schedules,
-        webhooks: this.webhooks,
-        triggerInstances: this.triggers,
-        ...(exceptInstanceId !== undefined ? { exceptInstanceId } : {}),
-      });
-    } catch (error) {
-      throw new AddonException(
-        'invalid_params',
-        422,
-        error instanceof Error ? error.message : 'thread is occupied by another trigger',
-      );
+    const occupied = occupiedTriggerInstanceThreadId(
+      this.triggers.list(orgId),
+      thread.id,
+      exceptInstanceId,
+    );
+    if (occupied) {
+      throw new AddonException('invalid_params', 422, 'thread already has a trigger');
     }
   }
 

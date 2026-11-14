@@ -3,11 +3,9 @@ import {
   knowledgeMemoryCapability,
   pinMemoryCapability,
   registerPack,
-  schedulerCapability,
   semanticMemoryCapability,
   threadsCapability,
   webCapability,
-  webhookCapability,
 } from 'harnesys';
 import { StudioEmbeddings } from '../../../domain/knowledge/embeddings.ts';
 import { resolveProviderApiKey } from '../../../domain/secret/provider-api-key.ts';
@@ -17,11 +15,9 @@ import { OrgEpisodicPort } from './org-episodic.port.ts';
 import { OrgKnowledgePort } from './org-knowledge.port.ts';
 import type { WireOrgPackContext } from './org-pack-registrations.ts';
 import { OrgPinPort } from './org-pin.port.ts';
-import { OrgSchedulerPort } from './org-scheduler.port.ts';
 import { OrgSemanticPort } from './org-semantic.port.ts';
 import { OrgThreadAttachmentPort } from './org-thread-attachment.port.ts';
 import { OrgThreadsPort } from './org-threads.port.ts';
-import { OrgWebhookPort } from './org-webhook.port.ts';
 import type { WireOrgPacksDeps } from './wire-org-packs.ts';
 
 export function webRegistration(ctx: WireOrgPackContext) {
@@ -103,52 +99,11 @@ export function threadsRegistration(ctx: WireOrgPackContext) {
         ...(ctx.deps.events ? { events: ctx.deps.events } : {}),
         ...(memoryDb ? { episodic: new OrgEpisodicPort(memoryDb) } : {}),
         ...(ctx.deps.manager ? { tail: ctx.deps.manager.tail } : {}),
-        ...(ctx.deps.schedules ? { schedules: ctx.deps.schedules } : {}),
       }),
     },
     resolveScope: ctx.liveScope,
   });
 }
-
-export function schedulerRegistration(ctx: WireOrgPackContext) {
-  if (!ctx.deps.schedules || !ctx.deps.threads || !ctx.deps.threadAgents || !ctx.deps.orgSettings) {
-    return undefined;
-  }
-  return registerPack(schedulerCapability, {
-    ports: {
-      scheduler: new OrgSchedulerPort({
-        schedules: ctx.deps.schedules,
-        threads: ctx.deps.threads,
-        threadAgents: ctx.deps.threadAgents,
-        agents: ctx.deps.agents,
-        orgSettings: ctx.deps.orgSettings,
-        ...(ctx.deps.deskEvents ? { deskEvents: ctx.deps.deskEvents } : {}),
-        ...(ctx.deps.webhooks ? { webhooks: ctx.deps.webhooks } : {}),
-        ...(ctx.deps.triggerInstances ? { triggerInstances: ctx.deps.triggerInstances } : {}),
-      }),
-    },
-    resolveScope: ctx.liveScope,
-  });
-}
-
-export function webhookRegistration(ctx: WireOrgPackContext) {
-  if (!ctx.deps.webhooks || !ctx.deps.threads || !ctx.deps.threadAgents) {
-    return undefined;
-  }
-  return registerPack(webhookCapability, {
-    ports: {
-      webhook: new OrgWebhookPort({
-        webhooks: ctx.deps.webhooks,
-        threads: ctx.deps.threads,
-        threadAgents: ctx.deps.threadAgents,
-        agents: ctx.deps.agents,
-        ...(ctx.deps.deskEvents ? { deskEvents: ctx.deps.deskEvents } : {}),
-      }),
-    },
-    resolveScope: ctx.liveScope,
-  });
-}
-
 export function knowledgeRegistration(ctx: WireOrgPackContext) {
   if (!ctx.deps.knowledge || !ctx.deps.sources) {
     return undefined;

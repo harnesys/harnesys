@@ -8,12 +8,16 @@ export type ThreadKind = z.infer<typeof ThreadKindSchema>;
 export const ThreadHistoryModeSchema = z.enum(['full', 'none', 'last']);
 export type ThreadHistoryMode = z.infer<typeof ThreadHistoryModeSchema>;
 
+export const ThreadResponderModeSchema = z.enum(['auto', 'mention']);
+export type ThreadResponderMode = z.infer<typeof ThreadResponderModeSchema>;
+
 export const ThreadPolicySchema = z.object({
   version: z.union([z.literal(1), z.literal(2)]).default(2),
   historyMode: ThreadHistoryModeSchema.optional(),
   historyLast: z.number().int().min(0).max(100).optional(),
   historyFromRunId: z.string().uuid().optional(),
   mentionGating: z.boolean().optional(),
+  responderMode: ThreadResponderModeSchema.optional(),
 });
 export type ThreadPolicy = z.infer<typeof ThreadPolicySchema>;
 
@@ -118,6 +122,7 @@ export const CreateThreadBodySchema = z.object({
       historyMode: ThreadHistoryModeSchema.optional(),
       historyLast: z.number().int().min(0).max(100).optional(),
       historyFromRunId: z.string().uuid().optional(),
+      responderMode: ThreadResponderModeSchema.optional(),
     })
     .optional(),
 });
@@ -136,6 +141,7 @@ export type AddThreadParticipantBody = z.infer<typeof AddThreadParticipantBodySc
 export const UpdateThreadPolicyBodySchema = z.object({
   autoReplyAgentId: z.string().uuid().nullable().optional(),
   mentionGating: z.boolean().optional(),
+  responderMode: ThreadResponderModeSchema.optional(),
   historyMode: ThreadHistoryModeSchema.optional(),
   historyLast: z.number().int().min(0).max(100).nullable().optional(),
   historyFromRunId: z.string().uuid().nullable().optional(),

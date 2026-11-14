@@ -3,9 +3,10 @@ import {
   type ThreadKind,
   type ThreadPolicy,
   ThreadPolicySchema,
+  type ThreadResponderMode,
 } from '@harnesys/contracts';
 
-export type { ThreadHistoryMode, ThreadPolicy };
+export type { ThreadHistoryMode, ThreadPolicy, ThreadResponderMode };
 export { ThreadPolicySchema };
 
 export const EMPTY_THREAD_POLICY: ThreadPolicy = { version: 2 };
@@ -46,4 +47,15 @@ export function historyLastOf(policy: ThreadPolicy): number {
 
 export function allowsMentions(policy: ThreadPolicy): boolean {
   return policy.mentionGating !== true;
+}
+
+/**
+ * Unified responder mode for any thread kind: 'auto' lets the pinned agent
+ * answer messages nobody addressed, 'mention' reacts only to addressed
+ * agents. Explicit policy wins; the kind default is 'mention' for group
+ * threads and 'auto' everywhere else. Existing rows are backfilled to an
+ * explicit value by migration, so the kind default only affects new threads.
+ */
+export function responderModeOf(policy: ThreadPolicy, kind: ThreadKind): ThreadResponderMode {
+  return policy.responderMode ?? (kind === 'group' ? 'mention' : 'auto');
 }

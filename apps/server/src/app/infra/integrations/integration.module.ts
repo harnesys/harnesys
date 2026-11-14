@@ -5,24 +5,14 @@ import { AddonDatabasePort } from '../../domain/integration/addon-database.port.
 import { IntegrationHostPort } from '../../domain/integration/integration-host.port.ts';
 import { EventsWatchModule } from '../events-watch/events-watch.module.ts';
 import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
-import { ScheduleModule } from '../schedules/schedule.module.ts';
 import { SecretModule } from '../secret/secret.module.ts';
 import { ThreadModule } from '../thread/thread.module.ts';
-import { WebhookModule } from '../webhooks/webhook.module.ts';
 import { AddonDatabaseAdapter } from './addon-database.adapter.ts';
 import { AutomationReadModelAdapter } from './automation-read-model.adapter.ts';
 import { IntegrationHost } from './integration-host.ts';
 
 @Module({
-  imports: [
-    MachineHomeModule,
-    SecretModule,
-    ScheduleModule,
-    WebhookModule,
-    ThreadModule,
-    EventsWatchModule,
-    ThreadUseCaseModule,
-  ],
+  imports: [MachineHomeModule, SecretModule, ThreadModule, EventsWatchModule, ThreadUseCaseModule],
   providers: [
     { provide: AddonDatabasePort, useClass: AddonDatabaseAdapter },
     { provide: IntegrationHostPort, useClass: IntegrationHost },

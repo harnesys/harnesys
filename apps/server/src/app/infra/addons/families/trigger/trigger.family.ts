@@ -8,6 +8,7 @@ import type { Disposable, OwnerKey } from '../../../../domain/addons/owner.ts';
 import { ownerKeyId } from '../../../../domain/addons/owner.ts';
 import type { AddonCallOptions } from '../../../../domain/addons/ports/addon-call.port.ts';
 import { AddonCallPort } from '../../../../domain/addons/ports/addon-call.port.ts';
+import { AddonPackageCatalogPort } from '../../../../domain/addons/ports/addon-package-catalog.port.ts';
 import { BindingRepositoryPort } from '../../../../domain/addons/ports/binding-repository.port.ts';
 import { InstanceSupervisorPort } from '../../../../domain/addons/ports/instance-supervisor.port.ts';
 import { OrgAddonRepositoryPort } from '../../../../domain/addons/ports/org-addon-repository.port.ts';
@@ -51,13 +52,15 @@ export class AddonTriggerCatalogContributor extends AutomationCatalogContributor
         continue;
       }
       const connected = this.connectionConnected(entry.owner, entry.descriptor);
+      const pkg = this.catalog.find(entry.owner.addonId);
       kinds.push({
         kind: globalTriggerKind(entry.owner.addonId, entry.descriptor.kind),
         integrationId: entry.owner.addonId,
         source: 'addon',
         label: l10nText(entry.descriptor.title),
         description: l10nText(entry.descriptor.description),
-        icon: 'zap',
+        icon: entry.descriptor.icon ?? pkg?.icon ?? 'zap',
+        color: entry.descriptor.color ?? pkg?.color ?? '',
         requiresConnection: entry.descriptor.connection !== undefined,
         connected,
       });
@@ -127,6 +130,7 @@ export class AddonTriggerCatalogContributor extends AutomationCatalogContributor
     private readonly instances: TriggerInstanceRepositoryPort,
     private readonly bindings: BindingRepositoryPort,
     private readonly orgAddons: OrgAddonRepositoryPort,
+    private readonly catalog: AddonPackageCatalogPort,
   ) {
     super();
   }

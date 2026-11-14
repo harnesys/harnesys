@@ -14,12 +14,6 @@ function packDependencySatisfied(packName: string, deps: WireOrgPackFilter): boo
   switch (packName) {
     case 'threads':
       return deps.threads !== undefined;
-    case 'scheduler':
-      return (
-        deps.threads !== undefined && deps.schedules !== undefined && deps.orgSettings !== undefined
-      );
-    case 'webhook':
-      return deps.threads !== undefined && deps.webhooks !== undefined;
     case 'issues':
       return deps.issues !== undefined || deps.issueTracker !== undefined;
     case 'manager':

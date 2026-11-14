@@ -251,14 +251,6 @@ export {
   runsTable,
 } from './runs.ts';
 export {
-  type ScheduleFireInsert,
-  type ScheduleFireRow,
-  type ScheduleInsert,
-  type ScheduleRow,
-  scheduleFiresTable,
-  schedulesTable,
-} from './schedules.ts';
-export {
   type SourceOperationGrantInsert,
   type SourceOperationGrantRow,
   sourceOperationGrantsTable,
@@ -295,8 +287,3 @@ export {
   type OrgTicketKeyRow,
   orgTicketKeysTable,
 } from './ticket-keys.ts';
-export {
-  type WebhookInsert,
-  type WebhookRow,
-  webhooksTable,
-} from './webhooks.ts';

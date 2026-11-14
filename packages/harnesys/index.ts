@@ -435,8 +435,6 @@ export type { SemanticMemoryPorts } from './src/packs/memory/semantic.ts';
 export { semanticMemoryCapability } from './src/packs/memory/semantic.ts';
 export type { PlanCapabilityPorts } from './src/packs/plan/index.ts';
 export { planCapability } from './src/packs/plan/index.ts';
-export type { SchedulerCapabilityPorts } from './src/packs/scheduler/index.ts';
-export { schedulerCapability } from './src/packs/scheduler/index.ts';
 export {
   firstMatchingCommandPattern,
   matchProgram,
@@ -511,8 +509,6 @@ export {
   writeAllowlist,
 } from './src/packs/web/index.ts';
 export type { WebSearchPackSpec } from './src/packs/web/search.ts';
-export type { WebhookCapabilityPorts } from './src/packs/webhook/index.ts';
-export { webhookCapability } from './src/packs/webhook/index.ts';
 export type {
   AgentCatalogCreated,
   AgentCatalogCreateInput,
@@ -759,17 +755,6 @@ export type {
   RuntimePromptWorktree,
 } from './src/ports/runtime-prompt.ts';
 export type { CommitMeta, RuntimeState } from './src/ports/runtime-state.ts';
-export type {
-  ScheduleCreatedRecord,
-  ScheduleCreatedThread,
-  ScheduleCreateInput,
-  SchedulePeekFire,
-  SchedulePeekRecord,
-  ScheduleRecord,
-  SchedulerPort,
-  ScheduleStatus,
-  ScheduleUpdateInput,
-} from './src/ports/scheduler.ts';
 export type { SecretResolver, SecretResolveScope } from './src/ports/secret-resolver.ts';
 export type {
   AskBudget,
@@ -821,13 +806,3 @@ export type {
   ToolExposure,
 } from './src/ports/tools.ts';
 export { tool } from './src/ports/tools.ts';
-export type {
-  WebhookCreatedRecord,
-  WebhookCreatedThread,
-  WebhookCreateInput,
-  WebhookPort,
-  WebhookRecord,
-  WebhookStatus,
-  WebhookThreadActiveRun,
-  WebhookUpdateInput,
-} from './src/ports/webhook.ts';

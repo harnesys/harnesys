@@ -18,16 +18,13 @@ import {
 } from '../../domain/integration/integration-host.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { OrgMachineStore } from '../../domain/machine/org-machine-store.port.ts';
-import { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repository.port.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
-import { WebhookRepositoryPort } from '../../domain/webhook/webhook-repository.port.ts';
 import { createAddonSecrets } from './addon-secrets.ts';
 import { AddonWorkersRunner } from './addon-workers.ts';
 import {
   AutomationSnapshots,
-  CORE_AUTOMATION_KINDS,
   mergeAutomationItems,
   toAutomationKindContributions,
 } from './automation-items.ts';
@@ -63,8 +60,6 @@ export class IntegrationHost
     private readonly machineConfig: MachineConfigPort,
     private readonly databases: AddonDatabasePort,
     private readonly secrets: SecretStorePort,
-    private readonly schedules: ScheduleRepositoryPort,
-    private readonly webhooks: WebhookRepositoryPort,
     private readonly threads: ThreadRepositoryPort,
     private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly sendThreadRun: SendThreadRunUseCase,
@@ -112,8 +107,6 @@ export class IntegrationHost
   override automationItems(orgId: string): AutomationItem[] {
     return mergeAutomationItems({
       orgId,
-      schedules: this.schedules.listByOrg(orgId),
-      webhooks: this.webhooks.listByOrg(orgId),
       addons: this.snapshots.forOrg(orgId).map((source) => ({
         integrationId: source.integrationId,
         connection: this.connectionOf(orgId, source.integrationId),
@@ -123,7 +116,7 @@ export class IntegrationHost
   }
 
   override automationKinds(orgId: string): AutomationKind[] {
-    const kinds = [...CORE_AUTOMATION_KINDS];
+    const kinds: AutomationKind[] = [];
     for (const definition of INSTALLED_INTEGRATIONS) {
       for (const kind of toAutomationKindContributions(definition)) {
         const connection = this.connectionOf(orgId, definition.id);

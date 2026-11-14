@@ -5,14 +5,6 @@ import { TeamValidationException } from '../../domain/teams/team.error.ts';
 import { CreateAgentUseCase } from '../agents/create-agent.use-case.ts';
 import { CreateIssueBoardUseCase } from '../issues/create-issue-board.use-case.ts';
 import { SaveBoardRuleUseCase } from '../issues/save-board-rule.use-case.ts';
-import { CreateScheduleUseCase } from '../schedules/create-schedule.use-case.ts';
-import {
-  FakeDeskEvents,
-  FakeOrgSettings,
-  FakeThreadAgents,
-  FakeTriggerInstances,
-  FakeWebhooks,
-} from '../schedules/schedule.use-case.fakes.ts';
 import {
   agentDetail,
   CODER_BODY,
@@ -33,8 +25,6 @@ import {
   FakeBoards,
   FakeEvents,
   FakeLabels,
-  FakeSchedules,
-  FakeThreads,
 } from './create-team-from-preset.use-case.work-fakes.ts';
 
 const ORG_ID = crypto.randomUUID();
@@ -43,14 +33,12 @@ const BODY = {
   presetId: 'harnesys/dev-team',
   name: 'Alpha Team',
   models: { lead: 'model-a', coder: 'model-b', reviewer: 'model-a' },
-  digestCron: '0 9 * * *',
 };
 
 interface Harness {
   useCase: CreateTeamFromPresetUseCase;
   agents: FakeAgents;
   boards: FakeBoards;
-  schedules: FakeSchedules;
   catalog: FakePresetCatalog;
 }
 
@@ -73,9 +61,7 @@ function buildHarness(options?: {
   const models = new FakeModels(options?.models ?? ['model-a', 'model-b']);
   const boards = new FakeBoards();
   boards.failInsert = options?.failBoardInsert ?? false;
-  const schedules = new FakeSchedules();
   const catalog = options?.catalog ?? defaultCatalog();
-  const orgSettings = new FakeOrgSettings();
   const useCase = new CreateTeamFromPresetUseCase(
     catalog,
     agents,
@@ -84,19 +70,8 @@ function buildHarness(options?: {
     new CreateAgentUseCase(agents, new FakeModePresets(), profiles),
     new CreateIssueBoardUseCase(boards, new FakeEvents()),
     new SaveBoardRuleUseCase(boards, new FakeLabels(), agents, profiles, new FakeEvents()),
-    new CreateScheduleUseCase(
-      schedules,
-      new FakeThreads(),
-      new FakeThreadAgents(),
-      new FakeWebhooks(),
-      new FakeTriggerInstances(),
-      agents,
-      orgSettings,
-      new FakeDeskEvents(),
-    ),
-    orgSettings,
   );
-  return { useCase, agents, boards, schedules, catalog };
+  return { useCase, agents, boards, catalog };
 }
 
 function withTeamBody(catalog: FakePresetCatalog, body: typeof TEAM_BODY): void {
@@ -104,7 +79,7 @@ function withTeamBody(catalog: FakePresetCatalog, body: typeof TEAM_BODY): void 
 }
 
 describe('CreateTeamFromPresetUseCase', () => {
-  test('creates agents, board with rules and digest schedule', () => {
+  test('creates agents and board with rules', () => {
     const h = buildHarness();
     const response = h.useCase.execute({ orgId: ORG_ID, body: { ...BODY } });
     expect(response.agents).toHaveLength(3);
@@ -138,25 +113,6 @@ describe('CreateTeamFromPresetUseCase', () => {
       actions: [{ type: 'assign_agent', agentId: reviewer.id }],
       position: 1,
     });
-    const schedule = [...h.schedules.items.values()][0];
-    if (!schedule) {
-      throw new Error('schedule not created');
-    }
-    expect(schedule.targetAgentId).toBe(lead.id);
-    expect(schedule.cron).toBe('0 9 * * *');
-    expect(schedule.detail).toBe(TEAM_BODY.digest.detail);
-    expect(schedule.missPolicy).toBe('catch-up');
-    expect(response.scheduleId).toBe(schedule.id);
-  });
-
-  test('skips schedule without digestCron', () => {
-    const h = buildHarness();
-    const response = h.useCase.execute({
-      orgId: ORG_ID,
-      body: { ...BODY, digestCron: undefined },
-    });
-    expect(response.scheduleId).toBeNull();
-    expect(h.schedules.items.size).toBe(0);
   });
 
   test('rejects unknown model without creating anything', () => {
@@ -165,7 +121,6 @@ describe('CreateTeamFromPresetUseCase', () => {
     expect(() => h.useCase.execute({ orgId: ORG_ID, body })).toThrow(TeamValidationException);
     expect(h.agents.items.size).toBe(0);
     expect(h.boards.items.size).toBe(0);
-    expect(h.schedules.items.size).toBe(0);
   });
 
   test('rejects stub model', () => {
@@ -201,16 +156,6 @@ describe('CreateTeamFromPresetUseCase', () => {
     expect(h.agents.items.size).toBe(0);
     expect(h.boards.items.size).toBe(0);
     expect(h.boards.rules.size).toBe(0);
-  });
-
-  test('rejects invalid digest cron before creating anything', () => {
-    const h = buildHarness();
-    expect(() =>
-      h.useCase.execute({ orgId: ORG_ID, body: { ...BODY, digestCron: 'not-a-cron' } }),
-    ).toThrow(TeamValidationException);
-    expect(h.agents.items.size).toBe(0);
-    expect(h.boards.items.size).toBe(0);
-    expect(h.schedules.items.size).toBe(0);
   });
 
   test('re-creating the same preset does not conflict on names', () => {

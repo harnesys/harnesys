@@ -60,6 +60,7 @@ export interface FakeHost {
   dispatchedRuns: Array<{ threadId?: string; agentId?: string; input: string }>;
   cancelledRuns: Array<{ threadId: string; runId: string }>;
   createdThreads: string[];
+  patchedThreads: Array<{ threadId: string; responderMode?: 'auto' | 'mention' }>;
   accountReports: Array<{ connection: string; accountId?: string; code: string }>;
   workerReports: Array<{ workerId: string; state: string; code?: string }>;
   inboundMessages: Array<{ channel: string; from?: string; text: string; payload?: unknown }>;
@@ -115,6 +116,7 @@ export function createFakeHost(options: FakeHostOptions): FakeHost {
     dispatchedRuns: [] as Array<{ threadId?: string; agentId?: string; input: string }>,
     cancelledRuns: [] as Array<{ threadId: string; runId: string }>,
     createdThreads: [] as string[],
+    patchedThreads: [],
     accountReports: [] as Array<{ connection: string; accountId?: string; code: string }>,
     workerReports: [] as Array<{ workerId: string; state: string; code?: string }>,
     inboundMessages: [] as Array<{
@@ -159,6 +161,7 @@ export function createFakeHost(options: FakeHostOptions): FakeHost {
     dispatchedRuns: sinks.dispatchedRuns,
     cancelledRuns: sinks.cancelledRuns,
     createdThreads: sinks.createdThreads,
+    patchedThreads: sinks.patchedThreads,
     accountReports: sinks.accountReports,
     workerReports: sinks.workerReports,
     inboundMessages: sinks.inboundMessages,

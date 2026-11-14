@@ -11,6 +11,7 @@ export interface FakeServiceSinks {
   dispatchedRuns: Array<{ threadId?: string; agentId?: string; input: string }>;
   cancelledRuns: Array<{ threadId: string; runId: string }>;
   createdThreads: string[];
+  patchedThreads: Array<{ threadId: string; responderMode?: 'auto' | 'mention' }>;
   accountReports: Array<{ connection: string; accountId?: string; code: string }>;
   fileWrites: Array<{ path: string; size: number }>;
   workerReports: Array<{ workerId: string; state: string; code?: string }>;
@@ -267,6 +268,13 @@ export function createFakeServices(context: FakeServiceContext): {
         sinks.createdThreads.push(threadId);
         return { threadId };
       }
+      case 'threads.get':
+        return { thread: undefined };
+      case 'threads.patch':
+        sinks.patchedThreads.push(params as never);
+        return {};
+      case 'agents.list':
+        return { agents: [] };
       case 'bridge.inbound':
         sinks.inboundMessages.push(params.message as never);
         return {};

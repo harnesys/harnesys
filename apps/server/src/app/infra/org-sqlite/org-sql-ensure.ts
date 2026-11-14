@@ -1,4 +1,5 @@
 import {
+  backfillThreadsResponderMode,
   CREATE_ADDONS_SQL,
   CREATE_AGENT_MEMORY_SQL,
   CREATE_AGENTS_SQL,
@@ -30,7 +31,6 @@ import {
   CREATE_RUN_EVENTS_SQL,
   CREATE_RUN_SNAPSHOTS_SQL,
   CREATE_RUNS_SQL,
-  CREATE_SCHEDULES_SQL,
   CREATE_SECRETS_SQL,
   CREATE_THREAD_AGENTS_SQL,
   CREATE_THREAD_MESSAGE_QUEUE_SQL,
@@ -39,7 +39,7 @@ import {
   CREATE_THREADS_ISSUE_IDX_SQL,
   CREATE_THREADS_SQL,
   CREATE_USAGE_SQL,
-  CREATE_WEBHOOKS_SQL,
+  DROP_LEGACY_TRIGGERS_SQL,
   ensureKnowledgeFts,
   ensureSourcesSchema,
   migrateAgentsExecutionProfileColumn,
@@ -95,12 +95,9 @@ import {
   migrateIssuesBranchColumns,
   migrateModePresetToolColumns,
   migrateRunsAttributionColumns,
-  migrateSchedulesHistoryToThreads,
   migrateThreadMessageQueueModeColumn,
   migrateThreadsBindingColumns,
   migrateThreadsPolicyContextWindow,
-  migrateTriggerOwnerColumns,
-  migrateWebhooksModeColumn,
 } from './org-sql-migrations.ts';
 import { CREATE_PERMISSION_RULES_SQL, migratePermissionRules } from './org-sql-permission-rules.ts';
 
@@ -216,6 +213,7 @@ export function ensureOrgSchema(
   exec(CREATE_THREAD_AGENTS_SQL);
   exec(CREATE_THREAD_PARTICIPANTS_SQL);
   exec(CREATE_THREADS_ISSUE_IDX_SQL);
+  backfillThreadsResponderMode(exec);
   exec(CREATE_ISSUE_BOARDS_SQL);
   exec(CREATE_BOARD_STATUSES_SQL);
   exec(CREATE_BOARD_RULES_SQL);
@@ -248,17 +246,13 @@ export function ensureOrgSchema(
     migrateApprovalsTable(exec, all);
     migrateApprovalsResumeStateColumn(exec, all);
   }
+  exec(DROP_LEGACY_TRIGGERS_SQL);
   exec(CREATE_PERMISSION_RULES_SQL);
   if (all) {
     migratePermissionRules(exec, all);
   }
-  exec(CREATE_SCHEDULES_SQL);
-  exec(CREATE_WEBHOOKS_SQL);
   if (all) {
-    migrateTriggerOwnerColumns(exec, all);
     migrateThreadsPolicyContextWindow(exec, all);
-    migrateSchedulesHistoryToThreads(exec, all);
-    migrateWebhooksModeColumn(exec, all);
     migrateThreadMessageQueueModeColumn(exec, all);
   }
   exec(CREATE_CONNECTORS_SQL);

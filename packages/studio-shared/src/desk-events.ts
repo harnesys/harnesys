@@ -1,7 +1,6 @@
 import type { AgentPublic } from '@harnesys/contracts';
 import type { IssueBoardRecord, IssueLabelRecord, IssueRecord } from './issue.ts';
 import type { ThreadPlanRecord } from './plan-types.ts';
-import type { ScheduleRecord, WebhookRecord } from './schedule.ts';
 import type { ThreadRecord } from './thread.ts';
 
 export type AttachmentKind = 'image' | 'audio' | 'video' | 'file';
@@ -25,28 +24,12 @@ export type DeskEvent =
       thread: ThreadRecord;
     }
   | {
-      type: 'schedule';
-      schedule: ScheduleRecord;
-    }
-  | {
-      type: 'schedule-deleted';
-      id: string;
-    }
-  | {
       type: 'plan';
       plan: ThreadPlanRecord;
     }
   | {
       type: 'plan-deleted';
       threadId: string;
-    }
-  | {
-      type: 'webhook';
-      webhook: WebhookRecord;
-    }
-  | {
-      type: 'webhook-deleted';
-      id: string;
     }
   | {
       type: 'agent';

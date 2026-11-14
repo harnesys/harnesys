@@ -14,13 +14,11 @@ import {
   pinMemoryCapability,
   planCapability,
   registerPack,
-  schedulerCapability,
   semanticMemoryCapability,
   shellCapability,
   telegramCapability,
   threadsCapability,
   webCapability,
-  webhookCapability,
 } from 'harnesys';
 import { lspCapability } from 'harnesys/lsp';
 import { skillsCapability } from 'harnesys/skills';
@@ -54,8 +52,6 @@ export const CORE_PACKS: readonly CorePackEntry[] = [
   { name: 'mcp', register: () => stubRegistration(mcpCapability) },
   { name: 'plan', register: () => stubRegistration(planCapability) },
   { name: 'threads', register: () => stubRegistration(threadsCapability) },
-  { name: 'scheduler', register: () => stubRegistration(schedulerCapability) },
-  { name: 'webhook', register: () => stubRegistration(webhookCapability) },
   { name: 'issues', register: () => stubRegistration(issuesCapability) },
   { name: 'manager', register: () => stubRegistration(managerCapability) },
   { name: 'google', register: () => stubRegistration(googleCapability) },

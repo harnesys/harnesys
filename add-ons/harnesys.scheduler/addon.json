@@ -4,7 +4,10 @@
   "platform": 1,
   "title": "Scheduler",
   "description": "Cron schedules for agent threads. Every scheduler.cron trigger instance is bound to a thread and fires it when its cron expression is due, evaluated in the organization timezone. Missed runs follow the selected policy: catch up within an hour, skip, or skip and open an approval inbox item.",
-  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "runtime": {
+    "entry": "dist/index.js",
+    "profile": "trusted"
+  },
   "activation": "resident",
   "connections": [],
   "permissions": [
@@ -25,7 +28,10 @@
       "reason": "Open approval inbox items when a schedule misses its catch-up window"
     }
   ],
-  "data": { "migrations": "migrations", "quotaMb": 16 },
+  "data": {
+    "migrations": "migrations",
+    "quotaMb": 16
+  },
   "contributions": [
     {
       "id": "cron",
@@ -41,7 +47,9 @@
             "type": "text",
             "required": true,
             "default": "0 9 * * *",
-            "widget": { "kind": "cron" },
+            "widget": {
+              "kind": "cron"
+            },
             "help": "Evaluated in the organization timezone"
           },
           {
@@ -68,7 +76,9 @@
               }
             ]
           }
-        ]
+        ],
+        "icon": "calendar-clock",
+        "color": "#f59e0b"
       }
     },
     {
@@ -77,7 +87,9 @@
       "descriptor": {
         "id": "tick",
         "title": "Schedule planner",
-        "schedule": { "everySec": 60 },
+        "schedule": {
+          "everySec": 60
+        },
         "timeoutSec": 55,
         "catchUp": "none",
         "defaultEnabled": true
@@ -86,7 +98,12 @@
     {
       "id": "schedules",
       "family": "route",
-      "descriptor": { "id": "schedules", "method": "GET", "path": "/schedules", "role": "member" }
+      "descriptor": {
+        "id": "schedules",
+        "method": "GET",
+        "path": "/schedules",
+        "role": "member"
+      }
     },
     {
       "id": "pack",
@@ -101,7 +118,9 @@
             "description": "List this addon's cron schedules: name, cron expression, miss policy, status, next run, last fire, target thread and error.",
             "effect": "read",
             "idempotent": true,
-            "inputSchema": { "type": "object" }
+            "inputSchema": {
+              "type": "object"
+            }
           },
           {
             "name": "set",
@@ -114,12 +133,25 @@
                   "type": "string",
                   "description": "Schedule instance id or name to update; omit to create"
                 },
-                "cron": { "type": "string", "description": "Cron expression, required on create" },
-                "name": { "type": "string", "description": "Schedule name" },
-                "detail": { "type": "string", "description": "Task detail passed to the fire" },
+                "cron": {
+                  "type": "string",
+                  "description": "Cron expression, required on create"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Schedule name"
+                },
+                "detail": {
+                  "type": "string",
+                  "description": "Task detail passed to the fire"
+                },
                 "miss_policy": {
                   "type": "string",
-                  "enum": ["catch-up", "skip", "escalate"],
+                  "enum": [
+                    "catch-up",
+                    "skip",
+                    "escalate"
+                  ],
                   "description": "Missed-run policy, default catch-up"
                 },
                 "threadId": {
@@ -136,9 +168,14 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "schedule": { "type": "string", "description": "Schedule instance id or name" }
+                "schedule": {
+                  "type": "string",
+                  "description": "Schedule instance id or name"
+                }
               },
-              "required": ["schedule"]
+              "required": [
+                "schedule"
+              ]
             }
           },
           {
@@ -148,9 +185,14 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "schedule": { "type": "string", "description": "Schedule instance id or name" }
+                "schedule": {
+                  "type": "string",
+                  "description": "Schedule instance id or name"
+                }
               },
-              "required": ["schedule"]
+              "required": [
+                "schedule"
+              ]
             }
           }
         ]
@@ -163,22 +205,61 @@
         "id": "main",
         "title": "Scheduler",
         "sections": [
-          { "type": "status" },
-          { "type": "capabilities" },
-          { "type": "permissions" },
-          { "type": "automations", "triggers": ["scheduler.cron"] },
-          { "type": "jobs" },
+          {
+            "type": "status"
+          },
+          {
+            "type": "capabilities"
+          },
+          {
+            "type": "permissions"
+          },
+          {
+            "type": "automations",
+            "triggers": [
+              "scheduler.cron"
+            ]
+          },
+          {
+            "type": "jobs"
+          },
           {
             "type": "table",
             "title": "Schedules",
-            "source": { "route": "/schedules" },
+            "source": {
+              "route": "/schedules"
+            },
             "columns": [
-              { "key": "name", "label": "Name", "format": "text" },
-              { "key": "cron", "label": "Cron", "format": "text" },
-              { "key": "status", "label": "Status", "format": "badge" },
-              { "key": "nextRunAt", "label": "Next run", "format": "datetime" },
-              { "key": "lastFiredAt", "label": "Last fired", "format": "datetime" },
-              { "key": "threadId", "label": "Thread", "format": "text" }
+              {
+                "key": "name",
+                "label": "Name",
+                "format": "text"
+              },
+              {
+                "key": "cron",
+                "label": "Cron",
+                "format": "text"
+              },
+              {
+                "key": "status",
+                "label": "Status",
+                "format": "badge"
+              },
+              {
+                "key": "nextRunAt",
+                "label": "Next run",
+                "format": "datetime"
+              },
+              {
+                "key": "lastFiredAt",
+                "label": "Last fired",
+                "format": "datetime"
+              },
+              {
+                "key": "threadId",
+                "label": "Thread",
+                "format": "text"
+              }
             ]
           },
           {
@@ -188,5 +269,7 @@
         ]
       }
     }
-  ]
+  ],
+  "icon": "calendar-clock",
+  "color": "#f59e0b"
 }

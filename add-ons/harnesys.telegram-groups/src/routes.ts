@@ -72,19 +72,27 @@ const ConnectBodySchema = z.object({
   chat: z.string().min(1),
   topic: z.string().optional(),
   agentId: z.string().uuid(),
+  mode: z.enum(['auto', 'mention']).optional(),
   title: z.string().optional(),
 });
 
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
 /**
- * Binds a discovered group or forum topic to a fresh thread of the chosen
- * agent. Replaces the first-message auto-bind with an explicit admin decision.
+ * Binds a discovered group or forum topic to a fresh thread. The responder
+ * mode lives on the thread policy (one source of truth): 'auto' creates a
+ * chat thread whose pinned agent answers every message, 'mention' creates a
+ * group thread that mirrors everything and agents answer on @mentions.
  */
 export const connect: RouteHandler = async (params, ctx: AddonContext) => {
   const parsed = ConnectBodySchema.safeParse(asCall(params).request.body);
   if (!parsed.success) {
-    throw invalid('body must be { chat, topic?, agentId, title? }');
+    throw invalid('body must be { chat, topic?, agentId, mode?, title? }');
   }
   const body = parsed.data;
+  const mode = body.mode ?? 'auto';
   const target = resolveConnectTarget(body.topic);
   const chat = await requireChat(ctx, body.chat);
   let topicId: string | null = null;
@@ -104,24 +112,37 @@ export const connect: RouteHandler = async (params, ctx: AddonContext) => {
   }
   const channel = channelOfParts(chat.chatId, topicId ?? undefined);
   const threadTitle = (body.title ?? '').trim() || connectTitle(displayTitleOf(chat), topicTitle);
-  const thread = await ctx.threads.create({ agentId: body.agentId, title: threadTitle });
+  const thread = await ctx.threads.create({
+    agentId: body.agentId,
+    title: threadTitle,
+    kind: mode === 'mention' ? 'group' : 'chat',
+    responderMode: mode,
+  });
   await ctx.bindings.bind({ provider: 'telegram', channel, threadId: thread.threadId });
+  await ctx.db.run(
+    'insert into connections (channel, chat_id, topic_id, agent_id, thread_id, thread_title, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?) on conflict(channel) do update set agent_id = excluded.agent_id, thread_id = excluded.thread_id, thread_title = excluded.thread_title, updated_at = excluded.updated_at',
+    [channel, chat.chatId, topicId, body.agentId, thread.threadId, threadTitle, nowIso(), nowIso()],
+  );
   await ctx.db.run('update chats set status = ?, updated_at = ? where chat_id = ?', [
     'bound',
-    new Date().toISOString(),
+    nowIso(),
     chat.chatId,
   ]);
   await ctx.log.info('group connected', {
     chatId: chat.chatId,
     channel,
     threadId: thread.threadId,
+    mode,
   });
   const place =
     topicTitle === null ? displayTitleOf(chat) : `${displayTitleOf(chat)} · ${topicTitle}`;
   return {
     status: 200,
     body: {
-      toast: `Connected ${place}. Messages matching the routing policy reach the new thread.`,
+      toast:
+        mode === 'mention'
+          ? `Connected ${place}. Messages mirror into the thread; agents answer on @mentions.`
+          : `Connected ${place}. Every message reaches the thread agent.`,
       refresh: true,
     },
   };
@@ -148,4 +169,50 @@ export const rename: RouteHandler = async (params, ctx: AddonContext) => {
     status: 200,
     body: { toast: `Renamed ${chat.title} to ${parsed.data.title}.`, refresh: true },
   };
+};
+
+interface ConnectionRow {
+  channel: string;
+  chat_id: string;
+  topic_id: string | null;
+  agent_id: string;
+  thread_id: string;
+  thread_title: string;
+  updated_at: string;
+}
+
+function isConnectionRow(row: unknown): row is ConnectionRow {
+  return (
+    typeof row === 'object' &&
+    row !== null &&
+    typeof (row as ConnectionRow).channel === 'string' &&
+    typeof (row as ConnectionRow).chat_id === 'string' &&
+    typeof (row as ConnectionRow).agent_id === 'string' &&
+    typeof (row as ConnectionRow).thread_id === 'string' &&
+    typeof (row as ConnectionRow).thread_title === 'string' &&
+    typeof (row as ConnectionRow).updated_at === 'string'
+  );
+}
+
+/** Routing card: every connection with live agent name and thread responder mode. */
+export const bindings: RouteHandler = async (_params, ctx: AddonContext) => {
+  const all = await ctx.db.all('select * from connections order by updated_at desc');
+  const rows = all.filter(isConnectionRow);
+  const agents = await ctx.agents.list();
+  const agentNames = new Map(agents.map((agent) => [agent.id, agent.name]));
+  const rowsOut = await Promise.all(
+    rows.map(async (row) => {
+      const view = await ctx.threads.get({ threadId: row.thread_id });
+      return {
+        channel: row.channel,
+        target: row.topic_id === null ? row.chat_id : `${row.chat_id} · ${row.topic_id}`,
+        agent: agentNames.get(row.agent_id) ?? row.agent_id,
+        thread: view?.title ?? row.thread_title,
+        mode: view?.responderMode ?? 'auto',
+        threadId: row.thread_id,
+        updatedAt: row.updated_at,
+      };
+    }),
+  );
+  return { status: 200, body: { rows: rowsOut } };
 };

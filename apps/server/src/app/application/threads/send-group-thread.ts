@@ -5,7 +5,7 @@ import { AttachmentRepositoryPort } from '../../domain/thread/attachment-reposit
 import { resolveResponders } from '../../domain/thread/responder-policy.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
-import { allowsMentions } from '../../domain/thread/thread-policy.ts';
+import { allowsMentions, responderModeOf } from '../../domain/thread/thread-policy.ts';
 import { resolveAttachmentsOf } from './send-thread-attachments.ts';
 import { SendThreadMessageUseCase } from './send-thread-message.use-case.ts';
 import type { SendThreadRunRequest } from './send-thread-run.use-case.ts';
@@ -33,6 +33,7 @@ export async function sendGroupThread(
     members,
     autoReplyAgentId: thread.autoReplyAgentId,
     allowMentions: allowsMentions(thread.policy),
+    autoFallback: responderModeOf(thread.policy, thread.kind) === 'auto',
   });
   const attachments = resolveAttachmentsOf(
     deps.attachments,

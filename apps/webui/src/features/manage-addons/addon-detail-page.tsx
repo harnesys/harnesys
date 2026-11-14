@@ -208,7 +208,7 @@ function AddonHero({
   return (
     <Card className="gap-5 bg-popover p-5" data-testid="addon-detail-hero">
       <div className="flex items-start gap-4">
-        <AddonMark size="lg" />
+        <AddonMark size="lg" icon={detail.icon} color={detail.color} />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <h1 className="truncate font-heading font-medium text-xl">{detail.title}</h1>

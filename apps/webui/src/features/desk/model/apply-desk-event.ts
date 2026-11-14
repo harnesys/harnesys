@@ -42,14 +42,6 @@ export function applyDeskEvent(event: DeskEvent, nav?: DeskEventNavigation): voi
       usePlanStore.getState().removeForThread(event.threadId);
       return;
     }
-    case 'schedule-deleted':
-    case 'schedule':
-    case 'webhook-deleted':
-    case 'webhook': {
-      // Legacy scheduler/webhook events are ignored on the client: those
-      // surfaces live in the addon automations UI now.
-      return;
-    }
     case 'issue': {
       useIssueStore.getState().upsert(event.issue);
       return;

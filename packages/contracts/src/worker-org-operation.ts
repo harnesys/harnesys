@@ -11,8 +11,6 @@ import {
   UpdateIssueBodySchema,
   UpdateIssueStatusBodySchema,
 } from './issues.ts';
-import { CreateScheduleBodySchema, UpdateScheduleBodySchema } from './schedules.ts';
-import { CreateWebhookBodySchema, UpdateWebhookBodySchema } from './webhooks.ts';
 
 export const WorkerOrgOperationSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('issue.listBoards') }),
@@ -75,22 +73,6 @@ export const WorkerOrgOperationSchema = z.discriminatedUnion('kind', [
     boardId: z.string().uuid(),
     ruleId: z.string().uuid(),
   }),
-  z.object({ kind: z.literal('schedule.list') }),
-  z.object({ kind: z.literal('schedule.create'), body: CreateScheduleBodySchema }),
-  z.object({
-    kind: z.literal('schedule.update'),
-    scheduleId: z.string().uuid(),
-    body: UpdateScheduleBodySchema,
-  }),
-  z.object({ kind: z.literal('schedule.remove'), scheduleId: z.string().uuid() }),
-  z.object({ kind: z.literal('webhook.list') }),
-  z.object({ kind: z.literal('webhook.create'), body: CreateWebhookBodySchema }),
-  z.object({
-    kind: z.literal('webhook.update'),
-    webhookId: z.string().uuid(),
-    body: UpdateWebhookBodySchema,
-  }),
-  z.object({ kind: z.literal('webhook.remove'), webhookId: z.string().uuid() }),
 ]);
 export type WorkerOrgOperation = z.infer<typeof WorkerOrgOperationSchema>;
 

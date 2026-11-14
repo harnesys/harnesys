@@ -4,17 +4,28 @@
   "platform": 1,
   "title": "GitHub",
   "description": "GitHub repositories, issues, pull requests and CI workflow runs for every connected GitHub App installation, plus a github.repo-events trigger that polls repos for new issues, pull requests and workflow runs. Installation tokens are issued by the host and never enter the add-on process.",
-  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "runtime": {
+    "entry": "dist/index.js",
+    "profile": "trusted"
+  },
   "activation": "resident",
   "permissions": [
     {
       "id": "http.fetch",
-      "scope": { "hosts": ["api.github.com"] },
+      "scope": {
+        "hosts": [
+          "api.github.com"
+        ]
+      },
       "reason": "Call the GitHub REST API with the bound installation token"
     },
     {
       "id": "accounts.use",
-      "scope": { "connections": ["github"] },
+      "scope": {
+        "connections": [
+          "github"
+        ]
+      },
       "reason": "Use the GitHub installation bound to the github connection"
     },
     {
@@ -34,11 +45,16 @@
     {
       "id": "github",
       "label": "GitHub installation",
-      "accountKinds": ["github-installation"],
+      "accountKinds": [
+        "github-installation"
+      ],
       "cardinality": "many"
     }
   ],
-  "data": { "migrations": "migrations", "quotaMb": 32 },
+  "data": {
+    "migrations": "migrations",
+    "quotaMb": 32
+  },
   "contributions": [
     {
       "id": "config",
@@ -88,15 +104,27 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "repo": { "type": "string", "description": "owner/name" },
-                "path": { "type": "string", "description": "Repository-relative file path" },
-                "ref": { "type": "string", "description": "Branch, tag or commit; defaults to the default branch" },
+                "repo": {
+                  "type": "string",
+                  "description": "owner/name"
+                },
+                "path": {
+                  "type": "string",
+                  "description": "Repository-relative file path"
+                },
+                "ref": {
+                  "type": "string",
+                  "description": "Branch, tag or commit; defaults to the default branch"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound GitHub installation id; required only when several installations are connected"
                 }
               },
-              "required": ["repo", "path"]
+              "required": [
+                "repo",
+                "path"
+              ]
             }
           },
           {
@@ -107,15 +135,28 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "query": { "type": "string", "description": "GitHub code search query, e.g. \"TODO language:ts\"" },
-                "repo": { "type": "string", "description": "Restrict the search to owner/name" },
-                "limit": { "type": "integer", "minimum": 1, "maximum": 50, "description": "Maximum hits (default 20)" },
+                "query": {
+                  "type": "string",
+                  "description": "GitHub code search query, e.g. \"TODO language:ts\""
+                },
+                "repo": {
+                  "type": "string",
+                  "description": "Restrict the search to owner/name"
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 50,
+                  "description": "Maximum hits (default 20)"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound GitHub installation id; required only when several installations are connected"
                 }
               },
-              "required": ["query"]
+              "required": [
+                "query"
+              ]
             }
           },
           {
@@ -126,15 +167,33 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "repo": { "type": "string", "description": "owner/name" },
-                "state": { "type": "string", "enum": ["open", "closed", "all"], "description": "Issue state filter (default open)" },
-                "limit": { "type": "integer", "minimum": 1, "maximum": 50, "description": "Maximum issues (default 20)" },
+                "repo": {
+                  "type": "string",
+                  "description": "owner/name"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "open",
+                    "closed",
+                    "all"
+                  ],
+                  "description": "Issue state filter (default open)"
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 50,
+                  "description": "Maximum issues (default 20)"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound GitHub installation id; required only when several installations are connected"
                 }
               },
-              "required": ["repo"]
+              "required": [
+                "repo"
+              ]
             }
           },
           {
@@ -145,14 +204,23 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "repo": { "type": "string", "description": "owner/name" },
-                "number": { "type": "integer", "description": "Issue number" },
+                "repo": {
+                  "type": "string",
+                  "description": "owner/name"
+                },
+                "number": {
+                  "type": "integer",
+                  "description": "Issue number"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound GitHub installation id; required only when several installations are connected"
                 }
               },
-              "required": ["repo", "number"]
+              "required": [
+                "repo",
+                "number"
+              ]
             }
           },
           {
@@ -162,16 +230,34 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "repo": { "type": "string", "description": "owner/name" },
-                "title": { "type": "string", "description": "Issue title" },
-                "body": { "type": "string", "description": "Issue body in markdown" },
-                "labels": { "type": "array", "items": { "type": "string" }, "description": "Labels to attach" },
+                "repo": {
+                  "type": "string",
+                  "description": "owner/name"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Issue title"
+                },
+                "body": {
+                  "type": "string",
+                  "description": "Issue body in markdown"
+                },
+                "labels": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Labels to attach"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound GitHub installation id; required only when several installations are connected"
                 }
               },
-              "required": ["repo", "title"]
+              "required": [
+                "repo",
+                "title"
+              ]
             }
           },
           {
@@ -181,15 +267,28 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "repo": { "type": "string", "description": "owner/name" },
-                "number": { "type": "integer", "description": "Issue or pull request number" },
-                "body": { "type": "string", "description": "Comment body in markdown" },
+                "repo": {
+                  "type": "string",
+                  "description": "owner/name"
+                },
+                "number": {
+                  "type": "integer",
+                  "description": "Issue or pull request number"
+                },
+                "body": {
+                  "type": "string",
+                  "description": "Comment body in markdown"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound GitHub installation id; required only when several installations are connected"
                 }
               },
-              "required": ["repo", "number", "body"]
+              "required": [
+                "repo",
+                "number",
+                "body"
+              ]
             }
           },
           {
@@ -199,14 +298,23 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "repo": { "type": "string", "description": "owner/name" },
-                "number": { "type": "integer", "description": "Issue number" },
+                "repo": {
+                  "type": "string",
+                  "description": "owner/name"
+                },
+                "number": {
+                  "type": "integer",
+                  "description": "Issue number"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound GitHub installation id; required only when several installations are connected"
                 }
               },
-              "required": ["repo", "number"]
+              "required": [
+                "repo",
+                "number"
+              ]
             }
           },
           {
@@ -216,15 +324,31 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "repo": { "type": "string", "description": "owner/name" },
-                "number": { "type": "integer", "description": "Issue or pull request number" },
-                "labels": { "type": "array", "items": { "type": "string" }, "description": "Labels to add" },
+                "repo": {
+                  "type": "string",
+                  "description": "owner/name"
+                },
+                "number": {
+                  "type": "integer",
+                  "description": "Issue or pull request number"
+                },
+                "labels": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Labels to add"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound GitHub installation id; required only when several installations are connected"
                 }
               },
-              "required": ["repo", "number", "labels"]
+              "required": [
+                "repo",
+                "number",
+                "labels"
+              ]
             }
           },
           {
@@ -235,15 +359,33 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "repo": { "type": "string", "description": "owner/name" },
-                "state": { "type": "string", "enum": ["open", "closed", "all"], "description": "Pull request state filter (default open)" },
-                "limit": { "type": "integer", "minimum": 1, "maximum": 50, "description": "Maximum pull requests (default 20)" },
+                "repo": {
+                  "type": "string",
+                  "description": "owner/name"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "open",
+                    "closed",
+                    "all"
+                  ],
+                  "description": "Pull request state filter (default open)"
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 50,
+                  "description": "Maximum pull requests (default 20)"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound GitHub installation id; required only when several installations are connected"
                 }
               },
-              "required": ["repo"]
+              "required": [
+                "repo"
+              ]
             }
           },
           {
@@ -254,14 +396,23 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "repo": { "type": "string", "description": "owner/name" },
-                "number": { "type": "integer", "description": "Pull request number" },
+                "repo": {
+                  "type": "string",
+                  "description": "owner/name"
+                },
+                "number": {
+                  "type": "integer",
+                  "description": "Pull request number"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound GitHub installation id; required only when several installations are connected"
                 }
               },
-              "required": ["repo", "number"]
+              "required": [
+                "repo",
+                "number"
+              ]
             }
           },
           {
@@ -272,14 +423,23 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "repo": { "type": "string", "description": "owner/name" },
-                "number": { "type": "integer", "description": "Pull request number" },
+                "repo": {
+                  "type": "string",
+                  "description": "owner/name"
+                },
+                "number": {
+                  "type": "integer",
+                  "description": "Pull request number"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound GitHub installation id; required only when several installations are connected"
                 }
               },
-              "required": ["repo", "number"]
+              "required": [
+                "repo",
+                "number"
+              ]
             }
           },
           {
@@ -289,18 +449,40 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "repo": { "type": "string", "description": "owner/name" },
-                "head": { "type": "string", "description": "Branch to merge from" },
-                "base": { "type": "string", "description": "Branch to merge into; defaults to the default branch" },
-                "title": { "type": "string", "description": "Pull request title" },
-                "body": { "type": "string", "description": "Pull request body in markdown" },
-                "draft": { "type": "boolean", "description": "Open as a draft pull request" },
+                "repo": {
+                  "type": "string",
+                  "description": "owner/name"
+                },
+                "head": {
+                  "type": "string",
+                  "description": "Branch to merge from"
+                },
+                "base": {
+                  "type": "string",
+                  "description": "Branch to merge into; defaults to the default branch"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Pull request title"
+                },
+                "body": {
+                  "type": "string",
+                  "description": "Pull request body in markdown"
+                },
+                "draft": {
+                  "type": "boolean",
+                  "description": "Open as a draft pull request"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound GitHub installation id; required only when several installations are connected"
                 }
               },
-              "required": ["repo", "head", "title"]
+              "required": [
+                "repo",
+                "head",
+                "title"
+              ]
             }
           },
           {
@@ -310,17 +492,39 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "repo": { "type": "string", "description": "owner/name" },
-                "number": { "type": "integer", "description": "Pull request number" },
-                "title": { "type": "string", "description": "New title" },
-                "body": { "type": "string", "description": "New body in markdown" },
-                "state": { "type": "string", "enum": ["open", "closed"], "description": "New state" },
+                "repo": {
+                  "type": "string",
+                  "description": "owner/name"
+                },
+                "number": {
+                  "type": "integer",
+                  "description": "Pull request number"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "New title"
+                },
+                "body": {
+                  "type": "string",
+                  "description": "New body in markdown"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "open",
+                    "closed"
+                  ],
+                  "description": "New state"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound GitHub installation id; required only when several installations are connected"
                 }
               },
-              "required": ["repo", "number"]
+              "required": [
+                "repo",
+                "number"
+              ]
             }
           },
           {
@@ -330,15 +534,28 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "repo": { "type": "string", "description": "owner/name" },
-                "number": { "type": "integer", "description": "Pull request number" },
-                "body": { "type": "string", "description": "Comment body in markdown" },
+                "repo": {
+                  "type": "string",
+                  "description": "owner/name"
+                },
+                "number": {
+                  "type": "integer",
+                  "description": "Pull request number"
+                },
+                "body": {
+                  "type": "string",
+                  "description": "Comment body in markdown"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound GitHub installation id; required only when several installations are connected"
                 }
               },
-              "required": ["repo", "number", "body"]
+              "required": [
+                "repo",
+                "number",
+                "body"
+              ]
             }
           },
           {
@@ -348,16 +565,37 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "repo": { "type": "string", "description": "owner/name" },
-                "number": { "type": "integer", "description": "Pull request number" },
-                "event": { "type": "string", "enum": ["APPROVE", "REQUEST_CHANGES", "COMMENT"], "description": "Review verdict" },
-                "body": { "type": "string", "description": "Review body in markdown" },
+                "repo": {
+                  "type": "string",
+                  "description": "owner/name"
+                },
+                "number": {
+                  "type": "integer",
+                  "description": "Pull request number"
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "APPROVE",
+                    "REQUEST_CHANGES",
+                    "COMMENT"
+                  ],
+                  "description": "Review verdict"
+                },
+                "body": {
+                  "type": "string",
+                  "description": "Review body in markdown"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound GitHub installation id; required only when several installations are connected"
                 }
               },
-              "required": ["repo", "number", "event"]
+              "required": [
+                "repo",
+                "number",
+                "event"
+              ]
             }
           },
           {
@@ -367,15 +605,32 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "repo": { "type": "string", "description": "owner/name" },
-                "number": { "type": "integer", "description": "Pull request number" },
-                "mergeMethod": { "type": "string", "enum": ["merge", "squash", "rebase"], "description": "Merge strategy (default merge)" },
+                "repo": {
+                  "type": "string",
+                  "description": "owner/name"
+                },
+                "number": {
+                  "type": "integer",
+                  "description": "Pull request number"
+                },
+                "mergeMethod": {
+                  "type": "string",
+                  "enum": [
+                    "merge",
+                    "squash",
+                    "rebase"
+                  ],
+                  "description": "Merge strategy (default merge)"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound GitHub installation id; required only when several installations are connected"
                 }
               },
-              "required": ["repo", "number"]
+              "required": [
+                "repo",
+                "number"
+              ]
             }
           },
           {
@@ -386,15 +641,28 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "repo": { "type": "string", "description": "owner/name" },
-                "branch": { "type": "string", "description": "Only runs for this branch" },
-                "limit": { "type": "integer", "minimum": 1, "maximum": 50, "description": "Maximum runs (default 10)" },
+                "repo": {
+                  "type": "string",
+                  "description": "owner/name"
+                },
+                "branch": {
+                  "type": "string",
+                  "description": "Only runs for this branch"
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 50,
+                  "description": "Maximum runs (default 10)"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound GitHub installation id; required only when several installations are connected"
                 }
               },
-              "required": ["repo"]
+              "required": [
+                "repo"
+              ]
             }
           },
           {
@@ -405,14 +673,23 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "repo": { "type": "string", "description": "owner/name" },
-                "runId": { "type": "integer", "description": "Workflow run id" },
+                "repo": {
+                  "type": "string",
+                  "description": "owner/name"
+                },
+                "runId": {
+                  "type": "integer",
+                  "description": "Workflow run id"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound GitHub installation id; required only when several installations are connected"
                 }
               },
-              "required": ["repo", "runId"]
+              "required": [
+                "repo",
+                "runId"
+              ]
             }
           },
           {
@@ -423,14 +700,23 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "repo": { "type": "string", "description": "owner/name" },
-                "runId": { "type": "integer", "description": "Workflow run id" },
+                "repo": {
+                  "type": "string",
+                  "description": "owner/name"
+                },
+                "runId": {
+                  "type": "integer",
+                  "description": "Workflow run id"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound GitHub installation id; required only when several installations are connected"
                 }
               },
-              "required": ["repo", "runId"]
+              "required": [
+                "repo",
+                "runId"
+              ]
             }
           },
           {
@@ -440,14 +726,23 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "repo": { "type": "string", "description": "owner/name" },
-                "runId": { "type": "integer", "description": "Workflow run id" },
+                "repo": {
+                  "type": "string",
+                  "description": "owner/name"
+                },
+                "runId": {
+                  "type": "integer",
+                  "description": "Workflow run id"
+                },
                 "accountId": {
                   "type": "string",
                   "description": "Bound GitHub installation id; required only when several installations are connected"
                 }
               },
-              "required": ["repo", "runId"]
+              "required": [
+                "repo",
+                "runId"
+              ]
             }
           }
         ]
@@ -468,8 +763,14 @@
             "type": "text",
             "required": true,
             "placeholder": "owner/name",
-            "optionsFrom": { "kind": "addonRoute", "route": "repos", "valueKey": "fullName" },
-            "widget": { "kind": "combobox" },
+            "optionsFrom": {
+              "kind": "addonRoute",
+              "route": "repos",
+              "valueKey": "fullName"
+            },
+            "widget": {
+              "kind": "combobox"
+            },
             "pattern": {
               "regex": "^[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*$",
               "hint": "Repository as owner/name"
@@ -483,11 +784,22 @@
             "default": "issues,pull_requests,workflow_runs",
             "multi": true,
             "options": [
-              { "value": "issues", "label": "Issues" },
-              { "value": "pull_requests", "label": "Pull requests" },
-              { "value": "workflow_runs", "label": "Workflow runs" }
+              {
+                "value": "issues",
+                "label": "Issues"
+              },
+              {
+                "value": "pull_requests",
+                "label": "Pull requests"
+              },
+              {
+                "value": "workflow_runs",
+                "label": "Workflow runs"
+              }
             ],
-            "widget": { "kind": "chips" },
+            "widget": {
+              "kind": "chips"
+            },
             "help": "Which events to watch; selecting none means all"
           },
           {
@@ -502,7 +814,9 @@
             "label": "Labels",
             "type": "text",
             "required": false,
-            "widget": { "kind": "tags" },
+            "widget": {
+              "kind": "tags"
+            },
             "help": "Only issues and pull requests carrying at least one of these labels"
           },
           {
@@ -510,12 +824,21 @@
             "label": "Installation account",
             "type": "text",
             "required": false,
-            "optionsFrom": { "kind": "connections" },
-            "widget": { "kind": "combobox" },
+            "optionsFrom": {
+              "kind": "connections"
+            },
+            "widget": {
+              "kind": "combobox"
+            },
             "help": "Only needed when several GitHub installations are connected: the bound account to poll with"
           }
         ],
-        "limits": { "perDay": 500, "throttleSec": 5 }
+        "limits": {
+          "perDay": 500,
+          "throttleSec": 5
+        },
+        "icon": "github",
+        "color": "#a78bfa"
       }
     },
     {
@@ -535,21 +858,57 @@
         "id": "main",
         "title": "GitHub",
         "sections": [
-          { "type": "status" },
-          { "type": "capabilities" },
-          { "type": "permissions" },
-          { "type": "connections", "connections": ["github"] },
-          { "type": "config" },
-          { "type": "automations", "triggers": ["github.repo-events"] },
+          {
+            "type": "status"
+          },
+          {
+            "type": "capabilities"
+          },
+          {
+            "type": "permissions"
+          },
+          {
+            "type": "connections",
+            "connections": [
+              "github"
+            ]
+          },
+          {
+            "type": "config"
+          },
+          {
+            "type": "automations",
+            "triggers": [
+              "github.repo-events"
+            ]
+          },
           {
             "type": "table",
             "title": "Repositories",
-            "source": { "route": "/repos" },
+            "source": {
+              "route": "/repos"
+            },
             "columns": [
-              { "key": "fullName", "label": "Repository", "format": "text" },
-              { "key": "private", "label": "Private", "format": "badge" },
-              { "key": "defaultBranch", "label": "Default branch", "format": "text" },
-              { "key": "updatedAt", "label": "Updated", "format": "datetime" }
+              {
+                "key": "fullName",
+                "label": "Repository",
+                "format": "text"
+              },
+              {
+                "key": "private",
+                "label": "Private",
+                "format": "badge"
+              },
+              {
+                "key": "defaultBranch",
+                "label": "Default branch",
+                "format": "text"
+              },
+              {
+                "key": "updatedAt",
+                "label": "Updated",
+                "format": "datetime"
+              }
             ]
           },
           {
@@ -562,7 +921,14 @@
     {
       "id": "repos",
       "family": "route",
-      "descriptor": { "id": "repos", "method": "GET", "path": "/repos", "role": "member" }
+      "descriptor": {
+        "id": "repos",
+        "method": "GET",
+        "path": "/repos",
+        "role": "member"
+      }
     }
-  ]
+  ],
+  "icon": "github",
+  "color": "#a78bfa"
 }

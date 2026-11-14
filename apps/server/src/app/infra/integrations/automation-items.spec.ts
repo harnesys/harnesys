@@ -1,52 +1,10 @@
 import { expect, test } from 'bun:test';
 import type { AutomationUpsertInput } from 'harnesys/integration';
-import type { ScheduleRecord } from '../../domain/schedule/schedule.ts';
-import type { WebhookRecord } from '../../domain/webhook/webhook.ts';
 import {
   AutomationSnapshots,
   mergeAutomationItems,
   toAutomationKindContributions,
 } from './automation-items.ts';
-
-function scheduleFixture(overrides: Partial<ScheduleRecord> = {}): ScheduleRecord {
-  return {
-    id: 'sch-1',
-    orgId: 'org-1',
-    name: 'Morning digest',
-    status: 'active',
-    targetAgentId: 'agent-1',
-    detail: 'Summarize overnight',
-    cron: '0 9 * * *',
-    modeId: 'default',
-    missPolicy: 'catch-up',
-    threadId: 'thread-1',
-    nextRunAt: '2026-11-07T09:00:00.000Z',
-    lastFiredAt: null,
-    createdByUserId: null,
-    createdAt: '2026-11-01T00:00:00.000Z',
-    updatedAt: '2026-11-05T00:00:00.000Z',
-    ...overrides,
-  };
-}
-
-function webhookFixture(overrides: Partial<WebhookRecord> = {}): WebhookRecord {
-  return {
-    id: 'wh-1',
-    orgId: 'org-1',
-    name: 'Deploy hook',
-    status: 'paused',
-    targetAgentId: 'agent-1',
-    detail: '',
-    mode: null,
-    endpoint: '/api/orgs/org-1/hooks/wh-1',
-    threadId: 'thread-2',
-    lastFiredAt: null,
-    createdByUserId: null,
-    createdAt: '2026-11-01T00:00:00.000Z',
-    updatedAt: '2026-11-04T00:00:00.000Z',
-    ...overrides,
-  };
-}
 
 const feedItem: AutomationUpsertInput = {
   id: 'feed-1',
@@ -59,35 +17,8 @@ const feedItem: AutomationUpsertInput = {
 };
 
 test('core schedules and webhooks map to automation items', () => {
-  const items = mergeAutomationItems({
-    orgId: 'org-1',
-    schedules: [scheduleFixture()],
-    webhooks: [webhookFixture()],
-    addons: [],
-  });
-  expect(items).toHaveLength(2);
-  const schedule = items.find((item) => item.kind === 'schedule');
-  expect(schedule?.integrationId).toBe('core');
-  expect(schedule?.label).toBe('Morning digest');
-  expect(schedule?.status).toBe('active');
-  expect(schedule?.connection).toEqual({ required: false, connected: true });
-  expect(schedule?.meta).toEqual({ cron: '0 9 * * *', nextRunAt: '2026-11-07T09:00:00.000Z' });
-  expect(schedule?.availableAt).toBe('2026-11-07T09:00:00.000Z');
-  const webhook = items.find((item) => item.kind === 'webhook');
-  expect(webhook?.status).toBe('paused');
-  expect(webhook?.meta).toEqual({ endpoint: '/api/orgs/org-1/hooks/wh-1' });
-  expect(webhook?.availableAt).toBeNull();
-});
-
-test('schedule item drops null nextRunAt from meta', () => {
-  const items = mergeAutomationItems({
-    orgId: 'org-1',
-    schedules: [scheduleFixture({ nextRunAt: null })],
-    webhooks: [],
-    addons: [],
-  });
-  expect(items[0]?.meta).toEqual({ cron: '0 9 * * *' });
-  expect(items[0]?.availableAt).toBeNull();
+  const items = mergeAutomationItems({ orgId: 'org-1', addons: [] });
+  expect(items).toHaveLength(0);
 });
 
 test('addon snapshots replace on publish and feed the merged read-model', () => {
@@ -104,8 +35,6 @@ test('addon snapshots replace on publish and feed the merged read-model', () => 
   expect(entries?.items.map((item) => item.id)).toEqual(['feed-2', 'feed-3']);
   const items = mergeAutomationItems({
     orgId: 'org-1',
-    schedules: [],
-    webhooks: [],
     addons: [
       {
         integrationId: 'telegram',
@@ -138,6 +67,7 @@ test('integration kind contributions default from connection presence', () => {
       label: 'Feed',
       description: '',
       icon: 'zap',
+      color: '',
       requiresConnection: true,
       connected: true,
     },

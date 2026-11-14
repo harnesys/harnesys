@@ -225,11 +225,6 @@ export const SANDBOX_DENIED_STATE_TOOLS: readonly string[] = [
   'plan_item_update',
   'pin_set',
   'pin_remove',
-  'schedule_set',
-  'schedule_pause',
-  'schedule_delete',
-  'webhook_set',
-  'webhook_delete',
 ];
 export const CHAT_GENERATION_PARAMETERS = [
   'temperature',

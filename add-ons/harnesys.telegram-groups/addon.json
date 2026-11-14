@@ -1,20 +1,31 @@
 {
   "id": "harnesys.telegram-groups",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "platform": 1,
   "title": "Telegram groups",
   "description": "Group and community bot: the bot is added to group chats and forum topics and routes matching messages to Harnesys threads (routing policy: mention, reply-to-bot, always, or commands only). Groups register themselves with /start or /join (admin or privacy-mode verification via getChatMember), an admin binds them in this settings page, and each group or topic gets its own thread. This add-on binds its own telegram-bot account with its own BotFather token; never share one bot token between this add-on and the Telegram bot add-on (getUpdates returns 409 for two pollers on one token).",
-  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "runtime": {
+    "entry": "dist/index.js",
+    "profile": "trusted"
+  },
   "activation": "resident",
   "permissions": [
     {
       "id": "http.fetch",
-      "scope": { "hosts": ["api.telegram.org"] },
+      "scope": {
+        "hosts": [
+          "api.telegram.org"
+        ]
+      },
       "reason": "Call the Telegram Bot API"
     },
     {
       "id": "accounts.use",
-      "scope": { "connections": ["telegram-bot"] },
+      "scope": {
+        "connections": [
+          "telegram-bot"
+        ]
+      },
       "reason": "Resolve the bot token bound to the telegram-bot connection owned by this add-on"
     },
     {
@@ -50,6 +61,18 @@
       "reason": "Create the thread a group or topic is connected to from the settings page"
     },
     {
+      "id": "threads.read",
+      "reason": "Read the connected thread title and responder mode for the routing card"
+    },
+    {
+      "id": "threads.write",
+      "reason": "Set the thread responder mode chosen in the connect form"
+    },
+    {
+      "id": "agents.read",
+      "reason": "List workspace agents for the connect form and the routing card"
+    },
+    {
       "id": "bindings.write",
       "reason": "Bind and unbind the add-on transport channels to threads from the settings page"
     },
@@ -70,32 +93,23 @@
     {
       "id": "telegram-bot",
       "label": "Telegram bot (groups)",
-      "accountKinds": ["telegram-bot"],
+      "accountKinds": [
+        "telegram-bot"
+      ],
       "cardinality": "one",
       "optional": true
     }
   ],
-  "data": { "migrations": "migrations", "quotaMb": 32 },
+  "data": {
+    "migrations": "migrations",
+    "quotaMb": 32
+  },
   "contributions": [
     {
       "id": "config",
       "family": "config",
       "descriptor": {
         "fields": [
-          {
-            "key": "routing",
-            "label": "Routing policy",
-            "type": "select",
-            "required": false,
-            "default": "mention",
-            "options": [
-              { "value": "mention", "label": "Mentions of the bot" },
-              { "value": "reply", "label": "Replies to bot messages" },
-              { "value": "always", "label": "Every message" },
-              { "value": "commands", "label": "Commands only" }
-            ],
-            "help": "Which group messages are delivered to the bound thread agent"
-          },
           {
             "key": "attribution",
             "label": "Sender attribution",
@@ -139,7 +153,9 @@
           "reactions": false,
           "readReceipts": false
         },
-        "limits": { "textMax": 4096 }
+        "limits": {
+          "textMax": 4096
+        }
       }
     },
     {
@@ -168,9 +184,14 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "chat": { "type": "string", "description": "Chat id or @username" }
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id or @username"
+                }
               },
-              "required": ["chat"]
+              "required": [
+                "chat"
+              ]
             }
           },
           {
@@ -180,19 +201,43 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "chat": { "type": "string", "description": "Chat id or @username" },
-                "text": { "type": "string", "description": "Message text, up to 4096 characters" },
-                "topicId": { "type": "string", "description": "Forum topic id" },
-                "replyToMessageId": { "type": "string", "description": "Message id to reply to" },
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id or @username"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Message text, up to 4096 characters"
+                },
+                "topicId": {
+                  "type": "string",
+                  "description": "Forum topic id"
+                },
+                "replyToMessageId": {
+                  "type": "string",
+                  "description": "Message id to reply to"
+                },
                 "parseMode": {
                   "type": "string",
-                  "enum": ["HTML", "MarkdownV2"],
+                  "enum": [
+                    "HTML",
+                    "MarkdownV2"
+                  ],
                   "description": "Telegram parse mode"
                 },
-                "disableNotification": { "type": "boolean", "description": "Send silently" },
-                "linkPreview": { "type": "boolean", "description": "Set false to hide the link preview" }
+                "disableNotification": {
+                  "type": "boolean",
+                  "description": "Send silently"
+                },
+                "linkPreview": {
+                  "type": "boolean",
+                  "description": "Set false to hide the link preview"
+                }
               },
-              "required": ["chat", "text"]
+              "required": [
+                "chat",
+                "text"
+              ]
             }
           },
           {
@@ -202,16 +247,32 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "chat": { "type": "string", "description": "Chat id or @username" },
-                "messageId": { "type": "string", "description": "Message id returned by a send" },
-                "text": { "type": "string", "description": "New text, up to 4096 characters" },
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id or @username"
+                },
+                "messageId": {
+                  "type": "string",
+                  "description": "Message id returned by a send"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "New text, up to 4096 characters"
+                },
                 "parseMode": {
                   "type": "string",
-                  "enum": ["HTML", "MarkdownV2"],
+                  "enum": [
+                    "HTML",
+                    "MarkdownV2"
+                  ],
                   "description": "Telegram parse mode"
                 }
               },
-              "required": ["chat", "messageId", "text"]
+              "required": [
+                "chat",
+                "messageId",
+                "text"
+              ]
             }
           },
           {
@@ -221,10 +282,19 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "chat": { "type": "string", "description": "Chat id or @username" },
-                "messageId": { "type": "string", "description": "Message id to delete" }
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id or @username"
+                },
+                "messageId": {
+                  "type": "string",
+                  "description": "Message id to delete"
+                }
               },
-              "required": ["chat", "messageId"]
+              "required": [
+                "chat",
+                "messageId"
+              ]
             }
           },
           {
@@ -234,20 +304,46 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "chat": { "type": "string", "description": "Chat id or @username" },
-                "topicId": { "type": "string", "description": "Forum topic id" },
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id or @username"
+                },
+                "topicId": {
+                  "type": "string",
+                  "description": "Forum topic id"
+                },
                 "kind": {
                   "type": "string",
-                  "enum": ["photo", "document"],
+                  "enum": [
+                    "photo",
+                    "document"
+                  ],
                   "description": "Photo or document, default document"
                 },
-                "url": { "type": "string", "description": "Public file URL" },
-                "path": { "type": "string", "description": "Workspace-relative file path" },
-                "dataBase64": { "type": "string", "description": "File bytes in base64" },
-                "name": { "type": "string", "description": "File name for documents" },
-                "caption": { "type": "string", "description": "Caption, up to 1024 characters" }
+                "url": {
+                  "type": "string",
+                  "description": "Public file URL"
+                },
+                "path": {
+                  "type": "string",
+                  "description": "Workspace-relative file path"
+                },
+                "dataBase64": {
+                  "type": "string",
+                  "description": "File bytes in base64"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "File name for documents"
+                },
+                "caption": {
+                  "type": "string",
+                  "description": "Caption, up to 1024 characters"
+                }
               },
-              "required": ["chat"]
+              "required": [
+                "chat"
+              ]
             }
           },
           {
@@ -257,16 +353,30 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "chat": { "type": "string", "description": "Chat id or @username" },
-                "topicId": { "type": "string", "description": "Forum topic id" },
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id or @username"
+                },
+                "topicId": {
+                  "type": "string",
+                  "description": "Forum topic id"
+                },
                 "urls": {
                   "type": "array",
-                  "items": { "type": "string" },
+                  "items": {
+                    "type": "string"
+                  },
                   "description": "Public file URLs, 2 to 10 entries"
                 },
-                "caption": { "type": "string", "description": "Album caption, up to 1024 characters" }
+                "caption": {
+                  "type": "string",
+                  "description": "Album caption, up to 1024 characters"
+                }
               },
-              "required": ["chat", "urls"]
+              "required": [
+                "chat",
+                "urls"
+              ]
             }
           },
           {
@@ -276,13 +386,19 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "fileId": { "type": "string", "description": "Telegram file_id" },
+                "fileId": {
+                  "type": "string",
+                  "description": "Telegram file_id"
+                },
                 "path": {
                   "type": "string",
                   "description": "Workspace-relative destination path, e.g. inbox/report.pdf"
                 }
               },
-              "required": ["fileId", "path"]
+              "required": [
+                "fileId",
+                "path"
+              ]
             }
           },
           {
@@ -292,11 +408,24 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "fromChat": { "type": "string", "description": "Source chat id or @username" },
-                "messageId": { "type": "string", "description": "Message id in the source chat" },
-                "toChat": { "type": "string", "description": "Destination chat id or @username" }
+                "fromChat": {
+                  "type": "string",
+                  "description": "Source chat id or @username"
+                },
+                "messageId": {
+                  "type": "string",
+                  "description": "Message id in the source chat"
+                },
+                "toChat": {
+                  "type": "string",
+                  "description": "Destination chat id or @username"
+                }
               },
-              "required": ["fromChat", "messageId", "toChat"]
+              "required": [
+                "fromChat",
+                "messageId",
+                "toChat"
+              ]
             }
           },
           {
@@ -306,11 +435,23 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "chat": { "type": "string", "description": "Chat id or @username" },
-                "messageId": { "type": "string", "description": "Message id to pin" },
-                "notify": { "type": "boolean", "description": "Notify members about the pin" }
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id or @username"
+                },
+                "messageId": {
+                  "type": "string",
+                  "description": "Message id to pin"
+                },
+                "notify": {
+                  "type": "boolean",
+                  "description": "Notify members about the pin"
+                }
               },
-              "required": ["chat", "messageId"]
+              "required": [
+                "chat",
+                "messageId"
+              ]
             }
           },
           {
@@ -320,10 +461,19 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "chat": { "type": "string", "description": "Supergroup id or @username" },
-                "name": { "type": "string", "description": "Topic title" }
+                "chat": {
+                  "type": "string",
+                  "description": "Supergroup id or @username"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Topic title"
+                }
               },
-              "required": ["chat", "name"]
+              "required": [
+                "chat",
+                "name"
+              ]
             }
           },
           {
@@ -333,12 +483,27 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "chat": { "type": "string", "description": "Supergroup id or @username" },
-                "topicId": { "type": "string", "description": "Topic id" },
-                "name": { "type": "string", "description": "New title" },
-                "closed": { "type": "boolean", "description": "true closes the topic, false reopens it" }
+                "chat": {
+                  "type": "string",
+                  "description": "Supergroup id or @username"
+                },
+                "topicId": {
+                  "type": "string",
+                  "description": "Topic id"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "New title"
+                },
+                "closed": {
+                  "type": "boolean",
+                  "description": "true closes the topic, false reopens it"
+                }
               },
-              "required": ["chat", "topicId"]
+              "required": [
+                "chat",
+                "topicId"
+              ]
             }
           },
           {
@@ -348,17 +513,35 @@
             "inputSchema": {
               "type": "object",
               "properties": {
-                "chat": { "type": "string", "description": "Chat id or @username" },
-                "question": { "type": "string", "description": "Poll question, up to 300 characters" },
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id or @username"
+                },
+                "question": {
+                  "type": "string",
+                  "description": "Poll question, up to 300 characters"
+                },
                 "options": {
                   "type": "array",
-                  "items": { "type": "string" },
+                  "items": {
+                    "type": "string"
+                  },
                   "description": "2 to 10 answer options"
                 },
-                "anonymous": { "type": "boolean", "description": "Anonymous poll, default true" },
-                "multiple": { "type": "boolean", "description": "Allow several answers" }
+                "anonymous": {
+                  "type": "boolean",
+                  "description": "Anonymous poll, default true"
+                },
+                "multiple": {
+                  "type": "boolean",
+                  "description": "Allow several answers"
+                }
               },
-              "required": ["chat", "question", "options"]
+              "required": [
+                "chat",
+                "question",
+                "options"
+              ]
             }
           }
         ]
@@ -371,21 +554,71 @@
         "id": "main",
         "title": "Telegram groups",
         "sections": [
-          { "type": "status" },
-          { "type": "capabilities" },
-          { "type": "permissions" },
-          { "type": "connections", "connections": ["telegram-bot"] },
-          { "type": "config" },
-          { "type": "jobs" },
+          {
+            "type": "status"
+          },
+          {
+            "type": "capabilities"
+          },
+          {
+            "type": "permissions"
+          },
+          {
+            "type": "connections",
+            "connections": [
+              "telegram-bot"
+            ]
+          },
+          {
+            "type": "config"
+          },
+          {
+            "type": "jobs"
+          },
           {
             "type": "table",
             "title": "Registered chats",
-            "source": { "route": "/chats" },
+            "source": {
+              "route": "/chats"
+            },
             "columns": [
-              { "key": "title", "label": "Group", "format": "text" },
-              { "key": "kind", "label": "Kind", "format": "badge" },
-              { "key": "status", "label": "Status", "format": "badge" },
-              { "key": "id", "label": "Chat id", "format": "copy" },
+              {
+                "key": "title",
+                "label": "Group",
+                "format": "text"
+              },
+              {
+                "key": "kind",
+                "label": "Kind",
+                "format": "badge"
+              },
+              {
+                "key": "status",
+                "label": "Status",
+                "format": "badge"
+              },
+              {
+                "key": "id",
+                "label": "Chat id",
+                "format": "copy"
+              },
+              {
+                "key": "updatedAt",
+                "label": "Updated",
+                "format": "datetime"
+              }
+            ]
+          },
+          {
+            "type": "table",
+            "title": "Routing",
+            "source": { "route": "/bindings" },
+            "columns": [
+              { "key": "target", "label": "Target", "format": "text" },
+              { "key": "agent", "label": "Agent", "format": "text" },
+              { "key": "thread", "label": "Thread", "format": "text" },
+              { "key": "mode", "label": "Mode", "format": "badge" },
+              { "key": "channel", "label": "Channel", "format": "copy" },
               { "key": "updatedAt", "label": "Updated", "format": "datetime" }
             ]
           },
@@ -405,7 +638,9 @@
                   "valueKey": "id",
                   "labelKey": "title"
                 },
-                "widget": { "kind": "combobox" },
+                "widget": {
+                  "kind": "combobox"
+                },
                 "help": "Groups the bot has seen; add the bot to a group or send /start there to discover it"
               },
               {
@@ -419,18 +654,42 @@
                   "route": "topics",
                   "valueKey": "topicId",
                   "labelKey": "title",
-                  "dependsOn": ["chat"]
+                  "dependsOn": [
+                    "chat"
+                  ]
                 },
-                "widget": { "kind": "combobox" },
+                "widget": {
+                  "kind": "combobox"
+                },
                 "help": "Pick a discovered topic, or type a name to create a new one (the bot must be a group admin). Leave empty to connect the whole group. Topic names appear as soon as the bot sees the topic being created or edited, or any message posted in it."
+              },
+              {
+                "key": "mode",
+                "label": "Responder mode",
+                "type": "select",
+                "required": false,
+                "default": "auto",
+                "options": [
+                  {
+                    "value": "auto",
+                    "label": "Agent answers every message"
+                  },
+                  {
+                    "value": "mention",
+                    "label": "Mirror all, agents answer on @mentions"
+                  }
+                ],
+                "help": "Sets the thread responder policy — the same setting as the thread settings page. 'Agent answers every message' creates a dedicated thread; 'Mirror all' creates a group thread where agents answer when mentioned."
               },
               {
                 "key": "agentId",
                 "label": "Agent",
                 "type": "select",
                 "required": true,
-                "optionsFrom": { "kind": "agents" },
-                "help": "The agent answers in the connected thread"
+                "optionsFrom": {
+                  "kind": "agents"
+                },
+                "help": "The agent answers in the connected thread (auto mode) or joins it as a member (mention mode)"
               },
               {
                 "key": "title",
@@ -440,7 +699,9 @@
                 "help": "Defaults to the group and topic names"
               }
             ],
-            "submit": { "route": "/connect" }
+            "submit": {
+              "route": "/connect"
+            }
           },
           {
             "type": "form",
@@ -458,7 +719,9 @@
                   "valueKey": "id",
                   "labelKey": "title"
                 },
-                "widget": { "kind": "combobox" }
+                "widget": {
+                  "kind": "combobox"
+                }
               },
               {
                 "key": "title",
@@ -467,7 +730,9 @@
                 "required": true
               }
             ],
-            "submit": { "route": "/rename" }
+            "submit": {
+              "route": "/rename"
+            }
           },
           {
             "type": "markdown",
@@ -479,22 +744,54 @@
     {
       "id": "chats",
       "family": "route",
-      "descriptor": { "id": "chats", "method": "GET", "path": "/chats", "role": "member" }
+      "descriptor": {
+        "id": "chats",
+        "method": "GET",
+        "path": "/chats",
+        "role": "member"
+      }
     },
     {
       "id": "topics",
       "family": "route",
-      "descriptor": { "id": "topics", "method": "GET", "path": "/topics", "role": "member" }
+      "descriptor": {
+        "id": "topics",
+        "method": "GET",
+        "path": "/topics",
+        "role": "member"
+      }
     },
     {
       "id": "connect",
       "family": "route",
-      "descriptor": { "id": "connect", "method": "POST", "path": "/connect", "role": "member" }
+      "descriptor": {
+        "id": "connect",
+        "method": "POST",
+        "path": "/connect",
+        "role": "member"
+      }
+    },
+    {
+      "id": "bindings",
+      "family": "route",
+      "descriptor": {
+        "id": "bindings",
+        "method": "GET",
+        "path": "/bindings",
+        "role": "member"
+      }
     },
     {
       "id": "rename",
       "family": "route",
-      "descriptor": { "id": "rename", "method": "POST", "path": "/rename", "role": "member" }
+      "descriptor": {
+        "id": "rename",
+        "method": "POST",
+        "path": "/rename",
+        "role": "member"
+      }
     }
-  ]
+  ],
+  "icon": "assets/icon.svg",
+  "color": "#229ED9"
 }

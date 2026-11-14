@@ -7,6 +7,7 @@ import { threadsBase, toStudioSummary } from './threads';
 export interface UpdateThreadPolicyInput {
   autoReplyAgentId?: string | null;
   mentionGating?: boolean;
+  responderMode?: 'auto' | 'mention';
   historyMode?: ThreadHistoryMode;
   historyLast?: number | null;
   historyFromRunId?: string | null;

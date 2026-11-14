@@ -17,21 +17,13 @@ import { validateStatuses } from '../../domain/issue/board-validation.ts';
 import { PresetNotFoundException } from '../../domain/presets/preset.error.ts';
 import { PresetCatalogPort } from '../../domain/presets/preset-catalog.port.ts';
 import { LlmModelPort } from '../../domain/provider/llm-provider.port.ts';
-import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
 import { TeamValidationException } from '../../domain/teams/team.error.ts';
 import { uniqueAgentName } from '../agents/agent.helpers.ts';
 import { CreateAgentUseCase } from '../agents/create-agent.use-case.ts';
 import { DEFAULT_REACT_BUDGET } from '../agents/react-preset.ts';
 import { CreateIssueBoardUseCase } from '../issues/create-issue-board.use-case.ts';
 import { SaveBoardRuleUseCase } from '../issues/save-board-rule.use-case.ts';
-import { CreateScheduleUseCase } from '../schedules/create-schedule.use-case.ts';
-import { isValidCron } from '../schedules/cron-next.ts';
-import {
-  composeTeamPlan,
-  type TeamPlan,
-  type TeamPlanAgent,
-  type TeamPlanSchedule,
-} from './compose-team-plan.ts';
+import { composeTeamPlan, type TeamPlan, type TeamPlanAgent } from './compose-team-plan.ts';
 
 const STUB_MODEL_ID = 'stub';
 
@@ -51,8 +43,6 @@ export class CreateTeamFromPresetUseCase {
     private readonly createAgent: CreateAgentUseCase,
     private readonly createBoard: CreateIssueBoardUseCase,
     private readonly saveBoardRule: SaveBoardRuleUseCase,
-    private readonly createSchedule: CreateScheduleUseCase,
-    private readonly orgSettings: OrgSettingsPort,
   ) {}
 
   execute(request: CreateTeamFromPresetRequest): CreateTeamResponse {
@@ -64,16 +54,10 @@ export class CreateTeamFromPresetUseCase {
     this.assertBoard(preset);
     const agentBodies = this.loadAgentBodies(preset);
     this.assertModels(request.orgId, preset, request.body.models);
-    const digestCron = request.body.digestCron?.trim() || null;
-    const timezone = this.orgSettings.get(request.orgId).timezone;
-    if (digestCron !== null && !isValidCron(digestCron, timezone)) {
-      throw new TeamValidationException(`invalid digest cron: ${digestCron}`);
-    }
     const plan = composeTeamPlan({
       preset,
       name: request.body.name?.trim() || detail.name,
       models: request.body.models,
-      digestCron,
     });
     return this.createTeam(request, plan, agentBodies);
   }
@@ -100,10 +84,7 @@ export class CreateTeamFromPresetUseCase {
         agentIdByRoleKey.set(planAgent.roleKey, agent.id);
       }
       boardId = this.createBoardWithRules(request, plan, agentIdByRoleKey);
-      const scheduleId = plan.schedule
-        ? this.createDigestSchedule(request, plan.schedule, agentIdByRoleKey)
-        : null;
-      return { agents: createdAgents, boardId, scheduleId };
+      return { agents: createdAgents, boardId };
     } catch (err) {
       this.rollback(request.orgId, boardId, createdAgents);
       throw err;
@@ -241,29 +222,6 @@ export class CreateTeamFromPresetUseCase {
         ? { executionProfileId: action.executionProfileId }
         : {}),
     };
-  }
-
-  private createDigestSchedule(
-    request: CreateTeamFromPresetRequest,
-    plan: TeamPlanSchedule,
-    agentIdByRoleKey: Map<string, string>,
-  ): string {
-    const targetAgentId = agentIdByRoleKey.get(plan.agentRoleKey);
-    if (!targetAgentId) {
-      throw new TeamValidationException(`digest references unknown role ${plan.agentRoleKey}`);
-    }
-    const created = this.createSchedule.execute({
-      orgId: request.orgId,
-      actorUserId: request.actorUserId ?? null,
-      body: {
-        name: plan.name,
-        targetAgentId,
-        detail: plan.detail,
-        cron: plan.cron,
-        missPolicy: 'catch-up',
-      },
-    });
-    return created.schedule.id;
   }
 
   private rollback(orgId: string, boardId: string | null, createdAgents: AgentPublic[]): void {

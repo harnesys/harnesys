@@ -16,7 +16,7 @@ export const threadsCapability = definePack<ThreadsCapabilityPorts, Record<strin
       {
         name: 'threads_list',
         description:
-          "List threads in this project. Each id works with schedule_set threadId to wake that conversation and with threads_tail to read that thread's event journal (runs, failures, comments). current=true is THIS chat. hasSchedule=true already has a cron (one schedule per thread).",
+          "List threads in this project. Use threads_tail to read a thread's event journal (runs, failures, comments). current=true is THIS chat.",
       },
       {
         name: 'threads_history',

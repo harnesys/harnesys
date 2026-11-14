@@ -2,6 +2,7 @@ import { Injectable } from '@harnesys/brix';
 import type { HostServiceModule } from '../../../domain/addons/host-service.ts';
 import { HostServiceRegistryPort } from '../../../domain/addons/ports/host-service-registry.port.ts';
 import { AccountsHostService } from './accounts/accounts-service.ts';
+import { AgentsHostService } from './agents/agents-service.ts';
 import { ApprovalsHostService } from './approvals/approvals-service.ts';
 import { BindingsHostService } from './bindings/bindings-service.ts';
 import { BridgeHostService } from './bridge/bridge-service.ts';
@@ -15,6 +16,7 @@ import { OrgHostService } from './org/org-service.ts';
 import { RunsHostService } from './runs/runs-service.ts';
 import { SecretsHostService } from './secrets/secrets-service.ts';
 import { SkillsHostService } from './skills/skills-service.ts';
+import { ThreadsHostService } from './threads/threads-service.ts';
 import { TriggersHostService } from './triggers/triggers-service.ts';
 import { UsageHostService } from './usage/usage-service.ts';
 import { WorkersHostService } from './workers/workers-service.ts';
@@ -42,6 +44,8 @@ export class HostServicesIndex {
     skills: SkillsHostService,
     org: OrgHostService,
     approvals: ApprovalsHostService,
+    threads: ThreadsHostService,
+    agents: AgentsHostService,
   ) {
     this.modules = [
       config,
@@ -61,6 +65,8 @@ export class HostServicesIndex {
       skills,
       org,
       approvals,
+      threads,
+      agents,
     ];
     assertUniqueMethodNames(this.modules);
     this.registry = registry;

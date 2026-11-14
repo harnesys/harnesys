@@ -31,9 +31,9 @@ async function runGuard<T>(fn: () => Promise<T>): Promise<
 export function createThreadTools(deps: CreateThreadToolsParams): ToolDefinition[] {
   return [
     tool('threads_list', {
-      group: 'schedules',
+      group: 'thread',
       description:
-        "List threads in this project. Each id works with schedule_set threadId to wake that conversation and with threads_tail to read that thread's event journal (runs, failures, comments). current=true is THIS chat. hasSchedule=true already has a cron (one schedule per thread).",
+        "List threads in this project. Use threads_tail to read a thread's event journal (runs, failures, comments). current=true is THIS chat.",
       input: { type: 'object' },
       execute: async () =>
         runGuard(async () => {
@@ -47,7 +47,6 @@ export function createThreadTools(deps: CreateThreadToolsParams): ToolDefinition
               agentId: row.agentId,
               agentName: row.agentName,
               current: row.id === scope.threadId,
-              hasSchedule: row.hasSchedule ?? false,
             })),
             hint: 'To see what happened inside a thread (run events, failures, comments), call threads_tail with its threadId; load it via load_tools if not loaded yet. Use threads_history or threads_search for thread transcripts.',
           };

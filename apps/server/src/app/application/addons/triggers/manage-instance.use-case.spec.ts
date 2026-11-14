@@ -1,11 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { AddonException } from '../../../domain/addons/errors.ts';
-import {
-  FakeSchedules,
-  FakeThreadAgents,
-  FakeThreads,
-  FakeWebhooks,
-} from '../../schedules/schedule.use-case.fakes.ts';
+import { FakeThreadAgents, FakeThreads } from '../../threads/thread.fakes.ts';
 import {
   FakeAudit,
   InMemoryCatalog,
@@ -78,8 +73,6 @@ function build(enabled = true) {
     new FakeAudit(),
     threads,
     threadAgents,
-    new FakeSchedules(),
-    new FakeWebhooks(),
     new NullLogger(),
   );
   return { useCase, triggers, calls, threads, threadAgents };

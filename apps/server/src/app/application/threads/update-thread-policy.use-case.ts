@@ -22,6 +22,9 @@ function applyPolicyUpdate(current: ThreadPolicy, body: UpdateThreadPolicyBody):
   if (body.mentionGating !== undefined) {
     policy.mentionGating = body.mentionGating;
   }
+  if (body.responderMode !== undefined) {
+    policy.responderMode = body.responderMode;
+  }
   if (body.historyMode !== undefined) {
     policy.historyMode = body.historyMode;
   }

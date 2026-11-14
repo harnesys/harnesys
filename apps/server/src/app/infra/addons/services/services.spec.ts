@@ -188,7 +188,9 @@ describe('triggers service', () => {
 });
 
 function stubManage(): ManageTriggerInstanceUseCase {
-  const stub = Object.create(ManageTriggerInstanceUseCase.prototype) as ManageTriggerInstanceUseCase;
+  const stub = Object.create(
+    ManageTriggerInstanceUseCase.prototype,
+  ) as ManageTriggerInstanceUseCase;
   stub.create = async () => {
     throw new Error('not used in these tests');
   };

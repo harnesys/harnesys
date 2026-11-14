@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { HexColorSchema, LucideIconNameSchema } from '../manifest/branding.ts';
 import type { L10n } from '../manifest/l10n.ts';
 import { L10nSchema } from '../manifest/l10n.ts';
 import type { FieldSpec } from './field-spec.ts';
@@ -43,6 +44,10 @@ export interface TriggerDescriptor {
   kind: string;
   title: L10n;
   description: L10n;
+  /** Lucide icon name shown on trigger cards (picker, lists). */
+  icon?: string;
+  /** Brand color as `#RRGGBB`; falls back to the addon manifest color. */
+  color?: string;
   configFields: FieldSpec[];
   connection?: string;
   limits?: TriggerLimits;
@@ -53,6 +58,8 @@ export const TriggerDescriptorSchema = z.object({
   kind: z.string().min(1),
   title: L10nSchema,
   description: L10nSchema,
+  icon: LucideIconNameSchema.optional(),
+  color: HexColorSchema.optional(),
   configFields: z.array(FieldSpecSchema),
   connection: z.string().min(1).optional(),
   limits: z

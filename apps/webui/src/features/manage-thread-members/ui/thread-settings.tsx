@@ -32,6 +32,11 @@ const HISTORY_MODE_ITEMS: { value: ThreadHistoryMode; label: string }[] = [
   { value: 'last', label: 'Last N runs' },
 ];
 
+const RESPONDER_MODE_ITEMS: { value: 'auto' | 'mention'; label: string }[] = [
+  { value: 'auto', label: 'Agent answers every message' },
+  { value: 'mention', label: 'Only on @mentions' },
+];
+
 function historyModeLabel(mode: ThreadHistoryMode): string {
   return HISTORY_MODE_ITEMS.find((item) => item.value === mode)?.label ?? mode;
 }
@@ -156,6 +161,33 @@ export function ThreadSettings({ thread, className }: { thread: Thread; classNam
             </FieldDescription>
           </Field>
         ) : null}
+        <Field>
+          <FieldLabel htmlFor="thread-responder-mode">Responder mode</FieldLabel>
+          <Select
+            items={RESPONDER_MODE_ITEMS}
+            value={policy?.responderMode ?? (thread.kind === 'group' ? 'mention' : 'auto')}
+            onValueChange={(value) =>
+              void mutateThread(() =>
+                updateThreadPolicy(thread.id, { responderMode: value as 'auto' | 'mention' }),
+              )
+            }
+          >
+            <SelectTrigger id="thread-responder-mode" size="sm" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="start">
+              {RESPONDER_MODE_ITEMS.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <FieldDescription>
+            Who answers a message nobody addressed: the pinned agent on every message (auto), or
+            only agents mentioned in the text (mention). Telegram add-ons read this same setting.
+          </FieldDescription>
+        </Field>
         <Field>
           <FieldLabel htmlFor={anchorFieldId}>History anchor</FieldLabel>
           <div className="flex items-center gap-1.5">

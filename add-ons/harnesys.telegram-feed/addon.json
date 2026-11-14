@@ -4,7 +4,10 @@
   "platform": 1,
   "title": "Telegram feed",
   "description": "Watches Telegram channels and groups with a user account (MTProto), stores new posts, filters them by keywords and fires a telegram.feed trigger with the post text. The account session comes from the bound telegram-user account; independent of the bot add-on: an organization can run only the feed, only the bot, or both.",
-  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "runtime": {
+    "entry": "dist/index.js",
+    "profile": "trusted"
+  },
   "activation": "resident",
   "permissions": [
     {
@@ -21,12 +24,20 @@
     },
     {
       "id": "accounts.use",
-      "scope": { "connections": ["telegram-user"] },
+      "scope": {
+        "connections": [
+          "telegram-user"
+        ]
+      },
       "reason": "Resolve the bound telegram-user account for the feed session"
     },
     {
       "id": "accounts.credentials",
-      "scope": { "connections": ["telegram-user"] },
+      "scope": {
+        "connections": [
+          "telegram-user"
+        ]
+      },
       "reason": "Read the MTProto session and the linked telegram-app credentials"
     }
   ],
@@ -34,12 +45,17 @@
     {
       "id": "telegram-user",
       "label": "Telegram user account",
-      "accountKinds": ["telegram-user"],
+      "accountKinds": [
+        "telegram-user"
+      ],
       "cardinality": "one",
       "optional": true
     }
   ],
-  "data": { "migrations": "migrations", "quotaMb": 64 },
+  "data": {
+    "migrations": "migrations",
+    "quotaMb": 64
+  },
   "contributions": [
     {
       "id": "config",
@@ -87,8 +103,15 @@
             "type": "text",
             "required": false,
             "placeholder": "All channels",
-            "optionsFrom": { "kind": "addonRoute", "route": "sources", "valueKey": "peer", "labelKey": "title" },
-            "widget": { "kind": "combobox" },
+            "optionsFrom": {
+              "kind": "addonRoute",
+              "route": "sources",
+              "valueKey": "peer",
+              "labelKey": "title"
+            },
+            "widget": {
+              "kind": "combobox"
+            },
             "help": "Fire only for this channel; empty means every watched channel. You can also type an @username that is not in the list"
           },
           {
@@ -97,7 +120,9 @@
             "type": "text",
             "required": false,
             "placeholder": "release, hiring",
-            "widget": { "kind": "tags" },
+            "widget": {
+              "kind": "tags"
+            },
             "help": "Comma-separated terms; empty matches every post"
           },
           {
@@ -105,7 +130,9 @@
             "label": "Exclude words",
             "type": "text",
             "required": false,
-            "widget": { "kind": "tags" },
+            "widget": {
+              "kind": "tags"
+            },
             "help": "Comma-separated terms; a post containing any of them is skipped"
           },
           {
@@ -115,12 +142,23 @@
             "required": false,
             "default": "any",
             "options": [
-              { "value": "any", "label": "Any keyword" },
-              { "value": "all", "label": "All keywords" }
+              {
+                "value": "any",
+                "label": "Any keyword"
+              },
+              {
+                "value": "all",
+                "label": "All keywords"
+              }
             ]
           }
         ],
-        "limits": { "perDay": 200, "throttleSec": 5 }
+        "limits": {
+          "perDay": 200,
+          "throttleSec": 5
+        },
+        "icon": "rss",
+        "color": "#229ED9"
       }
     },
     {
@@ -140,34 +178,96 @@
         "id": "main",
         "title": "Telegram feed",
         "sections": [
-          { "type": "status" },
-          { "type": "capabilities" },
-          { "type": "permissions" },
-          { "type": "connections", "connections": ["telegram-user"] },
-          { "type": "config" },
-          { "type": "automations", "triggers": ["telegram.feed"] },
+          {
+            "type": "status"
+          },
+          {
+            "type": "capabilities"
+          },
+          {
+            "type": "permissions"
+          },
+          {
+            "type": "connections",
+            "connections": [
+              "telegram-user"
+            ]
+          },
+          {
+            "type": "config"
+          },
+          {
+            "type": "automations",
+            "triggers": [
+              "telegram.feed"
+            ]
+          },
           {
             "type": "table",
             "title": "Sources",
-            "source": { "route": "/sources" },
+            "source": {
+              "route": "/sources"
+            },
             "columns": [
-              { "key": "peer", "label": "Channel", "format": "text" },
-              { "key": "title", "label": "Title", "format": "text" },
-              { "key": "kind", "label": "Kind", "format": "badge" },
-              { "key": "lastPostId", "label": "Last post", "format": "number" },
-              { "key": "updatedAt", "label": "Synced", "format": "datetime" }
+              {
+                "key": "peer",
+                "label": "Channel",
+                "format": "text"
+              },
+              {
+                "key": "title",
+                "label": "Title",
+                "format": "text"
+              },
+              {
+                "key": "kind",
+                "label": "Kind",
+                "format": "badge"
+              },
+              {
+                "key": "lastPostId",
+                "label": "Last post",
+                "format": "number"
+              },
+              {
+                "key": "updatedAt",
+                "label": "Synced",
+                "format": "datetime"
+              }
             ]
           },
           {
             "type": "table",
             "title": "Posts",
-            "source": { "route": "/posts" },
+            "source": {
+              "route": "/posts"
+            },
             "columns": [
-              { "key": "peer", "label": "Channel", "format": "text" },
-              { "key": "postId", "label": "Post", "format": "number" },
-              { "key": "text", "label": "Text", "format": "text" },
-              { "key": "publishedAt", "label": "Published", "format": "datetime" },
-              { "key": "fires", "label": "Fires", "format": "number" }
+              {
+                "key": "peer",
+                "label": "Channel",
+                "format": "text"
+              },
+              {
+                "key": "postId",
+                "label": "Post",
+                "format": "number"
+              },
+              {
+                "key": "text",
+                "label": "Text",
+                "format": "text"
+              },
+              {
+                "key": "publishedAt",
+                "label": "Published",
+                "format": "datetime"
+              },
+              {
+                "key": "fires",
+                "label": "Fires",
+                "format": "number"
+              }
             ]
           },
           {
@@ -180,12 +280,24 @@
     {
       "id": "posts",
       "family": "route",
-      "descriptor": { "id": "posts", "method": "GET", "path": "/posts", "role": "member" }
+      "descriptor": {
+        "id": "posts",
+        "method": "GET",
+        "path": "/posts",
+        "role": "member"
+      }
     },
     {
       "id": "sources",
       "family": "route",
-      "descriptor": { "id": "sources", "method": "GET", "path": "/sources", "role": "member" }
+      "descriptor": {
+        "id": "sources",
+        "method": "GET",
+        "path": "/sources",
+        "role": "member"
+      }
     }
-  ]
+  ],
+  "icon": "assets/icon.svg",
+  "color": "#229ED9"
 }

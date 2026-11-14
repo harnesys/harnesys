@@ -32,21 +32,13 @@ const CAPTION_SPECS: Record<string, CaptionSpec> = {
   ask_user: { kind: 'question', title: 'Question', fields: ['prompt'] },
   load_skill: { kind: 'file', title: 'Skill', fields: ['name'] },
   wait: { kind: 'question', title: 'Wait', fields: ['delayMs'], transform: 'ms' },
-  schedule_list: { kind: 'search', title: 'Schedules' },
   threads_list: { kind: 'search', title: 'Threads' },
   threads_history: { kind: 'search', title: 'Thread History', fields: ['threadId', 'beforeSeq'] },
   threads_search: { kind: 'search', title: 'Thread Search', fields: ['query'] },
   threads_tail: { kind: 'search', title: 'Thread Journal', fields: ['threadId'] },
-  schedule_peek: { kind: 'search', title: 'Schedule Log', fields: ['id'] },
-  schedule_set: { kind: 'pencil', title: 'Schedule', fields: ['name', 'id'] },
-  schedule_pause: { kind: 'pencil', title: 'Schedule Pause', fields: ['id'] },
-  schedule_delete: { kind: 'pencil', title: 'Schedule Delete', fields: ['id'] },
   plan_save: { kind: 'pencil', title: 'Plan', fields: ['overview'] },
   plan_item_update: { kind: 'pencil', title: 'Plan Item', fields: ['itemId', 'status'] },
   plan_get: { kind: 'search', title: 'Plan' },
-  webhook_list: { kind: 'globe', title: 'Webhooks' },
-  webhook_set: { kind: 'pencil', title: 'Webhook', fields: ['name', 'id'] },
-  webhook_delete: { kind: 'pencil', title: 'Webhook Delete', fields: ['id'] },
 };
 
 export function toolCaption(

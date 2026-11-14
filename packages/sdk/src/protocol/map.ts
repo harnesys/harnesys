@@ -30,6 +30,7 @@ import {
   TransportMessageSchema,
 } from './shared.ts';
 import { sourceMethods } from './source-methods.ts';
+import { threadServiceMethods } from './thread-service-methods.ts';
 
 export type { MethodDirection, MethodSpec, NotificationSender } from './method-spec.ts';
 export { addonMethod, hostMethod, notificationSpec } from './method-spec.ts';
@@ -42,6 +43,7 @@ const MAX_SECRET_BYTES = 8 * 1024;
 export const protocolMap = {
   ...sourceMethods,
   ...orgServiceMethods,
+  ...threadServiceMethods,
   initialize: hostMethod(InitializeParamsSchema, InitializeResultSchema),
   initialized: notificationSpec(empty, 'host'),
   shutdown: hostMethod(
@@ -207,9 +209,45 @@ export const protocolMap = {
     'runs.dispatch',
   ),
   'threads.create': addonMethod(
-    z.object({ title: str.optional(), agentId: z.string().uuid() }),
+    z.object({
+      title: str.optional(),
+      agentId: z.string().uuid(),
+      kind: z.enum(['chat', 'group']).optional(),
+      responderMode: z.enum(['auto', 'mention']).optional(),
+    }),
     z.object({ threadId: str }),
     'threads.create',
+  ),
+  'threads.get': addonMethod(
+    z.object({ threadId: str }),
+    z.object({
+      thread: z
+        .object({
+          threadId: str,
+          kind: str,
+          title: str,
+          responderMode: z.enum(['auto', 'mention']),
+          autoReplyAgentId: str.nullable(),
+          agents: z.array(z.object({ id: str, name: str })),
+        })
+        .optional(),
+    }),
+    'threads.read',
+  ),
+  'threads.patch': addonMethod(
+    z.object({
+      threadId: str,
+      responderMode: z.enum(['auto', 'mention']).optional(),
+    }),
+    empty,
+    'threads.write',
+  ),
+  'agents.list': addonMethod(
+    z.object({}),
+    z.object({
+      agents: z.array(z.object({ id: str, name: str, status: str.optional() })),
+    }),
+    'agents.read',
   ),
   'bridge.inbound': addonMethod(
     z.object({ message: InboundMessageSchema }),

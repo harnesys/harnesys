@@ -21,12 +21,14 @@ import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
 import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
 import { AttachmentRepositoryPort } from '../../domain/thread/attachment-repository.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
+import { resolveResponders } from '../../domain/thread/responder-policy.ts';
 import {
   ThreadNotFoundException,
   ThreadValidationException,
 } from '../../domain/thread/thread.error.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
+import { allowsMentions, responderModeOf } from '../../domain/thread/thread-policy.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { UsagePort } from '../../domain/usage/usage-port.ts';
 import { IssueRemoteRunUseCase } from '../fleet/issue-remote-run.use-case.ts';
@@ -42,6 +44,10 @@ import {
   type RunStartAttribution,
 } from './run-attribution.ts';
 import { sendGroupThread } from './send-group-thread.ts';
+import {
+  chatMentionGateBlocked,
+  storeUnaddressedMessage,
+} from './send-thread-run-helpers.ts';
 import {
   type AttachmentMeta,
   attachmentMetasOf,
@@ -151,6 +157,13 @@ export class SendThreadRunUseCase {
       request.threadId,
       request.body.attachmentIds,
     );
+    if (chatMentionGateBlocked(thread, agent, request.body)) {
+      return await storeUnaddressedMessage(
+        { sendMessage: this.sendMessage, users: this.users },
+        request,
+        thread,
+      );
+    }
     const requestedSkills = [...new Set(request.body.skills ?? [])];
     await this.validateRequestedSkills(request.orgId, agent.id, requestedSkills);
     const runText =

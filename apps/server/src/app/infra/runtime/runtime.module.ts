@@ -22,13 +22,11 @@ import { PlanModule } from '../plan/plan.module.ts';
 import { PluginsModule } from '../plugins/plugins.module.ts';
 import { WorkspaceContainerModule } from '../process-runtime/workspace-container.module.ts';
 import { ProviderModule } from '../provider/provider.module.ts';
-import { ScheduleModule } from '../schedules/schedule.module.ts';
 import { SecretModule } from '../secret/secret.module.ts';
 import { SkillsModule } from '../skills/skills.module.ts';
 import { SourceModule } from '../source/source.module.ts';
 import { TerminalModule } from '../terminal/terminal.module.ts';
 import { ThreadModule } from '../thread/thread.module.ts';
-import { WebhookModule } from '../webhooks/webhook.module.ts';
 import { LocalExecutorAdapter } from './local-executor.adapter.ts';
 import { RunLifecycleReaderAdapter } from './run-lifecycle-reader.adapter.ts';
 import { WaitTickerGateAdapter } from './wait-ticker-gate.adapter.ts';
@@ -51,8 +49,6 @@ import { WaitTickerGateAdapter } from './wait-ticker-gate.adapter.ts';
     PlanModule,
     DeskModule,
     TerminalModule,
-    ScheduleModule,
-    WebhookModule,
     AddonCatalogModule,
     KnowledgeModule,
     LspModule,

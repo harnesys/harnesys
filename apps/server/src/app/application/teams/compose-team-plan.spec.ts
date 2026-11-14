@@ -61,18 +61,17 @@ const MODELS: Record<string, string> = {
   reviewer: 'model-a',
 };
 
-function compose(digestCron: string | null) {
+function compose() {
   return composeTeamPlan({
     preset: PRESET,
     name: 'Alpha Team',
     models: MODELS,
-    digestCron,
   });
 }
 
 describe('composeTeamPlan', () => {
   test('composes one agent per role with model and top level', () => {
-    const plan = compose(null);
+    const plan = compose();
     expect(plan.agents).toHaveLength(3);
     expect(plan.agents.map((agent) => agent.roleKey)).toEqual(['lead', 'coder', 'reviewer']);
     const lead = plan.agents.find((agent) => agent.roleKey === 'lead');
@@ -88,37 +87,22 @@ describe('composeTeamPlan', () => {
   });
 
   test('plan carries no top-level source id', () => {
-    const plan = compose(null);
+    const plan = compose();
     expect(Object.keys(plan)).not.toContain('sourceId');
     expect(plan.agents.every((agent) => !('sourceId' in agent.body))).toBe(true);
   });
 
   test('board keeps the preset statuses', () => {
-    const plan = compose(null);
+    const plan = compose();
     expect(plan.board.name).toBe('Dev Team');
     expect(plan.board.statuses).toHaveLength(3);
     expect(plan.board.statuses[0]?.key).toBe('backlog');
   });
 
   test('rules keep the preset role keys', () => {
-    const plan = compose(null);
+    const plan = compose();
     expect(plan.rules).toHaveLength(2);
     expect(plan.rules[0]?.actions).toEqual([{ type: 'assign_agent', roleKey: 'coder' }]);
-  });
-
-  test('schedule is null without digestCron', () => {
-    const plan = compose(null);
-    expect(plan.schedule).toBeNull();
-  });
-
-  test('schedule binds digest to the preset digest role with cron and detail', () => {
-    const plan = compose('30 8 * * 1-5');
-    expect(plan.schedule).toEqual({
-      agentRoleKey: 'lead',
-      name: 'Alpha Team',
-      cron: '30 8 * * 1-5',
-      detail: 'Daily digest.',
-    });
   });
 
   test('rejects missing model for a role', () => {
@@ -127,7 +111,6 @@ describe('composeTeamPlan', () => {
         preset: PRESET,
         name: 'Alpha Team',
         models: { lead: 'model-a', coder: 'model-b' },
-        digestCron: null,
       }),
     ).toThrow(TeamValidationException);
   });
@@ -143,7 +126,6 @@ describe('composeTeamPlan', () => {
       preset: optionalReviewer,
       name: 'Alpha Team',
       models: { lead: 'model-a', coder: 'model-b' },
-      digestCron: null,
     });
     const reviewer = plan.agents.find((agent) => agent.roleKey === 'reviewer');
     expect(reviewer?.body.modelId).toBe('stub');
@@ -170,36 +152,6 @@ describe('composeTeamPlan', () => {
         preset: broken,
         name: 'Alpha Team',
         models: MODELS,
-        digestCron: null,
-      }),
-    ).toThrow(TeamValidationException);
-  });
-
-  test('digest schedule binds to the preset digest role', () => {
-    const shifted: TeamPresetBody = {
-      ...PRESET,
-      digest: { ...PRESET.digest, roleKey: 'reviewer' },
-    };
-    const plan = composeTeamPlan({
-      preset: shifted,
-      name: 'Alpha Team',
-      models: MODELS,
-      digestCron: '30 8 * * 1-5',
-    });
-    expect(plan.schedule?.agentRoleKey).toBe('reviewer');
-  });
-
-  test('rejects digest role referencing unknown role', () => {
-    const broken: TeamPresetBody = {
-      ...PRESET,
-      digest: { ...PRESET.digest, roleKey: 'ghost' },
-    };
-    expect(() =>
-      composeTeamPlan({
-        preset: broken,
-        name: 'Alpha Team',
-        models: MODELS,
-        digestCron: '30 8 * * 1-5',
       }),
     ).toThrow(TeamValidationException);
   });
