@@ -101,6 +101,23 @@ export function TableSection({ orgId, addonId, section }: SectionProps) {
     }
   };
 
+  const runAction = (action: AddonSectionAction, row: Record<string, unknown>) => {
+    if (action.confirm) {
+      void alert
+        .confirm({
+          title: resolveL10nText(action.confirm),
+          testId: `addon-action-confirm-${action.id}`,
+        })
+        .then((ok) => {
+          if (ok) {
+            void callAction(action, row);
+          }
+        });
+      return;
+    }
+    void callAction(action, row);
+  };
+
   if (!title || !source) {
     return null;
   }
@@ -109,53 +126,18 @@ export function TableSection({ orgId, addonId, section }: SectionProps) {
     <RowSection label={resolveL10nText(title)} count={rows.length}>
       {error ? <SettingsErrorBanner message={error} testId="addon-table-error" /> : null}
       {rows.length === 0 ? (
-        <RowItem title="No rows" />
+        <RowItem title="Nothing here yet" />
       ) : (
-        <div className="flex min-w-0 flex-col gap-1" data-testid="addon-table-rows">
+        <div className="flex min-w-0 flex-col gap-1.5" data-testid="addon-table-rows">
           {rows.map((row, index) => (
-            <div
+            <TableCard
               key={String(row.id ?? index)}
-              className="flex min-w-0 flex-wrap items-center gap-2 rounded-md border px-2 py-1.5"
-            >
-              {columns.map((column) => (
-                <span
-                  key={column.key}
-                  className={
-                    column.format === 'number' ? 'min-w-0 font-mono text-xs' : 'min-w-0 text-xs'
-                  }
-                >
-                  {formatCell(column, row[column.key])}
-                </span>
-              ))}
-              <span className="flex-1" />
-              {(rowActions ?? []).map((action) => (
-                <Button
-                  key={action.id}
-                  type="button"
-                  size="sm"
-                  variant={action.destructive ? 'destructive' : 'outline'}
-                  disabled={busy}
-                  onClick={() => {
-                    if (action.confirm) {
-                      void alert
-                        .confirm({
-                          title: resolveL10nText(action.confirm),
-                          testId: `addon-action-confirm-${action.id}`,
-                        })
-                        .then((ok) => {
-                          if (ok) {
-                            void callAction(action, row);
-                          }
-                        });
-                      return;
-                    }
-                    void callAction(action, row);
-                  }}
-                >
-                  {resolveL10nText(action.label)}
-                </Button>
-              ))}
-            </div>
+              columns={columns}
+              row={row}
+              actions={rowActions}
+              busy={busy}
+              onAction={runAction}
+            />
           ))}
         </div>
       )}
@@ -167,6 +149,71 @@ export function TableSection({ orgId, addonId, section }: SectionProps) {
         </div>
       ) : null}
     </RowSection>
+  );
+}
+
+function TableCard({
+  columns,
+  row,
+  actions,
+  busy,
+  onAction,
+}: {
+  columns: AddonColumn[];
+  row: Record<string, unknown>;
+  actions: AddonSectionAction[];
+  busy: boolean;
+  onAction: (action: AddonSectionAction, row: Record<string, unknown>) => void;
+}) {
+  const primary = columns.find((column) => column.format !== 'badge') ?? columns[0];
+  if (!primary) {
+    return null;
+  }
+  const badges = columns.filter((column) => column.format === 'badge' && column !== primary);
+  const details = columns.filter((column) => column !== primary && column.format !== 'badge');
+  return (
+    <div className="flex min-w-0 flex-col gap-2 rounded-lg border bg-popover px-4 py-3">
+      <div className="flex min-w-0 items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="min-w-0 truncate font-medium text-sm">
+            {formatCell(primary, row[primary.key])}
+          </span>
+          {badges.map((column) => (
+            <span key={column.key} className="shrink-0">
+              {formatCell(column, row[column.key])}
+            </span>
+          ))}
+        </div>
+        {actions.length > 0 ? (
+          <div className="flex shrink-0 items-center gap-1">
+            {actions.map((action) => (
+              <Button
+                key={action.id}
+                type="button"
+                size="sm"
+                variant={action.destructive ? 'destructive' : 'outline'}
+                disabled={busy}
+                onClick={() => onAction(action, row)}
+              >
+                {resolveL10nText(action.label)}
+              </Button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+      {details.length > 0 ? (
+        <div className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1">
+          {details.map((column) => (
+            <div key={column.key} className="flex min-w-0 items-baseline gap-1.5">
+              <span className="shrink-0 font-medium text-[10px] text-muted-foreground uppercase tracking-wide">
+                {resolveL10nText(column.label)}
+              </span>
+              <span className="min-w-0 text-xs">{formatCell(column, row[column.key])}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -185,22 +232,32 @@ function formatCell(column: AddonColumn, value: unknown): ReactNode {
   if (column.format === 'copy') {
     return <CopyCell value={String(value)} />;
   }
+  if (column.format === 'number') {
+    return <span className="font-mono">{String(value)}</span>;
+  }
   return String(value);
 }
 
 const BADGE_TONES: Record<string, 'ok' | 'warn' | 'danger' | 'neutral'> = {
   active: 'ok',
+  bound: 'ok',
+  connected: 'ok',
   fired: 'ok',
+  live: 'ok',
   ok: 'ok',
   success: 'ok',
-  paused: 'warn',
-  queued: 'warn',
   deduped: 'warn',
-  throttled: 'warn',
+  discovered: 'warn',
+  paused: 'warn',
+  pending: 'warn',
+  queued: 'warn',
   suppressed: 'warn',
+  throttled: 'warn',
+  disabled: 'danger',
+  disconnected: 'danger',
+  error: 'danger',
   failed: 'danger',
   rejected: 'danger',
-  error: 'danger',
   none: 'neutral',
   empty: 'neutral',
 };
