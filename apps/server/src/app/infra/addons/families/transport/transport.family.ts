@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@harnesys/brix';
 import { TransportDescriptorSchema, type TransportMessage } from '@harnesys/sdk';
 import type { z } from 'zod';
+import type { BridgeInboundOutcome } from '../../../../application/addons/bridge/bridge-inbound.port.ts';
 import { BridgeInboundPort } from '../../../../application/addons/bridge/bridge-inbound.port.ts';
 import type { ChannelCapabilities } from '../../../../domain/addons/channel-capabilities.ts';
 import type { FamilyModule, HandlerSpec } from '../../../../domain/addons/family-module.ts';
@@ -21,7 +22,6 @@ const HANDLERS: readonly HandlerSpec[] = [
   handlerSpec('transport.typing'),
 ];
 const TRANSPORT_CALL_TIMEOUT_MS = 30_000;
-const INBOUND_QUEUE_LIMIT = 256;
 
 export function channelCapabilitiesOf(descriptor: TransportSchema): ChannelCapabilities {
   return {
@@ -85,8 +85,12 @@ export class AddonTransportRegistry {
 
 @Injectable()
 export class TransportInboundService implements BridgeInboundSink {
-  private readonly queues = new Map<string, BridgeInboundInput[]>();
-  private readonly consuming = new Set<string>();
+  /**
+   * Per addon (`orgId/addonId`) promise tail: inbound messages of one addon
+   * reach the bridge strictly in arrival order, and every caller awaits the
+   * outcome of its own message instead of a fire-and-forget drain.
+   */
+  private readonly tails = new Map<string, Promise<BridgeInboundOutcome>>();
 
   constructor(
     private readonly registry: AddonTransportRegistry,
@@ -95,44 +99,31 @@ export class TransportInboundService implements BridgeInboundSink {
     private readonly logger: Logger,
   ) {}
 
-  async inbound(input: BridgeInboundInput): Promise<void> {
+  async inbound(input: BridgeInboundInput): Promise<BridgeInboundOutcome> {
     const transport = this.registry.find(input.orgId, input.addonId);
     if (transport === undefined) {
-      return;
+      return 'skipped';
     }
-    this.enqueue(input);
-    this.consume(input.orgId, input.addonId, transport.provider);
-  }
-
-  private consume(orgId: string, addonId: string, provider: string): void {
-    const key = `${orgId}/${addonId}`;
-    if (this.consuming.has(key)) {
-      return;
-    }
-    this.consuming.add(key);
-    void this.drainIntoBridge(orgId, addonId, provider).finally(() => {
-      this.consuming.delete(key);
-    });
-  }
-
-  private async drainIntoBridge(orgId: string, addonId: string, provider: string): Promise<void> {
-    for (;;) {
-      const pending = this.drain(orgId, addonId);
-      if (pending.length === 0) {
-        return;
-      }
-      for (const input of pending) {
-        await this.deliver(orgId, addonId, provider, input);
+    const key = `${input.orgId}/${input.addonId}`;
+    const previous = this.tails.get(key) ?? Promise.resolve<BridgeInboundOutcome>('skipped');
+    const task = previous
+      .catch(() => 'skipped')
+      .then(() => this.deliver(key, transport.provider, input));
+    this.tails.set(key, task);
+    try {
+      return await task;
+    } finally {
+      if (this.tails.get(key) === task) {
+        this.tails.delete(key);
       }
     }
   }
 
   private async deliver(
-    orgId: string,
-    addonId: string,
+    key: string,
     provider: string,
     input: BridgeInboundInput,
-  ): Promise<void> {
+  ): Promise<BridgeInboundOutcome> {
     try {
       const answered = await this.asks.tryAnswer({
         orgId: input.orgId,
@@ -142,9 +133,9 @@ export class TransportInboundService implements BridgeInboundSink {
         text: input.message.text,
       });
       if (answered) {
-        return;
+        return 'skipped';
       }
-      await this.bridge.execute({
+      return await this.bridge.execute({
         orgId: input.orgId,
         addonId: input.addonId,
         transportProvider: provider,
@@ -153,33 +144,11 @@ export class TransportInboundService implements BridgeInboundSink {
       });
     } catch (error) {
       this.logger.warn(
-        { orgId, addonId, error: error instanceof Error ? error.message : String(error) },
+        { key, error: error instanceof Error ? error.message : String(error) },
         'bridge inbound failed',
       );
+      return 'failed';
     }
-  }
-
-  enqueue(input: BridgeInboundInput): number {
-    const key = `${input.orgId}/${input.addonId}`;
-    const queue = this.queues.get(key) ?? [];
-    queue.push(input);
-    let dropped = 0;
-    while (queue.length > INBOUND_QUEUE_LIMIT) {
-      queue.shift();
-      dropped += 1;
-    }
-    this.queues.set(key, queue);
-    if (dropped > 0) {
-      this.logger.warn({ dropped, addonId: input.addonId }, 'transport inbound queue overflow');
-    }
-    return dropped;
-  }
-
-  drain(orgId: string, addonId: string): BridgeInboundInput[] {
-    const key = `${orgId}/${addonId}`;
-    const queue = this.queues.get(key) ?? [];
-    this.queues.delete(key);
-    return queue;
   }
 }
 

@@ -21,6 +21,12 @@ import {
 const TRANSPORT_CALL_TIMEOUT_MS = 30_000;
 const NO_AGENT_NOTICE =
   'No agent is available in this workspace yet, so the message cannot be delivered.';
+const DISPATCH_OUTCOME: Record<RunDispatchOutcome, BridgeInboundOutcome> = {
+  fired: 'dispatched',
+  suppressed: 'skipped',
+  busy: 'busy',
+  failed: 'failed',
+};
 
 @Injectable()
 export class NeutralBridgeInboundUseCase extends BridgeInboundPort {
@@ -98,7 +104,7 @@ export class NeutralBridgeInboundUseCase extends BridgeInboundPort {
       ...(attachmentIds.length > 0 ? { attachmentIds } : {}),
     });
     this.logDispatch(request, binding.threadId, outcome);
-    return 'dispatched';
+    return DISPATCH_OUTCOME[outcome];
   }
 
   private async bindAndDispatch(request: BridgeInboundRequest): Promise<BridgeInboundOutcome> {
@@ -137,7 +143,7 @@ export class NeutralBridgeInboundUseCase extends BridgeInboundPort {
       ...(attachmentIds.length > 0 ? { attachmentIds } : {}),
     });
     this.logDispatch(request, thread.id, outcome);
-    return 'dispatched';
+    return DISPATCH_OUTCOME[outcome];
   }
 
   private async uploadAttachments(

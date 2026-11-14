@@ -1,5 +1,17 @@
+import type { BridgeInboundOutcome } from '@harnesys/sdk';
 import { attributedText, authorLabel } from './routing.ts';
 import type { TelegramMessage } from './telegram.ts';
+
+const DROPPABLE_OUTCOMES: readonly BridgeInboundOutcome[] = [
+  'dispatched',
+  'auto_replied',
+  'skipped',
+  'echo_suppressed',
+];
+
+export function shouldDropAfter(outcome: BridgeInboundOutcome): boolean {
+  return DROPPABLE_OUTCOMES.includes(outcome);
+}
 
 export const DEFAULT_INBOX_MAX_BATCH = 20;
 export const DEFAULT_INBOX_MAX_CHARS = 3000;

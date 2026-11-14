@@ -1,5 +1,6 @@
 import type { InboundMessageSchema, TriggerFireOutcomeSchema } from '@harnesys/sdk';
 import type { z } from 'zod';
+import type { BridgeInboundOutcome } from '../../../application/addons/bridge/bridge-inbound.port.ts';
 import type { HostCallContext } from '../../../domain/addons/host-service.ts';
 
 export type SqlParam = string | number | boolean | null;
@@ -95,7 +96,7 @@ export abstract class TriggerFireSink {
 }
 
 export abstract class BridgeInboundSink {
-  abstract inbound(ctx: HostCallContext, message: InboundMessage): Promise<void>;
+  abstract inbound(ctx: HostCallContext, message: InboundMessage): Promise<BridgeInboundOutcome>;
 }
 
 export interface WorkerReportInput {

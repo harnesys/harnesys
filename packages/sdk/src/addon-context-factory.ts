@@ -209,9 +209,7 @@ export function createAddonContext(
       update: async (params) => client['triggers.update'](params, { signal }),
     },
     bridge: {
-      inbound: async (message) => {
-        await client['bridge.inbound']({ message }, { signal });
-      },
+      inbound: async (message) => (await client['bridge.inbound']({ message }, { signal })).outcome,
     },
     progress: {
       progress: (token: string, value: unknown) => {

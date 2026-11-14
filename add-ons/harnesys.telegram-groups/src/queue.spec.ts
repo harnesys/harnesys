@@ -5,6 +5,7 @@ import {
   type InboxEntry,
   renderBatch,
   replyDecision,
+  shouldDropAfter,
   trimBacklog,
 } from './queue.ts';
 import type { TelegramMessage } from './telegram.ts';
@@ -128,5 +129,18 @@ describe('reply anchoring', () => {
         boundThreadId: 't',
       }),
     ).toEqual({ replyTo: null, clear: true });
+  });
+});
+
+describe('inbound ack decision', () => {
+  test('delivered, answered and self-echo outcomes release the queue rows', () => {
+    for (const outcome of ['dispatched', 'auto_replied', 'skipped', 'echo_suppressed'] as const) {
+      expect(shouldDropAfter(outcome)).toBe(true);
+    }
+  });
+
+  test('busy and failed outcomes keep the rows for the next flush', () => {
+    expect(shouldDropAfter('busy')).toBe(false);
+    expect(shouldDropAfter('failed')).toBe(false);
   });
 });

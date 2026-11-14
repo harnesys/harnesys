@@ -15,7 +15,13 @@ export interface BridgeInboundRequest {
   correlationId?: string;
 }
 
-export type BridgeInboundOutcome = 'echo_suppressed' | 'dispatched' | 'auto_replied' | 'skipped';
+export type BridgeInboundOutcome =
+  | 'echo_suppressed'
+  | 'dispatched'
+  | 'auto_replied'
+  | 'skipped'
+  | 'busy'
+  | 'failed';
 
 export abstract class BridgeInboundPort {
   abstract execute(request: BridgeInboundRequest): Promise<BridgeInboundOutcome>;

@@ -262,6 +262,17 @@ export const InboundMessageSchema = z.object({
   attachments: z.array(InboundAttachmentSchema).max(10).optional(),
 });
 
+export const BridgeInboundOutcomeSchema = z.enum([
+  'echo_suppressed',
+  'dispatched',
+  'auto_replied',
+  'skipped',
+  'busy',
+  'failed',
+]);
+
+export type BridgeInboundOutcome = z.infer<typeof BridgeInboundOutcomeSchema>;
+
 export interface RouteRequest {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   path: string;

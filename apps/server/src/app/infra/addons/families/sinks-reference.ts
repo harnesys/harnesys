@@ -1,4 +1,5 @@
 import type { TransportMessage } from '@harnesys/sdk';
+import type { BridgeInboundOutcome } from '../../../application/addons/bridge/bridge-inbound.port.ts';
 import type { ResolvedInboundAttachment } from '../bridge/inbound-attachment.resolver.ts';
 
 export interface TriggerFireOutcome {
@@ -29,7 +30,7 @@ export interface BridgeInboundInput {
 }
 
 export interface BridgeInboundSink {
-  inbound(input: BridgeInboundInput): Promise<void>;
+  inbound(input: BridgeInboundInput): Promise<BridgeInboundOutcome>;
 }
 
 export type WorkerReportState = 'running' | 'stopped' | 'failed';

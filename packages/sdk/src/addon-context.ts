@@ -1,5 +1,5 @@
 import type { CallMeta } from './protocol/meta.ts';
-import type { AppCredentials } from './protocol/shared.ts';
+import type { AppCredentials, BridgeInboundOutcome } from './protocol/shared.ts';
 
 export type DbRow = Record<string, unknown>;
 export type SqlParam = string | number | boolean | null;
@@ -272,7 +272,7 @@ export interface AddonBridge {
     text: string;
     payload?: unknown;
     attachments?: AddonInboundAttachment[];
-  }): Promise<void>;
+  }): Promise<BridgeInboundOutcome>;
 }
 
 export interface AddonWorkerLease {

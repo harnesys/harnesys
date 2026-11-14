@@ -11,6 +11,7 @@ import {
   AppCredentialsSchema,
   BindingChannelParamsSchema,
   BindingWriteParamsSchema,
+  BridgeInboundOutcomeSchema,
   DbRowSchema,
   FileReadParamsSchema,
   FileReadResultSchema,
@@ -215,7 +216,7 @@ export const protocolMap = {
   ),
   'bridge.inbound': addonMethod(
     z.object({ message: InboundMessageSchema }),
-    empty,
+    z.object({ outcome: BridgeInboundOutcomeSchema }),
     'bridge.inbound',
   ),
   'workers.lease': addonMethod(

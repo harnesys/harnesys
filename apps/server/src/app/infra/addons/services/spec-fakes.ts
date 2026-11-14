@@ -248,9 +248,9 @@ export class FakeTriggerSink extends TriggerFireSink {
 
 export class FakeBridgeSink extends BridgeInboundSink {
   readonly messages: Array<{ channel: string; correlationId: string }> = [];
-  override inbound(ctx: HostCallContext, message: { channel: string }): Promise<void> {
+  override inbound(ctx: HostCallContext, message: { channel: string }): Promise<'dispatched'> {
     this.messages.push({ channel: message.channel, correlationId: ctx.correlationId });
-    return Promise.resolve();
+    return Promise.resolve('dispatched');
   }
 }
 

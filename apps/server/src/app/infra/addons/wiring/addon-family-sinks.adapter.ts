@@ -1,6 +1,7 @@
 import { Injectable } from '@harnesys/brix';
 import type { InboundMessageSchema, TriggerFireOutcomeSchema } from '@harnesys/sdk';
 import type { z } from 'zod';
+import type { BridgeInboundOutcome } from '../../../application/addons/bridge/bridge-inbound.port.ts';
 import type { HostCallContext } from '../../../domain/addons/host-service.ts';
 import { InboundAttachmentResolver } from '../bridge/inbound-attachment.resolver.ts';
 import type { BridgeInboundInput } from '../families/sinks-reference.ts';
@@ -42,7 +43,10 @@ export class BridgeInboundSinkAdapter extends BridgeInboundSink {
     super();
   }
 
-  override async inbound(ctx: HostCallContext, message: InboundMessage): Promise<void> {
+  override async inbound(
+    ctx: HostCallContext,
+    message: InboundMessage,
+  ): Promise<BridgeInboundOutcome> {
     const resolved = await this.attachments.resolve(ctx.orgId, message.attachments ?? []);
     const input: BridgeInboundInput = {
       orgId: ctx.orgId,
@@ -50,7 +54,7 @@ export class BridgeInboundSinkAdapter extends BridgeInboundSink {
       message: { channel: message.channel, text: message.text },
       ...(resolved.length === 0 ? {} : { attachments: resolved }),
     };
-    await this.inboundService.inbound(input);
+    return await this.inboundService.inbound(input);
   }
 }
 

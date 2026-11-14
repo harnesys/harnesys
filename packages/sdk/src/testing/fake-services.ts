@@ -277,7 +277,7 @@ export function createFakeServices(context: FakeServiceContext): {
         return { agents: [] };
       case 'bridge.inbound':
         sinks.inboundMessages.push(params.message as never);
-        return {};
+        return { outcome: 'dispatched' };
       case 'workers.report':
         sinks.workerReports.push(params as never);
         return {};

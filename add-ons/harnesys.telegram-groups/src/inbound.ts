@@ -7,7 +7,13 @@ import {
   registerChat,
 } from './commands.ts';
 import { connectionAlive } from './lifecycle.ts';
-import { filterFresh, hasActiveRun, type InboxSettings, renderBatch } from './queue.ts';
+import {
+  filterFresh,
+  hasActiveRun,
+  type InboxSettings,
+  renderBatch,
+  shouldDropAfter,
+} from './queue.ts';
 import {
   boundThreadOf,
   bumpOmitted,
@@ -206,7 +212,7 @@ export async function flushChannel(
     fresh.map((entry) => entry.message),
   );
   const chatTitle = first.message.chat.title ?? first.message.chat.username ?? channel;
-  await ctx.bridge.inbound({
+  const outcome = await ctx.bridge.inbound({
     channel,
     from: first.message.from === undefined ? undefined : `telegram:${first.message.from.id}`,
     text: rendered.text,
@@ -219,6 +225,12 @@ export async function flushChannel(
     },
     ...(attachments.length > 0 ? { attachments } : {}),
   });
+  if (!shouldDropAfter(outcome)) {
+    if (outcome === 'failed') {
+      await ctx.log.warn('bridge inbound failed, keeping queued messages', { channel });
+    }
+    return false;
+  }
   await deleteQueueEntries(
     ctx,
     fresh.map((entry) => entry.id),

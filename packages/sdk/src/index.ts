@@ -293,6 +293,8 @@ export {
   AccountSummarySchema,
   type AppCredentials,
   AppCredentialsSchema,
+  type BridgeInboundOutcome,
+  BridgeInboundOutcomeSchema,
   CloudRemoteEntrySchema,
   type CloudRemoteEntryWire,
   CloudRemoteExportSchema,
