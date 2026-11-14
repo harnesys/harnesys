@@ -2,7 +2,7 @@ import { useSessionStore } from '@/entities/session';
 import { toClientThread, useThreadStore } from '@/entities/thread';
 import { getActiveOrgId } from '@/shared/api/active-org';
 import { ApiError, apiJson } from '@/shared/api/client';
-import { getThread, threadsBase } from '@/shared/api/threads';
+import { getThread } from '@/shared/api/threads';
 
 export interface UndoCompactOptions {
   threadId: string;
@@ -17,13 +17,13 @@ export async function undoCompact(options: UndoCompactOptions): Promise<void> {
     if (!orgId) {
       throw new ApiError(400, 'No active organization');
     }
-    await apiJson<unknown>(`${threadsBase(orgId)}/${encodeURIComponent(threadId)}/compact/undo`, {
+    await apiJson<unknown>(`/api/threads/${encodeURIComponent(threadId)}/compact/undo`, {
       method: 'POST',
     });
     useThreadStore.getState().touch(threadId);
     const record = await getThread(threadId);
     useThreadStore.getState().upsert(toClientThread(record));
-    useSessionStore.getState().reconcileEvents(threadId, record.events);
+    useSessionStore.getState().replaceEvents(threadId, record.events);
     options.onDone?.();
   } catch (error) {
     options.onError?.(error);
