@@ -1,6 +1,6 @@
 {
   "id": "harnesys.scheduler",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "platform": 1,
   "title": "Scheduler",
   "description": "Cron schedules for agent threads. Every scheduler.cron trigger instance is bound to a thread and fires it when its cron expression is due, evaluated in the organization timezone. Missed runs follow the selected policy: catch up within an hour, skip, or skip and open an approval inbox item.",
@@ -87,6 +87,74 @@
       "id": "schedules",
       "family": "route",
       "descriptor": { "id": "schedules", "method": "GET", "path": "/schedules", "role": "member" }
+    },
+    {
+      "id": "pack",
+      "family": "tool-pack",
+      "descriptor": {
+        "name": "scheduler",
+        "title": "Scheduler tools",
+        "description": "Inspect and manage this addon's cron schedules: list, pause and resume",
+        "tools": [
+          {
+            "name": "list",
+            "description": "List this addon's cron schedules: name, cron expression, miss policy, status, next run, last fire, target thread and error.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": { "type": "object" }
+          },
+          {
+            "name": "set",
+            "description": "Create a cron schedule (omit schedule) or update an existing one (schedule = instance id or name). The cron expression is evaluated in the organization timezone; optional miss_policy controls missed runs (catch-up, skip, escalate). Rebinding with threadId moves the fire target to another thread of the same agent.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "schedule": {
+                  "type": "string",
+                  "description": "Schedule instance id or name to update; omit to create"
+                },
+                "cron": { "type": "string", "description": "Cron expression, required on create" },
+                "name": { "type": "string", "description": "Schedule name" },
+                "detail": { "type": "string", "description": "Task detail passed to the fire" },
+                "miss_policy": {
+                  "type": "string",
+                  "enum": ["catch-up", "skip", "escalate"],
+                  "description": "Missed-run policy, default catch-up"
+                },
+                "threadId": {
+                  "type": "string",
+                  "description": "Thread to fire; create defaults to the calling thread, update keeps the current binding when omitted"
+                }
+              }
+            }
+          },
+          {
+            "name": "pause",
+            "description": "Pause a schedule by instance id or name: the planner stops firing it until it is resumed.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "schedule": { "type": "string", "description": "Schedule instance id or name" }
+              },
+              "required": ["schedule"]
+            }
+          },
+          {
+            "name": "resume",
+            "description": "Resume a paused schedule by instance id or name: the next run is recomputed from the cron expression in the organization timezone.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "schedule": { "type": "string", "description": "Schedule instance id or name" }
+              },
+              "required": ["schedule"]
+            }
+          }
+        ]
+      }
     },
     {
       "id": "main",

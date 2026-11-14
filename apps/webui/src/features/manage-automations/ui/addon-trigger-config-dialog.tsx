@@ -271,7 +271,12 @@ function AddonTriggerForm({
                 fields={fields}
                 values={draft.config}
                 errors={validation}
-                addon={{ orgId, addonId, connections: detail.connections }}
+                addon={{
+                  orgId,
+                  addonId,
+                  connections: detail.connections,
+                  agents: agents.map((agent) => ({ id: agent.id, name: agent.name })),
+                }}
                 onChange={setConfig}
               />
             </div>

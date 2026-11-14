@@ -62,3 +62,9 @@ export function optionsFromConnections(connections: readonly AddonConnectionView
     })),
   );
 }
+
+export function optionsFromAgents(
+  agents: ReadonlyArray<{ id: string; name: string }> | undefined,
+): FieldOption[] {
+  return (agents ?? []).map((agent) => ({ value: agent.id, label: agent.name }));
+}

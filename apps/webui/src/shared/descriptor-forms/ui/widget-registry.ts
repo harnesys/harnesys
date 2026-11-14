@@ -12,6 +12,8 @@ export interface AddonFormContext {
   addonId: string;
   /** Connection views of the add-on, used by `optionsFrom: connections`. */
   connections: readonly AddonConnectionView[];
+  /** Org agents for `optionsFrom: agents`; absent on forms that never load them. */
+  agents?: ReadonlyArray<{ id: string; name: string }>;
 }
 
 export interface FormWidgetProps {

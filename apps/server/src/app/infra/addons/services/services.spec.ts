@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { ManageTriggerInstanceUseCase } from '../../../application/addons/triggers/manage-instance.use-case.ts';
 import type { OrgAddonRow } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import type { WorkerLeaseState } from '../../../domain/addons/ports/worker-lease.port.ts';
@@ -170,7 +171,7 @@ describe('triggers service', () => {
   test('rejects an instance owned by another add-on', async () => {
     const repo = new FakeTriggerRepo();
     repo.row = { ...repo.row, addonId: 'other.addon' };
-    const svc = new TriggersHostService(repo, new FakeTriggerSink());
+    const svc = new TriggersHostService(repo, new FakeTriggerSink(), stubManage());
     await expect(
       svc.methods[0]?.handle(callCtx(), { instanceId: 'ti1', runKey: 'k1' }),
     ).rejects.toMatchObject({ reason: 'not_found' });
@@ -178,13 +179,22 @@ describe('triggers service', () => {
 
   test('fires owned instances through the sink', async () => {
     const sink = new FakeTriggerSink();
-    const svc = new TriggersHostService(new FakeTriggerRepo(), sink);
+    const svc = new TriggersHostService(new FakeTriggerRepo(), sink, stubManage());
     await expect(
       svc.methods[0]?.handle(callCtx(), { instanceId: 'ti1', runKey: 'k1', text: 'hi' }),
     ).resolves.toEqual({ outcome: 'fired' });
     expect(sink.fired).toEqual([{ instanceId: 'ti1', runKey: 'k1', correlationId: 'corr-1' }]);
   });
 });
+
+function stubManage(): ManageTriggerInstanceUseCase {
+  const stub = Object.create(ManageTriggerInstanceUseCase.prototype) as ManageTriggerInstanceUseCase;
+  stub.create = async () => {
+    throw new Error('not used in these tests');
+  };
+  stub.patch = async () => {};
+  return stub;
+}
 
 class StubWorkerLease extends AddonWorkerLeasePort {
   override claim(): WorkerLeaseState {

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { AddonConnectionView } from '@harnesys/contracts';
 import {
+  optionsFromAgents,
   optionsFromConnections,
   optionsFromRouteBody,
   routeOptionsParams,
@@ -59,5 +60,10 @@ describe('field option sources', () => {
       { value: '11', label: 'GitHub installation · 11' },
       { value: '22', label: 'GitHub installation · 22' },
     ]);
+  });
+
+  test('agents map to options and tolerate a missing list', () => {
+    expect(optionsFromAgents([{ id: 'a1', name: 'Ops' }])).toEqual([{ value: 'a1', label: 'Ops' }]);
+    expect(optionsFromAgents(undefined)).toEqual([]);
   });
 });

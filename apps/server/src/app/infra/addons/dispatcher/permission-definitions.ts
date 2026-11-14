@@ -141,6 +141,7 @@ export const PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
   simple('runs.read', 'low', 'List runs of conversation threads'),
   simple('threads.create', 'medium', 'Create conversation threads'),
   simple('threads.compact', 'high', 'Compact conversation thread history'),
+  simple('bindings.write', 'medium', 'Create and remove the add-on transport bindings'),
   simple('usage.read', 'low', 'Read token usage and cost summaries'),
   simple('skills.read', 'low', 'List organization skills'),
   eventsSubscribeDefinition,

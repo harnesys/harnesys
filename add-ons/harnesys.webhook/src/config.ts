@@ -66,6 +66,13 @@ function choice<T extends string>(
     : fallback;
 }
 
+export function authLabel(auth: HookAuth): string {
+  if (auth === 'hmac') {
+    return 'HMAC';
+  }
+  return auth === 'apiKey' ? 'API key' : 'None';
+}
+
 export function parseHookConfig(raw: Record<string, unknown>): HookConfig {
   return {
     auth: choice(raw, 'auth', AUTH_VALUES, 'none'),

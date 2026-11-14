@@ -88,9 +88,9 @@ function build(enabled = true) {
 const TARGET = { threadId: THREAD_ID, agentId: AGENT_ID, modeId: 'plan' };
 
 describe('ManageTriggerInstanceUseCase', () => {
-  test('creates instance and starts it when enabled', () => {
+  test('creates instance and starts it when enabled', async () => {
     const { useCase, triggers, calls } = build();
-    const row = useCase.create({
+    const row = await useCase.create({
       orgId: ORG,
       addonId: 'acme.tool',
       triggerId: 'feed',
@@ -104,9 +104,9 @@ describe('ManageTriggerInstanceUseCase', () => {
     expect(calls.calls).toContain(`trigger.start:${row.id}`);
   });
 
-  test('rejects create when addon is disabled', () => {
+  test('rejects create when addon is disabled', async () => {
     const { useCase } = build(false);
-    expect(() =>
+    await expect(
       useCase.create({
         orgId: ORG,
         addonId: 'acme.tool',
@@ -115,12 +115,12 @@ describe('ManageTriggerInstanceUseCase', () => {
         config: {},
         actor: ACTOR,
       }),
-    ).toThrow(AddonException);
+    ).rejects.toThrow(AddonException);
   });
 
-  test('rejects undeclared trigger kind', () => {
+  test('rejects undeclared trigger kind', async () => {
     const { useCase } = build();
-    expect(() =>
+    await expect(
       useCase.create({
         orgId: ORG,
         addonId: 'acme.tool',
@@ -129,12 +129,12 @@ describe('ManageTriggerInstanceUseCase', () => {
         config: {},
         actor: ACTOR,
       }),
-    ).toThrow('not declared');
+    ).rejects.toThrow('not declared');
   });
 
-  test('rejects target pointing at a missing thread', () => {
+  test('rejects target pointing at a missing thread', async () => {
     const { useCase } = build();
-    expect(() =>
+    await expect(
       useCase.create({
         orgId: ORG,
         addonId: 'acme.tool',
@@ -144,12 +144,12 @@ describe('ManageTriggerInstanceUseCase', () => {
         target: { threadId: OTHER_THREAD_ID, agentId: AGENT_ID },
         actor: ACTOR,
       }),
-    ).toThrow('target.threadId not found');
+    ).rejects.toThrow('target.threadId not found');
   });
 
-  test('rejects target agent outside the thread', () => {
+  test('rejects target agent outside the thread', async () => {
     const { useCase } = build();
-    expect(() =>
+    await expect(
       useCase.create({
         orgId: ORG,
         addonId: 'acme.tool',
@@ -159,12 +159,12 @@ describe('ManageTriggerInstanceUseCase', () => {
         target: { threadId: THREAD_ID, agentId: STRANGER_AGENT_ID },
         actor: ACTOR,
       }),
-    ).toThrow('not a thread member');
+    ).rejects.toThrow('not a thread member');
   });
 
   test('disable stops the instance and flips the flag', async () => {
     const { useCase, triggers, calls } = build();
-    const row = useCase.create({
+    const row = await useCase.create({
       orgId: ORG,
       addonId: 'acme.tool',
       triggerId: 'feed',
@@ -180,7 +180,7 @@ describe('ManageTriggerInstanceUseCase', () => {
 
   test('delete stops enabled instance and removes the row', async () => {
     const { useCase, triggers, calls } = build();
-    const row = useCase.create({
+    const row = await useCase.create({
       orgId: ORG,
       addonId: 'acme.tool',
       triggerId: 'feed',
@@ -196,7 +196,7 @@ describe('ManageTriggerInstanceUseCase', () => {
 
   test('enable restarts a disabled instance', async () => {
     const { useCase, calls } = build();
-    const row = useCase.create({
+    const row = await useCase.create({
       orgId: ORG,
       addonId: 'acme.tool',
       triggerId: 'feed',
@@ -211,9 +211,9 @@ describe('ManageTriggerInstanceUseCase', () => {
     expect(calls.calls).toEqual([`trigger.start:${row.id}`]);
   });
 
-  test('patch accepts retargeting the same instance to its own thread', () => {
+  test('patch accepts retargeting the same instance to its own thread', async () => {
     const { useCase, triggers } = build();
-    const row = useCase.create({
+    const row = await useCase.create({
       orgId: ORG,
       addonId: 'acme.tool',
       triggerId: 'feed',
@@ -222,7 +222,7 @@ describe('ManageTriggerInstanceUseCase', () => {
       target: TARGET,
       actor: ACTOR,
     });
-    useCase.patch(ORG, row.id, { targetJson: JSON.stringify(TARGET) });
+    await useCase.patch(ORG, row.id, { targetJson: JSON.stringify(TARGET) });
     expect(JSON.parse(triggers.find(ORG, row.id)?.targetJson ?? '{}')).toMatchObject({
       threadId: THREAD_ID,
     });

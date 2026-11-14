@@ -50,7 +50,8 @@ export type FieldOptionsFrom =
       /** Row field used as the option label. Defaults to `valueKey`. */
       labelKey?: string;
     }
-  | { kind: 'connections' };
+  | { kind: 'connections' }
+  | { kind: 'agents' };
 
 export interface FieldSpec {
   key: string;
@@ -120,6 +121,7 @@ export const FieldOptionsFromSchema: z.ZodType<FieldOptionsFrom> = z.union([
     labelKey: z.string().min(1).optional(),
   }),
   z.object({ kind: z.literal('connections') }),
+  z.object({ kind: z.literal('agents') }),
 ]);
 
 export const FieldSpecSchema: z.ZodType<FieldSpec> = z.object({

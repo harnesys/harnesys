@@ -1,15 +1,24 @@
 import type { FieldSpec, FieldValue } from '@harnesys/contracts';
+import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { fetchAddonRoute } from '@/shared/api/addons';
+import { orgScopedAgentsQuery } from '@/shared/api/agents';
 import {
   buildValidator,
   FieldRenderer,
+  fieldControlId,
   fieldInputs,
   initialFieldValues,
+  RequiredMark,
 } from '@/shared/descriptor-forms';
 import { alert } from '@/shared/services/overlay';
-import { RowSection } from '@/shared/ui/capability-rows';
-import { SettingsErrorBanner, SettingsField, SettingsSave } from '@/shared/ui/settings-kit';
+import { ROW_SECTION_DIVIDER } from '@/shared/ui/capability-rows';
+import {
+  SettingsErrorBanner,
+  SettingsField,
+  SettingsSave,
+  SettingsSection,
+} from '@/shared/ui/settings-kit';
 import { handleSectionResult, resolveL10nText, routeParamsOf } from '../lib/route-call';
 import type { SectionProps } from '../lib/section-props';
 import type { AddonRouteRef, SectionL10n } from '../lib/view-sections';
@@ -20,6 +29,11 @@ export function FormSection({ orgId, addonId, detail, section, onRefresh }: Sect
   const [pending, setPending] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const agentsQuery = useQuery(orgScopedAgentsQuery(orgId));
+  const agents = (agentsQuery.data?.items ?? []).map((agent) => ({
+    id: agent.id,
+    name: agent.name,
+  }));
 
   const title = section.title as SectionL10n | undefined;
   const submitRef = section.submit as AddonRouteRef | undefined;
@@ -70,21 +84,29 @@ export function FormSection({ orgId, addonId, detail, section, onRefresh }: Sect
   };
 
   return (
-    <RowSection label={resolveL10nText(title)}>
+    <SettingsSection label={resolveL10nText(title)} className={ROW_SECTION_DIVIDER}>
       {fields.map((field) => (
         <SettingsField
           key={field.key}
-          label={field.label}
+          label={
+            <>
+              {field.label}
+              {field.required ? <RequiredMark /> : null}
+            </>
+          }
           description={field.help}
           error={errors[field.key]}
+          htmlFor={fieldControlId(field.key)}
           testId={`addon-form-${field.key}`}
         >
           <FieldRenderer
             field={field}
+            bare
             value={field.type === 'secret' ? undefined : values[field.key]}
             secretValue={secrets[field.key]}
+            disabled={pending}
             values={values}
-            addon={{ orgId, addonId, connections: detail.connections }}
+            addon={{ orgId, addonId, connections: detail.connections, agents }}
             onChange={(next) => setValues((current) => ({ ...current, [field.key]: next }))}
             onSecretChange={(next) => setSecrets((current) => ({ ...current, [field.key]: next }))}
           />
@@ -104,6 +126,6 @@ export function FormSection({ orgId, addonId, detail, section, onRefresh }: Sect
         }}
         testId="addon-form-submit"
       />
-    </RowSection>
+    </SettingsSection>
   );
 }

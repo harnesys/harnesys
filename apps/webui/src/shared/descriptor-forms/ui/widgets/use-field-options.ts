@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchAddonRoute } from '@/shared/api/addons';
 import {
   type AddonRouteOptions,
+  optionsFromAgents,
   optionsFromConnections,
   optionsFromRouteBody,
   routeOptionsParams,
@@ -13,6 +14,8 @@ export interface ResolvedFieldOptions {
   options: FieldOption[];
   loading: boolean;
   failed: boolean;
+  /** `dependsOn` values are not filled yet: the source cannot be queried. */
+  blocked: boolean;
 }
 
 /**
@@ -48,27 +51,37 @@ export function useFieldOptions(
   });
 
   if (!source) {
-    return { options: field.options ?? [], loading: false, failed: false };
+    return { options: field.options ?? [], loading: false, failed: false, blocked: false };
   }
   if (source.kind === 'connections') {
     return {
       options: addon ? optionsFromConnections(addon.connections) : [],
       loading: false,
       failed: !addon,
+      blocked: false,
+    };
+  }
+  if (source.kind === 'agents') {
+    return {
+      options: optionsFromAgents(addon?.agents),
+      loading: false,
+      failed: !addon || addon.agents === undefined,
+      blocked: false,
     };
   }
   if (!addon) {
-    return { options: field.options ?? [], loading: false, failed: true };
+    return { options: field.options ?? [], loading: false, failed: true, blocked: false };
   }
   if (!params) {
-    return { options: field.options ?? [], loading: false, failed: false };
+    return { options: [], loading: false, failed: false, blocked: true };
   }
   if (optionsQuery.isError) {
-    return { options: [], loading: false, failed: true };
+    return { options: [], loading: false, failed: true, blocked: false };
   }
   return {
     options: optionsFromRouteBody(optionsQuery.data, route as AddonRouteOptions),
     loading: optionsQuery.isPending && optionsQuery.fetchStatus !== 'idle',
     failed: false,
+    blocked: false,
   };
 }

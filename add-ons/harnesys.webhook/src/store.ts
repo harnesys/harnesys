@@ -109,6 +109,14 @@ export async function pauseWebhook(ctx: AddonContext, instanceId: string): Promi
   ]);
 }
 
+export async function resumeWebhook(ctx: AddonContext, instanceId: string): Promise<void> {
+  await ctx.db.run('update webhooks set status = ?, updated_at = ? where instance_id = ?', [
+    'active',
+    new Date().toISOString(),
+    instanceId,
+  ]);
+}
+
 export async function markFired(ctx: AddonContext, instanceId: string): Promise<void> {
   await ctx.db.run(
     "update webhooks set last_fired_at = ?, fires = fires + 1, status = 'active', last_error = '', updated_at = ? where instance_id = ?",
@@ -129,6 +137,14 @@ export async function markFailed(
 
 export async function findByToken(ctx: AddonContext, token: string): Promise<WebhookRecord | null> {
   const row = await ctx.db.get(`${SELECT_WEBHOOK} where token = ?`, [token]);
+  return row ? mapWebhook(row) : null;
+}
+
+export async function findByInstance(
+  ctx: AddonContext,
+  instanceId: string,
+): Promise<WebhookRecord | null> {
+  const row = await ctx.db.get(`${SELECT_WEBHOOK} where instance_id = ?`, [instanceId]);
   return row ? mapWebhook(row) : null;
 }
 

@@ -17,6 +17,8 @@ export class BindingsHostService implements HostServiceModule {
       serviceMethod('bindings.channels', undefined, (ctx, params) =>
         this.channels(ctx, params.provider),
       ),
+      serviceMethod('bindings.bind', undefined, (ctx, params) => this.bind(ctx, params)),
+      serviceMethod('bindings.unbind', undefined, (ctx, params) => this.unbind(ctx, params)),
     ];
   }
 
@@ -36,5 +38,29 @@ export class BindingsHostService implements HostServiceModule {
         createdAt: row.createdAt,
       }));
     return { channels };
+  }
+
+  private async bind(
+    ctx: HostCallContext,
+    params: { provider: string; channel: string; threadId: string },
+  ): Promise<{ ok: true }> {
+    this.bindings.remove(ctx.orgId, ctx.addonId, params.provider, params.channel);
+    this.bindings.add({
+      orgId: ctx.orgId,
+      addonId: ctx.addonId,
+      provider: params.provider,
+      externalChatId: params.channel,
+      threadId: params.threadId,
+      createdAt: new Date().toISOString(),
+    });
+    return { ok: true };
+  }
+
+  private async unbind(
+    ctx: HostCallContext,
+    params: { provider: string; channel: string },
+  ): Promise<{ ok: true }> {
+    this.bindings.remove(ctx.orgId, ctx.addonId, params.provider, params.channel);
+    return { ok: true };
   }
 }

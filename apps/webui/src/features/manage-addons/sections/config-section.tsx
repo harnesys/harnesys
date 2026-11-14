@@ -1,7 +1,8 @@
 import type { FieldValue } from '@harnesys/contracts';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { orgAddonDetailQueryKey, putOrgAddonConfig } from '@/shared/api/addons';
+import { orgScopedAgentsQuery } from '@/shared/api/agents';
 import {
   buildValidator,
   FieldRenderer,
@@ -21,6 +22,11 @@ import { configFieldsFromDetail } from '../lib/view-sections';
 
 export function ConfigSection({ orgId, detail, section }: SectionProps) {
   const queryClient = useQueryClient();
+  const agentsQuery = useQuery(orgScopedAgentsQuery(orgId));
+  const agents = (agentsQuery.data?.items ?? []).map((agent) => ({
+    id: agent.id,
+    name: agent.name,
+  }));
   const allFields = configFieldsFromDetail(detail);
   const onlyFields = Array.isArray(section.fields) ? (section.fields as string[]) : undefined;
   const fields = onlyFields
@@ -104,7 +110,7 @@ export function ConfigSection({ orgId, detail, section }: SectionProps) {
             existingSecret={false}
             disabled={pending}
             values={values}
-            addon={{ orgId, addonId: detail.addonId, connections: detail.connections }}
+            addon={{ orgId, addonId: detail.addonId, connections: detail.connections, agents }}
             onChange={(next) => setValues((current) => ({ ...current, [field.key]: next }))}
             onSecretChange={(next) => setSecrets((current) => ({ ...current, [field.key]: next }))}
           />

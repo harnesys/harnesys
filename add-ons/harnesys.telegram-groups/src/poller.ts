@@ -2,6 +2,7 @@ import type { AddonContext, WorkerPair } from '@harnesys/sdk';
 import { AddonError } from '@harnesys/sdk';
 import { call, deleteWebhook, getMe, setMyCommands } from './bot-api.ts';
 import { botCommands, commandsScope } from './commands.ts';
+import { discoverMessage, touchChat, touchTopic } from './discovery.ts';
 import { type BotIdentityState, handleGroup } from './inbound.ts';
 import { groupMessages, type TelegramUpdate } from './telegram.ts';
 
@@ -58,10 +59,24 @@ async function handleUpdate(ctx: AddonContext, update: TelegramUpdate): Promise<
     return;
   }
   if (update.my_chat_member !== undefined) {
+    const chat = update.my_chat_member.chat;
+    if (chat.type !== 'private') {
+      await touchChat(ctx, chat);
+    }
     await ctx.log.info('telegram chat membership changed', {
-      chatId: update.my_chat_member.chat.id,
+      chatId: chat.id,
       status: update.my_chat_member.new_chat_member?.status ?? 'unknown',
     });
+    return;
+  }
+  if (update.forum_topic_created !== undefined) {
+    const topic = update.forum_topic_created;
+    await touchChat(ctx, topic.chat);
+    await touchTopic(ctx, String(topic.chat.id), String(topic.message_thread_id), topic.name);
+    return;
+  }
+  if (update.message !== undefined) {
+    await discoverMessage(ctx, update.message);
   }
 }
 
@@ -90,7 +105,7 @@ async function pollBatch(
   const updates = await call<TelegramUpdate[]>(ctx, 'getUpdates', {
     offset: state.offset,
     timeout: POLL_TIMEOUT_SEC,
-    allowed_updates: ['message', 'my_chat_member'],
+    allowed_updates: ['message', 'my_chat_member', 'forum_topic_created'],
   });
   const messages = [];
   for (const update of updates) {

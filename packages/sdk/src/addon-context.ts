@@ -97,6 +97,8 @@ export interface AddonBindings {
   channels(
     provider?: string,
   ): Promise<Array<{ provider: string; channel: string; threadId: string; createdAt: string }>>;
+  bind(params: { provider: string; channel: string; threadId: string }): Promise<{ ok: true }>;
+  unbind(params: { provider: string; channel: string }): Promise<{ ok: true }>;
 }
 
 export interface AddonAccounts {
@@ -162,6 +164,12 @@ export interface AddonSkills {
   }): Promise<Array<{ id: string; name: string; description: string | null; source: string }>>;
 }
 
+export interface AddonTriggerTarget {
+  threadId: string;
+  agentId: string;
+  modeId?: string;
+}
+
 export interface AddonTriggers {
   fire(params: {
     instanceId: string;
@@ -169,6 +177,20 @@ export interface AddonTriggers {
     text?: string;
     payload?: unknown;
   }): Promise<{ outcome: 'fired' | 'suppressed' | 'busy' | 'failed'; runId?: string | null }>;
+  create(params: {
+    kind: string;
+    label: string;
+    config: Record<string, unknown>;
+    target: AddonTriggerTarget;
+    instructions?: string;
+  }): Promise<{ instanceId: string }>;
+  update(params: {
+    instanceId: string;
+    label?: string;
+    config?: Record<string, unknown>;
+    target?: AddonTriggerTarget;
+    instructions?: string;
+  }): Promise<{ instanceId: string }>;
 }
 
 export interface AddonOrg {

@@ -198,14 +198,32 @@ export async function registerChat(ctx: AddonContext, message: CommandMessage): 
   }
   await ctx.db.run(
     'insert into chats (chat_id, kind, title, status, updated_at) values (?, ?, ?, ?, ?) on conflict(chat_id) do update set kind = excluded.kind, title = excluded.title, updated_at = excluded.updated_at',
-    [message.chatId, 'group', message.chatId, 'discovered', new Date().toISOString()],
+    [
+      message.chatId,
+      'group',
+      await registeredTitle(ctx, message.chatId),
+      'discovered',
+      new Date().toISOString(),
+    ],
   );
   await ctx.log.info('group registered', { chatId: message.chatId });
   await reply(
     ctx,
     message,
-    'This group is registered. An admin can bind it to a thread in Harnesys: Settings → Add-ons → Telegram groups.',
+    'This group is registered. An admin can connect it in Harnesys: Settings → Add-ons → Telegram groups.',
   );
+}
+
+/** Chat title from the Bot API; the id stays the fallback when getChat fails. */
+async function registeredTitle(ctx: AddonContext, chatId: string): Promise<string> {
+  try {
+    const info = await call<{ title?: string; username?: string }>(ctx, 'getChat', {
+      chat_id: chatId,
+    });
+    return info.title ?? (info.username ? `@${info.username}` : chatId);
+  } catch {
+    return chatId;
+  }
 }
 
 const UNBOUND_REPLY =

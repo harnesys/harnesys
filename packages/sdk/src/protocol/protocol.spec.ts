@@ -70,6 +70,8 @@ describe('protocol method map conformance', () => {
       'files.read',
       'files.write',
       'bindings.channels',
+      'bindings.bind',
+      'bindings.unbind',
       'accounts.list',
       'accounts.report',
       'accounts.access',
@@ -81,6 +83,8 @@ describe('protocol method map conformance', () => {
       'usage.summary',
       'skills.list',
       'triggers.fire',
+      'triggers.create',
+      'triggers.update',
       'bridge.inbound',
       'workers.lease',
       'workers.release',
@@ -100,6 +104,8 @@ describe('protocol method map conformance', () => {
     expect(protocolMap['threads.create'].permission).toBe('threads.create');
     expect(protocolMap['bridge.inbound'].permission).toBe('bridge.inbound');
     expect(protocolMap['triggers.fire'].permission).toBe('trigger');
+    expect(protocolMap['triggers.create'].permission).toBe('trigger');
+    expect(protocolMap['triggers.update'].permission).toBe('trigger');
     expect(protocolMap['workers.report'].permission).toBe('worker');
     expect(protocolMap['workers.lease'].permission).toBe('worker');
     expect(protocolMap['secrets.set'].permission).toBeNull();
@@ -109,6 +115,8 @@ describe('protocol method map conformance', () => {
     expect(protocolMap['files.read'].permission).toBe('files.read');
     expect(protocolMap['files.write'].permission).toBe('files.write');
     expect(protocolMap['bindings.channels'].permission).toBeNull();
+    expect(protocolMap['bindings.bind'].permission).toBe('bindings.write');
+    expect(protocolMap['bindings.unbind'].permission).toBe('bindings.write');
     expect(protocolMap['db.run'].permission).toBeNull();
     expect(protocolMap['log.write'].permission).toBeNull();
   });

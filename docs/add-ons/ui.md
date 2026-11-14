@@ -71,7 +71,8 @@ interface FieldSpec {
   multi?: boolean;                    // мультивыбор select — хранится запятой-списком
   optionsFrom?:                       // динамические опции, резолвит хост
     | { kind: 'addonRoute'; route: string; dependsOn?: string[]; listKey?: string; valueKey: string; labelKey?: string }
-    | { kind: 'connections' };        // список привязанных аккаунтов
+    | { kind: 'connections' }         // список привязанных аккаунтов
+    | { kind: 'agents' };             // агенты организации
   pattern?: { regex: string; hint: string };
   editable?: boolean;                 // false — только показать
   generated?: boolean;                // значение создаёт хост/аддон
@@ -96,6 +97,7 @@ interface FieldSpec {
   { "key": "repo", "label": "Repository", "type": "select", "required": true,
     "optionsFrom": { "kind": "addonRoute", "route": "/repos", "valueKey": "full_name", "labelKey": "full_name", "dependsOn": ["installation"] } },
   { "key": "account", "label": "Bot account", "type": "select", "required": true, "optionsFrom": { "kind": "connections" } },
+  { "key": "agentId", "label": "Agent", "type": "select", "required": true, "optionsFrom": { "kind": "agents" } },
   { "key": "expert", "label": "Advanced", "type": "group", "required": false, "advanced": true, "collapsible": true, "columns": 2,
     "fields": [ { "key": "poll_sec", "label": "Poll interval", "type": "number", "required": false, "visibleWhen": { "key": "commands", "equals": "true" } } ] }
 ]

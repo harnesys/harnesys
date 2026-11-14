@@ -49,13 +49,13 @@ export class AddonsOrgTriggersController {
 
   @UseGuards(AddonOrgAdminGuard)
   @Post()
-  create(
+  async create(
     @Param('orgId') orgId: string,
     @Param('addonId') addonId: string,
     @SessionPrincipal() principal: Principal,
     @Body(UpsertBodySchema) body: z.infer<typeof UpsertBodySchema>,
-  ): TriggerInstanceView {
-    const created = this.manage.create({
+  ): Promise<TriggerInstanceView> {
+    const created = await this.manage.create({
       orgId,
       addonId,
       triggerId: body.triggerId,
@@ -72,12 +72,12 @@ export class AddonsOrgTriggersController {
 
   @UseGuards(AddonOrgAdminGuard)
   @Patch(':tid')
-  patch(
+  async patch(
     @Param('orgId') orgId: string,
     @Param('addonId') addonId: string,
     @Param('tid') tid: string,
     @Body(PatchBodySchema) body: z.infer<typeof PatchBodySchema>,
-  ): TriggerInstanceView {
+  ): Promise<TriggerInstanceView> {
     this.assertRow(orgId, addonId);
     const patch: TriggerInstancePatch = {};
     if (body.label !== undefined) {
@@ -95,7 +95,7 @@ export class AddonsOrgTriggersController {
     if (body.enabled !== undefined) {
       patch.enabled = body.enabled;
     }
-    this.manage.patch(orgId, tid, patch);
+    await this.manage.patch(orgId, tid, patch);
     const row = this.instances.find(orgId, tid);
     if (!row) {
       throw new AddonException('not_found', 404, `Trigger instance not found: ${tid}`);

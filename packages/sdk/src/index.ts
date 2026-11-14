@@ -18,6 +18,7 @@ export {
   type AddonSkills,
   type AddonThreads,
   type AddonTriggers,
+  type AddonTriggerTarget,
   type AddonUsage,
   type AddonWorkers,
   createAddonContext,

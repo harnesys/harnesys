@@ -64,6 +64,7 @@ export interface FakeHost {
   workerReports: Array<{ workerId: string; state: string; code?: string }>;
   inboundMessages: Array<{ channel: string; from?: string; text: string; payload?: unknown }>;
   fileWrites: Array<{ path: string; size: number }>;
+  createdTriggerInstances: Array<Record<string, unknown>>;
   files: Record<string, string>;
   progress: Array<{ token: string; value: unknown }>;
   now(): number;
@@ -123,6 +124,7 @@ export function createFakeHost(options: FakeHostOptions): FakeHost {
       payload?: unknown;
     }>,
     fileWrites: [] as Array<{ path: string; size: number }>,
+    createdTriggerInstances: [] as Array<Record<string, unknown>>,
   };
   const files: Record<string, string> = options.files ?? {};
   const services = createFakeServices({
@@ -161,6 +163,7 @@ export function createFakeHost(options: FakeHostOptions): FakeHost {
     workerReports: sinks.workerReports,
     inboundMessages: sinks.inboundMessages,
     fileWrites: sinks.fileWrites,
+    createdTriggerInstances: sinks.createdTriggerInstances,
     files,
     progress,
     now,

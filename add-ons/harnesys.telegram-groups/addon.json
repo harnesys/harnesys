@@ -1,6 +1,6 @@
 {
   "id": "harnesys.telegram-groups",
-  "version": "1.1.0",
+  "version": "1.3.0",
   "platform": 1,
   "title": "Telegram groups",
   "description": "Group and community bot: the bot is added to group chats and forum topics and routes matching messages to Harnesys threads (routing policy: mention, reply-to-bot, always, or commands only). Groups register themselves with /start or /join (admin or privacy-mode verification via getChatMember), an admin binds them in this settings page, and each group or topic gets its own thread. This add-on binds its own telegram-bot account with its own BotFather token; never share one bot token between this add-on and the Telegram bot add-on (getUpdates returns 409 for two pollers on one token).",
@@ -44,6 +44,14 @@
     {
       "id": "runs.dispatch",
       "reason": "Cancel the active run for /stop (runs.cancel is gated behind this permission)"
+    },
+    {
+      "id": "threads.create",
+      "reason": "Create the thread a group or topic is connected to from the settings page"
+    },
+    {
+      "id": "bindings.write",
+      "reason": "Bind and unbind the add-on transport channels to threads from the settings page"
     },
     {
       "id": "threads.compact",
@@ -374,27 +382,65 @@
             "title": "Registered chats",
             "source": { "route": "/chats" },
             "columns": [
-              { "key": "id", "label": "Chat", "format": "text" },
+              { "key": "title", "label": "Group", "format": "text" },
               { "key": "kind", "label": "Kind", "format": "badge" },
-              { "key": "title", "label": "Title", "format": "text" },
               { "key": "status", "label": "Status", "format": "badge" },
-              { "key": "threadId", "label": "Thread", "format": "text" },
+              { "key": "id", "label": "Chat id", "format": "copy" },
               { "key": "updatedAt", "label": "Updated", "format": "datetime" }
-            ],
-            "rowActions": [
+            ]
+          },
+          {
+            "type": "form",
+            "title": "Connect a group or topic",
+            "fields": [
               {
-                "id": "bind",
-                "label": "Bind",
-                "route": { "route": "/chats/:id/bind", "params": { "id": "id" } }
+                "key": "chat",
+                "label": "Group",
+                "type": "text",
+                "required": true,
+                "placeholder": "Pick a discovered group",
+                "optionsFrom": {
+                  "kind": "addonRoute",
+                  "route": "chats",
+                  "valueKey": "id",
+                  "labelKey": "title"
+                },
+                "widget": { "kind": "combobox" },
+                "help": "Groups the bot has seen; add the bot to a group or send /start there to discover it"
               },
               {
-                "id": "unbind",
-                "label": "Unbind",
-                "route": { "route": "/chats/:id/unbind", "params": { "id": "id" } },
-                "confirm": "Unbind this group? Messages stop reaching the thread until it is bound again.",
-                "destructive": true
+                "key": "topic",
+                "label": "Forum topic",
+                "type": "text",
+                "required": false,
+                "placeholder": "Whole group",
+                "optionsFrom": {
+                  "kind": "addonRoute",
+                  "route": "topics",
+                  "valueKey": "topicId",
+                  "labelKey": "title",
+                  "dependsOn": ["chat"]
+                },
+                "widget": { "kind": "combobox" },
+                "help": "Pick a discovered topic, or type a name to create a new one (the bot must be a group admin). Leave empty to connect the whole group. Topic names appear as soon as the bot sees the topic being created or edited, or any message posted in it."
+              },
+              {
+                "key": "agentId",
+                "label": "Agent",
+                "type": "select",
+                "required": true,
+                "optionsFrom": { "kind": "agents" },
+                "help": "The agent answers in the connected thread"
+              },
+              {
+                "key": "title",
+                "label": "Thread title",
+                "type": "text",
+                "required": false,
+                "help": "Defaults to the group and topic names"
               }
-            ]
+            ],
+            "submit": { "route": "/connect" }
           },
           {
             "type": "form",
@@ -402,10 +448,17 @@
             "fields": [
               {
                 "key": "chat",
-                "label": "Chat id",
+                "label": "Chat",
                 "type": "text",
                 "required": true,
-                "help": "Numeric chat id from the registered chats table"
+                "placeholder": "Pick a discovered group",
+                "optionsFrom": {
+                  "kind": "addonRoute",
+                  "route": "chats",
+                  "valueKey": "id",
+                  "labelKey": "title"
+                },
+                "widget": { "kind": "combobox" }
               },
               {
                 "key": "title",
@@ -418,7 +471,7 @@
           },
           {
             "type": "markdown",
-            "body": "Setup: 1) bind a telegram-bot account created from a @BotFather token in the connections section; 2) add the bot to a group and send /start or /join there — the bot verifies it is an admin (or has privacy mode disabled); 3) bind the chat above. Messages matching the routing policy go to the bound thread agent with sender attribution, and replies come back into the group. Forum topics each get their own thread. This add-on must own its own bot token: sharing one token with the Telegram bot add-on breaks both pollers (Telegram returns 409)."
+            "body": "Setup: 1) bind a telegram-bot account created from a @BotFather token in the connections section; 2) add the bot to a group — the bot discovers it once it sees any message there (or send /start or /join to register explicitly; the bot verifies it is an admin or has privacy mode disabled); 3) connect the group or a forum topic above with the agent that should answer. Messages matching the routing policy go to the connected thread with sender attribution, and replies come back into the group. Each forum topic can have its own thread and agent. The bot must own its own token: sharing one token with the Telegram bot add-on breaks both pollers (Telegram returns 409)."
           }
         ]
       }
@@ -429,24 +482,14 @@
       "descriptor": { "id": "chats", "method": "GET", "path": "/chats", "role": "member" }
     },
     {
-      "id": "bind",
+      "id": "topics",
       "family": "route",
-      "descriptor": {
-        "id": "bind",
-        "method": "POST",
-        "path": "/chats/:id/bind",
-        "role": "member"
-      }
+      "descriptor": { "id": "topics", "method": "GET", "path": "/topics", "role": "member" }
     },
     {
-      "id": "unbind",
+      "id": "connect",
       "family": "route",
-      "descriptor": {
-        "id": "unbind",
-        "method": "POST",
-        "path": "/chats/:id/unbind",
-        "role": "member"
-      }
+      "descriptor": { "id": "connect", "method": "POST", "path": "/connect", "role": "member" }
     },
     {
       "id": "rename",

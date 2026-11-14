@@ -9,6 +9,8 @@ import { orgServiceMethods } from './org-service-methods.ts';
 import {
   AccountSummarySchema,
   AppCredentialsSchema,
+  BindingChannelParamsSchema,
+  BindingWriteParamsSchema,
   DbRowSchema,
   FileReadParamsSchema,
   FileReadResultSchema,
@@ -20,12 +22,12 @@ import {
   HttpFetchResultSchema,
   InboundMessageSchema,
   LogWriteParamsSchema,
+  OkResultSchema,
   RouteHandleResultSchema,
   RouteRequestSchema,
   SqlParamSchema,
   TransportBindingSummarySchema,
   TransportMessageSchema,
-  TriggerFireOutcomeSchema,
 } from './shared.ts';
 import { sourceMethods } from './source-methods.ts';
 
@@ -173,6 +175,8 @@ export const protocolMap = {
     z.object({ channels: z.array(TransportBindingSummarySchema) }),
     null,
   ),
+  'bindings.bind': addonMethod(BindingWriteParamsSchema, OkResultSchema, 'bindings.write'),
+  'bindings.unbind': addonMethod(BindingChannelParamsSchema, OkResultSchema, 'bindings.write'),
   'accounts.list': addonMethod(
     z.object({ connection: str }),
     z.object({ accounts: z.array(AccountSummarySchema) }),
@@ -206,16 +210,6 @@ export const protocolMap = {
     z.object({ title: str.optional(), agentId: z.string().uuid() }),
     z.object({ threadId: str }),
     'threads.create',
-  ),
-  'triggers.fire': addonMethod(
-    z.object({
-      instanceId: str,
-      runKey: str,
-      text: str.optional(),
-      payload: z.unknown().optional(),
-    }),
-    TriggerFireOutcomeSchema,
-    'trigger',
   ),
   'bridge.inbound': addonMethod(
     z.object({ message: InboundMessageSchema }),

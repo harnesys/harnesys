@@ -50,6 +50,7 @@ export const KNOWN_PERMISSION_IDS = [
   'runs.read',
   'threads.create',
   'threads.compact',
+  'bindings.write',
   'usage.read',
   'skills.read',
   'events.subscribe',

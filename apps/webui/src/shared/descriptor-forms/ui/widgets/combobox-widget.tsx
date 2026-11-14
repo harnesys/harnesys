@@ -18,7 +18,7 @@ export function ComboboxWidget({
   values,
   addon,
 }: FormWidgetProps) {
-  const { options, loading, failed } = useFieldOptions(field, values, addon);
+  const { options, loading, failed, blocked } = useFieldOptions(field, values, addon);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const searchRef = useRef<HTMLInputElement | null>(null);
@@ -34,7 +34,7 @@ export function ComboboxWidget({
   const current = value === undefined || value === null ? '' : String(value);
   const freeText = field.widget?.params?.freeText !== false;
 
-  if (failed || (options.length === 0 && !loading)) {
+  if (failed) {
     return (
       <div className="flex w-full flex-col gap-1">
         <Input
@@ -61,6 +61,7 @@ export function ComboboxWidget({
   const custom =
     freeText && query.trim().length > 0 && !options.some((option) => option.value === query.trim());
   const selectedLabel = options.find((option) => option.value === current)?.label ?? current;
+  const emptyHint = blocked ? 'Pick the group first' : 'No matches';
 
   const pick = (next: string): void => {
     onChange(next);
@@ -113,7 +114,7 @@ export function ComboboxWidget({
             >
               <span className="min-w-0 flex-1 truncate">
                 {option.label}
-                {option.label !== option.value ? (
+                {option.label !== option.value && !option.label.includes(option.value) ? (
                   <span className="text-muted-foreground"> ({option.value})</span>
                 ) : null}
               </span>
@@ -133,7 +134,7 @@ export function ComboboxWidget({
             </button>
           ) : null}
           {!loading && matches.length === 0 && !custom ? (
-            <div className="px-2 py-4 text-center text-muted-foreground text-sm">No matches</div>
+            <div className="px-2 py-4 text-center text-muted-foreground text-sm">{emptyHint}</div>
           ) : null}
         </div>
       </PopoverContent>

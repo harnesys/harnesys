@@ -56,7 +56,7 @@ export class ManageTriggerInstanceUseCase {
     this.logger = logger.child('addons-trigger-instances');
   }
 
-  create(input: CreateTriggerInstanceInput): TriggerInstanceRow {
+  async create(input: CreateTriggerInstanceInput): Promise<TriggerInstanceRow> {
     const row = this.orgAddons.find(input.orgId, input.addonId);
     if (!row?.enabled) {
       throw new AddonException('conflict', 409, `Addon is not enabled: ${input.addonId}`);
@@ -80,7 +80,7 @@ export class ManageTriggerInstanceUseCase {
       updatedAt: now,
     });
     if (created.enabled) {
-      void this.start(created);
+      await this.start(created);
     }
     this.audit.append(input.orgId, {
       at: now,
@@ -113,7 +113,7 @@ export class ManageTriggerInstanceUseCase {
     this.triggers.remove(input.orgId, input.instanceId);
   }
 
-  patch(orgId: string, instanceId: string, patch: TriggerInstancePatch): void {
+  async patch(orgId: string, instanceId: string, patch: TriggerInstancePatch): Promise<void> {
     this.require(orgId, instanceId);
     if (patch.targetJson !== undefined) {
       this.assertTarget(orgId, this.parseTarget(patch.targetJson), instanceId);
@@ -125,7 +125,7 @@ export class ManageTriggerInstanceUseCase {
       patch.configJson !== undefined ||
       patch.instructions !== undefined;
     if (resynced.enabled && contentChanged) {
-      void this.start(resynced);
+      await this.start(resynced);
     }
   }
 

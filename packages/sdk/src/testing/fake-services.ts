@@ -15,6 +15,7 @@ export interface FakeServiceSinks {
   fileWrites: Array<{ path: string; size: number }>;
   workerReports: Array<{ workerId: string; state: string; code?: string }>;
   inboundMessages: Array<{ channel: string; from?: string; text: string; payload?: unknown }>;
+  createdTriggerInstances: Array<Record<string, unknown>>;
 }
 
 export interface FakeServiceContext {
@@ -84,6 +85,10 @@ export function createFakeServices(context: FakeServiceContext): {
         });
       case 'triggers.fire':
         return fireTrigger(params);
+      case 'triggers.create':
+        return createTriggerInstance(params);
+      case 'triggers.update':
+        return updateTriggerInstance(params);
       default:
         return executeRecord(method, params);
     }
@@ -189,6 +194,40 @@ export function createFakeServices(context: FakeServiceContext): {
     }
     context.firedKeys.add(key);
     return { outcome: 'fired' };
+  }
+
+  function createTriggerInstance(params: ServiceParams): unknown {
+    const kind = params.kind as string;
+    const declared = context.manifest.contributions.some(
+      (c) => c.family === 'trigger' && (c.descriptor as { kind?: string }).kind === kind,
+    );
+    if (!declared) {
+      throw new AddonError('invalid_params', {
+        detail: `trigger kind is not declared: ${kind}`,
+      });
+    }
+    const instanceId = `trigger-instance-${context.sinks.createdTriggerInstances.length + 1}`;
+    context.sinks.createdTriggerInstances.push({ ...params, instanceId });
+    context.startedTriggers.add(instanceId);
+    return { instanceId };
+  }
+
+  function updateTriggerInstance(params: ServiceParams): unknown {
+    const instanceId = params.instanceId as string;
+    const stored = context.sinks.createdTriggerInstances.find(
+      (row) => row.instanceId === instanceId,
+    );
+    if (!stored) {
+      throw new AddonError('not_found', {
+        detail: `trigger instance not found: ${instanceId}`,
+      });
+    }
+    for (const key of ['label', 'config', 'target', 'instructions'] as const) {
+      if (params[key] !== undefined) {
+        stored[key] = params[key];
+      }
+    }
+    return { instanceId };
   }
 
   function executeRecord(method: string, params: ServiceParams): unknown {

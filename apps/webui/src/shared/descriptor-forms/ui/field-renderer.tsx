@@ -16,6 +16,7 @@ import {
 import { Textarea } from '@/shared/ui/textarea';
 import { type AddonFormContext, fieldControlId, formWidget } from './widget-registry';
 import { registerBuiltinFormWidgets } from './widgets/register-builtin-widgets';
+import { useFieldOptions } from './widgets/use-field-options';
 
 registerBuiltinFormWidgets();
 
@@ -152,43 +153,16 @@ function FieldControl({
     );
   }
   if (field.type === 'select') {
-    const options = field.options ?? [];
-    const selectedHint = options.find((option) => option.value === String(displayed))?.help;
     return (
-      <div className="flex w-full flex-col gap-1.5">
-        <Select
-          items={options.map((option) => ({ value: option.value, label: option.label }))}
-          value={
-            displayed === undefined || displayed === '' || displayed === null
-              ? null
-              : String(displayed)
-          }
-          disabled={disabled}
-          onValueChange={(next) => {
-            if (typeof next === 'string') {
-              onChange(next);
-            }
-          }}
-        >
-          <SelectTrigger id={id} className="w-full" data-testid={id}>
-            <SelectValue placeholder={field.placeholder ?? 'Select...'} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {options.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        {selectedHint ? (
-          <p className="text-muted-foreground text-xs" data-testid={`${id}-hint`}>
-            {selectedHint}
-          </p>
-        ) : null}
-      </div>
+      <BaseSelectControl
+        field={field}
+        id={id}
+        displayed={displayed}
+        disabled={disabled}
+        values={values}
+        addon={addon}
+        onChange={onChange}
+      />
     );
   }
   if (field.type === 'boolean') {
@@ -224,6 +198,72 @@ function inputType(field: FieldSpec): 'number' | 'url' | 'text' {
     return 'number';
   }
   return field.type === 'url' ? 'url' : 'text';
+}
+
+/**
+ * Base select control. Resolves `optionsFrom` through the host (agents,
+ * connections, add-on routes); static `options` stay the fallback.
+ */
+function BaseSelectControl({
+  field,
+  id,
+  displayed,
+  disabled,
+  values,
+  addon,
+  onChange,
+}: {
+  field: FieldSpec;
+  id: string;
+  displayed: FieldValue | undefined;
+  disabled: boolean;
+  values: Record<string, FieldValue> | undefined;
+  addon: AddonFormContext | undefined;
+  onChange: (value: FieldValue) => void;
+}) {
+  const { options: resolved, loading } = useFieldOptions(field, values ?? {}, addon);
+  const options = field.optionsFrom ? resolved : (field.options ?? []);
+  const selectedHint = options.find((option) => option.value === String(displayed))?.help;
+  return (
+    <div className="flex w-full flex-col gap-1.5">
+      <Select
+        items={options.map((option) => ({ value: option.value, label: option.label }))}
+        value={
+          displayed === undefined || displayed === '' || displayed === null
+            ? null
+            : String(displayed)
+        }
+        disabled={disabled}
+        onValueChange={(next) => {
+          if (typeof next === 'string') {
+            onChange(next);
+          }
+        }}
+      >
+        <SelectTrigger id={id} className="w-full" data-testid={id}>
+          <SelectValue
+            placeholder={
+              loading && options.length === 0 ? 'Loading...' : (field.placeholder ?? 'Select...')
+            }
+          />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {options.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+      {selectedHint ? (
+        <p className="text-muted-foreground text-xs" data-testid={`${id}-hint`}>
+          {selectedHint}
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 function SecretInput({

@@ -59,6 +59,8 @@ function makeContext(services: FakeServices): { ctx: AddonContext; sent: SentMes
           createdAt: '',
           ...binding,
         })),
+      bind: async () => ({ ok: true }),
+      unbind: async () => ({ ok: true }),
     },
     runs: {
       dispatch: async () => ({ runId: 'r-dispatch' }),

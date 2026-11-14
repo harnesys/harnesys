@@ -1,16 +1,9 @@
 import type { AddonContext, RouteHandler } from '@harnesys/sdk';
 import { generateSecret } from './auth.ts';
-import type { HookAuth } from './config.ts';
+import { authLabel } from './config.ts';
 import { executeDelivery } from './hook-route.ts';
 import { findByToken, listDeliveries, listWebhooks, rotateToken, secretKeyFor } from './store.ts';
 import { endpointUrl, tokenFromPath } from './url.ts';
-
-function authLabel(auth: HookAuth): string {
-  if (auth === 'hmac') {
-    return 'HMAC';
-  }
-  return auth === 'apiKey' ? 'API key' : 'None';
-}
 
 export const instances: RouteHandler = async (call, ctx: AddonContext) => {
   const orgId = ctx.meta.orgId ?? '';

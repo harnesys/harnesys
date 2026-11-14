@@ -59,6 +59,9 @@ export const FieldOptionsFromSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('connections'),
   }),
+  z.object({
+    kind: z.literal('agents'),
+  }),
 ]);
 export type FieldOptionsFrom = z.infer<typeof FieldOptionsFromSchema>;
 

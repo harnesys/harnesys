@@ -44,6 +44,19 @@ export const TransportBindingSummarySchema = z.object({
   createdAt: z.string().min(1),
 });
 
+export const BindingWriteParamsSchema = z.object({
+  provider: z.string().min(1),
+  channel: z.string().min(1),
+  threadId: z.string().min(1),
+});
+
+export const BindingChannelParamsSchema = z.object({
+  provider: z.string().min(1),
+  channel: z.string().min(1),
+});
+
+export const OkResultSchema = z.object({ ok: z.literal(true) });
+
 export interface TransportMessage {
   channel: string;
   text: string;

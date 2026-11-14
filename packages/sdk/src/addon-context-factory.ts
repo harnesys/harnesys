@@ -39,6 +39,7 @@ export type {
   AddonSkills,
   AddonThreads,
   AddonTriggers,
+  AddonTriggerTarget,
   AddonUsage,
   AddonWorkers,
   DbRow,
@@ -140,6 +141,10 @@ export function createAddonContext(
       const result = await client['bindings.channels']({ provider }, { signal });
       return result.channels;
     },
+    bind: async (params: { provider: string; channel: string; threadId: string }) =>
+      client['bindings.bind'](params, { signal }),
+    unbind: async (params: { provider: string; channel: string }) =>
+      client['bindings.unbind'](params, { signal }),
   };
   const accounts = {
     list: async (connection: string) => {
@@ -187,6 +192,8 @@ export function createAddonContext(
     },
     triggers: {
       fire: async (params) => client['triggers.fire'](params, { signal }),
+      create: async (params) => client['triggers.create'](params, { signal }),
+      update: async (params) => client['triggers.update'](params, { signal }),
     },
     bridge: {
       inbound: async (message) => {

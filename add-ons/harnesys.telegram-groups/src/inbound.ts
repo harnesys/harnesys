@@ -39,19 +39,6 @@ async function routingPolicyOf(ctx: AddonContext): Promise<RoutingPolicy> {
   return value === 'always' || value === 'reply' || value === 'commands' ? value : 'mention';
 }
 
-async function touchChat(ctx: AddonContext, message: TelegramMessage): Promise<void> {
-  await ctx.db.run(
-    'insert into chats (chat_id, kind, title, status, updated_at) values (?, ?, ?, ?, ?) on conflict(chat_id) do update set kind = excluded.kind, title = excluded.title, updated_at = excluded.updated_at',
-    [
-      String(message.chat.id),
-      message.chat.type,
-      message.chat.title ?? message.chat.username ?? String(message.chat.id),
-      'discovered',
-      new Date().toISOString(),
-    ],
-  );
-}
-
 async function chatStatus(ctx: AddonContext, chatId: string): Promise<string | null> {
   const row = await ctx.db.get('select status from chats where chat_id = ?', [chatId]);
   return row === null ? null : String(row.status);
@@ -153,7 +140,6 @@ async function bridgeMessages(ctx: AddonContext, messages: TelegramMessage[]): P
   if (first === undefined) {
     return;
   }
-  await touchChat(ctx, first);
   const text = firstText(messages);
   const hasFile = messages.some((entry) => fileRefOf(entry) !== null);
   if (text.length === 0 && !hasFile) {

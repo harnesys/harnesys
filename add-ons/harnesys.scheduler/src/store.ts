@@ -13,7 +13,7 @@ export interface ScheduleRow {
   cron: string;
   detail: string;
   missPolicy: MissPolicy;
-  status: 'active' | 'failed';
+  status: 'active' | 'paused' | 'failed';
   nextRunAt: string | null;
   lastFiredAt: string | null;
   error: string | null;
@@ -67,10 +67,17 @@ export async function listSchedules(ctx: AddonContext): Promise<ScheduleRow[]> {
 
 interface StateRow {
   cron: string;
-  status: 'active' | 'failed';
+  status: 'active' | 'paused' | 'failed';
   nextRunAt: string | null;
   lastFiredAt: string | null;
   error: string | null;
+}
+
+function statusOf(raw: unknown): 'active' | 'paused' | 'failed' {
+  if (raw === 'failed') {
+    return 'failed';
+  }
+  return raw === 'paused' ? 'paused' : 'active';
 }
 
 async function stateMap(ctx: AddonContext): Promise<Map<string, StateRow>> {
@@ -81,7 +88,7 @@ async function stateMap(ctx: AddonContext): Promise<Map<string, StateRow>> {
   for (const row of stateRows) {
     byId.set(String(row.instanceId), {
       cron: String(row.cron),
-      status: row.status === 'failed' ? 'failed' : 'active',
+      status: statusOf(row.status),
       nextRunAt: typeof row.nextRunAt === 'string' ? row.nextRunAt : null,
       lastFiredAt: typeof row.lastFiredAt === 'string' ? row.lastFiredAt : null,
       error: typeof row.error === 'string' ? row.error : null,
@@ -155,7 +162,7 @@ export async function saveState(
   params: {
     instanceId: string;
     cron: string;
-    status: 'active' | 'failed';
+    status: 'active' | 'paused' | 'failed';
     nextRunAt: string | null;
     error: string | null;
   },

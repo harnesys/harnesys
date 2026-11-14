@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { addonMethod } from './method-spec.ts';
+import { TriggerFireOutcomeSchema } from './shared.ts';
 
 const str = z.string().min(1);
 
@@ -90,5 +91,47 @@ export const orgServiceMethods = {
     }),
     z.object({ id: str }),
     'approvals.request',
+  ),
+  'triggers.fire': addonMethod(
+    z.object({
+      instanceId: str,
+      runKey: str,
+      text: str.optional(),
+      payload: z.unknown().optional(),
+    }),
+    TriggerFireOutcomeSchema,
+    'trigger',
+  ),
+  'triggers.create': addonMethod(
+    z.object({
+      kind: str,
+      label: str,
+      config: z.record(z.string(), z.unknown()).default({}),
+      target: z.object({
+        threadId: str,
+        agentId: str,
+        modeId: str.optional(),
+      }),
+      instructions: str.optional(),
+    }),
+    z.object({ instanceId: str }),
+    'trigger',
+  ),
+  'triggers.update': addonMethod(
+    z.object({
+      instanceId: str,
+      label: str.optional(),
+      config: z.record(z.string(), z.unknown()).optional(),
+      target: z
+        .object({
+          threadId: str,
+          agentId: str,
+          modeId: str.optional(),
+        })
+        .optional(),
+      instructions: str.optional(),
+    }),
+    z.object({ instanceId: str }),
+    'trigger',
   ),
 };

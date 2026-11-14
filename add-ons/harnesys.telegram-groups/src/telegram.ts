@@ -27,8 +27,13 @@ export interface TelegramMessage {
   chat: TelegramChat;
   message_thread_id?: number;
   media_group_id?: string;
+  forum_topic_created?: { name: string };
+  forum_topic_edited?: { name?: string };
   from?: { id: number; is_bot?: boolean; username?: string; first_name?: string };
-  reply_to_message?: { from?: { id: number } };
+  reply_to_message?: {
+    from?: { id: number };
+    forum_topic_created?: { name: string };
+  };
   photo?: Array<{ file_id: string; file_size?: number }>;
   document?: TelegramFileRef;
   audio?: TelegramFileRef;
@@ -46,11 +51,22 @@ export interface TelegramUpdate {
   update_id: number;
   message?: TelegramMessage;
   my_chat_member?: TelegramChatMemberUpdate;
+  forum_topic_created?: {
+    chat: TelegramChat;
+    message_thread_id: number;
+    name: string;
+  };
+}
+
+export function channelOfParts(chatId: string, topicId?: string): string {
+  return topicId === undefined || topicId.length === 0 ? chatId : `${chatId}:${topicId}`;
 }
 
 export function channelOf(message: TelegramMessage): string {
-  const chat = String(message.chat.id);
-  return message.message_thread_id === undefined ? chat : `${chat}:${message.message_thread_id}`;
+  return channelOfParts(
+    String(message.chat.id),
+    message.message_thread_id === undefined ? undefined : String(message.message_thread_id),
+  );
 }
 
 export function firstText(messages: TelegramMessage[]): string {
