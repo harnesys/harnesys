@@ -66,13 +66,8 @@ import {
   storeRuntime,
   takeRuntime,
 } from './org-runtime-cache.ts';
-import { githubToolsDeps } from './packs/github-tools.holder.ts';
-import { googleToolsDeps } from './packs/google-tools.holder.ts';
-import { issueToolsDeps } from './packs/issue-tools.holder.ts';
-import { managerToolsDeps } from './packs/manager-tools.holder.ts';
 import { OrgMcpManagePort } from './packs/org-mcp-manage.port.ts';
-import { skillsToolsDeps } from './packs/skills-tools.holder.ts';
-import { telegramToolsDeps } from './packs/telegram-tools.holder.ts';
+import { packToolsDeps } from './packs/pack-tools-deps.ts';
 import { countWaitingTimersOf } from './waiting-timers.count.ts';
 
 @Injectable()
@@ -141,12 +136,6 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     if (cached !== undefined) {
       return cached;
     }
-    const issues = issueToolsDeps();
-    const manager = managerToolsDeps();
-    const skills = skillsToolsDeps();
-    const google = googleToolsDeps();
-    const github = githubToolsDeps();
-    const telegram = telegramToolsDeps();
     const pending = openOrgRuntime({
       orgId,
       logger: this.log.child('org-runtime'),
@@ -213,12 +202,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       },
       waitGate: this.waitGate,
       issueExecutions: this.issueExecutions,
-      ...(issues ? { issues } : {}),
-      ...(manager ? { manager } : {}),
-      ...(google ? { google } : {}),
-      ...(github ? { github } : {}),
-      ...(telegram ? { telegram } : {}),
-      ...(skills ? { skills } : {}),
+      ...packToolsDeps(),
       ...(this.lsp ? { lsp: this.lsp } : {}),
     });
     storeRuntime(this.runtimes, orgId, pending, revision);

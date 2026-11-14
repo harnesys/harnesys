@@ -11,24 +11,17 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { SkillCandidate } from '@harnesys/contracts';
-import type { CursorMcpJson } from 'harnesys';
-import { FsSkillRegistry } from 'harnesys/adapters/node';
 import type { AppConfig } from '../../../config.schema.ts';
 import { DiscoverRepoSkillsUseCase } from '../../application/skills/discover-repo-skills.use-case.ts';
 import { InstallRepoSkillsUseCase } from '../../application/skills/install-repo-skills.use-case.ts';
 import { resolveSkillSelection } from '../../application/skills/skill-selection.ts';
 import { UpdateInstalledSkillUseCase } from '../../application/skills/update-installed-skill.use-case.ts';
 import {
-  type PluginRuntimeBundle,
-  PluginRuntimePort,
-} from '../../domain/plugin/plugin-runtime.port.ts';
-import {
   SkillConflictException,
   SkillValidationException,
 } from '../../domain/skills/skills.error.ts';
-import { SkillsEventsPort } from '../../domain/skills/skills-events.port.ts';
-import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { HostFsLayoutAdapter } from '../fs-layout/host-fs-layout.adapter.ts';
+import { FakeEvents, FakeExecutor, FakePluginRuntime } from './install-repo-skills.fakes.ts';
 import { OrgSkillsAdapter } from './org-skills.adapter.ts';
 import { SkillsGitAdapter } from './skills-git.adapter.ts';
 import { SkillsWalkAdapter } from './skills-walk.adapter.ts';
@@ -63,99 +56,6 @@ beforeEach(() => {
 afterAll(() => {
   rmSync(base, { recursive: true, force: true });
 });
-
-class FakeExecutor extends LocalExecutorPort {
-  invalidated: string[] = [];
-
-  invalidateRuntime(orgId: string): Promise<void> {
-    this.invalidated.push(orgId);
-    return Promise.resolve();
-  }
-
-  lifecycle(): Promise<never> {
-    return Promise.reject(new Error('not used'));
-  }
-  events(): Promise<never> {
-    return Promise.reject(new Error('not used'));
-  }
-  sessionFor(): Promise<never> {
-    return Promise.reject(new Error('not used'));
-  }
-  send(): Promise<never> {
-    return Promise.reject(new Error('not used'));
-  }
-  compact = (): Promise<never> => Promise.reject(new Error('not used'));
-  cancelCompact = (): Promise<never> => Promise.reject(new Error('not used'));
-  undoThreadCompact = (): Promise<never> => Promise.reject(new Error('not used'));
-  drainMessageQueue = (): Promise<never> => Promise.reject(new Error('not used'));
-  steerMessageQueue(): Promise<never> {
-    return Promise.reject(new Error('not used'));
-  }
-  cancel(): Promise<never> {
-    return Promise.reject(new Error('not used'));
-  }
-  retry(): Promise<never> {
-    return Promise.reject(new Error('not used'));
-  }
-  truncateThreadFrom(): Promise<never> {
-    return Promise.reject(new Error('not used'));
-  }
-  removeThreadEvent(): Promise<never> {
-    return Promise.reject(new Error('not used'));
-  }
-  stream(): never {
-    throw new Error('not used');
-  }
-  tickWaitTimers(): Promise<number> {
-    return Promise.resolve(0);
-  }
-  countWaitingTimers(): Promise<number> {
-    return Promise.resolve(0);
-  }
-  listMcpServers(): Promise<never[]> {
-    return Promise.resolve([]);
-  }
-}
-
-class FakeEvents extends SkillsEventsPort {
-  published: { orgId: string; name?: string }[] = [];
-
-  publish(orgId: string, event: { kind: 'changed'; name?: string }): void {
-    this.published.push({ orgId, name: event.name });
-  }
-
-  subscribe(): () => void {
-    return () => undefined;
-  }
-}
-
-class FakePluginRuntime extends PluginRuntimePort {
-  constructor(private readonly layout: HostFsLayoutAdapter) {
-    super();
-  }
-
-  bundle(orgId: string): Promise<PluginRuntimeBundle> {
-    const root = this.layout.skillsDir(orgId);
-    const dirs = existsSync(root)
-      ? readdirSync(root, { withFileTypes: true })
-          .filter((e) => e.isDirectory())
-          .map((e) => join(root, e.name))
-      : [];
-    return Promise.resolve(makeBundle(new FsSkillRegistry({ roots: [], skillDirs: dirs })));
-  }
-
-  invalidate(): void {}
-}
-
-function makeBundle(registry: FsSkillRegistry): PluginRuntimeBundle {
-  return {
-    entries: [],
-    skills: registry,
-    mcpJson: {} as CursorMcpJson,
-    agents: [],
-    lspServers: [],
-  };
-}
 
 function git(cwd: string, args: string[]): void {
   const proc = Bun.spawnSync(['/usr/bin/git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe' });

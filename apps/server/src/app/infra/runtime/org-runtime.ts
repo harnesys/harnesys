@@ -10,7 +10,6 @@ import {
   type RuntimeHandle,
   type SessionHandle,
 } from 'harnesys';
-import { primaryAgentIdOf } from '../../application/threads/thread.helpers.ts';
 import { createOrgModelsPort } from '../../domain/provider/org-models.ts';
 import { ThreadNotFoundException } from '../../domain/thread/thread.error.ts';
 import { openOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
@@ -21,7 +20,7 @@ import { wireOrgPlugins } from './org-plugin-wiring.ts';
 import { createOrgRunStores } from './org-run-stores.ts';
 import type { OrgRuntime, OrgRuntimeDeps } from './org-runtime.types.ts';
 import { createAgentsResolve } from './org-runtime-agents.ts';
-import { compactThread } from './org-runtime-compact.ts';
+import { runOrgCompact } from './org-runtime-compact-deps.ts';
 import { createOrgCompactGuard } from './org-runtime-compact-guard.ts';
 import { createOrgEventPublisher } from './org-runtime-publish.ts';
 import { createSteeringChannel, createThreadQueueDrainer } from './org-runtime-queue.ts';
@@ -265,33 +264,22 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     kick: runControl.kick,
   });
   const compactGuard = createOrgCompactGuard({
-    runCompact: (threadId, guardSignal) => {
-      const thread = deps.threads.findById(deps.orgId, threadId);
-      const agentId =
-        thread === undefined
-          ? undefined
-          : primaryAgentIdOf(
-              thread,
-              deps.threadAgents.listByThread(deps.orgId, threadId).map((row) => row.agentId),
-            );
-      return compactThread(
+    runCompact: (threadId, guardSignal) =>
+      runOrgCompact(
         {
           models: modelsPort,
           events: runEvents,
-          agentId,
+          lifecycle: runLifecycle,
+          threadAgentIds: (id) =>
+            deps.threadAgents.listByThread(deps.orgId, id).map((row) => row.agentId),
+          findThreadRecord: (id) => deps.threads.findById(deps.orgId, id),
           seededThreadState: (id) => branchSeed.seededThreadState(id),
           resolveRunTarget,
           findThread: (id) => deps.threads.findById(deps.orgId, id),
-          activeRunIdOf: (id) =>
-            runLifecycle
-              .activeByThread(id)
-              .then((record) => record?.runId ?? null)
-              .catch(() => null),
         },
         threadId,
         guardSignal,
-      );
-    },
+      ),
     undo: (threadId) =>
       undoThreadCompaction(
         { lifecycle: runLifecycle, events: runEvents, sessions: threadSessions, sessionFor },
