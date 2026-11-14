@@ -82,11 +82,22 @@
         "connection": "telegram-user",
         "configFields": [
           {
+            "key": "sources",
+            "label": "Channel",
+            "type": "text",
+            "required": false,
+            "placeholder": "All channels",
+            "optionsFrom": { "kind": "addonRoute", "route": "sources", "valueKey": "peer", "labelKey": "title" },
+            "widget": { "kind": "combobox" },
+            "help": "Fire only for this channel; empty means every watched channel. You can also type an @username that is not in the list"
+          },
+          {
             "key": "keywords",
             "label": "Keywords",
             "type": "text",
             "required": false,
             "placeholder": "release, hiring",
+            "widget": { "kind": "tags" },
             "help": "Comma-separated terms; empty matches every post"
           },
           {
@@ -94,6 +105,7 @@
             "label": "Exclude words",
             "type": "text",
             "required": false,
+            "widget": { "kind": "tags" },
             "help": "Comma-separated terms; a post containing any of them is skipped"
           },
           {
@@ -106,13 +118,6 @@
               { "value": "any", "label": "Any keyword" },
               { "value": "all", "label": "All keywords" }
             ]
-          },
-          {
-            "key": "sources",
-            "label": "Only these channels",
-            "type": "text",
-            "required": false,
-            "help": "Comma-separated channel usernames; empty means every watched channel"
           }
         ],
         "limits": { "perDay": 200, "throttleSec": 5 }

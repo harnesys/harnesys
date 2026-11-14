@@ -49,7 +49,7 @@ export function TagsWidget({ field, value, disabled, onChange, values, addon }: 
         ))}
         <Input
           id={fieldControlId(field.key)}
-          className="h-6 min-w-24 border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+          className="h-6 min-w-24 flex-1 border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
           placeholder={items.length === 0 ? field.placeholder : undefined}
           disabled={disabled}
           value={draft}
