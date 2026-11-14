@@ -6,6 +6,8 @@
 
 Путь: `Settings → Add-ons → <аддон>` (`/o/:orgId/settings/addons/:addonId`). Без вклада `view` страница строится из манифеста дефолтным набором: `status`, `capabilities`, `permissions`, `connections`, `config`, `automations`, `jobs`. С вкладом — секции из дескриптора; порядок расположения единый для всех страниц и расставляется фронтендом независимо от порядка в манифесте: сначала служебные (`status, capabilities, permissions, connections, config, automations, jobs`), затем аддонские (`table, form, actions, frame`) в порядке объявления, `markdown` последним.
 
+Секция Notes живёт в пакете, а не в манифесте: если в корне аддона или в `assets/` лежит `notes.md`, хост подставляет его содержимое как markdown-секцию последней — даже когда аддон не объявляет ни `notes.md`-секции, ни вклада `view`. Манифестная секция `markdown` остаётся для обратной совместимости, но при наличии `notes.md` её тело заменяется файлом. Пишите сноски обычным markdown в `notes.md` — без экранирования строкой в `addon.json`.
+
 ```json
 { "id": "main", "family": "view",
   "descriptor": { "id": "main", "title": "Telegram", "sections": [
@@ -16,8 +18,7 @@
     { "type": "form", "title": "Pair a chat", "fields": [ … ], "submit": { "route": "/pair" } },
     { "type": "table", "title": "Paired chats", "source": { "route": "/chats" }, "columns": [ … ],
       "rowActions": [ { "id": "unbind", "label": "Unbind", "route": { "route": "/chats/:id/unbind", "params": { "id": "id" } },
-                        "confirm": "Unbind this chat?", "destructive": true } ], "pageSize": 20 },
-    { "type": "markdown", "body": "How pairing works…" }
+                        "confirm": "Unbind this chat?", "destructive": true } ], "pageSize": 20 }
   ] } }
 ```
 
@@ -37,7 +38,7 @@
 | `table` | `title, source, columns, rowActions?, pageSize?` | таблица + пагинация + действия | `source` route: `{ rows, nextCursor? }` |
 | `form` | `title, fields, submit, confirm?` | форма, submit-маршрут | submit route: `{ toast?, refresh? }` |
 | `actions` | `actions: Action[]` | кнопки | `{ toast?, refresh? }` |
-| `markdown` | `body: L10n` | текст (последним) | — |
+| `markdown` | `body: L10n` | текст (последним); при наличии `notes.md` файл перекрывает `body` | — |
 | `frame` | `route, height?` | iframe-область | HTML с route аддона |
 
 `Action = { id, label, route: RouteRef, confirm?, destructive? }`; `Column = { key, label, format: 'text'|'datetime'|'number'|'badge'|'link'|'copy' }`; `RouteRef = { route, params? }` — `params` мапит колонку в сегмент пути (`{ id: "id" }` → `/chats/:id/unbind` с id строки).

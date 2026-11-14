@@ -4,6 +4,7 @@ import { call, deleteWebhook, getMe, setMyCommands } from './bot-api.ts';
 import { botCommands, commandsScope } from './commands.ts';
 import { discoverMessage, touchChat, touchTopic } from './discovery.ts';
 import { type BotIdentityState, handleGroup } from './inbound.ts';
+import { disconnectChat, memberGoneStatus, pruneTopic } from './lifecycle.ts';
 import { groupMessages, type TelegramUpdate } from './telegram.ts';
 
 const WORKER_ID = 'poller';
@@ -13,6 +14,8 @@ const ERROR_SLEEP_MS = 3_000;
 const CONFLICT_SLEEP_MS = 30_000;
 const AUTH_SLEEP_MS = 15_000;
 const POLL_TIMEOUT_SEC = 20;
+const ITERATION_DEADLINE_MS = 120_000;
+const MAX_STALLED_ITERATIONS = 2;
 
 interface PollState {
   offset: number;
@@ -34,6 +37,32 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
         resolve();
       },
       { once: true },
+    );
+  });
+}
+
+/**
+ * Bounds every host round trip of the loop: a lost RPC response would
+ * otherwise hang the poller forever, silently, with the lease expired and the
+ * worker still reported running. On the deadline the promise rejects and the
+ * loop counts the stall; repeated stalls hand the worker back to the
+ * on-failure restart.
+ */
+function deadline<T>(what: string, run: () => Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new AddonError('timeout', { detail: `${what} exceeded ${ITERATION_DEADLINE_MS}ms` }));
+    }, ITERATION_DEADLINE_MS);
+    timer.unref?.();
+    run().then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      },
     );
   });
 }
@@ -60,12 +89,16 @@ async function handleUpdate(ctx: AddonContext, update: TelegramUpdate): Promise<
   }
   if (update.my_chat_member !== undefined) {
     const chat = update.my_chat_member.chat;
+    const status = update.my_chat_member.new_chat_member?.status;
     if (chat.type !== 'private') {
       await touchChat(ctx, chat);
+      if (memberGoneStatus(status)) {
+        await disconnectChat(ctx, String(chat.id), 'bot_removed');
+      }
     }
     await ctx.log.info('telegram chat membership changed', {
       chatId: chat.id,
-      status: update.my_chat_member.new_chat_member?.status ?? 'unknown',
+      status: status ?? 'unknown',
     });
     return;
   }
@@ -73,6 +106,11 @@ async function handleUpdate(ctx: AddonContext, update: TelegramUpdate): Promise<
     const topic = update.forum_topic_created;
     await touchChat(ctx, topic.chat);
     await touchTopic(ctx, String(topic.chat.id), String(topic.message_thread_id), topic.name);
+    return;
+  }
+  if (update.forum_topic_deleted !== undefined) {
+    const topic = update.forum_topic_deleted;
+    await pruneTopic(ctx, String(topic.chat.id), String(topic.message_thread_id));
     return;
   }
   if (update.message !== undefined) {
@@ -105,7 +143,7 @@ async function pollBatch(
   const updates = await call<TelegramUpdate[]>(ctx, 'getUpdates', {
     offset: state.offset,
     timeout: POLL_TIMEOUT_SEC,
-    allowed_updates: ['message', 'my_chat_member', 'forum_topic_created'],
+    allowed_updates: ['message', 'my_chat_member', 'forum_topic_created', 'forum_topic_deleted'],
   });
   const messages = [];
   for (const update of updates) {
@@ -162,40 +200,104 @@ async function pauseAfterFailure(
 
 async function acquireLease(ctx: AddonContext, signal: AbortSignal): Promise<boolean> {
   try {
-    return (await ctx.workers.lease(WORKER_ID, LEASE_MS)).held;
+    return (await deadline('worker lease', () => ctx.workers.lease(WORKER_ID, LEASE_MS))).held;
   } catch (error) {
     await pauseAfterFailure(ctx, signal, error);
     return false;
   }
 }
 
-async function run(ctx: AddonContext, signal: AbortSignal): Promise<void> {
-  let identity = await initialIdentity(ctx, signal);
-  const state: PollState = { offset: 0 };
-  try {
-    state.offset = await baselineOffset(ctx);
-  } catch (error) {
-    await pauseAfterFailure(ctx, signal, error);
+async function pollOnce(
+  ctx: AddonContext,
+  state: PollState,
+  identity: BotIdentityState | null,
+): Promise<BotIdentityState> {
+  const current =
+    identity === null ? await deadline('bot identity', () => loadIdentity(ctx)) : identity;
+  await deadline('update poll', () => pollBatch(ctx, state, current));
+  return current;
+}
+
+async function waitForLease(ctx: AddonContext, signal: AbortSignal): Promise<boolean> {
+  if (await acquireLease(ctx, signal)) {
+    return true;
   }
+  if (!signal.aborted) {
+    await sleep(IDLE_SLEEP_MS, signal);
+  }
+  return false;
+}
+
+interface PollFailure {
+  stalled: number;
+  resetIdentity: boolean;
+  restart: boolean;
+}
+
+function isTimeout(error: unknown): boolean {
+  return error instanceof AddonError && error.reason === 'timeout';
+}
+
+async function pollFailure(
+  ctx: AddonContext,
+  signal: AbortSignal,
+  stalled: number,
+  error: unknown,
+): Promise<PollFailure> {
+  await pauseAfterFailure(ctx, signal, error);
+  const nextStalled = isTimeout(error) ? stalled + 1 : 0;
+  if (nextStalled >= MAX_STALLED_ITERATIONS) {
+    await ctx.log.error('telegram poller stalled; handing over to the worker restart', {
+      stalls: nextStalled,
+    });
+    await ctx.workers.report(WORKER_ID, 'failed', 'poller_stalled');
+    return { stalled: nextStalled, resetIdentity: false, restart: true };
+  }
+  return {
+    stalled: nextStalled,
+    resetIdentity: error instanceof AddonError && error.reason === 'account_failed',
+    restart: false,
+  };
+}
+
+async function pollLoop(
+  ctx: AddonContext,
+  signal: AbortSignal,
+  state: PollState,
+  identity: BotIdentityState | null,
+): Promise<'aborted' | 'restart'> {
+  let current = identity;
+  let stalled = 0;
   while (!signal.aborted) {
-    if (!(await acquireLease(ctx, signal))) {
-      if (!signal.aborted) {
-        await sleep(IDLE_SLEEP_MS, signal);
-      }
+    if (!(await waitForLease(ctx, signal))) {
       continue;
     }
     try {
-      if (identity === null) {
-        identity = await loadIdentity(ctx);
-      }
-      await pollBatch(ctx, state, identity);
+      current = await pollOnce(ctx, state, current);
+      stalled = 0;
     } catch (error) {
-      if (error instanceof AddonError && error.reason === 'account_failed') {
-        identity = null;
+      const failure = await pollFailure(ctx, signal, stalled, error);
+      stalled = failure.stalled;
+      if (failure.resetIdentity) {
+        current = null;
       }
-      await pauseAfterFailure(ctx, signal, error);
+      if (failure.restart) {
+        return 'restart';
+      }
     }
   }
+  return 'aborted';
+}
+
+async function run(ctx: AddonContext, signal: AbortSignal): Promise<void> {
+  const identity = await initialIdentity(ctx, signal);
+  const state: PollState = { offset: 0 };
+  try {
+    state.offset = await deadline('baseline offset', () => baselineOffset(ctx));
+  } catch (error) {
+    await pauseAfterFailure(ctx, signal, error);
+  }
+  await pollLoop(ctx, signal, state, identity);
 }
 
 async function initialIdentity(
@@ -203,8 +305,8 @@ async function initialIdentity(
   signal: AbortSignal,
 ): Promise<BotIdentityState | null> {
   try {
-    await ensureReady(ctx);
-    return await loadIdentity(ctx);
+    await deadline('bot setup', () => ensureReady(ctx));
+    return await deadline('bot identity', () => loadIdentity(ctx));
   } catch (error) {
     await pauseAfterFailure(ctx, signal, error);
     return null;

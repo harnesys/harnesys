@@ -14,6 +14,7 @@ import { HostFsLayoutPort } from '../../../domain/machine/host-fs-layout.port.ts
 import { computeAddonDigest } from './addon-digest.ts';
 import { addonBranding } from './addon-icon.ts';
 import { AddonLock, lockEntryFor } from './addon-lock.ts';
+import { addonNotes } from './addon-notes.ts';
 import {
   addonPackageDir,
   addonsHomeDir,
@@ -50,9 +51,7 @@ export class AddonPackageStoreAdapter extends AddonPackageCatalogPort {
         packages.push(installed);
       }
     }
-    return packages
-      .map((pkg) => ({ ...pkg, ...addonBranding(pkg) }))
-      .sort((a, b) => a.id.localeCompare(b.id));
+    return packages.map(withAddonPresentation).sort((a, b) => a.id.localeCompare(b.id));
   }
 
   override find(id: string, version?: string): InstalledAddonPackage | undefined {
@@ -61,9 +60,10 @@ export class AddonPackageStoreAdapter extends AddonPackageCatalogPort {
         .scanPackages()
         .find((pkg) => pkg.id === id && pkg.version === version);
       if (builtin) {
-        return { ...builtin, ...addonBranding(builtin) };
+        return withAddonPresentation(builtin);
       }
-      return this.readInstalled(this.lock.entry(id, version));
+      const installed = this.readInstalled(this.lock.entry(id, version));
+      return installed ? withAddonPresentation(installed) : undefined;
     }
     const candidates = [
       ...this.builtins.scanPackages().filter((pkg) => pkg.id === id),
@@ -74,7 +74,7 @@ export class AddonPackageStoreAdapter extends AddonPackageCatalogPort {
         .filter((installed) => installed !== undefined),
     ].sort((a, b) => b.version.localeCompare(a.version));
     const found = candidates[0];
-    return found ? { ...found, ...addonBranding(found) } : undefined;
+    return found ? withAddonPresentation(found) : undefined;
   }
 
   override readLock(): AddonLockFile {
@@ -218,4 +218,9 @@ export class AddonPackageStoreAdapter extends AddonPackageCatalogPort {
       installedAt: entry.installedAt,
     };
   }
+}
+
+/** Attaches the resolved-for-display artifacts (icon, color, notes) to a package. */
+function withAddonPresentation(pkg: InstalledAddonPackage): InstalledAddonPackage {
+  return { ...pkg, ...addonBranding(pkg), ...addonNotes(pkg) };
 }

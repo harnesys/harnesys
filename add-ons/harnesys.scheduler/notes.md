@@ -1,0 +1,1 @@
+Every schedule is a trigger instance bound to a thread. The planner ticks every minute, fires due schedules with run-level deduplication, and applies the missed-run policy: catch-up fires runs missed within the last hour, skip drops them, escalate drops them and opens an approval inbox item. An invalid cron expression or a thread that cannot run marks the schedule as failed.

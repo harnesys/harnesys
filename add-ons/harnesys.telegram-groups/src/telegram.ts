@@ -56,6 +56,10 @@ export interface TelegramUpdate {
     message_thread_id: number;
     name: string;
   };
+  forum_topic_deleted?: {
+    chat: TelegramChat;
+    message_thread_id: number;
+  };
 }
 
 export function channelOfParts(chatId: string, topicId?: string): string {

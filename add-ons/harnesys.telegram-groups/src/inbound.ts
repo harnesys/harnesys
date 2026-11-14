@@ -6,6 +6,7 @@ import {
   isStartCommand,
   registerChat,
 } from './commands.ts';
+import { connectionAlive } from './lifecycle.ts';
 import { attributedText, authorLabel } from './routing.ts';
 import {
   channelOf,
@@ -67,7 +68,7 @@ async function handleCommands(
 /**
  * Resolves the channel a group message bridges through: an exact topic
  * connection wins, otherwise the whole-group connection catches every topic
- * of the group. No connection — nothing mirrors.
+ * of the group. Only live connections count; no connection — nothing mirrors.
  */
 async function resolveChannel(
   ctx: AddonContext,
@@ -75,15 +76,19 @@ async function resolveChannel(
   topicId: string | null,
 ): Promise<string | null> {
   if (topicId !== null) {
-    const exact = await ctx.db.get('select channel from connections where channel = ?', [
-      channelOfParts(chatId, topicId),
-    ]);
-    if (exact !== null) {
-      return String(exact.channel);
+    const exact = await ctx.db.get(
+      'select channel from connections where channel = ? and status = ?',
+      [channelOfParts(chatId, topicId), 'connected'],
+    );
+    if (exact !== null && typeof exact.channel === 'string') {
+      return exact.channel;
     }
   }
-  const group = await ctx.db.get('select channel from connections where channel = ?', [chatId]);
-  return group === null ? null : String(group.channel);
+  const group = await ctx.db.get(
+    'select channel from connections where channel = ? and status = ?',
+    [chatId, 'connected'],
+  );
+  return group !== null && typeof group.channel === 'string' ? group.channel : null;
 }
 
 export async function handleGroup(
@@ -112,6 +117,13 @@ export async function handleGroup(
   const topicId = first.message_thread_id === undefined ? null : String(first.message_thread_id);
   const channel = await resolveChannel(ctx, chatId, topicId);
   if (channel === null) {
+    return;
+  }
+  const row = await ctx.db.get('select thread_id from connections where channel = ?', [channel]);
+  if (row === null || typeof row.thread_id !== 'string') {
+    return;
+  }
+  if (!(await connectionAlive(ctx, channel, row.thread_id))) {
     return;
   }
   await bridgeMessages(ctx, messages, channel);

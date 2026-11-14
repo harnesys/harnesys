@@ -1,9 +1,9 @@
 {
   "id": "harnesys.telegram-groups",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "platform": 1,
   "title": "Telegram groups",
-  "description": "Group and community bot: the bot is added to group chats and forum topics and routes matching messages to Harnesys threads (routing policy: mention, reply-to-bot, always, or commands only). Groups register themselves with /start or /join (admin or privacy-mode verification via getChatMember), an admin binds them in this settings page, and each group or topic gets its own thread. This add-on binds its own telegram-bot account with its own BotFather token; never share one bot token between this add-on and the Telegram bot add-on (getUpdates returns 409 for two pollers on one token).",
+  "description": "Group and community bot: the bot is added to group chats and forum topics and mirrors their messages into Harnesys threads. Groups register themselves with /start or /join (admin or privacy-mode verification via getChatMember), an admin connects a group or topic to a thread on this settings page, and who answers is the thread responder mode (auto: the pinned agent answers every message; mention: only @mentions and replies). All messages of a connected group or topic mirror into its thread either way. This add-on binds its own telegram-bot account with its own BotFather token; never share one bot token between this add-on and the Telegram bot add-on (getUpdates returns 409 for two pollers on one token).",
   "runtime": {
     "entry": "dist/index.js",
     "profile": "trusted"
@@ -618,8 +618,18 @@
               { "key": "agent", "label": "Agent", "format": "text" },
               { "key": "thread", "label": "Thread", "format": "text" },
               { "key": "mode", "label": "Mode", "format": "badge" },
+              { "key": "status", "label": "Status", "format": "badge" },
               { "key": "channel", "label": "Channel", "format": "copy" },
               { "key": "updatedAt", "label": "Updated", "format": "datetime" }
+            ],
+            "rowActions": [
+              {
+                "id": "unbind",
+                "label": "Unbind",
+                "route": { "route": "/unbind?channel=:channel" },
+                "confirm": "Stop mirroring this target into its thread? The thread itself is kept.",
+                "destructive": true
+              }
             ]
           },
           {
@@ -676,10 +686,10 @@
                   },
                   {
                     "value": "mention",
-                    "label": "Mirror all, agents answer on @mentions"
+                    "label": "Agents answer only @mentions and replies"
                   }
                 ],
-                "help": "Sets the thread responder policy — the same setting as the thread settings page. 'Agent answers every message' creates a dedicated thread; 'Mirror all' creates a group thread where agents answer when mentioned."
+                "help": "Who answers in the connected thread — the same setting as the thread settings page. All messages of the connected group or topic are mirrored into the thread either way; this only decides whether unaddressed messages trigger the agent."
               },
               {
                 "key": "agentId",
@@ -736,7 +746,7 @@
           },
           {
             "type": "markdown",
-            "body": "Setup: 1) bind a telegram-bot account created from a @BotFather token in the connections section; 2) add the bot to a group — the bot discovers it once it sees any message there (or send /start or /join to register explicitly; the bot verifies it is an admin or has privacy mode disabled); 3) connect the group or a forum topic above with the agent that should answer. Messages matching the routing policy go to the connected thread with sender attribution, and replies come back into the group. Each forum topic can have its own thread and agent. The bot must own its own token: sharing one token with the Telegram bot add-on breaks both pollers (Telegram returns 409)."
+            "body": "Setup: 1) bind a telegram-bot account created from a @BotFather token in the connections section; 2) add the bot to a group — the bot discovers it once it sees any message there (or send /start or /join to register explicitly; the bot verifies it is an admin or has privacy mode disabled); 3) connect the group or a forum topic above with the agent that should answer. Every message of a connected group or topic mirrors into its thread with sender attribution, and replies go back into the group. The responder mode decides who answers: auto — the pinned agent answers every message; mention — only @mentions and replies start a run. Unbind in the Routing table stops mirroring; deleting a topic in Telegram or removing the bot marks the connection disconnected automatically. Each forum topic can have its own thread and agent. The bot must own its own token: sharing one token with the Telegram bot add-on breaks both pollers (Telegram returns 409)."
           }
         ]
       }
@@ -768,6 +778,16 @@
         "id": "connect",
         "method": "POST",
         "path": "/connect",
+        "role": "member"
+      }
+    },
+    {
+      "id": "unbind",
+      "family": "route",
+      "descriptor": {
+        "id": "unbind",
+        "method": "POST",
+        "path": "/unbind",
         "role": "member"
       }
     },

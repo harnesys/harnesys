@@ -46,7 +46,9 @@ export function useFieldOptions(
       return await fetchAddonRoute(addon.orgId, addon.addonId, route.route, params);
     },
     enabled: ready,
-    staleTime: 60_000,
+    // One-off fetch per mount and per dependency change: discovery data lives
+    // in the addon DB and must reflect reality when the form is opened again.
+    staleTime: 0,
     retry: false,
   });
 

@@ -34,7 +34,12 @@ export function TableSection({ orgId, addonId, section }: SectionProps) {
 
   const params = routeParamsOf(source ?? { route: '/' });
   const result = useQuery({
-    queryKey: ['addon-table', orgId, addonId, source?.route ?? '', cursor] as const,
+    queryKey: [
+      ...orgAddonDetailQueryKey(orgId, addonId),
+      'table',
+      source?.route ?? '',
+      cursor,
+    ] as const,
     queryFn: async () => {
       const page = (await fetchAddonRoute(orgId, addonId, source?.route ?? '/', {
         ...params,

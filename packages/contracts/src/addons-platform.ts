@@ -204,6 +204,8 @@ export type OrgAddonSummary = z.infer<typeof OrgAddonSummarySchema>;
 
 export const OrgAddonDetailSchema = OrgAddonSummarySchema.extend({
   manifest: AddonManifestSummarySchema,
+  /** Package-authored `notes.md` (root or `assets/`), rendered as the Notes section. */
+  notes: z.string().nullable().default(null),
   contributions: z.array(AddonContributionViewSchema).default([]),
   capabilities: z.array(AddonCapabilityViewSchema).default([]),
   permissions: z.object({

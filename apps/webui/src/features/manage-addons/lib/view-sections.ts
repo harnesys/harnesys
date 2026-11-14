@@ -222,6 +222,28 @@ export function defaultSectionEntries(): SectionEntry[] {
 }
 
 /**
+ * The package-authored `notes.md` (root or `assets/`) is the single source for
+ * the Notes section: it replaces the body of a declared markdown section or
+ * appends one when the add-on declares none. The host resolves the text, so no
+ * copy of the notes lives in the manifest.
+ */
+export function applyAddonNotes(entries: SectionEntry[], notes: string | null): SectionEntry[] {
+  if (notes === null || notes.length === 0) {
+    return entries;
+  }
+  const section: AddonViewSection = { type: 'markdown', body: notes };
+  const index = entries.findIndex(
+    (entry) => entry.kind === 'known' && entry.section.type === 'markdown',
+  );
+  if (index === -1) {
+    return [...entries, { kind: 'known', section }];
+  }
+  const result = [...entries];
+  result[index] = { kind: 'known', section };
+  return result;
+}
+
+/**
  * Permissions are a core security surface: the grant review and editing must be
  * reachable on every add-on page, even when the add-on declares its own view
  * sections and omits the permissions block.

@@ -222,6 +222,7 @@ export function orgAvailableDetailOf(input: {
     },
     connections: connectionsViewOf(pkg, []),
     configValues: {},
+    notes: pkg.notes ?? null,
   };
 }
 
@@ -243,6 +244,7 @@ export function orgAddonDetailOf(input: AddonDetailInput): OrgAddonDetail {
       permissions: { declared: [], granted: grants, diff: { added: [], removed: [] } },
       connections: [],
       configValues,
+      notes: null,
     };
   }
   return {
@@ -262,6 +264,7 @@ export function orgAddonDetailOf(input: AddonDetailInput): OrgAddonDetail {
     },
     connections: connectionsViewOf(pkg, bindings),
     configValues,
+    notes: pkg.notes ?? null,
   };
 }
 

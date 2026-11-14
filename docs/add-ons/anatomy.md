@@ -7,6 +7,7 @@
 ```
 add-ons/harnesys.webhook/
   addon.json          # манифест (89 строк)
+  notes.md            # текст секции Notes (markdown)
   package.json        # deps: @harnesys/sdk, @harnesys/studio-shared; build: bun build --target=bun
   src/index.ts        # defineAddon + startAddonProcess (17 строк)
   src/hook.ts         # триггер-пара + route-хендлеры (100 строк)
@@ -80,8 +81,7 @@ add-ons/harnesys.webhook/
               { "key": "lastFiredAt", "label": "Last fired", "format": "datetime" },
               { "key": "fires", "label": "Fires", "format": "number" },
               { "key": "threadId", "label": "Thread", "format": "text" }
-            ] },
-          { "type": "markdown", "body": "Every webhook is a trigger instance bound to a thread and a public POST endpoint. …" }
+            ] }
         ]
       }
     }
@@ -93,8 +93,9 @@ add-ons/harnesys.webhook/
 
 - Декларированы только **небазовые** права: `trigger` (для `triggers.fire`) и `routes.public` (high-risk, для публичного endpoint). `db`, `log`, `config.read` и прочие базовые — неявно.
 - `activation: 'lazy'` — процесс стартует на первый запрос/событие и выключается после 5 минут покоя: слушателем вебхука является маршрут хоста, resident-процесс не нужен.
-- Публичный route без аутентификации — поэтому в markdown прямо сказано «трактуйте URL как секрет».
+- Публичный route без аутентификации — поэтому в `notes.md` прямо сказано «трактуйте URL как секрет».
 - `view` собирает страницу из манифеста без единой строчки UI-кода; данные таблицы отдаёт тот же аддон через route `/instances` в контракте `{ rows }`.
+- Текст секции Notes лежит в `notes.md` рядом с манифестом, а не строкой в `addon.json`: хост подставляет файл последней секцией сам, вклада `view` для этого не требуется.
 
 ## Точка входа
 

@@ -8,7 +8,6 @@ export interface CommandMessage {
   text: string;
   channel: string;
 }
-
 const REGISTERED_COMMANDS = [
   { command: 'start', description: 'Register this group with Harnesys' },
   { command: 'join', description: 'Register this group with Harnesys' },
@@ -44,7 +43,6 @@ export function botCommands(): Array<{ command: string; description: string }> {
 export function commandsScope(): Record<string, string> {
   return { ...SET_COMMANDS_SCOPE };
 }
-
 
 function commandName(text: string): string {
   const head = text.trim().split(/\s+/)[0] ?? '';

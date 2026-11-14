@@ -28,6 +28,8 @@ export interface InstalledAddonPackage {
   icon?: string;
   /** Manifest brand color as `#RRGGBB`. */
   color?: string;
+  /** Package-authored `notes.md` (root or `assets/`) resolved for the add-on page. */
+  notes?: string;
 }
 
 export interface AddonInstallRequest {

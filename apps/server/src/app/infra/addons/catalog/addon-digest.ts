@@ -3,10 +3,10 @@ import { join, relative, sep } from 'node:path';
 import { loadAddonManifest } from './manifest-loader.ts';
 
 // §4.1: a package ships the built layout only — the manifest, the
-// self-contained bundle, migrations, translations, content and assets.
-// Development files (src/, node_modules/, package.json, tsconfig.json,
-// lockfiles) are not part of the package: the digest and staging read
-// exactly the runtime payload collected here.
+// self-contained bundle, migrations, translations, content, assets and the
+// authored notes.md. Development files (src/, node_modules/, package.json,
+// tsconfig.json, lockfiles) are not part of the package: the digest and
+// staging read exactly the runtime payload collected here.
 const PACKAGE_ASSET_DIRS = ['l10n', 'content', 'assets'] as const;
 
 export function computeAddonDigest(root: string): string {
@@ -31,6 +31,10 @@ export function packageFiles(root: string): string[] {
     );
   }
   const files = [join(root, 'addon.json'), entryFile(root, loaded.manifest.runtime.entry)];
+  const rootNotes = join(root, 'notes.md');
+  if (existsSync(rootNotes)) {
+    files.push(rootNotes);
+  }
   if (loaded.manifest.data?.migrations) {
     files.push(...collectDir(root, loaded.manifest.data.migrations));
   }
