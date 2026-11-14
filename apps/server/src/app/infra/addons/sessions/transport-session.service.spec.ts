@@ -1,14 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { Logger } from '@harnesys/brix';
-import type { AddonCallOptions } from '../../../domain/addons/ports/addon-call.port.ts';
-import { AddonCallPort } from '../../../domain/addons/ports/addon-call.port.ts';
 import {
   AddonTransportBindingRepositoryPort,
   type AddonTransportBindingRow,
 } from '../../../domain/addons/ports/transport-binding-repository.port.ts';
 import { AddonTransportSessionRepositoryPort } from '../../../domain/addons/ports/transport-session-repository.port.ts';
 import type { TransportSessionRow } from '../../../domain/addons/transport-session.ts';
-import { LocalExecutorPort } from '../../../domain/thread/local-executor.port.ts';
 import {
   ThreadEventsPort,
   type ThreadRunEvent,
@@ -17,6 +13,7 @@ import { AddonTransportRegistry } from '../families/transport/transport.family.t
 import { TransportAskRegistry } from '../families/transport/transport-ask.registry.ts';
 import { TransportSessionAsk } from './transport-session.ask.ts';
 import { TransportSessionDrafts } from './transport-session.drafts.ts';
+import { FakeExecutor, FakeStore, SilentLogger, SlowCalls } from './transport-session.fakes.ts';
 import { TransportSessionService } from './transport-session.service.ts';
 
 const ORG = 'org1';
@@ -131,48 +128,6 @@ class FakeSessionsRepo extends AddonTransportSessionRepositoryPort {
   }
 }
 
-class SlowCalls {
-  readonly typingCalls: number[] = [];
-
-  async transportTyping(
-    _orgId: string,
-    _addonId: string,
-    _params: { channel: string; on: boolean },
-    _opts?: AddonCallOptions,
-  ): Promise<void> {
-    this.typingCalls.push(this.typingCalls.length);
-    await new Promise((resolve) => setTimeout(resolve, 5));
-  }
-
-  async transportSend(): Promise<{ messageId?: string }> {
-    return {};
-  }
-
-  async transportEdit(): Promise<void> {}
-}
-
-function silence(): Logger {
-  const noop = async () => {};
-  return {
-    child: () => ({
-      info: noop,
-      warn: noop,
-      error: noop,
-      debug: noop,
-    }),
-  } as unknown as Logger;
-}
-
-class FakeStore {
-  constructor(readonly events: unknown[]) {}
-
-  tail(_runId: string, fromSeq: number): Promise<unknown[]> {
-    return Promise.resolve(
-      (this.events as Array<{ seq?: number }>).filter((event) => (event.seq ?? 0) > fromSeq),
-    );
-  }
-}
-
 function harness(store: FakeStore): {
   service: TransportSessionService;
   events: FakeEvents;
@@ -184,20 +139,19 @@ function harness(store: FakeStore): {
   const repo = new FakeSessionsRepo();
   const drafts = new TransportSessionDrafts(
     repo,
-    calls as unknown as AddonCallPort,
+    calls,
     new AddonTransportRegistry(),
-    silence(),
+    new SilentLogger(),
   );
-  const executor = { events: async () => store } as unknown as LocalExecutorPort;
   const service = new TransportSessionService(
     events,
     new FakeBindings(),
     repo,
     drafts,
     {} as TransportSessionAsk,
-    executor,
+    new FakeExecutor(store),
     new TransportAskRegistry(),
-    silence(),
+    new SilentLogger(),
   );
   service.onModuleInit();
   return { service, events, calls, repo };

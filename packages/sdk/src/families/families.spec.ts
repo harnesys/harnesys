@@ -136,6 +136,7 @@ describe('descriptor schemas', () => {
       'source-kind',
       'mcp',
       'lsp',
+      'viewer',
     ]);
     for (const name of FAMILY_NAMES) {
       const module = familyRegistry[name];

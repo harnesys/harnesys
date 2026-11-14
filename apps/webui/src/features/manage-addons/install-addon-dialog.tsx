@@ -1,5 +1,5 @@
 import type { InstallPlan } from '@harnesys/contracts';
-import type { DragEvent, KeyboardEvent } from 'react';
+import type { DragEvent } from 'react';
 import { useRef, useState } from 'react';
 import {
   confirmAddonInstall,
@@ -55,17 +55,10 @@ export function InstallAddonDialog({
     setFile(next);
   };
 
-  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+  const handleDrop = (event: DragEvent<HTMLButtonElement>) => {
     event.preventDefault();
     setDragging(false);
     pickFile(event.dataTransfer.files?.[0]);
-  };
-
-  const handleDropKeys = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      fileInput.current?.click();
-    }
   };
 
   const selectFolder = (path?: string) => {
@@ -116,6 +109,11 @@ export function InstallAddonDialog({
     }
   };
 
+  let reviewLabel = 'Review package';
+  if (pending) {
+    reviewLabel = file ? 'Uploading...' : 'Scanning...';
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {error ? <SettingsErrorBanner message={error} testId="install-addon-error" /> : null}
@@ -138,12 +136,10 @@ export function InstallAddonDialog({
         </div>
       ) : (
         <>
-          <div
-            role="button"
-            tabIndex={0}
+          <button
+            type="button"
             aria-label="Upload add-on package"
             onClick={() => fileInput.current?.click()}
-            onKeyDown={handleDropKeys}
             onDragOver={(event) => {
               event.preventDefault();
               setDragging(true);
@@ -151,21 +147,21 @@ export function InstallAddonDialog({
             onDragLeave={() => setDragging(false)}
             onDrop={handleDrop}
             className={cn(
-              'flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed px-4 py-5 text-center focus-visible:outline-1 focus-visible:outline-ring',
+              'flex min-h-24 w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed px-4 py-5 text-center focus-visible:outline-1 focus-visible:outline-ring',
               dragging && 'border-primary bg-muted/40',
             )}
           >
-            <p className="font-medium text-sm">
+            <span className="font-medium text-sm">
               Drop a .zip package here, or click to choose a file
-            </p>
-            <p className="text-muted-foreground text-xs">Up to 32 MiB</p>
+            </span>
+            <span className="text-muted-foreground text-xs">Up to 32 MiB</span>
             {file ? (
-              <p className="truncate font-mono text-xs">
+              <span className="truncate font-mono text-xs">
                 {file.name} · {formatBytes(file.size)}
-              </p>
+              </span>
             ) : null}
-            {fileError ? <p className="text-destructive text-xs">{fileError}</p> : null}
-          </div>
+            {fileError ? <span className="text-destructive text-xs">{fileError}</span> : null}
+          </button>
           <input
             ref={fileInput}
             type="file"
@@ -216,7 +212,7 @@ export function InstallAddonDialog({
             onClick={() => void startPlan()}
             data-testid="install-addon-plan"
           >
-            {pending ? (file ? 'Uploading...' : 'Scanning...') : 'Review package'}
+            {reviewLabel}
           </Button>
         )}
       </DialogFooter>
