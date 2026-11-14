@@ -216,7 +216,8 @@ describe('trigger fire service', () => {
     expect(first.outcome).toBe('fired');
     expect(second.outcome).toBe('suppressed');
     expect(runs.dispatched).toHaveLength(1);
-    expect(runs.dispatched[0]).toMatchObject({ threadId: 't-1', agentId: 'a-1', text: 'hello' });
+    expect(runs.dispatched[0]).toMatchObject({ threadId: 't-1', agentId: 'a-1' });
+    expect(runs.dispatched[0]?.origin).toBe('trigger');
   });
 
   test('unknown or foreign instance fails closed', async () => {

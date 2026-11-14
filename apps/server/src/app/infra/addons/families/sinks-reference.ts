@@ -12,6 +12,8 @@ export interface TriggerFireInput {
   instanceId: string;
   runKey: string;
   text?: string;
+  title?: string;
+  fields?: Array<{ label: string; value: string; href?: string }>;
   payload?: unknown;
 }
 

@@ -38,6 +38,7 @@ export type {
   AddonSecrets,
   AddonSkills,
   AddonThreads,
+  AddonTriggerField,
   AddonTriggers,
   AddonTriggerTarget,
   AddonUsage,

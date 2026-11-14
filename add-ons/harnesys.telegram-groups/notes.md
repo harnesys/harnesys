@@ -14,3 +14,7 @@ Every message of a connected group or topic mirrors into its thread with sender 
 Unbind in the **Routing** table stops mirroring. Deleting a topic in Telegram or removing the bot marks the connection disconnected automatically.
 
 > The bot must own its own token: sharing one token with the Telegram bot add-on breaks both pollers (Telegram returns `409`).
+
+**Agent tools**
+
+Chat tools are not part of this add-on. Install the **Telegram tools** add-on, connect the bot there and grant its pack to the agents that should act through Telegram; this add-on keeps owning polling, routing and replies.

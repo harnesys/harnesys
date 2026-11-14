@@ -1,0 +1,601 @@
+{
+  "id": "harnesys.telegram-tools",
+  "version": "1.1.0",
+  "platform": 1,
+  "title": "Telegram tools",
+  "description": "Agent tools for Telegram chats: messages, media, albums, files, topics, pins, forwards and polls. This add-on is optional and separate from the Telegram bot and Telegram groups transports, so an agent gets Telegram tools only when an admin grants this pack to that agent. Connect the bot the agent should act as; the transport add-ons keep owning long polling, pairing and routing. Using the same bot token here as in a transport add-on is safe because this add-on never calls getUpdates.",
+  "runtime": {
+    "entry": "dist/index.js",
+    "profile": "trusted"
+  },
+  "activation": "lazy",
+  "permissions": [
+    {
+      "id": "http.fetch",
+      "scope": {
+        "hosts": [
+          "api.telegram.org"
+        ]
+      },
+      "reason": "Call the Telegram Bot API as the connected bot"
+    },
+    {
+      "id": "accounts.use",
+      "scope": {
+        "connections": [
+          "telegram-bot"
+        ]
+      },
+      "reason": "Resolve the bot token bound to the telegram-bot connection owned by this add-on"
+    },
+    {
+      "id": "files.read",
+      "reason": "Read workspace files to send them to Telegram"
+    },
+    {
+      "id": "files.write",
+      "reason": "Save files downloaded from Telegram into the organization workspace"
+    }
+  ],
+  "connections": [
+    {
+      "id": "telegram-bot",
+      "label": "Telegram bot",
+      "accountKinds": [
+        "telegram-bot"
+      ],
+      "cardinality": "many",
+      "optional": true
+    }
+  ],
+  "icon": "assets/icon.svg",
+  "color": "#229ED9",
+  "contributions": [
+    {
+      "id": "config",
+      "family": "config",
+      "descriptor": {
+        "fields": [
+          {
+            "key": "default_chat",
+            "label": "Default chat",
+            "type": "text",
+            "required": false,
+            "placeholder": "-1001234567890 or @channel",
+            "help": "Used when a tool call omits chat. Accepts a numeric chat id, a -100… supergroup id, @username, or chatId:topicId to post into a forum topic."
+          },
+          {
+            "key": "allowed_chats",
+            "label": "Allowed chats",
+            "type": "textarea",
+            "required": false,
+            "help": "Chat ids or @usernames the agent may touch, separated by commas or new lines. Empty means every chat the bot can reach. A chat is matched by its id or its @username, so listing @name allows the same chat by -100… id and the other way round. Calls to any other chat fail with permission_denied."
+          },
+          {
+            "key": "read_only",
+            "label": "Read-only",
+            "type": "boolean",
+            "required": false,
+            "default": false,
+            "help": "Reject every tool that posts, edits, deletes, forwards or pins. get_chat, get_file and download_file keep working, so an agent can inspect chats and pull files without writing."
+          },
+          {
+            "key": "bots",
+            "label": "Per-bot rules (JSON)",
+            "type": "textarea",
+            "required": false,
+            "placeholder": "{\"@sales_bot\": {\"allowed_chats\": [\"@sales\"], \"read_only\": false}}",
+            "help": "Optional JSON object keyed by bot label or account id, for setups with several bots. Each entry may set allowed_chats, read_only and default_chat; a missing key falls back to the fields above. Example: {\"@sales_bot\": {\"allowed_chats\": [\"-100123\"], \"read_only\": true}, \"@ops_bot\": {\"default_chat\": \"@ops\"}}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "pack",
+      "family": "tool-pack",
+      "descriptor": {
+        "name": "telegram",
+        "title": "Telegram tools",
+        "description": "Chats, messages, media, albums, files, topics, polls, pins and forwards as one of the connected Telegram bots",
+        "connection": "telegram-bot",
+        "tools": [
+          {
+            "name": "list_bots",
+            "description": "List the Telegram bots connected to this add-on: account id (use it as bot in other tools), label, Telegram bot id, status and effective rights (read_only, default_chat, allowed_chats). Call it first when several bots are connected.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          {
+            "name": "list_chats",
+            "description": "List the chats the selected bot is allowed to use, with id, type (private, group, supergroup, channel), title and username, hydrated through getChat. The list comes from the bot rules, Default chat and Allowed chats settings, because the Telegram Bot API cannot enumerate the chats a bot belongs to; entries carry default: true for the Default chat, restricted: false when no allow-list is set, and per-entry error text when Telegram rejects a chat.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "bot": {
+                  "type": "string",
+                  "description": "Bot to act as: account id, label from list_bots, or Telegram bot id. Required when several bots are connected"
+                }
+              }
+            }
+          },
+          {
+            "name": "get_chat",
+            "description": "Read a chat the bot can reach: id, type, title, username and pinned message id. chat accepts a numeric id, a -100… supergroup id, @username or chatId:topicId; when omitted the add-on Default chat is used.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "bot": {
+                  "type": "string",
+                  "description": "Bot to act as: account id, label from list_bots, or Telegram bot id. Required when several bots are connected"
+                },
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id, -100… supergroup id, @username or chatId:topicId"
+                }
+              }
+            }
+          },
+          {
+            "name": "send_message",
+            "description": "Send a text message to a chat, optionally into a forum topic and as a reply. Text up to 4096 characters, sent as plain text unless parseMode is set; the add-on does not escape markup. Returns the new messageId.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "bot": {
+                  "type": "string",
+                  "description": "Bot to act as: account id, label from list_bots, or Telegram bot id. Required when several bots are connected"
+                },
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id, -100… supergroup id, @username or chatId:topicId"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Message text, up to 4096 characters"
+                },
+                "topicId": {
+                  "type": "string",
+                  "description": "Forum topic id, numeric"
+                },
+                "replyToMessageId": {
+                  "type": "string",
+                  "description": "Message id to reply to, numeric"
+                },
+                "parseMode": {
+                  "type": "string",
+                  "enum": [
+                    "HTML",
+                    "MarkdownV2"
+                  ],
+                  "description": "Telegram parse mode; omit for plain text"
+                },
+                "disableNotification": {
+                  "type": "boolean",
+                  "description": "Send silently"
+                },
+                "linkPreview": {
+                  "type": "boolean",
+                  "description": "Set false to hide the link preview"
+                }
+              },
+              "required": [
+                "text"
+              ]
+            }
+          },
+          {
+            "name": "edit_message",
+            "description": "Edit the text of a message the bot posted. Text up to 4096 characters. Editing with unchanged text fails as conflict.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "bot": {
+                  "type": "string",
+                  "description": "Bot to act as: account id, label from list_bots, or Telegram bot id. Required when several bots are connected"
+                },
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id, -100… supergroup id, @username or chatId:topicId"
+                },
+                "messageId": {
+                  "type": "string",
+                  "description": "Message id returned by a send, numeric"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "New text, up to 4096 characters"
+                },
+                "parseMode": {
+                  "type": "string",
+                  "enum": [
+                    "HTML",
+                    "MarkdownV2"
+                  ],
+                  "description": "Telegram parse mode; omit for plain text"
+                }
+              },
+              "required": [
+                "messageId",
+                "text"
+              ]
+            }
+          },
+          {
+            "name": "delete_message",
+            "description": "Delete a message the bot posted.",
+            "effect": "destructive",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "bot": {
+                  "type": "string",
+                  "description": "Bot to act as: account id, label from list_bots, or Telegram bot id. Required when several bots are connected"
+                },
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id, -100… supergroup id, @username or chatId:topicId"
+                },
+                "messageId": {
+                  "type": "string",
+                  "description": "Message id to delete, numeric"
+                }
+              },
+              "required": [
+                "messageId"
+              ]
+            }
+          },
+          {
+            "name": "send_media",
+            "description": "Send one file as a photo, video or document. Pass exactly one of url, workspace path or dataBase64; files up to 5 MB, public urls are fetched by Telegram. Returns the new messageId and the Telegram fileId, which can be reused by other tools.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "bot": {
+                  "type": "string",
+                  "description": "Bot to act as: account id, label from list_bots, or Telegram bot id. Required when several bots are connected"
+                },
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id, -100… supergroup id, @username or chatId:topicId"
+                },
+                "topicId": {
+                  "type": "string",
+                  "description": "Forum topic id, numeric"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "photo",
+                    "video",
+                    "document"
+                  ],
+                  "description": "Media kind; inferred from the extension or mime type when omitted"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "Public file URL"
+                },
+                "path": {
+                  "type": "string",
+                  "description": "Workspace-relative file path"
+                },
+                "dataBase64": {
+                  "type": "string",
+                  "description": "File bytes in base64"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "File name shown in Telegram"
+                },
+                "mimeType": {
+                  "type": "string",
+                  "description": "MIME type, inferred from the extension when omitted"
+                },
+                "caption": {
+                  "type": "string",
+                  "description": "Caption, up to 1024 characters"
+                },
+                "parseMode": {
+                  "type": "string",
+                  "enum": [
+                    "HTML",
+                    "MarkdownV2"
+                  ],
+                  "description": "Caption parse mode; omit for plain text"
+                },
+                "replyToMessageId": {
+                  "type": "string",
+                  "description": "Message id to reply to, numeric"
+                },
+                "disableNotification": {
+                  "type": "boolean",
+                  "description": "Send silently"
+                }
+              }
+            }
+          },
+          {
+            "name": "send_album",
+            "description": "Send 2 to 10 photos, videos or documents as one album with an optional caption. Pass urls or workspace paths, not both; each item up to 5 MB.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "bot": {
+                  "type": "string",
+                  "description": "Bot to act as: account id, label from list_bots, or Telegram bot id. Required when several bots are connected"
+                },
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id, -100… supergroup id, @username or chatId:topicId"
+                },
+                "topicId": {
+                  "type": "string",
+                  "description": "Forum topic id, numeric"
+                },
+                "urls": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Public file URLs, 2 to 10 entries"
+                },
+                "paths": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Workspace-relative file paths, 2 to 10 entries"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "photo",
+                    "video",
+                    "document"
+                  ],
+                  "description": "Media kind for every item; inferred per item when omitted"
+                },
+                "caption": {
+                  "type": "string",
+                  "description": "Album caption, up to 1024 characters"
+                },
+                "parseMode": {
+                  "type": "string",
+                  "enum": [
+                    "HTML",
+                    "MarkdownV2"
+                  ],
+                  "description": "Caption parse mode; omit for plain text"
+                },
+                "disableNotification": {
+                  "type": "boolean",
+                  "description": "Send silently"
+                }
+              }
+            }
+          },
+          {
+            "name": "get_file",
+            "description": "Read Telegram file metadata by fileId: download path and size, without downloading the bytes. Use it to check size before download_file.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "bot": {
+                  "type": "string",
+                  "description": "Bot to act as: account id, label from list_bots, or Telegram bot id. Required when several bots are connected"
+                },
+                "fileId": {
+                  "type": "string",
+                  "description": "Telegram file_id from an earlier tool result"
+                }
+              },
+              "required": [
+                "fileId"
+              ]
+            }
+          },
+          {
+            "name": "download_file",
+            "description": "Download a file the bot can see into the organization workspace and return its path and size. Files up to 5 MB; fileId comes from an inbound attachment or a send result.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "bot": {
+                  "type": "string",
+                  "description": "Bot to act as: account id, label from list_bots, or Telegram bot id. Required when several bots are connected"
+                },
+                "fileId": {
+                  "type": "string",
+                  "description": "Telegram file_id"
+                },
+                "path": {
+                  "type": "string",
+                  "description": "Workspace-relative destination path, e.g. inbox/report.pdf"
+                }
+              },
+              "required": [
+                "fileId",
+                "path"
+              ]
+            }
+          },
+          {
+            "name": "forward_message",
+            "description": "Forward one message from a chat to another chat.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "bot": {
+                  "type": "string",
+                  "description": "Bot to act as: account id, label from list_bots, or Telegram bot id. Required when several bots are connected"
+                },
+                "fromChat": {
+                  "type": "string",
+                  "description": "Source chat id or @username"
+                },
+                "messageId": {
+                  "type": "string",
+                  "description": "Message id in the source chat, numeric"
+                },
+                "toChat": {
+                  "type": "string",
+                  "description": "Destination chat id or @username"
+                }
+              },
+              "required": [
+                "fromChat",
+                "messageId",
+                "toChat"
+              ]
+            }
+          },
+          {
+            "name": "pin_message",
+            "description": "Pin a message in a group or channel.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "bot": {
+                  "type": "string",
+                  "description": "Bot to act as: account id, label from list_bots, or Telegram bot id. Required when several bots are connected"
+                },
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id, -100… supergroup id, @username or chatId:topicId"
+                },
+                "messageId": {
+                  "type": "string",
+                  "description": "Message id to pin, numeric"
+                },
+                "notify": {
+                  "type": "boolean",
+                  "description": "Notify members about the pin"
+                }
+              },
+              "required": [
+                "messageId"
+              ]
+            }
+          },
+          {
+            "name": "create_topic",
+            "description": "Create a forum topic in a supergroup and return its topic id. Name up to 128 characters.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "bot": {
+                  "type": "string",
+                  "description": "Bot to act as: account id, label from list_bots, or Telegram bot id. Required when several bots are connected"
+                },
+                "chat": {
+                  "type": "string",
+                  "description": "Supergroup id, -100… id or @username"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Topic title, up to 128 characters"
+                }
+              },
+              "required": [
+                "name"
+              ]
+            }
+          },
+          {
+            "name": "edit_topic",
+            "description": "Rename a forum topic and optionally close or reopen it. Pass name, closed, or both.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "bot": {
+                  "type": "string",
+                  "description": "Bot to act as: account id, label from list_bots, or Telegram bot id. Required when several bots are connected"
+                },
+                "chat": {
+                  "type": "string",
+                  "description": "Supergroup id, -100… id or @username"
+                },
+                "topicId": {
+                  "type": "string",
+                  "description": "Topic id, numeric"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "New topic title, up to 128 characters"
+                },
+                "closed": {
+                  "type": "boolean",
+                  "description": "True closes the topic, false reopens it"
+                }
+              },
+              "required": [
+                "topicId"
+              ]
+            }
+          },
+          {
+            "name": "create_poll",
+            "description": "Send a poll to a chat. Question up to 300 characters, 2 to 10 options up to 100 characters each.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "bot": {
+                  "type": "string",
+                  "description": "Bot to act as: account id, label from list_bots, or Telegram bot id. Required when several bots are connected"
+                },
+                "chat": {
+                  "type": "string",
+                  "description": "Chat id, -100… supergroup id, @username or chatId:topicId"
+                },
+                "question": {
+                  "type": "string",
+                  "description": "Poll question, up to 300 characters"
+                },
+                "options": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Answer options, 2 to 10 entries up to 100 characters each"
+                },
+                "anonymous": {
+                  "type": "boolean",
+                  "description": "Anonymous poll, true by default"
+                },
+                "multiple": {
+                  "type": "boolean",
+                  "description": "Allow several answers"
+                }
+              },
+              "required": [
+                "question",
+                "options"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

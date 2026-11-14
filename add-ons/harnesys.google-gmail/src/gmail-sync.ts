@@ -161,7 +161,12 @@ async function fireMessage(
   const result = await ctx.triggers.fire({
     instanceId: instance.instanceId,
     runKey,
-    text: `[gmail] New mail from ${snapshot.from || 'unknown sender'}: ${snapshot.subject || '(no subject)'}`,
+    title: snapshot.subject || 'New mail',
+    text: snapshot.snippet,
+    fields: [
+      { label: 'From', value: snapshot.from || 'Unknown sender' },
+      { label: 'Link', value: 'Open in Gmail', href: `${MAIL_URL_BASE}/${snapshot.messageId}` },
+    ],
     payload: {
       messageId: snapshot.messageId,
       threadId: snapshot.threadId,

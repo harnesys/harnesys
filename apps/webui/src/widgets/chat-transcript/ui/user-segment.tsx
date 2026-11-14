@@ -3,6 +3,7 @@ import {
   isIssueHumanText,
   isScheduledHumanText,
   scheduledTaskName,
+  TRIGGER_HUMAN_ORIGIN,
   visibleScheduledText,
 } from '@harnesys/studio-shared';
 import { CalendarClockIcon } from 'lucide-react';
@@ -27,6 +28,7 @@ import { FeedNotice } from './feed-notice';
 import { IssueWakeBanner } from './issue-wake-message';
 import { MessageActions } from './message-actions';
 import { ModeTagBadges } from './mode-tag-badge';
+import { TriggerNotice } from './trigger-notice';
 import { AttachmentPreview, uniqueAttachments } from './user-attachments';
 import { AuthorLabel } from './user-author-label';
 import { buildSendInput, type SendInput, UserMessageEditor } from './user-message-edit';
@@ -58,6 +60,9 @@ export function UserSegment({
       ? useSessionStore.getState().sentSkillsFor(clientEventId)
       : undefined;
   const [editing, setEditing] = useState(false);
+  if (event.origin === TRIGGER_HUMAN_ORIGIN) {
+    return <TriggerNotice text={rawText} threadId={threadId} />;
+  }
   const sendInput = buildSendInput(atts, sidecarSkills);
   const editable = Boolean(
     !inherited &&

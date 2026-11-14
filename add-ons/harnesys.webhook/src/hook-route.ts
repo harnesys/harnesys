@@ -1,5 +1,4 @@
 import type { AddonContext, RouteHandler, RouteRequest } from '@harnesys/sdk';
-import { webhookTaskText } from '@harnesys/studio-shared/webhook-prompt';
 import { checkAuth } from './auth.ts';
 import type { HookConfig } from './config.ts';
 import { checkDedupe, type DedupKeys, type DedupSource, writeDedupe } from './dedupe.ts';
@@ -138,12 +137,16 @@ export async function executeDelivery(
   }
 
   const text = extractText(config, source) || config.detail;
-  const taskText = webhookTaskText(webhook.name, text || undefined);
   const fireStartedAt = Date.now();
   const result = await ctx.triggers.fire({
     instanceId: webhook.instanceId,
     runKey: crypto.randomUUID(),
-    text: taskText,
+    title: webhook.name,
+    text,
+    fields: [
+      { label: 'Method', value: source.method },
+      { label: 'Source', value: origin === 'hook' ? 'Webhook' : 'Test call' },
+    ],
   });
   const latencyMs = Date.now() - fireStartedAt;
   const runId = typeof result.runId === 'string' ? result.runId : null;

@@ -152,7 +152,19 @@
     },
     "add-ons/harnesys.telegram-groups": {
       "name": "harnesys.telegram-groups",
-      "version": "1.1.0",
+      "version": "1.4.0",
+      "dependencies": {
+        "@harnesys/sdk": "file:../../packages/sdk",
+        "zod": "^4.4.3",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "^5.9.3",
+      },
+    },
+    "add-ons/harnesys.telegram-tools": {
+      "name": "harnesys.telegram-tools",
+      "version": "1.0.0",
       "dependencies": {
         "@harnesys/sdk": "file:../../packages/sdk",
         "zod": "^4.4.3",
@@ -197,7 +209,6 @@
         "@ai-sdk/openai-compatible": "3.0.30",
         "@harnesys/brix": "workspace:*",
         "@harnesys/contracts": "workspace:*",
-        "@harnesys/integration-telegram": "workspace:*",
         "@harnesys/sdk": "workspace:*",
         "@harnesys/studio-shared": "workspace:*",
         "ai": "7.0.47",
@@ -372,20 +383,6 @@
         "@types/diff": "^8.0.0",
         "@types/node": "^26.4.0",
         "typescript": "~5.9.0",
-      },
-    },
-    "packages/integration-telegram": {
-      "name": "@harnesys/integration-telegram",
-      "version": "0.1.0",
-      "dependencies": {
-        "@harnesys/contracts": "workspace:*",
-        "big-integer": "^1.6.48",
-        "harnesys": "workspace:*",
-        "teleproto": "^1.232.1",
-        "zod": "^4.4.3",
-      },
-      "peerDependencies": {
-        "typescript": "^5.9.3",
       },
     },
     "packages/sdk": {
@@ -632,8 +629,6 @@
     "@harnesys/contracts": ["@harnesys/contracts@workspace:packages/contracts"],
 
     "@harnesys/desktop": ["@harnesys/desktop@workspace:apps/desktop"],
-
-    "@harnesys/integration-telegram": ["@harnesys/integration-telegram@workspace:packages/integration-telegram"],
 
     "@harnesys/sdk": ["@harnesys/sdk@workspace:packages/sdk"],
 
@@ -1506,6 +1501,8 @@
     "harnesys.telegram-feed": ["harnesys.telegram-feed@workspace:add-ons/harnesys.telegram-feed"],
 
     "harnesys.telegram-groups": ["harnesys.telegram-groups@workspace:add-ons/harnesys.telegram-groups"],
+
+    "harnesys.telegram-tools": ["harnesys.telegram-tools@workspace:add-ons/harnesys.telegram-tools"],
 
     "harnesys.webhook": ["harnesys.webhook@workspace:add-ons/harnesys.webhook"],
 
@@ -2657,6 +2654,8 @@
 
     "harnesys.telegram-groups/@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
 
+    "harnesys.telegram-tools/@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
+
     "harnesys.webhook/@harnesys/sdk": ["@harnesys/sdk@file:packages/sdk", { "dependencies": { "zod": "^4.4.3" }, "devDependencies": { "@types/bun": "^1.4.2", "typescript": "^5.9.3" }, "peerDependencies": { "typescript": "^5.9.3" } }],
 
     "harnesys.webhook/@harnesys/studio-shared": ["@harnesys/studio-shared@file:packages/studio-shared", { "dependencies": { "@harnesys/contracts": "workspace:*", "harnesys": "workspace:*" }, "devDependencies": { "@biomejs/biome": "2.5.6" } }],
@@ -3108,6 +3107,8 @@
     "harnesys.telegram-feed/@types/bun/bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
 
     "harnesys.telegram-groups/@types/bun/bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
+
+    "harnesys.telegram-tools/@types/bun/bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
 
     "harnesys.webhook/@harnesys/studio-shared/@biomejs/biome": ["@biomejs/biome@2.5.6", "", { "optionalDependencies": { "@biomejs/cli-darwin-arm64": "2.5.6", "@biomejs/cli-darwin-x64": "2.5.6", "@biomejs/cli-linux-arm64": "2.5.6", "@biomejs/cli-linux-arm64-musl": "2.5.6", "@biomejs/cli-linux-x64": "2.5.6", "@biomejs/cli-linux-x64-musl": "2.5.6", "@biomejs/cli-win32-arm64": "2.5.6", "@biomejs/cli-win32-x64": "2.5.6" }, "bin": { "biome": "bin/biome" } }, "sha512-lxVNjv7UF6KfhMJfL9gaUHbWdJdHbsAj6OSmwSYNdhRuG67NxNQ4Xdvh3TUxsSK9sBzJBQhEJj3AopmmNJ5pSA=="],
 

@@ -96,7 +96,17 @@ export const orgServiceMethods = {
     z.object({
       instanceId: str,
       runKey: str,
-      text: str.optional(),
+      text: z.string().optional(),
+      title: z.string().optional(),
+      fields: z
+        .array(
+          z.object({
+            label: str,
+            value: str,
+            href: str.optional(),
+          }),
+        )
+        .optional(),
       payload: z.unknown().optional(),
     }),
     TriggerFireOutcomeSchema,

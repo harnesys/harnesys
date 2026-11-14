@@ -196,11 +196,19 @@ export interface AddonTriggerTarget {
   modeId?: string;
 }
 
+export interface AddonTriggerField {
+  label: string;
+  value: string;
+  href?: string;
+}
+
 export interface AddonTriggers {
   fire(params: {
     instanceId: string;
     runKey: string;
     text?: string;
+    title?: string;
+    fields?: AddonTriggerField[];
     payload?: unknown;
   }): Promise<{ outcome: 'fired' | 'suppressed' | 'busy' | 'failed'; runId?: string | null }>;
   create(params: {

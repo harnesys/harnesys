@@ -17,6 +17,7 @@ export {
   type AddonSecrets,
   type AddonSkills,
   type AddonThreads,
+  type AddonTriggerField,
   type AddonTriggers,
   type AddonTriggerTarget,
   type AddonUsage,

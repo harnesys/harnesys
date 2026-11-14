@@ -1,6 +1,7 @@
 import type { AddonContext, WorkerPair } from '@harnesys/sdk';
 import { AddonError } from '@harnesys/sdk';
 import { type FeedCredentials, feedCredentials } from './credentials.ts';
+import { postFieldsOf } from './feed-prompt.ts';
 import { listInstances, type StoredInstance } from './feed-trigger.ts';
 import { channelsOf, filterOf, matchesFilter, parseList } from './filter.ts';
 import { type FeedClient, openFeedClient, type RawPost, type ResolvedPeer } from './mtproto.ts';
@@ -113,25 +114,6 @@ async function storePost(ctx: AddonContext, peer: string, post: RawPost): Promis
   );
 }
 
-function taskTextOf(resolved: ResolvedPeer, post: RawPost): string {
-  const topic = post.topicId === null ? '' : ` · topic ${post.topicId}`;
-  const link =
-    resolved.username === null
-      ? ''
-      : `https://t.me/${resolved.username}/${post.postId}${
-          post.topicId === null ? '' : `?thread=${post.topicId}`
-        }`;
-  const lines = [
-    `Telegram post from ${resolved.title} (#${post.postId}${topic})`,
-    `Published ${post.publishedAt}`,
-    post.mediaKind === null ? '' : `Media: ${post.mediaKind}`,
-    link === '' ? '' : `Link: ${link}`,
-  ].filter((line) => line.length > 0);
-  const body =
-    post.text.length > MAX_TASK_CHARS ? `${post.text.slice(0, MAX_TASK_CHARS)}...` : post.text;
-  return `${lines.join('\n')}\n\n${body}`;
-}
-
 interface FireInput {
   peer: string;
   resolved: ResolvedPeer;
@@ -162,10 +144,14 @@ async function fireInstances(ctx: AddonContext, input: FireInput): Promise<void>
     if (claim.changes === 0) {
       continue;
     }
+    const body =
+      post.text.length > MAX_TASK_CHARS ? `${post.text.slice(0, MAX_TASK_CHARS)}...` : post.text;
     const result = await ctx.triggers.fire({
       instanceId: instance.instanceId,
       runKey,
-      text: taskTextOf(resolved, post),
+      title: `New post in ${resolved.title}`,
+      text: body,
+      fields: postFieldsOf(resolved, post),
       payload: {
         peer,
         postId: post.postId,

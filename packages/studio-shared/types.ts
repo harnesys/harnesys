@@ -231,6 +231,16 @@ export type {
 export { THREAD_KINDS, threadsForAgent } from './src/thread.ts';
 export type { TranscriptItem } from './src/transcript.ts';
 export { toTranscript } from './src/transcript.ts';
+export type {
+  TriggerTaskField,
+  TriggerTaskInput,
+  TriggerTaskView,
+} from './src/trigger-prompt.ts';
+export {
+  parseTriggerTaskText,
+  TRIGGER_HUMAN_ORIGIN,
+  triggerTaskText,
+} from './src/trigger-prompt.ts';
 export { WEBHOOK_HUMAN_ORIGIN, webhookTaskText } from './src/webhook-prompt.ts';
 export type {
   HostNetworkAddress,

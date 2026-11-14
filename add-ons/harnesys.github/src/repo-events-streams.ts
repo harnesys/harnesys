@@ -10,6 +10,7 @@ import {
   watermarkOf,
 } from './repo-events-state.ts';
 import type { StoredInstance } from './repo-events-trigger.ts';
+import { eventPromptOf } from './repo-prompt.ts';
 import { repoPath } from './tools-input.ts';
 
 const PAGE_SIZE = 50;
@@ -304,14 +305,6 @@ function passesFilters(instance: StoredInstance, event: RepoEvent): boolean {
   return true;
 }
 
-function taskTextOf(repo: string, event: RepoEvent): string {
-  if (event.kind === 'workflow_run') {
-    return `[github] workflow run ${event.key} (${event.branch ?? 'unknown branch'}) is ${event.status ?? 'running'} in ${repo}: ${event.title}`;
-  }
-  const label = event.kind === 'issue' ? 'issue' : 'PR';
-  return `[github] ${label} #${event.key} ${event.action} by ${event.actor ?? 'unknown'} in ${repo}: ${event.title}`;
-}
-
 async function fireEvent(
   ctx: AddonContext,
   instance: StoredInstance,
@@ -321,10 +314,13 @@ async function fireEvent(
   if (!(await claimRun(ctx, runKey, instance.instanceId))) {
     return;
   }
+  const prompt = eventPromptOf(instance.repo, event);
   const result = await ctx.triggers.fire({
     instanceId: instance.instanceId,
     runKey,
-    text: taskTextOf(instance.repo, event),
+    title: prompt.title,
+    text: event.title,
+    fields: prompt.fields,
     payload: {
       type: event.kind,
       repo: instance.repo,

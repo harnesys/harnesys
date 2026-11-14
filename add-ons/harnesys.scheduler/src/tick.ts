@@ -1,5 +1,4 @@
 import type { AddonContext, JobHandler } from '@harnesys/sdk';
-import { scheduledTaskText } from '@harnesys/studio-shared/schedule-prompt';
 import { nextCronRunAt } from './cron.ts';
 import { type DueDecision, planDueBatch } from './planner.ts';
 import type { ScheduleTarget } from './store.ts';
@@ -62,7 +61,12 @@ async function handlePlanned(
   const result = await ctx.triggers.fire({
     instanceId: row.instanceId,
     runKey: decision.fireId ?? `schedule:${row.instanceId}:${scheduledFor.toISOString()}`,
-    text: scheduledTaskText(row.name, row.detail),
+    title: row.name,
+    text: row.detail,
+    fields: [
+      { label: 'Schedule', value: row.cron },
+      { label: 'Scheduled for', value: scheduledFor.toISOString() },
+    ],
   });
   if (result.outcome === 'busy') {
     // Core parity: a busy thread keeps its nextRunAt so the run is retried

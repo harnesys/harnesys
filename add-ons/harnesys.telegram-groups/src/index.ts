@@ -1,15 +1,13 @@
 import { defineAddon, startAddonProcess } from '@harnesys/sdk';
 import { poller } from './poller.ts';
 import { bindings, chats, connect, topics, unbind } from './routes.ts';
-import { telegramTools } from './tools.ts';
 import { telegramTransport } from './transport.ts';
 
 const ADDON_ID = 'harnesys.telegram-groups';
-const ADDON_VERSION = '1.5.0';
+const ADDON_VERSION = '1.6.0';
 
 export const addon = defineAddon({
   transport: telegramTransport,
-  tools: telegramTools,
   workers: { poller },
   routes: { chats, topics, connect, unbind, bindings },
 });

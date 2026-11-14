@@ -40,7 +40,14 @@ export class TriggersHostService implements HostServiceModule {
 
   private async fire(
     ctx: HostCallContext,
-    params: { instanceId: string; runKey: string; text?: string; payload?: unknown },
+    params: {
+      instanceId: string;
+      runKey: string;
+      text?: string;
+      title?: string;
+      fields?: Array<{ label: string; value: string; href?: string }>;
+      payload?: unknown;
+    },
   ): Promise<{ outcome: 'fired' | 'suppressed' | 'busy' | 'failed' }> {
     const row = this.instances.find(ctx.orgId, params.instanceId);
     if (!row || row.addonId !== ctx.addonId) {
@@ -49,8 +56,10 @@ export class TriggersHostService implements HostServiceModule {
     const result = await this.sink.fire(ctx, {
       instanceId: params.instanceId,
       runKey: params.runKey,
-      text: params.text,
-      payload: params.payload,
+      ...(params.text === undefined ? {} : { text: params.text }),
+      ...(params.title === undefined ? {} : { title: params.title }),
+      ...(params.fields === undefined ? {} : { fields: params.fields }),
+      ...(params.payload === undefined ? {} : { payload: params.payload }),
     });
     return result;
   }

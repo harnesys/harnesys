@@ -1,5 +1,10 @@
 import { Inject, Injectable, Logger } from '@harnesys/brix';
 import { TriggerDescriptorSchema } from '@harnesys/sdk';
+import {
+  TRIGGER_HUMAN_ORIGIN,
+  type TriggerTaskField,
+  triggerTaskText,
+} from '@harnesys/studio-shared';
 import { AddonException } from '../../../domain/addons/errors.ts';
 import { ContributionRegistryPort } from '../../../domain/addons/ports/contribution-registry.port.ts';
 import type { TriggerInstanceRow } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
@@ -13,7 +18,9 @@ export interface FireTriggerInput {
   addonId: string;
   instanceId: string;
   runKey: string;
-  text: string;
+  text?: string;
+  title?: string;
+  fields?: TriggerTaskField[];
   payload?: unknown;
   correlationId?: string;
 }
@@ -77,7 +84,16 @@ export class FireTriggerUseCase {
       orgId: input.orgId,
       threadId: target.threadId,
       agentId: target.agentId ?? '',
-      text: withInstructions(input.text, instance.instructions),
+      text: triggerTaskText({
+        addonId: input.addonId,
+        triggerId: instance.triggerId,
+        label: instance.label,
+        ...(input.title === undefined ? {} : { title: input.title }),
+        ...(input.text === undefined ? {} : { text: input.text }),
+        ...(input.fields === undefined ? {} : { fields: input.fields }),
+        instructions: instance.instructions,
+      }),
+      origin: TRIGGER_HUMAN_ORIGIN,
       runKey: input.runKey,
       correlationId: input.correlationId,
       ...(target.modeId === undefined ? {} : { mode: target.modeId }),
@@ -130,9 +146,4 @@ export class FireTriggerUseCase {
       return {};
     }
   }
-}
-
-function withInstructions(text: string, instructions: string): string {
-  const trimmed = instructions.trim();
-  return trimmed.length > 0 ? `${text}\n\n<instructions>\n${trimmed}\n</instructions>` : text;
 }

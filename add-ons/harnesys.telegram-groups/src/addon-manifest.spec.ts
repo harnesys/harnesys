@@ -8,7 +8,7 @@ const manifest = parseAddonManifest(
 describe('harnesys.telegram-groups manifest', () => {
   test('parses with the expected identity', () => {
     expect(manifest.id).toBe('harnesys.telegram-groups');
-    expect(manifest.version).toBe('1.5.0');
+    expect(manifest.version).toBe('1.6.0');
     expect(manifest.runtime).toEqual({ entry: 'dist/index.js', profile: 'trusted' });
   });
 
