@@ -116,6 +116,30 @@
       }
     },
     {
+      "id": "config",
+      "family": "config",
+      "descriptor": {
+        "fields": [
+          {
+            "key": "poll_sec",
+            "label": "Poll interval, seconds",
+            "type": "number",
+            "required": false,
+            "default": 60,
+            "help": "How often the mailbox is checked for new mail. Allowed range: 30–3600 seconds; one poll costs about 2 Gmail quota units."
+          },
+          {
+            "key": "poll_disabled",
+            "label": "Pause polling",
+            "type": "boolean",
+            "required": false,
+            "default": false,
+            "help": "Temporarily stop checking Gmail. The historyId watermark is kept, so new mail arrives after polling is resumed."
+          }
+        ]
+      }
+    },
+    {
       "id": "main",
       "family": "view",
       "descriptor": {
@@ -136,6 +160,9 @@
             "connections": [
               "google"
             ]
+          },
+          {
+            "type": "config"
           },
           {
             "type": "automations",
