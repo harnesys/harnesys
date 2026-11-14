@@ -743,10 +743,6 @@
             "submit": {
               "route": "/rename"
             }
-          },
-          {
-            "type": "markdown",
-            "body": "Setup: 1) bind a telegram-bot account created from a @BotFather token in the connections section; 2) add the bot to a group — the bot discovers it once it sees any message there (or send /start or /join to register explicitly; the bot verifies it is an admin or has privacy mode disabled); 3) connect the group or a forum topic above with the agent that should answer. Every message of a connected group or topic mirrors into its thread with sender attribution, and replies go back into the group. The responder mode decides who answers: auto — the pinned agent answers every message; mention — only @mentions and replies start a run. Unbind in the Routing table stops mirroring; deleting a topic in Telegram or removing the bot marks the connection disconnected automatically. Each forum topic can have its own thread and agent. The bot must own its own token: sharing one token with the Telegram bot add-on breaks both pollers (Telegram returns 409)."
           }
         ]
       }
