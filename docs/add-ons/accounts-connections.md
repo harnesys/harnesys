@@ -72,7 +72,7 @@ const res = await ctx.http.fetch({
 
 При ответе 401/403 хост по умолчанию сам репортит проблему аккаунта. Право `accounts.use` + scope `{ connections }`; токен в процесс аддона не попадает ни при каком раскладе, не попадает и в журнал (canary-тест это закрепляет).
 
-`accounts.access` — исключение для протоколов, где cred нужен внутри процесса (MTProto-сессия `harnesys.telegram-feed`). Хранить cred дольше `expiresAt` нельзя; не логируйте.
+`accounts.access` — исключение для протоколов, где cred нужен внутри процесса (MTProto-сессия `harnesys.telegram-account`). Хранить cred дольше `expiresAt` нельзя; не логируйте.
 
 ## Смена состояния аккаунтов
 

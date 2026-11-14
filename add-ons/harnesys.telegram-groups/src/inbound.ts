@@ -7,7 +7,19 @@ import {
   registerChat,
 } from './commands.ts';
 import { connectionAlive } from './lifecycle.ts';
-import { attributedText, authorLabel } from './routing.ts';
+import { filterFresh, hasActiveRun, type InboxSettings, renderBatch } from './queue.ts';
+import {
+  boundThreadOf,
+  bumpOmitted,
+  channelState,
+  deleteQueueEntries,
+  enqueueMessages,
+  inboxSettings,
+  pendingChannels,
+  queuedEntries,
+  resetOmitted,
+  setReplyAnchor,
+} from './queue-store.ts';
 import {
   channelOf,
   channelOfParts,
@@ -126,41 +138,92 @@ export async function handleGroup(
   if (!(await connectionAlive(ctx, channel, row.thread_id))) {
     return;
   }
-  await bridgeMessages(ctx, messages, channel);
+  const settings = await inboxSettings(ctx);
+  const deliverable = messages.filter(
+    (entry) => (entry.text ?? entry.caption ?? '').length > 0 || fileRefOf(entry) !== null,
+  );
+  if (deliverable.length === 0) {
+    return;
+  }
+  await enqueueMessages(ctx, channel, deliverable, settings.maxBacklog, Date.now());
+  await flushChannel(ctx, channel, settings);
 }
 
-async function bridgeMessages(
+export async function flushChannels(ctx: AddonContext): Promise<void> {
+  for (const channel of await pendingChannels(ctx)) {
+    try {
+      await flushChannel(ctx, channel);
+    } catch (error) {
+      await ctx.log.warn('inbox flush failed', {
+        channel,
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+}
+
+export async function flushChannel(
   ctx: AddonContext,
-  messages: TelegramMessage[],
   channel: string,
-): Promise<void> {
-  const first = messages[0];
-  if (first === undefined) {
-    return;
+  settings?: InboxSettings,
+): Promise<boolean> {
+  const threadId = await boundThreadOf(ctx, channel);
+  if (threadId === null) {
+    return false;
   }
-  const text = firstText(messages);
-  const hasFile = messages.some((entry) => fileRefOf(entry) !== null);
-  if (text.length === 0 && !hasFile) {
-    return;
+  const config = settings ?? (await inboxSettings(ctx));
+  const runs = await ctx.runs.list({ threadId });
+  if (hasActiveRun(runs)) {
+    return false;
   }
-  const attribution = (await ctx.config.get(['attribution'])).attribution !== false;
-  const chatTitle = first.chat.title ?? first.chat.username ?? String(first.chat.id);
-  const plain = text.length === 0 ? '[attachment]' : text;
-  const bridgeText = attribution
-    ? attributedText(authorLabel(first.from), chatTitle, plain)
-    : plain;
-  const attachments = await inboundAttachments(ctx, messages);
+  const batch = await queuedEntries(ctx, channel, config.maxBatch);
+  if (batch.length === 0) {
+    return false;
+  }
+  const now = Date.now();
+  const { fresh, expired } = filterFresh(batch, now, config.ttlSec);
+  if (expired.length > 0) {
+    await deleteQueueEntries(
+      ctx,
+      expired.map((entry) => entry.id),
+    );
+    await bumpOmitted(ctx, channel, expired.length);
+  }
+  const first = fresh[0];
+  const last = fresh.at(-1);
+  if (first === undefined || last === undefined) {
+    return false;
+  }
+  const state = await channelState(ctx, channel);
+  const rendered = renderBatch(
+    fresh,
+    config.attribution,
+    config.maxChars,
+    state.omitted + expired.length,
+  );
+  const attachments = await inboundAttachments(
+    ctx,
+    fresh.map((entry) => entry.message),
+  );
+  const chatTitle = first.message.chat.title ?? first.message.chat.username ?? channel;
   await ctx.bridge.inbound({
     channel,
-    from: first.from === undefined ? undefined : `telegram:${first.from.id}`,
-    text: bridgeText,
+    from: first.message.from === undefined ? undefined : `telegram:${first.message.from.id}`,
+    text: rendered.text,
     payload: {
       provider: 'telegram',
-      chatId: first.chat.id,
-      messageId: first.message_id,
-      topicId: first.message_thread_id ?? null,
+      chatId: first.message.chat.id,
+      messageId: first.messageId,
+      topicId: first.message.message_thread_id ?? null,
       chatTitle,
     },
     ...(attachments.length > 0 ? { attachments } : {}),
   });
+  await deleteQueueEntries(
+    ctx,
+    fresh.map((entry) => entry.id),
+  );
+  await setReplyAnchor(ctx, channel, last.messageId, now);
+  await resetOmitted(ctx, channel);
+  return true;
 }

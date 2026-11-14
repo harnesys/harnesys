@@ -259,7 +259,10 @@ export class TransportSessionDrafts {
   }
 
   private async deliver(orgId: string, session: LiveSession, text: string): Promise<void> {
-    const opts: AddonCallOptions = { timeoutMs: CALL_TIMEOUT_MS };
+    const opts: AddonCallOptions = {
+      timeoutMs: CALL_TIMEOUT_MS,
+      threadId: session.row.threadId,
+    };
     const { addonId, externalChatId, messageId } = session.row;
     if (messageId === null) {
       const sent = await this.calls.transportSend(

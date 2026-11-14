@@ -1,3 +1,0 @@
-Connect a Telegram **user** account in the connections section — phone login with a code from the Telegram app. The session is stored by the account layer; this add-on never asks for the code.
-
-Polling reads the newest 20 posts of every watched channel and fires the `telegram.feed` trigger for posts published after the trigger instance was created. On first sync the backfill setting decides how many of the newest posts fire; `0` keeps history silent.

@@ -1,4 +1,4 @@
-import type { RawPost, ResolvedPeer } from './mtproto.ts';
+import type { RawPost, ResolvedPeer } from './telegram-types.ts';
 
 export function postLinkOf(resolved: ResolvedPeer, post: RawPost): string {
   if (resolved.username === null) {

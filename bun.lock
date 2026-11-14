@@ -125,25 +125,25 @@
         "typescript": "^5.9.3",
       },
     },
-    "add-ons/harnesys.telegram-bot": {
-      "name": "harnesys.telegram-bot",
+    "add-ons/harnesys.telegram-account": {
+      "name": "harnesys.telegram-account",
       "version": "1.0.0",
       "dependencies": {
         "@harnesys/sdk": "file:../../packages/sdk",
-        "zod": "^4.4.3",
+        "big-integer": "^1.6.48",
+        "teleproto": "^1.232.1",
       },
       "devDependencies": {
         "@types/bun": "latest",
         "typescript": "^5.9.3",
       },
     },
-    "add-ons/harnesys.telegram-feed": {
-      "name": "harnesys.telegram-feed",
+    "add-ons/harnesys.telegram-bot": {
+      "name": "harnesys.telegram-bot",
       "version": "1.0.0",
       "dependencies": {
         "@harnesys/sdk": "file:../../packages/sdk",
-        "big-integer": "^1.6.48",
-        "teleproto": "^1.232.1",
+        "zod": "^4.4.3",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -164,7 +164,7 @@
     },
     "add-ons/harnesys.telegram-tools": {
       "name": "harnesys.telegram-tools",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "dependencies": {
         "@harnesys/sdk": "file:../../packages/sdk",
         "zod": "^4.4.3",
@@ -1496,9 +1496,9 @@
 
     "harnesys.scheduler": ["harnesys.scheduler@workspace:add-ons/harnesys.scheduler"],
 
-    "harnesys.telegram-bot": ["harnesys.telegram-bot@workspace:add-ons/harnesys.telegram-bot"],
+    "harnesys.telegram-account": ["harnesys.telegram-account@workspace:add-ons/harnesys.telegram-account"],
 
-    "harnesys.telegram-feed": ["harnesys.telegram-feed@workspace:add-ons/harnesys.telegram-feed"],
+    "harnesys.telegram-bot": ["harnesys.telegram-bot@workspace:add-ons/harnesys.telegram-bot"],
 
     "harnesys.telegram-groups": ["harnesys.telegram-groups@workspace:add-ons/harnesys.telegram-groups"],
 
@@ -2642,17 +2642,19 @@
 
     "harnesys.scheduler/@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
 
+    "harnesys.telegram-account/@harnesys/sdk": ["@harnesys/sdk@file:packages/sdk", { "dependencies": { "zod": "^4.4.3" }, "devDependencies": { "@types/bun": "^1.4.2", "typescript": "^5.9.3" }, "peerDependencies": { "typescript": "^5.9.3" } }],
+
+    "harnesys.telegram-account/@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
+
     "harnesys.telegram-bot/@harnesys/sdk": ["@harnesys/sdk@file:packages/sdk", { "dependencies": { "zod": "^4.4.3" }, "devDependencies": { "@types/bun": "^1.4.2", "typescript": "^5.9.3" }, "peerDependencies": { "typescript": "^5.9.3" } }],
 
     "harnesys.telegram-bot/@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
 
-    "harnesys.telegram-feed/@harnesys/sdk": ["@harnesys/sdk@file:packages/sdk", { "dependencies": { "zod": "^4.4.3" }, "devDependencies": { "@types/bun": "^1.4.2", "typescript": "^5.9.3" }, "peerDependencies": { "typescript": "^5.9.3" } }],
-
-    "harnesys.telegram-feed/@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
-
     "harnesys.telegram-groups/@harnesys/sdk": ["@harnesys/sdk@file:packages/sdk", { "dependencies": { "zod": "^4.4.3" }, "devDependencies": { "@types/bun": "^1.4.2", "typescript": "^5.9.3" }, "peerDependencies": { "typescript": "^5.9.3" } }],
 
     "harnesys.telegram-groups/@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
+
+    "harnesys.telegram-tools/@harnesys/sdk": ["@harnesys/sdk@file:packages/sdk", { "dependencies": { "zod": "^4.4.3" }, "devDependencies": { "@types/bun": "^1.4.2", "typescript": "^5.9.3" }, "peerDependencies": { "typescript": "^5.9.3" } }],
 
     "harnesys.telegram-tools/@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
 
@@ -3102,9 +3104,9 @@
 
     "harnesys.scheduler/@types/bun/bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
 
-    "harnesys.telegram-bot/@types/bun/bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
+    "harnesys.telegram-account/@types/bun/bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
 
-    "harnesys.telegram-feed/@types/bun/bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
+    "harnesys.telegram-bot/@types/bun/bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
 
     "harnesys.telegram-groups/@types/bun/bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
 

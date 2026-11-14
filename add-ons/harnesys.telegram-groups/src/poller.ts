@@ -3,8 +3,9 @@ import { AddonError } from '@harnesys/sdk';
 import { call, deleteWebhook, getMe, setMyCommands } from './bot-api.ts';
 import { botCommands, commandsScope } from './commands.ts';
 import { discoverMessage, touchChat, touchTopic } from './discovery.ts';
-import { type BotIdentityState, handleGroup } from './inbound.ts';
+import { type BotIdentityState, flushChannels, handleGroup } from './inbound.ts';
 import { disconnectChat, memberGoneStatus, pruneTopic } from './lifecycle.ts';
+import { hasPendingInbox } from './queue-store.ts';
 import { groupMessages, type TelegramUpdate } from './telegram.ts';
 
 const WORKER_ID = 'poller';
@@ -14,6 +15,7 @@ const ERROR_SLEEP_MS = 3_000;
 const CONFLICT_SLEEP_MS = 30_000;
 const AUTH_SLEEP_MS = 15_000;
 const POLL_TIMEOUT_SEC = 20;
+const INBOX_POLL_TIMEOUT_SEC = 3;
 const ITERATION_DEADLINE_MS = 120_000;
 const MAX_STALLED_ITERATIONS = 2;
 
@@ -140,9 +142,10 @@ async function pollBatch(
   state: PollState,
   identity: BotIdentityState,
 ): Promise<void> {
+  const timeout = (await hasPendingInbox(ctx)) ? INBOX_POLL_TIMEOUT_SEC : POLL_TIMEOUT_SEC;
   const updates = await call<TelegramUpdate[]>(ctx, 'getUpdates', {
     offset: state.offset,
-    timeout: POLL_TIMEOUT_SEC,
+    timeout,
     allowed_updates: ['message', 'my_chat_member', 'forum_topic_created', 'forum_topic_deleted'],
   });
   const messages = [];
@@ -157,6 +160,7 @@ async function pollBatch(
   for (const group of groupMessages(messages)) {
     await handleGroup(ctx, group, identity);
   }
+  await flushChannels(ctx);
 }
 
 async function loadIdentity(ctx: AddonContext): Promise<BotIdentityState> {

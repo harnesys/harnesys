@@ -4,7 +4,7 @@ import { bindings, chats, connect, topics, unbind } from './routes.ts';
 import { telegramTransport } from './transport.ts';
 
 const ADDON_ID = 'harnesys.telegram-groups';
-const ADDON_VERSION = '1.6.0';
+const ADDON_VERSION = '1.7.0';
 
 export const addon = defineAddon({
   transport: telegramTransport,

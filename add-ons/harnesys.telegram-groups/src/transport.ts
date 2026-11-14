@@ -1,6 +1,8 @@
 import type { AddonContext, TransportHandlers } from '@harnesys/sdk';
 import { call } from './bot-api.ts';
 import { sendMedia } from './media.ts';
+import { replyDecision } from './queue.ts';
+import { boundThreadOf, channelState, clearReplyAnchor, inboxSettings } from './queue-store.ts';
 
 type MessageFormat = 'text' | 'markdown' | 'html';
 
@@ -91,13 +93,46 @@ function sourceOf(attachment: Attachment) {
   };
 }
 
-async function sendMessage(ctx: AddonContext, message: PreparedMessage): Promise<string> {
-  const result = await call<{ message_id: number }>(
-    ctx,
-    'sendMessage',
-    textFields(message, message.text),
-  );
+async function sendMessage(
+  ctx: AddonContext,
+  message: PreparedMessage,
+  withReply = true,
+): Promise<string> {
+  const fields = textFields(withReply ? message : { ...message, replyTo: undefined }, message.text);
+  const result = await call<{ message_id: number }>(ctx, 'sendMessage', fields);
   return String(result.message_id);
+}
+
+async function anchoredReply(
+  ctx: AddonContext,
+  channel: string,
+  explicit: string | undefined,
+): Promise<string | undefined> {
+  if (explicit !== undefined && explicit.length > 0) {
+    return undefined;
+  }
+  const settings = await inboxSettings(ctx);
+  if (settings.replyMode === 'never') {
+    return undefined;
+  }
+  const origin = ctx.meta.threadId;
+  const bound = await boundThreadOf(ctx, channel);
+  const state = await channelState(ctx, channel);
+  const decision = replyDecision({
+    mode: settings.replyMode,
+    anchor:
+      state.replyMessageId === null || state.replyAt === null
+        ? null
+        : { messageId: state.replyMessageId, at: state.replyAt },
+    now: Date.now(),
+    windowSec: settings.replyWindowSec,
+    ...(origin === undefined ? {} : { originThreadId: origin }),
+    ...(bound === null ? {} : { boundThreadId: bound }),
+  });
+  if (decision.clear) {
+    await clearReplyAnchor(ctx, channel);
+  }
+  return decision.replyTo === null ? undefined : String(decision.replyTo);
 }
 
 async function sendWithAttachments(
@@ -121,7 +156,7 @@ async function sendWithAttachments(
     sourceOf(first),
   );
   if (caption === undefined && message.text.length > 0) {
-    await sendMessage(ctx, message);
+    await sendMessage(ctx, message, false);
   }
   for (const attachment of rest) {
     await sendMedia(
@@ -138,10 +173,15 @@ async function sendWithAttachments(
 
 export const telegramTransport: TransportHandlers = {
   send: async (params, ctx: AddonContext) => {
-    const message = prepare(params.message as ParsedMessage);
+    const parsed = params.message as ParsedMessage;
+    const message = prepare(parsed);
     const attachments = params.message.attachments;
     if (message.text.length === 0 && (attachments === undefined || attachments.length === 0)) {
       return {};
+    }
+    const anchor = await anchoredReply(ctx, parsed.channel, message.replyTo);
+    if (anchor !== undefined) {
+      message.replyTo = anchor;
     }
     const messageId =
       attachments === undefined || attachments.length === 0

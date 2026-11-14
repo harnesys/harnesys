@@ -340,7 +340,7 @@ create table if not exists dedup (
 | `harnesys.telegram-bot` | `transport`-семейство + worker-поллер с `ctx.workers.lease/release`, `http.fetch` с `scheme: 'path'` (токен бота в URL без попадания в процесс), `bridge.inbound`, чанковая докачка файлов `ctx.files.write({ append })`, форма+таблица+destructive rowAction в view, `message.options` для HITL |
 | `harnesys.github` | connection `github` (kind `github-installation`, cardinality many), tool-pack из 21 инструмента, доставка событий worker `repo-poller` + trigger `github.repo-events` (без `hook`) |
 | `harnesys.google-drive` | `source-kind`: облачная папка как знание-источник, `source.list/stat/download/upload/...`, баз64-чанки |
-| `harnesys.telegram-feed` | `accounts.access` под MTProto-credentials, конфиг-поля select/number, чтение каналов в треды |
+| `harnesys.telegram-account` | `accounts.access` под MTProto-credentials, конфиг-поля select/number, чтение каналов в треды и инструменты аккаунта |
 | `harnesys.drawio` | `viewer`-семейство: `.drawio` из дерева источников открывается в редакторе, `mode: "edit"` + `create` |
 
 ---

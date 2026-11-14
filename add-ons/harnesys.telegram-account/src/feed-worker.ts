@@ -2,9 +2,19 @@ import type { AddonContext, WorkerPair } from '@harnesys/sdk';
 import { AddonError } from '@harnesys/sdk';
 import { type FeedCredentials, feedCredentials } from './credentials.ts';
 import { postFieldsOf } from './feed-prompt.ts';
+import {
+  pruneFeedPosts,
+  rememberSource,
+  setWatermark,
+  storePost,
+  watermarkOf,
+} from './feed-store.ts';
 import { listInstances, type StoredInstance } from './feed-trigger.ts';
 import { channelsOf, filterOf, matchesFilter, parseList } from './filter.ts';
-import { type FeedClient, openFeedClient, type RawPost, type ResolvedPeer } from './mtproto.ts';
+import { openFeedClient } from './mtproto.ts';
+import { createSingleFlight } from './single-flight.ts';
+import type { FeedClient, RawPost, ResolvedPeer } from './telegram-types.ts';
+import { withSharedClient } from './tool-client.ts';
 
 const WORKER_ID = 'feed-poller';
 const CONNECTION = 'telegram-user';
@@ -15,12 +25,13 @@ const ERROR_SLEEP_MS = 10_000;
 const HISTORY_LIMIT = 20;
 const MAX_TASK_CHARS = 3800;
 const PRUNE_INTERVAL_MS = 60 * 60_000;
-const POST_KEEP_PER_PEER = 500;
-const POST_MAX_AGE_DAYS = 30;
 
-interface PollConfig {
+interface FeedTarget {
   creds: FeedCredentials;
   channels: string[];
+}
+
+interface PollConfig extends FeedTarget {
   pollSec: number;
   backfill: number;
 }
@@ -49,70 +60,61 @@ function clamp(value: number, min: number, max: number): number {
   return Number.isFinite(value) ? Math.min(Math.max(Math.trunc(value), min), max) : min;
 }
 
-async function pollConfigOf(ctx: AddonContext): Promise<PollConfig | null> {
-  const config = await ctx.config.get(['channels', 'poll_sec', 'backfill']);
-  const channels = channelsOf(config);
+async function configuredChannels(ctx: AddonContext): Promise<string[]> {
+  const channels = channelsOf(await ctx.config.get(['channels']));
   if (channels.length === 0) {
     await ctx.log.warn('telegram feed has no channels configured');
+  }
+  return channels;
+}
+
+async function feedTargetOf(ctx: AddonContext): Promise<FeedTarget | null> {
+  const channels = await configuredChannels(ctx);
+  if (channels.length === 0) {
     return null;
   }
-  let creds: FeedCredentials;
   try {
-    creds = await feedCredentials(ctx);
+    return { creds: await feedCredentials(ctx), channels };
   } catch (error) {
     await ctx.log.warn('telegram feed account is not ready', {
       detail: error instanceof Error ? error.message : String(error),
     });
     return null;
   }
+}
+
+async function pollConfigOf(ctx: AddonContext): Promise<PollConfig | null> {
+  const target = await feedTargetOf(ctx);
+  if (target === null) {
+    return null;
+  }
+  const config = await ctx.config.get(['poll_sec', 'backfill']);
   const pollSec = clamp(Number(config.poll_sec ?? 120), 30, 3600);
   const backfill = clamp(Number(config.backfill ?? 0), 0, HISTORY_LIMIT);
-  return { creds, channels, pollSec, backfill };
+  return { ...target, pollSec, backfill };
 }
 
-async function watermarkOf(ctx: AddonContext, peer: string): Promise<number | null> {
-  const row = await ctx.db.get(
-    'select last_post_id as lastPostId from source_watermark where peer = ?',
-    [peer],
-  );
-  return row === null ? null : Number(row.lastPostId ?? 0);
+async function runSourceSync(ctx: AddonContext): Promise<void> {
+  const channels = await configuredChannels(ctx);
+  if (channels.length === 0) {
+    return;
+  }
+  await withSharedClient(ctx, async (client) => {
+    for (const peer of channels) {
+      try {
+        const resolved = await client.resolve(peer);
+        await rememberSource(ctx, peer, resolved);
+      } catch (error) {
+        await ctx.log.warn('telegram feed channel did not resolve', {
+          peer,
+          detail: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  });
 }
 
-async function setWatermark(ctx: AddonContext, peer: string, postId: number): Promise<void> {
-  await ctx.db.run(
-    'insert into source_watermark (peer, last_post_id, updated_at) values (?, ?, ?) on conflict(peer) do update set last_post_id = excluded.last_post_id, updated_at = excluded.updated_at',
-    [peer, postId, new Date().toISOString()],
-  );
-}
-
-async function rememberSource(
-  ctx: AddonContext,
-  peer: string,
-  resolved: ResolvedPeer,
-): Promise<void> {
-  await ctx.db.run(
-    `insert into sources (peer, title, added_at, username, peer_id, access_hash, kind)
-     values (?, ?, ?, ?, ?, ?, ?)
-     on conflict(peer) do update set title = excluded.title, username = excluded.username,
-       peer_id = excluded.peer_id, access_hash = excluded.access_hash, kind = excluded.kind`,
-    [
-      peer,
-      resolved.title,
-      new Date().toISOString(),
-      resolved.username,
-      resolved.peerId,
-      resolved.accessHash,
-      resolved.kind,
-    ],
-  );
-}
-
-async function storePost(ctx: AddonContext, peer: string, post: RawPost): Promise<void> {
-  await ctx.db.run(
-    'insert or ignore into posts (peer, post_id, text, published_at, received_at) values (?, ?, ?, ?, ?)',
-    [peer, post.postId, post.text, post.publishedAt, new Date().toISOString()],
-  );
-}
+export const syncSourcesOnce = createSingleFlight(runSourceSync);
 
 interface FireInput {
   peer: string;
@@ -224,20 +226,6 @@ async function pollOnce(ctx: AddonContext, input: PollInput): Promise<void> {
   }
 }
 
-async function prune(ctx: AddonContext): Promise<void> {
-  const cutoff = new Date(Date.now() - POST_MAX_AGE_DAYS * 86_400_000).toISOString();
-  await ctx.db.run('delete from posts where received_at < ?', [cutoff]);
-  const peers = await ctx.db.all('select peer from posts group by peer');
-  for (const row of peers) {
-    const peer = String(row.peer);
-    await ctx.db.run(
-      'delete from posts where peer = ? and post_id not in (select post_id from posts where peer = ? order by received_at desc limit ?)',
-      [peer, peer, POST_KEEP_PER_PEER],
-    );
-  }
-  await ctx.db.run('delete from fired where at < ?', [cutoff]);
-}
-
 async function reportAccountFailure(ctx: AddonContext, error: unknown): Promise<void> {
   if (!(error instanceof AddonError) || error.reason !== 'account_failed') {
     return;
@@ -274,7 +262,7 @@ async function runCycle(
     const instances = await listInstances(ctx);
     await pollOnce(ctx, { client: state.client, config, cache: state.cache, instances });
     if (Date.now() - state.lastPrune >= PRUNE_INTERVAL_MS) {
-      await prune(ctx);
+      await pruneFeedPosts(ctx);
       state.lastPrune = Date.now();
     }
     await sleep(config.pollSec * 1000, signal);

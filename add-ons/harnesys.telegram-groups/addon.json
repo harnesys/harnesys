@@ -1,6 +1,6 @@
 {
   "id": "harnesys.telegram-groups",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "platform": 1,
   "title": "Telegram groups",
   "description": "Group and community bot: the bot is added to group chats and forum topics and mirrors their messages into Harnesys threads. Groups register themselves with /start or /join (admin or privacy-mode verification via getChatMember), an admin connects a group or topic to a thread on this settings page, and who answers is the thread responder mode (auto: the pinned agent answers every message; mention: only @mentions and replies). All messages of a connected group or topic mirror into its thread either way. This add-on binds its own telegram-bot account with its own BotFather token; never share one bot token between this add-on and the Telegram bot add-on (getUpdates returns 409 for two pollers on one token).",
@@ -129,6 +129,68 @@
             "required": false,
             "default": 5,
             "help": "Attachments larger than this are bridged as a note instead of bytes (max 8)"
+          },
+          {
+            "key": "inbox_max_batch",
+            "label": "Messages per agent turn",
+            "type": "number",
+            "required": false,
+            "default": 20,
+            "help": "How many queued group messages are handed to the agent in one turn; the rest wait for the next turn"
+          },
+          {
+            "key": "inbox_max_chars",
+            "label": "Characters per agent turn",
+            "type": "number",
+            "required": false,
+            "default": 3000,
+            "help": "Upper bound of the batched text sent to the agent; the newest messages are kept and the omitted older ones are counted in the header"
+          },
+          {
+            "key": "inbox_max_backlog",
+            "label": "Queued messages per chat",
+            "type": "number",
+            "required": false,
+            "default": 50,
+            "help": "Oldest messages are dropped beyond this limit while the agent is busy"
+          },
+          {
+            "key": "inbox_ttl_sec",
+            "label": "Queue message lifetime, seconds",
+            "type": "number",
+            "required": false,
+            "default": 3600,
+            "help": "Queued messages older than this are dropped instead of being replayed to the agent"
+          },
+          {
+            "key": "reply_mode",
+            "label": "Reply anchoring",
+            "type": "select",
+            "required": false,
+            "default": "auto",
+            "options": [
+              {
+                "value": "auto",
+                "label": "Reply to the last message of the batch once"
+              },
+              {
+                "value": "always",
+                "label": "Reply to the last message of the batch while it is fresh"
+              },
+              {
+                "value": "never",
+                "label": "Post without a reply"
+              }
+            ],
+            "help": "Whether the agent's answer is posted as a Telegram reply to the message that triggered it"
+          },
+          {
+            "key": "reply_window_sec",
+            "label": "Reply window, seconds",
+            "type": "number",
+            "required": false,
+            "default": 900,
+            "help": "An answer posted later than this after the last queued message is sent without a reply"
           }
         ]
       }

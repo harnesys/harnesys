@@ -1,3 +1,5 @@
+import { chatRefOf, resolveArgOf } from './chat-target.ts';
+
 export interface FeedFilter {
   keywords: string[];
   exclude: string[];
@@ -35,15 +37,12 @@ export function matchesFilter(filter: FeedFilter, text: string): boolean {
     : filter.keywords.some((term) => haystack.includes(term));
 }
 
-export function normalizePeer(raw: string): string {
-  const value = raw.trim();
-  if (value.startsWith('https://t.me/') || value.startsWith('http://t.me/')) {
-    return `@${value.replace(/^https?:\/\/t\.me\//, '').replace(/^s\//, '')}`;
+function channelOf(entry: string): string | null {
+  try {
+    return resolveArgOf(chatRefOf(entry));
+  } catch {
+    return null;
   }
-  if (value.startsWith('t.me/')) {
-    return `@${value.slice('t.me/'.length)}`;
-  }
-  return value;
 }
 
 export function channelsOf(config: Record<string, unknown>): string[] {
@@ -51,12 +50,16 @@ export function channelsOf(config: Record<string, unknown>): string[] {
   if (typeof value !== 'string') {
     return [];
   }
-  return [
-    ...new Set(
-      value
-        .split(/[\n,]/)
-        .map(normalizePeer)
-        .filter((peer) => peer.length > 0),
-    ),
-  ];
+  const channels: string[] = [];
+  for (const entry of value.split(/[\n,]/)) {
+    const trimmed = entry.trim();
+    if (trimmed.length === 0) {
+      continue;
+    }
+    const channel = channelOf(trimmed);
+    if (channel !== null) {
+      channels.push(channel);
+    }
+  }
+  return [...new Set(channels)];
 }

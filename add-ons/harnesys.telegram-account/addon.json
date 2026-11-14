@@ -1,0 +1,442 @@
+{
+  "id": "harnesys.telegram-account",
+  "version": "1.0.0",
+  "platform": 1,
+  "title": "Telegram account",
+  "description": "Acts as a connected Telegram user account over MTProto. Watches channels and groups, stores new posts, filters them by keywords and fires a telegram.feed trigger; and exposes a tool-pack so an agent can read dialogs and history, send and forward messages and mark chats read as the same account. The session comes from the bound telegram-user account; independent of the bot add-on: an organization can run only the feed, only the tools, or both.",
+  "runtime": {
+    "entry": "dist/index.js",
+    "profile": "trusted"
+  },
+  "activation": "resident",
+  "permissions": [
+    {
+      "id": "worker",
+      "reason": "Keep the resident poller that reads new channel posts"
+    },
+    {
+      "id": "lifecycle.resident",
+      "reason": "Stay running to keep polling the watched channels"
+    },
+    {
+      "id": "trigger",
+      "reason": "Fire telegram.feed instances for matching posts"
+    },
+    {
+      "id": "accounts.use",
+      "scope": {
+        "connections": [
+          "telegram-user"
+        ]
+      },
+      "reason": "Resolve the bound telegram-user account for the feed session and for every tool call"
+    },
+    {
+      "id": "accounts.credentials",
+      "scope": {
+        "connections": [
+          "telegram-user"
+        ]
+      },
+      "reason": "Read the MTProto session and the linked telegram-app credentials"
+    }
+  ],
+  "connections": [
+    {
+      "id": "telegram-user",
+      "label": "Telegram user account",
+      "accountKinds": [
+        "telegram-user"
+      ],
+      "cardinality": "one",
+      "optional": true
+    }
+  ],
+  "data": {
+    "migrations": "migrations",
+    "quotaMb": 64
+  },
+  "contributions": [
+    {
+      "id": "config",
+      "family": "config",
+      "descriptor": {
+        "fields": [
+          {
+            "key": "channels",
+            "label": "Channels and groups",
+            "type": "textarea",
+            "required": true,
+            "placeholder": "@channel\nhttps://t.me/group",
+            "help": "One @username, t.me link or numeric id per line"
+          },
+          {
+            "key": "poll_sec",
+            "label": "Poll interval, seconds",
+            "type": "number",
+            "required": false,
+            "default": 120
+          },
+          {
+            "key": "backfill",
+            "label": "Backfill posts on first sync",
+            "type": "number",
+            "required": false,
+            "default": 0,
+            "help": "How many of the newest posts to fire when a channel is first watched (0 keeps the history silent and only fires new posts)"
+          },
+          {
+            "key": "allowed_chats",
+            "label": "Allowed chats for tools",
+            "type": "textarea",
+            "required": false,
+            "help": "Chat ids or @usernames the tools may touch, separated by commas or new lines. Empty means every chat the account can reach. A chat is matched by its id or its @username, so listing @name allows the same chat by its numeric id and the other way round. Tool calls to any other chat fail with permission_denied. The feed poller is not affected."
+          },
+          {
+            "key": "read_only",
+            "label": "Read-only tools",
+            "type": "boolean",
+            "required": false,
+            "default": false,
+            "help": "Reject send_message, forward_message and mark_read. get_account, list_dialogs and list_messages keep working, so an agent can watch chats without ever posting from the account. Recommended for monitoring-only setups: a user account that only reads is far less likely to be restricted."
+          },
+          {
+            "key": "min_send_interval_ms",
+            "label": "Minimum interval between sends, ms",
+            "type": "number",
+            "required": false,
+            "default": 2000,
+            "help": "Minimum gap between two messages sent to the same chat. Guards against one agent replying faster than a human would."
+          },
+          {
+            "key": "max_sends_per_hour",
+            "label": "Max sends per hour",
+            "type": "number",
+            "required": false,
+            "default": 20,
+            "help": "Account-wide cap over a rolling hour. Telegram restricts accounts that message too fast, so keep this low."
+          },
+          {
+            "key": "max_sends_per_day",
+            "label": "Max sends per day",
+            "type": "number",
+            "required": false,
+            "default": 150,
+            "help": "Account-wide cap over a rolling 24 hours. The main protection against an account ban."
+          },
+          {
+            "key": "max_history_limit",
+            "label": "Max messages per list_messages call",
+            "type": "number",
+            "required": false,
+            "default": 100,
+            "help": "Upper bound for the limit argument of list_messages; larger values are rejected."
+          },
+          {
+            "key": "max_dialogs",
+            "label": "Max dialogs per list_dialogs call",
+            "type": "number",
+            "required": false,
+            "default": 200,
+            "help": "Upper bound for the limit argument of list_dialogs; larger values are rejected."
+          },
+          {
+            "key": "flood_wait_retries",
+            "label": "Flood-wait retries inside a tool call",
+            "type": "number",
+            "required": false,
+            "default": 0,
+            "help": "0 fails immediately with rate_limited and retry_after. 1-3 waits out a Telegram FLOOD_WAIT inside the call when the wait is 30 seconds or shorter, then sends once; longer waits still fail immediately."
+          }
+        ]
+      }
+    },
+    {
+      "id": "pack",
+      "family": "tool-pack",
+      "descriptor": {
+        "name": "telegram-account",
+        "title": "Telegram account",
+        "description": "Read dialogs and history, send and forward messages and mark chats read as the connected Telegram user account (MTProto, not the bot API)",
+        "connection": "telegram-user",
+        "tools": [
+          {
+            "name": "get_account",
+            "description": "Read the connected Telegram user account: numeric id, @username, first and last name, and phone when the session exposes it. Call it first to confirm which account the agent acts as before writing anything.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          {
+            "name": "list_dialogs",
+            "description": "List the account's dialogs (private chats, groups, supergroups, channels) in the order Telegram shows them. Each entry carries kind (user, group, supergroup, channel), peerId, username, title and unread count. limit defaults to 50 and cannot exceed max_dialogs from the add-on config.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "How many dialogs to return, default 50, capped by max_dialogs (200 by default)"
+                }
+              }
+            }
+          },
+          {
+            "name": "list_messages",
+            "description": "Read the recent history of a chat, newest first. chat accepts @username, a t.me/... link or a numeric peer id. limit defaults to 20 and cannot exceed max_history_limit from the add-on config; beforeId returns messages older than that message id. Each message carries its id, ISO date, sender (@username, title or numeric id), text truncated to 2000 characters with truncated: true, and mediaKind when the message has media.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": {
+                  "type": "string",
+                  "description": "@username, t.me/username, t.me/username/123 link or numeric peer id"
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "How many messages to return, default 20, capped by max_history_limit (100 by default)"
+                },
+                "beforeId": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Return messages older than this message id, for paging back through history"
+                }
+              },
+              "required": ["chat"]
+            }
+          },
+          {
+            "name": "send_message",
+            "description": "Send a plain-text message as the connected user account. chat accepts @username, a t.me/... link or a numeric peer id. text is required, up to 4096 characters, and is sent verbatim: no markup parsing. Respects allowed_chats, read_only, min_send_interval_ms, max_sends_per_hour, max_sends_per_day and FLOOD_WAIT handling; returns the new messageId. Raising those limits risks a Telegram restriction on the account.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": {
+                  "type": "string",
+                  "description": "@username, t.me/username, t.me/username/123 link or numeric peer id"
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096,
+                  "description": "Message text, up to 4096 characters, sent as plain text"
+                }
+              },
+              "required": ["chat", "text"]
+            }
+          },
+          {
+            "name": "forward_message",
+            "description": "Forward one message from one chat to another as the connected user account. Both fromChat and toChat accept @username, a t.me/... link or a numeric peer id and both must pass allowed_chats. messageId is the id of an existing message in fromChat. Uses the same read_only guard and send-rate limits as send_message; returns the new messageId in toChat.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "fromChat": {
+                  "type": "string",
+                  "description": "Source chat: @username, t.me/... link or numeric peer id"
+                },
+                "messageId": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Id of the message to forward, from list_messages"
+                },
+                "toChat": {
+                  "type": "string",
+                  "description": "Destination chat: @username, t.me/... link or numeric peer id"
+                }
+              },
+              "required": ["fromChat", "messageId", "toChat"]
+            }
+          },
+          {
+            "name": "mark_read",
+            "description": "Mark a chat as read for the connected user account, clearing its unread badge. chat accepts @username, a t.me/... link or a numeric peer id. This is a write, so it is blocked when read_only is on and it counts towards nothing else: no message is sent.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": {
+                  "type": "string",
+                  "description": "@username, t.me/... link or numeric peer id"
+                }
+              },
+              "required": ["chat"]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "feed",
+      "family": "trigger",
+      "descriptor": {
+        "kind": "telegram.feed",
+        "title": "Telegram feed post",
+        "description": "Fires when a watched channel or group posts new text that matches the keywords",
+        "connection": "telegram-user",
+        "configFields": [
+          {
+            "key": "sources",
+            "label": "Channel",
+            "type": "text",
+            "required": false,
+            "placeholder": "All channels",
+            "optionsFrom": {
+              "kind": "addonRoute",
+              "route": "sources",
+              "valueKey": "peer",
+              "labelKey": "title"
+            },
+            "widget": {
+              "kind": "combobox"
+            },
+            "help": "Fire only for this channel; empty means every watched channel. You can also type an @username that is not in the list"
+          },
+          {
+            "key": "keywords",
+            "label": "Keywords",
+            "type": "text",
+            "required": false,
+            "placeholder": "release, hiring",
+            "widget": {
+              "kind": "tags"
+            },
+            "help": "Comma-separated terms; empty matches every post"
+          },
+          {
+            "key": "exclude",
+            "label": "Exclude words",
+            "type": "text",
+            "required": false,
+            "widget": {
+              "kind": "tags"
+            },
+            "help": "Comma-separated terms; a post containing any of them is skipped"
+          },
+          {
+            "key": "match",
+            "label": "Keyword match",
+            "type": "select",
+            "required": false,
+            "default": "any",
+            "options": [
+              {
+                "value": "any",
+                "label": "Any keyword"
+              },
+              {
+                "value": "all",
+                "label": "All keywords"
+              }
+            ]
+          }
+        ],
+        "limits": {
+          "perDay": 200,
+          "throttleSec": 5
+        },
+        "icon": "rss",
+        "color": "#229ED9"
+      }
+    },
+    {
+      "id": "feed-poller",
+      "family": "worker",
+      "descriptor": {
+        "id": "feed-poller",
+        "title": "Channel feed poller",
+        "autostart": true,
+        "restart": "on-failure"
+      }
+    },
+    {
+      "id": "main",
+      "family": "view",
+      "descriptor": {
+        "id": "main",
+        "title": "Telegram account",
+        "sections": [
+          {
+            "type": "status"
+          },
+          {
+            "type": "capabilities"
+          },
+          {
+            "type": "permissions"
+          },
+          {
+            "type": "connections",
+            "connections": [
+              "telegram-user"
+            ]
+          },
+          {
+            "type": "config"
+          },
+          {
+            "type": "automations",
+            "triggers": [
+              "telegram.feed"
+            ]
+          },
+          {
+            "type": "table",
+            "title": "Sources",
+            "source": {
+              "route": "/sources"
+            },
+            "columns": [
+              {
+                "key": "peer",
+                "label": "Channel",
+                "format": "text"
+              },
+              {
+                "key": "title",
+                "label": "Title",
+                "format": "text"
+              },
+              {
+                "key": "kind",
+                "label": "Kind",
+                "format": "badge"
+              },
+              {
+                "key": "lastPostId",
+                "label": "Last post",
+                "format": "number"
+              },
+              {
+                "key": "updatedAt",
+                "label": "Synced",
+                "format": "datetime"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "sources",
+      "family": "route",
+      "descriptor": {
+        "id": "sources",
+        "method": "GET",
+        "path": "/sources",
+        "role": "member"
+      }
+    }
+  ],
+  "icon": "assets/icon.svg",
+  "color": "#229ED9"
+}

@@ -70,7 +70,7 @@
 | `harnesys.webhook` | trigger + публичный маршрут со своей проверкой подписи + org-маршруты + `tool-pack` из 9 инструментов |
 | `harnesys.scheduler` | cron-планировщик на job+trigger, org timezone, HITL-эскалация пропусков |
 | `harnesys.telegram-bot` | транспорт чата: transport + worker-поллер + 12 tool-ов + привязка чатов + исходящие вложения |
-| `harnesys.telegram-feed` | MTProto-аккаунт как connection (`telegram-user`), чтение каналов в треды |
+| `harnesys.telegram-account` | MTProto-аккаунт как connection (`telegram-user`), чтение каналов в треды, инструменты аккаунта |
 | `harnesys.telegram-groups` | бот-транспорт для групп (connection `telegram-bot`), привязка чатов, tools |
 | `harnesys.github` | GitHub App: installation-аккаунты, пака tools (21 инструмент), события через опрос (worker `repo-poller` + trigger `github.repo-events`) |
 | `harnesys.google-*` (7) | tool-pack поверх OAuth-аккаунтов; `google-drive` — `source-kind` (облачный диск как знания) |
