@@ -1,6 +1,60 @@
 import type { JsonRpcNotification, JsonRpcRequest } from '@harnesys/sdk';
-import { decodeMessage, encodeMessage, errorResponse, request as rpcRequest } from '@harnesys/sdk';
+import {
+  AddonErrorDataSchema,
+  decodeMessage,
+  encodeMessage,
+  errorResponse,
+  request as rpcRequest,
+} from '@harnesys/sdk';
+import { AddonException } from '../../../domain/addons/errors.ts';
 import type { AddonTransportPort } from '../../../domain/addons/ports/addon-transport.port.ts';
+
+/** HTTP status for an addon-reported error reason (typed-error contract). */
+function statusOfAddonReason(reason: string): number {
+  switch (reason) {
+    case 'invalid_params':
+      return 400;
+    case 'not_found':
+      return 404;
+    case 'permission_denied':
+    case 'permission_revoked':
+      return 403;
+    case 'conflict':
+    case 'account_failed':
+      return 409;
+    case 'quota_exceeded':
+    case 'rate_limited':
+      return 429;
+    case 'timeout':
+      return 504;
+    case 'unavailable':
+      return 503;
+    case 'unsupported':
+      return 501;
+    case 'invalid_response':
+      return 502;
+    default:
+      return 500;
+  }
+}
+
+/**
+ * Rebuilds a typed host exception from the addon's JSON-RPC error so the REST
+ * filter can map reason and detail into the ErrorResponse contract instead of
+ * collapsing every addon failure into 500 INTERNAL_ERROR.
+ */
+function addonRpcErrorOf(error: { message: string; data?: unknown }): Error {
+  const data = AddonErrorDataSchema.safeParse(error.data);
+  if (!data.success) {
+    return new Error(error.message);
+  }
+  return new AddonException(
+    data.data.reason,
+    statusOfAddonReason(data.data.reason),
+    data.data.detail ?? error.message,
+    data.data,
+  );
+}
 
 export interface TransportRpcOptions {
   readonly transport: AddonTransportPort;
@@ -170,7 +224,7 @@ export class TransportRpcClient {
     clearTimeout(entry.timer);
     this.pending.delete(parsed.id);
     if (parsed.error) {
-      entry.reject(new Error(parsed.error.message));
+      entry.reject(addonRpcErrorOf(parsed.error));
     } else {
       entry.resolve(parsed.result);
     }

@@ -246,6 +246,7 @@ export {
   AddonErrorDataSchema,
   type AddonErrorReason,
   AddonErrorReasonSchema,
+  isAddonError,
 } from './protocol/error.ts';
 export {
   type InitializeParams,

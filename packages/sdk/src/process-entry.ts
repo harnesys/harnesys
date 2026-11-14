@@ -8,7 +8,7 @@ import {
   request,
   response,
 } from './protocol/envelope.ts';
-import { AddonError, type AddonErrorReason } from './protocol/error.ts';
+import { AddonError, type AddonErrorReason, isAddonError } from './protocol/error.ts';
 import { type AddonRuntime, createAddonRuntime } from './runtime.ts';
 
 export const PROTOCOL_PLATFORM = 1;
@@ -111,10 +111,14 @@ export async function startAddonProcess(options: StartAddonProcessOptions): Prom
   }
 
   function replyError(id: string | number | null, error: unknown): void {
-    const data =
-      error instanceof AddonError
-        ? error.toData()
-        : { reason: 'internal' as const, retryable: false };
+    const data = isAddonError(error)
+      ? error.toData()
+      : { reason: 'internal' as const, retryable: false };
+    if (!isAddonError(error)) {
+      wiring.stderr.write(
+        `addon request failed: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`,
+      );
+    }
     const reason: AddonErrorReason = data.reason;
     wiring.stdout.write(
       encodeMessage(

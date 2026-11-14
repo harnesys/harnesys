@@ -5,11 +5,11 @@ import { call } from './bot-api.ts';
 import {
   connectTitle,
   displayTitleOf,
+  findTopic,
   listAllTopics,
   listChats,
   listTopics,
   requireChat,
-  requireTopic,
   resolveConnectTarget,
   type TopicRow,
   touchTopic,
@@ -96,20 +96,29 @@ export const connect: RouteHandler = async (params, ctx: AddonContext) => {
   const mode = body.mode ?? 'auto';
   const target = resolveConnectTarget(body.topic);
   const chat = await requireChat(ctx, body.chat);
+  const createTopic = async (name: string): Promise<void> => {
+    const created = await call<{ message_thread_id: number }>(ctx, 'createForumTopic', {
+      chat_id: body.chat,
+      name,
+    });
+    await touchTopic(ctx, chat.chatId, String(created.message_thread_id), name);
+    topicId = String(created.message_thread_id);
+    topicTitle = name;
+  };
   let topicId: string | null = null;
   let topicTitle: string | null = null;
   if (target.kind === 'create') {
-    const created = await call<{ message_thread_id: number }>(ctx, 'createForumTopic', {
-      chat_id: body.chat,
-      name: target.name,
-    });
-    topicId = String(created.message_thread_id);
-    topicTitle = target.name;
-    await touchTopic(ctx, chat.chatId, topicId, topicTitle);
-  } else if (target.kind === 'existing') {
-    const topic = await requireTopic(ctx, chat.chatId, target.topicId);
-    topicId = topic.topicId;
-    topicTitle = topic.title;
+    await createTopic(target.name);
+  } else {
+    // Typed names are create-intent: a purely numeric value that the bot has
+    // not discovered is a new topic named with those digits, not an id lookup.
+    const topic = await findTopic(ctx, chat.chatId, target.topicId);
+    if (topic === null) {
+      await createTopic(target.topicId);
+    } else {
+      topicId = topic.topicId;
+      topicTitle = topic.title;
+    }
   }
   const channel = channelOfParts(chat.chatId, topicId ?? undefined);
   const threadTitle = (body.title ?? '').trim() || connectTitle(displayTitleOf(chat), topicTitle);

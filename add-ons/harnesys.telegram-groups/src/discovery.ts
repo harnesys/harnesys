@@ -143,19 +143,16 @@ export async function listAllTopics(ctx: AddonContext): Promise<TopicRow[]> {
   return rows.map(topicRowOf);
 }
 
-export async function requireTopic(
+export async function findTopic(
   ctx: AddonContext,
   chatId: string,
   topicId: string,
-): Promise<TopicRow> {
+): Promise<TopicRow | null> {
   const row = await ctx.db.get(
     `select ${TOPIC_COLUMNS} from topics where chat_id = ? and topic_id = ?`,
     [chatId, topicId],
   );
-  if (row === null) {
-    throw invalid(`topic ${topicId} of chat ${chatId} is not discovered yet`);
-  }
-  return topicRowOf(row);
+  return row === null ? null : topicRowOf(row);
 }
 
 /** Pure helpers used by the connect route and covered by specs. */

@@ -62,3 +62,20 @@ export class AddonError extends Error {
     };
   }
 }
+
+/**
+ * Copy-safe detection: the addon dist bundles its own copy of this module, so
+ * in-process hosts see errors whose class identity differs from the host's
+ * `AddonError`. Detect structurally instead of by `instanceof` alone.
+ */
+export function isAddonError(error: unknown): error is AddonError {
+  if (error instanceof AddonError) {
+    return true;
+  }
+  return (
+    error instanceof Error &&
+    error.name === 'AddonError' &&
+    'reason' in error &&
+    typeof (error as AddonError).toData === 'function'
+  );
+}
