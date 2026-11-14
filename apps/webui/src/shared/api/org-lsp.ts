@@ -2,7 +2,7 @@ import type { OrgLspListResponse, UpsertOrgLspServerBody } from '@harnesys/contr
 import { queryOptions } from '@tanstack/react-query';
 import { apiJson, apiUrl } from './client';
 import { authenticatedFetch } from './session';
-import { readSse } from './sse';
+import { readSse } from './sse-read';
 
 export type { OrgLspListResponse, UpsertOrgLspServerBody };
 

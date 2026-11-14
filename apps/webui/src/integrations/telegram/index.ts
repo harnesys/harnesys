@@ -3,7 +3,6 @@ import { toast } from '@/shared/ui/toast';
 import type { AutomationConfigInput, WebuiIntegrationDescriptor } from '../types';
 import { deleteRule } from './api';
 import { openTelegramFeedConfigDialog } from './model/telegram-feed-dialog';
-import { TelegramAccountSettings } from './ui/telegram-account-settings';
 
 async function openFeedConfig(input: AutomationConfigInput): Promise<void> {
   const result = await openTelegramFeedConfigDialog({
@@ -27,8 +26,6 @@ export const telegramUi: WebuiIntegrationDescriptor = {
   id: 'telegram',
   title: 'Telegram',
   icon: SendIcon,
-  connectorProvider: 'telegram',
-  settings: TelegramAccountSettings,
   automationKinds: {
     'telegram.feed': {
       label: 'Telegram feed',

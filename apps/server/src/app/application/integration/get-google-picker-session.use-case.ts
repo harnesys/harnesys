@@ -27,7 +27,7 @@ export class GetGooglePickerSessionUseCase {
     const appConfig = await loadGoogleAppConfig(this.secrets, input.orgId);
     if (!appConfig?.apiKey || !appConfig.appId) {
       throw new IntegrationNotConfiguredException(
-        'Google Picker needs the API key and App ID from your Google Cloud app — add them in Settings → Connectors → Google',
+        'Google Picker needs the API key and App ID from your Google Cloud app — add them in Settings → Apps → Google',
       );
     }
     const integration = this.registry.findById(input.orgId, input.integrationId);

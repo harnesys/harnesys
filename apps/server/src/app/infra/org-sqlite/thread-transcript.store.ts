@@ -15,7 +15,6 @@ export interface AppendPeopleMessageInput {
   text: string;
   attachments?: Attachment[] | null;
   origin?: string | null;
-  originConnectorId?: string | null;
   clientEventId?: string | null;
   author?: ThreadAuthor | null;
 }
@@ -76,7 +75,6 @@ export function appendPeopleMessage(
       ? { attachments: input.attachments }
       : {}),
     ...(input.origin ? { origin: input.origin } : {}),
-    ...(input.originConnectorId ? { originConnectorId: input.originConnectorId } : {}),
     ...(input.clientEventId ? { clientEventId: input.clientEventId } : {}),
     ...(input.author ? { author: input.author } : {}),
   };

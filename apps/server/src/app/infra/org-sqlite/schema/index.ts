@@ -62,22 +62,6 @@ export {
   attachmentsTable,
 } from './attachments.ts';
 export {
-  type ConnectorAgentRow,
-  type ConnectorBindingInsertRow,
-  type ConnectorBindingRow,
-  type ConnectorDeliveryInsertRow,
-  type ConnectorDeliveryRow,
-  type ConnectorInboxInsertRow,
-  type ConnectorInboxRow,
-  type ConnectorInsertRow,
-  type ConnectorRow,
-  connectorAgentsTable,
-  connectorBindingsTable,
-  connectorDeliveriesTable,
-  connectorInboxTable,
-  connectorsTable,
-} from './connectors.ts';
-export {
   type EventClaimInsert,
   type EventClaimRow,
   eventClaimsTable,

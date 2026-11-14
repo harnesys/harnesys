@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@harnesys/brix';
 import type { SessionEvent } from 'harnesys';
+import { appEchoText, ORIGIN_PREFIX } from '../../../domain/addons/origin.ts';
 import { AddonCallPort } from '../../../domain/addons/ports/addon-call.port.ts';
 import type { AddonTransportBindingRow } from '../../../domain/addons/ports/transport-binding-repository.port.ts';
 import { AddonTransportBindingRepositoryPort } from '../../../domain/addons/ports/transport-binding-repository.port.ts';
@@ -8,7 +9,6 @@ import type {
   TransportAskReply,
   TransportSessionRow,
 } from '../../../domain/addons/transport-session.ts';
-import { appEchoText } from '../../../domain/connector/echo.ts';
 import { LocalExecutorPort } from '../../../domain/thread/local-executor.port.ts';
 import {
   ThreadEventsPort,
@@ -220,9 +220,9 @@ export class TransportSessionService {
 
   /**
    * Two-way mirror: messages typed in the app reach the bound transports.
-   * Messages that arrived through a transport (connector origin or non-app
-   * author) are skipped — they are already visible on the other side. The
-   * relayed message is remembered as outbound so the transport's own echo
+   * Messages that arrived through a transport (addon-transport origin or
+   * non-app author) are skipped — they are already visible on the other side.
+   * The relayed message is remembered as outbound so the transport's own echo
    * never re-enters the thread.
    */
   private async mirrorUserMessage(
@@ -231,7 +231,7 @@ export class TransportSessionService {
     event: Extract<SessionEvent, { type: 'user' }>,
     bindings: readonly AddonTransportBindingRow[],
   ): Promise<void> {
-    if (event.text.trim() === '' || (event.origin ?? '').startsWith('connector:')) {
+    if (event.text.trim() === '' || (event.origin ?? '').startsWith(ORIGIN_PREFIX)) {
       return;
     }
     if (event.author !== undefined && event.author.provider !== 'app') {

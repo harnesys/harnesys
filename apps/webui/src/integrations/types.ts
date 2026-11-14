@@ -21,7 +21,5 @@ export interface WebuiIntegrationDescriptor {
   id: string;
   title: string;
   icon: ComponentType<{ className?: string }>;
-  connectorProvider?: string;
-  settings?: ComponentType<{ orgId: string }>;
   automationKinds: Record<string, AutomationKindDescriptor>;
 }

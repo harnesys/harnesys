@@ -59,7 +59,6 @@ import {
   migrateTriggerInstructionsColumn,
 } from './org-sql-addons-platform.ts';
 import { ensureAppsSchema } from './org-sql-apps.ts';
-import { CREATE_CONNECTORS_SQL } from './org-sql-connectors.ts';
 import {
   CREATE_INVITES_INDEX_SQL,
   CREATE_INVITES_SQL,
@@ -68,11 +67,9 @@ import {
   migratePendingRunEventsAttributionColumns,
 } from './org-sql-fleet.ts';
 import {
-  assertConnectorsAgentSet,
   assertIssuesStatusKey,
   assertRunEventsThreadScoped,
   assertRunsAgentSnapshot,
-  assertRunsOriginConnector,
   assertThreadsKindIsConversation,
   assertThreadsOwnMembership,
   assertThreadsThreadSeq,
@@ -232,7 +229,6 @@ export function ensureOrgSchema(
   }
   exec(CREATE_RUNS_SQL);
   assertRunsAgentSnapshot(all);
-  assertRunsOriginConnector(all);
   if (all) {
     migrateRunsAttributionColumns(exec, all);
   }
@@ -255,8 +251,6 @@ export function ensureOrgSchema(
     migrateThreadsPolicyContextWindow(exec, all);
     migrateThreadMessageQueueModeColumn(exec, all);
   }
-  exec(CREATE_CONNECTORS_SQL);
-  assertConnectorsAgentSet(all);
   exec(CREATE_THREAD_PLANS_SQL);
   if (all) {
     migrateThreadPlansTable(exec, all);

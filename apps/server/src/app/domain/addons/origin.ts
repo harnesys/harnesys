@@ -1,5 +1,7 @@
+export const ORIGIN_PREFIX = 'connector:';
+
 export function connectorOrigin(connectorId: string): string {
-  return `connector:${connectorId}`;
+  return `${ORIGIN_PREFIX}${connectorId}`;
 }
 
 export function shouldEchoUser(origin: string, connectorId: string): boolean {

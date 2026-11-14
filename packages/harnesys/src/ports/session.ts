@@ -14,7 +14,6 @@ export type SendInput =
       files?: SendFile[];
       attachments?: Attachment[];
       origin?: string;
-      originConnectorId?: string;
       attribution?: RunAttribution;
     };
 export type { AskBudget } from '../domain/tool-subject.ts';

@@ -55,7 +55,7 @@ export async function requireGoogleAppConfig(
   const config = await loadGoogleAppConfig(secrets, orgId);
   if (!config) {
     throw new IntegrationNotConfiguredException(
-      'Connect your Google Cloud app in Settings → Connectors → Google first',
+      'Connect your Google Cloud app in Settings → Apps → Google first',
     );
   }
   return config;

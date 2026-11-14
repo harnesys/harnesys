@@ -101,7 +101,6 @@ async function deliverQueuedThreadMessage(
       text: item.text,
       ...(item.attachments ? { attachments: item.attachments } : {}),
       ...(item.origin ? { origin: item.origin } : {}),
-      ...(item.originConnectorId ? { originConnectorId: item.originConnectorId } : {}),
       ...(item.clientEventId ? { clientEventId: item.clientEventId } : {}),
       ...(item.mode ? { mode: item.mode } : {}),
       ...(item.threadSeq !== null ? { triggerThreadSeq: item.threadSeq } : {}),

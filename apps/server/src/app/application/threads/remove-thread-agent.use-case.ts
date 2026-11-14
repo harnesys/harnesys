@@ -1,7 +1,6 @@
 import { Injectable } from '@harnesys/brix';
 import type { ThreadSummary } from '@harnesys/contracts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
-import { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
 import {
   ThreadNotFoundException,
   ThreadValidationException,
@@ -9,7 +8,6 @@ import {
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadParticipantRepositoryPort } from '../../domain/thread/thread-participant-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
-import { syncConnectorAgentsForThread } from '../connectors/sync-connector-agents.ts';
 import { membersOf, participantsOf, toThreadSummary } from './thread.helpers.ts';
 
 export interface RemoveThreadAgentRequest {
@@ -25,7 +23,6 @@ export class RemoveThreadAgentUseCase {
     private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly participants: ThreadParticipantRepositoryPort,
     private readonly agents: AgentRegistryPort,
-    private readonly connectors: ConnectorRepositoryPort,
   ) {}
 
   execute(request: RemoveThreadAgentRequest): ThreadSummary {
@@ -57,13 +54,6 @@ export class RemoveThreadAgentUseCase {
       }
     }
     this.threadAgents.remove(request.orgId, thread.id, request.agentId);
-    if (this.connectors.listBindingsByThread(request.orgId, thread.id).length > 0) {
-      syncConnectorAgentsForThread(
-        { connectors: this.connectors, threadAgents: this.threadAgents },
-        request.orgId,
-        thread.id,
-      );
-    }
     const deps = {
       threadAgents: this.threadAgents,
       participants: this.participants,

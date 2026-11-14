@@ -592,7 +592,6 @@ CREATE TABLE IF NOT EXISTS runs (
   thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
   agent_id TEXT REFERENCES agents(id) ON DELETE SET NULL,
   agent_name TEXT NOT NULL,
-  origin_connector_id TEXT REFERENCES connectors(id) ON DELETE SET NULL,
   status TEXT NOT NULL,
   interrupt_id TEXT,
   wait_fire_at INTEGER,

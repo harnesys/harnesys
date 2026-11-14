@@ -62,7 +62,6 @@ function normalizeSendInput(input: SendInput): {
   text: string;
   attachments?: Attachment[];
   origin?: string;
-  originConnectorId?: string;
   effort?: string;
 } {
   if (typeof input === 'string') {
@@ -102,7 +101,6 @@ function normalizeSendInput(input: SendInput): {
     text: input.text ?? '',
     attachments: attachments.length > 0 ? attachments : undefined,
     origin: input.origin,
-    originConnectorId: input.originConnectorId,
     effort: effort || undefined,
   };
 }
@@ -182,9 +180,6 @@ export function createSession(
           threadId,
           agentId: def.id,
           agentName: def.name ?? def.id,
-          ...(normalized.originConnectorId
-            ? { originConnectorId: normalized.originConnectorId }
-            : {}),
           attribution: sendInputAttribution(input),
         },
         sendOpts?.triggerThreadSeq === undefined ? [userEvent] : [],

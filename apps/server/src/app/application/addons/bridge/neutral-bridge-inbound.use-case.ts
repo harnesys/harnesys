@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@harnesys/brix';
+import { connectorOrigin, shouldEchoUser } from '../../../domain/addons/origin.ts';
 import {
   type AddonCallOptions,
   AddonCallPort,
@@ -7,7 +8,6 @@ import type { AddonTransportBindingRow } from '../../../domain/addons/ports/tran
 import { AddonTransportBindingRepositoryPort } from '../../../domain/addons/ports/transport-binding-repository.port.ts';
 import { AddonTransportSessionRepositoryPort } from '../../../domain/addons/ports/transport-session-repository.port.ts';
 import { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
-import { connectorOrigin, shouldEchoUser } from '../../../domain/connector/echo.ts';
 import { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
 import { CreateThreadUseCase } from '../../threads/create-thread.use-case.ts';
 import { UploadThreadAttachmentUseCase } from '../../threads/upload-thread-attachment.use-case.ts';

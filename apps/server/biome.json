@@ -101,7 +101,6 @@
     {
       "includes": [
         "src/app/application/integrations/**",
-        "src/app/application/connectors/**",
         "src/app/application/plugins/**",
         "src/app/application/integration/**",
         "src/app/application/threads/send-thread-message.use-case.ts",

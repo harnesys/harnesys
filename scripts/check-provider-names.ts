@@ -11,15 +11,12 @@ const zones = [
 ];
 
 const exclusions = [
-  'apps/webui/src/features/manage-connectors',
   'apps/webui/src/integrations',
   'apps/webui/src/widgets',
   'apps/server/src/app/infra/apps/providers/__fixtures__',
-  'apps/server/src/app/domain/connector',
   'apps/server/src/app/domain/integration',
   'apps/server/src/app/domain/source/cloud-remote-backend.port.ts',
   'apps/server/src/app/application/integration',
-  'apps/server/src/app/application/connectors',
   'apps/server/src/app/application/source',
   'apps/server/src/app/application/capabilities/org-pack-catalog.ts',
   'apps/server/src/app/application/fleet/resolve-fleet-secrets.use-case.ts',
@@ -28,7 +25,6 @@ const exclusions = [
   'apps/server/src/app/api/rest/integrations-github.controller.ts',
   'apps/server/src/app/api/rest/integrations-google-callback.controller.ts',
   'apps/server/src/app/api/rest/catalog.controller.ts',
-  'apps/server/src/app/api/rest/connectors.controller.ts',
   'apps/server/src/app/api/rest/sources.controller.ts',
   'apps/server/src/app/api/api.module.ts',
   'apps/webui/src/features/attach-source',
@@ -39,7 +35,6 @@ const exclusions = [
   'apps/webui/src/features/manage-project-settings',
   'apps/webui/src/features/app-update',
   'apps/webui/src/features/manage-thread-members',
-  'apps/webui/src/shared/api/integrations.ts',
   'apps/webui/src/shared/api/sources.ts',
   'apps/webui/src/shared/config/settings-nav.ts',
 ];

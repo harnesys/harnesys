@@ -14,7 +14,6 @@ export {
 } from './discovery';
 export {
   watchApprovalEvents,
-  watchConnectorChanges,
   watchDeskEvents,
   watchFleetChanged,
   watchKnowledgeIndexState,
@@ -195,7 +194,7 @@ export {
   setAccess,
   subscribeSessionDead,
 } from './session';
-export { readSse } from './sse';
+export { readSse } from './sse-read';
 export { type CreateTeamBody, type CreateTeamResponse, createTeam } from './teams';
 export {
   createTerminal,

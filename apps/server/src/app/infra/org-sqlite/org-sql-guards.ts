@@ -86,29 +86,3 @@ export function assertRunsAgentSnapshot(all?: (sql: string) => ColumnInfo[]): vo
     'Legacy org database detected: table "runs" has no "agent_name" column. Delete the org database and restart so the schema is recreated.',
   );
 }
-
-export function assertRunsOriginConnector(all?: (sql: string) => ColumnInfo[]): void {
-  if (!all) {
-    return;
-  }
-  const columns = new Set(all('PRAGMA table_info(runs)').map((column) => column.name));
-  if (columns.size === 0 || columns.has('origin_connector_id')) {
-    return;
-  }
-  throw new Error(
-    'Legacy org database detected: table "runs" has no "origin_connector_id" column. Delete the org database and restart so the schema is recreated.',
-  );
-}
-
-export function assertConnectorsAgentSet(all?: (sql: string) => ColumnInfo[]): void {
-  if (!all) {
-    return;
-  }
-  const columns = new Set(all('PRAGMA table_info(connectors)').map((column) => column.name));
-  if (columns.size === 0 || !columns.has('agent_id')) {
-    return;
-  }
-  throw new Error(
-    'Legacy org database detected: table "connectors" still has an "agent_id" column. Delete the org database and restart so the schema is recreated.',
-  );
-}

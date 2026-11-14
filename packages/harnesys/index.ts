@@ -395,9 +395,6 @@ export type { AgentsCapabilityPorts } from './src/packs/agents/index.ts';
 export { agentsCapability } from './src/packs/agents/index.ts';
 export { filesCapability, shellCapability } from './src/packs/base.ts';
 export { coreCapability } from './src/packs/core/index.ts';
-export { githubCapability } from './src/packs/github/index.ts';
-export type { GoogleCapabilityPorts, GooglePackSpec } from './src/packs/google/index.ts';
-export { googleCapability } from './src/packs/google/index.ts';
 export { imageCapability } from './src/packs/image/index.ts';
 export type { IssuesCapabilityPorts } from './src/packs/issues/index.ts';
 export { issuesCapability } from './src/packs/issues/index.ts';
@@ -441,15 +438,6 @@ export {
 } from './src/packs/shell/command-glob.ts';
 export { programOf, segmentCommand } from './src/packs/shell/shell-chain.ts';
 export { SHELL_FLOOR_PATTERNS } from './src/packs/shell/shell-floor.ts';
-export {
-  type CreateTelegramToolsParams,
-  createTelegramTools,
-} from './src/packs/telegram/create-telegram-tools.ts';
-export type {
-  TelegramCapabilityPorts,
-  TelegramPackSpec,
-} from './src/packs/telegram/index.ts';
-export { telegramCapability } from './src/packs/telegram/index.ts';
 export {
   createThreadsHistoryTool,
   THREADS_HISTORY_TOOL,
@@ -768,19 +756,6 @@ export type {
   SessionHandle,
 } from './src/ports/session.ts';
 export type { SkillRegistry } from './src/ports/skills.ts';
-export type {
-  TelegramAlbumItem,
-  TelegramChatSummary,
-  TelegramChatTarget,
-  TelegramMediaKind,
-  TelegramMediaSource,
-  TelegramMessageSummary,
-  TelegramParseMode,
-  TelegramPollInput,
-  TelegramPostResult,
-  TelegramTopicRecord,
-} from './src/ports/telegram-chats.ts';
-export { TelegramChatsPort } from './src/ports/telegram-chats.ts';
 export type {
   ThreadAttachmentPutInput,
   ThreadAttachmentRecord,

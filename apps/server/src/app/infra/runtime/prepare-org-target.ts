@@ -13,7 +13,6 @@ import { intersectPermissions } from 'harnesys';
 import { runModeOf } from '../../application/threads/thread.helpers.ts';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
-import { CHANNEL_NOTE } from '../../domain/connector/constants.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import type { ModePresetRecord } from '../../domain/mode-presets/mode-preset.ts';
@@ -192,9 +191,6 @@ export function prepareTarget(
         total: thread.conversationCount,
       }),
     );
-  }
-  if (thread.metadata.provider === 'telegram') {
-    notes.push(CHANNEL_NOTE);
   }
   const channelNote = notes.length > 0 ? notes.join('\n\n') : undefined;
   const modeId = options?.mode ?? runModeOf(thread);

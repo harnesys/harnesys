@@ -4,7 +4,7 @@ import type { EngineSpec, HostEngineEntry } from 'harnesys';
 import { getActiveOrgId } from '@/shared/api/active-org';
 import { apiJson, apiUrl } from '@/shared/api/client';
 import { authenticatedFetch } from '@/shared/api/session';
-import { readSse } from '@/shared/api/sse';
+import { readSse } from '@/shared/api/sse-read';
 
 export type { BrowserDefaultEngine, EngineSpec, HostEngineEntry };
 

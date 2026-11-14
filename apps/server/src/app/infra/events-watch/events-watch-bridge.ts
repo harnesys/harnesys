@@ -3,7 +3,6 @@ import type {
   DeskEvent,
   EventsWatchApprovalFrame,
   EventsWatchApprovalRecord,
-  EventsWatchConnectorFrame,
   EventsWatchDeskFrame,
   EventsWatchFleetFrame,
   EventsWatchGitFileStatusFrame,
@@ -22,7 +21,6 @@ import type {
 import type { ApprovalRecord } from '../../domain/approval/approval.ts';
 import type { ApprovalEvent } from '../../domain/approval/approval-events.port.ts';
 import { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
-import { ConnectorEventsPort } from '../../domain/connector/connector-events.port.ts';
 import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import { EventsWatchHubPort } from '../../domain/events-watch/events-watch-hub.port.ts';
 import { FleetEventsPort } from '../../domain/fleet/fleet-events.port.ts';
@@ -62,7 +60,6 @@ export class EventsWatchBridge implements ModuleInitHook, ModuleDestroyHook {
     private readonly materializationEvents: MaterializationEventsPort,
     private readonly releaseEvents: ReleaseEventsPort,
     private readonly terminalEvents: TerminalEventsPort,
-    private readonly connectorEvents: ConnectorEventsPort,
   ) {}
 
   onModuleInit(): void {
@@ -81,7 +78,6 @@ export class EventsWatchBridge implements ModuleInitHook, ModuleDestroyHook {
       this.materializationEvents.subscribe((event) => this.publishMaterialization(event)),
       this.releaseEvents.subscribe((frame) => this.publishRelease(frame)),
       this.terminalEvents.subscribe((orgId, event) => this.publishTerminal(orgId, event)),
-      this.connectorEvents.subscribe((orgId) => this.publishConnectors(orgId)),
     ];
   }
 
@@ -179,11 +175,6 @@ export class EventsWatchBridge implements ModuleInitHook, ModuleDestroyHook {
   private publishTerminal(orgId: string, event: TerminalWatchEvent): void {
     const frame: EventsWatchTerminalFrame = { orgId, event };
     this.hub.publish(orgId, 'terminal', frame);
-  }
-
-  private publishConnectors(orgId: string): void {
-    const frame: EventsWatchConnectorFrame = { orgId, type: 'connectors-changed' };
-    this.hub.publish(orgId, 'connectors-changed', frame);
   }
 }
 

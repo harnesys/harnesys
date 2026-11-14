@@ -54,13 +54,10 @@ import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repo
 import { ThreadEventsPort } from '../../domain/thread/thread-events.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { WaitTickerGatePort } from '../../domain/thread/wait-ticker-gate.port.ts';
-import type { OrgGithubDeps } from './packs/org-github.port.ts';
-import type { OrgGoogleDeps } from './packs/org-google.port.ts';
 import type { OrgIssueDeps } from './packs/org-issue.port.ts';
 import type { OrgKnowledgeDeps } from './packs/org-knowledge.port.ts';
 import type { OrgManagerDeps } from './packs/org-manager.port.ts';
 import type { OrgSkillsDeps } from './packs/org-skills.pack.port.ts';
-import type { OrgTelegramDeps } from './packs/org-telegram.port.ts';
 
 export interface OrgRuntime {
   orgId: string;
@@ -77,7 +74,6 @@ export interface OrgRuntime {
     skills?: string[];
     clientEventId?: string;
     origin?: string;
-    originConnectorId?: string;
     correlationId?: string;
     sourceId?: string;
     worktreeId?: string;
@@ -145,9 +141,6 @@ export interface OrgRuntimeDeps {
   issues?: OrgIssueDeps;
   issueExecutions?: IssueExecutionPort;
   manager?: OrgManagerDeps;
-  google?: OrgGoogleDeps;
-  github?: OrgGithubDeps;
-  telegram?: OrgTelegramDeps;
   skills?: OrgSkillsDeps;
   waitGate?: WaitTickerGatePort;
 }

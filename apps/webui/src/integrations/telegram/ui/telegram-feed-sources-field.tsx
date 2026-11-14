@@ -1,4 +1,3 @@
-import { Button } from '@/shared/ui/button';
 import { RowChip } from '@/shared/ui/capability-rows';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { Field, FieldDescription, FieldLabel } from '@/shared/ui/field';
@@ -8,12 +7,10 @@ export function TelegramFeedSourcesField({
   sources,
   selectedIds,
   onToggle,
-  onOpenConnector,
 }: {
   sources: TelegramSource[];
   selectedIds: string[];
   onToggle: (sourceId: string) => void;
-  onOpenConnector: () => void;
 }) {
   return (
     <Field>
@@ -23,15 +20,6 @@ export function TelegramFeedSourcesField({
           <span className="text-[13px] text-muted-foreground">
             Connect the Telegram account first
           </span>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={onOpenConnector}
-            data-testid="telegram-feed-open-connector"
-          >
-            Open Telegram connector
-          </Button>
         </div>
       ) : (
         <>

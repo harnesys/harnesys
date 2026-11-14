@@ -28,7 +28,6 @@ export interface SendThreadMessageRequest {
   text: string;
   attachments?: Attachment[];
   origin?: string;
-  originConnectorId?: string;
   clientEventId?: string;
   mode?: string;
   author?: ThreadAuthor;
@@ -104,7 +103,6 @@ function enqueueUserMessage(
     text: request.text,
     ...(attachments.length > 0 ? { attachments } : {}),
     ...(request.origin ? { origin: request.origin } : {}),
-    ...(request.originConnectorId ? { originConnectorId: request.originConnectorId } : {}),
     ...(request.clientEventId ? { clientEventId: request.clientEventId } : {}),
     ...(request.mode ? { mode: request.mode } : {}),
     ...(request.author ? { author: request.author } : {}),

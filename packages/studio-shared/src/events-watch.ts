@@ -54,11 +54,6 @@ export interface EventsWatchFleetFrame {
   type: 'fleet-changed';
 }
 
-export interface EventsWatchConnectorFrame {
-  orgId: OrgId;
-  type: 'connectors-changed';
-}
-
 export interface EventsWatchAutomationsFrame {
   orgId: OrgId;
   type: 'automations-changed';

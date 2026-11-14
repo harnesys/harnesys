@@ -1,10 +1,8 @@
 import { DEFAULT_MODE_ID } from '@harnesys/studio-shared';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
 import type { Agent } from '@/entities/agent';
 import { automationStatusLabel } from '@/entities/automation';
-import { studioPath } from '@/shared/config/routes';
 import { cn } from '@/shared/lib/utils';
 import { alert, type DialogComponentProps } from '@/shared/services/overlay';
 import { Button } from '@/shared/ui/button';
@@ -107,7 +105,6 @@ function TelegramFeedForm({
   rules: TelegramRule[];
   onResolve?: TelegramFeedOnResolve;
 }) {
-  const navigate = useNavigate();
   const [draft, setDraft] = useState<TelegramFeedDraft>(() =>
     rule ? feedDraftFromRule(rule) : emptyFeedDraft(agents),
   );
@@ -234,10 +231,6 @@ function TelegramFeedForm({
             sources={sources}
             selectedIds={draft.sourceIds}
             onToggle={toggleSource}
-            onOpenConnector={() => {
-              onResolve?.();
-              void navigate(studioPath.connector(orgId, 'telegram'));
-            }}
           />
           <TelegramFeedKeywordsField
             terms={draft.terms}

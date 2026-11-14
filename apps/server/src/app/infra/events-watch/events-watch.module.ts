@@ -1,7 +1,6 @@
 import { Module } from '@harnesys/brix';
 import { EventsWatchHubPort } from '../../domain/events-watch/events-watch-hub.port.ts';
 import { ApprovalModule } from '../approvals/approval.module.ts';
-import { ConnectorModule } from '../connector/connector.module.ts';
 import { DeskModule } from '../desk/desk.module.ts';
 import { FleetHubModule } from '../fleet-hub/fleet-hub.module.ts';
 import { IssueInfraModule } from '../issues/issue.module.ts';
@@ -30,7 +29,6 @@ import { EVENTS_WATCH_HUB_OPTIONS, EventsWatchHub } from './events-watch-hub.ts'
     FleetHubModule,
     ReleaseModule,
     TerminalModule,
-    ConnectorModule,
   ],
   providers: [
     { provide: EventsWatchHubPort, useClass: EventsWatchHub },

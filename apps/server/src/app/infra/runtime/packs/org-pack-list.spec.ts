@@ -21,8 +21,6 @@ describe('org pack single source', () => {
       'agents',
       'core',
       'files',
-      'github',
-      'google',
       'image',
       'issues',
       'knowledge-memory',
@@ -34,7 +32,6 @@ describe('org pack single source', () => {
       'semantic-memory',
       'shell',
       'skills',
-      'telegram',
       'threads',
       'web',
     ]);

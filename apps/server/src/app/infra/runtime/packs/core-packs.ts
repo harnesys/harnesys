@@ -2,8 +2,6 @@ import {
   agentsCapability,
   coreCapability,
   filesCapability,
-  githubCapability,
-  googleCapability,
   imageCapability,
   issuesCapability,
   knowledgeMemoryCapability,
@@ -16,7 +14,6 @@ import {
   registerPack,
   semanticMemoryCapability,
   shellCapability,
-  telegramCapability,
   threadsCapability,
   webCapability,
 } from 'harnesys';
@@ -54,11 +51,8 @@ export const CORE_PACKS: readonly CorePackEntry[] = [
   { name: 'threads', register: () => stubRegistration(threadsCapability) },
   { name: 'issues', register: () => stubRegistration(issuesCapability) },
   { name: 'manager', register: () => stubRegistration(managerCapability) },
-  { name: 'google', register: () => stubRegistration(googleCapability) },
-  { name: 'github', register: () => stubRegistration(githubCapability) },
   { name: 'pin-memory', register: () => stubRegistration(pinMemoryCapability) },
   { name: 'semantic-memory', register: () => stubRegistration(semanticMemoryCapability) },
   { name: 'knowledge-memory', register: () => stubRegistration(knowledgeMemoryCapability) },
   { name: 'skills', register: () => stubRegistration(skillsCapability) },
-  { name: 'telegram', register: () => stubRegistration(telegramCapability) },
 ];

@@ -27,7 +27,6 @@ export interface SendLocalRunInput {
   skills?: string[];
   clientEventId?: string;
   origin?: string;
-  originConnectorId?: string;
   correlationId?: string;
   directory?: string;
   sourceId?: string;

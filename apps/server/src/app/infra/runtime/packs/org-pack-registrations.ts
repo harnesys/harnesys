@@ -3,8 +3,6 @@ import {
   agentsCapability,
   coreCapability,
   filesCapability,
-  githubCapability,
-  googleCapability,
   imageCapability,
   issuesCapability,
   managerCapability,
@@ -12,7 +10,6 @@ import {
   planCapability,
   registerPack,
   shellCapability,
-  telegramCapability,
 } from 'harnesys';
 import { lspCapability } from 'harnesys/lsp';
 import { skillsCapability } from 'harnesys/skills';
@@ -21,8 +18,6 @@ import { isHostWired } from '../../../domain/runtime/org-pack-list.ts';
 import { scopedLspPort } from '../../lsp/scoped-lsp.port.ts';
 import { getHostToolScope } from '../host-tool-scope.ts';
 import { OrgAgentsCatalogPort } from './org-agents-catalog.port.ts';
-import { OrgGithubPort } from './org-github.port.ts';
-import { OrgGooglePort } from './org-google.port.ts';
 import { OrgImageGenerationPort } from './org-image.port.ts';
 import { OrgIssuePort } from './org-issue.port.ts';
 import { OrgManagerPort } from './org-manager.port.ts';
@@ -35,7 +30,6 @@ import {
 } from './org-pack-registrations.helpers.ts';
 import { OrgPlanPort } from './org-plan.port.ts';
 import { OrgSkillsPackPort } from './org-skills.pack.port.ts';
-import { OrgTelegramPort } from './org-telegram.port.ts';
 import { sshHostGateOf } from './ssh-host-gate.ts';
 import type { WireOrgPacksDeps } from './wire-org-packs.ts';
 
@@ -64,12 +58,6 @@ export function registrationForPack(packName: string, ctx: WireOrgPackContext) {
       return shellRegistration(ctx);
     case 'web':
       return webRegistration(ctx);
-    case 'google':
-      return googleRegistration(ctx);
-    case 'github':
-      return githubRegistration(ctx);
-    case 'telegram':
-      return telegramRegistration(ctx);
     case 'lsp':
       return lspRegistration(ctx);
     case 'agents':
@@ -115,40 +103,6 @@ function imageRegistration(ctx: WireOrgPackContext) {
         attachments,
       }),
     },
-    resolveScope: ctx.liveScope,
-  });
-}
-
-function googleRegistration(ctx: WireOrgPackContext) {
-  const google = ctx.deps.google;
-  const attachments = threadAttachmentPortOf(ctx);
-  if (!google || !attachments) {
-    return undefined;
-  }
-  return registerPack(googleCapability, {
-    ports: { google: new OrgGooglePort(google, attachments) },
-    resolveScope: ctx.liveScope,
-  });
-}
-
-function githubRegistration(ctx: WireOrgPackContext) {
-  const github = ctx.deps.github;
-  if (!github) {
-    return undefined;
-  }
-  return registerPack(githubCapability, {
-    ports: { github: new OrgGithubPort(github) },
-    resolveScope: ctx.liveScope,
-  });
-}
-
-function telegramRegistration(ctx: WireOrgPackContext) {
-  const telegram = ctx.deps.telegram;
-  if (!telegram) {
-    return undefined;
-  }
-  return registerPack(telegramCapability, {
-    ports: { telegram: new OrgTelegramPort(telegram) },
     resolveScope: ctx.liveScope,
   });
 }

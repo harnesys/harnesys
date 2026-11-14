@@ -4,7 +4,7 @@ import type {
   AddonWorkerHandle,
   AddonWorkerRegistry,
 } from 'harnesys/integration';
-import { tryAcquireLease } from '../../domain/connector/lease.ts';
+import { tryAcquireLease } from '../../domain/addons/lease.ts';
 
 const LEASE_TTL_MS = 15_000;
 const LEASE_RENEW_MS = 5_000;

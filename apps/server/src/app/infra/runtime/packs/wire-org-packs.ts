@@ -34,15 +34,12 @@ import type { OrgPluginRuntimeSource } from '../org-plugin-wiring.ts';
 import type { OrgRuntimeDeps } from '../org-runtime.types.ts';
 import { agentCatalogCreate } from './agent-catalog-create.ts';
 import { OrgAgentsCatalogPort } from './org-agents-catalog.port.ts';
-import type { OrgGithubDeps } from './org-github.port.ts';
-import type { OrgGoogleDeps } from './org-google.port.ts';
 import type { OrgIssueDeps } from './org-issue.port.ts';
 import type { OrgKnowledgeDeps } from './org-knowledge.port.ts';
 import type { OrgManagerDeps } from './org-manager.port.ts';
 import { registrationForPack } from './org-pack-registrations.ts';
 import { isPackSatisfied } from './org-pack-requirements.ts';
 import type { OrgSkillsDeps } from './org-skills.pack.port.ts';
-import type { OrgTelegramDeps } from './org-telegram.port.ts';
 
 export interface WireOrgPacksDeps {
   orgId: string;
@@ -59,9 +56,6 @@ export interface WireOrgPacksDeps {
   issues?: OrgIssueDeps;
   issueTracker?: IssueTrackerPort;
   manager?: OrgManagerDeps;
-  google?: OrgGoogleDeps;
-  github?: OrgGithubDeps;
-  telegram?: OrgTelegramDeps;
   knowledge?: OrgKnowledgeDeps;
   sources?: SourceRegistryPort;
   planDb?: OrgSqliteDb;
@@ -89,9 +83,6 @@ export interface WireOrgPackFilter {
   issues?: OrgIssueDeps;
   issueTracker?: IssueTrackerPort;
   manager?: OrgManagerDeps;
-  google?: OrgGoogleDeps;
-  github?: OrgGithubDeps;
-  telegram?: OrgTelegramDeps;
   knowledge?: OrgKnowledgeDeps;
   skills?: OrgSkillsDeps;
   orgSettings?: OrgSettingsPort;
@@ -151,9 +142,6 @@ function optionalInputs(deps: OrgRuntimeDeps): Partial<WireOrgPacksDeps> {
     ...(deps.knowledge ? { knowledge: deps.knowledge } : {}),
     ...(deps.issues ? { issues: deps.issues } : {}),
     ...(deps.manager ? { manager: deps.manager } : {}),
-    ...(deps.google ? { google: deps.google } : {}),
-    ...(deps.github ? { github: deps.github } : {}),
-    ...(deps.telegram ? { telegram: deps.telegram } : {}),
     ...(deps.skills ? { skills: deps.skills } : {}),
     ...(deps.lsp ? { lsp: deps.lsp } : {}),
   };

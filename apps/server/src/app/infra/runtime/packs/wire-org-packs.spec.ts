@@ -7,12 +7,9 @@ import { HostFsLayoutPort } from '../../../domain/machine/host-fs-layout.port.ts
 import { isHostWired, orgPackNames } from '../../../domain/runtime/org-pack-list.ts';
 import { SecretStorePort } from '../../../domain/secret/secret-store.port.ts';
 import { OrgSettingsPort } from '../../../domain/skills/org-settings.port.ts';
-import type { OrgGithubDeps } from './org-github.port.ts';
-import type { OrgGoogleDeps } from './org-google.port.ts';
 import type { OrgIssueDeps } from './org-issue.port.ts';
 import type { OrgManagerDeps } from './org-manager.port.ts';
 import type { OrgSkillsDeps } from './org-skills.pack.port.ts';
-import type { OrgTelegramDeps } from './org-telegram.port.ts';
 import {
   FakeKnowledgeSearch,
   FakeKnowledgeStore,
@@ -50,9 +47,6 @@ function fullDeps(): WireOrgPacksDeps {
     orgSettings: new FakeOrgSettings(),
     issues: {} as OrgIssueDeps,
     manager: {} as OrgManagerDeps,
-    google: {} as OrgGoogleDeps,
-    github: {} as OrgGithubDeps,
-    telegram: {} as OrgTelegramDeps,
     skills: {} as OrgSkillsDeps,
     mcpManage: {} as McpManagePort,
     lsp: {} as LspPort,

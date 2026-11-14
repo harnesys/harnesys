@@ -1,13 +1,8 @@
 import { Injectable } from '@harnesys/brix';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
-import { ConnectorRepositoryPort } from '../../domain/connector/connector-repository.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
-import {
-  syncConnectorAgents,
-  syncConnectorAgentsForThread,
-} from '../connectors/sync-connector-agents.ts';
 import { requireAgent } from './agent.helpers.ts';
 
 export interface DeleteAgentRequest {
@@ -19,7 +14,6 @@ export interface DeleteAgentRequest {
 export class DeleteAgentUseCase {
   constructor(
     private readonly agents: AgentRegistryPort,
-    private readonly connectors: ConnectorRepositoryPort,
     private readonly threads: ThreadRepositoryPort,
     private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly executor: LocalExecutorPort,
@@ -27,10 +21,8 @@ export class DeleteAgentUseCase {
 
   async execute(request: DeleteAgentRequest): Promise<void> {
     requireAgent(this.agents, request.orgId, request.agentId);
-    this.detachFromConnectors(request.orgId, request.agentId);
     const threadIds = this.threadAgents.listThreadIdsByAgent(request.orgId, request.agentId);
     const ownThreadIds: string[] = [];
-    const survivingThreadIds: string[] = [];
     for (const threadId of threadIds) {
       const thread = this.threads.findById(request.orgId, threadId);
       if (!thread) {
@@ -54,45 +46,9 @@ export class DeleteAgentUseCase {
         });
       }
       this.threadAgents.remove(request.orgId, threadId, request.agentId);
-      survivingThreadIds.push(threadId);
     }
-    for (const threadId of survivingThreadIds) {
-      syncConnectorAgentsForThread(
-        { connectors: this.connectors, threadAgents: this.threadAgents },
-        request.orgId,
-        threadId,
-      );
-    }
-    this.detachThreads(request.orgId, ownThreadIds);
     this.threads.deleteMany(request.orgId, ownThreadIds);
     this.agents.delete(request.orgId, request.agentId);
-  }
-
-  private detachFromConnectors(orgId: string, agentId: string): void {
-    for (const connector of this.connectors.listByOrg(orgId)) {
-      const agentIds = this.connectors.listAgentIds(orgId, connector.id);
-      if (!agentIds.includes(agentId)) {
-        continue;
-      }
-      this.connectors.removeAgent(orgId, connector.id, agentId);
-    }
-  }
-
-  private detachThreads(orgId: string, threadIds: string[]): void {
-    const connectorIds = new Set<string>();
-    for (const threadId of threadIds) {
-      for (const binding of this.connectors.listBindingsByThread(orgId, threadId)) {
-        connectorIds.add(binding.connectorId);
-        this.connectors.detachBinding(orgId, binding.id, new Date().toISOString());
-      }
-    }
-    for (const connectorId of connectorIds) {
-      syncConnectorAgents(
-        { connectors: this.connectors, threadAgents: this.threadAgents },
-        orgId,
-        connectorId,
-      );
-    }
   }
 
   private async cancelLiveRuns(

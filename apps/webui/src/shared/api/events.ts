@@ -2,7 +2,6 @@ import type {
   DeskEvent,
   EventsWatchApprovalFrame,
   EventsWatchAutomationsFrame,
-  EventsWatchConnectorFrame,
   EventsWatchDeskFrame,
   EventsWatchFleetFrame,
   EventsWatchIndexStateFrame,
@@ -79,19 +78,6 @@ export function watchResync(
     },
     { orgId },
   );
-}
-
-export function watchConnectorChanges(orgId: string, onChanged: () => void): () => void {
-  return watchEventSource(eventsWatchUrl, 'connectors-changed', (data) => {
-    try {
-      const frame = JSON.parse(data) as EventsWatchConnectorFrame;
-      if (frame.orgId === orgId) {
-        onChanged();
-      }
-    } catch {
-      // ignore malformed frames
-    }
-  });
 }
 
 export function watchAutomationsEvents(orgId: string, onChange: () => void): () => void {

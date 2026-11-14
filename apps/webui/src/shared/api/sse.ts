@@ -1,17 +1,8 @@
 import { SSE_STALL_TIMEOUT_MS } from '@harnesys/studio-shared';
 import { trace } from '../lib/trace';
-import { getActiveOrgId } from './active-org';
+import { getActiveOrgId, subscribeActiveOrg } from './active-org';
 import { authenticatedFetch } from './session';
-
-export interface SseFrame {
-  event: string;
-  data: string;
-  id?: string;
-}
-
-export interface ReadSseOptions {
-  idleTimeoutMs?: number;
-}
+import { readSse } from './sse-read';
 
 /** A 4xx (except 408/429) will not succeed on retry — reconnecting would be polling. */
 class SsePermanentError extends Error {
@@ -26,59 +17,6 @@ class SsePermanentError extends Error {
 
 function isPermanentOpenFailure(status: number): boolean {
   return status >= 400 && status < 500 && status !== 408 && status !== 429;
-}
-
-export async function* readSse(
-  response: Response,
-  options?: ReadSseOptions,
-): AsyncGenerator<SseFrame> {
-  if (!response.body) {
-    trace('sse', 'no response body');
-    return;
-  }
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  const idleTimeoutMs = options?.idleTimeoutMs ?? 0;
-  let buffer = '';
-  try {
-    while (true) {
-      const chunk =
-        idleTimeoutMs > 0 ? await withDeadline(reader.read(), idleTimeoutMs) : await reader.read();
-      buffer += decoder.decode(chunk.value ?? new Uint8Array(), { stream: !chunk.done });
-      const frames = buffer.split('\n\n');
-      buffer = chunk.done ? '' : (frames.pop() ?? '');
-      for (const block of frames) {
-        const frame = parseBlock(block);
-        if (frame) {
-          yield frame;
-        }
-      }
-      if (chunk.done) {
-        const last = parseBlock(buffer);
-        if (last) {
-          yield last;
-        }
-        trace('sse', 'reader done');
-        return;
-      }
-    }
-  } finally {
-    try {
-      await reader.cancel();
-    } catch {}
-  }
-}
-
-async function withDeadline<T>(read: Promise<T>, ms: number): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const deadline = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error('sse stream stalled')), ms);
-  });
-  try {
-    return await Promise.race([read, deadline]);
-  } finally {
-    clearTimeout(timer);
-  }
 }
 
 interface Subscription {
@@ -102,6 +40,7 @@ const SSE_STABLE_MS = 10_000;
 const SSE_RECONNECT_DELAY_MS = 1_000;
 
 const connections = new Map<string, FetchSseConnection>();
+const pendingListeners = new Map<string, Map<string, Set<Subscription>>>();
 
 export interface WatchEventSourceOptions {
   onOpen?: () => void;
@@ -122,7 +61,60 @@ export function watchEventSource(
   onData: (data: string) => void,
   options?: WatchEventSourceOptions,
 ): () => void {
-  const orgId = options?.orgId ?? getActiveOrgId() ?? '';
+  const sub: Subscription = { onData, onOpen: options?.onOpen, onError: options?.onError };
+  const orgId = options?.orgId ?? getActiveOrgId();
+  if (orgId) {
+    attach(url, orgId, event, sub);
+    return () => detach(url, event, sub);
+  }
+  // The active org is resolved only after bootstrapping, so opening the stream
+  // now would hit the guard without X-Org-Id (400). Hold the subscriber until
+  // setCurrentOrgId provides one, then attach without a rejected request.
+  addPending(url, event, sub);
+  const unsubscribeOrg = subscribeActiveOrg(() => {
+    const resolved = getActiveOrgId();
+    if (!resolved || !removePending(url, event, sub)) {
+      return;
+    }
+    attach(url, resolved, event, sub);
+  });
+  return () => {
+    unsubscribeOrg();
+    removePending(url, event, sub);
+    detach(url, event, sub);
+  };
+}
+
+function addPending(url: string, event: string, sub: Subscription): void {
+  let byEvent = pendingListeners.get(url);
+  if (!byEvent) {
+    byEvent = new Map();
+    pendingListeners.set(url, byEvent);
+  }
+  let set = byEvent.get(event);
+  if (!set) {
+    set = new Set();
+    byEvent.set(event, set);
+  }
+  set.add(sub);
+}
+
+function removePending(url: string, event: string, sub: Subscription): boolean {
+  const byEvent = pendingListeners.get(url);
+  const set = byEvent?.get(event);
+  if (!set?.delete(sub)) {
+    return false;
+  }
+  if (set.size === 0) {
+    byEvent?.delete(event);
+  }
+  if (byEvent && byEvent.size === 0) {
+    pendingListeners.delete(url);
+  }
+  return true;
+}
+
+function attach(url: string, orgId: string, event: string, sub: Subscription): void {
   const key = `${url}::${orgId}`;
   let conn = connections.get(key);
   if (!conn) {
@@ -132,7 +124,6 @@ export function watchEventSource(
     void maintainConnection(key);
   }
   conn.refs += 1;
-  const sub: Subscription = { onData, onOpen: options?.onOpen, onError: options?.onError };
   let set = conn.listeners.get(event);
   if (!set) {
     set = new Set();
@@ -142,25 +133,35 @@ export function watchEventSource(
   if (conn.open) {
     sub.onOpen?.();
   }
-  return () => {
-    const current = connections.get(key);
-    if (!current) {
+}
+
+function detach(url: string, event: string, sub: Subscription): void {
+  for (const conn of connections.values()) {
+    if (conn.url !== url) {
+      continue;
+    }
+    const set = conn.listeners.get(event);
+    if (!set?.delete(sub)) {
+      continue;
+    }
+    conn.refs -= 1;
+    if (conn.refs > 0) {
       return;
     }
-    current.listeners.get(event)?.delete(sub);
-    current.refs -= 1;
-    if (current.refs > 0) {
+    scheduleClose(conn);
+    return;
+  }
+}
+
+function scheduleClose(conn: FetchSseConnection): void {
+  void Promise.resolve().then(() => {
+    const still = connections.get(conn.key);
+    if (!still || still !== conn || still.refs > 0) {
       return;
     }
-    void Promise.resolve().then(() => {
-      const still = connections.get(key);
-      if (!still || still !== current || still.refs > 0) {
-        return;
-      }
-      still.abort.abort();
-      connections.delete(key);
-    });
-  };
+    still.abort.abort();
+    connections.delete(conn.key);
+  });
 }
 
 async function maintainConnection(key: string): Promise<void> {
@@ -285,24 +286,4 @@ async function openSseOnce(conn: FetchSseConnection): Promise<void> {
 function nextBackoff(attempt: number): number {
   const ms = 1000 * 2 ** attempt;
   return Math.min(ms, 30_000);
-}
-
-function parseBlock(block: string): SseFrame | undefined {
-  let event = 'message';
-  let id: string | undefined;
-  const data: string[] = [];
-  for (const line of block.split('\n')) {
-    if (line.startsWith('event:')) {
-      event = line.slice(6).trim();
-    } else if (line.startsWith('id:')) {
-      const value = line.slice(3).trim();
-      id = value || id;
-    } else if (line.startsWith('data:')) {
-      data.push(line.slice(5).trimStart());
-    }
-  }
-  if (data.length === 0) {
-    return undefined;
-  }
-  return { event, data: data.join('\n'), id };
 }

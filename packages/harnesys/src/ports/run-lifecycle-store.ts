@@ -20,7 +20,6 @@ export interface RunRecord {
   threadId: string;
   agentId?: string;
   agentName?: string;
-  originConnectorId?: string;
   status: RunLifecycleStatus;
   interruptId?: string;
   waitFireAt?: number;
@@ -39,7 +38,6 @@ export interface RunCreateInput {
   threadId: string;
   agentId: string;
   agentName: string;
-  originConnectorId?: string;
   parentRunId?: string;
   attribution?: RunAttribution;
 }

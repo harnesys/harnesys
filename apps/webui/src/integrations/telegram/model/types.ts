@@ -1,10 +1,3 @@
-export type TelegramReaderStatus =
-  | 'anonymous'
-  | 'awaiting_code'
-  | 'awaiting_password'
-  | 'authorized'
-  | 'error';
-
 export type TelegramPeerKind = 'channel' | 'group' | 'supergroup';
 
 export type TelegramRuleStatus = 'active' | 'paused' | 'failed';
@@ -24,21 +17,6 @@ export type TelegramKeywordMatch = 'any' | 'all';
 export interface TelegramKeywordsStage {
   type: 'keywords';
   config: { terms: string[]; match: TelegramKeywordMatch; exclude: string[] };
-}
-
-export interface TelegramReader {
-  id: string;
-  label: string;
-  status: TelegramReaderStatus;
-  loginPending: boolean;
-  loginPhone: string | null;
-  apiId: number;
-  phoneMasked: string;
-  dcId: number | null;
-  lastError: string | null;
-  lastSeenAt: string | null;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface TelegramSource {
@@ -90,30 +68,6 @@ export interface TelegramRule {
   lastFiredAt: string | null;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface CreateReaderBody {
-  label: string;
-  apiId: number;
-  apiHash: string;
-  phone: string;
-}
-
-export interface AuthorizeReaderBody {
-  readerId?: string;
-  code: string;
-  password?: string;
-}
-
-export interface AddSourceBody {
-  peer: string;
-  invite?: string;
-  watchTopics?: boolean;
-}
-
-export interface BackfillResult {
-  fetched: number;
-  stored: number;
 }
 
 export interface ListPostsQuery {

@@ -2,7 +2,6 @@ import { UsersIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { type Agent, AgentRecordAvatar } from '@/entities/agent';
 import type { Thread } from '@/entities/thread';
-import { ThreadTelegramBadge } from '@/features/manage-connectors/ui/telegram/telegram-thread-badge';
 import {
   AddThreadMemberMenu,
   ThreadMembersPopover,
@@ -25,7 +24,6 @@ export function ThreadHeader({ thread, agent }: { thread: Thread; agent: Agent }
       subtitle={threadSubtitle(thread, agent, trigger)}
       actions={
         <>
-          <ThreadTelegramBadge orgId={orgId} threadId={thread.id} inline />
           {isGroup ? <ThreadMembersPopover thread={thread} /> : null}
           {isGroup ? <AddThreadMemberMenu thread={thread} /> : null}
           <ThreadSettings thread={thread} />

@@ -2,10 +2,6 @@ export type { AgentsCapabilityPorts } from './agents/index.ts';
 export { agentsCapability } from './agents/index.ts';
 export { filesCapability, shellCapability } from './base.ts';
 export { coreCapability } from './core/index.ts';
-export type { GithubCapabilityPorts, GithubPackSpec } from './github/index.ts';
-export { githubCapability } from './github/index.ts';
-export type { GoogleCapabilityPorts, GooglePackSpec } from './google/index.ts';
-export { googleCapability } from './google/index.ts';
 export type { ImageCapabilityPorts } from './image/index.ts';
 export { imageCapability } from './image/index.ts';
 export type { IssuesCapabilityPorts } from './issues/index.ts';
@@ -26,11 +22,6 @@ export type { SemanticMemoryPorts } from './memory/semantic.ts';
 export { semanticMemoryCapability } from './memory/semantic.ts';
 export type { PlanCapabilityPorts } from './plan/index.ts';
 export { planCapability } from './plan/index.ts';
-export type {
-  TelegramCapabilityPorts,
-  TelegramPackSpec,
-} from './telegram/index.ts';
-export { telegramCapability } from './telegram/index.ts';
 export type { ThreadsCapabilityPorts } from './threads/index.ts';
 export { threadsCapability } from './threads/index.ts';
 export type { WebPackPorts, WebPackSpec } from './web/index.ts';

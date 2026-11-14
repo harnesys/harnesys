@@ -4,7 +4,6 @@ import { ApprovalUseCaseModule } from '../application/approvals/approval.use-cas
 import { AppsUseCaseModule } from '../application/apps/apps.use-case.module.ts';
 import { AutomationUseCaseModule } from '../application/automations/automation.use-case.module.ts';
 import { CapabilitiesUseCaseModule } from '../application/capabilities/capabilities.use-case.module.ts';
-import { ConnectorUseCaseModule } from '../application/connectors/connector.use-case.module.ts';
 import { ContentUseCaseModule } from '../application/content/content.use-case.module.ts';
 import { EulaUseCaseModule } from '../application/eula/eula.use-case.module.ts';
 import { ExecutionProfileUseCaseModule } from '../application/execution-profile/execution-profile.use-case.module.ts';
@@ -40,7 +39,6 @@ import { VaultUseCaseModule } from '../application/vault/vault.use-case.module.t
 import { AddonWiringModule } from '../infra/addons/wiring/addons-wiring.module.ts';
 import { AgentMemoryModule } from '../infra/agent-memory/agent-memory.module.ts';
 import { AutomationsModule } from '../infra/automations/automations.module.ts';
-import { ConnectorModule } from '../infra/connector/connector.module.ts';
 import { ContentModule } from '../infra/content/content.module.ts';
 import { DeskModule } from '../infra/desk/desk.module.ts';
 import { EulaInfraModule } from '../infra/eula/eula.module.ts';
@@ -91,7 +89,6 @@ import { BrowserController } from './rest/browser.controller.ts';
 import { CapabilitiesController } from './rest/capabilities.controller.ts';
 import { CatalogController } from './rest/catalog.controller.ts';
 import { ConnectController } from './rest/connect.controller.ts';
-import { ConnectorsController } from './rest/connectors.controller.ts';
 import { ContentController } from './rest/content.controller.ts';
 import { DiscoveryController } from './rest/discovery.controller.ts';
 import { EulaController } from './rest/eula.controller.ts';
@@ -170,7 +167,6 @@ import { VaultController } from './rest/vault.controller.ts';
     AudioUseCaseModule,
     IssueUseCaseModule,
     IssueInfraModule,
-    ConnectorModule,
     DeskModule,
     EventsWatchModule,
     IntegrationAppsModule,
@@ -210,7 +206,6 @@ import { VaultController } from './rest/vault.controller.ts';
     AppsUseCaseModule,
     AutomationUseCaseModule,
     TeamsUseCaseModule,
-    ConnectorUseCaseModule,
     IdentityUseCaseModule,
     UsageUseCaseModule,
     MemoryUseCaseModule,
@@ -296,7 +291,6 @@ import { VaultController } from './rest/vault.controller.ts';
     ThreadMessageQueueController,
     ThreadRawModelRequestsController,
     ApprovalsController,
-    ConnectorsController,
     BoardsController,
     IssuesController,
     LabelsController,

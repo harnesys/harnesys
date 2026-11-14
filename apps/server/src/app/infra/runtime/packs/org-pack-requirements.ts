@@ -18,12 +18,6 @@ function packDependencySatisfied(packName: string, deps: WireOrgPackFilter): boo
       return deps.issues !== undefined || deps.issueTracker !== undefined;
     case 'manager':
       return deps.manager !== undefined;
-    case 'google':
-      return deps.google !== undefined;
-    case 'github':
-      return deps.github !== undefined;
-    case 'telegram':
-      return deps.telegram !== undefined;
     case 'knowledge-memory':
       return deps.knowledge !== undefined && deps.sources !== undefined;
     case 'skills':
