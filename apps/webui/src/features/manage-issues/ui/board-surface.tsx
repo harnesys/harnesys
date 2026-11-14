@@ -4,8 +4,8 @@ import { useAgentStore } from '@/entities/agent';
 import { useIssueBoardStore, useIssueLabelStore, useIssueStore } from '@/entities/issue';
 import { useOrgId } from '@/shared/config/location';
 import { entityColorTintClass } from '@/shared/lib/entity-colors';
-import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
+import { PageHeader, PageHeaderIcon } from '@/shared/ui/page-header';
 import { toast } from '@/shared/ui/toast';
 import { ToggleGroup, ToggleGroupItem } from '@/shared/ui/toggle-group';
 import { resolveBoardIcon } from '../model/board-icons';
@@ -48,86 +48,85 @@ export function BoardSurface({ projectId, boardId }: { projectId: string; boardI
   const colorClass = entityColorTintClass(board.color ?? null);
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-board">
-      <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2">
-        <span
-          className={cn('flex size-7 shrink-0 items-center justify-center rounded-md', colorClass)}
-        >
-          <IssueIcon className="size-4" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <span className="truncate font-medium text-sm">{board.name}</span>
-            {archived ? (
-              <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[9px] text-muted-foreground uppercase">
-                Archived
-              </span>
-            ) : null}
-          </div>
-          {board.description ? (
-            <div className="truncate text-[11px] text-muted-foreground">{board.description}</div>
-          ) : null}
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <ToggleGroup
-            size="sm"
-            variant="segment"
-            value={[settings.mode]}
-            onValueChange={(value) => {
-              const next = value[0];
-              if (next === 'kanban' || next === 'list') {
-                setViewMode(next);
-              }
-            }}
-            aria-label="Board view"
-          >
-            <ToggleGroupItem value="kanban" data-testid="issue-view-kanban">
-              <KanbanIcon className="size-3.5" />
-            </ToggleGroupItem>
-            <ToggleGroupItem value="list" data-testid="issue-view-list">
-              <ListIcon className="size-3.5" />
-            </ToggleGroupItem>
-          </ToggleGroup>
-          <BoardSortPopover
-            sort={settings.sort}
-            onToggle={(field) => useIssueViewStore.getState().setSort(boardId, field)}
-          />
-          <BoardColumnsPopover
-            statuses={statuses}
-            hiddenStatuses={settings.hiddenStatuses}
-            onPatch={(hiddenStatuses) =>
-              useIssueViewStore.getState().patch(boardId, { hiddenStatuses })
-            }
-          />
-          <BoardFilterPopover
-            filters={settings.filters}
-            statuses={statuses}
-            agents={agents}
-            onPatch={(patch) => useIssueViewStore.getState().setFilters(boardId, patch)}
-          />
-          {!archived ? (
-            <Button
+      <PageHeader
+        icon={
+          <PageHeaderIcon className={colorClass}>
+            <IssueIcon className="size-4" />
+          </PageHeaderIcon>
+        }
+        title={board.name}
+        badge={
+          archived ? (
+            <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[9px] text-muted-foreground uppercase">
+              Archived
+            </span>
+          ) : undefined
+        }
+        subtitle={board.description || undefined}
+        actions={
+          <>
+            <ToggleGroup
               size="sm"
-              variant="outline"
-              className="gap-1.5"
-              data-testid="issue-create-open"
-              onClick={() => {
-                if (!entryStatus) {
-                  toast.add({
-                    title: 'No entry status',
-                    description: 'Mark a status as entry in board settings before creating issues.',
-                    type: 'error',
-                  });
-                  return;
+              variant="segment"
+              value={[settings.mode]}
+              onValueChange={(value) => {
+                const next = value[0];
+                if (next === 'kanban' || next === 'list') {
+                  setViewMode(next);
                 }
-                startCreate(boardId, entryStatus.key);
               }}
+              aria-label="Board view"
             >
-              <PlusIcon className="size-3.5" />
-              New issue
-            </Button>
-          ) : null}
-        </div>
-      </div>
+              <ToggleGroupItem value="kanban" data-testid="issue-view-kanban">
+                <KanbanIcon className="size-3.5" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="list" data-testid="issue-view-list">
+                <ListIcon className="size-3.5" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <BoardSortPopover
+              sort={settings.sort}
+              onToggle={(field) => useIssueViewStore.getState().setSort(boardId, field)}
+            />
+            <BoardColumnsPopover
+              statuses={statuses}
+              hiddenStatuses={settings.hiddenStatuses}
+              onPatch={(hiddenStatuses) =>
+                useIssueViewStore.getState().patch(boardId, { hiddenStatuses })
+              }
+            />
+            <BoardFilterPopover
+              filters={settings.filters}
+              statuses={statuses}
+              agents={agents}
+              onPatch={(patch) => useIssueViewStore.getState().setFilters(boardId, patch)}
+            />
+            {!archived ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                data-testid="issue-create-open"
+                onClick={() => {
+                  if (!entryStatus) {
+                    toast.add({
+                      title: 'No entry status',
+                      description:
+                        'Mark a status as entry in board settings before creating issues.',
+                      type: 'error',
+                    });
+                    return;
+                  }
+                  startCreate(boardId, entryStatus.key);
+                }}
+              >
+                <PlusIcon className="size-3.5" />
+                New issue
+              </Button>
+            ) : null}
+          </>
+        }
+      />
       {settings.mode === 'kanban' ? (
         <BoardKanban
           boardId={boardId}

@@ -32,6 +32,7 @@ interface TerminalEvent {
 export class TransportSessionService {
   private readonly bindingsCache = new Map<string, AddonTransportBindingRow[]>();
   private readonly lastMirrored = new Map<string, string>();
+  private readonly chains = new Map<string, Promise<void>>();
   private readonly logger: Logger;
   private unsubscribe: (() => void) | null = null;
   private unregisterAsk: (() => void) | null = null;
@@ -52,7 +53,7 @@ export class TransportSessionService {
 
   onModuleInit(): void {
     this.unsubscribe = this.events.subscribe((orgId, event) => {
-      void this.onEvent(orgId, event);
+      void this.enqueueEvent(orgId, event);
     });
     this.unregisterAsk = this.askRouting.register((reply) => this.tryAnswer(reply));
     void this.resumeOpenSessions();
@@ -63,8 +64,29 @@ export class TransportSessionService {
     this.unregisterAsk?.();
     this.unsubscribe = null;
     this.unregisterAsk = null;
+    this.chains.clear();
     this.drafts.destroy();
     this.bindingsCache.clear();
+  }
+
+  /**
+   * Frames and their terminal notifications are emitted from the same run
+   * through a fire-and-forget subscriber. Handling them concurrently let a
+   * late text-delta land after the run was closed, duplicating an already
+   * streamed tail and resurrecting the session as `streaming`. Events for one
+   * thread are chained so they are applied in emission order.
+   */
+  private enqueueEvent(orgId: string, event: ThreadRunEvent): Promise<void> {
+    const key = `${orgId}/${event.threadId}`;
+    const next = (this.chains.get(key) ?? Promise.resolve()).then(() => this.onEvent(orgId, event));
+    const tail = next.catch(() => {});
+    this.chains.set(key, tail);
+    void tail.then(() => {
+      if (this.chains.get(key) === tail) {
+        this.chains.delete(key);
+      }
+    });
+    return next;
   }
 
   private async tryAnswer(reply: TransportAskReply): Promise<boolean> {
@@ -150,23 +172,30 @@ export class TransportSessionService {
     runId: string,
     suffix: string,
   ): Promise<void> {
-    const text = await this.authoritativeDraft(orgId, runId);
+    const draft = await this.authoritativeDraft(orgId, runId);
     for (const binding of this.bindingsOf(orgId, threadId)) {
-      await this.drafts.close(orgId, binding, runId, suffix, text ?? undefined);
+      await this.drafts.close(orgId, binding, runId, suffix, draft ?? undefined);
     }
   }
 
-  private async authoritativeDraft(orgId: string, runId: string): Promise<string | null> {
+  private async authoritativeDraft(
+    orgId: string,
+    runId: string,
+  ): Promise<{ text: string; lastSeq: number } | null> {
     try {
       const store = await this.executor.events(orgId);
       const tail = await store.tail(runId, 0);
       let text = '';
+      let lastSeq = 0;
       for (const event of tail) {
         if (event.type === 'text-delta' && event.text !== '') {
           text += event.text;
         }
+        if (typeof event.seq === 'number' && event.seq > lastSeq) {
+          lastSeq = event.seq;
+        }
       }
-      return text === '' ? null : text;
+      return text === '' ? null : { text, lastSeq };
     } catch (error) {
       this.logger.warn(
         { orgId, runId, error: error instanceof Error ? error.message : String(error) },

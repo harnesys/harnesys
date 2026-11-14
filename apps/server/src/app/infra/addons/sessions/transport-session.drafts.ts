@@ -52,6 +52,9 @@ export class TransportSessionDrafts {
     delta: { text: string; seq?: number },
   ): Promise<void> {
     const session = await this.ensure(orgId, binding, runId);
+    if (session.row.status === 'closed') {
+      return;
+    }
     const applied = applyDelta(
       { text: session.row.draft, lastSeq: session.row.lastSeq },
       { text: delta.text, seq: delta.seq },
@@ -121,21 +124,24 @@ export class TransportSessionDrafts {
     binding: AddonTransportBindingRow,
     runId: string,
     suffix: string,
-    text?: string,
+    authoritative?: { text: string; lastSeq: number },
   ): Promise<void> {
     const key = sessionKey(orgId, binding.threadId, runId, binding.addonId);
     const live = this.sessions.get(key);
     const existing = live?.row ?? this.repo.find(orgId, binding.threadId, runId, binding.addonId);
-    if (existing === null) {
+    if (existing === null || existing.status === 'closed') {
       return;
     }
     const session = live ?? (await this.ensure(orgId, binding, runId));
-    const base = text ?? existing.draft;
+    const base = authoritative?.text ?? existing.draft;
     session.row.draft = `${base}${suffix}`;
+    session.row.lastSeq = Math.max(session.row.lastSeq, authoritative?.lastSeq ?? 0);
+    session.row.status = 'closed';
     await this.flush(orgId, session);
     await this.setTyping(orgId, session, false);
     this.repo.patch(orgId, binding.threadId, runId, binding.addonId, {
       draft: session.row.draft,
+      lastSeq: session.row.lastSeq,
       status: 'closed',
       askId: null,
       askOptionsJson: null,

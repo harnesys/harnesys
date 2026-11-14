@@ -54,18 +54,21 @@ export function TableSection({ orgId, addonId, section }: SectionProps) {
     if (!result.data) {
       return;
     }
-    const key = cursor ?? '';
-    if (loadedCursors.current.has(key)) {
+    const fetched = result.data.rows ?? [];
+    if (cursor === undefined) {
+      loadedCursors.current = new Set();
+      setRows(fetched);
       return;
     }
-    loadedCursors.current.add(key);
-    const fetched = result.data.rows ?? [];
-    setRows((current) => (cursor === undefined ? fetched : [...current, ...fetched]));
+    if (loadedCursors.current.has(cursor)) {
+      return;
+    }
+    loadedCursors.current.add(cursor);
+    setRows((current) => [...current, ...fetched]);
   }, [cursor, result.data]);
 
   const refresh = () => {
     loadedCursors.current = new Set();
-    setRows([]);
     setCursor(undefined);
     void result.refetch();
   };

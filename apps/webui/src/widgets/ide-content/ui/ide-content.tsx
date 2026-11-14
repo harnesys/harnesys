@@ -5,9 +5,7 @@ import { toClientThread, useThreadStore } from '@/entities/thread';
 import { useDeskReady } from '@/features/desk';
 import { GitCommitDiffView } from '@/features/git-commit';
 import { type IdeTab, useIdeStore } from '@/features/ide';
-import { ThreadTelegramBadge } from '@/features/manage-connectors/ui/telegram/telegram-thread-badge';
 import { BoardSurface } from '@/features/manage-issues';
-import { ThreadMembersPanel, ThreadSettings } from '@/features/manage-thread-members';
 import { openFileKind } from '@/features/open-file';
 import { HitlPrompt } from '@/features/send-message';
 import { ApiError, getOrgAgent, getThread } from '@/shared/api';
@@ -25,7 +23,8 @@ import {
   useAddonViewer,
 } from '@/widgets/file-pane';
 import { TerminalView } from '@/widgets/terminal-pane';
-import { ThreadTriggerDock } from '@/widgets/thread-dock';
+import { ThreadDock } from '@/widgets/thread-dock';
+import { ThreadHeader } from '@/widgets/thread-header';
 import { JournalComposer, ThreadJournal } from '@/widgets/thread-journal';
 import { ThreadFileTabContent } from './thread-file-tab';
 
@@ -111,17 +110,7 @@ function ThreadTabContent({
   if (thread.kind === 'chat' || thread.kind === 'group') {
     return (
       <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-thread">
-        {thread.kind === 'group' ? (
-          <ThreadMembersPanel
-            thread={thread}
-            telegram={<ThreadTelegramBadge orgId={orgId} threadId={thread.id} inline />}
-          />
-        ) : (
-          <div className="flex shrink-0 items-center border-border/40 border-b py-1 pr-2">
-            <ThreadTelegramBadge orgId={orgId} threadId={thread.id} inline />
-            <ThreadSettings thread={thread} className="ml-auto" />
-          </div>
-        )}
+        <ThreadHeader thread={thread} agent={agent} />
         <div className="min-h-0 flex-1">
           <ThreadPanel threadId={thread.id} agent={agent} active />
         </div>
@@ -132,14 +121,11 @@ function ThreadTabContent({
   }
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-thread">
+      <ThreadHeader thread={thread} agent={agent} />
       <ThreadJournal threadId={thread.id} agent={agent} kind={thread.kind} />
       <HitlPrompt />
       <JournalComposer thread={thread} agent={agent} />
-      <ThreadTriggerDock
-        threadId={thread.id}
-        issueId={thread.issueId}
-        settings={<ThreadSettings thread={thread} />}
-      />
+      <ThreadDock threadId={thread.id} issueId={thread.issueId} />
     </div>
   );
 }
