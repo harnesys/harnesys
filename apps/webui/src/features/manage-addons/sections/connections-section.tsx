@@ -78,12 +78,15 @@ export function ConnectionsSection({ orgId, detail, section, installed }: Sectio
   };
 
   const bind = (connection: AddonConnectionView, accountId: string) => {
-    void saveBinding(
-      connection,
-      connection.cardinality === 'one'
-        ? [accountId]
-        : [...connection.accountIds, accountId].filter((id) => id !== accountId),
-    );
+    let next: string[];
+    if (connection.cardinality === 'one') {
+      next = [accountId];
+    } else if (connection.accountIds.includes(accountId)) {
+      next = connection.accountIds;
+    } else {
+      next = [...connection.accountIds, accountId];
+    }
+    void saveBinding(connection, next);
   };
 
   if (connections.length === 0) {
