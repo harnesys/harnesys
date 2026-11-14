@@ -4,7 +4,8 @@
   "private": true,
   "workspaces": [
     "packages/*",
-    "apps/*"
+    "apps/*",
+    "add-ons/*"
   ],
   "scripts": {
     "dev": "bun run scripts/dev.ts",
@@ -20,8 +21,10 @@
     "icon:desktop": "bash scripts/icons-desktop.sh",
     "lint": "biome check .",
     "lint:fix": "biome check --write --unsafe .",
+    "check:provider-names": "bun run scripts/check-provider-names.ts",
+    "addon:build": "bun run scripts/addon-build.ts",
     "test": "bun test",
-    "typecheck": "bun run --cwd packages/brix typecheck && bun run --cwd packages/contracts typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/webui typecheck && bun run --cwd apps/cli typecheck",
+    "typecheck": "bun run --cwd packages/brix typecheck && bun run --cwd packages/contracts typecheck && bun run --cwd packages/sdk typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/webui typecheck && bun run --cwd apps/cli typecheck",
     "check": "bun run typecheck && bun run lint:fix && bun run test"
   },
   "devDependencies": {

@@ -46,7 +46,7 @@ function quietWsProxyDisconnects(): Plugin {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, serverEnvDir, '');
-  const apiPort = readPort(env.PORT, DEFAULT_API_PORT);
+  const apiPort = readPort(env.PORT ?? env.SERVER_PORT, DEFAULT_API_PORT);
   const uiPort = readPort(env.VITE_DEV_SERVER_PORT, DEFAULT_DEV_SERVER_PORT);
   return {
     root,

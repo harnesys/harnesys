@@ -4,6 +4,7 @@ import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
 import { ScheduleRepositoryAdapter } from './schedule-repository.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule],
   providers: [{ provide: ScheduleRepositoryPort, useClass: ScheduleRepositoryAdapter }],
   exports: [ScheduleRepositoryPort],

@@ -6,9 +6,9 @@ import {
   type ThreadAttachmentPort,
 } from 'harnesys';
 import { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-provider.port.ts';
+import { createOrgModelsPort } from '../../../domain/provider/org-models.ts';
 import { SecretStorePort } from '../../../domain/secret/secret-store.port.ts';
 import { SdkImageAdapter } from '../../model-execution/sdk-image.adapter.ts';
-import { createOrgModelsPort } from '../org-models.port.ts';
 
 interface OrgImageGenerationPortDeps {
   orgId: string;

@@ -4,13 +4,13 @@ import { OrgSettingsSchema } from '@harnesys/contracts';
 import type { McpManagePort } from 'harnesys';
 import { LspPort } from '../../../domain/lsp/lsp.port.ts';
 import { HostFsLayoutPort } from '../../../domain/machine/host-fs-layout.port.ts';
+import { isHostWired, orgPackNames } from '../../../domain/runtime/org-pack-list.ts';
 import { SecretStorePort } from '../../../domain/secret/secret-store.port.ts';
 import { OrgSettingsPort } from '../../../domain/skills/org-settings.port.ts';
 import type { OrgGithubDeps } from './org-github.port.ts';
 import type { OrgGoogleDeps } from './org-google.port.ts';
 import type { OrgIssueDeps } from './org-issue.port.ts';
 import type { OrgManagerDeps } from './org-manager.port.ts';
-import { isHostWired, orgPackNames } from './org-pack-list.ts';
 import type { OrgSkillsDeps } from './org-skills.pack.port.ts';
 import type { OrgTelegramDeps } from './org-telegram.port.ts';
 import {

@@ -10,11 +10,13 @@ import type {
   TruncateThreadResult,
 } from 'harnesys';
 import { resolveMcpVaultEntry } from '../../application/mcp/resolve-mcp-vault-placeholders.ts';
+import { TriggerInstanceRepositoryPort } from '../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { HookRunStorePort } from '../../domain/agent/hook-run-store.port.ts';
 import { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
 import { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
 import { BrowserHostPort } from '../../domain/browser/browser-host.port.ts';
+import { PackRegistryPort } from '../../domain/capabilities/pack-registry.port.ts';
 import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
 import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
@@ -57,6 +59,13 @@ import { WaitTickerGatePort } from '../../domain/thread/wait-ticker-gate.port.ts
 import { WebhookRepositoryPort } from '../../domain/webhook/webhook-repository.port.ts';
 import { openOrgRuntime } from './org-runtime.ts';
 import type { OrgRuntime } from './org-runtime.types.ts';
+import {
+  cachedRuntimeOf,
+  drainRuntimes,
+  type OrgRuntimeCache,
+  storeRuntime,
+  takeRuntime,
+} from './org-runtime-cache.ts';
 import { githubToolsDeps } from './packs/github-tools.holder.ts';
 import { googleToolsDeps } from './packs/google-tools.holder.ts';
 import { issueToolsDeps } from './packs/issue-tools.holder.ts';
@@ -68,7 +77,7 @@ import { countWaitingTimersOf } from './waiting-timers.count.ts';
 
 @Injectable()
 export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDestroyHook {
-  private readonly runtimes = new Map<string, Promise<OrgRuntime>>();
+  private readonly runtimes: OrgRuntimeCache = new Map();
 
   constructor(
     private readonly layout: HostFsLayoutPort,
@@ -84,6 +93,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     private readonly models: LlmModelPort,
     private readonly secrets: SecretStorePort,
     private readonly plugins: PluginRuntimePort,
+    private readonly packRegistry: PackRegistryPort,
     private readonly sourceSkills: SourceSkillsPort,
     private readonly orgSettings: OrgSettingsPort,
     private readonly approvals: ApprovalStorePort,
@@ -95,6 +105,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     private readonly terminalSessions: TerminalSessionsPort,
     private readonly schedules: ScheduleRepositoryPort,
     private readonly webhooks: WebhookRepositoryPort,
+    private readonly triggerInstances: TriggerInstanceRepositoryPort,
     private readonly knowledgeSearch: KnowledgeSearchPort,
     private readonly knowledgeStore: KnowledgeStorePort,
     private readonly waitGate: WaitTickerGatePort,
@@ -116,10 +127,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
   }
 
   onModuleDestroy(): void {
-    for (const pending of this.runtimes.values()) {
-      void pending.then((rt) => rt.close()).catch(() => {});
-    }
-    this.runtimes.clear();
+    drainRuntimes(this.runtimes);
   }
 
   private browserEnginesDeps(): { snapshot: () => Promise<HostEngineEntry[]> } | undefined {
@@ -128,8 +136,9 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
   }
 
   private ensure(orgId: string): Promise<OrgRuntime> {
-    const cached = this.runtimes.get(orgId);
-    if (cached) {
+    const revision = this.packRegistry.revision();
+    const cached = cachedRuntimeOf(this.runtimes, orgId, revision);
+    if (cached !== undefined) {
       return cached;
     }
     const issues = issueToolsDeps();
@@ -161,6 +170,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       fileRules: this.fileRules,
       permissionRules: this.permissionRules,
       plugins: this.plugins,
+      packRegistry: this.packRegistry,
       sourceSkills: this.sourceSkills,
       orgSettings: this.orgSettings,
       mcpManage: new OrgMcpManagePort({
@@ -195,6 +205,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       terminalSessions: this.terminalSessions,
       schedules: this.schedules,
       webhooks: this.webhooks,
+      triggerInstances: this.triggerInstances,
       knowledge: {
         search: this.knowledgeSearch,
         store: this.knowledgeStore,
@@ -210,12 +221,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       ...(skills ? { skills } : {}),
       ...(this.lsp ? { lsp: this.lsp } : {}),
     });
-    this.runtimes.set(orgId, pending);
-    pending.catch(() => {
-      if (this.runtimes.get(orgId) === pending) {
-        this.runtimes.delete(orgId);
-      }
-    });
+    storeRuntime(this.runtimes, orgId, pending, revision);
     return pending;
   }
 
@@ -237,6 +243,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       threadId: input.threadId,
       text: input.text,
       effort: input.effort,
+      ...(input.mode ? { mode: input.mode } : {}),
       attachments: input.attachments,
       ...(input.skills?.length ? { skills: input.skills } : {}),
       clientEventId: input.clientEventId,
@@ -335,11 +342,10 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
   }
 
   async invalidateRuntime(orgId: string): Promise<void> {
-    const pending = this.runtimes.get(orgId);
+    const pending = takeRuntime(this.runtimes, orgId);
     if (!pending) {
       return;
     }
-    this.runtimes.delete(orgId);
     try {
       const rt = await pending;
       rt.closeWhenIdle();

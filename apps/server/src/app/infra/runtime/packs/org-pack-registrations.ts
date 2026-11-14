@@ -17,6 +17,7 @@ import {
 import { lspCapability } from 'harnesys/lsp';
 import { skillsCapability } from 'harnesys/skills';
 import { LspPort } from '../../../domain/lsp/lsp.port.ts';
+import { isHostWired } from '../../../domain/runtime/org-pack-list.ts';
 import { scopedLspPort } from '../../lsp/scoped-lsp.port.ts';
 import { getHostToolScope } from '../host-tool-scope.ts';
 import { OrgAgentsCatalogPort } from './org-agents-catalog.port.ts';
@@ -25,7 +26,6 @@ import { OrgGooglePort } from './org-google.port.ts';
 import { OrgImageGenerationPort } from './org-image.port.ts';
 import { OrgIssuePort } from './org-issue.port.ts';
 import { OrgManagerPort } from './org-manager.port.ts';
-import { isHostWired } from './org-pack-list.ts';
 import {
   knowledgeRegistration,
   memoryRegistration,

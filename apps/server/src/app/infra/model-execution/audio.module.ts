@@ -7,6 +7,7 @@ import { SdkTranscriptionAdapter } from './sdk-transcription.adapter.ts';
 import { SdkVoiceCatalogAdapter } from './sdk-voice-catalog.adapter.ts';
 
 @Module({
+  global: true,
   providers: [
     { provide: SpeechPort, useClass: SdkSpeechAdapter },
     { provide: TranscriptionPort, useClass: SdkTranscriptionAdapter },

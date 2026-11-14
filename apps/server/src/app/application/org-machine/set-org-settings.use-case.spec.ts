@@ -23,8 +23,6 @@ function schedule(id: string, cron: string, nextRunAt: string | null): ScheduleR
     detail: '',
     cron,
     modeId: 'default',
-    history: 'none',
-    historyLast: 1,
     missPolicy: 'catch-up',
     threadId: 'thread-1',
     nextRunAt,

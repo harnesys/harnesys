@@ -1,6 +1,7 @@
 import { APP_GUARD, Module } from '@harnesys/brix';
 import { AgentUseCaseModule } from '../application/agents/agent.use-case.module.ts';
 import { ApprovalUseCaseModule } from '../application/approvals/approval.use-case.module.ts';
+import { AppsUseCaseModule } from '../application/apps/apps.use-case.module.ts';
 import { AutomationUseCaseModule } from '../application/automations/automation.use-case.module.ts';
 import { CapabilitiesUseCaseModule } from '../application/capabilities/capabilities.use-case.module.ts';
 import { ConnectorUseCaseModule } from '../application/connectors/connector.use-case.module.ts';
@@ -38,28 +39,60 @@ import { UsageUseCaseModule } from '../application/usage/usage.use-case.module.t
 import { BrowserUseCaseModule } from '../application/use-cases/browser/browser.use-case.module.ts';
 import { VaultUseCaseModule } from '../application/vault/vault.use-case.module.ts';
 import { WebhookUseCaseModule } from '../application/webhooks/webhook.use-case.module.ts';
+import { AddonWiringModule } from '../infra/addons/wiring/addons-wiring.module.ts';
+import { AgentMemoryModule } from '../infra/agent-memory/agent-memory.module.ts';
+import { AutomationsModule } from '../infra/automations/automations.module.ts';
 import { ConnectorModule } from '../infra/connector/connector.module.ts';
+import { ContentModule } from '../infra/content/content.module.ts';
 import { DeskModule } from '../infra/desk/desk.module.ts';
+import { EulaInfraModule } from '../infra/eula/eula.module.ts';
 import { EventsWatchModule } from '../infra/events-watch/events-watch.module.ts';
+import { ExecutionProfileModule } from '../infra/execution-profile/execution-profile.module.ts';
 import { FleetHubModule } from '../infra/fleet-hub/fleet-hub.module.ts';
-import { IntegrationModule } from '../infra/integrations/integration.module.ts';
+import { FleetWorkerModule } from '../infra/fleet-hub/fleet-worker.module.ts';
+import { IdentitySqliteModule } from '../infra/identity-sqlite/identity-sqlite.module.ts';
+import { IntegrationModule as IntegrationAppsModule } from '../infra/integrations/integration.module.ts';
 import { IssueInfraModule } from '../infra/issues/issue.module.ts';
+import { LegacyPortsModule } from '../infra/legacy-ports/legacy-ports.module.ts';
 import { MachineHomeModule } from '../infra/machine-home/machine-home.module.ts';
+import { ManagerInfraModule } from '../infra/manager/manager.module.ts';
+import { AudioModule } from '../infra/model-execution/audio.module.ts';
+import { ImageModule } from '../infra/model-execution/image.module.ts';
+import { PresetsModule } from '../infra/presets/presets.module.ts';
 import { ReleaseModule } from '../infra/release/release.module.ts';
 import { RuntimeModule } from '../infra/runtime/runtime.module.ts';
 import { SkillsModule } from '../infra/skills/skills.module.ts';
+import { CloudSyncBackModule } from '../infra/source/drivers/cloud/cloud-sync-back.module.ts';
 import { SourceWatchModule } from '../infra/source/source-watch.module.ts';
 import { TerminalModule } from '../infra/terminal/terminal.module.ts';
+import { UsageModule } from '../infra/usage/usage.module.ts';
 import { SessionGuard } from './guards/session.guard.ts';
+import { AccountsController } from './rest/accounts.controller.ts';
+import { AddonPublicRoutesController } from './rest/addon-public-routes.controller.ts';
+import { AddonRoutesController } from './rest/addon-routes.controller.ts';
+import { AddonViewersController } from './rest/addon-viewers.controller.ts';
+import { AddonsDiagnosticsController } from './rest/addons-diagnostics.controller.ts';
+import { AddonsEventsController } from './rest/addons-events.controller.ts';
+import { AddonsOrgController } from './rest/addons-org.controller.ts';
+import { AddonsOrgJobsController } from './rest/addons-org-jobs.controller.ts';
+import { AddonsOrgSourcesController } from './rest/addons-org-sources.controller.ts';
+import { AddonsOrgTriggersController } from './rest/addons-org-triggers.controller.ts';
+import { AddonsPackagesController } from './rest/addons-packages.controller.ts';
 import { AgentHooksController } from './rest/agent-hooks.controller.ts';
 import { AgentsController } from './rest/agents.controller.ts';
 import { ApprovalsController } from './rest/approvals.controller.ts';
+import { AppsController } from './rest/apps.controller.ts';
+import { AppsCatalogController } from './rest/apps-catalog.controller.ts';
+import { AppsConnectPublicController } from './rest/apps-connect-public.controller.ts';
+import { AppsHookController } from './rest/apps-hook.controller.ts';
+import { AppsOAuthCallbackController } from './rest/apps-oauth-callback.controller.ts';
 import { AuditController } from './rest/audit.controller.ts';
 import { AutomationsController } from './rest/automations.controller.ts';
 import { BoardsController } from './rest/boards.controller.ts';
 import { BrowserController } from './rest/browser.controller.ts';
 import { CapabilitiesController } from './rest/capabilities.controller.ts';
 import { CatalogController } from './rest/catalog.controller.ts';
+import { ConnectController } from './rest/connect.controller.ts';
 import { ConnectorsController } from './rest/connectors.controller.ts';
 import { ContentController } from './rest/content.controller.ts';
 import { DiscoveryController } from './rest/discovery.controller.ts';
@@ -143,7 +176,21 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     ConnectorModule,
     DeskModule,
     EventsWatchModule,
-    IntegrationModule,
+    IntegrationAppsModule,
+    LegacyPortsModule,
+    AgentMemoryModule,
+    AutomationsModule,
+    CloudSyncBackModule,
+    ContentModule,
+    EulaInfraModule,
+    AudioModule,
+    ImageModule,
+    ExecutionProfileModule,
+    FleetWorkerModule,
+    IdentitySqliteModule,
+    ManagerInfraModule,
+    PresetsModule,
+    UsageModule,
     ManagerUseCaseModule,
     KnowledgeUseCaseModule,
     VaultUseCaseModule,
@@ -163,6 +210,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     BrowserUseCaseModule,
     ThreadUseCaseModule,
     ApprovalUseCaseModule,
+    AppsUseCaseModule,
     AutomationUseCaseModule,
     ScheduleUseCaseModule,
     TeamsUseCaseModule,
@@ -176,6 +224,7 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     SourceWatchModule,
     FleetHubModule,
     MachineHomeModule,
+    AddonWiringModule,
   ],
   controllers: [
     HealthController,
@@ -192,6 +241,13 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     IntegrationsGithubController,
     IntegrationsController,
     IntegrationRoutesController,
+    AppsCatalogController,
+    AppsController,
+    AccountsController,
+    ConnectController,
+    AppsOAuthCallbackController,
+    AppsConnectPublicController,
+    AppsHookController,
     FleetController,
     FleetCloudController,
     FleetNodesController,
@@ -227,6 +283,16 @@ import { OrgHooksController, WebhooksController } from './rest/webhooks.controll
     PresetsController,
     LspController,
     ToolchainController,
+    AddonsPackagesController,
+    AddonsOrgController,
+    AddonsOrgTriggersController,
+    AddonsOrgJobsController,
+    AddonsOrgSourcesController,
+    AddonsDiagnosticsController,
+    AddonsEventsController,
+    AddonRoutesController,
+    AddonPublicRoutesController,
+    AddonViewersController,
     BrowserController,
     ThreadsController,
     ThreadAttachmentsController,

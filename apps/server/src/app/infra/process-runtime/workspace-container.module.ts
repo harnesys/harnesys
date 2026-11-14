@@ -7,6 +7,7 @@ import {
 } from './docker-workspace.adapter.ts';
 
 @Module({
+  global: true,
   providers: [
     { provide: WORKSPACE_CONTAINER_SEAM, useValue: realWorkspaceContainerSeam },
     { provide: WorkspaceContainerPort, useClass: DockerWorkspaceAdapter },

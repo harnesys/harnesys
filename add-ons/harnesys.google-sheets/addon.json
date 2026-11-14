@@ -1,0 +1,125 @@
+{
+  "id": "harnesys.google-sheets",
+  "version": "1.0.0",
+  "platform": 1,
+  "title": "Google Sheets",
+  "description": "Reads spreadsheet tabs and ranges, overwrites ranges and appends rows with the org's bound Google account. The add-on calls the Sheets API; the token stays host-side.",
+  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "activation": "lazy",
+  "permissions": [
+    {
+      "id": "http.fetch",
+      "scope": { "hosts": ["www.googleapis.com"] },
+      "reason": "Call the Google Sheets API with the bound account"
+    },
+    {
+      "id": "accounts.use",
+      "scope": { "connections": ["google"] },
+      "reason": "Use the Google account bound to the spreadsheet connection"
+    }
+  ],
+  "connections": [
+    {
+      "id": "google",
+      "label": "Google account",
+      "accountKinds": ["google-account"],
+      "scopes": ["spreadsheets"],
+      "cardinality": "many"
+    }
+  ],
+  "contributions": [
+    {
+      "id": "pack",
+      "family": "tool-pack",
+      "descriptor": {
+        "name": "sheets",
+        "title": "Google Sheets tools",
+        "description": "List tabs, read ranges, overwrite ranges and append rows in Google Sheets",
+        "connection": "google",
+        "tools": [
+          {
+            "name": "list_tabs",
+            "description": "List the tabs of a spreadsheet with sheetId, title and grid sizes. Use the tab title to build A1 ranges for the other tools.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "spreadsheetId": { "type": "string", "description": "Spreadsheet id from its URL" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              },
+              "required": ["spreadsheetId"]
+            }
+          },
+          {
+            "name": "read_range",
+            "description": "Read an A1 range from a spreadsheet as rows of values.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "spreadsheetId": { "type": "string", "description": "Spreadsheet id" },
+                "range": { "type": "string", "description": "A1 range, e.g. Sheet1!A1:D50" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              },
+              "required": ["spreadsheetId", "range"]
+            }
+          },
+          {
+            "name": "write_range",
+            "description": "Overwrite an A1 range with rows of values. Values are parsed like user input, so formulas start with '='.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "spreadsheetId": { "type": "string", "description": "Spreadsheet id" },
+                "range": { "type": "string", "description": "A1 range, e.g. Sheet1!A1:C3" },
+                "rows": {
+                  "type": "array",
+                  "description": "Rows of cell values",
+                  "items": { "type": "array", "items": { "type": "string" } },
+                  "maxItems": 1000
+                },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              },
+              "required": ["spreadsheetId", "range", "rows"]
+            }
+          },
+          {
+            "name": "append_rows",
+            "description": "Append rows after the last row of a table in a spreadsheet.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "spreadsheetId": { "type": "string", "description": "Spreadsheet id" },
+                "range": { "type": "string", "description": "A1 range of the table, e.g. Sheet1!A:D" },
+                "rows": {
+                  "type": "array",
+                  "description": "Rows of cell values to append",
+                  "items": { "type": "array", "items": { "type": "string" } },
+                  "maxItems": 1000
+                },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              },
+              "required": ["spreadsheetId", "range", "rows"]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

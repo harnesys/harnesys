@@ -2,6 +2,11 @@ import { existsSync, mkdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { DomainException, HttpException, Injectable } from '@harnesys/brix';
 import type { SourceVcs } from '@harnesys/contracts';
+import {
+  type WorkerHostBrowseRequest,
+  type WorkerRequest,
+  WorkerRequestSchema,
+} from '../../domain/content/worker-content.protocol.ts';
 import type { ProxyHttpResult } from '../../domain/fleet/fleet-hub.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
@@ -23,11 +28,6 @@ import {
 import { copyAt } from './fs-copy-ops.ts';
 import { listTreeAt } from './fs-tree-walk.ts';
 import { listHostDirectories } from './list-host-directories.ts';
-import {
-  type WorkerHostBrowseRequest,
-  type WorkerRequest,
-  WorkerRequestSchema,
-} from './worker-content.protocol.ts';
 import { resolveWorktreeContentRoot } from './worktree-content-root.ts';
 
 const DOMAIN_STATUS: Record<string, number> = {

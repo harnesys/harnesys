@@ -48,7 +48,9 @@ export class DetachSourceUseCase {
     const materialization = this.materializations.find(input.orgId, input.sourceId, hostId);
     if (
       materialization?.origin === 'managed' &&
-      (hasGitVcs(row) || row.distribution.kind === 'cloud-drive')
+      (hasGitVcs(row) ||
+        row.distribution.kind === 'cloud-drive' ||
+        row.distribution.kind === 'addon-cloud')
     ) {
       this.removeManagedRoot(input.orgId, input.sourceId, materialization.localPath);
       this.releaseContainer(input.orgId, input.sourceId, hostId);

@@ -1,17 +1,13 @@
+import { type AgentMode, DEFAULT_MODE, DEFAULT_MODE_ID } from '@harnesys/studio-shared';
 import { useState } from 'react';
 import type { Agent } from '@/entities/agent';
-import { ThreadBindingSelects, useThreadStore } from '@/entities/thread';
-import {
-  useWebhookStore,
-  WEBHOOK_STATUSES,
-  type Webhook,
-  webhookStatusLabel,
-} from '@/entities/webhook';
+import { WEBHOOK_STATUSES, type Webhook, webhookStatusLabel } from '@/entities/webhook';
+import { TriggerTargetField } from '@/features/manage-automations/ui/trigger-target-field';
 import { cn } from '@/shared/lib/utils';
 import type { DialogComponentProps } from '@/shared/services/overlay';
 import { Button } from '@/shared/ui/button';
 import { DialogFooter } from '@/shared/ui/dialog';
-import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/shared/ui/field';
+import { Field, FieldGroup, FieldLabel } from '@/shared/ui/field';
 import { Input } from '@/shared/ui/input';
 import {
   Select,
@@ -24,13 +20,24 @@ import {
 import { Textarea } from '@/shared/ui/textarea';
 import { confirmDeleteWebhook } from '../model/delete-webhook';
 import type { WebhookConfigResult } from '../model/webhook-dialogs';
-import { draftFrom, emptyWebhookDraft, type WebhookFormDraft } from '../model/webhook-draft';
+import {
+  defaultWebhookMode,
+  draftFrom,
+  emptyWebhookDraft,
+  type WebhookFormDraft,
+} from '../model/webhook-draft';
 export interface WebhookConfigData {
   agents: Agent[];
   projectId: string;
   webhook: Webhook | null;
 }
-const NEW_THREAD_VALUE = 'new';
+
+interface AgentModesLike {
+  modes?: AgentMode[];
+}
+function hasAgentModes(agent: Agent): agent is Agent & AgentModesLike {
+  return 'modes' in agent;
+}
 export function WebhookConfigDialog({
   onResolve,
   data,
@@ -41,35 +48,13 @@ export function WebhookConfigDialog({
   const [draft, setDraft] = useState<WebhookFormDraft>(() =>
     webhook ? draftFrom(webhook) : emptyWebhookDraft(agents),
   );
-  const webhooks = useWebhookStore((state) => state.items);
-  const threads = useThreadStore((state) => state.items);
-  const linkedThread = draft.threadId
-    ? threads.find((thread) => thread.id === draft.threadId)
-    : undefined;
-  const freeThreads = threads.filter(
-    (thread) =>
-      (thread.orgId === projectId || Boolean(thread.orgId)) &&
-      thread.agentId === draft.targetAgentId &&
-      !webhooks.some((item) => item.threadId === thread.id && item.id !== webhook?.id),
-  );
-  const threadItems = webhook
-    ? [
-        ...freeThreads.map((thread) => ({
-          value: thread.id,
-          label: thread.title.trim() || 'Untitled',
-        })),
-        ...(draft.threadId && !freeThreads.some((thread) => thread.id === draft.threadId)
-          ? [{ value: draft.threadId, label: 'Current thread' }]
-          : []),
-      ]
-    : [
-        { value: NEW_THREAD_VALUE, label: 'New thread' },
-        ...freeThreads.map((thread) => ({
-          value: thread.id,
-          label: thread.title.trim() || 'Untitled',
-        })),
-      ];
   const canSave = draft.name.trim().length > 0 && agents.length > 0;
+  const agent = agents.find((item) => item.id === draft.targetAgentId);
+  const agentModes = agent !== undefined && hasAgentModes(agent) ? (agent.modes ?? []) : [];
+  const modeItems = [
+    { value: DEFAULT_MODE_ID, label: DEFAULT_MODE.name },
+    ...agentModes.map((mode) => ({ value: mode.id, label: mode.name })),
+  ];
   return (
     <>
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -101,10 +86,12 @@ export function WebhookConfigDialog({
                   value={draft.targetAgentId}
                   onValueChange={(value) => {
                     if (typeof value === 'string') {
+                      const next = agents.find((item) => item.id === value);
                       setDraft({
                         ...draft,
                         targetAgentId: value,
-                        threadId: undefined,
+                        mode: defaultWebhookMode(next),
+                        threadId: null,
                       });
                     }
                   }}
@@ -155,56 +142,40 @@ export function WebhookConfigDialog({
               ) : null}
             </div>
           </Field>
+          <TriggerTargetField
+            orgId={projectId}
+            agentId={draft.targetAgentId}
+            value={draft.threadId ?? ''}
+            onChange={(threadId) => setDraft({ ...draft, threadId: threadId || null })}
+            currentThreadId={webhook?.threadId}
+          />
           <Field>
-            <FieldLabel>Thread</FieldLabel>
-            <div className="grid items-start gap-1.5 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.5fr)]">
-              <div className="flex min-w-0 flex-col gap-1">
-                <span className="text-[11px] text-muted-foreground">Thread</span>
-                <Select
-                  aria-label="Trigger thread"
-                  items={threadItems}
-                  value={draft.threadId ?? NEW_THREAD_VALUE}
-                  onValueChange={(value) => {
-                    if (typeof value === 'string') {
-                      setDraft({
-                        ...draft,
-                        threadId: value === NEW_THREAD_VALUE ? undefined : value,
-                      });
-                    }
-                  }}
-                >
-                  <SelectTrigger id="webhook-thread" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {threadItems.map((item) => (
-                        <SelectItem key={item.value} value={item.value}>
-                          {item.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-              {linkedThread ? (
-                <ThreadBindingSelects
-                  orgId={projectId}
-                  threadId={linkedThread.id}
-                  runProfileId={linkedThread.runProfileId ?? null}
-                  runDirectory={linkedThread.runDirectory ?? null}
-                  bindingLocked={linkedThread.bindingLocked ?? false}
-                />
-              ) : null}
-            </div>
-            <FieldDescription>
-              {linkedThread
-                ? 'Profile and folder apply to webhook-triggered runs.'
-                : 'Binding can be set after the first run creates the thread.'}
-            </FieldDescription>
+            <FieldLabel htmlFor="webhook-mode">Mode</FieldLabel>
+            <Select
+              items={modeItems}
+              value={draft.mode}
+              onValueChange={(value) => {
+                if (typeof value === 'string') {
+                  setDraft({ ...draft, mode: value });
+                }
+              }}
+            >
+              <SelectTrigger id="webhook-mode" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {modeItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </Field>
           <Field>
-            <FieldLabel htmlFor="webhook-detail">Notes</FieldLabel>
+            <FieldLabel htmlFor="webhook-detail">Instructions</FieldLabel>
             <Textarea
               id="webhook-detail"
               value={draft.detail}

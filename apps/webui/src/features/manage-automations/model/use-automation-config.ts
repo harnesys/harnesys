@@ -16,6 +16,7 @@ import {
 import { deleteWebhook, openWebhookConfigDialog, updateWebhook } from '@/features/manage-webhook';
 import { findIntegrationUi } from '@/integrations/registry';
 import type { AutomationConfigInput } from '@/integrations/types';
+import { openAddonTriggerConfigDialog } from '../ui/addon-trigger-config-dialog';
 
 async function configureCoreAutomation(
   automation: ClientAutomation,
@@ -67,6 +68,17 @@ export function useAutomationConfig(): (input: AutomationConfigInput) => Promise
         return;
       }
       await configureCoreAutomation(input.automation, input);
+    } else if (input.source === 'addon') {
+      const result = await openAddonTriggerConfigDialog({
+        orgId: input.scopeId,
+        addonId: input.integrationId,
+        kind: input.kind,
+        agents: input.agents,
+        automation: input.automation,
+      });
+      if (!result) {
+        return;
+      }
     } else {
       const entry = findIntegrationUi(input.integrationId)?.automationKinds[input.kind];
       if (!entry) {

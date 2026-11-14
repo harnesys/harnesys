@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { AgentPresetBody } from '@harnesys/contracts';
-import { rolePresetContract } from './role-preset-contract.ts';
+import { rolePresetContract } from '../../domain/agent/role-preset-contract.ts';
 
 function fixture(overrides: Partial<AgentPresetBody> = {}): AgentPresetBody {
   return {

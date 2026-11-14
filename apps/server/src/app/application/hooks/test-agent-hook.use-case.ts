@@ -15,10 +15,10 @@ import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { LlmModelPort, LlmProviderPort } from '../../domain/provider/llm-provider.port.ts';
+import { createOrgModelsPort } from '../../domain/provider/org-models.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import { SourceLocationPort } from '../../domain/source/source-location.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
-import { createOrgModelsPort } from '../../infra/runtime/org-models.port.ts';
 import { requireAgent } from '../agents/agent.helpers.ts';
 import { validateAgentHooks } from '../agents/agent-hooks.validation.ts';
 

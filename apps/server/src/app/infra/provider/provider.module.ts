@@ -5,6 +5,7 @@ import { SqliteLlmModelAdapter } from './sqlite-llm-model.adapter.ts';
 import { SqliteLlmProviderAdapter } from './sqlite-llm-provider.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule],
   providers: [
     { provide: LlmProviderPort, useClass: SqliteLlmProviderAdapter },

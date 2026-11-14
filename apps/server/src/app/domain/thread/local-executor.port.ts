@@ -22,6 +22,7 @@ export interface SendLocalRunInput {
   threadId: string;
   text?: string;
   effort?: string;
+  mode?: string;
   attachments?: Attachment[];
   skills?: string[];
   clientEventId?: string;

@@ -6,13 +6,13 @@ import { findDecisionModelCoords } from '../../application/use-cases/memory/prom
 import { ReflectThreadUseCase } from '../../application/use-cases/memory/reflect-thread.use-case.ts';
 import { observeCancelledRun } from '../../domain/approval/cancelled-run-approvals.ts';
 import type { ParkFileRuntime } from '../../domain/approval/park-observer.ts';
+import { StudioEmbeddings } from '../../domain/knowledge/embeddings.ts';
+import { createOrgModelsPort } from '../../domain/provider/org-models.ts';
 import { resolveProviderApiKey } from '../../domain/secret/provider-api-key.ts';
-import { StudioEmbeddings } from '../knowledge/embeddings.ts';
 import { decisionModelIdOf, embedModelIdOf } from '../memory/org-memory-settings.store.ts';
 import type { OrgSqliteDb, OrgSqliteSession } from '../org-sqlite/org-sqlite-session.ts';
 import { createApprovalReconcile } from './approval-reconcile.ts';
 import { observeRunTerminal } from './observe-run-terminal.ts';
-import { createOrgModelsPort } from './org-models.port.ts';
 import type { OrgRuntimeDeps } from './org-runtime.types.ts';
 import { OrgEpisodicPort } from './packs/org-episodic.port.ts';
 import { cachedTargetOf, type TargetCache } from './prepare-org-target.ts';

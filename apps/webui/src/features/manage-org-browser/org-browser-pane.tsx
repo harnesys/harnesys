@@ -1,6 +1,6 @@
 import type { BrowserDefaultEngine } from '@harnesys/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { PlusIcon } from 'lucide-react';
+import { GlobeIcon, PlusIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/shared/ui/button';
 import { RowHeader, RowList } from '@/shared/ui/capability-rows';
@@ -129,6 +129,7 @@ export function OrgBrowserPane({ orgId }: { orgId: string }) {
                 key={candidate.id}
                 onClick={() => allowlist.mutate({ hostId: activeHostId, engineId: candidate.id })}
               >
+                <GlobeIcon />
                 {candidate.label}
               </DropdownMenuItem>
             ))}
@@ -145,18 +146,20 @@ export function OrgBrowserPane({ orgId }: { orgId: string }) {
       )}
 
       <Tabs value={activeHostId} onValueChange={setHostTab}>
-        <TabsList className="h-8 w-full">
-          {hosts.map((host) => (
-            <TabsTrigger
-              key={host.hostId}
-              value={host.hostId}
-              className="flex-1"
-              data-testid={`browser-tab-${host.hostId}`}
-            >
-              {host.hostId}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        {hosts.length > 1 && (
+          <TabsList className="w-full">
+            {hosts.map((host) => (
+              <TabsTrigger
+                key={host.hostId}
+                value={host.hostId}
+                className="flex-1"
+                data-testid={`browser-tab-${host.hostId}`}
+              >
+                {host.hostId}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        )}
         {hosts.map((host) => (
           <TabsContent key={host.hostId} value={host.hostId} className="mt-3">
             <div className="flex flex-col gap-2" data-testid={`browser-host-${host.hostId}`}>

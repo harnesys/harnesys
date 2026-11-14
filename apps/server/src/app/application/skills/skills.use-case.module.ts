@@ -1,11 +1,4 @@
 import { Module } from '@harnesys/brix';
-import { AgentModule } from '../../infra/agent/agent.module.ts';
-import { MachineHomeModule } from '../../infra/machine-home/machine-home.module.ts';
-import { PluginsModule } from '../../infra/plugins/plugins.module.ts';
-import { RuntimeModule } from '../../infra/runtime/runtime.module.ts';
-import { SkillsModule } from '../../infra/skills/skills.module.ts';
-import { SkillsTierModule } from '../../infra/skills/skills-tier.module.ts';
-import { SourceModule } from '../../infra/source/source.module.ts';
 import { CreateOrgSkillUseCase } from './create-org-skill.use-case.ts';
 import { DeleteOrgSkillUseCase } from './delete-org-skill.use-case.ts';
 import { DiscoverRepoSkillsUseCase } from './discover-repo-skills.use-case.ts';
@@ -32,15 +25,6 @@ const useCases = [
 ];
 
 @Module({
-  imports: [
-    SkillsModule,
-    SkillsTierModule,
-    MachineHomeModule,
-    PluginsModule,
-    RuntimeModule,
-    SourceModule,
-    AgentModule,
-  ],
   providers: [...useCases, SkillsToolsProvider],
   exports: [...useCases],
 })

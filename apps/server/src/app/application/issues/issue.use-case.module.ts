@@ -1,12 +1,5 @@
 import { Module } from '@harnesys/brix';
 import { IssueFirePort } from '../../domain/issue/issue-fire.port.ts';
-import { AgentModule } from '../../infra/agent/agent.module.ts';
-import { ExecutionProfileModule } from '../../infra/execution-profile/execution-profile.module.ts';
-import { FleetHubModule } from '../../infra/fleet-hub/fleet-hub.module.ts';
-import { IssueInfraModule } from '../../infra/issues/issue.module.ts';
-import { MachineHomeModule } from '../../infra/machine-home/machine-home.module.ts';
-import { SourceModule } from '../../infra/source/source.module.ts';
-import { ThreadModule } from '../../infra/thread/thread.module.ts';
 import { SourceUseCaseModule } from '../source/source.use-case.module.ts';
 import { ThreadUseCaseModule } from '../threads/thread.use-case.module.ts';
 import { AddBoardStatusUseCase } from './add-board-status.use-case.ts';
@@ -83,17 +76,7 @@ const useCases = [
 ];
 
 @Module({
-  imports: [
-    IssueInfraModule,
-    AgentModule,
-    ExecutionProfileModule,
-    FleetHubModule,
-    MachineHomeModule,
-    SourceModule,
-    SourceUseCaseModule,
-    ThreadModule,
-    ThreadUseCaseModule,
-  ],
+  imports: [SourceUseCaseModule, ThreadUseCaseModule],
   providers: [
     FireIssueUseCase,
     { provide: IssueFirePort, useClass: IssueFireBinding },

@@ -192,7 +192,6 @@ export const PLAN_STATUSES = [
 ] as const;
 export const SUBAGENT_ROLES = ['explore', 'coder', 'verifier', 'general'] as const;
 export const PERMISSION_MODES = ['ask', 'auto', 'dont_ask', 'bypass'] as const;
-export const SCHEDULE_HISTORIES = ['none', 'last', 'all'] as const;
 export const RUN_NON_TERMINAL: RunLifecycleStatus[] = [
   'queued',
   'running',

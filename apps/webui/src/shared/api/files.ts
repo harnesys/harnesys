@@ -90,7 +90,7 @@ export async function listSourceFilesTree(
   }
   return tree.entries
     .filter((entry) => options?.includeHidden || !entry.name.startsWith('.'))
-    .map((entry) => toEntry(entry, entry.type === 'dir'));
+    .map((entry) => toEntry(entry));
 }
 
 export async function createProjectFile(

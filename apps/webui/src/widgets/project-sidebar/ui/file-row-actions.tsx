@@ -22,7 +22,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
+import { useExplorerDraftStore } from '../model/explorer-draft.store';
 import type { useEntryActions } from '../model/use-entry-actions';
+import { useViewerCreates } from '../model/viewer-creates';
 
 type OpenNewTerminal = ReturnType<typeof useOpenNewTerminal>;
 type EntryActions = ReturnType<typeof useEntryActions>;
@@ -54,6 +56,8 @@ export function FileRowActions({
   onStartRename: (fullPath: string) => void;
   onDelete: (fullPath: string) => void;
 }) {
+  const start = useExplorerDraftStore((state) => state.start);
+  const viewerCreates = useViewerCreates();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -83,6 +87,15 @@ export function FileRowActions({
                 <FileIcon className="size-3.5" />
                 New file
               </DropdownMenuItem>
+              {viewerCreates.map((template) => (
+                <DropdownMenuItem
+                  key={template.viewerId}
+                  onClick={() => start('file', fullPath, projectId, template)}
+                >
+                  <FileIcon className="size-3.5" />
+                  {`New ${template.title} (${template.extension})`}
+                </DropdownMenuItem>
+              ))}
               <DropdownMenuItem onClick={() => onStartCreate('dir', fullPath)}>
                 <FolderIcon className="size-3.5" />
                 New folder

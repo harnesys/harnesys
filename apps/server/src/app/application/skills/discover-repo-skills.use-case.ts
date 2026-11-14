@@ -8,8 +8,8 @@ import type {
   SkillCandidate,
 } from '@harnesys/contracts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
-import { clonePlugin, resolveGitSource } from '../../infra/plugins/plugin-git.ts';
-import { walkSkills } from '../../infra/skills/skills-walk.ts';
+import { SkillsGitPort } from '../../domain/skills/skills-git.port.ts';
+import { SkillsWalkPort } from '../../domain/skills/skills-walk.port.ts';
 
 export interface DiscoverRepoSkillsRequest {
   orgId: string;
@@ -18,17 +18,21 @@ export interface DiscoverRepoSkillsRequest {
 
 @Injectable()
 export class DiscoverRepoSkillsUseCase {
-  constructor(private readonly layout: HostFsLayoutPort) {}
+  constructor(
+    private readonly layout: HostFsLayoutPort,
+    private readonly git: SkillsGitPort,
+    private readonly walk: SkillsWalkPort,
+  ) {}
 
   async execute(request: DiscoverRepoSkillsRequest): Promise<DiscoverSkillsResponse> {
     const staging = join(this.layout.skillsStagingDir(request.orgId), randomUUID());
     try {
-      const { revision } = await clonePlugin({
-        source: resolveGitSource(request.body.url),
+      const { revision } = await this.git.clonePlugin({
+        source: this.git.resolveGitSource(request.body.url),
         dest: staging,
         ref: request.body.ref,
       });
-      const walk = await walkSkills(staging);
+      const walk = await this.walk.walkSkills(staging);
       const candidates: SkillCandidate[] = [];
       const diagnostics: { subPath: string; reason: string }[] = [];
       for (const hit of walk.candidates) {

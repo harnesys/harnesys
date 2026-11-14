@@ -5,6 +5,7 @@ import {
   loadGoogleOAuthClient,
 } from '../../../integration/google/google-token-access.ts';
 import type { CloudDriveSyncSource } from './cloud-sync-back.ts';
+import { integrationIdOfCloudSource } from './cloud-sync-back.ts';
 
 export interface CloudSyncCredentialLease {
   credential: string;
@@ -28,7 +29,7 @@ export function leasedTokenReader(input: LeasedTokenReaderInput): () => Promise<
     return getValidGoogleAccessToken(
       input.secrets,
       input.orgId,
-      input.source.distribution.integrationId,
+      integrationIdOfCloudSource(input.source),
       client,
     );
   };

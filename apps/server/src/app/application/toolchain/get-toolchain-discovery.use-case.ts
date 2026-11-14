@@ -1,9 +1,9 @@
 import { Injectable } from '@harnesys/brix';
 import type { ToolchainDiscovery } from '@harnesys/contracts';
+import { LSP_CATALOG } from '../../domain/lsp/lsp-catalog.ts';
+import { disabledFileEntries, readOrgLspFile } from '../../domain/lsp/org-lsp-file.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { ToolchainPort } from '../../domain/toolchain/toolchain.port.ts';
-import { LSP_CATALOG } from '../../infra/lsp/lsp-catalog.ts';
-import { disabledFileEntries, readOrgLspFile } from '../../infra/lsp/org-lsp-file.ts';
 
 export interface ToolchainCommandRef {
   command: string;

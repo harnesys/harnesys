@@ -1,5 +1,6 @@
 import { Injectable } from '@harnesys/brix';
 import type { SchedulePublic, UpdateScheduleBody } from '@harnesys/contracts';
+import { TriggerInstanceRepositoryPort } from '../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { AgentNotFoundException } from '../../domain/agent/agent.error.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
@@ -12,6 +13,9 @@ import { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repositor
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
+import { WebhookRepositoryPort } from '../../domain/webhook/webhook-repository.port.ts';
+import { insertDedicatedThread } from '../threads/create-dedicated-thread.ts';
+import { DeleteThreadUseCase } from '../threads/delete-thread.use-case.ts';
 import { recordOwnerOnWrite } from '../threads/run-attribution.ts';
 import { requireBindableScheduleThread } from './bind-schedule-thread.ts';
 import { isValidCron, nextCronRunAt } from './cron-next.ts';
@@ -30,12 +34,15 @@ export class UpdateScheduleUseCase {
     private readonly schedules: ScheduleRepositoryPort,
     private readonly threads: ThreadRepositoryPort,
     private readonly threadAgents: ThreadAgentRepositoryPort,
+    private readonly webhooks: WebhookRepositoryPort,
+    private readonly triggerInstances: TriggerInstanceRepositoryPort,
     private readonly agents: AgentRegistryPort,
     private readonly orgSettings: OrgSettingsPort,
     private readonly deskEvents: DeskEventsPort,
+    private readonly deleteThread: DeleteThreadUseCase,
   ) {}
 
-  execute(request: UpdateScheduleRequest): SchedulePublic {
+  async execute(request: UpdateScheduleRequest): Promise<SchedulePublic> {
     const current = this.schedules.findById(request.orgId, request.scheduleId);
     if (!current) {
       throw new ScheduleNotFoundException(request.scheduleId);
@@ -48,22 +55,35 @@ export class UpdateScheduleUseCase {
     const rename = applyName(patch, request.body, current.name);
     const nextAgentId = applyAgent(patch, request.orgId, request.body, current, this.agents);
     applyCronAndMode(patch, request.body, this.orgSettings.get(request.orgId).timezone);
-    applyHistoryAndPolicy(patch, request.body);
+    applyMissPolicy(patch, request.body);
     applyThreadBind(patch, {
       orgId: request.orgId,
       body: request.body,
       currentId: current.id,
       agentId: nextAgentId,
+      title: rename ?? current.name,
       threads: this.threads,
       threadAgents: this.threadAgents,
       schedules: this.schedules,
+      webhooks: this.webhooks,
+      triggerInstances: this.triggerInstances,
     });
     const updated = this.schedules.update(request.orgId, current.id, patch);
     if (rename) {
       this.threads.patch(request.orgId, updated.threadId, { title: rename });
     }
+    if (request.body.threadId !== undefined && updated.threadId !== current.threadId) {
+      await this.deleteAbandonedThread(request.orgId, current.threadId);
+    }
     this.deskEvents.emit(request.orgId, toDeskScheduleEvent(updated));
     return toSchedulePublic(updated);
+  }
+
+  private async deleteAbandonedThread(orgId: string, threadId: string): Promise<void> {
+    const abandoned = this.threads.findById(orgId, threadId);
+    if (abandoned?.kind === 'schedule') {
+      await this.deleteThread.execute({ orgId, threadId: abandoned.id });
+    }
   }
 }
 
@@ -126,13 +146,7 @@ function applyCronAndMode(patch: SchedulePatch, body: UpdateScheduleBody, timezo
   }
 }
 
-function applyHistoryAndPolicy(patch: SchedulePatch, body: UpdateScheduleBody): void {
-  if (body.history !== undefined) {
-    patch.history = body.history;
-  }
-  if (body.historyLast !== undefined) {
-    patch.historyLast = Math.min(Math.max(body.historyLast, 1), 99);
-  }
+function applyMissPolicy(patch: SchedulePatch, body: UpdateScheduleBody): void {
   if (body.missPolicy !== undefined) {
     patch.missPolicy = body.missPolicy;
   }
@@ -145,22 +159,37 @@ function applyThreadBind(
     body: UpdateScheduleBody;
     currentId: string;
     agentId: string;
+    title: string;
     threads: ThreadRepositoryPort;
     threadAgents: ThreadAgentRepositoryPort;
     schedules: ScheduleRepositoryPort;
+    webhooks: WebhookRepositoryPort;
+    triggerInstances: TriggerInstanceRepositoryPort;
   },
 ): void {
   if (input.body.threadId === undefined) {
     return;
   }
+  if (input.body.threadId === null) {
+    patch.threadId = insertDedicatedThread(
+      { threads: input.threads, threadAgents: input.threadAgents },
+      { orgId: input.orgId, agentId: input.agentId, title: input.title, kind: 'schedule' },
+    ).id;
+    return;
+  }
   const bound = requireBindableScheduleThread({
     threads: input.threads,
     threadAgents: input.threadAgents,
-    schedules: input.schedules,
-    orgId: input.orgId,
+    occupancy: {
+      orgId: input.orgId,
+      threadId: input.body.threadId,
+      schedules: input.schedules,
+      webhooks: input.webhooks,
+      triggerInstances: input.triggerInstances,
+      exceptScheduleId: input.currentId,
+    },
     agentId: input.agentId,
     threadId: input.body.threadId,
-    exceptScheduleId: input.currentId,
   });
   patch.threadId = bound.id;
 }

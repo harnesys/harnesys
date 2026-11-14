@@ -1,0 +1,43 @@
+{
+  "id": "harnesys.drawio",
+  "version": "0.1.0",
+  "platform": 1,
+  "title": "Draw.io",
+  "description": "draw.io diagram editor for .drawio files in the project workspace. Opens .drawio files from the sources tree in the embedded draw.io editor and saves changes back; new diagrams can be created from the folder menu.",
+  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "activation": "lazy",
+  "connections": [],
+  "permissions": [],
+  "contributions": [
+    {
+      "id": "drawio",
+      "family": "viewer",
+      "descriptor": {
+        "id": "drawio",
+        "title": "Draw.io diagram",
+        "extensions": [".drawio"],
+        "route": "/viewer",
+        "mode": "edit",
+        "create": true
+      }
+    },
+    {
+      "id": "viewer",
+      "family": "route",
+      "descriptor": {
+        "id": "viewer",
+        "method": "GET",
+        "path": "/viewer"
+      }
+    },
+    {
+      "id": "template",
+      "family": "route",
+      "descriptor": {
+        "id": "template",
+        "method": "GET",
+        "path": "/template"
+      }
+    }
+  ]
+}

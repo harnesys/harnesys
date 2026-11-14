@@ -4,6 +4,7 @@ import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
 import { ExecutionProfileAdapter } from './execution-profile.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule],
   providers: [{ provide: ExecutionProfilePort, useClass: ExecutionProfileAdapter }],
   exports: [ExecutionProfilePort],

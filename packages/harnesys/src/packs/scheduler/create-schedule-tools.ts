@@ -1,5 +1,5 @@
 import type { CapabilityScope } from '../../domain/pack.ts';
-import type { PermissionMode, ScheduleHistory } from '../../domain/schedule.ts';
+import type { PermissionMode } from '../../domain/schedule.ts';
 import type { SchedulerPort, ScheduleUpdateInput } from '../../ports/scheduler.ts';
 import { type ToolDefinition, tool } from '../../ports/tools.ts';
 export interface CreateScheduleToolsParams {
@@ -25,8 +25,6 @@ interface ScheduleSetInput {
   detail?: string;
   targetAgentId?: string;
   mode?: PermissionMode;
-  history?: ScheduleHistory;
-  historyLast?: number;
   threadId?: string;
 }
 interface SchedulePauseInput {
@@ -58,8 +56,6 @@ export function createScheduleTools(deps: CreateScheduleToolsParams): ToolDefini
             detail: row.detail,
             targetAgentId: row.targetAgentId,
             mode: row.mode,
-            history: row.history,
-            historyLast: row.historyLast,
             nextRunAt: row.nextRunAt,
             threadId: row.threadId,
             lastFiredAt: row.lastFiredAt,
@@ -88,7 +84,7 @@ export function createScheduleTools(deps: CreateScheduleToolsParams): ToolDefini
     tool('schedule_set', {
       group: 'schedules',
       description:
-        'Create a cron schedule (omit id: ids are auto-generated, never invent one), or update an existing one with id taken from schedule_list. Defaults to this agent as target. nextRunAt is the next cron instant after create, not now. threadId chooses WHERE the fire lands: omit = new dedicated schedule thread (isolated cron log); "self" = THIS chat (fires here once this run is idle; one active run per thread); uuid from threads_list = that existing conversation. Thread agent must match targetAgentId. One schedule per thread. history=none|last|all folds prior fires only on dedicated schedule threads; historyLast is how many when history=last (1–99).',
+        'Create a cron schedule (omit id: ids are auto-generated, never invent one), or update an existing one with id taken from schedule_list. Defaults to this agent as target. nextRunAt is the next cron instant after create, not now. threadId chooses WHERE the fire lands: omit = new dedicated schedule thread (isolated cron log); "self" = THIS chat (fires here once this run is idle; one active run per thread); uuid from threads_list = that existing conversation. Thread agent must match targetAgentId. One trigger of any kind (schedule, webhook, addon trigger) per thread; binding to an occupied thread fails. History folding is configured on the bound thread policy, not on the schedule.',
       input: {
         type: 'object',
         properties: {
@@ -98,8 +94,6 @@ export function createScheduleTools(deps: CreateScheduleToolsParams): ToolDefini
           detail: { type: 'string' },
           targetAgentId: { type: 'string' },
           mode: { type: 'string', enum: ['ask', 'auto', 'dont_ask', 'bypass'] },
-          history: { type: 'string', enum: ['none', 'last', 'all'] },
-          historyLast: { type: 'integer', minimum: 1, maximum: 99 },
           threadId: { type: 'string' },
         },
       },
@@ -114,8 +108,6 @@ export function createScheduleTools(deps: CreateScheduleToolsParams): ToolDefini
               detail: input.detail,
               targetAgentId: input.targetAgentId,
               mode: input.mode,
-              history: input.history,
-              historyLast: input.historyLast,
             };
             return await deps.scheduler.update(scope, input.id, patch);
           }
@@ -128,8 +120,6 @@ export function createScheduleTools(deps: CreateScheduleToolsParams): ToolDefini
             cron: input.cron,
             detail: input.detail,
             mode: input.mode,
-            history: input.history,
-            historyLast: input.historyLast,
             threadId: resolveCreateThreadId(input.threadId, scope.threadId),
           });
           return {

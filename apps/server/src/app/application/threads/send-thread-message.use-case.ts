@@ -30,6 +30,7 @@ export interface SendThreadMessageRequest {
   origin?: string;
   originConnectorId?: string;
   clientEventId?: string;
+  mode?: string;
   author?: ThreadAuthor;
   targetAgentIds: string[];
   attribution: RunStartAttribution;
@@ -105,6 +106,7 @@ function enqueueUserMessage(
     ...(request.origin ? { origin: request.origin } : {}),
     ...(request.originConnectorId ? { originConnectorId: request.originConnectorId } : {}),
     ...(request.clientEventId ? { clientEventId: request.clientEventId } : {}),
+    ...(request.mode ? { mode: request.mode } : {}),
     ...(request.author ? { author: request.author } : {}),
     targetAgentIds: request.targetAgentIds,
     threadScoped: true,

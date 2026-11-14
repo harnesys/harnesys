@@ -42,7 +42,7 @@ export function SettingsField({
   testId,
   children,
 }: {
-  label: string;
+  label: ReactNode;
   description?: ReactNode;
   error?: string | null;
   htmlFor?: string;

@@ -1,15 +1,29 @@
-import { createHash } from 'node:crypto';
 import { existsSync, readdirSync } from 'node:fs';
 import { chmod, mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import {
+  materializeAgentBrowserPlatformBinary,
+  platformBinaryName,
+} from './agent-browser-platform.ts';
 import { compareVersions } from './engine-fs.ts';
+import {
+  downloadNpmPackageTarball,
+  extractNpmPackageTarball,
+  fetchNpmPackageRelease,
+  type NpmPackagePhase,
+  type NpmPackageRelease,
+} from './npm-package.ts';
 
+export const AGENT_BROWSER_PACKAGE = 'agent-browser';
 export const AGENT_BROWSER_VERSION = '0.39.2';
-export const AGENT_BROWSER_TARBALL = `https://registry.npmjs.org/agent-browser/-/agent-browser-${AGENT_BROWSER_VERSION}.tgz`;
+export const AGENT_BROWSER_TARBALL = `https://registry.npmjs.org/${AGENT_BROWSER_PACKAGE}/-/${AGENT_BROWSER_PACKAGE}-${AGENT_BROWSER_VERSION}.tgz`;
 const AGENT_BROWSER_INTEGRITY_SHA512 =
   'sha512-8zh5Dj4r/Lo14nDw+8jUViTlmZV5ON3qmrGp1wppmB87NhMqmSXUqVIeNith9xjIJNr/00wHxhCqH/2lATezYQ==';
-const NPM_REGISTRY_LATEST = 'https://registry.npmjs.org/agent-browser/latest';
 const HELP_SNAPSHOT_FILE = 'help.txt';
+
+export type AgentBrowserInstallPhase = NpmPackagePhase | 'done';
+
+const PLATFORM_PACKAGE_DIR = '.platform-package';
 
 export function agentBrowserDir(toolsRoot: string, version: string): string {
   return join(toolsRoot, 'agent-browser', version);
@@ -17,12 +31,6 @@ export function agentBrowserDir(toolsRoot: string, version: string): string {
 
 export function agentBrowserToolDir(toolsRoot: string): string {
   return agentBrowserDir(toolsRoot, AGENT_BROWSER_VERSION);
-}
-
-function platformBinaryName(): string {
-  const os = process.platform === 'darwin' ? 'darwin' : 'linux';
-  const arch = process.arch === 'arm64' ? 'arm64' : 'x64';
-  return `agent-browser-${os}-${arch}`;
 }
 
 function binOf(toolsRoot: string, version: string): string {
@@ -130,31 +138,12 @@ async function readHelpSnapshot(toolsRoot: string, version: string): Promise<str
   return parseAgentBrowserHelp(await Bun.file(path).text());
 }
 
-export interface AgentBrowserRegistryRelease {
-  version: string;
-  tarball: string;
-  integrity: string | null;
-}
+export type AgentBrowserRegistryRelease = NpmPackageRelease;
 
 export async function latestAgentBrowserRelease(
   fetchFn: typeof fetch = fetch,
 ): Promise<AgentBrowserRegistryRelease> {
-  const response = await fetchFn(NPM_REGISTRY_LATEST);
-  if (!response.ok) {
-    throw new Error(`agent-browser: registry lookup failed (${response.status})`);
-  }
-  const doc = (await response.json()) as {
-    version?: string;
-    dist?: { tarball?: string; integrity?: string };
-  };
-  if (typeof doc.version !== 'string' || typeof doc.dist?.tarball !== 'string') {
-    throw new Error('agent-browser: registry payload malformed');
-  }
-  return {
-    version: doc.version,
-    tarball: doc.dist.tarball,
-    integrity: doc.dist.integrity ?? null,
-  };
+  return await fetchNpmPackageRelease(fetchFn, AGENT_BROWSER_PACKAGE, 'latest');
 }
 
 export interface AgentBrowserUpdateCheck {
@@ -180,7 +169,7 @@ export interface InstallAgentBrowserInput {
   toolsRoot: string;
   version?: string;
   fetchFn?: typeof fetch;
-  onProgress?: (phase: 'download' | 'verify' | 'extract' | 'done') => void;
+  onProgress?: (phase: AgentBrowserInstallPhase) => void;
 }
 
 export interface AgentBrowserToolInstall {
@@ -189,48 +178,23 @@ export interface AgentBrowserToolInstall {
   commands: string[];
 }
 
-async function downloadAndVerify(
+async function agentBrowserReleaseFor(
   fetchFn: typeof fetch,
-  url: string,
-  expectedIntegrity: string,
-  staging: string,
-  onProgress: (phase: 'download' | 'verify' | 'extract' | 'done') => void,
-): Promise<string> {
-  onProgress('download');
-  const response = await fetchFn(url);
-  if (!response.ok || response.body === null) {
-    throw new Error(`agent-browser: download failed (${response.status})`);
+  version: string,
+): Promise<NpmPackageRelease> {
+  if (version === AGENT_BROWSER_VERSION) {
+    return {
+      name: AGENT_BROWSER_PACKAGE,
+      version,
+      tarball: AGENT_BROWSER_TARBALL,
+      integrity: AGENT_BROWSER_INTEGRITY_SHA512,
+    };
   }
-  const hasher = createHash('sha512');
-  const chunks: Buffer[] = [];
-  const reader = response.body.getReader();
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) {
-      break;
-    }
-    if (value !== undefined) {
-      chunks.push(Buffer.from(value));
-      hasher.update(value);
-    }
+  const release = await latestAgentBrowserRelease(fetchFn);
+  if (release.version !== version) {
+    throw new Error(`agent-browser: registry serves ${release.version}, not ${version}`);
   }
-  const payload = Buffer.concat(chunks);
-  const target = join(staging, 'payload.tgz');
-  await writeFile(target, payload);
-  onProgress('verify');
-  if (hasher.digest('base64') !== expectedIntegrity.replace(/^sha512-/, '')) {
-    throw new Error('agent-browser: integrity mismatch (npm sha512)');
-  }
-  return target;
-}
-
-async function extractTarball(archivePath: string, staging: string): Promise<string> {
-  const proc = Bun.spawn(['tar', '-xzf', archivePath, '-C', staging]);
-  const code = await proc.exited;
-  if (code !== 0) {
-    throw new Error(`agent-browser: tar exited with ${code}`);
-  }
-  return join(staging, 'package');
+  return release;
 }
 
 export async function installAgentBrowserTool(
@@ -248,39 +212,21 @@ export async function installAgentBrowserTool(
     }
     return { path: bin, version, commands: await captureAgentBrowserHelp(bin, dir) };
   }
-  const pinned = version === AGENT_BROWSER_VERSION;
-  const release = pinned
-    ? null
-    : await latestAgentBrowserRelease(fetchFn).then((found) => {
-        if (found.version !== version) {
-          throw new Error(`agent-browser: registry serves ${found.version}, not ${version}`);
-        }
-        return found;
-      });
-  const expectedIntegrity = pinned ? AGENT_BROWSER_INTEGRITY_SHA512 : (release?.integrity ?? null);
-  if (expectedIntegrity === null) {
-    throw new Error(`agent-browser: no integrity published for ${version}`);
-  }
-  const tarballUrl = pinned ? AGENT_BROWSER_TARBALL : release?.tarball;
-  if (tarballUrl === undefined) {
-    throw new Error(`agent-browser: no tarball published for ${version}`);
-  }
+  const release = await agentBrowserReleaseFor(fetchFn, version);
   const staging = join(input.toolsRoot, `.staging-agent-browser-${Date.now()}`);
   await mkdir(staging, { recursive: true });
   try {
-    const archivePath = await downloadAndVerify(
-      fetchFn,
-      tarballUrl,
-      expectedIntegrity,
-      staging,
-      onProgress,
-    );
-    onProgress('extract');
-    const packageDir = await extractTarball(archivePath, staging);
-    const extractedBin = join(packageDir, 'bin', platformBinaryName());
-    if (!existsSync(extractedBin)) {
-      throw new Error('agent-browser: platform binary not found after extract');
-    }
+    const archivePath = await downloadNpmPackageTarball(fetchFn, release, staging, onProgress);
+    const packageDir = await extractNpmPackageTarball(archivePath, staging, onProgress);
+    const bundledBin = join(packageDir, 'bin', platformBinaryName());
+    const extractedBin = existsSync(bundledBin)
+      ? bundledBin
+      : await materializeAgentBrowserPlatformBinary({
+          fetchFn,
+          packageDir,
+          workDir: join(staging, PLATFORM_PACKAGE_DIR),
+          onProgress,
+        });
     await chmod(extractedBin, 0o755);
     await mkdir(dir, { recursive: true });
     await rename(staging, dir);

@@ -1,5 +1,5 @@
+import type { EmbeddingsPort, StudioEmbeddingsDeps } from '../../domain/knowledge/embeddings.ts';
 import { KnowledgeIndexEventsPort } from '../../domain/knowledge/knowledge-index-events.port.ts';
-import type { EmbeddingsPort, StudioEmbeddingsDeps } from './embeddings.ts';
 import type { SqliteKnowledgeIndexRepo } from './knowledge-index-repo.ts';
 import type {
   KnowledgeIndexStatePatch,

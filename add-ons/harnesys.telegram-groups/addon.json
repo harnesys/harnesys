@@ -1,0 +1,457 @@
+{
+  "id": "harnesys.telegram-groups",
+  "version": "1.1.0",
+  "platform": 1,
+  "title": "Telegram groups",
+  "description": "Group and community bot: the bot is added to group chats and forum topics and routes matching messages to Harnesys threads (routing policy: mention, reply-to-bot, always, or commands only). Groups register themselves with /start or /join (admin or privacy-mode verification via getChatMember), an admin binds them in this settings page, and each group or topic gets its own thread. This add-on binds its own telegram-bot account with its own BotFather token; never share one bot token between this add-on and the Telegram bot add-on (getUpdates returns 409 for two pollers on one token).",
+  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "activation": "resident",
+  "permissions": [
+    {
+      "id": "http.fetch",
+      "scope": { "hosts": ["api.telegram.org"] },
+      "reason": "Call the Telegram Bot API"
+    },
+    {
+      "id": "accounts.use",
+      "scope": { "connections": ["telegram-bot"] },
+      "reason": "Resolve the bot token bound to the telegram-bot connection owned by this add-on"
+    },
+    {
+      "id": "worker",
+      "reason": "Keep the long-polling worker that receives updates and sends them to the bridge"
+    },
+    {
+      "id": "lifecycle.resident",
+      "reason": "Stay running to keep long polling the Bot API"
+    },
+    {
+      "id": "bridge.inbound",
+      "reason": "Deliver inbound group messages and media into Harnesys threads"
+    },
+    {
+      "id": "files.read",
+      "reason": "Read workspace files to send them to Telegram"
+    },
+    {
+      "id": "files.write",
+      "reason": "Save files downloaded from Telegram into the organization workspace"
+    },
+    {
+      "id": "runs.read",
+      "reason": "List runs in the bound thread so /stop can find the active one"
+    },
+    {
+      "id": "runs.dispatch",
+      "reason": "Cancel the active run for /stop (runs.cancel is gated behind this permission)"
+    },
+    {
+      "id": "threads.compact",
+      "reason": "Compact the bound thread history for /compact"
+    },
+    {
+      "id": "usage.read",
+      "reason": "Read token usage and cost for the bound thread for /stats"
+    },
+    {
+      "id": "skills.read",
+      "reason": "List the skills available to the thread agent for /skills"
+    }
+  ],
+  "connections": [
+    {
+      "id": "telegram-bot",
+      "label": "Telegram bot (groups)",
+      "accountKinds": ["telegram-bot"],
+      "cardinality": "one",
+      "optional": true
+    }
+  ],
+  "data": { "migrations": "migrations", "quotaMb": 32 },
+  "contributions": [
+    {
+      "id": "config",
+      "family": "config",
+      "descriptor": {
+        "fields": [
+          {
+            "key": "routing",
+            "label": "Routing policy",
+            "type": "select",
+            "required": false,
+            "default": "mention",
+            "options": [
+              { "value": "mention", "label": "Mentions of the bot" },
+              { "value": "reply", "label": "Replies to bot messages" },
+              { "value": "always", "label": "Every message" },
+              { "value": "commands", "label": "Commands only" }
+            ],
+            "help": "Which group messages are delivered to the bound thread agent"
+          },
+          {
+            "key": "attribution",
+            "label": "Sender attribution",
+            "type": "boolean",
+            "required": false,
+            "default": true,
+            "help": "Prefix bridged messages with the sender and group name"
+          },
+          {
+            "key": "commands",
+            "label": "Commands",
+            "type": "boolean",
+            "required": false,
+            "default": true,
+            "help": "Handle /start, /join, /help, /id, /agent, /stop, /stats, /skills and /compact in groups"
+          },
+          {
+            "key": "media_limit_mb",
+            "label": "Inbound media limit, MB",
+            "type": "number",
+            "required": false,
+            "default": 5,
+            "help": "Attachments larger than this are bridged as a note instead of bytes (max 8)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "channel",
+      "family": "transport",
+      "descriptor": {
+        "provider": "telegram",
+        "title": "Telegram groups",
+        "connection": "telegram-bot",
+        "capabilities": {
+          "threads": true,
+          "edit": true,
+          "typing": true,
+          "attachments": true,
+          "topics": true,
+          "reactions": false,
+          "readReceipts": false
+        },
+        "limits": { "textMax": 4096 }
+      }
+    },
+    {
+      "id": "poller",
+      "family": "worker",
+      "descriptor": {
+        "id": "poller",
+        "title": "Updates poller",
+        "autostart": true,
+        "restart": "on-failure"
+      }
+    },
+    {
+      "id": "pack",
+      "family": "tool-pack",
+      "descriptor": {
+        "name": "telegram-groups",
+        "title": "Telegram groups tools",
+        "description": "Chats, messages, media, albums, topics, polls, pins, forwards and file downloads as the connected group bot",
+        "tools": [
+          {
+            "name": "get_chat",
+            "description": "Read a Telegram chat by id, @username or channel address: type, title, and pinned message id.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": { "type": "string", "description": "Chat id or @username" }
+              },
+              "required": ["chat"]
+            }
+          },
+          {
+            "name": "send_message",
+            "description": "Send a text message to a chat, optionally into a forum topic and as a reply. Text up to 4096 characters.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": { "type": "string", "description": "Chat id or @username" },
+                "text": { "type": "string", "description": "Message text, up to 4096 characters" },
+                "topicId": { "type": "string", "description": "Forum topic id" },
+                "replyToMessageId": { "type": "string", "description": "Message id to reply to" },
+                "parseMode": {
+                  "type": "string",
+                  "enum": ["HTML", "MarkdownV2"],
+                  "description": "Telegram parse mode"
+                },
+                "disableNotification": { "type": "boolean", "description": "Send silently" },
+                "linkPreview": { "type": "boolean", "description": "Set false to hide the link preview" }
+              },
+              "required": ["chat", "text"]
+            }
+          },
+          {
+            "name": "edit_message",
+            "description": "Edit the text of a message the bot posted.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": { "type": "string", "description": "Chat id or @username" },
+                "messageId": { "type": "string", "description": "Message id returned by a send" },
+                "text": { "type": "string", "description": "New text, up to 4096 characters" },
+                "parseMode": {
+                  "type": "string",
+                  "enum": ["HTML", "MarkdownV2"],
+                  "description": "Telegram parse mode"
+                }
+              },
+              "required": ["chat", "messageId", "text"]
+            }
+          },
+          {
+            "name": "delete_message",
+            "description": "Delete a message the bot posted.",
+            "effect": "destructive",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": { "type": "string", "description": "Chat id or @username" },
+                "messageId": { "type": "string", "description": "Message id to delete" }
+              },
+              "required": ["chat", "messageId"]
+            }
+          },
+          {
+            "name": "send_media",
+            "description": "Send one file to a chat as a photo or a document. Pass exactly one of url, workspace path or base64 bytes; files up to 5 MB.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": { "type": "string", "description": "Chat id or @username" },
+                "topicId": { "type": "string", "description": "Forum topic id" },
+                "kind": {
+                  "type": "string",
+                  "enum": ["photo", "document"],
+                  "description": "Photo or document, default document"
+                },
+                "url": { "type": "string", "description": "Public file URL" },
+                "path": { "type": "string", "description": "Workspace-relative file path" },
+                "dataBase64": { "type": "string", "description": "File bytes in base64" },
+                "name": { "type": "string", "description": "File name for documents" },
+                "caption": { "type": "string", "description": "Caption, up to 1024 characters" }
+              },
+              "required": ["chat"]
+            }
+          },
+          {
+            "name": "send_album",
+            "description": "Send 2 to 10 photos or videos as one album with an optional caption.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": { "type": "string", "description": "Chat id or @username" },
+                "topicId": { "type": "string", "description": "Forum topic id" },
+                "urls": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Public file URLs, 2 to 10 entries"
+                },
+                "caption": { "type": "string", "description": "Album caption, up to 1024 characters" }
+              },
+              "required": ["chat", "urls"]
+            }
+          },
+          {
+            "name": "download_file",
+            "description": "Download a file the bot can see (photo, document, voice, video) into the organization workspace and return its path and size.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "fileId": { "type": "string", "description": "Telegram file_id" },
+                "path": {
+                  "type": "string",
+                  "description": "Workspace-relative destination path, e.g. inbox/report.pdf"
+                }
+              },
+              "required": ["fileId", "path"]
+            }
+          },
+          {
+            "name": "forward_message",
+            "description": "Forward one message from a chat to another chat.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "fromChat": { "type": "string", "description": "Source chat id or @username" },
+                "messageId": { "type": "string", "description": "Message id in the source chat" },
+                "toChat": { "type": "string", "description": "Destination chat id or @username" }
+              },
+              "required": ["fromChat", "messageId", "toChat"]
+            }
+          },
+          {
+            "name": "pin_message",
+            "description": "Pin a message in a group or channel.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": { "type": "string", "description": "Chat id or @username" },
+                "messageId": { "type": "string", "description": "Message id to pin" },
+                "notify": { "type": "boolean", "description": "Notify members about the pin" }
+              },
+              "required": ["chat", "messageId"]
+            }
+          },
+          {
+            "name": "create_topic",
+            "description": "Create a forum topic in a supergroup and return its topic id.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": { "type": "string", "description": "Supergroup id or @username" },
+                "name": { "type": "string", "description": "Topic title" }
+              },
+              "required": ["chat", "name"]
+            }
+          },
+          {
+            "name": "edit_topic",
+            "description": "Rename a forum topic and optionally close or reopen it.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": { "type": "string", "description": "Supergroup id or @username" },
+                "topicId": { "type": "string", "description": "Topic id" },
+                "name": { "type": "string", "description": "New title" },
+                "closed": { "type": "boolean", "description": "true closes the topic, false reopens it" }
+              },
+              "required": ["chat", "topicId"]
+            }
+          },
+          {
+            "name": "create_poll",
+            "description": "Send a quiz or regular poll to a chat.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": { "type": "string", "description": "Chat id or @username" },
+                "question": { "type": "string", "description": "Poll question, up to 300 characters" },
+                "options": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "2 to 10 answer options"
+                },
+                "anonymous": { "type": "boolean", "description": "Anonymous poll, default true" },
+                "multiple": { "type": "boolean", "description": "Allow several answers" }
+              },
+              "required": ["chat", "question", "options"]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "main",
+      "family": "view",
+      "descriptor": {
+        "id": "main",
+        "title": "Telegram groups",
+        "sections": [
+          { "type": "status" },
+          { "type": "capabilities" },
+          { "type": "permissions" },
+          { "type": "connections", "connections": ["telegram-bot"] },
+          { "type": "config" },
+          { "type": "jobs" },
+          {
+            "type": "table",
+            "title": "Registered chats",
+            "source": { "route": "/chats" },
+            "columns": [
+              { "key": "id", "label": "Chat", "format": "text" },
+              { "key": "kind", "label": "Kind", "format": "badge" },
+              { "key": "title", "label": "Title", "format": "text" },
+              { "key": "status", "label": "Status", "format": "badge" },
+              { "key": "threadId", "label": "Thread", "format": "text" },
+              { "key": "updatedAt", "label": "Updated", "format": "datetime" }
+            ],
+            "rowActions": [
+              {
+                "id": "bind",
+                "label": "Bind",
+                "route": { "route": "/chats/:id/bind", "params": { "id": "id" } }
+              },
+              {
+                "id": "unbind",
+                "label": "Unbind",
+                "route": { "route": "/chats/:id/unbind", "params": { "id": "id" } },
+                "confirm": "Unbind this group? Messages stop reaching the thread until it is bound again.",
+                "destructive": true
+              }
+            ]
+          },
+          {
+            "type": "form",
+            "title": "Rename a chat",
+            "fields": [
+              {
+                "key": "chat",
+                "label": "Chat id",
+                "type": "text",
+                "required": true,
+                "help": "Numeric chat id from the registered chats table"
+              },
+              {
+                "key": "title",
+                "label": "Display title",
+                "type": "text",
+                "required": true
+              }
+            ],
+            "submit": { "route": "/rename" }
+          },
+          {
+            "type": "markdown",
+            "body": "Setup: 1) bind a telegram-bot account created from a @BotFather token in the connections section; 2) add the bot to a group and send /start or /join there — the bot verifies it is an admin (or has privacy mode disabled); 3) bind the chat above. Messages matching the routing policy go to the bound thread agent with sender attribution, and replies come back into the group. Forum topics each get their own thread. This add-on must own its own bot token: sharing one token with the Telegram bot add-on breaks both pollers (Telegram returns 409)."
+          }
+        ]
+      }
+    },
+    {
+      "id": "chats",
+      "family": "route",
+      "descriptor": { "id": "chats", "method": "GET", "path": "/chats", "role": "member" }
+    },
+    {
+      "id": "bind",
+      "family": "route",
+      "descriptor": {
+        "id": "bind",
+        "method": "POST",
+        "path": "/chats/:id/bind",
+        "role": "member"
+      }
+    },
+    {
+      "id": "unbind",
+      "family": "route",
+      "descriptor": {
+        "id": "unbind",
+        "method": "POST",
+        "path": "/chats/:id/unbind",
+        "role": "member"
+      }
+    },
+    {
+      "id": "rename",
+      "family": "route",
+      "descriptor": { "id": "rename", "method": "POST", "path": "/rename", "role": "member" }
+    }
+  ]
+}

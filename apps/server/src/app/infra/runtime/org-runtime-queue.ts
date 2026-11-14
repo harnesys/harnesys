@@ -25,6 +25,7 @@ export interface ThreadQueueRuntimeDeps {
   lifecycle: RunLifecycleStore;
   sessionFor: (threadId: string, agentId: string) => Promise<SessionHandle>;
   requestedSkills: Map<string, string[]>;
+  requestedModes: Map<string, string | undefined>;
   worktreeBindings: Map<string, ThreadBinding>;
   kick: () => void;
 }
@@ -47,6 +48,7 @@ export function createThreadQueueDrainer(
             {
               lifecycle: runtime.lifecycle,
               requestedSkills: runtime.requestedSkills,
+              requestedModes: runtime.requestedModes,
               worktreeBindings: runtime.worktreeBindings,
               sessionFor: runtime.sessionFor,
               kick: runtime.kick,
@@ -101,6 +103,7 @@ async function deliverQueuedThreadMessage(
       ...(item.origin ? { origin: item.origin } : {}),
       ...(item.originConnectorId ? { originConnectorId: item.originConnectorId } : {}),
       ...(item.clientEventId ? { clientEventId: item.clientEventId } : {}),
+      ...(item.mode ? { mode: item.mode } : {}),
       ...(item.threadSeq !== null ? { triggerThreadSeq: item.threadSeq } : {}),
     });
     return accepted.runId;

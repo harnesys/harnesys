@@ -12,11 +12,15 @@ export const AutomationConnectionSchema = z.object({
 });
 export type AutomationConnection = z.infer<typeof AutomationConnectionSchema>;
 
+export const AutomationSourceSchema = z.enum(['core', 'integration', 'addon']);
+export type AutomationSource = z.infer<typeof AutomationSourceSchema>;
+
 export const AutomationItemSchema = z.object({
   id: z.string().min(1),
   orgId: OrgIdSchema,
   integrationId: z.string().min(1),
   kind: z.string().min(1),
+  source: AutomationSourceSchema.default('integration'),
   label: z.string().min(1),
   description: z.string().default(''),
   status: AutomationStatusSchema,
@@ -37,6 +41,7 @@ export type ListAutomationsResponse = z.infer<typeof ListAutomationsResponseSche
 export const AutomationKindSchema = z.object({
   kind: z.string().min(1),
   integrationId: z.string().min(1),
+  source: AutomationSourceSchema.default('integration'),
   label: z.string().min(1),
   description: z.string().default(''),
   icon: z.string().default('zap'),

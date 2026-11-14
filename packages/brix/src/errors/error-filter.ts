@@ -55,6 +55,20 @@ const domainStatusByCode: Record<string, number> = {
   INTEGRATION_WEBHOOK_SIGNATURE_INVALID: 401,
   INTEGRATION_TOKEN_REFRESH_FAILED: 502,
   INTEGRATION_PROVIDER_ERROR: 502,
+  APP_NOT_FOUND: 404,
+  APP_KIND_UNKNOWN: 400,
+  APP_FIELDS_INVALID: 400,
+  ACCOUNT_NOT_FOUND: 404,
+  // Addon domain (ADDONS_PLAN §16): AddonException reason codes. Values mirror
+  // the status declared by each AddonException class in domain/addons/errors.ts.
+  not_found: 404,
+  permission_denied: 403,
+  incompatible: 409,
+  needs_consent: 409,
+  in_use: 409,
+  manifest_invalid: 422,
+  quarantined: 409,
+  migration_failed: 500,
 };
 
 interface ErrorBodyInput {

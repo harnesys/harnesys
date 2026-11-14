@@ -10,8 +10,8 @@ import {
   type SessionHandle,
 } from 'harnesys';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
+import { createOrgModelsPort } from '../../domain/provider/org-models.ts';
 import { openOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
-import { createOrgModelsPort } from '../runtime/org-models.port.ts';
 import { wireOrgPlugins } from '../runtime/org-plugin-wiring.ts';
 import { wireOrgPacks } from '../runtime/packs/wire-org-packs.ts';
 import { providerApiKeySecretNames } from '../runtime/secret-resolver.adapter.ts';

@@ -15,10 +15,12 @@ import type {
   TruncateThreadResult,
   UrlEntry,
 } from 'harnesys';
+import { TriggerInstanceRepositoryPort } from '../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { HookRunStorePort } from '../../domain/agent/hook-run-store.port.ts';
 import { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
 import { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
+import { PackRegistryPort } from '../../domain/capabilities/pack-registry.port.ts';
 import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
 import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
@@ -72,6 +74,7 @@ export interface OrgRuntime {
     threadId: string;
     text?: string;
     effort?: string;
+    mode?: string;
     attachments?: Attachment[];
     skills?: string[];
     clientEventId?: string;
@@ -125,6 +128,7 @@ export interface OrgRuntimeDeps {
   fileRules: FileAccessRulePort;
   permissionRules?: PermissionRuleStorePort;
   plugins: PluginRuntimePort;
+  packRegistry: PackRegistryPort;
   sourceSkills: SourceSkillsPort;
   orgSettings: OrgSettingsPort;
   mcpManage?: McpManagePort;
@@ -140,6 +144,7 @@ export interface OrgRuntimeDeps {
   terminalSessions?: TerminalSessionsPort;
   schedules?: ScheduleRepositoryPort;
   webhooks?: WebhookRepositoryPort;
+  triggerInstances?: TriggerInstanceRepositoryPort;
   knowledge?: OrgKnowledgeDeps;
   issues?: OrgIssueDeps;
   issueExecutions?: IssueExecutionPort;

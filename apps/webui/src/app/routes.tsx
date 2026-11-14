@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { Navigate, Outlet, type RouteObject, useParams } from 'react-router';
 import { DeskSync, OrgDeskSync } from '@/features/desk';
+import { AddonDetailPage } from '@/features/manage-addons/addon-detail-page';
+import { AppProviderPage } from '@/features/manage-apps/ui/provider-page';
 import { ConnectorDetailPage } from '@/features/manage-connectors';
 import { WorkerRelayPage } from '@/features/relay-link';
 import { OrgBootstrap } from '@/features/switch-org/org-bootstrap';
@@ -130,6 +132,8 @@ export const routes: RouteObject[] = [
           { path: 'settings', element: <SettingsIndexRedirect /> },
           { path: 'settings/:category', element: <SettingsPage /> },
           { path: 'settings/connectors/:connectorId', element: <ConnectorDetailPage /> },
+          { path: 'settings/addons/:addonId', element: <AddonDetailPage /> },
+          { path: 'settings/apps/:providerId', element: <AppProviderPage /> },
           { path: 'inbox', element: <InboxPage /> },
           {
             element: <ProjectPage />,

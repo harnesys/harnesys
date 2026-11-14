@@ -21,15 +21,19 @@ function readString(raw: string | undefined, fallback: string): string {
   const value = raw?.trim();
   return value ? value : fallback;
 }
+const LOCAL_HOST_ORIGIN = 'http://127.0.0.1:47474';
+
+function hasWindow(): boolean {
+  return typeof window !== 'undefined';
+}
+
 export const env = {
   devServerPort: readPort(import.meta.env.VITE_DEV_SERVER_PORT, DEFAULT_DEV_SERVER_PORT),
   trace: readBool(import.meta.env.CLIENT_TRACE, false),
-  isTauri: typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window,
+  isTauri: hasWindow() && '__TAURI_INTERNALS__' in window,
   localHostOrigin: readString(
     import.meta.env.CLIENT_HOST_ORIGIN,
-    typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
-      ? 'http://127.0.0.1:47474'
-      : window.location.origin,
+    hasWindow() && !('__TAURI_INTERNALS__' in window) ? window.location.origin : LOCAL_HOST_ORIGIN,
   ),
 } as const;
 export function hostWsBase(): string {

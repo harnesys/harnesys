@@ -17,8 +17,6 @@ export async function createSchedule(
     detail: draft.detail.trim() || undefined,
     cron: draft.cron.trim() || undefined,
     modeId: draft.modeId,
-    history: draft.history,
-    historyLast: draft.historyLast,
     threadId: draft.threadId || undefined,
   });
   const schedule = toClientSchedule(created.schedule);

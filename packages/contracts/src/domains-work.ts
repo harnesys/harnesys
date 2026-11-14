@@ -191,8 +191,6 @@ export {
   CreateScheduleResponseSchema,
   type ListSchedulesResponse,
   ListSchedulesResponseSchema,
-  type ScheduleHistory,
-  ScheduleHistorySchema,
   type ScheduleMissPolicy,
   ScheduleMissPolicySchema,
   type SchedulePublic,

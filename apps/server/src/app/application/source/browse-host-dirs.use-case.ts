@@ -1,14 +1,14 @@
 import { Injectable } from '@harnesys/brix';
 import type { ProxyRequest } from '@harnesys/contracts';
 import { HostOfflineException } from '../../domain/content/content.error.ts';
+import { HostBrowsePort } from '../../domain/content/host-browse.port.ts';
 import type { HostDirectoryListing } from '../../domain/content/host-directory.ts';
+import { WORKER_CONTENT_PATH } from '../../domain/content/worker-content.protocol.ts';
 import { FleetContentProxyPort } from '../../domain/fleet/fleet-content-proxy.port.ts';
 import { FleetHubPort } from '../../domain/fleet/fleet-hub.port.ts';
 import { NodeRepository } from '../../domain/fleet/node-repository.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { SourcePathInvalidException } from '../../domain/source/source.error.ts';
-import { listHostDirectories } from '../../infra/content/list-host-directories.ts';
-import { WORKER_CONTENT_PATH } from '../../infra/content/worker-content.protocol.ts';
 
 export interface BrowseHostDirsInput {
   orgId: string;
@@ -23,13 +23,14 @@ export class BrowseHostDirsUseCase {
     private readonly nodes: NodeRepository,
     private readonly hub: FleetHubPort,
     private readonly proxy: FleetContentProxyPort,
+    private readonly hostBrowse: HostBrowsePort,
   ) {}
 
   async execute(input: BrowseHostDirsInput): Promise<HostDirectoryListing> {
     const localHostId = this.machineConfig.get().id;
     const hostId = input.hostId?.trim() || localHostId;
     if (hostId === localHostId) {
-      return listHostDirectories(input.path);
+      return this.hostBrowse.listHostDirectories(input.path);
     }
     return this.browseRemote(input.orgId, hostId, input.path);
   }

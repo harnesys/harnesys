@@ -1,9 +1,9 @@
 import { Injectable, Logger, type ModuleDestroyHook, type ModuleInitHook } from '@harnesys/brix';
 import { isNewerVersion, parseVersion } from '@harnesys/studio-shared';
 import { Cron } from 'croner';
-import { serverVersion } from '../../api/rest/server-version.ts';
 import { OrgMachineStore } from '../../domain/machine/org-machine-store.port.ts';
 import { ReleaseEventsPort } from '../../domain/release/release-events.port.ts';
+import { serverVersion } from '../../domain/release/server-version.ts';
 
 const REPO = 'harnesys/harnesys';
 const GH_API = 'https://api.github.com';

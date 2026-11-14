@@ -8,20 +8,18 @@ import type { LoadedOrgPlugin } from '../../domain/plugin/plugin-runtime.port.ts
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
 import { OrgSkillsPort } from '../../domain/skills/org-skills.port.ts';
+import type { SeedMarker } from '../../domain/skills/skills-seed.port.ts';
+import { SkillsSeedPort } from '../../domain/skills/skills-seed.port.ts';
+import { SkillsTierCachePort } from '../../domain/skills/skills-tier-cache.port.ts';
 import { type SourceSkillDir, SourceSkillsPort } from '../../domain/skills/source-skills.port.ts';
 import { SourceLocationPort } from '../../domain/source/source-location.port.ts';
 import type { SourceRecord } from '../../domain/source/source-registry.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
-import { SkillsTierCache } from '../../infra/skills/skills-tier-cache.ts';
-import {
-  readSeedMarker,
-  type SeedMarker,
-  systemSkillUpdateAvailable,
-} from '../../infra/skills/system-skills-seed.ts';
 
 export interface MergedSkillsDeps {
   layout: HostFsLayoutPort;
-  tierCache: SkillsTierCache;
+  tierCache: SkillsTierCachePort;
+  seed: SkillsSeedPort;
   skills: OrgSkillsPort;
   pluginRuntime: PluginRuntimePort;
   sources: SourceRegistryPort;
@@ -52,7 +50,7 @@ export async function buildMergedSkills(
 async function tierSkills(deps: MergedSkillsDeps): Promise<OrgSkill[]> {
   const entries = await deps.tierCache.entries();
   const systemDir = deps.layout.systemSkillsDir();
-  const marker = readSeedMarker(systemDir) ?? EMPTY_MARKER;
+  const marker = deps.seed.readSeedMarker(systemDir) ?? EMPTY_MARKER;
   return entries.map((entry) => ({
     name: entry.summary.name,
     description: entry.summary.description,
@@ -63,7 +61,13 @@ async function tierSkills(deps: MergedSkillsDeps): Promise<OrgSkill[]> {
     canUpdate: false,
     loadable: true,
     ...(entry.origin.kind === 'system'
-      ? { updateAvailable: systemSkillUpdateAvailable(systemDir, marker, entry.summary.name) }
+      ? {
+          updateAvailable: deps.seed.systemSkillUpdateAvailable(
+            systemDir,
+            marker,
+            entry.summary.name,
+          ),
+        }
       : {}),
   }));
 }

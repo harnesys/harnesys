@@ -12,6 +12,7 @@ import { KnowledgeAdapter } from './knowledge.adapter.ts';
 import { KnowledgeIndexEventsAdapter } from './knowledge-index-events.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule, SourceModule, ProviderModule, SecretModule, FilesWatcherModule],
   providers: [
     {

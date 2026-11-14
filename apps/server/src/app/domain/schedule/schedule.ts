@@ -1,4 +1,4 @@
-import type { ScheduleHistory, ScheduleMissPolicy, ScheduleStatus } from '@harnesys/contracts';
+import type { ScheduleMissPolicy, ScheduleStatus } from '@harnesys/contracts';
 
 export const SCHEDULE_CATCHUP_WINDOW_SEC = 3600;
 export const SCHEDULE_CATCHUP_BATCH = 50;
@@ -13,8 +13,6 @@ export interface ScheduleRecord {
   detail: string;
   cron: string;
   modeId: string;
-  history: ScheduleHistory;
-  historyLast: number;
   missPolicy: ScheduleMissPolicy;
   threadId: string;
   nextRunAt: string | null;
@@ -40,8 +38,6 @@ export type SchedulePatch = Partial<{
   detail: string;
   cron: string;
   modeId: string;
-  history: ScheduleHistory;
-  historyLast: number;
   missPolicy: ScheduleMissPolicy;
   threadId: string;
   nextRunAt: string | null;
@@ -50,4 +46,4 @@ export type SchedulePatch = Partial<{
   updatedAt: string;
 }>;
 
-export type { ScheduleHistory, ScheduleMissPolicy, ScheduleStatus };
+export type { ScheduleMissPolicy, ScheduleStatus };

@@ -9,8 +9,8 @@ import {
   webCapability,
   webhookCapability,
 } from 'harnesys';
+import { StudioEmbeddings } from '../../../domain/knowledge/embeddings.ts';
 import { resolveProviderApiKey } from '../../../domain/secret/provider-api-key.ts';
-import { StudioEmbeddings } from '../../knowledge/embeddings.ts';
 import { embedModelIdOf } from '../../memory/org-memory-settings.store.ts';
 import type { OrgSqliteDb } from '../../org-sqlite/org-sqlite-session.ts';
 import { OrgEpisodicPort } from './org-episodic.port.ts';
@@ -123,6 +123,8 @@ export function schedulerRegistration(ctx: WireOrgPackContext) {
         agents: ctx.deps.agents,
         orgSettings: ctx.deps.orgSettings,
         ...(ctx.deps.deskEvents ? { deskEvents: ctx.deps.deskEvents } : {}),
+        ...(ctx.deps.webhooks ? { webhooks: ctx.deps.webhooks } : {}),
+        ...(ctx.deps.triggerInstances ? { triggerInstances: ctx.deps.triggerInstances } : {}),
       }),
     },
     resolveScope: ctx.liveScope,

@@ -1,12 +1,17 @@
 import { Injectable } from '@harnesys/brix';
 import type { CreateWebhookBody, CreateWebhookResponse } from '@harnesys/contracts';
+import { TriggerInstanceRepositoryPort } from '../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { AgentNotFoundException } from '../../domain/agent/agent.error.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
+import { ModePresetRegistryPort } from '../../domain/mode-presets/mode-preset-registry.port.ts';
+import { assertValidModePreset } from '../../domain/mode-presets/validate-mode.ts';
+import { ScheduleRepositoryPort } from '../../domain/schedule/schedule-repository.port.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { WebhookRepositoryPort } from '../../domain/webhook/webhook-repository.port.ts';
-import { insertAgentThread, toThreadPublicForAgent } from '../threads/thread.helpers.ts';
+import { insertDedicatedThread } from '../threads/create-dedicated-thread.ts';
+import { toThreadPublicForAgent } from '../threads/thread.helpers.ts';
 import { requireBindableWebhookThread } from './bind-webhook-thread.ts';
 import { toDeskWebhookEvent, toWebhookPublic, webhookEndpointFor } from './webhook.helpers.ts';
 
@@ -22,8 +27,11 @@ export class CreateWebhookUseCase {
     private readonly webhooks: WebhookRepositoryPort,
     private readonly threads: ThreadRepositoryPort,
     private readonly threadAgents: ThreadAgentRepositoryPort,
+    private readonly schedules: ScheduleRepositoryPort,
+    private readonly triggerInstances: TriggerInstanceRepositoryPort,
     private readonly agents: AgentRegistryPort,
     private readonly deskEvents: DeskEventsPort,
+    private readonly modes: ModePresetRegistryPort,
   ) {}
 
   execute(request: CreateWebhookRequest): CreateWebhookResponse {
@@ -32,6 +40,7 @@ export class CreateWebhookUseCase {
     if (!agent || agent.status === 'archived') {
       throw new AgentNotFoundException(request.body.targetAgentId);
     }
+    assertValidModePreset(this.modes, request.orgId, request.body.mode);
     const status = request.body.status ?? 'active';
     const now = new Date().toISOString();
     const id = crypto.randomUUID();
@@ -40,6 +49,8 @@ export class CreateWebhookUseCase {
           threads: this.threads,
           threadAgents: this.threadAgents,
           webhooks: this.webhooks,
+          schedules: this.schedules,
+          triggerInstances: this.triggerInstances,
           orgId: request.orgId,
           agentId: agent.id,
           threadId: request.body.threadId,
@@ -47,24 +58,9 @@ export class CreateWebhookUseCase {
       : undefined;
     const thread =
       existingThread ??
-      insertAgentThread(
+      insertDedicatedThread(
         { threads: this.threads, threadAgents: this.threadAgents },
-        {
-          id: crypto.randomUUID(),
-          orgId: request.orgId,
-          title: name,
-          kind: 'webhook',
-          parentThreadId: null,
-          forkAt: null,
-          inheritedEventCount: 0,
-          metadata: {},
-          runProfileId: null,
-          runDirectory: null,
-          createdAt: now,
-          updatedAt: now,
-          lastReadAt: now,
-        },
-        agent.id,
+        { orgId: request.orgId, agentId: agent.id, title: name, kind: 'webhook' },
       );
     const webhook = this.webhooks.insert({
       id,
@@ -74,6 +70,7 @@ export class CreateWebhookUseCase {
       targetAgentId: agent.id,
       detail: request.body.detail?.trim() || '',
       endpoint: webhookEndpointFor(request.orgId, id),
+      mode: request.body.mode ?? null,
       threadId: thread.id,
       lastFiredAt: null,
       createdByUserId: request.actorUserId ?? null,

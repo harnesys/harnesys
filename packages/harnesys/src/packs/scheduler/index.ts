@@ -21,7 +21,7 @@ export const schedulerCapability = definePack<SchedulerCapabilityPorts, Record<s
       {
         name: 'schedule_set',
         description:
-          'Create a cron schedule, or update it when id is set. Defaults to this agent as target. nextRunAt is the next cron instant after create, not now. threadId chooses WHERE the fire lands: omit = new dedicated schedule thread (isolated cron log); "self" = THIS chat (fires here once this run is idle; one active run per thread); uuid from threads_list = that existing conversation. Thread agent must match targetAgentId. One schedule per thread. history=none|last|all folds prior fires only on dedicated schedule threads; historyLast is how many when history=last (1–99).',
+          'Create a cron schedule, or update it when id is set. Defaults to this agent as target. nextRunAt is the next cron instant after create, not now. threadId chooses WHERE the fire lands: omit = new dedicated schedule thread (isolated cron log); "self" = THIS chat (fires here once this run is idle; one active run per thread); uuid from threads_list = that existing conversation. Thread agent must match targetAgentId. One trigger of any kind (schedule, webhook, addon trigger) per thread; binding to an occupied thread fails. History folding is configured on the bound thread policy, not on the schedule.',
       },
       { name: 'schedule_pause', description: 'Pause or resume a schedule by id.' },
       { name: 'schedule_delete', description: 'Delete a schedule by id.' },

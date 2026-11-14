@@ -1,12 +1,12 @@
 import { HttpException, Injectable } from '@harnesys/brix';
 import type { ProxyRequest } from '@harnesys/contracts';
 import { HostOfflineException } from '../../domain/content/content.error.ts';
-import { FleetContentProxyPort } from '../../domain/fleet/fleet-content-proxy.port.ts';
-import { FleetHubPort } from '../../domain/fleet/fleet-hub.port.ts';
 import {
   isWorkerContentPath,
   PROXY_CONTENT_TIMEOUT_MS,
-} from '../content/worker-content.protocol.ts';
+} from '../../domain/content/worker-content.protocol.ts';
+import { FleetContentProxyPort } from '../../domain/fleet/fleet-content-proxy.port.ts';
+import { FleetHubPort } from '../../domain/fleet/fleet-hub.port.ts';
 
 @Injectable()
 export class FleetContentProxyAdapter extends FleetContentProxyPort {

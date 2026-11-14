@@ -18,6 +18,7 @@ export interface SendThreadMessageInput {
   threadId: string;
   text?: string;
   effort?: string;
+  mode?: string;
   attachments?: Attachment[];
   skills?: string[];
   clientEventId?: string;
@@ -38,6 +39,7 @@ export interface SendThreadMessageInput {
 export interface RunControlDeps {
   lifecycle: RunLifecycleStore;
   requestedSkills: Map<string, string[]>;
+  requestedModes: Map<string, string | undefined>;
   worktreeBindings: Map<string, ThreadBinding>;
   sessionFor: (threadId: string, agentId: string) => Promise<SessionHandle>;
   kick: () => void;
@@ -51,6 +53,7 @@ export async function sendThreadMessage(
   const handle = await deps.sessionFor(input.threadId, input.agentId);
   const clientEventId = input.clientEventId ?? crypto.randomUUID();
   deps.requestedSkills.set(input.threadId, input.skills ?? []);
+  deps.requestedModes.set(input.threadId, input.mode);
   syncThreadBinding(deps.worktreeBindings, input);
   const { runId } = await handle.send(
     {

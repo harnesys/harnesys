@@ -1,5 +1,5 @@
 import { Injectable } from '@harnesys/brix';
-import type { ScheduleHistory, ScheduleMissPolicy, ScheduleStatus } from '@harnesys/contracts';
+import type { ScheduleMissPolicy, ScheduleStatus } from '@harnesys/contracts';
 import { and, asc, desc, eq, isNotNull, lte } from 'drizzle-orm';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import {
@@ -100,8 +100,6 @@ export class ScheduleRepositoryAdapter extends ScheduleRepositoryPort {
             detail: rec.detail,
             cron: rec.cron,
             modeId: rec.modeId,
-            history: rec.history,
-            historyLast: rec.historyLast,
             missPolicy: rec.missPolicy,
             threadId: rec.threadId,
             nextRunAt: rec.nextRunAt,
@@ -191,8 +189,6 @@ function toSchedule(row: ScheduleRow): ScheduleRecord {
     detail: row.detail,
     cron: row.cron,
     modeId: row.modeId,
-    history: (row.history || 'none') as ScheduleHistory,
-    historyLast: row.historyLast > 0 ? row.historyLast : 1,
     missPolicy: (row.missPolicy || 'catch-up') as ScheduleMissPolicy,
     threadId: row.threadId,
     nextRunAt: row.nextRunAt,

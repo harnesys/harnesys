@@ -7,6 +7,7 @@ import type {
   KnowledgeReindexInput,
   KnowledgeSearchInput,
 } from 'harnesys';
+import type { EmbeddingsPort, StudioEmbeddingsDeps } from '../../domain/knowledge/embeddings.ts';
 import {
   KnowledgeSourceNotFoundException,
   KnowledgeValidationException,
@@ -26,7 +27,6 @@ import {
   knowledgeChunksTable,
   knowledgeRootsTable,
 } from '../org-sqlite/schema/index.ts';
-import type { EmbeddingsPort, StudioEmbeddingsDeps } from './embeddings.ts';
 import { embeddingsForSettings } from './knowledge-embeddings.ts';
 import type { SqliteKnowledgeIndexRepo } from './knowledge-index-repo.ts';
 import type { KnowledgeIndexer } from './knowledge-indexer.ts';

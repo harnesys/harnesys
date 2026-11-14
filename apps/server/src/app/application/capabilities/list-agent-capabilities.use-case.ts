@@ -10,9 +10,9 @@ import type { ExplainStatus, HookGateStatus, PermissionMap } from 'harnesys';
 import { hookGateStatus } from 'harnesys';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
+import { PackRegistryPort } from '../../domain/capabilities/pack-registry.port.ts';
 import type { LoadedOrgPlugin } from '../../domain/plugin/plugin-runtime.port.ts';
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
-import { isHostWired } from '../../infra/runtime/packs/org-pack-list.ts';
 import { requireAgent } from '../agents/agent.helpers.ts';
 import { pluginHookBindings } from '../plugins/plugin-grant-gate.ts';
 import { listOrgPackCatalog } from './org-pack-catalog.ts';
@@ -26,6 +26,7 @@ export interface ListAgentCapabilitiesRequest {
 export class ListAgentCapabilitiesUseCase {
   constructor(
     private readonly agents: AgentRegistryPort,
+    private readonly packs: PackRegistryPort,
     private readonly pluginRuntime: PluginRuntimePort,
   ) {}
 
@@ -35,7 +36,7 @@ export class ListAgentCapabilitiesUseCase {
     const explain: ExplainEntry[] = [];
     const registry: AgentCapabilityRegistryEntry[] = [];
 
-    for (const pack of listOrgPackCatalog()) {
+    for (const pack of listOrgPackCatalog(this.packs)) {
       pushPackEntries(explain, registry, pack, packs);
     }
 
@@ -145,18 +146,6 @@ function pushPackEntries(
     return;
   }
   const source = `pack:${pack.name}`;
-  if (!isHostWired(pack.name)) {
-    for (const tool of pack.tools) {
-      explain.push({
-        item: tool.name,
-        kind: 'tool',
-        source,
-        status: 'denied-by-universe',
-        reason: 'pack not wired by host',
-      });
-    }
-    return;
-  }
   const override = overrideOf(packs[pack.name]);
   for (const tool of pack.tools) {
     const disabled = override.disabledTools?.includes(tool.name) ?? false;

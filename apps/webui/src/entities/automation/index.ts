@@ -1,5 +1,6 @@
 export type {
   AutomationConnection,
+  AutomationSource,
   AutomationStatus,
   ClientAutomation,
 } from './model/automation';

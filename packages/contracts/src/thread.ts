@@ -2,14 +2,17 @@ import { z } from 'zod';
 import { ExecutionProfileIdSchema } from './execution-profile.ts';
 import { OrgIdSchema } from './org-machine.ts';
 
-export const DEFAULT_CONTEXT_WINDOW = 6;
-
 export const ThreadKindSchema = z.enum(['chat', 'group', 'schedule', 'webhook', 'issue']);
 export type ThreadKind = z.infer<typeof ThreadKindSchema>;
 
+export const ThreadHistoryModeSchema = z.enum(['full', 'none', 'last']);
+export type ThreadHistoryMode = z.infer<typeof ThreadHistoryModeSchema>;
+
 export const ThreadPolicySchema = z.object({
-  version: z.literal(1).default(1),
-  contextWindow: z.number().int().min(1).max(40).optional(),
+  version: z.union([z.literal(1), z.literal(2)]).default(2),
+  historyMode: ThreadHistoryModeSchema.optional(),
+  historyLast: z.number().int().min(0).max(100).optional(),
+  historyFromRunId: z.string().uuid().optional(),
   mentionGating: z.boolean().optional(),
 });
 export type ThreadPolicy = z.infer<typeof ThreadPolicySchema>;
@@ -110,6 +113,13 @@ export const CreateThreadBodySchema = z.object({
   kind: ThreadKindSchema.optional(),
   parentThreadId: z.string().uuid().optional(),
   forkAt: z.string().trim().min(1).optional(),
+  policy: z
+    .object({
+      historyMode: ThreadHistoryModeSchema.optional(),
+      historyLast: z.number().int().min(0).max(100).optional(),
+      historyFromRunId: z.string().uuid().optional(),
+    })
+    .optional(),
 });
 export type CreateThreadBody = z.infer<typeof CreateThreadBodySchema>;
 
@@ -125,8 +135,10 @@ export type AddThreadParticipantBody = z.infer<typeof AddThreadParticipantBodySc
 
 export const UpdateThreadPolicyBodySchema = z.object({
   autoReplyAgentId: z.string().uuid().nullable().optional(),
-  contextWindow: z.number().int().min(1).max(40).nullable().optional(),
   mentionGating: z.boolean().optional(),
+  historyMode: ThreadHistoryModeSchema.optional(),
+  historyLast: z.number().int().min(0).max(100).nullable().optional(),
+  historyFromRunId: z.string().uuid().nullable().optional(),
 });
 export type UpdateThreadPolicyBody = z.infer<typeof UpdateThreadPolicyBodySchema>;
 

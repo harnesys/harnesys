@@ -16,6 +16,7 @@ import { UserInviteRepositoryAdapter } from './user-invite-repository.adapter.ts
 import { LoginAttemptStoreAdapter, UserRepositoryAdapter } from './user-repository.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule],
   providers: [
     { provide: UserRepository, useClass: UserRepositoryAdapter },

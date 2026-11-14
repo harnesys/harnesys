@@ -1,12 +1,7 @@
-import {
-  DEFAULT_MODE_ID,
-  type ScheduleHistory,
-  type ScheduleRecord,
-  type ScheduleStatus,
-} from '@harnesys/studio-shared';
+import { DEFAULT_MODE_ID, type ScheduleRecord, type ScheduleStatus } from '@harnesys/studio-shared';
 
-export { SCHEDULE_HISTORIES, SCHEDULE_STATUSES } from '@harnesys/studio-shared';
-export type { ScheduleHistory, ScheduleStatus };
+export { SCHEDULE_STATUSES } from '@harnesys/studio-shared';
+export type { ScheduleStatus };
 export function scheduleStatusTone(
   status: ScheduleStatus,
 ): 'idle' | 'live' | 'wait' | 'danger' | 'off' {
@@ -48,8 +43,6 @@ export interface Schedule {
   detail: string;
   cron: string;
   modeId: string;
-  history: ScheduleHistory;
-  historyLast: number;
   threadId: string;
   nextRunAt?: string;
   lastFiredAt?: string;
@@ -65,8 +58,6 @@ export function toClientSchedule(record: ScheduleRecord): Schedule {
     detail: record.detail,
     cron: record.cron,
     modeId: record.modeId ?? DEFAULT_MODE_ID,
-    history: record.history ?? 'none',
-    historyLast: record.historyLast > 0 ? record.historyLast : 1,
     threadId: record.threadId,
     nextRunAt: record.nextRunAt ?? undefined,
     lastFiredAt: record.lastFiredAt ?? undefined,

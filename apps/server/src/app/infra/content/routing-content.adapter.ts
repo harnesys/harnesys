@@ -11,6 +11,10 @@ import {
   type ContentWriteResult,
   OrgContentPort,
 } from '../../domain/content/org-content.port.ts';
+import {
+  WORKER_CONTENT_PATH,
+  type WorkerContentRequest,
+} from '../../domain/content/worker-content.protocol.ts';
 import { FleetContentProxyPort } from '../../domain/fleet/fleet-content-proxy.port.ts';
 import { OrgExecutionReplicaPort } from '../../domain/fleet/org-execution-replica.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
@@ -24,7 +28,6 @@ import {
   findSourceForContentRoute,
   readyContentHostIds,
 } from './routing-content.route.ts';
-import { WORKER_CONTENT_PATH, type WorkerContentRequest } from './worker-content.protocol.ts';
 
 @Injectable()
 export class RoutingContentAdapter extends OrgContentPort {

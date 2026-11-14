@@ -33,8 +33,7 @@ import {
   sharedSourcesOf,
 } from '../../domain/thread/prepare-runtime-input.ts';
 import { ThreadValidationException } from '../../domain/thread/thread.error.ts';
-import type { ThreadRecord } from '../../domain/thread/thread.ts';
-import { contextWindowOf } from '../../domain/thread/thread-policy.ts';
+import { historyLastOf, historyModeOf } from '../../domain/thread/thread-policy.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import {
   type PrimarySourceRef,
@@ -188,7 +187,8 @@ export function prepareTarget(
   if (thread.kind === 'group') {
     notes.push(
       groupChannelNote({
-        window: contextWindowOf(thread.policy),
+        mode: historyModeOf(thread.policy, thread.kind),
+        historyLast: historyLastOf(thread.policy),
         total: thread.conversationCount,
       }),
     );
@@ -197,11 +197,12 @@ export function prepareTarget(
     notes.push(CHANNEL_NOTE);
   }
   const channelNote = notes.length > 0 ? notes.join('\n\n') : undefined;
+  const modeId = options?.mode ?? runModeOf(thread);
   return {
     agent,
-    agentDef: runAgentDef(deps, thread, agent, { model, provider }),
-    mode: runModeCapability(deps, thread, agent),
-    permissions: runPermissions(deps, thread, agent),
+    agentDef: runAgentDef(deps, agent, modeId, { model, provider }),
+    mode: runModeCapability(deps, agent, modeId),
+    permissions: runPermissions(deps, agent, modeId),
     paths,
     threadDir,
     scope,
@@ -234,20 +235,22 @@ function isDirectory(path: string): boolean {
 
 function runAgentDef(
   deps: PrepareOrgTargetDeps,
-  thread: ThreadRecord,
   agent: AgentRecord,
+  modeId: string | undefined,
   lookup: AgentModelLookup,
 ): AgentDefinition {
   const agentDef = toAgentDefinition(agent, lookup);
-  const preset = presetOf(deps, thread);
+  const preset = presetOf(deps, modeId);
   if (preset) {
     mergePresetShell(agentDef, agent.config, preset);
   }
   return agentDef;
 }
 
-function presetOf(deps: PrepareOrgTargetDeps, thread: ThreadRecord): ModePresetRecord | undefined {
-  const modeId = runModeOf(thread);
+function presetOf(
+  deps: PrepareOrgTargetDeps,
+  modeId: string | undefined,
+): ModePresetRecord | undefined {
   if (!modeId) {
     return undefined;
   }
@@ -256,18 +259,18 @@ function presetOf(deps: PrepareOrgTargetDeps, thread: ThreadRecord): ModePresetR
 
 function runModeCapability(
   deps: PrepareOrgTargetDeps,
-  thread: ThreadRecord,
   agent: AgentRecord,
+  modeId: string | undefined,
 ): ModeCapabilityFields | undefined {
-  const modeId = runModeOf(thread) ?? agent.defaultModeId ?? undefined;
-  if (modeId === undefined || modeId === DEFAULT_MODE_ID) {
+  const effective = modeId ?? agent.defaultModeId ?? undefined;
+  if (effective === undefined || effective === DEFAULT_MODE_ID) {
     return undefined;
   }
-  const local = modeByIdOf(modesFromConfig(agent.config), modeId);
+  const local = modeByIdOf(modesFromConfig(agent.config), effective);
   if (local !== undefined) {
     return capabilityFieldsOf(local);
   }
-  const preset = deps.modes.findById(deps.orgId, modeId);
+  const preset = deps.modes.findById(deps.orgId, effective);
   if (preset === undefined) {
     return undefined;
   }
@@ -299,11 +302,11 @@ function capabilityFieldsOf(mode: AgentMode): ModeCapabilityFields {
 
 function runPermissions(
   deps: PrepareOrgTargetDeps,
-  thread: ThreadRecord,
   agent: AgentRecord,
+  modeId: string | undefined,
 ): PermissionMap {
   const agentPermissions = permissionsFromConfig(agent.config) ?? {};
-  const preset = presetOf(deps, thread);
+  const preset = presetOf(deps, modeId);
   if (!preset) {
     return agentPermissions;
   }

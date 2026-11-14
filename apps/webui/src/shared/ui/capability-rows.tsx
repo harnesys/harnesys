@@ -224,23 +224,37 @@ export function Row({
     </div>
   );
 }
+export const ROW_SECTION_DIVIDER = 'mt-5 border-border/40 border-t pt-3';
 export function RowSection({
   label,
   count,
+  actions,
+  className,
   children,
 }: {
   label: string;
   count?: number;
+  className?: string;
+  actions?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <div className="mt-2 flex flex-col gap-1 border-border/40 border-t pt-2 first-of-type:mt-0 first-of-type:border-t-0 first-of-type:pt-1">
-      <p className="flex items-baseline gap-1.5 font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
-        {label}
-        {typeof count === 'number' ? (
-          <span className="font-mono font-normal normal-case tabular-nums">{count}</span>
-        ) : null}
-      </p>
+    <div
+      className={cn(
+        ROW_SECTION_DIVIDER,
+        'flex flex-col gap-2 first-of-type:mt-0 first-of-type:border-t-0 first-of-type:pt-1',
+        className,
+      )}
+    >
+      <div className="flex items-baseline gap-2">
+        <p className="flex min-w-0 flex-1 items-baseline gap-1.5 font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
+          {label}
+          {typeof count === 'number' ? (
+            <span className="font-mono font-normal normal-case tabular-nums">{count}</span>
+          ) : null}
+        </p>
+        {actions ? <div className="flex shrink-0 items-center gap-1">{actions}</div> : null}
+      </div>
       {children}
     </div>
   );
@@ -249,20 +263,23 @@ export function RowItem({
   title,
   icon,
   description,
+  chips,
   testId,
 }: {
   title: string;
   icon?: ReactNode;
   description?: ReactNode;
+  chips?: ReactNode;
   testId?: string;
 }) {
   return (
-    <div className="min-w-0 px-1 py-0.5" data-testid={testId}>
+    <div className="min-w-0 px-1 py-1" data-testid={testId}>
       <div className="flex min-w-0 items-baseline gap-1.5">
         {icon ? (
           <span className="shrink-0 self-center text-muted-foreground [&_svg]:size-3">{icon}</span>
         ) : null}
-        <p className="truncate font-mono text-[12px] leading-snug">{title}</p>
+        <p className="min-w-0 truncate font-mono text-[12px] leading-snug">{title}</p>
+        {chips}
       </div>
       {description ? (
         <p className="line-clamp-2 text-[11px] text-muted-foreground leading-snug">{description}</p>
@@ -273,7 +290,7 @@ export function RowItem({
 export function RowField({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex min-w-0 gap-2 px-1 py-0.5">
-      <span className="w-16 shrink-0 pt-px font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
+      <span className="w-20 shrink-0 pt-px font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
         {label}
       </span>
       <span className="wrap-anywhere min-w-0 font-mono text-[12px] leading-snug">{value}</span>

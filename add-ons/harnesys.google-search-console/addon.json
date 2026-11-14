@@ -1,0 +1,88 @@
+{
+  "id": "harnesys.google-search-console",
+  "version": "1.0.0",
+  "platform": 1,
+  "title": "Google Search Console",
+  "description": "Reads Search Console properties and search analytics (clicks, impressions, CTR, position) with the org's bound Google account. The add-on calls the Search Console API; the token stays host-side.",
+  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "activation": "lazy",
+  "permissions": [
+    {
+      "id": "http.fetch",
+      "scope": { "hosts": ["www.googleapis.com"] },
+      "reason": "Call the Google Search Console API with the bound account"
+    },
+    {
+      "id": "accounts.use",
+      "scope": { "connections": ["google"] },
+      "reason": "Use the Google account bound to the search console connection"
+    }
+  ],
+  "connections": [
+    {
+      "id": "google",
+      "label": "Google account",
+      "accountKinds": ["google-account"],
+      "scopes": ["webmasters"],
+      "cardinality": "many"
+    }
+  ],
+  "contributions": [
+    {
+      "id": "pack",
+      "family": "tool-pack",
+      "descriptor": {
+        "name": "search-console",
+        "title": "Google Search Console tools",
+        "description": "List verified sites and query search analytics",
+        "connection": "google",
+        "tools": [
+          {
+            "name": "list_sites",
+            "description": "List Search Console properties accessible by the bound account with their permission levels.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              }
+            }
+          },
+          {
+            "name": "search_analytics",
+            "description": "Query Search Console search analytics for a verified site: clicks, impressions, CTR and average position grouped by dimensions.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "siteUrl": { "type": "string", "description": "Property URL from list_sites" },
+                "startDate": { "type": "string", "description": "YYYY-MM-DD" },
+                "endDate": { "type": "string", "description": "YYYY-MM-DD" },
+                "dimensions": {
+                  "type": "string",
+                  "description": "Comma-separated dimensions: query, page, date, device, country"
+                },
+                "maxResults": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100,
+                  "description": "Maximum number of rows (default 25)"
+                },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              },
+              "required": ["siteUrl", "startDate", "endDate"]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

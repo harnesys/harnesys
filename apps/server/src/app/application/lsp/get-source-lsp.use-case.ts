@@ -1,11 +1,11 @@
 import { Injectable } from '@harnesys/brix';
 import type { OrgLspListResponse } from '@harnesys/contracts';
+import { readLspJsonText } from '../../domain/lsp/org-lsp-file.ts';
 import { PluginRegistryPort } from '../../domain/plugin/plugin-registry.port.ts';
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
 import { SourceNotFoundException } from '../../domain/source/source.error.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import { ToolchainPort } from '../../domain/toolchain/toolchain.port.ts';
-import { readLspJsonText } from '../../infra/lsp/org-lsp-file.ts';
 import { buildLspView } from './lsp-view.ts';
 
 export interface GetSourceLspRequest {

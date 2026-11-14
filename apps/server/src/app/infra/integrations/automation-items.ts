@@ -11,6 +11,7 @@ export const CORE_AUTOMATION_KINDS: AutomationKind[] = [
   {
     kind: CORE_SCHEDULE_KIND,
     integrationId: CORE_INTEGRATION_ID,
+    source: 'core',
     label: 'Scheduler',
     description: 'Cron schedule',
     icon: 'calendar-clock',
@@ -20,6 +21,7 @@ export const CORE_AUTOMATION_KINDS: AutomationKind[] = [
   {
     kind: CORE_WEBHOOK_KIND,
     integrationId: CORE_INTEGRATION_ID,
+    source: 'core',
     label: 'Webhook',
     description: 'HTTP trigger',
     icon: 'webhook',
@@ -90,6 +92,7 @@ export function toScheduleAutomationItem(schedule: ScheduleRecord): AutomationIt
     orgId: schedule.orgId,
     integrationId: CORE_INTEGRATION_ID,
     kind: CORE_SCHEDULE_KIND,
+    source: 'core',
     label: schedule.name,
     description: schedule.detail,
     status: schedule.status,
@@ -108,6 +111,7 @@ export function toWebhookAutomationItem(webhook: WebhookRecord): AutomationItem 
     orgId: webhook.orgId,
     integrationId: CORE_INTEGRATION_ID,
     kind: CORE_WEBHOOK_KIND,
+    source: 'core',
     label: webhook.name,
     description: webhook.detail,
     status: webhook.status,
@@ -131,6 +135,7 @@ export function toAddonAutomationItem(
     orgId,
     integrationId,
     kind: item.kind,
+    source: 'integration',
     label: item.label,
     description: item.description ?? '',
     status: item.status,
@@ -148,6 +153,7 @@ export function toAutomationKindContributions(definition: IntegrationDefinition)
   return (definition.automationKinds ?? []).map((contribution) => ({
     kind: contribution.kind,
     integrationId: definition.id,
+    source: 'integration',
     label: contribution.label,
     description: contribution.description ?? '',
     icon: contribution.icon ?? 'zap',

@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, type Stats, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ContentEntry, ContentTreeResult } from '@harnesys/contracts';
 import { MAX_TREE_ENTRIES } from '@harnesys/contracts';
@@ -99,7 +99,24 @@ function walkEntry(
   level: number,
 ): boolean {
   const abs = join(dir, name);
-  const st = statSync(abs);
+  const st = statSync(abs, { throwIfNoEntry: false });
+  // A missing stat means a broken symlink or an entry that vanished mid-walk.
+  return st !== undefined && walkStatEntry({ ...ctx, dir: abs, name }, st, relDir, level);
+}
+
+interface WalkEntry {
+  dir: string;
+  name: string;
+}
+
+function walkStatEntry(
+  ctx: WalkEntry & WalkContext,
+  st: Stats,
+  relDir: string,
+  level: number,
+): boolean {
+  const abs = ctx.dir;
+  const name = ctx.name;
   const isDir = st.isDirectory();
   const path = toRel(ctx.root, abs);
   const relName = relDir ? `${relDir}/${name}` : name;

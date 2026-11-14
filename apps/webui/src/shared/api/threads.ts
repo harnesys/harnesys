@@ -24,6 +24,11 @@ export interface CreateThreadInput {
   kind?: 'chat' | 'group' | 'schedule' | 'webhook' | 'issue';
   parentThreadId?: string;
   forkAt?: string;
+  policy?: {
+    historyMode?: 'full' | 'none' | 'last';
+    historyLast?: number;
+    historyFromRunId?: string;
+  };
 }
 
 function requireOrgId(): string {
@@ -102,6 +107,7 @@ export function createThreadRecord(body: CreateThreadInput): Promise<ThreadRecor
     ...(body.kind ? { kind: body.kind } : {}),
     ...(body.parentThreadId ? { parentThreadId: body.parentThreadId } : {}),
     ...(body.forkAt ? { forkAt: body.forkAt } : {}),
+    ...(body.policy ? { policy: body.policy } : {}),
   };
   return apiJson<ThreadPublic>(threadsBase(orgId), {
     method: 'POST',
@@ -254,9 +260,7 @@ export async function compactThreadStream(id: string, signal?: AbortSignal): Pro
   if (!response.ok) {
     let message = response.statusText || 'Compact failed';
     try {
-      const body = (await response.json()) as {
-        error?: string;
-      };
+      const body = (await response.json()) as { error?: string };
       if (body.error) {
         message = body.error;
       }
@@ -283,9 +287,7 @@ export async function getRunEventsStream(
   if (!response.ok) {
     let message = response.statusText || 'Stream connection failed';
     try {
-      const body = (await response.json()) as {
-        error?: string;
-      };
+      const body = (await response.json()) as { error?: string };
       if (body.error) {
         message = body.error;
       }
@@ -326,10 +328,7 @@ export function updateThreadBinding(
   const orgId = requireOrgId();
   return apiJson<ContractThreadSummary>(
     `${threadsBase(orgId)}/${encodeURIComponent(threadId)}/binding`,
-    {
-      method: 'PATCH',
-      body: JSON.stringify(body),
-    },
+    { method: 'PATCH', body: JSON.stringify(body) },
   ).then(toStudioSummary);
 }
 

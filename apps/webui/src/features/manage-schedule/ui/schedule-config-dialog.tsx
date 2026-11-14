@@ -2,12 +2,12 @@ import { type AgentMode, DEFAULT_MODE, DEFAULT_MODE_ID } from '@harnesys/studio-
 import { useState } from 'react';
 import type { Agent } from '@/entities/agent';
 import { SCHEDULE_STATUSES, type Schedule, scheduleStatusLabel } from '@/entities/schedule';
-import { ThreadBindingSelects, useThreadStore } from '@/entities/thread';
+import { TriggerTargetField } from '@/features/manage-automations/ui/trigger-target-field';
 import { cn } from '@/shared/lib/utils';
 import type { DialogComponentProps } from '@/shared/services/overlay';
 import { Button } from '@/shared/ui/button';
 import { DialogFooter } from '@/shared/ui/dialog';
-import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/shared/ui/field';
+import { Field, FieldGroup, FieldLabel } from '@/shared/ui/field';
 import { Input } from '@/shared/ui/input';
 import {
   Select,
@@ -22,8 +22,6 @@ import { confirmDeleteSchedule } from '../model/delete-schedule';
 import type { ScheduleConfigResult } from '../model/schedule-dialogs';
 import { draftFrom, emptyScheduleDraft, type ScheduleFormDraft } from '../model/schedule-draft';
 import { CronComposer } from './cron-composer';
-import { ScheduleHistoryFields } from './schedule-history-fields';
-import { ScheduleThreadField } from './schedule-thread-field';
 
 interface AgentModesLike {
   modes?: AgentMode[];
@@ -54,9 +52,6 @@ export function ScheduleConfigDialog({
     return { ...base, modeId: defaultModeId ?? DEFAULT_MODE_ID };
   });
   const agent = agents.find((item) => item.id === draft.targetAgentId);
-  const linkedThread = useThreadStore((state) =>
-    draft.threadId ? state.items.find((item) => item.id === draft.threadId) : undefined,
-  );
   const agentModes = agent !== undefined && hasAgentModes(agent) ? (agent.modes ?? []) : [];
   const modeItems = [
     { value: DEFAULT_MODE_ID, label: DEFAULT_MODE.name },
@@ -100,7 +95,7 @@ export function ScheduleConfigDialog({
                       setDraft({
                         ...draft,
                         targetAgentId: value,
-                        threadId: schedule ? draft.threadId : '',
+                        threadId: null,
                         modeId: defaultModeId ?? DEFAULT_MODE_ID,
                       });
                     }
@@ -153,81 +148,45 @@ export function ScheduleConfigDialog({
             </div>
           </Field>
           {projectId ? (
-            <Field>
-              <FieldLabel>Wake thread</FieldLabel>
-              <div className="grid items-start gap-1.5 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.5fr)]">
-                <div className="flex min-w-0 flex-col gap-1">
-                  <span className="text-[11px] text-muted-foreground">Thread</span>
-                  <ScheduleThreadField
-                    projectId={projectId}
-                    agentId={draft.targetAgentId}
-                    value={draft.threadId}
-                    onChange={(threadId) => setDraft({ ...draft, threadId })}
-                    currentThreadId={schedule?.threadId}
-                    allowDedicated={!schedule}
-                  />
-                </div>
-                {linkedThread ? (
-                  <ThreadBindingSelects
-                    orgId={projectId}
-                    threadId={linkedThread.id}
-                    runProfileId={linkedThread.runProfileId ?? null}
-                    runDirectory={linkedThread.runDirectory ?? null}
-                    bindingLocked={linkedThread.bindingLocked ?? false}
-                  />
-                ) : null}
-              </div>
-              <FieldDescription>
-                {linkedThread
-                  ? 'Profile and folder apply to the wake thread runs.'
-                  : 'Dedicated thread is an isolated cron log. A chat thread receives the fire in that conversation.'}
-              </FieldDescription>
-            </Field>
+            <TriggerTargetField
+              orgId={projectId}
+              agentId={draft.targetAgentId}
+              value={draft.threadId ?? ''}
+              onChange={(threadId) => setDraft({ ...draft, threadId: threadId || null })}
+              currentThreadId={schedule?.threadId}
+            />
           ) : null}
-          {!linkedThread && draft.threadId ? (
-            <FieldDescription>
-              Binding can be set after the first run creates the thread.
-            </FieldDescription>
-          ) : null}
+          <Field>
+            <FieldLabel htmlFor="schedule-mode">Mode</FieldLabel>
+            <Select
+              items={modeItems}
+              value={draft.modeId}
+              onValueChange={(value) => {
+                if (typeof value === 'string') {
+                  setDraft({ ...draft, modeId: value });
+                }
+              }}
+            >
+              <SelectTrigger id="schedule-mode" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {modeItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
           <Field>
             <FieldLabel htmlFor="schedule-cron-raw">Cron</FieldLabel>
             <CronComposer value={draft.cron} onChange={(cron) => setDraft({ ...draft, cron })} />
           </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field>
-              <FieldLabel htmlFor="schedule-mode">Mode</FieldLabel>
-              <Select
-                items={modeItems}
-                value={draft.modeId}
-                onValueChange={(value) => {
-                  if (typeof value === 'string') {
-                    setDraft({ ...draft, modeId: value });
-                  }
-                }}
-              >
-                <SelectTrigger id="schedule-mode" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {modeItems.map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </Field>
-            <ScheduleHistoryFields
-              history={draft.history}
-              historyLast={draft.historyLast}
-              onHistory={(history) => setDraft({ ...draft, history })}
-              onHistoryLast={(historyLast) => setDraft({ ...draft, historyLast })}
-            />
-          </div>
           <Field>
-            <FieldLabel htmlFor="schedule-detail">Notes</FieldLabel>
+            <FieldLabel htmlFor="schedule-detail">Instructions</FieldLabel>
             <Textarea
               id="schedule-detail"
               value={draft.detail}

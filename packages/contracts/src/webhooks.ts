@@ -13,6 +13,7 @@ export const WebhookPublicSchema = z.object({
   targetAgentId: z.string().uuid(),
   detail: z.string(),
   endpoint: z.string().min(1),
+  mode: z.string().min(1).nullable(),
   threadId: z.string().uuid(),
   lastFiredAt: z.string().nullable(),
   createdAt: z.string().min(1),
@@ -25,6 +26,7 @@ export const CreateWebhookBodySchema = z.object({
   targetAgentId: z.string().uuid(),
   detail: z.string().trim().optional(),
   status: WebhookStatusSchema.optional(),
+  mode: z.string().trim().min(1).max(48).optional(),
   threadId: z.string().uuid().optional(),
 });
 export type CreateWebhookBody = z.infer<typeof CreateWebhookBodySchema>;
@@ -34,7 +36,8 @@ export const UpdateWebhookBodySchema = z.object({
   status: WebhookStatusSchema.optional(),
   targetAgentId: z.string().uuid().optional(),
   detail: z.string().trim().optional(),
-  threadId: z.string().uuid().optional(),
+  mode: z.string().trim().min(1).max(48).optional(),
+  threadId: z.string().uuid().nullable().optional(),
 });
 export type UpdateWebhookBody = z.infer<typeof UpdateWebhookBodySchema>;
 

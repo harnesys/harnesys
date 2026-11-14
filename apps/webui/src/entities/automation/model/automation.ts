@@ -1,6 +1,11 @@
-import type { AutomationConnection, AutomationItem, AutomationStatus } from '@harnesys/contracts';
+import type {
+  AutomationConnection,
+  AutomationItem,
+  AutomationSource,
+  AutomationStatus,
+} from '@harnesys/contracts';
 
-export type { AutomationConnection, AutomationStatus };
+export type { AutomationConnection, AutomationSource, AutomationStatus };
 
 export const CORE_AUTOMATION_INTEGRATION_ID = 'core';
 
@@ -29,6 +34,7 @@ export interface ClientAutomation {
   projectId: string;
   integrationId: string;
   kind: string;
+  source: AutomationSource;
   label: string;
   description: string;
   status: AutomationStatus;
@@ -51,6 +57,7 @@ export function toClientAutomation(item: AutomationItem): ClientAutomation {
     projectId: item.orgId,
     integrationId: item.integrationId,
     kind: item.kind,
+    source: item.source,
     label: item.label,
     description: item.description,
     status: item.status,

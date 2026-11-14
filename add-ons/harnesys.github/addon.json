@@ -1,0 +1,568 @@
+{
+  "id": "harnesys.github",
+  "version": "1.0.0",
+  "platform": 1,
+  "title": "GitHub",
+  "description": "GitHub repositories, issues, pull requests and CI workflow runs for every connected GitHub App installation, plus a github.repo-events trigger that polls repos for new issues, pull requests and workflow runs. Installation tokens are issued by the host and never enter the add-on process.",
+  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "activation": "resident",
+  "permissions": [
+    {
+      "id": "http.fetch",
+      "scope": { "hosts": ["api.github.com"] },
+      "reason": "Call the GitHub REST API with the bound installation token"
+    },
+    {
+      "id": "accounts.use",
+      "scope": { "connections": ["github"] },
+      "reason": "Use the GitHub installation bound to the github connection"
+    },
+    {
+      "id": "worker",
+      "reason": "Keep the resident poller that watches repos for new events"
+    },
+    {
+      "id": "lifecycle.resident",
+      "reason": "Stay running to keep polling watched repos"
+    },
+    {
+      "id": "trigger",
+      "reason": "Fire github.repo-events instances for new issues, pull requests and workflow runs"
+    }
+  ],
+  "connections": [
+    {
+      "id": "github",
+      "label": "GitHub installation",
+      "accountKinds": ["github-installation"],
+      "cardinality": "many"
+    }
+  ],
+  "data": { "migrations": "migrations", "quotaMb": 32 },
+  "contributions": [
+    {
+      "id": "config",
+      "family": "config",
+      "descriptor": {
+        "fields": [
+          {
+            "key": "poll_sec",
+            "label": "Poll interval, seconds",
+            "type": "number",
+            "required": false,
+            "default": 300,
+            "help": "How often watched repos are polled. Conditional requests with ETags do not count against the GitHub rate limit."
+          }
+        ]
+      }
+    },
+    {
+      "id": "pack",
+      "family": "tool-pack",
+      "descriptor": {
+        "name": "github",
+        "title": "GitHub tools",
+        "description": "Repos, code search, issues, pull requests and CI workflow runs through the GitHub API",
+        "connection": "github",
+        "tools": [
+          {
+            "name": "list_repos",
+            "description": "List repositories of the GitHub App installation. Returns name, fullName, private, defaultBranch and updatedAt per repository.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              }
+            }
+          },
+          {
+            "name": "get_file",
+            "description": "Read one file from a repository through the contents API and decode it from base64. Files up to 512 KB are supported.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "repo": { "type": "string", "description": "owner/name" },
+                "path": { "type": "string", "description": "Repository-relative file path" },
+                "ref": { "type": "string", "description": "Branch, tag or commit; defaults to the default branch" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              },
+              "required": ["repo", "path"]
+            }
+          },
+          {
+            "name": "search_code",
+            "description": "Search code with the GitHub code search syntax. Optionally scoped to one repository. Returns path, repository, url and a text excerpt per hit.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "query": { "type": "string", "description": "GitHub code search query, e.g. \"TODO language:ts\"" },
+                "repo": { "type": "string", "description": "Restrict the search to owner/name" },
+                "limit": { "type": "integer", "minimum": 1, "maximum": 50, "description": "Maximum hits (default 20)" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              },
+              "required": ["query"]
+            }
+          },
+          {
+            "name": "list_issues",
+            "description": "List issues of a repository (pull requests are excluded). Returns number, title, state, labels, author, url and timestamps.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "repo": { "type": "string", "description": "owner/name" },
+                "state": { "type": "string", "enum": ["open", "closed", "all"], "description": "Issue state filter (default open)" },
+                "limit": { "type": "integer", "minimum": 1, "maximum": 50, "description": "Maximum issues (default 20)" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              },
+              "required": ["repo"]
+            }
+          },
+          {
+            "name": "get_issue",
+            "description": "Read one issue: title, body, state, labels, author, comment count and url.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "repo": { "type": "string", "description": "owner/name" },
+                "number": { "type": "integer", "description": "Issue number" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              },
+              "required": ["repo", "number"]
+            }
+          },
+          {
+            "name": "create_issue",
+            "description": "Create an issue with a title, optional body and optional labels. Returns the created issue.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "repo": { "type": "string", "description": "owner/name" },
+                "title": { "type": "string", "description": "Issue title" },
+                "body": { "type": "string", "description": "Issue body in markdown" },
+                "labels": { "type": "array", "items": { "type": "string" }, "description": "Labels to attach" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              },
+              "required": ["repo", "title"]
+            }
+          },
+          {
+            "name": "comment_issue",
+            "description": "Add a markdown comment to an issue or pull request. Returns the comment id, author and url.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "repo": { "type": "string", "description": "owner/name" },
+                "number": { "type": "integer", "description": "Issue or pull request number" },
+                "body": { "type": "string", "description": "Comment body in markdown" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              },
+              "required": ["repo", "number", "body"]
+            }
+          },
+          {
+            "name": "close_issue",
+            "description": "Close an issue. Returns the closed issue.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "repo": { "type": "string", "description": "owner/name" },
+                "number": { "type": "integer", "description": "Issue number" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              },
+              "required": ["repo", "number"]
+            }
+          },
+          {
+            "name": "add_labels",
+            "description": "Add labels to an issue or pull request. Returns the label names now on the issue.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "repo": { "type": "string", "description": "owner/name" },
+                "number": { "type": "integer", "description": "Issue or pull request number" },
+                "labels": { "type": "array", "items": { "type": "string" }, "description": "Labels to add" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              },
+              "required": ["repo", "number", "labels"]
+            }
+          },
+          {
+            "name": "list_pull_requests",
+            "description": "List pull requests of a repository. Returns number, title, state, draft, author, head/base branches, url and timestamps.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "repo": { "type": "string", "description": "owner/name" },
+                "state": { "type": "string", "enum": ["open", "closed", "all"], "description": "Pull request state filter (default open)" },
+                "limit": { "type": "integer", "minimum": 1, "maximum": 50, "description": "Maximum pull requests (default 20)" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              },
+              "required": ["repo"]
+            }
+          },
+          {
+            "name": "get_pull_request",
+            "description": "Read one pull request: title, body, state, draft, author, head/base branches, url and timestamps.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "repo": { "type": "string", "description": "owner/name" },
+                "number": { "type": "integer", "description": "Pull request number" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              },
+              "required": ["repo", "number"]
+            }
+          },
+          {
+            "name": "get_pull_request_diff",
+            "description": "Read the unified diff of one pull request. Large diffs are truncated to 200 KB.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "repo": { "type": "string", "description": "owner/name" },
+                "number": { "type": "integer", "description": "Pull request number" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              },
+              "required": ["repo", "number"]
+            }
+          },
+          {
+            "name": "create_pull_request",
+            "description": "Open a pull request from head to base with a title, optional body and draft flag. Returns the created pull request.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "repo": { "type": "string", "description": "owner/name" },
+                "head": { "type": "string", "description": "Branch to merge from" },
+                "base": { "type": "string", "description": "Branch to merge into; defaults to the default branch" },
+                "title": { "type": "string", "description": "Pull request title" },
+                "body": { "type": "string", "description": "Pull request body in markdown" },
+                "draft": { "type": "boolean", "description": "Open as a draft pull request" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              },
+              "required": ["repo", "head", "title"]
+            }
+          },
+          {
+            "name": "update_pull_request",
+            "description": "Update the title, body or state (open/closed) of a pull request. Returns the updated pull request.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "repo": { "type": "string", "description": "owner/name" },
+                "number": { "type": "integer", "description": "Pull request number" },
+                "title": { "type": "string", "description": "New title" },
+                "body": { "type": "string", "description": "New body in markdown" },
+                "state": { "type": "string", "enum": ["open", "closed"], "description": "New state" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              },
+              "required": ["repo", "number"]
+            }
+          },
+          {
+            "name": "comment_pull_request",
+            "description": "Add a markdown comment to a pull request. Returns the comment id, author and url.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "repo": { "type": "string", "description": "owner/name" },
+                "number": { "type": "integer", "description": "Pull request number" },
+                "body": { "type": "string", "description": "Comment body in markdown" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              },
+              "required": ["repo", "number", "body"]
+            }
+          },
+          {
+            "name": "review_pull_request",
+            "description": "Submit a review on a pull request: APPROVE, REQUEST_CHANGES or COMMENT with an optional markdown body.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "repo": { "type": "string", "description": "owner/name" },
+                "number": { "type": "integer", "description": "Pull request number" },
+                "event": { "type": "string", "enum": ["APPROVE", "REQUEST_CHANGES", "COMMENT"], "description": "Review verdict" },
+                "body": { "type": "string", "description": "Review body in markdown" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              },
+              "required": ["repo", "number", "event"]
+            }
+          },
+          {
+            "name": "merge_pull_request",
+            "description": "Merge a pull request with merge, squash or rebase. Returns merged flag and the resulting commit sha.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "repo": { "type": "string", "description": "owner/name" },
+                "number": { "type": "integer", "description": "Pull request number" },
+                "mergeMethod": { "type": "string", "enum": ["merge", "squash", "rebase"], "description": "Merge strategy (default merge)" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              },
+              "required": ["repo", "number"]
+            }
+          },
+          {
+            "name": "list_workflow_runs",
+            "description": "List recent Actions workflow runs of a repository, optionally filtered by branch. Returns id, name, headBranch, status, conclusion, event, url and createdAt.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "repo": { "type": "string", "description": "owner/name" },
+                "branch": { "type": "string", "description": "Only runs for this branch" },
+                "limit": { "type": "integer", "minimum": 1, "maximum": 50, "description": "Maximum runs (default 10)" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              },
+              "required": ["repo"]
+            }
+          },
+          {
+            "name": "get_workflow_run",
+            "description": "Read one Actions workflow run: name, headBranch, status, conclusion, event, url and timestamps.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "repo": { "type": "string", "description": "owner/name" },
+                "runId": { "type": "integer", "description": "Workflow run id" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              },
+              "required": ["repo", "runId"]
+            }
+          },
+          {
+            "name": "list_run_jobs",
+            "description": "List the jobs of one Actions workflow run with status, conclusion and timings.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "repo": { "type": "string", "description": "owner/name" },
+                "runId": { "type": "integer", "description": "Workflow run id" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              },
+              "required": ["repo", "runId"]
+            }
+          },
+          {
+            "name": "rerun_workflow_run",
+            "description": "Re-run one Actions workflow run.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "repo": { "type": "string", "description": "owner/name" },
+                "runId": { "type": "integer", "description": "Workflow run id" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound GitHub installation id; required only when several installations are connected"
+                }
+              },
+              "required": ["repo", "runId"]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "events",
+      "family": "trigger",
+      "descriptor": {
+        "kind": "github.repo-events",
+        "title": "GitHub repo event",
+        "description": "Fires when a watched repository gets a new or updated issue, a new or updated pull request, or a new Actions workflow run. Polled, no webhook needed",
+        "connection": "github",
+        "configFields": [
+          {
+            "key": "repo",
+            "label": "Repository",
+            "type": "text",
+            "required": true,
+            "placeholder": "owner/name",
+            "optionsFrom": { "kind": "addonRoute", "route": "repos", "valueKey": "fullName" },
+            "widget": { "kind": "combobox" },
+            "pattern": {
+              "regex": "^[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*$",
+              "hint": "Repository as owner/name"
+            }
+          },
+          {
+            "key": "events",
+            "label": "Events",
+            "type": "text",
+            "required": false,
+            "default": "issues,pull_requests,workflow_runs",
+            "multi": true,
+            "options": [
+              { "value": "issues", "label": "Issues" },
+              { "value": "pull_requests", "label": "Pull requests" },
+              { "value": "workflow_runs", "label": "Workflow runs" }
+            ],
+            "widget": { "kind": "chips" },
+            "help": "Which events to watch; selecting none means all"
+          },
+          {
+            "key": "branch",
+            "label": "Branch",
+            "type": "text",
+            "required": false,
+            "help": "Only pull requests and workflow runs for this branch"
+          },
+          {
+            "key": "labels",
+            "label": "Labels",
+            "type": "text",
+            "required": false,
+            "widget": { "kind": "tags" },
+            "help": "Only issues and pull requests carrying at least one of these labels"
+          },
+          {
+            "key": "accountId",
+            "label": "Installation account",
+            "type": "text",
+            "required": false,
+            "optionsFrom": { "kind": "connections" },
+            "widget": { "kind": "combobox" },
+            "help": "Only needed when several GitHub installations are connected: the bound account to poll with"
+          }
+        ],
+        "limits": { "perDay": 500, "throttleSec": 5 }
+      }
+    },
+    {
+      "id": "poller",
+      "family": "worker",
+      "descriptor": {
+        "id": "repo-poller",
+        "title": "GitHub repo poller",
+        "autostart": true,
+        "restart": "on-failure"
+      }
+    },
+    {
+      "id": "main",
+      "family": "view",
+      "descriptor": {
+        "id": "main",
+        "title": "GitHub",
+        "sections": [
+          { "type": "status" },
+          { "type": "capabilities" },
+          { "type": "permissions" },
+          { "type": "connections", "connections": ["github"] },
+          { "type": "config" },
+          { "type": "automations", "triggers": ["github.repo-events"] },
+          {
+            "type": "table",
+            "title": "Repositories",
+            "source": { "route": "/repos" },
+            "columns": [
+              { "key": "fullName", "label": "Repository", "format": "text" },
+              { "key": "private", "label": "Private", "format": "badge" },
+              { "key": "defaultBranch", "label": "Default branch", "format": "text" },
+              { "key": "updatedAt", "label": "Updated", "format": "datetime" }
+            ]
+          },
+          {
+            "type": "markdown",
+            "body": "Connect a GitHub App installation in the connections section. The installation token is issued by the host on demand and never leaves the server. The github.repo-events trigger polls watched repositories: new issues and pull requests, updates to them, and new Actions workflow runs. Raw push events are not covered by polling; CI runs (workflow_runs) cover the push-to-build case. Conditional requests with ETags are used so polling does not consume the GitHub rate limit."
+          }
+        ]
+      }
+    },
+    {
+      "id": "repos",
+      "family": "route",
+      "descriptor": { "id": "repos", "method": "GET", "path": "/repos", "role": "member" }
+    }
+  ]
+}

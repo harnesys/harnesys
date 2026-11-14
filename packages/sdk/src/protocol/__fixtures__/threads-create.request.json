@@ -1,0 +1,9 @@
+{
+  "jsonrpc": "2.0",
+  "id": 21,
+  "method": "threads.create",
+  "params": {
+    "title": "Release follow-up",
+    "agentId": "00000000-0000-1000-8000-000000000001"
+  }
+}

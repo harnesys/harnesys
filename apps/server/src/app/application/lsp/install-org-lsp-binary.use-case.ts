@@ -5,16 +5,17 @@ import {
   ValidationException,
 } from '@harnesys/brix';
 import type { OrgLspListResponse } from '@harnesys/contracts';
-import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
-import { PluginRegistryPort } from '../../domain/plugin/plugin-registry.port.ts';
-import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
-import { ToolchainPort } from '../../domain/toolchain/toolchain.port.ts';
-import { installLspBinary, installSpecForCommand } from '../../infra/lsp/install-lsp-binary.ts';
+import { lspInstallSpecForCommand } from '../../domain/lsp/lsp-catalog.ts';
+import { LspInstallPort } from '../../domain/lsp/lsp-install.port.ts';
 import {
   disabledFileEntries,
   fileHasServer,
   readOrgLspFile,
-} from '../../infra/lsp/org-lsp-file.ts';
+} from '../../domain/lsp/org-lsp-file.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { PluginRegistryPort } from '../../domain/plugin/plugin-registry.port.ts';
+import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
+import { ToolchainPort } from '../../domain/toolchain/toolchain.port.ts';
 import { buildLspView } from './lsp-view.ts';
 
 export interface InstallOrgLspBinaryRequest {
@@ -29,6 +30,7 @@ export class InstallOrgLspBinaryUseCase {
     private readonly runtime: PluginRuntimePort,
     private readonly plugins: PluginRegistryPort,
     private readonly toolchain: ToolchainPort,
+    private readonly lspInstall: LspInstallPort,
   ) {}
 
   async execute(request: InstallOrgLspBinaryRequest): Promise<OrgLspListResponse> {
@@ -46,7 +48,7 @@ export class InstallOrgLspBinaryUseCase {
       disabledFileEntries(file.raw).find((server) => server.serverId === request.serverId)
         ?.command ??
       '';
-    const spec = installSpecForCommand(command);
+    const spec = lspInstallSpecForCommand(command);
     if (spec === undefined) {
       throw new HttpException(
         501,
@@ -56,7 +58,7 @@ export class InstallOrgLspBinaryUseCase {
       );
     }
     try {
-      await installLspBinary(spec, this.toolchain.resolve(request.orgId).pathEnv);
+      await this.lspInstall.installBinary(spec, this.toolchain.resolve(request.orgId).pathEnv);
     } catch (error) {
       throw new ValidationException(
         `install failed for ${command}: ${error instanceof Error ? error.message : String(error)}`,

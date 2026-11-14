@@ -15,6 +15,8 @@ import type {
   UsageReportRequest,
   UsageRunsReport,
   UsageRunsReportRequest,
+  UsageSummary,
+  UsageSummaryRequest,
 } from '../../domain/usage/usage-port.ts';
 import { byMemberOf, clampRunsLimit } from '../../domain/usage/usage-port.ts';
 import { type OrgSqliteDb, withOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
@@ -22,6 +24,7 @@ import { runsTable } from '../org-sqlite/schema/runs.ts';
 import { budgetMarksTable, priceOverridesTable, usageTable } from '../org-sqlite/schema/usage.ts';
 import { keyExpressionOf, reportRangeOffsetModifier } from './usage-report.helpers.ts';
 import { selectRunsReport } from './usage-runs.report.ts';
+import { selectUsageSummary } from './usage-summary.report.ts';
 
 @Injectable()
 export class UsageAdapter implements UsagePort {
@@ -249,6 +252,13 @@ export class UsageAdapter implements UsagePort {
       db.insert(budgetMarksTable).values({ entityId, scope, percent, markedAt }).run();
       return true;
     });
+  }
+
+  summary(orgId: string, request: UsageSummaryRequest): UsageSummary {
+    if (request.since !== undefined && Number.isNaN(Date.parse(request.since))) {
+      throw new UsageValidationError(`since is not a valid ISO date: ${request.since}`);
+    }
+    return withOrgSqlite(this.layout, orgId, (db) => selectUsageSummary(db, request));
   }
 
   private groupByOf(value: string | undefined): 'day' | 'hour' | 'minute' | 'agent' {

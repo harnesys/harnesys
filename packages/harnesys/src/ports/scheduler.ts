@@ -1,5 +1,5 @@
 import type { CapabilityScope } from '../domain/pack.ts';
-import type { PermissionMode, ScheduleHistory } from '../domain/schedule.ts';
+import type { PermissionMode } from '../domain/schedule.ts';
 export type ScheduleStatus = 'active' | 'paused' | 'failed';
 export interface ScheduleRecord {
   id: string;
@@ -10,8 +10,6 @@ export interface ScheduleRecord {
   detail: string;
   cron: string;
   mode: PermissionMode;
-  history: ScheduleHistory;
-  historyLast: number;
   threadId: string;
   nextRunAt: string | null;
   lastFiredAt: string | null;
@@ -24,8 +22,6 @@ export interface ScheduleCreateInput {
   cron?: string;
   detail?: string;
   mode?: PermissionMode;
-  history?: ScheduleHistory;
-  historyLast?: number;
   threadId?: string;
 }
 export interface ScheduleUpdateInput {
@@ -35,8 +31,6 @@ export interface ScheduleUpdateInput {
   detail?: string;
   cron?: string;
   mode?: PermissionMode;
-  history?: ScheduleHistory;
-  historyLast?: number;
 }
 export interface ScheduleCreatedThread {
   id: string;

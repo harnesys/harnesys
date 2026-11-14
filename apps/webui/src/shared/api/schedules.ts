@@ -7,7 +7,6 @@ import type {
 } from '@harnesys/contracts';
 import type {
   CreateScheduleResponse,
-  ScheduleHistory,
   ScheduleRecord,
   ScheduleStatus,
   SessionEvent,
@@ -21,8 +20,6 @@ export interface CreateScheduleInput {
   detail?: string;
   cron?: string;
   modeId?: string;
-  history?: ScheduleHistory;
-  historyLast?: number;
   missPolicy?: 'catch-up' | 'skip' | 'escalate';
   threadId?: string;
 }
@@ -34,10 +31,8 @@ export interface UpdateScheduleInput {
   detail?: string;
   cron?: string;
   modeId?: string;
-  history?: ScheduleHistory;
-  historyLast?: number;
   missPolicy?: 'catch-up' | 'skip' | 'escalate';
-  threadId?: string;
+  threadId?: string | null;
 }
 
 function requireOrgId(orgId?: string): string {
@@ -62,8 +57,6 @@ function toStudioSchedule(record: SchedulePublic): ScheduleRecord {
     detail: record.detail,
     cron: record.cron,
     modeId: record.modeId,
-    history: record.history,
-    historyLast: record.historyLast,
     threadId: record.threadId,
     nextRunAt: record.nextRunAt,
     lastFiredAt: record.lastFiredAt,
@@ -119,8 +112,6 @@ export function createScheduleRecord(orgId: string, body: CreateScheduleInput) {
     detail: body.detail,
     cron: body.cron,
     modeId: body.modeId,
-    history: body.history,
-    historyLast: body.historyLast,
     missPolicy: body.missPolicy,
     threadId: body.threadId,
   };
@@ -139,8 +130,6 @@ export function updateScheduleRecord(orgId: string, scheduleId: string, body: Up
     detail: body.detail,
     cron: body.cron,
     modeId: body.modeId,
-    history: body.history,
-    historyLast: body.historyLast,
     missPolicy: body.missPolicy,
     threadId: body.threadId,
   };

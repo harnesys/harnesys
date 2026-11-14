@@ -19,6 +19,7 @@ export async function createWebhook(
     name,
     targetAgentId: draft.targetAgentId,
     detail: draft.detail?.trim() || undefined,
+    mode: draft.mode,
     threadId: draft.threadId || undefined,
   });
   const webhook = toClientWebhook(created.webhook);

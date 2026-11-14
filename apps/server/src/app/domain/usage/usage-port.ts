@@ -1,13 +1,51 @@
-import type {
-  budgetMarksTable,
-  priceOverridesTable,
-  usageTable,
-} from '../../infra/org-sqlite/schema/usage.ts';
+export interface UsageRecord {
+  id: string;
+  ts: string;
+  projectId: string | null;
+  agentId: string | null;
+  runId: string;
+  model: string;
+  modelId: string | null;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number | null;
+  cacheWriteTokens: number | null;
+  reasoningTokens: number | null;
+  images: number | null;
+  costUsd: number;
+  pricingSource: string;
+}
 
-export type UsageRecord = typeof usageTable.$inferSelect;
-export type NewUsageRecord = typeof usageTable.$inferInsert;
-export type BudgetMark = typeof budgetMarksTable.$inferSelect;
-export type PriceOverride = typeof priceOverridesTable.$inferSelect;
+export interface NewUsageRecord {
+  id: string;
+  ts: string;
+  projectId?: string | null;
+  agentId?: string | null;
+  runId: string;
+  model: string;
+  modelId?: string | null;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens?: number | null;
+  cacheWriteTokens?: number | null;
+  reasoningTokens?: number | null;
+  images?: number | null;
+  costUsd?: number;
+  pricingSource?: string;
+}
+
+export interface BudgetMark {
+  entityId: string;
+  scope: string;
+  percent: number;
+  markedAt: string;
+}
+
+export interface PriceOverride {
+  modelId: string;
+  inputPer1M: number;
+  outputPer1M: number;
+}
 
 export interface ManualPrice {
   inputPer1M: number;
@@ -145,8 +183,28 @@ export function clampRunsLimit(limit: number | undefined): number {
   return Math.min(Math.max(Math.trunc(limit), 1), USAGE_RUNS_LIMIT_MAX);
 }
 
+export interface UsageSummaryRequest {
+  threadId?: string;
+  since?: string;
+}
+
+export interface UsageSummaryModelRow {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+}
+
+export interface UsageSummary {
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  byModel: UsageSummaryModelRow[];
+}
+
 export abstract class UsagePort {
   abstract report(orgId: string, request: UsageReportRequest): UsageReport;
+  abstract summary(orgId: string, request: UsageSummaryRequest): UsageSummary;
   abstract record(orgId: string, record: NewUsageRecord): void;
   abstract sumRunTokens(orgId: string, runId: string): number;
   abstract sumCostUsdByRunIds(orgId: string, runIds: string[]): number;

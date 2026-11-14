@@ -24,6 +24,7 @@ export const webhooksTable = sqliteTable(
       .references((): AnySQLiteColumn => agentsTable.id, { onDelete: 'cascade' }),
     detail: text('detail').notNull().default(''),
     endpoint: text('endpoint').notNull(),
+    mode: text('mode'),
     threadId: text('thread_id')
       .notNull()
       .references((): AnySQLiteColumn => threadsTable.id),

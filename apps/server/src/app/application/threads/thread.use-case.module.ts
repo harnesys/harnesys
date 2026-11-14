@@ -1,19 +1,4 @@
 import { Module } from '@harnesys/brix';
-import { AgentModule } from '../../infra/agent/agent.module.ts';
-import { ApprovalModule } from '../../infra/approvals/approval.module.ts';
-import { ConnectorModule } from '../../infra/connector/connector.module.ts';
-import { ExecutionProfileModule } from '../../infra/execution-profile/execution-profile.module.ts';
-import { FileAccessModule } from '../../infra/file-access/file-access.module.ts';
-import { FleetHubModule } from '../../infra/fleet-hub/fleet-hub.module.ts';
-import { IdentitySqliteModule } from '../../infra/identity-sqlite/identity-sqlite.module.ts';
-import { IssueInfraModule } from '../../infra/issues/issue.module.ts';
-import { MachineHomeModule } from '../../infra/machine-home/machine-home.module.ts';
-import { ModePresetsModule } from '../../infra/mode-presets/mode-presets.module.ts';
-import { RuntimeModule } from '../../infra/runtime/runtime.module.ts';
-import { SkillsModule } from '../../infra/skills/skills.module.ts';
-import { SourceModule } from '../../infra/source/source.module.ts';
-import { ThreadModule } from '../../infra/thread/thread.module.ts';
-import { UsageModule } from '../../infra/usage/usage.module.ts';
 import { FleetUseCaseModule } from '../fleet/fleet.use-case.module.ts';
 import { SkillsUseCaseModule } from '../skills/skills.use-case.module.ts';
 import { AddThreadAgentUseCase } from './add-thread-agent.use-case.ts';
@@ -31,6 +16,7 @@ import { GetThreadRawModelRequestUseCase } from './get-thread-raw-model-request.
 import { ListThreadAttachmentsUseCase } from './list-thread-attachments.use-case.ts';
 import { ListThreadFilesUseCase } from './list-thread-files.use-case.ts';
 import { ListThreadRawModelRequestsUseCase } from './list-thread-raw-model-requests.use-case.ts';
+import { ListThreadRunsUseCase } from './list-thread-runs.use-case.ts';
 import { ListThreadsUseCase } from './list-threads.use-case.ts';
 import { MarkThreadReadUseCase } from './mark-thread-read.use-case.ts';
 import { ReadThreadFileUseCase } from './read-thread-file.use-case.ts';
@@ -77,31 +63,14 @@ const useCases = [
   ListThreadFilesUseCase,
   ReadThreadFileUseCase,
   ListThreadRawModelRequestsUseCase,
+  ListThreadRunsUseCase,
   GetThreadRawModelRequestUseCase,
   GetThreadAttachmentUseCase,
   ThreadMessageQueueUseCase,
 ];
 
 @Module({
-  imports: [
-    ThreadModule,
-    AgentModule,
-    ConnectorModule,
-    ApprovalModule,
-    ModePresetsModule,
-    RuntimeModule,
-    SourceModule,
-    ExecutionProfileModule,
-    MachineHomeModule,
-    FileAccessModule,
-    FleetHubModule,
-    FleetUseCaseModule,
-    IdentitySqliteModule,
-    SkillsModule,
-    SkillsUseCaseModule,
-    IssueInfraModule,
-    UsageModule,
-  ],
+  imports: [FleetUseCaseModule, SkillsUseCaseModule],
   providers: [...useCases],
   exports: [...useCases],
 })

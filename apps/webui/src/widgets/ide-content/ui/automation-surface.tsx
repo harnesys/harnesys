@@ -2,9 +2,10 @@ import { useAgentStore } from '@/entities/agent';
 import { useScheduleStore } from '@/entities/schedule';
 import { useThreadStore } from '@/entities/thread';
 import { useWebhookStore } from '@/entities/webhook';
+import { ThreadSettings } from '@/features/manage-thread-members';
 import { HitlPrompt } from '@/features/send-message';
 import { ThreadTriggerDock } from '@/widgets/thread-dock';
-import { ThreadJournal } from '@/widgets/thread-journal';
+import { JournalComposer, ThreadJournal } from '@/widgets/thread-journal';
 
 function NotFound({ text }: { text: string }) {
   return (
@@ -35,7 +36,12 @@ function TriggerSurface({
         <>
           <ThreadJournal threadId={thread.id} agent={agent} kind={kind} />
           <HitlPrompt />
-          <ThreadTriggerDock threadId={thread.id} projectId={projectId} />
+          <JournalComposer thread={thread} agent={agent} />
+          <ThreadTriggerDock
+            threadId={thread.id}
+            projectId={projectId}
+            settings={<ThreadSettings thread={thread} />}
+          />
         </>
       ) : (
         <NotFound text="Journal unavailable" />

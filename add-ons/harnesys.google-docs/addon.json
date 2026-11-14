@@ -1,0 +1,78 @@
+{
+  "id": "harnesys.google-docs",
+  "version": "1.0.0",
+  "platform": 1,
+  "title": "Google Docs",
+  "description": "Reads Google Docs documents as plain text and appends text blocks with the org's bound Google account. The add-on calls the Docs API; the token stays host-side.",
+  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "activation": "lazy",
+  "permissions": [
+    {
+      "id": "http.fetch",
+      "scope": { "hosts": ["www.googleapis.com"] },
+      "reason": "Call the Google Docs API with the bound account"
+    },
+    {
+      "id": "accounts.use",
+      "scope": { "connections": ["google"] },
+      "reason": "Use the Google account bound to the documents connection"
+    }
+  ],
+  "connections": [
+    {
+      "id": "google",
+      "label": "Google account",
+      "accountKinds": ["google-account"],
+      "scopes": ["documents"],
+      "cardinality": "many"
+    }
+  ],
+  "contributions": [
+    {
+      "id": "pack",
+      "family": "tool-pack",
+      "descriptor": {
+        "name": "docs",
+        "title": "Google Docs tools",
+        "description": "Read documents as plain text and append text blocks",
+        "connection": "google",
+        "tools": [
+          {
+            "name": "read_document",
+            "description": "Read a Google Docs document as plain text: paragraphs in order, table cells joined with tabs.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "documentId": { "type": "string", "description": "Document id from its URL" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              },
+              "required": ["documentId"]
+            }
+          },
+          {
+            "name": "append_text",
+            "description": "Append a text block at the end of a Google Docs document as a new paragraph.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "documentId": { "type": "string", "description": "Document id" },
+                "text": { "type": "string", "description": "Text to append" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              },
+              "required": ["documentId", "text"]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

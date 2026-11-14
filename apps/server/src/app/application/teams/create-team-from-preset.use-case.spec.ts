@@ -10,6 +10,8 @@ import {
   FakeDeskEvents,
   FakeOrgSettings,
   FakeThreadAgents,
+  FakeTriggerInstances,
+  FakeWebhooks,
 } from '../schedules/schedule.use-case.fakes.ts';
 import {
   agentDetail,
@@ -86,6 +88,8 @@ function buildHarness(options?: {
       schedules,
       new FakeThreads(),
       new FakeThreadAgents(),
+      new FakeWebhooks(),
+      new FakeTriggerInstances(),
       agents,
       orgSettings,
       new FakeDeskEvents(),

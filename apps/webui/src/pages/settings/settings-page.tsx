@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { UpdatePane } from '@/features/app-update';
 import { AppearancePane } from '@/features/appearance/appearance-pane';
 import { AccountPane } from '@/features/manage-account';
+import { ManageAddonsPane } from '@/features/manage-addons/manage-addons-pane';
+import { AppsPane } from '@/features/manage-apps/apps-pane';
 import { OrgAuditPane } from '@/features/manage-audit';
 import { ChatSettingsPane } from '@/features/manage-chat-settings/ui/chat-settings-pane';
 import { ConnectorsPane } from '@/features/manage-connectors';
@@ -123,6 +125,10 @@ function SettingsPane({ category, orgId }: { category: WindowSettingsCategory; o
       return <OrgLspPane orgId={orgId} />;
     case 'toolchain':
       return <OrgToolchainPane orgId={orgId} />;
+    case 'addons':
+      return <ManageAddonsPane key={orgId} orgId={orgId} />;
+    case 'apps':
+      return <AppsPane key={orgId} orgId={orgId} />;
     case 'providers':
       return <ModelsPane orgId={orgId} />;
     case 'connectors':

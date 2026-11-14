@@ -1,5 +1,5 @@
-import type { LspInstallSpec } from './lsp-catalog.ts';
-import { installForCommand } from './lsp-catalog.ts';
+import type { LspInstallSpec } from '../../domain/lsp/lsp-catalog.ts';
+import { installForCommand } from '../../domain/lsp/lsp-catalog.ts';
 
 export interface InstallLspBinaryResult {
   stdout: string;

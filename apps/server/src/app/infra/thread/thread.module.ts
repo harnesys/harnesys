@@ -14,6 +14,7 @@ import { ThreadParticipantRepositoryAdapter } from './thread-participant-reposit
 import { ThreadRepositoryAdapter } from './thread-repository.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule],
   providers: [
     { provide: ThreadRepositoryPort, useClass: ThreadRepositoryAdapter },

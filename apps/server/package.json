@@ -15,14 +15,17 @@
     "@harnesys/brix": "workspace:*",
     "@harnesys/contracts": "workspace:*",
     "@harnesys/integration-telegram": "workspace:*",
+    "@harnesys/sdk": "workspace:*",
     "@harnesys/studio-shared": "workspace:*",
     "ai": "7.0.47",
     "croner": "^10.0.1",
     "drizzle-orm": "^0.45.2",
+    "fflate": "^0.8.3",
     "harnesys": "workspace:*",
     "hono": "^4.13.2",
     "ignore": "^7.0.6",
     "reflect-metadata": "^0.2.2",
+    "teleproto": "^1.232.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {

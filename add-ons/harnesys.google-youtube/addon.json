@@ -1,0 +1,282 @@
+{
+  "id": "harnesys.google-youtube",
+  "version": "1.0.0",
+  "platform": 1,
+  "title": "YouTube",
+  "description": "Manages a YouTube channel with the org's bound Google account: channel and video stats, metadata updates, resumable video uploads from the organization workspace, thumbnails, playlists, comments, and analytics. Tokens stay host-side.",
+  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "activation": "lazy",
+  "permissions": [
+    {
+      "id": "http.fetch",
+      "scope": { "hosts": ["www.googleapis.com"] },
+      "reason": "Call the YouTube Data and Analytics APIs with the bound account"
+    },
+    {
+      "id": "accounts.use",
+      "scope": { "connections": ["google"] },
+      "reason": "Use the Google account bound to the channel connection"
+    },
+    {
+      "id": "files.read",
+      "reason": "Read video and thumbnail files from the organization workspace before upload"
+    }
+  ],
+  "connections": [
+    {
+      "id": "google",
+      "label": "Google account",
+      "accountKinds": ["google-account"],
+      "scopes": ["youtube", "youtube-upload", "youtube-manage", "yt-analytics"],
+      "cardinality": "many"
+    }
+  ],
+  "contributions": [
+    {
+      "id": "pack",
+      "family": "tool-pack",
+      "descriptor": {
+        "name": "youtube",
+        "title": "YouTube tools",
+        "description": "Channel stats, video metadata and uploads, thumbnails, playlists, comments and analytics",
+        "connection": "google",
+        "tools": [
+          {
+            "name": "list_channels",
+            "description": "List the YouTube channels of the bound account with title, subscriber/view/video counts and the uploads playlist id.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              }
+            }
+          },
+          {
+            "name": "list_videos",
+            "description": "List recent uploads of the channel (newest first) with title, publish date, privacy status and view/like/comment counts.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "maxResults": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 50,
+                  "description": "Maximum number of videos (default 10)"
+                },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              }
+            }
+          },
+          {
+            "name": "video_details",
+            "description": "Read full metadata of one video: title, description, tags, duration, privacy status and view/like/comment counts.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "videoId": { "type": "string", "description": "Video id from list_videos" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              },
+              "required": ["videoId"]
+            }
+          },
+          {
+            "name": "update_video",
+            "description": "Update metadata of an owned video: title, description, tags, categoryId or privacyStatus. Only the passed fields change.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "videoId": { "type": "string", "description": "Video id from list_videos" },
+                "title": { "type": "string", "description": "New title" },
+                "description": { "type": "string", "description": "New description" },
+                "tags": { "type": "string", "description": "Comma-separated tags" },
+                "categoryId": {
+                  "type": "string",
+                  "description": "YouTube category id, e.g. 22 = People & Blogs"
+                },
+                "privacyStatus": {
+                  "type": "string",
+                  "enum": ["public", "unlisted", "private"],
+                  "description": "New privacy status"
+                },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              },
+              "required": ["videoId"]
+            }
+          },
+          {
+            "name": "upload_video",
+            "description": "Upload a video file from the organization workspace to the channel (resumable upload, up to 1 GB). Costs roughly 1600 of the 10000 daily YouTube quota units.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "description": "Workspace-relative path of the video file (mp4, mov, webm, avi, mpeg)"
+                },
+                "title": { "type": "string", "description": "Video title" },
+                "description": { "type": "string", "description": "Video description" },
+                "tags": { "type": "string", "description": "Comma-separated tags" },
+                "categoryId": {
+                  "type": "string",
+                  "description": "YouTube category id, default 22 (People & Blogs)"
+                },
+                "privacyStatus": {
+                  "type": "string",
+                  "enum": ["public", "unlisted", "private"],
+                  "description": "Privacy status, default private"
+                },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              },
+              "required": ["path", "title"]
+            }
+          },
+          {
+            "name": "set_thumbnail",
+            "description": "Set the custom thumbnail of an owned video from a JPEG or PNG file in the workspace (max 2 MB).",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "videoId": { "type": "string", "description": "Video id from list_videos" },
+                "path": { "type": "string", "description": "Workspace-relative path to a .jpg/.jpeg/.png file" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              },
+              "required": ["videoId", "path"]
+            }
+          },
+          {
+            "name": "list_playlists",
+            "description": "List playlists of the channel with id, title, publish date and item count.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "maxResults": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 50,
+                  "description": "Maximum number of playlists (default 25)"
+                },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              }
+            }
+          },
+          {
+            "name": "add_to_playlist",
+            "description": "Add a video to one of the channel playlists.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "playlistId": { "type": "string", "description": "Playlist id from list_playlists" },
+                "videoId": { "type": "string", "description": "Video id from list_videos" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              },
+              "required": ["playlistId", "videoId"]
+            }
+          },
+          {
+            "name": "list_comments",
+            "description": "List viewer comment threads on a video (newest first) with author, text, likes, reply count and comment id.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "videoId": { "type": "string", "description": "Video id from list_videos" },
+                "maxResults": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 50,
+                  "description": "Maximum number of comment threads (default 20)"
+                },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              },
+              "required": ["videoId"]
+            }
+          },
+          {
+            "name": "reply_to_comment",
+            "description": "Post a reply to a YouTube comment as the channel.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "commentId": { "type": "string", "description": "Top-level comment id from list_comments" },
+                "text": { "type": "string", "description": "Reply text" },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              },
+              "required": ["commentId", "text"]
+            }
+          },
+          {
+            "name": "analytics_report",
+            "description": "Query YouTube Analytics for the channel: views, watch time, subscribers, likes, traffic. Metrics and dimensions are comma-separated API names.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "startDate": { "type": "string", "description": "YYYY-MM-DD" },
+                "endDate": { "type": "string", "description": "YYYY-MM-DD" },
+                "metrics": { "type": "string", "description": "Comma-separated metrics, e.g. views,estimatedMinutesWatched" },
+                "dimensions": { "type": "string", "description": "Comma-separated dimensions, e.g. day,video,country" },
+                "filters": { "type": "string", "description": "Analytics filter, e.g. video==VIDEO_ID" },
+                "maxResults": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100,
+                  "description": "Maximum number of rows (default 50)"
+                },
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account id; required only when several accounts are bound"
+                }
+              },
+              "required": ["startDate", "endDate", "metrics"]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

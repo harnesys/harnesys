@@ -379,8 +379,8 @@ export type {
   RunSuccess,
   Usage,
 } from './src/domain/run-result.ts';
-export type { PermissionMode, ScheduleHistory } from './src/domain/schedule.ts';
-export { PERMISSION_MODES, SCHEDULE_HISTORIES } from './src/domain/schedule.ts';
+export type { PermissionMode } from './src/domain/schedule.ts';
+export { PERMISSION_MODES } from './src/domain/schedule.ts';
 export type { SkillDocument, SkillSummary } from './src/domain/skill.ts';
 export type { CommitKind, Cursor, CursorPhase, Event, Snapshot } from './src/domain/snapshot.ts';
 export { RUNTIME_VERSION } from './src/domain/snapshot.ts';

@@ -1,5 +1,3 @@
-export type CloudVendor = 'google' | 'dropbox' | 'onedrive';
-
 export interface CloudRemoteEntry {
   id: string;
   name: string;
@@ -35,7 +33,7 @@ export interface CloudRemoteFolderResult {
 }
 
 export abstract class CloudRemoteBackendPort {
-  abstract readonly vendor: CloudVendor;
+  abstract readonly vendor: string;
 
   abstract listChildren(folderId: string): Promise<CloudRemoteEntry[]>;
 

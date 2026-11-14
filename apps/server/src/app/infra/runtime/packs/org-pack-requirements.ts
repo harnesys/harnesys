@@ -1,4 +1,4 @@
-import { isHostWired } from './org-pack-list.ts';
+import { isHostWired } from '../../../domain/runtime/org-pack-list.ts';
 import type { WireOrgPackFilter } from './wire-org-packs.ts';
 
 const MEMORY_PACK_NAMES: ReadonlySet<string> = new Set(['pin-memory', 'semantic-memory']);

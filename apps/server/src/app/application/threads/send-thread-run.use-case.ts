@@ -8,6 +8,7 @@ import type {
 import type { Attachment } from 'harnesys';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
+import { EventBusPort } from '../../domain/events/event-bus.port.ts';
 import { ExecutionProfilePort } from '../../domain/execution-profile/execution-profile.port.ts';
 import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
 import { FleetHubPort } from '../../domain/fleet/fleet-hub.port.ts';
@@ -86,6 +87,7 @@ export class SendThreadRunUseCase {
     private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly users: UserRepository,
     private readonly sendMessage: SendThreadMessageUseCase,
+    private readonly events: EventBusPort,
   ) {}
 
   async execute(request: SendThreadRunRequest): Promise<AcceptedRunResponse> {
@@ -191,6 +193,13 @@ export class SendThreadRunUseCase {
         text: request.body.text,
       });
       this.threads.touch(request.orgId, thread.id);
+      this.events.publish(request.orgId, 'run.started', {
+        orgId: request.orgId,
+        threadId: request.threadId,
+        runId: accepted.runId,
+        agentId: agent.id,
+        trigger: request.trigger ?? { kind: 'chat', id: request.threadId },
+      });
       return accepted;
     } catch (error) {
       throw mapSendError(error);

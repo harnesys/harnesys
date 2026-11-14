@@ -302,6 +302,33 @@ CREATE TABLE IF NOT EXISTS plugin_server_state (
 );
 `;
 
+export const CREATE_ADDONS_SQL = `
+CREATE TABLE IF NOT EXISTS addons (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  version TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  icon TEXT NOT NULL DEFAULT 'puzzle',
+  tags_json TEXT NOT NULL DEFAULT '[]',
+  root TEXT NOT NULL,
+  entry TEXT NOT NULL,
+  state TEXT NOT NULL CHECK(state IN ('discovered', 'installed', 'enabled')),
+  enabled_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS addons_org_id_idx ON addons(org_id);
+
+CREATE TABLE IF NOT EXISTS addon_config (
+  org_id TEXT NOT NULL,
+  addon_id TEXT NOT NULL,
+  values_json TEXT NOT NULL DEFAULT '{}',
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (org_id, addon_id)
+);
+`;
+
 export const CREATE_KNOWLEDGE_SQL = `
 CREATE TABLE IF NOT EXISTS knowledge_chunks (
   id TEXT PRIMARY KEY,
@@ -621,6 +648,7 @@ CREATE TABLE IF NOT EXISTS thread_message_queue (
   attachments TEXT,
   origin TEXT,
   client_event_id TEXT,
+  mode TEXT,
   queued_at TEXT NOT NULL,
   delivered_at TEXT,
   FOREIGN KEY (thread_id, thread_seq)
@@ -680,8 +708,6 @@ CREATE TABLE IF NOT EXISTS schedules (
   detail TEXT NOT NULL DEFAULT '',
   cron TEXT NOT NULL,
   mode_id TEXT NOT NULL DEFAULT 'default',
-  history TEXT NOT NULL DEFAULT 'none' CHECK(history IN ('none', 'last', 'all')),
-  history_last INTEGER NOT NULL DEFAULT 1,
   miss_policy TEXT NOT NULL DEFAULT 'catch-up' CHECK(miss_policy IN ('catch-up', 'skip', 'escalate')),
   thread_id TEXT NOT NULL REFERENCES threads(id),
   next_run_at TEXT,
@@ -773,6 +799,7 @@ CREATE TABLE IF NOT EXISTS webhooks (
   target_agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
   detail TEXT NOT NULL DEFAULT '',
   endpoint TEXT NOT NULL,
+  mode TEXT,
   thread_id TEXT NOT NULL REFERENCES threads(id),
   last_fired_at TEXT,
   created_by_user_id TEXT,

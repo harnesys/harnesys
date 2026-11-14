@@ -30,6 +30,8 @@ import { SkillsEventsPort } from '../../domain/skills/skills-events.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { HostFsLayoutAdapter } from '../fs-layout/host-fs-layout.adapter.ts';
 import { OrgSkillsAdapter } from './org-skills.adapter.ts';
+import { SkillsGitAdapter } from './skills-git.adapter.ts';
+import { SkillsWalkAdapter } from './skills-walk.adapter.ts';
 
 const ORG = 'o1';
 
@@ -51,9 +53,11 @@ beforeEach(() => {
   executor = new FakeExecutor();
   events = new FakeEvents();
   const runtime = new FakePluginRuntime(layout);
-  discover = new DiscoverRepoSkillsUseCase(layout);
-  install = new InstallRepoSkillsUseCase(layout, skills, runtime, executor, events);
-  update = new UpdateInstalledSkillUseCase(layout, skills, runtime, executor, events);
+  const git = new SkillsGitAdapter();
+  const walk = new SkillsWalkAdapter();
+  discover = new DiscoverRepoSkillsUseCase(layout, git, walk);
+  install = new InstallRepoSkillsUseCase(layout, skills, runtime, executor, events, git, walk);
+  update = new UpdateInstalledSkillUseCase(layout, skills, runtime, executor, events, git, walk);
 });
 
 afterAll(() => {

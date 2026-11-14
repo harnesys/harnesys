@@ -10,6 +10,7 @@ import type {
   UpsertKnowledgeSettingsRequest,
 } from '@harnesys/studio-shared';
 import type { KnowledgeHit, KnowledgeReadResult } from 'harnesys';
+import { StudioEmbeddings } from '../../domain/knowledge/embeddings.ts';
 import { FilesWatcherPort } from '../../domain/knowledge/files-watcher.port.ts';
 import { KnowledgeIndexEventsPort } from '../../domain/knowledge/knowledge-index-events.port.ts';
 import { KnowledgeIndexerPort } from '../../domain/knowledge/knowledge-indexer.port.ts';
@@ -31,7 +32,6 @@ import {
   withOrgSqlite,
   withOrgSqliteAsync,
 } from '../org-sqlite/org-sqlite-session.ts';
-import { StudioEmbeddings } from './embeddings.ts';
 import { deleteKnowledgeForSource } from './knowledge-delete.ts';
 import { modelRefFromSettings } from './knowledge-embeddings.ts';
 import { SqliteKnowledgeIndexRepo } from './knowledge-index-repo.ts';

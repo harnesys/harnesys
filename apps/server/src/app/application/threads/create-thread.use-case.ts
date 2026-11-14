@@ -3,6 +3,7 @@ import type { CreateThreadBody, ThreadKind, ThreadPublic } from '@harnesys/contr
 import { AgentNotFoundException } from '../../domain/agent/agent.error.ts';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
+import { EventBusPort } from '../../domain/events/event-bus.port.ts';
 import { UserNotFoundException } from '../../domain/identity/identity.error.ts';
 import { UserRepository } from '../../domain/identity/user-repository.port.ts';
 import { collectInheritedEvents } from '../../domain/thread/fork-logs.ts';
@@ -42,6 +43,7 @@ export class CreateThreadUseCase {
     private readonly agents: AgentRegistryPort,
     private readonly users: UserRepository,
     private readonly executor: LocalExecutorPort,
+    private readonly events: EventBusPort,
   ) {}
 
   async execute(request: CreateThreadRequest): Promise<ThreadPublic> {
@@ -56,7 +58,7 @@ export class CreateThreadUseCase {
       title: request.body.title?.trim() || DEFAULT_THREAD_TITLE,
       kind,
       autoReplyAgentId: agent.id,
-      policy: { version: 1 },
+      policy: request.body.policy ? { version: 2, ...request.body.policy } : { version: 2 },
       lastThreadSeq: 0,
       conversationCount: 0,
       parentThreadId: fork.parentThreadId,
@@ -75,6 +77,14 @@ export class CreateThreadUseCase {
     for (const row of participantRows) {
       this.participants.ensure(row);
     }
+    this.events.publish(request.orgId, 'thread.created', {
+      orgId: request.orgId,
+      threadId: thread.id,
+      title: thread.title,
+      kind,
+      agentId: agent.id,
+      createdAt: now,
+    });
     const deps = {
       threadAgents: this.threadAgents,
       participants: this.participants,

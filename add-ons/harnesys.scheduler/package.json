@@ -1,0 +1,20 @@
+{
+  "name": "harnesys.scheduler",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "module": "src/index.ts",
+  "scripts": {
+    "build": "bun build --target=bun src/index.ts --outfile dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@harnesys/sdk": "file:../../packages/sdk",
+    "@harnesys/studio-shared": "file:../../packages/studio-shared",
+    "croner": "^10.0.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,7 +1,5 @@
 import { Module } from '@harnesys/brix';
 import { KnowledgeIndexEventsPort } from '../../domain/knowledge/knowledge-index-events.port.ts';
-import { KnowledgeModule } from '../../infra/knowledge/knowledge.module.ts';
-import { SourceModule } from '../../infra/source/source.module.ts';
 import { CancelKnowledgeIndexUseCase } from './cancel-knowledge-index.use-case.ts';
 import { DeleteKnowledgeRootUseCase } from './delete-knowledge-root.use-case.ts';
 import { GetKnowledgeIndexStateUseCase } from './get-knowledge-index-state.use-case.ts';
@@ -31,7 +29,6 @@ const useCases = [
 ];
 
 @Module({
-  imports: [KnowledgeModule, SourceModule],
   providers: [...useCases],
   exports: [...useCases, KnowledgeIndexEventsPort],
 })

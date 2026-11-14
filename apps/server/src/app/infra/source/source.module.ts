@@ -18,6 +18,7 @@ import { SourceMaterializationAdapter } from './source-materialization.adapter.t
 import { SourceRegistryAdapter } from './source-registry.adapter.ts';
 
 @Module({
+  global: true,
   imports: [MachineHomeModule],
   providers: [
     { provide: SourceRegistryPort, useClass: SourceRegistryAdapter },

@@ -1,6 +1,8 @@
 import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { MachineConfigPort } from '../../../../domain/machine/machine-config.port.ts';
+import type { CloudRemoteBackendPort } from '../../../../domain/source/cloud-remote-backend.port.ts';
+import type { CloudSyncSourceDistribution } from '../../../../domain/source/cloud-sync-back.port.ts';
 import { SourceLocationPort } from '../../../../domain/source/source-location.port.ts';
 import { SourceRegistryPort } from '../../../../domain/source/source-registry.port.ts';
 import { trace } from '../../../../libs/trace.ts';
@@ -14,21 +16,20 @@ import { scanCloudMirrorChanges } from './cloud-mirror-scan.ts';
 import { syncBackFile, syncBackFolder, syncDeletePath } from './cloud-mirror-sync.ts';
 import { GoogleDriveBackend } from './google-drive.backend.ts';
 
-export interface CloudDriveSyncSource {
+export interface CloudSyncBackSource {
   id: string;
-  distribution: {
-    kind: 'cloud-drive';
-    remoteFolderId: string;
-    integrationId: string;
-  };
+  distribution: CloudSyncSourceDistribution;
 }
+
+export type CloudDriveSyncSource = CloudSyncBackSource;
 
 export interface CloudSyncPathInput {
   orgId: string;
-  source: CloudDriveSyncSource;
+  source: CloudSyncBackSource;
   sourceLocation: SourceLocationPort;
   machine: MachineConfigPort;
   getAccessToken: () => Promise<string>;
+  createBackend?: (distribution: CloudSyncSourceDistribution) => CloudRemoteBackendPort;
   path: string;
   kind: CloudChangeKind;
 }
@@ -38,6 +39,7 @@ export interface CloudSyncLocalDependencies {
   sourceLocation: SourceLocationPort;
   machine: MachineConfigPort;
   getAccessToken: () => Promise<string>;
+  createBackend?: (distribution: CloudSyncSourceDistribution) => CloudRemoteBackendPort;
 }
 
 export type CloudChangeKind = 'create' | 'change' | 'delete';
@@ -59,10 +61,15 @@ export async function syncBackCloudFile(
   path: string,
 ): Promise<SyncBackResult | null> {
   assertSafeCloudPath(path);
-  const source = deps.sources.findById(orgId, sourceId);
-  if (source?.distribution.kind !== 'cloud-drive') {
+  const record = deps.sources.findById(orgId, sourceId);
+  if (!record) {
     return null;
   }
+  const distribution = record.distribution;
+  if (distribution.kind !== 'cloud-drive' && distribution.kind !== 'addon-cloud') {
+    return null;
+  }
+  const source: CloudSyncBackSource = { id: record.id, distribution };
   const hostId = deps.machine.get().id;
   let mirrorRoot: string;
   try {
@@ -87,7 +94,7 @@ export async function syncBackCloudFile(
   if (meta?.remoteId && meta.localHash === contentHash(bytes)) {
     return null;
   }
-  const drive = new GoogleDriveBackend(deps.getAccessToken);
+  const drive = cloudBackendFor(source, deps);
   return syncBackFile({
     backend: drive,
     mirror: mirrorRoot,
@@ -118,7 +125,7 @@ export async function syncBackCloudPath(deps: CloudSyncPathInput): Promise<SyncB
   if (isUnchangedCloudPath(kind, abs, meta)) {
     return null;
   }
-  const drive = new GoogleDriveBackend(deps.getAccessToken);
+  const drive = cloudBackendFor(source, deps);
   if (kind === 'delete') {
     return syncDeletePath({ backend: drive, mirror: mirrorRoot, relativePath: path });
   }
@@ -142,6 +149,27 @@ export async function syncBackCloudPath(deps: CloudSyncPathInput): Promise<SyncB
 
 function isExportedGoogleDoc(meta: ReturnType<typeof readMirrorMeta>): boolean {
   return Boolean(meta?.mimeType?.startsWith('application/vnd.google-apps.'));
+}
+
+/**
+ * Remote backend of a cloud mirror source: add-on provided source kinds resolve
+ * through `createBackend`; every other source keeps the built-in Google Drive backend.
+ */
+function cloudBackendFor(
+  source: CloudSyncBackSource,
+  deps: {
+    getAccessToken: () => Promise<string>;
+    createBackend?: (distribution: CloudSyncSourceDistribution) => CloudRemoteBackendPort;
+  },
+): CloudRemoteBackendPort {
+  return deps.createBackend?.(source.distribution) ?? new GoogleDriveBackend(deps.getAccessToken);
+}
+
+export function integrationIdOfCloudSource(source: CloudSyncBackSource): string {
+  if (source.distribution.kind !== 'cloud-drive') {
+    throw new Error(`source ${source.id} is not a google drive cloud source`);
+  }
+  return source.distribution.integrationId;
 }
 
 function effectiveChangeKind(kind: CloudChangeKind, absPath: string): CloudChangeKind {
@@ -194,10 +222,11 @@ function pathHasSymlink(root: string, relativePath: string): boolean {
 
 export interface CloudSyncFlushInput {
   orgId: string;
-  source: CloudDriveSyncSource;
+  source: CloudSyncBackSource;
   sourceLocation: SourceLocationPort;
   machine: MachineConfigPort;
   getAccessToken: () => Promise<string>;
+  createBackend?: (distribution: CloudSyncSourceDistribution) => CloudRemoteBackendPort;
 }
 
 export async function flushCloudMirror(input: CloudSyncFlushInput): Promise<SyncBackResult[]> {
@@ -221,6 +250,7 @@ export async function flushCloudMirror(input: CloudSyncFlushInput): Promise<Sync
         sourceLocation: input.sourceLocation,
         machine: input.machine,
         getAccessToken: input.getAccessToken,
+        ...(input.createBackend === undefined ? {} : { createBackend: input.createBackend }),
         path: change.path,
         kind: change.kind,
       });

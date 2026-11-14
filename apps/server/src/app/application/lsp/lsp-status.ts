@@ -5,14 +5,14 @@ import type {
   OrgLspListResponse,
   PluginDiagnostic,
 } from '@harnesys/contracts';
-import type { PluginLspEntry } from '../../domain/plugin/plugin-runtime.port.ts';
-import { LSP_CATALOG } from '../../infra/lsp/lsp-catalog.ts';
+import { LSP_CATALOG } from '../../domain/lsp/lsp-catalog.ts';
 import {
   disabledFileEntries,
   isFileDisabled,
   type LspServerSpec,
   type OrgLspFile,
-} from '../../infra/lsp/org-lsp-file.ts';
+} from '../../domain/lsp/org-lsp-file.ts';
+import type { PluginLspEntry } from '../../domain/plugin/plugin-runtime.port.ts';
 
 export type HasBinary = (command: string) => boolean;
 

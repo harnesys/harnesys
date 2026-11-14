@@ -105,7 +105,7 @@ export class IssueRemoteRunUseCase {
     const modeShellSpec = modeShellSpecOf(
       this.modes,
       input.orgId,
-      thread ? runModeOf(thread) : undefined,
+      input.mode ?? (thread ? runModeOf(thread) : undefined),
     );
     const claim = this.claims.grant({
       orgId: input.orgId,

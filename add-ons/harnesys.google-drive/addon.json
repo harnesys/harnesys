@@ -1,0 +1,47 @@
+{
+  "id": "harnesys.google-drive",
+  "version": "1.0.0",
+  "platform": 1,
+  "title": "Google Drive",
+  "description": "Mounts Google Drive folders as Harnesys knowledge sources. The add-on talks to the Drive v3 API with the org's bound Google account; the token never leaves the add-on process. Folders are mirrored by the core source pipeline through this add-on's source.* handlers, and local edits are written back.",
+  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "activation": "lazy",
+  "permissions": [
+    {
+      "id": "http.fetch",
+      "scope": { "hosts": ["www.googleapis.com"] },
+      "reason": "Call the Google Drive v3 API with the bound account"
+    },
+    {
+      "id": "accounts.use",
+      "scope": { "connections": ["google"] },
+      "reason": "Use the Google account bound to the source connection"
+    },
+    {
+      "id": "source",
+      "reason": "Serve Google Drive folders as knowledge sources for the host mirror pipeline"
+    }
+  ],
+  "connections": [
+    {
+      "id": "google",
+      "label": "Google account",
+      "accountKinds": ["google-account"],
+      "scopes": ["drive"],
+      "cardinality": "many"
+    }
+  ],
+  "contributions": [
+    {
+      "id": "google-drive",
+      "family": "source-kind",
+      "descriptor": {
+        "id": "google-drive",
+        "title": "Google Drive folder",
+        "connection": "google",
+        "supportsRootMount": true,
+        "rootTitle": "My Drive"
+      }
+    }
+  ]
+}

@@ -1,10 +1,11 @@
 import type { ComponentType } from 'react';
 import type { Agent } from '@/entities/agent';
-import type { ClientAutomation } from '@/entities/automation';
+import type { AutomationSource, ClientAutomation } from '@/entities/automation';
 
 export interface AutomationConfigInput {
   integrationId: string;
   kind: string;
+  source?: AutomationSource;
   scopeId: string;
   agents: Agent[];
   automation: ClientAutomation | null;

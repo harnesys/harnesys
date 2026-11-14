@@ -5,14 +5,14 @@ import {
   type TeamPresetBody,
 } from '@harnesys/contracts';
 import { PresetValidationException } from '../../domain/presets/preset.error.ts';
-import type { PresetRecord } from '../../domain/presets/preset-library.port.ts';
 import {
   buildEnvelope,
   duplicateEnvelopeIds,
   missingAgentRefs,
   parseEnvelope,
   resolveEmbeds,
-} from './preset-envelope.ts';
+} from '../../domain/presets/preset-envelope.ts';
+import type { PresetRecord } from '../../domain/presets/preset-library.port.ts';
 
 const agentBody: AgentPresetBody = {
   name: 'Coder',

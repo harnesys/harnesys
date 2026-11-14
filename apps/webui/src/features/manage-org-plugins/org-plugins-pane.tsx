@@ -7,7 +7,7 @@ export function OrgPluginsPane({ orgId }: { orgId: string }) {
   return (
     <div className="flex w-full flex-col gap-4" data-testid="org-plugins-pane">
       <Tabs defaultValue="installed">
-        <TabsList className="h-8 w-full">
+        <TabsList className="w-full">
           <TabsTrigger value="installed" className="flex-1">
             Installed
           </TabsTrigger>

@@ -4,6 +4,7 @@ import { basename, resolve } from 'node:path';
 import { ForbiddenException, Injectable } from '@harnesys/brix';
 import type { ProxyRequest, Source, SourceVcs, UiVisibility } from '@harnesys/contracts';
 import { HostOfflineException } from '../../domain/content/content.error.ts';
+import { WORKER_CONTENT_PATH } from '../../domain/content/worker-content.protocol.ts';
 import { FleetContentProxyPort } from '../../domain/fleet/fleet-content-proxy.port.ts';
 import { FleetHubPort } from '../../domain/fleet/fleet-hub.port.ts';
 import { NodeCommandQueuePort } from '../../domain/fleet/node-command-queue.port.ts';
@@ -18,7 +19,6 @@ import { GitVcsPort } from '../../domain/source/git-vcs.port.ts';
 import { SourcePathInvalidException } from '../../domain/source/source.error.ts';
 import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
-import { WORKER_CONTENT_PATH } from '../../infra/content/worker-content.protocol.ts';
 import { hashNodeToken } from '../fleet/hash-node-token.ts';
 import { toPublicSource } from './to-public-source.ts';
 

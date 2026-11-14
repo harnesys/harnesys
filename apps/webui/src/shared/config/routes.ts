@@ -74,6 +74,8 @@ export const studioPath = {
     `/o/${orgId}/settings/${category}`,
   connector: (orgId: string, connectorId: string) =>
     `/o/${orgId}/settings/connectors/${connectorId}`,
+  addon: (orgId: string, addonId: string) => `/o/${orgId}/settings/addons/${addonId}`,
+  app: (orgId: string, providerId: string) => `/o/${orgId}/settings/apps/${providerId}`,
 };
 
 export function parseWindowSettingsCategory(value: string | undefined): WindowSettingsCategory {

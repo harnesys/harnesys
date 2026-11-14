@@ -1,23 +1,20 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { Injectable } from '@harnesys/brix';
-import type { SkillOrigin } from '@harnesys/contracts';
-import type { SkillRegistry, SkillSummary } from 'harnesys';
+import type { SkillRegistry } from 'harnesys';
 import { FsSkillRegistry } from 'harnesys/adapters/node';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
-
-export interface TierEntry {
-  summary: SkillSummary;
-  origin: SkillOrigin;
-  path?: string;
-}
+import type { TierEntry } from '../../domain/skills/skills-tier-cache.port.ts';
+import { SkillsTierCachePort } from '../../domain/skills/skills-tier-cache.port.ts';
 
 @Injectable()
-export class SkillsTierCache {
+export class SkillsTierCache extends SkillsTierCachePort {
   private readonly registriesByRoot = new Map<string, SkillRegistry>();
   private entriesCache?: Promise<TierEntry[]>;
 
-  constructor(private readonly layout: HostFsLayoutPort) {}
+  constructor(private readonly layout: HostFsLayoutPort) {
+    super();
+  }
 
   async entries(): Promise<TierEntry[]> {
     this.entriesCache ??= this.collectEntries();

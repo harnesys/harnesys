@@ -1,3 +1,5 @@
+export * from './addons-platform.ts';
+export * from './apps.ts';
 export * from './domains-agents.ts';
 export * from './domains-org.ts';
 export * from './domains-work.ts';
@@ -14,7 +16,10 @@ export {
   AddThreadAgentBodySchema,
   type AddThreadParticipantBody,
   AddThreadParticipantBodySchema,
-  DEFAULT_CONTEXT_WINDOW,
+  type ThreadHistoryMode,
+  ThreadHistoryModeSchema,
+  type ThreadKind,
+  ThreadKindSchema,
   type ThreadMember,
   ThreadMemberSchema,
   type ThreadParticipant,

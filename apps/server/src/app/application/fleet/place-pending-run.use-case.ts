@@ -148,7 +148,7 @@ export class PlacePendingRunUseCase {
     const modeShellSpec = modeShellSpecOf(
       this.modes,
       input.orgId,
-      thread ? runModeOf(thread) : undefined,
+      input.pending.payload.mode ?? (thread ? runModeOf(thread) : undefined),
     );
     return {
       threadId: input.pending.threadId,

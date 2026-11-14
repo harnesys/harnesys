@@ -11,6 +11,8 @@ export interface ReplayThreadHistoryOpts {
   activeRunId?: string | null;
 
   messageSources?: number[];
+
+  speakerAttribution?: boolean;
 }
 
 interface PendingCall {
@@ -30,10 +32,6 @@ function emptyBuffer(): RunBuffer {
   return { deltas: [], calls: new Map(), bodyCallIds: new Set() };
 }
 
-function isUserEvent(event: SessionEvent): event is Extract<SessionEvent, { type: 'user' }> {
-  return event.type === 'user';
-}
-
 function hasConversationBody(event: Extract<SessionEvent, { type: 'model.usage' }>): boolean {
   return (
     typeof event.text === 'string' || (Array.isArray(event.toolCalls) && event.toolCalls.length > 0)
@@ -46,6 +44,8 @@ export function rebuildThreadMessages(
 ): unknown[] {
   const activeRunId = opts?.activeRunId ?? null;
   const externalSources = opts?.messageSources;
+  const attribution = opts?.speakerAttribution === true;
+  const agentNames = new Map<string, string>();
   const out: unknown[] = [];
   const sources: number[] = [];
   const emit = (message: unknown): void => {
@@ -63,32 +63,30 @@ export function rebuildThreadMessages(
   const excluded = new Set<string>();
   let eventIndex = -1;
   for (const event of events) {
-    if (event.type === 'agent.spawned' && event.spawnId) {
-      excluded.add(event.spawnId);
-    }
-    if (
-      (event.type === 'map.item.started' ||
-        event.type === 'map.item.completed' ||
-        event.type === 'map.item.failed') &&
-      event.workerId
-    ) {
-      excluded.add(event.workerId);
+    const marked =
+      event.type === 'agent.spawned' && event.spawnId
+        ? event.spawnId
+        : (event.type === 'map.item.started' ||
+            event.type === 'map.item.completed' ||
+            event.type === 'map.item.failed') &&
+          event.workerId;
+    if (marked) {
+      excluded.add(marked);
     }
   }
   const buffers = new Map<string, RunBuffer>();
   let heldUser: Extract<SessionEvent, { type: 'user' }> | null = null;
   const bufferOf = (runId: string): RunBuffer => {
-    const known = buffers.get(runId);
-    if (known) {
-      return known;
+    let buffer = buffers.get(runId);
+    if (!buffer) {
+      buffer = emptyBuffer();
+      buffers.set(runId, buffer);
     }
-    const fresh = emptyBuffer();
-    buffers.set(runId, fresh);
-    return fresh;
+    return buffer;
   };
   const flushHeldUser = (): void => {
     if (heldUser) {
-      emit(toUserMessage(heldUser));
+      emit(toUserMessage(heldUser, attribution));
       heldUser = null;
     }
   };
@@ -103,7 +101,10 @@ export function rebuildThreadMessages(
       flushHeldUser();
     }
     if (text) {
-      emit({ role: 'assistant', content: text });
+      emit({
+        role: 'assistant',
+        content: withSpeaker(attribution, agentNames.get(runId) ?? null, text),
+      });
     }
   };
   const emitAssistantCall = (runId: string, toolCallId: string, call: PendingCall): void => {
@@ -134,6 +135,9 @@ export function rebuildThreadMessages(
       continue;
     }
     const runId = event.runId ?? '';
+    if (runId && event.agentName) {
+      agentNames.set(runId, event.agentName);
+    }
     if (runId && excluded.has(runId)) {
       continue;
     }
@@ -146,7 +150,7 @@ export function rebuildThreadMessages(
       emit(toAnchorMessage(event, dropped));
       continue;
     }
-    if (isUserEvent(event)) {
+    if (event.type === 'user') {
       if (runId !== '' && runId === activeRunId) {
         flushDeltasOfOthers(buffers, emit, runId);
         if (!heldUser && (event.text || (event.attachments?.length ?? 0) > 0)) {
@@ -155,7 +159,7 @@ export function rebuildThreadMessages(
         continue;
       }
       flushDeltasOfOthers(buffers, emit, runId);
-      emit(toUserMessage(event));
+      emit(toUserMessage(event, attribution));
       continue;
     }
     if (event.type === 'text-delta') {
@@ -175,7 +179,7 @@ export function rebuildThreadMessages(
       }
       const buffer = runId ? bufferOf(runId) : emptyBuffer();
       buffer.deltas = [];
-      emit(toAssistantMessage(event));
+      emit(toAssistantMessage(event, attribution, agentNames.get(runId) ?? null));
       markBodyCalls(runId, event.toolCalls);
       continue;
     }
@@ -244,8 +248,14 @@ function flushDeltasOfOthers(
   }
 }
 
-function toUserMessage(event: Extract<SessionEvent, { type: 'user' }>): unknown {
+function toUserMessage(
+  event: Extract<SessionEvent, { type: 'user' }>,
+  attribution = false,
+): unknown {
   const message: Record<string, unknown> = { role: 'user', content: event.text ?? '' };
+  if (attribution && event.author?.displayName) {
+    message.content = `${event.author.displayName}: ${message.content}`;
+  }
   if (event.attachments && event.attachments.length > 0) {
     message.attachments = event.attachments;
   }
@@ -255,10 +265,18 @@ function toUserMessage(event: Extract<SessionEvent, { type: 'user' }>): unknown 
   return message;
 }
 
-function toAssistantMessage(event: Extract<SessionEvent, { type: 'model.usage' }>): unknown {
+function withSpeaker(attribution: boolean, speaker: string | null, content: string): string {
+  return attribution && speaker && content ? `${speaker}: ${content}` : content;
+}
+
+function toAssistantMessage(
+  event: Extract<SessionEvent, { type: 'model.usage' }>,
+  attribution = false,
+  speaker: string | null = null,
+): unknown {
   return {
     role: 'assistant',
-    content: event.text ?? '',
+    content: withSpeaker(attribution, speaker, event.text ?? ''),
     reasoning: event.reasoning,
     toolCalls: event.toolCalls,
     finishReason: event.finishReason,

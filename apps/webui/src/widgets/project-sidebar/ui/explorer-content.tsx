@@ -15,12 +15,14 @@ import {
   deleteProjectFile,
   listSourceFilesTree,
   sourceFilesTreeQueryKey,
+  writeProjectFileContent,
 } from '@/shared/api/files';
 import { getGitFileStatus, gitFileStatusQueryKey } from '@/shared/api/git';
 import { useStudioNavigation } from '@/shared/config/navigation';
 import { useSidebar } from '@/shared/ui/sidebar';
 import { Spinner } from '@/shared/ui/spinner';
 import { toast } from '@/shared/ui/toast';
+import type { ViewerCreateTemplate } from '../model/explorer-draft.store';
 import { useExplorerDraftStore } from '../model/explorer-draft.store';
 import { useExplorerExpandStore } from '../model/explorer-expand.store';
 import { useExplorerHiddenStore } from '../model/explorer-hidden.store';
@@ -31,6 +33,7 @@ import { flattenFileTree, indexFileTree } from '../model/file-tree-index';
 import { useFilesCopyPaste } from '../model/use-files-copy-paste';
 import { useFilesHotkey } from '../model/use-files-hotkey';
 import { useRootDragDrop } from '../model/use-root-drag-drop';
+import { fetchViewerTemplate } from '../model/viewer-creates';
 import { renderFileTreeRow } from './file-row-render';
 import { FileTreeWindow } from './file-tree-window';
 import { InlineCreateInput } from './inline-create-input';
@@ -98,8 +101,18 @@ export function ExplorerContent({
     void qc.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] });
   };
   const createMutation = useMutation({
-    mutationFn: (input: { path: string; kind: 'file' | 'dir' }) =>
-      createProjectFile(projectId, input),
+    mutationFn: async (input: {
+      path: string;
+      kind: 'file' | 'dir';
+      template?: ViewerCreateTemplate;
+    }) => {
+      await createProjectFile(projectId, { path: input.path, kind: input.kind });
+      if (input.kind === 'file' && input.template) {
+        const content = await fetchViewerTemplate(input.template);
+        await writeProjectFileContent(projectId, { path: input.path, content });
+      }
+      return { path: input.path };
+    },
     onSuccess: invalidateTree,
   });
   const deleteMutation = useMutation({
@@ -164,6 +177,23 @@ export function ExplorerContent({
     const relPath = createDraft.parentPath
       ? `${createDraft.parentPath}/${name.trim()}`
       : name.trim();
+    if (createDraft.kind === 'file' && createDraft.template) {
+      // Template content must land before the viewer opens the file.
+      void createMutation
+        .mutateAsync({ path: relPath, kind: 'file', template: createDraft.template })
+        .then(() => {
+          openProjectFile(projectId, relPath);
+          useIdeStore.getState().openFile(projectId, relPath);
+        })
+        .catch((error: unknown) => {
+          toast.add({
+            title: 'Failed to create file from template',
+            description: error instanceof Error ? error.message : undefined,
+          });
+        });
+      cancelCreate();
+      return;
+    }
     createMutation.mutate({ path: relPath, kind: createDraft.kind });
     if (createDraft.kind === 'file') {
       openProjectFile(projectId, relPath);

@@ -17,6 +17,31 @@ export interface UpdateThreadPolicyRequest {
   body: UpdateThreadPolicyBody;
 }
 
+function applyPolicyUpdate(current: ThreadPolicy, body: UpdateThreadPolicyBody): ThreadPolicy {
+  const policy: ThreadPolicy = { ...current, version: 2 };
+  if (body.mentionGating !== undefined) {
+    policy.mentionGating = body.mentionGating;
+  }
+  if (body.historyMode !== undefined) {
+    policy.historyMode = body.historyMode;
+  }
+  if (body.historyLast !== undefined) {
+    if (body.historyLast === null) {
+      delete policy.historyLast;
+    } else {
+      policy.historyLast = body.historyLast;
+    }
+  }
+  if (body.historyFromRunId !== undefined) {
+    if (body.historyFromRunId === null) {
+      delete policy.historyFromRunId;
+    } else {
+      policy.historyFromRunId = body.historyFromRunId;
+    }
+  }
+  return policy;
+}
+
 @Injectable()
 export class UpdateThreadPolicyUseCase {
   constructor(
@@ -31,7 +56,7 @@ export class UpdateThreadPolicyUseCase {
     if (!thread) {
       throw new ThreadNotFoundException(request.threadId);
     }
-    const { autoReplyAgentId, contextWindow, mentionGating } = request.body;
+    const { autoReplyAgentId } = request.body;
     if (autoReplyAgentId) {
       const member = this.threadAgents
         .listByThread(request.orgId, thread.id)
@@ -40,17 +65,7 @@ export class UpdateThreadPolicyUseCase {
         throw new ThreadValidationException('auto-reply agent must be a thread member');
       }
     }
-    const policy: ThreadPolicy = { ...thread.policy };
-    if (contextWindow !== undefined) {
-      if (contextWindow === null) {
-        delete policy.contextWindow;
-      } else {
-        policy.contextWindow = contextWindow;
-      }
-    }
-    if (mentionGating !== undefined) {
-      policy.mentionGating = mentionGating;
-    }
+    const policy = applyPolicyUpdate(thread.policy, request.body);
     const updated = this.threads.patch(request.orgId, thread.id, {
       ...(autoReplyAgentId !== undefined ? { autoReplyAgentId } : {}),
       policy,

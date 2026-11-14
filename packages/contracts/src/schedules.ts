@@ -5,9 +5,6 @@ import { ThreadPublicSchema } from './thread.ts';
 export const ScheduleStatusSchema = z.enum(['active', 'paused', 'failed']);
 export type ScheduleStatus = z.infer<typeof ScheduleStatusSchema>;
 
-export const ScheduleHistorySchema = z.enum(['none', 'last', 'all']);
-export type ScheduleHistory = z.infer<typeof ScheduleHistorySchema>;
-
 export const ScheduleMissPolicySchema = z.enum(['catch-up', 'skip', 'escalate']);
 export type ScheduleMissPolicy = z.infer<typeof ScheduleMissPolicySchema>;
 
@@ -20,8 +17,6 @@ export const SchedulePublicSchema = z.object({
   detail: z.string(),
   cron: z.string().min(1),
   modeId: z.string().min(1).max(48),
-  history: ScheduleHistorySchema,
-  historyLast: z.number().int().min(1).max(99),
   missPolicy: ScheduleMissPolicySchema,
   threadId: z.string().uuid(),
   nextRunAt: z.string().nullable(),
@@ -37,8 +32,6 @@ export const CreateScheduleBodySchema = z.object({
   detail: z.string().trim().optional(),
   cron: z.string().trim().min(1).optional(),
   modeId: z.string().trim().min(1).max(48).optional(),
-  history: ScheduleHistorySchema.optional(),
-  historyLast: z.number().int().min(1).max(99).optional(),
   missPolicy: ScheduleMissPolicySchema.optional(),
   threadId: z.string().uuid().optional(),
 });
@@ -51,10 +44,8 @@ export const UpdateScheduleBodySchema = z.object({
   detail: z.string().trim().optional(),
   cron: z.string().trim().min(1).optional(),
   modeId: z.string().trim().min(1).max(48).optional(),
-  history: ScheduleHistorySchema.optional(),
-  historyLast: z.number().int().min(1).max(99).optional(),
   missPolicy: ScheduleMissPolicySchema.optional(),
-  threadId: z.string().uuid().optional(),
+  threadId: z.string().uuid().nullable().optional(),
 });
 export type UpdateScheduleBody = z.infer<typeof UpdateScheduleBodySchema>;
 

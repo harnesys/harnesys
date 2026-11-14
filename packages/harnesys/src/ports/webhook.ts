@@ -10,6 +10,7 @@ export interface WebhookRecord {
   targetAgentId: string;
   detail: string;
   endpoint: string;
+  mode: string | null;
   threadId: string;
   lastFiredAt: string | null;
   createdAt: string;
@@ -20,12 +21,14 @@ export interface WebhookCreateInput {
   targetAgentId?: string;
   detail?: string;
   status?: WebhookStatus;
+  mode?: string;
 }
 export interface WebhookUpdateInput {
   name?: string;
   status?: WebhookStatus;
   targetAgentId?: string;
   detail?: string;
+  mode?: string;
 }
 export interface WebhookThreadActiveRun {
   runId: string;

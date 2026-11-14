@@ -1,5 +1,5 @@
 import { Injectable } from '@harnesys/brix';
-import { MemoryCrawler } from '../../infra/memory/memory-crawler.ts';
+import { MemoryCrawlerPort } from '../../domain/agent/memory-crawler.port.ts';
 import {
   GetMemoryStatusUseCase,
   type MemoryEmbeddingsStatus,
@@ -8,7 +8,7 @@ import {
 @Injectable()
 export class RunMemoryPassUseCase {
   constructor(
-    private readonly crawler: MemoryCrawler,
+    private readonly crawler: MemoryCrawlerPort,
     private readonly status: GetMemoryStatusUseCase,
   ) {}
 

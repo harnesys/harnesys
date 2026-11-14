@@ -1,5 +1,4 @@
 import { Module } from '@harnesys/brix';
-import { BrowserModule } from '../../../infra/browser/browser.module.ts';
 import { AddBrowserAllowlistUseCase } from './add-browser-allowlist.use-case.ts';
 import { CheckAgentBrowserUpdateUseCase } from './check-agent-browser-update.use-case.ts';
 import { GetOrgBrowserUseCase } from './get-org-browser.use-case.ts';
@@ -11,7 +10,6 @@ import { RemoveBrowserEngineUseCase } from './remove-browser-engine.use-case.ts'
 import { SetBrowserEngineStateUseCase } from './set-browser-engine-state.use-case.ts';
 
 @Module({
-  imports: [BrowserModule],
   providers: [
     GetOrgBrowserUseCase,
     InstallBrowserEngineUseCase,

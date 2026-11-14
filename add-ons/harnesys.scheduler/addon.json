@@ -1,0 +1,124 @@
+{
+  "id": "harnesys.scheduler",
+  "version": "1.1.0",
+  "platform": 1,
+  "title": "Scheduler",
+  "description": "Cron schedules for agent threads. Every scheduler.cron trigger instance is bound to a thread and fires it when its cron expression is due, evaluated in the organization timezone. Missed runs follow the selected policy: catch up within an hour, skip, or skip and open an approval inbox item.",
+  "runtime": { "entry": "dist/index.js", "profile": "trusted" },
+  "activation": "resident",
+  "connections": [],
+  "permissions": [
+    {
+      "id": "trigger",
+      "reason": "Fire scheduler.cron instances when their cron expression is due"
+    },
+    {
+      "id": "lifecycle.resident",
+      "reason": "Stay running so the planner keeps firing due schedules"
+    },
+    {
+      "id": "org.read",
+      "reason": "Evaluate cron times in the organization timezone"
+    },
+    {
+      "id": "approvals.request",
+      "reason": "Open approval inbox items when a schedule misses its catch-up window"
+    }
+  ],
+  "data": { "migrations": "migrations", "quotaMb": 16 },
+  "contributions": [
+    {
+      "id": "cron",
+      "family": "trigger",
+      "descriptor": {
+        "kind": "scheduler.cron",
+        "title": "Cron schedule",
+        "description": "Run an agent on a cron schedule",
+        "configFields": [
+          {
+            "key": "cron",
+            "label": "Cron",
+            "type": "text",
+            "required": true,
+            "default": "0 9 * * *",
+            "widget": { "kind": "cron" },
+            "help": "Evaluated in the organization timezone"
+          },
+          {
+            "key": "miss_policy",
+            "label": "If a run is missed",
+            "type": "select",
+            "required": false,
+            "default": "catch-up",
+            "options": [
+              {
+                "value": "catch-up",
+                "label": "Catch up",
+                "help": "Runs missed while the host was asleep still fire within the next hour."
+              },
+              {
+                "value": "skip",
+                "label": "Skip",
+                "help": "Missed runs are dropped; the next scheduled run fires as usual."
+              },
+              {
+                "value": "escalate",
+                "label": "Skip and ask",
+                "help": "Missed runs are dropped and an approval inbox item asks what to do."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "tick",
+      "family": "job",
+      "descriptor": {
+        "id": "tick",
+        "title": "Schedule planner",
+        "schedule": { "everySec": 60 },
+        "timeoutSec": 55,
+        "catchUp": "none",
+        "defaultEnabled": true
+      }
+    },
+    {
+      "id": "schedules",
+      "family": "route",
+      "descriptor": { "id": "schedules", "method": "GET", "path": "/schedules", "role": "member" }
+    },
+    {
+      "id": "main",
+      "family": "view",
+      "descriptor": {
+        "id": "main",
+        "title": "Scheduler",
+        "sections": [
+          { "type": "status" },
+          { "type": "capabilities" },
+          { "type": "permissions" },
+          { "type": "automations", "triggers": ["scheduler.cron"] },
+          { "type": "jobs" },
+          {
+            "type": "table",
+            "title": "Schedules",
+            "source": { "route": "/schedules" },
+            "columns": [
+              { "key": "name", "label": "Name", "format": "text" },
+              { "key": "cron", "label": "Cron", "format": "text" },
+              { "key": "status", "label": "Status", "format": "badge" },
+              { "key": "nextRunAt", "label": "Next run", "format": "datetime" },
+              { "key": "lastFiredAt", "label": "Last fired", "format": "datetime" },
+              { "key": "threadId", "label": "Thread", "format": "text" }
+            ]
+          },
+          {
+            "type": "markdown",
+            "body": "Every schedule is a trigger instance bound to a thread. The planner ticks every minute, fires due schedules with run-level deduplication, and applies the missed-run policy: catch-up fires runs missed within the last hour, skip drops them, escalate drops them and opens an approval inbox item. An invalid cron expression or a thread that cannot run marks the schedule as failed."
+          }
+        ]
+      }
+    }
+  ]
+}

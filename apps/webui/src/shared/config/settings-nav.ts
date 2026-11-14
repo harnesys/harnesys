@@ -1,4 +1,5 @@
 import {
+  AppWindowIcon,
   BellIcon,
   BlocksIcon,
   BoxesIcon,
@@ -38,11 +39,13 @@ export const WINDOW_SETTINGS_CATEGORIES = [
   'packages',
   'lsp',
   'toolchain',
+  'addons',
   'browser',
   'fleet',
   'profiles',
   'providers',
   'connectors',
+  'apps',
   'secrets',
   'general',
   'members',
@@ -159,6 +162,12 @@ export const WINDOW_SETTINGS_GROUPS: SettingsNavGroup[] = [
         icon: BoxesIcon,
       },
       {
+        id: 'addons',
+        label: 'Add-ons',
+        description: 'Connect integrations and enable add-ons for this organization.',
+        icon: PuzzleIcon,
+      },
+      {
         id: 'browser',
         label: 'Browser',
         description: 'Browser engines for the browser pack: install per host, org default.',
@@ -188,6 +197,12 @@ export const WINDOW_SETTINGS_GROUPS: SettingsNavGroup[] = [
     id: 'integrations',
     label: 'Integrations',
     items: [
+      {
+        id: 'apps',
+        label: 'Apps',
+        description: 'Provider applications and connected accounts shared by add-ons.',
+        icon: AppWindowIcon,
+      },
       {
         id: 'providers',
         label: 'Providers',

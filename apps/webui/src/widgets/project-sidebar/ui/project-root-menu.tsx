@@ -35,6 +35,7 @@ import {
 import { Input } from '@/shared/ui/input';
 import { toast } from '@/shared/ui/toast';
 import { useExplorerDraftStore } from '../model/explorer-draft.store';
+import { useViewerCreates } from '../model/viewer-creates';
 import {
   useWorktreesHidden,
   useWorktreesVisibilityStore,
@@ -52,6 +53,7 @@ export function ProjectRootMenu({
 }) {
   const [addRemoteOpen, setAddRemoteOpen] = useState(false);
   const start = useExplorerDraftStore((state) => state.start);
+  const viewerCreates = useViewerCreates();
   const queryClient = useQueryClient();
   const openNewTerminal = useOpenNewTerminal();
   const isRoot = dirPath === '';
@@ -149,6 +151,15 @@ export function ProjectRootMenu({
               <FileIcon className="size-3.5" />
               New file
             </DropdownMenuItem>
+            {viewerCreates.map((template) => (
+              <DropdownMenuItem
+                key={template.viewerId}
+                onClick={() => start('file', dirPath, projectId, template)}
+              >
+                <FileIcon className="size-3.5" />
+                {`New ${template.title} (${template.extension})`}
+              </DropdownMenuItem>
+            ))}
             <DropdownMenuItem onClick={() => start('dir', dirPath, projectId)}>
               <FolderIcon className="size-3.5" />
               New folder
