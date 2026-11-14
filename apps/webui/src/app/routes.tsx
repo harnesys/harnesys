@@ -142,8 +142,6 @@ export const routes: RouteObject[] = [
               { path: 'thread/:threadId', element: null },
               { path: 'board/:boardId', element: null },
               { path: 'attachment/:issueId/:attachmentId', element: null },
-              { path: 'schedule/:scheduleId', element: null },
-              { path: 'webhook/:webhookId', element: null },
               { path: 'spawn/:threadId/:spawnId', element: null },
               { path: 'terminal/:sessionId', element: null },
               {
@@ -153,8 +151,6 @@ export const routes: RouteObject[] = [
                   { path: 'thread/:threadId', element: null },
                   { path: 'file/*', element: null },
                   { path: 'diff/*', element: null },
-                  { path: 'schedule/:scheduleId', element: null },
-                  { path: 'webhook/:webhookId', element: null },
                   { path: 'spawn/:threadId/:spawnId', element: null },
                   { path: 'terminal/:sessionId', element: null },
                   { path: 'attachment/:issueId/:attachmentId', element: null },

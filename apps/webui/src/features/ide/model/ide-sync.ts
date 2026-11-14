@@ -17,11 +17,7 @@ export function useIdeSync() {
   const storeOrgId = useActiveOrgStore((state) => state.orgId);
   const org = urlOrgId ?? storeOrgId ?? '';
   const projectId = focus.kind === 'none' || focus.kind === 'settings' ? null : focus.projectId;
-  const needDeskEntities =
-    focus.kind === 'thread' ||
-    focus.kind === 'spawn' ||
-    focus.kind === 'schedule' ||
-    focus.kind === 'webhook';
+  const needDeskEntities = focus.kind === 'thread' || focus.kind === 'spawn';
   const deskReady = useDeskReady(needDeskEntities ? projectId : null);
   const focusProjectRef = useRef<string | null>(projectId);
   focusProjectRef.current = projectId;

@@ -1,4 +1,4 @@
-import { BotIcon, CalendarClockIcon, CircleDotIcon, MessagesSquareIcon } from 'lucide-react';
+import { BotIcon, CircleDotIcon, MessagesSquareIcon } from 'lucide-react';
 import { useAgentStore } from '@/entities/agent';
 import { useIssueBoardStore } from '@/entities/issue';
 import { useActiveOrgStore } from '@/entities/org-machine';
@@ -6,7 +6,6 @@ import { setActiveThreadId } from '@/entities/thread';
 import { useDeskStore } from '@/features/desk';
 import { useIdeStore } from '@/features/ide';
 import { useIssueDrawerStore } from '@/features/manage-issues/model/issue-drawer.store';
-import { createSchedule, openScheduleConfigDialog } from '@/features/manage-schedule';
 import { openMarketplace } from '@/features/preset-marketplace';
 import { openNewThread } from '@/features/switch-thread';
 import { useOrgId } from '@/shared/config/location';
@@ -26,7 +25,7 @@ export function IdeHome() {
   const urlOrgId = useOrgId();
   const storeOrgId = useActiveOrgStore((state) => state.orgId);
   const orgId = urlOrgId ?? storeOrgId ?? '';
-  const { openBoard, openSchedule, openThread } = useStudioNavigation();
+  const { openBoard, openThread } = useStudioNavigation();
   return (
     <CategoryLanding data-testid="ide-home">
       <CategoryLandingEyebrow>HOME</CategoryLandingEyebrow>
@@ -45,27 +44,6 @@ export function IdeHome() {
             description="Name and a job. Opens as a thread tab."
             onClick={() => {
               void openMarketplace({ kind: 'agent' });
-            }}
-          />
-          <CategoryLandingActionCard
-            icon={<CalendarClockIcon />}
-            title="New schedule"
-            description="Cron fires a run."
-            onClick={() => {
-              const agents = useAgentStore.getState().items.filter((a) => a.orgId === orgId);
-              void openScheduleConfigDialog(agents, orgId).then(async (result) => {
-                if (!result || result.deleted) {
-                  return;
-                }
-                const draft = result.draft;
-                const schedule = await createSchedule(orgId, draft);
-                if (schedule) {
-                  useIdeStore
-                    .getState()
-                    .openSchedule(orgId, schedule.id, schedule.threadId, schedule.targetAgentId);
-                  openSchedule(orgId, schedule.id);
-                }
-              });
             }}
           />
           <CategoryLandingActionCard

@@ -10,8 +10,6 @@ function orgLevelFocus(
   orgId: string,
   matches: {
     thread?: { params: { threadId?: string } };
-    schedule?: { params: { scheduleId?: string } };
-    webhook?: { params: { webhookId?: string } };
     board?: { params: { boardId?: string } };
     spawn?: { params: { threadId?: string; spawnId?: string } };
     terminal?: { params: { sessionId?: string } };
@@ -21,14 +19,6 @@ function orgLevelFocus(
   const threadId = matches.thread?.params.threadId;
   if (threadId) {
     return { kind: 'thread', projectId: orgId, threadId };
-  }
-  const scheduleId = matches.schedule?.params.scheduleId;
-  if (scheduleId) {
-    return { kind: 'schedule', projectId: orgId, scheduleId };
-  }
-  const webhookId = matches.webhook?.params.webhookId;
-  if (webhookId) {
-    return { kind: 'webhook', projectId: orgId, webhookId };
   }
   const boardId = matches.board?.params.boardId;
   if (boardId) {
@@ -58,8 +48,6 @@ function projectLevelFocus(matches: {
   thread?: { params: { projectId?: string; threadId?: string } };
   file?: { params: { projectId?: string; '*'?: string | undefined } };
   diff?: { params: { projectId?: string; '*'?: string | undefined } };
-  schedule?: { params: { projectId?: string; scheduleId?: string } };
-  webhook?: { params: { projectId?: string; webhookId?: string } };
   spawn?: { params: { projectId?: string; threadId?: string; spawnId?: string } };
   terminal?: { params: { projectId?: string; sessionId?: string } };
   attachment?: { params: { projectId?: string; issueId?: string; attachmentId?: string } };
@@ -79,22 +67,6 @@ function projectLevelFocus(matches: {
   const diff = matches.diff;
   if (diff?.params.projectId && diff.params['*']) {
     return { kind: 'diff', projectId: diff.params.projectId, path: `/${diff.params['*']}` };
-  }
-  const schedule = matches.schedule;
-  if (schedule?.params.projectId && schedule.params.scheduleId) {
-    return {
-      kind: 'schedule',
-      projectId: schedule.params.projectId,
-      scheduleId: schedule.params.scheduleId,
-    };
-  }
-  const webhook = matches.webhook;
-  if (webhook?.params.projectId && webhook.params.webhookId) {
-    return {
-      kind: 'webhook',
-      projectId: webhook.params.projectId,
-      webhookId: webhook.params.webhookId,
-    };
   }
   const spawn = matches.spawn;
   if (spawn?.params.projectId && spawn.params.threadId && spawn.params.spawnId) {
@@ -131,8 +103,6 @@ export function useStudioLocation(): { orgId: string | null; focus: StudioFocus 
   const settingsCategoryMatch = useMatch('/o/:orgId/settings/:category');
   const settingsRoot = useMatch('/o/:orgId/settings');
   const orgThread = useMatch('/o/:orgId/thread/:threadId');
-  const orgSchedule = useMatch('/o/:orgId/schedule/:scheduleId');
-  const orgWebhook = useMatch('/o/:orgId/webhook/:webhookId');
   const orgBoard = useMatch('/o/:orgId/board/:boardId');
   const orgSpawn = useMatch('/o/:orgId/spawn/:threadId/:spawnId');
   const orgTerminal = useMatch('/o/:orgId/terminal/:sessionId');
@@ -140,8 +110,6 @@ export function useStudioLocation(): { orgId: string | null; focus: StudioFocus 
   const thread = useMatch('/o/:orgId/:projectId/thread/:threadId');
   const file = useMatch('/o/:orgId/:projectId/file/*');
   const diff = useMatch('/o/:orgId/:projectId/diff/*');
-  const schedule = useMatch('/o/:orgId/:projectId/schedule/:scheduleId');
-  const webhook = useMatch('/o/:orgId/:projectId/webhook/:webhookId');
   const spawn = useMatch('/o/:orgId/:projectId/spawn/:threadId/:spawnId');
   const terminal = useMatch('/o/:orgId/:projectId/terminal/:sessionId');
   const attachment = useMatch('/o/:orgId/:projectId/attachment/:issueId/:attachmentId');
@@ -157,8 +125,6 @@ export function useStudioLocation(): { orgId: string | null; focus: StudioFocus 
   if (orgId) {
     const focus = orgLevelFocus(orgId, {
       thread: orgThread ?? undefined,
-      schedule: orgSchedule ?? undefined,
-      webhook: orgWebhook ?? undefined,
       board: orgBoard ?? undefined,
       spawn: orgSpawn ?? undefined,
       terminal: orgTerminal ?? undefined,
@@ -172,8 +138,6 @@ export function useStudioLocation(): { orgId: string | null; focus: StudioFocus 
     thread: thread ?? undefined,
     file: file ?? undefined,
     diff: diff ?? undefined,
-    schedule: schedule ?? undefined,
-    webhook: webhook ?? undefined,
     spawn: spawn ?? undefined,
     terminal: terminal ?? undefined,
     attachment: attachment ?? undefined,

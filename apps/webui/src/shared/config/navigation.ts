@@ -29,12 +29,6 @@ export function useStudioNavigation() {
     openDiff(projectId: string, path: string) {
       void navigate(studioPath.diff(orgId, projectId, path));
     },
-    openSchedule(projectId: string, scheduleId: string) {
-      void navigate(studioPath.schedule(orgId, projectId, scheduleId));
-    },
-    openWebhook(projectId: string, webhookId: string) {
-      void navigate(studioPath.webhook(orgId, projectId, webhookId));
-    },
     openBoard(boardId: string) {
       void navigate(studioPath.board(orgId, boardId));
     },

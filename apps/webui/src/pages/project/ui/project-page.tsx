@@ -49,10 +49,7 @@ function ProjectShell({
     !bareProject &&
     inspectorOpen &&
     activeTab !== null &&
-    (activeTab.kind === 'thread' ||
-      activeTab.kind === 'file' ||
-      activeTab.kind === 'schedule' ||
-      activeTab.kind === 'webhook');
+    (activeTab.kind === 'thread' || activeTab.kind === 'file');
   const hasTabs = workspace.tabs.length > 0;
   if (bareProject) {
     return <Navigate to={orgId ? studioPath.desk(orgId) : '/'} replace />;

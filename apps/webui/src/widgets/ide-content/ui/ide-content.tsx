@@ -27,7 +27,6 @@ import {
 import { TerminalView } from '@/widgets/terminal-pane';
 import { ThreadTriggerDock } from '@/widgets/thread-dock';
 import { JournalComposer, ThreadJournal } from '@/widgets/thread-journal';
-import { ScheduleSurface, WebhookSurface } from './automation-surface';
 import { ThreadFileTabContent } from './thread-file-tab';
 
 function isNotFound(error: Error | null): boolean {
@@ -138,7 +137,6 @@ function ThreadTabContent({
       <JournalComposer thread={thread} agent={agent} />
       <ThreadTriggerDock
         threadId={thread.id}
-        projectId={tab.projectId}
         issueId={thread.issueId}
         settings={<ThreadSettings thread={thread} />}
       />
@@ -199,12 +197,6 @@ export function IdeTabContent({ tab, projectId }: { tab: IdeTab; projectId: stri
   const isHydrating = !useDeskReady(hydrateScope);
   if (tab.kind === 'thread' && tab.threadId) {
     return <ThreadTabContent tab={tab} threadId={tab.threadId} isHydrating={isHydrating} />;
-  }
-  if (tab.kind === 'schedule' && tab.scheduleId) {
-    return <ScheduleSurface projectId={projectId} scheduleId={tab.scheduleId} />;
-  }
-  if (tab.kind === 'webhook' && tab.webhookId) {
-    return <WebhookSurface projectId={projectId} webhookId={tab.webhookId} />;
   }
   if (tab.kind === 'board' && tab.boardId) {
     return <BoardSurface projectId={projectId} boardId={tab.boardId} />;

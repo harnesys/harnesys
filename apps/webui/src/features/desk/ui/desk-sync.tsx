@@ -41,11 +41,7 @@ export function DeskSync() {
   const orgs = useActiveOrgStore((state) => state.orgs);
   const projectId = studioFocusProjectId(focus);
   const activeOrgId = orgId ?? storeOrgId;
-  const projectDeskFocus =
-    focus.kind === 'thread' ||
-    focus.kind === 'spawn' ||
-    focus.kind === 'schedule' ||
-    focus.kind === 'webhook';
+  const projectDeskFocus = focus.kind === 'thread' || focus.kind === 'spawn';
   const deskReadyScope = projectDeskFocus ? projectId : null;
   const projectScopeId =
     projectDeskFocus && projectId && projectId !== activeOrgId ? projectId : null;

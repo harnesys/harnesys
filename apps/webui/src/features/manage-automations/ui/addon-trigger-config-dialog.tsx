@@ -9,7 +9,7 @@ import {
   type AddonTriggerDescriptor,
   triggerDescriptorsFromDetail,
 } from '@/features/manage-addons/lib/view-sections';
-import { CronComposer } from '@/features/manage-schedule/ui/cron-composer';
+import { CronComposer } from '@/features/manage-automations/ui/cron-composer';
 import { orgAddonDetailQuery, orgAddonTriggersQuery } from '@/shared/api/addons';
 import { studioPath } from '@/shared/config/routes';
 import {

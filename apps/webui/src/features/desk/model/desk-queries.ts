@@ -6,9 +6,7 @@ import {
   listIssueLabels,
   listIssues,
   listOrgTerminals,
-  listSchedules,
   listThreads,
-  listWebhooks,
 } from '@/shared/api';
 import { getOrgGitSummary, gitOrgSummaryQueryKey } from '@/shared/api/git';
 
@@ -34,14 +32,6 @@ export function deskThreadsQuery(scopeId: string) {
   });
 }
 
-export function deskSchedulesQuery(scopeId: string) {
-  return queryOptions({
-    queryKey: deskQueryKey('schedules', scopeId),
-    queryFn: () => listSchedules(scopeId),
-    enabled: Boolean(scopeId),
-  });
-}
-
 export function deskAutomationsQueryKey(scopeId: string) {
   return deskQueryKey('automations', scopeId);
 }
@@ -50,14 +40,6 @@ export function deskAutomationsQuery(scopeId: string) {
   return queryOptions({
     queryKey: deskAutomationsQueryKey(scopeId),
     queryFn: () => listAutomations(scopeId),
-    enabled: Boolean(scopeId),
-  });
-}
-
-export function deskWebhooksQuery(scopeId: string) {
-  return queryOptions({
-    queryKey: deskQueryKey('webhooks', scopeId),
-    queryFn: () => listWebhooks(scopeId),
     enabled: Boolean(scopeId),
   });
 }

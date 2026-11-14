@@ -20,12 +20,6 @@ export function pathForIdeTab(orgId: string, projectId: string, tab: IdeTab): st
   if (tab.kind === 'diff' && tab.path) {
     return studioPath.diff(orgId, projectId, tab.path);
   }
-  if (tab.kind === 'schedule' && tab.scheduleId) {
-    return studioPath.schedule(orgId, projectId, tab.scheduleId);
-  }
-  if (tab.kind === 'webhook' && tab.webhookId) {
-    return studioPath.webhook(orgId, projectId, tab.webhookId);
-  }
   if (tab.kind === 'board' && tab.boardId) {
     return studioPath.board(orgId, tab.boardId);
   }

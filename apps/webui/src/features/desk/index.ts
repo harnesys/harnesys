@@ -46,14 +46,10 @@ export {
   useDeskSelection,
   useErroredThreads,
   useProjectAgents,
-  useProjectSchedules,
-  useProjectWebhooks,
-  useSchedulesInProjects,
   useSelectedAgent,
   useSelectedThread,
   useThreadEvents,
   useWaitingThreads,
-  useWebhooksInProjects,
 } from './model/use-desk';
 export { useOrgTerminals } from './model/use-org-terminals';
 export { DeskSync } from './ui/desk-sync';

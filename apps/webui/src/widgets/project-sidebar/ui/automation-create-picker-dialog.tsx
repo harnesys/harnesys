@@ -1,30 +1,16 @@
 import type { AutomationKind } from '@harnesys/contracts';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  ArrowRightIcon,
-  CalendarClockIcon,
-  PlusIcon,
-  PuzzleIcon,
-  WebhookIcon,
-  ZapIcon,
-} from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { ArrowRightIcon, PlusIcon, PuzzleIcon, ZapIcon } from 'lucide-react';
 import type { ComponentType } from 'react';
 import type { Agent } from '@/entities/agent';
 import { CORE_AUTOMATION_INTEGRATION_ID } from '@/entities/automation';
 import { useActiveOrgStore } from '@/entities/org-machine';
-import { useThreadStore } from '@/entities/thread';
-import type { Webhook } from '@/entities/webhook';
-import { deskAutomationsQueryKey } from '@/features/desk';
-import { useIdeStore } from '@/features/ide';
 import { useAutomationConfig } from '@/features/manage-automations';
-import { createSchedule, openScheduleConfigDialog } from '@/features/manage-schedule';
-import { createWebhook, openWebhookConfigDialog } from '@/features/manage-webhook';
 import type { WebuiIntegrationDescriptor } from '@/integrations/registry';
 import { findIntegrationUi } from '@/integrations/registry';
 import { listAutomationKinds } from '@/shared/api';
 import { orgAddonsQuery } from '@/shared/api/addons';
 import { useOrgId } from '@/shared/config/location';
-import { useStudioNavigation } from '@/shared/config/navigation';
 import { softTint } from '@/shared/lib/color';
 import type { DialogComponentProps } from '@/shared/services/overlay';
 import { dialog } from '@/shared/services/overlay';
@@ -35,12 +21,9 @@ interface PickerData {
   kinds: AutomationKind[];
 }
 type PickerChoice =
-  | { source: 'core'; kind: 'scheduler' | 'webhook' }
   | { source: 'integration'; integrationId: string; kind: string }
   | { source: 'addon'; integrationId: string; kind: string };
 
-const CORE_CARD_COLOR = '#f59e0b';
-const WEBHOOK_CARD_COLOR = '#0ea5e9';
 const INTEGRATION_CARD_COLOR = '#8b5cf6';
 const ADDON_CARD_COLOR = '#10b981';
 
@@ -56,24 +39,6 @@ function AutomationCreatePickerDialog({
     addons.data?.items.find((item) => item.addonId === addonId)?.title ?? addonId;
   return (
     <div className="grid grid-cols-2 gap-2.5">
-      <AutomationCard
-        testId="automation-create-scheduler"
-        icon={CalendarClockIcon}
-        color={CORE_CARD_COLOR}
-        title="Scheduler"
-        meta="Cron schedule"
-        description="Run an agent on a cron"
-        onPick={() => onResolve?.({ source: 'core', kind: 'scheduler' })}
-      />
-      <AutomationCard
-        testId="automation-create-webhook"
-        icon={WebhookIcon}
-        color={WEBHOOK_CARD_COLOR}
-        title="Webhook"
-        meta="HTTP trigger"
-        description="Trigger from an HTTP endpoint"
-        onPick={() => onResolve?.({ source: 'core', kind: 'webhook' })}
-      />
       {contributions.map((kind) =>
         kind.source === 'addon' ? (
           <AutomationCard
@@ -176,9 +141,7 @@ function openAutomationCreatePicker(kinds: AutomationKind[], orgId: string) {
   });
 }
 export function useCreateAutomation(agents: Agent[], onDone?: () => void): () => void {
-  const { openSchedule, openWebhook } = useStudioNavigation();
   const configure = useAutomationConfig();
-  const queryClient = useQueryClient();
   const urlOrgId = useOrgId();
   const storeOrgId = useActiveOrgStore((state) => state.orgId);
   const orgId = urlOrgId ?? storeOrgId ?? '';
@@ -187,16 +150,6 @@ export function useCreateAutomation(agents: Agent[], onDone?: () => void): () =>
     const orgAgents = agents.filter(
       (item) => item.orgId === scopeId || item.orgId === orgId || !item.orgId,
     );
-    const openWebhookTab = (item: Webhook) => {
-      const agentId = useThreadStore.getState().byId(item.threadId)?.agentId;
-      useIdeStore
-        .getState()
-        .openWebhook(scopeId, item.id, item.threadId, agentId ?? item.targetAgentId);
-      openWebhook(scopeId, item.id);
-    };
-    const refreshAutomations = () => {
-      void queryClient.invalidateQueries({ queryKey: deskAutomationsQueryKey(scopeId) });
-    };
     const createFromIntegration = async (choice: {
       source: 'integration' | 'addon';
       integrationId: string;
@@ -212,50 +165,13 @@ export function useCreateAutomation(agents: Agent[], onDone?: () => void): () =>
       });
       onDone?.();
     };
-    const createFromScheduler = async () => {
-      const result = await openScheduleConfigDialog(orgAgents, scopeId);
-      if (!result || result.deleted) {
-        return;
-      }
-      const created = await createSchedule(scopeId, result.draft);
-      if (!created) {
-        return;
-      }
-      useIdeStore
-        .getState()
-        .openSchedule(scopeId, created.id, created.threadId, created.targetAgentId);
-      openSchedule(scopeId, created.id);
-      refreshAutomations();
-      onDone?.();
-    };
-    const createFromWebhook = async () => {
-      const result = await openWebhookConfigDialog(orgAgents, scopeId);
-      if (!result || result.deleted) {
-        return;
-      }
-      const created = await createWebhook(scopeId, result.draft);
-      if (!created) {
-        return;
-      }
-      openWebhookTab(created);
-      refreshAutomations();
-      onDone?.();
-    };
     void (async () => {
       const kinds = orgId ? await listAutomationKinds(orgId).catch(() => []) : [];
       const choice = await openAutomationCreatePicker(kinds, orgId);
       if (!choice) {
         return;
       }
-      if (choice.source === 'integration' || choice.source === 'addon') {
-        await createFromIntegration(choice);
-        return;
-      }
-      if (choice.kind === 'scheduler') {
-        await createFromScheduler();
-        return;
-      }
-      await createFromWebhook();
+      await createFromIntegration(choice);
     })();
   };
 }

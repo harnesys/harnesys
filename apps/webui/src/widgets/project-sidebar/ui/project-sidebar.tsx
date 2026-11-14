@@ -19,9 +19,7 @@ import {
   useDeskReady,
   useErroredThreads,
   useOrgTerminals,
-  useSchedulesInProjects,
   useWaitingThreads,
-  useWebhooksInProjects,
 } from '@/features/desk';
 import { useIdeTabs } from '@/features/ide';
 import { OrgHeader } from '@/features/switch-org';
@@ -110,8 +108,6 @@ export function ProjectSidebar({
   const inboxThreads = useWaitingThreads(agentScopeIds);
   const errorThreads = useErroredThreads(agentScopeIds);
   const agents = useAgentsInProjects(agentScopeIds);
-  const schedules = useSchedulesInProjects(automationScopeIds);
-  const webhooks = useWebhooksInProjects(automationScopeIds);
   const automations = useAutomationsInProjects(automationScopeIds);
   const boards = useIssueBoardStore((state) => state.boards);
   const terminals = useOrgTerminals();
@@ -122,8 +118,6 @@ export function ProjectSidebar({
   const activeAgentId = useThreadStore((state) =>
     threadId ? (state.byId(threadId)?.agentId ?? null) : null,
   );
-  const activeScheduleId = focus.kind === 'schedule' ? focus.scheduleId : null;
-  const activeWebhookId = focus.kind === 'webhook' ? focus.webhookId : null;
   const activeBoardId = focus.kind === 'board' ? focus.boardId : null;
   const activeTerminalSessionId = focus.kind === 'terminal' ? focus.sessionId : null;
   const collapsed = useAccordionStore((state) => state.collapsed);
@@ -276,15 +270,7 @@ export function ProjectSidebar({
             }
             {...drag}
           >
-            <AutomationsSection
-              agents={agents}
-              schedules={schedules}
-              webhooks={webhooks}
-              activeScheduleId={activeScheduleId}
-              activeWebhookId={activeWebhookId}
-              activeThreadId={activeThreadId}
-              onSelectDone={() => setOpenMobile(false)}
-            />
+            <AutomationsSection agents={agents} onSelectDone={() => setOpenMobile(false)} />
           </AccordionSection>
         );
       case 'git':

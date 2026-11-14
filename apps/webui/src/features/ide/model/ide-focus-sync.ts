@@ -1,6 +1,4 @@
-import { useScheduleStore } from '@/entities/schedule';
 import { setActiveThreadId, useThreadStore } from '@/entities/thread';
-import { useWebhookStore } from '@/entities/webhook';
 import { ensureThreadCached, useDeskStore } from '@/features/desk';
 import type { StudioFocus, StudioFocusKind } from '@/shared/config/routes';
 import { studioPath } from '@/shared/config/routes';
@@ -22,8 +20,6 @@ export function syncIdeFocus({ focus, projectId, org, navigate }: FocusSyncArgs)
   const handlers: Partial<Record<FocusKind, FocusHandler>> = {
     file: syncFileFocus,
     diff: syncDiffFocus,
-    schedule: syncScheduleFocus,
-    webhook: syncWebhookFocus,
     spawn: syncSpawnFocus,
     terminal: syncTerminalFocus,
     board: syncBoardFocus,
@@ -63,34 +59,6 @@ function syncDiffFocus({ focus, projectId, org, navigate }: FocusSyncArgs): void
   ide.openDiff(projectId, normalized);
   ide.setActive(tabIdFor('diff', projectId, normalized));
 }
-function syncScheduleFocus({ focus, projectId }: FocusSyncArgs): void {
-  if (focus.kind !== 'schedule') {
-    return;
-  }
-  const schedule = useScheduleStore.getState().items.find((item) => item.id === focus.scheduleId);
-  if (!schedule || schedule.projectId !== projectId) {
-    return;
-  }
-  const ide = useIdeStore.getState();
-  ide.openSchedule(projectId, schedule.id, schedule.threadId, schedule.targetAgentId);
-  useDeskStore.getState().setFocusedThreadId(schedule.threadId);
-  setActiveThreadId(schedule.targetAgentId, schedule.threadId);
-  ide.setActive(tabIdFor('schedule', projectId, schedule.id));
-}
-function syncWebhookFocus({ focus, projectId }: FocusSyncArgs): void {
-  if (focus.kind !== 'webhook') {
-    return;
-  }
-  const webhook = useWebhookStore.getState().items.find((item) => item.id === focus.webhookId);
-  if (!webhook || webhook.projectId !== projectId) {
-    return;
-  }
-  const ide = useIdeStore.getState();
-  ide.openWebhook(projectId, webhook.id, webhook.threadId, webhook.targetAgentId);
-  useDeskStore.getState().setFocusedThreadId(webhook.threadId);
-  setActiveThreadId(webhook.targetAgentId, webhook.threadId);
-  ide.setActive(tabIdFor('webhook', projectId, webhook.id));
-}
 function syncSpawnFocus({ focus, projectId }: FocusSyncArgs): void {
   if (focus.kind !== 'spawn') {
     return;
@@ -120,7 +88,7 @@ function syncBoardFocus({ focus, projectId }: FocusSyncArgs): void {
   ide.openBoard(projectId, focus.boardId);
   ide.setActive(tabIdFor('board', projectId, focus.boardId));
 }
-function syncThreadFocus({ focus, projectId, org, navigate }: FocusSyncArgs): void {
+function syncThreadFocus({ focus, projectId }: FocusSyncArgs): void {
   if (focus.kind !== 'thread') {
     return;
   }
@@ -128,28 +96,10 @@ function syncThreadFocus({ focus, projectId, org, navigate }: FocusSyncArgs): vo
   if (!thread) {
     void ensureThreadCached(focus.threadId).then((found) => {
       if (found) {
-        syncThreadFocus({ focus, projectId, org, navigate });
+        syncThreadFocus({ focus, projectId, org: '', navigate: () => {} });
       }
     });
     return;
-  }
-  if (thread.kind === 'schedule') {
-    const schedule = useScheduleStore
-      .getState()
-      .items.find((item) => item.threadId === focus.threadId && item.projectId === projectId);
-    if (schedule) {
-      void navigate(studioPath.schedule(org, projectId, schedule.id), { replace: true });
-      return;
-    }
-  }
-  if (thread.kind === 'webhook') {
-    const webhook = useWebhookStore
-      .getState()
-      .items.find((item) => item.threadId === focus.threadId && item.projectId === projectId);
-    if (webhook) {
-      void navigate(studioPath.webhook(org, projectId, webhook.id), { replace: true });
-      return;
-    }
   }
   const ide = useIdeStore.getState();
   ide.openThread(projectId, thread.agentId, focus.threadId);

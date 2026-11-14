@@ -3,9 +3,7 @@ import { useEffect } from 'react';
 import { toClientAgentFromPublic, useAgentStore } from '@/entities/agent';
 import { toClientAutomation, useAutomationStore } from '@/entities/automation';
 import { useIssueBoardStore, useIssueLabelStore, useIssueStore } from '@/entities/issue';
-import { toClientSchedule, useScheduleStore } from '@/entities/schedule';
 import { toClientThread, useThreadStore } from '@/entities/thread';
-import { toClientWebhook, useWebhookStore } from '@/entities/webhook';
 import { watchAutomationsEvents } from '@/shared/api/events';
 import {
   gitFileStatusQueryKey,
@@ -21,10 +19,8 @@ import {
   deskGitSummaryQuery,
   deskIssuesQuery,
   deskLabelsQuery,
-  deskSchedulesQuery,
   deskTerminalsQuery,
   deskThreadsQuery,
-  deskWebhooksQuery,
 } from './desk-queries';
 
 function useDeskSlices(scopeId: string) {
@@ -32,8 +28,6 @@ function useDeskSlices(scopeId: string) {
     queries: [
       deskAgentsQuery(scopeId),
       deskThreadsQuery(scopeId),
-      deskSchedulesQuery(scopeId),
-      deskWebhooksQuery(scopeId),
       deskBoardsQuery(scopeId),
       deskLabelsQuery(scopeId),
       deskIssuesQuery(scopeId),
@@ -42,11 +36,9 @@ function useDeskSlices(scopeId: string) {
       ready: results.every((result) => result.isSuccess),
       agents: results[0]?.data,
       threads: results[1]?.data,
-      schedules: results[2]?.data,
-      webhooks: results[3]?.data,
-      boards: results[4]?.data,
-      labels: results[5]?.data,
-      issues: results[6]?.data,
+      boards: results[2]?.data,
+      labels: results[3]?.data,
+      issues: results[4]?.data,
     }),
   });
 }
@@ -92,9 +84,7 @@ export function useDeskStoreSync(
   options: { orgEntities?: boolean } = {},
 ): boolean {
   const queryClient = useQueryClient();
-  const { ready, agents, threads, schedules, webhooks, boards, labels, issues } = useDeskSlices(
-    scopeId ?? '',
-  );
+  const { ready, agents, threads, boards, labels, issues } = useDeskSlices(scopeId ?? '');
   const automationsQuery = useQuery({
     ...deskAutomationsQuery(scopeId ?? ''),
     enabled: Boolean(scopeId),
@@ -131,12 +121,6 @@ export function useDeskStoreSync(
     if (threads) {
       useThreadStore.getState().replaceOrg(scopeId, threads.map(toClientThread));
     }
-    if (schedules) {
-      useScheduleStore.getState().replaceProject(scopeId, schedules.map(toClientSchedule));
-    }
-    if (webhooks) {
-      useWebhookStore.getState().replaceProject(scopeId, webhooks.map(toClientWebhook));
-    }
     if (orgEntities) {
       if (boards) {
         useIssueBoardStore.getState().replaceAll(boards);
@@ -148,6 +132,6 @@ export function useDeskStoreSync(
         useIssueStore.getState().replaceAll(issues);
       }
     }
-  }, [scopeId, agents, threads, schedules, webhooks, boards, labels, issues, orgEntities]);
+  }, [scopeId, agents, threads, boards, labels, issues, orgEntities]);
   return ready;
 }

@@ -35,12 +35,6 @@ export function TabIcon({ tab }: { tab: IdeTab }) {
   if (tab.kind === 'diff') {
     return <FileDiffIcon className="size-3.5 shrink-0 opacity-70" />;
   }
-  if (tab.kind === 'schedule') {
-    return <CalendarClockIcon className="size-3.5 shrink-0 opacity-70" />;
-  }
-  if (tab.kind === 'webhook') {
-    return <EarthIcon className="size-3.5 shrink-0 opacity-70" />;
-  }
   if (tab.kind === 'board') {
     return <BoardTabIcon boardId={tab.boardId ?? ''} />;
   }
@@ -88,7 +82,7 @@ function ThreadTabIcon({ threadId }: { threadId: string }) {
 }
 export function useTabLabel(tab: IdeTab): string {
   const title = useThreadStore((state) =>
-    (tab.kind === 'thread' || tab.kind === 'schedule' || tab.kind === 'webhook') && tab.threadId
+    tab.kind === 'thread' && tab.threadId
       ? (state.items.find((item) => item.id === tab.threadId)?.title ?? null)
       : null,
   );
@@ -112,8 +106,8 @@ export function useTabLabel(tab: IdeTab): string {
   if (tab.kind === 'thread-file' && tab.path) {
     return fileBaseName(tab.path);
   }
-  if (tab.kind === 'thread' || tab.kind === 'schedule' || tab.kind === 'webhook') {
-    return title || (tab.kind === 'thread' ? 'Thread' : tab.kind);
+  if (tab.kind === 'thread') {
+    return title || 'Thread';
   }
   if (tab.kind === 'board' && tab.boardId) {
     return boardName ?? 'Board';

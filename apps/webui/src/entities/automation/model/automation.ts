@@ -48,9 +48,6 @@ export interface ClientAutomation {
 export function isCoreAutomation(automation: ClientAutomation): boolean {
   return automation.integrationId === CORE_AUTOMATION_INTEGRATION_ID;
 }
-export function isScheduleAutomationKind(kind: string): boolean {
-  return kind === 'scheduler' || kind === 'schedule';
-}
 export function toClientAutomation(item: AutomationItem): ClientAutomation {
   return {
     id: item.id,

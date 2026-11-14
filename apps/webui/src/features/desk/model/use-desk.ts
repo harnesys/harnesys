@@ -3,10 +3,8 @@ import { useShallow } from 'zustand/react/shallow';
 import { useAgentStore } from '@/entities/agent';
 import { useAutomationStore } from '@/entities/automation';
 import { useProjects } from '@/entities/project';
-import { useScheduleStore } from '@/entities/schedule';
 import { useSessionStore } from '@/entities/session';
 import { useThreadStore } from '@/entities/thread';
-import { useWebhookStore } from '@/entities/webhook';
 import {
   studioFocusProjectId,
   studioFocusThreadId,
@@ -45,32 +43,8 @@ export function useThreadEvents(threadId: string | null) {
     return state.events[threadId] ?? EMPTY_EVENTS;
   });
 }
-export function useProjectSchedules(projectId: string | null) {
-  return useScheduleStore(
-    useShallow((state) =>
-      projectId ? state.items.filter((item) => item.projectId === projectId) : [],
-    ),
-  );
-}
-export function useSchedulesInProjects(projectIds: string[]) {
-  return useScheduleStore(
-    useShallow((state) => state.items.filter((item) => projectIds.includes(item.projectId))),
-  );
-}
 export function useAutomationsInProjects(projectIds: string[]) {
   return useAutomationStore(
-    useShallow((state) => state.items.filter((item) => projectIds.includes(item.projectId))),
-  );
-}
-export function useProjectWebhooks(projectId: string | null) {
-  return useWebhookStore(
-    useShallow((state) =>
-      projectId ? state.items.filter((item) => item.projectId === projectId) : [],
-    ),
-  );
-}
-export function useWebhooksInProjects(projectIds: string[]) {
-  return useWebhookStore(
     useShallow((state) => state.items.filter((item) => projectIds.includes(item.projectId))),
   );
 }
@@ -103,37 +77,17 @@ export function useErroredThreads(orgIds: string[]) {
 export function useSelectedAgent() {
   const { focus } = useStudioLocation();
   const threadId = studioFocusThreadId(focus);
-  const scheduleId = focus.kind === 'schedule' ? focus.scheduleId : null;
-  const webhookId = focus.kind === 'webhook' ? focus.webhookId : null;
   const thread = useThreadStore(
     useShallow((state) => (threadId ? (state.byId(threadId) ?? null) : null)),
   );
-  const schedule = useScheduleStore(
-    useShallow((state) =>
-      scheduleId ? (state.items.find((item) => item.id === scheduleId) ?? null) : null,
-    ),
-  );
-  const webhook = useWebhookStore(
-    useShallow((state) =>
-      webhookId ? (state.items.find((item) => item.id === webhookId) ?? null) : null,
-    ),
-  );
-  const agentId = thread?.agentId ?? schedule?.targetAgentId ?? webhook?.targetAgentId ?? null;
+  const agentId = thread?.agentId ?? null;
   return useAgentStore(useShallow((state) => (agentId ? (state.byId(agentId) ?? null) : null)));
 }
 export function useSelectedThread() {
   const { focus } = useStudioLocation();
   const threadId = studioFocusThreadId(focus);
-  const scheduleId = focus.kind === 'schedule' ? focus.scheduleId : null;
-  const webhookId = focus.kind === 'webhook' ? focus.webhookId : null;
   const focusedThreadId = useDeskStore((state) => state.focusedThreadId);
-  const scheduleThreadId = useScheduleStore((state) =>
-    scheduleId ? (state.items.find((item) => item.id === scheduleId)?.threadId ?? null) : null,
-  );
-  const webhookThreadId = useWebhookStore((state) =>
-    webhookId ? (state.items.find((item) => item.id === webhookId)?.threadId ?? null) : null,
-  );
-  const preferredId = threadId ?? scheduleThreadId ?? webhookThreadId ?? focusedThreadId;
+  const preferredId = threadId ?? focusedThreadId;
   return useThreadStore(
     useShallow((state) => (preferredId ? (state.byId(preferredId) ?? null) : null)),
   );
@@ -148,8 +102,6 @@ export function useDesk() {
   const threads = useAgentThreads(agent?.id ?? null);
   const thread = useSelectedThread();
   const events = useThreadEvents(thread?.id ?? null);
-  const schedules = useProjectSchedules(projectId);
-  const webhooks = useProjectWebhooks(projectId);
   return {
     projectId,
     focus,
@@ -161,8 +113,6 @@ export function useDesk() {
     threads,
     thread,
     events,
-    schedules,
-    webhooks,
     inspectorTab: desk.inspectorTab,
     inspectorOpen: desk.inspectorOpen,
   };

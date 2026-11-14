@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Agent } from '@/entities/agent';
 import { useAgentStore } from '@/entities/agent';
-import { useScheduleStore } from '@/entities/schedule';
 import { useSessionStore } from '@/entities/session';
 import type { Thread } from '@/entities/thread';
 import { useThreadWorktreeStore } from '@/entities/thread';
@@ -87,7 +86,6 @@ export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }
   const [dropPrompt, setDropPrompt] = useState<ComposerDropPrompt | null>(null);
   const [mode, setMode] = useState<ComposerMode>(DEFAULT_MODE_ID);
   const editorRef = useRef<ComposerEditorHandle>(null);
-  const scheduleMode = useScheduleStore((state) => scheduleModeForThread(state.items, thread));
   const [effort, setEffort] = useState<string | undefined>(undefined);
   const modelDefaultEffort = agentDefaultEffort(modelId, providers);
   const currentEffort = selectedEffort(
@@ -129,13 +127,13 @@ export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }
   useEffect(() => {
     setMode(
       resolveComposerMode({
-        scheduleMode,
+        scheduleMode: null,
         threadRunMode: thread?.runMode,
         agentDefaultModeId: agent?.defaultModeId,
         agentModes,
       }),
     );
-  }, [thread?.runMode, scheduleMode, agent?.defaultModeId, agentModes]);
+  }, [thread?.runMode, agent?.defaultModeId, agentModes]);
   return (
     <div className="relative mx-auto w-full max-w-3xl px-4 pb-3" data-testid="chat-composer">
       <VoiceStatusBar />
@@ -337,14 +335,4 @@ export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }
       setSending,
     });
   }
-}
-
-function scheduleModeForThread(
-  items: { threadId: string; modeId: string }[],
-  thread: Thread | null | undefined,
-): string | null {
-  if (thread?.kind !== 'schedule') {
-    return null;
-  }
-  return items.find((item) => item.threadId === thread.id)?.modeId ?? null;
 }

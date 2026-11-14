@@ -183,14 +183,6 @@ export {
   updateProviderModel,
 } from './providers';
 export {
-  type CreateScheduleInput,
-  createScheduleRecord,
-  deleteScheduleRecord,
-  listSchedules,
-  type UpdateScheduleInput,
-  updateScheduleRecord,
-} from './schedules';
-export {
   authenticatedFetch,
   clearAccess,
   getAccess,
@@ -271,11 +263,3 @@ export {
   vaultQueryKey,
   vaultQueryKeyFor,
 } from './vault';
-export {
-  type CreateWebhookInput,
-  createWebhookRecord,
-  deleteWebhookRecord,
-  listWebhooks,
-  type UpdateWebhookInput,
-  updateWebhookRecord,
-} from './webhooks';

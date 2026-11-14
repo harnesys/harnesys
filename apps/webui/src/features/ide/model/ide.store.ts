@@ -31,8 +31,6 @@ export type IdeTabKind =
   | 'file'
   | 'spawn'
   | 'diff'
-  | 'schedule'
-  | 'webhook'
   | 'terminal'
   | 'board'
   | 'attachment'
@@ -44,8 +42,6 @@ export interface IdeTab {
   agentId?: string;
   threadId?: string;
   spawnId?: string;
-  scheduleId?: string;
-  webhookId?: string;
   terminalSessionId?: string;
   boardId?: string;
   issueId?: string;
@@ -73,8 +69,6 @@ type IdeStore = IdeState & {
   openSpawn: (projectId: string, agentId: string, threadId: string, spawnId: string) => void;
   openFile: (projectId: string, path: string, worktreeId?: string, worktreeBranch?: string) => void;
   openDiff: (projectId: string, path: string) => void;
-  openSchedule: (projectId: string, scheduleId: string, threadId: string, agentId: string) => void;
-  openWebhook: (projectId: string, webhookId: string, threadId: string, agentId: string) => void;
   openBoard: (projectId: string, boardId: string) => void;
   openAttachment: (projectId: string, input: OpenAttachmentInput) => void;
   openThreadFile: (
@@ -142,32 +136,6 @@ export const useIdeStore = create<IdeStore>((set) => ({
       const normalized = normalizeIdeFilePath(path);
       const id = tabIdFor('diff', projectId, normalized);
       const tab: IdeTab = { id, kind: 'diff', projectId, path: normalized };
-      return withWs(state, upsertTabState(state.workspace, tab));
-    }),
-  openSchedule: (projectId, scheduleId, threadId, agentId) =>
-    set((state) => {
-      const id = tabIdFor('schedule', projectId, scheduleId);
-      const tab: IdeTab = {
-        id,
-        kind: 'schedule',
-        projectId,
-        scheduleId,
-        threadId,
-        agentId,
-      };
-      return withWs(state, upsertTabState(state.workspace, tab));
-    }),
-  openWebhook: (projectId, webhookId, threadId, agentId) =>
-    set((state) => {
-      const id = tabIdFor('webhook', projectId, webhookId);
-      const tab: IdeTab = {
-        id,
-        kind: 'webhook',
-        projectId,
-        webhookId,
-        threadId,
-        agentId,
-      };
       return withWs(state, upsertTabState(state.workspace, tab));
     }),
   openBoard: (projectId, boardId) =>

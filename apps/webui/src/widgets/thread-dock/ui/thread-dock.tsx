@@ -1,28 +1,7 @@
-import {
-  CalendarClockIcon,
-  EarthIcon,
-  MessageSquareIcon,
-  MoreHorizontalIcon,
-  PauseIcon,
-  PlayIcon,
-} from 'lucide-react';
+import { CalendarClockIcon, EarthIcon, MessageSquareIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useAgentStore } from '@/entities/agent';
-import { scheduleStatusLabel, useScheduleStore } from '@/entities/schedule';
 import { useThreadStore } from '@/entities/thread';
-import { useWebhookStore, webhookStatusLabel } from '@/entities/webhook';
-import { useProjectAgents } from '@/features/desk';
-import { useIdeStore } from '@/features/ide';
-import { updateSchedule } from '@/features/manage-schedule';
-import { deleteWebhook, openWebhookConfigDialog, updateWebhook } from '@/features/manage-webhook';
-import { webhookDisplayUrl } from '@/shared/lib/webhook-display-url';
-import { Button } from '@/shared/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/shared/ui/dropdown-menu';
 import { ThreadRunStatusBar } from '@/widgets/thread-run-status';
 
 export interface ThreadDockIdentity {
@@ -75,87 +54,17 @@ export function ThreadDock({
 
 export function ThreadTriggerDock({
   threadId,
-  projectId,
   issueId,
   settings,
 }: {
   threadId: string;
-  projectId: string;
   issueId?: string | null;
   settings?: ReactNode;
 }) {
   const thread = useThreadStore((state) => state.byId(threadId) ?? undefined);
-  const schedule = useScheduleStore((state) =>
-    state.items.find((item) => item.threadId === threadId && item.projectId === projectId),
-  );
-  const webhook = useWebhookStore((state) =>
-    state.items.find((item) => item.threadId === threadId && item.projectId === projectId),
-  );
-  const agents = useProjectAgents(projectId);
   const agent = useAgentStore((state) =>
     thread ? (state.byId(thread.agentId) ?? undefined) : undefined,
   );
-  if (schedule) {
-    return (
-      <ThreadDock
-        identity={{
-          icon: <CalendarClockIcon />,
-          title: schedule.name,
-          meta: (
-            <>
-              {schedule.cron} · {scheduleStatusLabel(schedule.status)}
-              {agent ? ` · ${agent.name}` : ''}
-            </>
-          ),
-          actions: (
-            <TriggerPauseButton
-              paused={schedule.status === 'paused'}
-              onToggle={() => {
-                void updateSchedule(projectId, schedule.id, {
-                  status: schedule.status === 'paused' ? 'active' : 'paused',
-                });
-              }}
-            />
-          ),
-        }}
-        threadId={threadId}
-        issueId={issueId}
-        settings={settings}
-      />
-    );
-  }
-  if (webhook) {
-    return (
-      <ThreadDock
-        identity={{
-          icon: <EarthIcon />,
-          title: webhook.name,
-          meta: (
-            <>
-              {webhookDisplayUrl(webhook.endpoint)} · {webhookStatusLabel(webhook.status)}
-              {agent ? ` · ${agent.name}` : ''}
-            </>
-          ),
-          actions: (
-            <>
-              <TriggerPauseButton
-                paused={webhook.status === 'paused'}
-                onToggle={() => {
-                  void updateWebhook(projectId, webhook.id, {
-                    status: webhook.status === 'paused' ? 'active' : 'paused',
-                  });
-                }}
-              />
-              <WebhookActionsMenu projectId={projectId} webhookId={webhook.id} agents={agents} />
-            </>
-          ),
-        }}
-        threadId={threadId}
-        issueId={issueId}
-        settings={settings}
-      />
-    );
-  }
   return (
     <ThreadDock
       identity={{
@@ -167,59 +76,6 @@ export function ThreadTriggerDock({
       issueId={issueId}
       settings={settings}
     />
-  );
-}
-
-function TriggerPauseButton({ paused, onToggle }: { paused: boolean; onToggle: () => void }) {
-  return (
-    <Button variant="ghost" size="icon-sm" title={paused ? 'Resume' : 'Pause'} onClick={onToggle}>
-      {paused ? <PlayIcon /> : <PauseIcon />}
-    </Button>
-  );
-}
-
-function WebhookActionsMenu({
-  projectId,
-  webhookId,
-  agents,
-}: {
-  projectId: string;
-  webhookId: string;
-  agents: ReturnType<typeof useProjectAgents>;
-}) {
-  const webhook = useWebhookStore((state) =>
-    state.items.find((item) => item.id === webhookId && item.projectId === projectId),
-  );
-  if (!webhook) {
-    return null;
-  }
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={<Button variant="ghost" size="icon-sm" aria-label="Webhook actions" />}
-      >
-        <MoreHorizontalIcon />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem
-          onClick={() => {
-            void openWebhookConfigDialog(agents, projectId, webhook).then(async (result) => {
-              if (!result) {
-                return;
-              }
-              if (result.deleted) {
-                await deleteWebhook(projectId, webhook);
-                useIdeStore.getState().closeByEntity(projectId, 'webhook', webhook.id);
-                return;
-              }
-              await updateWebhook(projectId, webhook.id, result.draft);
-            });
-          }}
-        >
-          Configure…
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }
 

@@ -2,10 +2,8 @@ import type { DeskEvent } from '@harnesys/studio-shared';
 import { toClientAgentFromPublic, useAgentStore } from '@/entities/agent';
 import { useIssueBoardStore, useIssueLabelStore, useIssueStore } from '@/entities/issue';
 import { usePlanStore } from '@/entities/plan';
-import { toClientSchedule, useScheduleStore } from '@/entities/schedule';
 import { useSessionStore } from '@/entities/session';
 import { toClientThread, useThreadStore } from '@/entities/thread';
-import { toClientWebhook, useWebhookStore } from '@/entities/webhook';
 import { useIssueDrawerStore } from '@/features/manage-issues/model/issue-drawer.store';
 import { useThreadQueueStore } from '@/features/message-queue';
 import { studioPath } from '@/shared/config/routes';
@@ -44,32 +42,12 @@ export function applyDeskEvent(event: DeskEvent, nav?: DeskEventNavigation): voi
       usePlanStore.getState().removeForThread(event.threadId);
       return;
     }
-    case 'schedule-deleted': {
-      dropSchedule(event.id);
-      return;
-    }
-    case 'schedule': {
-      const previous = useScheduleStore.getState().byId(event.schedule.id);
-      if (previous && previous.threadId !== event.schedule.threadId) {
-        dropOwnedTriggerThread(previous.threadId);
-      }
-      useScheduleStore.getState().upsert(toClientSchedule(event.schedule));
-      return;
-    }
-    case 'webhook-deleted': {
-      const current = useWebhookStore.getState().byId(event.id);
-      useWebhookStore.getState().remove(event.id);
-      if (current) {
-        dropOwnedTriggerThread(current.threadId);
-      }
-      return;
-    }
+    case 'schedule-deleted':
+    case 'schedule':
+    case 'webhook-deleted':
     case 'webhook': {
-      const previous = useWebhookStore.getState().byId(event.webhook.id);
-      if (previous && previous.threadId !== event.webhook.threadId) {
-        dropOwnedTriggerThread(previous.threadId);
-      }
-      useWebhookStore.getState().upsert(toClientWebhook(event.webhook));
+      // Legacy scheduler/webhook events are ignored on the client: those
+      // surfaces live in the addon automations UI now.
       return;
     }
     case 'issue': {
@@ -129,13 +107,6 @@ export function applyDeskEvent(event: DeskEvent, nav?: DeskEventNavigation): voi
     }
   }
 }
-function dropSchedule(id: string): void {
-  const current = useScheduleStore.getState().byId(id);
-  useScheduleStore.getState().remove(id);
-  if (current) {
-    dropOwnedTriggerThread(current.threadId);
-  }
-}
 function dropAgent(agentId: string): void {
   const threadIds = useThreadStore
     .getState()
@@ -170,13 +141,4 @@ function dropIssueThreads(issueId: string): void {
   if (desk.focusedThreadId && threadIds.includes(desk.focusedThreadId)) {
     desk.setFocusedThreadId(null);
   }
-}
-function dropOwnedTriggerThread(threadId: string): void {
-  const thread = useThreadStore.getState().byId(threadId);
-  if (thread?.kind !== 'schedule' && thread?.kind !== 'webhook') {
-    return;
-  }
-  useSessionStore.getState().removeForThreads([threadId]);
-  usePlanStore.getState().removeForThread(threadId);
-  useThreadStore.getState().remove(threadId);
 }
