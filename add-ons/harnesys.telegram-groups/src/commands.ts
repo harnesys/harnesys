@@ -45,13 +45,10 @@ export function commandsScope(): Record<string, string> {
   return { ...SET_COMMANDS_SCOPE };
 }
 
+
 function commandName(text: string): string {
-  const [head] = text.trim().split(/\s+/);
-  if (head === undefined) {
-    return '';
-  }
-  const withoutMention = head.split('@')[0] ?? head;
-  return withoutMention.replace(/^\//, '').toLowerCase();
+  const head = text.trim().split(/\s+/)[0] ?? '';
+  return head.split('@')[0]?.replace(/^\//, '').toLowerCase() ?? '';
 }
 
 export function isCommand(text: string): boolean {
@@ -96,14 +93,13 @@ type CompactResult =
   | { compacted: false; reason?: string };
 
 export function pickStoppableRun(runs: RunLike[]): RunLike | null {
-  const active = runs.filter((run) => ACTIVE_RUN_STATUSES.includes(run.status));
-  let latest: RunLike | null = null;
-  for (const run of active) {
-    if (latest === null || (run.startedAt ?? '') > (latest.startedAt ?? '')) {
-      latest = run;
-    }
-  }
-  return latest;
+  return runs
+    .filter((run) => ACTIVE_RUN_STATUSES.includes(run.status))
+    .reduce<RunLike | null>(
+      (latest, run) =>
+        latest === null || (run.startedAt ?? '') > (latest.startedAt ?? '') ? run : latest,
+      null,
+    );
 }
 
 export interface BindingLike {
@@ -116,12 +112,10 @@ export function threadForChannel(
   channel: string,
   chatId: string,
 ): string | null {
-  const exact = bindings.find((binding) => binding.channel === channel);
-  if (exact !== undefined) {
-    return exact.threadId;
-  }
-  const base = bindings.find((binding) => binding.channel === chatId);
-  return base === undefined ? null : base.threadId;
+  const exact =
+    bindings.find((binding) => binding.channel === channel) ??
+    bindings.find((binding) => binding.channel === chatId);
+  return exact === undefined ? null : exact.threadId;
 }
 
 export function formatUsage(summary: UsageSummary): string {
@@ -179,10 +173,11 @@ async function adminVerified(ctx: AddonContext, chatId: string): Promise<boolean
     chat_id: chatId,
     user_id: me.id,
   });
-  if (member.status === 'administrator' || member.status === 'creator') {
-    return true;
-  }
-  return me.can_read_all_group_messages === true;
+  return (
+    member.status === 'administrator' ||
+    member.status === 'creator' ||
+    me.can_read_all_group_messages === true
+  );
 }
 
 export async function registerChat(ctx: AddonContext, message: CommandMessage): Promise<void> {
@@ -286,11 +281,12 @@ interface ConnectionRow {
 }
 
 function isConnectionRow(row: unknown): row is ConnectionRow {
+  const candidate = row as Partial<ConnectionRow> | null;
   return (
-    typeof row === 'object' &&
-    row !== null &&
-    typeof (row as ConnectionRow).channel === 'string' &&
-    typeof (row as ConnectionRow).thread_title === 'string'
+    candidate !== null &&
+    typeof candidate === 'object' &&
+    typeof candidate.channel === 'string' &&
+    typeof candidate.thread_title === 'string'
   );
 }
 
@@ -341,21 +337,16 @@ export async function handleCommand(ctx: AddonContext, message: CommandMessage):
     await agentCommand(ctx, message);
     return true;
   }
-  if (name === 'stop') {
-    await stopCommand(ctx, message);
-    return true;
+  const handlers: Record<string, (ctx: AddonContext, message: CommandMessage) => Promise<void>> = {
+    stop: stopCommand,
+    stats: statsCommand,
+    skills: skillsCommand,
+    compact: compactCommand,
+  };
+  const handler = handlers[name];
+  if (handler === undefined) {
+    return false;
   }
-  if (name === 'stats') {
-    await statsCommand(ctx, message);
-    return true;
-  }
-  if (name === 'skills') {
-    await skillsCommand(ctx, message);
-    return true;
-  }
-  if (name === 'compact') {
-    await compactCommand(ctx, message);
-    return true;
-  }
-  return false;
+  await handler(ctx, message);
+  return true;
 }

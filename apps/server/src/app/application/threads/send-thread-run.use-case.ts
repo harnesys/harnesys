@@ -21,20 +21,18 @@ import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
 import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
 import { AttachmentRepositoryPort } from '../../domain/thread/attachment-repository.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
-import { resolveResponders } from '../../domain/thread/responder-policy.ts';
 import {
   ThreadNotFoundException,
   ThreadValidationException,
 } from '../../domain/thread/thread.error.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
-import { allowsMentions, responderModeOf } from '../../domain/thread/thread-policy.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { UsagePort } from '../../domain/usage/usage-port.ts';
 import { IssueRemoteRunUseCase } from '../fleet/issue-remote-run.use-case.ts';
 import { IssueWaitingRunUseCase } from '../fleet/issue-waiting-run.use-case.ts';
 import { GetEffectiveSkillsUseCase } from '../skills/get-effective-skills.use-case.ts';
-import { requestedSkillsBlock, validateRequestedSkills } from '../skills/requested-skills.ts';
+import { requestedSkillsBlock } from '../skills/requested-skills.ts';
 import { assertDailyBudget } from '../usage/assert-daily-budget.ts';
 import { resolveRunPlacement, toPlacementEvent } from './resolve-run-placement.ts';
 import {
@@ -45,10 +43,6 @@ import {
 } from './run-attribution.ts';
 import { sendGroupThread } from './send-group-thread.ts';
 import {
-  chatMentionGateBlocked,
-  storeUnaddressedMessage,
-} from './send-thread-run-helpers.ts';
-import {
   type AttachmentMeta,
   attachmentMetasOf,
   mapSendError,
@@ -56,6 +50,11 @@ import {
 } from './send-thread-attachments.ts';
 import { dispatchLocalRun, dispatchRemoteRun, sharedRunFields } from './send-thread-dispatch.ts';
 import { SendThreadMessageUseCase } from './send-thread-message.use-case.ts';
+import {
+  assertRequestedSkills,
+  chatMentionGateBlocked,
+  storeUnaddressedMessage,
+} from './send-thread-run-helpers.ts';
 import { resolveWorktreeBinding, type WorktreeBinding } from './send-thread-worktree.ts';
 import { applyDerivedThreadTitle } from './thread.helpers.ts';
 
@@ -165,7 +164,7 @@ export class SendThreadRunUseCase {
       );
     }
     const requestedSkills = [...new Set(request.body.skills ?? [])];
-    await this.validateRequestedSkills(request.orgId, agent.id, requestedSkills);
+    await assertRequestedSkills(this.effectiveSkills, request.orgId, agent.id, requestedSkills);
     const runText =
       requestedSkills.length > 0
         ? `${requestedSkillsBlock(requestedSkills)}\n\n${request.body.text ?? ''}`
@@ -342,20 +341,5 @@ export class SendThreadRunUseCase {
       issueRuleProfileId: input.request.issueRuleProfileId,
       profileSource: input.decision.request.profileSource,
     });
-  }
-
-  private async validateRequestedSkills(
-    orgId: string,
-    agentId: string,
-    requested: string[],
-  ): Promise<void> {
-    if (requested.length === 0) {
-      return;
-    }
-    const effective = await this.effectiveSkills.execute({ orgId, agentId });
-    const check = validateRequestedSkills({ requested, catalog: effective.skills });
-    if ('error' in check) {
-      throw new ThreadValidationException(check.error);
-    }
   }
 }

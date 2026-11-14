@@ -1,10 +1,12 @@
-import type { AcceptedRunResponse, SendThreadRunBody } from '@harnesys/contracts';
+import type { AcceptedRunResponse, SendThreadRunBody, ThreadKind } from '@harnesys/contracts';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
 import { UserRepository } from '../../domain/identity/user-repository.port.ts';
-import type { ThreadKind } from '@harnesys/contracts';
-import type { ThreadRecord } from '../../domain/thread/thread.ts';
-import { responderModeOf, allowsMentions } from '../../domain/thread/thread-policy.ts';
 import { resolveResponders } from '../../domain/thread/responder-policy.ts';
+import { ThreadValidationException } from '../../domain/thread/thread.error.ts';
+import type { ThreadRecord } from '../../domain/thread/thread.ts';
+import { allowsMentions, responderModeOf } from '../../domain/thread/thread-policy.ts';
+import type { GetEffectiveSkillsUseCase } from '../skills/get-effective-skills.use-case.ts';
+import { validateRequestedSkills } from '../skills/requested-skills.ts';
 import type { RunStartAttribution } from './run-attribution.ts';
 import type { SendThreadMessageUseCase } from './send-thread-message.use-case.ts';
 
@@ -65,4 +67,21 @@ export function chatMentionGateBlocked(
     autoFallback: false,
   });
   return addressed.length === 0;
+}
+
+/** Rejects requested skills the thread agent does not actually have. */
+export async function assertRequestedSkills(
+  effectiveSkills: GetEffectiveSkillsUseCase,
+  orgId: string,
+  agentId: string,
+  requested: string[],
+): Promise<void> {
+  if (requested.length === 0) {
+    return;
+  }
+  const effective = await effectiveSkills.execute({ orgId, agentId });
+  const check = validateRequestedSkills({ requested, catalog: effective.skills });
+  if ('error' in check) {
+    throw new ThreadValidationException(check.error);
+  }
 }

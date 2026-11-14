@@ -1,4 +1,4 @@
-import type { AddonContext, RouteHandler } from '@harnesys/sdk';
+import type { AddonContext, DbRow, RouteHandler } from '@harnesys/sdk';
 import { AddonError } from '@harnesys/sdk';
 import { z } from 'zod';
 import { call } from './bot-api.ts';
@@ -181,16 +181,15 @@ interface ConnectionRow {
   updated_at: string;
 }
 
-function isConnectionRow(row: unknown): row is ConnectionRow {
+function isConnectionRow(row: DbRow): row is DbRow & ConnectionRow {
   return (
-    typeof row === 'object' &&
-    row !== null &&
-    typeof (row as ConnectionRow).channel === 'string' &&
-    typeof (row as ConnectionRow).chat_id === 'string' &&
-    typeof (row as ConnectionRow).agent_id === 'string' &&
-    typeof (row as ConnectionRow).thread_id === 'string' &&
-    typeof (row as ConnectionRow).thread_title === 'string' &&
-    typeof (row as ConnectionRow).updated_at === 'string'
+    typeof row.channel === 'string' &&
+    typeof row.chat_id === 'string' &&
+    typeof row.agent_id === 'string' &&
+    typeof row.thread_id === 'string' &&
+    typeof row.thread_title === 'string' &&
+    typeof row.updated_at === 'string' &&
+    (row.topic_id === null || typeof row.topic_id === 'string')
   );
 }
 

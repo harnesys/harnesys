@@ -1,7 +1,6 @@
 import { Database } from 'bun:sqlite';
 import { describe, expect, test } from 'bun:test';
-import { CREATE_THREADS_SQL } from './org-sql.ts';
-import { backfillThreadsResponderMode } from './org-sql.ts';
+import { backfillThreadsResponderMode, CREATE_THREADS_SQL } from './org-sql.ts';
 
 function open(): Database {
   const sqlite = new Database(':memory:');
