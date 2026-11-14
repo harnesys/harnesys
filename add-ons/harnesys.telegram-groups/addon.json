@@ -712,37 +712,6 @@
             "submit": {
               "route": "/connect"
             }
-          },
-          {
-            "type": "form",
-            "title": "Rename a chat",
-            "fields": [
-              {
-                "key": "chat",
-                "label": "Chat",
-                "type": "text",
-                "required": true,
-                "placeholder": "Pick a discovered group",
-                "optionsFrom": {
-                  "kind": "addonRoute",
-                  "route": "chats",
-                  "valueKey": "id",
-                  "labelKey": "title"
-                },
-                "widget": {
-                  "kind": "combobox"
-                }
-              },
-              {
-                "key": "title",
-                "label": "Display title",
-                "type": "text",
-                "required": true
-              }
-            ],
-            "submit": {
-              "route": "/rename"
-            }
           }
         ]
       }
@@ -794,16 +763,6 @@
         "id": "bindings",
         "method": "GET",
         "path": "/bindings",
-        "role": "member"
-      }
-    },
-    {
-      "id": "rename",
-      "family": "route",
-      "descriptor": {
-        "id": "rename",
-        "method": "POST",
-        "path": "/rename",
         "role": "member"
       }
     }

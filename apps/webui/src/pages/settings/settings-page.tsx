@@ -7,7 +7,6 @@ import { ManageAddonsPane } from '@/features/manage-addons/manage-addons-pane';
 import { AppsPane } from '@/features/manage-apps/apps-pane';
 import { OrgAuditPane } from '@/features/manage-audit';
 import { ChatSettingsPane } from '@/features/manage-chat-settings/ui/chat-settings-pane';
-import { ConnectorsPane } from '@/features/manage-connectors';
 import { EditorSettingsPane } from '@/features/manage-editor-settings/ui/editor-settings-pane';
 import { FleetPage } from '@/features/manage-fleet/fleet-page';
 import { ProfilesPane } from '@/features/manage-fleet/profiles-pane';
@@ -131,8 +130,6 @@ function SettingsPane({ category, orgId }: { category: WindowSettingsCategory; o
       return <AppsPane key={orgId} orgId={orgId} />;
     case 'providers':
       return <ModelsPane orgId={orgId} />;
-    case 'connectors':
-      return <ConnectorsPane orgId={orgId} />;
     case 'secrets':
       return <VaultPane orgId={orgId} />;
     case 'usage':

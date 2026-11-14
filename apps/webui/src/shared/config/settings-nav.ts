@@ -5,7 +5,6 @@ import {
   BoxesIcon,
   BracesIcon,
   Building2Icon,
-  CableIcon,
   ChartColumnIcon,
   CircleDotIcon,
   CircleUserIcon,
@@ -44,7 +43,6 @@ export const WINDOW_SETTINGS_CATEGORIES = [
   'fleet',
   'profiles',
   'providers',
-  'connectors',
   'apps',
   'secrets',
   'general',
@@ -208,12 +206,6 @@ export const WINDOW_SETTINGS_GROUPS: SettingsNavGroup[] = [
         label: 'Providers',
         description: 'LLM and embedding providers for this organization.',
         icon: CpuIcon,
-      },
-      {
-        id: 'connectors',
-        label: 'Connectors',
-        description: 'Google Drive, Calendar, and Gmail connections for agents.',
-        icon: CableIcon,
       },
       {
         id: 'secrets',

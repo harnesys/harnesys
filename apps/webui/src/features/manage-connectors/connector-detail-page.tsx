@@ -69,7 +69,7 @@ function ConnectorDetail({ orgId, connector }: { orgId: string; connector: Conne
           size="sm"
           className="text-muted-foreground"
           onClick={() => {
-            void navigate(studioPath.settings(orgId, 'connectors'));
+            void navigate(studioPath.settings(orgId));
           }}
           data-testid="connector-detail-back"
         >

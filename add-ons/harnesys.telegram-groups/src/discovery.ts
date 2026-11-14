@@ -12,7 +12,6 @@ export interface ChatRow {
   chatId: string;
   kind: string;
   title: string;
-  titleOverride: string | null;
   status: string;
   updatedAt: string;
 }
@@ -89,14 +88,13 @@ export async function discoverMessage(ctx: AddonContext, message: TelegramMessag
   }
 }
 
-const CHAT_COLUMNS = 'chat_id, kind, title, title_override, status, updated_at';
+const CHAT_COLUMNS = 'chat_id, kind, title, status, updated_at';
 
 function chatRowOf(row: Record<string, unknown>): ChatRow {
   return {
     chatId: String(row.chat_id),
     kind: String(row.kind),
     title: String(row.title),
-    titleOverride: typeof row.title_override === 'string' ? row.title_override : null,
     status: String(row.status),
     updatedAt: String(row.updated_at),
   };
@@ -170,8 +168,4 @@ export function resolveConnectTarget(topic: string | undefined): ConnectTarget {
 
 export function connectTitle(chatTitle: string, topicTitle: string | null): string {
   return topicTitle === null ? chatTitle : `${chatTitle} · ${topicTitle}`;
-}
-
-export function displayTitleOf(chat: ChatRow): string {
-  return chat.titleOverride ?? chat.title;
 }

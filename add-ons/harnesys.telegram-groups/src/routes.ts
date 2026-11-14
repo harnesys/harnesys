@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { call } from './bot-api.ts';
 import {
   connectTitle,
-  displayTitleOf,
   findTopic,
   listAllTopics,
   listChats,
@@ -45,7 +44,7 @@ export const chats: RouteHandler = async (_params, ctx: AddonContext) => {
       rows: rows.map((row) => ({
         id: row.chatId,
         kind: row.kind,
-        title: displayTitleOf(row),
+        title: row.title,
         status: row.status,
         updatedAt: row.updatedAt,
       })),
@@ -109,7 +108,7 @@ export const connect: RouteHandler = async (params, ctx: AddonContext) => {
   let topicTitle: string | null = null;
   if (target.kind === 'create') {
     await createTopic(target.name);
-  } else {
+  } else if (target.kind === 'existing') {
     // Typed names are create-intent: a purely numeric value that the bot has
     // not discovered is a new topic named with those digits, not an id lookup.
     const topic = await findTopic(ctx, chat.chatId, target.topicId);
@@ -120,8 +119,9 @@ export const connect: RouteHandler = async (params, ctx: AddonContext) => {
       topicTitle = topic.title;
     }
   }
+  // target.kind === 'group' keeps topicId/topicTitle null: the whole group.
   const channel = channelOfParts(chat.chatId, topicId ?? undefined);
-  const threadTitle = (body.title ?? '').trim() || connectTitle(displayTitleOf(chat), topicTitle);
+  const threadTitle = (body.title ?? '').trim() || connectTitle(chat.title, topicTitle);
   const thread = await ctx.threads.create({
     agentId: body.agentId,
     title: threadTitle,
@@ -154,8 +154,7 @@ export const connect: RouteHandler = async (params, ctx: AddonContext) => {
     threadId: thread.threadId,
     mode,
   });
-  const place =
-    topicTitle === null ? displayTitleOf(chat) : `${displayTitleOf(chat)} · ${topicTitle}`;
+  const place = topicTitle === null ? chat.title : `${chat.title} · ${topicTitle}`;
   return {
     status: 200,
     body: {
@@ -165,29 +164,6 @@ export const connect: RouteHandler = async (params, ctx: AddonContext) => {
           : `Connected ${place}. Messages mirror into the thread; the agent answers every message.`,
       refresh: true,
     },
-  };
-};
-
-const RenameBodySchema = z.object({
-  chat: z.string().min(1),
-  title: z.string().min(1).max(200),
-});
-
-export const rename: RouteHandler = async (params, ctx: AddonContext) => {
-  const call = asCall(params);
-  const parsed = RenameBodySchema.safeParse(call.request.body);
-  if (!parsed.success) {
-    throw invalid('body must be { chat: string, title: string }');
-  }
-  const chat = await requireChat(ctx, parsed.data.chat);
-  await ctx.db.run('update chats set title_override = ?, updated_at = ? where chat_id = ?', [
-    parsed.data.title,
-    new Date().toISOString(),
-    chat.chatId,
-  ]);
-  return {
-    status: 200,
-    body: { toast: `Renamed ${chat.title} to ${parsed.data.title}.`, refresh: true },
   };
 };
 

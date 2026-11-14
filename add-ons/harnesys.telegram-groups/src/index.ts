@@ -1,6 +1,6 @@
 import { defineAddon, startAddonProcess } from '@harnesys/sdk';
 import { poller } from './poller.ts';
-import { bindings, chats, connect, rename, topics, unbind } from './routes.ts';
+import { bindings, chats, connect, topics, unbind } from './routes.ts';
 import { telegramTools } from './tools.ts';
 import { telegramTransport } from './transport.ts';
 
@@ -11,7 +11,7 @@ export const addon = defineAddon({
   transport: telegramTransport,
   tools: telegramTools,
   workers: { poller },
-  routes: { chats, topics, connect, unbind, rename, bindings },
+  routes: { chats, topics, connect, unbind, bindings },
 });
 
 if (import.meta.main) {
