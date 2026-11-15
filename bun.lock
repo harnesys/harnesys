@@ -199,7 +199,7 @@
     },
     "apps/cli": {
       "name": "@harnesys/cli",
-      "version": "0.9.2",
+      "version": "0.9.4",
       "devDependencies": {
         "@types/bun": "^1.4.2",
         "typescript": "^5.9.3",
@@ -207,14 +207,14 @@
     },
     "apps/desktop": {
       "name": "@harnesys/desktop",
-      "version": "0.9.2",
+      "version": "0.9.4",
       "devDependencies": {
         "@tauri-apps/cli": "^2",
       },
     },
     "apps/server": {
       "name": "@harnesys/server",
-      "version": "0.9.2",
+      "version": "0.9.4",
       "dependencies": {
         "@ai-sdk/openai": "3.0.90",
         "@ai-sdk/openai-compatible": "3.0.30",
@@ -244,7 +244,7 @@
     },
     "apps/webui": {
       "name": "@harnesys/webui",
-      "version": "0.9.2",
+      "version": "0.9.4",
       "dependencies": {
         "@base-ui/react": "^1.9.0",
         "@floating-ui/dom": "^1.8.0",
@@ -303,6 +303,7 @@
         "react-hook-form": "^7.92.0",
         "react-markdown": "^10.1.0",
         "react-router": "^8.5.1",
+        "react-zoom-pan-pinch": "^4.2.0",
         "recharts": "3.10.1",
         "rehype-katex": "^7.0.1",
         "remark-gfm": "^4.0.1",
@@ -2040,6 +2041,8 @@
     "react-redux": ["react-redux@9.3.0", "", { "dependencies": { "@types/use-sync-external-store": "^0.0.6", "use-sync-external-store": "^1.4.0" }, "peerDependencies": { "@types/react": "^18.2.25 || ^19", "react": "^18.0 || ^19", "redux": "^5.0.0" }, "optionalPeers": ["@types/react", "redux"] }, "sha512-KQopgqFo/p/fgmAs5qz6p5RWaNAzq40WAu7fJIXnQpYxFPbJYtsJPWvGeF2rOBaY/kEuV77AVsX8TsQzKm+A/g=="],
 
     "react-router": ["react-router@8.5.1", "", { "dependencies": { "@remix-run/route-pattern": "^0.22.1", "cookie-es": "^3.1.1" }, "peerDependencies": { "@types/react": ">=19.2.0", "@types/react-dom": ">=19.2.0", "react": ">=19.2.7", "react-dom": ">=19.2.7" }, "optionalPeers": ["@types/react", "@types/react-dom", "react-dom"] }, "sha512-5u1eQ46QjuXjNfEnLwzrnou1Bm5dquO3xjVYkkMYCudtkicD2AQHtx+fvXzPATtPJx8TW6DR1x1TDRqsfHyZBw=="],
+
+    "react-zoom-pan-pinch": ["react-zoom-pan-pinch@4.2.0", "", { "peerDependencies": { "react": "*", "react-dom": "*" } }, "sha512-QSw1dvr6QGv5zHCUY7SEIY7EWRDbx1y6plylrWf2Nko9KOMW1MEoPC6oJ+Y/qOSeQjhvbkMV0m5bFF7pBxCH4A=="],
 
     "readable-stream": ["readable-stream@3.6.2", "", { "dependencies": { "inherits": "^2.0.3", "string_decoder": "^1.1.1", "util-deprecate": "^1.0.1" } }, "sha512-9u/sniCrY3D5WdsERHzHE4G2YCXqoG5FTHUiCC4SIbr6XcLZBY05ya9EKjYek9O5xOAwjGq+1JdGBAS7Q9ScoA=="],
 

@@ -2,6 +2,7 @@ import type { OpenFileKind } from '@/features/open-file';
 import { useAuthedBlobUrl } from '@/shared/api/blob-url';
 import { loadProjectFileBlob } from '@/shared/api/files';
 import { DocumentPreview } from '@/widgets/ide-content/ui/document-preview';
+import { ImageViewer } from './image-viewer';
 
 export function MediaPreview({
   projectId,
@@ -48,14 +49,5 @@ export function MediaPreview({
   if (kind === 'docx' || kind === 'xlsx') {
     return <DocumentPreview name={path} url={url} />;
   }
-  return (
-    <div className="flex h-full w-full items-center justify-center overflow-auto bg-muted/20 p-4">
-      <img
-        src={url}
-        alt={path}
-        className="max-h-full max-w-full object-contain"
-        data-testid="image-preview"
-      />
-    </div>
-  );
+  return <ImageViewer url={url} name={path} />;
 }

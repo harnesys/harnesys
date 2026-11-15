@@ -92,7 +92,7 @@ type IdeStore = IdeState & {
   remapPaths: (projectId: string, moves: ProjectMoveItem[], worktreeId?: string) => void;
   reorderTab: (fromId: string, toId: string) => void;
   moveTab: (tabId: string, toGroupId: string, beforeTabId: string | null) => void;
-  splitGroup: (groupId: string, side: IdeSplitSide) => void;
+  splitGroup: (groupId: string, side: IdeSplitSide, tabId?: string) => void;
   closeGroup: (groupId: string) => void;
   setSplitRatio: (splitId: string, ratio: number) => void;
 };
@@ -243,8 +243,10 @@ export const useIdeStore = create<IdeStore>((set) => ({
     }),
   moveTab: (tabId, toGroupId, beforeTabId) =>
     set((state) => withWs(state, moveTabState(state.workspace, tabId, toGroupId, beforeTabId))),
-  splitGroup: (groupId, side) =>
-    set((state) => withWs(state, splitGroupState(state.workspace, groupId, side, randomUUID()))),
+  splitGroup: (groupId, side, tabId) =>
+    set((state) =>
+      withWs(state, splitGroupState(state.workspace, groupId, side, randomUUID(), tabId)),
+    ),
   closeGroup: (groupId) => set((state) => withWs(state, closeGroupState(state.workspace, groupId))),
   setSplitRatio: (splitId, ratio) =>
     set((state) => withWs(state, setSplitRatioState(state.workspace, splitId, ratio))),

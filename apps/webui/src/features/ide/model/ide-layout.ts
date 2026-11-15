@@ -193,12 +193,13 @@ export function splitGroupState(
   groupId: string,
   side: IdeSplitSide,
   newGroupId: string,
+  tabId?: string,
 ): IdeWorkspaceState | null {
   const group = findGroup(ws, groupId);
   if (!group) {
     return null;
   }
-  const movingId = group.activeId;
+  const movingId = tabId && group.tabIds.includes(tabId) ? tabId : group.activeId;
   const newGroup: IdeGroup = {
     id: newGroupId,
     tabIds: movingId ? [movingId] : [],

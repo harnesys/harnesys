@@ -7,16 +7,24 @@ import {
   Trash2Icon,
   XIcon,
 } from 'lucide-react';
-import { type RefObject, useLayoutEffect, useRef, useState } from 'react';
+import { type ReactNode, type RefObject, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useActiveOrgStore } from '@/entities/org-machine';
 import { setActiveThreadId, useThreadStore } from '@/entities/thread';
 import { useAgentsDisplayStore, useDeskStore } from '@/features/desk';
-import { type IdeTab, pathForIdeTab, useIdeGroup, useIdeStore, useIdeTabs } from '@/features/ide';
+import {
+  type IdeSplitSide,
+  type IdeTab,
+  pathForIdeTab,
+  useIdeGroup,
+  useIdeStore,
+  useIdeTabs,
+} from '@/features/ide';
 import { useOrgId } from '@/shared/config/location';
 import { useStudioNavigation } from '@/shared/config/navigation';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/shared/ui/context-menu';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -119,6 +127,15 @@ export function IdeGroupTabs({
               onDragLeaveTab={() => setDragOverId(null)}
               onSelect={() => handleSelect(tab)}
               onClose={() => handleCloseTab(tab.id)}
+              menu={
+                <GroupMenuItems
+                  groupId={groupId}
+                  targetTabId={tab.id}
+                  onCloseTab={handleCloseTab}
+                  onCloseGroup={handleCloseGroup}
+                  onCloseAll={handleCloseAll}
+                />
+              }
             />
           ))}
         </div>
@@ -133,58 +150,13 @@ export function IdeGroupTabs({
           <EllipsisIcon className="size-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44">
-          <DropdownMenuItem
-            data-testid="split-left"
-            onClick={() => useIdeStore.getState().splitGroup(groupId, 'left')}
-            disabled={!activeId}
-          >
-            <PanelLeftIcon /> Split Left
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            data-testid="split-right"
-            onClick={() => useIdeStore.getState().splitGroup(groupId, 'right')}
-            disabled={!activeId}
-          >
-            <PanelRightIcon /> Split Right
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            data-testid="split-up"
-            onClick={() => useIdeStore.getState().splitGroup(groupId, 'up')}
-            disabled={!activeId}
-          >
-            <PanelTopIcon /> Split Up
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            data-testid="split-down"
-            onClick={() => useIdeStore.getState().splitGroup(groupId, 'down')}
-            disabled={!activeId}
-          >
-            <PanelBottomIcon /> Split Down
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            data-testid="close-tab"
-            disabled={!activeId}
-            onClick={handleCloseActive}
-          >
-            <XIcon /> Close Tab
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            data-testid="close-group"
-            onClick={() => {
-              useIdeStore.getState().closeGroup(groupId);
-              navigateHomeIfEmpty();
-            }}
-          >
-            <XIcon /> Close Group
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            data-testid="close-all"
-            disabled={ws.tabs.length === 0}
-            onClick={handleCloseAll}
-          >
-            <Trash2Icon /> Close All
-          </DropdownMenuItem>
+          <GroupMenuItems
+            groupId={groupId}
+            targetTabId={activeId}
+            onCloseTab={handleCloseTab}
+            onCloseGroup={handleCloseGroup}
+            onCloseAll={handleCloseAll}
+          />
         </DropdownMenuContent>
       </DropdownMenu>
       {trailing ? (
@@ -242,20 +214,84 @@ export function IdeGroupTabs({
       handleSelect(next);
     }
   }
-  function handleCloseActive() {
-    if (activeId) {
-      handleCloseTab(activeId);
-    }
-  }
   function handleCloseAll() {
     useIdeStore.getState().closeAll();
     openDesk();
   }
-  function navigateHomeIfEmpty() {
+  function handleCloseGroup() {
+    useIdeStore.getState().closeGroup(groupId);
     if (useIdeStore.getState().workspace.tabs.length === 0) {
       openDesk();
     }
   }
+}
+function GroupMenuItems({
+  groupId,
+  targetTabId,
+  onCloseTab,
+  onCloseGroup,
+  onCloseAll,
+}: {
+  groupId: string;
+  targetTabId: string | null;
+  onCloseTab: (tabId: string) => void;
+  onCloseGroup: () => void;
+  onCloseAll: () => void;
+}) {
+  const ws = useIdeTabs();
+  const split = (side: IdeSplitSide) => {
+    useIdeStore.getState().splitGroup(groupId, side, targetTabId ?? undefined);
+  };
+  return (
+    <>
+      <DropdownMenuItem
+        data-testid="split-left"
+        disabled={!targetTabId}
+        onClick={() => split('left')}
+      >
+        <PanelLeftIcon /> Split Left
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        data-testid="split-right"
+        disabled={!targetTabId}
+        onClick={() => split('right')}
+      >
+        <PanelRightIcon /> Split Right
+      </DropdownMenuItem>
+      <DropdownMenuItem data-testid="split-up" disabled={!targetTabId} onClick={() => split('up')}>
+        <PanelTopIcon /> Split Up
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        data-testid="split-down"
+        disabled={!targetTabId}
+        onClick={() => split('down')}
+      >
+        <PanelBottomIcon /> Split Down
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem
+        data-testid="close-tab"
+        disabled={!targetTabId}
+        onClick={() => {
+          if (targetTabId) {
+            onCloseTab(targetTabId);
+          }
+        }}
+      >
+        <XIcon /> Close Tab
+      </DropdownMenuItem>
+      <DropdownMenuItem data-testid="close-group" onClick={onCloseGroup}>
+        <XIcon /> Close Group
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        data-testid="close-all"
+        disabled={ws.tabs.length === 0}
+        onClick={onCloseAll}
+      >
+        <Trash2Icon /> Close All
+      </DropdownMenuItem>
+    </>
+  );
 }
 function IdeTabView({
   tab,
@@ -267,6 +303,7 @@ function IdeTabView({
   onDragLeaveTab,
   onSelect,
   onClose,
+  menu,
 }: {
   tab: IdeTab;
   groupId: string;
@@ -277,82 +314,90 @@ function IdeTabView({
   onDragLeaveTab: () => void;
   onSelect: () => void;
   onClose: () => void;
+  menu: ReactNode;
 }) {
   const selected = isActive;
   const label = useTabLabel(tab);
   return (
-    <div
-      ref={selected ? scrollRef : null}
-      role="tab"
-      tabIndex={0}
-      data-testid={`ide-tab-${tab.id}`}
-      data-selected={selected ? 'true' : 'false'}
-      draggable
-      onDragStart={(e) => {
-        setIdeDrag({ tabId: tab.id, fromGroupId: groupId });
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', tab.id);
-      }}
-      onDragEnd={() => setIdeDrag(null)}
-      onDragOver={(e) => {
-        const drag = ideDrag();
-        if (!drag) {
-          return;
+    <ContextMenu>
+      <ContextMenuTrigger
+        render={
+          <div
+            ref={selected ? scrollRef : null}
+            role="tab"
+            tabIndex={0}
+            data-testid={`ide-tab-${tab.id}`}
+            data-selected={selected ? 'true' : 'false'}
+            draggable
+            onDragStart={(e) => {
+              setIdeDrag({ tabId: tab.id, fromGroupId: groupId });
+              e.dataTransfer.effectAllowed = 'move';
+              e.dataTransfer.setData('text/plain', tab.id);
+            }}
+            onDragEnd={() => setIdeDrag(null)}
+            onDragOver={(e) => {
+              const drag = ideDrag();
+              if (!drag) {
+                return;
+              }
+              e.preventDefault();
+              onDragOverTab(tab.id);
+            }}
+            onDragLeave={onDragLeaveTab}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDragLeaveTab();
+              const drag = takeIdeDrag();
+              if (!drag) {
+                return;
+              }
+              const { moveTab, reorderTab } = useIdeStore.getState();
+              if (drag.fromGroupId === groupId) {
+                reorderTab(drag.tabId, tab.id);
+                return;
+              }
+              moveTab(drag.tabId, groupId, tab.id);
+            }}
+            className={cn(
+              'group/tab relative flex max-w-52 shrink-0 animate-tab-enter items-center rounded-md p-0.5 pl-2 text-[0.74rem] transition-colors duration-150',
+              selected
+                ? 'bg-muted text-foreground'
+                : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+              isDragOver && 'ring-1 ring-ring',
+            )}
+          >
+            <button
+              type="button"
+              className="relative flex min-w-0 flex-1 items-center gap-1.5 truncate"
+              title={label}
+              onClick={onSelect}
+            >
+              <TabIcon tab={tab} />
+              {tab.kind === 'file' && tab.dirty ? (
+                <span className="size-1.5 shrink-0 rounded-full bg-live" title="Unsaved" />
+              ) : null}
+              <span className="truncate leading-3">{label}</span>
+            </button>
+            <button
+              type="button"
+              data-testid={`ide-close-${tab.id}`}
+              className={cn(
+                'flex size-5 items-center justify-center rounded-sm text-muted-foreground transition-opacity duration-150 hover:bg-background/30 hover:text-foreground',
+                selected ? 'opacity-100' : 'opacity-0 group-hover/tab:opacity-100',
+              )}
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
+              aria-label="Close tab"
+            >
+              <XIcon className="size-3" />
+            </button>
+          </div>
         }
-        e.preventDefault();
-        onDragOverTab(tab.id);
-      }}
-      onDragLeave={onDragLeaveTab}
-      onDrop={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onDragLeaveTab();
-        const drag = takeIdeDrag();
-        if (!drag) {
-          return;
-        }
-        const { moveTab, reorderTab } = useIdeStore.getState();
-        if (drag.fromGroupId === groupId) {
-          reorderTab(drag.tabId, tab.id);
-          return;
-        }
-        moveTab(drag.tabId, groupId, tab.id);
-      }}
-      className={cn(
-        'group/tab relative flex max-w-52 shrink-0 animate-tab-enter items-center rounded-md p-0.5 pl-2 text-[0.74rem] transition-colors duration-150',
-        selected
-          ? 'bg-muted text-foreground'
-          : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-        isDragOver && 'ring-1 ring-ring',
-      )}
-    >
-      <button
-        type="button"
-        className="relative flex min-w-0 flex-1 items-center gap-1.5 truncate"
-        title={label}
-        onClick={onSelect}
-      >
-        <TabIcon tab={tab} />
-        {tab.kind === 'file' && tab.dirty ? (
-          <span className="size-1.5 shrink-0 rounded-full bg-live" title="Unsaved" />
-        ) : null}
-        <span className="truncate leading-3">{label}</span>
-      </button>
-      <button
-        type="button"
-        data-testid={`ide-close-${tab.id}`}
-        className={cn(
-          'flex size-5 items-center justify-center rounded-sm text-muted-foreground transition-opacity duration-150 hover:bg-background/30 hover:text-foreground',
-          selected ? 'opacity-100' : 'opacity-0 group-hover/tab:opacity-100',
-        )}
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose();
-        }}
-        aria-label="Close tab"
-      >
-        <XIcon className="size-3" />
-      </button>
-    </div>
+      />
+      <ContextMenuContent onClick={(event) => event.stopPropagation()}>{menu}</ContextMenuContent>
+    </ContextMenu>
   );
 }
