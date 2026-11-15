@@ -32,21 +32,7 @@ interface CapabilityText {
 
 type CapabilityMapper = (raw: Record<string, unknown>) => CapabilityText | null;
 
-const CAPABILITY_FAMILIES = new Set<string>([
-  'tool-pack',
-  'trigger',
-  'job',
-  'worker',
-  'route',
-  'transport',
-  'hook',
-  'content',
-  'source-kind',
-  'mcp',
-  'lsp',
-]);
-
-const TEXT_MAPPERS: Record<CapabilityFamily, CapabilityMapper> = {
+const TEXT_MAPPERS: Partial<Record<CapabilityFamily, CapabilityMapper>> = {
   'tool-pack': toolPackText,
   trigger: triggerText,
   job: jobText,
@@ -61,7 +47,7 @@ const TEXT_MAPPERS: Record<CapabilityFamily, CapabilityMapper> = {
 };
 
 function isCapabilityFamily(value: string): value is CapabilityFamily {
-  return CAPABILITY_FAMILIES.has(value);
+  return Object.hasOwn(TEXT_MAPPERS, value);
 }
 
 function l10n(value: string | Record<string, string>): string {
@@ -70,14 +56,16 @@ function l10n(value: string | Record<string, string>): string {
 
 /** Lists every declared contribution of a package as display-ready capabilities. */
 export function capabilitiesViewOf(pkg: InstalledAddonPackage): AddonCapabilityView[] {
-  return pkg.manifest.contributions
-    .filter((contribution) => isCapabilityFamily(contribution.family))
-    .map((contribution) => capabilityOf(contribution.family, contribution));
+  return pkg.manifest.contributions.flatMap(
+    (contribution) => capabilityOf(contribution.family, contribution) ?? [],
+  );
 }
 
-function capabilityOf(family: CapabilityFamily, contribution: Contribution): AddonCapabilityView {
-  const mapper: CapabilityMapper | undefined = TEXT_MAPPERS[family];
-  const text = mapper?.(contribution.descriptor);
+function capabilityOf(family: string, contribution: Contribution): AddonCapabilityView | null {
+  if (!isCapabilityFamily(family)) {
+    return null;
+  }
+  const text = TEXT_MAPPERS[family]?.(contribution.descriptor);
   return {
     family,
     id: contribution.id,

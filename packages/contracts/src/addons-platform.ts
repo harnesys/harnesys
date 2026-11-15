@@ -1,9 +1,11 @@
-import { FAMILY_NAMES } from '@harnesys/sdk';
 import { z } from 'zod';
+
+import { FAMILY_NAMES } from './families.ts';
 
 // ---------------------------------------------------------------------------
 
-export const AddonPlatformFamilySchema = z.enum(FAMILY_NAMES as [string, ...string[]]);
+export { FAMILY_NAMES } from './families.ts';
+export const AddonPlatformFamilySchema = z.enum(FAMILY_NAMES);
 export type AddonPlatformFamily = z.infer<typeof AddonPlatformFamilySchema>;
 
 export const AddonTrustSchema = z.enum(['builtin', 'local', 'external']);
@@ -60,7 +62,8 @@ export type AddonManifestSummary = z.infer<typeof AddonManifestSummarySchema>;
 
 export const AddonContributionViewSchema = z.object({
   id: z.string().min(1),
-  family: AddonPlatformFamilySchema,
+  /** Manifest contributions may declare families this build does not know; views render them verbatim. */
+  family: z.string().min(1),
   optional: z.boolean().default(false),
   descriptor: z.record(z.string(), z.unknown()).optional(),
 });
