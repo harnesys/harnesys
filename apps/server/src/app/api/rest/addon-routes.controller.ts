@@ -10,11 +10,11 @@ import {
   Put,
   UseGuards,
 } from '@harnesys/brix';
+import { schemaValueIssues } from '@harnesys/sdk';
 import { AddonException } from '../../domain/addons/errors.ts';
 import { AddonCallPort } from '../../domain/addons/ports/addon-call.port.ts';
 import type { AddonRouteMatch } from '../../domain/addons/ports/route-table.port.ts';
 import { AddonRouteTablePort } from '../../domain/addons/ports/route-table.port.ts';
-import { routeSchemaIssues } from '../../domain/addons/route-body-schema.ts';
 import { authorize } from '../../domain/identity/authorize.ts';
 import type { Principal } from '../../domain/identity/principal.ts';
 import { OrgAccessGuard } from '../guards/org-access.guard.ts';
@@ -102,7 +102,7 @@ export class AddonRoutesController {
     }
     const body = await this.readBody(request, resolved.bodyLimitKb);
     if (body !== undefined && resolved.requestSchema !== undefined) {
-      const issues = routeSchemaIssues(body, resolved.requestSchema);
+      const issues = schemaValueIssues(body, resolved.requestSchema);
       if (issues.length > 0) {
         throw new AddonException(
           'invalid_params',

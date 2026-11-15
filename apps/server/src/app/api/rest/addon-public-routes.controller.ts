@@ -10,6 +10,7 @@ import {
   Public,
   Put,
 } from '@harnesys/brix';
+import { schemaValueIssues } from '@harnesys/sdk';
 import { AddonException } from '../../domain/addons/errors.ts';
 import type { RateSpec } from '../../domain/addons/host-service.ts';
 import { coversGrant } from '../../domain/addons/host-service.ts';
@@ -19,7 +20,6 @@ import type { OrgAddonRow } from '../../domain/addons/ports/org-addon-repository
 import { OrgAddonRepositoryPort } from '../../domain/addons/ports/org-addon-repository.port.ts';
 import { AddonRouteTablePort } from '../../domain/addons/ports/route-table.port.ts';
 import { TokenBucketRateLimiter } from '../../domain/addons/rate-limit.ts';
-import { routeSchemaIssues } from '../../domain/addons/route-body-schema.ts';
 import { ClockPort } from '../../domain/apps/ports/clock.port.ts';
 import { routeResponse } from './addon-route-response.ts';
 
@@ -114,7 +114,7 @@ export class AddonPublicRoutesController {
     }
     const body = await this.readBody(request, Math.min(resolved.bodyLimitKb, MAX_PUBLIC_BODY_KB));
     if (body?.value !== undefined && resolved.requestSchema !== undefined) {
-      const issues = routeSchemaIssues(body.value, resolved.requestSchema);
+      const issues = schemaValueIssues(body.value, resolved.requestSchema);
       if (issues.length > 0) {
         throw new AddonException(
           'invalid_params',
