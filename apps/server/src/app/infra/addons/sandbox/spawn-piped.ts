@@ -3,22 +3,30 @@ import { spawn } from 'bun';
 import type { ChildHandle, SpawnedStdio } from '../transport/stdio-wiring.ts';
 import { ProcessChildHandle } from '../transport/stdio-wiring.ts';
 
+export type SpawnExtraStdio = 'socket-fd';
+
+export interface SpawnedPipedProcess {
+  readonly stdio: SpawnedStdio;
+  readonly child: ChildHandle;
+  readonly extraFds: readonly (number | null)[];
+}
+
 export function spawnPiped(
   command: readonly string[],
   cwd: string,
   env: Record<string, string>,
-): { stdio: SpawnedStdio; child: ChildHandle } {
+  extraStdio: readonly SpawnExtraStdio[] = [],
+): SpawnedPipedProcess {
   const proc: Subprocess<'pipe', 'pipe', 'pipe'> = spawn([...command], {
     cwd,
     env,
-    stdin: 'pipe',
-    stdout: 'pipe',
-    stderr: 'pipe',
+    stdio: ['pipe', 'pipe', 'pipe', ...extraStdio],
   });
   const stdio: SpawnedStdio = {
     stdin: proc.stdin,
     stdout: proc.stdout,
     stderr: proc.stderr,
   };
-  return { stdio, child: new ProcessChildHandle(proc) };
+  const extraFds = extraStdio.map((_, index) => proc.stdio[3 + index] ?? null);
+  return { stdio, child: new ProcessChildHandle(proc), extraFds };
 }

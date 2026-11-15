@@ -25,7 +25,22 @@ assets/...                 # иконка
 | `local` | домашний каталог `~/.harnesys/add-ons/`, ручной placement, путь-установка | по launch-политике | можно | не нужна |
 | `external` | url/реестр | только `restricted` | запрещено | обязательна; **источник выключен** до верификатора |
 
-Доверие назначает источник, не манифест. `runtime.profile` выбирает механику: `trusted` — процесс с очищенным окружением (граница = отказоустойчивость) или in-process; `restricted` — OS-песочница (`sandbox-exec` с seatbelt-профилем на macOS, `bwrap` на Linux): запись — только каталог данных и tmp (файловая система смонтирована read-only), сеть и IPC закрыты (`deny network*` / `--unshare-net`), exec разрешён хостовому интерпретатору и каталогу пакета, env — белый список. Если у ОС нет механизма, external-пакет не стартует, пока политикой не включён `allowUnsandboxedExternal` (предупреждение в UI + аудит `addon.sandbox.unsandboxed_external`).
+Доверие назначает источник, не манифест. `runtime.profile` выбирает механику: `trusted` — процесс с очищенным окружением (граница = отказоустойчивость) или in-process; `restricted` — OS-песочница: запись — только каталог данных и tmp (файловая система смонтирована read-only), сеть и IPC закрыты, запуск процессов запрещён, env — белый список. Если у ОС нет механизма, external-пакет не стартует, пока политикой не включён `allowUnsandboxedExternal` (предупреждение в UI + аудит `addon.sandbox.unsandboxed_external`).
+
+### Механизмы `restricted` по платформам
+
+| Платформа | Механизм | Сеть | Запуск процессов | Запись |
+|---|---|---|---|---|
+| macOS | `sandbox-exec` (seatbelt): `(deny default)`, `(allow process-exec)` только bun и каталог пакета | `deny network*` | запрещён (`process-exec` ограничен) | только dataDir и tmp |
+| Linux (x86_64, aarch64) | `bwrap`: `--unshare-user --unshare-pid --unshare-net --unshare-ipc --disable-userns --cap-drop ALL --ro-bind / /` + seccomp deny-list (два уровня, ниже) | `--unshare-net` + seccomp `socket*` → `EPERM` | seccomp `execve/execveat/fork/vfork` → `EPERM` | только dataDir и tmp (bind), корень read-only |
+| Windows / прочие | механизм отсутствует | — | — | `restricted` недоступен: fail-closed (`AddonSandboxUnavailableError`), unsandboxed только по `allowUnsandboxedExternal` |
+
+Linux-паритет с macOS достигается двумя уровнями seccomp-фильтра (`seccomp-filter.ts`, cBPF deny-list: сокеты, `execve`/`fork`, `ptrace`, mount-семейство, `bpf`, модули ядра, `kexec`, `keyctl`, `userfaultfd`, `perf_event_open`, `open_by_handle_at`, x32-диапазон ≥512):
+
+1. **Уровень ядра** — `bwrap --seccomp 3`: фильтр передаётся через stdio-слот 3 (`socket-fd`), родитель пишет байты и закрывает fd, bwrap читает до EOF и применяет перед exec. Здесь exec-семейство **не** запрещено: bwrap применяет фильтр перед собственным `execve(bun)`.
+2. **Уровень процесса** — сгенерированный `bun --preload`-скрипт через FFI `prctl(PR_SET_SECCOMP)` применяет полный фильтр (включая `execve/execveat/fork/vfork`) после старта bun и до исполнения кода аддона; `PR_SET_NO_NEW_PRIVS` уже установлен bwrap. Запуск процессов внутри песочницы получает `EPERM`.
+
+Фильтр — deny-list, не allow-list: незапрещённый сисколл проходит, неизвестная архитектура (`seccomp_data.arch`) или неподдерживаемая платформа → `available() === false`, fail-closed. Probe при старте прогоняет всю цепочку (bwrap + флаги + фильтр ядра + preload-prctl) и кэширует результат.
 
 ## Каталог хоста
 
