@@ -1,13 +1,6 @@
-import type {
-  AddonGrantEntry,
-  AddonPackageView,
-  AddonTrust,
-  OrgAddonDetail,
-  OrgAddonSummary,
-} from '@harnesys/contracts';
+import type { AddonGrantEntry, OrgAddonDetail } from '@harnesys/contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ChevronRightIcon,
   PackageOpenIcon,
   RefreshCwIcon,
   SearchIcon,
@@ -16,7 +9,6 @@ import {
   XIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
 import {
   addonPackagesQuery,
   pruneAddonPackages,
@@ -30,31 +22,18 @@ import {
   watchAddonEvents,
 } from '@/shared/api/addons';
 import { studioPath } from '@/shared/config/routes';
-import { cn } from '@/shared/lib/utils';
 import { dialog } from '@/shared/services/overlay';
-import { Badge } from '@/shared/ui/badge';
-import { Button, buttonVariants } from '@/shared/ui/button';
-import { RowChip } from '@/shared/ui/capability-rows';
-import { EntityTile, EntityTileFooter, EntityTileHead } from '@/shared/ui/entity-tile';
+import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { RowListSkeleton, SettingsEmpty, SettingsErrorBanner } from '@/shared/ui/settings-kit';
-import { StatusDot } from '@/shared/ui/status-dot';
-import { Switch } from '@/shared/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { toast } from '@/shared/ui/toast';
-import { AddonMark } from './addon-mark';
+import { AddonTile } from './addon-tile';
 import { ConsentDialog } from './consent-dialog';
 import { HostPolicyDialog } from './host-policy-dialog';
 import { InstallAddonDialog } from './install-addon-dialog';
-import { ADDON_TRUST_LABEL, addonHealthLabel, addonHealthTone } from './lib/addon-labels';
-
-interface AddonCardModel {
-  id: string;
-  title: string;
-  description: string;
-  versions: Array<{ version: string; trust: AddonTrust }>;
-  org: OrgAddonSummary | null;
-}
+import type { AddonCardModel } from './lib/addon-cards';
+import { buildCards } from './lib/addon-cards';
 
 interface AddonEmptyState {
   testId: string;
@@ -341,120 +320,4 @@ export function ManageAddonsPane({ orgId }: { orgId: string }) {
       {policyOpen ? <HostPolicyDialog onResolve={() => setPolicyOpen(false)} /> : null}
     </div>
   );
-}
-
-interface AddonTileProps {
-  card: AddonCardModel;
-  pending: boolean;
-  path: string;
-  onEnable: () => void;
-  onDisable: () => void;
-}
-
-function AddonTile({ card, pending, path, onEnable, onDisable }: AddonTileProps) {
-  const latest = card.versions[0];
-  const org = card.org;
-  const enabled = org?.enabled === true;
-  return (
-    <EntityTile className="gap-3 p-4" testId={`manage-addon-${card.id}`}>
-      <EntityTileHead
-        mark={<AddonMark size="sm" icon={card.org?.icon} color={card.org?.color} />}
-        title={
-          <Link
-            to={path}
-            data-testid={`addon-open-${card.id}`}
-            className="truncate font-medium text-sm hover:underline"
-          >
-            {card.title}
-          </Link>
-        }
-        badges={
-          <>
-            {enabled ? (
-              <Badge variant="secondary" data-testid={`addon-state-${card.id}`}>
-                Enabled
-              </Badge>
-            ) : null}
-            {latest?.trust === 'builtin' ? <Badge variant="outline">System</Badge> : null}
-          </>
-        }
-        description={card.description || card.id}
-        action={
-          org ? (
-            <Switch
-              size="sm"
-              checked={enabled}
-              disabled={pending}
-              onCheckedChange={(value) => (value === true ? onEnable() : onDisable())}
-              data-testid={`addon-switch-${card.id}`}
-              aria-label={enabled ? `Disable ${card.title}` : `Enable ${card.title}`}
-            />
-          ) : undefined
-        }
-      />
-      <EntityTileFooter
-        action={
-          <Link
-            to={path}
-            className={cn(
-              buttonVariants({ variant: 'ghost', size: 'sm' }),
-              'shrink-0 text-muted-foreground',
-            )}
-            data-testid={`addon-details-${card.id}`}
-          >
-            Details
-            <ChevronRightIcon data-icon="inline-end" />
-          </Link>
-        }
-      >
-        {org ? (
-          <StatusDot tone={addonHealthTone(org.health)} label={addonHealthLabel(org.health)} />
-        ) : null}
-        <span className="font-mono text-[11px] text-muted-foreground">
-          {org?.version ?? latest?.version ?? card.id}
-        </span>
-        {card.versions.length > 1 ? <RowChip>{`${card.versions.length} versions`}</RowChip> : null}
-        {latest && latest.trust !== 'builtin' ? (
-          <RowChip>{ADDON_TRUST_LABEL[latest.trust]}</RowChip>
-        ) : null}
-        {org && org.compatibility.outcome === 'incompatible' ? (
-          <RowChip tone="danger">incompatible</RowChip>
-        ) : null}
-        {org?.updateAvailable ? <RowChip tone="warn">update {org.updateAvailable}</RowChip> : null}
-      </EntityTileFooter>
-    </EntityTile>
-  );
-}
-
-function buildCards(packages: AddonPackageView[], orgAddons: OrgAddonSummary[]): AddonCardModel[] {
-  const byId = new Map<string, AddonCardModel>();
-  for (const pkg of packages) {
-    const existing = byId.get(pkg.id);
-    if (existing) {
-      existing.versions.push({ version: pkg.version, trust: pkg.trust });
-      continue;
-    }
-    byId.set(pkg.id, {
-      id: pkg.id,
-      title: pkg.title,
-      description: pkg.description,
-      versions: [{ version: pkg.version, trust: pkg.trust }],
-      org: null,
-    });
-  }
-  for (const org of orgAddons) {
-    const existing = byId.get(org.addonId);
-    if (existing) {
-      existing.org = org;
-      continue;
-    }
-    byId.set(org.addonId, {
-      id: org.addonId,
-      title: org.title,
-      description: org.description,
-      versions: [],
-      org,
-    });
-  }
-  return [...byId.values()].sort((a, b) => a.title.localeCompare(b.title));
 }

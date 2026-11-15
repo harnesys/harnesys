@@ -15,11 +15,11 @@ import type {
 import { AddonRouteTablePort } from '../../../domain/addons/ports/route-table.port.ts';
 import type { AddonViewerEntryView } from '../../../domain/addons/ports/viewer-table.port.ts';
 import { AddonViewerTablePort } from '../../../domain/addons/ports/viewer-table.port.ts';
-import type { AddonViewerEntry } from '../families/viewer/viewer.family.ts';
 import { resolveAddonIconRef } from '../catalog/addon-icon.ts';
 import { PermissionDefinitionRegistry } from '../dispatcher/permission-definitions.ts';
 import { AddonConfigReadModel } from '../families/config/config.family.ts';
 import { AddonRouteTable } from '../families/route/route.family.ts';
+import type { AddonViewerEntry } from '../families/viewer/viewer.family.ts';
 import { AddonViewerTable } from '../families/viewer/viewer.family.ts';
 import { AddonDbAccessAdapter } from './addon-db-access.adapter.ts';
 import { AddonLogSinkAdapter } from './addon-log-sink.adapter.ts';
