@@ -18,7 +18,7 @@ The registry scans roots at server start; a workspace skill added mid-session ne
 ## Grant model (the `skills` field)
 
 - An agent definition has `skills: string[]`. **Missing or empty = no filesystem skills**: `load_skill` fails for every name.
-- Presets must list bundled skill names explicitly for them to load. Bundled today: `agent-creator`, `workspace-ops`, `issue-ops`, `find-skills`, `harnesys-system`.
+- Presets must list bundled skill names explicitly for them to load. Bundled today: `agent-creator`, `workspace-ops`, `issue-ops`, `find-skills`, `harnesys-system`, `addon-creator`.
 - A pack may also grant its own skill (e.g. the `web` pack ships a `browser` skill) — pack skills bypass the agent's `skills` allowlist.
 - Referencing a nonexistent skill name does not fail creation; it just never loads. Check `skills_list` / the registry before granting.
 

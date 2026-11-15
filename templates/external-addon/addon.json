@@ -1,0 +1,122 @@
+{
+  "id": "acme.example",
+  "version": "1.0.0",
+  "platform": 1,
+  "title": "Example Bookmarks",
+  "description": "A minimal but complete external add-on: two agent tools over a per-organization SQLite table, a read-only HTTP route, a settings form with a secret field and a skill.",
+  "icon": "bookmark",
+  "color": "#4f46e5",
+  "homepage": "https://example.com",
+  "license": "MIT",
+  "runtime": {
+    "entry": "dist/index.js",
+    "profile": "trusted"
+  },
+  "activation": "lazy",
+  "permissions": [],
+  "connections": [],
+  "data": {
+    "migrations": "migrations",
+    "quotaMb": 4
+  },
+  "contributions": [
+    {
+      "id": "pack",
+      "family": "tool-pack",
+      "descriptor": {
+        "name": "bookmarks",
+        "title": "Bookmarks",
+        "description": "Save short bookmarks and list the ones already stored.",
+        "skills": ["usage"],
+        "tools": [
+          {
+            "name": "add",
+            "description": "Save a bookmark with a title and a URL. The tag falls back to the configured default tag.",
+            "effect": "write",
+            "idempotent": false,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "url": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "tag": {
+                  "type": "string"
+                }
+              },
+              "required": ["title", "url"]
+            }
+          },
+          {
+            "name": "list",
+            "description": "List stored bookmarks, newest first. limit defaults to 20 and is capped at 100.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                },
+                "tag": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "items",
+      "family": "route",
+      "descriptor": {
+        "id": "items",
+        "method": "GET",
+        "path": "/items",
+        "role": "member"
+      }
+    },
+    {
+      "id": "settings",
+      "family": "config",
+      "descriptor": {
+        "fields": [
+          {
+            "key": "default_tag",
+            "label": "Default tag",
+            "type": "text",
+            "required": false,
+            "default": "inbox",
+            "help": "Tag applied when a bookmark is saved without one."
+          },
+          {
+            "key": "api_note",
+            "label": "API note",
+            "type": "secret",
+            "required": false,
+            "help": "Stored in the host secret store and read with ctx.secrets.get('api_note')."
+          }
+        ]
+      }
+    },
+    {
+      "id": "usage",
+      "family": "content",
+      "descriptor": {
+        "id": "usage",
+        "title": "Bookmark usage",
+        "kind": "skill",
+        "path": "content/usage"
+      }
+    }
+  ]
+}

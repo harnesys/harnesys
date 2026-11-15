@@ -111,6 +111,7 @@ harnesys update               # self-update host/web binaries from the latest re
 | [`apps/cli`](apps/cli) | CLI: commands, session files |
 | [`apps/desktop`](apps/desktop) | Tauri shell: sidecar, updater, builds |
 | [`deploy/`](deploy) | Docker compose, Dockerfiles, SearXNG |
+| [`docs/external-addons`](docs/external-addons) | Build and install an add-on without the monorepo |
 
 ## Development
 

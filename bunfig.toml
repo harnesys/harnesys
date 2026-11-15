@@ -1,0 +1,4 @@
+# templates/ ships standalone add-on packages for third-party authors: they depend on
+# the published @harnesys/sdk, not on workspace links, so they cannot run from the monorepo root.
+[test]
+pathIgnorePatterns = ["templates/**", "packages/create-addon/template/**"]

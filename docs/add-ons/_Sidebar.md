@@ -37,3 +37,4 @@
 
 - [Дорожная карта](roadmap.md)
 - [Глоссарий](glossary.md)
+- [Внешние аддоны (English)](../external-addons/README.md)

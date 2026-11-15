@@ -2,9 +2,9 @@
 
 `@harnesys/sdk` — leaf-пакет для авторов аддонов: манифест, протокол, семейства, права, `defineAddon`, контекст, тестирование. Единственная runtime-зависимость — `zod` (v4). Из кода SDK в ядро не импортируется ничего, и аддон по гейту линтера импортирует только SDK.
 
-- Пакет: `@harnesys/sdk` (в монорепо `packages/sdk`, v0.1.0, скоро переедет в npm отдельным релизом).
+- Пакет: `@harnesys/sdk` (в монорепо `packages/sdk`, публикуется в npm как `v1.0.0`).
 - Экспортные пути: `@harnesys/sdk` (всё) и `@harnesys/sdk/testing` (fake-хост).
-- Установка в монорепо-аддоне: `"@harnesys/sdk": "file:../../packages/sdk"`; в standalone-пакете — `bun add @harnesys/sdk`.
+- Установка в монорепо-аддоне: `"@harnesys/sdk": "file:../../packages/sdk"`; в аддоне вне монорепо — `bun add @harnesys/sdk`.
 
 ## Точка входа
 
@@ -169,6 +169,45 @@ if (import.meta.main) {
   await startAddonProcess({ definition: addon, addon: { id: 'acme.thing', version: '1.0.0' } });
 }
 ```
+
+## Распространение SDK
+
+SDK публикуется в npm как `@harnesys/sdk`. Версия идёт по semver и синхронизирована с номером `platform` в манифесте аддонов: `platform: 1` — публичный контракт аддона, поэтому major-версия SDK меняется только вместе с ломающим изменением этого контракта (манифест, протокол, сигнатуры `defineAddon`/`AddonContext`). Первая публичная версия — `1.0.0`, `platform: 1`.
+
+Потребитель ставит пакет как обычную зависимость:
+
+```sh
+bun add @harnesys/sdk   # аддон вне монорепо
+```
+
+В монорепо-аддонах остаётся локальная ссылка `"@harnesys/sdk": "file:../../packages/sdk"` — она резолвится в те же исходники без публикации.
+
+### Что попадает в tarball
+
+`files`: только `dist/`, `src/`, `README.md`, `LICENSE` плюс сам `package.json`. Из `src/` выкинуты `*.spec.ts` и `src/protocol/__fixtures__/` — они не нужны потребителю. `dist/` — скомпилированный ESM (`.js`) и декларации (`.d.ts`); `src/` нужен для dev-резолюции в Bun и для типов. Список содержимого можно проверить без публикации: `bun run sdk:pack` (собирает `dist/` и кладёт tarball `packages/sdk/harnesys-sdk-<version>.tgz`) или `npm publish --dry-run` из `packages/sdk`.
+
+### Два режима экспортов: `bun` ↔ `import`/`types`
+
+`package.json` объявляет условные `exports`:
+
+```jsonc
+".": {
+  "bun":   "./src/index.ts",       // Bun (рантайм и bun build) — исходники
+  "types": "./src/index.ts",       // tsc внутри репо и у аддона — типы из исходников
+  "import": "./dist/index.js",     // Node/прочие ESM-раннеры — собранный JS
+  "default":"./dist/index.js"
+}
+```
+
+- **`bun`** — Bun резолвит этот condition первым, поэтому `bun run`, `bun test` и `bun build --target=bun` в монорепо и у внешнего аддона берут TS-исходники SDK напрямую. Это значит, что dev-цикл (`bun run dev`, `bun run addon:build`, тесты) работает **без предварительной сборки `dist/`**.
+- **`types`** — `tsc` внутри репо (и `tsc --noEmit` в аддоне) читает типы из `src/*.ts`, `dist/` для типов не нужен. Потребительский `tsconfig` должен быть Bun-ориентированным: `moduleResolution: "bundler"`, `allowImportingTsExtensions: true` (в исходниках SDK импорты вида `./manifest/manifest.ts`) и `types: ["bun"]` — те же настройки, что у встроенных аддонов.
+- **`import`/`default`** — обычные ESM-раннеры, не понимающие TS, получают `dist/index.js`; `dist/index.d.ts` доступен через `main`/`module`/топ-левел `types` для резолверов, которые не читают `exports` (node10).
+
+Сборка: `bun run sdk:build` (корень) → `tsc -p tsconfig.build.json` в `packages/sdk`, на выходе `dist/` с `.js` и `.d.ts`; `rewriteRelativeImportExtensions` переписывает `./x.ts` в `./x.js` в JS-выводе, поэтому в `dist/*.js` нет `.ts`-импортов.
+
+### Breaking change
+
+Ломающее изменение контракта аддона (`platform`) — это major SDK: поднять `version` в `packages/sdk/package.json`, обновить номер `platform` в манифесте и синхронно пересобрать встроенные аддоны. Публикация — по тегу `sdk-v<version>` или вручную через `workflow_dispatch` (workflow `.github/workflows/sdk-publish.yml`), отдельно от релиза приложения по тегу `v*`.
 
 ---
 

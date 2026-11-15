@@ -45,6 +45,20 @@ assets/...                 # иконка
 
 **Удаление версии пакета**: `DELETE /api/addons/packages/:id/:version` — `409 in_use`, пока хоть одна организация держит закрепление; `POST /api/addons/packages/prune` чистит неиспользуемые.
 
+## Встроенные пакеты в собранной сборке
+
+Корень встроенных пакетов хост резолвит как корень assets — `bundledAddonsRoot()` в `apps/server/src/const.ts` (`addon-staging.ts` вызывает его из `monorepoAddOnsDir()`), по приоритету:
+
+1. `HARNESYS_ADDONS_DIR` — ops-клапан: явный каталог, приоритет над всем.
+2. `<bundledAssetsRoot()>/add-ons` — путь упакованной сборки: `assets` рядом с бинарём (`HARNESYS_BUNDLED_ASSETS` → соседний `assets/` → источниковый `apps/server/assets`) и desktop-ресурсы (`Contents/Resources/assets`).
+3. репозиторный `add-ons/` — источник в dev-запуске.
+
+Если не найдено ничего, резолвер возвращает репозиторный путь (чтобы текст ошибки был осмысленным), а сканер пишет warning и не отдаёт встроенных пакетов.
+
+Payload собирается, а не коммитится: `addon:build` компилирует `dist/index.js` в каждом аддоне, `addon:payload [targetDir]` (по умолчанию `build/assets/add-ons`) копирует только рантайм-нагрузку — `addon.json`, `dist/**`, `migrations/**`, `l10n/**`, `content/**`, `assets/**`, `notes.md`. `src/`, `node_modules/`, `package.json`, spec-файлы в payload не попадают. Скрипт fail-closed: без `dist/index.js` он падает — релиз не может уехать без встроенных аддонов (флаг `--allow-missing` оставлен только для локальной отладки).
+
+Точки проводки: `release.yml` (job `server`) прогоняет `addon:build` + `addon:payload` и упаковывает дерево `assets/` (серверные presets/skills + `add-ons/`) в `harnesys-assets-<target>.tar.gz` рядом с бинарями; desktop-сборка (`scripts/desktop-host.ts`) генерирует `build/assets/add-ons` до бандлинга, а `apps/desktop/src-tauri/tauri.conf.json` кладёт его в ресурс `assets/add-ons`; `deploy/host.Dockerfile` собирает аддоны в образ и выставляет `HARNESYS_ADDONS_DIR`.
+
 ## Жизненный цикл в организации
 
 | Действие | Эндпоинт | Что происходит |

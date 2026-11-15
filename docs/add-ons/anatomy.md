@@ -266,6 +266,10 @@ Endpoint собирается из заголовков запроса (`origin`
 
 Те же операции доступны агенту как `tool-pack`: `list`, `deliveries`, `create`, `configure`, `pause`, `resume`, `rotate_url`, `rotate_secret`, `test`. `create` создаёт экземпляр триггера через `ctx.triggers.create` и по умолчанию целится в текущий тред; поэтому агент может завести себе вебхук без похода в настройки. Инструменты валидируют вход `AddonError('invalid_params')` — через RPC эта ошибка доезжает до клиента типизированной (см. [Протокол → Ошибки](protocol.md#ошибки)).
 
+### Skills shipped with a pack
+
+An add-on can package skills next to its tools: declare a `content` contribution (`kind: "skill"`, `path` = a directory holding `SKILL.md` and `references/`) and list its id in `tool-pack.skills`. The host registers the skill for the organization and the pack embeds the same body and supporting files, so an agent assigned the pack receives the skill even though pack skills bypass the org-skill allowlist. Naming, limits and the per-file copying rules are in [Contributions → content](contributions.md).
+
 ## Слой данных
 
 ```ts

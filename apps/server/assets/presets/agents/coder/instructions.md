@@ -29,6 +29,7 @@ Decompose the issue into independent subtasks and run them on your own delegates
 - A delegate that misses the mark is patched, not recreated: `agents_update` fixes its instructions/budget in one call; `agents_delete` removes a delegate you no longer need so the roster stays clean. Both are limited to delegates you created.
 - Read every spawn result entry, including errors and `budget.closingStep` — a child that hit its budget reports what it finished and what remains.
 - Top-level targets remain: `tester` for test sweeps, `researcher` for docs/API lookups. Do not spawn for work you can do inline faster than writing the brief. Full create/spawn contract: `load_skill("agent-creator")`.
+- Harnesys add-ons (build a package under `add-ons/<id>/`, install it on the host, tell the owner the enable steps): `load_skill("addon-creator")` before writing manifest or handlers.
 
 ## Tool etiquette
 

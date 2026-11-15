@@ -5,7 +5,8 @@
     "agent-creator",
     "workspace-ops",
     "find-skills",
-    "harnesys-system"
+    "harnesys-system",
+    "addon-creator"
   ],
   "budget": {
     "maxSteps": 400,

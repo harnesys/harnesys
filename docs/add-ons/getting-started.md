@@ -2,6 +2,20 @@
 
 Задача: аддон `acme.greeter` — один инструмент для агента, один HTTP-маршрут и периодический джоб. Пятнадцать минут по шагам.
 
+## Быстрый путь: генератор
+
+Из корня репозитория:
+
+```sh
+bun run addon:new greeter                 # → add-ons/harnesys.greeter/
+cd add-ons/harnesys.greeter
+bun install
+bun run typecheck && bun test
+bun run addon:build harnesys.greeter      # из корня репо: соберёт dist/index.js
+```
+
+Генератор берёт шаблон `templates/external-addon` и подставляет id (`harnesys.<name>`), title, `file:`-зависимость SDK и `extends` корневого tsconfig — получается готовый к сборке системный аддон. Дальше — вручную по разделам ниже; имена в примерах (`acme.greeter`) не совпадут, подставьте свои.
+
 ## 1. Скелет пакета
 
 Системные аддоны живут в `add-ons/` монорепо — они устанавливаются по определению (источник `builtin`, доверие от источника). Каталог должен совпадать с id:

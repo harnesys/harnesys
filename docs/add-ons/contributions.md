@@ -14,7 +14,7 @@
 | `job` | `jobs` (по `descriptor.id`) | `job.run` | — |
 | `worker` | `workers` (по `descriptor.id`) | `worker.start/stop` + `ctx.workers.*` | `worker` |
 | `hook` | `hooks` (по `descriptor.id`) | `hook.deliver` | `events.subscribe` / `accounts.use` |
-| `transport` | `transport` | `transport.send/edit/typing` + `ctx.bridge.inbound` | `bridge.inbound` |
+| `transport` | `transport` | `transport.send/edit/typing` (без права) + `ctx.bridge.inbound` (право `bridge.inbound`) | — |
 | `source-kind` | `sources` (по id kind-а) | `source.*` | `source` |
 | `content` | — (файлы пакета) | хост регистрирует скиллы | — |
 | `config` | — (`notifications['config.changed']`) | уведомление | `config.read` (базовое) |
@@ -73,7 +73,7 @@ const addon = defineAddon({
 - `timeoutSec` (default 60, потолок 600), `maxResultKb` (default 256).
 - `connection` — пак требует привязку: без неё вызовы инструментов возвращают `account_failed` (`needs_setup` на UI).
 - `specFields` — [FieldSpec](ui.md#fieldspec), параметры пака на уровне назначения агенту.
-- `skills` — ссылки на вклады `content` kind `skill`, показываются вместе с паком.
+- `skills` — ids of `content` contributions of kind `skill`. The pack embeds their body and supporting files, so an agent assigned the pack receives them even though pack skills bypass the org-skill allowlist.
 
 ## trigger — виды триггеров автоматизаций
 
@@ -240,13 +240,27 @@ const addon = defineAddon({
 - `on.providerEvent` — события провайдера из Apps (webhook-доставки connection-аккаунтов), фильтруются по `types`, доставляются только если аккаунт привязан к `connection`.
 - Доставка at-most-once: очередь на аддон 256 (drop-oldest), вызов ≤ 10 с, хост лениво поднимает процесс перед доставкой. Гарантии нужны — стройте на триггерах/джобах, не на хуках.
 
-## content — скиллы и промпты
+## content — skills and prompts
 
 ```json
 { "id": "howto", "family": "content", "descriptor": { "id": "howto", "title": "How to use", "kind": "skill", "path": "content/howto" } }
 ```
 
-Файлы пакета (`path` от корня; skill — каталог с `SKILL.md`) регистрируются как скиллы организации; ни кода, ни обработчика нет. Ссылки из паков — `tool-pack.skills`.
+A content contribution ships package files only: no code, no handler. For `kind: "skill"` the `path` is relative to the package root and points either at a skill directory that contains `SKILL.md` (with its `references/` next to it) or, for backward compatibility, at a single markdown file.
+
+```
+add-ons/acme.guide/
+  content/howto/
+    SKILL.md
+    references/checklist.md
+```
+
+- The host registers the skill under the namespaced name `addon-<addonId>-<skillId>` (for the example: `addon-acme-guide-howto`), so it can never collide with an org skill. The frontmatter `name` is replaced by that name; `description` and `when_to_use` are preserved. A source file without valid frontmatter falls back to the contribution `title` as the description and gets no `when_to_use`.
+- `SKILL.md` and every supporting file are copied into the org skills directory atomically (staged in a temporary sibling, then swapped in) and removed when the add-on deactivates. The agent reads the body with `load_skill` and any supporting file with `load_skill_file`.
+- Limits per skill: at most 32 supporting files, 256 KiB per file, 1 MiB in total. Hidden files and symlinks are skipped, and a file path that escapes the skill directory is refused. A skill that breaks a limit is skipped with a warning; the add-on still activates.
+- Reference the skill from a `tool-pack` with `skills: ["howto"]` — the contribution **id**, not the path. The pack then embeds the same body and supporting files, so an agent assigned the pack receives the skill through the pack even though pack skills bypass the agent's org-skill allowlist.
+
+`kind: "prompt"` uses the same `path` rules; prompt files are tracked in the content registry but are not registered as loadable skills.
 
 ## config — поля настроек
 

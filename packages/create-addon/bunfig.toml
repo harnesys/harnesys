@@ -1,0 +1,4 @@
+# template/ is a synced copy of templates/external-addon; its own src/index.spec.ts is
+# covered by the template package, not by this package's test suite.
+[test]
+pathIgnorePatterns = ["template/**"]

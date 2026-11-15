@@ -1,0 +1,43 @@
+{
+  "name": "@harnesys/create-addon",
+  "version": "1.0.0",
+  "description": "Scaffold a Harnesys add-on from the bundled template: bunx @harnesys/create-addon my-addon.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "create-addon": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "template",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "bun": ">=1.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/harnesys/harnesys.git",
+    "directory": "packages/create-addon"
+  },
+  "homepage": "https://github.com/harnesys/harnesys/tree/main/packages/create-addon#readme",
+  "bugs": {
+    "url": "https://github.com/harnesys/harnesys/issues"
+  },
+  "scripts": {
+    "build": "bun run scripts/sync-template.ts && bun build src/cli.ts --target=bun --outfile dist/cli.js",
+    "sync-template": "bun run scripts/sync-template.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun run sync-template && bun test",
+    "prepack": "bun run build"
+  },
+  "devDependencies": {
+    "@harnesys/sdk": "workspace:*",
+    "@types/bun": "^1.4.2",
+    "typescript": "^5.9.3"
+  }
+}

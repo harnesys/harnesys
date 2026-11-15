@@ -2,7 +2,8 @@
   "name": "Coder",
   "role": "coder",
   "skills": [
-    "issue-ops"
+    "issue-ops",
+    "addon-creator"
   ],
   "budget": {
     "maxSteps": 300,

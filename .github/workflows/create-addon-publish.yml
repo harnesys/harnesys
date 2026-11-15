@@ -1,0 +1,38 @@
+name: create-addon-publish
+
+on:
+  push:
+    tags: ['create-addon-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: create-addon-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Build the scaffolder (syncs the template)
+        run: bun run --cwd packages/create-addon build
+      - name: Test the scaffolder
+        working-directory: packages/create-addon
+        run: bun test
+      - name: Configure npm auth
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
+      - name: Show the package contents
+        working-directory: packages/create-addon
+        run: npm publish --dry-run
+      - name: Publish to npm
+        working-directory: packages/create-addon
+        run: npm publish --provenance --access public
