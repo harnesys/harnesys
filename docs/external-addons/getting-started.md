@@ -14,9 +14,10 @@ bunx @harnesys/create-addon acme.example
 cd acme.example
 ```
 
-The generator copies the same template described below and rewrites the id, title, package
-name and SDK pin, then prints the next commands. It never touches the network and never
-installs dependencies.
+The generator copies the same template described below and rewrites the id, title,
+description (pass `--description "<text>"` to set it explicitly), package name and SDK pin,
+then prints the next commands. It never touches the network and never installs
+dependencies.
 
 Prefer to copy by hand? Grab `templates/external-addon/` from the Harnesys repository — in
 the repo it is at `templates/external-addon/`, otherwise unzip it wherever you keep your code:
@@ -30,12 +31,14 @@ The template is a complete package; on the manual path you rename it yourself in
 
 ## 2. Rename the add-on
 
-Skip this step if you used the scaffolder in step 1 — it already set the id and title.
+Skip this step if you used the scaffolder in step 1 — it already set the id, title and
+description.
 
 Pick an id of the form `<publisher>.<name>` — lowercase letters, digits and dashes, at
 least one dot (`^[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*$`). Update:
 
-- `addon.json` → `id`, `title`, `description`, `version` (`1.0.0`),
+- `addon.json` → `id`, `title`, `description`, `version` (`1.0.0`), and the visible
+  `REPLACE_ME` placeholders (`homepage`; adjust `icon` when you change the demo domain),
 - `package.json` → `name`,
 - `src/index.ts` → `ADDON_ID`, `ADDON_VERSION`.
 

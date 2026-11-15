@@ -162,6 +162,64 @@ The host restarts your process freely, so handlers must tolerate repeats:
 4. `lifecycle.upgrade({ fromVersion }, ctx)` runs after the SQL migrations are applied to
    the data database; make it idempotent.
 
+## Data and SQL
+
+`ctx.db` is the add-on's own SQLite data database (created from `migrations/*.sql`; the
+fake host starts empty). Signatures and types come from the SDK:
+
+```ts
+import type { DbRow, DbStatement, DbWriteResult, SqlParam } from '@harnesys/sdk';
+
+interface AddonDb {
+  exec(sql: string): Promise<void>;
+  all(sql: string, params?: SqlParam[]): Promise<DbRow[]>;
+  get(sql: string, params?: SqlParam[]): Promise<DbRow | null>;
+  run(sql: string, params?: SqlParam[]): Promise<DbWriteResult>; // { changes, lastInsertRowid }
+  batch(statements: DbStatement[]): Promise<DbWriteResult[]>; // one transaction
+}
+
+type SqlParam = string | number | boolean | null;
+type DbRow = Record<string, unknown>;
+interface DbStatement { sql: string; params?: SqlParam[] }
+```
+
+Host-side facts worth knowing: statements are cached per SQL text; every statement has a
+5 s timeout; `batch` accepts at most 100 statements; a query result larger than 8 MiB
+fails with `quota_exceeded` (413).
+
+### Names
+
+- Contribution **ids** (also the `routes`/`jobs`/`workers`/`hooks` handler keys) must
+  match `^[a-z][a-z0-9-]*$`.
+- `tool-pack` descriptor names and tool names accept any non-empty string, but the
+  agent-facing tool name is `<addonId>.<tool>` with every character outside
+  `[a-zA-Z0-9_-]` collapsed to `_`. Pick tool names from `[a-zA-Z0-9_-]` so two tools
+  cannot collapse to the same exposed name (`a.b` and `a_b` would).
+- `defineAddon` tool keys must equal the descriptor tool names exactly, otherwise the
+  handshake fails with `incompatible_handlers`.
+
+### `data.quotaMb`
+
+Quota counts the add-on's SQLite data database (`page_count × page_size`), not the
+package. There is **no host default** — an unset `quotaMb` means no quota. Estimate from
+average row bytes × expected rows × growth horizon, plus indexes, and keep 2–3×
+headroom. When the quota is exceeded only size-reducing statements (`DELETE`, `DROP`,
+`VACUUM`) are accepted until the database shrinks back under the limit; reads keep
+working.
+
+### What the SQL authorizer allows
+
+Every statement runs through the host's SQL guard (the fake host mirrors it with
+`guardSql`):
+
+- **Denied outright**, anywhere in the statement: `ATTACH`, `DETACH`,
+  `load_extension(…)` → `permission_denied`.
+- **PRAGMA**: read-only and whitelisted — only `PRAGMA user_version` and
+  `PRAGMA foreign_keys` are allowed; any other PRAGMA, or any `PRAGMA … = value` write,
+  is denied.
+- Everything else is regular SQLite: JSON functions such as `json_each` / `json_extract`
+  are **allowed** — the guard restricts statements, not functions.
+
 ## Errors
 
 ```ts

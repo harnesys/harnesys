@@ -96,6 +96,10 @@ export {
   validateInputSchema,
 } from './families/json-schema.ts';
 export {
+  type SchemaValueIssue,
+  schemaValueIssues,
+} from './families/json-schema-value.ts';
+export {
   LSP_SCHEMA_VERSION,
   type LspDescriptor,
   LspDescriptorSchema,

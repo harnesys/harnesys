@@ -50,6 +50,24 @@ export function validManifest(): AddonManifest {
   };
 }
 
+export function toolPackManifest(tools: Array<Record<string, unknown>>): AddonManifest {
+  return {
+    ...validManifest(),
+    contributions: [
+      {
+        id: 'pack',
+        family: 'tool-pack',
+        descriptor: {
+          name: 'example',
+          title: 'Example tools',
+          description: 'Tools for the demo',
+          tools,
+        },
+      },
+    ],
+  };
+}
+
 export function demoDefinition(): ResolvedAddonDefinition {
   return defineAddon({
     tools: {

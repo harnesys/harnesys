@@ -1,4 +1,5 @@
 import type { ResolvedAddonDefinition } from '../define-addon.ts';
+import { type SchemaValueIssue, schemaValueIssues } from '../families/json-schema-value.ts';
 import type { HostChannel } from '../host-client.ts';
 import type { AddonManifest } from '../manifest/manifest.ts';
 import { AddonError } from '../protocol/error.ts';
@@ -232,7 +233,54 @@ export function createFakeHost(options: FakeHostOptions): FakeHost {
     const controller = new AbortController();
     const withMeta =
       method === 'initialize' ? params : { ...(params as Record<string, unknown>), _meta: meta };
+    if (method === 'tools.call') {
+      return deliverToolCall(withMeta as Record<string, unknown>, controller.signal);
+    }
     return runtime.handleRequest(method, withMeta, controller.signal);
+  }
+
+  // Mirrors the real host: tool input is validated against the descriptor's
+  // `inputSchema` before the call and the output against `outputSchema` after
+  // it (see docs/external-addons/contributions.md, tool-pack).
+  async function deliverToolCall(
+    params: Record<string, unknown>,
+    signal: AbortSignal,
+  ): Promise<unknown> {
+    const tool = typeof params.tool === 'string' ? params.tool : '';
+    const descriptor = toolDescriptor(tool);
+    const input = isPlainObject(params.input) ? params.input : {};
+    const inputIssues = descriptor?.inputSchema
+      ? schemaValueIssues(input, descriptor.inputSchema)
+      : [];
+    if (inputIssues.length > 0) {
+      throw new AddonError('invalid_params', {
+        detail: `tools.call ${tool}: ${describeIssue(inputIssues)}`,
+      });
+    }
+    const result = (await runtime.handleRequest('tools.call', params, signal)) as {
+      output: unknown;
+    };
+    const outputIssues = descriptor?.outputSchema
+      ? schemaValueIssues(result.output ?? {}, descriptor.outputSchema)
+      : [];
+    if (outputIssues.length > 0) {
+      throw new AddonError('invalid_response', {
+        detail: `tools.call ${tool}: ${describeIssue(outputIssues)}`,
+      });
+    }
+    return result;
+  }
+
+  function toolDescriptor(tool: string): ToolSchemaDescriptor | null {
+    return toolSchemaDescriptor(manifest, tool);
+  }
+
+  function describeIssue(issues: SchemaValueIssue[]): string {
+    const issue = issues[0];
+    if (!issue) {
+      return 'validation failed';
+    }
+    return `${issue.path === '$' ? 'params' : issue.path}: ${issue.message}`;
   }
 
   async function dispatchAddonToHost(method: string, rawParams: unknown): Promise<unknown> {
@@ -258,4 +306,45 @@ export function createFakeHost(options: FakeHostOptions): FakeHost {
   }
 
   return host;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+interface ToolSchemaDescriptor {
+  inputSchema?: Record<string, unknown>;
+  outputSchema?: Record<string, unknown>;
+}
+
+function toolSchemaDescriptor(manifest: AddonManifest, tool: string): ToolSchemaDescriptor | null {
+  for (const contribution of manifest.contributions) {
+    if (contribution.family !== 'tool-pack') {
+      continue;
+    }
+    const entry = toolEntry(contribution.descriptor, tool);
+    if (entry) {
+      return {
+        ...(isPlainObject(entry.inputSchema) ? { inputSchema: entry.inputSchema } : {}),
+        ...(isPlainObject(entry.outputSchema) ? { outputSchema: entry.outputSchema } : {}),
+      };
+    }
+  }
+  return null;
+}
+
+function toolEntry(
+  descriptor: Record<string, unknown>,
+  tool: string,
+): Record<string, unknown> | null {
+  const tools = descriptor.tools;
+  if (!Array.isArray(tools)) {
+    return null;
+  }
+  return (
+    tools.find(
+      (candidate): candidate is Record<string, unknown> =>
+        isPlainObject(candidate) && candidate.name === tool,
+    ) ?? null
+  );
 }

@@ -109,6 +109,15 @@ transports, or the real secrets vault. In particular `workers.lease`/`release`,
 those on a real host. If a test needs the schema, apply your migrations yourself with
 `host.service('db.exec', { sql })`; the fake does not run `migrations/*.sql`.
 
+## The fake host rejects valid-at-runtime tool calls
+
+Since SDK **1.1.0** the fake host validates tool calls against the descriptor schemas,
+like the real host: input is checked against `inputSchema` before the call
+(`invalid_params`) and the returned output against `outputSchema` after it
+(`invalid_response`); SDK versions up to **1.0.x** skipped both checks. If a test passes
+with an older SDK and fails now, the call (or the handler's return value) violates the
+manifest schema — fix the call or the schema, not the test assertion.
+
 ## Nothing installs from a URL or registry
 
 That is by design: `external` sources are disabled until package signature verification
