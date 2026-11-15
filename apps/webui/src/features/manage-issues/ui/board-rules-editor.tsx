@@ -24,6 +24,7 @@ export function BoardRulesEditor({
   statuses,
   agents,
   labels,
+  statusScope,
 }: {
   orgId: string;
   boardId: string;
@@ -31,10 +32,16 @@ export function BoardRulesEditor({
   statuses: BoardStatus[];
   agents: Agent[];
   labels: IssueLabelRecord[];
+  statusScope?: string;
 }) {
   const { data: profiles } = useQuery(executionProfilesQuery(orgId));
   const upsertBoard = useIssueBoardStore((state) => state.upsert);
   const ordered = [...rules].sort((a, b) => a.position - b.position);
+  const visible = statusScope
+    ? ordered.filter(
+        (rule) => rule.trigger.type === 'status_entered' && rule.trigger.statusKey === statusScope,
+      )
+    : ordered;
 
   const persist = async (input: BoardRuleInput & { id?: string }): Promise<void> => {
     try {
@@ -46,7 +53,7 @@ export function BoardRulesEditor({
   };
 
   const addRule = (): void => {
-    const statusKey = sortedStatuses(statuses)[0]?.key ?? '';
+    const statusKey = statusScope ?? sortedStatuses(statuses)[0]?.key ?? '';
     void persist({
       trigger: statusKey ? { type: 'status_entered', statusKey } : { type: 'issue_created' },
       conditions: [],
@@ -78,17 +85,19 @@ export function BoardRulesEditor({
   };
 
   const moveRule = (rule: BoardRule, delta: number): void => {
-    const index = ordered.indexOf(rule);
-    const target = index + delta;
-    if (target < 0 || target >= ordered.length) {
+    const index = visible.indexOf(rule);
+    const neighbor = visible[index + delta];
+    if (index === -1 || !neighbor) {
       return;
     }
     const ids = ordered.map((item) => item.id);
-    const [movedId] = ids.splice(index, 1);
-    if (!movedId) {
+    const from = ids.indexOf(rule.id);
+    const to = ids.indexOf(neighbor.id);
+    if (from === -1 || to === -1) {
       return;
     }
-    ids.splice(target, 0, movedId);
+    ids[from] = neighbor.id;
+    ids[to] = rule.id;
     void reorderBoardRules(orgId, boardId, ids)
       .then(upsertBoard)
       .catch((error) => {
@@ -99,10 +108,11 @@ export function BoardRulesEditor({
   return (
     <div className="space-y-3">
       <p className="text-muted-foreground text-xs">
-        Rules run on issue creation or when an issue enters a status. Conditions are AND; actions
-        run in order. Changes save immediately.
+        {statusScope
+          ? 'Rules that run when an issue enters this status. Conditions are AND; actions run in order. Changes save immediately.'
+          : 'Rules run on issue creation or when an issue enters a status. Conditions are AND; actions run in order. Changes save immediately.'}
       </p>
-      {ordered.map((rule) => (
+      {visible.map((rule) => (
         <RuleRow
           key={rule.id}
           rule={rule}
@@ -112,11 +122,17 @@ export function BoardRulesEditor({
           labels={labels}
           profiles={profiles?.items ?? []}
           defaultProfileId={profiles?.defaultProfileId ?? LOCAL_EXECUTION_PROFILE_ID}
+          showTrigger={!statusScope}
           onPatch={(patch) => patchRule(rule, patch)}
           onRemove={() => removeRule(rule)}
           onMove={(delta) => moveRule(rule, delta)}
         />
       ))}
+      {statusScope && visible.length === 0 ? (
+        <p className="text-muted-foreground/70 text-xs italic">
+          No rule for this status — nothing fires here.
+        </p>
+      ) : null}
       <Button
         type="button"
         variant="outline"

@@ -142,23 +142,11 @@ export function ProjectRootMenu({
               <FileIcon className="size-3.5" />
               New file
             </DropdownMenuItem>
-            {viewerCreates.map((template) => (
-              <DropdownMenuItem
-                key={template.viewerId}
-                onClick={() => start('file', dirPath, projectId, template)}
-              >
-                {template.icon === undefined ? (
-                  <FileIcon className="size-3.5" />
-                ) : (
-                  <IconRef icon={template.icon} className="size-3.5" />
-                )}
-                {template.label}
-              </DropdownMenuItem>
-            ))}
             <DropdownMenuItem onClick={() => start('dir', dirPath, projectId)}>
               <FolderIcon className="size-3.5" />
               New folder
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               data-testid="project-open-terminal"
               onClick={() => {
@@ -175,6 +163,20 @@ export function ProjectRootMenu({
               <SquareTerminalIcon className="size-3.5" />
               Terminal
             </DropdownMenuItem>
+            {viewerCreates.length > 0 ? <DropdownMenuSeparator /> : null}
+            {viewerCreates.map((template) => (
+              <DropdownMenuItem
+                key={template.viewerId}
+                onClick={() => start('file', dirPath, projectId, template)}
+              >
+                {template.icon === undefined ? (
+                  <FileIcon className="size-3.5" />
+                ) : (
+                  <IconRef icon={template.icon} className="size-3.5" />
+                )}
+                {template.label}
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>

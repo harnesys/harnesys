@@ -1,5 +1,5 @@
 import type { BoardRuleRecord, BoardStatus, IssueRecord } from '@harnesys/studio-shared';
-import { CheckSquareIcon, PlusIcon } from 'lucide-react';
+import { CheckSquareIcon, ListChecksIcon, PlusIcon } from 'lucide-react';
 import { useState } from 'react';
 import type { Agent } from '@/entities/agent';
 import { AgentRecordAvatar } from '@/entities/agent';
@@ -16,6 +16,7 @@ import {
 } from '../model/board-columns';
 import { useIssueDrawerStore } from '../model/issue-drawer.store';
 import { moveIssueStatus } from '../model/issues';
+import { openBoardColumnRulesDialog } from './board-column-rules-dialog';
 import { IssueCard } from './issue-card';
 
 export function BoardColumn({
@@ -115,7 +116,13 @@ export function BoardColumn({
         ))}
         {issues.length === 0 ? <EmptyColumn status={status} /> : null}
       </div>
-      <ColumnRuleFooter rules={rules} statusKey={status.key} agents={agents} />
+      <ColumnRuleFooter
+        boardId={boardId}
+        orgId={orgId}
+        status={status}
+        rules={rules}
+        agents={agents}
+      />
     </section>
   );
 }
@@ -137,73 +144,89 @@ function EmptyColumn({ status }: { status: BoardStatus }) {
 }
 
 function ColumnRuleFooter({
+  boardId,
+  orgId,
+  status,
   rules,
-  statusKey,
   agents,
 }: {
+  boardId: string;
+  orgId: string;
+  status: BoardStatus;
   rules: BoardRuleRecord[];
-  statusKey: string;
   agents: Agent[];
 }) {
   const labels = useIssueLabelStore((state) => state.items);
-  const matched = rulesForStatus(rules, statusKey).filter((rule) =>
+  const matched = rulesForStatus(rules, status.key).filter((rule) =>
     rule.actions.some((action) => action.type === 'assign_agent'),
   );
-  if (matched.length === 0) {
-    return (
-      <footer className="shrink-0 border-t px-3 py-1.5 text-[10px] text-muted-foreground/60 italic">
-        No rule — nothing fires here
-      </footer>
-    );
-  }
   return (
     <footer
-      className="shrink-0 space-y-0.5 border-t px-3 py-1.5"
-      data-testid={`column-rules-${statusKey}`}
+      className="flex shrink-0 items-end justify-between gap-2 border-t px-3 py-1.5"
+      data-testid={`column-rules-${status.key}`}
     >
-      {matched.map((rule) => {
-        const labelIds = rule.conditions
-          .filter((condition) => condition.type === 'has_label')
-          .map((condition) => condition.labelId);
-        return rule.actions
-          .filter((action) => action.type === 'assign_agent')
-          .map((action, index) => {
-            if (action.type !== 'assign_agent') {
-              return null;
-            }
-            const agent = agents.find((item) => item.id === action.agentId);
-            const label =
-              labelIds.length > 0 ? labels.find((item) => item.id === labelIds[0]) : undefined;
-            return (
-              <div
-                key={`${rule.id}-${index}`}
-                className="flex min-w-0 items-center gap-1.5 text-[10px]"
-              >
-                {label ? (
-                  <>
+      <div className="min-w-0 flex-1 space-y-0.5">
+        {matched.length === 0 ? (
+          <span className="text-[10px] text-muted-foreground/60 italic">
+            No rule — nothing fires here
+          </span>
+        ) : (
+          matched.map((rule) => {
+            const labelIds = rule.conditions
+              .filter((condition) => condition.type === 'has_label')
+              .map((condition) => condition.labelId);
+            return rule.actions
+              .filter((action) => action.type === 'assign_agent')
+              .map((action, index) => {
+                if (action.type !== 'assign_agent') {
+                  return null;
+                }
+                const agent = agents.find((item) => item.id === action.agentId);
+                const label =
+                  labelIds.length > 0 ? labels.find((item) => item.id === labelIds[0]) : undefined;
+                return (
+                  <div
+                    key={`${rule.id}-${index}`}
+                    className="flex min-w-0 items-center gap-1.5 text-[10px]"
+                  >
+                    {label ? (
+                      <>
+                        <span
+                          className="size-1.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: label.color }}
+                        />
+                        <span className="max-w-20 truncate" title={label.title}>
+                          {label.title}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground/70 italic">any label</span>
+                    )}
+                    <span className="shrink-0 text-muted-foreground/50">→</span>
+                    {agent ? <AgentRecordAvatar agent={agent} /> : null}
                     <span
-                      className="size-1.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: label.color }}
-                    />
-                    <span className="max-w-20 truncate" title={label.title}>
-                      {label.title}
+                      className="max-w-24 truncate font-medium text-muted-foreground"
+                      title={agent?.name ?? action.agentId}
+                    >
+                      {agent?.name ?? 'agent'}
                     </span>
-                  </>
-                ) : (
-                  <span className="text-muted-foreground/70 italic">any label</span>
-                )}
-                <span className="shrink-0 text-muted-foreground/50">→</span>
-                {agent ? <AgentRecordAvatar agent={agent} /> : null}
-                <span
-                  className="max-w-24 truncate font-medium text-muted-foreground"
-                  title={agent?.name ?? action.agentId}
-                >
-                  {agent?.name ?? 'agent'}
-                </span>
-              </div>
-            );
-          });
-      })}
+                  </div>
+                );
+              });
+          })
+        )}
+      </div>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        className="shrink-0 text-muted-foreground hover:text-foreground"
+        title="Edit column rules"
+        data-testid={`column-rules-edit-${status.key}`}
+        onClick={() => void openBoardColumnRulesDialog(orgId, boardId, status.key)}
+      >
+        <ListChecksIcon className="size-3.5" />
+        <span className="sr-only">Edit rules for {status.label}</span>
+      </Button>
     </footer>
   );
 }

@@ -27,6 +27,7 @@ export function RuleRow({
   onPatch,
   onRemove,
   onMove,
+  showTrigger = true,
 }: {
   rule: BoardRule;
   orgId: string;
@@ -38,6 +39,7 @@ export function RuleRow({
   onPatch: (patch: Partial<BoardRuleInput>) => void;
   onRemove: () => void;
   onMove: (delta: number) => void;
+  showTrigger?: boolean;
 }) {
   const statusItems = sortedStatuses(statuses);
   const triggerStatusKey = rule.trigger.type === 'status_entered' ? rule.trigger.statusKey : '';
@@ -53,49 +55,54 @@ export function RuleRow({
           aria-label="Rule enabled"
           onCheckedChange={(enabled) => onPatch({ enabled })}
         />
-        <Select
-          items={[
-            { value: 'status_entered', label: 'Status entered' },
-            { value: 'issue_created', label: 'Issue created' },
-          ]}
-          value={rule.trigger.type}
-          onValueChange={(value) => {
-            if (value === 'issue_created') {
-              onPatch({ trigger: { type: 'issue_created' } });
-            } else if (statusItems[0]) {
-              onPatch({
-                trigger: { type: 'status_entered', statusKey: statusItems[0].key },
-              });
-            }
-          }}
-        >
-          <SelectTrigger size="sm" className="w-36 shrink-0 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="status_entered">Status entered</SelectItem>
-            <SelectItem value="issue_created">Issue created</SelectItem>
-          </SelectContent>
-        </Select>
-        {rule.trigger.type === 'status_entered' ? (
-          <Select
-            items={statusItems.map((item) => ({ value: item.key, label: item.label }))}
-            value={triggerStatusKey}
-            onValueChange={(value) =>
-              value && onPatch({ trigger: { type: 'status_entered', statusKey: String(value) } })
-            }
-          >
-            <SelectTrigger size="sm" className="min-w-0 flex-1 text-xs">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              {statusItems.map((item) => (
-                <SelectItem key={item.key} value={item.key}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {showTrigger ? (
+          <>
+            <Select
+              items={[
+                { value: 'status_entered', label: 'Status entered' },
+                { value: 'issue_created', label: 'Issue created' },
+              ]}
+              value={rule.trigger.type}
+              onValueChange={(value) => {
+                if (value === 'issue_created') {
+                  onPatch({ trigger: { type: 'issue_created' } });
+                } else if (statusItems[0]) {
+                  onPatch({
+                    trigger: { type: 'status_entered', statusKey: statusItems[0].key },
+                  });
+                }
+              }}
+            >
+              <SelectTrigger size="sm" className="w-36 shrink-0 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="status_entered">Status entered</SelectItem>
+                <SelectItem value="issue_created">Issue created</SelectItem>
+              </SelectContent>
+            </Select>
+            {rule.trigger.type === 'status_entered' ? (
+              <Select
+                items={statusItems.map((item) => ({ value: item.key, label: item.label }))}
+                value={triggerStatusKey}
+                onValueChange={(value) =>
+                  value &&
+                  onPatch({ trigger: { type: 'status_entered', statusKey: String(value) } })
+                }
+              >
+                <SelectTrigger size="sm" className="min-w-0 flex-1 text-xs">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusItems.map((item) => (
+                    <SelectItem key={item.key} value={item.key}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
+          </>
         ) : null}
         <div className="ml-auto flex shrink-0 items-center">
           <Button

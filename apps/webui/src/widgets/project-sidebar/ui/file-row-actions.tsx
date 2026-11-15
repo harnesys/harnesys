@@ -85,12 +85,6 @@ export function FileRowMenuItems({
               <FolderIcon className="size-3.5" />
               New folder
             </DropdownMenuItem>
-            {templateItems.length > 0 ? (
-              <>
-                <DropdownMenuSeparator />
-                {templateItems}
-              </>
-            ) : null}
             {!worktreeId ? (
               <>
                 <DropdownMenuSeparator />
@@ -105,9 +99,13 @@ export function FileRowMenuItems({
                 </DropdownMenuItem>
               </>
             ) : null}
-            <DropdownMenuSeparator />
+            {templateItems.length > 0 ? <DropdownMenuSeparator /> : null}
+            {templateItems}
           </>
         ) : null}
+      </DropdownMenuGroup>
+      <DropdownMenuSeparator />
+      <DropdownMenuGroup>
         <DropdownMenuItem onClick={() => onStartRename(fullPath)}>
           <PenLineIcon className="size-3.5" />
           Rename
