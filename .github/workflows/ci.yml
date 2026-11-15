@@ -32,3 +32,8 @@ jobs:
           test -x build/harnesys-host
           test -x build/harnesys-web
           test -x build/harnesys
+      - name: Build the webui client bundle
+        run: |
+          bun run --cwd packages/sdk build
+          bun run build:client
+          test -d apps/webui/dist
