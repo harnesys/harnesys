@@ -179,6 +179,10 @@ export function MarkdownMermaid({ chart }: MarkdownMermaidProps) {
   useEffect(() => {
     let cancelled = false;
     setFailed(false);
+    if (!source) {
+      setFailed(true);
+      return;
+    }
     void queueRender(async () => {
       const host = hostRef.current;
       if (!host || cancelled) {
@@ -187,9 +191,6 @@ export function MarkdownMermaid({ chart }: MarkdownMermaidProps) {
       host.replaceChildren();
       const id = `mmd-${reactId}-${Math.random().toString(36).slice(2, 8)}`;
       try {
-        if (!source) {
-          throw new Error('empty mermaid source');
-        }
         const dark =
           theme === 'dark' ||
           (theme === 'system' && document.documentElement.classList.contains('dark'));

@@ -146,6 +146,14 @@ function applyFile(file: string, name: string, input: GenerateInput): void {
     }
     return;
   }
+  if (name === 'biome.template.json') {
+    writeFileSync(
+      join(parse(file).dir, 'biome.json'),
+      substitute(readFileSync(file, 'utf8'), input),
+    );
+    rmSync(file, { force: true });
+    return;
+  }
   writeFileSync(file, substitute(readFileSync(file, 'utf8'), input));
 }
 

@@ -15,6 +15,7 @@ import { createApprovalReconcile } from './approval-reconcile.ts';
 import { observeRunTerminal } from './observe-run-terminal.ts';
 import type { OrgRuntimeDeps } from './org-runtime.types.ts';
 import { OrgEpisodicPort } from './packs/org-episodic.port.ts';
+import { createCompactionCursorPreparer } from './prepare-compaction-cursors.ts';
 import { cachedTargetOf, type TargetCache } from './prepare-org-target.ts';
 import { prepareUsageEvents } from './prepare-usage-events.ts';
 import { requestRunParkApprovals } from './request-approval-for-park.ts';
@@ -68,8 +69,13 @@ export function createOrgRunStores(
     ...(deps.logger === undefined ? {} : { logger: deps.logger }),
     ...(fileRuntime === undefined ? {} : { fileRuntime }),
   });
+  const prepareCursors = createCompactionCursorPreparer({
+    orgId: deps.orgId,
+    threads: deps.threads,
+  });
   const runEvents = new SqliteRunEventStore(session.db, {
-    prepare: (tx, runId, threadId, events) => prepareUsageEvents(tx, runId, threadId, events),
+    prepare: (tx, runId, threadId, events) =>
+      prepareCursors(tx, runId, threadId, prepareUsageEvents(tx, runId, threadId, events)),
     ...(onAppend === undefined ? {} : { onAppend }),
     observe: (_tx, runId, threadId, events) => {
       // adapters open their own sqlite connection and would hit SQLITE_BUSY

@@ -72,6 +72,22 @@ export function UserSegment({
       !issueWake &&
       (event.threadSeq !== undefined || clientEventId),
   );
+  function saveEdit(text: string): void {
+    if (!threadId) {
+      return;
+    }
+    const threadSeq = event.threadSeq;
+    const input =
+      threadSeq !== undefined
+        ? { threadId, threadSeq, text, ...sendInput }
+        : { threadId, text, clientEventId, ...sendInput };
+    void editUserMessage(input).catch((error: unknown) => {
+      toast.add({
+        title: 'Could not edit',
+        description: error instanceof Error ? error.message : 'Edit failed',
+      });
+    });
+  }
   if (wake) {
     return <ScheduleWakeBanner text={rawText} />;
   }
@@ -131,23 +147,6 @@ export function UserSegment({
     </>
   );
   return <div className="flex flex-col items-end gap-2">{content}</div>;
-
-  function saveEdit(text: string): void {
-    if (!threadId) {
-      return;
-    }
-    const threadSeq = event.threadSeq;
-    const input =
-      threadSeq !== undefined
-        ? { threadId, threadSeq, text, ...sendInput }
-        : { threadId, text, clientEventId, ...sendInput };
-    void editUserMessage(input).catch((error: unknown) => {
-      toast.add({
-        title: 'Could not edit',
-        description: error instanceof Error ? error.message : 'Edit failed',
-      });
-    });
-  }
 }
 
 function UserSegmentActions({

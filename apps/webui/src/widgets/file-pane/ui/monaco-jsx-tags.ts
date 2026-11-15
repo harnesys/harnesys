@@ -1,6 +1,6 @@
 import type { OnMount } from '@monaco-editor/react';
-import { StandaloneServices } from 'monaco-editor/esm/vs/editor/standalone/browser/standaloneServices.js';
-import { IConfigurationService } from 'monaco-editor/esm/vs/platform/configuration/common/configuration.js';
+import { StandaloneServices } from 'monaco-editor/editor/standalone/browser/standaloneServices.js';
+import { IConfigurationService } from 'monaco-editor/platform/configuration/common/configuration.js';
 
 type Monaco = Parameters<OnMount>[1];
 interface LineSpan {

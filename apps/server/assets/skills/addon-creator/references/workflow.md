@@ -32,7 +32,7 @@ add-ons/<id>/
   assets/icon.svg           # optional icon
 ```
 
-`package.json` (copy the exact shape from a built-in; `module` points at source, `build` writes `dist`):
+`package.json` (copy the exact shape from a built-in; `build` writes `dist` — the payload ships `dist/index.js`, nothing else from the package root):
 
 ```json
 {
@@ -40,7 +40,6 @@ add-ons/<id>/
   "version": "1.0.0",
   "type": "module",
   "private": true,
-  "module": "src/index.ts",
   "scripts": {
     "build": "bun build --target=bun src/index.ts --outfile dist/index.js",
     "typecheck": "tsc --noEmit"
@@ -72,6 +71,21 @@ bun run addon:build webhook    # one; accepts the full id or the id without the 
 ```
 
 `scripts/addon-build.ts` resolves `add-ons/<name>`, runs `bun install` in the package when `node_modules/@harnesys/sdk` is missing, then `bun run build` (which is exactly `bun build --target=bun src/index.ts --outfile dist/index.js`). It builds in place; no install script ever runs on the host.
+
+**Packages outside the monorepo** (workspace add-on, different repo) use the same command with a path:
+
+```sh
+bun run addon:build --path /path/to/<id>     # repo root, or any directory
+```
+
+The package must contain `addon.json`, `src/index.ts` and a `build` script; keep a standalone `tsconfig.json` (do not extend the monorepo one) and add a `biome.json` (copy `packages/create-addon/template/biome.json`) so `bunx biome check .` works outside the repo. `bun run build` inside the package directory is the equivalent one-liner.
+
+Package a built add-on into an installable zip (payload contract: `addon.json` + `dist/`/`migrations/`/`l10n`/`content/`/`assets/` + `notes.md`, fail-closed on a missing `dist/index.js`):
+
+```sh
+bun run addon:pack /path/to/<id>             # writes <id>-<version>.zip next to the package
+bun run addon:pack /path/to/<id> --out out.zip
+```
 
 Local checks in the package directory:
 

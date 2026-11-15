@@ -59,30 +59,36 @@ export function sliceThreadHistory(events: SessionEvent[], opts: ThreadSliceOpts
     return [];
   }
   const { excludedRuns, markerEventIndex, markerSegmentIndex } = sliceExclusions(events, segments);
-  const anchorIndex = newestAnchorIndex(events);
+  const anchor = newestAnchor(events);
   const kept = new Set<number>(baseSegments(events, segments, opts));
   for (const index of segmentIndexesOfRun(segments, opts.activeRunId ?? null)) {
     kept.add(index);
   }
   coKeepMarkerRuns(segments, kept, excludedRuns, markerSegmentIndex);
   const forced = forcedEventIndexes(segments, kept, excludedRuns, markerEventIndex);
-  if (anchorIndex >= 0) {
-    forced.add(anchorIndex);
+  if (anchor.index >= 0) {
+    forced.add(anchor.index);
   }
-  const indexes = segmentEventIndexes(segments, kept, anchorIndex, opts);
+  const indexes = segmentEventIndexes(events, segments, kept, anchor, opts);
   for (const index of forced) {
     indexes.add(index);
   }
   return eventsAtIndexes(events, indexes, opts.beforeThreadSeq);
 }
 
+interface SliceAnchor {
+  index: number;
+  /** undefined = legacy event (no cursor persisted), null = cursor unresolved: keep everything. */
+  cursor: number | null | undefined;
+}
+
 function segmentEventIndexes(
+  events: SessionEvent[],
   segments: ThreadHistorySegment[],
   kept: Set<number>,
-  anchorIndex: number,
+  anchor: SliceAnchor,
   opts: ThreadSliceOpts,
 ): Set<number> {
-  const cut = anchorIndex >= 0 ? anchorIndex : 0;
   const indexes = new Set<number>();
   for (const index of kept) {
     const segment = segments[index];
@@ -90,11 +96,31 @@ function segmentEventIndexes(
       continue;
     }
     const exempt = segment.runId !== null && segment.runId === opts.activeRunId;
-    for (let i = exempt ? segment.start : Math.max(segment.start, cut); i < segment.end; i += 1) {
+    for (let i = segment.start; i < segment.end; i += 1) {
+      if (!exempt && droppedByAnchor(anchor, events[i], i)) {
+        continue;
+      }
       indexes.add(i);
     }
   }
   return indexes;
+}
+
+function droppedByAnchor(
+  anchor: SliceAnchor,
+  event: SessionEvent | undefined,
+  index: number,
+): boolean {
+  if (anchor.index < 0 || !event) {
+    return false;
+  }
+  if (anchor.cursor === undefined) {
+    return index < anchor.index;
+  }
+  if (anchor.cursor === null || typeof event.threadSeq !== 'number') {
+    return false;
+  }
+  return event.threadSeq <= anchor.cursor;
 }
 
 function eventsAtIndexes(
@@ -273,7 +299,7 @@ function markerRunIdOf(event: SessionEvent): string | null {
   return null;
 }
 
-function newestAnchorIndex(events: SessionEvent[]): number {
+function newestAnchor(events: SessionEvent[]): SliceAnchor {
   for (let index = events.length - 1; index >= 0; index -= 1) {
     const event = events[index];
     if (
@@ -282,10 +308,10 @@ function newestAnchorIndex(events: SessionEvent[]): number {
       typeof event.summary === 'string' &&
       event.summary.length > 0
     ) {
-      return index;
+      return { index, cursor: event.coveredUntilThreadSeq };
     }
   }
-  return -1;
+  return { index: -1, cursor: undefined };
 }
 
 function segmentIndexesOfRun(segments: ThreadHistorySegment[], runId: string | null): number[] {

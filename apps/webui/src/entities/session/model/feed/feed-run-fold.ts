@@ -150,6 +150,9 @@ function appendCompaction(run: RunDraft, ev: SessionEvent & { type: 'compaction'
       ...(ev.summary ? { summary: ev.summary } : {}),
       ...(ev.coveredUntilRunId ? { coveredUntilRunId: ev.coveredUntilRunId } : {}),
       ...(ev.coveredUntilSeq !== undefined ? { coveredUntilSeq: ev.coveredUntilSeq } : {}),
+      ...(ev.coveredUntilThreadSeq !== undefined
+        ? { coveredUntilThreadSeq: ev.coveredUntilThreadSeq }
+        : {}),
     },
   });
 }
@@ -198,6 +201,7 @@ function closeRun(fold: RunFold, error: string | null, terminal: FeedRunTerminal
   run.terminal = terminal;
   fold.closed.push(publishRun(run));
   fold.current = undefined;
+  fold.dirty = true;
 }
 
 export function pushSegment(run: RunDraft, data: FeedSegment): void {

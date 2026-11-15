@@ -63,6 +63,7 @@ export interface CompactionSegmentMeta {
   summary?: string;
   coveredUntilRunId?: string;
   coveredUntilSeq?: number;
+  coveredUntilThreadSeq?: number | null;
 }
 
 export type ToolCallEvent = SessionEvent & {

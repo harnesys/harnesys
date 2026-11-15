@@ -74,7 +74,7 @@ Baseline ids (`config.read`, `log`, `db`, `secrets.own`, `events.emit.own`, `org
 ]
 ```
 
-- `accountKinds` are provider account kinds from the Apps/Accounts layer; the host validates the bindings against them.
+- `accountKinds` are provider account kinds from the Apps/Accounts layer; the host validates the bindings against them. Only built-in providers (GitHub, Google, Telegram) contribute kinds — a kind for a third-party API does not exist and an add-on cannot declare its own. **Escape hatch:** instead of a connection, declare a `config` field with `secret: true` (an internal integration token) and read it in handlers via `ctx.secrets.get`; the add-on card still gives the user a fill-in field, but multi-account binding is not available this way.
 - `cardinality: "one" | "many"`. With `many`, a tool call must pass an explicit `accountId` unless exactly one account is bound (otherwise `conflict`).
 - `connection` on a `tool-pack`/`trigger`/`source-kind` descriptor must be one of these ids (cross-check: `unknown_connection`).
 

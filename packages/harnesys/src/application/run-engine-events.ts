@@ -253,9 +253,11 @@ export function eventToSessionEvent(ev: Event): SessionEvent | null {
       tokensBefore: num(m?.tokensBefore) ?? 0,
       tokensAfter: num(m?.tokensAfter) ?? 0,
     };
+    const total = num(m?.messageCount);
+    const stamped = total === undefined ? covered : { ...covered, coveredTotal: total };
     return typeof m?.summary === 'string' && m.summary
-      ? { ...covered, summary: m.summary }
-      : covered;
+      ? { ...stamped, summary: m.summary }
+      : stamped;
   }
   if (t === 'tool.completed' || t === 'tool.intent') {
     const m = ev.metadata as Record<string, unknown> | undefined;

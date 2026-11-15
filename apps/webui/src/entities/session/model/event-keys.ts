@@ -2,8 +2,11 @@ import type { SessionEvent } from '@harnesys/studio-shared';
 import { streamDeltaKey } from './coalesce-events.ts';
 
 let timestampCounter = 0;
+export function hasClientEventId(ev: SessionEvent): ev is SessionEvent & { clientEventId: string } {
+  return 'clientEventId' in ev && Boolean(ev.clientEventId);
+}
 export function stableEventKey(ev: SessionEvent): string | undefined {
-  if ('clientEventId' in ev && ev.clientEventId) {
+  if (hasClientEventId(ev)) {
     return `ce:${ev.clientEventId}`;
   }
   if (ev.runId !== undefined && ev.seq !== undefined) {

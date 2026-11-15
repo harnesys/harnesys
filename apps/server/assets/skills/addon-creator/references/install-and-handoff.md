@@ -22,6 +22,8 @@ List page `/o/:orgId/settings/addons`. Buttons on the pane (`apps/webui/src/feat
 | **Prune unused** | `POST /api/addons/packages/prune` |
 | **Source policy** | `GET / PUT /api/addons/policy` |
 
+`plan` **is the dry-run**: it stages and validates the package (manifest parse, source policy, platform compatibility) and returns the plan without installing anything. Plans expire in the plan store; simply never calling `confirm` leaves the host untouched. Use it as the pre-handoff gate — plan the final zip, check `warnings` and `permissions` in the response, and only then hand off. Note the plan does not execute handlers: manifest↔handler parity is verified by `createFakeHost` locally and by the instance handshake on first start.
+
 Add-on card `/o/:orgId/settings/addons/<addonId>` (`addon-detail-page.tsx`): the toggle (enable), the **consent dialog** for mandatory permissions, **connections** (bind accounts → `PUT .../bindings/:connectionId`), **config** form, **automations** (trigger instances), **jobs** (**Run now**), delegated `table`/`form`/`actions`/`frame` sections, and the **logs** panel. Default sections when the add-on declares no `view`: `status`, `capabilities`, `permissions`, `connections`, `config`, `automations`, `jobs`.
 
 ## REST path (agent with a session token)
@@ -62,7 +64,7 @@ curl -s -X POST $B/api/orgs/$ORG/addons/acme.greeter/jobs/heartbeat/run -H "auth
 curl -s $B/api/orgs/$ORG/addons/acme.greeter/logs -H "authorization: Bearer $TOKEN" | jq '.items[-1]'
 ```
 
-State changes also arrive over SSE at `GET /api/orgs/:orgId/addons/events` (`addon.state_changed`, `addon.update_available`, `addon.consent_required`). There is **no CLI for add-ons**: the `hxa` tool is a roadmap item; today the only build command is `bun run addon:build`.
+State changes also arrive over SSE at `GET /api/orgs/:orgId/addons/events` (`addon.state_changed`, `addon.update_available`, `addon.consent_required`). There is **no CLI for add-ons**: the `hxa` tool is a roadmap item; today the build command is `bun run addon:build` and the packaging command is `bun run addon:pack <dir-or-name> [--out <zip>]` (payload: `addon.json` + `dist/`/`migrations/`/`l10n/`/`content/`/`assets/` + `notes.md`, zip layout `addon.json` inside one top-level directory — the host also accepts `addon.json` at the archive root).
 
 If you have no `web.fetch` or no token, you cannot install or enable anything. Prepare the built package, then hand the rest to the user with the WebUI steps below.
 
@@ -70,15 +72,16 @@ If you have no `web.fetch` or no token, you cannot install or enable anything. P
 
 After the package builds and passes checks, tell the user exactly this (fill in `<id>`, `<addonId>`, `<orgId>`):
 
-1. Put the package in place: in the monorepo, the directory `add-ons/<id>/` is enough; otherwise copy it to `~/.harnesys/add-ons/<id>/<version>/` (dev stand: `~/.harnesys-dev/add-ons/...`).
-2. Open **Settings → Add-ons** (`/o/<orgId>/settings/addons`) and press **Reload**; the add-on appears in the list. For a package from a path or `.zip`, use **Install package** instead (review the plan, then confirm).
-3. Open the add-on card (`/o/<orgId>/settings/addons/<addonId>`), flip the toggle, and approve the consent dialog if it lists permissions.
-4. On the same card: **Connect** the required accounts, fill the **Config** fields, and create any **Automations** (triggers).
-5. Confirm it works: the card shows health `running`; check the **logs** panel; test a route or a job **Run now**; grant the pack to an agent and try a tool.
+1. Validate first without installing: `POST /api/addons/packages/plan` with the zip (or `bun run addon:pack` output) and check the returned plan — no confirm, host untouched.
+2. Put the package in place: in the monorepo, the directory `add-ons/<id>/` is enough; otherwise copy it to `~/.harnesys/add-ons/<id>/<version>/` (dev stand: `~/.harnesys-dev/add-ons/...`).
+3. Open **Settings → Add-ons** (`/o/<orgId>/settings/addons`) and press **Reload**; the add-on appears in the list. For a package from a path or `.zip`, use **Install package** instead (review the plan, then confirm).
+4. Open the add-on card (`/o/<orgId>/settings/addons/<addonId>`), flip the toggle, and approve the consent dialog if it lists permissions.
+5. On the same card: **Connect** the required accounts, fill the **Config** fields, and create any **Automations** (triggers).
+6. Confirm it works: the card shows health `running`; check the **logs** panel; test a route or a job **Run now**; grant the pack to an agent and try a tool.
 
 ## Pre-handoff checklist
 
-- `bun run addon:build <name>` succeeds and `dist/index.js` matches `runtime.entry`.
+- `bun run addon:build <name>` (or `addon:build --path <dir>` outside the monorepo) succeeds and `dist/index.js` matches `runtime.entry`.
 - `bun run typecheck` and `bun test` pass; `bunx biome check .` is clean in the package.
 - Handler maps and manifest contributions match exactly (a missing pair fails `incompatible_handlers`).
 - `version` was bumped for the shipped change.

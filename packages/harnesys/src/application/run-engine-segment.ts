@@ -374,6 +374,13 @@ export async function runSegment(
         }
         continue;
       }
+      if (mapped.type === 'compaction') {
+        // The append hook resolves this anchor's thread cursor from the
+        // already-persisted stream, so everything before it must be committed.
+        if (!(await flushJournal(env, ctx))) {
+          return;
+        }
+      }
       ctx.pending.push(admit(env, runId, mapped));
       if (
         ctx.pending.length >= env.journalBatch ||

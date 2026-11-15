@@ -15,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/shared/ui/switch';
 import { toast } from '@/shared/ui/toast';
 import { mutateThread } from '../model/thread-members-mutation';
-import { AddThreadMemberFields } from './add-thread-member-fields';
 import { ThreadMemberList } from './thread-member-list';
 
 const NONE = '__none__';
@@ -40,15 +39,12 @@ const RESPONDER_MODE_ITEMS: { value: 'auto' | 'mention'; label: string }[] = [
   { value: 'mention', label: 'Only on @mentions' },
 ];
 
-function historyModeLabel(mode: ThreadHistoryMode): string {
-  return HISTORY_MODE_ITEMS.find((item) => item.value === mode)?.label ?? mode;
-}
-
 export function ThreadSettings({ thread, className }: { thread: Thread; className?: string }) {
   const { openDesk, openThread } = useStudioNavigation();
   const policy = thread.policy;
   const members = thread.members ?? [];
   const isGroup = thread.kind === 'group';
+  const canDelete = thread.kind === 'chat' || isGroup;
   const historyMode = policy?.historyMode ?? DEFAULT_HISTORY_MODE_BY_KIND[thread.kind];
   const [historyLast, setHistoryLast] = useState(
     policy?.historyLast === undefined ? '' : String(policy.historyLast),
@@ -59,9 +55,12 @@ export function ThreadSettings({ thread, className }: { thread: Thread; classNam
   const anchorFieldId = useId();
   const saveHistoryLast = () => {
     const value = Number(historyLast);
+    if (!Number.isInteger(value)) {
+      return;
+    }
     void mutateThread(() =>
       updateThreadPolicy(thread.id, {
-        historyLast: Number.isInteger(value) && value >= 0 && value <= 100 ? value : null,
+        historyLast: value >= 0 && value <= 100 ? value : null,
       }),
     );
   };
@@ -119,59 +118,55 @@ export function ThreadSettings({ thread, className }: { thread: Thread; classNam
               Members
             </p>
             <ThreadMemberList thread={thread} />
-            <AddThreadMemberFields thread={thread} />
           </section>
         ) : null}
         <Field>
           <FieldLabel htmlFor="thread-history-mode">History</FieldLabel>
-          <Select
-            items={HISTORY_MODE_ITEMS}
-            value={historyMode}
-            onValueChange={(value) =>
-              void mutateThread(() =>
-                updateThreadPolicy(thread.id, { historyMode: value as ThreadHistoryMode }),
-              )
-            }
-          >
-            <SelectTrigger id="thread-history-mode" size="sm" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent align="start">
-              {HISTORY_MODE_ITEMS.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <FieldDescription>
-            How much prior history each run is seeded with. Default for this thread:{' '}
-            {historyModeLabel(DEFAULT_HISTORY_MODE_BY_KIND[thread.kind]).toLowerCase()}.
-          </FieldDescription>
-        </Field>
-        {historyMode === 'last' ? (
-          <Field>
-            <FieldLabel htmlFor={historyLastFieldId}>Runs included</FieldLabel>
-            <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5">
+            <Select
+              items={HISTORY_MODE_ITEMS}
+              value={historyMode}
+              onValueChange={(value) =>
+                void mutateThread(() =>
+                  updateThreadPolicy(thread.id, { historyMode: value as ThreadHistoryMode }),
+                )
+              }
+            >
+              <SelectTrigger id="thread-history-mode" size="sm" className="flex-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="start">
+                {HISTORY_MODE_ITEMS.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {historyMode === 'last' ? (
               <Input
                 id={historyLastFieldId}
-                type="number"
-                min={0}
-                max={100}
-                className="h-7 text-xs"
+                type="text"
+                inputMode="numeric"
+                aria-label="Runs included"
+                className="h-7 w-12 px-1.5 text-center text-xs"
                 value={historyLast}
                 placeholder={String(HISTORY_LAST_PLACEHOLDER)}
-                onChange={(event) => setHistoryLast(event.target.value)}
+                onChange={(event) => setHistoryLast(event.target.value.replace(/\D/g, ''))}
+                onBlur={saveHistoryLast}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.currentTarget.blur();
+                  }
+                }}
               />
-              <Button type="button" size="sm" variant="secondary" onClick={saveHistoryLast}>
-                Save
-              </Button>
-            </div>
-            <FieldDescription>
-              Number of recent runs carried into the next one. Default {HISTORY_LAST_PLACEHOLDER}.
-            </FieldDescription>
-          </Field>
-        ) : null}
+            ) : null}
+          </div>
+          <FieldDescription>
+            Prior history seeded into each run. With Last N runs, the input sets how many recent
+            runs carry forward (default {HISTORY_LAST_PLACEHOLDER}).
+          </FieldDescription>
+        </Field>
         <Field>
           <FieldLabel htmlFor="thread-responder-mode">Responder mode</FieldLabel>
           <Select
@@ -195,25 +190,25 @@ export function ThreadSettings({ thread, className }: { thread: Thread; classNam
             </SelectContent>
           </Select>
           <FieldDescription>
-            Who answers a message nobody addressed: the pinned agent on every message (auto), or
-            only agents mentioned in the text (mention). Telegram add-ons read this same setting.
+            Who answers unaddressed messages: the pinned agent (auto) or only @mentions (mention).
           </FieldDescription>
         </Field>
         <Field>
           <FieldLabel htmlFor={anchorFieldId}>History anchor</FieldLabel>
-          <div className="flex items-center gap-1.5">
-            <Input
-              id={anchorFieldId}
-              type="text"
-              className="h-7 text-xs"
-              value={historyFromRunId}
-              placeholder="Run ID to start history from"
-              onChange={(event) => setHistoryFromRunId(event.target.value)}
-            />
-            <Button type="button" size="sm" variant="secondary" onClick={saveAnchor}>
-              Save
-            </Button>
-          </div>
+          <Input
+            id={anchorFieldId}
+            type="text"
+            className="h-7 text-xs"
+            value={historyFromRunId}
+            placeholder="Run ID to start history from"
+            onChange={(event) => setHistoryFromRunId(event.target.value)}
+            onBlur={saveAnchor}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.currentTarget.blur();
+              }
+            }}
+          />
           <FieldDescription>
             Optional. Starts history at a specific run; falls back to the default if the run is
             gone.
@@ -249,12 +244,12 @@ export function ThreadSettings({ thread, className }: { thread: Thread; classNam
                   ))}
                 </SelectContent>
               </Select>
-              <FieldDescription>Messages without a mention go to this agent.</FieldDescription>
+              <FieldDescription>Gets messages without a mention.</FieldDescription>
             </Field>
             <Field orientation="horizontal" className="items-start justify-between gap-3">
               <FieldContent>
                 <FieldTitle>Ignore @mentions</FieldTitle>
-                <FieldDescription>Every agent receives every message.</FieldDescription>
+                <FieldDescription>Every agent gets every message.</FieldDescription>
               </FieldContent>
               <Switch
                 aria-label="Ignore mentions"
@@ -264,19 +259,21 @@ export function ThreadSettings({ thread, className }: { thread: Thread; classNam
                 }
               />
             </Field>
-            <Button
-              type="button"
-              variant="destructive"
-              size="sm"
-              aria-label="Delete group thread"
-              title="Delete group thread"
-              onClick={removeThread}
-              className="w-full"
-            >
-              <Trash2Icon className="size-3" />
-              Delete Group
-            </Button>
           </>
+        ) : null}
+        {canDelete ? (
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            aria-label={isGroup ? 'Delete group thread' : 'Delete thread'}
+            title={isGroup ? 'Delete group thread' : 'Delete thread'}
+            onClick={removeThread}
+            className="w-full"
+          >
+            <Trash2Icon className="size-3" />
+            {isGroup ? 'Delete Group' : 'Delete thread'}
+          </Button>
         ) : null}
       </PopoverContent>
     </Popover>

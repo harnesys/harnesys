@@ -1119,6 +1119,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
               id: m.id,
               coveredFrom: m.coveredFrom,
               coveredUntil: m.coveredUntil,
+              ...(typeof m.messageCount === 'number' ? { messageCount: m.messageCount } : {}),
               reason: m.reason,
               tokensBefore: m.stats.tokensBefore,
               tokensAfter: m.stats.tokensAfter,

@@ -1,13 +1,30 @@
 import type { ChunkDraft, ItemDraft, RunDraft, SegmentDraft } from './feed-run-drafts';
 import type { RunFold } from './feed-run-fold';
-import type { FeedChunk, FeedItem, FeedRun, FeedSegment, ToolEventPair } from './feed-types';
+import type {
+  FeedChunk,
+  FeedItem,
+  FeedRun,
+  FeedSegment,
+  GroupFeedChunk,
+  ToolEventPair,
+} from './feed-types';
+
+function sameElements<T>(next: readonly T[], prev: readonly T[]): boolean {
+  for (let index = 0; index < next.length; index += 1) {
+    if (next[index] !== prev[index]) {
+      return false;
+    }
+  }
+  return next.length === prev.length;
+}
 
 export function runSnapshot(fold: RunFold): FeedRun[] {
   if (!fold.dirty) {
     return fold.published;
   }
   const current = fold.current ? publishRun(fold.current) : undefined;
-  fold.published = current ? [...fold.closed, current] : fold.closed.slice();
+  const next = current ? [...fold.closed, current] : fold.closed.slice();
+  fold.published = sameElements(next, fold.published) ? fold.published : next;
   fold.dirty = false;
   return fold.published;
 }
@@ -15,16 +32,28 @@ export function runSnapshot(fold: RunFold): FeedRun[] {
 export { publishRun };
 
 function publishRun(run: RunDraft): FeedRun {
-  const segments: FeedSegment[] = [];
-  for (const segment of run.segments) {
-    segments.push(publishSegment(segment));
-  }
+  const prev = run.published;
+  const segments = run.segments.map((segment) => publishSegment(segment));
   const first = run.events[0];
   const key =
     (first?.type === 'user' && first.clientEventId ? first.clientEventId : undefined) ??
     run.runId ??
     run.id ??
     `run-${run.firstIndex}`;
+  const eventsSame = prev !== null && prev.events.length === run.events.length;
+  if (
+    prev !== null &&
+    eventsSame &&
+    prev.key === key &&
+    prev.id === run.id &&
+    prev.runId === run.runId &&
+    prev.error === run.error &&
+    prev.terminal === run.terminal &&
+    prev.hasInFlight === run.hasInFlight &&
+    sameElements(segments, prev.segments)
+  ) {
+    return prev;
+  }
   const published: FeedRun = {
     key,
     id: run.id,
@@ -32,7 +61,7 @@ function publishRun(run: RunDraft): FeedRun {
     error: run.error,
     terminal: run.terminal,
     firstIndex: run.firstIndex,
-    events: run.events.slice(),
+    events: eventsSame && prev !== null ? prev.events : run.events.slice(),
     segments,
     hasInFlight: run.hasInFlight,
   };
@@ -43,79 +72,126 @@ function publishRun(run: RunDraft): FeedRun {
 function publishSegment(segment: SegmentDraft): FeedSegment {
   if (segment.kind !== 'activity') {
     segment.published = segment.data;
+    segment.dirty = false;
     return segment.data;
   }
-  const items: FeedItem[] = [];
-  for (const item of segment.items) {
-    items.push(publishItem(item));
+  const items = segment.items.map((item) => publishItem(item));
+  const prev = segment.published;
+  if (
+    !segment.dirty &&
+    prev !== null &&
+    prev.kind === 'activity' &&
+    sameElements(items, prev.items)
+  ) {
+    segment.dirty = false;
+    return prev;
   }
+  segment.dirty = false;
   const published: FeedSegment = { key: segment.key, kind: 'activity', items };
   segment.published = published;
   return published;
 }
 
 function publishItem(item: ItemDraft): FeedItem {
-  const chunks: FeedChunk[] = [];
-  let toolsKey: string | undefined;
-  for (const chunk of item.chunks) {
-    const published = publishChunk(chunk);
-    chunks.push(published);
-    if (chunk.kind === 'tools' && !toolsKey) {
-      toolsKey = chunk.pairs?.[0]?.key;
-    }
-  }
+  const prev = item.published;
   if (!item.group) {
-    const chunk = chunks[0];
+    const chunk = publishChunk(item.chunks[0]);
+    if (prev !== null && prev.type === 'chunk' && prev.chunk === chunk) {
+      item.dirty = false;
+      return prev;
+    }
     const published: FeedItem = {
       type: 'chunk',
       key: chunk.key || item.key,
       chunk: chunk as Extract<FeedChunk, { type: 'text' | 'ask' | 'source' | 'file' | 'hook' }>,
     };
     item.published = published;
+    item.dirty = false;
     return published;
   }
+  const chunks = item.chunks.map((chunk) => publishChunk(chunk) as GroupFeedChunk);
+  if (!item.dirty && prev !== null && prev.type === 'group' && sameElements(chunks, prev.chunks)) {
+    item.dirty = false;
+    return prev;
+  }
+  const toolsKey = item.chunks.find((chunk) => chunk.kind === 'tools')?.pairs?.[0]?.key;
   const published: FeedItem = {
     type: 'group',
     key: toolsKey ?? `group-${item.key || chunks[0]?.key || 'x'}`,
-    chunks: chunks as Extract<FeedChunk, { type: 'reasoning' | 'tools' | 'spawn' }>[],
+    chunks,
   };
   item.published = published;
+  item.dirty = false;
   return published;
 }
 
 function publishChunk(chunk: ChunkDraft): FeedChunk {
   if (chunk.kind === 'tools') {
-    const pairs: ToolEventPair[] = (chunk.pairs ?? []).map((pair) => {
-      if (!pair.dirty && pair.published) {
-        return pair.published;
-      }
-      const published: ToolEventPair = {
-        call: pair.call,
-        ...(pair.result ? { result: pair.result } : {}),
-        ...(pair.ask ? { ask: pair.ask } : {}),
-      };
-      pair.published = published;
-      pair.dirty = false;
-      return published;
-    });
-    const published: FeedChunk = {
-      key: chunk.pairs?.[0]?.key ?? chunk.key,
-      type: 'tools',
-      pairs,
-    };
-    chunk.published = published;
-    chunk.dirty = false;
-    return published;
+    return publishToolsChunk(chunk);
   }
   if (chunk.kind === 'reasoning') {
-    const published: FeedChunk = {
-      key: chunk.key || 'reasoning',
-      type: 'reasoning',
-      events: chunk.reasoning ?? [],
+    return publishReasoningChunk(chunk);
+  }
+  return publishEventChunk(chunk);
+}
+
+function publishToolsChunk(chunk: ChunkDraft): FeedChunk {
+  const prev = chunk.published;
+  const pairs: ToolEventPair[] = [];
+  for (const pair of chunk.pairs ?? []) {
+    if (!pair.dirty && pair.published !== null) {
+      pairs.push(pair.published);
+      continue;
+    }
+    const published: ToolEventPair = {
+      call: pair.call,
+      ...(pair.result ? { result: pair.result } : {}),
+      ...(pair.ask ? { ask: pair.ask } : {}),
     };
-    chunk.published = published;
+    pair.published = published;
+    pair.dirty = false;
+    pairs.push(published);
+  }
+  if (!chunk.dirty && prev !== null && prev.type === 'tools' && sameElements(pairs, prev.pairs)) {
     chunk.dirty = false;
-    return published;
+    return prev;
+  }
+  const published: FeedChunk = {
+    key: chunk.pairs?.[0]?.key ?? chunk.key,
+    type: 'tools',
+    pairs,
+  };
+  chunk.published = published;
+  chunk.dirty = false;
+  return published;
+}
+
+function publishReasoningChunk(chunk: ChunkDraft): FeedChunk {
+  const prev = chunk.published;
+  const events = chunk.reasoning ?? [];
+  if (!chunk.dirty && prev !== null && prev.type === 'reasoning' && prev.events === events) {
+    return prev;
+  }
+  const published: FeedChunk = {
+    key: chunk.key || 'reasoning',
+    type: 'reasoning',
+    events,
+  };
+  chunk.published = published;
+  chunk.dirty = false;
+  return published;
+}
+
+function publishEventChunk(chunk: ChunkDraft): FeedChunk {
+  const prev = chunk.published;
+  if (
+    prev !== null &&
+    prev.type !== 'reasoning' &&
+    prev.type !== 'tools' &&
+    prev.event === chunk.event
+  ) {
+    chunk.dirty = false;
+    return prev;
   }
   const published = {
     key: chunk.key || `${chunk.kind}-x`,

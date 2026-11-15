@@ -13,7 +13,19 @@ const NO_COVERAGE: CompactionCoverage = {
   tokensAfter: null,
 };
 
+const coverageCache = new WeakMap<SessionEvent[], CompactionCoverage>();
+
 export function compactionCoverage(events: SessionEvent[]): CompactionCoverage {
+  const cached = coverageCache.get(events);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const coverage = findCompactionCoverage(events);
+  coverageCache.set(events, coverage);
+  return coverage;
+}
+
+function findCompactionCoverage(events: SessionEvent[]): CompactionCoverage {
   for (let index = events.length - 1; index >= 0; index -= 1) {
     const event = events[index];
     if (event.type !== 'compaction' || !event.coveredUntilRunId) {

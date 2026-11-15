@@ -1,6 +1,6 @@
 import type { SessionEvent } from '@harnesys/studio-shared';
 import { isToolInputStream, mergeDeltaContinuation, mergeIncomingEvent } from './coalesce-events';
-import { eventKey, stableEventKey } from './event-keys';
+import { eventKey, hasClientEventId, stableEventKey } from './event-keys';
 import type { FeedDecision } from './feed/feed-types';
 export interface ThreadLog {
   events: SessionEvent[];
@@ -77,8 +77,11 @@ export function applyIncomingEvents(
       continue;
     }
     const list = workingEvents();
+    // A runId:seq duplicate would have been dropped by the seqCeil gate above and
+    // an event without a stable key can never match an existing row, so only
+    // clientEventId-keyed events need the dedupe scan.
     const key = eventKey(event);
-    const index = list.findIndex((ev) => eventKey(ev) === key);
+    const index = hasClientEventId(event) ? list.findIndex((ev) => eventKey(ev) === key) : -1;
     if (index === -1) {
       list.push(event);
       sink?.push({ ev: event, merged: false, index: list.length - 1 });

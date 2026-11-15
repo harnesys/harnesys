@@ -73,6 +73,13 @@ describe('eventToSessionEvent replay fields', () => {
     expect(out).toMatchObject({ type: 'compaction', id: 'a1', summary: 'old work' });
   });
 
+  test('maps the compaction message count onto coveredTotal', () => {
+    const out = eventToSessionEvent(
+      graphEvent('compaction.completed', { id: 'a1', coveredUntil: 4, messageCount: 12 }),
+    );
+    expect(out).toMatchObject({ type: 'compaction', coveredUntil: 4, coveredTotal: 12 });
+  });
+
   test('keeps the generated image count on model usage', () => {
     const out = eventToSessionEvent(
       graphEvent('model.completed', {

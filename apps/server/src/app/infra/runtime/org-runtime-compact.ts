@@ -20,6 +20,7 @@ import {
   ThreadValidationException,
 } from '../../domain/thread/thread.error.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
+import { type CompactionBoundary, resolveCompactionCursor } from './compaction-cursor.ts';
 import type { RunTargetSelector } from './org-runtime-run-target.ts';
 import {
   sliceThreadHistory,
@@ -207,14 +208,16 @@ async function persistCompact(
       tokensBefore: input.completed.stats.tokensBefore,
       tokensAfter: input.completed.stats.tokensAfter,
       summary: input.completed.content,
-      ...(boundary ? { coveredUntilRunId: boundary.runId, coveredUntilSeq: boundary.seq } : {}),
+      coveredTotal: input.messageCount,
+      ...(boundary
+        ? {
+            coveredUntilRunId: boundary.runId,
+            coveredUntilSeq: boundary.seq,
+            coveredUntilThreadSeq: boundary.threadSeq,
+          }
+        : { coveredUntilThreadSeq: null }),
     },
   ]);
-}
-
-export interface CompactionBoundary {
-  runId: string;
-  seq: number;
 }
 
 export async function resolveCompactBoundary(
@@ -231,26 +234,13 @@ export async function resolveCompactBoundary(
     messageSources: sources,
     ...(sliceOpts?.activeRunId ? { activeRunId: sliceOpts.activeRunId } : {}),
   });
-  if (messages.length !== messageCount) {
-    return null;
-  }
-  if (coveredUntil < 0 || coveredUntil >= sources.length) {
-    return null;
-  }
-  const sourceIndex = sources[coveredUntil];
-  if (sourceIndex === undefined || sourceIndex < 0 || sourceIndex >= sliced.length) {
-    return null;
-  }
-  const event = sliced[sourceIndex];
-  if (!event) {
-    return null;
-  }
-  const runId = event.runId ?? '';
-  const seq = event.seq;
-  if (!runId || typeof seq !== 'number') {
-    return null;
-  }
-  return { runId, seq };
+  return resolveCompactionCursor({
+    rebuiltCount: messages.length,
+    coveredTotal: messageCount,
+    coveredUntil,
+    sources,
+    sliced,
+  });
 }
 
 async function compactSliceOpts(

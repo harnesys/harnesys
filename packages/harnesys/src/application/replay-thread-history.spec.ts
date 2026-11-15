@@ -106,3 +106,68 @@ test('compaction with a covered boundary keeps the protected tail', () => {
   expect(messages.length).toBe(3);
   expect(sources).toEqual([2, 3, 4]);
 });
+
+function anchorEvent(cursor: number | null | undefined, threadSeq: number): SessionEvent {
+  return {
+    type: 'compaction',
+    id: 'c1',
+    reason: 'threshold',
+    coveredFrom: 0,
+    coveredUntil: 1,
+    tokensBefore: 10,
+    tokensAfter: 2,
+    summary: 'summary',
+    coveredUntilThreadSeq: cursor,
+    runId: 'r2',
+    seq: 1,
+    threadSeq,
+  } as SessionEvent;
+}
+
+function historyWithAnchor(cursor: number | null | undefined): SessionEvent[] {
+  return [
+    { type: 'user', text: 'old', runId: 'r1', seq: 1, threadSeq: 1 } as SessionEvent,
+    {
+      type: 'model.usage',
+      text: 'a',
+      usage: {},
+      runId: 'r1',
+      seq: 2,
+      threadSeq: 2,
+    } as SessionEvent,
+    anchorEvent(cursor, 3),
+    { type: 'user', text: 'tail', runId: 'r2', seq: 2, threadSeq: 4 } as SessionEvent,
+    {
+      type: 'model.usage',
+      text: 'reply',
+      usage: {},
+      runId: 'r3',
+      seq: 1,
+      threadSeq: 5,
+    } as SessionEvent,
+  ];
+}
+
+test('a thread cursor drops covered messages and keeps the tail', () => {
+  const sources: number[] = [];
+  const messages = rebuildThreadMessages(historyWithAnchor(2), { messageSources: sources });
+  expect(messages.length).toBe(3);
+  expect(sources).toEqual([2, 3, 4]);
+});
+
+test('an unresolved cursor keeps the whole history instead of wiping it', () => {
+  const sources: number[] = [];
+  const messages = rebuildThreadMessages(historyWithAnchor(null), { messageSources: sources });
+  expect(messages.length).toBe(5);
+  expect(sources).toEqual([0, 1, 2, 3, 4]);
+});
+
+test('the active run is exempt from cursor coverage', () => {
+  const sources: number[] = [];
+  const messages = rebuildThreadMessages(historyWithAnchor(2), {
+    messageSources: sources,
+    activeRunId: 'r1',
+  });
+  expect(messages.length).toBe(5);
+  expect(sources).toEqual([1, 1, 2, 3, 4]);
+});

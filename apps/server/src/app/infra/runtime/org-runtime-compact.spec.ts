@@ -4,8 +4,8 @@ import { resolveCompactBoundary, resolveCompactRunId } from './org-runtime-compa
 
 const THREAD_ID = 'thread-1';
 
-function fakeEvent(runId: string, seq: number): SessionEvent {
-  return { type: 'user', text: 'hi', runId, seq } as SessionEvent;
+function fakeEvent(runId: string, seq: number, threadSeq?: number): SessionEvent {
+  return { type: 'user', text: 'hi', runId, seq, threadSeq } as SessionEvent;
 }
 
 function fakeStore(runs: string[], events: SessionEvent[]): RunEventStore {
@@ -57,17 +57,17 @@ test('no journal events resolve to undefined so the append is skipped', async ()
 });
 
 test('boundary resolves to the source event of the last covered message', async () => {
-  const events = [fakeEvent('run-1', 1), fakeEvent('run-1', 2), fakeEvent('run-2', 1)];
+  const events = [fakeEvent('run-1', 1, 10), fakeEvent('run-1', 2, 11), fakeEvent('run-2', 1, 12)];
   const store = fakeStore(['run-1', 'run-2'], events);
   const boundary = await resolveCompactBoundary(store, THREAD_ID, 1, 3);
-  expect(boundary).toEqual({ runId: 'run-1', seq: 2 });
+  expect(boundary).toEqual({ runId: 'run-1', seq: 2, threadSeq: 11 });
 });
 
 test('boundary persists even when the compaction covered the whole history', async () => {
   const events = [fakeEvent('run-1', 1), fakeEvent('run-1', 2)];
   const store = fakeStore(['run-1'], events);
   const boundary = await resolveCompactBoundary(store, THREAD_ID, 1, 2);
-  expect(boundary).toEqual({ runId: 'run-1', seq: 2 });
+  expect(boundary).toEqual({ runId: 'run-1', seq: 2, threadSeq: null });
 });
 
 test('boundary is null when the replay diverges from the compacted state', async () => {

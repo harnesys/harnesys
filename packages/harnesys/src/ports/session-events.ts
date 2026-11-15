@@ -150,6 +150,10 @@ export type SessionEvent = SessionEventScope &
         summary?: string;
         coveredUntilRunId?: string;
         coveredUntilSeq?: number;
+        /** Thread-cursor boundary: last covered event's threadSeq. Null = resolved-unavailable (keep everything). */
+        coveredUntilThreadSeq?: number | null;
+        /** Message list length at compaction time; guards cursor resolution. */
+        coveredTotal?: number;
         seq?: number;
         runId?: string;
         clientEventId?: string;

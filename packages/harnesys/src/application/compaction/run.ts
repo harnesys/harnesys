@@ -367,6 +367,7 @@ async function* writeCompactionMessage(
     content: text,
     coveredFrom: args.plan.coveredFrom,
     coveredUntil: args.plan.coveredUntil,
+    messageCount: messages.length,
     reason: args.reason,
     stats: {
       tokensBefore: args.before.total,

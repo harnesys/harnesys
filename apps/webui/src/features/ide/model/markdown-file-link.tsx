@@ -12,25 +12,6 @@ export function useFileLinkComponents(): Components {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const projects = useProjects().data ?? [];
-  const components: Components = {
-    a: ({ node, children, href, ...rest }) => (
-      <a
-        {...rest}
-        href={href}
-        onClick={(event) => {
-          if (!intercepts(href)) {
-            return;
-          }
-          event.preventDefault();
-          void openHostFile(href ?? '');
-        }}
-      >
-        {children}
-      </a>
-    ),
-  };
-  return components;
-
   function intercepts(href: string | undefined): boolean {
     return href !== undefined && hostPathOf(href) !== null;
   }
@@ -80,6 +61,25 @@ export function useFileLinkComponents(): Components {
     const relPath = abs.slice(best.root.length).replace(/^\//, '');
     return { projectId: best.projectId, relPath };
   }
+
+  const components: Components = {
+    a: ({ node, children, href, ...rest }) => (
+      <a
+        {...rest}
+        href={href}
+        onClick={(event) => {
+          if (!intercepts(href)) {
+            return;
+          }
+          event.preventDefault();
+          void openHostFile(href ?? '');
+        }}
+      >
+        {children}
+      </a>
+    ),
+  };
+  return components;
 }
 
 function hostPathOf(href: string): string | null {

@@ -95,6 +95,8 @@ export interface CompactionMessage {
   content: string;
   coveredFrom: number;
   coveredUntil: number;
+  /** Message list length before the anchor was pushed; guards cursor resolution. */
+  messageCount?: number;
   reason: 'threshold' | 'manual' | 'overflow';
   stats: {
     tokensBefore: number;

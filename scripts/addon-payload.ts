@@ -1,7 +1,7 @@
-import { cpSync, existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { stagePackage } from './addon-payload-stage.ts';
 
-const PAYLOAD_DIRS = ['dist', 'migrations', 'l10n', 'content', 'assets'] as const;
 const repoRoot = join(import.meta.dir, '..');
 const addonsRoot = join(repoRoot, 'add-ons');
 const args = process.argv.slice(2);
@@ -25,16 +25,7 @@ const missingBundle: string[] = [];
 for (const name of names) {
   const src = join(addonsRoot, name);
   const out = join(target, name);
-  mkdirSync(out, { recursive: true });
-  cpSync(join(src, 'addon.json'), join(out, 'addon.json'));
-  for (const dir of PAYLOAD_DIRS) {
-    if (existsSync(join(src, dir))) {
-      cpSync(join(src, dir), join(out, dir), { recursive: true });
-    }
-  }
-  if (existsSync(join(src, 'notes.md'))) {
-    cpSync(join(src, 'notes.md'), join(out, 'notes.md'));
-  }
+  stagePackage(src, out);
   if (!existsSync(join(out, 'dist', 'index.js'))) {
     missingBundle.push(name);
   }

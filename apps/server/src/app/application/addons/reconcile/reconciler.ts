@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@harnesys/brix';
 import { AddonPackageCatalogPort } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
+import { ContributionRegistryPort } from '../../../domain/addons/ports/contribution-registry.port.ts';
 import { InstanceSupervisorPort } from '../../../domain/addons/ports/instance-supervisor.port.ts';
 import type { OrgAddonRow } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
@@ -21,6 +22,7 @@ export class AddonReconciler {
   constructor(
     private readonly orgAddons: OrgAddonRepositoryPort,
     private readonly catalog: AddonPackageCatalogPort,
+    private readonly registry: ContributionRegistryPort,
     private readonly supervisor: InstanceSupervisorPort,
     private readonly triggers: TriggerInstanceRepositoryPort,
     private readonly clock: ClockPort,
@@ -57,6 +59,7 @@ export class AddonReconciler {
 
   private async reconcileRow(row: OrgAddonRow): Promise<void> {
     this.publishUpdateAvailable(row);
+    this.reactivateMissingContributions(row);
     const snapshot = this.supervisor.snapshot(row.orgId, row.addonId);
     if (!row.enabled) {
       if (snapshot && (snapshot.state === 'running' || snapshot.state === 'starting')) {
@@ -81,6 +84,46 @@ export class AddonReconciler {
 
   private needsProcess(row: { orgId: string; addonId: string }): boolean {
     return this.reasons.hasReason(row.orgId, row.addonId);
+  }
+
+  /**
+   * §8.2 boot walk rerun on the tick: an enabled row whose contributions are
+   * not registered (crash between the row upsert and registry.activate, or a
+   * failed boot activation) must not silently serve zero tools until the next
+   * restart. The pinned package is required; on registration failure the row
+   * keeps its health marker so the card surfaces the error.
+   */
+  private reactivateMissingContributions(row: OrgAddonRow): void {
+    if (!row.enabled || this.registry.isActive(row)) {
+      return;
+    }
+    const pkg = this.catalog.find(row.addonId, row.version);
+    if (!pkg) {
+      this.logger.warn(
+        { orgId: row.orgId, addonId: row.addonId, version: row.version },
+        'contribution registration skipped: pinned package is not installed',
+      );
+      return;
+    }
+    try {
+      this.registry.activate(row, pkg.manifest);
+      this.logger.info(
+        { orgId: row.orgId, addonId: row.addonId, version: row.version },
+        'contributions re-registered after drift',
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.orgAddons.updateHealth(
+        row.orgId,
+        row.addonId,
+        row.health,
+        `contribution registration failed: ${message}`,
+      );
+      this.logger.warn(
+        { orgId: row.orgId, addonId: row.addonId, version: row.version, error: message },
+        'contribution re-registration failed',
+      );
+    }
   }
 
   private publishUpdateAvailable(row: OrgAddonRow): void {

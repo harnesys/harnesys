@@ -129,6 +129,7 @@ export function rebuildThreadMessages(
       }
     }
   };
+  const anchorPass: AnchorPass = { out, sources, boundaries, events, activeRunId };
   for (eventIndex = 0; eventIndex < events.length; eventIndex += 1) {
     const event = events[eventIndex];
     if (!event) {
@@ -145,7 +146,7 @@ export function rebuildThreadMessages(
       if (!event.summary) {
         continue;
       }
-      const dropped = applyCompactionAnchor(out, sources, event, boundaries);
+      const dropped = applyCompactionAnchor(event, anchorPass);
       buffers.clear();
       emit(toAnchorMessage(event, dropped));
       continue;
@@ -286,12 +287,25 @@ function toAssistantMessage(
   };
 }
 
+interface AnchorPass {
+  out: unknown[];
+  sources: number[];
+  boundaries: Map<string, number>;
+  events: SessionEvent[];
+  activeRunId: string | null;
+}
+
 function applyCompactionAnchor(
-  out: unknown[],
-  sources: number[],
   event: Extract<SessionEvent, { type: 'compaction' }>,
-  boundaries: Map<string, number>,
+  pass: AnchorPass,
 ): number {
+  const { out, sources, boundaries } = pass;
+  if (typeof event.coveredUntilThreadSeq === 'number') {
+    return dropCoveredByCursor(event.coveredUntilThreadSeq, pass);
+  }
+  if (event.coveredUntilThreadSeq === null) {
+    return 0;
+  }
   const key =
     typeof event.coveredUntilRunId === 'string' && typeof event.coveredUntilSeq === 'number'
       ? `${event.coveredUntilRunId}:${event.coveredUntilSeq}`
@@ -315,6 +329,36 @@ function applyCompactionAnchor(
   out.length = write;
   sources.length = write;
   return out.length - write;
+}
+
+/**
+ * Cursor semantics: the summary replaces every message whose source event sits
+ * at or before the covered-until thread cursor. Messages of the active run are
+ * exempt (they are the working set the slice already forced through).
+ */
+function dropCoveredByCursor(cursor: number, pass: AnchorPass): number {
+  const { out, sources, events, activeRunId } = pass;
+  let write = 0;
+  let dropped = 0;
+  for (let index = 0; index < out.length; index++) {
+    const source = sources[index] ?? -1;
+    const src = source >= 0 && source < events.length ? events[source] : undefined;
+    const covered =
+      src !== undefined &&
+      src.runId !== activeRunId &&
+      typeof src.threadSeq === 'number' &&
+      src.threadSeq <= cursor;
+    if (covered) {
+      dropped += 1;
+      continue;
+    }
+    out[write] = out[index];
+    sources[write] = source;
+    write += 1;
+  }
+  out.length = write;
+  sources.length = write;
+  return dropped;
 }
 
 function toAnchorMessage(

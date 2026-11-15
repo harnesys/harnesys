@@ -36,6 +36,30 @@
 
 Notes: `ctx.db` is a per-org SQLite file (`orgDataDir/<org>/addons/<addonId>/data.db`) with prepared statements only, SQL guard (`ATTACH`, `load_extension`, write pragmas blocked), operator ≤5s, result ≤8 MiB, `batch` ≤100. `ctx.secrets` cannot see other add-ons' secrets. `ctx.http.fetch` supports `auth` injection (`scheme: bearer | basic | header | path`) so the token never enters your process; only `https`, private addresses blocked. Full semantics: `docs/add-ons/context.md`.
 
+Two ways to authenticate `ctx.http.fetch`:
+
+```ts
+// a) connection-bound account (OAuth provider / GitHub App): the host injects
+//    the credential; it never enters the add-on process.
+await ctx.http.fetch({
+  url: 'https://api.github.com/user',
+  auth: { connection: 'gh', scheme: 'bearer' },
+});
+
+// b) static token without a provider connection (third-party API with no
+//    accountKind): a config field with secret: true, read per call and passed
+//    as a header — the token does enter the process on this path.
+const token = await ctx.secrets.get('api_token');
+if (token !== null) {
+  await ctx.http.fetch({
+    url: 'https://api.example.com/v1/items',
+    headers: { authorization: `Bearer ${token}` },
+  });
+}
+```
+
+Path (b) is the fallback when no provider `accountKind` exists (see `manifest.md`); in the fake host, register a handler for the URL to test it (`FakeHttpHandler` in `createFakeHost`).
+
 ## Permission catalog
 
 Baseline (always granted, never declared, never shown in consent): `config.read`, `log`, `db`, `secrets.own`, `events.emit.own`, `org.read`.

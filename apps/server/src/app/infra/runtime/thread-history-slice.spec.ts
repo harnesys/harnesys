@@ -41,6 +41,10 @@ function spawned(spawnId: string): SessionEvent {
   return { type: 'agent.spawned', agentId: 'parent', spawnId };
 }
 
+function withThreadSeq(events: SessionEvent[]): SessionEvent[] {
+  return events.map((event, index) => ({ ...event, threadSeq: index + 1 }) as SessionEvent);
+}
+
 function threadRecord(policy: ThreadPolicy, kind: ThreadKind): ThreadRecord {
   const now = new Date().toISOString();
   return {
@@ -183,6 +187,29 @@ describe('thread-history-slice', () => {
     ];
     const sliced = sliceThreadHistory(events, { mode: 'full' });
     expect(sliced).toEqual([pick(events, 3), pick(events, 4), pick(events, 5)]);
+  });
+
+  test('a cursor anchor keeps covered-until-relative events that sit before it in the stream', () => {
+    const anchor = { ...compaction('c1', 'fold', 'run-3'), coveredUntilThreadSeq: 1 };
+    const events = withThreadSeq([
+      ...runEvents('run-1', [user('one')]),
+      ...runEvents('run-2', [user('two')]),
+      anchor,
+      ...runEvents('run-3', [user('three')]),
+    ]);
+    const sliced = sliceThreadHistory(events, { mode: 'full' });
+    expect(texts(sliced)).toEqual(['two', 'fold', 'three']);
+  });
+
+  test('an unresolved cursor keeps the window whole instead of cutting at the anchor', () => {
+    const anchor = { ...compaction('c1', 'fold', 'run-2'), coveredUntilThreadSeq: null };
+    const events = withThreadSeq([
+      ...runEvents('run-1', [user('one')]),
+      anchor,
+      ...runEvents('run-2', [user('two')]),
+    ]);
+    const sliced = sliceThreadHistory(events, { mode: 'full' });
+    expect(texts(sliced)).toEqual(['one', 'fold', 'two']);
   });
 
   test('the active run is exempt from the anchor cut', () => {
