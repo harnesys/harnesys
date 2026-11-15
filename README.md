@@ -8,7 +8,7 @@
   <a href="https://github.com/harnesys/harnesys/actions/workflows/ci.yml"><img src="https://github.com/harnesys/harnesys/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/harnesys/harnesys/releases"><img src="https://img.shields.io/badge/release-v0.7.0-2f7f6f" alt="Release"></a>
   <img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey" alt="Platforms">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-PolyForm%20Internal%20Use%201.0.0-blue" alt="License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-FSL--1.1--ALv2-blue" alt="License"></a>
 </p>
 
 <p align="center">
@@ -150,6 +150,12 @@ Architecture: clean architecture in a Nest-style layout — controllers are thin
 
 ## License
 
-[PolyForm Internal Use 1.0.0](LICENSE) — use and modify freely inside your organization, including for commercial purposes. Redistribution of the software or derivative works is not permitted.
+[Functional Source License 1.1, ALv2 Future License](LICENSE) (`FSL-1.1-ALv2`) — source available.
 
-Issues are welcome. Pull requests are not accepted and will be closed.
+- Use, read, modify, and redistribute Harnesys for any purpose **except competing use**. A competing use is offering Harnesys, or a product or service with substantially similar functionality, to others as a commercial product or service.
+- Each version of the software converts to the **Apache License 2.0** on its second anniversary.
+- Internal use, non-commercial education and research, and professional services around the software are all permitted purposes.
+- Commercial use that would otherwise be a competing use is available under a separate commercial license — contact [mikestotik@gmail.com](mailto:mikestotik@gmail.com).
+- **Harnesys** is a trademark. The license grants no right to use the name or logo, and rebranded forks are not permitted.
+
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first; by opening a pull request you agree to the [CLA](CLA.md).

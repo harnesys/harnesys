@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
 export const EULA_CURRENT_AGREEMENT = {
-  id: 'harnesys-eula-1.0.0',
-  version: '1.0.0',
-  publishedAt: '2026-11-01',
+  id: 'harnesys-eula-1.0.1',
+  version: '1.0.1',
+  publishedAt: '2026-11-15',
 } as const;
 
 export const EulaAgreementSchema = z.object({
