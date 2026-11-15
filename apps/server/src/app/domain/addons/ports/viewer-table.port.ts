@@ -10,6 +10,9 @@ export interface AddonViewerEntryView {
   route: string;
   mode: AddonViewerMode;
   create: boolean;
+  createLabel?: L10n;
+  /** Descriptor icon resolved for display: lucide name or inline SVG data URI. */
+  icon?: string;
 }
 
 export abstract class AddonViewerTablePort {

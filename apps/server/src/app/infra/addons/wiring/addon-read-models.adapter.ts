@@ -1,5 +1,6 @@
 import { Injectable } from '@harnesys/brix';
 import type { PermissionDefinition } from '../../../domain/addons/permissions.ts';
+import { AddonPackageCatalogPort } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
 import type { AddonLogLineView } from '../../../domain/addons/ports/addon-read-models.port.ts';
 import {
   AddonConfigReadPort,
@@ -14,6 +15,8 @@ import type {
 import { AddonRouteTablePort } from '../../../domain/addons/ports/route-table.port.ts';
 import type { AddonViewerEntryView } from '../../../domain/addons/ports/viewer-table.port.ts';
 import { AddonViewerTablePort } from '../../../domain/addons/ports/viewer-table.port.ts';
+import type { AddonViewerEntry } from '../families/viewer/viewer.family.ts';
+import { resolveAddonIconRef } from '../catalog/addon-icon.ts';
 import { PermissionDefinitionRegistry } from '../dispatcher/permission-definitions.ts';
 import { AddonConfigReadModel } from '../families/config/config.family.ts';
 import { AddonRouteTable } from '../families/route/route.family.ts';
@@ -50,20 +53,39 @@ export class RouteTablePortAdapter extends AddonRouteTablePort {
 
 @Injectable()
 export class ViewerTablePortAdapter extends AddonViewerTablePort {
-  constructor(private readonly table: AddonViewerTable) {
+  constructor(
+    private readonly table: AddonViewerTable,
+    private readonly catalog: AddonPackageCatalogPort,
+  ) {
     super();
   }
 
   override list(orgId: string): AddonViewerEntryView[] {
-    return this.table.list(orgId).map((entry) => ({
-      addonId: entry.owner.addonId,
-      viewerId: entry.viewerId,
-      title: entry.title,
-      extensions: [...entry.extensions],
-      route: entry.route,
-      mode: entry.mode,
-      create: entry.create,
-    }));
+    return this.table.list(orgId).map((entry) => {
+      const icon = this.resolveIcon(entry);
+      return {
+        addonId: entry.owner.addonId,
+        viewerId: entry.viewerId,
+        title: entry.title,
+        extensions: [...entry.extensions],
+        route: entry.route,
+        mode: entry.mode,
+        create: entry.create,
+        ...(entry.createLabel === undefined ? {} : { createLabel: entry.createLabel }),
+        ...(icon === undefined ? {} : { icon }),
+      };
+    });
+  }
+
+  private resolveIcon(entry: AddonViewerEntry): string | undefined {
+    if (entry.icon === undefined) {
+      return undefined;
+    }
+    const pkg = this.catalog.find(entry.owner.addonId);
+    if (!pkg) {
+      return undefined;
+    }
+    return resolveAddonIconRef(pkg.root, entry.icon);
   }
 }
 

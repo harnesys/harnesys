@@ -33,6 +33,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
+import { IconRef } from '@/shared/ui/icon';
 import { Input } from '@/shared/ui/input';
 import { toast } from '@/shared/ui/toast';
 import { useExplorerDraftStore } from '../model/explorer-draft.store';
@@ -146,8 +147,12 @@ export function ProjectRootMenu({
                 key={template.viewerId}
                 onClick={() => start('file', dirPath, projectId, template)}
               >
-                <FileIcon className="size-3.5" />
-                {`New ${template.title} (${template.extension})`}
+                {template.icon === undefined ? (
+                  <FileIcon className="size-3.5" />
+                ) : (
+                  <IconRef icon={template.icon} className="size-3.5" />
+                )}
+                {template.label}
               </DropdownMenuItem>
             ))}
             <DropdownMenuItem onClick={() => start('dir', dirPath, projectId)}>

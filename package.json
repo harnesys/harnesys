@@ -33,6 +33,9 @@
     "typecheck": "bun run --cwd packages/brix typecheck && bun run --cwd packages/contracts typecheck && bun run --cwd packages/sdk typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/webui typecheck && bun run --cwd apps/cli typecheck",
     "check": "bun run typecheck && bun run lint:fix && bun run test"
   },
+  "overrides": {
+    "zod": "4.6.7"
+  },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
     "@types/bun": "^1.4.2"

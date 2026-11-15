@@ -6,8 +6,10 @@ import { getGitFileStatus } from '@/shared/api/git';
 import { gitStatusColorClass, useGitStatusColors } from '@/shared/lib/git-status-colors';
 import { cn } from '@/shared/lib/utils';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/shared/ui/context-menu';
+import { IconRef } from '@/shared/ui/icon';
 import { FileTypeIcon, FolderTypeIcon } from '@/shared/ui/icons';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
+import { useAddonFileIcon } from '../model/addon-file-icon';
 import { useEntryActions } from '../model/use-entry-actions';
 import type { FileRowMenuProps } from './file-row-actions';
 import { FileRowMenuItems } from './file-row-actions';
@@ -15,12 +17,33 @@ import { getDirAggregatedStatus } from './git-file-decorations';
 import { InlineCreateInput } from './inline-create-input';
 import { useFileRowDrag } from './use-file-row-drag';
 
+function EntryTypeIcon({
+  isDir,
+  isExpanded,
+  name,
+  addonIcon,
+}: {
+  isDir: boolean;
+  isExpanded: boolean;
+  name: string;
+  addonIcon?: string;
+}) {
+  if (isDir) {
+    return <FolderTypeIcon open={isExpanded} size="sm" />;
+  }
+  if (addonIcon !== undefined) {
+    return <IconRef icon={addonIcon} className="size-4" />;
+  }
+  return <FileTypeIcon name={name} size="sm" />;
+}
+
 function FileRowLabel({
   entry,
   isDir,
   isExpanded,
   selected,
   git,
+  addonIcon,
 }: {
   entry: ProjectFileEntry;
   isDir: boolean;
@@ -31,6 +54,7 @@ function FileRowLabel({
     color: string | undefined;
     decorationClass: string | undefined;
   };
+  addonIcon?: string;
 }) {
   return (
     <span data-drag-label className="-ml-2 flex min-w-0 items-center gap-0.75">
@@ -50,11 +74,12 @@ function FileRowLabel({
         <span className="flex size-4 shrink-0 items-center justify-center" />
       )}
       <span className="flex size-[18px] shrink-0 items-center justify-center">
-        {isDir ? (
-          <FolderTypeIcon open={isExpanded} size="sm" />
-        ) : (
-          <FileTypeIcon name={entry.name} size="sm" />
-        )}
+        <EntryTypeIcon
+          isDir={isDir}
+          isExpanded={isExpanded}
+          name={entry.name}
+          {...(addonIcon === undefined ? {} : { addonIcon })}
+        />
       </span>
       <span
         className={cn(
@@ -196,6 +221,8 @@ export function FileRow({
   });
   const openNewTerminal = useOpenNewTerminal();
   const entryActions = useEntryActions(projectId, worktreeId);
+  const addonIconFor = useAddonFileIcon();
+  const addonIcon = isDir ? undefined : addonIconFor(entry.name);
   const { dropState, dragProps } = useFileRowDrag({
     projectId,
     worktreeId,
@@ -300,6 +327,7 @@ export function FileRow({
                 isExpanded={isExpanded}
                 selected={selected}
                 git={git}
+                {...(addonIcon === undefined ? {} : { addonIcon })}
               />
             </TooltipTrigger>
             <TooltipContent side="right" hidden={!iconMode}>

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AddonIconRefSchema } from '../manifest/branding.ts';
 import type { L10n } from '../manifest/l10n.ts';
 import { L10nSchema } from '../manifest/l10n.ts';
 
@@ -12,8 +13,18 @@ export interface ViewerDescriptor {
   /** Add-on route (GET) that serves the editor/preview HTML document. */
   route: string;
   mode: 'view' | 'edit';
-  /** Host offers "New <title> file" in the sources tree when true. */
+  /** Host offers a "create file" entry in the sources tree when true. */
   create?: boolean;
+  /**
+   * Full label of that entry, e.g. `{'en': 'New Draw.io'}`. The host renders it
+   * verbatim; without it the entry falls back to `New <title>`.
+   */
+  createLabel?: L10n;
+  /**
+   * Icon shown for the extensions above in the sources tree and its menus:
+   * a lucide icon name or an SVG shipped with the package (`assets/*.svg`).
+   */
+  icon?: string;
 }
 
 export const ViewerExtensionSchema = z
@@ -29,6 +40,8 @@ export const ViewerDescriptorSchema = z.object({
     .regex(/^\/[A-Za-z0-9/_:.-]*$/, 'route must start with / and use :param segments'),
   mode: z.enum(['view', 'edit']),
   create: z.boolean().optional(),
+  createLabel: L10nSchema.optional(),
+  icon: AddonIconRefSchema.optional(),
 });
 
 export const viewerFamily = {

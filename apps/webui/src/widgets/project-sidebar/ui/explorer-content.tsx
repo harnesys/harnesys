@@ -174,9 +174,13 @@ export function ExplorerContent({
       cancelCreate();
       return;
     }
-    const relPath = createDraft.parentPath
-      ? `${createDraft.parentPath}/${name.trim()}`
-      : name.trim();
+    const typedName = name.trim();
+    const extension = createDraft.template?.extension ?? '';
+    const entryName =
+      extension !== '' && !typedName.toLowerCase().endsWith(extension.toLowerCase())
+        ? `${typedName}${extension}`
+        : typedName;
+    const relPath = createDraft.parentPath ? `${createDraft.parentPath}/${entryName}` : entryName;
     if (createDraft.kind === 'file' && createDraft.template) {
       // Template content must land before the viewer opens the file.
       void createMutation

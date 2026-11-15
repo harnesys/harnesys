@@ -13,7 +13,8 @@ export function useViewerCreates(): readonly ViewerCreateTemplate[] {
       addonId: viewer.addonId,
       viewerId: viewer.id,
       extension: viewer.extensions[0] ?? '',
-      title: viewer.title,
+      label: viewer.createLabel ?? `New ${viewer.title}`,
+      ...(viewer.icon === undefined ? {} : { icon: viewer.icon }),
     }));
 }
 

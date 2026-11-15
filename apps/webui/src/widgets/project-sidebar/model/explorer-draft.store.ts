@@ -4,7 +4,10 @@ export interface ViewerCreateTemplate {
   addonId: string;
   viewerId: string;
   extension: string;
-  title: string;
+  /** Full menu label authored by the add-on, e.g. "New Draw.io". */
+  label: string;
+  /** Descriptor icon: lucide name or inline SVG data URI. */
+  icon?: string;
 }
 
 export interface ExplorerCreateDraft {

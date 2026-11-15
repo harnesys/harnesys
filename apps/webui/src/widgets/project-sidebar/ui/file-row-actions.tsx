@@ -16,6 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/shared/ui/dropdown-menu';
+import { IconRef } from '@/shared/ui/icon';
 import { useExplorerDraftStore } from '../model/explorer-draft.store';
 import type { useEntryActions } from '../model/use-entry-actions';
 import { useViewerCreates } from '../model/viewer-creates';
@@ -57,8 +58,12 @@ export function FileRowMenuItems({
       key={template.viewerId}
       onClick={() => start('file', fullPath, projectId, template)}
     >
-      <FileIcon className="size-3.5" />
-      {`New ${template.title} (${template.extension})`}
+      {template.icon === undefined ? (
+        <FileIcon className="size-3.5" />
+      ) : (
+        <IconRef icon={template.icon} className="size-3.5" />
+      )}
+      {template.label}
     </DropdownMenuItem>
   ));
   return (

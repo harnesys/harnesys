@@ -19,6 +19,8 @@ export interface AddonViewerEntry {
   route: string;
   mode: ViewerMode;
   create: boolean;
+  createLabel?: L10n;
+  icon?: string;
 }
 
 @Injectable()
@@ -35,6 +37,8 @@ export class AddonViewerTable {
       route: d.route,
       mode: d.mode,
       create: d.create === true,
+      ...(d.createLabel === undefined ? {} : { createLabel: d.createLabel }),
+      ...(d.icon === undefined ? {} : { icon: d.icon }),
     });
     return {
       dispose: () => {

@@ -4,6 +4,7 @@ import type { CompactionSegmentMeta, CompactionStatus } from '@/entities/session
 import { undoCompact, useCompactingStore } from '@/features/compact-thread';
 import { Markdown } from '@/shared/ui/markdown';
 import { toast } from '@/shared/ui/toast';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
 import { FeedNotice, FeedNoticeMetaSep } from './feed-notice';
 
 const STATUS_LABEL: Record<CompactionStatus, string> = {
@@ -115,29 +116,37 @@ export function formatTokenCount(value: number): string {
 
 function UndoCompactButton({ threadId }: { threadId: string }) {
   const [undoing, setUndoing] = useState(false);
+  const label = undoing ? 'Restoring…' : 'Restore history';
   return (
-    <button
-      type="button"
-      data-testid="compaction-undo"
-      disabled={undoing}
-      onClick={async () => {
-        setUndoing(true);
-        await undoCompact({
-          threadId,
-          onError: (error) => {
-            toast.add({
-              title: 'Could not restore history',
-              description: error instanceof Error ? error.message : 'Undo compaction failed',
-            });
-          },
-        });
-        setUndoing(false);
-      }}
-      className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
-    >
-      <UndoIcon className="size-3" />
-      {undoing ? 'Restoring…' : 'Restore history'}
-    </button>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <button
+            type="button"
+            data-testid="compaction-undo"
+            aria-label={label}
+            disabled={undoing}
+            onClick={async () => {
+              setUndoing(true);
+              await undoCompact({
+                threadId,
+                onError: (error) => {
+                  toast.add({
+                    title: 'Could not restore history',
+                    description: error instanceof Error ? error.message : 'Undo compaction failed',
+                  });
+                },
+              });
+              setUndoing(false);
+            }}
+            className="inline-flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+          />
+        }
+      >
+        <UndoIcon className="size-3" />
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }
 

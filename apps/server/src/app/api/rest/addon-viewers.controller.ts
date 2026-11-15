@@ -11,6 +11,8 @@ export interface AddonViewerView {
   route: string;
   mode: 'view' | 'edit';
   create: boolean;
+  createLabel?: string;
+  icon?: string;
 }
 
 export interface AddonViewerListResponse {
@@ -33,6 +35,10 @@ export class AddonViewersController {
         route: entry.route,
         mode: entry.mode,
         create: entry.create,
+        ...(entry.createLabel === undefined
+          ? {}
+          : { createLabel: resolveL10n(entry.createLabel, { locale: 'en' }) }),
+        ...(entry.icon === undefined ? {} : { icon: entry.icon }),
       })),
     };
   }

@@ -9,6 +9,10 @@ export interface AddonViewerView {
   route: string;
   mode: 'view' | 'edit';
   create: boolean;
+  /** Full label of the "create file" entry, e.g. "New Draw.io". */
+  createLabel?: string;
+  /** Descriptor icon: lucide name or inline SVG data URI. */
+  icon?: string;
 }
 
 export interface AddonViewerListResponse {

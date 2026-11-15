@@ -5,8 +5,11 @@ import type { InstalledAddonPackage } from '../../../domain/addons/ports/addon-p
 const ASSET_ICON_PREFIX = 'assets/';
 const MAX_ICON_SVG_BYTES = 65_536;
 
-function resolveIcon(pkg: InstalledAddonPackage): string | undefined {
-  const icon = pkg.manifest.icon;
+/**
+ * Resolves an icon reference (`'assets/icon.svg'` or a lucide name) to what the
+ * web UI can render: an inline SVG data URI or the name itself.
+ */
+export function resolveAddonIconRef(root: string, icon: string | undefined): string | undefined {
   if (icon === undefined) {
     return undefined;
   }
@@ -14,7 +17,7 @@ function resolveIcon(pkg: InstalledAddonPackage): string | undefined {
     return icon;
   }
   try {
-    const svg = readFileSync(join(pkg.root, icon), 'utf8');
+    const svg = readFileSync(join(root, icon), 'utf8');
     if (Buffer.byteLength(svg) > MAX_ICON_SVG_BYTES) {
       return undefined;
     }
@@ -25,7 +28,7 @@ function resolveIcon(pkg: InstalledAddonPackage): string | undefined {
 }
 
 export function addonBranding(pkg: InstalledAddonPackage): { icon?: string; color?: string } {
-  const icon = resolveIcon(pkg);
+  const icon = resolveAddonIconRef(pkg.root, pkg.manifest.icon);
   const { color } = pkg.manifest;
   return {
     ...(icon === undefined ? {} : { icon }),
