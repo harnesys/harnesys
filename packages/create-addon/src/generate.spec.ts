@@ -16,6 +16,7 @@ const templateDir = join(import.meta.dir, '..', 'template');
 const input: GenerateInput = {
   id: 'acme.demo',
   title: 'Demo',
+  description: 'Demo add-on generated for tests.',
   sdk: '^1.0.0',
   builtin: false,
   dir: '',
@@ -97,7 +98,7 @@ describe('generateAddon', () => {
     }
   });
 
-  test('copies the whole template tree and drops every acme.example placeholder', () => {
+  test('copies the whole template tree and drops every template identity placeholder', () => {
     const dir = tempDir();
     const { files } = generateAddon({ ...input, dir });
     expect(files).toEqual(expectedTemplateFiles());
@@ -105,8 +106,20 @@ describe('generateAddon', () => {
     expect(files).toContain('content/usage/SKILL.md');
     expect(files).toContain('migrations/0001_init.sql');
     for (const file of files) {
-      expect(readFileSync(join(dir, file), 'utf8').includes('acme.example')).toBe(false);
+      const text = readFileSync(join(dir, file), 'utf8');
+      expect(text.includes('acme.example')).toBe(false);
+      expect(text.includes('Example Bookmarks')).toBe(false);
     }
+  });
+
+  test('rewrites the manifest description and keeps explicit placeholders visible', () => {
+    const dir = tempDir();
+    generateAddon({ ...input, dir });
+    const raw: unknown = JSON.parse(readFileSync(join(dir, 'addon.json'), 'utf8'));
+    const manifest = raw as Record<string, unknown>;
+    expect(manifest.description).toBe(input.description);
+    expect(manifest.homepage).toBe('REPLACE_ME');
+    expect(JSON.stringify(manifest).includes('https://example.com')).toBe(false);
   });
 
   test('substitutes the SDK range and the builtin wiring', () => {
@@ -130,5 +143,6 @@ describe('generateAddon', () => {
     const manifest = parseAddonManifest(raw);
     expect(manifest.id).toBe('acme.demo');
     expect(manifest.title).toBe('Demo');
+    expect(manifest.description).toBe('Demo add-on generated for tests.');
   });
 });

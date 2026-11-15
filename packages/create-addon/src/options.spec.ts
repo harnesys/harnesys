@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { syncTemplate } from '../scripts/sync-template.ts';
-import { DEFAULT_SDK, parseArgs, resolvePlan } from './options.ts';
+import { DEFAULT_SDK, defaultDescription, parseArgs, resolvePlan } from './options.ts';
 
 const context = { cwd: '/tmp/work', repoRoot: '/repo' };
 
@@ -25,6 +25,17 @@ describe('resolvePlan', () => {
     expect(plan.id).toBe('acme.my-addon');
     expect(plan.title).toBe('My Add-on');
     expect(plan.dir).toBe(resolve('/tmp/work', 'my-addon'));
+  });
+
+  test('--description overrides the default derived from the title', () => {
+    const plan = resolvePlan(parseArgs(['acme.example']), context);
+    expect(plan.description).toBe(defaultDescription(plan.title));
+
+    const custom = resolvePlan(
+      parseArgs(['acme.example', '--description', 'Save links.']),
+      context,
+    );
+    expect(custom.description).toBe('Save links.');
   });
 
   test('rejects a directory name without a publisher', () => {

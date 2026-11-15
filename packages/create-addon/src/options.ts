@@ -13,6 +13,7 @@ Usage:
 Options:
   --id <publisher.name>   add-on id (overrides the derived one)
   --name "<Title>"        human title (defaults to a title-cased id)
+  --description "<text>"  catalog description (defaults to a phrase built from the title)
   --sdk <range>           @harnesys/sdk version range (default ${DEFAULT_SDK})
   --force                 overwrite a non-empty target directory
   --builtin               internal monorepo mode (add-ons/, file: SDK, extends root tsconfig)
@@ -23,6 +24,7 @@ export interface CliFlags {
   positional: string | undefined;
   id: string | undefined;
   name: string | undefined;
+  description: string | undefined;
   sdk: string | undefined;
   force: boolean;
   builtin: boolean;
@@ -32,6 +34,7 @@ export interface CliFlags {
 export interface AddonPlan {
   id: string;
   title: string;
+  description: string;
   sdk: string;
   builtin: boolean;
   dir: string;
@@ -47,6 +50,7 @@ export function parseArgs(argv: string[]): CliFlags {
     positional: undefined,
     id: undefined,
     name: undefined,
+    description: undefined,
     sdk: undefined,
     force: false,
     builtin: false,
@@ -56,7 +60,7 @@ export function parseArgs(argv: string[]): CliFlags {
   let index = 0;
   while (index < argv.length) {
     const arg = argv[index] ?? '';
-    if (arg === '--id' || arg === '--name' || arg === '--sdk') {
+    if (arg === '--id' || arg === '--name' || arg === '--description' || arg === '--sdk') {
       const value = argv[index + 1];
       if (value === undefined || value.startsWith('--')) {
         throw new CliError(`missing value for ${arg}`);
@@ -82,6 +86,10 @@ function assignValue(flags: CliFlags, flag: string, value: string): void {
   }
   if (flag === '--name') {
     flags.name = value;
+    return;
+  }
+  if (flag === '--description') {
+    flags.description = value;
     return;
   }
   flags.sdk = value;
@@ -117,6 +125,10 @@ function deriveId(builtin: boolean, positional: string): string {
   return basename(positional);
 }
 
+export function defaultDescription(title: string): string {
+  return `${title} add-on: agent tools, an HTTP route, a settings form and a skill over a per-organization SQLite table.`;
+}
+
 export function resolvePlan(flags: CliFlags, context: PlanContext): AddonPlan {
   const positional = flags.positional;
   if (positional === undefined || positional.length === 0) {
@@ -138,6 +150,7 @@ export function resolvePlan(flags: CliFlags, context: PlanContext): AddonPlan {
     ? join(context.repoRoot, 'add-ons', id)
     : resolve(context.cwd, positional);
   const title = flags.name ?? titleFromName(nameFromId(id));
+  const description = flags.description ?? defaultDescription(title);
 
-  return { id, title, sdk: flags.sdk ?? DEFAULT_SDK, builtin: flags.builtin, dir };
+  return { id, title, description, sdk: flags.sdk ?? DEFAULT_SDK, builtin: flags.builtin, dir };
 }

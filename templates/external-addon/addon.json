@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "platform": 1,
   "title": "Example Bookmarks",
-  "description": "A minimal but complete external add-on: two agent tools over a per-organization SQLite table, a read-only HTTP route, a settings form with a secret field and a skill.",
+  "description": "Two agent tools over a per-organization SQLite table, a read-only HTTP route, a settings form with a secret field and a skill.",
   "icon": "bookmark",
   "color": "#4f46e5",
-  "homepage": "https://example.com",
+  "homepage": "REPLACE_ME",
   "license": "MIT",
   "runtime": {
     "entry": "dist/index.js",

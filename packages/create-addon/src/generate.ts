@@ -17,6 +17,7 @@ import { CliError } from './errors.ts';
 export interface GenerateInput {
   id: string;
   title: string;
+  description: string;
   sdk: string;
   builtin: boolean;
   dir: string;
@@ -122,6 +123,7 @@ function rewriteAddonJson(file: string, input: GenerateInput): void {
   const manifest = readJson(file);
   manifest.id = input.id;
   manifest.title = input.title;
+  manifest.description = input.description;
   writeJson(file, manifest);
 }
 

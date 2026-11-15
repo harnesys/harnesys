@@ -2,8 +2,8 @@ import { defineAddon, startAddonProcess } from '@harnesys/sdk';
 import { items } from './routes.ts';
 import { bookmarks } from './tools.ts';
 
-const ADDON_ID = 'acme.example';
-const ADDON_VERSION = '1.0.0';
+export const ADDON_ID = 'acme.example';
+export const ADDON_VERSION = '1.0.0';
 
 export const addon = defineAddon({
   tools: bookmarks,

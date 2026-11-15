@@ -9,7 +9,7 @@ bun install
 ```
 
 The generator copies the `acme.example` template shipped with this package, rewrites the
-add-on id, title, package name and SDK pin, then prints the next steps. It never touches
+add-on id, title, description, package name and SDK pin, then prints the next steps. It never touches
 the network and never installs dependencies.
 
 ## Usage
@@ -21,6 +21,7 @@ create-addon --builtin <name>       monorepo add-on: creates add-ons/harnesys.<n
 Options:
   --id <publisher.name>   add-on id (overrides the derived one)
   --name "<Title>"        human title (defaults to a title-cased id)
+  --description "<text>"  catalog description (defaults to a phrase built from the title)
   --sdk <range>           @harnesys/sdk version range (default ^1.0.0)
   --force                 overwrite a non-empty target directory
   --builtin               internal monorepo mode (add-ons/, file: SDK, extends root tsconfig)

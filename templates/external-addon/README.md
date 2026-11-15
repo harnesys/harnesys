@@ -33,9 +33,10 @@ Harnesys repository (or the documentation shipped next to this template).
 
 ## Make it yours
 
-- Rename the add-on: set `id`, `title`, `version` in `addon.json`, the `name` in
-  `package.json`, and `ADDON_ID` / `ADDON_VERSION` in `src/index.ts`. The package
-  directory name must equal the manifest `id`.
+- Rename the add-on: set `id`, `title`, `description`, `version` in `addon.json` (and the
+  `homepage` `REPLACE_ME` placeholder; adjust `icon` when you replace the demo domain),
+  the `name` in `package.json`, and `ADDON_ID` / `ADDON_VERSION` in `src/index.ts`. The
+  package directory name must equal the manifest `id`.
 - Add a contribution: add its descriptor to `addon.json` and its handler under the
   matching `defineAddon` key. Every contribution needs a handler and every handler needs
   a contribution, or the instance fails the handshake with `incompatible_handlers`.
