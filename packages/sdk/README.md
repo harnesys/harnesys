@@ -8,7 +8,7 @@ Leaf package for addon authors. Implements the addon platform spec (`docs/ADDONS
 bun add @harnesys/sdk
 ```
 
-Version `1.0.0` tracks the addon platform contract (`platform: 1`); `1.1.0` adds tool schema validation to the fake host. The SDK ships TypeScript sources for Bun and compiled ESM plus declarations in `dist/`; see [Распространение SDK](../../docs/add-ons/sdk.md#распространение-sdk) for the export modes and the consumer `tsconfig` shape.
+Version `1.0.0` tracks the addon platform contract (`platform: 1`); `1.1.0` adds tool schema validation to the fake host; `1.2.0` adds `createLabel` and `icon` to the viewer descriptor. The SDK ships TypeScript sources for Bun and compiled ESM plus declarations in `dist/`; see [Распространение SDK](../../docs/add-ons/sdk.md#распространение-sdk) for the export modes and the consumer `tsconfig` shape.
 
 ## Layout
 
