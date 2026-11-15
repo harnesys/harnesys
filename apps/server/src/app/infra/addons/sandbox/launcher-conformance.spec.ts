@@ -126,6 +126,7 @@ async function runCanary(
 
 describe('sandbox conformance', () => {
   if (!sandboxAvailable) {
+    process.stdout.write('sandbox conformance skipped: no usable OS sandbox on this host\n');
     return;
   }
   testIf('restricted profile denies socket, outside reads and process spawn', async () => {
