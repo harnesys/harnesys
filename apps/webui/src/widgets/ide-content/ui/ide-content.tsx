@@ -24,7 +24,6 @@ import {
 } from '@/widgets/file-pane';
 import { TerminalView } from '@/widgets/terminal-pane';
 import { ThreadDock } from '@/widgets/thread-dock';
-import { ThreadHeader } from '@/widgets/thread-header';
 import { JournalComposer, ThreadJournal } from '@/widgets/thread-journal';
 import { ThreadFileTabContent } from './thread-file-tab';
 
@@ -110,7 +109,6 @@ function ThreadTabContent({
   if (thread.kind === 'chat' || thread.kind === 'group') {
     return (
       <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-thread">
-        <ThreadHeader thread={thread} agent={agent} />
         <div className="min-h-0 flex-1">
           <ThreadPanel threadId={thread.id} agent={agent} active />
         </div>
@@ -121,7 +119,6 @@ function ThreadTabContent({
   }
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-thread">
-      <ThreadHeader thread={thread} agent={agent} />
       <ThreadJournal threadId={thread.id} agent={agent} kind={thread.kind} />
       <HitlPrompt />
       <JournalComposer thread={thread} agent={agent} />

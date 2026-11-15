@@ -56,6 +56,7 @@ import {
   WorktreeBindingBanner,
 } from './composer-chrome';
 import { ComposerEditor, type ComposerEditorHandle } from './composer-editor';
+import { ComposerThreadMenu } from './composer-thread-menu';
 import { ComposerTrailingControls } from './composer-trailing-controls';
 import { ComposerDropOverlay } from './drop-overlay';
 import { ModeSelect } from './mode-select';
@@ -175,6 +176,7 @@ export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }
           />
           <InputGroupAddon align="block-end" className="justify-between gap-2 px-2 pb-2">
             <div className="flex min-w-0 items-center gap-0.5">
+              <ComposerThreadMenu thread={thread} />
               <AttachMenu allowed={allowed} disabled={disabled} onPick={addFiles} />
               <ModeSelect
                 modes={composerModeItems(agentModes)}

@@ -9,11 +9,14 @@ import { useStudioNavigation } from '@/shared/config/navigation';
 import { Button } from '@/shared/ui/button';
 import { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from '@/shared/ui/field';
 import { Input } from '@/shared/ui/input';
+import { InputGroupButton } from '@/shared/ui/input-group';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Switch } from '@/shared/ui/switch';
 import { toast } from '@/shared/ui/toast';
 import { mutateThread } from '../model/thread-members-mutation';
+import { AddThreadMemberFields } from './add-thread-member-fields';
+import { ThreadMemberList } from './thread-member-list';
 
 const NONE = '__none__';
 const HISTORY_LAST_PLACEHOLDER = 10;
@@ -97,10 +100,9 @@ export function ThreadSettings({ thread, className }: { thread: Thread; classNam
     <Popover>
       <PopoverTrigger
         render={
-          <Button
-            type="button"
+          <InputGroupButton
+            size="icon-xs"
             variant="ghost"
-            size="icon-sm"
             aria-label="Thread settings"
             title="Thread settings"
             className={className}
@@ -109,8 +111,17 @@ export function ThreadSettings({ thread, className }: { thread: Thread; classNam
       >
         <Settings2Icon />
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-72 space-y-4 p-3">
+      <PopoverContent align="start" side="top" className="w-72 space-y-4 p-3">
         <p className="font-medium text-sm">Thread settings</p>
+        {isGroup ? (
+          <section className="space-y-2">
+            <p className="font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
+              Members
+            </p>
+            <ThreadMemberList thread={thread} />
+            <AddThreadMemberFields thread={thread} />
+          </section>
+        ) : null}
         <Field>
           <FieldLabel htmlFor="thread-history-mode">History</FieldLabel>
           <Select

@@ -49,8 +49,6 @@ jobs:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
       - run: bun install
-      - name: Build @harnesys/sdk dist
-        run: bun run --cwd packages/sdk build
       - run: bun run build:client
       - run: (cd apps/webui && zip -qr ../../client-dist.zip dist)
       - uses: actions/upload-artifact@v7
@@ -89,8 +87,6 @@ jobs:
         with:
           workspaces: apps/desktop/src-tauri
       - run: bun install
-      - name: Build @harnesys/sdk dist
-        run: bun run --cwd packages/sdk build
       - name: Build bundles
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
