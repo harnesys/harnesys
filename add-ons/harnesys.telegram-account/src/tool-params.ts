@@ -70,7 +70,12 @@ export function limitOf(
   return value;
 }
 
-export function cappedLimitOf(input: Record<string, unknown>, key: string, fallback: number, cap: number): number {
+export function cappedLimitOf(
+  input: Record<string, unknown>,
+  key: string,
+  fallback: number,
+  cap: number,
+): number {
   const value = optionalPositiveInt(input, key);
   if (value === undefined) {
     return Math.min(fallback, cap);
@@ -81,11 +86,7 @@ export function cappedLimitOf(input: Record<string, unknown>, key: string, fallb
   return value;
 }
 
-export function booleanOf(
-  input: Record<string, unknown>,
-  key: string,
-  fallback: boolean,
-): boolean {
+export function booleanOf(input: Record<string, unknown>, key: string, fallback: boolean): boolean {
   const value = input[key];
   if (value === undefined || value === null) {
     return fallback;
@@ -138,6 +139,14 @@ export function messageIdsOf(input: Record<string, unknown>, key: string, max: n
     });
   }
   return [...new Set(list.map((entry) => messageIdOf(entry, key)))];
+}
+
+export function requiredMessageId(input: Record<string, unknown>): number {
+  const value = optionalPositiveInt(input, 'messageId');
+  if (value === undefined) {
+    throw new AddonError('invalid_params', { detail: 'messageId must be a positive integer' });
+  }
+  return value;
 }
 
 export function requiredMessageIds(

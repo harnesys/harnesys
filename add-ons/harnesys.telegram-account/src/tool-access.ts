@@ -1,7 +1,7 @@
 import { AddonError } from '@harnesys/sdk';
 import { type ChatRef, chatLabelOf, matchesAllowed, resolveArgOf } from './chat-target.ts';
-import type { AccountToolSettings } from './tool-settings.ts';
 import type { FeedClient, ResolvedPeer } from './telegram-types.ts';
+import type { AccountToolSettings } from './tool-settings.ts';
 
 export function requireWritable(settings: AccountToolSettings, tool: string): void {
   if (settings.readOnly) {

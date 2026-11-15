@@ -1,9 +1,9 @@
 {
   "id": "harnesys.telegram-account",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "platform": 1,
   "title": "Telegram account",
-  "description": "Acts as a connected Telegram user account over MTProto. Watches channels and groups, stores new posts, filters them by keywords and fires a telegram.feed trigger; and exposes a tool-pack so an agent can read dialogs and history, send and forward messages and mark chats read as the same account. The session comes from the bound telegram-user account; independent of the bot add-on: an organization can run only the feed, only the tools, or both.",
+  "description": "Acts as a connected Telegram user account over MTProto. Watches channels and groups, stores new posts, filters them by keywords and fires a telegram.feed trigger; and exposes a tool-pack so an agent can read dialogs, history, chats and participants, send text, media and albums, forward and copy messages, edit, delete, pin, react, join and leave chats and download attachments as the same account. The session comes from the bound telegram-user account; independent of the bot add-on: an organization can run only the feed, only the tools, or both.",
   "runtime": {
     "entry": "dist/index.js",
     "profile": "trusted"
@@ -39,6 +39,18 @@
         ]
       },
       "reason": "Read the MTProto session and the linked telegram-app credentials"
+    },
+    {
+      "id": "http.fetch",
+      "reason": "Download media by https url when send_media, send_album or copy_message is given a url source instead of a workspace path; bytes are uploaded to Telegram and never stored by the add-on"
+    },
+    {
+      "id": "files.read",
+      "reason": "Read attachments from the organization workspace to upload them with send_media and send_album"
+    },
+    {
+      "id": "files.write",
+      "reason": "Save attachments downloaded by download_media into the organization workspace"
     }
   ],
   "connections": [
@@ -90,7 +102,7 @@
             "label": "Allowed chats for tools",
             "type": "textarea",
             "required": false,
-            "help": "Chat ids or @usernames the tools may touch, separated by commas or new lines. Empty means every chat the account can reach. A chat is matched by its id or its @username, so listing @name allows the same chat by its numeric id and the other way round. Tool calls to any other chat fail with permission_denied. The feed poller is not affected."
+            "help": "Chat ids or @usernames the tools may touch, separated by commas or new lines. Empty means every chat the account can reach. A chat is matched by its id or its @username, so listing @name allows the same chat by its numeric id and the other way round. Tool calls to any other chat fail with permission_denied. Two exceptions: list_dialogs lists every dialog unfiltered, and join_chat by invite link is not checked (see join_allowed). The global search_messages (no chat) is limited by this list too: hits from chats that are not allowed are dropped and counted in the filteredOut field of the result. The feed poller is not affected."
           },
           {
             "key": "read_only",
@@ -98,7 +110,15 @@
             "type": "boolean",
             "required": false,
             "default": false,
-            "help": "Reject send_message, forward_message and mark_read. get_account, list_dialogs and list_messages keep working, so an agent can watch chats without ever posting from the account. Recommended for monitoring-only setups: a user account that only reads is far less likely to be restricted."
+            "help": "Reject every tool that writes: send_message, send_media, send_album, forward_message, copy_message, edit_message, delete_messages, pin_message, unpin_message, react, mark_read, join_chat, leave_chat, create_topic and download_media. The read tools (get_account, list_dialogs, list_messages, get_message, search_messages, get_chat, list_participants, list_topics) keep working, so an agent can watch chats without touching the account. Recommended for monitoring-only setups: a user account that only reads is far less likely to be restricted."
+          },
+          {
+            "key": "join_allowed",
+            "label": "Allow joining and leaving chats",
+            "type": "boolean",
+            "required": false,
+            "default": true,
+            "help": "When off, join_chat and leave_chat fail with permission_denied. Joining by invite link is not checked against allowed_chats, so an open account can enter any chat its invite points at; turn this off for a locked-down account."
           },
           {
             "key": "min_send_interval_ms",
@@ -122,15 +142,15 @@
             "type": "number",
             "required": false,
             "default": 150,
-            "help": "Account-wide cap over a rolling 24 hours. The main protection against an account ban."
+            "help": "Account-wide cap over a rolling 24 hours. One media upload, album or copy counts as one send, not per item."
           },
           {
             "key": "max_history_limit",
-            "label": "Max messages per list_messages call",
+            "label": "Max messages per history or search call",
             "type": "number",
             "required": false,
             "default": 100,
-            "help": "Upper bound for the limit argument of list_messages; larger values are rejected."
+            "help": "Upper bound for the limit argument of list_messages and search_messages; larger values are rejected."
           },
           {
             "key": "max_dialogs",
@@ -141,12 +161,28 @@
             "help": "Upper bound for the limit argument of list_dialogs; larger values are rejected."
           },
           {
+            "key": "max_upload_mb",
+            "label": "Max outgoing media size, MB",
+            "type": "number",
+            "required": false,
+            "default": 20,
+            "help": "Cap per media item uploaded by send_media, send_album and the caption re-upload of copy_message. Values above 50 fall back to 50. Media fetched by url is additionally capped at 8 MB by the host http.fetch limit."
+          },
+          {
+            "key": "max_download_mb",
+            "label": "Max incoming media size, MB",
+            "type": "number",
+            "required": false,
+            "default": 20,
+            "help": "Cap for download_media and for the copy_message re-upload path. Values above 50 fall back to 50."
+          },
+          {
             "key": "flood_wait_retries",
             "label": "Flood-wait retries inside a tool call",
             "type": "number",
             "required": false,
             "default": 0,
-            "help": "0 fails immediately with rate_limited and retry_after. 1-3 waits out a Telegram FLOOD_WAIT inside the call when the wait is 30 seconds or shorter, then sends once; longer waits still fail immediately."
+            "help": "0 fails immediately with rate_limited and retry_after. 1-3 waits out a Telegram FLOOD_WAIT inside the call when the wait is 30 seconds or shorter, then retries once; longer waits still fail. Applies to text, media, album, copy, edit, delete and join calls alike."
           }
         ]
       }
@@ -157,7 +193,7 @@
       "descriptor": {
         "name": "telegram-account",
         "title": "Telegram account",
-        "description": "Read dialogs and history, send and forward messages and mark chats read as the connected Telegram user account (MTProto, not the bot API)",
+        "description": "Read dialogs, history, chats and participants, send text, media and albums, forward, copy, edit, delete, pin and react, join and leave chats and download attachments as the connected Telegram user account (MTProto, not the bot API)",
         "connection": "telegram-user",
         "tools": [
           {
@@ -172,7 +208,7 @@
           },
           {
             "name": "list_dialogs",
-            "description": "List the account's dialogs (private chats, groups, supergroups, channels) in the order Telegram shows them. Each entry carries kind (user, group, supergroup, channel), peerId, username, title and unread count. limit defaults to 50 and cannot exceed max_dialogs from the add-on config.",
+            "description": "List the account's dialogs (private chats, groups, supergroups, channels) in the order Telegram shows them. Each entry carries kind (user, group, supergroup, channel), peerId, username, title and unread count. limit defaults to 50 and cannot exceed max_dialogs from the add-on config. This tool is not filtered by allowed_chats.",
             "effect": "read",
             "idempotent": true,
             "inputSchema": {
@@ -181,6 +217,7 @@
                 "limit": {
                   "type": "integer",
                   "minimum": 1,
+                  "maximum": 1000,
                   "description": "How many dialogs to return, default 50, capped by max_dialogs (200 by default)"
                 }
               }
@@ -188,7 +225,7 @@
           },
           {
             "name": "list_messages",
-            "description": "Read the recent history of a chat, newest first. chat accepts @username, a t.me/... link or a numeric peer id. limit defaults to 20 and cannot exceed max_history_limit from the add-on config; beforeId returns messages older than that message id. Each message carries its id, ISO date, sender (@username, title or numeric id), text truncated to 2000 characters with truncated: true, and mediaKind when the message has media.",
+            "description": "Read the recent history of a chat, newest first. chat accepts @username, a t.me/... link or a numeric peer id and must pass allowed_chats. limit defaults to 20 and cannot exceed max_history_limit from the add-on config; beforeId returns messages older than that message id. Each message carries its id, ISO date, sender (@username, title or numeric id), text truncated to 2000 characters with truncated: true, and mediaKind when the message has media.",
             "effect": "read",
             "idempotent": true,
             "inputSchema": {
@@ -201,6 +238,7 @@
                 "limit": {
                   "type": "integer",
                   "minimum": 1,
+                  "maximum": 1000,
                   "description": "How many messages to return, default 20, capped by max_history_limit (100 by default)"
                 },
                 "beforeId": {
@@ -213,8 +251,127 @@
             }
           },
           {
+            "name": "get_message",
+            "description": "Read one message by id: ISO date, sender, text truncated to 2000 characters, mediaKind, mediaSize in bytes, replyToMessageId, forwardFrom, views for channel posts and editedAt when it was edited. chat accepts @username, a t.me/... link or a numeric peer id and must pass allowed_chats.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": {
+                  "type": "string",
+                  "description": "@username, t.me/... link or numeric peer id"
+                },
+                "messageId": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Id of the message, from list_messages or search_messages"
+                }
+              },
+              "required": ["chat", "messageId"]
+            }
+          },
+          {
+            "name": "search_messages",
+            "description": "Search message text. With chat set the search runs inside that chat and the chat must pass allowed_chats; without chat it runs globally across every chat the account can see and each result carries peerId so the chat can be resolved, but hits from chats that do not pass allowed_chats are dropped and counted in filteredOut, so a global search never leaks a chat outside the grant. limit defaults to 20 and cannot exceed max_history_limit. Results carry the same fields as list_messages with the addition of mediaSize, replyToMessageId, forwardFrom, views and editedAt.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "description": "Text to search for"
+                },
+                "chat": {
+                  "type": "string",
+                  "description": "Leave out for a global search; @username, t.me/... link or numeric peer id to search one chat"
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 1000,
+                  "description": "How many results to return, default 20, capped by max_history_limit (100 by default)"
+                }
+              },
+              "required": ["query"]
+            }
+          },
+          {
+            "name": "get_chat",
+            "description": "Read one chat: title, kind, @username, about text, participantsCount, isMember, pinnedMessageId and slowmodeSeconds for supergroups. Fields Telegram does not expose for that chat type come back as null. chat accepts @username, a t.me/... link or a numeric peer id and must pass allowed_chats.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": {
+                  "type": "string",
+                  "description": "@username, t.me/... link or numeric peer id"
+                }
+              },
+              "required": ["chat"]
+            }
+          },
+          {
+            "name": "list_participants",
+            "description": "List participants of a group, supergroup or channel: numeric id, @username, display name, isBot and isAdmin. limit defaults to 50 and is capped at 200; search filters by name or username, adminsOnly keeps admins and creators. On basic groups the admin filter is applied locally because Telegram only filters participants server-side for channels. chat must pass allowed_chats.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": {
+                  "type": "string",
+                  "description": "@username, t.me/... link or numeric peer id"
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 200,
+                  "description": "How many participants to return, default 50, capped at 200"
+                },
+                "search": {
+                  "type": "string",
+                  "maxLength": 128,
+                  "description": "Only participants whose name or @username contains this text"
+                },
+                "adminsOnly": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Keep only admins and creators, default false"
+                }
+              },
+              "required": ["chat"]
+            }
+          },
+          {
+            "name": "list_topics",
+            "description": "List forum topics of a supergroup with forums enabled: topic id (equal to its top message id), title, closed, pinned and unread count. limit defaults to 20 and is capped at 100. A chat without forums fails with the Telegram error mapped to invalid_params. chat must pass allowed_chats.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": {
+                  "type": "string",
+                  "description": "Forum supergroup: @username, t.me/... link or numeric peer id"
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100,
+                  "description": "How many topics to return, default 20, capped at 100"
+                }
+              },
+              "required": ["chat"]
+            }
+          },
+          {
             "name": "send_message",
-            "description": "Send a plain-text message as the connected user account. chat accepts @username, a t.me/... link or a numeric peer id. text is required, up to 4096 characters, and is sent verbatim: no markup parsing. Respects allowed_chats, read_only, min_send_interval_ms, max_sends_per_hour, max_sends_per_day and FLOOD_WAIT handling; returns the new messageId. Raising those limits risks a Telegram restriction on the account.",
+            "description": "Send a text message as the connected user account, up to 4096 characters. replyTo replies to a message id in the same chat, parseMode is none (default, text sent verbatim), markdown or html, silent suppresses the notification sound, scheduleAt is an ISO 8601 timestamp in the future and hands the message to Telegram's scheduler instead of sending it now. Respects allowed_chats, read_only, the send-rate limits and FLOOD_WAIT handling; returns the new messageId. Raising those limits risks a Telegram restriction on the account.",
             "effect": "write",
             "inputSchema": {
               "type": "object",
@@ -227,15 +384,146 @@
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 4096,
-                  "description": "Message text, up to 4096 characters, sent as plain text"
+                  "description": "Message text, up to 4096 characters"
+                },
+                "replyTo": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Message id in the same chat to reply to"
+                },
+                "parseMode": {
+                  "type": "string",
+                  "enum": ["none", "markdown", "html"],
+                  "default": "none",
+                  "description": "How Telegram parses the text, default none"
+                },
+                "silent": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Send without a notification sound, default false"
+                },
+                "scheduleAt": {
+                  "type": "string",
+                  "description": "ISO 8601 time in the future; Telegram sends the message then instead of now"
                 }
               },
               "required": ["chat", "text"]
             }
           },
           {
+            "name": "send_media",
+            "description": "Send one photo, video, document, audio track, voice note or gif with an optional caption of up to 1024 characters. source is either an https url (downloaded by the add-on) or a path inside the organization workspace; file://, http://, absolute paths and .. escapes are rejected. kind defaults to auto, which picks the kind from the file extension and mime type, and can be forced to photo, video, document, audio, voice or gif. The size is checked against max_upload_mb (20 MB by default) before upload; media taken from a url is additionally limited to 8 MB by the host. forceDocument hides the media preview, replyTo, silent and parseMode behave as in send_message. One call counts as one send towards the rate limits.",
+            "effect": "write",
+            "timeoutSec": 180,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": {
+                  "type": "string",
+                  "description": "@username, t.me/... link or numeric peer id"
+                },
+                "source": {
+                  "type": "string",
+                  "description": "https url or workspace-relative file path"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": ["auto", "photo", "video", "document", "audio", "voice", "gif"],
+                  "default": "auto",
+                  "description": "Media kind, default auto from the extension and mime type"
+                },
+                "caption": {
+                  "type": "string",
+                  "maxLength": 1024,
+                  "description": "Caption, up to 1024 characters"
+                },
+                "replyTo": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Message id in the same chat to reply to"
+                },
+                "silent": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Send without a notification sound, default false"
+                },
+                "forceDocument": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Send as a document even for photo and video files, default false"
+                },
+                "parseMode": {
+                  "type": "string",
+                  "enum": ["none", "markdown", "html"],
+                  "default": "none",
+                  "description": "How Telegram parses the caption, default none"
+                }
+              },
+              "required": ["chat", "source"]
+            }
+          },
+          {
+            "name": "send_album",
+            "description": "Send 2 to 10 media items as one album in a single Telegram call. Each item carries source (https url or workspace path) and optional kind (auto by default) and caption of up to 1024 characters; the caption of the first item is the album caption. Per-item media attributes are preserved, so a gif stays an animation and a voice note stays a voice message. Every item is size-checked against max_upload_mb, and the whole album counts as one send towards the rate limits. replyTo, silent and parseMode apply to the album as a whole.",
+            "effect": "write",
+            "timeoutSec": 240,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": {
+                  "type": "string",
+                  "description": "@username, t.me/... link or numeric peer id"
+                },
+                "items": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 10,
+                  "description": "2 to 10 media items",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "source": {
+                        "type": "string",
+                        "description": "https url or workspace-relative file path"
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": ["auto", "photo", "video", "document", "audio", "voice", "gif"],
+                        "default": "auto",
+                        "description": "Media kind, default auto"
+                      },
+                      "caption": {
+                        "type": "string",
+                        "maxLength": 1024,
+                        "description": "Item caption, up to 1024 characters"
+                      }
+                    },
+                    "required": ["source"]
+                  }
+                },
+                "replyTo": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Message id in the same chat to reply to"
+                },
+                "silent": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Send without a notification sound, default false"
+                },
+                "parseMode": {
+                  "type": "string",
+                  "enum": ["none", "markdown", "html"],
+                  "default": "none",
+                  "description": "How Telegram parses the captions, default none"
+                }
+              },
+              "required": ["chat", "items"]
+            }
+          },
+          {
             "name": "forward_message",
-            "description": "Forward one message from one chat to another as the connected user account. Both fromChat and toChat accept @username, a t.me/... link or a numeric peer id and both must pass allowed_chats. messageId is the id of an existing message in fromChat. Uses the same read_only guard and send-rate limits as send_message; returns the new messageId in toChat.",
+            "description": "Forward one or more messages from one chat to another as the connected user account. messageIds holds up to 100 ids and messageId is the single-id form kept for compatibility; both chats must pass allowed_chats. dropAuthor removes the link back to the original author, silent suppresses the notification. One call counts as one send towards the rate limits; returns the new message ids in toChat.",
             "effect": "write",
             "inputSchema": {
               "type": "object",
@@ -247,20 +535,300 @@
                 "messageId": {
                   "type": "integer",
                   "minimum": 1,
-                  "description": "Id of the message to forward, from list_messages"
+                  "description": "Single message id to forward, kept for compatibility with earlier callers"
+                },
+                "messageIds": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 100,
+                  "description": "Up to 100 message ids to forward",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
                 },
                 "toChat": {
                   "type": "string",
                   "description": "Destination chat: @username, t.me/... link or numeric peer id"
+                },
+                "dropAuthor": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Forward without the original author, default false"
+                },
+                "silent": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Forward without a notification sound, default false"
                 }
               },
-              "required": ["fromChat", "messageId", "toChat"]
+              "required": ["fromChat", "toChat"]
+            }
+          },
+          {
+            "name": "copy_message",
+            "description": "Copy one message to another chat. Without caption it forwards the message with the author dropped, which is one Telegram call and keeps media, formatting and links intact. With caption the forwarded text cannot be replaced, so the add-on downloads the media of the source message (bounded by the smaller of max_download_mb and max_upload_mb) and uploads it again with the new caption; a text-only message cannot be copied with a new caption and fails with invalid_params, so use send_message for that. Both chats must pass allowed_chats and the call counts as one send.",
+            "effect": "write",
+            "timeoutSec": 240,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "description": "Source chat: @username, t.me/... link or numeric peer id"
+                },
+                "messageId": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Id of the source message"
+                },
+                "to": {
+                  "type": "string",
+                  "description": "Destination chat: @username, t.me/... link or numeric peer id"
+                },
+                "caption": {
+                  "type": "string",
+                  "maxLength": 1024,
+                  "description": "New caption; forces a download and re-upload of the media instead of a forward"
+                },
+                "parseMode": {
+                  "type": "string",
+                  "enum": ["none", "markdown", "html"],
+                  "default": "none",
+                  "description": "How Telegram parses the new caption, default none"
+                },
+                "silent": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Send without a notification sound, default false"
+                }
+              },
+              "required": ["from", "messageId", "to"]
+            }
+          },
+          {
+            "name": "edit_message",
+            "description": "Replace the text of a message the account sent, up to 4096 characters, with parseMode none (default), markdown or html. Telegram only allows editing your own messages and rejects edits that change nothing. Respects allowed_chats, read_only and the send-rate limits; counts as one send.",
+            "effect": "write",
+            "idempotent": false,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": {
+                  "type": "string",
+                  "description": "@username, t.me/... link or numeric peer id"
+                },
+                "messageId": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Id of the message to edit"
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096,
+                  "description": "New text, up to 4096 characters"
+                },
+                "parseMode": {
+                  "type": "string",
+                  "enum": ["none", "markdown", "html"],
+                  "default": "none",
+                  "description": "How Telegram parses the new text, default none"
+                }
+              },
+              "required": ["chat", "messageId", "text"]
+            }
+          },
+          {
+            "name": "delete_messages",
+            "description": "Delete up to 100 messages of a chat by id. revoke defaults to true, which deletes the messages for everyone when the account is allowed to; set it to false to remove them only from this account's side. Telegram silently ignores ids it cannot delete, so the result lists exactly what was asked for. Respects allowed_chats, read_only and the send-rate limits; counts as one send.",
+            "effect": "write",
+            "idempotent": false,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": {
+                  "type": "string",
+                  "description": "@username, t.me/... link or numeric peer id"
+                },
+                "messageIds": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 100,
+                  "description": "Up to 100 message ids to delete",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "revoke": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Delete for everyone, default true; false deletes only on this account's side"
+                }
+              },
+              "required": ["chat", "messageIds"]
+            }
+          },
+          {
+            "name": "pin_message",
+            "description": "Pin one message in a chat. notify defaults to false so the pin does not produce a notification for the members. The account needs pin rights, otherwise Telegram answers with CHAT_ADMIN_REQUIRED, which is reported as permission_denied. Respects allowed_chats and read_only.",
+            "effect": "write",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": {
+                  "type": "string",
+                  "description": "@username, t.me/... link or numeric peer id"
+                },
+                "messageId": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Id of the message to pin"
+                },
+                "notify": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Notify members about the pin, default false"
+                }
+              },
+              "required": ["chat", "messageId"]
+            }
+          },
+          {
+            "name": "unpin_message",
+            "description": "Unpin one message, or every pinned message in the chat when messageId is left out. Respects allowed_chats and read_only.",
+            "effect": "write",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": {
+                  "type": "string",
+                  "description": "@username, t.me/... link or numeric peer id"
+                },
+                "messageId": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Message id to unpin; leave out to unpin everything in the chat"
+                }
+              },
+              "required": ["chat"]
+            }
+          },
+          {
+            "name": "react",
+            "description": "Set a reaction on one message, or clear the reaction when emoji is an empty string. A single message can hold one reaction per account. The emoji is not validated against Telegram's allowed set here: an unsupported emoji comes back as the Telegram error mapped to invalid_params, and a chat that forbids reactions answers with a permission error. Respects allowed_chats and read_only.",
+            "effect": "write",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": {
+                  "type": "string",
+                  "description": "@username, t.me/... link or numeric peer id"
+                },
+                "messageId": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Id of the message to react to"
+                },
+                "emoji": {
+                  "type": "string",
+                  "maxLength": 32,
+                  "description": "One emoji, or an empty string to clear the reaction"
+                }
+              },
+              "required": ["chat", "messageId", "emoji"]
+            }
+          },
+          {
+            "name": "join_chat",
+            "description": "Join a chat with the connected account. link accepts an invite link (t.me/+hash, t.me/joinchat/hash) or an @username / t.me/username of a public channel or supergroup. Invite links are not checked against allowed_chats: joining is allowed whenever read_only is off and join_allowed is on, which is deliberate so an account can be pointed at a fresh private chat, but it does widen what the account can reach. Counts as one send towards the rate limits; returns the chat title when Telegram reveals it.",
+            "effect": "write",
+            "idempotent": false,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "link": {
+                  "type": "string",
+                  "description": "t.me/+hash or t.me/joinchat/hash invite link, or @username of a public chat"
+                }
+              },
+              "required": ["link"]
+            }
+          },
+          {
+            "name": "leave_chat",
+            "description": "Leave a group, supergroup or channel. chat must pass allowed_chats. Basic groups are left with messages.deleteChatUser, channels and supergroups with channels.leaveChannel. Blocked together with join_chat by join_allowed. Respects read_only.",
+            "effect": "write",
+            "idempotent": false,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": {
+                  "type": "string",
+                  "description": "@username, t.me/... link or numeric peer id"
+                }
+              },
+              "required": ["chat"]
+            }
+          },
+          {
+            "name": "create_topic",
+            "description": "Create a forum topic in a supergroup with forums enabled and return its topic id, which doubles as the id of the topic's first message. title is up to 128 characters. The account needs the create-topics right. A chat without forums fails with CHANNEL_FORUM_MISSING mapped to invalid_params. chat must pass allowed_chats; this tool does not consume the send-rate budget.",
+            "effect": "write",
+            "idempotent": false,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": {
+                  "type": "string",
+                  "description": "Forum supergroup: @username, t.me/... link or numeric peer id"
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "description": "Topic title, up to 128 characters"
+                }
+              },
+              "required": ["chat", "title"]
+            }
+          },
+          {
+            "name": "download_media",
+            "description": "Download the media of one message into the organization workspace and return its path, size and mime type. path is relative to the workspace; absolute paths, .. escapes, file:// and windows drive letters are rejected. The size is checked against max_download_mb (20 MB by default) before the bytes are fetched. This is a read of Telegram but it writes a file, so it sits behind read_only and uses files.write; it does not consume the send-rate budget.",
+            "effect": "write",
+            "idempotent": true,
+            "timeoutSec": 240,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "chat": {
+                  "type": "string",
+                  "description": "@username, t.me/... link or numeric peer id"
+                },
+                "messageId": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Id of the message holding the media"
+                },
+                "path": {
+                  "type": "string",
+                  "maxLength": 512,
+                  "description": "Destination path inside the workspace, for example downloads/photo.jpg"
+                }
+              },
+              "required": ["chat", "messageId", "path"]
             }
           },
           {
             "name": "mark_read",
-            "description": "Mark a chat as read for the connected user account, clearing its unread badge. chat accepts @username, a t.me/... link or a numeric peer id. This is a write, so it is blocked when read_only is on and it counts towards nothing else: no message is sent.",
+            "description": "Mark a chat as read for the connected user account, clearing its unread badge. chat must pass allowed_chats. This is a write, so it is blocked when read_only is on, and it counts towards nothing else: no message is sent and the send-rate budget is untouched.",
             "effect": "write",
+            "idempotent": true,
             "inputSchema": {
               "type": "object",
               "properties": {

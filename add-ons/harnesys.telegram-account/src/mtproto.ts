@@ -1,12 +1,15 @@
 import { AddonError } from '@harnesys/sdk';
-import bigInt from 'big-integer';
 import * as telegram from 'teleproto';
 import { StringSession } from 'teleproto/sessions';
 import { numericKeys } from './chat-target.ts';
+import { createJoinMethods } from './mtproto-join.ts';
+import { createMediaMethods } from './mtproto-media.ts';
+import { inputPeerOf } from './mtproto-peer.ts';
+import { createReadMethods } from './mtproto-read.ts';
+import { createSendMethods } from './mtproto-send.ts';
 import { createPeerCache, matchPeerId } from './peer-lookup.ts';
 import {
   field,
-  fieldNumber,
   fieldString,
   toChatEntry,
   toDialog,
@@ -25,22 +28,6 @@ import type {
 } from './telegram-types.ts';
 
 export const DEFAULT_DIALOG_SCAN_LIMIT = 500;
-
-function inputPeerOf(peer: ResolvedPeer): telegram.Api.TypeInputPeer {
-  if (peer.kind === 'user') {
-    return new telegram.Api.InputPeerUser({
-      userId: bigInt(peer.peerId || '0'),
-      accessHash: bigInt(peer.accessHash || '0'),
-    });
-  }
-  if (peer.kind === 'group') {
-    return new telegram.Api.InputPeerChat({ chatId: bigInt(peer.peerId || '0') });
-  }
-  return new telegram.Api.InputPeerChannel({
-    channelId: bigInt(peer.peerId || '0'),
-    accessHash: bigInt(peer.accessHash || '0'),
-  });
-}
 
 function numericPeerIdOf(peer: string): string | null {
   return numericKeys(peer.trim())[0] ?? null;
@@ -145,24 +132,13 @@ export async function openFeedClient(
         .map((message) => toChatEntry(message as object))
         .filter((entry) => entry.id > 0);
     },
-    async sendText(peer: ResolvedPeer, text: string): Promise<number> {
-      const message = await client.sendMessage(inputPeerOf(peer), {
-        message: text,
-        parseMode: false,
-      });
-      return fieldNumber(message as object, 'id');
-    },
-    async forward(from: ResolvedPeer, messageId: number, to: ResolvedPeer): Promise<number> {
-      const sent = await client.forwardMessages(inputPeerOf(to), {
-        messages: messageId,
-        fromPeer: inputPeerOf(from),
-      });
-      const first = sent[0];
-      return first === undefined ? 0 : fieldNumber(first as object, 'id');
-    },
     async markRead(peer: ResolvedPeer): Promise<void> {
       await client.markAsRead(inputPeerOf(peer));
     },
+    ...createSendMethods(client),
+    ...createReadMethods(client),
+    ...createMediaMethods(client),
+    ...createJoinMethods(client),
     async close(): Promise<void> {
       await client.disconnect();
     },

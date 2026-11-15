@@ -47,11 +47,7 @@ function positiveField(
   return Number.isFinite(parsed) ? clampInt(parsed, 1, cap) : fallback;
 }
 
-function booleanField(
-  raw: Record<string, unknown>,
-  key: string,
-  fallback: boolean,
-): boolean {
+function booleanField(raw: Record<string, unknown>, key: string, fallback: boolean): boolean {
   const value = raw[key];
   if (typeof value === 'boolean') {
     return value;

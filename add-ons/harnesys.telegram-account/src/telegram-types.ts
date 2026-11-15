@@ -160,14 +160,23 @@ export interface FeedClient {
   createTopic(peer: ResolvedPeer, title: string): Promise<number>;
   sendText(peer: ResolvedPeer, text: string, options: SendTextOptions): Promise<number>;
   sendMedia(peer: ResolvedPeer, media: MediaFile, options: SendMediaOptions): Promise<number>;
-  sendAlbum(peer: ResolvedPeer, files: readonly MediaFile[], options: AlbumOptions): Promise<number[]>;
+  sendAlbum(
+    peer: ResolvedPeer,
+    files: readonly MediaFile[],
+    options: AlbumOptions,
+  ): Promise<number[]>;
   forward(
     from: ResolvedPeer,
     messageIds: readonly number[],
     to: ResolvedPeer,
     options: ForwardOptions,
   ): Promise<number[]>;
-  editText(peer: ResolvedPeer, messageId: number, text: string, parseMode: ParseMode): Promise<void>;
+  editText(
+    peer: ResolvedPeer,
+    messageId: number,
+    text: string,
+    parseMode: ParseMode,
+  ): Promise<void>;
   deleteMessages(peer: ResolvedPeer, messageIds: readonly number[], revoke: boolean): Promise<void>;
   pinMessage(peer: ResolvedPeer, messageId: number, notify: boolean): Promise<void>;
   unpinMessage(peer: ResolvedPeer, messageId?: number): Promise<void>;

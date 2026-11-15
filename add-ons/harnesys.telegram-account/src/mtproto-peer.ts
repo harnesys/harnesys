@@ -1,7 +1,7 @@
 import { AddonError } from '@harnesys/sdk';
 import bigInt from 'big-integer';
 import * as telegram from 'teleproto';
-import { field } from './telegram-entities.ts';
+import { field, fieldString } from './telegram-entities.ts';
 import type { ResolvedPeer } from './telegram-types.ts';
 
 export type TelegramRawClient = telegram.TelegramClient;
@@ -50,12 +50,23 @@ export async function messageOf(
 }
 
 export function markedPeerIdOf(message: object): string | null {
-  try {
-    const peer = field(message, 'peerId');
-    return peer === undefined || peer === null ? null : telegram.utils.getPeerId(peer);
-  } catch {
+  return peerIdFromPeerObject(field(message, 'peerId'));
+}
+
+export function peerIdFromPeerObject(peer: unknown): string | null {
+  if (typeof peer !== 'object' || peer === null) {
     return null;
   }
+  const userId = fieldString(peer, 'userId');
+  if (userId !== null) {
+    return userId;
+  }
+  const chatId = fieldString(peer, 'chatId');
+  if (chatId !== null) {
+    return `-${chatId}`;
+  }
+  const channelId = fieldString(peer, 'channelId');
+  return channelId === null ? null : `-100${channelId}`;
 }
 
 export function forwardNameOf(message: object): string | null {
@@ -67,13 +78,5 @@ export function forwardNameOf(message: object): string | null {
   if (typeof fromName === 'string' && fromName.length > 0) {
     return fromName;
   }
-  const from = field(forwarded, 'fromId');
-  if (typeof from !== 'object' || from === null) {
-    return null;
-  }
-  try {
-    return telegram.utils.getPeerId(from);
-  } catch {
-    return null;
-  }
+  return peerIdFromPeerObject(field(forwarded, 'fromId'));
 }

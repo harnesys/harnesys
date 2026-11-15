@@ -24,11 +24,11 @@ function fileOf(media: MediaFile): telegram.client.uploads.CustomFile {
   return new telegram.client.uploads.CustomFile(media.name, media.data.length, '', media.data);
 }
 
-function attributesOf(media: MediaFile): telegram.Api.TypeDocumentAttribute[] | undefined {
+function attributesOf(media: MediaFile): telegram.Api.TypeDocumentAttribute[] {
   if (media.kind === 'gif') {
     return [new telegram.Api.DocumentAttributeAnimated()];
   }
-  return undefined;
+  return [];
 }
 
 function messageIdOf(sent: unknown): number {
@@ -43,7 +43,11 @@ function messageIdsOf(sent: unknown): number[] {
 export function createSendMethods(client: TelegramRawClient): {
   sendText(peer: ResolvedPeer, text: string, options: SendTextOptions): Promise<number>;
   sendMedia(peer: ResolvedPeer, media: MediaFile, options: SendMediaOptions): Promise<number>;
-  sendAlbum(peer: ResolvedPeer, files: readonly MediaFile[], options: AlbumOptions): Promise<number[]>;
+  sendAlbum(
+    peer: ResolvedPeer,
+    files: readonly MediaFile[],
+    options: AlbumOptions,
+  ): Promise<number[]>;
   forward(
     from: ResolvedPeer,
     messageIds: readonly number[],
@@ -94,6 +98,8 @@ export function createSendMethods(client: TelegramRawClient): {
         replyTo: options.replyTo,
         silent: options.silent,
         scheduleDate: options.scheduleAt,
+        attributes: files.map((media) => attributesOf(media)),
+        voiceNote: files.some((media) => media.kind === 'voice'),
       });
       return messageIdsOf(sent);
     },
@@ -120,6 +126,10 @@ export function createSendMethods(client: TelegramRawClient): {
       await client.pinMessage(inputPeerOf(peer), messageId, { notify });
     },
     async unpinMessage(peer, messageId) {
+      if (messageId === undefined) {
+        await client.unpinMessage(inputPeerOf(peer));
+        return;
+      }
       await client.unpinMessage(inputPeerOf(peer), messageId);
     },
     async react(peer, messageId, emoji) {

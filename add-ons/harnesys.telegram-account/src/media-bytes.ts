@@ -1,8 +1,8 @@
-import { AddonError, type AddonContext } from '@harnesys/sdk';
+import { type AddonContext, AddonError } from '@harnesys/sdk';
 import { mediaFileName, resolveMediaKind } from './media-kind.ts';
 import { type MediaSource, parseMediaSource } from './media-source.ts';
-import type { MediaItemInput } from './tool-album.ts';
 import type { MediaFile } from './telegram-types.ts';
+import type { MediaItemInput } from './tool-album.ts';
 
 export const HOST_HTTP_LIMIT_BYTES = 8 * 1024 * 1024;
 const READ_CHUNK_BYTES = 4 * 1024 * 1024;
@@ -49,7 +49,10 @@ async function pathBytes(ctx: AddonContext, path: string, maxBytes: number): Pro
       throw tooLarge(offset, maxBytes);
     }
   }
-  return concat(parts, parts.reduce((sum, part) => sum + part.length, 0));
+  return concat(
+    parts,
+    parts.reduce((sum, part) => sum + part.length, 0),
+  );
 }
 
 interface UrlBytes {

@@ -1,8 +1,11 @@
 import { describe, expect, test } from 'bun:test';
+import type { AddonContext, SqlParam } from '@harnesys/sdk';
+import { flushChannel } from './inbound.ts';
 import {
   filterFresh,
   hasActiveRun,
   type InboxEntry,
+  type InboxSettings,
   renderBatch,
   replyDecision,
   shouldDropAfter,
@@ -142,5 +145,92 @@ describe('inbound ack decision', () => {
   test('busy and failed outcomes keep the rows for the next flush', () => {
     expect(shouldDropAfter('busy')).toBe(false);
     expect(shouldDropAfter('failed')).toBe(false);
+  });
+});
+
+function queuedMessage(id: number, text: string): TelegramMessage {
+  return {
+    message_id: id,
+    date: 0,
+    text,
+    chat: { id: 10, type: 'group', title: 'Design' },
+    from: { id: 100, username: 'ada' },
+  };
+}
+
+function flushHarness() {
+  const channel = '10';
+  const now = Date.now();
+  const state = { omitted: 2 };
+  const queue = [
+    {
+      id: 1,
+      message_id: 100,
+      payload: JSON.stringify(queuedMessage(100, 'old')),
+      at: now - 120_000,
+    },
+    { id: 2, message_id: 101, payload: JSON.stringify(queuedMessage(101, 'new')), at: now },
+  ];
+  const sent: string[] = [];
+  const db = {
+    exec: async () => {},
+    all: async (sql: string) => (sql.includes('from inbox_queue') ? queue : []),
+    get: async (sql: string) => {
+      if (sql.includes('from inbox_state')) {
+        return { reply_message_id: null, reply_at: null, omitted: state.omitted };
+      }
+      if (sql.includes('from connections')) {
+        return { thread_id: 't-1' };
+      }
+      return null;
+    },
+    run: async (sql: string, params?: SqlParam[]) => {
+      if (sql.includes('omitted = inbox_state.omitted + excluded.omitted')) {
+        state.omitted += Number(params?.[1] ?? 0);
+      } else if (sql.includes('set omitted = 0')) {
+        state.omitted = 0;
+      }
+      return { changes: 1 };
+    },
+    batch: async () => [],
+  };
+  const ctx: Partial<AddonContext> = {
+    db,
+    config: { get: async () => ({}) },
+    log: {
+      debug: async () => {},
+      info: async () => {},
+      warn: async () => {},
+      error: async () => {},
+    },
+    runs: { list: async () => [] },
+    bridge: {
+      inbound: async (message) => {
+        sent.push(message.text);
+        return 'dispatched' as const;
+      },
+    },
+  };
+  return { ctx: ctx as AddonContext, channel, state, sent };
+}
+
+describe('inbox flush omitted count', () => {
+  const settings: InboxSettings = {
+    maxBatch: 20,
+    maxChars: 3000,
+    maxBacklog: 50,
+    ttlSec: 60,
+    replyMode: 'auto',
+    replyWindowSec: 900,
+    attribution: true,
+  };
+
+  test('renders the persisted omitted count once after the expired bump', async () => {
+    const { ctx, channel, state, sent } = flushHarness();
+    const delivered = await flushChannel(ctx, channel, settings);
+    expect(delivered).toBe(true);
+    expect(sent[0]).toStartWith('[+3 earlier messages omitted]');
+    expect(sent[0]).not.toContain('[+4');
+    expect(state.omitted).toBe(0);
   });
 });

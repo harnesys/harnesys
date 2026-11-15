@@ -1,5 +1,13 @@
 import * as telegram from 'teleproto';
-import { chatIdOf, inputChannelOf, inputPeerOf, inputUserOf, markedPeerIdOf, messageOf, type TelegramRawClient } from './mtproto-peer.ts';
+import {
+  chatIdOf,
+  inputChannelOf,
+  inputPeerOf,
+  inputUserOf,
+  markedPeerIdOf,
+  messageOf,
+  type TelegramRawClient,
+} from './mtproto-peer.ts';
 import { displayNameOf, field, fieldString, toMessageDetail } from './telegram-entities.ts';
 import type {
   ChatInfo,
@@ -69,7 +77,9 @@ function withChatDetail(info: ChatInfo, full: unknown): ChatInfo {
     ...info,
     about: full.about ?? null,
     participantsCount:
-      participants instanceof telegram.Api.ChatParticipants ? participants.participants.length : null,
+      participants instanceof telegram.Api.ChatParticipants
+        ? participants.participants.length
+        : null,
     pinnedMessageId: full.pinnedMsgId ?? null,
   };
 }
@@ -88,7 +98,10 @@ function withChannelDetail(info: ChatInfo, full: unknown): ChatInfo {
 }
 
 function topicIdOf(updates: telegram.Api.TypeUpdates): number {
-  if (!(updates instanceof telegram.Api.Updates) && !(updates instanceof telegram.Api.UpdatesCombined)) {
+  if (
+    !(updates instanceof telegram.Api.Updates) &&
+    !(updates instanceof telegram.Api.UpdatesCombined)
+  ) {
     return 0;
   }
   for (const update of updates.updates) {
@@ -96,7 +109,10 @@ function topicIdOf(updates: telegram.Api.TypeUpdates): number {
       continue;
     }
     const message = update.message;
-    if (message instanceof telegram.Api.Message && message.action instanceof telegram.Api.MessageActionTopicCreate) {
+    if (
+      message instanceof telegram.Api.Message &&
+      message.action instanceof telegram.Api.MessageActionTopicCreate
+    ) {
       return message.id;
     }
   }
@@ -163,7 +179,9 @@ export function createReadMethods(client: TelegramRawClient): {
     async topics(peer, limit) {
       const result = await client.getForumTopics(inputPeerOf(peer), { limit });
       return result.topics
-        .filter((topic): topic is telegram.Api.ForumTopic => topic instanceof telegram.Api.ForumTopic)
+        .filter(
+          (topic): topic is telegram.Api.ForumTopic => topic instanceof telegram.Api.ForumTopic,
+        )
         .map((topic) => ({
           id: topic.id,
           title: topic.title,

@@ -201,12 +201,7 @@ export async function flushChannel(
     return false;
   }
   const state = await channelState(ctx, channel);
-  const rendered = renderBatch(
-    fresh,
-    config.attribution,
-    config.maxChars,
-    state.omitted + expired.length,
-  );
+  const rendered = renderBatch(fresh, config.attribution, config.maxChars, state.omitted);
   const attachments = await inboundAttachments(
     ctx,
     fresh.map((entry) => entry.message),

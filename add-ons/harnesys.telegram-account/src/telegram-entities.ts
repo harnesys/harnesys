@@ -148,7 +148,7 @@ export function displayNameOf(entity: object): string {
   if (title !== null && title.length > 0) {
     return title;
   }
-  return username ?? (fieldString(entity, 'id') ?? '');
+  return username ?? fieldString(entity, 'id') ?? '';
 }
 
 export function toRaw(message: object): RawPost {

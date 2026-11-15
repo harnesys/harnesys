@@ -63,7 +63,7 @@ export function numericKeys(value: string): string[] {
   }
   const digits = trimmed.replace(/^-/, '');
   if (trimmed.startsWith(BOT_API_CHANNEL_PREFIX) && digits.length > BOT_API_CHANNEL_DIGITS) {
-    return [digits.slice(BOT_API_CHANNEL_DIGITS), digits];
+    return [digits.slice(BOT_API_CHANNEL_DIGITS)];
   }
   return [digits];
 }
@@ -116,20 +116,33 @@ export function resolveArgOf(ref: ChatRef): string {
   return ref.username === null ? (ref.numeric[0] ?? ref.raw) : `@${ref.username}`;
 }
 
+function identityKeys(identity: ChatIdentity): string[] {
+  const keys: string[] = [];
+  if (identity.username !== null) {
+    keys.push(`u:${identity.username.toLowerCase()}`);
+  }
+  for (const digits of numericKeys(identity.peerId)) {
+    keys.push(`n:${digits}`);
+  }
+  return keys;
+}
+
+function anyKeyAllowed(allowed: readonly string[], keys: readonly string[]): boolean {
+  if (allowed.length === 0) {
+    return true;
+  }
+  const used = new Set(keys);
+  return allowed.some((entry) => chatKeysOf(entry).some((key) => used.has(key)));
+}
+
 export function matchesAllowed(
   allowed: readonly string[],
   ref: ChatRef,
   identity: ChatIdentity,
 ): boolean {
-  if (allowed.length === 0) {
-    return true;
-  }
-  const used = new Set(refKeysOf(ref));
-  if (identity.username !== null) {
-    used.add(`u:${identity.username.toLowerCase()}`);
-  }
-  for (const digits of numericKeys(identity.peerId)) {
-    used.add(`n:${digits}`);
-  }
-  return allowed.some((entry) => chatKeysOf(entry).some((key) => used.has(key)));
+  return anyKeyAllowed(allowed, [...refKeysOf(ref), ...identityKeys(identity)]);
+}
+
+export function matchesIdentity(allowed: readonly string[], identity: ChatIdentity): boolean {
+  return anyKeyAllowed(allowed, identityKeys(identity));
 }

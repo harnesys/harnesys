@@ -16,7 +16,7 @@ export type JoinTarget = InviteJoinTarget | UsernameJoinTarget;
 
 const INVITE_PATHS = ['+', 'joinchat'];
 
-function inviteTarget(value: string, hash: string): InviteJoinTarget {
+function inviteTarget(hash: string): InviteJoinTarget {
   return {
     kind: 'invite',
     link: `https://t.me/+${hash}`,
@@ -37,12 +37,12 @@ export function joinTargetOf(value: unknown): JoinTarget {
   const segments = path.split('/').filter((segment) => segment.length > 0);
   const head = segments[0] ?? '';
   if (head.startsWith('+') && head.length > 1) {
-    return inviteTarget(raw, head.slice(1));
+    return inviteTarget(head.slice(1));
   }
   if (INVITE_PATHS.includes(head.toLowerCase()) && segments.length > 1) {
     const hash = segments[1] ?? '';
     if (hash.length > 0) {
-      return inviteTarget(raw, hash);
+      return inviteTarget(hash);
     }
   }
   if (head.startsWith('+')) {

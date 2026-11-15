@@ -1,8 +1,9 @@
 import { AddonError } from '@harnesys/sdk';
 import type { OutgoingMediaKind } from './telegram-types.ts';
 
-export type RequestedMediaKind = OutgoingMediaKind | 'auto';
+export type { OutgoingMediaKind };
 
+export type RequestedMediaKind = OutgoingMediaKind | 'auto';
 const KIND_EXTENSIONS: Record<OutgoingMediaKind, string> = {
   photo: 'jpg',
   video: 'mp4',
@@ -56,10 +57,14 @@ const MIME_ALIASES: Record<string, OutgoingMediaKind> = {
 };
 
 function extensionOf(name: string): string {
+  return rawExtensionOf(name).toLowerCase();
+}
+
+function rawExtensionOf(name: string): string {
   const base = name.split(/[?#]/)[0] ?? name;
   const file = base.split(/[\\/]/).pop() ?? base;
   const dot = file.lastIndexOf('.');
-  return dot <= 0 ? '' : file.slice(dot + 1).toLowerCase();
+  return dot <= 0 ? '' : file.slice(dot + 1);
 }
 
 function baseNameOf(name: string): string {
@@ -110,10 +115,15 @@ export function defaultExtension(kind: OutgoingMediaKind): string {
 }
 
 export function mediaFileName(name: string, kind: OutgoingMediaKind): string {
-  const base = baseNameOf(name).replace(/[^\w.-]+/g, '_').slice(0, 96);
-  const safeBase = base.length === 0 || base === '.' ? 'file' : base;
+  const cleaned = baseNameOf(name)
+    .replace(/[^\w.-]+/g, '_')
+    .replace(/^[_.-]+|[_.-]+$/g, '')
+    .slice(0, 96);
+  const safeBase = cleaned.length === 0 ? 'file' : cleaned;
   const existing = kindOfName(name);
-  return existing === kind ? `${safeBase}.${extensionOf(name)}` : `${safeBase}.${defaultExtension(kind)}`;
+  return existing === kind
+    ? `${safeBase}.${rawExtensionOf(name)}`
+    : `${safeBase}.${defaultExtension(kind)}`;
 }
 
 export function requestedKindOf(value: unknown): RequestedMediaKind {

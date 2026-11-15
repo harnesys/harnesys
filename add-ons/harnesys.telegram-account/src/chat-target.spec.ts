@@ -1,13 +1,19 @@
 import { describe, expect, test } from 'bun:test';
 import { AddonError } from '@harnesys/sdk';
-import { chatRefOf, matchesAllowed, numericKeys, resolveArgOf } from './chat-target.ts';
+import {
+  chatRefOf,
+  matchesAllowed,
+  matchesIdentity,
+  numericKeys,
+  resolveArgOf,
+} from './chat-target.ts';
 
 describe('chat arguments', () => {
   test('normalizes chat formats and matches allowed_chats by id or username', () => {
     expect(chatRefOf('@SomeChannel').username).toBe('somechannel');
     expect(chatRefOf('https://t.me/some_channel/42?single').username).toBe('some_channel');
     expect(chatRefOf('t.me/s/some_channel').username).toBe('some_channel');
-    expect(chatRefOf('-1001234567890').numeric).toEqual(['1234567890', '1001234567890']);
+    expect(chatRefOf('-1001234567890').numeric).toEqual(['1234567890']);
     expect(chatRefOf('-1001234567890').kind).toBe('id');
     expect(resolveArgOf(chatRefOf('-1001234567890'))).toBe('1234567890');
     expect(numericKeys('@name')).toEqual([]);
@@ -26,6 +32,20 @@ describe('chat arguments', () => {
       true,
     );
     expect(matchesAllowed(['@other'], sales, { peerId: '999', username: null })).toBe(false);
+  });
+
+  test('matches an identity hit without a chat ref for global search', () => {
+    expect(numericKeys('-1001234567890')).toEqual(['1234567890']);
+    expect(matchesIdentity(['1234567890'], { peerId: '-1001234567890', username: null })).toBe(
+      true,
+    );
+    expect(matchesIdentity(['-1001234567890'], { peerId: '1234567890', username: null })).toBe(
+      true,
+    );
+    expect(matchesIdentity([], { peerId: '-1001234567890', username: null })).toBe(true);
+    expect(matchesIdentity(['1001234567890'], { peerId: '-1001234567890', username: null })).toBe(
+      false,
+    );
   });
 
   test('reads t.me/c private links as numeric ids, not usernames', () => {
