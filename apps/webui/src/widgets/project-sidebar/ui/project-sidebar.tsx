@@ -232,6 +232,7 @@ export function ProjectSidebar({
             title={<ProjectsTitle />}
             size={shares[id] ?? 1}
             actions={<ProjectsActions />}
+            horizontalScroll
             {...drag}
           >
             <ProjectsTrees projectIds={projectIds} />

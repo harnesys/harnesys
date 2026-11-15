@@ -13,6 +13,13 @@ export function Providers({ children }: { children: ReactNode }) {
   useEffect(() => {
     enableSystemNotifications();
   }, []);
+  useEffect(() => {
+    const suppressNativeContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+    };
+    document.addEventListener('contextmenu', suppressNativeContextMenu);
+    return () => document.removeEventListener('contextmenu', suppressNativeContextMenu);
+  }, []);
   return (
     <ThemeProvider defaultTheme="dark">
       <QueryProvider>

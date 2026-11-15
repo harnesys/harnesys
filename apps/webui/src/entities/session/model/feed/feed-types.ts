@@ -53,6 +53,12 @@ export interface MapInfo {
   completedAt?: number;
 }
 
+export type CompactionStatus = 'running' | 'completed' | 'failed' | 'cancelled' | 'interrupted';
+
+export function isRunningCompactionSegment(segment: FeedSegment): boolean {
+  return segment.kind === 'compaction' && segment.meta.status === 'running';
+}
+
 export interface CompactionSegmentMeta {
   id: string;
   reason: 'threshold' | 'manual';
@@ -60,6 +66,8 @@ export interface CompactionSegmentMeta {
   coveredUntil: number;
   tokensBefore: number;
   tokensAfter: number;
+  status?: CompactionStatus;
+  message?: string;
   summary?: string;
   coveredUntilRunId?: string;
   coveredUntilSeq?: number;

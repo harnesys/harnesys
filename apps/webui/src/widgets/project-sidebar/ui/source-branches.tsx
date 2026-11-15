@@ -96,7 +96,7 @@ function ActiveBranchFolder({
         role="treeitem"
         tabIndex={0}
         aria-expanded={open}
-        className="group/ws relative flex items-center rounded-md hover:bg-sidebar-accent/70"
+        className="group/ws relative flex items-center rounded-md"
         onKeyDown={(event) => {
           if (event.key !== 'Enter' && event.key !== ' ') {
             return;

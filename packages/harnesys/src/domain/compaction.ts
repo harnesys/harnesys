@@ -3,6 +3,8 @@ import type { AgentModelRef } from './agent-definition.ts';
 export { THRESHOLD_SUMMARY_NAME } from '../constants.ts';
 export interface CompactionSpec {
   thresholdRatio?: number;
+  /** Max share of the context window reserved for the reply (0–0.9, default 0.1). Caps provider metadata. */
+  outputReserveRatio?: number;
   protectRecentRatio?: number;
   /** Count of trailing user+agent turns kept out of every compaction (0 = off, default). */
   protectRecentTurns?: number;
@@ -26,6 +28,7 @@ export interface CompactionSpec {
 }
 export interface ParsedCompactionSpec {
   thresholdRatio: number;
+  outputReserveRatio: number;
   protectRecentRatio: number;
   protectRecentTurns: number;
   auto: boolean;
@@ -71,6 +74,7 @@ export function parseThresholdSpec(spec?: Record<string, unknown>): ParsedCompac
   };
   return {
     thresholdRatio: clamp(raw.thresholdRatio, 0.1, 1, 0.8),
+    outputReserveRatio: clamp(raw.outputReserveRatio, 0, 0.9, 0.1),
     protectRecentRatio: clamp(raw.protectRecentRatio, 0, 0.9, 0.1),
     protectRecentTurns: nonNegativeInt(raw.protectRecentTurns, 0),
     auto: raw.auto !== false,

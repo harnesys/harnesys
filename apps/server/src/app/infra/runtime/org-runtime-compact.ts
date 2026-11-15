@@ -1,5 +1,6 @@
 import {
   type CompactionMessage,
+  type CompactionPassEvent,
   compactForced,
   type InMemoryRuntimeState,
   type ModelBinding,
@@ -10,10 +11,7 @@ import {
   type Snapshot,
   type ToolDefinition,
 } from 'harnesys';
-import type {
-  CompactSkipReason,
-  CompactThreadResult,
-} from '../../domain/thread/local-executor.port.ts';
+import type { CompactThreadResult } from '../../domain/thread/local-executor.port.ts';
 import {
   CompactionNotConfiguredException,
   ThreadNotFoundException,
@@ -21,6 +19,8 @@ import {
 } from '../../domain/thread/thread.error.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
 import { type CompactionBoundary, resolveCompactionCursor } from './compaction-cursor.ts';
+import type { CompactOutcome, CompactProgressSink } from './org-runtime-compact-progress.ts';
+import { closeUnfinishedProgress, createProgressAppender } from './org-runtime-compact-progress.ts';
 import type { RunTargetSelector } from './org-runtime-run-target.ts';
 import {
   sliceThreadHistory,
@@ -40,12 +40,6 @@ export interface CompactThreadDeps {
   ) => Promise<RunTarget | null>;
   findThread?: (threadId: string) => ThreadRecord | null | undefined;
   activeRunIdOf?: (threadId: string) => Promise<string | null>;
-}
-
-interface CompactOutcome {
-  completed: CompactionMessage | undefined;
-  failure: string | undefined;
-  skipReason: CompactSkipReason | undefined;
 }
 
 const CANCELLED: CompactThreadResult = { compacted: false, reason: 'cancelled' };
@@ -69,9 +63,19 @@ export async function compactThread(
   const mutable = mutableStateOf(snapshot);
   const messageCount = Array.isArray(mutable.messages) ? mutable.messages.length : -1;
   const sliceOpts = await compactSliceOpts(deps, threadId);
-  const outcome = await runForcedCompact(deps, { threadId, target, binding, mutable, signal });
+  const runId = await resolveCompactRunId(deps.events, threadId, snapshot?.runId);
+  const progress = createProgressAppender(deps, threadId, runId);
+  const outcome = await runForcedCompact(deps, {
+    threadId,
+    target,
+    binding,
+    mutable,
+    signal,
+    progress,
+  });
   const partial = outcomeToCompactResult(outcome, signal);
   if (partial) {
+    await closeUnfinishedProgress(outcome, signal, progress);
     return partial;
   }
   const completed = outcome.completed as CompactionMessage;
@@ -83,6 +87,7 @@ export async function compactThread(
     completed,
     messageCount,
     sliceOpts,
+    runId,
   });
   return {
     compacted: true,
@@ -120,15 +125,17 @@ async function runForcedCompact(
     binding: ModelBinding;
     mutable: Record<string, unknown>;
     signal?: AbortSignal;
+    progress: CompactProgressSink;
   },
 ): Promise<CompactOutcome> {
   const outcome: CompactOutcome = {
     completed: undefined,
     failure: undefined,
     skipReason: undefined,
+    startedId: undefined,
   };
   try {
-    for await (const event of compactForced({
+    const pass = compactForced({
       agent: input.target.agent,
       state: input.mutable,
       sessionId: input.threadId,
@@ -137,15 +144,8 @@ async function runForcedCompact(
       toolRegistry: toolRegistryOf(input.target),
       paths: input.target.paths,
       signal: input.signal ?? new AbortController().signal,
-    })) {
-      if (event.type === 'completed') {
-        outcome.completed = event.message;
-      } else if (event.type === 'failed') {
-        outcome.failure = event.error;
-      } else if (event.type === 'skipped' && event.reason !== 'near-threshold') {
-        outcome.skipReason = event.reason;
-      }
-    }
+    });
+    await drainCompactPass(pass, outcome, input.progress);
   } catch (error) {
     if (isCompactionNotConfigured(error)) {
       throw new CompactionNotConfiguredException();
@@ -158,6 +158,33 @@ async function runForcedCompact(
   return outcome;
 }
 
+async function drainCompactPass(
+  pass: AsyncGenerator<CompactionPassEvent>,
+  outcome: CompactOutcome,
+  progress: CompactProgressSink,
+): Promise<void> {
+  for await (const event of pass) {
+    if (event.type === 'started') {
+      outcome.startedId = event.id;
+      await progress({
+        phase: 'started',
+        id: event.id,
+        coveredFrom: event.coveredFrom,
+        coveredUntil: event.coveredUntil,
+      });
+    } else if (event.type === 'completed') {
+      outcome.completed = event.message;
+    } else if (event.type === 'failed') {
+      outcome.failure = event.error;
+      if (outcome.startedId !== undefined) {
+        await progress({ phase: 'failed', id: outcome.startedId, message: event.error });
+      }
+    } else if (event.type === 'skipped' && event.reason !== 'near-threshold') {
+      outcome.skipReason = event.reason;
+    }
+  }
+}
+
 async function persistCompact(
   deps: CompactThreadDeps,
   input: {
@@ -168,6 +195,7 @@ async function persistCompact(
     completed: CompactionMessage;
     messageCount: number;
     sliceOpts: ThreadSliceOpts | null;
+    runId: string | undefined;
   },
 ): Promise<void> {
   const sequence = (input.snapshot?.sequence ?? 0) + 1;
@@ -187,7 +215,7 @@ async function persistCompact(
     [],
     { kind: 'recorded', sequence },
   );
-  const runId = await resolveCompactRunId(deps.events, input.threadId, input.snapshot?.runId);
+  const runId = input.runId;
   if (!runId) {
     return;
   }

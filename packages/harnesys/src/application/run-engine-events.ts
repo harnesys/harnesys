@@ -259,6 +259,29 @@ export function eventToSessionEvent(ev: Event): SessionEvent | null {
       ? { ...stamped, summary: m.summary }
       : stamped;
   }
+  if (t === 'compaction.started' || t === 'compaction.failed') {
+    const m = ev.metadata as Record<string, unknown> | undefined;
+    const id = typeof m?.id === 'string' ? m.id : '';
+    if (!id) {
+      return null;
+    }
+    if (t === 'compaction.started') {
+      return {
+        type: 'compaction.progress' as const,
+        id,
+        phase: 'started' as const,
+        reason: m?.reason === 'manual' ? ('manual' as const) : ('threshold' as const),
+        coveredFrom: num(m?.coveredFrom) ?? 0,
+        coveredUntil: num(m?.coveredUntil) ?? 0,
+      };
+    }
+    return {
+      type: 'compaction.progress' as const,
+      id,
+      phase: 'failed' as const,
+      message: typeof m?.error === 'string' ? m.error : 'compaction failed',
+    };
+  }
   if (t === 'tool.completed' || t === 'tool.intent') {
     const m = ev.metadata as Record<string, unknown> | undefined;
     const tool = {

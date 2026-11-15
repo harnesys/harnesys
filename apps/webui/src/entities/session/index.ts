@@ -19,10 +19,11 @@ export {
   useThreadFeeds,
 } from './model/feed/feed-hooks.ts';
 export { mapForToolCall, mapLineHint } from './model/feed/feed-map-snapshot.ts';
-export { isCompactRun, splitRuns } from './model/feed/feed-run-fold.ts';
+export { hasCompactedAnchor, hasRunningCompaction, splitRuns } from './model/feed/feed-run-fold.ts';
 export { spawnSubtreeIds, spawnTaskText } from './model/feed/feed-spawns.ts';
 export type {
   CompactionSegmentMeta,
+  CompactionStatus,
   FeedChunk,
   FeedItem,
   FeedRun,

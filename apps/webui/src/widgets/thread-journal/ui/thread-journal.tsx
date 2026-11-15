@@ -10,7 +10,8 @@ import { useShallow } from 'zustand/react/shallow';
 import type { Agent } from '@/entities/agent';
 import {
   type FeedRun,
-  isCompactRun,
+  hasCompactedAnchor,
+  hasRunningCompaction,
   type RunFailure,
   useSessionStore,
   useThreadFeed,
@@ -45,7 +46,7 @@ const EMPTY_FAILURES: RunFailure[] = [];
 function lastCompactRunKey(runs: FeedRun[]): string | null {
   for (let index = runs.length - 1; index >= 0; index--) {
     const run = runs[index];
-    if (run && isCompactRun(run)) {
+    if (run && hasCompactedAnchor(run)) {
       return run.key;
     }
   }
@@ -82,7 +83,7 @@ export function ThreadJournal({ threadId, agent }: ThreadJournalProps) {
     );
   } else {
     const runs = feed?.runs ?? [];
-    const compactLive = compacting && runs.some(isCompactRun);
+    const compactionLive = runs.some(hasRunningCompaction);
     const lastRun = runs.length > 0 ? runs[runs.length - 1] : undefined;
     const lastError = thread?.lastError ?? null;
     const showLaunchError =
@@ -96,7 +97,7 @@ export function ThreadJournal({ threadId, agent }: ThreadJournalProps) {
               {runs.map((run, index) => {
                 const last = index === runs.length - 1;
                 const runStreaming =
-                  (streaming && last && !compacting) || (compacting && last && isCompactRun(run));
+                  (streaming && last && !compacting) || hasRunningCompaction(run);
                 return (
                   <MessageScrollerItem key={run.key} messageId={run.key}>
                     <RunDivider
@@ -140,7 +141,7 @@ export function ThreadJournal({ threadId, agent }: ThreadJournalProps) {
                   />
                 </MessageScrollerItem>
               ) : null}
-              {compacting && !compactLive ? (
+              {compacting && !compactionLive ? (
                 <MessageScrollerItem key="compaction-pending" messageId="compaction-pending">
                   <CompactionPendingCard
                     onCancel={() => useCompactingStore.getState().abort(threadId)}

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { type FeedRun, isCompactRun, useSessionStore } from '@/entities/session';
+import { type FeedRun, hasCompactedAnchor, useSessionStore } from '@/entities/session';
 import type { Thread } from '@/entities/thread';
 import { onRevealMessageRequest } from '@/features/send-message';
 import type { BranchChild } from './branch-point-badge';
@@ -59,7 +59,7 @@ export function undoableRunKeyOf(
 function lastCompactRunKey(runs: FeedRun[]): string | null {
   for (let index = runs.length - 1; index >= 0; index--) {
     const run = runs[index];
-    if (run && isCompactRun(run)) {
+    if (run && hasCompactedAnchor(run)) {
       return run.key;
     }
   }

@@ -55,7 +55,6 @@ export function renderFileTreeRow(row: FlatTreeRow, h: FileTreeRowHandlers): Rea
       entry={entry}
       fullPath={row.fullPath}
       depth={row.depth}
-      childCount={row.childCount}
       projectId={h.projectId}
       worktreeId={h.worktreeId}
       expandedDirs={h.expandedDirs}

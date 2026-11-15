@@ -204,7 +204,7 @@ describe('runSummaryPassIfDue threshold evaluation', () => {
     expect(events).toEqual([]);
   });
 
-  test('reserve reaching the window disables compaction with a visible reason', async () => {
+  test('output reserve cap keeps the reserve below the window', async () => {
     const agent = agentOf({ thresholdRatio: 0.8 });
     agent.generation = { maxTokens: 1000 };
     const ctx = ctxOf({
@@ -213,7 +213,7 @@ describe('runSummaryPassIfDue threshold evaluation', () => {
       messages: [user(120)],
     });
     const events = await collect(runSummaryPassIfDue(ctx));
-    expect(events).toEqual([{ type: 'skipped', reason: 'invalid-output-reserve' }]);
+    expect(events).toEqual([]);
   });
 
   test('near-threshold emits a note when enabled', async () => {
@@ -273,8 +273,10 @@ describe('runSummaryPassIfDue failure and model choice', () => {
       messages: [user(120), user(3600), user(120)],
     });
     const events = await collect(runSummaryPassIfDue(ctx));
-    expect(events.length).toBe(1);
-    expect(events[0]?.type).toBe('failed');
+    expect(events.map((ev) => ev.type)).toEqual(['started', 'failed']);
+    const opened = events[0] as { id?: string };
+    const closed = events[1] as { id?: string };
+    expect(closed.id).toBe(opened.id);
   });
 
   test('summary model binding is used for the summary call', async () => {

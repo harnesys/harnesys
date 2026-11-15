@@ -1105,8 +1105,17 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
       async function* drainCompaction(
         gen: AsyncGenerator<CompactionPassEvent>,
       ): AsyncGenerator<Event> {
+        let startedId: string | undefined;
         for await (const ev of gen) {
-          if (ev.type === 'completed') {
+          if (ev.type === 'started') {
+            startedId = ev.id;
+            yield await commit('running', 'compaction.started', 'recorded', {
+              id: ev.id,
+              reason: ev.reason === 'manual' ? 'manual' : 'threshold',
+              coveredFrom: ev.coveredFrom,
+              coveredUntil: ev.coveredUntil,
+            });
+          } else if (ev.type === 'completed') {
             const m = ev.message;
             compactionNote = undefined;
             const u = m.stats.usage as Record<string, unknown> | undefined;
@@ -1128,7 +1137,11 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
             });
           } else if (ev.type === 'failed') {
             compactionNote = compactionFailNote(ev.error);
-            yield await commit('running', 'compaction.failed', 'recorded', { error: ev.error });
+            const id = ev.id ?? startedId;
+            yield await commit('running', 'compaction.failed', 'recorded', {
+              ...(id ? { id } : {}),
+              error: ev.error,
+            });
           } else if (ev.type === 'skipped') {
             compactionNote = compactionSkipNote(ev.reason);
           } else if (ev.type === 'pressure') {

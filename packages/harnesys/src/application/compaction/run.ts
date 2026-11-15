@@ -41,11 +41,20 @@ export interface CompactionPassContext {
 }
 export type CompactionPassEvent =
   | {
+      type: 'started';
+      id: string;
+      reason: 'threshold' | 'manual' | 'overflow';
+      coveredFrom: number;
+      coveredUntil: number;
+    }
+  | {
       type: 'completed';
       message: CompactionMessage;
     }
   | {
       type: 'failed';
+      /** Present when the failure happened after the pass opened (see started). */
+      id?: string;
       error: string;
     }
   | {
@@ -173,9 +182,14 @@ async function compactionWindowOf(
   return agentWindow ? Math.min(agentWindow, summaryWindow) : summaryWindow;
 }
 
-function effectiveOutputReserve(ctx: CompactionPassContext, contextLength: number): number {
+function effectiveOutputReserve(
+  ctx: CompactionPassContext,
+  spec: ParsedCompactionSpec,
+  contextLength: number,
+): number {
   const reserve = positiveInt(ctx.agent.generation?.maxTokens) ?? maxOutputOf(ctx.binding) ?? 0;
-  return Math.min(reserve, contextLength);
+  const cap = Math.floor(contextLength * spec.outputReserveRatio);
+  return Math.min(reserve, contextLength, cap);
 }
 async function resolveSummaryBinding(
   ctx: CompactionPassContext,
@@ -216,7 +230,7 @@ async function* passIfDue(
     return;
   }
   if (reason === 'threshold') {
-    const available = contextLength - effectiveOutputReserve(ctx, contextLength);
+    const available = contextLength - effectiveOutputReserve(ctx, spec, contextLength);
     if (available <= 0) {
       yield { type: 'skipped', reason: 'invalid-output-reserve' };
       return;
@@ -310,6 +324,14 @@ async function* writeCompactionMessage(
   const system = args.anchor
     ? `${SUMMARY_SYSTEM_PROMPT}${priorSummaryBlock(args.anchor.content)}`
     : SUMMARY_SYSTEM_PROMPT;
+  const id = crypto.randomUUID();
+  yield {
+    type: 'started',
+    id,
+    reason: args.reason,
+    coveredFrom: args.plan.coveredFrom,
+    coveredUntil: args.plan.coveredUntil,
+  };
   let completed:
     | Extract<
         StreamChunk,
@@ -345,6 +367,7 @@ async function* writeCompactionMessage(
     }
     yield {
       type: 'failed',
+      id,
       error: e instanceof Error ? e.message : String(e),
     };
     return;
@@ -356,6 +379,7 @@ async function* writeCompactionMessage(
     }
     yield {
       type: 'failed',
+      id,
       error: `summary pass rejected: finishReason=${completed?.finishReason ?? 'none'}${text.trim() ? '' : ', empty text'}`,
     };
     return;
@@ -363,7 +387,7 @@ async function* writeCompactionMessage(
   const message: CompactionMessage = {
     role: 'assistant',
     kind: 'compaction',
-    id: crypto.randomUUID(),
+    id,
     content: text,
     coveredFrom: args.plan.coveredFrom,
     coveredUntil: args.plan.coveredUntil,
@@ -507,7 +531,7 @@ async function contextPressureOf(
   if (!contextLength) {
     return null;
   }
-  const available = contextLength - effectiveOutputReserve(ctx, contextLength);
+  const available = contextLength - effectiveOutputReserve(ctx, spec, contextLength);
   if (available <= 0) {
     return null;
   }

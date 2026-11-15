@@ -1,10 +1,22 @@
 import type { SessionEvent } from '@harnesys/studio-shared';
 import { selfNodeCached } from '@/shared/api/fleet';
 import { activityProcess, flushActivity } from './feed-run-activity';
-import type { RunDraft, TextDeltaEvent } from './feed-run-drafts';
+import type {
+  CompactionAnchorEvent,
+  CompactionProgressEvent,
+  RunDraft,
+  SegmentDraft,
+  TextDeltaEvent,
+} from './feed-run-drafts';
 import { publishRun, runSnapshot } from './feed-run-publish';
-import type { FeedRun, FeedRunTerminal, FeedSegment, MemoryEvent } from './feed-types';
-import { RUN_TERMINAL_EVENT_TYPES } from './feed-types';
+import type {
+  CompactionSegmentMeta,
+  FeedRun,
+  FeedRunTerminal,
+  FeedSegment,
+  MemoryEvent,
+} from './feed-types';
+import { isRunningCompactionSegment, RUN_TERMINAL_EVENT_TYPES } from './feed-types';
 import { shouldShowPlacementInFeed } from './placement-visibility';
 
 export interface PlacementCursor {
@@ -75,7 +87,11 @@ function segmentProcess(fold: RunFold, run: RunDraft, ev: SessionEvent): boolean
     return true;
   }
   if (ev.type === 'compaction') {
-    appendCompaction(run, ev as SessionEvent & { type: 'compaction' });
+    appendCompaction(run, ev as CompactionAnchorEvent);
+    return true;
+  }
+  if (ev.type === 'compaction.progress') {
+    progressCompaction(run, ev as CompactionProgressEvent);
     return true;
   }
   if (ev.type === 'agent.handoff') {
@@ -123,7 +139,7 @@ function appendText(run: RunDraft, delta: TextDeltaEvent): void {
   pushSegment(run, { key: '', kind: 'text', id: delta.id, text: delta.text });
 }
 
-function appendCompaction(run: RunDraft, ev: SessionEvent & { type: 'compaction' }): void {
+function appendCompaction(run: RunDraft, ev: CompactionAnchorEvent): void {
   flushActivity(run);
   const texts: string[] = [];
   while (run.segments.length > 0) {
@@ -136,25 +152,89 @@ function appendCompaction(run: RunDraft, ev: SessionEvent & { type: 'compaction'
     }
     run.segments.pop();
   }
-  pushSegment(run, {
-    key: '',
-    kind: 'compaction',
-    text: texts.join(''),
-    meta: {
-      id: ev.id,
-      reason: ev.reason,
-      coveredFrom: ev.coveredFrom,
-      coveredUntil: ev.coveredUntil,
-      tokensBefore: ev.tokensBefore,
-      tokensAfter: ev.tokensAfter,
-      ...(ev.summary ? { summary: ev.summary } : {}),
-      ...(ev.coveredUntilRunId ? { coveredUntilRunId: ev.coveredUntilRunId } : {}),
-      ...(ev.coveredUntilSeq !== undefined ? { coveredUntilSeq: ev.coveredUntilSeq } : {}),
-      ...(ev.coveredUntilThreadSeq !== undefined
-        ? { coveredUntilThreadSeq: ev.coveredUntilThreadSeq }
-        : {}),
-    },
-  });
+  const meta: CompactionSegmentMeta = {
+    id: ev.id,
+    reason: ev.reason,
+    coveredFrom: ev.coveredFrom,
+    coveredUntil: ev.coveredUntil,
+    tokensBefore: ev.tokensBefore,
+    tokensAfter: ev.tokensAfter,
+    status: 'completed',
+    ...(ev.summary ? { summary: ev.summary } : {}),
+    ...(ev.coveredUntilRunId ? { coveredUntilRunId: ev.coveredUntilRunId } : {}),
+    ...(ev.coveredUntilSeq !== undefined ? { coveredUntilSeq: ev.coveredUntilSeq } : {}),
+    ...(ev.coveredUntilThreadSeq !== undefined
+      ? { coveredUntilThreadSeq: ev.coveredUntilThreadSeq }
+      : {}),
+  };
+  const text = texts.join('');
+  const draft = findCompactionDraft(run, ev.id);
+  if (draft && draft.data.kind === 'compaction') {
+    draft.data = { ...draft.data, text, meta };
+    return;
+  }
+  pushSegment(run, { key: '', kind: 'compaction', text, meta });
+}
+
+function progressCompaction(run: RunDraft, ev: CompactionProgressEvent): void {
+  flushActivity(run);
+  const draft = findCompactionDraft(run, ev.id);
+  if (ev.phase === 'started') {
+    if (!draft) {
+      pushSegment(run, {
+        key: '',
+        kind: 'compaction',
+        text: '',
+        meta: markerMeta(ev, 'running'),
+      });
+    }
+    return;
+  }
+  if (draft && draft.data.kind === 'compaction' && draft.data.meta.status === 'running') {
+    draft.data = {
+      ...draft.data,
+      meta: { ...draft.data.meta, status: ev.phase, message: ev.message },
+    };
+    return;
+  }
+  if (!draft) {
+    pushSegment(run, {
+      key: '',
+      kind: 'compaction',
+      text: '',
+      meta: { ...markerMeta(ev, ev.phase), message: ev.message },
+    });
+  }
+}
+
+function markerMeta(
+  ev: CompactionProgressEvent,
+  status: 'running' | 'failed' | 'cancelled',
+): CompactionSegmentMeta {
+  return {
+    id: ev.id,
+    reason: ev.reason ?? 'manual',
+    coveredFrom: ev.coveredFrom ?? 0,
+    coveredUntil: ev.coveredUntil ?? 0,
+    tokensBefore: 0,
+    tokensAfter: 0,
+    status,
+  };
+}
+
+function findCompactionDraft(run: RunDraft, id: string): SegmentDraft | undefined {
+  for (let index = run.segments.length - 1; index >= 0; index -= 1) {
+    const segment = run.segments[index];
+    if (
+      segment &&
+      segment.kind === 'compaction' &&
+      segment.data.kind === 'compaction' &&
+      segment.data.meta.id === id
+    ) {
+      return segment;
+    }
+  }
+  return undefined;
 }
 
 export function splitRuns(events: SessionEvent[]): FeedRun[] {
@@ -167,11 +247,13 @@ export function splitRuns(events: SessionEvent[]): FeedRun[] {
   return runSnapshot(fold).slice();
 }
 
-export function isCompactRun(run: FeedRun): boolean {
-  return run.events.some(
-    (event) =>
-      event.type === 'compaction' ||
-      (typeof event.runId === 'string' && event.runId.startsWith('compact:')),
+export function hasRunningCompaction(run: FeedRun): boolean {
+  return run.segments.some(isRunningCompactionSegment);
+}
+
+export function hasCompactedAnchor(run: FeedRun): boolean {
+  return run.segments.some(
+    (segment) => segment.kind === 'compaction' && segment.meta.status === 'completed',
   );
 }
 

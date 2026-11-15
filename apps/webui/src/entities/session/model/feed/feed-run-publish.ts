@@ -8,6 +8,7 @@ import type {
   GroupFeedChunk,
   ToolEventPair,
 } from './feed-types';
+import { isRunningCompactionSegment } from './feed-types';
 
 function sameElements<T>(next: readonly T[], prev: readonly T[]): boolean {
   for (let index = 0; index < next.length; index += 1) {
@@ -24,9 +25,41 @@ export function runSnapshot(fold: RunFold): FeedRun[] {
   }
   const current = fold.current ? publishRun(fold.current) : undefined;
   const next = current ? [...fold.closed, current] : fold.closed.slice();
-  fold.published = sameElements(next, fold.published) ? fold.published : next;
+  const settled = withStaleCompactionsInterrupted(next);
+  fold.published = sameElements(settled, fold.published) ? fold.published : settled;
   fold.dirty = false;
   return fold.published;
+}
+
+/**
+ * A running compaction card that is no longer at the feed tail means its
+ * closing event never arrived (crash, lost stream): nothing else will update
+ * it, so the fold closes it as interrupted instead of lying about progress.
+ */
+function withStaleCompactionsInterrupted(runs: FeedRun[]): FeedRun[] {
+  const tailRunIndex = runs.length - 1;
+  let changed = false;
+  const next = runs.map((run, runIndex) => {
+    if (!run.segments.some(isRunningCompactionSegment)) {
+      return run;
+    }
+    let runChanged = false;
+    const segments = run.segments.map((segment, segmentIndex) => {
+      if (!isRunningCompactionSegment(segment)) {
+        return segment;
+      }
+      const isFeedTail =
+        runIndex === tailRunIndex && segmentIndex === run.segments.length - 1 && segmentIndex >= 0;
+      if (isFeedTail) {
+        return segment;
+      }
+      runChanged = true;
+      changed = true;
+      return { ...segment, meta: { ...segment.meta, status: 'interrupted' as const } };
+    });
+    return runChanged ? { ...run, segments } : run;
+  });
+  return changed ? next : runs;
 }
 
 export { publishRun };

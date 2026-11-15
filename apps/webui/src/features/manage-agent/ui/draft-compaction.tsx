@@ -129,9 +129,7 @@ export function DraftCompaction({
           />
         </Field>
         <p className="font-mono text-[11px] text-muted-foreground tabular-nums leading-snug">
-          context {formatNumber(effectiveContext(agent, providers))} · reserve{' '}
-          {formatNumber(effectiveReserve(agent, providers))}
-          {draft.auto ? '' : ' · manual only'}
+          {thresholdPreview(agent, providers, draft)}
         </p>
         <div className="grid grid-cols-2 gap-2">
           <NumberField
@@ -139,9 +137,18 @@ export function DraftCompaction({
             label="Threshold, %"
             value={draft.thresholdPercent}
             placeholder="80"
-            description="Auto compaction fires at this percent of the context window minus the reply reserve. Clamp 10–100. Default 80."
+            description="Auto compaction fires when the context passes this percent of the usable budget: context window minus reply reserve. Clamp 10–100. Default 80."
             disabled={!draft.auto}
             onChange={(thresholdPercent) => patch({ thresholdPercent })}
+          />
+          <NumberField
+            id="draft-compaction-reserve-cap"
+            label="Reply reserve cap, %"
+            value={draft.reserveCapPercent}
+            placeholder="10"
+            description="Upper bound for the reply reserve, as a percent of the context window. Reserve = min(model max output, this cap) and is subtracted from the window before the threshold applies. Clamp 0–90. Default 10."
+            disabled={!draft.auto}
+            onChange={(reserveCapPercent) => patch({ reserveCapPercent })}
           />
           <NumberField
             id="draft-compaction-protect"
@@ -237,6 +244,34 @@ function effectiveReserve(agent: Agent | null, providers: ProviderPublic[]): num
     return reserve ?? 0;
   }
   return Math.min(reserve ?? 0, context);
+}
+function thresholdPreview(
+  agent: Agent | null,
+  providers: ProviderPublic[],
+  draft: CompactionDraft,
+): string {
+  const context = effectiveContext(agent, providers);
+  if (context === undefined) {
+    return 'context ? · model has no context window metadata';
+  }
+  const capRatio = parsePercent(draft.reserveCapPercent, 0.1);
+  const reserve = Math.min(effectiveReserve(agent, providers), Math.floor(context * capRatio));
+  const thresholdRatio = parsePercent(draft.thresholdPercent, 0.8);
+  const parts = [
+    `context ${formatNumber(context)}`,
+    `reserve ≤${formatNumber(reserve)}`,
+    `usable ${formatNumber(context - reserve)}`,
+  ];
+  if (draft.auto) {
+    parts.push(`auto fires at ~${formatNumber(Math.floor((context - reserve) * thresholdRatio))}`);
+  } else {
+    parts.push('manual only');
+  }
+  return parts.join(' · ');
+}
+function parsePercent(value: string, fallback: number): number {
+  const next = Number(value.trim());
+  return Number.isFinite(next) ? Math.min(1, Math.max(0, next / 100)) : fallback;
 }
 function formatNumber(value: number | undefined): string {
   return value === undefined ? '?' : value.toLocaleString('en-US');

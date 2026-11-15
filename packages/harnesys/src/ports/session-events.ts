@@ -159,6 +159,18 @@ export type SessionEvent = SessionEventScope &
         clientEventId?: string;
       }
     | {
+        type: 'compaction.progress';
+        /** Anchor id this progress belongs to; the anchor event closes the card. */
+        id: string;
+        phase: 'started' | 'failed' | 'cancelled';
+        reason?: 'threshold' | 'manual';
+        coveredFrom?: number;
+        coveredUntil?: number;
+        message?: string;
+        seq?: number;
+        runId?: string;
+      }
+    | {
         type: 'run.completed';
         text?: string;
         seq?: number;

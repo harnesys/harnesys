@@ -238,7 +238,7 @@ export function WorktreeSection({
         tabIndex={0}
         aria-expanded={expanded}
         className={cn(
-          'group/ws relative flex items-center rounded-md hover:bg-sidebar-accent/70',
+          'group/ws relative flex items-center rounded-md',
           rootDrop === 'valid' && 'bg-live/15 ring-1 ring-live ring-inset',
           rootDrop === 'invalid' && 'cursor-not-allowed opacity-60',
         )}

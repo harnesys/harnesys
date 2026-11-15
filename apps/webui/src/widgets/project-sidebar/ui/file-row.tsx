@@ -5,10 +5,12 @@ import { useOpenNewTerminal } from '@/features/ide';
 import { getGitFileStatus } from '@/shared/api/git';
 import { gitStatusColorClass, useGitStatusColors } from '@/shared/lib/git-status-colors';
 import { cn } from '@/shared/lib/utils';
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/shared/ui/context-menu';
 import { FileTypeIcon, FolderTypeIcon } from '@/shared/ui/icons';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
 import { useEntryActions } from '../model/use-entry-actions';
-import { FileRowActions } from './file-row-actions';
+import type { FileRowMenuProps } from './file-row-actions';
+import { FileRowMenuItems } from './file-row-actions';
 import { getDirAggregatedStatus } from './git-file-decorations';
 import { InlineCreateInput } from './inline-create-input';
 import { useFileRowDrag } from './use-file-row-drag';
@@ -56,7 +58,7 @@ function FileRowLabel({
       </span>
       <span
         className={cn(
-          'min-w-0 truncate text-sm group-data-[collapsible=icon]:hidden',
+          'whitespace-nowrap text-sm group-data-[collapsible=icon]:hidden',
           selected ? 'text-sidebar-foreground/90' : 'text-sidebar-foreground/70',
           git.decorationClass,
         )}
@@ -124,18 +126,10 @@ function resolveGitDecoration({
   };
 }
 
-function resolveInfoLabel(isDir: boolean, childCount: number, size: number | undefined): string {
-  if (isDir) {
-    return `${childCount} items`;
-  }
-  return size !== undefined ? formatSize(size) : '';
-}
-
 export function FileRow({
   entry,
   fullPath,
   depth,
-  childCount,
   projectId,
   worktreeId,
   expandedDirs,
@@ -156,7 +150,6 @@ export function FileRow({
   entry: ProjectFileEntry;
   fullPath: string;
   depth: number;
-  childCount: number;
   projectId: string;
   worktreeId?: string;
   expandedDirs: Set<string>;
@@ -203,7 +196,6 @@ export function FileRow({
   });
   const openNewTerminal = useOpenNewTerminal();
   const entryActions = useEntryActions(projectId, worktreeId);
-  const infoLabel = resolveInfoLabel(isDir, childCount, entry.size);
   const { dropState, dragProps } = useFileRowDrag({
     projectId,
     worktreeId,
@@ -237,47 +229,66 @@ export function FileRow({
     }
     onSelect(fullPath);
   };
+  const handleContextMenu = () => {
+    if (!selected) {
+      onSelect(fullPath);
+    }
+  };
+  const menuProps: FileRowMenuProps = {
+    projectId,
+    worktreeId,
+    entry,
+    fullPath,
+    isDir,
+    openNewTerminal,
+    entryActions,
+    onOpen,
+    onStartCreate,
+    onStartRename,
+    onDelete,
+  };
   return (
-    <div
-      role="treeitem"
-      tabIndex={0}
-      aria-expanded={isDir ? isExpanded : undefined}
-      aria-selected={selected}
-      className={cn(
-        'group/file relative flex items-center rounded-md hover:bg-sidebar-accent/70',
-        selected && 'bg-sidebar-accent/70 text-sidebar-accent-foreground',
-        'group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center',
-        dropState === 'valid' && 'bg-live/15 ring-1 ring-live ring-inset',
-        dropState === 'invalid' && 'cursor-not-allowed opacity-60',
-      )}
-      style={!iconMode ? { paddingLeft: `${depth * 12 + 1}px` } : undefined}
-      data-testid={`file-${fullPath}`}
-      data-selected={selected ? 'true' : 'false'}
-      data-drop={dropState ?? undefined}
-      data-path={fullPath}
-      draggable={dragProps.draggable}
-      onDragStart={dragProps.onDragStart}
-      onDragEnd={dragProps.onDragEnd}
-      onDragOver={dragProps.onDragOver}
-      onDragLeave={dragProps.onDragLeave}
-      onDrop={dragProps.onDrop}
-      onKeyDown={handleKeyDown}
-    >
-      {renamePath === fullPath ? (
-        <InlineCreateInput
-          kind={isDir ? 'dir' : 'file'}
-          initialValue={entry.name}
-          depth={depth}
-          onFinish={(name) => onRenameFinish(fullPath, name)}
-        />
-      ) : (
-        <>
+    <ContextMenu>
+      <ContextMenuTrigger
+        role="treeitem"
+        tabIndex={0}
+        aria-expanded={isDir ? isExpanded : undefined}
+        aria-selected={selected}
+        className={cn(
+          'group/file relative flex items-center rounded-md',
+          selected && 'bg-sidebar-accent/70 text-sidebar-accent-foreground',
+          'group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center',
+          dropState === 'valid' && 'bg-live/15 ring-1 ring-live ring-inset',
+          dropState === 'invalid' && 'cursor-not-allowed opacity-60',
+        )}
+        style={!iconMode ? { paddingLeft: `${depth * 12 + 1}px` } : undefined}
+        data-testid={`file-${fullPath}`}
+        data-selected={selected ? 'true' : 'false'}
+        data-drop={dropState ?? undefined}
+        data-path={fullPath}
+        draggable={dragProps.draggable}
+        onDragStart={dragProps.onDragStart}
+        onDragEnd={dragProps.onDragEnd}
+        onDragOver={dragProps.onDragOver}
+        onDragLeave={dragProps.onDragLeave}
+        onDrop={dragProps.onDrop}
+        onKeyDown={handleKeyDown}
+        onContextMenu={handleContextMenu}
+      >
+        {renamePath === fullPath ? (
+          <InlineCreateInput
+            kind={isDir ? 'dir' : 'file'}
+            initialValue={entry.name}
+            depth={depth}
+            onFinish={(name) => onRenameFinish(fullPath, name)}
+          />
+        ) : (
           <Tooltip>
             <TooltipTrigger
               render={
                 <button
                   type="button"
-                  className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-0.5 pl-2 text-left group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
+                  className="flex flex-1 items-center gap-1.5 px-1.5 py-0.5 pl-2 text-left group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
                   onClick={handleClick}
                   onDoubleClick={handleDoubleClick}
                 />
@@ -295,33 +306,11 @@ export function FileRow({
               {fullPath}
             </TooltipContent>
           </Tooltip>
-
-          <FileRowActions
-            projectId={projectId}
-            worktreeId={worktreeId}
-            entry={entry}
-            fullPath={fullPath}
-            isDir={isDir}
-            infoLabel={infoLabel}
-            openNewTerminal={openNewTerminal}
-            entryActions={entryActions}
-            onOpen={onOpen}
-            onStartCreate={onStartCreate}
-            onStartRename={onStartRename}
-            onDelete={onDelete}
-          />
-        </>
-      )}
-    </div>
+        )}
+      </ContextMenuTrigger>
+      <ContextMenuContent onClick={(event) => event.stopPropagation()}>
+        <FileRowMenuItems {...menuProps} />
+      </ContextMenuContent>
+    </ContextMenu>
   );
-}
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

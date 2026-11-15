@@ -5,22 +5,16 @@ import {
   DownloadIcon,
   FileIcon,
   FolderIcon,
-  InfoIcon,
-  MoreHorizontalIcon,
   PenLineIcon,
   ScanSearchIcon,
   SquareTerminalIcon,
   TrashIcon,
 } from 'lucide-react';
 import type { useOpenNewTerminal } from '@/features/ide';
-import { Button } from '@/shared/ui/button';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
 import { useExplorerDraftStore } from '../model/explorer-draft.store';
 import type { useEntryActions } from '../model/use-entry-actions';
@@ -29,78 +23,72 @@ import { useViewerCreates } from '../model/viewer-creates';
 type OpenNewTerminal = ReturnType<typeof useOpenNewTerminal>;
 type EntryActions = ReturnType<typeof useEntryActions>;
 
-export function FileRowActions({
-  projectId,
-  worktreeId,
-  entry,
-  fullPath,
-  isDir,
-  infoLabel,
-  openNewTerminal,
-  entryActions,
-  onOpen,
-  onStartCreate,
-  onStartRename,
-  onDelete,
-}: {
+export interface FileRowMenuProps {
   projectId: string;
   worktreeId?: string;
   entry: ProjectFileEntry;
   fullPath: string;
   isDir: boolean;
-  infoLabel: string;
   openNewTerminal: OpenNewTerminal;
   entryActions: EntryActions;
   onOpen: (fullPath: string) => void;
   onStartCreate: (kind: 'file' | 'dir', parentPath: string) => void;
   onStartRename: (fullPath: string) => void;
   onDelete: (fullPath: string) => void;
-}) {
+}
+
+export function FileRowMenuItems({
+  projectId,
+  worktreeId,
+  entry,
+  fullPath,
+  isDir,
+  openNewTerminal,
+  entryActions,
+  onOpen,
+  onStartCreate,
+  onStartRename,
+  onDelete,
+}: FileRowMenuProps) {
   const start = useExplorerDraftStore((state) => state.start);
   const viewerCreates = useViewerCreates();
+  const templateItems = viewerCreates.map((template) => (
+    <DropdownMenuItem
+      key={template.viewerId}
+      onClick={() => start('file', fullPath, projectId, template)}
+    >
+      <FileIcon className="size-3.5" />
+      {`New ${template.title} (${template.extension})`}
+    </DropdownMenuItem>
+  ));
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            className="absolute top-1/2 right-1 -translate-y-1/2 opacity-0 group-hover/file:opacity-100 data-open:opacity-100 group-data-[collapsible=icon]:hidden"
-          />
-        }
-        onClick={(event) => event.stopPropagation()}
-      >
-        <MoreHorizontalIcon className="text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
-        <span className="sr-only">File actions</span>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
-        <DropdownMenuGroup>
-          {!isDir ? (
-            <DropdownMenuItem onClick={() => onOpen(fullPath)}>
+    <>
+      <DropdownMenuGroup>
+        {!isDir ? (
+          <DropdownMenuItem onClick={() => onOpen(fullPath)}>
+            <FileIcon className="size-3.5" />
+            Open
+          </DropdownMenuItem>
+        ) : null}
+        {isDir ? (
+          <>
+            <DropdownMenuItem onClick={() => onStartCreate('file', fullPath)}>
               <FileIcon className="size-3.5" />
-              Open
+              New file
             </DropdownMenuItem>
-          ) : null}
-          {isDir ? (
-            <>
-              <DropdownMenuItem onClick={() => onStartCreate('file', fullPath)}>
-                <FileIcon className="size-3.5" />
-                New file
-              </DropdownMenuItem>
-              {viewerCreates.map((template) => (
-                <DropdownMenuItem
-                  key={template.viewerId}
-                  onClick={() => start('file', fullPath, projectId, template)}
-                >
-                  <FileIcon className="size-3.5" />
-                  {`New ${template.title} (${template.extension})`}
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuItem onClick={() => onStartCreate('dir', fullPath)}>
-                <FolderIcon className="size-3.5" />
-                New folder
-              </DropdownMenuItem>
-              {!worktreeId ? (
+            <DropdownMenuItem onClick={() => onStartCreate('dir', fullPath)}>
+              <FolderIcon className="size-3.5" />
+              New folder
+            </DropdownMenuItem>
+            {templateItems.length > 0 ? (
+              <>
+                <DropdownMenuSeparator />
+                {templateItems}
+              </>
+            ) : null}
+            {!worktreeId ? (
+              <>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   data-testid="folder-open-terminal"
                   onClick={() => {
@@ -110,47 +98,42 @@ export function FileRowActions({
                   <SquareTerminalIcon className="size-3.5" />
                   Terminal
                 </DropdownMenuItem>
-              ) : null}
-              <DropdownMenuSeparator />
-            </>
-          ) : null}
-          <DropdownMenuItem onClick={() => onStartRename(fullPath)}>
-            <PenLineIcon className="size-3.5" />
-            Rename
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => {
-              void navigator.clipboard.writeText(fullPath).catch(() => undefined);
-            }}
-          >
-            <ClipboardIcon className="size-3.5" />
-            Copy path
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => entryActions.duplicate(fullPath)}>
-            <CopyIcon className="size-3.5" />
-            Duplicate
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => entryActions.reveal(fullPath)}>
-            <ScanSearchIcon className="size-3.5" />
-            Reveal in Finder
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => entryActions.download(fullPath, entry.name, isDir)}>
-            <DownloadIcon className="size-3.5" />
-            Download
-          </DropdownMenuItem>
-          <DropdownMenuItem disabled>
-            <InfoIcon className="size-3.5" />
-            Info
-            <span className="ml-auto text-[11px] text-muted-foreground">{infoLabel}</span>
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => onDelete(fullPath)}>
-          <TrashIcon className="size-3.5" />
-          Delete
+              </>
+            ) : null}
+            <DropdownMenuSeparator />
+          </>
+        ) : null}
+        <DropdownMenuItem onClick={() => onStartRename(fullPath)}>
+          <PenLineIcon className="size-3.5" />
+          Rename
         </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <DropdownMenuItem
+          onClick={() => {
+            void navigator.clipboard.writeText(fullPath).catch(() => undefined);
+          }}
+        >
+          <ClipboardIcon className="size-3.5" />
+          Copy path
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => entryActions.duplicate(fullPath)}>
+          <CopyIcon className="size-3.5" />
+          Duplicate
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => entryActions.reveal(fullPath)}>
+          <ScanSearchIcon className="size-3.5" />
+          Reveal in Finder
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => entryActions.download(fullPath, entry.name, isDir)}>
+          <DownloadIcon className="size-3.5" />
+          Download
+        </DropdownMenuItem>
+      </DropdownMenuGroup>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem variant="destructive" onClick={() => onDelete(fullPath)}>
+        <TrashIcon className="size-3.5" />
+        Delete
+      </DropdownMenuItem>
+    </>
   );
 }
 

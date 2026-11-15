@@ -40,7 +40,6 @@ export interface FlatTreeRow {
   entry?: ProjectFileEntry;
   fullPath: string;
   depth: number;
-  childCount: number;
   createKind?: 'file' | 'dir';
 }
 export function flattenFileTree({
@@ -60,19 +59,18 @@ export function flattenFileTree({
   const walk = (parentPath: string, depth: number) => {
     for (const entry of childrenOf(index, parentPath, showHidden)) {
       const children = entry.kind === 'dir' ? childrenOf(index, entry.path, showHidden) : [];
-      rows.push({ kind: 'entry', entry, fullPath: entry.path, depth, childCount: children.length });
+      rows.push({ kind: 'entry', entry, fullPath: entry.path, depth });
       if (entry.kind === 'dir' && createDraft && createDraft.parentPath === entry.path) {
         rows.push({
           kind: 'create',
           fullPath: entry.path,
           depth: depth + 1,
-          childCount: 0,
           createKind: createDraft.kind,
         });
       }
       if (entry.kind === 'dir' && expandedDirs.has(entry.path)) {
         if (children.length === 0 && entry.pruned === true) {
-          rows.push({ kind: 'loading', fullPath: entry.path, depth: depth + 1, childCount: 0 });
+          rows.push({ kind: 'loading', fullPath: entry.path, depth: depth + 1 });
         } else {
           walk(entry.path, depth + 1);
         }

@@ -18,6 +18,7 @@ interface AccordionSectionProps {
   headerDragProps?: HTMLAttributes<HTMLButtonElement>;
   dragging?: boolean;
   dropHint?: 'before' | 'after' | null;
+  horizontalScroll?: boolean;
 }
 export function AccordionSection({
   id,
@@ -32,6 +33,7 @@ export function AccordionSection({
   headerDragProps,
   dragging = false,
   dropHint = null,
+  horizontalScroll = false,
 }: AccordionSectionProps) {
   const collapsed = useAccordionStore((state) => state.collapsed[id] ?? false);
   const toggle = useAccordionStore((state) => state.toggle);
@@ -104,6 +106,7 @@ export function AccordionSection({
           {resizer}
           <ScrollArea
             data-accordion-content={id}
+            horizontal={horizontalScroll}
             style={iconMode ? { flexGrow: 0, flexBasis: 'auto' } : { flexGrow: size, flexBasis: 0 }}
             className="min-h-0"
           >

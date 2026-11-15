@@ -80,6 +80,37 @@ describe('eventToSessionEvent replay fields', () => {
     expect(out).toMatchObject({ type: 'compaction', coveredUntil: 4, coveredTotal: 12 });
   });
 
+  test('maps compaction.started to a running progress marker', () => {
+    const out = eventToSessionEvent(
+      graphEvent('compaction.started', {
+        id: 'a1',
+        reason: 'manual',
+        coveredFrom: 2,
+        coveredUntil: 7,
+      }),
+    );
+    expect(out).toMatchObject({
+      type: 'compaction.progress',
+      id: 'a1',
+      phase: 'started',
+      reason: 'manual',
+      coveredFrom: 2,
+      coveredUntil: 7,
+    });
+  });
+
+  test('maps compaction.failed to a failed progress marker and drops idless failures', () => {
+    expect(
+      eventToSessionEvent(graphEvent('compaction.failed', { id: 'a1', error: 'boom' })),
+    ).toMatchObject({
+      type: 'compaction.progress',
+      id: 'a1',
+      phase: 'failed',
+      message: 'boom',
+    });
+    expect(eventToSessionEvent(graphEvent('compaction.failed', { error: 'boom' }))).toBeNull();
+  });
+
   test('keeps the generated image count on model usage', () => {
     const out = eventToSessionEvent(
       graphEvent('model.completed', {

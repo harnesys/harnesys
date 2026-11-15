@@ -14,6 +14,7 @@ export type SessionEventType =
   | 'model.stats'
   | 'model.retry'
   | 'compaction'
+  | 'compaction.progress'
   | 'run.completed'
   | 'run.cancelled'
   | 'run.failed'

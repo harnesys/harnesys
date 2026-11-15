@@ -2,6 +2,7 @@ import type { PortRef } from '@harnesys/studio-shared';
 import { THRESHOLD_SUMMARY_NAME } from '@harnesys/studio-shared';
 export interface CompactionDraft {
   thresholdPercent: string;
+  reserveCapPercent: string;
   protectRecentPercent: string;
   protectRecentTurns: string;
   preCompactNote: boolean;
@@ -20,6 +21,7 @@ export function compactionDraftFrom(ref: PortRef | null): CompactionDraft {
   if (!ref) {
     return {
       thresholdPercent: '80',
+      reserveCapPercent: '10',
       protectRecentPercent: '10',
       protectRecentTurns: '',
       preCompactNote: true,
@@ -39,6 +41,7 @@ export function compactionDraftFrom(ref: PortRef | null): CompactionDraft {
   const summary = summaryModelFrom(spec.summaryModel);
   return {
     thresholdPercent: ratioToPercent(spec.thresholdRatio, 80),
+    reserveCapPercent: ratioToPercent(spec.outputReserveRatio, 10),
     protectRecentPercent: ratioToPercent(spec.protectRecentRatio, 10),
     protectRecentTurns: stringifyNumber(spec.protectRecentTurns, ''),
     preCompactNote: spec.preCompactNote !== false,
@@ -57,6 +60,7 @@ export function compactionDraftFrom(ref: PortRef | null): CompactionDraft {
 export function toCompactionPortRef(draft: CompactionDraft): PortRef {
   const spec: Record<string, unknown> = {
     thresholdRatio: parsePercentToRatio(draft.thresholdPercent, 0.8),
+    outputReserveRatio: parsePercentToRatio(draft.reserveCapPercent, 0.1),
     protectRecentRatio: parsePercentToRatio(draft.protectRecentPercent, 0.1),
     protectRecentTurns: parseNonNegativeInt(draft.protectRecentTurns, 0),
     preCompactNote: draft.preCompactNote,

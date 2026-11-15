@@ -47,6 +47,7 @@ function isJournalBoundaryCard(event: SessionEvent): boolean {
     event.type === 'map.item.failed' ||
     event.type === 'map.completed' ||
     event.type === 'model.retry' ||
+    event.type === 'compaction.progress' ||
     event.type === 'wait.started'
   );
 }

@@ -6,7 +6,7 @@ import {
   compactionCoverage,
   type FeedRun,
   firstLiveRunIndex,
-  isCompactRun,
+  hasRunningCompaction,
   isRunCovered,
   type RunFailure,
   useSessionStore,
@@ -154,7 +154,7 @@ export function ThreadPanel({
       </>
     );
   }
-  const compactLive = compacting && ownRuns.some(isCompactRun);
+  const compactionLive = ownRuns.some(hasRunningCompaction);
   const showFork = Boolean(thread?.parentThreadId) && inheritedRuns.length > 0;
   const unseenRunIndex =
     unseenBoundary === null ? -1 : ownRuns.findIndex((run) => run.firstIndex >= unseenBoundary);
@@ -225,8 +225,7 @@ export function ThreadPanel({
             {tail.own.map((run, sliceIndex) => {
               const index = tail.ownCut + sliceIndex;
               const last = index === ownRuns.length - 1;
-              const runStreaming =
-                (streaming && last && !compacting) || (compacting && last && isCompactRun(run));
+              const runStreaming = (streaming && last && !compacting) || hasRunningCompaction(run);
               const forkAt = run.runId ?? run.id ?? '';
               const combined = inheritedRuns.length + index;
               const covered = isRunCovered(run, coverage.boundaryIndex);
@@ -271,7 +270,7 @@ export function ThreadPanel({
                 />
               </MessageScrollerItem>
             ))}
-            {compacting && !compactLive ? (
+            {compacting && !compactionLive ? (
               <MessageScrollerItem key="compaction-pending" messageId="compaction-pending">
                 <CompactionPendingCard
                   onCancel={() => useCompactingStore.getState().abort(threadId)}

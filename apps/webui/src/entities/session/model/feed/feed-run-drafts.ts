@@ -13,6 +13,8 @@ import type {
 
 export type ReasoningEvent = SessionEvent & { type: 'reasoning-delta' };
 export type TextDeltaEvent = SessionEvent & { type: 'text-delta' };
+export type CompactionAnchorEvent = SessionEvent & { type: 'compaction' };
+export type CompactionProgressEvent = SessionEvent & { type: 'compaction.progress' };
 export type AskEvent = ToolAskEvent;
 
 export interface ChunkDraft {

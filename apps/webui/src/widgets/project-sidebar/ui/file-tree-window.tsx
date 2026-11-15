@@ -85,7 +85,7 @@ export function FileTreeWindow({
       {slice.map((row, i) => (
         <div
           key={row.kind === 'entry' ? row.fullPath : `${row.kind}:${row.fullPath}`}
-          className="absolute inset-x-0 top-0"
+          className="absolute top-0 left-0 w-max min-w-full"
           style={{ transform: `translateY(${(start + i) * rowHeight}px)`, height: rowHeight }}
         >
           {renderRow(row)}

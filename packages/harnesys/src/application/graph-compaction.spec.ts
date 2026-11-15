@@ -165,9 +165,9 @@ describe('compaction threshold per model call', () => {
     const types = events.map((ev) => ev.type);
     const failedIndex = types.indexOf('compaction.failed');
     expect(failedIndex).toBeGreaterThan(-1);
-    expect(
-      types.slice(0, failedIndex).filter((type) => type.startsWith('compaction.')),
-    ).toHaveLength(0);
+    expect(types.slice(0, failedIndex).filter((type) => type.startsWith('compaction.'))).toEqual([
+      'compaction.started',
+    ]);
     expect(types.filter((type) => type === 'compaction.failed')).toHaveLength(1);
     expect(call).toBeGreaterThanOrEqual(2);
     expect(types.indexOf('model.completed')).toBeLessThan(failedIndex);
