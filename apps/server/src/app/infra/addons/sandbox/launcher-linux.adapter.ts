@@ -69,12 +69,9 @@ export function bwrapCommand(spec: SandboxSpawnSpec): string[] {
     '--bind-try',
     tmpdir(),
     tmpdir(),
-    '--dev-bind',
-    '/dev',
-    '/dev',
     '--proc',
     '/proc',
-    '--devtmpfs',
+    '--dev',
     '/dev',
   ];
 }

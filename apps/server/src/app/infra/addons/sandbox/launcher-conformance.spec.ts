@@ -99,12 +99,23 @@ async function runCanary(
     platform: 1,
   });
   const reader = (spawned.stdio.stdout as ReadableStream<Uint8Array>).getReader();
+  const errorReader = (spawned.stdio.stderr as ReadableStream<Uint8Array>).getReader();
   const decoder = new TextDecoder();
   let buffer = '';
+  let errorBuffer = '';
+  const errorPump = (async () => {
+    for (;;) {
+      const { done, value } = await errorReader.read();
+      if (done) {
+        return;
+      }
+      errorBuffer += decoder.decode(value, { stream: true });
+    }
+  })();
   const deadline = Date.now() + 15_000;
   for (;;) {
     if (Date.now() > deadline) {
-      throw new Error('canary timed out');
+      throw new Error(`canary timed out: ${errorBuffer}`);
     }
     const { done, value } = await reader.read();
     if (done) {
@@ -121,7 +132,8 @@ async function runCanary(
       return JSON.parse(line ?? '{}') as CanaryReport;
     }
   }
-  throw new Error(`canary produced no report: ${buffer}`);
+  await errorPump;
+  throw new Error(`canary produced no report: ${buffer}\nstderr: ${errorBuffer}`);
 }
 
 describe('sandbox conformance', () => {
