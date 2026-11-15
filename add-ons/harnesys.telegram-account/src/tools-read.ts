@@ -1,7 +1,7 @@
 import type { ToolHandler } from '@harnesys/sdk';
 import { chatLabelOf, chatRefOf, matchesIdentity } from './chat-target.ts';
 import { MAX_MESSAGE_TEXT } from './message-format.ts';
-import type { MessageDetail } from './telegram-types.ts';
+import type { FeedClient, MessageDetail } from './telegram-types.ts';
 import { peerOf } from './tool-access.ts';
 import { withSharedClient } from './tool-client.ts';
 import {
@@ -62,6 +62,39 @@ function detailViewOf(detail: MessageDetail): Record<string, unknown> {
     views: detail.views,
     editedAt: detail.editedAt,
   };
+}
+
+async function usernameOfPeer(client: FeedClient, peerId: string): Promise<string | null> {
+  try {
+    return (await client.resolve(peerId)).username;
+  } catch {
+    return null;
+  }
+}
+
+async function visibleFound(
+  client: FeedClient,
+  allowed: readonly string[],
+  found: readonly MessageDetail[],
+): Promise<MessageDetail[]> {
+  const usernames = new Map<string, string | null>();
+  const visible: MessageDetail[] = [];
+  for (const detail of found) {
+    const peerId = detail.peerId ?? '';
+    if (matchesIdentity(allowed, { peerId, username: null })) {
+      visible.push(detail);
+      continue;
+    }
+    let username = usernames.get(peerId);
+    if (username === undefined) {
+      username = await usernameOfPeer(client, peerId);
+      usernames.set(peerId, username);
+    }
+    if (matchesIdentity(allowed, { peerId, username })) {
+      visible.push(detail);
+    }
+  }
+  return visible;
 }
 
 const getAccountTool: ToolHandler = async (_input, ctx) => {
@@ -140,15 +173,7 @@ const searchMessagesTool: ToolHandler = async (input, ctx) => {
   return withSharedClient(ctx, async (client) => {
     const peer = ref === null ? undefined : await peerOf(client, settings, ref);
     const found = await client.search(query, peer, limit);
-    const visible =
-      ref === null
-        ? found.filter((detail) =>
-            matchesIdentity(settings.allowedChats, {
-              peerId: detail.peerId ?? '',
-              username: null,
-            }),
-          )
-        : found;
+    const visible = await visibleFound(client, settings.allowedChats, found);
     return {
       chat: ref === null ? null : chatLabelOf(ref),
       query,
