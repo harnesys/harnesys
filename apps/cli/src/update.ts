@@ -2,6 +2,12 @@ import { createHash } from 'node:crypto';
 import { chmodSync, existsSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import packageJson from '../package.json' with { type: 'json' };
+import {
+  assetNameFor,
+  assetsArchiveName,
+  extractAssetsPayload,
+  swapAssetsDir,
+} from './assets-payload.ts';
 
 export const CLI_VERSION: string = packageJson.version;
 export const DEFAULT_REPO = 'harnesys/harnesys';
@@ -24,25 +30,7 @@ function fail(message: string): never {
   process.exit(1);
 }
 
-export function platformSlug(): string | null {
-  if (process.platform === 'darwin') {
-    return 'darwin';
-  }
-  return process.platform === 'linux' ? 'linux' : null;
-}
-
-export function archSlug(): string | null {
-  return process.arch === 'x64' || process.arch === 'arm64' ? process.arch : null;
-}
-
-export function assetNameFor(bin: string): string {
-  const platform = platformSlug();
-  const arch = archSlug();
-  if (!platform || !arch) {
-    return `${bin}-unknown`;
-  }
-  return `${bin}-${platform}-${arch}`;
-}
+export { archSlug, assetNameFor, assetsArchiveName, platformSlug } from './assets-payload.ts';
 
 /** Numeric semver triple of "v1.2.3" / "1.2.3"; null when it does not parse. */
 export function parseVersion(tag: string): [number, number, number] | null {
@@ -214,6 +202,17 @@ async function fetchChecksum(asset: ReleaseAsset): Promise<string | null> {
   }
 }
 
+/** Download a release asset, verify its optional .sha256 checksum, write it to `staging`. */
+async function downloadVerified(asset: ReleaseAsset, staging: string): Promise<number> {
+  const bytes = await download(asset.name, asset.browser_download_url);
+  const expected = await fetchChecksum(asset);
+  if (expected !== null && !checksumMatches(bytes, expected)) {
+    throw new Error(`sha256 mismatch for ${asset.name} — download corrupted or tampered`);
+  }
+  writeFileSync(staging, bytes);
+  return bytes.length;
+}
+
 function isUnitActive(unit: string): boolean {
   if (process.platform !== 'linux' || !Bun.which('systemctl')) {
     return false;
@@ -263,28 +262,37 @@ export async function commandUpdate(repoFlag: string | undefined): Promise<void>
     return;
   }
   const staged: { assetName: string; staging: string; target: string; size: number }[] = [];
+  const assetsTargetDir = join(binDir, 'assets');
+  const assetsStagingArchive = join(binDir, `assets.update-${process.pid}.tar.gz`);
+  const assetsStagingDir = join(binDir, `assets.update-${process.pid}`);
+  let assetsAsset: ReleaseAsset | null = null;
+  let assetsPayloadDir: string | null = null;
   try {
     for (const item of targets) {
       const asset = findAsset(release.assets, assetNameFor(item.bin));
       const staging = `${item.target}.update-${process.pid}`;
-      const bytes = await download(asset.name, asset.browser_download_url);
-      const expected = await fetchChecksum(asset);
-      if (expected !== null && !checksumMatches(bytes, expected)) {
-        throw new Error(`sha256 mismatch for ${asset.name} — download corrupted or tampered`);
-      }
-      writeFileSync(staging, bytes);
+      const size = await downloadVerified(asset, staging);
       chmodSync(staging, 0o755);
       staged.push({
         assetName: asset.name,
         staging,
         target: item.target,
-        size: bytes.length,
+        size,
       });
     }
+    assetsAsset = findAsset(release.assets, assetsArchiveName());
+    await downloadVerified(assetsAsset, assetsStagingArchive);
+    assetsPayloadDir = extractAssetsPayload(
+      assetsStagingArchive,
+      assetsStagingDir,
+      assetsAsset.name,
+    );
   } catch (error) {
     for (const item of staged) {
       rmSync(item.staging, { force: true });
     }
+    rmSync(assetsStagingDir, { force: true, recursive: true });
+    rmSync(assetsStagingArchive, { force: true });
     return fail(`update aborted, binaries untouched: ${String(error).slice(0, 120)}`);
   }
   for (const item of staged) {
@@ -293,6 +301,15 @@ export async function commandUpdate(repoFlag: string | undefined): Promise<void>
       `updated ${item.assetName} → ${item.target} (${Math.round(item.size / 1024 / 1024)} MiB)\n`,
     );
   }
+  const payloadDir = assetsPayloadDir;
+  const asset = assetsAsset;
+  if (payloadDir === null || asset === null) {
+    return fail('update aborted, binaries untouched: assets payload was not staged');
+  }
+  swapAssetsDir(payloadDir, assetsTargetDir);
+  rmSync(assetsStagingDir, { force: true, recursive: true });
+  rmSync(assetsStagingArchive, { force: true });
+  process.stdout.write(`updated ${asset.name} → ${assetsTargetDir}\n`);
   const restarted = restartUnits();
   if (restarted.length > 0) {
     process.stdout.write(`restarted (systemd): ${restarted.join(', ')}\n`);

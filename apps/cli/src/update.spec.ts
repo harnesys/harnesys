@@ -1,11 +1,27 @@
 import { describe, expect, test } from 'bun:test';
-import { assetNameFor, checksumHexFor, isNewerVersion, parseVersion, sha256Hex } from './update.ts';
+import {
+  assetNameFor,
+  assetsArchiveName,
+  checksumHexFor,
+  isNewerVersion,
+  parseVersion,
+  sha256Hex,
+} from './update.ts';
 
 describe('assetNameFor', () => {
   test('includes platform and arch on supported platforms', () => {
     // The slug depends on the host running the test; assert the shape only.
     const name = assetNameFor('harnesys-host');
     expect(name.startsWith('harnesys-host-')).toBe(true);
+    expect(name).not.toContain('unknown');
+  });
+});
+
+describe('assetsArchiveName', () => {
+  test('matches the release.yml payload artifact naming', () => {
+    const name = assetsArchiveName();
+    expect(name.startsWith('harnesys-assets-')).toBe(true);
+    expect(name.endsWith('.tar.gz')).toBe(true);
     expect(name).not.toContain('unknown');
   });
 });

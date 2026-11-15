@@ -10,6 +10,7 @@
 #
 # Asset naming (release matrix):
 #   <bin>-<os>-<arch>   with os darwin|linux and arch x64|arm64
+#   harnesys-assets-<os>-<arch>.tar.gz   bundled add-on payload -> <execDir>/assets
 #
 # Prefer the desktop app from Releases for day-to-day use. These binaries are
 # for headless/host installs. Stage 1 CLI is a thin stub (help/version only).
@@ -42,6 +43,8 @@ case "$(uname -m)" in
   aarch64 | arm64) arch=arm64 ;;
   *) die "unsupported architecture \"$(uname -m)\" — assets exist for x64 and arm64" ;;
 esac
+
+ASSET_PAYLOAD="harnesys-assets-${os}-${arch}.tar.gz"
 
 # curl -f fails on HTTP >= 400 (exit 22); wget fails on server errors (exit 8).
 fetch_to() {
@@ -85,11 +88,31 @@ for bin in $BINARIES; do
   fi
 done
 
+say "downloading ${ASSET_PAYLOAD} ..."
+if ! fetch_to "${tmp_dir}/assets.tar.gz" "${BASE_URL}/${ASSET_PAYLOAD}"; then
+  download_failed "$ASSET_PAYLOAD" "${BASE_URL}/${ASSET_PAYLOAD}"
+  exit 1
+fi
+
+mkdir -p "${tmp_dir}/payload" || die "cannot prepare payload staging in $tmp_dir"
+if ! tar -xzf "${tmp_dir}/assets.tar.gz" -C "${tmp_dir}/payload"; then
+  die "cannot extract ${ASSET_PAYLOAD} — download corrupted or tar unavailable"
+fi
+if [ ! -d "${tmp_dir}/payload/assets/add-ons" ]; then
+  die "${ASSET_PAYLOAD} is malformed: no assets/add-ons/ inside — bundled add-ons would be missing"
+fi
+
 for bin in $BINARIES; do
   chmod 0755 "${tmp_dir}/${bin}" || die "cannot chmod ${tmp_dir}/${bin}"
   mv -f "${tmp_dir}/${bin}" "${PREFIX}/${bin}" || die "cannot move ${bin} into $PREFIX"
   say "installed ${PREFIX}/${bin}"
 done
+
+if [ -d "${PREFIX}/assets" ]; then
+  rm -rf "${PREFIX}/assets"
+fi
+mv "${tmp_dir}/payload/assets" "${PREFIX}/assets" || die "cannot move assets into $PREFIX"
+say "installed ${PREFIX}/assets"
 
 case ":${PATH}:" in
   *":${PREFIX}:"*) ;;
@@ -101,7 +124,7 @@ case ":${PATH}:" in
 esac
 
 say ""
-say "done. binaries are in ${PREFIX}."
+say "done. binaries and bundled assets are in ${PREFIX}."
 say "  harnesys --version     # CLI stub in Stage 1"
 say "  harnesys-host          # API host (default :47474)"
 say "  harnesys-web           # static web + proxy (default :8080)"
