@@ -1,4 +1,4 @@
-import { BotIcon, CircleDotIcon, MessagesSquareIcon } from 'lucide-react';
+import { CircleDotIcon, MessagesSquareIcon } from 'lucide-react';
 import { useAgentStore } from '@/entities/agent';
 import { useIssueBoardStore } from '@/entities/issue';
 import { useActiveOrgStore } from '@/entities/org-machine';
@@ -6,7 +6,6 @@ import { setActiveThreadId } from '@/entities/thread';
 import { useDeskStore } from '@/features/desk';
 import { useIdeStore } from '@/features/ide';
 import { useIssueDrawerStore } from '@/features/manage-issues/model/issue-drawer.store';
-import { openMarketplace } from '@/features/preset-marketplace';
 import { openNewThread } from '@/features/switch-thread';
 import { useOrgId } from '@/shared/config/location';
 import { useStudioNavigation } from '@/shared/config/navigation';
@@ -38,14 +37,6 @@ export function IdeHome() {
           Create
         </p>
         <CategoryLandingActions>
-          <CategoryLandingActionCard
-            icon={<BotIcon />}
-            title="New agent"
-            description="Name and a job. Opens as a thread tab."
-            onClick={() => {
-              void openMarketplace({ kind: 'agent' });
-            }}
-          />
           <CategoryLandingActionCard
             icon={<MessagesSquareIcon />}
             title="New thread"

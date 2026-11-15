@@ -55,7 +55,14 @@ export interface MapInfo {
 
 export type CompactionStatus = 'running' | 'completed' | 'failed' | 'cancelled' | 'interrupted';
 
-export function isRunningCompactionSegment(segment: FeedSegment): boolean {
+export interface CompactionSegment {
+  key: string;
+  kind: 'compaction';
+  text: string;
+  meta: CompactionSegmentMeta;
+}
+
+export function isRunningCompactionSegment(segment: FeedSegment): segment is CompactionSegment {
   return segment.kind === 'compaction' && segment.meta.status === 'running';
 }
 
@@ -182,12 +189,7 @@ export type FeedSegment =
       id: string | undefined;
       text: string;
     }
-  | {
-      key: string;
-      kind: 'compaction';
-      text: string;
-      meta: CompactionSegmentMeta;
-    }
+  | CompactionSegment
   | {
       key: string;
       kind: 'handoff';

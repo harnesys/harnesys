@@ -1,0 +1,319 @@
+{
+  "id": "harnesys.notion",
+  "version": "1.0.2",
+  "platform": 1,
+  "title": "Notion",
+  "description": "Agent tools for Notion: search pages and databases, read page content, create and update pages, query databases and append content. Uses a Notion internal integration token stored in the add-on config.",
+  "runtime": {
+    "entry": "dist/index.js",
+    "profile": "trusted"
+  },
+  "activation": "lazy",
+  "permissions": [
+    {
+      "id": "http.fetch",
+      "scope": {
+        "hosts": ["api.notion.com"]
+      },
+      "reason": "Call the Notion REST API with the configured integration token"
+    }
+  ],
+  "connections": [],
+  "icon": "assets/icon.svg",
+  "color": "#111111",
+  "contributions": [
+    {
+      "id": "config",
+      "family": "config",
+      "descriptor": {
+        "fields": [
+          {
+            "key": "token",
+            "label": "Notion integration token",
+            "type": "secret",
+            "required": false,
+            "help": "Internal integration secret from https://www.notion.so/profile/integrations (starts with ntn_). Create an integration, then share the target pages or databases with it in Notion (page menu → Connections). Stored in the host vault. Until it is set every tool returns account_failed."
+          }
+        ]
+      }
+    },
+    {
+      "id": "howto",
+      "family": "content",
+      "descriptor": {
+        "id": "howto",
+        "title": "Working with Notion",
+        "kind": "skill",
+        "path": "content/howto"
+      }
+    },
+    {
+      "id": "pack",
+      "family": "tool-pack",
+      "descriptor": {
+        "name": "notion",
+        "title": "Notion tools",
+        "description": "Search, read, create and update Notion pages and databases as a Notion integration. Content is written and returned as markdown; the add-on converts it to and from Notion blocks.",
+        "skills": ["howto"],
+        "tools": [
+          {
+            "name": "search",
+            "description": "Search pages and databases shared with the integration. Returns id, type, title and url for each result; use the ids with the other tools. Query matches page titles and content; an empty query lists everything shared.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string",
+                  "description": "Text to search for; empty lists all shared pages and databases"
+                },
+                "objectType": {
+                  "type": "string",
+                  "enum": ["page", "database"],
+                  "description": "Restrict results to pages or databases"
+                },
+                "pageSize": {
+                  "type": "integer",
+                  "description": "Results per call, up to 100"
+                },
+                "startCursor": {
+                  "type": "string",
+                  "description": "Cursor from a previous search result"
+                }
+              }
+            }
+          },
+          {
+            "name": "get_page",
+            "description": "Read page metadata: title, url, icon, parent and all properties with their values as plain text. Page body is not included; use get_page_content for it.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "pageId": {
+                  "type": "string",
+                  "description": "Notion page id (with or without dashes)"
+                }
+              },
+              "required": ["pageId"]
+            }
+          },
+          {
+            "name": "get_page_content",
+            "description": "Read a page body as markdown: headings, paragraphs, lists, to-dos, quotes, code and dividers. Nested blocks are indented. Good for summarizing or editing pages.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "pageId": {
+                  "type": "string",
+                  "description": "Notion page id"
+                },
+                "maxDepth": {
+                  "type": "integer",
+                  "description": "How deep to render nested blocks, 1 to 5, default 3"
+                }
+              },
+              "required": ["pageId"]
+            }
+          },
+          {
+            "name": "create_page",
+            "description": "Create a page inside a database or under another page. For a database parent set parentType to database_id and pass title (the add-on resolves the database title column) plus optional properties {\"Property name\": value} with plain strings, numbers, booleans or a select name; for a page parent set parentType to page_id and pass title. content is markdown converted to blocks under the new page. Returns the new page id and url.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "parentType": {
+                  "type": "string",
+                  "enum": ["database_id", "page_id"],
+                  "description": "What parentId points at"
+                },
+                "parentId": {
+                  "type": "string",
+                  "description": "Database or parent page id"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Page title"
+                },
+                "properties": {
+                  "type": "object",
+                  "description": "Extra database properties as simple values: string, number, boolean or select name; for anything richer pass Notion property objects with $raw suffix handled as raw values",
+                  "additionalProperties": {
+                    "oneOf": [
+                      { "type": "string" },
+                      { "type": "number" },
+                      { "type": "boolean" }
+                    ]
+                  }
+                },
+                "rawProperties": {
+                  "type": "object",
+                  "description": "Advanced: a raw Notion properties object passed as-is, merged over the convenience ones"
+                },
+                "content": {
+                  "type": "string",
+                  "description": "Markdown body for the new page"
+                },
+                "icon": {
+                  "type": "string",
+                  "description": "Page icon emoji, e.g. 🚀"
+                }
+              },
+              "required": ["parentType", "parentId"]
+            }
+          },
+          {
+            "name": "update_page",
+            "description": "Update an existing page: change the title (the add-on resolves the title column), set database properties with simple values, change the icon, or archive (trash) and restore the page. Page body is not changed by this tool; use append_blocks to add content.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "pageId": {
+                  "type": "string",
+                  "description": "Notion page id"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "New page title"
+                },
+                "properties": {
+                  "type": "object",
+                  "description": "Database properties as simple values: string, number, boolean or select name"
+                },
+                "rawProperties": {
+                  "type": "object",
+                  "description": "Advanced: a raw Notion properties object passed as-is, merged over the convenience ones"
+                },
+                "icon": {
+                  "type": "string",
+                  "description": "New page icon emoji"
+                },
+                "archived": {
+                  "type": "boolean",
+                  "description": "true moves the page to trash, false restores it"
+                }
+              },
+              "required": ["pageId"]
+            }
+          },
+          {
+            "name": "append_blocks",
+            "description": "Append markdown content to the end of a page body: headings, paragraphs, lists, to-dos, quotes, code and dividers. Existing content is kept.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "pageId": {
+                  "type": "string",
+                  "description": "Notion page id"
+                },
+                "content": {
+                  "type": "string",
+                  "description": "Markdown to append"
+                }
+              },
+              "required": ["pageId", "content"]
+            }
+          },
+          {
+            "name": "update_block",
+            "description": "Rewrite the text of an existing block: paragraphs, headings, list items, to-dos, quotes, code and callouts. content is plain text for that one block; markdown is not parsed here, so use append_blocks to add new markdown content. For a to-do block pass checked to tick or untick it, for a code block pass language to change the syntax. The block type is read from the id, so blocks that cannot hold text (images, dividers, child pages) are refused with the reason.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "blockId": {
+                  "type": "string",
+                  "description": "Notion block id (with or without dashes)"
+                },
+                "content": {
+                  "type": "string",
+                  "description": "New block text as plain text; omit to keep the text as it is"
+                },
+                "checked": {
+                  "type": "boolean",
+                  "description": "to-do blocks only: true ticks the item, false unticks it"
+                },
+                "language": {
+                  "type": "string",
+                  "description": "code blocks only: language name, e.g. ts or python"
+                }
+              },
+              "required": ["blockId"]
+            }
+          },
+          {
+            "name": "delete_block",
+            "description": "Delete one block together with its children (the block moves to the Notion trash and can be restored there). To change content prefer update_block, to add content prefer append_blocks.",
+            "effect": "destructive",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "blockId": {
+                  "type": "string",
+                  "description": "Notion block id (with or without dashes)"
+                }
+              },
+              "required": ["blockId"]
+            }
+          },
+          {
+            "name": "query_database",
+            "description": "Query a database and get matching rows with their properties as plain text and a page-content preview. filter is a raw Notion filter object (e.g. {\"property\": \"Status\", \"select\": {\"equals\": \"Done\"}}) and sorts a raw Notion sorts array; ids and urls are returned for follow-up get_page calls.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "databaseId": {
+                  "type": "string",
+                  "description": "Notion database id"
+                },
+                "filter": {
+                  "type": "object",
+                  "description": "Raw Notion filter object or {and|or: [...]}"
+                },
+                "sorts": {
+                  "type": "array",
+                  "items": { "type": "object" },
+                  "description": "Raw Notion sorts array, e.g. [{\"property\": \"Date\", \"direction\": \"descending\"}]"
+                },
+                "pageSize": {
+                  "type": "integer",
+                  "description": "Rows per call, up to 100"
+                },
+                "startCursor": {
+                  "type": "string",
+                  "description": "Cursor from a previous query result"
+                }
+              },
+              "required": ["databaseId"]
+            }
+          },
+          {
+            "name": "get_database",
+            "description": "Read database schema: title, url, description and every property with its name, type and, for selects and multi-selects, the option names. Call it before query_database or create_page to see what a database accepts.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "databaseId": {
+                  "type": "string",
+                  "description": "Notion database id"
+                }
+              },
+              "required": ["databaseId"]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

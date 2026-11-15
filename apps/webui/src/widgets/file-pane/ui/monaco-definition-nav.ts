@@ -1,9 +1,9 @@
-import type { OnMount } from '@monaco-editor/react';
+import type * as monacoNs from 'monaco-editor';
 import { useIdeStore } from '@/features/ide';
 import { openProjectFile } from '@/features/open-file';
 import { setPendingReveal } from '../model/definition-reveal';
 
-type Monaco = Parameters<OnMount>[1];
+type Monaco = typeof monacoNs;
 export interface DefinitionNavContext {
   projectId: string;
   filePath: string;
@@ -12,14 +12,6 @@ interface EditorResource {
   scheme: string;
   authority: string;
   path: string;
-}
-interface EditorRange {
-  startLineNumber: number;
-  startColumn: number;
-}
-interface EditorPosition {
-  lineNumber: number;
-  column: number;
 }
 const contextRef: {
   current: DefinitionNavContext | null;
@@ -61,12 +53,16 @@ export function bindMonacoDefinitionOpener(monaco: Monaco): () => void {
         return false;
       }
       if (selectionOrPosition) {
-        const range = selectionOrPosition as EditorRange;
-        const position = selectionOrPosition as EditorPosition;
         const reveal =
-          'startLineNumber' in range
-            ? { lineNumber: range.startLineNumber, column: range.startColumn }
-            : { lineNumber: position.lineNumber, column: position.column };
+          'startLineNumber' in selectionOrPosition
+            ? {
+                lineNumber: selectionOrPosition.startLineNumber,
+                column: selectionOrPosition.startColumn,
+              }
+            : {
+                lineNumber: selectionOrPosition.lineNumber,
+                column: selectionOrPosition.column,
+              };
         setPendingReveal({ path: target, ...reveal });
       }
       openProjectFile(ctx.projectId, target);

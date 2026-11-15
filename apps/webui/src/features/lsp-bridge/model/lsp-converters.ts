@@ -9,10 +9,10 @@ export function captureBuiltinDiagnostics(
   monaco: MonacoApi,
   languageId: string,
 ): {
-  typescript?: Record<string, unknown>;
-  javascript?: Record<string, unknown>;
+  typescript?: monacoNs.typescript.DiagnosticsOptions;
+  javascript?: monacoNs.typescript.DiagnosticsOptions;
 } | null {
-  const ts = monaco.languages.typescript;
+  const ts = monaco.typescript;
   if (!ts || !supportsBuiltinToggle(languageId)) {
     return null;
   }
@@ -21,13 +21,16 @@ export function captureBuiltinDiagnostics(
     javascript: { ...ts.javascriptDefaults.getDiagnosticsOptions() },
   };
 }
-export function applyBuiltinDiagnostics(monaco: MonacoApi, options: Record<string, unknown>): void {
-  const ts = monaco.languages.typescript;
+export function applyBuiltinDiagnostics(
+  monaco: MonacoApi,
+  options: monacoNs.typescript.DiagnosticsOptions,
+): void {
+  const ts = monaco.typescript;
   if (!ts) {
     return;
   }
-  ts.typescriptDefaults.setDiagnosticsOptions(options as never);
-  ts.javascriptDefaults.setDiagnosticsOptions(options as never);
+  ts.typescriptDefaults.setDiagnosticsOptions(options);
+  ts.javascriptDefaults.setDiagnosticsOptions(options);
 }
 export function suspendBuiltinDiagnostics(monaco: MonacoApi, languageId: string): () => void {
   const saved = captureBuiltinDiagnostics(monaco, languageId);

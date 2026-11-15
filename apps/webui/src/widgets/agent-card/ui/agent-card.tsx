@@ -49,8 +49,8 @@ export function AgentCard({
             />
           }
         >
-          <div className="relative inline-flex size-4 shrink-0">
-            <AgentRecordAvatar agent={agent} />
+          <div className="relative inline-flex size-[18px] shrink-0">
+            <AgentRecordAvatar agent={agent} className="size-[18px]" />
             {hasUnread ? (
               <span
                 title="Unread messages"
