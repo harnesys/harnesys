@@ -66,7 +66,7 @@ const addon = defineAddon({
 });
 ```
 
-- Глобальное имя пака — `<addonId>.<name>`; имя инструмента для LLM — `<addonId>.<tool>` с заменой спецсимволов на `_`.
+- Глобальное имя пака — `<addonId>.<name>`; имя инструмента для LLM — `<pack>_<tool>` с заменой спецсимволов на `_` (без идентификатора аддона). Неймспейс общий с ядровыми паками: конфликт имён отклоняется при активации.
 - Хост валидирует вход описанной `inputSchema` **до** вызова, результат — после (`invalid_params` / `invalid_response`).
 - `inputSchema` — подмножество JSON Schema: `type, properties, required, items, enum, const, additionalProperties, мин/макс, pattern, minItems/maxItems, uniqueItems, ограниченные oneOf/anyOf, description, default, $defs/локальные $ref`; глубина ≤ 8, размер ≤ 64 KiB, внешних `$ref` нет. Валидатор — `validateInputSchema`.
 - `effect: 'read' | 'write' | 'destructive'` — политика согласований ядра строится на нём; аддон понизить её не может. `idempotent` разрешает безопасные повторы.

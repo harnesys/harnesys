@@ -11,6 +11,7 @@ import {
   CodeIcon,
   CpuIcon,
   GlobeIcon,
+  HeartHandshakeIcon,
   KeyRoundIcon,
   LayersIcon,
   type LucideIcon,
@@ -50,6 +51,7 @@ export const WINDOW_SETTINGS_CATEGORIES = [
   'usage',
   'audit',
   'updates',
+  'support',
 ] as const;
 export type WindowSettingsCategory = (typeof WINDOW_SETTINGS_CATEGORIES)[number];
 
@@ -242,6 +244,17 @@ export const WINDOW_SETTINGS_GROUPS: SettingsNavGroup[] = [
         label: 'Audit',
         description: 'Security and fleet events for this organization.',
         icon: ScrollTextIcon,
+      },
+    ],
+  },
+  {
+    id: 'support',
+    items: [
+      {
+        id: 'support',
+        label: 'Support',
+        description: 'Ways to back the project, if Harnesys earns it.',
+        icon: HeartHandshakeIcon,
       },
     ],
   },

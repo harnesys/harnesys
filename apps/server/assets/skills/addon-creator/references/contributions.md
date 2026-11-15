@@ -37,7 +37,7 @@ Rule: a contribution without a handler fails the handshake (`incompatible_handle
     "effect": "read", "idempotent": true }] } }
 ```
 
-- Global pack name `<addonId>.<name>`, agent-facing tool name `<addonId>.<tool>` with unsafe chars replaced by `_`.
+- Global pack name `<addonId>.<name>`, agent-facing tool name `<pack>_<tool>` with unsafe chars replaced by `_` (the add-on id stays out of it). The tool namespace is flat and shared with the core packs, so a colliding pack name is rejected at activation.
 - Host validates `inputSchema` before the call and `outputSchema` (if given) after; both are the JSON Schema subset validated by `validateInputSchema`.
 - `effect: read | write | destructive` drives host approval policy; the add-on cannot lower it. `idempotent` lets the host retry safely. `timeoutSec` (default 60, cap 600), `maxResultKb` (default 256).
 - `connection` requires a binding; without it tool calls return `account_failed` / show `needsSetup`.

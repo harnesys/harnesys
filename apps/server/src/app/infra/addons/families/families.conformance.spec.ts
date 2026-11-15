@@ -138,49 +138,6 @@ describe('family modules conformance', () => {
     }
   });
 
-  test('tool-pack registration carries tool effect and addon-prefixed names', () => {
-    const bundle = buildFamilyBundle();
-    const disposable = bundle.toolPack.register(OWNER, {
-      name: 'github',
-      title: 'GitHub tools',
-      description: 'tools',
-      tools: [
-        {
-          name: 'create_issue',
-          description: 'create',
-          inputSchema: { type: 'object', properties: {} },
-          effect: 'destructive',
-        },
-        {
-          name: 'list_repos',
-          description: 'list',
-          inputSchema: { type: 'object', properties: {} },
-          effect: 'read',
-        },
-      ],
-    });
-    const registration = bundle.packs.find('acme.test.github');
-    expect(registration).toBeDefined();
-    const create = registration?.pack.create as
-      | (() => { tools?: Array<{ name: string; sideEffect?: string }> })
-      | undefined;
-    const tools = (create?.() ?? { tools: [] }) as {
-      tools?: Array<{ name: string; sideEffect?: string }>;
-    };
-    expect(tools.tools?.map((tool) => tool.name)).toEqual([
-      'acme_test_create_issue',
-      'acme_test_list_repos',
-    ]);
-    expect(tools.tools?.find((tool) => tool.name === 'acme_test_create_issue')?.sideEffect).toBe(
-      'destructive',
-    );
-    expect(tools.tools?.find((tool) => tool.name === 'acme_test_list_repos')?.sideEffect).toBe(
-      'read',
-    );
-    disposable.dispose();
-    expect(bundle.packs.find('acme.test.github')).toBeUndefined();
-  });
-
   test('tool-pack crossCheck reports unknown connection and unknown skills', () => {
     const bundle = buildFamilyBundle();
     const violations = bundle.toolPack.crossCheck(

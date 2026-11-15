@@ -3,6 +3,8 @@ import type { AddonManifest, ToolDescriptor, ToolPackDescriptor, Violation } fro
 import { ToolPackDescriptorSchema } from '@harnesys/sdk';
 import type { JsonSchema, PackRegistration, PackSkill } from 'harnesys';
 import type { z } from 'zod';
+import { AddonManifestInvalidException } from '../../../../domain/addons/errors.ts';
+import { exposedToolName } from '../../../../domain/addons/exposed-tool-name.ts';
 import type { FamilyModule, HandlerSpec } from '../../../../domain/addons/family-module.ts';
 import { handlerSpec } from '../../../../domain/addons/family-module.ts';
 import type { Disposable, OwnerKey } from '../../../../domain/addons/owner.ts';
@@ -19,18 +21,6 @@ type ToolEntry = ToolDescriptor;
 const HANDLERS: readonly HandlerSpec[] = [handlerSpec('tools.call')];
 const DEFAULT_TOOL_TIMEOUT_MS = 60_000;
 const MAX_TOOL_TIMEOUT_MS = 600_000;
-
-/**
- * LLM providers accept only `[a-zA-Z0-9_-]` in function names (Nvidia rejects dots
- * outright), while add-on ids are dot-namespaced. The agent-facing tool name is the
- * add-on id joined to the descriptor tool name with every unsafe character collapsed
- * to `_`; the add-on call still uses the original descriptor name.
- */
-const UNSAFE_TOOL_NAME_CHAR = /[^a-zA-Z0-9_-]/g;
-
-function exposedToolName(addonId: string, toolName: string): string {
-  return `${addonId}.${toolName}`.replace(UNSAFE_TOOL_NAME_CHAR, '_');
-}
 
 @Injectable()
 export class ToolPackFamilyModule implements FamilyModule<ToolPackSchema> {
@@ -81,12 +71,59 @@ export class ToolPackFamilyModule implements FamilyModule<ToolPackSchema> {
 
   register(owner: OwnerKey, d: ToolPackSchema): Disposable {
     const packName = `${owner.addonId}.${d.name}`;
+    this.assertExposedNamesFree(packName, d);
     this.packs.register(packName, this.buildRegistration(owner, d));
     return {
       dispose: () => {
         this.packs.unregister(packName);
       },
     };
+  }
+
+  /**
+   * Agent-facing tool names share one flat namespace per model call — the core packs and
+   * every add-on pack land in the same registry — so a pack whose `<pack>_<tool>` is
+   * already taken would shadow the holder tool by tool. Reject the activation instead:
+   * the pack has to be renamed. The pack's own registration (a version swap) is skipped.
+   */
+  private assertExposedNamesFree(packName: string, d: ToolPackSchema): void {
+    const claimed = new Map<string, string>();
+    for (const registration of this.packs.registrations()) {
+      if (registration.pack.name === packName) {
+        continue;
+      }
+      for (const tool of registration.pack.meta.tools) {
+        claimed.set(tool.name, registration.pack.name);
+      }
+    }
+    const violations: Violation[] = [];
+    const mine = new Set<string>();
+    for (const tool of d.tools) {
+      const name = exposedToolName(d.name, tool.name);
+      const path = `${packName}.tools.${tool.name}`;
+      if (mine.has(name)) {
+        violations.push({
+          path,
+          code: 'duplicate_tool_name',
+          message: `pack ${packName} exposes tool name '${name}' twice`,
+          severity: 'error',
+        });
+        continue;
+      }
+      mine.add(name);
+      const holder = claimed.get(name);
+      if (holder !== undefined) {
+        violations.push({
+          path,
+          code: 'tool_name_taken',
+          message: `tool name '${name}' is already exposed by pack ${holder}`,
+          severity: 'error',
+        });
+      }
+    }
+    if (violations.length > 0) {
+      throw new AddonManifestInvalidException(violations);
+    }
   }
 
   private buildRegistration(owner: OwnerKey, d: ToolPackSchema): PackRegistration {
@@ -98,7 +135,7 @@ export class ToolPackFamilyModule implements FamilyModule<ToolPackSchema> {
         icon: d.icon,
         meta: {
           tools: d.tools.map((tool) => ({
-            name: exposedToolName(owner.addonId, tool.name),
+            name: exposedToolName(d.name, tool.name),
             description: l10nText(tool.description),
           })),
           skills: d.skills ?? [],
@@ -162,7 +199,7 @@ export class ToolPackFamilyModule implements FamilyModule<ToolPackSchema> {
 
   private buildTool(owner: OwnerKey, d: ToolPackSchema, tool: ToolEntry) {
     return {
-      name: exposedToolName(owner.addonId, tool.name),
+      name: exposedToolName(d.name, tool.name),
       description: l10nText(tool.description),
       input: tool.inputSchema as JsonSchema,
       sideEffect: tool.effect,

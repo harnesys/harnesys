@@ -2,10 +2,10 @@ import type { OrgTool, PackCatalogEntry } from '@harnesys/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { PackageIcon, WrenchIcon } from 'lucide-react';
 import { useState } from 'react';
-import { groupTools } from '@/entities/tool-catalog';
+import { groupTools, type PackLabel, packLabels } from '@/entities/tool-catalog';
 import { orgCapabilitiesQuery, orgToolsQuery } from '@/shared/api/org-capabilities';
 import { orgMcpConfigQuery } from '@/shared/api/org-mcp';
-import { Row, RowHeader, RowItem, RowList, RowSection } from '@/shared/ui/capability-rows';
+import { Row, RowChip, RowHeader, RowItem, RowList, RowSection } from '@/shared/ui/capability-rows';
 import { RowListSkeleton, SettingsEmpty } from '@/shared/ui/settings-kit';
 
 export function OrgPackagesPane({ orgId }: { orgId: string }) {
@@ -22,6 +22,7 @@ export function OrgPackagesPane({ orgId }: { orgId: string }) {
     enabled: Boolean(orgId),
   });
   const packs = capabilitiesQuery.data?.capabilities ?? [];
+  const labels = packLabels(packs.map((pack) => pack.name));
   const packToolNames = new Set(packs.flatMap((pack) => pack.tools.map((tool) => tool.name)));
   const serverIds = (mcpConfigQuery.data?.servers ?? []).map((server) => server.serverId);
   const groups = groupTools(
@@ -55,6 +56,7 @@ export function OrgPackagesPane({ orgId }: { orgId: string }) {
                 <PackRow
                   key={pack.name}
                   pack={pack}
+                  label={labels.get(pack.name)}
                   expanded={expandedId === `pack:${pack.name}`}
                   onToggle={() => toggle(`pack:${pack.name}`)}
                 />
@@ -89,10 +91,12 @@ export function OrgPackagesPane({ orgId }: { orgId: string }) {
 
 function PackRow({
   pack,
+  label,
   expanded,
   onToggle,
 }: {
   pack: PackCatalogEntry;
+  label: PackLabel | undefined;
   expanded: boolean;
   onToggle: () => void;
 }) {
@@ -100,8 +104,9 @@ function PackRow({
     <Row
       testId={`package-${pack.name}`}
       icon={<PackageIcon />}
-      title={pack.name}
+      title={label?.title ?? pack.name}
       meta="pack"
+      chips={label?.addon ? <RowChip>{label.addon}</RowChip> : null}
       summary={pack.description}
       onToggle={onToggle}
       expanded={expanded}

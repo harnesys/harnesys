@@ -1,5 +1,6 @@
 import type { PluginListItem } from '@harnesys/contracts';
 import { useQuery } from '@tanstack/react-query';
+import { packLabels } from '@/entities/tool-catalog';
 import { orgAgentCapabilitiesQuery, orgCapabilitiesQuery } from '@/shared/api/org-capabilities';
 import { orgPluginsQuery } from '@/shared/api/org-plugins';
 import { RowList } from '@/shared/ui/capability-rows';
@@ -38,6 +39,7 @@ export function DraftPacksGrants({
   const catalog = (packsQuery.data?.capabilities ?? []).filter(
     (pack) => !(isDelegate && pack.name === 'agents'),
   );
+  const labels = packLabels(catalog.map((pack) => pack.name));
   return (
     <div className="flex min-w-0 flex-col gap-1">
       {!packsQuery.isPending && catalog.length === 0 ? (
@@ -55,6 +57,7 @@ export function DraftPacksGrants({
               key={pack.name}
               kind="pack"
               name={pack.name}
+              label={labels.get(pack.name)}
               description={pack.description}
               granted={granted}
               locked={isCore}

@@ -198,7 +198,7 @@ curl -X POST http://127.0.0.1:47473/api/orgs/$ORG_ID/addons/acme.greeter/enable 
 - **Страница аддона** (`Settings → Add-ons → Greeter`): версия, чип `system`, health `running|stopped`, секции (default-набор webui: status/capabilities/permissions/connections/config/automations/jobs).
 - **Маршрут**: `GET /api/orgs/$ORG_ID/addons/acme.greeter/r/greeting` → `{"text":"Hello, world!"}`. Путь в URL — из дескриптора `path`, не из id вклада.
 - **Джоб**: секция Jobs → **Run now** (`POST .../jobs/heartbeat/run`), состояние в `addon_job_state`.
-- **Инструмент**: назначьте пак `greeter` агенту и попросите его поздороваться; имя инструмента для LLM будет `acme_greeter_greet`.
+- **Инструмент**: назначьте пак `greeter` агенту и попросите его поздороваться; имя инструмента для LLM будет `greeter_greet`.
 - **Журнал**: секция Diagnostics → logs (`GET .../logs`): строка `greeting {name}`.
 - Если включён, но `stopped` — смотрите логи и **Restart**; 5 падений за 10 минут — карантин с кнопкой сброса.
 

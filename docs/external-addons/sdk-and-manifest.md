@@ -192,9 +192,12 @@ fails with `quota_exceeded` (413).
 - Contribution **ids** (also the `routes`/`jobs`/`workers`/`hooks` handler keys) must
   match `^[a-z][a-z0-9-]*$`.
 - `tool-pack` descriptor names and tool names accept any non-empty string, but the
-  agent-facing tool name is `<addonId>.<tool>` with every character outside
-  `[a-zA-Z0-9_-]` collapsed to `_`. Pick tool names from `[a-zA-Z0-9_-]` so two tools
-  cannot collapse to the same exposed name (`a.b` and `a_b` would).
+  agent-facing tool name is `<pack>_<tool>` with every character outside
+  `[a-zA-Z0-9_]` collapsed to `_`. Pick tool names from `[a-zA-Z0-9_]` so two tools
+  cannot collapse to the same exposed name (`a.b` and `a_b` would). The name is global to
+  the model call — the core packs share the namespace — so a pack whose names collide with
+  another add-on's pack is rejected at activation (`tool_name_taken`); keep the pack name
+  distinctive.
 - `defineAddon` tool keys must equal the descriptor tool names exactly, otherwise the
   handshake fails with `incompatible_handlers`.
 

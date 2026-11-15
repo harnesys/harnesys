@@ -55,7 +55,7 @@ has no consumer that acts on them yet. Do not build behavior on them.
 ```
 
 - The pack is the unit an agent is assigned; the LLM sees each tool as
-  `<addonId>.<tool>` with non-word characters replaced by `_`.
+  `<pack>_<tool>` with non-word characters replaced by `_`.
 - `effect`: `read` | `write` | `destructive` (drives host approval policy);
   `idempotent` allows safe retries (`timeoutSec` default 60 cap 600, `maxResultKb`
   default 256).

@@ -24,6 +24,7 @@ import { OrgToolchainPane } from '@/features/manage-org-toolchain/org-toolchain-
 import { ModelsPane } from '@/features/manage-project-settings/ui/models-pane';
 import { UsagePane } from '@/features/manage-usage';
 import { VaultPane } from '@/features/manage-vault/vault-pane';
+import { SupportPane } from '@/features/support/ui/support-pane';
 import {
   parseWindowSettingsCategory,
   studioPath,
@@ -140,5 +141,7 @@ function SettingsPane({ category, orgId }: { category: WindowSettingsCategory; o
       return <OrgAuditPane key={orgId} orgId={orgId} />;
     case 'updates':
       return <UpdatePane />;
+    case 'support':
+      return <SupportPane />;
   }
 }

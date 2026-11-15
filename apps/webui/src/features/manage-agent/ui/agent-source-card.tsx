@@ -2,6 +2,7 @@ import type { ToolExposure } from 'harnesys';
 import { PackageIcon, PuzzleIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+import type { PackLabel } from '@/entities/tool-catalog';
 import { Row, RowChip, RowItem, RowList, RowSection } from '@/shared/ui/capability-rows';
 import { Switch } from '@/shared/ui/switch';
 import { ToggleGroup, ToggleGroupItem } from '@/shared/ui/toggle-group';
@@ -9,6 +10,7 @@ import type { SourceCardSection, SourceCardTool } from '../model/draft-overrides
 export interface AgentSourceCardProps {
   kind: 'pack' | 'plugin';
   name: string;
+  label?: PackLabel;
   description?: string;
   granted: boolean;
   locked?: boolean;
@@ -25,6 +27,7 @@ export interface AgentSourceCardProps {
 export function AgentSourceCard({
   kind,
   name,
+  label,
   description,
   granted,
   locked = false,
@@ -44,10 +47,15 @@ export function AgentSourceCard({
     <Row
       testId={`draft-source-${name}`}
       icon={kind === 'pack' ? <PackageIcon /> : <PuzzleIcon />}
-      title={name}
+      title={label?.title ?? name}
       meta={kind}
       muted={!grantChecked}
-      chips={locked && lockLabel ? <RowChip tone="accent">{lockLabel}</RowChip> : null}
+      chips={
+        <>
+          {label?.addon ? <RowChip>{label.addon}</RowChip> : null}
+          {locked && lockLabel ? <RowChip tone="accent">{lockLabel}</RowChip> : null}
+        </>
+      }
       summary={description}
       onToggle={() => setExpanded((current) => !current)}
       expanded={expanded}
@@ -57,7 +65,7 @@ export function AgentSourceCard({
           checked={grantChecked}
           disabled={locked}
           onCheckedChange={(next) => onToggleGrant(Boolean(next))}
-          aria-label={`${kind} ${name}${locked && lockLabel ? ` (${lockLabel})` : ''}`}
+          aria-label={`${kind} ${label?.title ?? name}${locked && lockLabel ? ` (${lockLabel})` : ''}`}
         />
       }
       alwaysShowActions

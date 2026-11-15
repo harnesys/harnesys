@@ -19,6 +19,7 @@ import {
   WorkerDescriptorSchema,
 } from '@harnesys/sdk';
 import type { z } from 'zod';
+import { exposedToolName } from '../../domain/addons/exposed-tool-name.ts';
 import type { InstalledAddonPackage } from '../../domain/addons/ports/addon-package-catalog.port.ts';
 
 type CapabilityFamily = Exclude<AddonPlatformFamily, 'config' | 'view'>;
@@ -87,7 +88,7 @@ function toolPackText(raw: Record<string, unknown>): CapabilityText | null {
     description: l10n(pack.description),
     items: pack.tools.map((tool) => ({
       id: tool.name,
-      title: tool.name,
+      title: exposedToolName(pack.name, tool.name),
       description: l10n(tool.description),
       effect: tool.effect,
     })),

@@ -1,6 +1,7 @@
 import type { AgentCapabilitiesView, ModeOp, ModeOpGate } from '@harnesys/studio-shared';
 import type { PermissionGate, PermissionMap, ToolExposure } from 'harnesys';
 import { Controller, type UseFormReturn, useWatch } from 'react-hook-form';
+import { packLabels } from '@/entities/tool-catalog';
 import { RowList } from '@/shared/ui/capability-rows';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { Field, FieldLabel } from '@/shared/ui/field';
@@ -71,6 +72,7 @@ export function AgentModeEditor({
     disabledTools: mode?.disabledTools ?? [],
     exposure: mode?.exposure ?? {},
   };
+  const labels = packLabels(packNames);
   const instructions = form.watch(`modes.${index}.instructions`) ?? '';
   const instructionsError = form.formState.errors.modes?.[index]?.instructions?.message;
   function toggleSkills(skillName: string) {
@@ -165,6 +167,7 @@ export function AgentModeEditor({
                 key={packName}
                 kind="pack"
                 name={packName}
+                label={labels.get(packName)}
                 granted={granted}
                 locked={isCore}
                 lockLabel={isCore ? 'Required' : undefined}

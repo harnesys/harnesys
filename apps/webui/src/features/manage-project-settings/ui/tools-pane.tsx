@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { PackageIcon, WrenchIcon } from 'lucide-react';
 import { useState } from 'react';
-import { groupTools } from '@/entities/tool-catalog';
+import { groupTools, packLabels } from '@/entities/tool-catalog';
 import {
   type ProjectTool,
   projectCapabilitiesQuery,
   projectMcpConfigQuery,
   projectToolsQuery,
 } from '@/shared/api';
-import { Row, RowHeader, RowItem, RowList, RowSection } from '@/shared/ui/capability-rows';
+import { Row, RowChip, RowHeader, RowItem, RowList, RowSection } from '@/shared/ui/capability-rows';
 import { RowListSkeleton, SettingsEmpty } from '@/shared/ui/settings-kit';
 export function ToolsPane({ projectId }: { projectId: string }) {
   const query = useQuery({
@@ -24,6 +24,7 @@ export function ToolsPane({ projectId }: { projectId: string }) {
     enabled: Boolean(projectId),
   });
   const packs = capabilitiesQuery.data?.capabilities ?? [];
+  const labels = packLabels(packs.map((pack) => pack.name));
   const packToolNames = new Set(packs.flatMap((pack) => pack.tools.map((tool) => tool.name)));
   const serverIds = (mcpConfigQuery.data?.servers ?? []).map((server) => server.serverId);
   const groups = groupTools(
@@ -51,13 +52,15 @@ export function ToolsPane({ projectId }: { projectId: string }) {
             <RowList>
               {packs.map((pack) => {
                 const id = `pack:${pack.name}`;
+                const label = labels.get(pack.name);
                 return (
                   <Row
                     key={id}
                     testId={`package-${pack.name}`}
                     icon={<PackageIcon />}
-                    title={pack.name}
+                    title={label?.title ?? pack.name}
                     meta="pack"
+                    chips={label?.addon ? <RowChip>{label.addon}</RowChip> : null}
                     summary={pack.description}
                     onToggle={() => toggle(id)}
                     expanded={expandedId === id}
