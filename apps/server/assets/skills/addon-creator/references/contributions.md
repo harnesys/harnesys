@@ -147,10 +147,13 @@ Rule: a contribution without a handler fails the handshake (`incompatible_handle
 
 ```json
 { "id": "drawio", "family": "viewer", "descriptor": {
-  "id": "drawio", "title": "Diagram", "extensions": [".drawio"], "route": "/viewer", "mode": "edit", "create": true } }
+  "id": "drawio", "title": "Diagram", "extensions": [".drawio"], "route": "/viewer", "mode": "edit",
+  "create": true, "createLabel": "New Draw.io", "icon": "assets/icon.svg" } }
 ```
 
 - Claims dot-prefixed, lowercase file extensions and a GET `route` serving the editor HTML. One extension has one owner; a second claim fails the handshake (`viewer_extension_conflict`).
+- `create: true` adds a "create file" entry to the sources tree menus. `createLabel` is its full label, rendered verbatim (`L10n`; without it the host falls back to `New <title>`); the created file gets the first entry of `extensions`.
+- `icon` (lucide name or `assets/*.svg`) is rendered for the claimed extensions in the sources tree and in the create entries.
 - The host exposes the table at `GET /api/orgs/:orgId/addon-viewers`. Reference: `harnesys.drawio`.
 
 ## source-kind

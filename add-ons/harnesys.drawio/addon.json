@@ -23,7 +23,9 @@
         ],
         "route": "/viewer",
         "mode": "edit",
-        "create": true
+        "create": true,
+        "createLabel": "New Draw.io",
+        "icon": "assets/icon.svg"
       }
     },
     {

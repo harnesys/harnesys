@@ -43,7 +43,7 @@
 | `DELETE .../triggers/:tid` · `POST .../triggers/:tid/enable\|disable` | id содержит `/` — URL-кодируйте |
 | `GET .../jobs` · `PATCH .../jobs/:jobId { enabled }` · `POST .../jobs/:jobId/run` | джобы: `AddonJobView { schedule, timezone, enabled, nextRunAt, lastRunAt, lastStatus }` |
 | `ANY /api/orgs/:orgId/addons/:addonId/r/*` | маршруты вклада `route` (GET/POST/PUT/PATCH/DELETE; путь из дескриптора; роль member/admin; body-limit; requestSchema). Строковое тело уходит как есть с `Content-Type` аддона (HTML-документ viewer'а), объект — JSON |
-| `GET /api/orgs/:orgId/addon-viewers` | вклады `viewer`: `{ viewers: [{ addonId, id, title, extensions, route, mode, create }] }` — таблица расширений, которые умеют открывать аддоны организации |
+| `GET /api/orgs/:orgId/addon-viewers` | вклады `viewer`: `{ viewers: [{ addonId, id, title, extensions, route, mode, create, createLabel?, icon? }] }` — таблица расширений, которые умеют открывать аддоны организации |
 | `ANY /api/addons/public/:orgId/:addonId/r/*` | публичные маршруты (rate limit 20/с burst 40) |
 | `GET .../source-kinds` · `POST .../source-kinds/:id/browse` · `POST .../source-kinds/:id/attach` · `GET .../sources` · `POST .../sources/:id/refresh` · `DELETE .../sources/:id` | `source-kind`: подключение облачных папок как знание-источников |
 

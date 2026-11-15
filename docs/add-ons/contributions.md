@@ -296,10 +296,11 @@ add-ons/acme.guide/
 ```json
 { "id": "drawio", "family": "viewer",
   "descriptor": { "id": "drawio", "title": "Draw.io diagram", "extensions": [".drawio"],
-                  "route": "/viewer", "mode": "edit", "create": true } }
+                  "route": "/viewer", "mode": "edit", "create": true,
+                  "createLabel": "New Draw.io", "icon": "assets/icon.svg" } }
 ```
 
-Аддон заявляет расширения файлов, которые умеет открывать: `extensions` (dot-prefixed, lowercase), `route` — GET-маршрут аддона, отдающий HTML-документ редактора, `mode: "view" | "edit"`, `create` — добавлять ли «New <title> file» в меню источников. Хост собирает таблицу зрителей на организацию и отдаёт её `GET /api/orgs/:orgId/addon-viewers` (`{ viewers: [{ addonId, id, title, extensions, route, mode, create }] }`); фронтенд сам решает, чем открыть файл из дерева источников. Одно расширение — один владелец: второй аддон с тем же `.ext` получает `addon_manifest_invalid` (`viewer_extension_conflict`) на рукопожатии. Референс — `harnesys.drawio`.
+Аддон заявляет расширения файлов, которые умеет открывать: `extensions` (dot-prefixed, lowercase), `route` — GET-маршрут аддона, отдающий HTML-документ редактора, `mode: "view" | "edit"`, `create` — добавлять ли пункт создания файла в меню источников, `createLabel` — полная метка этого пункта (L10n, хост рисует как есть; без неё — `New <title>` и файл создаётся с первым расширением из `extensions`), `icon` — иконка расширений (lucide-имя или `assets/*.svg`), она же в дереве источников и в пунктах создания. Хост собирает таблицу зрителей на организацию и отдаёт её `GET /api/orgs/:orgId/addon-viewers` (`{ viewers: [{ addonId, id, title, extensions, route, mode, create, createLabel?, icon? }] }`); фронтенд сам решает, чем открыть файл из дерева источников. Одно расширение — один владелец: второй аддон с тем же `.ext` получает `addon_manifest_invalid` (`viewer_extension_conflict`) на рукопожатии. Референс — `harnesys.drawio`.
 
 ## source-kind — облачные знание-источники
 

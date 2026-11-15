@@ -266,11 +266,16 @@ own routes. When no `view` is declared the card renders the default set
 ```json
 { "id": "editor", "family": "viewer",
   "descriptor": { "id": "editor", "title": "Example diagram", "extensions": [".example"],
-                  "route": "/viewer", "mode": "edit", "create": true } }
+                  "route": "/viewer", "mode": "edit", "create": true,
+                  "createLabel": "New Example diagram", "icon": "assets/icon.svg" } }
 ```
 
 Declares file extensions your add-on can open from the sources tree. `route` is a GET
 route serving the HTML document; one extension has one owner (a second claim gets
-`viewer_extension_conflict`).
+`viewer_extension_conflict`). `create: true` adds a "create file" entry to the sources
+tree menus: `createLabel` is its full label rendered verbatim (omit it and the host
+falls back to `New <title>`), and the new file gets the first extension from
+`extensions`. `icon` (a lucide name or an `assets/*.svg` path) is shown for those
+extensions in the sources tree and in the create entries.
 
 Next: [Build and package](build-and-package.md).

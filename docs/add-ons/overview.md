@@ -74,7 +74,7 @@
 | `harnesys.telegram-groups` | бот-транспорт для групп (connection `telegram-bot`), привязка чатов, tools |
 | `harnesys.github` | GitHub App: installation-аккаунты, пака tools (21 инструмент), события через опрос (worker `repo-poller` + trigger `github.repo-events`) |
 | `harnesys.google-*` (7) | tool-pack поверх OAuth-аккаунтов; `google-drive` — `source-kind` (облачный диск как знания) |
-| `harnesys.drawio` | семейство `viewer`: `.drawio`-файлы открываются в редакторе прямо из дерева источников, `mode: "edit"` + `create` |
+| `harnesys.drawio` | семейство `viewer`: `.drawio`-файлы открываются в редакторе прямо из дерева источников, `mode: "edit"` + `create` со своей меткой создания (`createLabel`) и иконкой расширения (`icon`) |
 
 Разбор `harnesys.webhook` построчно — в [Анатомии аддона](anatomy.md).
 

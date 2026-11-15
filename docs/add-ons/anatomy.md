@@ -345,7 +345,7 @@ create table if not exists dedup (
 | `harnesys.github` | connection `github` (kind `github-installation`, cardinality many), tool-pack из 21 инструмента, доставка событий worker `repo-poller` + trigger `github.repo-events` (без `hook`) |
 | `harnesys.google-drive` | `source-kind`: облачная папка как знание-источник, `source.list/stat/download/upload/...`, баз64-чанки |
 | `harnesys.telegram-account` | `accounts.access` под MTProto-credentials, конфиг-поля select/number, чтение каналов в треды и инструменты аккаунта |
-| `harnesys.drawio` | `viewer`-семейство: `.drawio` из дерева источников открывается в редакторе, `mode: "edit"` + `create` |
+| `harnesys.drawio` | `viewer`-семейство: `.drawio` из дерева источников открывается в редакторе, `mode: "edit"` + `create`, своя метка создания (`createLabel`) и иконка расширения (`icon`), файл создаётся с `.drawio` |
 
 ---
 
