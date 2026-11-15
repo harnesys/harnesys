@@ -4,6 +4,7 @@ import {
   decodeMessage,
   encodeMessage,
   errorResponse,
+  notification as rpcNotification,
   request as rpcRequest,
 } from '@harnesys/sdk';
 import { AddonException } from '../../../domain/addons/errors.ts';
@@ -68,6 +69,21 @@ interface PendingEntry {
   resolve: (value: unknown) => void;
   reject: (error: Error) => void;
   timer?: ReturnType<typeof setTimeout>;
+  signal?: AbortSignal;
+  onAbort?: () => void;
+}
+
+/** Clears settle-time resources (timeout timer, abort listener) for an entry. */
+function disposeEntry(entry: PendingEntry): void {
+  if (entry.timer !== undefined) {
+    clearTimeout(entry.timer);
+    entry.timer = undefined;
+  }
+  if (entry.signal !== undefined && entry.onAbort !== undefined) {
+    entry.signal.removeEventListener('abort', entry.onAbort);
+    entry.signal = undefined;
+    entry.onAbort = undefined;
+  }
 }
 
 interface IdleWaiter {
@@ -156,6 +172,7 @@ export class TransportRpcClient {
     params: unknown,
     timeoutMs: number | null,
     meta?: RpcCallMeta,
+    signal?: AbortSignal,
   ): Promise<T> {
     this.nextId += 1;
     const id = this.nextId;
@@ -166,13 +183,40 @@ export class TransportRpcClient {
       const entry: PendingEntry = { resolve: resolve as (value: unknown) => void, reject };
       if (timeoutMs !== null) {
         entry.timer = setTimeout(() => {
+          disposeEntry(entry);
           this.pending.delete(id);
           reject(new Error(`call ${method} timed out after ${timeoutMs}ms`));
         }, timeoutMs);
       }
+      if (signal !== undefined) {
+        if (signal.aborted) {
+          disposeEntry(entry);
+          reject(new Error(`call ${method} aborted before send`));
+          return;
+        }
+        entry.signal = signal;
+        entry.onAbort = () => this.cancelPending(id, method);
+        signal.addEventListener('abort', entry.onAbort, { once: true });
+      }
       this.pending.set(id, entry);
       this.options.transport.send(line);
     });
+  }
+
+  /**
+   * Aborts one in-flight host→addon request: tells the addon via the `$/cancel`
+   * notification (§6.5) and rejects the pending promise. Idempotent — a settled
+   * entry is no longer in `pending`, so the notification goes out exactly once.
+   */
+  private cancelPending(id: number, method: string): void {
+    const entry = this.pending.get(id);
+    if (!entry) {
+      return;
+    }
+    disposeEntry(entry);
+    this.pending.delete(id);
+    this.options.transport.send(encodeMessage(rpcNotification('$/cancel', { id })));
+    entry.reject(new Error(`call ${method} cancelled`));
   }
 
   notify(method: string, params: unknown): void {
@@ -229,9 +273,7 @@ export class TransportRpcClient {
     if (!entry) {
       return;
     }
-    if (entry.timer !== undefined) {
-      clearTimeout(entry.timer);
-    }
+    disposeEntry(entry);
     this.pending.delete(parsed.id);
     if (parsed.error) {
       entry.reject(addonRpcErrorOf(parsed.error));
@@ -276,9 +318,7 @@ export class TransportRpcClient {
 
   private rejectAllPending(reason: string): void {
     for (const entry of this.pending.values()) {
-      if (entry.timer !== undefined) {
-        clearTimeout(entry.timer);
-      }
+      disposeEntry(entry);
       entry.reject(new Error(reason));
     }
     this.pending.clear();

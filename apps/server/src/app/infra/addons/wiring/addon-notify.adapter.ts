@@ -38,6 +38,7 @@ export class SupervisorRpcAdapter extends AddonRpcPort {
       method: call.method,
       params: call.params,
       timeoutMs: call.timeoutMs,
+      signal: call.signal,
       meta: call.meta,
     });
   }

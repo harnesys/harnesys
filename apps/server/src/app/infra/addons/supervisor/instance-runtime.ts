@@ -81,6 +81,7 @@ export class InstanceRuntime {
     params: unknown,
     timeoutMs: number | null,
     meta?: RpcCallMeta,
+    signal?: AbortSignal,
   ): Promise<unknown> {
     const rpc = this.rpc;
     if (!rpc || this.stopped || this.stopping) {
@@ -95,7 +96,7 @@ export class InstanceRuntime {
         ),
       );
     }
-    return rpc.call(method, params, timeoutMs, meta);
+    return rpc.call(method, params, timeoutMs, meta, signal);
   }
 
   notify(method: string, params: unknown): void {

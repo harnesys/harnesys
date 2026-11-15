@@ -13,11 +13,12 @@ export interface RuntimeCallInput {
   params: unknown;
   timeoutMs: number | null;
   meta?: RpcCallMeta;
+  signal?: AbortSignal;
 }
 
 export function requestOfRuntime(input: RuntimeCallInput): Promise<unknown> {
   const runtime = requireRuntime(input.runtimes, input.orgId, input.addonId);
-  return runtime.request(input.method, input.params, input.timeoutMs, input.meta);
+  return runtime.request(input.method, input.params, input.timeoutMs, input.meta, input.signal);
 }
 
 export function notifyRuntime(

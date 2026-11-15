@@ -41,6 +41,7 @@ export interface SupervisorRpcCall {
   params: unknown;
   timeoutMs: number | null;
   meta?: RpcCallMeta;
+  signal?: AbortSignal;
 }
 
 @Injectable()
@@ -146,6 +147,7 @@ export class AddonInstanceSupervisor extends InstanceSupervisorPort {
       params: call.params,
       timeoutMs: call.timeoutMs,
       meta: call.meta,
+      signal: call.signal,
     });
   }
 
