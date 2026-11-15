@@ -1,6 +1,7 @@
 {
   "name": "Genie",
   "role": "chief-of-staff",
+  "description": "Coordinates the team, routes work, and keeps the workspace moving.",
   "skills": [
     "agent-creator",
     "workspace-ops",

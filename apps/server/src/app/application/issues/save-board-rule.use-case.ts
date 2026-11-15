@@ -72,7 +72,10 @@ export class SaveBoardRuleUseCase {
 
   private validateConditions(orgId: string, conditions: RuleCondition[]): void {
     for (const condition of conditions) {
-      if (!this.labels.findById(orgId, condition.labelId)) {
+      if (
+        (condition.type === 'has_label' || condition.type === 'has_not_label') &&
+        !this.labels.findById(orgId, condition.labelId)
+      ) {
         throw new RuleValidationException(`unknown rule label: ${condition.labelId}`);
       }
     }
@@ -91,6 +94,12 @@ export class SaveBoardRuleUseCase {
     }
     if (action.type === 'set_status' && !statusKeys.has(action.statusKey)) {
       throw new RuleValidationException(`unknown rule status: ${action.statusKey}`);
+    }
+    if (
+      (action.type === 'add_label' || action.type === 'remove_label') &&
+      !this.labels.findById(orgId, action.labelId)
+    ) {
+      throw new RuleValidationException(`unknown rule label: ${action.labelId}`);
     }
   }
 

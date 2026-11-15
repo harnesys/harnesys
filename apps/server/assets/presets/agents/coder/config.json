@@ -1,6 +1,7 @@
 {
   "name": "Coder",
   "role": "coder",
+  "description": "Implements fixes and features with file, shell, issue and LSP tools.",
   "skills": [
     "issue-ops",
     "addon-creator"

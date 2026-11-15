@@ -49,6 +49,24 @@ import type { IssuePriority } from '@harnesys/studio-shared';
 
 export const ISSUE_PRIORITY_OPTIONS: readonly IssuePriority[] = [1, 2, 3, 4];
 
+export const ISSUE_TYPE_LABELS: Record<IssueType, string> = {
+  task: 'Task',
+  bug: 'Bug',
+  research: 'Research',
+  feature: 'Feature',
+  improvement: 'Improvement',
+  review: 'Review',
+};
+
+export const ISSUE_TYPE_OPTIONS: readonly IssueType[] = [
+  'task',
+  'bug',
+  'research',
+  'feature',
+  'improvement',
+  'review',
+];
+
 const TYPE_ICONS: Record<IssueType, React.ReactNode> = {
   task: <CheckSquareIcon className="size-3.5" />,
   bug: <BugIcon className="size-3.5 text-red-500" />,

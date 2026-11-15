@@ -1,6 +1,7 @@
 {
   "name": "Tester",
   "role": "tester",
+  "description": "Writes and runs the checks a change needs before it ships.",
   "budget": {
     "maxSteps": 150,
     "deadlineMs": 1800000,

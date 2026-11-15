@@ -5,6 +5,7 @@ import type {
   PresetKind,
   PresetOrigin,
 } from '@harnesys/contracts';
+import { ENTITY_COLOR_HEX, ENTITY_COLOR_NAMES, type EntityColorName } from '@harnesys/contracts';
 import type { Agent } from '@/entities/agent';
 
 export const PRESET_KIND_COLORS: Record<PresetKind, string> = {
@@ -17,6 +18,21 @@ export const PRESET_ORIGIN_COLORS: Record<PresetOrigin, string> = {
   user: '#6366f1',
   registry: '#a855f7',
 };
+
+export function presetColorHex(preset: PresetDetail): string {
+  if (preset.kind === 'team') {
+    return PRESET_KIND_COLORS.team;
+  }
+  return ENTITY_COLOR_HEX[preset.body.color ?? fallbackPresetColor(preset.id)];
+}
+
+function fallbackPresetColor(id: string): EntityColorName {
+  let hash = 0;
+  for (const char of id) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  }
+  return ENTITY_COLOR_NAMES[hash % ENTITY_COLOR_NAMES.length] ?? 'blue';
+}
 
 export function presetOriginLabel(origin: PresetOrigin): string {
   if (origin === 'system') {
@@ -72,10 +88,12 @@ export function presetGraphSummary(body: AgentPresetBody): string {
 }
 
 export function agentPresetBodyFromAgent(agent: Agent): AgentPresetBody {
+  const color = ENTITY_COLOR_NAMES.find((name) => name === agent.color);
   return {
     name: agent.name,
     role: agent.role || 'agent',
     instructions: agent.instructions,
+    ...(color ? { color } : {}),
     ...(agent.skills.length > 0 ? { skills: agent.skills } : {}),
     ...(agent.mcpServers.length > 0 ? { mcpServers: agent.mcpServers } : {}),
     ...(agent.budget ? { budget: agent.budget } : {}),

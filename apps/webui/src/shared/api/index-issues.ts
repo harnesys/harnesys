@@ -26,6 +26,7 @@ export {
   listIssueBoards,
   listIssues,
   nudgeIssueRecord,
+  previewBoardRules,
   removeBoardRule,
   removeBoardStatus,
   reorderBoardRules,

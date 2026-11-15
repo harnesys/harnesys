@@ -1,6 +1,7 @@
 {
   "name": "Planner",
   "role": "planner",
+  "description": "Breaks work into steps and keeps the plan aligned with reality.",
   "budget": {
     "maxSteps": 80,
     "deadlineMs": 1200000,

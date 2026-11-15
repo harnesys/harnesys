@@ -1,6 +1,7 @@
 {
   "name": "Explorer",
   "role": "scout",
+  "description": "Maps the codebase and reports what matters before work starts.",
   "budget": {
     "maxSteps": 60,
     "deadlineMs": 600000,

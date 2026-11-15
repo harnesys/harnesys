@@ -42,7 +42,7 @@ export function openBoardSettingsDialog(orgId: string, boardId: string) {
   return dialog.open(BoardSettingsDialog, {
     title: 'Board settings',
     data: { orgId, boardId, mode: 'edit' },
-    className: 'sm:max-w-lg',
+    className: 'sm:max-w-xl',
   });
 }
 

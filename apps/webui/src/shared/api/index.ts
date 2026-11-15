@@ -107,10 +107,10 @@ export {
 export {
   deletePreset,
   exportPresetDownload,
-  getPreset,
   importPresets,
   listPresetDetails,
   listPresets,
+  presetDetailsQuery,
   presetsQuery,
   presetsQueryKey,
   presetsQueryKeyFor,

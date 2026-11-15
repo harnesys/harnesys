@@ -158,6 +158,7 @@ export function ProjectSidebar({
         testId={`accordion-resize-${pair.upper}-${pair.lower}`}
         dragging={dragPair === key}
         orientation="vertical"
+        revealOnHover
         onResizeStart={beginResize(pair.upper, pair.lower)}
       />
     );

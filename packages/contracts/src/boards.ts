@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ExecutionProfileIdSchema } from './execution-profile.ts';
+import { IssuePrioritySchema, IssueTypeSchema } from './issue-fields.ts';
 
 export const StatusCategorySchema = z.enum(['backlog', 'started', 'finished', 'cancelled']);
 export type StatusCategory = z.infer<typeof StatusCategorySchema>;
@@ -29,10 +30,24 @@ export type BoardStatusInput = z.infer<typeof BoardStatusInputSchema>;
 export const RULE_TRIGGER_TYPES = ['status_entered', 'issue_created'] as const;
 export type RuleTriggerType = (typeof RULE_TRIGGER_TYPES)[number];
 
-export const RULE_CONDITION_TYPES = ['has_label'] as const;
+export const RULE_CONDITION_TYPES = [
+  'has_label',
+  'has_not_label',
+  'has_priority',
+  'has_type',
+  'has_open_blockers',
+] as const;
 export type RuleConditionType = (typeof RULE_CONDITION_TYPES)[number];
 
-export const RULE_ACTION_TYPES = ['assign_agent', 'set_status', 'notify_owner'] as const;
+export const RULE_ACTION_TYPES = [
+  'assign_agent',
+  'set_status',
+  'notify_owner',
+  'add_label',
+  'remove_label',
+  'unassign',
+  'stop',
+] as const;
 export type RuleActionType = (typeof RULE_ACTION_TYPES)[number];
 
 export const StatusEnteredTriggerSchema = z.object({
@@ -56,7 +71,37 @@ export const HasLabelConditionSchema = z.object({
 });
 export type HasLabelCondition = z.infer<typeof HasLabelConditionSchema>;
 
-export const RuleConditionSchema = z.discriminatedUnion('type', [HasLabelConditionSchema]);
+export const HasNotLabelConditionSchema = z.object({
+  type: z.literal(RULE_CONDITION_TYPES[1]),
+  labelId: z.string().uuid(),
+});
+export type HasNotLabelCondition = z.infer<typeof HasNotLabelConditionSchema>;
+
+export const HasPriorityConditionSchema = z.object({
+  type: z.literal(RULE_CONDITION_TYPES[2]),
+  priority: IssuePrioritySchema,
+});
+export type HasPriorityCondition = z.infer<typeof HasPriorityConditionSchema>;
+
+export const HasTypeConditionSchema = z.object({
+  type: z.literal(RULE_CONDITION_TYPES[3]),
+  issueType: IssueTypeSchema,
+});
+export type HasTypeCondition = z.infer<typeof HasTypeConditionSchema>;
+
+export const HasOpenBlockersConditionSchema = z.object({
+  type: z.literal(RULE_CONDITION_TYPES[4]),
+  value: z.boolean(),
+});
+export type HasOpenBlockersCondition = z.infer<typeof HasOpenBlockersConditionSchema>;
+
+export const RuleConditionSchema = z.discriminatedUnion('type', [
+  HasLabelConditionSchema,
+  HasNotLabelConditionSchema,
+  HasPriorityConditionSchema,
+  HasTypeConditionSchema,
+  HasOpenBlockersConditionSchema,
+]);
 export type RuleCondition = z.infer<typeof RuleConditionSchema>;
 
 export const AssignAgentActionSchema = z.object({
@@ -78,10 +123,32 @@ export const NotifyOwnerActionSchema = z.object({
 });
 export type NotifyOwnerAction = z.infer<typeof NotifyOwnerActionSchema>;
 
+export const AddLabelActionSchema = z.object({
+  type: z.literal(RULE_ACTION_TYPES[3]),
+  labelId: z.string().uuid(),
+});
+export type AddLabelAction = z.infer<typeof AddLabelActionSchema>;
+
+export const RemoveLabelActionSchema = z.object({
+  type: z.literal(RULE_ACTION_TYPES[4]),
+  labelId: z.string().uuid(),
+});
+export type RemoveLabelAction = z.infer<typeof RemoveLabelActionSchema>;
+
+export const UnassignActionSchema = z.object({ type: z.literal(RULE_ACTION_TYPES[5]) });
+export type UnassignAction = z.infer<typeof UnassignActionSchema>;
+
+export const StopActionSchema = z.object({ type: z.literal(RULE_ACTION_TYPES[6]) });
+export type StopAction = z.infer<typeof StopActionSchema>;
+
 export const RuleActionSchema = z.discriminatedUnion('type', [
   AssignAgentActionSchema,
   SetStatusActionSchema,
   NotifyOwnerActionSchema,
+  AddLabelActionSchema,
+  RemoveLabelActionSchema,
+  UnassignActionSchema,
+  StopActionSchema,
 ]);
 export type RuleAction = z.infer<typeof RuleActionSchema>;
 
@@ -97,6 +164,30 @@ export type BoardRule = z.infer<typeof BoardRuleSchema>;
 
 export const BoardRuleInputSchema = BoardRuleSchema.omit({ id: true });
 export type BoardRuleInput = z.infer<typeof BoardRuleInputSchema>;
+
+export const RuleSkipReasonSchema = z.enum(['dead-ref', 'disabled']);
+export type RuleSkipReason = z.infer<typeof RuleSkipReasonSchema>;
+
+export const BoardRulePreviewSchema = z.object({
+  agentId: z.string().uuid().nullable(),
+  executionProfileId: ExecutionProfileIdSchema.nullable(),
+  ruleId: z.string().uuid().nullable(),
+  finalStatusKey: z.string().min(1),
+  addLabelIds: z.array(z.string().uuid()),
+  removeLabelIds: z.array(z.string().uuid()),
+  unassign: z.boolean(),
+  notifications: z.array(z.string()),
+  matchedRuleIds: z.array(z.string().uuid()),
+  skippedRules: z.array(z.object({ ruleId: z.string().uuid(), reason: RuleSkipReasonSchema })),
+  stopped: z.boolean(),
+});
+export type BoardRulePreview = z.infer<typeof BoardRulePreviewSchema>;
+
+export const PreviewBoardRulesBodySchema = z.object({ issueId: z.string().uuid() });
+export type PreviewBoardRulesBody = z.infer<typeof PreviewBoardRulesBodySchema>;
+
+export const PreviewBoardRulesResponseSchema = z.object({ preview: BoardRulePreviewSchema });
+export type PreviewBoardRulesResponse = z.infer<typeof PreviewBoardRulesResponseSchema>;
 
 export const BoardDefinitionSchema = z.object({
   name: z.string().trim().min(1),

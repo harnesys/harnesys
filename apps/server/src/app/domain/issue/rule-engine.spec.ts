@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { BoardRuleRecord } from './board.ts';
-import type { EngineRefs } from './rule-engine.ts';
+import type { EngineIssue, EngineRefs } from './rule-engine.ts';
 import { MAX_CASCADE_TRANSITIONS, runRules } from './rule-engine.ts';
 
 function rule(partial: Partial<BoardRuleRecord> & { id: string }): BoardRuleRecord {
@@ -15,9 +15,20 @@ function rule(partial: Partial<BoardRuleRecord> & { id: string }): BoardRuleReco
   };
 }
 
+function issue(partial: Partial<EngineIssue> = {}): EngineIssue {
+  return {
+    statusKey: 'a',
+    labels: [],
+    priority: 3,
+    type: 'task',
+    hasOpenBlockers: false,
+    ...partial,
+  };
+}
+
 const refs: EngineRefs = {
   statusExists: (key) => ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].includes(key),
-  labelExists: (id) => id === 'label-frontend',
+  labelExists: (id) => id === 'label-frontend' || id === 'label-blocker',
   agentExists: (id) => id === 'agent-1' || id === 'agent-2',
 };
 
@@ -31,7 +42,7 @@ describe('runRules', () => {
         }),
       ],
       event: { type: 'status_entered', statusKey: 'a' },
-      issue: { statusKey: 'a', labels: ['label-frontend'] },
+      issue: issue({ labels: ['label-frontend'] }),
       refs,
     });
     expect(outcome.assigns).toHaveLength(1);
@@ -48,11 +59,44 @@ describe('runRules', () => {
         }),
       ],
       event: { type: 'status_entered', statusKey: 'a' },
-      issue: { statusKey: 'a', labels: ['label-frontend'] },
+      issue: issue({ labels: ['label-frontend'] }),
       refs,
     });
     expect(outcome.assigns).toHaveLength(0);
     expect(outcome.skippedRules).toEqual([{ ruleId: 'r1', reason: 'dead-ref' }]);
+  });
+
+  test('has_not_label, has_priority, has_type and has_open_blockers conditions gate the rule', () => {
+    const outcome = runRules({
+      rules: [
+        rule({
+          id: 'r-gated',
+          conditions: [
+            { type: 'has_not_label', labelId: 'label-blocker' },
+            { type: 'has_priority', priority: 1 },
+            { type: 'has_type', issueType: 'bug' },
+            { type: 'has_open_blockers', value: false },
+          ],
+        }),
+      ],
+      event: { type: 'status_entered', statusKey: 'a' },
+      issue: issue({ priority: 1, type: 'bug' }),
+      refs,
+    });
+    expect(outcome.assigns).toHaveLength(1);
+
+    const blocked = runRules({
+      rules: [
+        rule({
+          id: 'r-gated',
+          conditions: [{ type: 'has_not_label', labelId: 'label-blocker' }],
+        }),
+      ],
+      event: { type: 'status_entered', statusKey: 'a' },
+      issue: issue({ labels: ['label-blocker'] }),
+      refs,
+    });
+    expect(blocked.assigns).toHaveLength(0);
   });
 
   test('cascade set_status chain stops by rule', () => {
@@ -77,7 +121,7 @@ describe('runRules', () => {
         }),
       ],
       event: { type: 'status_entered', statusKey: 'a' },
-      issue: { statusKey: 'a', labels: [] },
+      issue: issue(),
       refs,
     });
     expect(outcome.finalStatusKey).toBe('c');
@@ -100,7 +144,7 @@ describe('runRules', () => {
         }),
       ],
       event: { type: 'status_entered', statusKey: 'a' },
-      issue: { statusKey: 'a', labels: [] },
+      issue: issue(),
       refs,
     });
     expect(outcome.finalStatusKey).toBe('b');
@@ -118,7 +162,7 @@ describe('runRules', () => {
     const outcome = runRules({
       rules: chain,
       event: { type: 'status_entered', statusKey: 'a' },
-      issue: { statusKey: 'a', labels: [] },
+      issue: issue(),
       refs,
     });
     expect(outcome.finalStatusKey).toBe('f');
@@ -144,7 +188,7 @@ describe('runRules', () => {
         }),
       ],
       event: { type: 'status_entered', statusKey: 'a' },
-      issue: { statusKey: 'a', labels: [] },
+      issue: issue(),
       refs,
     });
     expect(outcome.assigns).toHaveLength(0);
@@ -155,7 +199,7 @@ describe('runRules', () => {
     ]);
   });
 
-  test('last-wins for assign_agent, notifications accumulate', () => {
+  test('first matching assign_agent wins, later assigns are ignored', () => {
     const outcome = runRules({
       rules: [
         rule({
@@ -172,18 +216,71 @@ describe('runRules', () => {
         }),
       ],
       event: { type: 'status_entered', statusKey: 'a' },
-      issue: { statusKey: 'a', labels: [] },
+      issue: issue(),
       refs,
     });
-    expect(outcome.assigns.map((assign) => assign.agentId)).toEqual(['agent-1', 'agent-2']);
+    expect(outcome.assigns.map((assign) => assign.agentId)).toEqual(['agent-1']);
     expect(outcome.notifications.map((n) => n.text)).toEqual(['first']);
+  });
+
+  test('unassign wins over a later assign, stop halts further rules', () => {
+    const unassigned = runRules({
+      rules: [
+        rule({ id: 'r-clear', actions: [{ type: 'unassign' }] }),
+        rule({
+          id: 'r-assign',
+          position: 1,
+          actions: [{ type: 'assign_agent', agentId: 'agent-1' }],
+        }),
+      ],
+      event: { type: 'status_entered', statusKey: 'a' },
+      issue: issue(),
+      refs,
+    });
+    expect(unassigned.assigns).toHaveLength(0);
+    expect(unassigned.unassign).toBe(true);
+
+    const stopped = runRules({
+      rules: [
+        rule({ id: 'r-stop', actions: [{ type: 'stop' }] }),
+        rule({
+          id: 'r-later',
+          position: 1,
+          actions: [{ type: 'notify_owner', text: 'should not fire' }],
+        }),
+      ],
+      event: { type: 'status_entered', statusKey: 'a' },
+      issue: issue(),
+      refs,
+    });
+    expect(stopped.stopped).toBe(true);
+    expect(stopped.notifications).toHaveLength(0);
+  });
+
+  test('add_label and remove_label collect net label mutations', () => {
+    const outcome = runRules({
+      rules: [
+        rule({
+          id: 'r-labels',
+          actions: [
+            { type: 'add_label', labelId: 'label-frontend' },
+            { type: 'remove_label', labelId: 'label-blocker' },
+          ],
+        }),
+      ],
+      event: { type: 'status_entered', statusKey: 'a' },
+      issue: issue({ labels: ['label-blocker'] }),
+      refs,
+    });
+    expect(outcome.addLabelIds).toEqual(['label-frontend']);
+    expect(outcome.removeLabelIds).toEqual(['label-blocker']);
   });
 
   test('disabled rules are reported as skipped and never execute', () => {
     const outcome = runRules({
       rules: [rule({ id: 'r-off', enabled: false })],
       event: { type: 'status_entered', statusKey: 'a' },
-      issue: { statusKey: 'a', labels: [] },
+      issue: issue(),
       refs,
     });
     expect(outcome.assigns).toHaveLength(0);
@@ -194,14 +291,14 @@ describe('runRules', () => {
     const outcome = runRules({
       rules: [rule({ id: 'r-create', trigger: { type: 'issue_created' } })],
       event: [{ type: 'issue_created' }, { type: 'status_entered', statusKey: 'a' }],
-      issue: { statusKey: 'a', labels: [] },
+      issue: issue(),
       refs,
     });
     expect(outcome.assigns).toHaveLength(1);
     const noCreate = runRules({
       rules: [rule({ id: 'r-create', trigger: { type: 'issue_created' } })],
       event: { type: 'status_entered', statusKey: 'a' },
-      issue: { statusKey: 'a', labels: [] },
+      issue: issue(),
       refs,
     });
     expect(noCreate.assigns).toHaveLength(0);

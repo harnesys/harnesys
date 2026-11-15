@@ -1,9 +1,10 @@
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import type { IssueBoardRecord } from '../../domain/issue/board.ts';
 import { IssueBoardRepositoryPort } from '../../domain/issue/board-repository.port.ts';
+import type { IssueRecord } from '../../domain/issue/issue.ts';
 import { IssueRepositoryPort } from '../../domain/issue/issue-repository.port.ts';
 import { IssueLabelRepositoryPort } from '../../domain/issue/label-repository.port.ts';
-import type { EngineRefs } from '../../domain/issue/rule-engine.ts';
+import type { EngineIssue, EngineRefs } from '../../domain/issue/rule-engine.ts';
 
 export function engineRefs(input: {
   board: IssueBoardRecord;
@@ -16,6 +17,16 @@ export function engineRefs(input: {
     statusExists: (statusKey) => keys.has(statusKey),
     labelExists: (labelId) => input.labels.findById(input.orgId, labelId) !== undefined,
     agentExists: (agentId) => input.agents.findById(input.orgId, agentId) !== undefined,
+  };
+}
+
+export function toEngineIssue(issue: IssueRecord, hasOpenBlockers: boolean): EngineIssue {
+  return {
+    statusKey: issue.statusKey,
+    labels: issue.labels,
+    priority: issue.priority,
+    type: issue.type,
+    hasOpenBlockers,
   };
 }
 

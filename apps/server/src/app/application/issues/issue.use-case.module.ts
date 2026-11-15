@@ -25,6 +25,7 @@ import { ListIssueCommentsUseCase } from './list-issue-comments.use-case.ts';
 import { ListIssueLabelsUseCase } from './list-issue-labels.use-case.ts';
 import { ListIssuesUseCase } from './list-issues.use-case.ts';
 import { NudgeIssueUseCase } from './nudge-issue.use-case.ts';
+import { PreviewBoardRulesUseCase } from './preview-board-rules.use-case.ts';
 import { RemoveBoardRuleUseCase } from './remove-board-rule.use-case.ts';
 import { RemoveBoardStatusUseCase } from './remove-board-status.use-case.ts';
 import { RemoveIssueDependencyUseCase } from './remove-issue-dependency.use-case.ts';
@@ -51,6 +52,7 @@ const useCases = [
   SaveBoardRuleUseCase,
   RemoveBoardRuleUseCase,
   ReorderBoardRulesUseCase,
+  PreviewBoardRulesUseCase,
   SetIssueBoardArchiveUseCase,
   DeleteIssueBoardUseCase,
   CreateIssueUseCase,

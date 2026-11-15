@@ -7,75 +7,34 @@ import type {
   SetStatusAction,
 } from '@harnesys/contracts';
 import type { BoardRuleRecord } from './board.ts';
+import {
+  type EngineAssign,
+  type EngineIssue,
+  type EngineNotification,
+  type EngineOutcome,
+  type EngineRefs,
+  type EngineStop,
+  MAX_CASCADE_TRANSITIONS,
+  type RuleEvent,
+  type RunRulesInput,
+  type SkippedRule,
+  type SkipReason,
+} from './rule-engine.types.ts';
 
-export const MAX_CASCADE_TRANSITIONS = 5;
-
-export type RuleEvent = { type: 'issue_created' } | { type: 'status_entered'; statusKey: string };
-
-export interface EngineRefs {
-  statusExists(statusKey: string): boolean;
-  labelExists(labelId: string): boolean;
-  agentExists(agentId: string): boolean;
-}
-
-export interface EngineIssue {
-  statusKey: string;
-  labels: string[];
-}
-
-export interface EngineAssign {
-  agentId: string;
-  executionProfileId: string | null;
-  ruleId: string;
-  createdByUserId: string | null;
-}
-
-export interface EngineNotification {
-  ruleId: string;
-  text: string;
-}
-
-export type SkipReason = 'dead-ref' | 'disabled';
-
-export interface SkippedRule {
-  ruleId: string;
-  reason: SkipReason;
-}
-
-export type EngineStopReason = 'cascade-cap' | 'status-repeat';
-
-export interface EngineStop {
-  reason: EngineStopReason;
-  statusKey: string;
-}
-
-export interface EngineOutcome {
-  finalStatusKey: string;
-  assigns: EngineAssign[];
-  notifications: EngineNotification[];
-  skippedRules: SkippedRule[];
-  stop: EngineStop | null;
-}
-
-export interface RunRulesInput {
-  rules: BoardRuleRecord[];
-  event: RuleEvent | RuleEvent[];
-  issue: EngineIssue;
-  refs: EngineRefs;
-}
-
-export interface PickedAssignment {
-  agentId: string;
-  executionProfileId: string | null;
-  ruleId: string;
-  ownerUserId: string | null;
-}
-
-export interface PickAssignmentInput {
-  rules: BoardRuleRecord[];
-  issue: EngineIssue;
-  refs: EngineRefs;
-}
+export type {
+  EngineAssign,
+  EngineIssue,
+  EngineNotification,
+  EngineOutcome,
+  EngineRefs,
+  EngineStop,
+  EngineStopReason,
+  RuleEvent,
+  RunRulesInput,
+  SkippedRule,
+  SkipReason,
+} from './rule-engine.types.ts';
+export { MAX_CASCADE_TRANSITIONS };
 
 type ConditionResult = 'matched' | 'no-match' | 'dead-ref';
 
@@ -89,11 +48,16 @@ interface EngineContext {
 interface EngineState {
   finalStatusKey: string;
   assigns: EngineAssign[];
+  unassign: boolean;
+  addLabelIds: string[];
+  removeLabelIds: string[];
   notifications: EngineNotification[];
+  matchedRuleIds: string[];
   skippedRules: SkippedRule[];
   visited: Set<string>;
   transitions: number;
   stop: EngineStop | null;
+  stopped: boolean;
 }
 
 export function triggerMatches(trigger: RuleTrigger, event: RuleEvent): boolean {
@@ -103,15 +67,43 @@ export function triggerMatches(trigger: RuleTrigger, event: RuleEvent): boolean 
   return event.type === 'status_entered' && trigger.statusKey === event.statusKey;
 }
 
+export function conditionUsesLabel(condition: RuleCondition): condition is RuleCondition & {
+  labelId: string;
+} {
+  return condition.type === 'has_label' || condition.type === 'has_not_label';
+}
+
+function _labelConditionDeadRef(condition: RuleCondition, refs: EngineRefs): boolean {
+  return conditionUsesLabel(condition) && !refs.labelExists(condition.labelId);
+}
+
+function conditionMatches(condition: RuleCondition, issue: EngineIssue): boolean {
+  switch (condition.type) {
+    case 'has_label':
+      return issue.labels.includes(condition.labelId);
+    case 'has_not_label':
+      return !issue.labels.includes(condition.labelId);
+    case 'has_priority':
+      return issue.priority === condition.priority;
+    case 'has_type':
+      return issue.type === condition.issueType;
+    case 'has_open_blockers':
+      return issue.hasOpenBlockers === condition.value;
+  }
+}
+
 export function evaluateConditions(
   conditions: RuleCondition[],
-  labels: string[],
+  issue: EngineIssue,
   refs: EngineRefs,
 ): ConditionResult {
-  if (conditions.some((condition) => !refs.labelExists(condition.labelId))) {
+  const hasDeadRef = conditions.some(
+    (condition) => conditionUsesLabel(condition) && !refs.labelExists(condition.labelId),
+  );
+  if (hasDeadRef) {
     return 'dead-ref';
   }
-  return conditions.every((condition) => labels.includes(condition.labelId))
+  return conditions.every((condition) => conditionMatches(condition, issue))
     ? 'matched'
     : 'no-match';
 }
@@ -123,50 +115,30 @@ export function runRules(input: RunRulesInput): EngineOutcome {
   state.skippedRules.push(...skipped);
   const queue: RuleEvent[] = [...events];
   const context: EngineContext = { state, issue: input.issue, refs: input.refs, queue };
-  while (queue.length > 0) {
+  while (queue.length > 0 && !state.stopped) {
     const event = queue.shift() as RuleEvent;
     for (const rule of active) {
       applyRule(context, rule, event);
+      if (state.stopped) {
+        break;
+      }
     }
   }
   return {
     finalStatusKey: state.finalStatusKey,
     assigns: state.assigns,
+    unassign: state.unassign,
+    addLabelIds: state.addLabelIds,
+    removeLabelIds: state.removeLabelIds,
     notifications: state.notifications,
+    matchedRuleIds: state.matchedRuleIds,
     skippedRules: state.skippedRules,
     stop: state.stop,
+    stopped: state.stopped,
   };
 }
 
-export function pickAssignment(input: PickAssignmentInput): PickedAssignment | null {
-  const event: RuleEvent = { type: 'status_entered', statusKey: input.issue.statusKey };
-  const { active } = orderRules(input.rules);
-  let picked: PickedAssignment | null = null;
-  let ownerUserId: string | null = null;
-  for (const rule of active) {
-    if (!triggerMatches(rule.trigger, event)) {
-      continue;
-    }
-    if (evaluateConditions(rule.conditions, input.issue.labels, input.refs) !== 'matched') {
-      continue;
-    }
-    for (const action of rule.actions) {
-      if (action.type !== 'assign_agent' || !input.refs.agentExists(action.agentId)) {
-        continue;
-      }
-      ownerUserId = ownerUserId ?? rule.createdByUserId;
-      picked = {
-        agentId: action.agentId,
-        executionProfileId: action.executionProfileId ?? null,
-        ruleId: rule.id,
-        ownerUserId,
-      };
-    }
-  }
-  return picked;
-}
-
-function orderRules(rules: BoardRuleRecord[]): {
+export function orderRules(rules: BoardRuleRecord[]): {
   active: BoardRuleRecord[];
   skipped: SkippedRule[];
 } {
@@ -189,11 +161,16 @@ function createState(input: RunRulesInput, events: RuleEvent[]): EngineState {
   return {
     finalStatusKey: entryStatusKey(events, input.issue.statusKey),
     assigns: [],
+    unassign: false,
+    addLabelIds: [],
+    removeLabelIds: [],
     notifications: [],
+    matchedRuleIds: [],
     skippedRules: [],
     visited,
     transitions: 0,
     stop: null,
+    stopped: false,
   };
 }
 
@@ -206,7 +183,7 @@ function applyRule(context: EngineContext, rule: BoardRuleRecord, event: RuleEve
   if (!triggerMatches(rule.trigger, event)) {
     return;
   }
-  const conditions = evaluateConditions(rule.conditions, context.issue.labels, context.refs);
+  const conditions = evaluateConditions(rule.conditions, context.issue, context.refs);
   if (conditions === 'dead-ref') {
     markSkipped(context.state, rule.id, 'dead-ref');
     return;
@@ -214,34 +191,94 @@ function applyRule(context: EngineContext, rule: BoardRuleRecord, event: RuleEve
   if (conditions !== 'matched') {
     return;
   }
+  if (!context.state.matchedRuleIds.includes(rule.id)) {
+    context.state.matchedRuleIds.push(rule.id);
+  }
   for (const action of rule.actions) {
     applyAction(context, rule, action);
+    if (context.state.stopped) {
+      return;
+    }
   }
 }
 
 function applyAction(context: EngineContext, rule: BoardRuleRecord, action: RuleAction): void {
-  if (action.type === 'assign_agent') {
-    if (!context.refs.agentExists(action.agentId)) {
-      markSkipped(context.state, rule.id, 'dead-ref');
+  switch (action.type) {
+    case 'assign_agent':
+      applyAssign(context, rule, action);
+      return;
+    case 'unassign':
+      applyUnassign(context.state);
+      return;
+    case 'add_label':
+    case 'remove_label': {
+      if (!context.refs.labelExists(action.labelId)) {
+        markSkipped(context.state, rule.id, 'dead-ref');
+        return;
+      }
+      if (action.type === 'add_label') {
+        applyAddLabel(context.state, action.labelId);
+      } else {
+        applyRemoveLabel(context.state, action.labelId);
+      }
       return;
     }
-    applyAssign(context.state, rule, action);
-    return;
+    case 'notify_owner':
+      applyNotify(context.state, rule, action);
+      return;
+    case 'stop':
+      context.state.stopped = true;
+      return;
+    case 'set_status':
+      applyStatus(context, rule, action);
+      return;
   }
-  if (action.type === 'notify_owner') {
-    applyNotify(context.state, rule, action);
-    return;
-  }
-  applyStatus(context, rule, action);
 }
 
-function applyAssign(state: EngineState, rule: BoardRuleRecord, action: AssignAgentAction): void {
+function assignmentDecided(state: EngineState): boolean {
+  return state.assigns.length > 0 || state.unassign;
+}
+
+function applyAssign(
+  context: EngineContext,
+  rule: BoardRuleRecord,
+  action: AssignAgentAction,
+): void {
+  const { state, refs } = context;
+  if (assignmentDecided(state)) {
+    return;
+  }
+  if (!refs.agentExists(action.agentId)) {
+    markSkipped(state, rule.id, 'dead-ref');
+    return;
+  }
   state.assigns.push({
     agentId: action.agentId,
     executionProfileId: action.executionProfileId ?? null,
     ruleId: rule.id,
     createdByUserId: rule.createdByUserId,
   });
+}
+
+function applyUnassign(state: EngineState): void {
+  if (assignmentDecided(state)) {
+    return;
+  }
+  state.unassign = true;
+}
+
+function applyAddLabel(state: EngineState, labelId: string): void {
+  state.removeLabelIds = state.removeLabelIds.filter((id) => id !== labelId);
+  if (!state.addLabelIds.includes(labelId)) {
+    state.addLabelIds.push(labelId);
+  }
+}
+
+function applyRemoveLabel(state: EngineState, labelId: string): void {
+  state.addLabelIds = state.addLabelIds.filter((id) => id !== labelId);
+  if (!state.removeLabelIds.includes(labelId)) {
+    state.removeLabelIds.push(labelId);
+  }
 }
 
 function applyNotify(state: EngineState, rule: BoardRuleRecord, action: NotifyOwnerAction): void {

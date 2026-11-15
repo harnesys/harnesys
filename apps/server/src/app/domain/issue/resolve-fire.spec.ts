@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import type { BoardRuleRecord } from './board.ts';
+import { pickAssignment } from './pick-assignment.ts';
 import { resolveFire } from './resolve-fire.ts';
-import type { EngineRefs } from './rule-engine.ts';
-import { pickAssignment } from './rule-engine.ts';
+import type { EngineIssue, EngineRefs } from './rule-engine.ts';
 
 function rule(partial: Partial<BoardRuleRecord> & { id: string }): BoardRuleRecord {
   return {
@@ -12,6 +12,17 @@ function rule(partial: Partial<BoardRuleRecord> & { id: string }): BoardRuleReco
     position: 0,
     enabled: true,
     createdByUserId: null,
+    ...partial,
+  };
+}
+
+function issue(partial: Partial<EngineIssue> = {}): EngineIssue {
+  return {
+    statusKey: 'in_progress',
+    labels: [],
+    priority: 3,
+    type: 'task',
+    hasOpenBlockers: false,
     ...partial,
   };
 }
@@ -37,7 +48,7 @@ const base = {
       actions: [{ type: 'assign_agent', agentId: 'guard' }],
     }),
   ],
-  issue: { statusKey: 'in_progress', labels: ['frontend'] as string[] },
+  issue: issue({ labels: ['frontend'] }),
   refs,
   explicitAssignee: null,
   hasOpenBlockers: false,
@@ -56,10 +67,19 @@ describe('resolveFire', () => {
     expect(resolved.finalStatusKey).toBe('in_review');
   });
 
+  test('specific labeled rule fires before the generic fallback', () => {
+    const resolved = resolveFire({
+      ...base,
+      event: { type: 'status_entered', statusKey: 'in_review' },
+    });
+    expect(resolved.agentId).toBe('lena');
+    expect(resolved.ruleId).toBe('r1');
+  });
+
   test('falls back to label-less rule when no label matches', () => {
     const resolved = resolveFire({
       ...base,
-      issue: { statusKey: 'in_progress', labels: [] },
+      issue: issue({ labels: [] }),
       event: { type: 'status_entered', statusKey: 'in_review' },
     });
     expect(resolved.agentId).toBe('guard');
@@ -69,7 +89,7 @@ describe('resolveFire', () => {
   test('no matching rule means no agent', () => {
     const resolved = resolveFire({
       ...base,
-      issue: { statusKey: 'todo', labels: [] },
+      issue: issue({ statusKey: 'todo', labels: [] }),
       event: { type: 'status_entered', statusKey: 'todo' },
     });
     expect(resolved.agentId).toBeNull();
@@ -117,28 +137,34 @@ describe('resolveFire', () => {
     const second = resolveFire({
       ...base,
       rules,
-      issue: { statusKey: 'in_progress', labels: ['frontend'] },
+      issue: issue({ labels: ['frontend'] }),
       event: { type: 'status_entered', statusKey: 'in_review' },
     });
     expect(first.agentId).toBe('lena');
     expect(second.agentId).toBe('lena');
   });
 
-  test('pickAssignment picks last assign by position and first owner', () => {
-    const picked = pickAssignment({
+  test('pickAssignment picks the first assign by position and first owner', () => {
+    const labeled = pickAssignment({
       rules: base.rules,
-      issue: { statusKey: 'in_review', labels: [] },
+      issue: issue({ statusKey: 'in_review', labels: ['frontend'] }),
       refs,
     });
-    expect(picked).toEqual({
-      agentId: 'guard',
+    expect(labeled).toEqual({
+      agentId: 'lena',
       executionProfileId: null,
-      ruleId: 'r2',
-      ownerUserId: null,
+      ruleId: 'r1',
+      ownerUserId: 'mira',
     });
+    const generic = pickAssignment({
+      rules: base.rules,
+      issue: issue({ statusKey: 'in_review', labels: [] }),
+      refs,
+    });
+    expect(generic?.agentId).toBe('guard');
     const none = pickAssignment({
       rules: base.rules,
-      issue: { statusKey: 'todo', labels: [] },
+      issue: issue({ statusKey: 'todo' }),
       refs,
     });
     expect(none).toBeNull();

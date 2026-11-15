@@ -1,6 +1,7 @@
 {
   "name": "Reviewer",
   "role": "reviewer",
+  "description": "Reviews changes for bugs, regressions and missing tests.",
   "skills": [
     "issue-ops"
   ],

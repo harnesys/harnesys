@@ -10,8 +10,10 @@ import {
   ChevronRightIcon,
   PackageOpenIcon,
   RefreshCwIcon,
+  SearchIcon,
   ShieldCheckIcon,
   Trash2Icon,
+  XIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
@@ -33,15 +35,12 @@ import { dialog } from '@/shared/services/overlay';
 import { Badge } from '@/shared/ui/badge';
 import { Button, buttonVariants } from '@/shared/ui/button';
 import { RowChip } from '@/shared/ui/capability-rows';
-import { Card } from '@/shared/ui/card';
-import {
-  RowListSkeleton,
-  SettingsEmpty,
-  SettingsErrorBanner,
-  SettingsSection,
-} from '@/shared/ui/settings-kit';
+import { EntityTile, EntityTileFooter, EntityTileHead } from '@/shared/ui/entity-tile';
+import { Input } from '@/shared/ui/input';
+import { RowListSkeleton, SettingsEmpty, SettingsErrorBanner } from '@/shared/ui/settings-kit';
 import { StatusDot } from '@/shared/ui/status-dot';
 import { Switch } from '@/shared/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { toast } from '@/shared/ui/toast';
 import { AddonMark } from './addon-mark';
 import { ConsentDialog } from './consent-dialog';
@@ -57,6 +56,25 @@ interface AddonCardModel {
   org: OrgAddonSummary | null;
 }
 
+interface AddonEmptyState {
+  testId: string;
+  title: string;
+  description: string;
+}
+
+const INSTALLED_EMPTY: AddonEmptyState = {
+  testId: 'manage-addons-installed-empty',
+  title: 'No add-ons enabled yet',
+  description: 'Enable an add-on from the Marketplace tab.',
+};
+
+const MARKETPLACE_EMPTY: AddonEmptyState = {
+  testId: 'manage-addons-marketplace-empty',
+  title: 'No add-ons found',
+  description:
+    'Add-ons from the host directory appear here automatically. Use Reload after adding packages manually, or install one from a path or URL.',
+};
+
 export function ManageAddonsPane({ orgId }: { orgId: string }) {
   const queryClient = useQueryClient();
   const list = useQuery(orgAddonsQuery(orgId));
@@ -65,6 +83,7 @@ export function ManageAddonsPane({ orgId }: { orgId: string }) {
   const [policyOpen, setPolicyOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [q, setQ] = useState('');
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ['addons', orgId] });
@@ -175,8 +194,15 @@ export function ManageAddonsPane({ orgId }: { orgId: string }) {
 
   const cards = buildCards(packages.data?.items ?? [], list.data?.items ?? []);
   const isPending = list.isPending || packages.isPending;
-  const enabledCards = cards.filter((card) => card.org?.enabled === true);
-  const otherCards = cards.filter((card) => card.org?.enabled !== true);
+  const query = q.trim().toLowerCase();
+  const matches = (card: AddonCardModel) =>
+    query === '' ||
+    card.title.toLowerCase().includes(query) ||
+    card.description.toLowerCase().includes(query) ||
+    card.id.toLowerCase().includes(query);
+  const visibleCards = query === '' ? cards : cards.filter(matches);
+  const installedCards = visibleCards.filter((card) => card.org?.enabled === true);
+  const marketplaceCards = visibleCards.filter((card) => card.org?.enabled !== true);
 
   const renderTile = (card: AddonCardModel) => (
     <AddonTile
@@ -189,85 +215,114 @@ export function ManageAddonsPane({ orgId }: { orgId: string }) {
     />
   );
 
+  const renderGrid = (items: AddonCardModel[]) => (
+    <div className="grid gap-3 sm:grid-cols-2" data-testid="manage-addons-list">
+      {items.map(renderTile)}
+    </div>
+  );
+
+  const renderTab = (items: AddonCardModel[], empty: AddonEmptyState) => {
+    if (isPending) {
+      return <RowListSkeleton rows={3} testId="manage-addons-skeleton" />;
+    }
+    if (items.length > 0) {
+      return renderGrid(items);
+    }
+    const searching = query !== '';
+    return (
+      <SettingsEmpty
+        title={searching ? 'No matches' : empty.title}
+        description={searching ? 'Nothing matches this search.' : empty.description}
+        testId={empty.testId}
+      />
+    );
+  };
+
   return (
-    <div className="flex w-full flex-col gap-8" data-testid="manage-addons-pane">
+    <div className="flex w-full flex-col gap-4" data-testid="manage-addons-pane">
       {error ? <SettingsErrorBanner message={error} testId="manage-addons-error" /> : null}
-      <SettingsSection
-        label="Add-ons"
-        count={isPending ? undefined : cards.length}
-        description="Turn add-ons on for this organization, or install your own packages."
-        actions={
-          <>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground"
-              disabled={pending}
-              onClick={() => void reload()}
-              data-testid="addon-reload"
-            >
-              <RefreshCwIcon />
-              Reload
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground"
-              onClick={openInstallDialog}
-              data-testid="addon-install"
-            >
-              <PackageOpenIcon />
-              Install package
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground"
-              disabled={pending}
-              onClick={() => void prune()}
-              data-testid="addon-prune"
-            >
-              <Trash2Icon />
-              Prune unused
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground"
-              onClick={() => setPolicyOpen(true)}
-              data-testid="addon-source-policy"
-            >
-              <ShieldCheckIcon />
-              Source policy
-            </Button>
-          </>
-        }
-      >
-        {isPending ? <RowListSkeleton rows={3} testId="manage-addons-skeleton" /> : null}
-        {!isPending && cards.length === 0 ? (
-          <SettingsEmpty
-            title="No add-ons found"
-            description="Add-ons from the host directory appear here automatically. Use Reload after adding packages manually, or install one from a path or URL."
-            testId="manage-addons-empty"
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-0 max-w-sm grow basis-52">
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="pr-8 pl-8 font-mono text-sm"
+            placeholder="Search add-ons..."
+            value={q}
+            onChange={(event) => setQ(event.target.value)}
+            data-testid="addon-search"
           />
-        ) : null}
-      </SettingsSection>
-      {!isPending && enabledCards.length > 0 ? (
-        <SettingsSection label="Enabled" count={enabledCards.length} testId="manage-addons-enabled">
-          <div className="grid gap-3 sm:grid-cols-2">{enabledCards.map(renderTile)}</div>
-        </SettingsSection>
-      ) : null}
-      {!isPending && otherCards.length > 0 ? (
-        <SettingsSection
-          label="Available"
-          count={otherCards.length}
-          testId="manage-addons-available"
-        >
-          <div className="grid gap-3 sm:grid-cols-2" data-testid="manage-addons-list">
-            {otherCards.map(renderTile)}
-          </div>
-        </SettingsSection>
-      ) : null}
+          {q ? (
+            <button
+              type="button"
+              aria-label="Clear search"
+              className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              onClick={() => setQ('')}
+            >
+              <XIcon className="size-3.5" />
+            </button>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-center gap-1 sm:ml-auto">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            disabled={pending}
+            onClick={() => void reload()}
+            data-testid="addon-reload"
+          >
+            <RefreshCwIcon />
+            Reload
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            onClick={openInstallDialog}
+            data-testid="addon-install"
+          >
+            <PackageOpenIcon />
+            Install package
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            disabled={pending}
+            onClick={() => void prune()}
+            data-testid="addon-prune"
+          >
+            <Trash2Icon />
+            Prune unused
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            onClick={() => setPolicyOpen(true)}
+            data-testid="addon-source-policy"
+          >
+            <ShieldCheckIcon />
+            Source policy
+          </Button>
+        </div>
+      </div>
+      <Tabs defaultValue="installed">
+        <TabsList className="w-full">
+          <TabsTrigger value="installed" className="flex-1">
+            Installed
+          </TabsTrigger>
+          <TabsTrigger value="marketplace" className="flex-1">
+            Marketplace
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="installed" className="mt-4" data-testid="manage-addons-installed">
+          {renderTab(installedCards, INSTALLED_EMPTY)}
+        </TabsContent>
+        <TabsContent value="marketplace" className="mt-4" data-testid="manage-addons-marketplace">
+          {renderTab(marketplaceCards, MARKETPLACE_EMPTY)}
+        </TabsContent>
+      </Tabs>
       <ConsentDialog
         key={consent ? `${consent.addonId}:${consent.version}` : 'consent-none'}
         open={consent !== null}
@@ -301,74 +356,73 @@ function AddonTile({ card, pending, path, onEnable, onDisable }: AddonTileProps)
   const org = card.org;
   const enabled = org?.enabled === true;
   return (
-    <Card className="gap-3 bg-popover p-4" data-testid={`manage-addon-${card.id}`}>
-      <div className="flex min-w-0 items-start gap-3">
-        <AddonMark size="sm" icon={card.org?.icon} color={card.org?.color} />
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <div className="flex min-w-0 items-center gap-2">
-            <Link
-              to={path}
-              data-testid={`addon-open-${card.id}`}
-              className="truncate font-medium text-sm hover:underline"
-            >
-              {card.title}
-            </Link>
+    <EntityTile className="gap-3 p-4" testId={`manage-addon-${card.id}`}>
+      <EntityTileHead
+        mark={<AddonMark size="sm" icon={card.org?.icon} color={card.org?.color} />}
+        title={
+          <Link
+            to={path}
+            data-testid={`addon-open-${card.id}`}
+            className="truncate font-medium text-sm hover:underline"
+          >
+            {card.title}
+          </Link>
+        }
+        badges={
+          <>
             {enabled ? (
               <Badge variant="secondary" data-testid={`addon-state-${card.id}`}>
                 Enabled
               </Badge>
             ) : null}
             {latest?.trust === 'builtin' ? <Badge variant="outline">System</Badge> : null}
-          </div>
-          <p className="line-clamp-2 text-[13px] text-muted-foreground">
-            {card.description || card.id}
-          </p>
-        </div>
+          </>
+        }
+        description={card.description || card.id}
+        action={
+          org ? (
+            <Switch
+              size="sm"
+              checked={enabled}
+              disabled={pending}
+              onCheckedChange={(value) => (value === true ? onEnable() : onDisable())}
+              data-testid={`addon-switch-${card.id}`}
+              aria-label={enabled ? `Disable ${card.title}` : `Enable ${card.title}`}
+            />
+          ) : undefined
+        }
+      />
+      <EntityTileFooter
+        action={
+          <Link
+            to={path}
+            className={cn(
+              buttonVariants({ variant: 'ghost', size: 'sm' }),
+              'shrink-0 text-muted-foreground',
+            )}
+            data-testid={`addon-details-${card.id}`}
+          >
+            Details
+            <ChevronRightIcon data-icon="inline-end" />
+          </Link>
+        }
+      >
         {org ? (
-          <Switch
-            size="sm"
-            checked={enabled}
-            disabled={pending}
-            onCheckedChange={(value) => (value === true ? onEnable() : onDisable())}
-            data-testid={`addon-switch-${card.id}`}
-            aria-label={enabled ? `Disable ${card.title}` : `Enable ${card.title}`}
-          />
+          <StatusDot tone={addonHealthTone(org.health)} label={addonHealthLabel(org.health)} />
         ) : null}
-      </div>
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-border/40 border-t pt-2.5">
-        <span className="flex min-w-0 flex-wrap items-center gap-2">
-          {org ? (
-            <StatusDot tone={addonHealthTone(org.health)} label={addonHealthLabel(org.health)} />
-          ) : null}
-          <span className="font-mono text-[11px] text-muted-foreground">
-            {org?.version ?? latest?.version ?? card.id}
-          </span>
-          {card.versions.length > 1 ? (
-            <RowChip>{`${card.versions.length} versions`}</RowChip>
-          ) : null}
-          {latest && latest.trust !== 'builtin' ? (
-            <RowChip>{ADDON_TRUST_LABEL[latest.trust]}</RowChip>
-          ) : null}
-          {org && org.compatibility.outcome === 'incompatible' ? (
-            <RowChip tone="danger">incompatible</RowChip>
-          ) : null}
-          {org?.updateAvailable ? (
-            <RowChip tone="warn">update {org.updateAvailable}</RowChip>
-          ) : null}
+        <span className="font-mono text-[11px] text-muted-foreground">
+          {org?.version ?? latest?.version ?? card.id}
         </span>
-        <Link
-          to={path}
-          className={cn(
-            buttonVariants({ variant: 'ghost', size: 'sm' }),
-            'shrink-0 text-muted-foreground',
-          )}
-          data-testid={`addon-details-${card.id}`}
-        >
-          Details
-          <ChevronRightIcon data-icon="inline-end" />
-        </Link>
-      </div>
-    </Card>
+        {card.versions.length > 1 ? <RowChip>{`${card.versions.length} versions`}</RowChip> : null}
+        {latest && latest.trust !== 'builtin' ? (
+          <RowChip>{ADDON_TRUST_LABEL[latest.trust]}</RowChip>
+        ) : null}
+        {org && org.compatibility.outcome === 'incompatible' ? (
+          <RowChip tone="danger">incompatible</RowChip>
+        ) : null}
+        {org?.updateAvailable ? <RowChip tone="warn">update {org.updateAvailable}</RowChip> : null}
+      </EntityTileFooter>
+    </EntityTile>
   );
 }
 

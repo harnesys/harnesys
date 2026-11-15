@@ -12,6 +12,7 @@ import { LOCAL_EXECUTION_PROFILE_ID } from '../../domain/execution-profile/execu
 import { PendingPlacementPort } from '../../domain/fleet/pending-placement.port.ts';
 import type { IssueBoardRecord } from '../../domain/issue/board.ts';
 import { IssueBoardRepositoryPort } from '../../domain/issue/board-repository.port.ts';
+import { hasOpenBlockers } from '../../domain/issue/dependency-cycle.ts';
 import { IssueNotFoundException } from '../../domain/issue/issue.error.ts';
 import type { IssueRecord } from '../../domain/issue/issue.ts';
 import { IssueAttachmentRepositoryPort } from '../../domain/issue/issue-attachment-repository.port.ts';
@@ -21,7 +22,7 @@ import { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
 import type { IssueExecution } from '../../domain/issue/issue-execution.ts';
 import { IssueRepositoryPort } from '../../domain/issue/issue-repository.port.ts';
 import { IssueLabelRepositoryPort } from '../../domain/issue/label-repository.port.ts';
-import { pickAssignment } from '../../domain/issue/rule-engine.ts';
+import { pickAssignment } from '../../domain/issue/pick-assignment.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
@@ -34,7 +35,7 @@ import {
   toIssuePublic,
   toRulePublic,
 } from './issue-mappers.ts';
-import { engineRefs } from './issue-rule-support.ts';
+import { engineRefs, issueClosedChecker, toEngineIssue } from './issue-rule-support.ts';
 
 export interface GetIssueRequest {
   orgId: string;
@@ -176,9 +177,11 @@ export class GetIssueUseCase {
         profileSource: effective.selectedBy,
       };
     }
+    const isClosed = issueClosedChecker({ orgId, issues: this.issues, boards: this.boards });
+    const openBlockers = hasOpenBlockers(this.dependencies.listAll(orgId), issue.id, isClosed);
     const picked = pickAssignment({
       rules: board.rules,
-      issue: { statusKey: issue.statusKey, labels: issue.labels },
+      issue: toEngineIssue(issue, openBlockers),
       refs: engineRefs({ board, labels: this.labels, agents: this.agents, orgId }),
     });
     const agent = picked ? this.agents.findById(orgId, picked.agentId) : undefined;

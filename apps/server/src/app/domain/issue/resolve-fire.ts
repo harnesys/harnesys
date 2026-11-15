@@ -1,6 +1,7 @@
 import type { BoardRuleRecord } from './board.ts';
 import type { IssueFireReason } from './issue.ts';
 import {
+  type EngineIssue,
   type EngineOutcome,
   type EngineRefs,
   type EngineStop,
@@ -16,15 +17,20 @@ export interface ResolvedFire {
   reason: IssueFireReason;
   ownerUserId: string | null;
   finalStatusKey: string;
+  addLabelIds: string[];
+  removeLabelIds: string[];
+  unassign: boolean;
   notifications: string[];
+  matchedRuleIds: string[];
   skippedRules: SkippedRule[];
   stop: EngineStop | null;
+  stopped: boolean;
 }
 
 export interface ResolveFireInput {
   rules: BoardRuleRecord[];
   event: RuleEvent | RuleEvent[];
-  issue: { statusKey: string; labels: string[] };
+  issue: EngineIssue;
   refs: EngineRefs;
   explicitAssignee: string | null;
   hasOpenBlockers: boolean;
@@ -40,20 +46,34 @@ export function resolveFire(input: ResolveFireInput): ResolvedFire {
   return toResolvedFire(outcome, input);
 }
 
+export function applyLabelMutations(labels: string[], resolved: ResolvedFire): string[] {
+  const removed = new Set(resolved.removeLabelIds);
+  const next = labels.filter((labelId) => !removed.has(labelId));
+  for (const labelId of resolved.addLabelIds) {
+    if (!next.includes(labelId)) {
+      next.push(labelId);
+    }
+  }
+  return next;
+}
+
 function toResolvedFire(outcome: EngineOutcome, input: ResolveFireInput): ResolvedFire {
   const explicit = input.explicitAssignee;
-  const lastAssign = outcome.assigns.at(-1) ?? null;
-  const firstAssign = outcome.assigns[0] ?? null;
-  const agentId = input.hasOpenBlockers ? null : (explicit ?? lastAssign?.agentId ?? null);
+  const assign = outcome.assigns[0] ?? null;
   return {
-    agentId,
-    executionProfileId: explicit ? null : (lastAssign?.executionProfileId ?? null),
-    ruleId: explicit ? null : (lastAssign?.ruleId ?? null),
+    agentId: input.hasOpenBlockers ? null : (explicit ?? assign?.agentId ?? null),
+    executionProfileId: explicit ? null : (assign?.executionProfileId ?? null),
+    ruleId: explicit ? null : (assign?.ruleId ?? null),
     reason: explicit ? 'override' : 'rule',
-    ownerUserId: explicit ? null : (firstAssign?.createdByUserId ?? null),
+    ownerUserId: explicit ? null : (assign?.createdByUserId ?? null),
     finalStatusKey: outcome.finalStatusKey,
+    addLabelIds: outcome.addLabelIds,
+    removeLabelIds: outcome.removeLabelIds,
+    unassign: outcome.unassign,
     notifications: outcome.notifications.map((notification) => notification.text),
+    matchedRuleIds: outcome.matchedRuleIds,
     skippedRules: outcome.skippedRules,
     stop: outcome.stop,
+    stopped: outcome.stopped,
   };
 }

@@ -23,7 +23,11 @@ import { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
 import { IssueFirePort } from '../../domain/issue/issue-fire.port.ts';
 import { IssueRepositoryPort } from '../../domain/issue/issue-repository.port.ts';
 import { IssueLabelRepositoryPort } from '../../domain/issue/label-repository.port.ts';
-import { type ResolvedFire, resolveFire } from '../../domain/issue/resolve-fire.ts';
+import {
+  applyLabelMutations,
+  type ResolvedFire,
+  resolveFire,
+} from '../../domain/issue/resolve-fire.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
@@ -161,25 +165,47 @@ export class CreateIssueUseCase {
   ): Promise<IssueRecord> {
     const { orgId, body } = request;
     const isClosed = issueClosedChecker({ orgId, issues: this.issues, boards: this.boards });
+    const openBlockers = hasOpenBlockers(this.dependencies.listAll(orgId), issue.id, isClosed);
     const resolved = resolveFire({
       rules: board.rules,
       event: [{ type: 'issue_created' }, { type: 'status_entered', statusKey: issue.statusKey }],
-      issue: { statusKey: issue.statusKey, labels: issue.labels },
+      issue: {
+        statusKey: issue.statusKey,
+        labels: issue.labels,
+        priority: issue.priority,
+        type: issue.type,
+        hasOpenBlockers: openBlockers,
+      },
       refs: engineRefs({ board, labels: this.labels, agents: this.agents, orgId }),
       explicitAssignee: body.assigneeAgentId ?? null,
-      hasOpenBlockers: hasOpenBlockers(this.dependencies.listAll(orgId), issue.id, isClosed),
+      hasOpenBlockers: openBlockers,
     });
     this.warnStop(orgId, board.id, resolved);
+    const labelIds = applyLabelMutations(issue.labels, resolved);
     if (resolved.agentId === null) {
       this.emitNotifications(orgId, board.id, issue.id, resolved);
-      return this.persistOutcome(orgId, issue, resolved.finalStatusKey, null);
+      return this.persistOutcome({
+        orgId,
+        issue,
+        finalStatusKey: resolved.finalStatusKey,
+        firedAgentId: null,
+        labelIds,
+        unassign: resolved.unassign,
+      });
     }
     const finalCategory = board.statuses.find(
       (status) => status.key === resolved.finalStatusKey,
     )?.category;
     if (finalCategory !== 'started') {
       this.emitNotifications(orgId, board.id, issue.id, resolved);
-      return this.persistOutcome(orgId, issue, resolved.finalStatusKey, null);
+      return this.persistOutcome({
+        orgId,
+        issue,
+        finalStatusKey: resolved.finalStatusKey,
+        firedAgentId: null,
+        labelIds,
+        unassign: resolved.unassign,
+      });
     }
     const agent = this.agents.findById(orgId, resolved.agentId);
     const effective = resolveEffectiveProfile({
@@ -201,7 +227,14 @@ export class CreateIssueUseCase {
       issueRuleProfileId: resolved.executionProfileId,
       profileId: effective.profileId,
       onReserved: () => {
-        updated = this.persistOutcome(orgId, issue, resolved.finalStatusKey, resolved.agentId);
+        updated = this.persistOutcome({
+          orgId,
+          issue,
+          finalStatusKey: resolved.finalStatusKey,
+          firedAgentId: resolved.agentId,
+          labelIds,
+          unassign: false,
+        });
       },
       executions: this.executions,
       fire: this.fire,
@@ -215,7 +248,14 @@ export class CreateIssueUseCase {
       driver: this.driver,
     });
     if (dispatch.kind === 'blocked') {
-      updated = this.persistOutcome(orgId, issue, resolved.finalStatusKey, null);
+      updated = this.persistOutcome({
+        orgId,
+        issue,
+        finalStatusKey: resolved.finalStatusKey,
+        firedAgentId: null,
+        labelIds,
+        unassign: resolved.unassign,
+      });
     }
     this.emitNotifications(orgId, board.id, issue.id, resolved);
     return updated ?? this.issues.findById(orgId, issue.id) ?? issue;
@@ -242,21 +282,39 @@ export class CreateIssueUseCase {
     );
   }
 
-  private persistOutcome(
-    orgId: string,
-    issue: IssueRecord,
-    finalStatusKey: string,
-    firedAgentId: string | null,
-  ): IssueRecord {
-    if (finalStatusKey === issue.statusKey && firedAgentId === null) {
+  private persistOutcome(input: {
+    orgId: string;
+    issue: IssueRecord;
+    finalStatusKey: string;
+    firedAgentId: string | null;
+    labelIds: string[];
+    unassign: boolean;
+  }): IssueRecord {
+    const { orgId, issue, finalStatusKey, firedAgentId, labelIds, unassign } = input;
+    const labelsChanged =
+      labelIds.length !== issue.labels.length ||
+      labelIds.some((labelId) => !issue.labels.includes(labelId));
+    if (
+      finalStatusKey === issue.statusKey &&
+      firedAgentId === null &&
+      !unassign &&
+      !labelsChanged
+    ) {
       return issue;
     }
     const board = this.boards.findById(orgId, issue.boardId);
     const category = board?.statuses.find((status) => status.key === finalStatusKey)?.category;
     const now = new Date().toISOString();
+    let assigneeAgentId = issue.assigneeAgentId;
+    if (firedAgentId !== null) {
+      assigneeAgentId = firedAgentId;
+    } else if (unassign) {
+      assigneeAgentId = null;
+    }
     return this.issues.update(orgId, issue.id, {
       statusKey: finalStatusKey,
-      assigneeAgentId: firedAgentId ?? issue.assigneeAgentId,
+      labels: labelIds,
+      assigneeAgentId,
       closedAt:
         category === 'finished' || category === 'cancelled' ? (issue.closedAt ?? now) : null,
       updatedAt: now,

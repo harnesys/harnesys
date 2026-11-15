@@ -97,7 +97,7 @@ export function PluginsDiscoverTab({ projectId }: { projectId: string }) {
           }}
         >
           <SelectTrigger
-            className="w-40"
+            className="ml-auto w-40"
             data-testid="plugin-category-filter"
             aria-label="Filter by category"
           >

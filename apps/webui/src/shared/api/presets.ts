@@ -45,14 +45,17 @@ export function listPresetDetails(query?: ListPresetsQuery): Promise<PresetDetai
   );
 }
 
-export function getPreset(kind: PresetKind, id: string): Promise<PresetDetail> {
-  return apiJson<PresetDetail>(`/api/presets/${kind}/${id}`);
-}
-
 export function presetsQuery(query?: ListPresetsQuery) {
   return queryOptions({
     queryKey: presetsQueryKeyFor(query),
     queryFn: () => listPresets(query),
+  });
+}
+
+export function presetDetailsQuery(query?: ListPresetsQuery) {
+  return queryOptions({
+    queryKey: [...presetsQueryKey, 'details', query?.kind ?? 'all', query?.origin ?? 'all'],
+    queryFn: () => listPresetDetails(query),
   });
 }
 

@@ -19,7 +19,7 @@ import { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
 import { IssueFirePort } from '../../domain/issue/issue-fire.port.ts';
 import { IssueRepositoryPort } from '../../domain/issue/issue-repository.port.ts';
 import { IssueLabelRepositoryPort } from '../../domain/issue/label-repository.port.ts';
-import { type PickedAssignment, pickAssignment } from '../../domain/issue/rule-engine.ts';
+import { type PickedAssignment, pickAssignment } from '../../domain/issue/pick-assignment.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
@@ -29,7 +29,7 @@ import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts'
 import { resolveEffectiveProfile } from '../execution-profile/resolve-effective-profile.ts';
 import { dispatchIssueExecution } from './dispatch-issue-execution.ts';
 import { toIssuePublic } from './issue-mappers.ts';
-import { engineRefs } from './issue-rule-support.ts';
+import { engineRefs, toEngineIssue } from './issue-rule-support.ts';
 
 interface NudgeTarget {
   agentId: string;
@@ -144,7 +144,7 @@ export class NudgeIssueUseCase {
     }
     const assigned = pickAssignment({
       rules: board.rules,
-      issue: { statusKey: issue.statusKey, labels: issue.labels },
+      issue: toEngineIssue(issue, false),
       refs: engineRefs({ board, labels: this.labels, agents: this.agents, orgId }),
     });
     const agentId = assigned?.agentId ?? null;

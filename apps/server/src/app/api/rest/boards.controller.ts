@@ -6,6 +6,8 @@ import type {
   CreateIssueBoardResponse,
   GetIssueBoardResponse,
   ListIssueBoardsResponse,
+  PreviewBoardRulesBody,
+  PreviewBoardRulesResponse,
   ReorderBoardRulesBody,
   ReorderBoardStatusesBody,
   UpdateIssueBoardBody,
@@ -14,6 +16,7 @@ import {
   BoardRuleInputSchema,
   BoardStatusInputSchema,
   CreateIssueBoardBodySchema,
+  PreviewBoardRulesBodySchema,
   ReorderBoardRulesBodySchema,
   ReorderBoardStatusesBodySchema,
   UpdateIssueBoardBodySchema,
@@ -23,6 +26,7 @@ import { CreateIssueBoardUseCase } from '../../application/issues/create-issue-b
 import { DeleteIssueBoardUseCase } from '../../application/issues/delete-issue-board.use-case.ts';
 import { GetIssueBoardUseCase } from '../../application/issues/get-issue-board.use-case.ts';
 import { ListIssueBoardsUseCase } from '../../application/issues/list-issue-boards.use-case.ts';
+import { PreviewBoardRulesUseCase } from '../../application/issues/preview-board-rules.use-case.ts';
 import { RemoveBoardRuleUseCase } from '../../application/issues/remove-board-rule.use-case.ts';
 import { RemoveBoardStatusUseCase } from '../../application/issues/remove-board-status.use-case.ts';
 import { ReorderBoardRulesUseCase } from '../../application/issues/reorder-board-rules.use-case.ts';
@@ -49,6 +53,7 @@ export class BoardsController {
     private readonly saveBoardRule: SaveBoardRuleUseCase,
     private readonly removeBoardRule: RemoveBoardRuleUseCase,
     private readonly reorderBoardRules: ReorderBoardRulesUseCase,
+    private readonly previewBoardRules: PreviewBoardRulesUseCase,
     private readonly setArchive: SetIssueBoardArchiveUseCase,
     private readonly deleteBoard: DeleteIssueBoardUseCase,
   ) {}
@@ -142,6 +147,15 @@ export class BoardsController {
     @Body(ReorderBoardRulesBodySchema) body: ReorderBoardRulesBody,
   ): GetIssueBoardResponse {
     return this.reorderBoardRules.execute({ orgId, boardId, order: body.order });
+  }
+
+  @Post(':boardId/rules/preview')
+  previewRules(
+    @Param('orgId') orgId: string,
+    @Param('boardId') boardId: string,
+    @Body(PreviewBoardRulesBodySchema) body: PreviewBoardRulesBody,
+  ): PreviewBoardRulesResponse {
+    return this.previewBoardRules.execute({ orgId, boardId, issueId: body.issueId });
   }
 
   @Patch(':boardId/rules/:ruleId')

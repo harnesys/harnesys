@@ -1,6 +1,7 @@
 {
   "name": "Writer",
   "role": "writer",
+  "description": "Turns findings into docs, updates and clear prose.",
   "budget": {
     "maxSteps": 150,
     "deadlineMs": 1800000,

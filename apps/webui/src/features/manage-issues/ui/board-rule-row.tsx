@@ -3,21 +3,29 @@ import type {
   BoardRuleInput,
   BoardStatus,
   ExecutionProfileListItem,
-  RuleCondition,
 } from '@harnesys/contracts';
 import type { IssueLabelRecord } from '@harnesys/studio-shared';
-import { ArrowDownIcon, ArrowUpIcon, PlusIcon, TrashIcon } from 'lucide-react';
-import { type Agent } from '@/entities/agent';
+import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, TrashIcon } from 'lucide-react';
+import { type ReactNode, useState } from 'react';
+import type { Agent } from '@/entities/agent';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/shared/ui/collapsible';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Switch } from '@/shared/ui/switch';
 import { sortedStatuses } from '../model/board-columns';
-import { ActionRow } from './board-rule-action-row';
-import { LabelPickerPopover, RuleLabelTriggerLabel } from './label-editor/label-picker';
+import { ruleSummary } from '../model/rule-summary';
+import { ActionAdd, ActionRow } from './board-rule-action-row';
+import { ConditionAdd, ConditionRow } from './board-rule-condition-row';
+
+const EVENT_ITEMS = [
+  { value: 'status_entered', label: 'Entering a status' },
+  { value: 'issue_created', label: 'Issue created' },
+];
 
 export function RuleRow({
   rule,
+  index,
   orgId,
   statuses,
   agents,
@@ -28,8 +36,11 @@ export function RuleRow({
   onRemove,
   onMove,
   showTrigger = true,
+  highlight = false,
+  initialOpen = false,
 }: {
   rule: BoardRule;
+  index: number;
   orgId: string;
   statuses: BoardStatus[];
   agents: Agent[];
@@ -40,76 +51,64 @@ export function RuleRow({
   onRemove: () => void;
   onMove: (delta: number) => void;
   showTrigger?: boolean;
+  highlight?: boolean;
+  initialOpen?: boolean;
 }) {
+  const [open, setOpen] = useState(initialOpen);
   const statusItems = sortedStatuses(statuses);
   const triggerStatusKey = rule.trigger.type === 'status_entered' ? rule.trigger.statusKey : '';
+
   return (
-    <div
-      className="flex flex-col gap-1.5 rounded-md border px-2 py-2"
+    <Collapsible
+      open={open}
+      onOpenChange={setOpen}
+      className={cn(
+        'rounded-lg border bg-card transition-colors',
+        !rule.enabled && 'bg-muted/30',
+        highlight && 'border-primary/50 ring-1 ring-primary/25',
+      )}
       data-testid={`board-rule-${rule.id}`}
     >
-      <div className="flex items-center gap-1.5">
-        <Switch
-          checked={rule.enabled}
-          size="sm"
-          aria-label="Rule enabled"
-          onCheckedChange={(enabled) => onPatch({ enabled })}
-        />
-        {showTrigger ? (
-          <>
-            <Select
-              items={[
-                { value: 'status_entered', label: 'Status entered' },
-                { value: 'issue_created', label: 'Issue created' },
-              ]}
-              value={rule.trigger.type}
-              onValueChange={(value) => {
-                if (value === 'issue_created') {
-                  onPatch({ trigger: { type: 'issue_created' } });
-                } else if (statusItems[0]) {
-                  onPatch({
-                    trigger: { type: 'status_entered', statusKey: statusItems[0].key },
-                  });
-                }
-              }}
-            >
-              <SelectTrigger size="sm" className="w-36 shrink-0 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="status_entered">Status entered</SelectItem>
-                <SelectItem value="issue_created">Issue created</SelectItem>
-              </SelectContent>
-            </Select>
-            {rule.trigger.type === 'status_entered' ? (
-              <Select
-                items={statusItems.map((item) => ({ value: item.key, label: item.label }))}
-                value={triggerStatusKey}
-                onValueChange={(value) =>
-                  value &&
-                  onPatch({ trigger: { type: 'status_entered', statusKey: String(value) } })
-                }
-              >
-                <SelectTrigger size="sm" className="min-w-0 flex-1 text-xs">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusItems.map((item) => (
-                    <SelectItem key={item.key} value={item.key}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : null}
-          </>
-        ) : null}
-        <div className="ml-auto flex shrink-0 items-center">
+      <div className="flex items-center gap-1 p-1">
+        <CollapsibleTrigger className="group/head flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/50">
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-muted font-mono text-[10px] text-muted-foreground tabular-nums">
+            {index + 1}
+          </span>
+          <span
+            className={cn(
+              'min-w-0 flex-1 truncate text-xs',
+              !rule.enabled && 'text-muted-foreground',
+            )}
+          >
+            {ruleSummary({ rule, agents, statuses, labels, showTrigger })}
+          </span>
+          {rule.enabled ? null : (
+            <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-medium text-[10px] text-muted-foreground">
+              Off
+            </span>
+          )}
+          <ChevronRightIcon
+            className={cn(
+              'size-3.5 shrink-0 text-muted-foreground transition-transform',
+              open && 'rotate-90',
+            )}
+          />
+        </CollapsibleTrigger>
+        <div className="flex shrink-0 items-center gap-0.5">
+          <Switch
+            size="sm"
+            checked={rule.enabled}
+            aria-label={rule.enabled ? 'Rule enabled' : 'Rule disabled'}
+            title={rule.enabled ? 'Disable rule' : 'Enable rule'}
+            className="mr-1"
+            onCheckedChange={(enabled) => onPatch({ enabled })}
+          />
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
             aria-label="Move rule up"
+            title="Move up"
             onClick={() => onMove(-1)}
           >
             <ArrowUpIcon className="size-3.5" />
@@ -119,6 +118,7 @@ export function RuleRow({
             variant="ghost"
             size="icon-sm"
             aria-label="Move rule down"
+            title="Move down"
             onClick={() => onMove(1)}
           >
             <ArrowDownIcon className="size-3.5" />
@@ -127,142 +127,154 @@ export function RuleRow({
             type="button"
             variant="ghost"
             size="icon-sm"
-            className="text-muted-foreground hover:text-destructive"
             aria-label="Remove rule"
+            title="Delete rule"
+            className="text-muted-foreground hover:text-destructive"
             onClick={onRemove}
           >
             <TrashIcon className="size-3.5" />
           </Button>
         </div>
       </div>
-      <div className="space-y-1 pl-6">
-        {rule.conditions.map((condition, index) => {
-          if (condition.type !== 'has_label') {
-            return null;
-          }
-          const label = labels.find((item) => item.id === condition.labelId);
-          return (
-            <div key={`${condition.type}-${index}`} className="flex items-center gap-1.5">
-              <span className="w-16 shrink-0 text-[10px] text-muted-foreground uppercase">
-                if label
-              </span>
-              <LabelPickerPopover
-                orgId={orgId}
-                selected={[condition.labelId]}
-                onChange={(selected) => {
-                  const labelId = selected[0];
-                  if (!labelId) {
-                    onPatch({ conditions: rule.conditions.filter((_, i) => i !== index) });
-                    return;
+      <CollapsibleContent className="border-t">
+        <div className="space-y-3 px-3 py-3">
+          {showTrigger ? (
+            <Section label="When" hint="trigger">
+              <div className="flex items-center gap-2">
+                <Select
+                  items={EVENT_ITEMS}
+                  value={rule.trigger.type}
+                  onValueChange={(value) => {
+                    if (value === 'issue_created') {
+                      onPatch({ trigger: { type: 'issue_created' } });
+                    } else if (statusItems[0]) {
+                      onPatch({
+                        trigger: { type: 'status_entered', statusKey: statusItems[0].key },
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger size="sm" className="w-40 shrink-0 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EVENT_ITEMS.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {rule.trigger.type === 'status_entered' ? (
+                  <Select
+                    items={statusItems.map((item) => ({ value: item.key, label: item.label }))}
+                    value={triggerStatusKey}
+                    onValueChange={(value) =>
+                      value &&
+                      onPatch({ trigger: { type: 'status_entered', statusKey: String(value) } })
+                    }
+                  >
+                    <SelectTrigger size="sm" className="min-w-0 flex-1 text-xs">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusItems.map((item) => (
+                        <SelectItem key={item.key} value={item.key}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : null}
+              </div>
+            </Section>
+          ) : null}
+          <Section label="Only if" hint="all must match" divider={showTrigger}>
+            {rule.conditions.length === 0 ? (
+              <p className="text-muted-foreground text-xs italic">
+                No conditions — every issue here matches.
+              </p>
+            ) : (
+              rule.conditions.map((condition, conditionIndex) => (
+                <ConditionRow
+                  key={`${condition.type}-${conditionIndex}`}
+                  orgId={orgId}
+                  condition={condition}
+                  labels={labels}
+                  onChange={(next) =>
+                    onPatch({
+                      conditions: rule.conditions.map((item, i) =>
+                        i === conditionIndex ? next : item,
+                      ),
+                    })
                   }
-                  const next: RuleCondition = { type: 'has_label', labelId };
+                  onRemove={() =>
+                    onPatch({
+                      conditions: rule.conditions.filter((_, i) => i !== conditionIndex),
+                    })
+                  }
+                />
+              ))
+            )}
+            <ConditionAdd
+              orgId={orgId}
+              ruleId={rule.id}
+              onAdd={(condition) => onPatch({ conditions: [...rule.conditions, condition] })}
+            />
+          </Section>
+          <Section label="Then" hint="in this order" divider>
+            {rule.actions.map((action, actionIndex) => (
+              <ActionRow
+                key={`${action.type}-${actionIndex}`}
+                action={action}
+                orgId={orgId}
+                statuses={statuses}
+                agents={agents}
+                profiles={profiles}
+                defaultProfileId={defaultProfileId}
+                labels={labels}
+                onPatch={(next) =>
                   onPatch({
-                    conditions: rule.conditions.map((item, i) => (i === index ? next : item)),
-                  });
-                }}
-                single
-                manage
-                align="start"
-                trigger={{
-                  className:
-                    'h-7 min-w-0 flex-1 justify-start gap-1.5 rounded-[min(var(--radius-md),10px)] border border-input bg-transparent px-2 text-xs text-foreground transition-colors hover:bg-muted/40',
-                  testId: `board-rule-condition-${rule.id}-${index}`,
-                  children: <RuleLabelTriggerLabel label={label} />,
-                }}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Remove condition"
-                className="text-muted-foreground hover:text-destructive"
-                onClick={() =>
-                  onPatch({ conditions: rule.conditions.filter((_, i) => i !== index) })
+                    actions: rule.actions.map((item, i) => (i === actionIndex ? next : item)),
+                  })
                 }
-              >
-                <TrashIcon className="size-3" />
-              </Button>
-            </div>
-          );
-        })}
-        <ConditionAddRow orgId={orgId} rule={rule} labels={labels} onPatch={onPatch} />
-      </div>
-      <div className="space-y-1 pl-6">
-        {rule.actions.map((action, index) => (
-          <ActionRow
-            key={`${action.type}-${index}`}
-            action={action}
-            statuses={statuses}
-            agents={agents}
-            profiles={profiles}
-            defaultProfileId={defaultProfileId}
-            onPatch={(next) =>
-              onPatch({ actions: rule.actions.map((item, i) => (i === index ? next : item)) })
-            }
-            onRemove={() => onPatch({ actions: rule.actions.filter((_, i) => i !== index) })}
-          />
-        ))}
-        <Button
-          type="button"
-          variant="ghost"
-          size="xs"
-          className="h-6 gap-1 text-[11px]"
-          onClick={() => {
-            const firstAgent = agents[0];
-            onPatch({
-              actions: [
-                ...rule.actions,
-                firstAgent
-                  ? { type: 'assign_agent', agentId: firstAgent.id }
-                  : { type: 'notify_owner', text: 'Rule fired' },
-              ],
-            });
-          }}
-          data-testid={`board-rule-action-add-${rule.id}`}
-        >
-          <PlusIcon className="size-3" />
-          Add action
-        </Button>
-      </div>
-    </div>
+                onRemove={() =>
+                  onPatch({ actions: rule.actions.filter((_, i) => i !== actionIndex) })
+                }
+              />
+            ))}
+            <ActionAdd
+              ruleId={rule.id}
+              agents={agents}
+              statuses={statuses}
+              labels={labels}
+              onAdd={(action) => onPatch({ actions: [...rule.actions, action] })}
+            />
+          </Section>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
-function ConditionAddRow({
-  orgId,
-  rule,
-  labels,
-  onPatch,
+function Section({
+  label,
+  hint,
+  divider = false,
+  children,
 }: {
-  orgId: string;
-  rule: BoardRule;
-  labels: IssueLabelRecord[];
-  onPatch: (patch: Partial<BoardRuleInput>) => void;
+  label: string;
+  hint?: string;
+  divider?: boolean;
+  children: ReactNode;
 }) {
-  if (labels.length === 0) {
-    return null;
-  }
   return (
-    <LabelPickerPopover
-      orgId={orgId}
-      selected={[]}
-      single
-      manage
-      align="start"
-      trigger={{
-        className: cn(
-          'h-6 w-fit gap-1 rounded-[min(var(--radius-md),10px)] px-1.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted/40',
-        ),
-        testId: `board-rule-condition-add-${rule.id}`,
-        children: <span className="flex items-center gap-1">+ label condition</span>,
-      }}
-      onChange={(selected) => {
-        const labelId = selected[0];
-        if (!labelId) {
-          return;
-        }
-        onPatch({ conditions: [...rule.conditions, { type: 'has_label', labelId }] });
-      }}
-    />
+    <div className={cn('space-y-1.5', divider && 'border-border/60 border-t pt-3')}>
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="font-medium text-xs">{label}</p>
+        {hint ? <span className="text-[11px] text-muted-foreground">{hint}</span> : null}
+      </div>
+      <div className="space-y-1.5">{children}</div>
+    </div>
   );
 }

@@ -42,7 +42,7 @@ export function AccordionSection({
   const shown = iconMode || !collapsed;
   const hasTrailing = count !== undefined || Boolean(badge) || Boolean(actions);
   return (
-    <>
+    <div className="group/section contents">
       <div
         className={cn(
           'group/head flex h-7 shrink-0 items-center gap-0.5 rounded-md px-1 transition-colors group-data-[collapsible=icon]:hidden',
@@ -114,6 +114,6 @@ export function AccordionSection({
           </ScrollArea>
         </>
       ) : null}
-    </>
+    </div>
   );
 }

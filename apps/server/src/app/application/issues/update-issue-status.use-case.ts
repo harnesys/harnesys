@@ -17,7 +17,11 @@ import { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
 import { IssueFirePort } from '../../domain/issue/issue-fire.port.ts';
 import { IssueRepositoryPort } from '../../domain/issue/issue-repository.port.ts';
 import { IssueLabelRepositoryPort } from '../../domain/issue/label-repository.port.ts';
-import { type ResolvedFire, resolveFire } from '../../domain/issue/resolve-fire.ts';
+import {
+  applyLabelMutations,
+  type ResolvedFire,
+  resolveFire,
+} from '../../domain/issue/resolve-fire.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
@@ -82,13 +86,20 @@ export class UpdateIssueStatusUseCase {
     this.assertStatusOnBoard(board, body.statusKey);
     const explicit = this.explicitAssignee(orgId, body);
     const isClosed = issueClosedChecker({ orgId, issues: this.issues, boards: this.boards });
+    const openBlockers = hasOpenBlockers(this.dependencies.listAll(orgId), issue.id, isClosed);
     const resolved = resolveFire({
       rules: board.rules,
       event: { type: 'status_entered', statusKey: body.statusKey },
-      issue: { statusKey: issue.statusKey, labels: issue.labels },
+      issue: {
+        statusKey: issue.statusKey,
+        labels: issue.labels,
+        priority: issue.priority,
+        type: issue.type,
+        hasOpenBlockers: openBlockers,
+      },
       refs: engineRefs({ board, labels: this.labels, agents: this.agents, orgId }),
       explicitAssignee: explicit ?? null,
-      hasOpenBlockers: hasOpenBlockers(this.dependencies.listAll(orgId), issue.id, isClosed),
+      hasOpenBlockers: openBlockers,
     });
     this.warnOutcome(orgId, board.id, resolved);
     const now = new Date().toISOString();
@@ -98,6 +109,7 @@ export class UpdateIssueStatusUseCase {
       board,
       explicit,
       resolved,
+      labelIds: applyLabelMutations(issue.labels, resolved),
       now,
       actorAgentId: request.actorAgentId ?? null,
     });
@@ -124,10 +136,11 @@ export class UpdateIssueStatusUseCase {
     board: IssueBoardRecord;
     explicit: string | null | undefined;
     resolved: ResolvedFire;
+    labelIds: string[];
     now: string;
     actorAgentId: string | null;
   }): Promise<IssueRecord> {
-    const { orgId, issue, board, explicit, resolved, now } = input;
+    const { orgId, issue, board, explicit, resolved, labelIds, now } = input;
     const finalCategory = board.statuses.find(
       (status) => status.key === resolved.finalStatusKey,
     )?.category;
@@ -139,6 +152,8 @@ export class UpdateIssueStatusUseCase {
         finalStatusKey: resolved.finalStatusKey,
         explicit,
         firedAgentId: null,
+        unassign: resolved.unassign,
+        labelIds,
         now,
       });
     }
@@ -169,6 +184,8 @@ export class UpdateIssueStatusUseCase {
           finalStatusKey: resolved.finalStatusKey,
           explicit,
           firedAgentId: agentId,
+          unassign: false,
+          labelIds,
           now,
         });
       },
@@ -191,6 +208,8 @@ export class UpdateIssueStatusUseCase {
         finalStatusKey: resolved.finalStatusKey,
         explicit,
         firedAgentId: null,
+        unassign: resolved.unassign,
+        labelIds,
         now,
       });
     }
@@ -236,13 +255,16 @@ export class UpdateIssueStatusUseCase {
     finalStatusKey: string;
     explicit: string | null | undefined;
     firedAgentId: string | null;
+    unassign: boolean;
+    labelIds: string[];
     now: string;
   }): IssueRecord {
-    const { orgId, issue, finalStatusKey, explicit, firedAgentId, now } = input;
+    const { orgId, issue, finalStatusKey, explicit, firedAgentId, unassign, labelIds, now } = input;
     const category = this.statusCategory(orgId, issue.boardId, finalStatusKey);
     const patch: IssuePatch = {
       statusKey: finalStatusKey,
-      assigneeAgentId: explicit !== undefined ? explicit : (firedAgentId ?? issue.assigneeAgentId),
+      labels: labelIds,
+      assigneeAgentId: resolveAssignee(explicit, firedAgentId, unassign, issue.assigneeAgentId),
       closedAt:
         category === 'finished' || category === 'cancelled' ? (issue.closedAt ?? now) : null,
       updatedAt: now,
@@ -299,4 +321,22 @@ export class UpdateIssueStatusUseCase {
       'board rule cascade stopped',
     );
   }
+}
+
+function resolveAssignee(
+  explicit: string | null | undefined,
+  firedAgentId: string | null,
+  unassign: boolean,
+  current: string | null,
+): string | null {
+  if (explicit !== undefined) {
+    return explicit;
+  }
+  if (firedAgentId !== null) {
+    return firedAgentId;
+  }
+  if (unassign) {
+    return null;
+  }
+  return current;
 }

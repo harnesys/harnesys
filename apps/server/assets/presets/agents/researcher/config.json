@@ -1,6 +1,7 @@
 {
   "name": "Researcher",
   "role": "researcher",
+  "description": "Finds, reads and summarizes sources with web and memory tools.",
   "skills": [
     "agent-creator"
   ],

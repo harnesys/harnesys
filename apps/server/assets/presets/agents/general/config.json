@@ -1,6 +1,7 @@
 {
   "name": "General",
   "role": "helper",
+  "description": "General-purpose assistant for everyday workspace tasks.",
   "budget": {
     "maxSteps": 100,
     "deadlineMs": 900000,

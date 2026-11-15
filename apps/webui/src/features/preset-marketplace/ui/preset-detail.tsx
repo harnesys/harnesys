@@ -20,9 +20,9 @@ import { Button } from '@/shared/ui/button';
 import { toast } from '@/shared/ui/toast';
 import {
   localPresetId,
-  PRESET_KIND_COLORS,
   PRESET_ORIGIN_COLORS,
   presetCapabilityNames,
+  presetColorHex,
   presetExcerpt,
   presetGraphSummary,
   presetOriginLabel,
@@ -42,7 +42,7 @@ export function PresetDetailPanel({ detail, orgId, onClose, onDone }: PresetDeta
   const [busy, setBusy] = useState(false);
   const isUser = detail.origin === 'user';
   const Icon = detail.kind === 'team' ? UsersIcon : BotIcon;
-  const color = PRESET_KIND_COLORS[detail.kind];
+  const color = presetColorHex(detail);
 
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['presets'] });
@@ -188,7 +188,7 @@ export function PresetDetailPanel({ detail, orgId, onClose, onDone }: PresetDeta
       {detail.description ? (
         <p className="text-muted-foreground text-xs/relaxed">{detail.description}</p>
       ) : null}
-      <div className="max-h-[38vh] min-h-0 overflow-y-auto pr-1">
+      <div className="max-h-[26vh] min-h-0 overflow-y-auto pr-1">
         <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
           {detail.kind === 'agent' ? (
             <AgentPresetSummary detail={detail} />

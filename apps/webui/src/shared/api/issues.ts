@@ -1,5 +1,6 @@
 import type {
   BoardRuleInput,
+  BoardRulePreview,
   BoardStatusInput,
   CreateIssueBoardBody,
   CreateIssueBoardResponse,
@@ -10,6 +11,7 @@ import type {
   IssuePublic,
   ListIssueBoardsResponse,
   ListIssuesResponse,
+  PreviewBoardRulesResponse,
   UpdateIssueBoardBody,
   UpdateIssueBody,
   UpdateIssueStatusBody,
@@ -156,6 +158,18 @@ export async function removeBoardRule(
     { method: 'DELETE' },
   );
   return boardFrom(res);
+}
+
+export async function previewBoardRules(
+  orgId: string,
+  boardId: string,
+  issueId: string,
+): Promise<BoardRulePreview> {
+  const res = await apiJson<PreviewBoardRulesResponse>(
+    `${boardsBase(requireOrgId(orgId))}/${encodeURIComponent(boardId)}/rules/preview`,
+    { method: 'POST', body: JSON.stringify({ issueId }) },
+  );
+  return res.preview;
 }
 
 export async function deleteIssueBoard(orgId: string, boardId: string): Promise<void> {

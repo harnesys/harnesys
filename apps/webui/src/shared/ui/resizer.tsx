@@ -6,6 +6,7 @@ interface ResizerProps {
   testId: string;
   dragging: boolean;
   orientation?: 'horizontal' | 'vertical';
+  revealOnHover?: boolean;
   onResizeStart: (event: ReactMouseEvent) => void;
 }
 export function Resizer({
@@ -13,6 +14,7 @@ export function Resizer({
   testId,
   dragging,
   orientation = 'horizontal',
+  revealOnHover = false,
   onResizeStart,
 }: ResizerProps) {
   const vertical = orientation === 'vertical';
@@ -29,6 +31,8 @@ export function Resizer({
           : 'w-px cursor-col-resize bg-border/70 before:absolute before:inset-y-0 before:-left-1.5 before:w-3 before:content-[""]',
         'hover:bg-foreground/10',
         dragging && 'bg-foreground/50',
+        revealOnHover && 'opacity-0 transition-opacity group-hover/section:opacity-100',
+        revealOnHover && dragging && 'opacity-100',
       )}
     >
       <span className="sr-only">Resize</span>
