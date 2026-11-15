@@ -214,7 +214,7 @@ function toolTitle(name: string): string {
     case 'grep':
       return 'Grep';
     case 'shell':
-      return 'Terminal';
+      return 'Shell';
     case 'terminal_spawn':
       return 'Spawn Terminal';
     case 'terminal_read':
