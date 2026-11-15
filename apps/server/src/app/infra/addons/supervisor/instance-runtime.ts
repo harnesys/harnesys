@@ -79,7 +79,7 @@ export class InstanceRuntime {
   request(
     method: string,
     params: unknown,
-    timeoutMs: number,
+    timeoutMs: number | null,
     meta?: RpcCallMeta,
   ): Promise<unknown> {
     const rpc = this.rpc;

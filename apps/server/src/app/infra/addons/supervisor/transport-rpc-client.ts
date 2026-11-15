@@ -67,7 +67,7 @@ export interface TransportRpcOptions {
 interface PendingEntry {
   resolve: (value: unknown) => void;
   reject: (error: Error) => void;
-  timer: ReturnType<typeof setTimeout>;
+  timer?: ReturnType<typeof setTimeout>;
 }
 
 interface IdleWaiter {
@@ -80,7 +80,7 @@ const NOTIFY_DEADLINE_MS = 30_000;
 
 interface CallMetaStamp {
   correlationId: string;
-  deadline: number;
+  deadline: number | null;
   principal: { type: 'agent' | 'user' | 'system'; id?: string };
   locale: string;
   agentId?: string;
@@ -102,7 +102,7 @@ function isCallMeta(value: unknown): boolean {
 /** Stamps params._meta (§6.3) unless the caller already supplied one. */
 function withCallMeta(
   params: unknown,
-  timeoutMs: number,
+  timeoutMs: number | null,
   locale: string,
   overrides?: RpcCallMeta,
 ): unknown {
@@ -112,7 +112,7 @@ function withCallMeta(
   }
   const meta: CallMetaStamp = {
     correlationId: crypto.randomUUID(),
-    deadline: Date.now() + timeoutMs,
+    deadline: timeoutMs === null ? null : Date.now() + timeoutMs,
     principal: overrides?.principal ?? { type: 'system' },
     locale,
   };
@@ -151,18 +151,26 @@ export class TransportRpcClient {
     this.settleIdleWaiters();
   }
 
-  call<T>(method: string, params: unknown, timeoutMs: number, meta?: RpcCallMeta): Promise<T> {
+  call<T>(
+    method: string,
+    params: unknown,
+    timeoutMs: number | null,
+    meta?: RpcCallMeta,
+  ): Promise<T> {
     this.nextId += 1;
     const id = this.nextId;
     const line = encodeMessage(
       rpcRequest(method, id, withCallMeta(params, timeoutMs, this.options.locale ?? 'en', meta)),
     );
     return new Promise<T>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new Error(`call ${method} timed out after ${timeoutMs}ms`));
-      }, timeoutMs);
-      this.pending.set(id, { resolve: resolve as (value: unknown) => void, reject, timer });
+      const entry: PendingEntry = { resolve: resolve as (value: unknown) => void, reject };
+      if (timeoutMs !== null) {
+        entry.timer = setTimeout(() => {
+          this.pending.delete(id);
+          reject(new Error(`call ${method} timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+      }
+      this.pending.set(id, entry);
       this.options.transport.send(line);
     });
   }
@@ -221,7 +229,9 @@ export class TransportRpcClient {
     if (!entry) {
       return;
     }
-    clearTimeout(entry.timer);
+    if (entry.timer !== undefined) {
+      clearTimeout(entry.timer);
+    }
     this.pending.delete(parsed.id);
     if (parsed.error) {
       entry.reject(addonRpcErrorOf(parsed.error));
@@ -266,7 +276,9 @@ export class TransportRpcClient {
 
   private rejectAllPending(reason: string): void {
     for (const entry of this.pending.values()) {
-      clearTimeout(entry.timer);
+      if (entry.timer !== undefined) {
+        clearTimeout(entry.timer);
+      }
       entry.reject(new Error(reason));
     }
     this.pending.clear();

@@ -170,7 +170,7 @@ export class FakeMetrics extends MetricsPort {
 }
 
 export class FakeRpc extends AddonRpcPort {
-  requests: Array<{ method: string; params: unknown; timeoutMs: number }> = [];
+  requests: Array<{ method: string; params: unknown; timeoutMs: number | null }> = [];
   result: unknown = { ok: true };
   async request(call: AddonRpcCall): Promise<unknown> {
     this.requests.push({ method: call.method, params: call.params, timeoutMs: call.timeoutMs });

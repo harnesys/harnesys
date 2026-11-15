@@ -148,7 +148,7 @@ export function createAddonRuntime(options: AddonRuntimeOptions): AddonRuntime {
     if (instanceOrgId !== undefined) {
       meta.orgId = instanceOrgId;
     }
-    if (meta.deadline < now()) {
+    if (meta.deadline !== null && meta.deadline < now()) {
       throw new AddonError('timeout', { detail: `deadline ${meta.deadline} has passed` });
     }
     const ctx = createAddonContextFor(channel, meta, signal);
@@ -295,26 +295,33 @@ function optionalTarget(
 
 async function runWithDeadline(
   work: unknown,
-  deadline: number,
+  deadline: number | null,
   now: () => number,
   signal: AbortSignal,
 ): Promise<unknown> {
-  const remaining = deadline - now();
-  if (remaining <= 0 || signal.aborted) {
-    throw new AddonError(signal.aborted ? 'cancelled' : 'timeout');
+  if (signal.aborted) {
+    throw new AddonError('cancelled');
+  }
+  if (deadline !== null && deadline - now() <= 0) {
+    throw new AddonError('timeout');
   }
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<never>((_resolve, reject) => {
-    timer = setTimeout(
-      () => reject(new AddonError('timeout', { detail: `deadline ${deadline} exceeded` })),
-      remaining,
-    );
-  });
+  const timeout =
+    deadline === null
+      ? null
+      : new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(
+            () => reject(new AddonError('timeout', { detail: `deadline ${deadline} exceeded` })),
+            deadline - now(),
+          );
+        });
   const abort = new Promise<never>((_resolve, reject) => {
     signal.addEventListener('abort', () => reject(new AddonError('cancelled')), { once: true });
   });
+  const contenders =
+    timeout === null ? [Promise.resolve(work), abort] : [Promise.resolve(work), timeout, abort];
   try {
-    return await Promise.race([Promise.resolve(work), timeout, abort]);
+    return await Promise.race(contenders);
   } finally {
     if (timer !== undefined) {
       clearTimeout(timer);

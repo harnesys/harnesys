@@ -12,7 +12,7 @@ export interface AddonRpcCall {
   addonId: string;
   method: HostRequestName;
   params: unknown;
-  timeoutMs: number;
+  timeoutMs: number | null;
   signal?: AbortSignal;
   meta?: AddonRpcCallMeta;
 }

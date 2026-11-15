@@ -12,7 +12,9 @@ export const EMBEDDED_APP_CONFIG_YML = appConfigYml;
 export const HOME_DIR_NAME = '.harnesys';
 export const STUDIO_DIR_LEGACY = '.studio';
 export const BUNDLED_ASSETS_ENV = 'HARNESYS_BUNDLED_ASSETS';
+export const BUNDLED_ADDONS_ENV = 'HARNESYS_ADDONS_DIR';
 export const SOURCE_ASSETS_DIR = join(import.meta.dir, '..', 'assets');
+export const SOURCE_ADDONS_DIR = join(import.meta.dir, '..', '..', '..', 'add-ons');
 export const PRESET_ID_RE = /^[a-z0-9][a-z0-9-]*$/;
 
 export function bundledAssetsRoot(): string {
@@ -25,6 +27,18 @@ export function bundledAssetsRoot(): string {
     return sibling;
   }
   return SOURCE_ASSETS_DIR;
+}
+
+export function bundledAddonsRoot(): string {
+  const override = process.env[BUNDLED_ADDONS_ENV]?.trim();
+  if (override) {
+    return resolve(override);
+  }
+  const packaged = join(bundledAssetsRoot(), 'add-ons');
+  if (existsSync(packaged)) {
+    return packaged;
+  }
+  return SOURCE_ADDONS_DIR;
 }
 
 export function bundledPresetsPath(sub: 'agents' | 'modes'): string {

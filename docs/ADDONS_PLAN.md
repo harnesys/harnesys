@@ -440,7 +440,7 @@ export interface InitializeResult {
 ```ts
 export interface CallMeta {
   correlationId: string;
-  deadline: number;                       // абсолютное время, мс epoch
+  deadline: number | null;                // абсолютное время, мс epoch; null — без дедлайна (только $/cancel)
   principal: { type: 'agent' | 'user' | 'system'; id?: string };
   agentId?: string; threadId?: string; runId?: string;
   locale: string;
@@ -523,7 +523,7 @@ export interface HostMethodSpec<P = unknown, R = unknown> {
   name: string;                           // 'db.run'
   params: ZodType<P>; result: ZodType<R>;
   permission: PermissionRef | null;       // null — базовый набор
-  limits?: { rate?: RateSpec; timeoutMs?: number; maxResultKb?: number };
+  limits?: { rate?: RateSpec; timeoutMs?: number | null; maxResultKb?: number };  // timeoutMs: null — без дедлайна
   handle(ctx: HostCallContext, params: P): Promise<R>;
 }
 export interface HostServiceModule { readonly namespace: string; readonly methods: readonly HostMethodSpec[] }

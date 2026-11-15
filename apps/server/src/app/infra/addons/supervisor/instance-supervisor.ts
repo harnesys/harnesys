@@ -39,7 +39,7 @@ export interface SupervisorRpcCall {
   addonId: string;
   method: string;
   params: unknown;
-  timeoutMs: number;
+  timeoutMs: number | null;
   meta?: RpcCallMeta;
 }
 

@@ -8,6 +8,11 @@ export interface ContentDescriptor {
   id: string;
   title: L10n;
   kind: 'skill' | 'prompt';
+  /**
+   * Path from the package root. For `kind: 'skill'` it is the skill directory
+   * (containing `SKILL.md` and its `references/`); a path to a single markdown
+   * file is still accepted for backward compatibility.
+   */
   path: string;
 }
 

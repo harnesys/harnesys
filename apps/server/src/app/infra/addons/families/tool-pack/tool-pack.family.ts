@@ -1,7 +1,7 @@
-import { Injectable } from '@harnesys/brix';
+import { Injectable, Logger } from '@harnesys/brix';
 import type { AddonManifest, ToolDescriptor, ToolPackDescriptor, Violation } from '@harnesys/sdk';
 import { ToolPackDescriptorSchema } from '@harnesys/sdk';
-import type { JsonSchema, PackRegistration } from 'harnesys';
+import type { JsonSchema, PackRegistration, PackSkill } from 'harnesys';
 import type { z } from 'zod';
 import type { FamilyModule, HandlerSpec } from '../../../../domain/addons/family-module.ts';
 import { handlerSpec } from '../../../../domain/addons/family-module.ts';
@@ -9,6 +9,8 @@ import type { Disposable, OwnerKey } from '../../../../domain/addons/owner.ts';
 import type { ToolCallResult } from '../../../../domain/addons/ports/addon-call.port.ts';
 import { AddonCallPort } from '../../../../domain/addons/ports/addon-call.port.ts';
 import { PackRegistryPort } from '../../../../domain/capabilities/pack-registry.port.ts';
+import { AddonContentRegistry } from '../content/content.family.ts';
+import { loadAddonSkill, locateSkillSource } from '../content/skill-source.ts';
 import { l10nText } from '../shared.ts';
 
 type ToolPackSchema = z.infer<typeof ToolPackDescriptorSchema>;
@@ -40,6 +42,8 @@ export class ToolPackFamilyModule implements FamilyModule<ToolPackSchema> {
   constructor(
     private readonly packs: PackRegistryPort,
     private readonly calls: AddonCallPort,
+    private readonly content: AddonContentRegistry,
+    private readonly logger: Logger,
   ) {}
 
   schema(_v: number): z.ZodType<ToolPackSchema> {
@@ -102,9 +106,58 @@ export class ToolPackFamilyModule implements FamilyModule<ToolPackSchema> {
         },
         create: () => ({
           tools: d.tools.map((tool) => this.buildTool(owner, d, tool)),
+          skills: this.buildSkills(owner, d),
         }),
       },
     };
+  }
+
+  /**
+   * Emits the pack's `skills` as embedded `PackSkill`s so the agent receives the
+   * same skill files the content family registered, independent of its allowlist.
+   */
+  private buildSkills(owner: OwnerKey, d: ToolPackSchema): PackSkill[] {
+    const skills: PackSkill[] = [];
+    for (const skillId of d.skills ?? []) {
+      const entry = this.content.find(owner, skillId);
+      if (entry === undefined || entry.kind !== 'skill' || entry.resolvedPath === null) {
+        this.logger.warn(
+          { addonId: owner.addonId, pack: d.name, skill: skillId },
+          'pack skill contribution unavailable',
+        );
+        continue;
+      }
+      const resolution = locateSkillSource(entry.resolvedPath);
+      if (!resolution.ok) {
+        this.logger.warn(
+          { addonId: owner.addonId, pack: d.name, skill: skillId, reason: resolution.reason },
+          'pack skill source not resolved',
+        );
+        continue;
+      }
+      const loaded = loadAddonSkill({
+        addonId: owner.addonId,
+        skillId,
+        title: l10nText(entry.title),
+        location: resolution.location,
+        logger: this.logger,
+      });
+      if (!loaded.ok) {
+        this.logger.warn(
+          { addonId: owner.addonId, pack: d.name, skill: skillId, reason: loaded.reason },
+          'pack skill not emitted',
+        );
+        continue;
+      }
+      skills.push({
+        name: loaded.skill.name,
+        description: loaded.skill.description,
+        ...(loaded.skill.whenToUse !== undefined ? { whenToUse: loaded.skill.whenToUse } : {}),
+        body: loaded.skill.body,
+        files: loaded.skill.files,
+      });
+    }
+    return skills;
   }
 
   private buildTool(owner: OwnerKey, d: ToolPackSchema, tool: ToolEntry) {

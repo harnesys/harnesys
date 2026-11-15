@@ -1,7 +1,7 @@
 import type { JsonObject, RouteHandleResult, RouteRequest, TransportMessage } from '@harnesys/sdk';
 
 export interface AddonCallOptions {
-  timeoutMs?: number;
+  timeoutMs?: number | null;
   signal?: AbortSignal;
   principal?: { type: 'agent' | 'user' | 'system'; id?: string };
   agentId?: string;

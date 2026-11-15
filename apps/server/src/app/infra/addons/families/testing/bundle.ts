@@ -146,7 +146,7 @@ export function buildFamilyBundle(): FamilyBundle {
     bindings,
     orgAddons,
     supervisor,
-    toolPack: new ToolPackFamilyModule(packs, calls),
+    toolPack: new ToolPackFamilyModule(packs, calls, contentRegistry, logger),
     trigger: new TriggerFamilyModule(triggerContributor, calls, supervisor),
     job: new JobFamilyModule(jobScheduler, calls),
     worker: new WorkerFamilyModule(workerStore, workerReports, calls),

@@ -11,7 +11,7 @@ export interface RateSpec {
 
 export interface HostMethodLimits {
   rate?: RateSpec;
-  timeoutMs?: number;
+  timeoutMs?: number | null;
   maxResultKb?: number;
 }
 

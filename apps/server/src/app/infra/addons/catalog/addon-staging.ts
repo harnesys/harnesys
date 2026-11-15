@@ -1,7 +1,8 @@
 import { copyFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
-import { Injectable } from '@harnesys/brix';
+import { dirname, join, relative } from 'node:path';
+import { Injectable, Logger } from '@harnesys/brix';
 import { type AddonManifest } from '@harnesys/sdk';
+import { bundledAddonsRoot } from '../../../../const.ts';
 import type { InstalledAddonPackage } from '../../../domain/addons/ports/addon-package-catalog.port.ts';
 import type {
   AddonStagePlan,
@@ -29,12 +30,14 @@ export interface StagedAddon {
 @Injectable()
 export class BuiltinAddonSourceAdapter extends AddonSourcePort {
   private readonly layout: HostFsLayoutPort;
+  private readonly log: Logger | undefined;
   private addOnsDir: string;
   private scanned: InstalledAddonPackage[] | null = null;
 
-  constructor(layout: HostFsLayoutPort) {
+  constructor(layout: HostFsLayoutPort, logger?: Logger) {
     super();
     this.layout = layout;
+    this.log = logger?.child('builtin-addons');
     this.addOnsDir = monorepoAddOnsDir();
   }
 
@@ -71,6 +74,11 @@ export class BuiltinAddonSourceAdapter extends AddonSourcePort {
           installedAt: '',
         });
       }
+    } else {
+      this.log?.warn(
+        { dir: this.addOnsDir },
+        'builtin add-ons directory not found; no built-in packages available',
+      );
     }
     this.scanned = found.sort((a, b) => a.id.localeCompare(b.id));
     return this.scanned;
@@ -101,7 +109,7 @@ export class BuiltinAddonSourceAdapter extends AddonSourcePort {
 }
 
 export function monorepoAddOnsDir(): string {
-  return resolve(import.meta.dir, '..', '..', '..', '..', '..', '..', '..', 'add-ons');
+  return bundledAddonsRoot();
 }
 
 export function monorepoAddonDir(addOnsDir: string, name: string): string {

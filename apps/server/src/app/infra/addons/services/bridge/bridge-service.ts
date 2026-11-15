@@ -10,7 +10,7 @@ export class BridgeHostService implements HostServiceModule {
 
   constructor(private readonly sink: BridgeInboundSink) {
     this.methods = [
-      serviceMethod('bridge.inbound', { timeoutMs: 10000 }, (ctx, params) =>
+      serviceMethod('bridge.inbound', { timeoutMs: null }, (ctx, params) =>
         this.sink.inbound(ctx, params.message).then((outcome) => ({ outcome })),
       ),
     ];

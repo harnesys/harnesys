@@ -112,6 +112,45 @@ describe('HostDispatcher pipeline', () => {
     });
   });
 
+  test('timeoutMs null runs without a deadline', async () => {
+    let done = false;
+    const { dispatcher } = buildDispatcher(
+      buildSpecModule([
+        methodSpec({
+          name: 'test.echo',
+          limits: { timeoutMs: null },
+          handle: async () => {
+            await new Promise((resolve) => setTimeout(resolve, 40));
+            done = true;
+            return { value: 1 };
+          },
+        }),
+      ]),
+    );
+    await expect(dispatcher.dispatch(target(), 'test.echo', { value: 1 })).resolves.toEqual({
+      value: 1,
+    });
+    expect(done).toBe(true);
+  });
+
+  test('external abort still rejects a no-deadline call', async () => {
+    const controller = new AbortController();
+    const { dispatcher } = buildDispatcher(
+      buildSpecModule([
+        methodSpec({
+          name: 'test.echo',
+          limits: { timeoutMs: null },
+          handle: () => new Promise(() => {}),
+        }),
+      ]),
+    );
+    const pending = dispatcher.dispatch({ ...target(), signal: controller.signal }, 'test.echo', {
+      value: 1,
+    });
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ reason: 'cancelled' });
+  });
+
   test('result schema violation → invalid_response', async () => {
     const { dispatcher } = buildDispatcher(
       buildSpecModule([

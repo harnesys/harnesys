@@ -128,7 +128,11 @@ export function target(): {
 export function methodSpec(args: {
   name: string;
   permission?: string | null;
-  limits?: { rate?: { perSec: number; burst: number }; timeoutMs?: number; maxResultKb?: number };
+  limits?: {
+    rate?: { perSec: number; burst: number };
+    timeoutMs?: number | null;
+    maxResultKb?: number;
+  };
   handle: (ctx: HostCallContext, params: { value: number }) => Promise<unknown>;
   result?: z.ZodType;
 }): HostMethodSpec {

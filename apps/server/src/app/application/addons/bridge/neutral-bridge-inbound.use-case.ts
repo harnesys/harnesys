@@ -18,7 +18,6 @@ import {
   type BridgeInboundRequest,
 } from './bridge-inbound.port.ts';
 
-const TRANSPORT_CALL_TIMEOUT_MS = 30_000;
 const NO_AGENT_NOTICE =
   'No agent is available in this workspace yet, so the message cannot be delivered.';
 const DISPATCH_OUTCOME: Record<RunDispatchOutcome, BridgeInboundOutcome> = {
@@ -166,7 +165,7 @@ export class NeutralBridgeInboundUseCase extends BridgeInboundPort {
   }
 
   private async autoReply(request: BridgeInboundRequest, text: string): Promise<void> {
-    const opts: AddonCallOptions = { timeoutMs: TRANSPORT_CALL_TIMEOUT_MS };
+    const opts: AddonCallOptions = { timeoutMs: null };
     const sent = await this.calls.transportSend(
       request.orgId,
       request.addonId,

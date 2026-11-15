@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export interface CallMeta {
   correlationId: string;
-  deadline: number;
+  deadline: number | null;
   principal: { type: 'agent' | 'user' | 'system'; id?: string };
   agentId?: string;
   threadId?: string;
@@ -13,7 +13,7 @@ export interface CallMeta {
 
 export const CallMetaSchema = z.object({
   correlationId: z.string().min(1),
-  deadline: z.number(),
+  deadline: z.number().nullable(),
   principal: z.object({
     type: z.enum(['agent', 'user', 'system']),
     id: z.string().optional(),

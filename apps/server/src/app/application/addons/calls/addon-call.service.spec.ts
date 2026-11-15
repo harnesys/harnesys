@@ -49,6 +49,17 @@ describe('AddonCallService', () => {
     expect(rpc.requests[0]?.timeoutMs).toBe(600_000);
   });
 
+  test('null timeout override disables the deadline instead of using the default', async () => {
+    const { service, rpc } = build();
+    await service.callTool(
+      'org1',
+      'acme.tool',
+      { pack: 'acme', tool: 'ping', input: {} },
+      { timeoutMs: null },
+    );
+    expect(rpc.requests[0]?.timeoutMs).toBeNull();
+  });
+
   test('uses per-method defaults', async () => {
     const { service, rpc } = build();
     await service.callRoute('org1', 'acme.tool', {

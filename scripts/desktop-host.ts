@@ -29,6 +29,8 @@ function buildHostWithAssets(command: string): void {
     cpSync(join(root, 'apps', 'server', 'assets'), join(root, 'build', 'assets'), {
         recursive: true,
     });
+    execSync('bun run addon:build', { cwd: root, stdio: 'inherit' });
+    execSync('bun run addon:payload', { cwd: root, stdio: 'inherit' });
 }
 function findBuiltBinary(base: string): string | undefined {
     const exe = `${base}.exe`;

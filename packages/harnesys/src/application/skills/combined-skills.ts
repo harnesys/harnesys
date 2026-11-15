@@ -47,7 +47,13 @@ export function combineSkillRegistries(
       }
       const packSkill = packsByName.get(name);
       if (packSkill !== undefined) {
-        return { ...toSummary(packSkill), instructions: packSkill.body };
+        const files =
+          packSkill.files === undefined ? undefined : Object.keys(packSkill.files).sort();
+        return {
+          ...toSummary(packSkill),
+          instructions: packSkill.body,
+          ...(files !== undefined ? { files } : {}),
+        };
       }
       if (fs !== undefined) {
         return fs.load(name);
@@ -55,6 +61,16 @@ export function combineSkillRegistries(
       throw new Error(`unknown skill: ${name}`);
     },
     loadFile(name: string, relPath: string) {
+      const packSkill = packsByName.get(name);
+      if (packSkill !== undefined) {
+        const content = packSkill.files?.[relPath];
+        if (content !== undefined) {
+          return { path: relPath, content };
+        }
+        if (fs === undefined) {
+          throw new Error(`unknown skill file: ${name}/${relPath}`);
+        }
+      }
       if (fs !== undefined) {
         return fs.loadFile(name, relPath);
       }

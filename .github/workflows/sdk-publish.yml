@@ -1,0 +1,38 @@
+name: sdk-publish
+
+on:
+  push:
+    tags: ['sdk-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: sdk-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Build the SDK
+        run: bun run sdk:build
+      - name: Test the SDK
+        working-directory: packages/sdk
+        run: bun test
+      - name: Configure npm auth
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
+      - name: Show the package contents
+        working-directory: packages/sdk
+        run: npm publish --dry-run
+      - name: Publish to npm
+        working-directory: packages/sdk
+        run: npm publish --provenance --access public

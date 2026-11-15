@@ -40,7 +40,8 @@
       "binaries/harnesys-host"
     ],
     "resources": {
-      "../../server/assets": "assets"
+      "../../server/assets": "assets",
+      "../../../build/assets/add-ons": "assets/add-ons"
     },
     "icon": [
       "icons/32x32.png",

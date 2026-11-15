@@ -1,5 +1,3 @@
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
 import { Injectable, Logger } from '@harnesys/brix';
 import { ContentDescriptorSchema, type L10n } from '@harnesys/sdk';
 import type { z } from 'zod';
@@ -9,6 +7,7 @@ import { ownerKeyId } from '../../../../domain/addons/owner.ts';
 import { AddonPackageCatalogPort } from '../../../../domain/addons/ports/addon-package-catalog.port.ts';
 import { ContentContributionPort } from '../../../../domain/content/content-contribution.port.ts';
 import { l10nText } from '../shared.ts';
+import { resolveContentSkillPath } from './skill-source.ts';
 
 type ContentSchema = z.infer<typeof ContentDescriptorSchema>;
 export type AddonContentKind = 'skill' | 'prompt';
@@ -28,6 +27,10 @@ export class AddonContentRegistry {
 
   add(owner: OwnerKey, contributionId: string, entry: AddonContentEntry): void {
     this.entries.set(`${ownerKeyId(owner)}/${contributionId}`, entry);
+  }
+
+  find(owner: OwnerKey, contributionId: string): AddonContentEntry | undefined {
+    return this.entries.get(`${ownerKeyId(owner)}/${contributionId}`);
   }
 
   removeOwner(owner: OwnerKey): void {
@@ -96,11 +99,14 @@ export class ContentFamilyModule implements FamilyModule<ContentSchema> {
       this.logger.warn({ addonId: owner.addonId }, 'content path not resolved: package missing');
       return null;
     }
-    const resolved = join(pkg.root, relativePath);
-    if (!existsSync(resolved)) {
-      this.logger.warn({ addonId: owner.addonId, path: relativePath }, 'content path missing');
+    const resolution = resolveContentSkillPath(pkg.root, relativePath);
+    if (!resolution.ok) {
+      this.logger.warn(
+        { addonId: owner.addonId, path: relativePath, reason: resolution.reason },
+        'content path not resolved',
+      );
       return null;
     }
-    return resolved;
+    return resolution.location.source;
   }
 }

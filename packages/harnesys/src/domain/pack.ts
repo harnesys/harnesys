@@ -14,6 +14,8 @@ export interface PackSkill {
   description: string;
   whenToUse?: string;
   body: string;
+  /** Supporting files by relative path (e.g. `references/guide.md`), excluding SKILL.md itself. */
+  files?: Record<string, string>;
 }
 export interface PackToolMeta {
   name: string;

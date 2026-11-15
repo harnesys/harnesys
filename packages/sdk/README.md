@@ -2,6 +2,14 @@
 
 Leaf package for addon authors. Implements the addon platform spec (`docs/ADDONS_PLAN.md`): manifest, contributions, protocol, permissions, `defineAddon`, the host client, and the testing fake host. The package imports nothing from the core (`harnesys`, `@harnesys/contracts`, `apps/server`) — this is gate §16.3.
 
+## Install
+
+```sh
+bun add @harnesys/sdk
+```
+
+Version `1.0.0` tracks the addon platform contract (`platform: 1`). The SDK ships TypeScript sources for Bun and compiled ESM plus declarations in `dist/`; see [Распространение SDK](../../docs/add-ons/sdk.md#распространение-sdk) for the export modes and the consumer `tsconfig` shape.
+
 ## Layout
 
 ```

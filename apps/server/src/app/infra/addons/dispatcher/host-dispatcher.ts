@@ -130,21 +130,42 @@ export class HostDispatcher {
     controller: AbortController,
     target: DispatchTarget,
   ): Promise<unknown> {
-    const timeoutMs = spec.limits?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    const configured = spec.limits?.timeoutMs;
+    const timeoutMs = configured === undefined ? DEFAULT_TIMEOUT_MS : configured;
     const onOuterAbort = () => controller.abort();
     target.signal?.addEventListener('abort', onOuterAbort, { once: true });
     // Local to this invocation (§6.6): concurrent calls must not clear each
     // other's timeout timers.
     let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
-    const timeout = new Promise<never>((_, reject) => {
-      timeoutTimer = setTimeout(() => {
-        controller.abort();
-        reject(new AddonError('timeout', { detail: `${spec.name} timed out`, retryable: true }));
-      }, timeoutMs);
-      timeoutTimer.unref?.();
-    });
+    const timeout =
+      timeoutMs === null
+        ? null
+        : new Promise<never>((_, reject) => {
+            timeoutTimer = setTimeout(() => {
+              controller.abort();
+              reject(
+                new AddonError('timeout', { detail: `${spec.name} timed out`, retryable: true }),
+              );
+            }, timeoutMs);
+            timeoutTimer.unref?.();
+          });
     try {
-      return await Promise.race([spec.handle(ctx, params), timeout]);
+      const work = spec.handle(ctx, params);
+      if (timeout !== null) {
+        return await Promise.race([work, timeout]);
+      }
+      const aborted = new Promise<never>((_, reject) => {
+        if (controller.signal.aborted) {
+          reject(new AddonError('cancelled', { detail: `${spec.name} aborted` }));
+          return;
+        }
+        controller.signal.addEventListener(
+          'abort',
+          () => reject(new AddonError('cancelled', { detail: `${spec.name} aborted` })),
+          { once: true },
+        );
+      });
+      return await Promise.race([work, aborted]);
     } finally {
       clearTimeout(timeoutTimer);
       target.signal?.removeEventListener('abort', onOuterAbort);

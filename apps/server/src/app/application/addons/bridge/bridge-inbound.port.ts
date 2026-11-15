@@ -1,4 +1,5 @@
-import type { TransportMessage } from '@harnesys/sdk';
+import { BridgeInboundOutcomeSchema, type TransportMessage } from '@harnesys/sdk';
+import type { z } from 'zod';
 
 export interface InboundAttachmentBytes {
   name: string;
@@ -15,13 +16,7 @@ export interface BridgeInboundRequest {
   correlationId?: string;
 }
 
-export type BridgeInboundOutcome =
-  | 'echo_suppressed'
-  | 'dispatched'
-  | 'auto_replied'
-  | 'skipped'
-  | 'busy'
-  | 'failed';
+export type BridgeInboundOutcome = z.infer<typeof BridgeInboundOutcomeSchema>;
 
 export abstract class BridgeInboundPort {
   abstract execute(request: BridgeInboundRequest): Promise<BridgeInboundOutcome>;

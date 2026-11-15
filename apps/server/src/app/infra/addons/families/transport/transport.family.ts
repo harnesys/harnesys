@@ -102,7 +102,7 @@ export class TransportInboundService implements BridgeInboundSink {
   async inbound(input: BridgeInboundInput): Promise<BridgeInboundOutcome> {
     const transport = this.registry.find(input.orgId, input.addonId);
     if (transport === undefined) {
-      return 'skipped';
+      return 'failed';
     }
     const key = `${input.orgId}/${input.addonId}`;
     const previous = this.tails.get(key) ?? Promise.resolve<BridgeInboundOutcome>('skipped');

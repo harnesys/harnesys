@@ -195,7 +195,8 @@ export class AddonCallService extends AddonCallPort {
   ): Promise<unknown> {
     const snapshot = await this.supervisor.ensureRunning(orgId, addonId, method);
     this.assertRunning(snapshot);
-    const timeoutMs = opts?.timeoutMs ?? DEFAULT_TIMEOUTS[method] ?? 30_000;
+    const configured = opts?.timeoutMs;
+    const timeoutMs = configured === undefined ? (DEFAULT_TIMEOUTS[method] ?? 30_000) : configured;
     try {
       const result = await this.rpc.request({
         orgId,
