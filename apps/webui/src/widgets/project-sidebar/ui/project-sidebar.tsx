@@ -32,6 +32,7 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/shared/ui/sidebar';
+import { InboxBell } from '@/widgets/inbox-bell';
 import { normalizeShares, useAccordionStore } from '../model/accordion.store';
 import { useSectionAttention } from '../model/section-attention';
 import { useSectionDnd } from '../model/use-section-dnd';
@@ -206,7 +207,12 @@ export function ProjectSidebar({
   return (
     <Sidebar collapsible="icon" data-testid="project-sidebar">
       <SidebarHeader className="flex flex-col gap-1 p-2 group-data-[collapsible=icon]:items-center">
-        <OrgHeader />
+        <div className="flex w-full min-w-0 items-center gap-1">
+          <div className="flex min-w-0 flex-1 items-center group-data-[collapsible=icon]:justify-center">
+            <OrgHeader />
+          </div>
+          <InboxBell className="shrink-0 text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden" />
+        </div>
       </SidebarHeader>
 
       <SidebarContent className="gap-1 group-data-[collapsible=icon]:overflow-y-auto">
