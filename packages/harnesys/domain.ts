@@ -55,10 +55,13 @@ export {
 export { programOf, segmentCommand } from './src/packs/shell/shell-chain.ts';
 export type { Driver, ModelKind } from './src/ports/models.ts';
 export {
+  DEFAULT_SPEECH_SAMPLE_RATE,
+  DEFAULT_SPEECH_VOICE_PARAM,
   DRIVERS,
   isModelKind,
   isModelKindSupported,
   MODEL_KINDS,
   modelKindFromOutputModalities,
+  SPEECH_RESPONSE_FORMATS,
   SUPPORTED_MODEL_KINDS,
 } from './src/ports/models.ts';

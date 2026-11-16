@@ -11,7 +11,7 @@ export function openEditModelDialog(
     found?: DiscoveredModel;
   },
   orgId: string,
-  provider?: { id: string; driver: string },
+  provider?: { id: string; name: string; driver: string },
 ) {
   const modelName = row.stored?.name ?? row.found?.name ?? row.name ?? '';
   const initial = modelFieldsFrom(row);
@@ -30,15 +30,17 @@ export function openEditModelDialog(
       modelId: row.stored?.id,
       pricingExtras: pricingExtrasFrom(metadataFromModel(row.stored)?.pricing),
       providerId: provider?.id,
+      providerName: provider?.name,
       driver: provider?.driver,
     },
   });
 }
-export function openAddModelDialog() {
+export function openAddModelDialog(providerName?: string) {
   return dialog.open(AddModelDialog, {
     title: 'Add model',
     description: 'Set Kind to Embedding for vector models; Chat for agents and completions.',
     className: 'sm:max-w-lg',
+    data: { providerName },
   });
 }
 export function confirmDetachModel(name: string) {

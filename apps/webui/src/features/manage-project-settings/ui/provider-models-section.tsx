@@ -81,7 +81,7 @@ export function ProviderModelsSection({
             className="text-muted-foreground"
             data-testid="add-model"
             onClick={() => {
-              void openAddModelDialog().then((draft) => {
+              void openAddModelDialog(selected.name).then((draft) => {
                 if (!draft) {
                   return;
                 }
@@ -130,6 +130,7 @@ export function ProviderModelsSection({
               orgId={orgId}
               rows={attached}
               providerId={selected.id}
+              providerName={selected.name}
               driver={selected.driver}
               onAttach={onAttach}
               onPatchModel={onPatchModel}
@@ -142,6 +143,7 @@ export function ProviderModelsSection({
               orgId={orgId}
               rows={available}
               providerId={selected.id}
+              providerName={selected.name}
               driver={selected.driver}
               onAttach={onAttach}
               onPatchModel={onPatchModel}
@@ -161,6 +163,7 @@ function ModelGroup({
   orgId,
   rows,
   providerId,
+  providerName,
   driver,
   onAttach,
   onPatchModel,
@@ -170,6 +173,7 @@ function ModelGroup({
   orgId: string;
   rows: ModelRow[];
   providerId: string;
+  providerName: string;
   driver: string;
   onAttach: (input: ModelAttachInput) => void;
   onPatchModel: (input: ModelPatchInput) => void;
@@ -187,6 +191,7 @@ function ModelGroup({
           row={row}
           orgId={orgId}
           providerId={providerId}
+          providerName={providerName}
           driver={driver}
           onAttach={onAttach}
           onPatchModel={onPatchModel}

@@ -31,6 +31,7 @@ import {
   type ModelFieldsOutput,
   toggleItem,
 } from '../model/model-fields';
+import { SpeechSettings } from './model-speech-fields';
 
 const MODALITY_ICONS = {
   text: TypeIcon,
@@ -55,12 +56,14 @@ const MODALITY_ON = {
 } as const;
 export function ModelFields({
   control,
+  speechSource,
 }: {
   control:
     | Control<ModelFieldsInput>
     | Control<ModelFieldsInput, unknown, ModelFieldsOutput>
     | Control<AddModelInput>
     | Control<AddModelInput, unknown, AddModelOutput>;
+  speechSource?: { provider: string; model: string };
 }) {
   const fields = control as Control<ModelFieldsInput>;
   const kind = useWatch({ control: fields, name: 'kind' }) ?? 'chat';
@@ -211,6 +214,9 @@ export function ModelFields({
                 </Field>
               )}
             />
+          ) : null}
+          {kind === 'speech' ? (
+            <SpeechSettings control={fields} speechSource={speechSource} />
           ) : null}
         </>
       )}

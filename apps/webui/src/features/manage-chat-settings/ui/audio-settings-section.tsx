@@ -191,9 +191,12 @@ export function AudioSettingsSection() {
         audio.onerror = endModelPreview;
         void audio.play().catch(endModelPreview);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         finishPreview();
-        toast.add({ title: 'Preview failed' });
+        toast.add({
+          title: 'Preview failed',
+          description: error instanceof Error ? error.message : undefined,
+        });
       });
   }
 

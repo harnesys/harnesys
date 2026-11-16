@@ -1,38 +1,32 @@
-import type {
-  DiscoveredModel,
-  Effort,
-  Modality,
-  ModelArchitecture,
-  ModelFeature,
-  ModelKind,
-  ModelPricing,
-  ModelRecord,
-  ModelTopProvider,
-  ProviderModelPublic,
-} from '@harnesys/studio-shared';
 import {
+  type DiscoveredModel,
   EFFORTS,
+  type Effort,
   isModelKind,
   isModelKindSupported,
   MODALITIES,
   MODEL_FEATURES,
   MODEL_KINDS,
+  type Modality,
+  type ModelArchitecture,
+  type ModelFeature,
+  type ModelKind,
+  type ModelPricing,
+  type ModelRecord,
+  type ModelTopProvider,
+  type ProviderModelPublic,
+  type SpeechConfig,
   withChatGenerationParameters,
 } from '@harnesys/studio-shared';
 import { z } from 'zod';
+import { optionalAmount, optionalPrice } from './model-field-values';
+import {
+  emptySpeechFields,
+  speechFieldsFrom,
+  speechSchema,
+  toSpeechConfig,
+} from './model-speech-fields';
 
-export { MODEL_KINDS };
-
-const optionalAmount = z
-  .string()
-  .transform((value) => value.trim())
-  .refine((value) => value === '' || Number.isFinite(Number(value)), 'Must be a number')
-  .transform((value) => (value === '' ? undefined : Number(value)));
-const optionalPrice = z
-  .string()
-  .transform((value) => value.trim())
-  .refine((value) => value === '' || Number.isFinite(Number(value)), 'Must be a number')
-  .transform((value) => (value === '' ? undefined : value));
 export const modelFieldsSchema = z
   .object({
     kind: z.enum(MODEL_KINDS),
@@ -50,6 +44,7 @@ export const modelFieldsSchema = z
     effort: z.array(z.enum(EFFORTS)),
     defaultEffort: z.enum(EFFORTS).optional(),
     reasoningMandatory: z.boolean().optional(),
+    speech: speechSchema,
   })
   .superRefine((value, ctx) => {
     if (value.kind === 'embed') {
@@ -92,6 +87,7 @@ export interface ModelFieldsDraft {
   effort?: Effort[];
   defaultEffort?: Effort;
   reasoningMandatory?: boolean;
+  speech?: SpeechConfig;
 }
 export type ModelEditorDraft = ModelFieldsDraft & {
   kind: ModelKind;
@@ -110,6 +106,7 @@ export function emptyModelFields(kind: ModelKind = 'chat'): ModelFieldsInput {
     effort: [],
     defaultEffort: undefined,
     reasoningMandatory: undefined,
+    speech: emptySpeechFields(),
   };
 }
 export function resolveModelKind(raw?: string): ModelKind {
@@ -163,6 +160,7 @@ export function modelFieldsFrom(row: {
     effort: fields.effort ?? [],
     defaultEffort,
     reasoningMandatory: fields.reasoningMandatory,
+    speech: speechFieldsFrom(fields.speech),
   };
 }
 export function mergeFields(base?: ModelFieldsDraft, extra?: ModelFieldsDraft): ModelFieldsDraft {
@@ -178,13 +176,15 @@ export function mergeFields(base?: ModelFieldsDraft, extra?: ModelFieldsDraft): 
     effort: extra?.effort ?? base?.effort,
     defaultEffort: extra?.defaultEffort ?? base?.defaultEffort,
     reasoningMandatory: extra?.reasoningMandatory ?? base?.reasoningMandatory,
+    speech: extra?.speech ?? base?.speech,
   };
 }
 export function toModelDraft(values: ModelFieldsOutput): ModelFieldsDraft {
   if (values.kind === 'embed') {
     return toEmbedDraft(values);
   }
-  return toChatDraft(values);
+  const draft = toChatDraft(values);
+  return values.kind === 'speech' ? { ...draft, speech: toSpeechConfig(values.speech) } : draft;
 }
 export function toEditorDraft(values: ModelFieldsOutput): ModelEditorDraft {
   return { kind: values.kind, ...toModelDraft(values) };

@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SparklesIcon } from 'lucide-react';
 import { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { ollamaModelInfo } from '@/shared/api/providers';
 import type { DialogComponentProps } from '@/shared/services/overlay';
 import { Button } from '@/shared/ui/button';
@@ -58,6 +58,7 @@ function mergeSyncedFields(current: ModelFieldsInput, synced: ModelFieldsInput):
     effort: keepList(synced.effort, current.effort),
     defaultEffort: synced.defaultEffort ?? current.defaultEffort,
     reasoningMandatory: synced.reasoningMandatory ?? current.reasoningMandatory,
+    speech: current.speech,
   };
 }
 export function EditModelDialog({
@@ -73,6 +74,7 @@ export function EditModelDialog({
     modelId?: string;
     pricingExtras?: PricingExtras;
     providerId?: string;
+    providerName?: string;
     driver?: string;
   }
 >) {
@@ -186,7 +188,10 @@ export function EditModelDialog({
         ) : null}
       </div>
       <FieldGroup className="min-h-0 overflow-y-auto">
-        <ModelFields control={form.control} />
+        <ModelFields
+          control={form.control}
+          speechSource={{ provider: data?.providerName ?? '', model: data?.modelName ?? '' }}
+        />
         {data?.modelId ? <ModelPriceOverride orgId={data.orgId} modelId={data.modelId} /> : null}
       </FieldGroup>
       <DialogFooter>
@@ -200,15 +205,18 @@ export function EditModelDialog({
 }
 export function AddModelDialog({
   onResolve,
+  data,
 }: DialogComponentProps<
   {
     name: string;
-  } & ModelEditorDraft
+  } & ModelEditorDraft,
+  { providerName?: string }
 >) {
   const form = useForm<AddModelInput, unknown, AddModelOutput>({
     resolver: zodResolver(addModelSchema),
     defaultValues: { name: '', ...emptyModelFields() },
   });
+  const modelName = useWatch({ control: form.control, name: 'name' }) ?? '';
   const [syncing, setSyncing] = useState(false);
   const [extras, setExtras] = useState<PricingExtras>({});
   const handleSync = async () => {
@@ -292,7 +300,10 @@ export function AddModelDialog({
             Autofill
           </Button>
         </div>
-        <ModelFields control={form.control} />
+        <ModelFields
+          control={form.control}
+          speechSource={{ provider: data?.providerName ?? '', model: modelName }}
+        />
       </FieldGroup>
       <DialogFooter>
         <Button type="button" variant="outline" onClick={() => onResolve?.()}>

@@ -170,7 +170,7 @@ export function ModelVoicePicker({ id, provider, model, value, onChange }: Model
           ))}
         </SelectContent>
       </Select>
-      <p className="text-muted-foreground text-xs">Discovered via API</p>
+      <p className="text-muted-foreground text-xs">Available voices</p>
     </div>
   );
 }

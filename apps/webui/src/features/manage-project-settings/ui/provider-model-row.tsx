@@ -40,6 +40,7 @@ export function ProviderModelRow({
   row,
   orgId,
   providerId,
+  providerName,
   driver,
   onAttach,
   onPatchModel,
@@ -48,6 +49,7 @@ export function ProviderModelRow({
   row: ModelRow;
   orgId: string;
   providerId: string;
+  providerName: string;
   driver: string;
   onAttach: (input: ModelAttachInput) => void;
   onPatchModel: (input: ModelPatchInput) => void;
@@ -106,27 +108,29 @@ export function ProviderModelRow({
         size="icon-xs"
         aria-label={`Edit ${row.name}`}
         onClick={() => {
-          void openEditModelDialog(row, orgId, { id: providerId, driver }).then((draft) => {
-            if (!draft) {
-              return;
-            }
-            const { kind: nextKind, ...fields } = draft;
-            if (row.saved && row.stored) {
-              onPatchModel({
+          void openEditModelDialog(row, orgId, { id: providerId, name: providerName, driver }).then(
+            (draft) => {
+              if (!draft) {
+                return;
+              }
+              const { kind: nextKind, ...fields } = draft;
+              if (row.saved && row.stored) {
+                onPatchModel({
+                  providerId,
+                  modelId: row.stored.id,
+                  kind: nextKind,
+                  metadata: fields,
+                });
+                return;
+              }
+              onAttach({
                 providerId,
-                modelId: row.stored.id,
+                name: row.name,
                 kind: nextKind,
-                metadata: fields,
+                metadata: mergeFields(row.found, fields),
               });
-              return;
-            }
-            onAttach({
-              providerId,
-              name: row.name,
-              kind: nextKind,
-              metadata: mergeFields(row.found, fields),
-            });
-          });
+            },
+          );
         }}
       >
         <PencilIcon />

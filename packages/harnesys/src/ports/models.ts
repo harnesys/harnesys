@@ -33,6 +33,21 @@ export interface ModelTopProvider {
   max_completion_tokens?: number;
   is_moderated?: boolean;
 }
+export const SPEECH_RESPONSE_FORMATS = ['mp3', 'pcm', 'wav', 'opus', 'aac', 'flac'] as const;
+export type SpeechResponseFormat = (typeof SPEECH_RESPONSE_FORMATS)[number];
+export const DEFAULT_SPEECH_VOICE_PARAM = 'voice';
+export const DEFAULT_SPEECH_SAMPLE_RATE = 24000;
+export interface SpeechVoice {
+  name: string;
+  id: string;
+  params?: Record<string, string>;
+}
+export interface SpeechConfig {
+  responseFormat?: SpeechResponseFormat;
+  voiceParam?: string;
+  sampleRate?: number;
+  voices?: SpeechVoice[];
+}
 export const MODEL_KINDS = [
   'chat',
   'embed',
@@ -95,6 +110,7 @@ export interface ModelFields {
   effort?: string[];
   defaultEffort?: string;
   reasoningMandatory?: boolean;
+  speech?: SpeechConfig;
 }
 export type ModelRecord = ModelFields & {
   name: string;

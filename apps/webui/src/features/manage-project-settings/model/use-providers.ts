@@ -58,7 +58,10 @@ export function useAttachProviderModel(orgId: string) {
     }: {
       providerId: string;
     } & AttachProviderModelInput) => attachProviderModel(orgId, providerId, input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: providersQueryKeyFor(orgId) }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: providersQueryKeyFor(orgId) });
+      void queryClient.invalidateQueries({ queryKey: ['org-voices'] });
+    },
   });
 }
 export function useUpdateProviderModel(orgId: string) {
@@ -72,7 +75,10 @@ export function useUpdateProviderModel(orgId: string) {
       providerId: string;
       modelId: string;
     } & UpdateProviderModelInput) => updateProviderModel(orgId, providerId, modelId, input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: providersQueryKeyFor(orgId) }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: providersQueryKeyFor(orgId) });
+      void queryClient.invalidateQueries({ queryKey: ['org-voices'] });
+    },
   });
 }
 export function useDetachProviderModel(orgId: string) {

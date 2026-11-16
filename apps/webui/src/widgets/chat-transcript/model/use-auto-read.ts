@@ -54,7 +54,7 @@ export function useAutoRead(args: AutoReadArgs): void {
   }, []);
 
   useEffect(() => {
-    return onVoiceError(() => {
+    return onVoiceError((error) => {
       if (getVoiceSnapshot().owner !== AUTO_TOKEN) {
         return;
       }
@@ -69,7 +69,10 @@ export function useAutoRead(args: AutoReadArgs): void {
       if (orgId) {
         setAutoRead(orgId, false);
       }
-      toast.add({ title: 'Auto-read stopped: provider error' });
+      toast.add({
+        title: 'Auto-read stopped: provider error',
+        description: error instanceof Error ? error.message : undefined,
+      });
     });
   }, []);
 

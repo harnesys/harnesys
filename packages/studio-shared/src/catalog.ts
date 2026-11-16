@@ -1,4 +1,5 @@
 import type { Driver, ModelKind } from 'harnesys/domain';
+import { SPEECH_RESPONSE_FORMATS } from 'harnesys/domain';
 
 export type { CapabilityMechanism, Driver, ModelKind } from 'harnesys/domain';
 export {
@@ -11,6 +12,7 @@ export {
   modelKindFromOutputModalities,
   SUPPORTED_MODEL_KINDS,
 } from 'harnesys/domain';
+export { SPEECH_RESPONSE_FORMATS };
 export interface DriverEndpoint {
   id: string;
   label: string;
@@ -62,6 +64,18 @@ export interface ModelTopProvider {
   max_completion_tokens?: number;
   is_moderated?: boolean;
 }
+export type SpeechResponseFormat = (typeof SPEECH_RESPONSE_FORMATS)[number];
+export interface SpeechVoice {
+  name: string;
+  id: string;
+  params?: Record<string, string>;
+}
+export interface SpeechConfig {
+  responseFormat?: SpeechResponseFormat;
+  voiceParam?: string;
+  sampleRate?: number;
+  voices?: SpeechVoice[];
+}
 export interface ModelFields {
   id?: string;
   name?: string;
@@ -75,6 +89,7 @@ export interface ModelFields {
   effort?: Effort[];
   defaultEffort?: Effort;
   reasoningMandatory?: boolean;
+  speech?: SpeechConfig;
 }
 export type ModelRecord = ModelFields & {
   name: string;

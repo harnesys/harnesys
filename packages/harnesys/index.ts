@@ -698,8 +698,13 @@ export type {
   ModelsPort,
   ProviderConfig,
   ResolvedModel,
+  SpeechConfig,
+  SpeechResponseFormat,
+  SpeechVoice,
 } from './src/ports/models.ts';
 export {
+  DEFAULT_SPEECH_SAMPLE_RATE,
+  DEFAULT_SPEECH_VOICE_PARAM,
   DRIVERS,
   isModelKind,
   isModelKindSupported,
@@ -707,6 +712,7 @@ export {
   modelKindFromOutputModalities,
   normalizeProvider,
   resolveModel,
+  SPEECH_RESPONSE_FORMATS,
   SUPPORTED_MODEL_KINDS,
 } from './src/ports/models.ts';
 export type { PathsConfig } from './src/ports/paths.ts';

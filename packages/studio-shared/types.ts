@@ -52,6 +52,9 @@ export type {
   ModelPricingOverride,
   ModelRecord,
   ModelTopProvider,
+  SpeechConfig,
+  SpeechResponseFormat,
+  SpeechVoice,
   StudioCatalog,
   StudioModel,
   StudioModelView,
@@ -69,6 +72,7 @@ export {
   MODEL_FEATURES,
   MODEL_KINDS,
   modelKindFromOutputModalities,
+  SPEECH_RESPONSE_FORMATS,
   SUPPORTED_MODEL_KINDS,
 } from './src/catalog.ts';
 export * from './src/desk-events.ts';
