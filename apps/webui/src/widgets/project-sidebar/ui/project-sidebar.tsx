@@ -262,7 +262,7 @@ export function ProjectSidebar({
         <SidebarMenu>
           <SidebarMenuItem className="flex flex-row items-center gap-1 group-data-[collapsible=icon]:flex-col-reverse">
             <div
-              className="flex flex-1 items-center gap-2 px-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+              className="flex flex-1 items-center gap-2 px-1 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
               data-testid="app-logo"
               title="Harnesys"
             >
