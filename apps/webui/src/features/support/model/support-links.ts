@@ -23,6 +23,16 @@ export interface SupportMethod {
   addresses: readonly CryptoAddress[];
 }
 
+export type CommunityIcon = 'telegram' | 'x' | 'youtube' | 'reddit' | 'discord' | 'github';
+
+export interface CommunityLink {
+  id: string;
+  icon: CommunityIcon;
+  label: string;
+  description: string;
+  url: string;
+}
+
 export interface SupportAction {
   id: string;
   label: string;
@@ -32,6 +42,61 @@ export interface SupportAction {
 
 const REPOSITORY_URL = 'https://github.com/harnesys/harnesys';
 const LANDING_URL = 'https://harnesys.github.io/harnesys/';
+
+const TELEGRAM_CHANNEL_URL = 'https://t.me/harnesys';
+const TELEGRAM_GROUP_URL = 'https://t.me/harnesys_group';
+
+export const COMMUNITY_LINKS: readonly CommunityLink[] = [
+  {
+    id: 'telegram-channel',
+    icon: 'telegram',
+    label: 'Telegram channel',
+    description: 'Release notes and the dev log as they happen.',
+    url: TELEGRAM_CHANNEL_URL,
+  },
+  {
+    id: 'telegram-group',
+    icon: 'telegram',
+    label: 'Telegram group',
+    description: 'Ask anything, show what you built, push ideas.',
+    url: TELEGRAM_GROUP_URL,
+  },
+  {
+    id: 'x',
+    icon: 'x',
+    label: 'X (Twitter)',
+    description: 'Changelog in short bursts, between releases.',
+    url: '',
+  },
+  {
+    id: 'youtube',
+    icon: 'youtube',
+    label: 'YouTube',
+    description: 'Long-form walkthroughs and real fleet setups.',
+    url: '',
+  },
+  {
+    id: 'reddit',
+    icon: 'reddit',
+    label: 'Reddit',
+    description: 'r/LocalLLaMA, r/selfhosted — where we argue, help and ship.',
+    url: '',
+  },
+  {
+    id: 'discord',
+    icon: 'discord',
+    label: 'Discord',
+    description: 'Live chat, when the community outgrows Telegram.',
+    url: '',
+  },
+  {
+    id: 'github',
+    icon: 'github',
+    label: 'GitHub',
+    description: 'Star it, file issues, read the source.',
+    url: REPOSITORY_URL,
+  },
+];
 
 export const SUPPORT_METHODS: readonly SupportMethod[] = [
   {
@@ -97,25 +162,25 @@ export const SUPPORT_ACTIONS: readonly SupportAction[] = [
   {
     id: 'star',
     label: 'Star the repository',
-    description: 'Stars are how other developers find the project.',
+    description: 'Stars are how other developers find Harnesys.',
     url: REPOSITORY_URL,
   },
   {
     id: 'issues',
     label: 'Report bugs',
-    description: 'A clear reproduction is worth as much as a donation.',
+    description: 'A sharp bug report is worth more than a donation.',
     url: `${REPOSITORY_URL}/issues`,
   },
   {
     id: 'contribute',
     label: 'Contribute',
-    description: 'Read the contribution guide before opening a pull request.',
+    description: 'Good first issues are waiting for you.',
     url: `${REPOSITORY_URL}/blob/main/CONTRIBUTING.md`,
   },
   {
     id: 'share',
     label: 'Tell someone',
-    description: 'Share the project where people run agents.',
+    description: 'Know someone running agent fleets? Send them here.',
     url: LANDING_URL,
   },
 ];
