@@ -1,7 +1,7 @@
 import type { LspCatalogEntry } from '@harnesys/contracts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { PlusIcon } from 'lucide-react';
-import { orgLspQueryKey, upsertOrgLspServer } from '@/shared/api/org-lsp';
+import { DownloadIcon, Loader2Icon, PlusIcon } from 'lucide-react';
+import { ensureOrgLspServer, orgLspQueryKey } from '@/shared/api/org-lsp';
 import { Button } from '@/shared/ui/button';
 import { Row, RowField, RowHeader, RowList, RowSection } from '@/shared/ui/capability-rows';
 import { SettingsEmpty } from '@/shared/ui/settings-kit';
@@ -24,22 +24,31 @@ export function OrgLspCatalog({ orgId, catalog }: { orgId: string; catalog: LspC
   const queryClient = useQueryClient();
   const add = useMutation({
     mutationFn: (entry: LspCatalogEntry) =>
-      upsertOrgLspServer(orgId, entry.serverId, {
+      ensureOrgLspServer(orgId, {
+        serverId: entry.serverId,
         command: entry.command,
         args: entry.args,
         extensionToLanguage: entry.extensionToLanguage,
+        configured: false,
+        binaryOk: entry.binaryOk,
       }),
     onSuccess: (result, entry) => {
       queryClient.setQueryData(orgLspQueryKey(orgId), result);
       toast.add({
-        title: `Server ${entry.serverId} added`,
+        title: entry.binaryOk
+          ? `Server ${entry.serverId} added`
+          : `Server ${entry.serverId} installed`,
         description: entry.binaryOk
           ? 'Command is on PATH — it starts on first use.'
-          : `Install the binary first: ${entry.install}`,
+          : 'The language server is ready for editor diagnostics.',
       });
     },
-    onError: (error) => {
-      toast.add({ title: 'Add failed', description: errorMessage(error) });
+    onError: (error, entry) => {
+      void queryClient.invalidateQueries({ queryKey: orgLspQueryKey(orgId) });
+      toast.add({
+        title: entry.binaryOk ? 'Add failed' : 'Install failed',
+        description: errorMessage(error),
+      });
     },
   });
   return (
@@ -47,7 +56,7 @@ export function OrgLspCatalog({ orgId, catalog }: { orgId: string; catalog: LspC
       <RowHeader
         label="Available servers"
         count={catalog.length}
-        description="Adds the server entry to .harnesys/lsp.json in one click."
+        description="Adds the server entry to .harnesys/lsp.json and installs the binary when it is missing."
       />
       {catalog.length === 0 ? (
         <SettingsEmpty
@@ -56,42 +65,59 @@ export function OrgLspCatalog({ orgId, catalog }: { orgId: string; catalog: LspC
         />
       ) : (
         <RowList testId="org-lsp-catalog-list">
-          {catalog.map((entry) => (
-            <Row
-              key={entry.serverId}
-              testId={`lsp-catalog-${entry.serverId}`}
-              title={entry.label}
-              mono={false}
-              summary={entry.description}
-              status={
-                entry.binaryOk
-                  ? { tone: 'off', label: 'Ready' }
-                  : { tone: 'wait', label: 'Not installed' }
-              }
-              alwaysShowActions
-              actions={
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  disabled={add.isPending}
-                  onClick={() => add.mutate(entry)}
-                >
-                  <PlusIcon />
-                  Add
-                </Button>
-              }
-            >
-              <RowSection label="Details">
-                <RowField label="Server" value={entry.serverId} />
-                <RowField label="Extensions" value={extensionList(entry)} />
-                <RowField label="Command" value={commandLine(entry)} />
-                <RowField label="Install" value={entry.install} />
-              </RowSection>
-            </Row>
-          ))}
+          {catalog.map((entry) => {
+            const pending = add.isPending && add.variables?.serverId === entry.serverId;
+            return (
+              <Row
+                key={entry.serverId}
+                testId={`lsp-catalog-${entry.serverId}`}
+                title={entry.label}
+                mono={false}
+                summary={entry.description}
+                status={
+                  entry.binaryOk
+                    ? { tone: 'off', label: 'Ready' }
+                    : { tone: 'wait', label: 'Not installed' }
+                }
+                alwaysShowActions
+                actions={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    disabled={add.isPending}
+                    onClick={() => add.mutate(entry)}
+                  >
+                    <AddIcon entry={entry} pending={pending} />
+                    {addLabel(entry, pending)}
+                  </Button>
+                }
+              >
+                <RowSection label="Details">
+                  <RowField label="Server" value={entry.serverId} />
+                  <RowField label="Extensions" value={extensionList(entry)} />
+                  <RowField label="Command" value={commandLine(entry)} />
+                  <RowField label="Install" value={entry.install} />
+                </RowSection>
+              </Row>
+            );
+          })}
         </RowList>
       )}
     </section>
   );
+}
+
+function AddIcon({ entry, pending }: { entry: LspCatalogEntry; pending: boolean }) {
+  if (pending) {
+    return <Loader2Icon className="animate-spin" />;
+  }
+  return entry.binaryOk ? <PlusIcon /> : <DownloadIcon />;
+}
+
+function addLabel(entry: LspCatalogEntry, pending: boolean): string {
+  if (pending) {
+    return entry.binaryOk ? 'Adding…' : 'Installing…';
+  }
+  return entry.binaryOk ? 'Add' : 'Add & install';
 }

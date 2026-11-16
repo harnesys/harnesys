@@ -221,7 +221,10 @@ export function TextEditor({
   const {
     status: lspStatus,
     pulse: lspPulse,
+    gap: lspGap,
+    installing: lspInstalling,
     restartFileServer,
+    installFileServer,
   } = useEditorLspBridge(projectId, worktreeId ? null : activePath, language);
   useLayoutEffect(() => {
     setMonacoImportLinkContext({
@@ -327,6 +330,8 @@ export function TextEditor({
       cursor={cursor}
       lspStatus={lspStatus}
       lspPulse={lspPulse}
+      lspGap={lspGap}
+      lspInstalling={lspInstalling}
       beforeMount={handleBeforeMount}
       onMount={handleMount}
       onChange={(text) => {
@@ -341,6 +346,7 @@ export function TextEditor({
       onSelectLanguage={(next) => selectLanguage(activePath, next)}
       onSelectMarkdownMode={(mode) => selectMarkdownMode(activePath, mode)}
       onRestartFileServer={restartFileServer}
+      onInstallFileServer={installFileServer}
       toModelPath={toModelPath}
     />
   );

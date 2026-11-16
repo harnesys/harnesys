@@ -1,6 +1,11 @@
-import { CheckIcon, CopyIcon, RotateCwIcon } from 'lucide-react';
+import { CheckIcon, CopyIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { type LspBridgeStatus, type LspSessionEntry, useLspSessions } from '@/features/lsp-bridge';
+import {
+  type LspBridgeStatus,
+  type LspGap,
+  type LspSessionEntry,
+  useLspSessions,
+} from '@/features/lsp-bridge';
 import { cn } from '@/shared/lib/utils';
 import {
   DropdownMenu,
@@ -9,10 +14,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
 import type { MarkdownEditorMode } from '../model/use-markdown-editor-mode';
+import { STATUS_SEGMENT } from './lsp-status-display';
+import { LspStatusMenu } from './lsp-status-menu';
 export interface EditorCursor {
   line: number;
   column: number;
@@ -43,25 +49,6 @@ const LANGUAGE_OPTIONS: {
   { id: 'dockerfile', label: 'Dockerfile' },
   { id: 'ini', label: 'INI' },
 ];
-const LSP_DOT: Record<LspBridgeStatus, string> = {
-  live: 'bg-status-ok',
-  starting: 'bg-status-warn',
-  error: 'bg-red-500',
-  off: 'bg-muted-foreground/50',
-};
-const LSP_LABEL: Record<LspBridgeStatus, string> = {
-  live: 'LSP',
-  starting: 'LSP…',
-  error: 'LSP error',
-  off: 'LSP off',
-};
-const LSP_HINT: Record<LspBridgeStatus, string> = {
-  live: 'Connected',
-  starting: 'Connecting…',
-  error: 'Server start failed',
-  off: 'No server for this file',
-};
-const SEGMENT = 'flex shrink-0 items-center gap-1 px-1 hover:text-foreground';
 export function EditorStatusBar({
   projectId,
   path,
@@ -70,6 +57,8 @@ export function EditorStatusBar({
   languageId,
   lspStatus,
   lspPulse,
+  lspGap,
+  lspInstalling,
   dirty,
   cursor,
   content,
@@ -77,6 +66,7 @@ export function EditorStatusBar({
   markdownMode,
   onSelectMarkdownMode,
   onRestartFileServer,
+  onInstallFileServer,
 }: {
   projectId: string;
   path: string;
@@ -85,6 +75,8 @@ export function EditorStatusBar({
   languageId: string;
   lspStatus: LspBridgeStatus;
   lspPulse: number;
+  lspGap: LspGap | null;
+  lspInstalling: boolean;
   dirty: boolean;
   cursor: EditorCursor;
   content: string;
@@ -92,6 +84,7 @@ export function EditorStatusBar({
   markdownMode?: MarkdownEditorMode;
   onSelectMarkdownMode?: (mode: MarkdownEditorMode) => void;
   onRestartFileServer: () => void;
+  onInstallFileServer: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const sessions = useLspSessions(projectId);
@@ -145,7 +138,7 @@ export function EditorStatusBar({
               aria-pressed={markdownMode === 'edit'}
               onClick={() => onSelectMarkdownMode('edit')}
               className={cn(
-                SEGMENT,
+                STATUS_SEGMENT,
                 'rounded-none first:rounded-l-[2px]',
                 markdownMode === 'edit' && 'bg-muted text-foreground',
               )}
@@ -159,7 +152,7 @@ export function EditorStatusBar({
               aria-pressed={markdownMode === 'view'}
               onClick={() => onSelectMarkdownMode('view')}
               className={cn(
-                SEGMENT,
+                STATUS_SEGMENT,
                 'rounded-none last:rounded-r-[2px]',
                 markdownMode === 'view' && 'bg-muted text-foreground',
               )}
@@ -168,92 +161,23 @@ export function EditorStatusBar({
             </button>
           </span>
         ) : null}
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            title="Language servers"
-            data-testid="lsp-popup-trigger"
-            className={SEGMENT}
-          >
-            <span className="relative flex size-1.5">
-              {lspStatus === 'live' && lspPulse > 0 ? (
-                <span
-                  key={lspPulse}
-                  className="absolute inline-flex h-full w-full animate-ping rounded-full bg-status-ok opacity-60"
-                />
-              ) : null}
-              <span className={cn('relative size-1.5 rounded-full', LSP_DOT[lspStatus])} />
-            </span>
-            {LSP_LABEL[lspStatus]}
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            side="top"
-            align="end"
-            sideOffset={8}
-            className="w-72"
-            data-testid="lsp-popup"
-          >
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>This file</DropdownMenuLabel>
-              <div className="flex items-center gap-1.5 px-1.5 py-1 text-xs">
-                <span className={cn('size-1.5 shrink-0 rounded-full', LSP_DOT[lspStatus])} />
-                <span className="min-w-0 flex-1 truncate">{path}</span>
-                <span className="shrink-0 text-muted-foreground">
-                  {languageId} · {LSP_HINT[lspStatus]}
-                </span>
-                <button
-                  type="button"
-                  title="Restart language server"
-                  data-testid="lsp-restart"
-                  onClick={onRestartFileServer}
-                  className="shrink-0 rounded-sm p-0.5 hover:text-foreground"
-                >
-                  <RotateCwIcon className="size-3" />
-                </button>
-              </div>
-              {currentMessage ? (
-                <p
-                  title={currentMessage}
-                  className={cn(
-                    'px-1.5 pb-1 text-xs',
-                    lspStatus === 'error' ? 'text-destructive' : 'text-muted-foreground',
-                  )}
-                >
-                  {currentMessage}
-                </p>
-              ) : null}
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>Running sessions ({orderedSessions.length})</DropdownMenuLabel>
-              {orderedSessions.length === 0 ? (
-                <div className="px-1.5 py-1 text-muted-foreground text-xs">No active sessions</div>
-              ) : (
-                orderedSessions.map((session) => (
-                  <div
-                    key={session.path}
-                    className="flex items-center gap-1.5 px-1.5 py-1 text-xs"
-                    title={
-                      session.message
-                        ? `${session.path} — ${session.message}`
-                        : `${session.path} — ${session.languageId}, ${session.status}`
-                    }
-                  >
-                    <span
-                      className={cn('size-1.5 shrink-0 rounded-full', LSP_DOT[session.status])}
-                    />
-                    <span className="min-w-0 flex-1 truncate">{session.path}</span>
-                    <span className="shrink-0 text-muted-foreground">{session.languageId}</span>
-                  </div>
-                ))
-              )}
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <LspStatusMenu
+          path={path}
+          languageId={languageId}
+          status={lspStatus}
+          pulse={lspPulse}
+          gap={lspGap}
+          installing={lspInstalling}
+          sessions={orderedSessions}
+          message={currentMessage}
+          onRestart={onRestartFileServer}
+          onInstall={onInstallFileServer}
+        />
         <DropdownMenu>
           <DropdownMenuTrigger
             title={languageOverride ? `Language: ${languageId} (manual)` : 'Language: auto'}
             data-testid="language-popup-trigger"
-            className={SEGMENT}
+            className={STATUS_SEGMENT}
           >
             {languageId}
             {languageOverride ? <span className="text-live">•</span> : null}

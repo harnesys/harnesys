@@ -66,6 +66,39 @@ export function installOrgLspBinary(orgId: string, serverId: string): Promise<Or
   });
 }
 
+export interface EnsureOrgLspServerInput {
+  serverId: string;
+  command: string;
+  args?: string[];
+  extensionToLanguage: Record<string, string>;
+  configured: boolean;
+  binaryOk: boolean;
+}
+
+export async function ensureOrgLspServer(
+  orgId: string,
+  input: EnsureOrgLspServerInput,
+): Promise<OrgLspListResponse> {
+  let view: OrgLspListResponse | undefined;
+  if (!input.configured) {
+    view = await upsertOrgLspServer(orgId, input.serverId, {
+      command: input.command,
+      args: input.args,
+      extensionToLanguage: input.extensionToLanguage,
+    });
+  }
+  if (!input.binaryOk) {
+    view = await installOrgLspBinary(orgId, input.serverId);
+    const server = view.servers.find((entry) => entry.serverId === input.serverId);
+    if (server !== undefined && !server.binaryOk) {
+      throw new Error(
+        `installed ${input.command} but it is not on PATH — check toolchain settings`,
+      );
+    }
+  }
+  return view ?? getOrgLsp(orgId);
+}
+
 export function restartOrgLspServer(orgId: string, serverId: string) {
   return apiJson<OrgLspListResponse>(
     `${orgLspBase(orgId)}/${encodeURIComponent(serverId)}/restart`,

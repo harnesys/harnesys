@@ -16,7 +16,7 @@ import {
   toMonacoHover,
   toMonacoLocations,
 } from './lsp-converters';
-import { findServersForPath } from './lsp-restart';
+import { type LspGap, resolveLspGap } from './lsp-gap';
 
 export type LspBridgeStatus = 'starting' | 'live' | 'off' | 'error';
 export interface LspBridge {
@@ -28,6 +28,7 @@ export interface LspBridgeArgs {
   path: string;
   monaco: typeof monacoNs;
   onStatus: (status: LspBridgeStatus, message?: string) => void;
+  onGap?: (gap: LspGap) => void;
   onActivity?: () => void;
 }
 const CHANGE_DEBOUNCE_MS = 250;
@@ -51,45 +52,12 @@ function resumeBuiltinOnce(): void {
   }
 }
 
-interface ServerGap {
-  detail: string;
-  usable: boolean;
-}
-
-async function checkServerForFile(orgId: string, path: string): Promise<ServerGap> {
-  const list = await getOrgLsp(orgId);
-  const matches = findServersForPath(list.servers, path);
-  if (matches.length === 0) {
-    const ext = path.includes('.') ? `.${path.split('.').pop()}` : '(no extension)';
-    return {
-      detail: `no LSP server for ${ext} — add one in Settings → LSP or install a plugin that declares lspServers`,
-      usable: false,
-    };
-  }
-  const active = matches.find((server) => !server.disabled) ?? matches[0];
-  if (active.disabled) {
-    return {
-      detail: `LSP server "${active.serverId}" is disabled — re-enable it in Settings → LSP`,
-      usable: false,
-    };
-  }
-  if (!active.granted) {
-    return {
-      detail: `LSP server "${active.serverId}" is not granted — approve the plugin, then press Restart`,
-      usable: false,
-    };
-  }
-  if (!active.binaryOk) {
-    return {
-      detail: `LSP server "${active.serverId}" command "${active.command}" not found on this host`,
-      usable: false,
-    };
-  }
-  return { detail: '', usable: true };
+async function checkServerForFile(orgId: string, path: string): Promise<LspGap> {
+  return resolveLspGap(await getOrgLsp(orgId), path);
 }
 
 export function attachLspBridge(args: LspBridgeArgs): LspBridge {
-  const { monaco, onStatus, onActivity, orgId, sourceId, path } = args;
+  const { monaco, onStatus, onGap, onActivity, orgId, sourceId, path } = args;
   const modelUri = `file:///${path.replace(/^\/+/, '')}`;
   const model = monaco.editor.getModel(monaco.Uri.parse(modelUri));
   if (!model) {
@@ -161,9 +129,13 @@ export function attachLspBridge(args: LspBridgeArgs): LspBridge {
   });
   void checkServerForFile(orgId, path)
     .then((gap) => {
+      if (disposed) {
+        return;
+      }
+      onGap?.(gap);
       if (!gap.usable) {
         setStatus('off');
-        onStatus('off', gap.detail);
+        onStatus('off', gap.message);
         return;
       }
       serverForFile = true;
@@ -171,6 +143,9 @@ export function attachLspBridge(args: LspBridgeArgs): LspBridge {
       refreshDiagnostics();
     })
     .catch(() => {
+      if (disposed) {
+        return;
+      }
       serverForFile = true;
       suspendBuiltinOnce(monaco, languageId);
       refreshDiagnostics();

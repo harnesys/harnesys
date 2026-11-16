@@ -5,10 +5,14 @@ export {
   type LspBridgeStatus,
 } from './model/lsp-bridge';
 export {
-  findServersForPath,
-  restartLspForActiveOrg,
-  restartLspForPath,
-} from './model/lsp-restart';
+  type LspGap,
+  type LspInstallCandidate,
+  resolveLspGap,
+} from './model/lsp-gap';
+export { offerLspInstall, runLspInstall } from './model/lsp-install';
+export { lspInstallKey, useLspInstallStore } from './model/lsp-install.store';
+export { findServersForPath } from './model/lsp-path';
+export { restartLspForActiveOrg, restartLspForPath } from './model/lsp-restart';
 export {
   type LspSessionEntry,
   useLspSessions,

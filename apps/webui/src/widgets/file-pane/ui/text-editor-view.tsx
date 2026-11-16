@@ -1,6 +1,6 @@
 import Editor, { type OnMount } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
-import type { LspBridgeStatus } from '@/features/lsp-bridge';
+import type { LspBridgeStatus, LspGap } from '@/features/lsp-bridge';
 import type { MarkdownEditorMode } from '../model/use-markdown-editor-mode';
 import { type EditorCursor, EditorStatusBar } from './editor-status-bar';
 import { MarkdownFilePreview } from './markdown-file-preview';
@@ -21,12 +21,15 @@ interface TextEditorViewProps {
   cursor: EditorCursor;
   lspStatus: LspBridgeStatus;
   lspPulse: number;
+  lspGap: LspGap | null;
+  lspInstalling: boolean;
   beforeMount: (monaco: Monaco) => void;
   onMount: OnMount;
   onChange: (text: string) => void;
   onSelectLanguage: (language: string | null) => void;
   onSelectMarkdownMode: (mode: MarkdownEditorMode) => void;
   onRestartFileServer: () => void;
+  onInstallFileServer: () => void;
   toModelPath: (path: string) => string;
 }
 export function TextEditorView({
@@ -44,12 +47,15 @@ export function TextEditorView({
   cursor,
   lspStatus,
   lspPulse,
+  lspGap,
+  lspInstalling,
   beforeMount,
   onMount,
   onChange,
   onSelectLanguage,
   onSelectMarkdownMode,
   onRestartFileServer,
+  onInstallFileServer,
   toModelPath,
 }: TextEditorViewProps) {
   return (
@@ -80,6 +86,8 @@ export function TextEditorView({
         languageId={language}
         lspStatus={lspStatus}
         lspPulse={lspPulse}
+        lspGap={lspGap}
+        lspInstalling={lspInstalling}
         dirty={dirty}
         cursor={cursor}
         content={value}
@@ -87,6 +95,7 @@ export function TextEditorView({
         markdownMode={showMarkdownMode ? markdownMode : undefined}
         onSelectMarkdownMode={showMarkdownMode ? onSelectMarkdownMode : undefined}
         onRestartFileServer={onRestartFileServer}
+        onInstallFileServer={onInstallFileServer}
       />
     </div>
   );
