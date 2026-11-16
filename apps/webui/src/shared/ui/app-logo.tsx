@@ -16,10 +16,10 @@ export function AppLogo({ className }: { className?: string }) {
         fill="url(#app-logo-bg)"
         className="opacity-25 grayscale-100"
       />
-      <g fill="none" stroke="#f6f7f8" strokeWidth="46">
-        <path d="M 188 188 A 28 28 0 0 0 160 160 H 116 A 28 28 0 0 0 88 188 V 324 A 28 28 0 0 0 116 352 H 160 A 28 28 0 0 0 188 324" />
-        <path d="M 324 188 A 28 28 0 0 1 352 160 H 396 A 28 28 0 0 1 424 188 V 324 A 28 28 0 0 1 396 352 H 352 A 28 28 0 0 1 324 324" />
-        <line x1="195" y1="256" x2="317" y2="256" strokeLinecap="round" />
+      <g fill="#f6f7f8">
+        <path d="M 122 96 H 190 V 390 L 122 428 Z" />
+        <path d="M 322 96 H 390 V 428 L 322 390 Z" />
+        <rect x="122" y="224" width="268" height="64" rx="32" />
       </g>
     </svg>
   );

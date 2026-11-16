@@ -1,10 +1,37 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><metadata><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/"><rdf:Description><dc:creator>RealFaviconGenerator</dc:creator><dc:source>https://realfavicongenerator.net</dc:source></rdf:Description></rdf:RDF></metadata><title>Harnesys</title><defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><metadata><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/"><rdf:Description><dc:creator>RealFaviconGenerator</dc:creator><dc:source>https://realfavicongenerator.net</dc:source></rdf:Description></rdf:RDF></metadata><title>Harnesys — strap H, alive</title><defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#d4763c"></stop>
-      <stop offset="1" stop-color="#a9521f"></stop>
+      <stop offset="0" stop-color="#d06a33"></stop>
+      <stop offset="0.5" stop-color="#c4622d"></stop>
+      <stop offset="1" stop-color="#ad4e20"></stop>
     </linearGradient>
-  </defs><rect width="512" height="512" rx="115" fill="url(#bg)"></rect><g fill="none" stroke="#f6f7f8" stroke-width="46">
-    <path d="M 188 188 A 28 28 0 0 0 160 160 H 116 A 28 28 0 0 0 88 188 V 324 A 28 28 0 0 0 116 352 H 160 A 28 28 0 0 0 188 324"></path>
-    <path d="M 324 188 A 28 28 0 0 1 352 160 H 396 A 28 28 0 0 1 424 188 V 324 A 28 28 0 0 1 396 352 H 352 A 28 28 0 0 1 324 324"></path>
-    <line x1="195" y1="256" x2="317" y2="256" stroke-linecap="round"></line>
+    <radialGradient id="vig" cx="0.5" cy="0.45" r="0.75">
+      <stop offset="0.55" stop-color="#4a1d07" stop-opacity="0"></stop>
+      <stop offset="1" stop-color="#4a1d07" stop-opacity="0.22"></stop>
+    </radialGradient>
+    <linearGradient id="sweep" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.16"></stop>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity="0.04"></stop>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"></stop>
+    </linearGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="26"></feGaussianBlur>
+    </filter>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" stitchTiles="stitch"></feTurbulence>
+      <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.04 0"></feColorMatrix>
+    </filter>
+    <clipPath id="tile">
+      <rect width="512" height="512" rx="120"></rect>
+    </clipPath>
+    <filter id="lift" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#4a1d07" flood-opacity="0.3"></feDropShadow>
+    </filter>
+  </defs><rect width="512" height="512" rx="120" fill="url(#bg)"></rect><g clip-path="url(#tile)">
+    <rect width="512" height="512" fill="url(#vig)"></rect>
+    <polygon points="180,-80 420,-80 220,560 -20,560" fill="url(#sweep)" filter="url(#soft)"></polygon>
+    <rect width="512" height="512" fill="#00000000" filter="url(#grain)"></rect>
+  </g><g fill="#ffffff" filter="url(#lift)">
+    <path d="M 122 96 H 190 V 390 L 122 428 Z"></path>
+    <path d="M 322 96 H 390 V 428 L 322 390 Z"></path>
+    <rect x="122" y="224" width="268" height="64" rx="32"></rect>
   </g></svg>
