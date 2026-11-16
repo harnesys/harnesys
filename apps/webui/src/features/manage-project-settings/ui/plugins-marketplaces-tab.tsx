@@ -28,6 +28,7 @@ export function PluginsMarketplacesTab() {
   const registriesQuery = useQuery(pluginRegistriesQuery());
   const items = registriesQuery.data ?? [];
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
   async function invalidate() {
     await queryClient.invalidateQueries({ queryKey: pluginRegistriesQueryKey });
     await queryClient.invalidateQueries({ queryKey: pluginCatalogQueryKey });
@@ -52,6 +53,7 @@ export function PluginsMarketplacesTab() {
       toast.add({ title: 'Marketplace removed' });
     },
   });
+  const syncing = refresh.isPending || adding;
   return (
     <div className="flex flex-col gap-2" data-testid="plugins-marketplaces-tab">
       <RowHeader label="Marketplaces" count={registriesQuery.isPending ? undefined : items.length}>
@@ -60,19 +62,32 @@ export function PluginsMarketplacesTab() {
           size="sm"
           className="text-muted-foreground"
           onClick={() => {
-            void openAddRegistryDialog().then(async (registry) => {
-              if (!registry) {
-                return;
-              }
-              await invalidate();
-              toast.add({ title: 'Marketplace added', description: registry.name });
-            });
+            setAdding(true);
+            void openAddRegistryDialog()
+              .then(async (registry) => {
+                if (!registry) {
+                  return;
+                }
+                await invalidate();
+                toast.add({ title: 'Marketplace added', description: registry.name });
+              })
+              .finally(() => setAdding(false));
           }}
         >
           <PlusIcon />
           Add
         </Button>
       </RowHeader>
+
+      {syncing ? (
+        <div
+          role="progressbar"
+          aria-label="Syncing marketplaces"
+          className="h-0.5 w-full overflow-hidden rounded-full bg-muted"
+        >
+          <div className="h-full w-1/3 animate-pulse rounded-full bg-live" />
+        </div>
+      ) : null}
 
       {registriesQuery.isPending && <RowListSkeleton testId="marketplaces-loading" />}
 

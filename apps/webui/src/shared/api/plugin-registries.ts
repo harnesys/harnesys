@@ -36,6 +36,15 @@ export function removePluginRegistry(id: string) {
     method: 'DELETE',
   });
 }
+export function checkPluginCatalogEntry(
+  orgId: string,
+  body: { registryId: string; pluginName: string },
+) {
+  return apiJson<PluginCatalogEntry>(
+    `/api/orgs/${encodeURIComponent(orgId)}/plugins/catalog-check`,
+    { method: 'POST', body: JSON.stringify(body) },
+  );
+}
 export function listPluginCatalog(params: { q?: string; registryId?: string } = {}) {
   const search = new URLSearchParams();
   if (params.q) {

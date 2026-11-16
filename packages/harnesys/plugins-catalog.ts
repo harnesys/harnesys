@@ -1,4 +1,8 @@
 export {
+  collectComponentKinds,
+  summarizePluginCompat,
+} from './src/application/plugins/compat-summary.ts';
+export {
   findMarketplaceManifest,
   type MarketplaceManifestLocation,
 } from './src/application/plugins/find-marketplace-manifest.ts';

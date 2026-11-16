@@ -156,6 +156,7 @@ export type {
   GrantClass,
   InstallPluginRequest,
   PluginCatalogEntry,
+  PluginCompatSummary,
   PluginComponentSummary,
   PluginDiagnostic,
   PluginGrantSelection,

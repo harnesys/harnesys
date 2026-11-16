@@ -1,7 +1,9 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@harnesys/brix';
 import type {
   ApprovePluginServerBody,
+  CheckPluginCatalogEntryBody,
   InstallPluginBody,
+  PluginCatalogEntry,
   PluginListItem,
   PluginMutationResponse,
   PluginRecordResponse,
@@ -12,6 +14,7 @@ import type {
 } from '@harnesys/contracts';
 import {
   ApprovePluginServerBodySchema,
+  CheckPluginCatalogEntryBodySchema,
   InstallPluginBodySchema,
   SetPluginGrantsBodySchema,
   SetPluginOptionBodySchema,
@@ -19,6 +22,7 @@ import {
 } from '@harnesys/contracts';
 import { z } from 'zod';
 import { ApprovePluginServerUseCase } from '../../application/plugins/approve-plugin-server.use-case.ts';
+import { CheckCatalogEntryUseCase } from '../../application/plugins/check-catalog-entry.use-case.ts';
 import { InstallPluginUseCase } from '../../application/plugins/install-plugin.use-case.ts';
 import { ListPluginsUseCase } from '../../application/plugins/list-plugins.use-case.ts';
 import { RemovePluginUseCase } from '../../application/plugins/remove-plugin.use-case.ts';
@@ -40,11 +44,24 @@ export class PluginsController {
     private readonly approveServer: ApprovePluginServerUseCase,
     private readonly setOption: SetPluginOptionUseCase,
     private readonly removePlugin: RemovePluginUseCase,
+    private readonly checkCatalogEntry: CheckCatalogEntryUseCase,
   ) {}
 
   @Get()
   list(@Param('orgId') orgId: string): Promise<PluginListItem[]> {
     return this.listPlugins.execute({ orgId });
+  }
+
+  @Post('catalog-check')
+  catalogCheck(
+    @Param('orgId') orgId: string,
+    @Body(CheckPluginCatalogEntryBodySchema) body: CheckPluginCatalogEntryBody,
+  ): Promise<PluginCatalogEntry> {
+    return this.checkCatalogEntry.execute({
+      orgId,
+      registryId: body.registryId,
+      pluginName: body.pluginName,
+    });
   }
 
   @Post('install')

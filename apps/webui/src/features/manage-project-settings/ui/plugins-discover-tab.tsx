@@ -1,9 +1,10 @@
 import type { PluginCatalogEntry } from '@harnesys/studio-shared';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { PuzzleIcon, SearchIcon, XIcon } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { LoaderCircleIcon, PuzzleIcon, SearchIcon, XIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { openInstallCatalogPluginDialog } from '@/features/manage-plugins';
 import {
+  checkPluginCatalogEntry,
   pluginCatalogQuery,
   pluginCatalogQueryKey,
   pluginRegistriesQuery,
@@ -146,6 +147,14 @@ export function PluginsDiscoverTab({ projectId }: { projectId: string }) {
         </Select>
       </div>
 
+      {!loading && catalogEntries.length > 0 ? (
+        <p className="text-muted-foreground text-xs leading-4" data-testid="plugin-compat-hint">
+          The percentage is the share of components that install natively; warnings and errors list
+          manifest issues (ignored fields, dropped components). For an entry without a percentage,
+          use Check to inspect it before installing.
+        </p>
+      ) : null}
+
       {loading && <RowListSkeleton rows={4} testId="catalog-loading" />}
 
       {!loading && catalogEntries.length === 0 ? (
@@ -254,6 +263,42 @@ function installSourceLines(entry: PluginCatalogEntry): [string, string][] {
       ];
   }
 }
+function compatTone(percent: number): 'ok' | 'warn' | 'danger' {
+  if (percent === 100) {
+    return 'ok';
+  }
+  if (percent > 0) {
+    return 'warn';
+  }
+  return 'danger';
+}
+function countLabel(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
+function CatalogChips({
+  entry,
+  registryName,
+}: {
+  entry: PluginCatalogEntry;
+  registryName: string;
+}) {
+  const compat = entry.compat;
+  return (
+    <>
+      <RowChip>{registryName}</RowChip>
+      {entry.format ? <RowChip>{entry.format}</RowChip> : null}
+      {compat ? <RowChip tone={compatTone(compat.percent)}>{`${compat.percent}%`}</RowChip> : null}
+      {compat !== undefined && compat.errors > 0 ? (
+        <RowChip tone="danger">{countLabel(compat.errors, 'error')}</RowChip>
+      ) : null}
+      {compat !== undefined && compat.warnings > 0 ? (
+        <RowChip tone="warn">{countLabel(compat.warnings, 'warning')}</RowChip>
+      ) : null}
+      {entry.category ? <RowChip tone="accent">{entry.category}</RowChip> : null}
+      {!entry.installable ? <RowChip tone="danger">unsupported</RowChip> : null}
+    </>
+  );
+}
 function CatalogRow({
   projectId,
   entry,
@@ -269,6 +314,23 @@ function CatalogRow({
   onToggle: () => void;
   onInstalled: (name: string) => Promise<void>;
 }) {
+  const queryClient = useQueryClient();
+  const check = useMutation({
+    mutationFn: () =>
+      checkPluginCatalogEntry(projectId, {
+        registryId: entry.registryId,
+        pluginName: entry.pluginName,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: pluginCatalogQueryKey });
+    },
+    onError: (error) => {
+      toast.add({
+        title: 'Compatibility check failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    },
+  });
   const sourceLines = installSourceLines(entry);
   return (
     <Row
@@ -279,36 +341,43 @@ function CatalogRow({
       meta={entry.version}
       muted={!entry.installable}
       summary={catalogDescription(entry)}
-      chips={
-        <>
-          <RowChip>{registryName}</RowChip>
-          {entry.format ? <RowChip>{entry.format}</RowChip> : null}
-          {entry.category ? <RowChip tone="accent">{entry.category}</RowChip> : null}
-          {!entry.installable ? <RowChip tone="danger">unsupported</RowChip> : null}
-        </>
-      }
+      chips={<CatalogChips entry={entry} registryName={registryName} />}
       onToggle={onToggle}
       expanded={expanded}
       actions={
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground"
-          disabled={!entry.installable}
-          onClick={() => {
-            void openInstallCatalogPluginDialog({
-              projectId,
-              registryId: entry.registryId,
-              pluginName: entry.pluginName,
-            }).then(async (result) => {
-              if (result) {
-                await onInstalled(result.plugin.name);
-              }
-            });
-          }}
-        >
-          Install
-        </Button>
+        <>
+          {entry.compat === undefined ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              disabled={check.isPending}
+              onClick={() => check.mutate()}
+            >
+              {check.isPending ? <LoaderCircleIcon className="animate-spin" /> : null}
+              Check
+            </Button>
+          ) : null}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            disabled={!entry.installable}
+            onClick={() => {
+              void openInstallCatalogPluginDialog({
+                projectId,
+                registryId: entry.registryId,
+                pluginName: entry.pluginName,
+              }).then(async (result) => {
+                if (result) {
+                  await onInstalled(result.plugin.name);
+                }
+              });
+            }}
+          >
+            Install
+          </Button>
+        </>
       }
     >
       {entry.description ? (
@@ -337,10 +406,24 @@ function CatalogRow({
           ))}
         </RowSection>
       ) : null}
+      {entry.compat ? (
+        <RowSection label="Compatibility">
+          <p className="wrap-anywhere px-1 font-mono text-[12px] tabular-nums leading-snug">
+            {`${entry.compat.native} native · ${entry.compat.inert} inert · ${entry.compat.dropped} dropped`}
+          </p>
+        </RowSection>
+      ) : null}
       {entry.inertComponents && entry.inertComponents.length > 0 ? (
         <RowSection label="Inert here" count={entry.inertComponents.length}>
           <p className="wrap-anywhere px-1 font-mono text-[12px] leading-snug">
             {entry.inertComponents.join(' · ')}
+          </p>
+        </RowSection>
+      ) : null}
+      {entry.droppedComponents && entry.droppedComponents.length > 0 ? (
+        <RowSection label="Dropped here" count={entry.droppedComponents.length}>
+          <p className="wrap-anywhere px-1 font-mono text-[12px] leading-snug">
+            {entry.droppedComponents.join(' · ')}
           </p>
         </RowSection>
       ) : null}

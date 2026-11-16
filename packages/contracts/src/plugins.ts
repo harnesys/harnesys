@@ -182,6 +182,23 @@ export const CatalogInstallSourceSchema = z.discriminatedUnion('type', [
 ]);
 export type CatalogInstallSource = z.infer<typeof CatalogInstallSourceSchema>;
 
+export const PluginCompatSummarySchema = z.object({
+  percent: z.number().int().min(0).max(100),
+  native: z.number().int().nonnegative(),
+  inert: z.number().int().nonnegative(),
+  dropped: z.number().int().nonnegative(),
+  warnings: z.number().int().nonnegative(),
+  errors: z.number().int().nonnegative(),
+  checkedAt: z.string().min(1),
+});
+export type PluginCompatSummary = z.infer<typeof PluginCompatSummarySchema>;
+
+export const CheckPluginCatalogEntryBodySchema = z.object({
+  registryId: z.string().trim().min(1),
+  pluginName: z.string().trim().min(1),
+});
+export type CheckPluginCatalogEntryBody = z.infer<typeof CheckPluginCatalogEntryBodySchema>;
+
 export const PluginCatalogEntrySchema = z.object({
   registryId: z.string().min(1),
   pluginName: z.string().min(1),
@@ -196,6 +213,8 @@ export const PluginCatalogEntrySchema = z.object({
   installSource: CatalogInstallSourceSchema.optional(),
   format: z.string().optional(),
   inertComponents: z.array(z.string()).optional(),
+  droppedComponents: z.array(z.string()).optional(),
+  compat: PluginCompatSummarySchema.optional(),
 });
 export type PluginCatalogEntry = z.infer<typeof PluginCatalogEntrySchema>;
 

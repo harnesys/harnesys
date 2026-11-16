@@ -1,3 +1,4 @@
+import type { PluginCompatSummary } from '@harnesys/contracts';
 import type { PluginSourceFormat } from './plugin.ts';
 import type { PluginKind } from './plugin-ir.ts';
 export type RegistryKind = 'claude-marketplace';
@@ -52,6 +53,8 @@ export interface CatalogEntry {
   raw?: Record<string, unknown>;
   format?: PluginSourceFormat | 'unknown';
   inertComponents?: PluginKind[];
+  droppedComponents?: PluginKind[];
+  compat?: PluginCompatSummary;
 }
 export interface ParsedMarketplace {
   name: string;

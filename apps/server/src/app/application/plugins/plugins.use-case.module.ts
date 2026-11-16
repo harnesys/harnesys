@@ -6,6 +6,7 @@ import { RuntimeModule } from '../../infra/runtime/runtime.module.ts';
 import { SecretModule } from '../../infra/secret/secret.module.ts';
 import { AddPluginMarketplaceUseCase } from './add-plugin-marketplace.use-case.ts';
 import { ApprovePluginServerUseCase } from './approve-plugin-server.use-case.ts';
+import { CheckCatalogEntryUseCase } from './check-catalog-entry.use-case.ts';
 import { EnsureDefaultPluginMarketplacesUseCase } from './ensure-default-plugin-marketplaces.use-case.ts';
 import { InstallPluginUseCase } from './install-plugin.use-case.ts';
 import { InvalidatePluginsUseCase } from './invalidate-plugins.use-case.ts';
@@ -34,6 +35,7 @@ const useCases = [
   EnsureDefaultPluginMarketplacesUseCase,
   ListPluginMarketplacesUseCase,
   ListPluginCatalogUseCase,
+  CheckCatalogEntryUseCase,
 ];
 
 @Module({

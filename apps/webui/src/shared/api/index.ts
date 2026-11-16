@@ -71,6 +71,7 @@ export {
 export {
   type AddPluginRegistryRequest,
   addPluginRegistry,
+  checkPluginCatalogEntry,
   listPluginCatalog,
   listPluginRegistries,
   type PluginCatalogEntry,

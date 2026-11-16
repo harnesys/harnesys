@@ -135,6 +135,15 @@ export type CatalogInstallSource =
       url: string;
       sha256?: string;
     };
+export interface PluginCompatSummary {
+  percent: number;
+  native: number;
+  inert: number;
+  dropped: number;
+  warnings: number;
+  errors: number;
+  checkedAt: string;
+}
 export interface PluginCatalogEntry {
   registryId: string;
   pluginName: string;
@@ -149,6 +158,8 @@ export interface PluginCatalogEntry {
   installSource?: CatalogInstallSource;
   format?: PluginSourceFormat | 'unknown';
   inertComponents?: PluginKind[];
+  droppedComponents?: string[];
+  compat?: PluginCompatSummary;
 }
 export interface RemovePluginRequest {
   deleteData?: boolean;

@@ -19,6 +19,7 @@ import {
   resolveGitSource,
   updatePluginCheckout,
 } from '../../infra/plugins/plugin-git.ts';
+import { enrichCatalogEntries } from './catalog-compat.ts';
 
 @Injectable()
 export class SyncPluginMarketplaceUseCase {
@@ -44,7 +45,9 @@ export class SyncPluginMarketplaceUseCase {
       const parsed = parseClaudeMarketplace(JSON.parse(rawText) as unknown, {
         rootHint: location.root,
       });
-      const entries = parsed.entries.map((entry) => ({
+      const syncedPath = synced.path;
+      const enriched = await enrichCatalogEntries(parsed.entries, syncedPath);
+      const entries = enriched.map((entry) => ({
         ...entry,
         registryId: current.id,
       }));

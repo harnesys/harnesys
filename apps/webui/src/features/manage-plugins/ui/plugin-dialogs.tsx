@@ -203,6 +203,10 @@ export function AddRegistryDialog({
         {stage ? <p className="text-muted-foreground text-sm">{stageLabel(stage)}</p> : null}
         {error ? <p className="text-destructive text-sm">{error}</p> : null}
       </FieldGroup>
+      <p className="text-muted-foreground text-xs leading-4">
+        Plugins bundled in the marketplace are scanned for compatibility on add. Entries from
+        external repositories show a Check action in Discover.
+      </p>
       <DialogFooter>
         <Button type="button" variant="outline" disabled={busy} onClick={() => onResolve?.()}>
           Cancel
