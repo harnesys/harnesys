@@ -27,7 +27,7 @@ export function AgentCard({
   return (
     <div
       className={cn(
-        'group/agent relative flex items-center rounded-md transition-colors hover:bg-sidebar-accent/70',
+        'group/agent relative flex items-center rounded-md pl-1 transition-colors hover:bg-sidebar-accent/70',
         selected && 'bg-sidebar-accent text-sidebar-accent-foreground',
       )}
       data-testid={`agent-card-${agent.id}`}
@@ -39,8 +39,8 @@ export function AgentCard({
         className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left"
         onClick={onSelect}
       >
-        <div className="relative inline-flex size-[18px] shrink-0">
-          <AgentRecordAvatar agent={agent} className="size-[18px]" />
+        <div className="relative inline-flex size-4.5 shrink-0">
+          <AgentRecordAvatar agent={agent} className="size-4.5" />
           {hasUnread ? (
             <span
               title="Unread messages"
@@ -52,7 +52,7 @@ export function AgentCard({
         </div>
         <span
           className={cn(
-            'min-w-0 flex-1 truncate text-sm leading-4',
+            'ml-0.5 min-w-0 flex-1 truncate text-sm leading-4',
             status === 'offline' && 'text-muted-foreground',
             hasUnread && 'font-medium',
           )}
