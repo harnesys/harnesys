@@ -28,7 +28,7 @@ export function GitSection() {
     });
   };
   return (
-    <div className="flex flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
+    <div className="flex flex-col gap-0.5 pl-1 group-data-[collapsible=icon]:hidden">
       {showFolders
         ? changes.map((entry) => {
             const open = expanded.has(entry.project.id);

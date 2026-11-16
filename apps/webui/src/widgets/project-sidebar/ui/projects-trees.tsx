@@ -99,7 +99,7 @@ function ProjectRoot({
       tabIndex={0}
       aria-expanded={open}
       className={cn(
-        'group/ws relative flex items-center rounded-md hover:bg-sidebar-accent/70',
+        'group/ws relative flex items-center rounded-md pl-1 hover:bg-sidebar-accent/70',
         'group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center',
         dropState === 'valid' && 'bg-live/15 ring-1 ring-live ring-inset',
         dropState === 'invalid' && 'cursor-not-allowed opacity-60',

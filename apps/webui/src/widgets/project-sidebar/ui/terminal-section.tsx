@@ -186,7 +186,7 @@ export function TerminalSection({
     );
   }
   return (
-    <div className="flex flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
+    <div className="flex flex-col gap-0.5 pl-1 group-data-[collapsible=icon]:hidden">
       {rows.map(({ projectId, session }) => (
         <TerminalRow
           key={session.id}
