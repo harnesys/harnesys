@@ -213,7 +213,6 @@ export function WorktreeSection({
     expandedDirs,
     selectedPaths: activeSelectedPaths,
     renamePath,
-    iconMode: false,
     onToggle: toggleDir,
     onSelect: handleSelect,
     onOpen: handleOpen,

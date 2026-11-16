@@ -2,7 +2,6 @@ import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/shared/lib/utils';
 import { Badge } from '@/shared/ui/badge';
 import { ScrollArea } from '@/shared/ui/scroll-area';
-import { useSidebar } from '@/shared/ui/sidebar';
 import { useAccordionStore } from '../model/accordion.store';
 
 interface AccordionSectionProps {
@@ -37,15 +36,13 @@ export function AccordionSection({
 }: AccordionSectionProps) {
   const collapsed = useAccordionStore((state) => state.collapsed[id] ?? false);
   const toggle = useAccordionStore((state) => state.toggle);
-  const { state, isMobile } = useSidebar();
-  const iconMode = state === 'collapsed' && !isMobile;
-  const shown = iconMode || !collapsed;
+  const shown = !collapsed;
   const hasTrailing = count !== undefined || Boolean(badge) || Boolean(actions);
   return (
     <div className="group/section contents">
       <div
         className={cn(
-          'group/head flex h-7 shrink-0 items-center gap-0.5 rounded-md px-1 transition-colors group-data-[collapsible=icon]:hidden',
+          'group/head flex h-7 shrink-0 items-center gap-0.5 rounded-md px-1 transition-colors',
           'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
           dragging && 'cursor-grabbing opacity-50!',
           dropHint === 'before' && 'shadow-[inset_0_2px_0_0_var(--color-live)]',
@@ -107,7 +104,7 @@ export function AccordionSection({
           <ScrollArea
             data-accordion-content={id}
             horizontal={horizontalScroll}
-            style={iconMode ? { flexGrow: 0, flexBasis: 'auto' } : { flexGrow: size, flexBasis: 0 }}
+            style={{ flexGrow: size, flexBasis: 0 }}
             className="min-h-0"
           >
             {children}

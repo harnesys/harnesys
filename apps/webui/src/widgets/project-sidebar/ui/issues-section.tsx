@@ -16,9 +16,7 @@ import { entityColorTintClass, entityColorTintStyle } from '@/shared/lib/entity-
 import { setEntityRefDrag } from '@/shared/lib/entity-ref-drag';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
-import { useSidebar } from '@/shared/ui/sidebar';
 import { Skeleton } from '@/shared/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
 import { SidebarEmpty } from './sidebar-empty';
 
 export function IssuesSection({
@@ -39,7 +37,7 @@ export function IssuesSection({
   const startCreation = useStartBoardCreation();
   const sorted = [...boards].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   return (
-    <div className="flex flex-col gap-0.5 group-data-[collapsible=icon]:items-center">
+    <div className="flex flex-col gap-0.5">
       {sorted.map((board) => (
         <IssueBoardRow
           key={board.id}
@@ -112,8 +110,6 @@ function IssueBoardRow({
   onSelect: () => void;
   onSettings: () => void;
 }) {
-  const { state, isMobile } = useSidebar();
-  const iconMode = state === 'collapsed' && !isMobile;
   const count = useIssueCountForBoard(boardId);
   const active = useBoardHasActiveIssue(boardId);
   const BoardIcon = resolveBoardIcon(icon);
@@ -122,62 +118,52 @@ function IssueBoardRow({
       className={cn(
         'group/board relative flex items-start rounded-md transition-colors hover:bg-sidebar-accent/70',
         selected && 'bg-sidebar-accent/70 text-sidebar-accent-foreground',
-        'group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center',
       )}
       data-testid={`issue-board-${boardId}`}
       data-selected={selected ? 'true' : 'false'}
       data-active-issue={active ? 'true' : 'false'}
     >
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <button
-              type="button"
-              className="flex min-w-0 flex-1 items-start gap-2 px-2 py-2 text-left group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
-              draggable
-              onDragStart={(event) => {
-                event.dataTransfer.effectAllowed = 'copy';
-                setEntityRefDrag(event.dataTransfer, { kind: 'board', id: boardId, name });
-              }}
-              onClick={onSelect}
-            />
-          }
+      <button
+        type="button"
+        className="flex min-w-0 flex-1 items-start gap-2 px-2 py-2 text-left"
+        draggable
+        onDragStart={(event) => {
+          event.dataTransfer.effectAllowed = 'copy';
+          setEntityRefDrag(event.dataTransfer, { kind: 'board', id: boardId, name });
+        }}
+        onClick={onSelect}
+      >
+        <span
+          className={cn(
+            'relative mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-md',
+            entityColorTintClass(color),
+          )}
+          style={entityColorTintStyle(color)}
         >
-          <span
-            className={cn(
-              'relative mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-md group-data-[collapsible=icon]:mt-0',
-              entityColorTintClass(color),
-            )}
-            style={entityColorTintStyle(color)}
-          >
-            <BoardIcon className="size-3.5" />
-            {active ? (
-              <span
-                title="Issues running"
-                className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-orange-500 ring-2 ring-sidebar"
-                data-testid={`issue-board-active-${boardId}`}
-              >
-                <span className="sr-only">Issues running</span>
-              </span>
-            ) : null}
-          </span>
-          <span className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-            <span className="block truncate text-sm leading-4">{name}</span>
-            <span className="mt-0.5 flex items-baseline justify-between gap-2">
-              <span className="min-w-0 truncate font-mono text-[11px] text-muted-foreground leading-4">
-                {count} {count === 1 ? 'issue' : 'issues'}
-              </span>
+          <BoardIcon className="size-3.5" />
+          {active ? (
+            <span
+              title="Issues running"
+              className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-orange-500 ring-2 ring-sidebar"
+              data-testid={`issue-board-active-${boardId}`}
+            >
+              <span className="sr-only">Issues running</span>
+            </span>
+          ) : null}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm leading-4">{name}</span>
+          <span className="mt-0.5 flex items-baseline justify-between gap-2">
+            <span className="min-w-0 truncate font-mono text-[11px] text-muted-foreground leading-4">
+              {count} {count === 1 ? 'issue' : 'issues'}
             </span>
           </span>
-        </TooltipTrigger>
-        <TooltipContent side="right" hidden={!iconMode}>
-          {active ? `${name} · running` : name}
-        </TooltipContent>
-      </Tooltip>
+        </span>
+      </button>
       <Button
         variant="ghost"
         size="icon-xs"
-        className="absolute top-1 right-1 opacity-0 group-hover/board:opacity-100 group-data-[collapsible=icon]:hidden"
+        className="absolute top-1 right-1 opacity-0 group-hover/board:opacity-100"
         title="Configure board"
         data-testid={`issue-board-config-${boardId}`}
         onClick={(event) => {
@@ -195,7 +181,7 @@ function IssueBoardRow({
 function BoardsEmptyState({ loading, onCreate }: { loading: boolean; onCreate: () => void }) {
   if (loading) {
     return (
-      <div className="flex flex-col gap-1 px-1 group-data-[collapsible=icon]:hidden">
+      <div className="flex flex-col gap-1 px-1">
         <Skeleton className="h-9 w-full" />
         <Skeleton className="h-9 w-full" />
       </div>

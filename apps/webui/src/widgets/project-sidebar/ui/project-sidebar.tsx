@@ -1,12 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { InboxIcon } from 'lucide-react';
-import {
-  Fragment,
-  type MouseEvent as ReactMouseEvent,
-  type ReactNode,
-  useRef,
-  useState,
-} from 'react';
+import { Fragment, type MouseEvent as ReactMouseEvent, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { useIssueBoardStore } from '@/entities/issue';
 import { useProjects } from '@/entities/project';
@@ -40,48 +33,68 @@ import {
   useSidebar,
 } from '@/shared/ui/sidebar';
 import { normalizeShares, useAccordionStore } from '../model/accordion.store';
+import { useSectionAttention } from '../model/section-attention';
 import { useSectionDnd } from '../model/use-section-dnd';
 import { AccordionSection } from './accordion-section';
-import { AgentsSection, AgentsSectionActions } from './agents-section';
-import { AutomationsSection, AutomationsSectionActions } from './automations-section';
-import { GitSectionActions, GitTitle } from './git-menu';
-import { GitSection } from './git-section';
-import { InboxSection } from './inbox-section';
-import { IssuesSection, IssuesSectionActions } from './issues-section';
-import { ProjectsActions, ProjectsTitle, ProjectsTrees } from './projects-section';
+import { sectionParts } from './section-parts';
+import { SectionRail } from './section-rail';
 import { SECTION_META, type SidebarSectionId } from './sections-meta';
 import { SidebarSectionsConfig } from './sidebar-sections-config';
 import { SidebarSectionsVisibility } from './sidebar-sections-visibility';
-import { TerminalSection, TerminalSectionActions } from './terminal-section';
-
-const inboxCountBadge = (errors: number, waiting: number): ReactNode => {
-  const badges: ReactNode[] = [];
-  if (errors > 0) {
-    badges.push(
-      <Badge
-        key="errors"
-        variant="destructive"
-        className="h-4 px-1.5 font-normal text-[10px] tabular-nums leading-none"
-      >
-        {errors}
-      </Badge>,
-    );
-  }
-  if (waiting > 0) {
-    badges.push(
-      <Badge
-        key="waiting"
-        variant="secondary"
-        className="h-4 bg-[var(--color-live)]/15 px-1.5 font-normal text-[10px] text-[var(--color-live)] tabular-nums leading-none"
-      >
-        {waiting}
-      </Badge>,
-    );
-  }
-  return badges.length > 0 ? <span className="flex items-center gap-1">{badges}</span> : null;
-};
 
 type OrderedSectionId = Exclude<SidebarSectionId, 'inbox'>;
+function isIconMode(state: 'expanded' | 'collapsed', isMobile: boolean): boolean {
+  return state === 'collapsed' && !isMobile;
+}
+function railSectionIds(
+  visibleSections: OrderedSectionId[],
+  inboxVisible: boolean,
+): SidebarSectionId[] {
+  return inboxVisible ? ['inbox', ...visibleSections] : visibleSections;
+}
+function startAccordionResize({
+  event,
+  upperId,
+  lowerId,
+  root,
+  onDragging,
+}: {
+  event: ReactMouseEvent;
+  upperId: string;
+  lowerId: string;
+  root: HTMLDivElement | null;
+  onDragging: (pair: string | null) => void;
+}): void {
+  event.preventDefault();
+  const upper = root?.querySelector(`[data-accordion-content="${upperId}"]`);
+  const lower = root?.querySelector(`[data-accordion-content="${lowerId}"]`);
+  if (!upper || !lower) {
+    return;
+  }
+  const upperPx = upper.getBoundingClientRect().height;
+  const lowerPx = lower.getBoundingClientRect().height;
+  const totalPx = upperPx + lowerPx;
+  if (totalPx <= 0) {
+    return;
+  }
+  const startY = event.clientY;
+  onDragging(`${upperId}:${lowerId}`);
+  const onMove = (moveEvent: MouseEvent) => {
+    const current = useAccordionStore.getState().sizes;
+    const pairSum = (current[upperId] ?? 1) + (current[lowerId] ?? 1);
+    const ratio = Math.min(1, Math.max(0, (upperPx + moveEvent.clientY - startY) / totalPx));
+    useAccordionStore
+      .getState()
+      .setSizes({ ...current, [upperId]: pairSum * ratio, [lowerId]: pairSum * (1 - ratio) });
+  };
+  const onUp = () => {
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup', onUp);
+    onDragging(null);
+  };
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+}
 export function ProjectSidebar({
   onResizeStart,
 }: {
@@ -112,7 +125,8 @@ export function ProjectSidebar({
   const boards = useIssueBoardStore((state) => state.boards);
   const terminals = useOrgTerminals();
   const deskPending = !useDeskReady(orgId);
-  const { setOpenMobile, state } = useSidebar();
+  const { setOpenMobile, state, isMobile } = useSidebar();
+  const iconMode = isIconMode(state, isMobile);
   const ideTabs = useIdeTabs();
   const activeThreadId = ideTabs.tabs.find((tab) => tab.id === ideTabs.activeId)?.threadId ?? null;
   const activeAgentId = useThreadStore((state) =>
@@ -127,6 +141,7 @@ export function ProjectSidebar({
   const containerRef = useRef<HTMLDivElement>(null);
   const [dragPair, setDragPair] = useState<string | null>(null);
   const { draggingId, dropHintFor, headerProps } = useSectionDnd();
+  const attention = useSectionAttention();
   const visibleSections = order.filter((id): id is OrderedSectionId => !hidden[id]);
   const expanded = visibleSections.filter((id) => !(collapsed[id] ?? false));
   const inboxVisible = !hidden.inbox;
@@ -159,186 +174,88 @@ export function ProjectSidebar({
         dragging={dragPair === key}
         orientation="vertical"
         revealOnHover
-        onResizeStart={beginResize(pair.upper, pair.lower)}
+        onResizeStart={(event) =>
+          startAccordionResize({
+            event,
+            upperId: pair.upper,
+            lowerId: pair.lower,
+            root: containerRef.current,
+            onDragging: setDragPair,
+          })
+        }
       />
     );
   };
-  const beginResize = (upperId: string, lowerId: string) => (event: ReactMouseEvent) => {
-    event.preventDefault();
-    const root = containerRef.current;
-    const upper = root?.querySelector(`[data-accordion-content="${upperId}"]`);
-    const lower = root?.querySelector(`[data-accordion-content="${lowerId}"]`);
-    if (!upper || !lower) {
-      return;
-    }
-    const upperPx = upper.getBoundingClientRect().height;
-    const lowerPx = lower.getBoundingClientRect().height;
-    const totalPx = upperPx + lowerPx;
-    if (totalPx <= 0) {
-      return;
-    }
-    const startY = event.clientY;
-    setDragPair(`${upperId}:${lowerId}`);
-    const onMove = (moveEvent: MouseEvent) => {
-      const current = useAccordionStore.getState().sizes;
-      const pairSum = (current[upperId] ?? 1) + (current[lowerId] ?? 1);
-      const ratio = Math.min(1, Math.max(0, (upperPx + moveEvent.clientY - startY) / totalPx));
-      useAccordionStore
-        .getState()
-        .setSizes({ ...current, [upperId]: pairSum * ratio, [lowerId]: pairSum * (1 - ratio) });
-    };
-    const onUp = () => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-      setDragPair(null);
-    };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
+  const onSelectDone = () => setOpenMobile(false);
+  const partsContext = {
+    agents,
+    automations,
+    boards,
+    terminals,
+    inboxThreads,
+    errorThreads,
+    projectIds,
+    activeAgentId,
+    activeThreadId,
+    activeBoardId,
+    activeTerminalSessionId,
+    deskPending,
+    onSelectDone,
   };
-  const renderSection = (id: OrderedSectionId, resizer: ReactNode = null) => {
-    const Icon = SECTION_META[id].icon;
-    const drag = {
-      headerDragProps: headerProps(id),
-      dragging: draggingId === id,
-      dropHint: dropHintFor(id),
-    };
-    switch (id) {
-      case 'agents':
-        return (
-          <AccordionSection
-            id="agents"
-            resizer={resizer}
-            icon={<Icon />}
-            title="Agents"
-            count={agents.filter((agent) => !agent.parentId).length}
-            size={shares[id] ?? 1}
-            actions={<AgentsSectionActions onCreated={() => setOpenMobile(false)} />}
-            {...drag}
-          >
-            <AgentsSection
-              agents={agents}
-              activeAgentId={activeAgentId}
-              activeThreadId={activeThreadId}
-              onSelectDone={() => setOpenMobile(false)}
-              loading={deskPending}
-            />
-          </AccordionSection>
-        );
-      case 'projects':
-        return (
-          <AccordionSection
-            id="projects"
-            resizer={resizer}
-            icon={<Icon />}
-            title={<ProjectsTitle />}
-            size={shares[id] ?? 1}
-            actions={<ProjectsActions />}
-            horizontalScroll
-            {...drag}
-          >
-            <ProjectsTrees projectIds={projectIds} />
-          </AccordionSection>
-        );
-      case 'issues':
-        return (
-          <AccordionSection
-            id="issues"
-            resizer={resizer}
-            icon={<Icon />}
-            title="Issues"
-            count={boards.length}
-            size={shares[id] ?? 1}
-            actions={<IssuesSectionActions />}
-            {...drag}
-          >
-            <IssuesSection
-              activeBoardId={activeBoardId}
-              onSelectDone={() => setOpenMobile(false)}
-              loading={deskPending}
-            />
-          </AccordionSection>
-        );
-      case 'automations':
-        return (
-          <AccordionSection
-            id="automations"
-            resizer={resizer}
-            icon={<Icon />}
-            title="Automations"
-            count={automations.length}
-            size={shares[id] ?? 1}
-            actions={
-              <AutomationsSectionActions agents={agents} onDone={() => setOpenMobile(false)} />
-            }
-            {...drag}
-          >
-            <AutomationsSection agents={agents} onSelectDone={() => setOpenMobile(false)} />
-          </AccordionSection>
-        );
-      case 'git':
-        return (
-          <AccordionSection
-            id="git"
-            resizer={resizer}
-            icon={<Icon />}
-            title={<GitTitle />}
-            size={shares[id] ?? 1}
-            actions={<GitSectionActions />}
-            {...drag}
-          >
-            <GitSection />
-          </AccordionSection>
-        );
-      case 'terminal':
-        return (
-          <AccordionSection
-            id="terminal"
-            resizer={resizer}
-            icon={<Icon />}
-            title="Terminal"
-            count={terminals.length}
-            size={shares[id] ?? 1}
-            actions={<TerminalSectionActions onCreated={() => setOpenMobile(false)} />}
-            {...drag}
-          >
-            <TerminalSection
-              activeSessionId={activeTerminalSessionId}
-              onSelectDone={() => setOpenMobile(false)}
-            />
-          </AccordionSection>
-        );
-    }
-  };
+  const partsFor = (id: SidebarSectionId) => sectionParts(id, partsContext);
   return (
     <Sidebar collapsible="icon" data-testid="project-sidebar">
       <SidebarHeader className="flex flex-col gap-1 p-2 group-data-[collapsible=icon]:items-center">
-        <OrgHeader inboxCount={inboxThreads.length + errorThreads.length} />
+        <OrgHeader />
       </SidebarHeader>
 
       <SidebarContent className="gap-1 group-data-[collapsible=icon]:overflow-y-auto">
-        <div ref={containerRef} className="flex min-h-0 flex-auto flex-col gap-1 px-2 pb-2">
-          {inboxVisible ? (
-            <AccordionSection
-              id="inbox"
-              icon={<InboxIcon />}
-              title="Inbox"
-              count={inboxThreads.length + errorThreads.length}
-              badge={inboxCountBadge(errorThreads.length, inboxThreads.length)}
-              size={shares.inbox ?? 1}
-            >
-              <InboxSection
-                threads={[...errorThreads, ...inboxThreads]}
-                activeThreadId={activeThreadId}
-                onSelectDone={() => setOpenMobile(false)}
-              />
-            </AccordionSection>
-          ) : null}
-          {visibleSections.map((id, index) => (
-            <Fragment key={id}>
-              {renderSection(id, index > 0 || inboxExpanded ? resizeNode(id) : null)}
-            </Fragment>
-          ))}
-        </div>
+        {iconMode ? (
+          <SectionRail
+            ids={railSectionIds(visibleSections, inboxVisible)}
+            parts={partsFor}
+            attention={attention}
+          />
+        ) : (
+          <div ref={containerRef} className="flex min-h-0 flex-auto flex-col gap-1 px-2 pb-2">
+            {inboxVisible ? (
+              <AccordionSection
+                id="inbox"
+                resizer={null}
+                icon={partsFor('inbox').icon}
+                title={partsFor('inbox').title}
+                count={partsFor('inbox').count}
+                badge={partsFor('inbox').badge}
+                size={shares.inbox ?? 1}
+              >
+                {partsFor('inbox').content}
+              </AccordionSection>
+            ) : null}
+            {visibleSections.map((id) => {
+              const parts = partsFor(id);
+              return (
+                <Fragment key={id}>
+                  <AccordionSection
+                    id={id}
+                    resizer={resizeNode(id)}
+                    icon={parts.icon}
+                    title={parts.title}
+                    count={parts.count}
+                    badge={parts.badge}
+                    actions={parts.actions}
+                    horizontalScroll={parts.horizontalScroll}
+                    size={shares[id] ?? 1}
+                    headerDragProps={headerProps(id)}
+                    dragging={draggingId === id}
+                    dropHint={dropHintFor(id)}
+                  >
+                    {parts.content}
+                  </AccordionSection>
+                </Fragment>
+              );
+            })}
+          </div>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t">

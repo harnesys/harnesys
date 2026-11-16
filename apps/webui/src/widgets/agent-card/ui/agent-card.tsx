@@ -5,8 +5,6 @@ import { AgentRecordAvatar, statusLabel } from '@/entities/agent';
 import { useAgentHasUnread, useAgentLiveStatus } from '@/features/desk';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
-import { useSidebar } from '@/shared/ui/sidebar';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
 
 interface AgentCardProps {
   agent: Agent;
@@ -24,8 +22,6 @@ export function AgentCard({
   onNewThread,
   threadsFilter,
 }: AgentCardProps) {
-  const { state, isMobile } = useSidebar();
-  const iconMode = state === 'collapsed' && !isMobile;
   const status = useAgentLiveStatus(agent.id);
   const hasUnread = useAgentHasUnread(agent.id);
   return (
@@ -33,57 +29,46 @@ export function AgentCard({
       className={cn(
         'group/agent relative flex items-center rounded-md transition-colors hover:bg-sidebar-accent/70',
         selected && 'bg-sidebar-accent text-sidebar-accent-foreground',
-        'group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center',
       )}
       data-testid={`agent-card-${agent.id}`}
       data-selected={selected ? 'true' : 'false'}
       data-unread={hasUnread ? 'true' : 'false'}
     >
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <button
-              type="button"
-              className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
-              onClick={onSelect}
-            />
-          }
+      <button
+        type="button"
+        className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left"
+        onClick={onSelect}
+      >
+        <div className="relative inline-flex size-[18px] shrink-0">
+          <AgentRecordAvatar agent={agent} className="size-[18px]" />
+          {hasUnread ? (
+            <span
+              title="Unread messages"
+              className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-live ring-2 ring-sidebar"
+            >
+              <span className="sr-only">Unread messages</span>
+            </span>
+          ) : null}
+        </div>
+        <span
+          className={cn(
+            'min-w-0 flex-1 truncate text-sm leading-4',
+            status === 'offline' && 'text-muted-foreground',
+            hasUnread && 'font-medium',
+          )}
         >
-          <div className="relative inline-flex size-[18px] shrink-0">
-            <AgentRecordAvatar agent={agent} className="size-[18px]" />
-            {hasUnread ? (
-              <span
-                title="Unread messages"
-                className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-live ring-2 ring-sidebar"
-              >
-                <span className="sr-only">Unread messages</span>
-              </span>
-            ) : null}
-          </div>
-          <span
-            className={cn(
-              'min-w-0 flex-1 truncate text-sm leading-4 group-data-[collapsible=icon]:hidden',
-              status === 'offline' && 'text-muted-foreground',
-              hasUnread && 'font-medium',
-            )}
-          >
-            {agent.name}
-          </span>
-        </TooltipTrigger>
-        <TooltipContent side="right" hidden={!iconMode}>
           {agent.name}
-          {hasUnread ? ' · unread' : ''}
-        </TooltipContent>
-      </Tooltip>
+        </span>
+      </button>
       <div
         className={cn(
-          'shrink-0 pr-2 font-mono text-[8px] transition-opacity group-hover/agent:opacity-0 group-data-[collapsible=icon]:hidden',
+          'shrink-0 pr-2 font-mono text-[8px] transition-opacity group-hover/agent:opacity-0',
           statusInk(status),
         )}
       >
         {statusLabel(status)}
       </div>
-      <div className="absolute inset-y-0 right-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/agent:opacity-100 has-[:focus-visible]:opacity-100 has-[[data-popup-open]]:opacity-100 group-data-[collapsible=icon]:hidden">
+      <div className="absolute inset-y-0 right-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/agent:opacity-100 has-[:focus-visible]:opacity-100 has-[[data-popup-open]]:opacity-100">
         {onNewThread ? (
           <Button
             type="button"

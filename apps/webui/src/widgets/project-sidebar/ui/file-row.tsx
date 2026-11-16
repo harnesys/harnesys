@@ -8,7 +8,6 @@ import { cn } from '@/shared/lib/utils';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/shared/ui/context-menu';
 import { IconRef } from '@/shared/ui/icon';
 import { FileTypeIcon, FolderTypeIcon } from '@/shared/ui/icons';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
 import { useAddonFileIcon } from '../model/addon-file-icon';
 import { useEntryActions } from '../model/use-entry-actions';
 import type { FileRowMenuProps } from './file-row-actions';
@@ -160,7 +159,6 @@ export function FileRow({
   expandedDirs,
   selectedPaths,
   renamePath,
-  iconMode,
   gitMap,
   gitTruncated,
   onToggle,
@@ -180,7 +178,6 @@ export function FileRow({
   expandedDirs: Set<string>;
   selectedPaths: string[];
   renamePath: string | null;
-  iconMode: boolean;
   gitMap?: GitFileStatusMap;
   gitTruncated?: boolean;
   onToggle: (fullPath: string) => void;
@@ -284,11 +281,10 @@ export function FileRow({
         className={cn(
           'group/file relative flex items-center rounded-md',
           selected && 'bg-sidebar-accent/70 text-sidebar-accent-foreground',
-          'group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center',
           dropState === 'valid' && 'bg-live/15 ring-1 ring-live ring-inset',
           dropState === 'invalid' && 'cursor-not-allowed opacity-60',
         )}
-        style={!iconMode ? { paddingLeft: `${depth * 12 + 1}px` } : undefined}
+        style={{ paddingLeft: `${depth * 12 + 1}px` }}
         data-testid={`file-${fullPath}`}
         data-selected={selected ? 'true' : 'false'}
         data-drop={dropState ?? undefined}
@@ -310,30 +306,21 @@ export function FileRow({
             onFinish={(name) => onRenameFinish(fullPath, name)}
           />
         ) : (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <button
-                  type="button"
-                  className="flex flex-1 items-center gap-1.5 px-1.5 py-0.5 pl-2 text-left group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
-                  onClick={handleClick}
-                  onDoubleClick={handleDoubleClick}
-                />
-              }
-            >
-              <FileRowLabel
-                entry={entry}
-                isDir={isDir}
-                isExpanded={isExpanded}
-                selected={selected}
-                git={git}
-                {...(addonIcon === undefined ? {} : { addonIcon })}
-              />
-            </TooltipTrigger>
-            <TooltipContent side="right" hidden={!iconMode}>
-              {fullPath}
-            </TooltipContent>
-          </Tooltip>
+          <button
+            type="button"
+            className="flex flex-1 items-center gap-1.5 px-1.5 py-0.5 pl-2 text-left"
+            onClick={handleClick}
+            onDoubleClick={handleDoubleClick}
+          >
+            <FileRowLabel
+              entry={entry}
+              isDir={isDir}
+              isExpanded={isExpanded}
+              selected={selected}
+              git={git}
+              {...(addonIcon === undefined ? {} : { addonIcon })}
+            />
+          </button>
         )}
       </ContextMenuTrigger>
       <ContextMenuContent onClick={(event) => event.stopPropagation()}>

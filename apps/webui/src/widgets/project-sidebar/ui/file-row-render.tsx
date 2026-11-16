@@ -10,7 +10,6 @@ export interface FileTreeRowHandlers {
   expandedDirs: Set<string>;
   selectedPaths: string[];
   renamePath: string | null;
-  iconMode: boolean;
   gitMap?: GitFileStatusMap;
   gitTruncated?: boolean;
   onToggle: (fullPath: string) => void;
@@ -60,7 +59,6 @@ export function renderFileTreeRow(row: FlatTreeRow, h: FileTreeRowHandlers): Rea
       expandedDirs={h.expandedDirs}
       selectedPaths={h.selectedPaths}
       renamePath={h.renamePath}
-      iconMode={h.iconMode}
       gitMap={h.gitMap}
       gitTruncated={h.gitTruncated}
       onToggle={h.onToggle}

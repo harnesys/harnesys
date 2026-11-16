@@ -12,8 +12,6 @@ import { formatClock, formatShortDate } from '@/shared/lib/format-clock';
 import { dayKeyInTimeZone } from '@/shared/lib/time-zone';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
-import { useSidebar } from '@/shared/ui/sidebar';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
 import { useThreadActions } from '../model/thread-actions';
 import {
   buildThreadTree,
@@ -165,64 +163,47 @@ function InlineThreadRow({
   onPinToggle?: () => void;
   onDelete?: () => void;
 }) {
-  const { state, isMobile } = useSidebar();
   const timeZone = useOrgTimeZone();
-  const iconMode = state === 'collapsed' && !isMobile;
   const running = useSessionStore((s) => Boolean(s.activeRuns[thread.id]));
   const waiting = useThreadWaiting(thread.id);
   const status = runStatus(running, waiting);
   const hasMenu = Boolean(onPinToggle || onDelete);
-  const statusHint = [status, thread.unread ? 'unread' : null].filter(Boolean).join(' · ');
-  const right = rowRight(status, thread, iconMode, timeZone);
+  const right = rowRight(status, thread, timeZone);
   return (
     <div
       className={cn(
         'group/ithread relative flex items-center rounded-md transition-colors hover:bg-sidebar-accent/70',
         selected && 'bg-sidebar-accent/70 text-sidebar-accent-foreground',
-        'group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center',
       )}
       data-testid={`agent-thread-${thread.id}`}
       data-selected={selected ? 'true' : 'false'}
     >
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <button
-              type="button"
-              className="flex h-6 min-w-0 flex-1 items-center gap-1.5 rounded-md pr-2 pl-2 text-left group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
-              onClick={onSelect}
-            />
-          }
+      <button
+        type="button"
+        className="flex h-6 min-w-0 flex-1 items-center gap-1.5 rounded-md pr-2 pl-2 text-left"
+        onClick={onSelect}
+      >
+        <span className="inline-flex size-3 shrink-0 items-center justify-center text-muted-foreground">
+          <ThreadKindIcon kind={thread.kind} className="size-3" />
+        </span>
+        {thread.pinned ? (
+          <PinIcon className="size-2.5 shrink-0 text-muted-foreground" aria-hidden />
+        ) : null}
+        {thread.parentThreadId ? (
+          <GitBranchIcon className="size-2.5 shrink-0 text-muted-foreground" aria-hidden />
+        ) : null}
+        <span
+          className={cn(
+            'min-w-0 flex-1 truncate text-xs leading-none',
+            thread.unread && 'font-medium',
+          )}
         >
-          <span className="inline-flex size-3 shrink-0 items-center justify-center text-muted-foreground group-data-[collapsible=icon]:size-4 group-data-[collapsible=icon]:text-sidebar-foreground/80">
-            <ThreadKindIcon
-              kind={thread.kind}
-              className="size-3 group-data-[collapsible=icon]:size-4"
-            />
-          </span>
-          {thread.pinned ? (
-            <PinIcon className="size-2.5 shrink-0 text-muted-foreground" aria-hidden />
-          ) : null}
-          {thread.parentThreadId ? (
-            <GitBranchIcon className="size-2.5 shrink-0 text-muted-foreground" aria-hidden />
-          ) : null}
-          <span
-            className={cn(
-              'min-w-0 flex-1 truncate text-xs leading-none group-data-[collapsible=icon]:hidden',
-              thread.unread && 'font-medium',
-            )}
-          >
-            {thread.title}
-          </span>
-          {right}
-        </TooltipTrigger>
-        <TooltipContent side="right" hidden={!iconMode}>
           {thread.title}
-          {statusHint ? ` · ${statusHint}` : ''}
-        </TooltipContent>
-      </Tooltip>
+        </span>
+        {right}
+      </button>
       {hasMenu ? (
-        <div className="hidden items-center gap-0.5 pr-1 group-focus-within/ithread:flex group-hover/ithread:flex group-data-[collapsible=icon]:hidden">
+        <div className="hidden items-center gap-0.5 pr-1 group-focus-within/ithread:flex group-hover/ithread:flex">
           {onPinToggle ? (
             <Button
               variant="ghost"
@@ -275,12 +256,7 @@ function isLiveRunStatus(status: string | undefined): boolean {
   );
 }
 type RunStatus = ReturnType<typeof runStatus>;
-function rowRight(
-  status: RunStatus,
-  thread: Thread,
-  iconMode: boolean,
-  timeZone: string,
-): ReactNode {
+function rowRight(status: RunStatus, thread: Thread, timeZone: string): ReactNode {
   if (status) {
     return (
       <span
@@ -301,9 +277,6 @@ function rowRight(
         <span className="sr-only">unread</span>
       </span>
     );
-  }
-  if (iconMode) {
-    return null;
   }
   return (
     <span className="shrink-0 font-mono text-[10px] text-muted-foreground/70 leading-none group-focus-within/ithread:hidden group-hover/ithread:hidden">

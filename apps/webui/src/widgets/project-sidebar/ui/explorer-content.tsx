@@ -19,7 +19,6 @@ import {
 } from '@/shared/api/files';
 import { getGitFileStatus, gitFileStatusQueryKey } from '@/shared/api/git';
 import { useStudioNavigation } from '@/shared/config/navigation';
-import { useSidebar } from '@/shared/ui/sidebar';
 import { Spinner } from '@/shared/ui/spinner';
 import { toast } from '@/shared/ui/toast';
 import type { ViewerCreateTemplate } from '../model/explorer-draft.store';
@@ -47,8 +46,6 @@ export function ExplorerContent({
   projectId: string;
   depthOffset?: number;
 }) {
-  const { state, isMobile } = useSidebar();
-  const iconMode = state === 'collapsed' && !isMobile;
   const { openFile } = useStudioNavigation();
   const qc = useQueryClient();
   const projects = useProjects().data ?? [];
@@ -265,7 +262,6 @@ export function ExplorerContent({
     expandedDirs,
     selectedPaths: activeSelectedPaths,
     renamePath,
-    iconMode,
     gitMap: gitTruncated ? undefined : gitMap,
     gitTruncated,
     onToggle: toggleDir,
@@ -284,18 +280,18 @@ export function ExplorerContent({
   return (
     <div
       role="tree"
-      className="flex min-h-full flex-col gap-0.5 group-data-[collapsible=icon]:items-center"
+      className="flex min-h-full flex-col gap-0.5"
       onDragOver={handleRootDragOver}
       onDrop={handleRootDrop}
       data-testid={`explorer-content-${projectId}`}
     >
       {gitTruncated ? (
-        <div className="mx-2 mt-1 rounded-md bg-status-warn/10 px-2 py-1 text-[10px] text-status-warn group-data-[collapsible=icon]:hidden">
+        <div className="mx-2 mt-1 rounded-md bg-status-warn/10 px-2 py-1 text-[10px] text-status-warn">
           Large repo — file decorations off. Expand a folder for status.
         </div>
       ) : null}
       {treeQuery.isPending ? (
-        <div className="flex items-center gap-1.5 px-2 py-2 text-muted-foreground group-data-[collapsible=icon]:hidden">
+        <div className="flex items-center gap-1.5 px-2 py-2 text-muted-foreground">
           <Spinner className="size-3" />
           <span className="text-xs">Loading tree…</span>
         </div>
@@ -305,13 +301,13 @@ export function ExplorerContent({
       ) : null}
       <FileTreeWindow
         rows={rows}
-        rowHeight={iconMode ? 32 : 24}
+        rowHeight={24}
         renderRow={renderRow}
         testId={`explorer-rows-${projectId}`}
       />
       {!treeQuery.isPending && rows.length === 0 ? (
         <p
-          className="px-2 py-2 text-muted-foreground text-xs group-data-[collapsible=icon]:hidden"
+          className="px-2 py-2 text-muted-foreground text-xs"
           style={{ paddingLeft: `${8 + depthOffset * 12}px` }}
         >
           Empty source.
