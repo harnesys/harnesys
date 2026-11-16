@@ -165,11 +165,6 @@ function FileTabContent({
       {kind === 'dxf' ? (
         <DxfPreview projectId={projectId} path={path} worktreeId={worktreeId} />
       ) : null}
-      {kind === 'unsupported' ? (
-        <div className="flex flex-1 items-center justify-center px-4 text-muted-foreground text-sm">
-          Preview is not available
-        </div>
-      ) : null}
     </div>
   );
 }

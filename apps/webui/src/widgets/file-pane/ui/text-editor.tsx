@@ -5,6 +5,7 @@ import type { editor } from 'monaco-editor';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { remappedPathAfterMove, useIdeStore } from '@/features/ide';
 import { markProjectFileDirty } from '@/features/open-file';
+import { ApiError } from '@/shared/api';
 import { readProjectFileText, sourceFileContentQueryKey } from '@/shared/api/files';
 import { useEditorPreferences } from '@/shared/lib/editor-preferences';
 import '@/shared/lib/monaco';
@@ -31,6 +32,10 @@ import { defineAppThemes } from './monaco-themes';
 import { TextEditorView } from './text-editor-view';
 
 type FileContent = string;
+
+function isBinaryContentError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 415;
+}
 
 export function TextEditor({
   projectId,
@@ -66,6 +71,7 @@ export function TextEditor({
   const contentQuery = useQuery({
     queryKey: contentKey,
     queryFn: () => readProjectFileText(projectId, path, worktreeId),
+    retry: (_failureCount, error) => !isBinaryContentError(error),
   });
   useEffect(() => {
     if (Object.hasOwn(draftsRef.current, scopeKey)) {
@@ -293,7 +299,9 @@ export function TextEditor({
     if (contentQuery.isError) {
       return (
         <div className="flex flex-1 items-center justify-center bg-background px-4 text-muted-foreground text-sm">
-          Failed to load file
+          {isBinaryContentError(contentQuery.error)
+            ? 'Binary content cannot be shown as text'
+            : 'Failed to load file'}
         </div>
       );
     }

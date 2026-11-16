@@ -39,11 +39,6 @@ export function FilePane() {
         <MediaPreview projectId={projectId} path={active.path} kind={kind} />
       ) : null}
       {kind === 'dxf' ? <DxfPreview projectId={projectId} path={active.path} /> : null}
-      {kind === 'unsupported' ? (
-        <div className="flex flex-1 items-center justify-center px-4 text-muted-foreground text-sm">
-          Preview is not available for this file type
-        </div>
-      ) : null}
     </section>
   );
 }

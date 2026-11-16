@@ -30,11 +30,13 @@ function ThreadTextPreview({ threadId, path }: { threadId: string; path: string 
     queryKey: ['thread-file-text', threadId, path],
     queryFn: async () => (await loadThreadFileContent(threadId, path)).text(),
   });
+  const binary = query.data?.includes('\u0000') === true;
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-thread-file">
       {query.isPending ? <PreviewHint text="Loading…" /> : null}
       {query.isError ? <PreviewHint text="Could not load file." /> : null}
-      {query.data != null ? <TextLines text={query.data} /> : null}
+      {binary ? <PreviewHint text="Binary content cannot be shown as text" /> : null}
+      {query.data != null && !binary ? <TextLines text={query.data} /> : null}
     </div>
   );
 }

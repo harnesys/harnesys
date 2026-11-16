@@ -1,64 +1,10 @@
-export type OpenFileKind = 'text' | 'image' | 'pdf' | 'docx' | 'xlsx' | 'dxf' | 'unsupported';
+export type OpenFileKind = 'text' | 'image' | 'pdf' | 'docx' | 'xlsx' | 'dxf';
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']);
 const DXF_EXTS = new Set(['dxf']);
 const PDF_EXTS = new Set(['pdf']);
 const DOCX_EXTS = new Set(['docx']);
 const XLSX_EXTS = new Set(['xlsx', 'xls']);
 const MARKDOWN_EXTS = new Set(['md', 'mdx', 'markdown']);
-const TEXT_EXTS = new Set([
-  'txt',
-  'md',
-  'mdx',
-  'markdown',
-  'json',
-  'jsonc',
-  'ts',
-  'tsx',
-  'js',
-  'jsx',
-  'mjs',
-  'cjs',
-  'css',
-  'scss',
-  'less',
-  'html',
-  'htm',
-  'xml',
-  'yaml',
-  'yml',
-  'toml',
-  'ini',
-  'env',
-  'sh',
-  'bash',
-  'zsh',
-  'py',
-  'rs',
-  'go',
-  'java',
-  'kt',
-  'swift',
-  'c',
-  'h',
-  'cpp',
-  'hpp',
-  'cs',
-  'sql',
-  'graphql',
-  'vue',
-  'svelte',
-  'astro',
-  'php',
-  'rb',
-  'lua',
-  'r',
-  'dockerfile',
-  'gitignore',
-  'editorconfig',
-  'log',
-  'csv',
-  'tsv',
-]);
 export function fileBasename(path: string): string {
   return path.replaceAll('\\', '/').split('/').pop() ?? path;
 }
@@ -73,6 +19,7 @@ export function fileExtension(path: string): string {
   }
   return base.slice(dot + 1).toLowerCase();
 }
+/** Anything without a dedicated renderer opens as text; the reader rejects binary content. */
 export function openFileKind(path: string): OpenFileKind {
   const ext = fileExtension(path);
   if (IMAGE_EXTS.has(ext)) {
@@ -90,10 +37,7 @@ export function openFileKind(path: string): OpenFileKind {
   if (DXF_EXTS.has(ext)) {
     return 'dxf';
   }
-  if (!ext || TEXT_EXTS.has(ext)) {
-    return 'text';
-  }
-  return 'unsupported';
+  return 'text';
 }
 export function isMarkdownPath(path: string): boolean {
   return MARKDOWN_EXTS.has(fileExtension(path));

@@ -11,15 +11,7 @@ import { editorThemeName } from '../model/editor-setup';
 import { defineAppThemes } from './monaco-themes';
 import '@/shared/lib/monaco';
 
-export type AttachmentPreviewKind =
-  | 'image'
-  | 'video'
-  | 'audio'
-  | 'pdf'
-  | 'text'
-  | 'docx'
-  | 'xlsx'
-  | 'unsupported';
+export type AttachmentPreviewKind = 'image' | 'video' | 'audio' | 'pdf' | 'text' | 'docx' | 'xlsx';
 
 export function attachmentPreviewKind(name: string, mediaType: string): AttachmentPreviewKind {
   if (mediaType.startsWith('image/')) {
@@ -41,7 +33,7 @@ export function attachmentPreviewKind(name: string, mediaType: string): Attachme
   if (byName === 'docx' || byName === 'xlsx') {
     return byName;
   }
-  return 'unsupported';
+  return 'text';
 }
 
 export function AttachmentPreview({
@@ -111,16 +103,6 @@ export function AttachmentPreview({
       </div>
     );
   }
-  if (kind === 'text') {
-    return (
-      <AttachmentTextPreview
-        orgId={orgId}
-        issueId={issueId}
-        attachmentId={attachmentId}
-        name={name}
-      />
-    );
-  }
   if (kind === 'docx' || kind === 'xlsx') {
     if (!url) {
       return (
@@ -132,9 +114,12 @@ export function AttachmentPreview({
     return <DocumentPreview name={name} url={url} />;
   }
   return (
-    <div className="flex flex-1 items-center justify-center px-4 text-muted-foreground text-sm">
-      Preview is not available
-    </div>
+    <AttachmentTextPreview
+      orgId={orgId}
+      issueId={issueId}
+      attachmentId={attachmentId}
+      name={name}
+    />
   );
 }
 
