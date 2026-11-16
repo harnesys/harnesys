@@ -9,12 +9,12 @@ import {
   type OrgLspDiagnosticsFrame,
   openOrgLspEvents,
 } from '@/shared/api/org-lsp';
+import { toOpenableLocations } from './definition-locations';
 import {
   applyMarkers,
   suspendBuiltinDiagnostics,
   toLspPosition,
   toMonacoHover,
-  toMonacoLocations,
 } from './lsp-converters';
 import { type LspGap, resolveLspGap } from './lsp-gap';
 
@@ -165,7 +165,7 @@ export function attachLspBridge(args: LspBridgeArgs): LspBridge {
   });
   const definitionProvider = monaco.languages.registerDefinitionProvider(languageId, {
     provideDefinition: async (_target, position) =>
-      toMonacoLocations(await queryPosition('definition', position), monaco),
+      toOpenableLocations(await queryPosition('definition', position), monaco, sourceId),
   });
   return {
     dispose() {

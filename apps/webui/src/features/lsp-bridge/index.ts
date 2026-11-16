@@ -1,3 +1,4 @@
+export { toOpenableLocations } from './model/definition-locations';
 export {
   attachLspBridge,
   type LspBridge,
