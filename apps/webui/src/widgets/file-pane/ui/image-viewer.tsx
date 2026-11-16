@@ -1,28 +1,33 @@
-import { DownloadIcon, Grid2x2Icon, MaximizeIcon, MinusIcon, PlusIcon } from 'lucide-react';
 import type { CSSProperties, RefObject } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import {
-  TransformComponent,
-  TransformWrapper,
-  useControls,
-  useTransformComponent,
-} from 'react-zoom-pan-pinch';
+import { TransformComponent, TransformWrapper, useControls } from 'react-zoom-pan-pinch';
+import { markProjectFileDirty } from '@/features/open-file';
+import { writeProjectFileBytes } from '@/shared/api/files';
 import { cn } from '@/shared/lib/utils';
-
-interface NaturalSize {
-  width: number;
-  height: number;
-}
+import type { ImageEdits, ImageSize } from '../model/image-edit';
+import {
+  editedBoxOf,
+  exportEditedImage,
+  IDENTITY_EDITS,
+  sameEdits,
+  saveMimeForPath,
+} from '../model/image-edit';
+import { ViewerToolbar } from './image-viewer-toolbar';
 
 type ViewerState =
   | { status: 'loading' }
-  | { status: 'ready'; size: NaturalSize }
+  | { status: 'ready'; size: ImageSize }
   | { status: 'failed' };
 
 const MIN_SCALE = 0.05;
 const MAX_SCALE = 16;
 const FIT_GAP = 16;
 const CHECKER_STORAGE_KEY = 'harnesys:image-viewer:checkerboard';
+
+const CHECKERBOARD: CSSProperties = {
+  backgroundImage: 'repeating-conic-gradient(rgba(128,128,128,0.14) 0% 25%, transparent 0% 50%)',
+  backgroundSize: '24px 24px',
+};
 
 function readCheckerPref(): boolean {
   try {
@@ -40,17 +45,7 @@ function writeCheckerPref(enabled: boolean): void {
   }
 }
 
-const CHECKERBOARD: CSSProperties = {
-  backgroundImage: 'repeating-conic-gradient(rgba(128,128,128,0.14) 0% 25%, transparent 0% 50%)',
-  backgroundSize: '24px 24px',
-};
-
-const TOOL_BUTTON = cn(
-  'inline-flex size-7 items-center justify-center rounded-md',
-  'text-muted-foreground transition-colors hover:bg-accent hover:text-foreground',
-);
-
-function fitScaleFor(size: NaturalSize, rect: DOMRect | null): number {
+function fitScaleFor(size: ImageSize, rect: DOMRect | null): number {
   if (!rect || rect.width < FIT_GAP * 2 || rect.height < FIT_GAP * 2 || size.width < 1) {
     return 1;
   }
@@ -59,138 +54,106 @@ function fitScaleFor(size: NaturalSize, rect: DOMRect | null): number {
   return Math.min(Math.max(Math.min(sx, sy), MIN_SCALE), 1);
 }
 
-function ScaleBadge({ onClick }: { onClick: () => void }) {
-  return useTransformComponent(({ state }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      title="Zoom to fit"
-      className="min-w-12 rounded-md px-1.5 py-1 font-mono text-[11px] text-muted-foreground tabular-nums transition-colors hover:bg-accent hover:text-foreground"
-    >
-      {Math.round(state.scale * 100)}%
-    </button>
-  ));
-}
-
-function ViewerToolbar({
-  url,
-  name,
-  size,
-  areaRef,
-  checker,
-  onToggleChecker,
-}: {
-  url: string;
-  name: string;
-  size: NaturalSize;
-  areaRef: RefObject<HTMLDivElement | null>;
-  checker: boolean;
-  onToggleChecker: () => void;
-}) {
-  const { zoomIn, zoomOut, centerView } = useControls();
-  const fit = (): void => {
-    centerView(fitScaleFor(size, areaRef.current?.getBoundingClientRect() ?? null));
-  };
-  return (
-    <div className="absolute right-3 bottom-3 z-10 flex items-center gap-0.5 rounded-lg border bg-background/90 p-0.5 shadow-sm backdrop-blur-sm">
-      <button type="button" title="Zoom out" onClick={() => zoomOut()} className={TOOL_BUTTON}>
-        <MinusIcon className="size-3.5" />
-      </button>
-      <ScaleBadge onClick={fit} />
-      <button type="button" title="Zoom in" onClick={() => zoomIn()} className={TOOL_BUTTON}>
-        <PlusIcon className="size-3.5" />
-      </button>
-      <div className="mx-1 h-4 w-px bg-border" />
-      <button type="button" title="Fit to window" onClick={fit} className={TOOL_BUTTON}>
-        <MaximizeIcon className="size-3.5" />
-      </button>
-      <button
-        type="button"
-        title="Actual size"
-        onClick={() => centerView(1)}
-        className={TOOL_BUTTON}
-      >
-        <span className="font-mono text-[10px]">1:1</span>
-      </button>
-      <button
-        type="button"
-        title="Transparency checkerboard"
-        aria-pressed={checker}
-        onClick={onToggleChecker}
-        className={cn(TOOL_BUTTON, checker && 'bg-accent text-foreground')}
-      >
-        <Grid2x2Icon className="size-3.5" />
-      </button>
-      <div className="mx-1 h-4 w-px bg-border" />
-      <a href={url} download={name} title="Download image" className={TOOL_BUTTON}>
-        <DownloadIcon className="size-3.5" />
-      </a>
-    </div>
-  );
-}
-
 function ViewerBody({
   url,
   name,
   size,
-  areaRef,
+  edits,
   checker,
+  canSave,
+  saving,
+  saveError,
+  areaRef,
+  onEdits,
   onToggleChecker,
+  onSave,
 }: {
   url: string;
   name: string;
-  size: NaturalSize;
-  areaRef: RefObject<HTMLDivElement | null>;
+  size: ImageSize;
+  edits: ImageEdits;
   checker: boolean;
+  canSave: boolean;
+  saving: boolean;
+  saveError: string | null;
+  areaRef: RefObject<HTMLDivElement | null>;
+  onEdits: (next: ImageEdits) => void;
   onToggleChecker: () => void;
+  onSave: () => void;
 }) {
+  const { centerView } = useControls();
+  const box = editedBoxOf(size, edits);
+  const fit = (): void => {
+    centerView(fitScaleFor(box, areaRef.current?.getBoundingClientRect() ?? null));
+  };
   return (
     <>
       <TransformComponent
         wrapperStyle={{ width: '100%', height: '100%', cursor: 'grab' }}
         wrapperClass="select-none active:cursor-grabbing"
       >
-        <img
-          src={url}
-          alt={name}
-          draggable={false}
-          data-testid="image-preview"
-          style={{
-            width: size.width,
-            height: size.height,
-            display: 'block',
-            pointerEvents: 'none',
-          }}
-        />
+        <div style={{ position: 'relative', width: box.width, height: box.height }}>
+          <img
+            src={url}
+            alt={name}
+            draggable={false}
+            data-testid="image-preview"
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              width: size.width,
+              height: size.height,
+              display: 'block',
+              pointerEvents: 'none',
+              transform: `translate(-50%, -50%) rotate(${edits.rotation}deg) scale(${edits.flipH ? -1 : 1}, ${edits.flipV ? -1 : 1})`,
+            }}
+          />
+        </div>
       </TransformComponent>
       <ViewerToolbar
         url={url}
         name={name}
-        size={size}
-        areaRef={areaRef}
+        edits={edits}
         checker={checker}
+        saveSupported={canSave}
+        saving={saving}
+        saveError={saveError}
+        onFit={fit}
+        onEdits={onEdits}
         onToggleChecker={onToggleChecker}
+        onSave={onSave}
       />
     </>
   );
 }
 
-export function ImageViewer({ url, name }: { url: string; name: string }) {
+export function ImageViewer({
+  url,
+  path,
+  projectId,
+  worktreeId,
+}: {
+  url: string;
+  path: string;
+  projectId?: string;
+  worktreeId?: string;
+}) {
   const areaRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<ViewerState>({ status: 'loading' });
   const [checker, setChecker] = useState(readCheckerPref);
-
-  function toggleChecker(): void {
-    setChecker((previous) => {
-      const next = !previous;
-      writeCheckerPref(next);
-      return next;
-    });
-  }
+  const [edits, setEdits] = useState<ImageEdits>(IDENTITY_EDITS);
+  const [savedEdits, setSavedEdits] = useState<ImageEdits>(IDENTITY_EDITS);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const canSave = Boolean(projectId) && saveMimeForPath(path) !== null;
 
   useEffect(() => {
     let alive = true;
     setState({ status: 'loading' });
+    setEdits(IDENTITY_EDITS);
+    setSavedEdits(IDENTITY_EDITS);
+    setSaveError(null);
     const image = new Image();
     image.onload = (): void => {
       if (!alive) {
@@ -212,8 +175,62 @@ export function ImageViewer({ url, name }: { url: string; name: string }) {
     };
   }, [url]);
 
+  useEffect(() => {
+    if (!projectId) {
+      return;
+    }
+    markProjectFileDirty(projectId, path, !sameEdits(edits, savedEdits));
+  }, [projectId, path, edits, savedEdits]);
+
+  async function handleSave(): Promise<void> {
+    if (state.status !== 'ready' || !projectId || saving) {
+      return;
+    }
+    const mime = saveMimeForPath(path);
+    if (!mime) {
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const bytes = await exportEditedImage(url, edits, mime);
+      await writeProjectFileBytes(projectId, { path, bytes, worktreeId });
+      setSavedEdits(edits);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Could not save image');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!canSave) {
+      return;
+    }
+    function onKey(event: KeyboardEvent): void {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        void handleSave();
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
+  });
+
   const rect = areaRef.current?.getBoundingClientRect() ?? null;
-  const initialScale = state.status === 'ready' ? fitScaleFor(state.size, rect) : 1;
+  const initialScale =
+    state.status === 'ready' ? fitScaleFor(editedBoxOf(state.size, edits), rect) : 1;
+  const fileName = path.slice(path.lastIndexOf('/') + 1);
+
+  function toggleChecker(): void {
+    setChecker((previous) => {
+      const next = !previous;
+      writeCheckerPref(next);
+      return next;
+    });
+  }
 
   return (
     <div
@@ -244,11 +261,17 @@ export function ImageViewer({ url, name }: { url: string; name: string }) {
         >
           <ViewerBody
             url={url}
-            name={name}
+            name={fileName}
             size={state.size}
-            areaRef={areaRef}
+            edits={edits}
             checker={checker}
+            canSave={canSave}
+            saving={saving}
+            saveError={saveError}
+            areaRef={areaRef}
+            onEdits={setEdits}
             onToggleChecker={toggleChecker}
+            onSave={handleSave}
           />
         </TransformWrapper>
       ) : null}

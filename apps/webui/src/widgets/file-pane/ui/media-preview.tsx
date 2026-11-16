@@ -49,5 +49,5 @@ export function MediaPreview({
   if (kind === 'docx' || kind === 'xlsx') {
     return <DocumentPreview name={path} url={url} />;
   }
-  return <ImageViewer url={url} name={path} />;
+  return <ImageViewer url={url} path={path} projectId={projectId} worktreeId={worktreeId} />;
 }
