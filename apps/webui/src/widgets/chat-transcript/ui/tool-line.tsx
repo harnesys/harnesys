@@ -66,7 +66,12 @@ function artifactBodyOf(
   if (image && threadId) {
     return (
       <div className="pb-1">
-        <ImageArtifact threadId={threadId} attachmentId={image.attachmentId} name={image.name} />
+        <ImageArtifact
+          threadId={threadId}
+          attachmentId={image.attachmentId}
+          name={image.name}
+          mediaType={image.mediaType}
+        />
       </div>
     );
   }
@@ -181,12 +186,7 @@ export function ToolLine({
         badges={badges}
         active={active}
         failed={failed}
-        defaultOpen={
-          image !== null ||
-          file !== null ||
-          isAutoOpen(feedDetail, live) ||
-          (feedDetail !== 'manual' && Boolean(map))
-        }
+        defaultOpen={isAutoOpen(feedDetail, live) || (feedDetail !== 'manual' && Boolean(map))}
         hasContent
         tail={
           hasInput ? (

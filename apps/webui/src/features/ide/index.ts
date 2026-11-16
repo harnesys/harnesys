@@ -18,6 +18,7 @@ export { workspaceFromPersisted } from './model/ide-persist';
 export { afterProjectRemoved, useIdeSync } from './model/ide-sync';
 export { useFileLinkComponents } from './model/markdown-file-link';
 export {
+  openThreadFileTab,
   pathForIdeTab,
   useOpenAttachmentTab,
   useOpenIdeTab,

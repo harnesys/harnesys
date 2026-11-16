@@ -81,6 +81,7 @@ function renderAttachment(attachment: RunAttachment, threadId: string) {
         threadId={threadId}
         attachmentId={attachment.info.attachmentId}
         name={attachment.info.name}
+        mediaType={attachment.info.mediaType}
       />
     );
   }

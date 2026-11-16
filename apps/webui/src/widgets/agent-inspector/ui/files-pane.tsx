@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { useThreadFeeds } from '@/entities/session';
 import { useThreadWorktreeStore } from '@/entities/thread';
 import { useSelectedThread } from '@/features/desk';
-import { useIdeStore } from '@/features/ide';
+import { openThreadFileTab, useIdeStore } from '@/features/ide';
 import { openProjectFile } from '@/features/open-file';
 import { listThreadAttachments, listThreadFiles } from '@/shared/api';
 import { type ContentEntry, type ContentTreeResponse, listContentTree } from '@/shared/api/content';
@@ -26,7 +26,7 @@ export function FilesPane() {
   }
   return (
     <div className="flex flex-col gap-5">
-      <ThreadFilesSection orgId={thread.orgId} threadId={thread.id} />
+      <ThreadFilesSection threadId={thread.id} />
       <ThreadSandboxSection orgId={thread.orgId} threadId={thread.id} />
       <WorkspaceSection
         orgId={thread.orgId}
@@ -75,7 +75,7 @@ function mergeThreadFiles(
   return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function ThreadFilesSection({ orgId, threadId }: { orgId?: string; threadId: string }) {
+function ThreadFilesSection({ threadId }: { threadId: string }) {
   const feeds = useThreadFeeds(threadId);
   const uploadsQuery = useQuery({
     queryKey: ['thread-attachments', threadId],
@@ -104,8 +104,7 @@ function ThreadFilesSection({ orgId, threadId }: { orgId?: string; threadId: str
                 />
               }
               onClick={() =>
-                orgId &&
-                useIdeStore.getState().openThreadFile(orgId, threadId, file.name, file.attachmentId)
+                openThreadFileTab(threadId, file.name, file.attachmentId, file.mediaType)
               }
             />
           ))}
@@ -193,9 +192,7 @@ function ThreadSandboxEntry({
           )
         }
         onClick={() =>
-          isDir
-            ? setOpen((value) => !value)
-            : useIdeStore.getState().openThreadFile(orgId, threadId, entry.path)
+          isDir ? setOpen((value) => !value) : openThreadFileTab(threadId, entry.path)
         }
       />
       {isDir && open

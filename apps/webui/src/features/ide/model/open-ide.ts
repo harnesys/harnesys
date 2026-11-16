@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { deskTerminalsKey, useDeskStore } from '@/features/desk';
+import { getActiveOrgId } from '@/shared/api/active-org';
 import { createTerminal } from '@/shared/api/terminals';
 import { useStudioNavigation } from '@/shared/config/navigation';
 import { studioPath } from '@/shared/config/routes';
@@ -49,6 +50,18 @@ export function useOpenAttachmentTab(orgId: string) {
     useIdeStore.getState().openAttachment(projectId, input);
     void navigate(studioPath.attachment(orgId, projectId, input.issueId, input.attachmentId));
   };
+}
+export function openThreadFileTab(
+  threadId: string,
+  path: string,
+  attachmentId?: string,
+  mediaType?: string,
+): void {
+  const projectId = getActiveOrgId();
+  if (!projectId) {
+    return;
+  }
+  useIdeStore.getState().openThreadFile(projectId, threadId, path, attachmentId, mediaType);
 }
 export function useOpenThreadTab() {
   const { openThread } = useStudioNavigation();

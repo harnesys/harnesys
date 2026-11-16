@@ -211,6 +211,7 @@ export function IdeTabContent({ tab, projectId }: { tab: IdeTab; projectId: stri
         threadId={tab.threadId}
         path={tab.path}
         attachmentId={tab.attachmentId}
+        mediaType={tab.mediaType}
       />
     );
   }

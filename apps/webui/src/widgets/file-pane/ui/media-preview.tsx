@@ -1,8 +1,7 @@
 import type { OpenFileKind } from '@/features/open-file';
 import { useAuthedBlobUrl } from '@/shared/api/blob-url';
 import { loadProjectFileBlob } from '@/shared/api/files';
-import { DocumentPreview } from '@/widgets/ide-content/ui/document-preview';
-import { ImageViewer } from './image-viewer';
+import { FilePreview } from './file-preview';
 
 export function MediaPreview({
   projectId,
@@ -32,22 +31,18 @@ export function MediaPreview({
   if (!url) {
     return (
       <div className="flex h-full w-full items-center justify-center p-4 text-muted-foreground text-sm">
-        Loading…
+        Loading...
       </div>
     );
   }
-  if (kind === 'pdf') {
-    return (
-      <iframe
-        title={path}
-        src={url}
-        className="h-full w-full border-0 bg-background"
-        data-testid="pdf-preview"
-      />
-    );
-  }
-  if (kind === 'docx' || kind === 'xlsx') {
-    return <DocumentPreview name={path} url={url} />;
-  }
-  return <ImageViewer url={url} path={path} projectId={projectId} worktreeId={worktreeId} />;
+  return (
+    <FilePreview
+      url={url}
+      name={path}
+      kind={kind}
+      path={path}
+      projectId={projectId}
+      worktreeId={worktreeId}
+    />
+  );
 }

@@ -76,6 +76,7 @@ type IdeStore = IdeState & {
     threadId: string,
     path: string,
     attachmentId?: string,
+    mediaType?: string,
   ) => void;
   openTerminal: (projectId: string, sessionId: string) => void;
   closeTab: (tabId: string) => void;
@@ -169,7 +170,7 @@ export const useIdeStore = create<IdeStore>((set) => ({
       };
       return withWs(state, upsertTabState(state.workspace, tab));
     }),
-  openThreadFile: (projectId, threadId, path, attachmentId) =>
+  openThreadFile: (projectId, threadId, path, attachmentId, mediaType) =>
     set((state) => {
       const key = attachmentId
         ? `${threadId}:att:${attachmentId}`
@@ -182,6 +183,7 @@ export const useIdeStore = create<IdeStore>((set) => ({
         threadId,
         path,
         ...(attachmentId ? { attachmentId } : {}),
+        ...(mediaType ? { mediaType } : {}),
       };
       return withWs(state, upsertTabState(state.workspace, tab));
     }),

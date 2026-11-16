@@ -1,6 +1,7 @@
 import { CheckIcon, CopyIcon, DownloadIcon } from 'lucide-react';
 import { useState } from 'react';
 import type { ToolEventPair } from '@/entities/session';
+import { openThreadFileTab } from '@/features/ide';
 import { loadThreadAttachment } from '@/shared/api';
 import { useAuthedBlobUrl } from '@/shared/api/blob-url';
 import { cn } from '@/shared/lib/utils';
@@ -9,6 +10,7 @@ import { asObject, parseJson, str } from '../model/tool-json';
 export interface ImageArtifactInfo {
   attachmentId: string;
   name: string;
+  mediaType: string;
 }
 
 export function parseImageArtifact(pair: ToolEventPair): ImageArtifactInfo | null {
@@ -23,7 +25,7 @@ export function parseImageArtifact(pair: ToolEventPair): ImageArtifactInfo | nul
   if (!obj || !attachmentId || !mediaType) {
     return null;
   }
-  return { attachmentId, name: str(obj, 'name') ?? attachmentId };
+  return { attachmentId, name: str(obj, 'name') ?? attachmentId, mediaType };
 }
 
 const COPY_FLASH_MS = 1500;
@@ -56,10 +58,12 @@ export function ImageArtifact({
   threadId,
   attachmentId,
   name,
+  mediaType,
 }: {
   threadId: string;
   attachmentId: string;
   name: string;
+  mediaType: string;
 }) {
   const { url, error } = useAuthedBlobUrl(
     () => loadThreadAttachment(threadId, attachmentId),
@@ -90,30 +94,30 @@ export function ImageArtifact({
     })();
   };
   return (
-    <div className="flex flex-col gap-1">
+    <div className="group relative inline-flex max-w-full">
       <button
         type="button"
         aria-label={`Open ${name}`}
-        className="cursor-zoom-in self-start"
-        onClick={() => window.open(url, '_blank')}
+        className="cursor-zoom-in"
+        onClick={() => openThreadFileTab(threadId, name, attachmentId, mediaType)}
       >
         <img src={url} alt={name} className="max-h-80 max-w-sm rounded-lg border" />
       </button>
-      <div className="flex items-center gap-1">
+      <div className="pointer-events-none absolute right-2 bottom-2 flex items-center gap-1 rounded-lg bg-black/55 p-0.5 opacity-0 backdrop-blur-sm transition-opacity duration-150 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
         <button
           type="button"
           title="Copy image name"
           onClick={copyName}
           className={cn(
-            'inline-flex h-5 min-w-0 max-w-64 items-center gap-1 rounded border px-1.5',
-            'font-mono text-[10px] text-muted-foreground transition-colors hover:text-foreground',
+            'inline-flex h-5 min-w-0 max-w-56 items-center gap-1 rounded border border-white/25 px-1.5',
+            'font-mono text-[10px] text-white/85 transition-colors hover:border-white/40 hover:text-white',
             copied && 'text-status-ok',
           )}
         >
           {copied ? (
             <CheckIcon className="size-3 shrink-0 text-status-ok" />
           ) : (
-            <CopyIcon className="size-3 shrink-0 opacity-60" />
+            <CopyIcon className="size-3 shrink-0 opacity-70" />
           )}
           <span className="truncate">{name}</span>
         </button>
@@ -122,8 +126,8 @@ export function ImageArtifact({
           title="Copy image to clipboard"
           onClick={copyImage}
           className={cn(
-            'inline-flex size-5 items-center justify-center rounded border',
-            'text-muted-foreground transition-colors hover:text-foreground',
+            'inline-flex size-5 items-center justify-center rounded border border-white/25',
+            'text-white/85 transition-colors hover:border-white/40 hover:text-white',
             imageCopied && 'text-status-ok',
           )}
         >
@@ -138,8 +142,8 @@ export function ImageArtifact({
           download={name}
           title="Download image"
           className={cn(
-            'inline-flex size-5 items-center justify-center rounded border',
-            'text-muted-foreground transition-colors hover:text-foreground',
+            'inline-flex size-5 items-center justify-center rounded border border-white/25',
+            'text-white/85 transition-colors hover:border-white/40 hover:text-white',
           )}
         >
           <DownloadIcon className="size-3" />

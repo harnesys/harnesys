@@ -1,5 +1,6 @@
 import { DownloadIcon } from 'lucide-react';
 import type { ToolEventPair } from '@/entities/session';
+import { openThreadFileTab } from '@/features/ide';
 import { loadThreadAttachment } from '@/shared/api';
 import { useAuthedBlobUrl } from '@/shared/api/blob-url';
 import { cn } from '@/shared/lib/utils';
@@ -67,19 +68,31 @@ export function FileArtifact({
     return <div className="h-9 w-72 max-w-full animate-pulse rounded-lg border bg-muted/40" />;
   }
   return (
-    <a
-      href={url}
-      download={name}
-      title={`${mediaType} · ${formatBytes(size)} · click to download`}
-      className={cn(
-        'inline-flex h-9 max-w-md items-center gap-2 rounded-lg border px-2.5',
-        'bg-muted/30 text-foreground transition-colors hover:bg-muted/60',
-      )}
-    >
-      <FileTypeIcon name={name} mediaType={mediaType} size="sm" />
-      <span className="truncate font-mono text-[11px]">{name}</span>
-      <span className="shrink-0 text-[10px] text-muted-foreground">{formatBytes(size)}</span>
-      <DownloadIcon className="size-3.5 shrink-0 text-muted-foreground" />
-    </a>
+    <div className="flex items-center gap-1">
+      <button
+        type="button"
+        title={`${mediaType} · ${formatBytes(size)}`}
+        onClick={() => openThreadFileTab(threadId, name, attachmentId, mediaType)}
+        className={cn(
+          'inline-flex h-9 max-w-md items-center gap-2 rounded-lg border px-2.5',
+          'bg-muted/30 text-foreground transition-colors hover:bg-muted/60',
+        )}
+      >
+        <FileTypeIcon name={name} mediaType={mediaType} size="sm" />
+        <span className="truncate font-mono text-[11px]">{name}</span>
+        <span className="shrink-0 text-[10px] text-muted-foreground">{formatBytes(size)}</span>
+      </button>
+      <a
+        href={url}
+        download={name}
+        title="Download"
+        className={cn(
+          'inline-flex size-7 shrink-0 items-center justify-center rounded-lg border',
+          'text-muted-foreground transition-colors hover:text-foreground',
+        )}
+      >
+        <DownloadIcon className="size-3.5" />
+      </a>
+    </div>
   );
 }
