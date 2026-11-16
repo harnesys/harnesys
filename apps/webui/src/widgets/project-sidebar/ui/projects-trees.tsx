@@ -1,4 +1,3 @@
-import { PlusIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useProjects } from '@/entities/project';
 import { openAddSourceDialog } from '@/features/attach-source';
@@ -15,11 +14,11 @@ import type { BridgedProject } from '@/shared/api/projects';
 import { useOrgId } from '@/shared/config/location';
 import { setEntityRefDrag } from '@/shared/lib/entity-ref-drag';
 import { cn } from '@/shared/lib/utils';
-import { Button } from '@/shared/ui/button';
 import { useExplorerExpandStore } from '../model/explorer-expand.store';
 import { useHiddenSourceIds, useSourceVisibilityStore } from '../model/source-visibility.store';
 import { useOrgGitSummaries } from '../model/use-git-changes';
 import { ProjectRootMenu } from './project-root-menu';
+import { SidebarEmpty } from './sidebar-empty';
 import { SourceBranches } from './source-branches';
 import { SourceRootIcon } from './source-root-icon';
 
@@ -169,39 +168,24 @@ export function ProjectsTrees({ projectIds }: { projectIds: string[] }) {
   }, [visibleIds, pruneRoots]);
   if (projectIds.length === 0) {
     return (
-      <div className="flex flex-col gap-2 px-2 py-2 group-data-[collapsible=icon]:hidden">
-        <p className="text-muted-foreground text-xs">No sources yet.</p>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          data-testid="projects-empty-add"
-          onClick={() => {
-            void openAddSourceDialog();
-          }}
-        >
-          <PlusIcon className="size-3.5" />
-          Add source
-        </Button>
-      </div>
+      <SidebarEmpty
+        title="No sources yet"
+        onAction={() => {
+          void openAddSourceDialog();
+        }}
+        testId="projects-empty-add"
+      />
     );
   }
   if (visibleIds.length === 0) {
     return (
-      <div className="flex flex-col gap-2 px-2 py-2 group-data-[collapsible=icon]:hidden">
-        <p className="text-muted-foreground text-xs">All sources are hidden.</p>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          data-testid="projects-show-all"
-          onClick={() => {
-            showAll(orgId);
-          }}
-        >
-          Show all
-        </Button>
-      </div>
+      <SidebarEmpty
+        title="All sources are hidden"
+        onAction={() => {
+          showAll(orgId);
+        }}
+        testId="projects-show-all"
+      />
     );
   }
   return (

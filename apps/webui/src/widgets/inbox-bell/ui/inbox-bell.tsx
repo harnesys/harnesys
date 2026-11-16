@@ -6,9 +6,10 @@ import { useErroredThreads } from '@/features/desk';
 import { watchApprovalEvents } from '@/shared/api/events';
 import { useOrgId } from '@/shared/config/location';
 import { useStudioNavigation } from '@/shared/config/navigation';
+import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 
-export function InboxBell() {
+export function InboxBell({ className }: { className?: string }) {
   const orgId = useOrgId() ?? '';
   const { openInbox } = useStudioNavigation();
   const queryClient = useQueryClient();
@@ -35,7 +36,7 @@ export function InboxBell() {
         openInbox();
       }}
       data-testid="inbox-bell"
-      className="relative"
+      className={cn('relative text-muted-foreground', className)}
     >
       <BellIcon />
       {count > 0 ? (

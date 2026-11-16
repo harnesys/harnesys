@@ -12,7 +12,6 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/shared/ui/sideb
 import { AgentInspector } from '@/widgets/agent-inspector';
 import { FileInspector } from '@/widgets/file-inspector';
 import { IdeHome } from '@/widgets/ide-home';
-import { InboxBell } from '@/widgets/inbox-bell';
 import { ProjectSidebar } from '@/widgets/project-sidebar';
 import { useInspectorWidth } from '../model/inspector-width';
 import { useSidebarWidth } from '../model/sidebar-width';
@@ -67,7 +66,6 @@ function ProjectShell({
             <div className="flex h-11 shrink-0 items-center gap-2 px-3">
               <SidebarTrigger />
               <div className="ml-auto flex items-center gap-1">
-                <InboxBell />
                 <Button
                   variant="ghost"
                   size="icon-sm"
