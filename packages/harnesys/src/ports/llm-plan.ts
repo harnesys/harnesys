@@ -1,5 +1,6 @@
 export type ContextFileSkipReason =
   | 'missing'
+  | 'not-a-file'
   | 'blocked'
   | 'binary'
   | 'empty'

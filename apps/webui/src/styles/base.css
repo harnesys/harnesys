@@ -80,30 +80,22 @@
   will-change: transform, opacity;
 }
 
-@keyframes thinking-shimmer {
-  0% {
-    background-position: 100% 50%;
-  }
+/* Active step: brightness pulse over the dimmed label. Opacity-only on purpose:
+   a background-position wave forces a text repaint + layer commit every frame in
+   WebKit (measured 84% of main-thread time on a live run); opacity stays on the
+   compositor, same trick as the live-dot ripple. */
+@keyframes thinking-text-pulse {
+  0%,
   100% {
-    background-position: -100% 50%;
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
   }
 }
 
-/* Active step: a wave of the theme accent color over dimmed text. */
-.thinking-shimmer {
-  background-image: linear-gradient(
-    90deg,
-    var(--muted-foreground) 0%,
-    var(--muted-foreground) 35%,
-    var(--color-white) 50%,
-    var(--muted-foreground) 65%,
-    var(--muted-foreground) 100%
-  );
-  background-size: 200% 100%;
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  animation: thinking-shimmer 2.6s linear infinite;
+.thinking-text-pulse {
+  animation: thinking-text-pulse 2.6s ease-in-out infinite;
 }
 
 @keyframes thinking-icon-pulse {
@@ -176,7 +168,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .live-dot::after,
-  .thinking-shimmer,
+  .thinking-text-pulse,
   .thinking-icon-pulse,
   .animate-tab-enter {
     animation: none;
@@ -184,11 +176,6 @@
 
   .markdown[data-streaming="true"] > :last-child::after {
     animation: none;
-  }
-
-  .thinking-shimmer {
-    color: var(--muted-foreground);
-    background: none;
   }
 
   .thinking-icon-pulse {

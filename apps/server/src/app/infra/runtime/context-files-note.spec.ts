@@ -116,6 +116,12 @@ describe('resolveContextFiles', () => {
     expect(result.entries[0]?.skipped).toBe('binary');
   });
 
+  it('skips a directory with a dedicated reason', () => {
+    mkdirSync(join(root, 'notes'));
+    const result = resolveContextFiles(policyWith('notes'), root);
+    expect(result.entries[0]?.skipped).toBe('not-a-file');
+  });
+
   it('truncates a huge file and still injects the head', () => {
     writeFileSync(join(root, 'big.md'), 'x'.repeat(CONTEXT_FILE_MAX_CHARS + 500));
     const result = resolveContextFiles(policyWith('big.md'), root);

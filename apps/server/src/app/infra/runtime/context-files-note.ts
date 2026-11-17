@@ -9,10 +9,14 @@ import {
 } from 'harnesys';
 import { contextFilesOf, type ThreadPolicy } from '../../domain/thread/thread-policy.ts';
 
-/** Per-file ceiling: a huge rules file must not crowd out the conversation. */
+/**
+ * Per-file ceiling in bytes: a huge rules file must not crowd out the
+ * conversation. The total budget below is counted in JS chars, so CJK-heavy
+ * files consume less of it than their byte size suggests.
+ */
 export const CONTEXT_FILE_MAX_CHARS = 32 * 1024;
 
-/** Total ceiling across every injected file. */
+/** Total ceiling across every injected file, in JS chars. */
 export const CONTEXT_FILES_TOTAL_CHARS = 64 * 1024;
 
 const TRUNCATED_MARKER = '\n\n[truncated]';
@@ -103,7 +107,7 @@ function loadContextFile(
       return { skipped: 'blocked' };
     }
     if (!statSync(realFile).isFile()) {
-      return { skipped: 'missing' };
+      return { skipped: 'not-a-file' };
     }
     const buffer = readFileSync(realFile);
     if (buffer.length === 0) {

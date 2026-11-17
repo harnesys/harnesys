@@ -66,7 +66,7 @@ export function FeedNotice({
           )}
         >
           <Icon className={cn('size-3.5 shrink-0 opacity-80', pending && 'thinking-icon-pulse')} />
-          <span className={cn(pending && 'thinking-shimmer')}>{label}</span>
+          <span className={cn(pending && 'thinking-text-pulse')}>{label}</span>
         </span>
         {meta ? (
           <span className="inline-flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">

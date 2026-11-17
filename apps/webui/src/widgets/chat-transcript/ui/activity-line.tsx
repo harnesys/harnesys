@@ -59,7 +59,10 @@ export function ActivityLine({
             )}
           />
           <span
-            className={cn('shrink-0 font-medium text-foreground/90', active && 'thinking-shimmer')}
+            className={cn(
+              'shrink-0 font-medium text-foreground/90',
+              active && 'thinking-text-pulse',
+            )}
           >
             {label}
           </span>
