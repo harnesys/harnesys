@@ -10,6 +10,7 @@ export interface BreakdownRow {
 
 const SYSTEM_LABELS: Record<string, string> = {
   'system.prompt': 'System prompt',
+  'system.context': 'Context files',
   'system.channel': 'Channel note',
   'system.runtime': 'Runtime',
 };

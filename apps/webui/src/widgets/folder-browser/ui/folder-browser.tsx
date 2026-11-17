@@ -156,21 +156,23 @@ export function FolderBrowser({
             Loading…
           </div>
         ) : null}
-        {(listing?.entries ?? []).map((entry) => (
-          <Button
-            key={entry.path}
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start font-normal"
-            onClick={() => enter(entry.path)}
-          >
-            <span data-icon="inline-start" className="inline-flex shrink-0">
-              <FolderTypeIcon size="sm" />
-            </span>
-            {entry.name}
-          </Button>
-        ))}
+        {(listing?.entries ?? [])
+          .filter((entry) => entry.kind !== 'file')
+          .map((entry) => (
+            <Button
+              key={entry.path}
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start font-normal"
+              onClick={() => enter(entry.path)}
+            >
+              <span data-icon="inline-start" className="inline-flex shrink-0">
+                <FolderTypeIcon size="sm" />
+              </span>
+              {entry.name}
+            </Button>
+          ))}
         {listing && listing.entries.length === 0 && !listingQuery.isPending ? (
           <div className="p-3 text-center text-muted-foreground text-sm">No subfolders</div>
         ) : null}

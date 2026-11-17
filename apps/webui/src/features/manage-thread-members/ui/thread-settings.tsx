@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/shared/ui/switch';
 import { toast } from '@/shared/ui/toast';
 import { mutateThread } from '../model/thread-members-mutation';
+import { ThreadContextFiles } from './thread-context-files';
 import { ThreadMemberList } from './thread-member-list';
 
 const NONE = '__none__';
@@ -110,7 +111,7 @@ export function ThreadSettings({ thread, className }: { thread: Thread; classNam
       >
         <Settings2Icon />
       </PopoverTrigger>
-      <PopoverContent align="start" side="top" className="w-72 space-y-4 p-3">
+      <PopoverContent align="start" side="top" className="w-96 space-y-4 p-3">
         <p className="font-medium text-sm">Thread settings</p>
         {isGroup ? (
           <section className="space-y-2">
@@ -120,6 +121,7 @@ export function ThreadSettings({ thread, className }: { thread: Thread; classNam
             <ThreadMemberList thread={thread} />
           </section>
         ) : null}
+        <ThreadContextFiles thread={thread} />
         <Field>
           <FieldLabel htmlFor="thread-history-mode">History</FieldLabel>
           <div className="flex items-center gap-1.5">

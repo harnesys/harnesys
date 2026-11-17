@@ -1,5 +1,5 @@
 import type { ThreadSummary as ContractThreadSummary } from '@harnesys/contracts';
-import type { ThreadHistoryMode, ThreadSummary } from '@harnesys/studio-shared';
+import type { ThreadContextFile, ThreadHistoryMode, ThreadSummary } from '@harnesys/studio-shared';
 import { getActiveOrgId } from './active-org';
 import { apiJson } from './client';
 import { threadsBase, toStudioSummary } from './threads';
@@ -11,6 +11,7 @@ export interface UpdateThreadPolicyInput {
   historyMode?: ThreadHistoryMode;
   historyLast?: number | null;
   historyFromRunId?: string | null;
+  contextFiles?: ThreadContextFile[] | null;
 }
 
 function requireOrgId(): string {

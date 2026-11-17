@@ -1,6 +1,7 @@
 export interface HostDirectoryEntry {
   name: string;
   path: string;
+  kind: 'dir' | 'file';
 }
 
 export interface HostDirectoryListing {

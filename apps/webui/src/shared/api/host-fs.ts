@@ -3,6 +3,7 @@ import { apiJson } from './client';
 export interface HostDirectoryEntry {
   name: string;
   path: string;
+  kind: 'dir' | 'file';
 }
 
 export interface HostDirectoryListing {

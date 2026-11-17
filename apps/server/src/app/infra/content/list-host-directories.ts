@@ -15,9 +15,18 @@ export function listHostDirectories(path?: string): HostDirectoryListing {
   try {
     const dirents = readdirSync(dir, { withFileTypes: true });
     const entries = dirents
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => ({ name: entry.name, path: join(dir, entry.name) }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .filter((entry) => entry.isDirectory() || entry.isFile())
+      .map((entry) => ({
+        name: entry.name,
+        path: join(dir, entry.name),
+        kind: entry.isDirectory() ? ('dir' as const) : ('file' as const),
+      }))
+      .sort((a, b) => {
+        if (a.kind !== b.kind) {
+          return a.kind === 'dir' ? -1 : 1;
+        }
+        return a.name.localeCompare(b.name);
+      });
     const parent = dirname(dir);
     return {
       path: dir,
