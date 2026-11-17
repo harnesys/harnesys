@@ -11,6 +11,14 @@ export type ThreadHistoryMode = z.infer<typeof ThreadHistoryModeSchema>;
 export const ThreadResponderModeSchema = z.enum(['auto', 'mention']);
 export type ThreadResponderMode = z.infer<typeof ThreadResponderModeSchema>;
 
+export const ThreadContextFileSchema = z.object({
+  path: z.string().min(1).max(512),
+  enabled: z.boolean(),
+});
+export type ThreadContextFile = z.infer<typeof ThreadContextFileSchema>;
+
+export const ThreadContextFilesSchema = z.array(ThreadContextFileSchema).max(20);
+
 export const ThreadPolicySchema = z.object({
   version: z.union([z.literal(1), z.literal(2)]).default(2),
   historyMode: ThreadHistoryModeSchema.optional(),
@@ -18,6 +26,7 @@ export const ThreadPolicySchema = z.object({
   historyFromRunId: z.string().uuid().optional(),
   mentionGating: z.boolean().optional(),
   responderMode: ThreadResponderModeSchema.optional(),
+  contextFiles: ThreadContextFilesSchema.optional(),
 });
 export type ThreadPolicy = z.infer<typeof ThreadPolicySchema>;
 
@@ -145,6 +154,7 @@ export const UpdateThreadPolicyBodySchema = z.object({
   historyMode: ThreadHistoryModeSchema.optional(),
   historyLast: z.number().int().min(0).max(100).nullable().optional(),
   historyFromRunId: z.string().uuid().nullable().optional(),
+  contextFiles: ThreadContextFilesSchema.nullable().optional(),
 });
 export type UpdateThreadPolicyBody = z.infer<typeof UpdateThreadPolicyBodySchema>;
 

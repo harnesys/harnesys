@@ -12,6 +12,10 @@ export type { Event, RequestPlan, RequestSection, SessionEvent, SessionEventType
 export const THREAD_KINDS = ['chat', 'group', 'schedule', 'webhook', 'issue'] as const;
 export type ThreadKind = (typeof THREAD_KINDS)[number];
 export type ThreadHistoryMode = 'full' | 'none' | 'last';
+export interface ThreadContextFile {
+  path: string;
+  enabled: boolean;
+}
 export interface ThreadPolicy {
   version: 1 | 2;
   historyMode?: ThreadHistoryMode;
@@ -19,7 +23,16 @@ export interface ThreadPolicy {
   historyFromRunId?: string;
   mentionGating?: boolean;
   responderMode?: 'auto' | 'mention';
+  contextFiles?: ThreadContextFile[];
 }
+
+/**
+ * Context files injected into every run when a thread has not chosen its own
+ * list. A thread with `contextFiles: []` opts out of this default explicitly.
+ */
+export const DEFAULT_CONTEXT_FILES: readonly ThreadContextFile[] = [
+  { path: 'AGENTS.md', enabled: true },
+];
 export interface ThreadMemberRef {
   id: string;
   name: string;

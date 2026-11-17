@@ -209,6 +209,7 @@ export type {
 } from './src/terminal.ts';
 export { isTextAttachment } from './src/text-attachment.ts';
 export type {
+  ThreadContextFile,
   ThreadHistoryMode,
   ThreadMemberRef,
   ThreadParticipantRef,
@@ -233,7 +234,7 @@ export type {
   ThreadRecord,
   ThreadSummary,
 } from './src/thread.ts';
-export { THREAD_KINDS, threadsForAgent } from './src/thread.ts';
+export { DEFAULT_CONTEXT_FILES, THREAD_KINDS, threadsForAgent } from './src/thread.ts';
 export type { TranscriptItem } from './src/transcript.ts';
 export { toTranscript } from './src/transcript.ts';
 export type {
