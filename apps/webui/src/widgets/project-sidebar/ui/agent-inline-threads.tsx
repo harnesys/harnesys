@@ -8,10 +8,9 @@ import type { Thread } from '@/entities/thread';
 import { useAgentThreads, useThreadWaiting } from '@/features/desk';
 import { AGENT_THREAD_KINDS } from '@/features/desk/model/agents-display.store';
 import { useOrgTimeZone } from '@/features/switch-org/org-time-zone';
-import { formatClock, formatShortDate } from '@/shared/lib/format-clock';
-import { dayKeyInTimeZone } from '@/shared/lib/time-zone';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
+import { rowRight, runStatus, threadTime } from '../model/row-status';
 import { useThreadActions } from '../model/thread-actions';
 import {
   buildThreadTree,
@@ -168,7 +167,7 @@ function InlineThreadRow({
   const waiting = useThreadWaiting(thread.id);
   const status = runStatus(running, waiting);
   const hasMenu = Boolean(onPinToggle || onDelete);
-  const right = rowRight(status, thread, timeZone);
+  const right = rowRight(status, thread.unread, threadTime(thread.updatedAt, timeZone), 'ithread');
   return (
     <div
       className={cn(
@@ -184,7 +183,12 @@ function InlineThreadRow({
         onClick={onSelect}
       >
         <span className="inline-flex size-3 shrink-0 items-center justify-center text-muted-foreground">
-          <ThreadKindIcon kind={thread.kind} className="size-3" />
+          <ThreadKindIcon
+            kind={thread.kind}
+            className="size-3"
+            icon={thread.icon}
+            color={thread.color}
+          />
         </span>
         {thread.pinned ? (
           <PinIcon className="size-2.5 shrink-0 text-muted-foreground" aria-hidden />
@@ -241,56 +245,8 @@ function InlineThreadRow({
     </div>
   );
 }
-function runStatus(running: boolean, waiting: boolean): 'running' | 'waiting' | null {
-  if (running) {
-    return 'running';
-  }
-  if (waiting) {
-    return 'waiting';
-  }
-  return null;
-}
 function isLiveRunStatus(status: string | undefined): boolean {
   return (
     status === 'queued' || status === 'running' || status === 'waiting' || status === 'needs_input'
   );
-}
-type RunStatus = ReturnType<typeof runStatus>;
-function rowRight(status: RunStatus, thread: Thread, timeZone: string): ReactNode {
-  if (status) {
-    return (
-      <span
-        title={status}
-        className={cn(
-          'relative inline-flex size-1.5 shrink-0 rounded-full',
-          status === 'running' && 'animate-pulse',
-          status === 'running' ? 'bg-live' : 'bg-live/60',
-        )}
-      >
-        <span className="sr-only">{status}</span>
-      </span>
-    );
-  }
-  if (thread.unread) {
-    return (
-      <span title="unread" className="relative inline-flex size-1.5 shrink-0 rounded-full bg-live">
-        <span className="sr-only">unread</span>
-      </span>
-    );
-  }
-  return (
-    <span className="shrink-0 font-mono text-[10px] text-muted-foreground/70 leading-none group-focus-within/ithread:hidden group-hover/ithread:hidden">
-      {threadTime(thread.updatedAt, timeZone)}
-    </span>
-  );
-}
-function threadTime(iso: string, timeZone: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
-    return iso;
-  }
-  if (dayKeyInTimeZone(timeZone, date) === dayKeyInTimeZone(timeZone, new Date())) {
-    return formatClock(iso, timeZone);
-  }
-  return formatShortDate(iso, timeZone);
 }

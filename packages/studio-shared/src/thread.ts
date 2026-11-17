@@ -87,10 +87,13 @@ export interface ThreadRecord {
   events: SessionEvent[];
   activeRun: ThreadActiveRun | null;
   lastError?: ThreadLastError | null;
+  icon: string | null;
+  color: string | null;
 }
 export interface ThreadAgentRef {
   members: readonly { id: string }[];
   autoReplyAgentId?: string | null;
+  kind: ThreadKind;
 }
 export type ThreadSummary = Pick<
   ThreadRecord,
@@ -118,12 +121,16 @@ export type ThreadSummary = Pick<
   | 'bindingLocked'
   | 'activeRun'
   | 'lastError'
+  | 'icon'
+  | 'color'
 >;
 export function threadsForAgent<T extends ThreadAgentRef>(
   threads: readonly T[],
   agentId: string,
 ): T[] {
-  return threads.filter((thread) => thread.members.some((member) => member.id === agentId));
+  return threads.filter(
+    (thread) => thread.kind !== 'group' && thread.members.some((member) => member.id === agentId),
+  );
 }
 export function primaryAgentIdOf(thread: ThreadAgentRef): string | undefined {
   const autoReply = thread.autoReplyAgentId ?? undefined;

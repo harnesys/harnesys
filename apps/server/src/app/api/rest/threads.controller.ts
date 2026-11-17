@@ -15,6 +15,7 @@ import type {
   ThreadPublic,
   ThreadSummary,
   UpdateThreadBindingBody,
+  UpdateThreadMetaBody,
   UpdateThreadPolicyBody,
 } from '@harnesys/contracts';
 import {
@@ -26,6 +27,7 @@ import {
   SendThreadRunBodySchema,
   StreamRunEventsQuerySchema,
   UpdateThreadBindingBodySchema,
+  UpdateThreadMetaBodySchema,
   UpdateThreadPolicyBodySchema,
 } from '@harnesys/contracts';
 import type { ThreadPlanRecord } from '@harnesys/studio-shared';
@@ -48,6 +50,7 @@ import { userRunStart } from '../../application/threads/run-attribution.ts';
 import { SendThreadRunUseCase } from '../../application/threads/send-thread-run.use-case.ts';
 import { StreamRunEventsUseCase } from '../../application/threads/stream-run-events.use-case.ts';
 import { UpdateThreadBindingUseCase } from '../../application/threads/update-thread-binding.use-case.ts';
+import { UpdateThreadMetaUseCase } from '../../application/threads/update-thread-meta.use-case.ts';
 import { UpdateThreadPolicyUseCase } from '../../application/threads/update-thread-policy.use-case.ts';
 import { type Principal } from '../../domain/identity/principal.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
@@ -72,6 +75,7 @@ export class ThreadsController {
     private readonly deleteThreadEvent: DeleteThreadEventUseCase,
     private readonly updateThreadBinding: UpdateThreadBindingUseCase,
     private readonly updateThreadPolicy: UpdateThreadPolicyUseCase,
+    private readonly updateThreadMeta: UpdateThreadMetaUseCase,
     private readonly addThreadAgent: AddThreadAgentUseCase,
     private readonly removeThreadAgent: RemoveThreadAgentUseCase,
     private readonly addThreadParticipant: AddThreadParticipantUseCase,
@@ -119,6 +123,15 @@ export class ThreadsController {
     @Body(UpdateThreadPolicyBodySchema) body: UpdateThreadPolicyBody,
   ): ThreadSummary {
     return this.updateThreadPolicy.execute({ orgId, threadId, body });
+  }
+
+  @Patch(':threadId/meta')
+  updateMeta(
+    @Param('orgId') orgId: string,
+    @Param('threadId') threadId: string,
+    @Body(UpdateThreadMetaBodySchema) body: UpdateThreadMetaBody,
+  ): ThreadSummary {
+    return this.updateThreadMeta.execute({ orgId, threadId, body });
   }
 
   @Post(':threadId/agents')

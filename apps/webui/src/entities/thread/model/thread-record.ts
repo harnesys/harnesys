@@ -28,5 +28,7 @@ export function toClientThread(record: ThreadSummary | ThreadRecord): Thread {
     activeRunId: record.activeRun?.runId ?? null,
     activeRun: record.activeRun ?? null,
     lastError: record.lastError ?? null,
+    icon: record.icon ?? null,
+    color: record.color ?? null,
   };
 }

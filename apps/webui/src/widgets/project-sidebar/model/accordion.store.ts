@@ -13,6 +13,7 @@ export interface AccordionState {
 const DEFAULT_SIZES: Record<string, number> = {
   inbox: 1,
   agents: 1,
+  channels: 1,
   issues: 1,
   projects: 1,
   automations: 1,
@@ -22,13 +23,22 @@ const DEFAULT_SIZES: Record<string, number> = {
 const DEFAULT_COLLAPSED: Record<string, boolean> = {
   inbox: false,
   agents: false,
+  channels: false,
   issues: false,
   projects: false,
   automations: true,
   git: true,
   terminal: true,
 };
-const DEFAULT_ORDER: string[] = ['agents', 'issues', 'projects', 'automations', 'git', 'terminal'];
+const DEFAULT_ORDER: string[] = [
+  'agents',
+  'channels',
+  'issues',
+  'projects',
+  'automations',
+  'git',
+  'terminal',
+];
 const ALL_SECTION_IDS: string[] = ['inbox', ...DEFAULT_ORDER];
 function isValidSize(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0;

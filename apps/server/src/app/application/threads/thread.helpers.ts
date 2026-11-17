@@ -209,6 +209,16 @@ export function runModeOf(thread: ThreadRecord): string | undefined {
   return typeof mode === 'string' ? mode : undefined;
 }
 
+export function iconOf(thread: ThreadRecord): string | null {
+  const icon = thread.metadata.icon;
+  return typeof icon === 'string' ? icon : null;
+}
+
+export function colorOf(thread: ThreadRecord): string | null {
+  const color = thread.metadata.color;
+  return typeof color === 'string' ? color : null;
+}
+
 export function lastErrorOf(
   thread: ThreadRecord,
 ): { runId: string; message: string; at: string } | null {
@@ -275,6 +285,8 @@ export function toThreadSummary(input: ThreadSummaryInput): ThreadSummary {
     lastReadAt: thread.lastReadAt,
     unread: unreadOf({ thread, participants, userId: input.userId }),
     pinned: pinnedOf(thread),
+    icon: iconOf(thread),
+    color: colorOf(thread),
     runMode: runModeOf(thread),
     runProfileId: thread.runProfileId ?? null,
     runDirectory: thread.runDirectory ?? null,

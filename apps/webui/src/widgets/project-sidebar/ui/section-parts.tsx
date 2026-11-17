@@ -7,6 +7,7 @@ import type { Thread } from '@/entities/thread';
 import { Badge } from '@/shared/ui/badge';
 import { AgentsSection, AgentsSectionActions } from './agents-section';
 import { AutomationsSection, AutomationsSectionActions } from './automations-section';
+import { ChannelsSection } from './channels-section';
 import { GitSectionActions, GitTitle } from './git-menu';
 import { GitSection } from './git-section';
 import { InboxSection } from './inbox-section';
@@ -23,6 +24,7 @@ export interface SectionPartsContext {
   terminals: TerminalSessionRecord[];
   inboxThreads: Thread[];
   errorThreads: Thread[];
+  channels: Thread[];
   projectIds: string[];
   activeAgentId: string | null;
   activeThreadId: string | null;
@@ -60,6 +62,20 @@ export function sectionParts(id: SidebarSectionId, ctx: SectionPartsContext): Se
           <AgentsSection
             agents={ctx.agents}
             activeAgentId={ctx.activeAgentId}
+            activeThreadId={ctx.activeThreadId}
+            onSelectDone={onSelectDone}
+            loading={ctx.deskPending}
+          />
+        ),
+      };
+    case 'channels':
+      return {
+        icon: <Icon />,
+        title: 'Channels',
+        count: ctx.channels.length,
+        content: (
+          <ChannelsSection
+            channels={ctx.channels}
             activeThreadId={ctx.activeThreadId}
             onSelectDone={onSelectDone}
             loading={ctx.deskPending}

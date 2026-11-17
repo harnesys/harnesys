@@ -7,7 +7,6 @@ import type {
 } from '@harnesys/contracts';
 import type {
   SessionEvent,
-  ThreadAttachment,
   ThreadPlanRecord,
   ThreadRecord,
   ThreadSummary,
@@ -18,6 +17,8 @@ import { authenticatedFetch } from './session';
 
 export interface CreateThreadInput {
   title?: string;
+  icon?: string;
+  color?: string;
   agentId?: string;
   agentIds?: string[];
   participantUserIds?: string[];
@@ -69,6 +70,8 @@ export function toStudioSummary(record: ContractThreadSummary): ThreadSummary {
     bindingLocked: record.bindingLocked,
     activeRun: record.activeRun,
     lastError: record.lastError ?? null,
+    icon: record.icon ?? null,
+    color: record.color ?? null,
   };
 }
 
@@ -104,6 +107,8 @@ export function createThreadRecord(body: CreateThreadInput): Promise<ThreadRecor
     ...(body.agentIds?.length ? { agentIds: body.agentIds } : {}),
     ...(body.participantUserIds?.length ? { participantUserIds: body.participantUserIds } : {}),
     ...(body.title ? { title: body.title } : {}),
+    ...(body.icon ? { icon: body.icon } : {}),
+    ...(body.color ? { color: body.color } : {}),
     ...(body.kind ? { kind: body.kind } : {}),
     ...(body.parentThreadId ? { parentThreadId: body.parentThreadId } : {}),
     ...(body.forkAt ? { forkAt: body.forkAt } : {}),
@@ -113,35 +118,6 @@ export function createThreadRecord(body: CreateThreadInput): Promise<ThreadRecor
     method: 'POST',
     body: JSON.stringify(payload),
   }).then(toStudioRecord);
-}
-
-export function uploadThreadAttachment(threadId: string, file: File): Promise<ThreadAttachment> {
-  const body = new FormData();
-  body.append('file', file);
-  return apiJson<ThreadAttachment>(`/api/threads/${threadId}/attachments`, {
-    method: 'POST',
-    body,
-  });
-}
-
-export async function loadThreadAttachment(
-  threadId: string,
-  attachmentId: string,
-  signal?: AbortSignal,
-): Promise<Blob> {
-  const orgId = getActiveOrgId();
-  if (!orgId) {
-    throw new Error('active org required');
-  }
-  const url = apiUrl(`/api/threads/${threadId}/attachments/${attachmentId}`);
-  const response = await authenticatedFetch(url, {
-    signal,
-    headers: { 'X-Org-Id': orgId },
-  });
-  if (!response.ok) {
-    throw new Error(`failed to load attachment (${response.status})`);
-  }
-  return response.blob();
 }
 
 export interface SendThreadRunOptions {

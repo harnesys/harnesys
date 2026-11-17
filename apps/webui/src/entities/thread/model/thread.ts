@@ -31,6 +31,8 @@ export interface Thread {
   activeRunId?: string | null;
   activeRun?: ThreadActiveRun | null;
   lastError?: ThreadLastError | null;
+  icon?: string | null;
+  color?: string | null;
 }
 export function latestThread(threads: Thread[]): Thread | undefined {
   return [...threads].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];

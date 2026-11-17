@@ -1,10 +1,10 @@
 import type { ThreadHistoryMode, ThreadKind } from '@harnesys/studio-shared';
-import { Settings2Icon, Trash2Icon } from 'lucide-react';
+import { CheckIcon, Settings2Icon, Trash2Icon } from 'lucide-react';
 import { useId, useState } from 'react';
 import type { Thread } from '@/entities/thread';
 import { useIdeStore } from '@/features/ide';
 import { closeThread, confirmDeleteThread } from '@/features/switch-thread';
-import { updateThreadPolicy } from '@/shared/api';
+import { updateThreadMeta, updateThreadPolicy } from '@/shared/api';
 import { useStudioNavigation } from '@/shared/config/navigation';
 import { Button } from '@/shared/ui/button';
 import { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from '@/shared/ui/field';
@@ -13,6 +13,7 @@ import { InputGroupButton } from '@/shared/ui/input-group';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Switch } from '@/shared/ui/switch';
+import { ThreadColorPicker, ThreadIconPicker } from '@/shared/ui/thread-appearance-picker';
 import { toast } from '@/shared/ui/toast';
 import { mutateThread } from '../model/thread-members-mutation';
 import { ThreadContextFiles } from './thread-context-files';
@@ -51,9 +52,18 @@ export function ThreadSettings({ thread, className }: { thread: Thread; classNam
     policy?.historyLast === undefined ? '' : String(policy.historyLast),
   );
   const [historyFromRunId, setHistoryFromRunId] = useState(policy?.historyFromRunId ?? '');
+  const [title, setTitle] = useState(thread.title);
   const autoReplyFieldId = useId();
   const historyLastFieldId = useId();
   const anchorFieldId = useId();
+  const trimmedTitle = title.trim();
+  const titleChanged = trimmedTitle.length > 0 && trimmedTitle !== thread.title;
+  const saveTitle = () => {
+    if (!titleChanged) {
+      return;
+    }
+    void mutateThread(() => updateThreadMeta(thread.id, { title: trimmedTitle }));
+  };
   const saveHistoryLast = () => {
     const value = Number(historyLast);
     if (!Number.isInteger(value)) {
@@ -113,12 +123,64 @@ export function ThreadSettings({ thread, className }: { thread: Thread; classNam
       </PopoverTrigger>
       <PopoverContent align="start" side="top" className="w-96 space-y-4 p-3">
         <p className="font-medium text-sm">Thread settings</p>
+        <Field>
+          <FieldLabel htmlFor="thread-title">Title</FieldLabel>
+          <div className="flex items-center gap-1.5">
+            <Input
+              id="thread-title"
+              type="text"
+              className="h-7 text-xs"
+              value={title}
+              maxLength={120}
+              placeholder="Thread title"
+              onChange={(event) => setTitle(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  saveTitle();
+                }
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-xs"
+              className="size-7"
+              aria-label="Save title"
+              title="Save title"
+              disabled={!titleChanged}
+              data-testid="thread-title-save"
+              onClick={saveTitle}
+            >
+              <CheckIcon className="size-3" />
+            </Button>
+          </div>
+        </Field>
         {isGroup ? (
           <section className="space-y-2">
             <p className="font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
               Members
             </p>
             <ThreadMemberList thread={thread} />
+          </section>
+        ) : null}
+        {isGroup ? (
+          <section className="space-y-2">
+            <p className="font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
+              Appearance
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <ThreadIconPicker
+                value={thread.icon ?? null}
+                onChange={(icon) => void mutateThread(() => updateThreadMeta(thread.id, { icon }))}
+              />
+              <ThreadColorPicker
+                value={thread.color ?? null}
+                onChange={(color) =>
+                  void mutateThread(() => updateThreadMeta(thread.id, { color }))
+                }
+              />
+            </div>
           </section>
         ) : null}
         <ThreadContextFiles thread={thread} />

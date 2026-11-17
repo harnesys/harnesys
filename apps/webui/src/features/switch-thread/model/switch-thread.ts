@@ -48,6 +48,8 @@ export interface OpenGroupThreadInput {
   agentIds: string[];
   participantUserIds: string[];
   title?: string;
+  icon?: string;
+  color?: string;
 }
 
 export async function openGroupThread(input: OpenGroupThreadInput): Promise<string | null> {
@@ -61,6 +63,8 @@ export async function openGroupThread(input: OpenGroupThreadInput): Promise<stri
     participantUserIds: input.participantUserIds,
     kind: 'group',
     ...(input.title ? { title: input.title } : {}),
+    ...(input.icon ? { icon: input.icon } : {}),
+    ...(input.color ? { color: input.color } : {}),
   });
   const thread = toClientThread(record);
   useThreadStore.getState().upsert(thread);

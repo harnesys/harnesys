@@ -65,7 +65,12 @@ export function AgentThreadRow({
         onClick={onSelect}
       >
         <span className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center text-muted-foreground">
-          <ThreadKindIcon kind={thread.kind} className="size-3.5" />
+          <ThreadKindIcon
+            kind={thread.kind}
+            className="size-3.5"
+            icon={thread.icon}
+            color={thread.color}
+          />
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-center gap-1">

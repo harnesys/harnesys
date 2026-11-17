@@ -1,4 +1,4 @@
-import { PlusIcon, UsersIcon } from 'lucide-react';
+import { HashIcon, PlusIcon } from 'lucide-react';
 import { openCreateGroupThreadDialog } from '@/features/create-group-thread';
 import { openMarketplace } from '@/features/preset-marketplace';
 import { Button } from '@/shared/ui/button';
@@ -17,13 +17,13 @@ export function AgentsSectionCreateButton({ onCreated }: { onCreated?: () => voi
         type="button"
         variant="ghost"
         size="icon-xs"
-        title="New group thread"
-        aria-label="New group thread"
+        title="New channel"
+        aria-label="New channel"
         data-testid="group-create"
         onClick={() => void openCreateGroupThreadDialog()}
       >
-        <UsersIcon className="size-3.5 text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
-        <span className="sr-only">New group thread</span>
+        <HashIcon className="size-3.5 text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
+        <span className="sr-only">New channel</span>
       </Button>
       <Button
         type="button"

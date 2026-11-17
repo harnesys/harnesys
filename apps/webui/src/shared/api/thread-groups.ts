@@ -45,6 +45,19 @@ export function updateThreadPolicy(
   return threadMutation(threadId, '/policy', 'PATCH', input);
 }
 
+export interface UpdateThreadMetaInput {
+  title?: string;
+  icon?: string | null;
+  color?: string | null;
+}
+
+export function updateThreadMeta(
+  threadId: string,
+  input: UpdateThreadMetaInput,
+): Promise<ThreadSummary> {
+  return threadMutation(threadId, '/meta', 'PATCH', input);
+}
+
 export function addThreadAgent(threadId: string, agentId: string): Promise<ThreadSummary> {
   return threadMutation(threadId, '/agents', 'POST', { agentId });
 }

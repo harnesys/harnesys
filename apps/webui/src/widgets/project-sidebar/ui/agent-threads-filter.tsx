@@ -19,9 +19,8 @@ import {
 } from '@/shared/ui/dropdown-menu';
 import { ThreadKindIcon } from './thread-kind-icon';
 
-const KIND_META: Record<ThreadKind, { label: string; icon: ReactNode }> = {
+const KIND_META: Record<Exclude<ThreadKind, 'group'>, { label: string; icon: ReactNode }> = {
   chat: { label: 'Chat', icon: <ThreadKindIcon kind="chat" className="size-3.5" /> },
-  group: { label: 'Groups', icon: <ThreadKindIcon kind="group" className="size-3.5" /> },
   issue: { label: 'Issues', icon: <ThreadKindIcon kind="issue" className="size-3.5" /> },
   schedule: {
     label: 'Scheduler',

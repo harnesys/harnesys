@@ -70,7 +70,11 @@ export class CreateThreadUseCase {
       parentThreadId: fork.parentThreadId,
       forkAt: fork.forkAt,
       inheritedEventCount: fork.inheritedEventCount,
-      metadata: { runMode: agent.defaultModeId ?? undefined },
+      metadata: {
+        runMode: agent.defaultModeId ?? undefined,
+        ...(request.body.icon !== undefined ? { icon: request.body.icon } : {}),
+        ...(request.body.color !== undefined ? { color: request.body.color } : {}),
+      },
       runProfileId: null,
       runDirectory: null,
       createdAt: now,

@@ -14,7 +14,7 @@ export async function mutateThread(run: () => Promise<ThreadSummary>): Promise<v
     applyThreadSummary(await run());
   } catch (error) {
     toast.add({
-      title: 'Could not update group',
+      title: 'Could not update channel',
       description: error instanceof Error ? error.message : 'Request failed',
     });
   }

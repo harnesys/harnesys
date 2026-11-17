@@ -86,7 +86,12 @@ function InboxRow({
           }
         >
           <span className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center text-muted-foreground group-data-[collapsible=icon]:mt-0">
-            <ThreadKindIcon kind={thread.kind} className="size-3.5" />
+            <ThreadKindIcon
+              kind={thread.kind}
+              className="size-3.5"
+              icon={thread.icon}
+              color={thread.color}
+            />
           </span>
           <span className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
             <span className="block truncate pr-4 text-sm leading-4">{thread.title}</span>

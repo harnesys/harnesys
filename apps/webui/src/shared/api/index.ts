@@ -211,13 +211,16 @@ export {
 export {
   listThreadAttachments,
   listThreadFiles,
+  loadThreadAttachment,
   loadThreadFileContent,
+  uploadThreadAttachment,
 } from './thread-files';
 export {
   addThreadAgent,
   addThreadParticipant,
   removeThreadAgent,
   removeThreadParticipant,
+  updateThreadMeta,
   updateThreadPolicy,
 } from './thread-groups';
 export {
@@ -240,7 +243,6 @@ export {
   getThread,
   getThreadPlan,
   listThreads,
-  loadThreadAttachment,
   markThreadRead,
   type RespondRunOptions,
   type RetryRunResponse,
@@ -251,7 +253,6 @@ export {
   setThreadPinned,
   type UpdateThreadBindingInput,
   updateThreadBinding,
-  uploadThreadAttachment,
 } from './threads';
 export {
   deleteVaultEntry,

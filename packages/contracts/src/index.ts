@@ -1,5 +1,6 @@
 export * from './addons-platform.ts';
 export * from './apps.ts';
+export * from './dashboards.ts';
 export * from './domains-agents.ts';
 export * from './domains-org.ts';
 export * from './domains-work.ts';
@@ -32,6 +33,8 @@ export {
   ThreadPolicySchema,
   type ThreadResponderMode,
   ThreadResponderModeSchema,
+  type UpdateThreadMetaBody,
+  UpdateThreadMetaBodySchema,
   type UpdateThreadPolicyBody,
   UpdateThreadPolicyBodySchema,
 } from './thread.ts';

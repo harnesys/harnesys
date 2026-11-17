@@ -109,6 +109,8 @@ export const ThreadSummarySchema = z.object({
   bindingLocked: z.boolean(),
   activeRun: ThreadActiveRunSchema.nullable(),
   lastError: ThreadLastErrorSchema.nullable(),
+  icon: z.string().nullable(),
+  color: z.string().nullable(),
 });
 export type ThreadSummary = z.infer<typeof ThreadSummarySchema>;
 
@@ -122,7 +124,13 @@ export const CreateThreadBodySchema = z.object({
   agentId: z.string().uuid(),
   agentIds: z.array(z.string().uuid()).max(8).optional(),
   participantUserIds: z.array(z.string().uuid()).max(20).optional(),
-  title: z.string().trim().min(1).optional(),
+  title: z.string().trim().min(1).max(120).optional(),
+  icon: z.string().trim().min(1).max(64).optional(),
+  color: z
+    .string()
+    .trim()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .optional(),
   kind: ThreadKindSchema.optional(),
   parentThreadId: z.string().uuid().optional(),
   forkAt: z.string().trim().min(1).optional(),
@@ -136,6 +144,22 @@ export const CreateThreadBodySchema = z.object({
     .optional(),
 });
 export type CreateThreadBody = z.infer<typeof CreateThreadBodySchema>;
+
+export const UpdateThreadMetaBodySchema = z
+  .object({
+    title: z.string().trim().min(1).max(120).optional(),
+    icon: z.string().trim().min(1).max(64).nullable().optional(),
+    color: z
+      .string()
+      .trim()
+      .regex(/^#[0-9a-fA-F]{6}$/)
+      .nullable()
+      .optional(),
+  })
+  .refine((body) => body.title !== undefined || body.icon !== undefined || body.color !== undefined, {
+    message: 'at least one of title, icon or color is required',
+  });
+export type UpdateThreadMetaBody = z.infer<typeof UpdateThreadMetaBodySchema>;
 
 export const AddThreadAgentBodySchema = z.object({
   agentId: z.string().uuid(),

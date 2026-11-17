@@ -3,9 +3,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { AGENTS_DISPLAY_STORAGE_KEY } from '@/shared/config/constants';
 
-export const AGENT_THREAD_KINDS: readonly ThreadKind[] = [
+export const AGENT_THREAD_KINDS: readonly Exclude<ThreadKind, 'group'>[] = [
   'chat',
-  'group',
   'issue',
   'schedule',
   'webhook',

@@ -1,12 +1,7 @@
 import type { ThreadKind } from '@harnesys/studio-shared';
-import {
-  CalendarClockIcon,
-  EarthIcon,
-  MessageCircle,
-  SquareKanbanIcon,
-  UsersIcon,
-} from 'lucide-react';
+import { CalendarClockIcon, EarthIcon, MessageCircle, SquareKanbanIcon } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
+import { ChannelIcon } from '@/shared/ui/icon';
 
 export function threadKindInk(kind: ThreadKind): string | null {
   switch (kind) {
@@ -17,13 +12,23 @@ export function threadKindInk(kind: ThreadKind): string | null {
     case 'webhook':
       return 'text-violet-500/90';
     case 'group':
-      return 'text-emerald-500/90';
+      return null;
     case 'chat':
       return null;
   }
 }
 
-export function ThreadKindIcon({ kind, className }: { kind: ThreadKind; className?: string }) {
+export function ThreadKindIcon({
+  kind,
+  className,
+  icon,
+  color,
+}: {
+  kind: ThreadKind;
+  className?: string;
+  icon?: string | null;
+  color?: string | null;
+}) {
   const ink = threadKindInk(kind);
   switch (kind) {
     case 'issue':
@@ -33,7 +38,7 @@ export function ThreadKindIcon({ kind, className }: { kind: ThreadKind; classNam
     case 'webhook':
       return <EarthIcon className={cn(className, ink)} aria-hidden />;
     case 'group':
-      return <UsersIcon className={cn(className, ink)} aria-hidden />;
+      return <ChannelIcon icon={icon} color={color} className={className} />;
     case 'chat':
       return <MessageCircle className={cn(className, ink)} aria-hidden />;
   }

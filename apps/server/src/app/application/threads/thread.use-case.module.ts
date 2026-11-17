@@ -31,6 +31,7 @@ import { ThreadMessageQueueUseCase } from './thread-message-queue.use-case.ts';
 import { TickWaitTimersUseCase } from './tick-wait-timers.use-case.ts';
 import { UndoThreadCompactUseCase } from './undo-thread-compact.use-case.ts';
 import { UpdateThreadBindingUseCase } from './update-thread-binding.use-case.ts';
+import { UpdateThreadMetaUseCase } from './update-thread-meta.use-case.ts';
 import { UpdateThreadPolicyUseCase } from './update-thread-policy.use-case.ts';
 import { UploadThreadAttachmentUseCase } from './upload-thread-attachment.use-case.ts';
 
@@ -52,6 +53,7 @@ const useCases = [
   DeleteThreadUseCase,
   DeleteThreadEventUseCase,
   UpdateThreadBindingUseCase,
+  UpdateThreadMetaUseCase,
   UpdateThreadPolicyUseCase,
   AddThreadAgentUseCase,
   RemoveThreadAgentUseCase,

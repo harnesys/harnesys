@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Fragment, type MouseEvent as ReactMouseEvent, useRef, useState } from 'react';
 import { Link } from 'react-router';
+import { useShallow } from 'zustand/react/shallow';
 import { useIssueBoardStore } from '@/entities/issue';
 import { useProjects } from '@/entities/project';
 import { useThreadStore } from '@/entities/thread';
@@ -121,6 +122,11 @@ export function ProjectSidebar({
   const automationScopeIds = orgId ? [orgId] : projectIds;
   const inboxThreads = useWaitingThreads(agentScopeIds);
   const errorThreads = useErroredThreads(agentScopeIds);
+  const channels = useThreadStore(
+    useShallow((state) =>
+      orgId ? state.items.filter((item) => item.orgId === orgId && item.kind === 'group') : [],
+    ),
+  );
   const agents = useAgentsInProjects(agentScopeIds);
   const automations = useAutomationsInProjects(automationScopeIds);
   const boards = useIssueBoardStore((state) => state.boards);
@@ -195,6 +201,7 @@ export function ProjectSidebar({
     terminals,
     inboxThreads,
     errorThreads,
+    channels,
     projectIds,
     activeAgentId,
     activeThreadId,
