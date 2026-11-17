@@ -122,11 +122,11 @@ describe('prepareTarget runtime context', () => {
     const built = build(undefined, undefined, ['src-1']);
     const root = currentBaseDir();
     writeFileSync(join(root, '.env'), 'SECRET=1');
-    const threads = built.deps.threads as unknown as { thread: Record<string, unknown> };
-    threads.thread = {
-      ...threads.thread,
-      policy: { version: 2, contextFiles: [{ path: '.env', enabled: true }] },
-    };
+    const thread = built.deps.threads.findById('org-1', 'thread-1');
+    expect(thread).toBeDefined();
+    if (thread) {
+      thread.policy = { version: 2, contextFiles: [{ path: '.env', enabled: true }] };
+    }
 
     const prepared = prepareTarget(built.deps, 'thread-1', 'agent-1', built.cache, {
       directory: root,
