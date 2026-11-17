@@ -28,7 +28,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          const fs = require('fs');
+          import fs from 'node:fs';
 
           const headers = {
             Authorization: `Bearer ${process.env.GH_TOKEN}`,
