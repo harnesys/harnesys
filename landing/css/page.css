@@ -251,6 +251,52 @@
   display: block;
   width: 100%;
   height: auto;
+  cursor: zoom-in;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 6, 4, 0.86);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.lightbox[hidden] {
+  display: none;
+}
+
+.lightbox.is-open {
+  opacity: 1;
+}
+
+.lightbox img {
+  max-width: min(1500px, 96vw);
+  max-height: 94vh;
+  width: auto;
+  height: auto;
+  border-radius: calc(var(--radius) + 2px);
+  border: 1px solid var(--win-line);
+  box-shadow: 0 40px 120px -40px rgba(0, 0, 0, 0.9);
+  transform: scale(0.965);
+  transition: transform 0.18s ease;
+}
+
+.lightbox.is-open img {
+  transform: scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lightbox,
+  .lightbox img {
+    transition: none;
+  }
 }
 
 .shot figcaption {
@@ -530,6 +576,17 @@
   border-radius: var(--radius);
   padding: 24px;
   transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+a.card {
+  text-decoration: none;
+  color: inherit;
+}
+
+a.card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: 0 24px 60px -32px rgba(0, 0, 0, 0.85);
 }
 
 .icon-tile {

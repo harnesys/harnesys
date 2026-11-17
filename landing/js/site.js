@@ -70,6 +70,42 @@
     });
   });
 
+  var lightbox = document.createElement("div");
+  lightbox.className = "lightbox";
+  lightbox.hidden = true;
+  lightbox.setAttribute("role", "dialog");
+  lightbox.setAttribute("aria-label", "Screenshot preview");
+  var lightboxImg = document.createElement("img");
+  lightboxImg.alt = "";
+  lightbox.appendChild(lightboxImg);
+  document.body.appendChild(lightbox);
+
+  function closeLightbox() {
+    lightbox.classList.remove("is-open");
+    window.setTimeout(function () {
+      lightbox.hidden = true;
+    }, reduceMotion.matches ? 0 : 180);
+    document.removeEventListener("keydown", onLightboxKey);
+  }
+
+  function onLightboxKey(e) {
+    if (e.key === "Escape") closeLightbox();
+  }
+
+  document.querySelectorAll(".shot img").forEach(function (img) {
+    img.addEventListener("click", function () {
+      lightboxImg.src = img.currentSrc || img.src;
+      lightboxImg.alt = img.alt;
+      lightbox.hidden = false;
+      requestAnimationFrame(function () {
+        lightbox.classList.add("is-open");
+      });
+      document.addEventListener("keydown", onLightboxKey);
+    });
+  });
+
+  lightbox.addEventListener("click", closeLightbox);
+
   var revealables = Array.prototype.slice.call(document.querySelectorAll(".reveal"));
   if (!revealables.length) return;
 

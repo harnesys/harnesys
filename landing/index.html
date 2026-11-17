@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Harnesys: a control plane for your AI agent team</title>
-  <meta name="description" content="Harnesys is a self-hosted control plane for teams of AI agents: threads, tools, schedules, approvals and memory on your own machines, supervised from one desk.">
+  <meta name="description" content="Harnesys is a control plane for teams of AI agents: threads, tools, schedules, approvals and memory on your own machines, supervised from one desk.">
 
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Harnesys">
@@ -47,6 +47,7 @@
       <a href="#get">What you get</a>
       <a href="#agents">Agents</a>
       <a href="#desk">Workspace</a>
+      <a href="#addons">Add-ons</a>
       <a href="#quickstart">Quick start</a>
       <a href="https://github.com/harnesys/harnesys">GitHub</a>
       <a class="btn btn-amber btn-sm" href="#install"><i data-lucide="download"></i>Download</a>
@@ -59,7 +60,7 @@
   <section class="hero">
     <div class="wrap hero-in">
       <p class="kicker mono reveal">A control plane for your agent team</p>
-      <h1 class="reveal">Agents do the work. <em>You</em> keep the controls.</h1>
+      <h1 class="reveal">Hand off the routine. <em>Keep every decision.</em></h1>
       <p class="hero-sub reveal">
         Harnesys runs a team of AI agents on your own machines and gives you one
         desk to supervise them: every run in front of you, every sensitive step
@@ -77,10 +78,10 @@
 https://github.com/harnesys/harnesys/releases</code></pre>
       </div>
       <div class="chips reveal">
-        <div class="chip"><span class="chip-num">20</span><span class="chip-label">model providers</span></div>
-        <div class="chip"><span class="chip-num">13</span><span class="chip-label">config categories</span></div>
-        <div class="chip"><span class="chip-num">5</span><span class="chip-label">permission gates</span></div>
-        <div class="chip"><span class="chip-num">100%</span><span class="chip-label">self-hosted</span></div>
+        <div class="chip"><span class="chip-num">Every</span><span class="chip-label">tool call on the record</span></div>
+        <div class="chip"><span class="chip-num">Extensible</span><span class="chip-label">agents build their own add-ons</span></div>
+        <div class="chip"><span class="chip-num">Built-in</span><span class="chip-label">cron, webhooks and label rules</span></div>
+        <div class="chip"><span class="chip-num">No</span><span class="chip-label">cloud account required</span></div>
       </div>
       <figure class="shot shot-hero reveal">
         <img src="assets/automations.png" alt="A scheduled Harnesys run drafts an ops digest from the issue board, then stops and asks the owner to approve, trim or extend it" width="1600" height="1000">
@@ -296,6 +297,25 @@ https://github.com/harnesys/harnesys/releases</code></pre>
     </div>
   </section>
 
+  <section class="sec" id="addons">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2>Add-ons wire it into everything you use</h2>
+        <p>Flip a toggle and the whole org gains new tools, triggers and routes: GitHub, Gmail, Telegram, Notion, the Google suite and more &mdash; install from the marketplace or a package, prune what you don&rsquo;t need. Every capability an add-on ships is explicit: you see its permission grants, and you can edit them. And when the piece you need doesn&rsquo;t exist, your agents can build that add-on themselves.</p>
+      </div>
+      <div class="duo">
+        <figure class="shot reveal">
+          <img src="assets/add-ons.png" alt="Add-ons marketplace: installed and marketplace tabs, cards for Draw.io, Gmail, Google Calendar, Docs, Drive, Search Console, Sheets, Notion and Telegram with version and details links" width="1600" height="1000">
+          <figcaption>Marketplace view: install from the catalog or a package, toggle per organization, prune what you don&rsquo;t use.</figcaption>
+        </figure>
+        <figure class="shot reveal">
+          <img src="assets/add-ons-details.png" alt="GitHub add-on page: version, runtime profile, activation, capabilities list with tools, triggers, workers and routes, and editable permission grants" width="1600" height="1000">
+          <figcaption>An add-on&rsquo;s page: version, runtime profile, its capabilities &mdash; tools, triggers, workers, routes &mdash; and the permission grants behind them, editable per org.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
   <section class="sec sec-tint" id="quickstart">
     <div class="wrap">
       <div class="sec-head reveal">
@@ -442,6 +462,47 @@ harnesys host retarget --org &lt;orgId&gt; &lt;newRelayUrl&gt;</code></pre>
     </div>
   </section>
 
+  <section class="sec" id="support">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2>Support the project</h2>
+        <p>Harnesys is built and maintained by one developer, with no ads and no tracking. If it earns a place in your workflow, here is how to back it. Nothing in the product changes either way.</p>
+      </div>
+      <div class="cards">
+        <a class="card reveal" href="https://github.com/harnesys/harnesys">
+          <span class="icon-tile"><i data-lucide="star"></i></span>
+          <h3>Star the repository</h3>
+          <p>Stars are how other developers find Harnesys. It takes a second and moves the project further than you think.</p>
+        </a>
+        <a class="card reveal" href="https://t.me/harnesys">
+          <span class="icon-tile"><i data-lucide="hand-coins"></i></span>
+          <h3>Donate via Telegram</h3>
+          <p>Send Telegram Stars or take a monthly subscription, right inside Telegram &mdash; one tap, no forms.</p>
+        </a>
+        <a class="card reveal" href="https://github.com/harnesys/harnesys/issues">
+          <span class="icon-tile"><i data-lucide="bug"></i></span>
+          <h3>Report bugs</h3>
+          <p>A sharp bug report is worth more than a donation. Repro steps, logs, what you expected &mdash; and it&rsquo;s on the board.</p>
+        </a>
+        <a class="card reveal" href="https://t.me/harnesys_group">
+          <span class="icon-tile"><i data-lucide="users"></i></span>
+          <h3>Join the community</h3>
+          <p>Ask anything, show what you built, push ideas. Help, Showcase and Feature-requests live in separate topics.</p>
+        </a>
+        <a class="card reveal" href="https://github.com/harnesys/harnesys/blob/main/CONTRIBUTING.md">
+          <span class="icon-tile"><i data-lucide="git-pull-request"></i></span>
+          <h3>Contribute</h3>
+          <p>Good first issues are waiting for you. Read the contribution guide before opening a pull request.</p>
+        </a>
+        <a class="card reveal" href="https://t.me/harnesys">
+          <span class="icon-tile"><i data-lucide="send"></i></span>
+          <h3>Follow the build</h3>
+          <p>Release notes and the dev log as they happen &mdash; short posts on what shipped and how to use it.</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
 </main>
 
 <footer class="foot">
@@ -455,6 +516,7 @@ harnesys host retarget --org &lt;orgId&gt; &lt;newRelayUrl&gt;</code></pre>
       <p class="foot-copy">&copy; 2026 Harnesys</p>
     </div>
     <nav class="foot-nav" aria-label="Footer">
+      <a href="https://t.me/harnesys">Telegram</a>
       <a href="https://github.com/harnesys/harnesys">GitHub</a>
       <a href="https://github.com/harnesys/harnesys/releases">Releases</a>
       <a href="https://github.com/harnesys/harnesys#readme">Docs</a>
