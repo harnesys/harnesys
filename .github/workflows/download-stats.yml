@@ -1,0 +1,114 @@
+name: download-stats
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Collect release download stats
+        shell: node {0}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          const fs = require('fs');
+
+          const headers = {
+            Authorization: `Bearer ${process.env.GH_TOKEN}`,
+            'User-Agent': 'harnesys-download-stats',
+          };
+
+          async function fetchAllReleases() {
+            const releases = [];
+            for (let page = 1; page <= 20; page += 1) {
+              const res = await fetch(
+                `https://api.github.com/repos/harnesys/harnesys/releases?per_page=100&page=${page}`,
+                { headers },
+              );
+              if (!res.ok) {
+                throw new Error(`GitHub API ${res.status}: ${await res.text()}`);
+              }
+              const batch = await res.json();
+              releases.push(...batch);
+              if (batch.length < 100) break;
+            }
+            return releases;
+          }
+
+          async function fetchHistory() {
+            try {
+              const res = await fetch(
+                'https://harnesys.github.io/harnesys/stats/downloads.json',
+                { headers: { 'User-Agent': 'harnesys-download-stats' } },
+              );
+              if (!res.ok) return [];
+              const data = await res.json();
+              return Array.isArray(data.history) ? data.history : [];
+            } catch {
+              return [];
+            }
+          }
+
+          const releases = await fetchAllReleases();
+          const history = await fetchHistory();
+
+          const perAsset = new Map();
+          const perRelease = [];
+          for (const release of releases) {
+            let releaseTotal = 0;
+            const assets = [];
+            for (const asset of release.assets ?? []) {
+              perAsset.set(asset.name, (perAsset.get(asset.name) ?? 0) + asset.download_count);
+              releaseTotal += asset.download_count;
+              assets.push({ name: asset.name, downloads: asset.download_count });
+            }
+            perRelease.push({
+              tag: release.tag_name,
+              published_at: release.published_at,
+              total: releaseTotal,
+              assets,
+            });
+          }
+
+          const total = [...perAsset.values()].reduce((sum, n) => sum + n, 0);
+          const today = new Date().toISOString().slice(0, 10);
+          history.push({ date: today, total });
+
+          const stats = {
+            updated: new Date().toISOString(),
+            total,
+            assets: [...perAsset.entries()]
+              .map(([name, downloads]) => ({ name, downloads }))
+              .sort((a, b) => b.downloads - a.downloads),
+            releases: perRelease.slice(0, 30),
+            history: history.slice(-400),
+          };
+
+          fs.mkdirSync('landing/stats', { recursive: true });
+          fs.writeFileSync('landing/stats/downloads.json', JSON.stringify(stats, null, 2));
+          console.log(`total=${total} releases=${perRelease.length} history_days=${history.length}`);
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: landing
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
