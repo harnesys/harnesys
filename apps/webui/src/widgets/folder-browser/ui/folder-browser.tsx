@@ -5,7 +5,7 @@ import { getActiveOrgId } from '@/shared/api/active-org';
 import { browseDirs, createDir } from '@/shared/api/host-fs';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
-import { FolderTypeIcon } from '@/shared/ui/icons';
+import { FileTypeIcon, FolderTypeIcon } from '@/shared/ui/icons';
 import { Input } from '@/shared/ui/input';
 
 export interface FolderBrowserProps {
@@ -16,6 +16,12 @@ export interface FolderBrowserProps {
   inputId?: string;
   className?: string;
   listClassName?: string;
+  /** Directory to open at; the home directory when omitted. */
+  initialPath?: string;
+  /** Show files next to directories so one can be picked. */
+  files?: boolean;
+  /** Fires when a file row is clicked; navigation still fires onChange. */
+  onSelectFile?: (path: string) => void;
   onChange?: (path: string) => void;
 }
 
@@ -27,10 +33,13 @@ export function FolderBrowser({
   inputId,
   className,
   listClassName = 'h-48',
+  initialPath,
+  files = false,
+  onSelectFile,
   onChange,
 }: FolderBrowserProps) {
   const resolvedOrgId = orgId ?? getActiveOrgId();
-  const [dirPath, setDirPath] = useState<string | null>(null);
+  const [dirPath, setDirPath] = useState<string | null>(initialPath ?? null);
   const [pathInput, setPathInput] = useState('');
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
@@ -157,24 +166,42 @@ export function FolderBrowser({
           </div>
         ) : null}
         {(listing?.entries ?? [])
-          .filter((entry) => entry.kind !== 'file')
-          .map((entry) => (
-            <Button
-              key={entry.path}
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start font-normal"
-              onClick={() => enter(entry.path)}
-            >
-              <span data-icon="inline-start" className="inline-flex shrink-0">
-                <FolderTypeIcon size="sm" />
-              </span>
-              {entry.name}
-            </Button>
-          ))}
+          .filter((entry) => files || entry.kind !== 'file')
+          .map((entry) =>
+            entry.kind === 'file' ? (
+              <Button
+                key={entry.path}
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start font-normal"
+                onClick={() => onSelectFile?.(entry.path)}
+              >
+                <span data-icon="inline-start" className="inline-flex shrink-0">
+                  <FileTypeIcon name={entry.name} size="sm" />
+                </span>
+                <span className="truncate">{entry.name}</span>
+              </Button>
+            ) : (
+              <Button
+                key={entry.path}
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start font-normal"
+                onClick={() => enter(entry.path)}
+              >
+                <span data-icon="inline-start" className="inline-flex shrink-0">
+                  <FolderTypeIcon size="sm" />
+                </span>
+                {entry.name}
+              </Button>
+            ),
+          )}
         {listing && listing.entries.length === 0 && !listingQuery.isPending ? (
-          <div className="p-3 text-center text-muted-foreground text-sm">No subfolders</div>
+          <div className="p-3 text-center text-muted-foreground text-sm">
+            {files ? 'Nothing here' : 'No subfolders'}
+          </div>
         ) : null}
       </div>
       {actionError ? <p className="text-destructive text-sm">{actionError}</p> : null}

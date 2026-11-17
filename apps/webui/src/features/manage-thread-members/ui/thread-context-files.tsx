@@ -1,5 +1,5 @@
 import { DEFAULT_CONTEXT_FILES, type ThreadContextFile } from '@harnesys/studio-shared';
-import { ArrowDownIcon, ArrowUpIcon, XIcon } from 'lucide-react';
+import { ArrowDownIcon, ArrowUpIcon, FolderOpenIcon, XIcon } from 'lucide-react';
 import { useState } from 'react';
 import type { Thread } from '@/entities/thread';
 import { updateThreadPolicy } from '@/shared/api';
@@ -8,6 +8,7 @@ import { Field, FieldDescription, FieldLabel } from '@/shared/ui/field';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { toast } from '@/shared/ui/toast';
+import { FolderBrowserDialog } from '@/widgets/folder-browser';
 import { mutateThread } from '../model/thread-members-mutation';
 
 const MAX_CONTEXT_FILES = 20;
@@ -55,6 +56,7 @@ function toRelative(raw: string, runRoot: string | null | undefined): string | n
 export function ThreadContextFiles({ thread }: { thread: Thread }) {
   const rows = rowsOf(thread);
   const [draft, setDraft] = useState('');
+  const [browsing, setBrowsing] = useState(false);
 
   const save = (next: ThreadContextFile[]) => {
     void mutateThread(() => updateThreadPolicy(thread.id, { contextFiles: next }));
@@ -169,11 +171,44 @@ export function ThreadContextFiles({ thread }: { thread: Thread }) {
               }
             }}
           />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            aria-label="Browse files"
+            title="Browse files"
+            disabled={!thread.orgId}
+            onClick={() => setBrowsing(true)}
+          >
+            <FolderOpenIcon />
+          </Button>
           <Button type="button" variant="outline" size="sm" onClick={add}>
             Add
           </Button>
         </div>
+        {thread.runDirectory ? null : (
+          <FieldDescription>Paths are relative to the run root.</FieldDescription>
+        )}
       </Field>
+      {browsing ? (
+        <FolderBrowserDialog
+          {...(thread.orgId ? { orgId: thread.orgId } : {})}
+          {...(thread.runDirectory ? { initialPath: thread.runDirectory } : {})}
+          files
+          onResolve={(path) => {
+            setBrowsing(false);
+            if (!path) {
+              return;
+            }
+            const relative = toRelative(path, thread.runDirectory);
+            if (relative === null) {
+              toast.add({ title: RELATIVE_TOAST, description: path });
+              return;
+            }
+            setDraft(relative);
+          }}
+        />
+      ) : null}
     </section>
   );
 }
