@@ -130,6 +130,8 @@ export function createRunTargetResolver(ctx: RunTargetResolverContext) {
       ackSteerMessages: (itemIds: string[]) => ctx.steering.ack(itemIds),
       ...(process ? { process } : {}),
       ...(prepared.channelNote ? { channelNote: prepared.channelNote } : {}),
+      ...(prepared.contextNote ? { contextNote: prepared.contextNote } : {}),
+      contextEntries: prepared.contextEntries,
     };
     return target;
   };

@@ -6,6 +6,7 @@ import type { AgentDefinition } from '../domain/agent-definition.ts';
 import type { HookBinding } from '../domain/hook.ts';
 import type { PackRegistration } from '../domain/pack.ts';
 import type { FileAccessPolicy } from './file-access.ts';
+import type { ContextFileRunEntry } from './llm-plan.ts';
 import type { PathsConfig } from './paths.ts';
 import type { PermissionMap } from './permissions.ts';
 import type { RuntimePromptInfo } from './runtime-prompt.ts';
@@ -27,6 +28,8 @@ export interface RunTarget {
   binDirs?: string[];
   scope?: unknown;
   channelNote?: string;
+  contextNote?: string;
+  contextEntries?: ContextFileRunEntry[];
   fileAccess?: FileAccessPolicy;
   fileAccessFor?: (agent: AgentDefinition) => FileAccessPolicy;
   runtime?: RuntimePromptInfo;

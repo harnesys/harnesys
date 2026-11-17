@@ -19,6 +19,8 @@ function registry(entries: Array<[name: string, group: string]>): Map<string, To
 
 const base = {
   prompt: 'You are a helpful agent.',
+  contextNote: '',
+  contextEntries: [],
   channelNote: '',
   skillsSection: 'Skills catalog here.',
   runtimeSection: '',
@@ -96,6 +98,8 @@ describe('buildRequestPlan', () => {
   test('empty parts are skipped and totals stay consistent', () => {
     const plan = buildRequestPlan({
       prompt: 'Only prompt.',
+      contextNote: '',
+      contextEntries: [],
       channelNote: '',
       skillsSection: '',
       runtimeSection: '',
@@ -107,5 +111,46 @@ describe('buildRequestPlan', () => {
     });
     expect(plan.sections.map((s) => s.id)).toEqual(['system.prompt']);
     expect(plan.totalChars).toBe('Only prompt.'.length);
+  });
+
+  test('adds a context section with per-file children and skip reasons', () => {
+    const plan = buildRequestPlan({
+      ...base,
+      contextNote: 'The following project files are injected for this run.',
+      contextEntries: [
+        { path: 'AGENTS.md', chars: 40 },
+        { path: 'docs/missing.md', chars: 0, skipped: 'missing' },
+      ],
+      instructions: base.prompt,
+      toolNames: [],
+      toolRegistry: new Map(),
+      notes: [],
+      requestMessages: [],
+    });
+    const context = plan.sections.find((s) => s.id === 'system.context');
+    expect(context).toBeDefined();
+    expect(context?.children?.map((child) => child.id)).toEqual([
+      'system.context.AGENTS.md',
+      'system.context.docs/missing.md',
+      'system.context.docs/missing.md.skipped:missing',
+    ]);
+  });
+
+  test('keeps the context section when every file was skipped', () => {
+    const plan = buildRequestPlan({
+      ...base,
+      contextNote: '',
+      contextEntries: [{ path: 'AGENTS.md', chars: 0, skipped: 'blocked' }],
+      instructions: base.prompt,
+      toolNames: [],
+      toolRegistry: new Map(),
+      notes: [],
+      requestMessages: [],
+    });
+    const context = plan.sections.find((s) => s.id === 'system.context');
+    expect(context?.children?.map((child) => child.id)).toEqual([
+      'system.context.AGENTS.md',
+      'system.context.AGENTS.md.skipped:blocked',
+    ]);
   });
 });

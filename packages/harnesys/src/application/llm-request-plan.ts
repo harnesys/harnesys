@@ -1,5 +1,10 @@
 import { CHARS_PER_TOKEN_ESTIMATE } from '../constants.ts';
-import type { RequestPlan, RequestSection, RequestSectionId } from '../ports/llm-plan.ts';
+import type {
+  ContextFileRunEntry,
+  RequestPlan,
+  RequestSection,
+  RequestSectionId,
+} from '../ports/llm-plan.ts';
 import type { ToolDefinition } from '../ports/tools.ts';
 import { estimateMessageTokens } from './compaction/estimate.ts';
 import type { LlmNote } from './llm-notes.ts';
@@ -32,6 +37,8 @@ export interface SkillCatalogEntry {
 
 export interface RequestPlanInput {
   prompt: string;
+  contextNote: string;
+  contextEntries: readonly ContextFileRunEntry[];
   channelNote: string;
   skillsSection: string;
   runtimeSection: string;
@@ -47,6 +54,7 @@ export function buildRequestPlan(input: RequestPlanInput): RequestPlan {
   const sections: RequestSection[] = [];
   const parts = [
     { id: 'system.prompt' as const, text: input.prompt },
+    { id: 'system.context' as const, text: input.contextNote },
     { id: 'system.channel' as const, text: input.channelNote },
     { id: 'system.skills' as const, text: input.skillsSection },
     { id: 'system.runtime' as const, text: input.runtimeSection },
@@ -54,10 +62,18 @@ export function buildRequestPlan(input: RequestPlanInput): RequestPlan {
   const separators = Math.max(0, parts.length - 1) * 2;
   parts.forEach((part, index) => {
     const isLast = index === parts.length - 1;
-    const children =
-      part.id === 'system.skills' ? skillChildren(input.skillEntries ?? []) : undefined;
+    const children = partChildren(part.id, input);
     pushSection(sections, part.id, part.text.length + (isLast ? 0 : 2), children);
   });
+
+  // A thread whose files were all skipped renders no note, but the breakdown
+  // still has to explain why — so the section is keyed off the entries.
+  if (
+    input.contextEntries.length > 0 &&
+    !sections.some((existing) => existing.id === 'system.context')
+  ) {
+    sections.push(section('system.context', 0, contextFileChildren(input.contextEntries)));
+  }
 
   const toolSections = buildToolSections(input.toolNames, input.toolRegistry);
   const toolTextChars = toolSections.reduce((sum, s) => sum + s.chars, 0);
@@ -100,6 +116,27 @@ export function buildRequestPlan(input: RequestPlanInput): RequestPlan {
   const totalChars = sections.reduce((sum, s) => sum + s.chars, 0);
   const totalEstTokens = sections.reduce((sum, s) => sum + s.estTokens, 0);
   return { sections, totalChars, totalEstTokens };
+}
+
+function partChildren(id: RequestSectionId, input: RequestPlanInput): RequestSection[] | undefined {
+  if (id === 'system.skills') {
+    return skillChildren(input.skillEntries ?? []);
+  }
+  if (id === 'system.context') {
+    return contextFileChildren(input.contextEntries);
+  }
+  return undefined;
+}
+
+function contextFileChildren(entries: readonly ContextFileRunEntry[]): RequestSection[] {
+  const children: RequestSection[] = [];
+  for (const entry of entries) {
+    children.push(section(`system.context.${entry.path}`, entry.chars));
+    if (entry.skipped) {
+      children.push(section(`system.context.${entry.path}.skipped:${entry.skipped}`, 0));
+    }
+  }
+  return children;
 }
 
 function skillChildren(entries: readonly SkillCatalogEntry[]): RequestSection[] {

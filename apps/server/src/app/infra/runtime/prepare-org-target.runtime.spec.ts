@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
+import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { build, currentBaseDir, disposeBaseDir } from './prepare-org-target.fixtures.ts';
 import { prepareTarget } from './prepare-org-target.ts';
@@ -99,5 +100,39 @@ describe('prepareTarget runtime context', () => {
     }
     expect(chatPrepared?.paths.allow).toHaveLength(2);
     expect(chatPrepared?.paths.allow).not.toContain(join(currentBaseDir(), 'sources', 'src-1'));
+  });
+
+  test('injects AGENTS.md from the run root by default', () => {
+    const built = build(undefined, undefined, ['src-1']);
+    const root = currentBaseDir();
+    writeFileSync(join(root, 'AGENTS.md'), '# House rules\nAlways run the tests.');
+
+    const prepared = prepareTarget(built.deps, 'thread-1', 'agent-1', built.cache, {
+      directory: root,
+    });
+
+    expect(prepared?.contextNote).toContain('<file path="AGENTS.md">');
+    expect(prepared?.contextNote).toContain('Always run the tests.');
+    expect(prepared?.contextEntries).toEqual([
+      { path: 'AGENTS.md', chars: '# House rules\nAlways run the tests.'.length },
+    ]);
+  });
+
+  test('skips a blocked context file, leaving entries without a note', () => {
+    const built = build(undefined, undefined, ['src-1']);
+    const root = currentBaseDir();
+    writeFileSync(join(root, '.env'), 'SECRET=1');
+    const threads = built.deps.threads as unknown as { thread: Record<string, unknown> };
+    threads.thread = {
+      ...threads.thread,
+      policy: { version: 2, contextFiles: [{ path: '.env', enabled: true }] },
+    };
+
+    const prepared = prepareTarget(built.deps, 'thread-1', 'agent-1', built.cache, {
+      directory: root,
+    });
+
+    expect(prepared?.contextNote).toBeUndefined();
+    expect(prepared?.contextEntries).toEqual([{ path: '.env', chars: 0, skipped: 'blocked' }]);
   });
 });

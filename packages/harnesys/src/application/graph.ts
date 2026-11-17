@@ -22,6 +22,7 @@ import type { ProcessJobTarget } from '../domain/process-job.ts';
 import type { Event } from '../domain/snapshot.ts';
 import type { AgentsResolve } from '../ports/create-runtime.ts';
 import type { FileAccessPolicy } from '../ports/file-access.ts';
+import type { ContextFileRunEntry } from '../ports/llm-plan.ts';
 import type { Logger } from '../ports/logger.ts';
 import type { ModelBinding, ModelsPort, ProviderConfig } from '../ports/models.ts';
 import type { PathsConfig } from '../ports/paths.ts';
@@ -414,6 +415,8 @@ export interface GraphOpts {
   };
   logger?: Logger;
   channelNote?: string;
+  contextNote?: string;
+  contextEntries?: ContextFileRunEntry[];
   process?: ProcessJobTarget;
   fileAccess?: FileAccessPolicy;
   fileAccessFor?: (agent: AgentDefinition) => FileAccessPolicy;
@@ -1257,6 +1260,8 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
               sessionId: opts.state.sessionId,
               runId,
               channelNote: opts.channelNote,
+              contextNote: opts.contextNote,
+              contextEntries: opts.contextEntries,
               runtime: opts.runtime,
               fileAccess: opts.fileAccess,
               excludedMediaRelPaths,

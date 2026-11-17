@@ -17,7 +17,12 @@ export type SendInput =
       attribution?: RunAttribution;
     };
 export type { AskBudget } from '../domain/tool-subject.ts';
-export type { RequestPlan, RequestSection } from './llm-plan.ts';
+export type {
+  ContextFileRunEntry,
+  ContextFileSkipReason,
+  RequestPlan,
+  RequestSection,
+} from './llm-plan.ts';
 export type { ModelUsage, SessionEvent, SessionEventType } from './session-events.ts';
 
 export interface SendOpts {

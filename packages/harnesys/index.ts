@@ -1,4 +1,5 @@
 export { askUser, fetch, files, mapTool, shell, wait } from './src/adapters/actions/index.ts';
+export { isPathBlocked } from './src/adapters/actions/path-blocklist.ts';
 export { canonicalizePath } from './src/adapters/actions/path-resolve.ts';
 export type { CallModelResult, StreamChunk } from './src/adapters/ai-llm-adapter.ts';
 export { callModel } from './src/adapters/ai-llm-adapter.ts';
@@ -192,6 +193,8 @@ export { createLoadToolsTool } from './src/application/tools/create-load-tools-t
 export { aliasTool } from './src/application/tools/tool-alias.ts';
 export { validateStructural } from './src/application/validate.ts';
 export {
+  BINARY_PROBE_BYTES,
+  DEFAULT_PATH_BLOCKLIST,
   MEMORY_EXTRACTION_MAX_EVENTS,
   MEMORY_EXTRACTION_RUBRIC,
   MEMORY_PROMOTE_CANDIDATES_LIMIT,
@@ -753,6 +756,8 @@ export type { CommitMeta, RuntimeState } from './src/ports/runtime-state.ts';
 export type { SecretResolver, SecretResolveScope } from './src/ports/secret-resolver.ts';
 export type {
   AskBudget,
+  ContextFileRunEntry,
+  ContextFileSkipReason,
   ModelUsage,
   RequestPlan,
   RequestSection,

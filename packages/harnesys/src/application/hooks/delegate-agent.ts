@@ -46,6 +46,8 @@ export async function delegateHookAgent(input: {
     mergeState: parent.mergeState,
     signal: parent.signal,
     notes: parent.notes,
+    contextNote: parent.contextNote,
+    contextEntries: parent.contextEntries,
     packOutputs,
     universe: parent.universe,
     skills: parent.skills,

@@ -168,6 +168,8 @@ export async function prepareExecuteGraphOpts(
     ...(deps.childRunner ? { childRunner: deps.childRunner } : {}),
     logger: runLogger,
     ...(opts.channelNote ? { channelNote: opts.channelNote } : {}),
+    ...(opts.contextNote ? { contextNote: opts.contextNote } : {}),
+    ...(opts.contextEntries ? { contextEntries: opts.contextEntries } : {}),
   };
   let hooksEmit = opts.hooksEmit;
   if (hooksEmit === undefined) {

@@ -278,6 +278,8 @@ async function runOneWorker(args: RunWorkerArgs): Promise<MapResultItem> {
     mergeState: parent.mergeState,
     signal,
     notes: [...(parent.notes ?? []), mapWorkerNote],
+    contextNote: parent.contextNote,
+    contextEntries: parent.contextEntries,
     packOutputs: parent.packOutputs,
     universe: parent.universe,
     skills: parent.skills,

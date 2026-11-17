@@ -5,6 +5,7 @@ import type { PackRegistration } from '../domain/pack.ts';
 import type { ProcessJobTarget } from '../domain/process-job.ts';
 import type { AgentsResolve } from '../ports/create-runtime.ts';
 import type { FileAccessPolicy } from '../ports/file-access.ts';
+import type { ContextFileRunEntry } from '../ports/llm-plan.ts';
 import type { Logger } from '../ports/logger.ts';
 import type { ModelsPort, ProviderConfig } from '../ports/models.ts';
 import type { PathsConfig } from '../ports/paths.ts';
@@ -63,6 +64,8 @@ export interface RunTargetOpts {
   hookReport?: (report: HookRunReport) => void;
   binDirs?: string[];
   channelNote?: string;
+  contextNote?: string;
+  contextEntries?: ContextFileRunEntry[];
   process?: ProcessJobTarget;
   fileAccess?: FileAccessPolicy;
   fileAccessFor?: (agent: AgentDefinition) => FileAccessPolicy;

@@ -45,6 +45,7 @@ import {
   permissionsFromConfig,
   toAgentDefinition,
 } from './agent-definition.mapper.ts';
+import { resolveContextFiles } from './context-files-note.ts';
 import { groupChannelNote } from './group-note.ts';
 import { type TargetCache, targetCacheKey } from './target-cache.ts';
 
@@ -193,6 +194,7 @@ export function prepareTarget(
     );
   }
   const channelNote = notes.length > 0 ? notes.join('\n\n') : undefined;
+  const context = resolveContextFiles(thread.policy, primary.primaryDirectory);
   const modeId = options?.mode ?? runModeOf(thread);
   return {
     agent,
@@ -204,6 +206,8 @@ export function prepareTarget(
     scope,
     runtime,
     channelNote,
+    ...(context.note ? { contextNote: context.note } : {}),
+    contextEntries: context.entries,
   };
 }
 

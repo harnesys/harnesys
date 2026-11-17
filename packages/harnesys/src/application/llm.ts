@@ -5,6 +5,7 @@ import { EXCLUSION_TTL_USER_TURNS, LLM_CHUNK_EVENTS } from '../constants.ts';
 import type { AgentDefinition, AgentModelRef } from '../domain/agent-definition.ts';
 import { codedRunError } from '../domain/errors.ts';
 import type { FileAccessPolicy } from '../ports/file-access.ts';
+import type { ContextFileRunEntry } from '../ports/llm-plan.ts';
 import type { ModelBinding, ResolvedModel } from '../ports/models.ts';
 import type { PathsConfig } from '../ports/paths.ts';
 import type { PermissionMap } from '../ports/permissions.ts';
@@ -52,6 +53,8 @@ export interface LlmContext {
   sessionId?: string;
   runId?: string;
   channelNote?: string;
+  contextNote?: string;
+  contextEntries?: ContextFileRunEntry[];
   runtime?: RuntimePromptInfo;
   fileAccess?: FileAccessPolicy;
   excludedMediaRelPaths?: Map<string, { reason: string; untilTurn: number }>;
@@ -303,7 +306,14 @@ export async function* runLlmGenerate(
     ? await effectiveSkillRegistry(ctx.agent, ctx.skills, ctx.packOutputs ?? []).list()
     : [];
   const skillsSection = formatSkillsCatalog(skillList);
-  const instructions = [prompt, ctx.channelNote, skillsSection, runtimeSection, toolsSection]
+  const instructions = [
+    prompt,
+    ctx.contextNote,
+    ctx.channelNote,
+    skillsSection,
+    runtimeSection,
+    toolsSection,
+  ]
     .filter((part): part is string => typeof part === 'string' && part.trim().length > 0)
     .join('\n\n');
   const allNotes = ctx.notes ? [...ctx.notes] : [];
@@ -340,6 +350,8 @@ export async function* runLlmGenerate(
   const requestMessages = buildRequestMessages(history, projected.prefix, tailText, inserts);
   const plan = buildRequestPlan({
     prompt,
+    contextNote: ctx.contextNote ?? '',
+    contextEntries: ctx.contextEntries ?? [],
     channelNote: ctx.channelNote ?? '',
     skillsSection,
     runtimeSection,
