@@ -7,7 +7,8 @@ import {
 } from '../../domain/thread/thread.error.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadParticipantRepositoryPort } from '../../domain/thread/thread-participant-repository.port.ts';
-import type { ThreadPolicy } from '../../domain/thread/thread-policy.ts';
+import type { ThreadContextFile, ThreadPolicy } from '../../domain/thread/thread-policy.ts';
+import { normalizeContextFiles } from '../../domain/thread/thread-policy.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { membersOf, participantsOf, toThreadSummary } from './thread.helpers.ts';
 
@@ -15,6 +16,26 @@ export interface UpdateThreadPolicyRequest {
   orgId: string;
   threadId: string;
   body: UpdateThreadPolicyBody;
+}
+
+function applyContextFiles(
+  policy: ThreadPolicy,
+  contextFiles: readonly ThreadContextFile[] | null | undefined,
+): void {
+  if (contextFiles === undefined) {
+    return;
+  }
+  if (contextFiles === null) {
+    delete policy.contextFiles;
+    return;
+  }
+  const normalized = normalizeContextFiles(contextFiles);
+  if (normalized.invalid) {
+    throw new ThreadValidationException(
+      `invalid context file "${normalized.invalid.path}": ${normalized.invalid.reason}`,
+    );
+  }
+  policy.contextFiles = normalized.entries;
 }
 
 function applyPolicyUpdate(current: ThreadPolicy, body: UpdateThreadPolicyBody): ThreadPolicy {
@@ -42,6 +63,7 @@ function applyPolicyUpdate(current: ThreadPolicy, body: UpdateThreadPolicyBody):
       policy.historyFromRunId = body.historyFromRunId;
     }
   }
+  applyContextFiles(policy, body.contextFiles);
   return policy;
 }
 
