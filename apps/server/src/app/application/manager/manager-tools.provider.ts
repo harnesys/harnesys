@@ -1,4 +1,4 @@
-import { Injectable, type ModuleInitHook } from '@harnesys/brix';
+import { Injectable } from '@harnesys/brix';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
 import { IssueBoardRepositoryPort } from '../../domain/issue/board-repository.port.ts';
@@ -12,7 +12,7 @@ import { setManagerToolsDeps } from '../../infra/runtime/packs/manager-tools.hol
 import type { OrgManagerDeps } from '../../infra/runtime/packs/org-manager.port.ts';
 
 @Injectable()
-export class ManagerToolsProvider implements ModuleInitHook {
+export class ManagerToolsProvider {
   constructor(
     private readonly agents: AgentRegistryPort,
     private readonly threads: ThreadRepositoryPort,
@@ -23,9 +23,7 @@ export class ManagerToolsProvider implements ModuleInitHook {
     private readonly boards: IssueBoardRepositoryPort,
     private readonly tail: ManagerTailPort,
     private readonly orgSettings: OrgSettingsPort,
-  ) {}
-
-  onModuleInit(): void {
+  ) {
     const deps: OrgManagerDeps = {
       agents: this.agents,
       threads: this.threads,

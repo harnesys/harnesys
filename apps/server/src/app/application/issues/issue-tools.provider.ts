@@ -1,4 +1,4 @@
-import { Injectable, type ModuleInitHook } from '@harnesys/brix';
+import { Injectable } from '@harnesys/brix';
 import { setIssueToolsDeps } from '../../infra/runtime/packs/issue-tools.holder.ts';
 import type { OrgIssueDeps } from '../../infra/runtime/packs/org-issue.port.ts';
 import { ListSourcesUseCase } from '../source/list-sources.use-case.ts';
@@ -23,7 +23,7 @@ import { UpdateIssueBoardUseCase } from './update-issue-board.use-case.ts';
 import { UpdateIssueStatusUseCase } from './update-issue-status.use-case.ts';
 
 @Injectable()
-export class IssueToolsProvider implements ModuleInitHook {
+export class IssueToolsProvider {
   constructor(
     private readonly listBoards: ListIssueBoardsUseCase,
     private readonly listSources: ListSourcesUseCase,
@@ -45,9 +45,7 @@ export class IssueToolsProvider implements ModuleInitHook {
     private readonly deleteLabel: DeleteIssueLabelUseCase,
     private readonly saveBoardRule: SaveBoardRuleUseCase,
     private readonly removeBoardRule: RemoveBoardRuleUseCase,
-  ) {}
-
-  onModuleInit(): void {
+  ) {
     const deps: OrgIssueDeps = {
       listBoards: this.listBoards,
       listSources: this.listSources,

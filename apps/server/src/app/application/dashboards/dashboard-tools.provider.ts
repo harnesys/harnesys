@@ -1,4 +1,4 @@
-import { Injectable, type ModuleInitHook } from '@harnesys/brix';
+import { Injectable } from '@harnesys/brix';
 import { ActivateWidgetUseCase } from './activate-widget.use-case.ts';
 import { CreateDashboardUseCase } from './create-dashboard.use-case.ts';
 import { CreateWidgetUseCase } from './create-widget.use-case.ts';
@@ -14,7 +14,7 @@ import { UpdateLayoutUseCase } from './update-layout.use-case.ts';
 import { UpdateWidgetUseCase } from './update-widget.use-case.ts';
 
 @Injectable()
-export class DashboardsToolsProvider implements ModuleInitHook {
+export class DashboardsToolsProvider {
   constructor(
     private readonly listDashboards: ListDashboardsUseCase,
     private readonly getDashboard: GetDashboardUseCase,
@@ -27,9 +27,7 @@ export class DashboardsToolsProvider implements ModuleInitHook {
     private readonly updateLayout: UpdateLayoutUseCase,
     private readonly activateWidget: ActivateWidgetUseCase,
     private readonly testSource: TestWidgetSourceUseCase,
-  ) {}
-
-  onModuleInit(): void {
+  ) {
     const deps: OrgDashboardsDeps = {
       listDashboards: this.listDashboards,
       getDashboard: this.getDashboard,
