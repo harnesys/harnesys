@@ -113,6 +113,7 @@
         "src/app/application/issues/issue-tools.provider.ts",
         "src/app/application/manager/manager-tools.provider.ts",
         "src/app/application/skills/skills-tools.provider.ts",
+        "src/app/application/source/sources-tools.provider.ts",
         "src/app/application/**/*.spec.ts"
       ],
       "linter": {

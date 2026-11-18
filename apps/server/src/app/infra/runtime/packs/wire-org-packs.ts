@@ -42,6 +42,7 @@ import type { OrgManagerDeps } from './org-manager.port.ts';
 import { registrationForPack } from './org-pack-registrations.ts';
 import { isPackSatisfied } from './org-pack-requirements.ts';
 import type { OrgSkillsDeps } from './org-skills.pack.port.ts';
+import type { OrgSourcesDeps } from './org-sources.pack.port.ts';
 
 export interface WireOrgPacksDeps {
   orgId: string;
@@ -71,6 +72,7 @@ export interface WireOrgPacksDeps {
   orgSettings?: OrgSettingsPort;
   mcpManage?: McpManagePort;
   modes?: ModePresetRegistryPort;
+  sourcesPack?: OrgSourcesDeps;
   createAgent?: (input: AgentCatalogCreateInput, scope: CapabilityScope) => Promise<AgentRecord>;
   plugins?: OrgPluginRuntimeSource;
   engineSnapshot?: HostEngineEntry[];
@@ -91,6 +93,7 @@ export interface WireOrgPackFilter {
   orgSettings?: OrgSettingsPort;
   mcpManage?: McpManagePort;
   sources?: SourceRegistryPort;
+  sourcesPack?: OrgSourcesDeps;
   planDb?: OrgSqliteDb;
   memoryDb?: OrgSqliteDb;
 }
@@ -148,6 +151,7 @@ function optionalInputs(deps: OrgRuntimeDeps): Partial<WireOrgPacksDeps> {
     ...(deps.issues ? { issues: deps.issues } : {}),
     ...(deps.manager ? { manager: deps.manager } : {}),
     ...(deps.skills ? { skills: deps.skills } : {}),
+    ...(deps.sourcesPack ? { sourcesPack: deps.sourcesPack } : {}),
     ...(deps.lsp ? { lsp: deps.lsp } : {}),
   };
 }

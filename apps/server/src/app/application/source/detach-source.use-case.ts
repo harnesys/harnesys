@@ -11,6 +11,7 @@ import {
 } from '../../domain/source/source.error.ts';
 import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+import { SourceRegistryEventsPort } from '../../domain/source/source-registry-events.port.ts';
 import { hasGitVcs } from '../../domain/source/vcs-capability.ts';
 
 export interface DetachSourceInput {
@@ -29,6 +30,7 @@ export class DetachSourceUseCase {
     private readonly machineConfig: MachineConfigPort,
     private readonly knowledge: KnowledgeStorePort,
     private readonly containers: WorkspaceContainerPort,
+    private readonly registryEvents: SourceRegistryEventsPort,
     logger: Logger,
   ) {
     this.log = logger.child('detach-source');
@@ -54,6 +56,7 @@ export class DetachSourceUseCase {
     this.knowledge.deleteForSource(input.orgId, input.sourceId);
     this.materializations.removeForSource(input.orgId, input.sourceId);
     this.sources.remove(input.orgId, input.sourceId);
+    this.registryEvents.emit({ orgId: input.orgId, sourceId: input.sourceId });
   }
 
   private releaseContainer(orgId: string, sourceId: string, hostId: string): void {

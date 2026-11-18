@@ -11,6 +11,7 @@ import { OrgSettingsPort } from '../../../domain/skills/org-settings.port.ts';
 import type { OrgIssueDeps } from './org-issue.port.ts';
 import type { OrgManagerDeps } from './org-manager.port.ts';
 import type { OrgSkillsDeps } from './org-skills.pack.port.ts';
+import type { OrgSourcesDeps } from './org-sources.pack.port.ts';
 import {
   FakeKnowledgeSearch,
   FakeKnowledgeStore,
@@ -49,6 +50,7 @@ function fullDeps(): WireOrgPacksDeps {
     issues: {} as OrgIssueDeps,
     manager: {} as OrgManagerDeps,
     skills: {} as OrgSkillsDeps,
+    sourcesPack: {} as OrgSourcesDeps,
     mcpManage: {} as McpManagePort,
     lsp: {} as LspPort,
     secrets: {} as SecretStorePort,

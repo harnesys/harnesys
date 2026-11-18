@@ -19,7 +19,7 @@ export interface EventsWatchDeskFrame {
   event: DeskEvent;
 }
 export interface SourceWatchEvent {
-  kind: 'fs' | 'git';
+  kind: 'fs' | 'git' | 'registry';
   fileKind?: ProjectFileEventKind;
   changedPath?: string;
 }

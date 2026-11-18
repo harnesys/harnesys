@@ -7,6 +7,7 @@ import { SourceLocationPort } from '../../domain/source/source-location.port.ts'
 import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { SourceOperationGrantPort } from '../../domain/source/source-operation-grant.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+import { SourceRegistryEventsPort } from '../../domain/source/source-registry-events.port.ts';
 import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
 import { RepositoryWorktreeAdapter } from '../org-sqlite/repository-worktree.adapter.ts';
 import { SourceOperationGrantAdapter } from '../org-sqlite/source-operation-grant.adapter.ts';
@@ -16,12 +17,14 @@ import { MaterializationEventsAdapter } from './materialization-events.adapter.t
 import { SourceLocationAdapter } from './source-location.adapter.ts';
 import { SourceMaterializationAdapter } from './source-materialization.adapter.ts';
 import { SourceRegistryAdapter } from './source-registry.adapter.ts';
+import { SourceRegistryEventsAdapter } from './source-registry-events.adapter.ts';
 
 @Module({
   global: true,
   imports: [MachineHomeModule],
   providers: [
     { provide: SourceRegistryPort, useClass: SourceRegistryAdapter },
+    { provide: SourceRegistryEventsPort, useClass: SourceRegistryEventsAdapter },
     { provide: SourceMaterializationPort, useClass: SourceMaterializationAdapter },
     { provide: MaterializationEventsPort, useClass: MaterializationEventsAdapter },
     { provide: SourceLocationPort, useClass: SourceLocationAdapter },
@@ -32,6 +35,7 @@ import { SourceRegistryAdapter } from './source-registry.adapter.ts';
   ],
   exports: [
     SourceRegistryPort,
+    SourceRegistryEventsPort,
     SourceMaterializationPort,
     MaterializationEventsPort,
     SourceLocationPort,

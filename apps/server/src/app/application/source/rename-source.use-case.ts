@@ -5,6 +5,7 @@ import {
   SourcePathInvalidException,
 } from '../../domain/source/source.error.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+import { SourceRegistryEventsPort } from '../../domain/source/source-registry-events.port.ts';
 import { toPublicSource } from './to-public-source.ts';
 
 export interface RenameSourceInput {
@@ -15,7 +16,10 @@ export interface RenameSourceInput {
 
 @Injectable()
 export class RenameSourceUseCase {
-  constructor(private readonly sources: SourceRegistryPort) {}
+  constructor(
+    private readonly sources: SourceRegistryPort,
+    private readonly registryEvents: SourceRegistryEventsPort,
+  ) {}
 
   execute(input: RenameSourceInput): Source {
     const name = input.name.trim();
@@ -27,6 +31,7 @@ export class RenameSourceUseCase {
       throw new SourceNotFoundException(input.sourceId);
     }
     this.sources.updateName(input.orgId, input.sourceId, name);
+    this.registryEvents.emit({ orgId: input.orgId, sourceId: input.sourceId });
     return toPublicSource({ ...row, name }, new Date().toISOString());
   }
 }

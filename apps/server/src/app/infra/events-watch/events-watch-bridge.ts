@@ -35,6 +35,8 @@ import { GitWatchEventsPort } from '../../domain/source/git-watch-events.port.ts
 import type { MaterializationChangedEvent } from '../../domain/source/materialization-events.port.ts';
 import { MaterializationEventsPort } from '../../domain/source/materialization-events.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+import type { SourceRegistryChangedEvent } from '../../domain/source/source-registry-events.port.ts';
+import { SourceRegistryEventsPort } from '../../domain/source/source-registry-events.port.ts';
 import { SourceWatchEventsPort } from '../../domain/source/source-watch-events.port.ts';
 import { TerminalEventsPort } from '../../domain/terminal/terminal-events.port.ts';
 import type { ThreadRunEvent } from '../../domain/thread/thread-events.port.ts';
@@ -53,6 +55,7 @@ export class EventsWatchBridge implements ModuleInitHook, ModuleDestroyHook {
     private readonly issueEvents: IssueEventsPort,
     private readonly deskEvents: DeskEventsPort,
     private readonly sourceWatchEvents: SourceWatchEventsPort,
+    private readonly sourceRegistryEvents: SourceRegistryEventsPort,
     private readonly gitWatchEvents: GitWatchEventsPort,
     private readonly skillsEvents: SkillsEventsPort,
     private readonly threadEvents: ThreadEventsPort,
@@ -70,6 +73,7 @@ export class EventsWatchBridge implements ModuleInitHook, ModuleDestroyHook {
       this.issueEvents.subscribe((orgId, event) => this.publishIssue(orgId, event)),
       this.deskEvents.subscribe((orgId, event) => this.publishDesk(orgId, event)),
       this.sourceWatchEvents.subscribe((frame) => this.publishSourceChange(frame)),
+      this.sourceRegistryEvents.subscribe((event) => this.publishSourceRegistry(event)),
       this.gitWatchEvents.subscribe((frame) => this.publishGitSummary(frame)),
       this.gitWatchEvents.subscribeFileStatus((frame) => this.publishGitFileStatus(frame)),
       this.skillsEvents.subscribe((frame) => this.publishSkills(frame)),
@@ -125,6 +129,15 @@ export class EventsWatchBridge implements ModuleInitHook, ModuleDestroyHook {
 
   private publishSourceChange(frame: EventsWatchSourceChangeFrame): void {
     this.hub.publish(frame.orgId, 'source-change', frame);
+  }
+
+  private publishSourceRegistry(event: SourceRegistryChangedEvent): void {
+    const frame: EventsWatchSourceChangeFrame = {
+      orgId: event.orgId,
+      sourceId: event.sourceId,
+      event: { kind: 'registry' },
+    };
+    this.hub.publish(event.orgId, 'source-change', frame);
   }
 
   private publishGitSummary(frame: EventsWatchGitSummaryFrame): void {

@@ -22,6 +22,8 @@ export type { SemanticMemoryPorts } from './memory/semantic.ts';
 export { semanticMemoryCapability } from './memory/semantic.ts';
 export type { PlanCapabilityPorts } from './plan/index.ts';
 export { planCapability } from './plan/index.ts';
+export type { SourcesCapabilityPorts } from './sources/index.ts';
+export { sourcesCapability } from './sources/index.ts';
 export type { ThreadsCapabilityPorts } from './threads/index.ts';
 export { threadsCapability } from './threads/index.ts';
 export type { WebPackPorts, WebPackSpec } from './web/index.ts';

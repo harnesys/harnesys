@@ -1,7 +1,7 @@
+import { useQuery } from '@tanstack/react-query';
 import { HardDriveIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
-import { listSources, type Source } from '@/shared/api/sources';
+import { listSourcesQuery, type Source } from '@/shared/api/sources';
 import { FolderTypeIcon } from '@/shared/ui/icons';
 
 interface SourcesListProps {
@@ -11,42 +11,20 @@ interface SourcesListProps {
 
 export function SourcesList({ onSelect, selectedSourceId }: SourcesListProps) {
   const { orgId } = useParams();
-  const [sources, setSources] = useState<Source[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!orgId) {
-      setSources([]);
-      return;
-    }
-    let cancelled = false;
-    listSources(orgId)
-      .then((res) => {
-        if (!cancelled) {
-          setSources(res.sources);
-          setError(null);
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'failed to load sources');
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [orgId]);
+  const { data, error } = useQuery(listSourcesQuery(orgId ?? ''));
 
   if (!orgId) {
     return null;
   }
+
+  const sources = data?.sources ?? [];
 
   return (
     <div className="flex flex-col gap-1" data-testid="sources-list">
       <div className="px-2.5 font-medium text-muted-foreground text-xs uppercase tracking-wide">
         Sources
       </div>
-      {error ? <p className="px-2.5 text-destructive text-xs">{error}</p> : null}
+      {error ? <p className="px-2.5 text-destructive text-xs">{error.message}</p> : null}
       {sources.map((source) => {
         const selected = source.id === selectedSourceId;
         return (

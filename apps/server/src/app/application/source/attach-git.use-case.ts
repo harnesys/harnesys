@@ -4,6 +4,7 @@ import type { Source, UiVisibility } from '@harnesys/contracts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { SourcePathInvalidException } from '../../domain/source/source.error.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+import { SourceRegistryEventsPort } from '../../domain/source/source-registry-events.port.ts';
 import { PrepareGitSourceUseCase } from './prepare-git-source.use-case.ts';
 import { toPublicSource } from './to-public-source.ts';
 
@@ -25,6 +26,7 @@ export class AttachGitUseCase {
     private readonly sources: SourceRegistryPort,
     private readonly machineConfig: MachineConfigPort,
     private readonly prepare: PrepareGitSourceUseCase,
+    private readonly registryEvents: SourceRegistryEventsPort,
   ) {}
 
   async execute(input: AttachGitInput): Promise<Source> {
@@ -50,6 +52,7 @@ export class AttachGitUseCase {
     };
     this.sources.insert(record);
     void this.prepare.execute({ orgId: input.orgId, sourceId: id, hostId }).catch(() => undefined);
+    this.registryEvents.emit({ orgId: input.orgId, sourceId: id });
     return toPublicSource(record);
   }
 

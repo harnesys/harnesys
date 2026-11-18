@@ -33,6 +33,7 @@ import { RenameSourceUseCase } from './rename-source.use-case.ts';
 import { SetGitRemoteUseCase } from './set-git-remote.use-case.ts';
 import { SetSourceAvailabilityUseCase } from './set-source-availability.use-case.ts';
 import { SetSourceVisibilityUseCase } from './set-source-visibility.use-case.ts';
+import { SourcesToolsProvider } from './sources-tools.provider.ts';
 import { StageGitUseCase } from './stage-git.use-case.ts';
 import { SwitchGitBranchUseCase } from './switch-git-branch.use-case.ts';
 
@@ -74,6 +75,7 @@ import { SwitchGitBranchUseCase } from './switch-git-branch.use-case.ts';
     RenameSourceUseCase,
     SetGitRemoteUseCase,
     SetSourceAvailabilityUseCase,
+    SourcesToolsProvider,
   ],
   exports: [
     EnsureWorkspaceUseCase,

@@ -97,6 +97,18 @@ export function listSources(orgId: string): Promise<SourcesListResponse> {
   return apiJson(`/api/orgs/${encodeURIComponent(orgId)}/sources`);
 }
 
+export function sourcesListQueryKey(orgId: string) {
+  return ['sources', orgId, 'list'] as const;
+}
+
+export function listSourcesQuery(orgId: string) {
+  return queryOptions({
+    queryKey: sourcesListQueryKey(orgId),
+    queryFn: () => listSources(orgId),
+    enabled: Boolean(orgId),
+  });
+}
+
 export function sourceHostStatusQueryKey(orgId: string, sourceId: string) {
   return ['sources', orgId, sourceId, 'host-status'] as const;
 }

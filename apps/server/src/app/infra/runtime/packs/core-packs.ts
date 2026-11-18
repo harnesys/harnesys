@@ -15,6 +15,7 @@ import {
   registerPack,
   semanticMemoryCapability,
   shellCapability,
+  sourcesCapability,
   threadsCapability,
   webCapability,
 } from 'harnesys';
@@ -57,4 +58,5 @@ export const CORE_PACKS: readonly CorePackEntry[] = [
   { name: 'semantic-memory', register: () => stubRegistration(semanticMemoryCapability) },
   { name: 'knowledge-memory', register: () => stubRegistration(knowledgeMemoryCapability) },
   { name: 'skills', register: () => stubRegistration(skillsCapability) },
+  { name: 'sources', register: () => stubRegistration(sourcesCapability) },
 ];

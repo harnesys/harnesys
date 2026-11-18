@@ -447,6 +447,8 @@ export {
 } from './src/packs/shell/command-glob.ts';
 export { programOf, segmentCommand } from './src/packs/shell/shell-chain.ts';
 export { SHELL_FLOOR_PATTERNS } from './src/packs/shell/shell-floor.ts';
+export type { SourcesCapabilityPorts } from './src/packs/sources/index.ts';
+export { sourcesCapability } from './src/packs/sources/index.ts';
 export {
   createThreadsHistoryTool,
   THREADS_HISTORY_TOOL,
@@ -773,6 +775,13 @@ export type {
   SessionHandle,
 } from './src/ports/session.ts';
 export type { SkillRegistry } from './src/ports/skills.ts';
+export type {
+  SourcesAttachFolderInput,
+  SourcesPort,
+  SourcesSummary,
+  SourcesUiVisibility,
+  SourcesUpdateInput,
+} from './src/ports/sources.ts';
 export type {
   ThreadAttachmentPutInput,
   ThreadAttachmentRecord,

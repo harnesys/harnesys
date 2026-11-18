@@ -11,6 +11,7 @@ import {
   planCapability,
   registerPack,
   shellCapability,
+  sourcesCapability,
 } from 'harnesys';
 import { lspCapability } from 'harnesys/lsp';
 import { skillsCapability } from 'harnesys/skills';
@@ -32,6 +33,7 @@ import {
 } from './org-pack-registrations.helpers.ts';
 import { OrgPlanPort } from './org-plan.port.ts';
 import { OrgSkillsPackPort } from './org-skills.pack.port.ts';
+import { OrgSourcesPort } from './org-sources.pack.port.ts';
 import { sshHostGateOf } from './ssh-host-gate.ts';
 import type { WireOrgPacksDeps } from './wire-org-packs.ts';
 
@@ -86,6 +88,8 @@ export function registrationForPack(packName: string, ctx: WireOrgPackContext) {
       return knowledgeRegistration(ctx);
     case 'skills':
       return skillsRegistration(ctx);
+    case 'sources':
+      return sourcesRegistration(ctx);
     default:
       return undefined;
   }
@@ -188,6 +192,16 @@ function skillsRegistration(ctx: WireOrgPackContext) {
   }
   return registerPack(skillsCapability, {
     ports: new OrgSkillsPackPort(ctx.deps.skills),
+    resolveScope: ctx.liveScope,
+  });
+}
+
+function sourcesRegistration(ctx: WireOrgPackContext) {
+  if (!ctx.deps.sourcesPack) {
+    return undefined;
+  }
+  return registerPack(sourcesCapability, {
+    ports: { sources: new OrgSourcesPort(ctx.deps.sourcesPack) },
     resolveScope: ctx.liveScope,
   });
 }

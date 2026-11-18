@@ -23,6 +23,7 @@ import { isLocalFileWrite, sourceFilesTreeQueryKey } from '@/shared/api/files';
 import { rememberProjectNode, rememberSelfNode } from '@/shared/api/fleet';
 import { gitStatusQueryKey } from '@/shared/api/git';
 import { projectQueryKey } from '@/shared/api/project-base';
+import { sourcesListQueryKey } from '@/shared/api/sources';
 import { studioFocusProjectId, useStudioLocation } from '@/shared/config/location';
 import { studioPath } from '@/shared/config/routes';
 import { useAgentsDisplayStore } from '../model/agents-display.store';
@@ -213,7 +214,15 @@ export function DeskSync() {
       return;
     }
     return watchSourceChanges((frame) => {
-      if (frame.orgId !== activeOrgId || remoteProjects.has(frame.sourceId)) {
+      if (frame.orgId !== activeOrgId) {
+        return;
+      }
+      if (frame.event.kind === 'registry') {
+        void queryClient.invalidateQueries({ queryKey: sourcesListQueryKey(frame.orgId) });
+        void queryClient.invalidateQueries({ queryKey: projectQueryKey });
+        return;
+      }
+      if (remoteProjects.has(frame.sourceId)) {
         return;
       }
       if (frame.event.kind === 'git') {

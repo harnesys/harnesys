@@ -58,6 +58,7 @@ import type { OrgIssueDeps } from './packs/org-issue.port.ts';
 import type { OrgKnowledgeDeps } from './packs/org-knowledge.port.ts';
 import type { OrgManagerDeps } from './packs/org-manager.port.ts';
 import type { OrgSkillsDeps } from './packs/org-skills.pack.port.ts';
+import type { OrgSourcesDeps } from './packs/org-sources.pack.port.ts';
 
 export interface OrgRuntime {
   orgId: string;
@@ -142,5 +143,6 @@ export interface OrgRuntimeDeps {
   issueExecutions?: IssueExecutionPort;
   manager?: OrgManagerDeps;
   skills?: OrgSkillsDeps;
+  sourcesPack?: OrgSourcesDeps;
   waitGate?: WaitTickerGatePort;
 }

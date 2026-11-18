@@ -19,6 +19,7 @@ import { GitVcsPort } from '../../domain/source/git-vcs.port.ts';
 import { SourcePathInvalidException } from '../../domain/source/source.error.ts';
 import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+import { SourceRegistryEventsPort } from '../../domain/source/source-registry-events.port.ts';
 import { hashNodeToken } from '../fleet/hash-node-token.ts';
 import { toPublicSource } from './to-public-source.ts';
 
@@ -42,6 +43,7 @@ export class AttachLocalFolderUseCase {
     private readonly proxy: FleetContentProxyPort,
     private readonly commands: NodeCommandQueuePort,
     private readonly git: GitVcsPort,
+    private readonly registryEvents: SourceRegistryEventsPort,
   ) {}
 
   async execute(input: AttachLocalFolderInput): Promise<Source> {
@@ -96,6 +98,7 @@ export class AttachLocalFolderUseCase {
       absolutePath,
       revision: 1,
     });
+    this.registryEvents.emit({ orgId: input.orgId, sourceId: id });
     return toPublicSource(record);
   }
 
