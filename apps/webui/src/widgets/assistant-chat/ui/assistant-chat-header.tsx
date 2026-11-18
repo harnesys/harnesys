@@ -1,4 +1,4 @@
-import { CheckIcon, PlusIcon } from 'lucide-react';
+import { CheckIcon, GripVerticalIcon, PlusIcon } from 'lucide-react';
 import { AgentRecordAvatar } from '@/entities/agent';
 import { openNewThread } from '@/features/switch-thread';
 import {
@@ -67,13 +67,17 @@ export function AssistantChatHeader({
   }
   return (
     <header
-      className="flex h-14 shrink-0 cursor-grab touch-none select-none items-center gap-1.5 px-2 active:cursor-grabbing"
+      className="group/header flex h-14 shrink-0 cursor-grab touch-none select-none items-center gap-1.5 border-b bg-muted/40 px-2 transition-colors hover:bg-muted/70 active:cursor-grabbing active:bg-muted"
       data-testid="assistant-chat-header"
       onPointerDown={onDragStart}
       onPointerMove={onDragMove}
       onPointerUp={onDragEnd}
       onPointerCancel={onDragCancel}
     >
+      <GripVerticalIcon
+        className="size-4 shrink-0 text-muted-foreground/50 transition-colors group-hover/header:text-muted-foreground group-active/header:text-foreground"
+        aria-hidden="true"
+      />
       {agentBlock}
       {thread ? (
         <DropdownMenu>

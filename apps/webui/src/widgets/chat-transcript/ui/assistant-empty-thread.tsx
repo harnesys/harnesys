@@ -23,7 +23,7 @@ export function AssistantEmptyThread({ agent, threadId }: { agent: Agent; thread
   return (
     <CategoryLanding data-testid="chat-empty-thread" className="fade-in animate-in duration-200">
       <CategoryLandingEyebrow>ASSISTANT</CategoryLandingEyebrow>
-      <CategoryLandingTitle>{agent.name} can help with anything</CategoryLandingTitle>
+      <CategoryLandingTitle>{agent.name} can help</CategoryLandingTitle>
       <CategoryLandingDescription>{ASSISTANT_DESCRIPTION}</CategoryLandingDescription>
       <div className="mt-8">
         <AgentBulletList
