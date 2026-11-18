@@ -38,7 +38,10 @@ try {
     targetDir: layout.systemSkillsDir(),
     appVersion: APP_VERSION,
   });
-  seedLogger.info({ seeded: result.seeded, added: result.added }, 'system skills seed complete');
+  seedLogger.info(
+    { synced: result.synced, added: result.added, removed: result.removed },
+    'system skills seed complete',
+  );
 } catch (error) {
   seedLogger.warn({ error }, 'system skills seed failed');
 }

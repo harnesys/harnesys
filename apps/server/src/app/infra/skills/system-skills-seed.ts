@@ -1,5 +1,13 @@
 import { createHash } from 'node:crypto';
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 
 export interface SeedSkillEntry {
@@ -15,9 +23,10 @@ export interface SeedMarker {
 }
 
 export interface SeedResult {
-  seeded: string[];
-  skipped: string[];
+  synced: string[];
+  unchanged: string[];
   added: string[];
+  removed: string[];
 }
 
 export const SEED_MARKER_FILE = '.harnesys-seed.json';
@@ -100,29 +109,44 @@ export function seedSystemSkills(opts: {
   const bundledDir = join(opts.bundledRoot, 'skills');
   const previous = readSeedMarker(opts.targetDir);
   const now = new Date().toISOString();
-  const seeded: string[] = [];
-  const skipped: string[] = [];
+  const synced: string[] = [];
+  const unchanged: string[] = [];
   const added: string[] = [];
+  const removed: string[] = [];
   const skills: Record<string, SeedSkillEntry> = {};
   mkdirSync(opts.targetDir, { recursive: true });
   for (const name of bundledSkillNames(opts.bundledRoot)) {
     const source = join(bundledDir, name);
     const dest = join(opts.targetDir, name);
-    if (existsSync(dest)) {
-      skipped.push(name);
-    } else {
-      cpSync(source, dest, { recursive: true });
-      seeded.push(name);
-    }
-    if (!previous?.skills[name]) {
+    const entry = previous?.skills[name];
+    const bundledHash = sha256SkillDir(source);
+    if (entry === undefined) {
       added.push(name);
     }
-    skills[name] = { bundledHash: sha256SkillDir(join(source)), seededAt: now };
+    if (existsSync(join(dest, 'SKILL.md')) && sha256SkillDir(dest) === bundledHash) {
+      unchanged.push(name);
+    } else {
+      rmSync(dest, { recursive: true, force: true });
+      cpSync(source, dest, { recursive: true });
+      synced.push(name);
+    }
+    skills[name] = {
+      bundledHash,
+      seededAt: entry?.seededAt ?? now,
+      ...(entry?.restoredAt !== undefined ? { restoredAt: entry.restoredAt } : {}),
+    };
+  }
+  for (const name of Object.keys(previous?.skills ?? {})) {
+    if (skills[name] !== undefined) {
+      continue;
+    }
+    rmSync(join(opts.targetDir, name), { recursive: true, force: true });
+    removed.push(name);
   }
   writeSeedMarker(opts.targetDir, {
     appVersion: opts.appVersion,
     seededAt: now,
     skills,
   });
-  return { seeded, skipped, added };
+  return { synced, unchanged, added, removed };
 }
