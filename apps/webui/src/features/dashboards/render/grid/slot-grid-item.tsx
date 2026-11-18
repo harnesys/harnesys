@@ -21,6 +21,8 @@ export type SlotGridVariant = 'plain' | 'card';
 
 export interface SlotGridItemProps {
   entry: GridEntry;
+  /** Horizontal factor from the authored canvas width to the current one. */
+  scale: number;
   editable: boolean;
   selected: boolean;
   active: boolean;
@@ -76,6 +78,7 @@ function transitionStyle(active: boolean): string | undefined {
 
 export function SlotGridItem({
   entry,
+  scale,
   editable,
   selected,
   active,
@@ -111,9 +114,9 @@ export function SlotGridItem({
       role={editable || onClick ? 'button' : undefined}
       tabIndex={editable || onClick ? 0 : undefined}
       style={{
-        left: entry.rect.x,
+        left: entry.rect.x * scale,
         top: entry.rect.y,
-        width: entry.rect.w,
+        width: entry.rect.w * scale,
         height: entry.rect.h,
         zIndex: zIndexClass(active, selected),
         transition: transitionStyle(active),

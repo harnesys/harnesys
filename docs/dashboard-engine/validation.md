@@ -1,23 +1,46 @@
 # Validation, gates and generated references
 
-Owners: `apps/server/src/app/domain/dashboards/`,
-`packages/harnesys/src/packs/dashboards/`,
+Owners: `packages/contracts/src/dashboards/widget-doc-check.ts`,
+`apps/server/src/app/domain/dashboards/widget-doc.guard.ts`,
+`packages/harnesys/src/packs/dashboards/validate-doc.ts`,
 `scripts/gen-widget-skill-refs.ts`, `.github/workflows/ci.yml`.
 
-## Two layers
+## One check, three callers
 
-| Layer | Files | Checks |
-|---|---|---|
-| Contract schemas | `packages/contracts/src/dashboards/` | doc shape, rects on the 8 px grid, source fields, expression syntax, literal limits, `interval` only on external sources |
-| Server guard | `domain/dashboards/widget-doc.guard.ts`, `widget-doc-item.ts`, `widget-doc-expr.ts`, `path-guard.ts` | props parse with the descriptor, event names exist, `bindings` keys are real props, every root/source/derived reference resolves, `derived` has no cycles, `tpl` tokens are refs, `rowBindings` keys resolve, `visibleWhen` refs resolve, every source/`callApi` path names the widget's org |
+The rules live once, in `checkWidgetDoc(orgId, doc)`:
 
-Failures are one `DashboardWidgetValidationException` carrying
-`details.issues: [{ path, message }]`; the path is a dot path inside the doc.
-The agent tools `dashboard_widgets_validate` and `dashboard_widgets_test` run the
-same checks without writing.
+| File | Responsibility |
+|---|---|
+| `packages/contracts/src/dashboards/doc.ts` | `WidgetDocSchema` (strict top level) and `WidgetItemSchema` (strict): shape, limits, 8 px rects, literal JSON |
+| `packages/contracts/src/dashboards/sources.ts` | source kinds, `{{param:name}}` placement, `interval` only on `external` |
+| `packages/contracts/src/dashboards/widget-doc-check.ts` | `checkWidgetDoc`: byte cap, schema parse, sources, derived, items; returns `{ ok, doc, issues }` |
+| `packages/contracts/src/dashboards/widget-doc-expr.ts` | reference roots, fn names/arity/ops, `derived` cycles, template tokens, `rowBindings` refs |
+| `packages/contracts/src/dashboards/widget-doc-item.ts` | props against the descriptor, event names, binding prop names, `callApi` org, legacy `actions` paths |
+| `packages/contracts/src/dashboards/path-guard.ts` | traversal, encoding and org prefix of `/orgs/<orgId>/...` paths |
 
-Templates are additionally covered by `templates/templates.spec.ts` (contract
-parse, grid, fit, descriptor props, event names, catalog paths).
+Callers:
+
+- Server write path: `validateWidgetDoc` in
+  `apps/server/src/app/domain/dashboards/widget-doc.guard.ts` calls
+  `checkWidgetDoc`, then throws one `DashboardWidgetValidationException` with
+  `details.issues: [{ path, message }]`. The REST filter renders that contract;
+  `create-widget.use-case.ts` and `update-widget.use-case.ts` call it.
+- Agent dry run: `dashboard_widgets_validate` calls the same `checkWidgetDoc`
+  and returns `{ ok, issues }`. A doc that passes there is structurally accepted
+  by create/update — there is no "stricter server guard" anymore.
+- Templates: `templates/templates.spec.ts` runs the contract parse plus
+  descriptor parity over every template.
+
+Tool failures carry the exception details: `failureText` in
+`packages/harnesys/src/application/tool-approve.ts` appends
+`JSON.stringify(error.details)` after the message for every domain exception, so
+`details.issues` reaches the agent instead of a bare reason string.
+
+`visibleWhen`, `bindings`, source `query`/`body`, `derived`, `rowBindings` and
+every action expression are walked for refs and fn calls. Roots are `state`,
+`sources`, `status`, `derived`, `event`, `row`, `org`; `state.<key>` and
+`derived.<name>` must be declared, `sources.<id>`/`status.<id>` must name a
+declared source.
 
 ## Generated skill references
 
@@ -41,10 +64,10 @@ pass the guard.
 
 | Command | Covers |
 |---|---|
-| `bun test packages/contracts/src/dashboards` | primitive registry, defaults parity, JSON schema conversion, templates, expressions |
-| `bun test apps/server/src/app/domain/dashboards apps/server/src/app/application/dashboards` | guard invariants, doc fixtures, use-cases |
-| `bun test apps/webui/src/features/dashboards` | grid math and expression engine |
-| `bun run --cwd apps/webui typecheck` | registry completeness (`satisfies Record<PrimitiveId, …>`), contracts wiring |
+| `bun test packages/contracts/src/dashboards` | primitive registry, defaults parity, JSON schema conversion, templates, expressions, `checkWidgetDoc` |
+| `bun test apps/server/src/app/domain/dashboards apps/server/src/app/application/dashboards` | exception wrapping, doc fixtures, use-cases |
+| `bun test apps/webui/src/features/dashboards` | grid math, expression engine (including `where`) |
+| `bun run --cwd apps/webui typecheck` | registry completeness (`satisfies Record<PrimitiveId, ...>`), contracts wiring |
 | `bunx biome check .` | style and layer boundaries |
 | `bun run skills:check` | generated references are current |
 | server boot on a spare port | DI resolution after controller/module edits |
@@ -60,8 +83,17 @@ CI (`.github/workflows/ci.yml`) runs lint, typecheck, the compiler check,
 - `templates/templates.spec.ts`: every template parses; ids unique; source paths
   in the catalog; rects multiple of 8 and inside the widget; props parse;
   events declared.
-- `widget-doc.guard.spec.ts` / `widget-doc-golden.spec.ts`: guard messages,
-  expressions, bindings, paths, derived cycles, and a golden fixture shape.
+- `widget-doc-check.spec.ts`: unknown event, invalid prop, unknown binding root,
+  `derived` cycle, unverifiable `callApi` path, unknown top-level key, invalid
+  `where` op.
+- `apps/server/src/app/domain/dashboards/widget-doc.guard.spec.ts`: the check
+  result is wrapped in the one exception contract.
+- `apps/server/src/app/application/dashboards/widget-doc-golden.spec.ts`:
+  golden fixture shape.
+- `expr-fns.spec.ts`: every signature has an implementation; `where`
+  comparisons, `contains`, `exists`/`missing` and the invalid-input fallback.
+- `packages/harnesys/src/application/tool-approve.spec.ts`: domain error
+  `details` survive into the tool error text.
 
 ## Boot check
 

@@ -14,7 +14,6 @@ import {
 } from 'harnesys';
 import { lspCapability } from 'harnesys/lsp';
 import { skillsCapability } from 'harnesys/skills';
-import { dashboardsToolsDeps } from '../../../application/dashboards/dashboard-tools.holder.ts';
 import { LspPort } from '../../../domain/lsp/lsp.port.ts';
 import { isHostWired } from '../../../domain/runtime/org-pack-list.ts';
 import { scopedLspPort } from '../../lsp/scoped-lsp.port.ts';
@@ -173,7 +172,7 @@ function managerRegistration(ctx: WireOrgPackContext) {
 }
 
 function dashboardsRegistration(ctx: WireOrgPackContext) {
-  const deps = dashboardsToolsDeps();
+  const deps = ctx.deps.dashboards;
   if (!deps) {
     return undefined;
   }

@@ -1,5 +1,4 @@
-import type { WidgetParams, WidgetParamValue } from '@harnesys/contracts';
-import type { SourceParamValues } from '../../domain/dashboards/param-ref.ts';
+import type { SourceParamValues, WidgetParams, WidgetParamValue } from '@harnesys/contracts';
 import type { SourceRunRequest } from '../../domain/dashboards/source-runner.port.ts';
 
 export interface CacheEntry<T> {

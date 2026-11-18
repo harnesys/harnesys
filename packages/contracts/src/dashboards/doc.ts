@@ -58,7 +58,7 @@ export type WidgetItem = z.infer<typeof WidgetItemSchema>;
  * legacy single-primitive widget: `primitive` + `config` + optional
  * `transform` (kept for agent-authored and pre-composite widgets).
  */
-export const WidgetDocSchema = z.object({
+export const WidgetDocSchema = z.strictObject({
   schemaVersion: z.literal(1),
   title: z.string().min(1).max(120),
   state: z.record(z.string(), JsonValueSchema).default({}),

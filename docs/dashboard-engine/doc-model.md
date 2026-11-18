@@ -6,8 +6,8 @@ Owners: `packages/contracts/src/dashboards/doc.ts`,
 
 ## WidgetDoc
 
-`WidgetDocSchema` is the document contract. Top-level keys are not strict:
-unknown keys are dropped silently, so proofread them.
+`WidgetDocSchema` is the document contract: a strict object, so an unknown
+top-level key fails validation instead of being dropped silently.
 
 | Field | Rule |
 |---|---|
@@ -53,7 +53,18 @@ The widget card spends space on chrome: about 18 px of width and 43 px of height
 (border, 8 px padding, ~33 px header). A `408`-wide widget holds 384 px of items,
 which is what the templates use. Keep item content inside `w - 24` by `h - 48`.
 Taller content scrolls vertically inside the body; wider content scrolls
-horizontally; drag and resize clamp to the visible width.
+horizontally; drag and resize clamp to the authored width.
+
+Rects stay in pixels of one authored width per grid: the board uses
+`BOARD_REFERENCE_WIDTH = 1200`, raised to the committed extent of its widest
+widget so older boards keep their proportions; a widget body uses 12 item
+columns, 384 px. `SlotGrid` receives that value as `referenceWidth` and scales
+`x`/`w` by `containerWidth / referenceWidth`, so a board fills the pane at any
+window width instead of scrolling horizontally. `y`/`h` stay in pixels: a box
+narrows and its content reflows, it does not zoom. Pointer deltas are divided by
+the same factor, so drag and resize still snap to the 8 px grid of the authored
+space, and the reference comes from the committed layout, which keeps the
+pointer-to-grid mapping stable in the middle of a drag.
 
 Interaction (`render/grid/use-slot-interaction.ts`, `grid-math.ts`): the active
 box takes the requested rect, every overlapping box is pushed below the blocker

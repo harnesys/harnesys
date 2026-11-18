@@ -28,6 +28,7 @@ import { pluck } from './pluck';
 import { sort } from './sort';
 import { sum } from './sum';
 import type { ExprFn } from './types.ts';
+import { where } from './where';
 
 export type { ExprFn } from './types.ts';
 
@@ -41,6 +42,7 @@ export const EXPR_FNS = {
   last,
   pluck,
   filter,
+  where,
   sort,
   limit,
   groupCount,

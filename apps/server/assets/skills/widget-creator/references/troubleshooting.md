@@ -1,8 +1,8 @@
 # Troubleshooting
 
-Every message below is thrown by the widget doc guard (`apps/server/src/app/domain/dashboards/widget-doc.guard.ts`, `widget-doc-item.ts`, `widget-doc-expr.ts`), by the contract schemas, or by the source runner. Issues arrive as `{ path, message }`; the path is a dot path inside the doc and tells you the exact field.
+Every message below is thrown by the widget doc check (`packages/contracts/src/dashboards/widget-doc-check.ts` and the files it calls), by the contract schemas, or by the source runner. Issues arrive as `{ path, message }`; the path is a dot path inside the doc and tells you the exact field.
 
-`dashboard_widgets_validate` reports the contract layer, so a doc that passes it can still be rejected by the create/update guard. Both use the same paths.
+`dashboard_widgets_validate` runs the same check as create/update; a clean result there is accepted by the write path.
 
 ## Document and item shape
 

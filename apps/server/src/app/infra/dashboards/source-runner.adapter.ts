@@ -1,8 +1,7 @@
 import { Inject, Injectable, Logger } from '@harnesys/brix';
-import type { Expr, ExternalSource } from '@harnesys/contracts';
+import type { Expr, ExternalSource, SourceParamValues } from '@harnesys/contracts';
+import { substituteParams } from '@harnesys/contracts';
 import { DashboardWidgetValidationException } from '../../domain/dashboards/dashboard.error.ts';
-import type { SourceParamValues } from '../../domain/dashboards/param-ref.ts';
-import { substituteParams } from '../../domain/dashboards/param-ref.ts';
 import type {
   SourceHttpMethod,
   SourceRunRequest,

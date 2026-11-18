@@ -13,7 +13,7 @@ import { Button } from '@/shared/ui/button';
 import { useDashboardInspectorStore } from '../../model/inspector-store';
 import { defaultWidgetItem } from '../../model/widget-form';
 import type { GridEntry, GridRect } from '../../render/grid/grid-math';
-import { sameEntries } from '../../render/grid/grid-math';
+import { authoredWidth, sameEntries } from '../../render/grid/grid-math';
 import { SlotGrid } from '../../render/grid/slot-grid';
 import { useElementSize } from '../../render/grid/use-element-size';
 import { useDraftSelectionGuard } from '../draft-guard';
@@ -35,6 +35,7 @@ interface BoardCanvasProps {
 }
 
 const MOBILE_STACK_MAX_WIDTH = 640;
+const BOARD_REFERENCE_WIDTH = 1200;
 const COMPOSITE_MIN_W = 192;
 const COMPOSITE_MIN_H = 160;
 const WIDGET_MIN_W = 96;
@@ -91,6 +92,12 @@ export function BoardCanvas({
   const clearSelection = useDashboardInspectorStore((state) => state.clearSelection);
   const guard = useDraftSelectionGuard(dashboard.widgets);
   const stacked = width > 0 && width < MOBILE_STACK_MAX_WIDTH;
+  // Authored width comes from the committed layout, never from the live one:
+  // a fixed reference keeps the pointer-to-grid mapping stable mid-drag.
+  const referenceWidth = authoredWidth(
+    dashboard.widgets.map((widget) => ({ id: widget.id, rect: widget.rect })),
+    BOARD_REFERENCE_WIDTH,
+  );
 
   // Resync from the server only when committed slots actually differ from the
   // current grid state, so an unrelated refetch never clobbers a live drag.
@@ -164,6 +171,7 @@ export function BoardCanvas({
         <SlotGrid
           className="min-h-0 flex-1 p-4"
           entries={layout}
+          referenceWidth={referenceWidth}
           editable={editMode}
           selectedId={editMode && selectedItemId === null ? selectedWidgetId : null}
           hoverEnabled={selectedItemId === null}

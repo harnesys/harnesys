@@ -1,9 +1,13 @@
 import { describe, expect, test } from 'bun:test';
-import type { ExternalSource, WidgetParams } from '@harnesys/contracts';
+import type {
+  ExternalSource,
+  ParamSubstitution,
+  SourceParamValues,
+  WidgetDocIssue,
+  WidgetParams,
+} from '@harnesys/contracts';
+import { substituteParams } from '@harnesys/contracts';
 import { DashboardWidgetValidationException } from '../../domain/dashboards/dashboard.error.ts';
-import type { ParamSubstitution, SourceParamValues } from '../../domain/dashboards/param-ref.ts';
-import { substituteParams } from '../../domain/dashboards/param-ref.ts';
-import type { WidgetDocIssue } from '../../domain/dashboards/widget-doc.guard.ts';
 import { validateWidgetDoc } from '../../domain/dashboards/widget-doc.guard.ts';
 import { cacheKeyOf } from './source-cache.ts';
 

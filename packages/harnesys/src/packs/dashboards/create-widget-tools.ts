@@ -171,8 +171,7 @@ export function createWidgetTools(deps: WidgetToolsDeps): ToolDefinition[] {
     tool('dashboard_widgets_validate', {
       group: 'dashboards',
       description:
-        'Dry-run a WidgetDoc without writing anything and get structured issues: { ok, issues: [{ path, message }] } with dot paths inside the doc. Runs the contract schema, checks that every orgApi source path targets your org, parses each item props against its primitive descriptor, and rejects unknown event names and duplicate item ids. ' +
-        'The create and update tools run the full server guard on top of this: it also checks reference roots (state, sources, derived, event, row, org), derived cycles, source param placement and callApi target orgs, so a doc that passes here can still be rejected there.',
+        'Dry-run a WidgetDoc without writing anything and get structured issues: { ok, issues: [{ path, message }] } with dot paths inside the doc. It runs the exact check create and update run - contract schema, props against the primitive descriptor, event names, binding roots, derived cycles, source param placement and callApi/source orgs - so a doc that passes here is accepted by the write path.',
       input: {
         type: 'object',
         properties: {

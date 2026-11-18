@@ -320,7 +320,7 @@ export async function runSingleToolCall(
       ensureAskInterruptId(e, call.id);
       throw e;
     }
-    const content = e instanceof Error ? e.message : String(e);
+    const content = failureText(e);
     const post = await emitHook(ctx.hooks, 'PostToolUseFailure', {
       tool_name: call.name,
       tool_input: execArgs,
@@ -339,6 +339,25 @@ export async function runSingleToolCall(
       },
       message: message(finalText),
     };
+  }
+}
+/**
+ * Domain errors carry `details` (issues, ids, paths) that the message alone
+ * drops. Agents need those fields to fix the call, so they travel with the
+ * tool error as JSON after the message.
+ */
+function failureText(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return String(error);
+  }
+  const details = (error as { details?: unknown }).details;
+  if (details === undefined) {
+    return error.message;
+  }
+  try {
+    return `${error.message}\n${JSON.stringify(details)}`;
+  } catch {
+    return error.message;
   }
 }
 export async function executeApproveBatch(

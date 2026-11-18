@@ -9,6 +9,8 @@ import type {
   RunEventStore,
 } from 'harnesys';
 import { createProcessJobRegistry } from 'harnesys';
+import type { OrgDashboardsDeps } from '../../../application/dashboards/dashboard-tools.holder.ts';
+import { dashboardsToolsDeps } from '../../../application/dashboards/dashboard-tools.holder.ts';
 import { TriggerInstanceRepositoryPort } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
 import type { AgentRecord } from '../../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
@@ -73,6 +75,7 @@ export interface WireOrgPacksDeps {
   plugins?: OrgPluginRuntimeSource;
   engineSnapshot?: HostEngineEntry[];
   packRegistry?: PackRegistryPort;
+  dashboards?: OrgDashboardsDeps;
 }
 
 export interface WireOrgPackFilter {
@@ -103,8 +106,10 @@ export function orgPackInputs(
   engineSnapshot?: HostEngineEntry[],
   events?: RunEventStore,
 ): WireOrgPacksDeps {
+  const dashboards = dashboardsToolsDeps();
   return {
     orgId: deps.orgId,
+    ...(dashboards === undefined ? {} : { dashboards }),
     ...(engineSnapshot !== undefined ? { engineSnapshot } : {}),
     layout: deps.layout,
     agents: deps.agents,

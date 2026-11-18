@@ -34,6 +34,18 @@ export function contentHeight(entries: readonly GridEntry[]): number {
   return entries.reduce((max, entry) => Math.max(max, entry.rect.y + entry.rect.h), 0);
 }
 
+export function contentWidth(entries: readonly GridEntry[]): number {
+  return entries.reduce((max, entry) => Math.max(max, entry.rect.x + entry.rect.w), 0);
+}
+
+export function authoredWidth(entries: readonly GridEntry[], floor: number): number {
+  return Math.max(floor, contentWidth(entries));
+}
+
+export function widthScale(containerWidth: number, referenceWidth: number): number {
+  return containerWidth > 0 && referenceWidth > 0 ? containerWidth / referenceWidth : 1;
+}
+
 export function sameRect(a: GridRect, b: GridRect): boolean {
   return a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
 }

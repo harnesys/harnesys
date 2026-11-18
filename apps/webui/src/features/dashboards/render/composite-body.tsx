@@ -3,7 +3,7 @@ import { primitiveById } from '@harnesys/contracts';
 import type { ReactNode } from 'react';
 import { cn } from '@/shared/lib/utils';
 import type { WidgetRuntime } from './data/use-widget-runtime';
-import { type GridEntry, type GridRect } from './grid/grid-math';
+import { authoredWidth, type GridEntry, type GridRect } from './grid/grid-math';
 import { SlotGrid } from './grid/slot-grid';
 import { ItemContent } from './item-content';
 
@@ -53,10 +53,13 @@ export function CompositeBody(props: CompositeBodyProps): ReactNode {
     );
   };
 
+  const entries = doc.items.map(itemEntry);
+
   return (
     <SlotGrid
       className="h-full flex-1"
-      entries={doc.items.map(itemEntry)}
+      entries={entries}
+      referenceWidth={authoredWidth(entries, ITEM_UNIT * 12)}
       editable={editMode}
       selectedId={selectedItemId}
       variant="card"

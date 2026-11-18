@@ -1,5 +1,4 @@
 import type { z } from 'zod';
-import { DashboardWidgetValidationException } from './dashboard.error.ts';
 
 /** One validation finding, addressed by a dot path inside the widget doc. */
 export interface WidgetDocIssue {
@@ -15,9 +14,17 @@ export interface ScopedIssue extends WidgetDocIssue {
 
 export function zodIssues(error: z.ZodError, prefix: string): WidgetDocIssue[] {
   return error.issues.map((issue) => ({
-    path: joinPath(prefix, issue.path),
+    path: joinPath(prefix, issuePath(issue)),
     message: issue.message,
   }));
+}
+
+/** `unrecognized_keys` carries the stray keys outside `path`; name the key. */
+function issuePath(issue: z.core.$ZodIssue): PropertyKey[] {
+  if (issue.code === 'unrecognized_keys' && issue.keys.length > 0) {
+    return [...issue.path, issue.keys[0]];
+  }
+  return issue.path;
 }
 
 function joinPath(prefix: string, path: PropertyKey[]): string {
@@ -32,18 +39,4 @@ function joinPath(prefix: string, path: PropertyKey[]): string {
     }
   }
   return out === '' ? '(document)' : out;
-}
-
-export function failure(reason: string, issues: ScopedIssue[]): DashboardWidgetValidationException {
-  const itemIds = [...new Set(issues.map((issue) => issue.itemId).filter(isString))];
-  const sourceIds = [...new Set(issues.map((issue) => issue.sourceId).filter(isString))];
-  return new DashboardWidgetValidationException(reason, {
-    issues: issues.map(({ path, message }) => ({ path, message })),
-    ...(itemIds.length === 1 ? { itemId: itemIds[0] } : {}),
-    ...(sourceIds.length === 1 ? { sourceId: sourceIds[0] } : {}),
-  });
-}
-
-function isString(value: string | undefined): value is string {
-  return value !== undefined;
 }

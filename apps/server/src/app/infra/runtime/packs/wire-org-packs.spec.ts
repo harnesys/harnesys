@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { OrgSettings } from '@harnesys/contracts';
 import { OrgSettingsSchema } from '@harnesys/contracts';
 import type { McpManagePort } from 'harnesys';
+import type { OrgDashboardsDeps } from '../../../application/dashboards/dashboard-tools.holder.ts';
 import { LspPort } from '../../../domain/lsp/lsp.port.ts';
 import { HostFsLayoutPort } from '../../../domain/machine/host-fs-layout.port.ts';
 import { isHostWired, orgPackNames } from '../../../domain/runtime/org-pack-list.ts';
@@ -56,6 +57,7 @@ function fullDeps(): WireOrgPacksDeps {
     sources,
     planDb: memoryDb(),
     memoryDb: memoryDb(),
+    dashboards: {} as OrgDashboardsDeps,
   };
 }
 

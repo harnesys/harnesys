@@ -39,7 +39,8 @@ and never talks to a source directly.
 | Layer | Location |
 |---|---|
 | Contracts (schemas, expressions, primitives, templates) | `packages/contracts/src/dashboards/` |
-| Server validation guard | `apps/server/src/app/domain/dashboards/` |
+| Shared widget doc check | `packages/contracts/src/dashboards/widget-doc-check.ts` |
+| Server validation guard (exception wrapper) | `apps/server/src/app/domain/dashboards/widget-doc.guard.ts` |
 | Persistence (org SQLite) | `apps/server/src/app/infra/dashboards/`, `apps/server/src/app/infra/org-sqlite/` |
 | REST API | `apps/server/src/app/api/rest/dashboards.controller.ts` |
 | Server use-cases | `apps/server/src/app/application/dashboards/` |
@@ -54,7 +55,7 @@ and never talks to a source directly.
 
 | Command | Covers |
 |---|---|
-| `bun test packages/contracts/src/dashboards` | registry, defaults parity, JSON schema conversion, templates, expressions |
+| `bun test packages/contracts/src/dashboards` | registry, defaults parity, JSON schema conversion, templates, expressions, `checkWidgetDoc` |
 | `bun test apps/server/src/app/domain/dashboards apps/server/src/app/application/dashboards` | guard invariants, doc fixtures, use-cases |
 | `bun test apps/webui/src/features/dashboards` | grid math and expression engine |
 | `bun run --cwd apps/webui typecheck` | primitive registry completeness, contracts wiring |

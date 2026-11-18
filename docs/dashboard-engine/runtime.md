@@ -38,10 +38,15 @@ Evaluation order: source `query`/`body` (state and org only — a source cannot
 read another source) → `derived` in dependency order (cycles rejected) → item
 `bindings` → `visibleWhen` → `rowBindings`.
 
-The function library (`count`, `filter`, `pluck`, `groupCount`, `format`, …) is
+The function library (`count`, `filter`, `where`, `pluck`, `groupCount`, `format`, …) is
 declared in `packages/contracts/src/dashboards/expr.ts`
 (`EXPR_FN_SIGNATURES`) and implemented in `render/engine/fns/`. The agent-facing
 signature table is `apps/server/assets/skills/widget-creator/references/data-flow.md`.
+
+`filter(list, path)` keeps entries whose value at the path is truthy;
+`where(list, path, op, value?)` compares with `eq`, `neq`, `gt`, `gte`, `lt`,
+`lte`, `contains`, `exists` or `missing`. A literal unknown op is rejected by
+the guard.
 
 ## Sources
 

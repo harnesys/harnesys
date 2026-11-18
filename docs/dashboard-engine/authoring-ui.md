@@ -13,7 +13,10 @@ and actions for duplicate, export, import, refresh and delete.
 Layout changes are committed separately from the doc through
 `PUT /orgs/:orgId/dashboards/:dashboardId/layout` (`dashboard_widgets_move` in the
 agent tools). A drag that overlaps another widget pushes it down; nothing
-compacts upward. Narrow containers switch to a stacked layout.
+compacts upward. Narrow containers switch to a stacked layout; every other
+width scales widget `x`/`w` from the authored width (see `doc-model.md`), so the
+board fills the pane without horizontal scroll and saved rects never change on
+resize.
 
 ## Inspector
 

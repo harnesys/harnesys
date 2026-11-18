@@ -1,4 +1,4 @@
-import type { WidgetParams } from '@harnesys/contracts';
+import type { WidgetParams } from './doc.ts';
 
 export interface ParamRef {
   name: string;

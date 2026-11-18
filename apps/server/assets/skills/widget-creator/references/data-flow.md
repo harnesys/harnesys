@@ -57,6 +57,7 @@ Rules the guard enforces:
 | `first` / `last` | 1 | first / last entry of a list, first / last character of a string |
 | `pluck` | 2 | values at a path across a list of objects; missing entries become `null` so indexes stay aligned |
 | `filter` | 2 | entries whose value at a path is truthy (no lambdas; the second argument is the path) |
+| `where` | 3-4 | entries whose value at a path matches `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `exists` or `missing`; the fourth argument is the comparison value (`exists`/`missing` ignore it). Use it for "only in_review" or "older than X": `{ "fn": "where", "args": [{ "ref": "sources.issues.items" }, "status", "eq", "in_review"] }`. A literal unknown op is rejected by the guard |
 | `sort` | 1-2 | ascending copy; with a path, ordered by that value |
 | `limit` | 2 | first `n` entries |
 | `groupCount` | 1-2 | `[{ key, count }]` grouped by a path or by the entry itself, ordered count desc then key asc - shaped for a `chart` with `xKey: "key"`, `yKey: "count"` |

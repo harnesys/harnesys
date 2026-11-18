@@ -46,6 +46,17 @@ describe('expr function library', () => {
     expect(EXPR_FNS.sort([[3, 1, 2]])).toEqual([1, 2, 3]);
     expect(EXPR_FNS.sort([ROWS, 'score'])).toEqual([ROWS[0], ROWS[1], ROWS[2]]);
     expect(EXPR_FNS.limit([[1, 2, 3], 2])).toEqual([1, 2]);
+    expect(EXPR_FNS.where([ROWS, 'status', 'eq', 'open'])).toEqual([ROWS[0], ROWS[2]]);
+    expect(EXPR_FNS.where([ROWS, 'status', 'neq', 'open'])).toEqual([ROWS[1]]);
+    expect(EXPR_FNS.where([ROWS, 'score', 'gt', 3])).toEqual([ROWS[1]]);
+    expect(EXPR_FNS.where([ROWS, 'score', 'lte', 2])).toEqual([ROWS[0]]);
+    expect(EXPR_FNS.where([ROWS, 'status', 'contains', 'pe'])).toEqual([ROWS[0], ROWS[2]]);
+    expect(EXPR_FNS.where([ROWS, 'score', 'missing'])).toEqual([ROWS[2]]);
+    expect(EXPR_FNS.where([ROWS, 'score', 'exists'])).toEqual([ROWS[0], ROWS[1]]);
+    expect(EXPR_FNS.where([ROWS, 'status', 'bogus', 'open'])).toEqual(ROWS);
+    expect(EXPR_FNS.where([ROWS, 'status', 'eq'])).toEqual(ROWS);
+    expect(EXPR_FNS.where([ROWS, 'status', 'contains', null])).toEqual([]);
+    expect(EXPR_FNS.where(['not a list', 'status', 'eq', 'open'])).toBe('not a list');
     expect(EXPR_FNS.filter(['not a list', 'x'])).toBe('not a list');
     expect(EXPR_FNS.sort([null])).toBeNull();
     expect(EXPR_FNS.limit([[1, 2], 'many'])).toEqual([1, 2]);

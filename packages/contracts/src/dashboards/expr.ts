@@ -48,6 +48,22 @@ export interface ExprFnSignature {
   maxArgs: number;
 }
 
+export const WHERE_OPS = [
+  'eq',
+  'neq',
+  'gt',
+  'gte',
+  'lt',
+  'lte',
+  'contains',
+  'exists',
+  'missing',
+] as const;
+
+export type WhereOp = (typeof WHERE_OPS)[number];
+
+export const WhereOpSchema = z.enum(WHERE_OPS);
+
 export const EXPR_FN_SIGNATURES = {
   count: { minArgs: 1, maxArgs: 1 },
   sum: { minArgs: 1, maxArgs: 1 },
@@ -58,6 +74,7 @@ export const EXPR_FN_SIGNATURES = {
   last: { minArgs: 1, maxArgs: 1 },
   pluck: { minArgs: 2, maxArgs: 2 },
   filter: { minArgs: 2, maxArgs: 2 },
+  where: { minArgs: 3, maxArgs: 4 },
   sort: { minArgs: 1, maxArgs: 2 },
   limit: { minArgs: 2, maxArgs: 2 },
   groupCount: { minArgs: 1, maxArgs: 2 },

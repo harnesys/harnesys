@@ -79,7 +79,7 @@ interface PrimitiveComponentProps {
 | Default props and rect of a new item | descriptor `defaults`, `layout` |
 | Inspector fields, labels, hints, selects, list/record/json editors | JSON Schema + `.meta()` |
 | Event picker | descriptor `events` |
-| Server prop/event/binding validation | descriptor in `widget-doc-item.ts` |
+| Server prop/event/binding validation | descriptor in `packages/contracts/src/dashboards/widget-doc-item.ts` |
 | Tool JSON schema | `primitivePropsSchema` in `packages/harnesys/src/packs/dashboards/schemas.ts` |
 | `references/primitives.md` | `scripts/gen-widget-skill-refs.ts` |
 

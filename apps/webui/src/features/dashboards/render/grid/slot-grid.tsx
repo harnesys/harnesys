@@ -1,13 +1,15 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { cn } from '@/shared/lib/utils';
-import { contentHeight, type GridEntry, type GridRect } from './grid-math';
+import { contentHeight, GRID_STEP, type GridEntry, type GridRect, widthScale } from './grid-math';
 import { SlotGridItem } from './slot-grid-item';
 import { useElementSize } from './use-element-size';
 import { useSlotInteraction } from './use-slot-interaction';
 
 export interface SlotGridProps {
   entries: GridEntry[];
+  /** Width the entries were authored on; the grid fills other widths proportionally. */
+  referenceWidth?: number;
   editable?: boolean;
   selectedId?: string | null;
   /** false disables hover chrome (used for outer widgets while a primitive is active). */
@@ -26,10 +28,10 @@ export interface SlotGridProps {
 }
 
 const GRID_LINE = 'color-mix(in oklab, var(--border) 80%, transparent)';
-const GRID_STEP = 8;
 
 export function SlotGrid({
   entries,
+  referenceWidth = 0,
   editable = false,
   selectedId = null,
   hoverEnabled = true,
@@ -46,11 +48,13 @@ export function SlotGrid({
   const { ref: canvasRef, width } = useElementSize<HTMLDivElement>();
   const { ref: scrollRef } = useElementSize<HTMLDivElement>();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const scale = widthScale(width, referenceWidth);
   const interaction = useSlotInteraction({
     canvasRef,
     scrollRef,
     entries,
     width,
+    scale,
     editable,
     dragHandleSelector,
     onCommit,
@@ -62,7 +66,7 @@ export function SlotGrid({
   const horizontal = `linear-gradient(to bottom, ${GRID_LINE} 1px, transparent 1px)`;
   const gridStyle = {
     backgroundImage: `${vertical}, ${horizontal}`,
-    backgroundSize: `${GRID_STEP}px ${GRID_STEP}px`,
+    backgroundSize: `${GRID_STEP * scale}px ${GRID_STEP}px`,
   };
 
   return (
@@ -98,6 +102,7 @@ export function SlotGrid({
               <SlotGridItem
                 key={entry.id}
                 entry={entry}
+                scale={scale}
                 editable={editable}
                 selected={editable && selectedId === entry.id}
                 active={interaction.session?.id === entry.id}

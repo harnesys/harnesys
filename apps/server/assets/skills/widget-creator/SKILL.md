@@ -29,7 +29,7 @@ Start with `references/workflow.md` - it is the path from an empty dashboard to 
 ## Ground rules
 
 - **Draft, then approval.** `dashboard_widgets_create` always stores the widget as `status: "draft"`, and a doc change to an agent-created widget sends it back to draft. Only a human activates it in the dashboard UI. Say so when you hand the widget back; never claim the widget is live.
-- **Validate before create.** Run `dashboard_widgets_validate` on the doc and fix every issue it returns before calling `dashboard_widgets_create`. The create call runs a stricter server guard and answers with `details.issues: [{ path, message }]` you can fix field by field.
+- **Validate before create.** Run `dashboard_widgets_validate` on the doc and fix every issue it returns before calling `dashboard_widgets_create`: the tool runs the same guard as create/update, so a clean result means the doc will be accepted. A rejected create answers with `details` including `issues: [{ path, message }]`; fix those fields instead of rewriting the whole doc.
 - **Vault only, never inline secrets.** Header values reference secrets as `{{vault:name}}` and the names are listed in `secretRefs`. A literal API key, token or password in a doc is a defect even if it works.
 - **Org paths stay in your org.** Every `orgApi` source path and every `callApi` path starts with `/orgs/<your orgId>`; the guard rejects traversal, encoded separators and foreign orgs.
 - **`confirm` stays on for mutations.** Non-GET `callApi` actions ask the viewer before running. Only drop it with `confirm: false` when the user asked for a one-click action.

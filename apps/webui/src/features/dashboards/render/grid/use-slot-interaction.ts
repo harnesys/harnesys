@@ -43,6 +43,8 @@ interface InteractionOptions {
   scrollRef: RefObject<HTMLDivElement | null>;
   entries: GridEntry[];
   width: number;
+  /** Canvas width divided by the authored width: pointer deltas scale back by it. */
+  scale: number;
   editable: boolean;
   dragHandleSelector?: string;
   onCommit?: (next: SlotCommit[]) => void;
@@ -127,16 +129,18 @@ export function useSlotInteraction(options: InteractionOptions): InteractionResu
     const entry = current.base.find((candidate) => candidate.id === current.id);
     const minW = entry?.minW ?? 8;
     const minH = entry?.minH ?? 8;
+    const scale = latest.scale > 0 ? latest.scale : 1;
+    const layoutWidth = latest.width / scale;
     const desired = desiredRect(
       current,
       {
-        px: clientX - rect.left,
+        px: (clientX - rect.left) / scale,
         py: clientY - rect.top,
-        width: latest.width,
+        width: layoutWidth,
       },
       { minW, minH },
     );
-    const bounded = clampRect(desired, minW, minH, latest.width);
+    const bounded = clampRect(desired, minW, minH, layoutWidth);
     return resolveCollisions(current.base, current.id, bounded, minH);
   }
 
@@ -169,6 +173,7 @@ export function useSlotInteraction(options: InteractionOptions): InteractionResu
       return;
     }
     const rect = canvas.getBoundingClientRect();
+    const scale = options.scale > 0 ? options.scale : 1;
     event.preventDefault();
     event.stopPropagation();
     const next: GridSession = {
@@ -176,7 +181,7 @@ export function useSlotInteraction(options: InteractionOptions): InteractionResu
       gesture,
       origin: entry.rect,
       base: options.entries,
-      grabX: event.clientX - rect.left - entry.rect.x,
+      grabX: (event.clientX - rect.left) / scale - entry.rect.x,
       grabY: event.clientY - rect.top - entry.rect.y,
       startX: event.clientX,
       startY: event.clientY,

@@ -92,3 +92,27 @@ describe('hook ask effect', () => {
     expect(String(done.result.result)).toContain('no interactive user here');
   });
 });
+
+describe('tool failure details', () => {
+  test('keeps domain error details after the message', async () => {
+    const failing: ToolDefinition = {
+      name: 'failing',
+      description: 'throws a domain error',
+      input: { type: 'object', properties: {} },
+      execute: () => {
+        throw Object.assign(new Error('invalid widget doc: widget doc invariants'), {
+          details: { issues: [{ path: 'items[0].bindings.value', message: 'unknown root' }] },
+        });
+      },
+    };
+    const done = await runSingleToolCall(
+      { id: 'call-2', name: 'failing', args: {} },
+      ctx({ hooks: undefined, toolRegistry: new Map([['failing', failing]]) }),
+      0,
+    );
+    expect(done.result.isError).toBe(true);
+    const text = String(done.result.result);
+    expect(text).toContain('invalid widget doc');
+    expect(text).toContain('"path":"items[0].bindings.value"');
+  });
+});

@@ -1,5 +1,7 @@
-import type { Expr, ExprFnName, WidgetDoc } from '@harnesys/contracts';
-import { EXPR_FN_SIGNATURES, ROW_BINDINGS_PROP, rowBindingsOf } from '@harnesys/contracts';
+import type { WidgetDoc } from './doc.ts';
+import type { Expr, ExprFnName } from './expr.ts';
+import { EXPR_FN_SIGNATURES, WHERE_OPS } from './expr.ts';
+import { ROW_BINDINGS_PROP, rowBindingsOf } from './row-bindings.ts';
 import type { ScopedIssue } from './widget-doc-issue.ts';
 
 const TEMPLATE_TOKEN_PATTERN = /\{\{([^{}]*)\}\}/g;
@@ -61,6 +63,7 @@ export function pushRefIssues(
 interface FnCall {
   name: string;
   argCount: number;
+  args: readonly unknown[];
 }
 
 function fnCallsOf(expr: Expr): FnCall[] {
@@ -70,6 +73,7 @@ function fnCallsOf(expr: Expr): FnCall[] {
       calls.push({
         name: node.fn,
         argCount: Array.isArray(node.args) ? node.args.length : 0,
+        args: Array.isArray(node.args) ? node.args : [],
       });
       return 'walk';
     }
@@ -94,9 +98,27 @@ function fnArityProblem(call: FnCall): string | null {
   return `fn "${call.name}" expects ${expected} arguments, received ${call.argCount}`;
 }
 
+function fnArgProblem(call: FnCall): string | null {
+  if (call.name !== 'where') {
+    return null;
+  }
+  const op = call.args[2];
+  if (typeof op !== 'string') {
+    return null;
+  }
+  if (!(WHERE_OPS as readonly string[]).includes(op)) {
+    return `fn "where" expects a comparison op (${WHERE_OPS.join(', ')}), received "${op}"`;
+  }
+  const needsValue = op !== 'exists' && op !== 'missing';
+  if (needsValue && call.argCount < 4) {
+    return `fn "where" with op "${op}" expects a comparison value as the fourth argument`;
+  }
+  return null;
+}
+
 function pushFnIssues(expr: Expr, target: IssueTarget): void {
   for (const call of fnCallsOf(expr)) {
-    const problem = fnArityProblem(call);
+    const problem = fnArityProblem(call) ?? fnArgProblem(call);
     if (problem !== null) {
       target.issues.push({
         path: target.path,

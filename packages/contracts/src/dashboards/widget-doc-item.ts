@@ -1,6 +1,9 @@
-import type { Action, Expr, WidgetDoc, WidgetItem } from '@harnesys/contracts';
-import { parseOrgApiPath, primitiveById } from '@harnesys/contracts';
 import { z } from 'zod';
+import type { Action } from './actions.ts';
+import type { WidgetDoc, WidgetItem } from './doc.ts';
+import type { Expr } from './expr.ts';
+import { parseOrgApiPath } from './path-guard.ts';
+import { primitiveById } from './primitives/index.ts';
 import { isRecord, pushRefIssues, pushRowBindingIssues, resolveRef } from './widget-doc-expr.ts';
 import { type ScopedIssue, zodIssues } from './widget-doc-issue.ts';
 
