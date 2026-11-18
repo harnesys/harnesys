@@ -15,9 +15,10 @@ import { summarizeToolInput } from '../model/tool-input-summary';
 import { HitlPreview } from './hitl-preview';
 import { HitlShell } from './hitl-shell';
 import { FileConfirmCard, isFileToolAsk, ShellConfirmCard } from './hitl-shell-confirm';
-export function HitlPrompt() {
+export function HitlPrompt({ threadId: boundThreadId }: { threadId?: string } = {}) {
   const thread = useSelectedThread();
-  const events = useThreadEvents(thread?.id ?? null);
+  const threadId = boundThreadId ?? thread?.id ?? '';
+  const events = useThreadEvents(threadId || null);
   const pending = pendingHitl(events);
   const shellRef = useRef<HTMLDivElement | null>(null);
   const askId = pending?.askId;
@@ -34,12 +35,11 @@ export function HitlPrompt() {
   if (pending.source === 'budget') {
     return (
       <div ref={shellRef} className="mx-auto w-full max-w-3xl px-4 pb-2" data-testid="hitl-prompt">
-        <BudgetCard pending={pending} threadId={thread?.id ?? ''} />
+        <BudgetCard pending={pending} threadId={threadId} />
       </div>
     );
   }
   const isConfirm = pending.source === 'permission' || pending.source === 'approve';
-  const threadId = thread?.id ?? '';
   let card = <AskCard key={pending.askId} pending={pending} threadId={threadId} />;
   if (isConfirm && pending.tool?.name === 'shell') {
     card = <ShellConfirmCard key={pending.askId} pending={pending} threadId={threadId} />;

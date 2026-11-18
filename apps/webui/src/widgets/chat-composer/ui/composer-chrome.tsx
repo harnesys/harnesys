@@ -36,13 +36,15 @@ export function WorktreeBindingBanner({
   );
 }
 
-export function ComposerShortcutsHint() {
+export function ComposerShortcutsHint({ newline = true }: { newline?: boolean } = {}) {
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 px-1 font-mono text-[11px] text-muted-foreground">
-      <span className="inline-flex items-center gap-1">
-        <Kbd>Shift</Kbd>+<Kbd>Enter</Kbd>
-        <span>newline</span>
-      </span>
+      {newline ? (
+        <span className="inline-flex items-center gap-1">
+          <Kbd>Shift</Kbd>+<Kbd>Enter</Kbd>
+          <span>newline</span>
+        </span>
+      ) : null}
       <span className="inline-flex items-center gap-1">
         <Kbd>/</Kbd>
         <span>commands</span>

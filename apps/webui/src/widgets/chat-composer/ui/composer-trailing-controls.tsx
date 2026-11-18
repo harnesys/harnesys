@@ -29,6 +29,7 @@ export interface ComposerTrailingControlsProps {
   levels: Effort[];
   onEffortChange: (value: Effort) => void;
   verified: boolean;
+  showModelWarning: boolean;
   modelIncomplete: boolean;
   streaming: boolean;
   canSend: boolean;
@@ -54,6 +55,7 @@ export function ComposerTrailingControls({
   levels,
   onEffortChange,
   verified,
+  showModelWarning,
   modelIncomplete,
   streaming,
   canSend,
@@ -101,7 +103,7 @@ export function ComposerTrailingControls({
           onChange={onEffortChange}
         />
       ) : null}
-      {modelControls && !verified ? (
+      {modelControls && !verified && showModelWarning ? (
         <UnverifiedModelCard modelName={findModelLabel(modelId, providers)}>
           <button
             type="button"

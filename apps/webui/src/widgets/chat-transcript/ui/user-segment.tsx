@@ -146,7 +146,7 @@ export function UserSegment({
       )}
     </>
   );
-  return <div className="flex flex-col items-end gap-2">{content}</div>;
+  return <div className="group/message flex flex-col items-end gap-2">{content}</div>;
 }
 
 function UserSegmentActions({

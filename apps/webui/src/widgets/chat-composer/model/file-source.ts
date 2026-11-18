@@ -1,8 +1,9 @@
 import type { ProjectFileEntry } from '@harnesys/studio-shared';
 import { useQueries } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import type { Agent } from '@/entities/agent';
 import { useProjects } from '@/entities/project';
-import { useSelectedAgent, useThreadEvents } from '@/features/desk';
+import { useThreadEvents } from '@/features/desk';
 import { getActiveOrgId } from '@/shared/api/active-org';
 import { listSourceFilesTree, sourceFilesTreeQueryKey } from '@/shared/api/files';
 import { getSourceLocation, sourceLocationQueryKey } from '@/shared/api/source-location';
@@ -20,9 +21,9 @@ export interface ComposerFileOptions {
 }
 export function useComposerFileOptions(
   threadId: string | null,
+  agent: Agent | null,
   pendingNames: string[],
 ): ComposerFileOptions {
-  const agent = useSelectedAgent();
   const events = useThreadEvents(threadId);
   const sharedSourceIds = agent?.sharedSourceIds ?? [];
   const orgId = getActiveOrgId();

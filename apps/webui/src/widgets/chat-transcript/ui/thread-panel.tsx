@@ -64,10 +64,12 @@ export function ThreadPanel({
   threadId,
   agent,
   active,
+  assistant = false,
 }: {
   threadId: string;
   agent: Agent;
   active: boolean;
+  assistant?: boolean;
 }) {
   const feeds = useThreadFeeds(threadId);
   const eventsCount = useSessionStore((state) => state.events[threadId]?.length ?? 0);
@@ -150,7 +152,7 @@ export function ThreadPanel({
     return (
       <>
         <EmptyThreadReadSync threadId={threadId} />
-        <ThreadEmpty agent={agent} threadId={threadId} />
+        <ThreadEmpty agent={agent} threadId={threadId} assistant={assistant} />
       </>
     );
   }

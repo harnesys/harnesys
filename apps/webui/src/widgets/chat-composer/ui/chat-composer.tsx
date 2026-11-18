@@ -44,7 +44,6 @@ import { modelContextWindow } from '../model/model-context';
 import { allowedAttachKinds, modelInputModalities } from '../model/model-input';
 import type { SlashCommand } from '../model/slash-commands';
 import { AttachDraft } from './attach-draft';
-import { AttachMenu } from './attach-menu';
 import { AutoReadButton } from './auto-read-button';
 import {
   ComposerShortcutsHint,
@@ -56,16 +55,23 @@ import {
   WorktreeBindingBanner,
 } from './composer-chrome';
 import { ComposerEditor, type ComposerEditorHandle } from './composer-editor';
-import { ComposerThreadMenu } from './composer-thread-menu';
+import { ComposerStartControls } from './composer-start-controls';
 import { ComposerTrailingControls } from './composer-trailing-controls';
 import { ComposerDropOverlay } from './drop-overlay';
-import { ModeSelect } from './mode-select';
 import { ThreadBindingBar } from './thread-binding-bar';
 import { ThreadPlanBanner } from './thread-plan-banner';
 import { VoiceInputButton } from './voice-input-button';
 import { VoiceStatusBar } from './voice-status-bar';
 
-export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }) {
+export function ChatComposer({
+  thread,
+  agent,
+  assistant = false,
+}: {
+  thread: Thread;
+  agent: Agent;
+  assistant?: boolean;
+}) {
   const queryClient = useQueryClient();
   const { orgId } = useStudioLocation();
   const events = useThreadEvents(thread?.id ?? null);
@@ -102,7 +108,7 @@ export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }
   const inputModalities = modelInputModalities(modelId, providers);
   const allowed = allowedAttachKinds(inputModalities);
   const pendingNames = useMemo(() => pending.map((file) => file.name), [pending]);
-  const fileOptions = useComposerFileOptions(thread?.id ?? null, pendingNames);
+  const fileOptions = useComposerFileOptions(thread?.id ?? null, agent, pendingNames);
   const canSend = hasText || pending.length > 0;
   const isGroupThread = thread?.kind === 'group';
   const agents = useAgentStore((state) => state.items);
@@ -150,7 +156,7 @@ export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }
       ) : null}
       <div className="relative">
         <InputGroup
-          className="h-auto rounded-2xl"
+          className="h-auto rounded-2xl shadow-black/10 shadow-sm transition-shadow duration-150 focus-within:shadow-md dark:shadow-black/50 dark:focus-within:shadow-black/60"
           onDragOver={(event) => {
             event.preventDefault();
           }}
@@ -176,13 +182,15 @@ export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }
           />
           <InputGroupAddon align="block-end" className="justify-between gap-2 px-2 pb-2">
             <div className="flex min-w-0 items-center gap-0.5">
-              <ComposerThreadMenu thread={thread} />
-              <AttachMenu allowed={allowed} disabled={disabled} onPick={addFiles} />
-              <ModeSelect
-                modes={composerModeItems(agentModes)}
-                value={mode}
+              <ComposerStartControls
+                thread={thread}
+                allowed={allowed}
                 disabled={disabled}
-                onChange={setMode}
+                modeItems={composerModeItems(agentModes)}
+                mode={mode}
+                onModeChange={setMode}
+                onPick={addFiles}
+                assistant={assistant}
               />
             </div>
             <ComposerTrailingControls
@@ -200,6 +208,7 @@ export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }
               levels={levels}
               onEffortChange={setEffort}
               verified={verified}
+              showModelWarning={!assistant}
               modelIncomplete={modelIncomplete}
               streaming={streaming}
               canSend={canSend}
@@ -224,7 +233,7 @@ export function ChatComposer({ thread, agent }: { thread: Thread; agent: Agent }
       </div>
       <div className="flex items-center justify-between gap-2 px-1 pt-1.5">
         <ThreadBindingBar orgId={orgId} thread={thread} />
-        <ComposerShortcutsHint />
+        <ComposerShortcutsHint newline={!assistant} />
       </div>
     </div>
   );

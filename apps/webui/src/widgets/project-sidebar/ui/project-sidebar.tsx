@@ -33,6 +33,7 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/shared/ui/sidebar';
+import { AssistantChatToggle } from '@/widgets/assistant-chat';
 import { InboxBell } from '@/widgets/inbox-bell';
 import { normalizeShares, useAccordionStore } from '../model/accordion.store';
 import { useSectionAttention } from '../model/section-attention';
@@ -219,6 +220,7 @@ export function ProjectSidebar({
             <OrgHeader />
           </div>
           <InboxBell className="shrink-0 text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden" />
+          <AssistantChatToggle className="shrink-0 text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden" />
         </div>
       </SidebarHeader>
 

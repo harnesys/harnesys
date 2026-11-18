@@ -10,8 +10,21 @@ import { sendMessage } from '@/features/send-message';
 import { Button } from '@/shared/ui/button';
 import { CategoryLandingSectionLabel } from '@/shared/ui/category-landing';
 
-export function AgentBulletList({ agent, threadId }: { agent: Agent; threadId: string }) {
+export function AgentBulletList({
+  agent,
+  threadId,
+  starters,
+  editable = true,
+}: {
+  agent: Agent;
+  threadId: string;
+  starters?: string[];
+  editable?: boolean;
+}) {
   const [bullets, setBullets] = useState<string[]>(() => {
+    if (starters) {
+      return [...starters];
+    }
     return loadStoredAgentBullets(agent) ?? agentStarters(agent);
   });
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -60,37 +73,39 @@ export function AgentBulletList({ agent, threadId }: { agent: Agent; threadId: s
               >
                 {bullet}
               </button>
-              <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 gap-0.5 opacity-0 transition-opacity group-focus-within/bullet:opacity-100 group-hover/bullet:opacity-100">
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-muted-foreground hover:bg-transparent hover:text-foreground"
-                  onClick={() => {
-                    setEditIndex(index);
-                  }}
-                  aria-label="Edit bullet"
-                  title="Edit bullet"
-                >
-                  <PencilIcon />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-muted-foreground hover:bg-transparent hover:text-foreground"
-                  onClick={() => {
-                    setBullets(
-                      writeAgentBullets(
-                        agent,
-                        bullets.filter((_, i) => i !== index),
-                      ),
-                    );
-                  }}
-                  aria-label="Remove bullet"
-                  title="Remove bullet"
-                >
-                  <XIcon />
-                </Button>
-              </div>
+              {editable ? (
+                <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 gap-0.5 opacity-0 transition-opacity group-focus-within/bullet:opacity-100 group-hover/bullet:opacity-100">
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    className="text-muted-foreground hover:bg-transparent hover:text-foreground"
+                    onClick={() => {
+                      setEditIndex(index);
+                    }}
+                    aria-label="Edit bullet"
+                    title="Edit bullet"
+                  >
+                    <PencilIcon />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    className="text-muted-foreground hover:bg-transparent hover:text-foreground"
+                    onClick={() => {
+                      setBullets(
+                        writeAgentBullets(
+                          agent,
+                          bullets.filter((_, i) => i !== index),
+                        ),
+                      );
+                    }}
+                    aria-label="Remove bullet"
+                    title="Remove bullet"
+                  >
+                    <XIcon />
+                  </Button>
+                </div>
+              ) : null}
             </div>
           ),
         )}

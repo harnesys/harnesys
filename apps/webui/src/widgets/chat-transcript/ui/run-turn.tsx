@@ -29,7 +29,7 @@ export function RunTurn({
 }) {
   const deletable = !streaming && !readOnly && !inherited ? errorEventOf(run) : undefined;
   return (
-    <div className="group/turn flex flex-col gap-3">
+    <div className="flex flex-col gap-3">
       <AssistantMessageView
         run={run}
         runId={runId}

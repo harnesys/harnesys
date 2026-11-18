@@ -40,7 +40,7 @@ export const AGENT_CONFIG_CATEGORIES: AgentConfigNavItem[] = [
   { id: 'identity', label: 'Identity', icon: UserRoundIcon },
   { id: 'model', label: 'Model', icon: CpuIcon },
   { id: 'capabilities', label: 'Capabilities', icon: LayersIcon },
-  { id: 'access', label: 'Access & security', icon: FolderKeyIcon },
+  { id: 'access', label: 'Access', icon: FolderKeyIcon },
   { id: 'execution', label: 'Execution', icon: ServerIcon },
   { id: 'limits', label: 'Limits', icon: GaugeIcon },
   { id: 'compaction', label: 'Context', icon: FoldVerticalIcon },

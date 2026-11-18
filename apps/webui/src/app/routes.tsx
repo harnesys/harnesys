@@ -26,6 +26,7 @@ import { SignUpPage } from '@/pages/sign-up';
 import { useOrgId } from '@/shared/config/location';
 import { studioPath } from '@/shared/config/routes';
 import { OverlayProvider } from '@/shared/services/overlay';
+import { AssistantChat } from '@/widgets/assistant-chat';
 
 function AppFrame() {
   const orgId = useOrgId();
@@ -90,6 +91,7 @@ function OrgLayout() {
         <OrgDeskSync />
         <DeskSync />
         <Outlet />
+        <AssistantChat />
       </OrgBootstrap>
     </WorkerOrgShade>
   );

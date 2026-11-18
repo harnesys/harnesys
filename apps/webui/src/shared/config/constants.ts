@@ -10,6 +10,7 @@ export const SIDEBAR_DEFAULT_WIDTH = 240;
 export const SIDEBAR_MIN_WIDTH = 192;
 export const SIDEBAR_MAX_WIDTH = 512;
 export const AGENTS_DISPLAY_STORAGE_KEY = 'harnesys.agents-display';
+export const ASSISTANT_CHAT_STORAGE_KEY = 'harnesys.assistant-chat';
 export const EXPLORER_SHOW_HIDDEN_STORAGE_KEY = 'harnesys.explorer-show-hidden';
 export const SOURCES_VISIBILITY_STORAGE_KEY = 'harnesys.sources-visibility';
 export const EXPLORER_EXPAND_STORAGE_KEY = 'harnesys.explorer-expand';

@@ -1,4 +1,5 @@
 import type { FeedRun, ThreadFeeds } from '@/entities/session';
+import { cn } from '@/shared/lib/utils';
 import type { FileArtifactInfo } from './file-artifact';
 import { FileArtifact, parseFileArtifact } from './file-artifact';
 import type { ImageArtifactInfo } from './image-artifact';
@@ -97,7 +98,15 @@ function renderAttachment(attachment: RunAttachment, threadId: string) {
   );
 }
 
-export function RunAttachments({ run, threadId }: { run: FeedRun; threadId?: string }) {
+export function RunAttachments({
+  run,
+  threadId,
+  className,
+}: {
+  run: FeedRun;
+  threadId?: string;
+  className?: string;
+}) {
   if (!threadId) {
     return null;
   }
@@ -106,7 +115,7 @@ export function RunAttachments({ run, threadId }: { run: FeedRun; threadId?: str
     return null;
   }
   return (
-    <div className="flex flex-wrap items-start gap-2">
+    <div className={cn('flex flex-wrap items-start gap-2', className)}>
       {attachments.map((attachment) => renderAttachment(attachment, threadId))}
     </div>
   );
