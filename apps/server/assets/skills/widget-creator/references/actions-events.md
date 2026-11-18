@@ -6,7 +6,7 @@ Data goes into an item through `bindings`; user intent comes out through `on`. N
 
 ## Events
 
-`on` is a map of event name to one action or an array of actions (at most 50). The event payload is available inside those actions as the `event` root.
+`on` is a map of event name to one action or an array of actions (at most 50). The event payload is available inside those actions as the `event` root; a row-scoped event also puts its row on the `row` root, so `{ "ref": "row.id" }` and `{ "ref": "event.row.id" }` are equivalent there.
 
 | Primitive | Event | Payload |
 |---|---|---|
@@ -16,6 +16,7 @@ Data goes into an item through `bindings`; user intent comes out through `on`. N
 | `switch` | `change` | `event.checked` (boolean) |
 | `table` | `rowClick` | `event.row` (object), `event.index` |
 | `list` | `itemClick` | `event.row` (object), `event.index` |
+| `list` | `itemDismiss` | `event.row` (object), `event.index` (only when the list has `dismissible: true`) |
 | `chart` | `pointClick` | `event.point` (object), `event.index` |
 
 Every other primitive has no events; `references/primitives.md` is the generated authority and is regenerated from the same descriptors the guard validates against. An event name outside this table is rejected: `unknown event for table`.

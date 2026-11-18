@@ -8,7 +8,7 @@ Order of parts in one model call's system prompt:
 
 1. **Your instructions** — the `instructions` text from your agent definition.
 2. **Context note** — files attached to the thread, when the thread has any.
-3. **Channel note** — connector-specific note, e.g. that the thread is Telegram.
+3. **Channel note** — for group threads, the framing the runtime adds: conversation mode, history window and message count. Direct threads have no channel note.
 4. **Available skills catalog** — one line per granted skill: `- name: description (when: when_to_use)`. Catalog lines are cheap; bodies load on demand with `load_skill`.
 5. **Runtime section** — host name, environment (Host or Container), run root and its kind (`sandbox`, `directory`, `worktree`, `source`), scratch dir, shared sources with index state, and the rules for `thread:` paths and file links.
 6. **Tools section** — `Capabilities available in this model call:` grouped by tool group, listing exactly the direct tools the run has.

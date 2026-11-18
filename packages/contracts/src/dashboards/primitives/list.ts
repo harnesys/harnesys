@@ -18,6 +18,16 @@ export const listPrimitive = definePrimitive({
     primaryText: z.string().nullish().default('title').meta({ label: 'Primary key' }),
     secondaryText: z.string().nullish().meta({ label: 'Secondary key' }),
     badgeKey: z.string().nullish().meta({ label: 'Badge key' }),
+    markdown: z.boolean().nullish().default(false).meta({
+      label: 'Markdown',
+      hint: 'Render the primary text as Markdown',
+      control: 'switch',
+    }),
+    dismissible: z.boolean().nullish().default(false).meta({
+      label: 'Dismiss button',
+      hint: 'Trailing button per row emits itemDismiss with the row',
+      control: 'switch',
+    }),
     [ROW_BINDINGS_PROP]: z.record(z.string(), ExprSchema).nullish().meta({
       label: 'Row bindings',
       hint: 'Item value expressions evaluated per row with the row root',
@@ -25,6 +35,10 @@ export const listPrimitive = definePrimitive({
   }),
   events: {
     itemClick: z.object({
+      row: z.record(z.string(), z.unknown()),
+      index: z.number(),
+    }),
+    itemDismiss: z.object({
       row: z.record(z.string(), z.unknown()),
       index: z.number(),
     }),

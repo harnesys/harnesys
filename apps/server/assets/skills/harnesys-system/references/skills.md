@@ -39,7 +39,7 @@ Seven ship in `apps/server/assets/skills/`: `agent-creator`, `addon-creator`, `f
 | Skill | Use |
 |---|---|
 | `agent-creator` | Graphs, packs, budgets, HITL and agent-authoring traps before `agents_create`. |
-| `workspace-ops` | Workspace setup: sources, git, terminals, files. |
+| `workspace-ops` | Workspace-level operations: agent catalog, packs, skills, memory, delegation. |
 | `issue-ops` | Board dispatch cycle, rules, issue workflow recipes. |
 | `widget-creator` | Dashboard WidgetDoc contract, catalog, recipes, validation. |
 | `addon-creator` | Authoring an add-on package. |

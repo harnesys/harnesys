@@ -184,11 +184,14 @@ Default rect: 128×128 px; minimum 64×64 px
 | `primaryText` | string \| null | no | `"title"` | Primary key |
 | `secondaryText` | string \| null | no | - | Secondary key |
 | `badgeKey` | string \| null | no | - | Badge key |
+| `markdown` | boolean \| null | no | `false` | Render the primary text as Markdown |
+| `dismissible` | boolean \| null | no | `false` | Trailing button per row emits itemDismiss with the row |
 | `rowBindings` | object \| null | no | - | Item value expressions evaluated per row with the row root |
 
 | Event | Payload fields |
 |---|---|
 | `itemClick` | `index`, `row` |
+| `itemDismiss` | `index`, `row` |
 
 Defaults: `primaryText` = `"title"`
 

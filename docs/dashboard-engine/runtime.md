@@ -29,7 +29,9 @@ Owners: `apps/webui/src/features/dashboards/render/`,
 
 Roots: `state`, `sources`, `status`, `derived`, `event`, `row`, `org`. Unknown
 roots, undeclared source ids and undeclared state/derived names are rejected by
-the guard.
+the guard. `row` is null while rendering item bindings and holds the clicked row
+inside an action fired by a row-scoped event (`table.rowClick`,
+`list.itemClick`), where `event.row` carries the same value.
 
 Forms: literal value, `{ ref }`, `{ tpl }`, `{ fn, args }`, `{ lit }`. A binding
 value may also be a bare ref string (`"state.count"`).
@@ -84,6 +86,7 @@ Events come from the primitive descriptor:
 | `switch` | `change` | `{ checked }` |
 | `table` | `rowClick` | `{ row, index }` (original row and index) |
 | `list` | `itemClick` | `{ row, index }` (original row and index) |
+| `list` | `itemDismiss` | `{ row, index }` (trailing button, `dismissible: true`) |
 | `chart` | `pointClick` | `{ point, index }` |
 
 Actions (`packages/contracts/src/dashboards/actions.ts`): `setState`,

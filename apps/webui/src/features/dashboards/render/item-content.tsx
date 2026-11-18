@@ -33,19 +33,25 @@ export function resolveItemProps(
 /**
  * One emitter per item: event handlers from `item.on` win; a legacy item
  * `action` still fires on `click` when the item declares no click handler.
+ * Row-scoped events carry their row into the action scope as the `row` root.
  */
 export function itemEmit(
   item: WidgetItem,
   runtime: WidgetRuntime,
 ): (event: string, payload?: unknown) => void {
   return (event, payload) => {
+    const row =
+      typeof payload === 'object' && payload !== null
+        ? (payload as { row?: unknown }).row
+        : undefined;
+    const options = { event: payload, row };
     const handler = item.on[event];
     if (handler !== undefined) {
-      void runtime.dispatch(handler, { event: payload });
+      void runtime.dispatch(handler, options);
       return;
     }
     if (event === 'click' && item.action !== undefined) {
-      void runtime.dispatch(item.action, { event: payload });
+      void runtime.dispatch(item.action, options);
     }
   };
 }

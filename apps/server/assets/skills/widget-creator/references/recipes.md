@@ -297,7 +297,7 @@ A persisted list in plain state: the input writes `draft`, the button appends it
       "id": "open",
       "primitive": "list",
       "rect": { "x": 0, "y": 64, "w": 384, "h": 160 },
-      "props": { "primaryText": "text" },
+      "props": { "primaryText": "text", "markdown": true, "rowBindings": { "text": { "tpl": "> {{row.text}}" } } },
       "bindings": { "items": { "ref": "state.notes" } },
       "on": {
         "itemClick": {
@@ -313,7 +313,7 @@ A persisted list in plain state: the input writes `draft`, the button appends it
       "id": "closed",
       "primitive": "list",
       "rect": { "x": 0, "y": 224, "w": 384, "h": 96 },
-      "props": { "primaryText": "text", "rowBindings": { "text": { "fn": "concat", "args": ["✓ ", { "ref": "row.text" }] } } },
+      "props": { "primaryText": "text", "markdown": true, "dismissible": true, "rowBindings": { "text": { "tpl": "~~✓ {{row.text}}~~" } } },
       "bindings": { "items": { "ref": "state.done" } },
       "on": {
         "itemClick": {
@@ -322,14 +322,15 @@ A persisted list in plain state: the input writes `draft`, the button appends it
             { "type": "setState", "key": "notes", "value": { "fn": "concat", "args": [{ "ref": "state.notes" }, [{ "ref": "row" }]] } },
             { "type": "setState", "key": "done", "value": { "fn": "where", "args": [{ "ref": "state.done" }, "id", "neq", { "ref": "row.id" }] } }
           ]
-        }
+        },
+        "itemDismiss": { "type": "setState", "key": "done", "value": { "fn": "where", "args": [{ "ref": "state.done" }, "id", "neq", { "ref": "row.id" }] } }
       }
     }
   ]
 }
 ```
 
-`row` is available inside an item event action, so `where(state.notes, "id", "neq", row.id)` drops the clicked note and the action list appends it to `done` in the same click. `rowBindings` carries per-row presentation, which is how the closed list gets its check mark. Persist both arrays and the id counter.
+`row` is available inside an item event action, so `where(state.notes, "id", "neq", row.id)` drops the clicked note and the action list appends it to `done` in the same click. `markdown: true` renders each note as Markdown: open rows use a `>` row binding for the blockquote/comment frame, closed rows wrap in `~~...~~` strikethrough; `dismissible: true` adds the trailing × that emits `itemDismiss`, wired here to delete the closed note. Persist both arrays and the id counter.
 
 ## Weather from an external API
 

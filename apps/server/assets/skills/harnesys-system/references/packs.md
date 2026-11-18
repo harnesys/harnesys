@@ -1,6 +1,6 @@
 # Capability Packs — canonical inventory
 
-The pack set and every tool below are taken from the pack definitions in `packages/harnesys/src/packs/*` (each `definePack` carries `meta.tools` and a `specSchema`) and from the host pack list in `apps/server/src/app/domain/runtime/org-pack-list.ts`. There are **17 host packs and 98 pack tools**; the host additionally injects `load_skill` and `load_tools`, which belong to no pack.
+The pack set and every tool below are taken from the pack definitions in `packages/harnesys/src/packs/*` (each `definePack` carries `meta.tools` and a `specSchema`) and from the host pack list in `apps/server/src/app/domain/runtime/org-pack-list.ts`. There are **17 host packs**; the host additionally injects `load_skill` and `load_tools`, which belong to no pack.
 
 A run only sees the subset granted by the agent's `packs` map. This file describes what each pack contains in general; the agent's own Tools section is authoritative for that agent.
 

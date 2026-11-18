@@ -4,7 +4,7 @@ import { defineWidgetTemplate } from './define.ts';
 export const notesTemplate = defineWidgetTemplate({
   id: 'notes',
   title: 'Notes',
-  description: 'Persistent note list: add a note, close it, reopen a closed one.',
+  description: 'Persistent Markdown note list: add a note, close it, reopen a closed one.',
   rect: { x: 0, y: 0, w: 408, h: 368 },
   doc: {
     schemaVersion: 1,
@@ -66,7 +66,11 @@ export const notesTemplate = defineWidgetTemplate({
         primitive: 'list',
         title: 'Open notes',
         rect: itemRect(0, 2, 12, 5),
-        props: { primaryText: 'text' },
+        props: {
+          primaryText: 'text',
+          markdown: true,
+          rowBindings: { text: { tpl: '> {{row.text}}' } },
+        },
         bindings: { items: { ref: 'state.notes' } },
         on: {
           itemClick: {
@@ -96,7 +100,9 @@ export const notesTemplate = defineWidgetTemplate({
         rect: itemRect(0, 7, 12, 3),
         props: {
           primaryText: 'text',
-          rowBindings: { text: { fn: 'concat', args: ['✓ ', { ref: 'row.text' }] } },
+          markdown: true,
+          dismissible: true,
+          rowBindings: { text: { tpl: '~~✓ {{row.text}}~~' } },
         },
         bindings: { items: { ref: 'state.done' } },
         on: {
@@ -117,6 +123,14 @@ export const notesTemplate = defineWidgetTemplate({
                 },
               },
             ],
+          },
+          itemDismiss: {
+            type: 'setState',
+            key: 'done',
+            value: {
+              fn: 'where',
+              args: [{ ref: 'state.done' }, 'id', 'neq', { ref: 'row.id' }],
+            },
           },
         },
       },
