@@ -2,7 +2,7 @@ import { PanelRightIcon } from 'lucide-react';
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react';
 import { Navigate, useParams } from 'react-router';
 import { useDeskStore } from '@/features/desk';
-import { useIdeSync, useIdeTabs } from '@/features/ide';
+import { type IdeTab, useIdeSync, useIdeTabs } from '@/features/ide';
 import { useStudioLocation } from '@/shared/config/location';
 import { studioPath } from '@/shared/config/routes';
 import { cn } from '@/shared/lib/utils';
@@ -10,6 +10,7 @@ import { Button } from '@/shared/ui/button';
 import { Resizer } from '@/shared/ui/resizer';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/shared/ui/sidebar';
 import { AgentInspector } from '@/widgets/agent-inspector';
+import { DashboardInspector } from '@/widgets/dashboard-inspector';
 import { FileInspector } from '@/widgets/file-inspector';
 import { IdeHome } from '@/widgets/ide-home';
 import { ProjectSidebar } from '@/widgets/project-sidebar';
@@ -28,6 +29,23 @@ export function ProjectPage() {
     </SidebarProvider>
   );
 }
+function InspectorFallback({
+  activeTab,
+  orgId,
+  width,
+}: {
+  activeTab: IdeTab;
+  orgId: string | null;
+  width: number;
+}): React.ReactNode {
+  if (activeTab.kind === 'dashboard' && orgId) {
+    return (
+      <DashboardInspector width={width} orgId={orgId} dashboardId={activeTab.dashboardId ?? ''} />
+    );
+  }
+  return <AgentInspector width={width} />;
+}
+
 function ProjectShell({
   onSidebarResizeStart,
 }: {
@@ -46,9 +64,9 @@ function ProjectShell({
   const bareProject = Boolean(params.projectId && focus.kind === 'none');
   const showInspector =
     !bareProject &&
-    inspectorOpen &&
     activeTab !== null &&
-    (activeTab.kind === 'thread' || activeTab.kind === 'file');
+    inspectorOpen &&
+    (activeTab.kind === 'thread' || activeTab.kind === 'file' || activeTab.kind === 'dashboard');
   const hasTabs = workspace.tabs.length > 0;
   if (bareProject) {
     return <Navigate to={orgId ? studioPath.desk(orgId) : '/'} replace />;
@@ -107,7 +125,7 @@ function ProjectShell({
               }}
             />
           ) : (
-            <AgentInspector width={inspectorWidth} />
+            <InspectorFallback activeTab={activeTab} orgId={orgId} width={inspectorWidth} />
           )}
         </>
       ) : null}

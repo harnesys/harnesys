@@ -60,6 +60,10 @@ import {
 } from './org-sql-addons-platform.ts';
 import { ensureAppsSchema } from './org-sql-apps.ts';
 import {
+  CREATE_DASHBOARDS_SQL,
+  migrateDashboardPresentationColumns,
+} from './org-sql-dashboards.ts';
+import {
   CREATE_INVITES_INDEX_SQL,
   CREATE_INVITES_SQL,
   ensureFleetSchema,
@@ -273,5 +277,7 @@ export function ensureOrgSchema(
   }
   ensureFleetSchema(exec);
   migratePendingRunEventsAttributionColumns(exec, all);
+  exec(CREATE_DASHBOARDS_SQL);
+  migrateDashboardPresentationColumns(exec, all);
   return worktreeBranchDupes;
 }

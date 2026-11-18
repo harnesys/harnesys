@@ -399,6 +399,11 @@ export type { AgentsCapabilityPorts } from './src/packs/agents/index.ts';
 export { agentsCapability } from './src/packs/agents/index.ts';
 export { filesCapability, shellCapability } from './src/packs/base.ts';
 export { coreCapability } from './src/packs/core/index.ts';
+export { type DashboardsPackPorts, dashboardsCapability } from './src/packs/dashboards/index.ts';
+export type {
+  DashboardsPackPort,
+  WidgetSourceTestResult,
+} from './src/packs/dashboards/port.ts';
 export { imageCapability } from './src/packs/image/index.ts';
 export type { IssuesCapabilityPorts } from './src/packs/issues/index.ts';
 export { issuesCapability } from './src/packs/issues/index.ts';

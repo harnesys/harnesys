@@ -79,6 +79,11 @@ const addonConfigChangedPayload = z.object({
   keys: z.array(z.string()),
 });
 
+const dashboardsChangedPayload = z.object({
+  dashboardId: z.string(),
+  reason: z.string(),
+});
+
 const addonPermissionsChangedPayload = z.object({
   orgId: z.string(),
   addonId: z.string(),
@@ -105,6 +110,7 @@ export const HOST_EVENT_CATALOG: readonly HostEventDefinition[] = [
   { name: 'addon.state_changed', version: 1, payload: addonStateChangedPayload },
   { name: 'config.changed', version: 1, payload: addonConfigChangedPayload },
   { name: 'permissions.changed', version: 1, payload: addonPermissionsChangedPayload },
+  { name: 'dashboards.changed', version: 1, payload: dashboardsChangedPayload },
 ];
 
 export function hostEventDefinition(name: string): HostEventDefinition | undefined {

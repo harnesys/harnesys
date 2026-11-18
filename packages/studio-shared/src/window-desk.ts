@@ -31,6 +31,7 @@ export type IdeTabKind =
   | 'webhook'
   | 'terminal'
   | 'board'
+  | 'dashboard'
   | 'attachment'
   | 'thread-file';
 export interface PersistedIdeTab {
@@ -44,6 +45,7 @@ export interface PersistedIdeTab {
   webhookId?: string;
   terminalSessionId?: string;
   boardId?: string;
+  dashboardId?: string;
   issueId?: string;
   attachmentId?: string;
   mediaType?: string;

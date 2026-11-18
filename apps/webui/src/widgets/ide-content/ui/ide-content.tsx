@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { toClientAgentFromPublic, useAgentStore } from '@/entities/agent';
 import { toClientThread, useThreadStore } from '@/entities/thread';
+import { DashboardSurface } from '@/features/dashboards/ui/dashboard-surface';
 import { useDeskReady } from '@/features/desk';
 import { GitCommitDiffView } from '@/features/git-commit';
 import { type IdeTab, useIdeStore } from '@/features/ide';
@@ -178,6 +179,9 @@ export function IdeTabContent({ tab, projectId }: { tab: IdeTab; projectId: stri
   }
   if (tab.kind === 'board' && tab.boardId) {
     return <BoardSurface projectId={projectId} boardId={tab.boardId} />;
+  }
+  if (tab.kind === 'dashboard' && tab.dashboardId) {
+    return <DashboardSurface orgId={orgId} dashboardId={tab.dashboardId} />;
   }
   if (tab.kind === 'spawn' && tab.threadId && tab.spawnId) {
     return <SpawnView tab={tab} threadId={tab.threadId} spawnId={tab.spawnId} />;

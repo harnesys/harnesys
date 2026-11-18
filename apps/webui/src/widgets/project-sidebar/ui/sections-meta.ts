@@ -4,6 +4,7 @@ import {
   HardDriveIcon,
   HashIcon,
   InboxIcon,
+  LayoutDashboardIcon,
   type LucideIcon,
   SquareKanbanIcon,
   SquareTerminalIcon,
@@ -15,6 +16,7 @@ export type SidebarSectionId =
   | 'channels'
   | 'issues'
   | 'projects'
+  | 'dashboards'
   | 'automations'
   | 'git'
   | 'terminal';
@@ -30,6 +32,7 @@ export const SECTION_META: Record<
   channels: { label: 'Channels', icon: HashIcon },
   issues: { label: 'Issues', icon: SquareKanbanIcon },
   projects: { label: 'Sources', icon: HardDriveIcon },
+  dashboards: { label: 'Dashboards', icon: LayoutDashboardIcon },
   automations: { label: 'Automations', icon: ZapIcon },
   git: { label: 'Git', icon: GitBranchIcon },
   terminal: { label: 'Terminal', icon: SquareTerminalIcon },

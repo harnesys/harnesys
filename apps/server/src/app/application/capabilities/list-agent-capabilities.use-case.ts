@@ -142,12 +142,19 @@ function pushPackEntries(
   packs: Record<string, unknown>,
 ): void {
   const granted = pack.name === 'core' || isGranted(packs[pack.name]);
-  if (!granted) {
-    return;
-  }
   const source = `pack:${pack.name}`;
   const override = overrideOf(packs[pack.name]);
   for (const tool of pack.tools) {
+    if (!granted) {
+      explain.push({
+        item: tool.name,
+        kind: 'tool',
+        source,
+        status: 'denied-by-universe',
+        reason: 'pack not granted',
+      });
+      continue;
+    }
     const disabled = override.disabledTools?.includes(tool.name) ?? false;
     explain.push({
       item: tool.name,

@@ -139,6 +139,7 @@ export const routes: RouteObject[] = [
               { index: true, element: null },
               { path: 'thread/:threadId', element: null },
               { path: 'board/:boardId', element: null },
+              { path: 'dashboard/:dashboardId', element: null },
               { path: 'attachment/:issueId/:attachmentId', element: null },
               { path: 'spawn/:threadId/:spawnId', element: null },
               { path: 'terminal/:sessionId', element: null },

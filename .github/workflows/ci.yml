@@ -19,6 +19,7 @@ jobs:
       - run: bun run lint
       - run: bun run typecheck
       - run: bun run check:compiler
+      - run: bun run skills:check
       - name: Enable the Linux sandbox conformance tests
         run: |
           sudo apt-get update

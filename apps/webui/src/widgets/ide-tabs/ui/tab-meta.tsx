@@ -1,8 +1,10 @@
+import { useQuery } from '@tanstack/react-query';
 import {
   CalendarClockIcon,
   EarthIcon,
   FileDiffIcon,
   FileIcon,
+  LayoutDashboardIcon,
   MessageSquareIcon,
   PaperclipIcon,
   SquareTerminalIcon,
@@ -11,9 +13,11 @@ import {
 import { AgentRecordAvatar, useAgentStore } from '@/entities/agent';
 import { useIssueBoardStore } from '@/entities/issue';
 import { useThreadStore } from '@/entities/thread';
+import { dashboardsListQuery } from '@/features/dashboards/dashboards-queries';
 import { useOrgTerminals } from '@/features/desk';
 import type { IdeTab } from '@/features/ide';
 import { resolveBoardIcon } from '@/features/manage-issues';
+import { useOrgId } from '@/shared/config/location';
 import { entityColorTintClass } from '@/shared/lib/entity-colors';
 import { cn } from '@/shared/lib/utils';
 import { FileTypeIcon } from '@/shared/ui/icons';
@@ -37,6 +41,9 @@ export function TabIcon({ tab }: { tab: IdeTab }) {
   }
   if (tab.kind === 'board') {
     return <BoardTabIcon boardId={tab.boardId ?? ''} />;
+  }
+  if (tab.kind === 'dashboard') {
+    return <LayoutDashboardIcon className="size-3.5 shrink-0 opacity-70" />;
   }
   if (tab.kind === 'terminal') {
     return <SquareTerminalIcon className="size-3.5 shrink-0 opacity-70" />;
@@ -89,13 +96,15 @@ export function useTabLabel(tab: IdeTab): string {
   const boardName = useIssueBoardStore((state) =>
     tab.kind === 'board' && tab.boardId ? (state.boardById(tab.boardId)?.name ?? null) : null,
   );
+  const dashboardName = useDashboardTabName(tab);
   const agent = useAgentStore((state) =>
     tab.kind === 'spawn' && tab.agentId ? (state.byId(tab.agentId) ?? undefined) : undefined,
   );
   const terminals = useOrgTerminals();
   if (tab.kind === 'file' && tab.path) {
-    const base = fileBaseName(tab.path);
-    return tab.worktreeBranch ? `${base} · ${tab.worktreeBranch}` : base;
+    return tab.worktreeBranch
+      ? `${fileBaseName(tab.path)} · ${tab.worktreeBranch}`
+      : fileBaseName(tab.path);
   }
   if (tab.kind === 'diff' && tab.path) {
     return fileBaseName(tab.path);
@@ -112,6 +121,9 @@ export function useTabLabel(tab: IdeTab): string {
   if (tab.kind === 'board' && tab.boardId) {
     return boardName ?? 'Board';
   }
+  if (tab.kind === 'dashboard' && tab.dashboardId) {
+    return dashboardName ?? 'Dashboard';
+  }
   if (tab.kind === 'spawn') {
     return agent?.name ?? 'Spawn';
   }
@@ -120,4 +132,14 @@ export function useTabLabel(tab: IdeTab): string {
     return session?.title ?? 'Terminal';
   }
   return tab.kind;
+}
+
+function useDashboardTabName(tab: IdeTab): string | null {
+  const orgId = useOrgId() ?? '';
+  const enabled = tab.kind === 'dashboard' && orgId !== '';
+  const list = useQuery({ ...dashboardsListQuery(orgId), enabled, staleTime: 30_000 });
+  if (tab.kind !== 'dashboard' || !tab.dashboardId) {
+    return null;
+  }
+  return list.data?.find((item) => item.id === tab.dashboardId)?.name ?? null;
 }

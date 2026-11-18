@@ -5,5 +5,5 @@ export function ComposerThreadMenu({ thread }: { thread?: Thread | null }) {
   if (!thread) {
     return null;
   }
-  return <ThreadSettings thread={thread} />;
+  return <ThreadSettings key={thread.id} thread={thread} />;
 }

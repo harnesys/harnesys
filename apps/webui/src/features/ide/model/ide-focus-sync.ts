@@ -23,6 +23,7 @@ export function syncIdeFocus({ focus, projectId, org, navigate }: FocusSyncArgs)
     spawn: syncSpawnFocus,
     terminal: syncTerminalFocus,
     board: syncBoardFocus,
+    dashboard: syncDashboardFocus,
     thread: syncThreadFocus,
   };
   handlers[focus.kind]?.({ focus, projectId, org, navigate });
@@ -87,6 +88,14 @@ function syncBoardFocus({ focus, projectId }: FocusSyncArgs): void {
   const ide = useIdeStore.getState();
   ide.openBoard(projectId, focus.boardId);
   ide.setActive(tabIdFor('board', projectId, focus.boardId));
+}
+function syncDashboardFocus({ focus, projectId }: FocusSyncArgs): void {
+  if (focus.kind !== 'dashboard') {
+    return;
+  }
+  const ide = useIdeStore.getState();
+  ide.openDashboard(projectId, focus.dashboardId);
+  ide.setActive(tabIdFor('dashboard', projectId, focus.dashboardId));
 }
 function syncThreadFocus({ focus, projectId }: FocusSyncArgs): void {
   if (focus.kind !== 'thread') {

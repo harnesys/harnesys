@@ -11,6 +11,7 @@ function orgLevelFocus(
   matches: {
     thread?: { params: { threadId?: string } };
     board?: { params: { boardId?: string } };
+    dashboard?: { params: { dashboardId?: string } };
     spawn?: { params: { threadId?: string; spawnId?: string } };
     terminal?: { params: { sessionId?: string } };
     attachment?: { params: { issueId?: string; attachmentId?: string } };
@@ -23,6 +24,10 @@ function orgLevelFocus(
   const boardId = matches.board?.params.boardId;
   if (boardId) {
     return { kind: 'board', projectId: orgId, boardId };
+  }
+  const dashboardId = matches.dashboard?.params.dashboardId;
+  if (dashboardId) {
+    return { kind: 'dashboard', projectId: orgId, dashboardId };
   }
   const spawn = matches.spawn?.params;
   if (spawn?.threadId && spawn.spawnId) {
@@ -104,6 +109,7 @@ export function useStudioLocation(): { orgId: string | null; focus: StudioFocus 
   const settingsRoot = useMatch('/o/:orgId/settings');
   const orgThread = useMatch('/o/:orgId/thread/:threadId');
   const orgBoard = useMatch('/o/:orgId/board/:boardId');
+  const orgDashboard = useMatch('/o/:orgId/dashboard/:dashboardId');
   const orgSpawn = useMatch('/o/:orgId/spawn/:threadId/:spawnId');
   const orgTerminal = useMatch('/o/:orgId/terminal/:sessionId');
   const orgAttachment = useMatch('/o/:orgId/attachment/:issueId/:attachmentId');
@@ -126,6 +132,7 @@ export function useStudioLocation(): { orgId: string | null; focus: StudioFocus 
     const focus = orgLevelFocus(orgId, {
       thread: orgThread ?? undefined,
       board: orgBoard ?? undefined,
+      dashboard: orgDashboard ?? undefined,
       spawn: orgSpawn ?? undefined,
       terminal: orgTerminal ?? undefined,
       attachment: orgAttachment ?? undefined,

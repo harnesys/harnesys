@@ -12,6 +12,7 @@ export type StudioFocusKind =
   | 'spawn'
   | 'terminal'
   | 'board'
+  | 'dashboard'
   | 'attachment';
 
 export type StudioFocus =
@@ -23,6 +24,7 @@ export type StudioFocus =
   | { kind: 'spawn'; projectId: string; threadId: string; spawnId: string }
   | { kind: 'terminal'; projectId: string; sessionId: string }
   | { kind: 'board'; projectId: string; boardId: string }
+  | { kind: 'dashboard'; projectId: string; dashboardId: string }
   | { kind: 'attachment'; projectId: string; issueId: string; attachmentId: string };
 
 export const studioPath = {
@@ -46,6 +48,7 @@ export const studioPath = {
   diff: (orgId: string, projectId: string, path: string) =>
     `/o/${orgId}/${projectId}/diff${path.startsWith('/') ? path : `/${path}`}`,
   board: (orgId: string, boardId: string) => `/o/${orgId}/board/${boardId}`,
+  dashboard: (orgId: string, dashboardId: string) => `/o/${orgId}/dashboard/${dashboardId}`,
   attachment: (orgId: string, projectId: string, issueId: string, attachmentId: string) =>
     projectId === orgId
       ? `/o/${orgId}/attachment/${issueId}/${attachmentId}`

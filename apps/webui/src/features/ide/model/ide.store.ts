@@ -33,6 +33,7 @@ export type IdeTabKind =
   | 'diff'
   | 'terminal'
   | 'board'
+  | 'dashboard'
   | 'attachment'
   | 'thread-file';
 export interface IdeTab {
@@ -44,6 +45,7 @@ export interface IdeTab {
   spawnId?: string;
   terminalSessionId?: string;
   boardId?: string;
+  dashboardId?: string;
   issueId?: string;
   attachmentId?: string;
   mediaType?: string;
@@ -70,6 +72,7 @@ type IdeStore = IdeState & {
   openFile: (projectId: string, path: string, worktreeId?: string, worktreeBranch?: string) => void;
   openDiff: (projectId: string, path: string) => void;
   openBoard: (projectId: string, boardId: string) => void;
+  openDashboard: (projectId: string, dashboardId: string) => void;
   openAttachment: (projectId: string, input: OpenAttachmentInput) => void;
   openThreadFile: (
     projectId: string,
@@ -143,6 +146,12 @@ export const useIdeStore = create<IdeStore>((set) => ({
     set((state) => {
       const id = tabIdFor('board', projectId, boardId);
       const tab: IdeTab = { id, kind: 'board', projectId, boardId };
+      return withWs(state, upsertTabState(state.workspace, tab));
+    }),
+  openDashboard: (projectId, dashboardId) =>
+    set((state) => {
+      const id = tabIdFor('dashboard', projectId, dashboardId);
+      const tab: IdeTab = { id, kind: 'dashboard', projectId, dashboardId };
       return withWs(state, upsertTabState(state.workspace, tab));
     }),
   openAttachment: (projectId, input) =>

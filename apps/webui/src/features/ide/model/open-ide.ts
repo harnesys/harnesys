@@ -24,6 +24,9 @@ export function pathForIdeTab(orgId: string, projectId: string, tab: IdeTab): st
   if (tab.kind === 'board' && tab.boardId) {
     return studioPath.board(orgId, tab.boardId);
   }
+  if (tab.kind === 'dashboard' && tab.dashboardId) {
+    return studioPath.dashboard(orgId, tab.dashboardId);
+  }
   if (tab.kind === 'spawn' && tab.threadId && tab.spawnId) {
     return studioPath.spawn(orgId, projectId, tab.threadId, tab.spawnId);
   }

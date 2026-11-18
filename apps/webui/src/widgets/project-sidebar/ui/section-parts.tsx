@@ -7,7 +7,8 @@ import type { Thread } from '@/entities/thread';
 import { Badge } from '@/shared/ui/badge';
 import { AgentsSection, AgentsSectionActions } from './agents-section';
 import { AutomationsSection, AutomationsSectionActions } from './automations-section';
-import { ChannelsSection } from './channels-section';
+import { ChannelsSection, ChannelsSectionActions } from './channels-section';
+import { DashboardsSection, DashboardsSectionActions } from './dashboards-section';
 import { GitSectionActions, GitTitle } from './git-menu';
 import { GitSection } from './git-section';
 import { InboxSection } from './inbox-section';
@@ -73,6 +74,7 @@ export function sectionParts(id: SidebarSectionId, ctx: SectionPartsContext): Se
         icon: <Icon />,
         title: 'Channels',
         count: ctx.channels.length,
+        actions: <ChannelsSectionActions />,
         content: (
           <ChannelsSection
             channels={ctx.channels}
@@ -89,6 +91,13 @@ export function sectionParts(id: SidebarSectionId, ctx: SectionPartsContext): Se
         actions: <ProjectsActions />,
         horizontalScroll: true,
         content: <ProjectsTrees projectIds={ctx.projectIds} />,
+      };
+    case 'dashboards':
+      return {
+        icon: <Icon />,
+        title: 'Dashboards',
+        actions: <DashboardsSectionActions />,
+        content: <DashboardsSection onSelectDone={onSelectDone} />,
       };
     case 'issues':
       return {

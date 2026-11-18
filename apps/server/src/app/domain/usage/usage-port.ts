@@ -1,3 +1,25 @@
+import type {
+  UsageGroupRow,
+  UsageMemberRow,
+  UsagePricingSource,
+  UsageReport,
+  UsageRunRow,
+  UsageRunsReport,
+  UsageRunsTotals,
+  UsageTotals,
+} from '@harnesys/contracts';
+
+export type {
+  UsageGroupRow,
+  UsageMemberRow,
+  UsagePricingSource,
+  UsageReport,
+  UsageRunRow,
+  UsageRunsReport,
+  UsageRunsTotals,
+  UsageTotals,
+};
+
 export interface UsageRecord {
   id: string;
   ts: string;
@@ -54,45 +76,6 @@ export interface ManualPrice {
 
 export type UsageGroupBy = 'day' | 'agent';
 
-export interface UsageGroupRow {
-  key: string | null;
-  inputTokens: number;
-  outputTokens: number;
-  cacheReadTokens: number;
-  cacheWriteTokens: number;
-  reasoningTokens: number;
-  costUsd: number;
-  unpriced: number;
-  runs: number;
-}
-
-export interface UsageTotals {
-  inputTokens: number;
-  outputTokens: number;
-  cacheReadTokens: number;
-  cacheWriteTokens: number;
-  reasoningTokens: number;
-  costUsd: number;
-}
-
-export interface UsageMemberRow {
-  userId: string | null;
-  name: string | null;
-  inputTokens: number;
-  outputTokens: number;
-  cacheReadTokens: number;
-  cacheWriteTokens: number;
-  reasoningTokens: number;
-  costUsd: number;
-  runs: number;
-}
-
-export interface UsageReport {
-  rows: UsageGroupRow[];
-  totals: UsageTotals;
-  byMember: UsageMemberRow[];
-}
-
 export interface UsageMemberAggregateRow {
   startedByUserId: string | null;
   inputTokens: number;
@@ -136,34 +119,6 @@ export interface UsageReportRequest {
   to?: string;
   agents?: string[];
   timezone?: string;
-}
-
-export type UsagePricingSource = 'provider' | 'manual' | 'catalog' | 'none';
-
-export interface UsageRunRow {
-  runId: string;
-  agentId: string | null;
-  model: string;
-  modelId: string | null;
-  inputTokens: number;
-  outputTokens: number;
-  cacheReadTokens: number;
-  cacheWriteTokens: number;
-  costUsd: number;
-  pricingSource: UsagePricingSource;
-  ts: string;
-}
-
-export interface UsageRunsTotals {
-  inputTokens: number;
-  outputTokens: number;
-  costUsd: number;
-  runs: number;
-}
-
-export interface UsageRunsReport {
-  rows: UsageRunRow[];
-  totals: UsageRunsTotals;
 }
 
 export interface UsageRunsReportRequest {

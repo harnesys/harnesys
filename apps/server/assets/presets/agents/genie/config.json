@@ -7,7 +7,8 @@
     "workspace-ops",
     "find-skills",
     "harnesys-system",
-    "addon-creator"
+    "addon-creator",
+    "widget-creator"
   ],
   "budget": {
     "maxSteps": 400,

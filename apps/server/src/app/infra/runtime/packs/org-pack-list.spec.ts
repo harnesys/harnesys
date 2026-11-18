@@ -20,6 +20,7 @@ describe('org pack single source', () => {
     ).toEqual([
       'agents',
       'core',
+      'dashboards',
       'files',
       'image',
       'issues',
@@ -38,6 +39,7 @@ describe('org pack single source', () => {
     expect(wireOrgPackNames({}).sort()).toEqual([
       'agents',
       'core',
+      'dashboards',
       'files',
       'image',
       'shell',

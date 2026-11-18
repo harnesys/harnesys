@@ -1,3 +1,4 @@
+import type { PackCatalogTool } from '@harnesys/contracts';
 import type {
   AgentCapabilitiesView,
   AgentCapabilityRegistryEntry,
@@ -176,6 +177,27 @@ export interface SourceCardSection {
   kind: ExplainKind;
   label: string;
   items: string[];
+}
+/**
+ * Rows for a source the explain endpoint has no entries for yet (a new agent
+ * with no saved capabilities): the pack catalog is the tool list, the draft
+ * drives the switches.
+ */
+export function catalogToolRows(
+  tools: PackCatalogTool[],
+  override: PackOverride,
+): SourceCardTool[] {
+  return tools.map((tool) => ({
+    name: tool.name,
+    exposure: override.exposure?.[tool.name] ?? 'direct',
+    disabled: override.disabledTools?.includes(tool.name) ?? false,
+    overridden:
+      (override.disabledTools?.includes(tool.name) ?? false) ||
+      override.exposure?.[tool.name] !== undefined,
+    provenance: 'pack catalog',
+    status: 'denied-by-universe' as ExplainStatus,
+    reason: 'not saved yet',
+  }));
 }
 const PLUGIN_SECTION_LABEL: Record<string, string> = {
   skill: 'Skills',

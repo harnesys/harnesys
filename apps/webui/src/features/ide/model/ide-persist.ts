@@ -59,6 +59,7 @@ export function sanitizeWorkspace(ws: IdeWorkspaceState): IdeWorkspaceState | nu
           t.kind === 'diff' ||
           t.kind === 'terminal' ||
           t.kind === 'board' ||
+          t.kind === 'dashboard' ||
           t.kind === 'attachment' ||
           t.kind === 'thread-file',
       )

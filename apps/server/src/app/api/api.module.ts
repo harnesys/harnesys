@@ -5,6 +5,7 @@ import { AppsUseCaseModule } from '../application/apps/apps.use-case.module.ts';
 import { AutomationUseCaseModule } from '../application/automations/automation.use-case.module.ts';
 import { CapabilitiesUseCaseModule } from '../application/capabilities/capabilities.use-case.module.ts';
 import { ContentUseCaseModule } from '../application/content/content.use-case.module.ts';
+import { DashboardsUseCaseModule } from '../application/dashboards/dashboards.use-case.module.ts';
 import { EulaUseCaseModule } from '../application/eula/eula.use-case.module.ts';
 import { ExecutionProfileUseCaseModule } from '../application/execution-profile/execution-profile.use-case.module.ts';
 import { FileAccessUseCaseModule } from '../application/file-access/file-access.use-case.module.ts';
@@ -39,6 +40,7 @@ import { AddonWiringModule } from '../infra/addons/wiring/addons-wiring.module.t
 import { AgentMemoryModule } from '../infra/agent-memory/agent-memory.module.ts';
 import { AutomationsModule } from '../infra/automations/automations.module.ts';
 import { ContentModule } from '../infra/content/content.module.ts';
+import { DashboardsInfraModule } from '../infra/dashboards/dashboards.module.ts';
 import { DeskModule } from '../infra/desk/desk.module.ts';
 import { EulaInfraModule } from '../infra/eula/eula.module.ts';
 import { EventsWatchModule } from '../infra/events-watch/events-watch.module.ts';
@@ -88,6 +90,7 @@ import { CapabilitiesController } from './rest/capabilities.controller.ts';
 import { CatalogController } from './rest/catalog.controller.ts';
 import { ConnectController } from './rest/connect.controller.ts';
 import { ContentController } from './rest/content.controller.ts';
+import { DashboardsController } from './rest/dashboards.controller.ts';
 import { DiscoveryController } from './rest/discovery.controller.ts';
 import { EulaController } from './rest/eula.controller.ts';
 import { EventsWatchController } from './rest/events-watch.controller.ts';
@@ -155,6 +158,7 @@ import { VaultController } from './rest/vault.controller.ts';
     SourceUseCaseModule,
     AutomationUseCaseModule,
     ContentUseCaseModule,
+    DashboardsUseCaseModule,
     ProviderUseCaseModule,
     ImageUseCaseModule,
     AudioUseCaseModule,
@@ -205,6 +209,7 @@ import { VaultController } from './rest/vault.controller.ts';
     SourceWatchModule,
     FleetHubModule,
     MachineHomeModule,
+    DashboardsInfraModule,
     AddonWiringModule,
   ],
   controllers: [
@@ -289,6 +294,7 @@ import { VaultController } from './rest/vault.controller.ts';
     ModelSpeechController,
     ModelTranscriptionController,
     ModelVoicesController,
+    DashboardsController,
   ],
   providers: [{ provide: APP_GUARD, useClass: SessionGuard }],
 })

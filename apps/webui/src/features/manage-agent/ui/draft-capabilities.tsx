@@ -6,6 +6,7 @@ import { orgPluginsQuery } from '@/shared/api/org-plugins';
 import { RowList } from '@/shared/ui/capability-rows';
 import {
   CORE_SOURCE,
+  catalogToolRows,
   isSourceGranted,
   overrideOfAssignment,
   type PackAssignmentMap,
@@ -65,11 +66,11 @@ export function DraftPacksGrants({
               tools={
                 agentId
                   ? sourceToolRows(view, `pack:${pack.name}`, base, { ownsDisabledTools: true })
-                  : []
+                  : catalogToolRows(pack.tools, base)
               }
               toolsHint={
                 agentId
-                  ? 'Grant the source and save to tune its tools.'
+                  ? 'Grant the source to tune its tools.'
                   : 'Save the agent to tune per-tool overrides.'
               }
               onToggleGrant={(next) =>

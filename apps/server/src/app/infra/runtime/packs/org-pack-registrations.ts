@@ -2,6 +2,7 @@ import type { CapabilityScope, HostEngineEntry, ProcessJobRegistry } from 'harne
 import {
   agentsCapability,
   coreCapability,
+  dashboardsCapability,
   filesCapability,
   imageCapability,
   issuesCapability,
@@ -13,11 +14,13 @@ import {
 } from 'harnesys';
 import { lspCapability } from 'harnesys/lsp';
 import { skillsCapability } from 'harnesys/skills';
+import { dashboardsToolsDeps } from '../../../application/dashboards/dashboard-tools.holder.ts';
 import { LspPort } from '../../../domain/lsp/lsp.port.ts';
 import { isHostWired } from '../../../domain/runtime/org-pack-list.ts';
 import { scopedLspPort } from '../../lsp/scoped-lsp.port.ts';
 import { getHostToolScope } from '../host-tool-scope.ts';
 import { OrgAgentsCatalogPort } from './org-agents-catalog.port.ts';
+import { OrgDashboardsPackPort } from './org-dashboards.pack.port.ts';
 import { OrgImageGenerationPort } from './org-image.port.ts';
 import { OrgIssuePort } from './org-issue.port.ts';
 import { OrgManagerPort } from './org-manager.port.ts';
@@ -78,6 +81,8 @@ export function registrationForPack(packName: string, ctx: WireOrgPackContext) {
       return issuesRegistration(ctx);
     case 'manager':
       return managerRegistration(ctx);
+    case 'dashboards':
+      return dashboardsRegistration(ctx);
     case 'knowledge-memory':
       return knowledgeRegistration(ctx);
     case 'skills':
@@ -163,6 +168,17 @@ function managerRegistration(ctx: WireOrgPackContext) {
   }
   return registerPack(managerCapability, {
     ports: { observation: new OrgManagerPort(ctx.deps.manager) },
+    resolveScope: ctx.liveScope,
+  });
+}
+
+function dashboardsRegistration(ctx: WireOrgPackContext) {
+  const deps = dashboardsToolsDeps();
+  if (!deps) {
+    return undefined;
+  }
+  return registerPack(dashboardsCapability, {
+    ports: { dashboards: new OrgDashboardsPackPort(deps) },
     resolveScope: ctx.liveScope,
   });
 }

@@ -156,9 +156,12 @@ export const UpdateThreadMetaBodySchema = z
       .nullable()
       .optional(),
   })
-  .refine((body) => body.title !== undefined || body.icon !== undefined || body.color !== undefined, {
-    message: 'at least one of title, icon or color is required',
-  });
+  .refine(
+    (body) => body.title !== undefined || body.icon !== undefined || body.color !== undefined,
+    {
+      message: 'at least one of title, icon or color is required',
+    },
+  );
 export type UpdateThreadMetaBody = z.infer<typeof UpdateThreadMetaBodySchema>;
 
 export const AddThreadAgentBodySchema = z.object({

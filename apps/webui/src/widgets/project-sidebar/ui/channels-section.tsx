@@ -1,9 +1,12 @@
+import { PlusIcon } from 'lucide-react';
 import { useSessionStore } from '@/entities/session';
 import type { Thread } from '@/entities/thread';
+import { openCreateGroupThreadDialog } from '@/features/create-group-thread';
 import { useThreadWaiting } from '@/features/desk';
 import { useOrgTimeZone } from '@/features/switch-org/org-time-zone';
 import { useStudioNavigation } from '@/shared/config/navigation';
 import { cn } from '@/shared/lib/utils';
+import { Button } from '@/shared/ui/button';
 import { ChannelIcon } from '@/shared/ui/icon';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { rowRight, runStatus, threadTime } from '../model/row-status';
@@ -42,6 +45,23 @@ export function ChannelsSection({
         />
       ))}
     </div>
+  );
+}
+
+export function ChannelsSectionActions() {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-xs"
+      title="New channel"
+      aria-label="New channel"
+      data-testid="group-create"
+      onClick={() => void openCreateGroupThreadDialog()}
+    >
+      <PlusIcon className="size-3.5 text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
+      <span className="sr-only">New channel</span>
+    </Button>
   );
 }
 

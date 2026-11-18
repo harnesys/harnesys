@@ -1,6 +1,6 @@
 export * from './addons-platform.ts';
 export * from './apps.ts';
-export * from './dashboards.ts';
+export * from './dashboards/index.ts';
 export * from './domains-agents.ts';
 export * from './domains-org.ts';
 export * from './domains-work.ts';
@@ -10,7 +10,6 @@ export * from './identity-links.ts';
 export * from './memory-policy.ts';
 export * from './permission-rules.ts';
 export * from './teams.ts';
-
 export {
   type AddThreadAgentBody,
   AddThreadAgentBodySchema,
@@ -38,3 +37,4 @@ export {
   type UpdateThreadPolicyBody,
   UpdateThreadPolicyBodySchema,
 } from './thread.ts';
+export * from './usage.ts';

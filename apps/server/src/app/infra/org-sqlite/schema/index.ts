@@ -62,6 +62,17 @@ export {
   attachmentsTable,
 } from './attachments.ts';
 export {
+  type DashboardInsertRow,
+  type DashboardRow,
+  type DashboardWidgetInsertRow,
+  type DashboardWidgetRow,
+  type DashboardWidgetStateInsertRow,
+  type DashboardWidgetStateRow,
+  dashboardsTable,
+  dashboardWidgetStateTable,
+  dashboardWidgetsTable,
+} from './dashboards.ts';
+export {
   type EventClaimInsert,
   type EventClaimRow,
   eventClaimsTable,
