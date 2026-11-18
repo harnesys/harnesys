@@ -1,8 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { EyeIcon, EyeOffIcon, LoaderCircleIcon, PlusIcon } from 'lucide-react';
+import { EyeIcon, EyeOffIcon, LoaderCircleIcon, PlusIcon, SearchIcon } from 'lucide-react';
 import { useEffect } from 'react';
 import { useProjects } from '@/entities/project';
 import { openAddSourceDialog } from '@/features/attach-source';
+import { openFindInFilesDialog } from '@/features/find-in-files';
 import { patchKnowledgeIndexState } from '@/features/manage-knowledge-index/model/patch-knowledge-index-state';
 import { watchKnowledgeIndexStates } from '@/shared/api/events';
 import { selfNodeCached } from '@/shared/api/fleet';
@@ -11,6 +12,7 @@ import {
   knowledgeIndexStatesQuery,
 } from '@/shared/api/knowledge-index';
 import { useOrgId } from '@/shared/config/location';
+import { Button } from '@/shared/ui/button';
 import {
   DropdownMenuGroup,
   DropdownMenuItem,
@@ -70,70 +72,84 @@ export function ProjectsActions() {
   const toggleHidden = useSourceVisibilityStore((state) => state.toggleHidden);
   const showAll = useSourceVisibilityStore((state) => state.showAll);
   return (
-    <SectionMenu label="Sources actions" contentClassName="min-w-44">
-      <DropdownMenuGroup>
-        <DropdownMenuItem
-          data-testid="projects-add-project"
-          onClick={() => {
-            void openAddSourceDialog();
-          }}
-        >
-          <PlusIcon className="size-3" />
-          Add source
-        </DropdownMenuItem>
-      </DropdownMenuGroup>
-      {sources.length > 0 ? (
-        <>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <div className="flex items-center justify-between pr-2">
-              <DropdownMenuLabel>In this section</DropdownMenuLabel>
-              {hidden.length > 0 ? (
-                <DropdownMenuItem
-                  data-testid="projects-show-all-sources"
-                  className="h-auto px-1.5 py-0.5 text-[10px] focus:bg-transparent"
-                  onClick={() => {
-                    showAll(orgId);
-                  }}
-                >
-                  Show all
-                </DropdownMenuItem>
-              ) : null}
-            </div>
-            {sources.map((source) => {
-              const isVisible = !hidden.includes(source.id);
-              return (
-                <DropdownMenuSwitchItem
-                  key={source.id}
-                  data-testid={`projects-source-visibility-${source.id}`}
-                  checked={isVisible}
-                  onCheckedChange={(checked) => {
-                    toggleHidden(orgId, source.id, !checked);
-                  }}
-                >
-                  <SourceRootIcon
-                    driver={source.driver}
-                    hasGit={source.hasGit === true}
-                    hasRemote={source.gitRemote != null}
-                    managed={source.managed === true}
-                    isLocal={source.hostId != null && source.hostId === selfNodeCached()}
-                    open={false}
-                  />
-                  <span className="min-w-0 flex-1 truncate">{source.name}</span>
-                </DropdownMenuSwitchItem>
-              );
-            })}
-          </DropdownMenuGroup>
-        </>
-      ) : null}
-      <DropdownMenuSeparator />
-      <DropdownMenuGroup>
-        <DropdownMenuSwitchItem checked={showHidden} onCheckedChange={setShowHidden}>
-          {showHidden ? <EyeOffIcon className="size-3" /> : <EyeIcon className="size-3" />}
-          {showHidden ? 'Hide hidden files' : 'Show hidden files'}
-        </DropdownMenuSwitchItem>
-      </DropdownMenuGroup>
-    </SectionMenu>
+    <>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        title="Find in files"
+        aria-label="Find in files"
+        data-testid="projects-find-in-files"
+        onClick={() => {
+          void openFindInFilesDialog();
+        }}
+      >
+        <SearchIcon className="text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
+      </Button>
+      <SectionMenu label="Sources actions" contentClassName="min-w-44">
+        <DropdownMenuGroup>
+          <DropdownMenuItem
+            data-testid="projects-add-project"
+            onClick={() => {
+              void openAddSourceDialog();
+            }}
+          >
+            <PlusIcon className="size-3" />
+            Add source
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        {sources.length > 0 ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <div className="flex items-center justify-between pr-2">
+                <DropdownMenuLabel>In this section</DropdownMenuLabel>
+                {hidden.length > 0 ? (
+                  <DropdownMenuItem
+                    data-testid="projects-show-all-sources"
+                    className="h-auto px-1.5 py-0.5 text-[10px] focus:bg-transparent"
+                    onClick={() => {
+                      showAll(orgId);
+                    }}
+                  >
+                    Show all
+                  </DropdownMenuItem>
+                ) : null}
+              </div>
+              {sources.map((source) => {
+                const isVisible = !hidden.includes(source.id);
+                return (
+                  <DropdownMenuSwitchItem
+                    key={source.id}
+                    data-testid={`projects-source-visibility-${source.id}`}
+                    checked={isVisible}
+                    onCheckedChange={(checked) => {
+                      toggleHidden(orgId, source.id, !checked);
+                    }}
+                  >
+                    <SourceRootIcon
+                      driver={source.driver}
+                      hasGit={source.hasGit === true}
+                      hasRemote={source.gitRemote != null}
+                      managed={source.managed === true}
+                      isLocal={source.hostId != null && source.hostId === selfNodeCached()}
+                      open={false}
+                    />
+                    <span className="min-w-0 flex-1 truncate">{source.name}</span>
+                  </DropdownMenuSwitchItem>
+                );
+              })}
+            </DropdownMenuGroup>
+          </>
+        ) : null}
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuSwitchItem checked={showHidden} onCheckedChange={setShowHidden}>
+            {showHidden ? <EyeOffIcon className="size-3" /> : <EyeIcon className="size-3" />}
+            {showHidden ? 'Hide hidden files' : 'Show hidden files'}
+          </DropdownMenuSwitchItem>
+        </DropdownMenuGroup>
+      </SectionMenu>
+    </>
   );
 }
 

@@ -1,20 +1,17 @@
 import { Injectable } from '@harnesys/brix';
-import type { ContentStat, ContentTreeResult, ProxyRequest } from '@harnesys/contracts';
-import {
-  ContentHostNotLocalException,
-  ContentProxyException,
-  HostOfflineException,
-} from '../../domain/content/content.error.ts';
+import type {
+  ContentSearchSourceResult,
+  ContentStat,
+  ContentTreeResult,
+} from '@harnesys/contracts';
+import { ContentHostNotLocalException } from '../../domain/content/content.error.ts';
 import {
   type ContentDownload,
   type ContentReadResult,
+  type ContentSearchOptions,
   type ContentWriteResult,
   OrgContentPort,
 } from '../../domain/content/org-content.port.ts';
-import {
-  WORKER_CONTENT_PATH,
-  type WorkerContentRequest,
-} from '../../domain/content/worker-content.protocol.ts';
 import { FleetContentProxyPort } from '../../domain/fleet/fleet-content-proxy.port.ts';
 import { OrgExecutionReplicaPort } from '../../domain/fleet/org-execution-replica.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
@@ -22,12 +19,12 @@ import { SourceNotFoundException } from '../../domain/source/source.error.ts';
 import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import { LocalFsContentAdapter } from './local-fs.adapter.ts';
-import { throwFromProxyBody } from './proxy-error.ts';
 import {
   contentRouteTarget,
   findSourceForContentRoute,
   readyContentHostIds,
 } from './routing-content.route.ts';
+import { proxyWorkerJson } from './worker-content-proxy.ts';
 
 @Injectable()
 export class RoutingContentAdapter extends OrgContentPort {
@@ -53,7 +50,7 @@ export class RoutingContentAdapter extends OrgContentPort {
       if (!ctx.remote) {
         return this.local.listTree(orgId, sourceId, relPath, worktreeId, options);
       }
-      return this.proxyJson<ContentTreeResult>(ctx.hostId, {
+      return proxyWorkerJson<ContentTreeResult>(this.proxy, ctx.hostId, {
         op: 'tree',
         sourceId,
         relPath,
@@ -74,19 +71,22 @@ export class RoutingContentAdapter extends OrgContentPort {
       if (!ctx.remote) {
         return this.local.read(orgId, sourceId, relPath, worktreeId);
       }
-      return this.proxyJson<{
+      return proxyWorkerJson<{
         bytesBase64: string;
         etag: string;
         size: number;
         mtime: string;
-      }>(ctx.hostId, { op: 'read', sourceId, relPath, ...(worktreeId ? { worktreeId } : {}) }).then(
-        (body) => ({
-          bytes: Uint8Array.from(Buffer.from(body.bytesBase64, 'base64')),
-          etag: body.etag,
-          size: body.size,
-          mtime: body.mtime,
-        }),
-      );
+      }>(this.proxy, ctx.hostId, {
+        op: 'read',
+        sourceId,
+        relPath,
+        ...(worktreeId ? { worktreeId } : {}),
+      }).then((body) => ({
+        bytes: Uint8Array.from(Buffer.from(body.bytesBase64, 'base64')),
+        etag: body.etag,
+        size: body.size,
+        mtime: body.mtime,
+      }));
     });
   }
 
@@ -103,7 +103,7 @@ export class RoutingContentAdapter extends OrgContentPort {
       if (!ctx.remote) {
         return this.local.write(orgId, sourceId, relPath, bytes, options);
       }
-      return this.proxyJson<ContentWriteResult>(ctx.hostId, {
+      return proxyWorkerJson<ContentWriteResult>(this.proxy, ctx.hostId, {
         op: 'write',
         sourceId,
         relPath,
@@ -119,7 +119,7 @@ export class RoutingContentAdapter extends OrgContentPort {
       if (!ctx.remote) {
         return this.local.mkdir(orgId, sourceId, relPath, worktreeId);
       }
-      return this.proxyJson(ctx.hostId, {
+      return proxyWorkerJson(this.proxy, ctx.hostId, {
         op: 'mkdir',
         sourceId,
         relPath,
@@ -133,7 +133,7 @@ export class RoutingContentAdapter extends OrgContentPort {
       if (!ctx.remote) {
         return this.local.remove(orgId, sourceId, relPath, worktreeId);
       }
-      return this.proxyJson(ctx.hostId, {
+      return proxyWorkerJson(this.proxy, ctx.hostId, {
         op: 'remove',
         sourceId,
         relPath,
@@ -153,7 +153,7 @@ export class RoutingContentAdapter extends OrgContentPort {
       if (!ctx.remote) {
         return this.local.move(orgId, sourceId, fromRel, toRel, worktreeId);
       }
-      return this.proxyJson(ctx.hostId, {
+      return proxyWorkerJson(this.proxy, ctx.hostId, {
         op: 'move',
         sourceId,
         relPath: fromRel,
@@ -174,7 +174,7 @@ export class RoutingContentAdapter extends OrgContentPort {
       if (!ctx.remote) {
         return this.local.copy(orgId, sourceId, fromRel, toRel, worktreeId);
       }
-      return this.proxyJson(ctx.hostId, {
+      return proxyWorkerJson(this.proxy, ctx.hostId, {
         op: 'copy',
         sourceId,
         relPath: fromRel,
@@ -209,7 +209,7 @@ export class RoutingContentAdapter extends OrgContentPort {
       if (!ctx.remote) {
         return this.local.stat(orgId, sourceId, relPath, worktreeId);
       }
-      return this.proxyJson<ContentStat>(ctx.hostId, {
+      return proxyWorkerJson<ContentStat>(this.proxy, ctx.hostId, {
         op: 'stat',
         sourceId,
         relPath,
@@ -228,7 +228,7 @@ export class RoutingContentAdapter extends OrgContentPort {
       if (!ctx.remote) {
         return this.local.duplicate(orgId, sourceId, relPath, worktreeId);
       }
-      return this.proxyJson<ContentStat>(ctx.hostId, {
+      return proxyWorkerJson<ContentStat>(this.proxy, ctx.hostId, {
         op: 'duplicate',
         sourceId,
         relPath,
@@ -242,7 +242,7 @@ export class RoutingContentAdapter extends OrgContentPort {
       if (!ctx.remote) {
         return this.local.reveal(orgId, sourceId, relPath, worktreeId);
       }
-      return this.proxyJson(ctx.hostId, {
+      return proxyWorkerJson(this.proxy, ctx.hostId, {
         op: 'reveal',
         sourceId,
         relPath,
@@ -261,7 +261,7 @@ export class RoutingContentAdapter extends OrgContentPort {
       if (!ctx.remote) {
         return this.local.download(orgId, sourceId, relPath, worktreeId);
       }
-      return this.proxyJson<{ name: string; bytesBase64: string }>(ctx.hostId, {
+      return proxyWorkerJson<{ name: string; bytesBase64: string }>(this.proxy, ctx.hostId, {
         op: 'download',
         sourceId,
         relPath,
@@ -270,6 +270,32 @@ export class RoutingContentAdapter extends OrgContentPort {
         name: body.name,
         bytes: Uint8Array.from(Buffer.from(body.bytesBase64, 'base64')),
       }));
+    });
+  }
+
+  search(
+    orgId: string,
+    sourceId: string,
+    query: string,
+    options: ContentSearchOptions,
+    worktreeId?: string,
+  ): Promise<ContentSearchSourceResult> {
+    return this.route(orgId, sourceId, (ctx) => {
+      if (!ctx.remote) {
+        return this.local.search(orgId, sourceId, query, options, worktreeId);
+      }
+      return proxyWorkerJson<ContentSearchSourceResult>(this.proxy, ctx.hostId, {
+        op: 'search',
+        sourceId,
+        relPath: '',
+        query,
+        caseSensitive: options.caseSensitive,
+        wholeWord: options.wholeWord,
+        regex: options.regex,
+        mask: options.mask.join(','),
+        limit: options.limit,
+        ...(worktreeId ? { worktreeId } : {}),
+      });
     });
   }
 
@@ -308,40 +334,5 @@ export class RoutingContentAdapter extends OrgContentPort {
         readyHostIds,
       }),
     );
-  }
-
-  private async proxyJson<T>(hostId: string, req: WorkerContentRequest): Promise<T> {
-    const request: ProxyRequest = {
-      method: 'POST',
-      path: WORKER_CONTENT_PATH,
-      body: JSON.stringify(req),
-      contentType: 'application/json',
-    };
-    let response: Response;
-    try {
-      response = await this.proxy.requestProxy(hostId, request);
-    } catch (err) {
-      if (err instanceof HostOfflineException) {
-        throw err;
-      }
-      throw new ContentProxyException(
-        502,
-        'PROXY_FAILED',
-        err instanceof Error ? err.message : 'proxy failed',
-      );
-    }
-    const text = await response.text();
-    let parsed: unknown = null;
-    if (text) {
-      try {
-        parsed = JSON.parse(text);
-      } catch {
-        parsed = null;
-      }
-    }
-    if (!response.ok) {
-      throwFromProxyBody(hostId, response.status, parsed);
-    }
-    return parsed as T;
   }
 }

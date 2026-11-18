@@ -1,4 +1,8 @@
-import type { ContentStat, ContentTreeResult } from '@harnesys/contracts';
+import type {
+  ContentSearchSourceResult,
+  ContentStat,
+  ContentTreeResult,
+} from '@harnesys/contracts';
 
 export interface ContentReadResult {
   bytes: Uint8Array;
@@ -14,6 +18,14 @@ export interface ContentWriteResult {
 export interface ContentDownload {
   name: string;
   bytes: Uint8Array;
+}
+
+export interface ContentSearchOptions {
+  caseSensitive: boolean;
+  wholeWord: boolean;
+  regex: boolean;
+  mask: string[];
+  limit: number;
 }
 
 export abstract class OrgContentPort {
@@ -94,4 +106,11 @@ export abstract class OrgContentPort {
     relPath: string,
     worktreeId?: string,
   ): Promise<ContentDownload>;
+  abstract search(
+    orgId: string,
+    sourceId: string,
+    query: string,
+    options: ContentSearchOptions,
+    worktreeId?: string,
+  ): Promise<ContentSearchSourceResult>;
 }

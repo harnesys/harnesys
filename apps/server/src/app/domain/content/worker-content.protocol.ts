@@ -1,3 +1,8 @@
+import {
+  MAX_SEARCH_LIMIT,
+  MAX_SEARCH_MASK_CHARS,
+  MAX_SEARCH_QUERY_CHARS,
+} from '@harnesys/contracts';
 import { z } from 'zod';
 
 export const WORKER_CONTENT_PATH = '/api/fleet/worker-content';
@@ -15,6 +20,7 @@ export const WorkerContentOpSchema = z.enum([
   'duplicate',
   'reveal',
   'download',
+  'search',
 ]);
 export type WorkerContentOp = z.infer<typeof WorkerContentOpSchema>;
 
@@ -31,6 +37,12 @@ export const WorkerContentRequestSchema = z.object({
   worktreeId: z.string().min(1).max(200).optional(),
   includeIgnored: z.boolean().optional(),
   depth: z.number().int().min(1).optional(),
+  query: z.string().min(1).max(MAX_SEARCH_QUERY_CHARS).optional(),
+  caseSensitive: z.boolean().optional(),
+  wholeWord: z.boolean().optional(),
+  regex: z.boolean().optional(),
+  mask: z.string().max(MAX_SEARCH_MASK_CHARS).optional(),
+  limit: z.number().int().min(1).max(MAX_SEARCH_LIMIT).optional(),
 });
 export type WorkerContentRequest = z.infer<typeof WorkerContentRequestSchema>;
 

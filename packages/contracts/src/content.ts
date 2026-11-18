@@ -3,6 +3,12 @@ import { z } from 'zod';
 export const MAX_EDITOR_BYTES = 2 * 1024 * 1024;
 export const MAX_DOWNLOAD_BYTES = 100 * 1024 * 1024;
 export const MAX_TREE_ENTRIES = 20_000;
+export const MAX_SEARCH_QUERY_CHARS = 200;
+export const MAX_SEARCH_MASK_CHARS = 200;
+export const MAX_SEARCH_LIMIT = 1000;
+export const MAX_SEARCH_MATCHES = 500;
+export const MAX_SEARCH_FILE_BYTES = 2_000_000;
+export const MAX_SEARCH_LINE_CHARS = 400;
 
 export const ContentEntryTypeSchema = z.enum(['file', 'dir']);
 export type ContentEntryType = z.infer<typeof ContentEntryTypeSchema>;
@@ -121,6 +127,56 @@ export const ContentDownloadResultSchema = z.object({
   bytesBase64: z.string(),
 });
 export type ContentDownloadResult = z.infer<typeof ContentDownloadResultSchema>;
+
+export const ContentSearchQuerySchema = z.object({
+  q: z.string().min(1).max(MAX_SEARCH_QUERY_CHARS),
+  sourceId: z.string().min(1).optional(),
+  caseSensitive: z.enum(['true', 'false']).optional(),
+  wholeWord: z.enum(['true', 'false']).optional(),
+  regex: z.enum(['true', 'false']).optional(),
+  mask: z.string().max(MAX_SEARCH_MASK_CHARS).optional(),
+  limit: z.coerce.number().int().min(1).max(MAX_SEARCH_LIMIT).optional(),
+});
+export type ContentSearchQuery = z.infer<typeof ContentSearchQuerySchema>;
+
+export const ContentSearchMatchSchema = z.object({
+  line: z.number().int().min(1),
+  column: z.number().int().min(1),
+  text: z.string(),
+  start: z.number().int().nonnegative(),
+  end: z.number().int().nonnegative(),
+});
+export type ContentSearchMatch = z.infer<typeof ContentSearchMatchSchema>;
+
+export const ContentSearchFileSchema = z.object({
+  sourceId: z.string().min(1),
+  path: z.string(),
+  name: z.string().min(1),
+  matches: z.array(ContentSearchMatchSchema),
+});
+export type ContentSearchFile = z.infer<typeof ContentSearchFileSchema>;
+
+export const ContentSearchErrorSchema = z.object({
+  sourceId: z.string().min(1),
+  sourceName: z.string(),
+  message: z.string(),
+});
+export type ContentSearchError = z.infer<typeof ContentSearchErrorSchema>;
+
+export const ContentSearchResponseSchema = z.object({
+  fileCount: z.number().int().nonnegative(),
+  matchCount: z.number().int().nonnegative(),
+  files: z.array(ContentSearchFileSchema),
+  truncated: z.boolean(),
+  errors: z.array(ContentSearchErrorSchema),
+});
+export type ContentSearchResponse = z.infer<typeof ContentSearchResponseSchema>;
+
+export interface ContentSearchSourceResult {
+  files: ContentSearchFile[];
+  matchCount: number;
+  truncated: boolean;
+}
 
 export const ContentReadMetaSchema = z.object({
   path: z.string(),

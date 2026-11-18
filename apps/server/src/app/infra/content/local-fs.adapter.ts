@@ -1,8 +1,13 @@
 import { Injectable } from '@harnesys/brix';
-import type { ContentStat, ContentTreeResult } from '@harnesys/contracts';
+import type {
+  ContentSearchSourceResult,
+  ContentStat,
+  ContentTreeResult,
+} from '@harnesys/contracts';
 import {
   type ContentDownload,
   type ContentReadResult,
+  type ContentSearchOptions,
   type ContentWriteResult,
   OrgContentPort,
 } from '../../domain/content/org-content.port.ts';
@@ -20,6 +25,7 @@ import {
   statAt,
   writeAt,
 } from './fs-content-ops.ts';
+import { searchSourceAt } from './fs-content-search.ts';
 import { copyAt, importAt } from './fs-copy-ops.ts';
 import { listTreeAt } from './fs-tree-walk.ts';
 import { resolveWorktreeContentRoot } from './worktree-content-root.ts';
@@ -145,6 +151,22 @@ export class LocalFsContentAdapter extends OrgContentPort {
     worktreeId?: string,
   ): Promise<ContentDownload> {
     return Promise.resolve(downloadAt(this.contentRoot(orgId, sourceId, worktreeId), relPath));
+  }
+
+  search(
+    orgId: string,
+    sourceId: string,
+    query: string,
+    options: ContentSearchOptions,
+    worktreeId?: string,
+  ): Promise<ContentSearchSourceResult> {
+    return searchSourceAt(
+      sourceId,
+      this.contentRoot(orgId, sourceId, worktreeId),
+      '',
+      query,
+      options,
+    );
   }
 
   contentRoot(orgId: string, sourceId: string, worktreeId?: string): string {

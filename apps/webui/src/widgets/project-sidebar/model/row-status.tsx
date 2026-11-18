@@ -49,12 +49,7 @@ export function rowRight(status: RowRunStatus, unread: boolean, time: string): R
     );
   }
   return (
-    <span
-      className={cn(
-        'shrink-0 font-mono text-[11px] text-muted-foreground/70 leading-4',
-        'group-hover/row:hidden',
-      )}
-    >
+    <span className="shrink-0 font-mono text-[11px] text-muted-foreground/70 leading-4">
       {time}
     </span>
   );

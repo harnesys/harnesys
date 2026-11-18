@@ -90,6 +90,7 @@ import { CapabilitiesController } from './rest/capabilities.controller.ts';
 import { CatalogController } from './rest/catalog.controller.ts';
 import { ConnectController } from './rest/connect.controller.ts';
 import { ContentController } from './rest/content.controller.ts';
+import { ContentSearchController } from './rest/content-search.controller.ts';
 import { DashboardsController } from './rest/dashboards.controller.ts';
 import { DiscoveryController } from './rest/discovery.controller.ts';
 import { EulaController } from './rest/eula.controller.ts';
@@ -244,6 +245,7 @@ import { VaultController } from './rest/vault.controller.ts';
     TerminalsController,
     OrgTerminalsController,
     ContentController,
+    ContentSearchController,
     ProvidersController,
     KnowledgeController,
     KnowledgeOrgController,

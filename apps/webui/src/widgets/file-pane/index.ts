@@ -1,3 +1,4 @@
+export { type PendingReveal, setPendingReveal } from './model/definition-reveal';
 export { useAddonViewer } from './model/use-addon-viewer';
 export { AddonViewerFrame } from './ui/addon-viewer-frame';
 export type { AttachmentPreviewKind } from './ui/attachment-preview';

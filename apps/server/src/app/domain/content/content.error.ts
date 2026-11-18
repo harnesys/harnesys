@@ -52,3 +52,9 @@ export class ContentProxyException extends HttpException {
     super(statusCode, errorCode, message, details);
   }
 }
+
+export class ContentSearchQueryException extends ValidationException {
+  constructor(message: string, details?: unknown) {
+    super(message, details);
+  }
+}

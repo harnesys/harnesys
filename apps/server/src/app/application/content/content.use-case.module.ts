@@ -9,6 +9,7 @@ import { MovePathsUseCase } from './move-paths.use-case.ts';
 import { ReadFileUseCase } from './read-file.use-case.ts';
 import { RemovePathUseCase } from './remove-path.use-case.ts';
 import { RevealPathUseCase } from './reveal-path.use-case.ts';
+import { SearchContentUseCase } from './search-content.use-case.ts';
 import { StatPathUseCase } from './stat-path.use-case.ts';
 import { WriteFileUseCase } from './write-file.use-case.ts';
 
@@ -26,6 +27,7 @@ import { WriteFileUseCase } from './write-file.use-case.ts';
     DuplicatePathUseCase,
     RevealPathUseCase,
     DownloadPathUseCase,
+    SearchContentUseCase,
   ],
   exports: [
     ListTreeUseCase,
@@ -40,6 +42,7 @@ import { WriteFileUseCase } from './write-file.use-case.ts';
     DuplicatePathUseCase,
     RevealPathUseCase,
     DownloadPathUseCase,
+    SearchContentUseCase,
   ],
 })
 export class ContentUseCaseModule {}

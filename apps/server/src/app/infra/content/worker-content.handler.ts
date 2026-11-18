@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { DomainException, HttpException, Injectable } from '@harnesys/brix';
-import type { SourceVcs } from '@harnesys/contracts';
+import { MAX_SEARCH_MATCHES, type SourceVcs } from '@harnesys/contracts';
 import {
   type WorkerHostBrowseRequest,
   type WorkerRequest,
@@ -25,6 +25,7 @@ import {
   statAt,
   writeAt,
 } from './fs-content-ops.ts';
+import { searchSourceAt } from './fs-content-search.ts';
 import { copyAt } from './fs-copy-ops.ts';
 import { listTreeAt } from './fs-tree-walk.ts';
 import { listHostDirectories } from './list-host-directories.ts';
@@ -163,9 +164,24 @@ async function executeOp(orgId: string, req: WorkerRequest, deps: ContentOpDeps)
         bytesBase64: Buffer.from(result.bytes).toString('base64'),
       };
     }
+    case 'search':
+      return searchSourceAt(req.sourceId, root, req.relPath, req.query ?? '', {
+        caseSensitive: req.caseSensitive === true,
+        wholeWord: req.wholeWord === true,
+        regex: req.regex === true,
+        mask: maskList(req.mask),
+        limit: req.limit ?? MAX_SEARCH_MATCHES,
+      });
     default:
       throw new HttpException(400, 'VALIDATION_ERROR', `unknown op`);
   }
+}
+
+function maskList(mask: string | undefined): string[] {
+  return (mask ?? '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
 }
 
 function isHostBrowseRequest(req: WorkerRequest): req is WorkerHostBrowseRequest {

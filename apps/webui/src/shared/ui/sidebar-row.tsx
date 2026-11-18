@@ -59,7 +59,7 @@ export function SidebarRow({
           <span
             className={cn(
               'flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground tabular-nums leading-4',
-              actions && 'transition-opacity group-hover/row:opacity-0',
+              actions && 'min-w-11 justify-end transition-opacity group-hover/row:opacity-0',
             )}
           >
             {trailing}

@@ -20,6 +20,12 @@
   display: none;
 }
 
+/* Find in Files preview: the matched substrings inside the read-only Monaco view. */
+.find-preview-match {
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--live) 28%, transparent);
+}
+
 /* Chat viewport: the thumb stays transparent on autoscroll, even on hover. */
 [data-slot="message-scroller-viewport"][data-autoscrolling] {
   scrollbar-color: transparent transparent;
