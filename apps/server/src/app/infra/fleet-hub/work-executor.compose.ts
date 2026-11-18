@@ -9,6 +9,7 @@ import {
   type RuntimeHandle,
   type SessionEvent,
 } from 'harnesys';
+import { dashboardsToolsDeps } from '../../application/dashboards/dashboard-tools.holder.ts';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
@@ -31,6 +32,7 @@ import { composeRunSkills } from '../runtime/compose-run-skills.ts';
 import { type OrgPluginRuntimeSource, type OrgPluginWiring } from '../runtime/org-plugin-wiring.ts';
 import { agentCatalogCreate } from '../runtime/packs/agent-catalog-create.ts';
 import type { OrgKnowledgeDeps } from '../runtime/packs/org-knowledge.port.ts';
+import { packToolsDeps } from '../runtime/packs/pack-tools-deps.ts';
 import type { WireOrgPacksDeps } from '../runtime/packs/wire-org-packs.ts';
 import type { prepareWorkerTarget } from './work-executor.util.ts';
 
@@ -92,6 +94,7 @@ export function placedWireDeps(
   orgId: string,
   db: OrgSqliteDb,
 ): WireOrgPacksDeps {
+  const dashboards = dashboardsToolsDeps();
   return {
     orgId,
     agents: deps.agents,
@@ -100,6 +103,8 @@ export function placedWireDeps(
     sources: deps.sources,
     planDb: db,
     memoryDb: db,
+    ...packToolsDeps(),
+    ...(dashboards === undefined ? {} : { dashboards }),
     createAgent: agentCatalogCreate({
       orgId,
       agents: deps.agents,
