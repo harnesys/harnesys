@@ -21,10 +21,16 @@ export function zodIssues(error: z.ZodError, prefix: string): WidgetDocIssue[] {
 
 /** `unrecognized_keys` carries the stray keys outside `path`; name the key. */
 function issuePath(issue: z.core.$ZodIssue): PropertyKey[] {
-  if (issue.code === 'unrecognized_keys' && issue.keys.length > 0) {
-    return [...issue.path, issue.keys[0]];
+  const path = issue.path.filter(isPropertyKey);
+  if (issue.code !== 'unrecognized_keys') {
+    return path;
   }
-  return issue.path;
+  const key = issue.keys[0];
+  return key === undefined ? path : [...path, key];
+}
+
+function isPropertyKey(value: PropertyKey | undefined): value is PropertyKey {
+  return value !== undefined;
 }
 
 function joinPath(prefix: string, path: PropertyKey[]): string {
