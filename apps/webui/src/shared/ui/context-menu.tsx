@@ -6,8 +6,17 @@ import { menuPopupClassName } from '@/shared/ui/dropdown-menu';
 function ContextMenu({ ...props }: ContextMenuPrimitive.Root.Props) {
   return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />;
 }
-function ContextMenuTrigger({ ...props }: ContextMenuPrimitive.Trigger.Props) {
-  return <ContextMenuPrimitive.Trigger data-slot="context-menu-trigger" {...props} />;
+function ContextMenuTrigger({ onContextMenu, ...props }: ContextMenuPrimitive.Trigger.Props) {
+  return (
+    <ContextMenuPrimitive.Trigger
+      data-slot="context-menu-trigger"
+      onContextMenu={(event) => {
+        event.currentTarget.ownerDocument.getSelection()?.removeAllRanges();
+        onContextMenu?.(event);
+      }}
+      {...props}
+    />
+  );
 }
 function ContextMenuContent({ className, ...props }: ContextMenuPrimitive.Popup.Props) {
   return (

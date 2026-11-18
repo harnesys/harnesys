@@ -41,12 +41,21 @@ export function resolveFileAccess(input: {
     input.action === 'edit' &&
     !insideAllowedRoot(input.canonicalPath, input.hostId, input.rules)
   ) {
-    return { decision: 'deny', reason: 'path is outside allowed roots' };
+    return { decision: 'deny', reason: outsideRootsReason(input.canonicalPath, input.action) };
   }
   return {
     decision: 'ask',
     subject: { file: { path: input.canonicalPath, action: input.action } },
   };
+}
+
+function outsideRootsReason(canonicalPath: string, action: FileAction): string {
+  return (
+    `${action} denied: ${canonicalPath} is outside the allowed roots of this agent. ` +
+    `Only the user can enable it: agent settings, Sources — share this folder or source with the agent ` +
+    `and set its access to "${action}"; for a single file the user can add a file access rule instead. ` +
+    'Do not bypass this with shell commands — ask the user to enable the access, then retry.'
+  );
 }
 
 function insideAllowedRoot(canonicalPath: string, hostId: string, rules: FileRuleInput[]): boolean {

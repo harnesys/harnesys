@@ -112,9 +112,10 @@ describe('runTargetFileAccess', () => {
       decision: 'ask',
       subject: { file: { path: '/Users/mike/Desktop/report.md', action: 'read' } },
     });
-    expect(policy({ path: '/Users/mike/Desktop/report.md', action: 'edit' })).toEqual({
-      decision: 'deny',
-      reason: 'path is outside allowed roots',
-    });
+    const denied = policy({ path: '/Users/mike/Desktop/report.md', action: 'edit' });
+    expect(denied.decision).toBe('deny');
+    const reason = denied.decision === 'deny' ? denied.reason : '';
+    expect(reason).toContain('/Users/mike/Desktop/report.md is outside the allowed roots');
+    expect(reason).toContain('agent settings, Sources');
   });
 });

@@ -106,8 +106,10 @@ test('asks without rules and read rules do not grant edit', () => {
     agentId: AGENT_A,
     rules: [],
   });
-  expect(outsideEdit).toEqual({
-    decision: 'deny',
-    reason: 'path is outside allowed roots',
-  });
+  expect(outsideEdit.decision).toBe('deny');
+  const outsideReason = outsideEdit.decision === 'deny' ? outsideEdit.reason : '';
+  expect(outsideReason).toContain(
+    'edit denied: /Users/mike/Desktop/file.txt is outside the allowed roots',
+  );
+  expect(outsideReason).toContain('agent settings, Sources');
 });
