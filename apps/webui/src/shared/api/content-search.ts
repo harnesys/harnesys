@@ -1,4 +1,7 @@
+import type { ContentReplaceTarget } from '@harnesys/contracts';
 import { apiJson } from './client';
+
+export type { ContentReplaceTarget };
 
 export interface ContentSearchMatch {
   line: number;
@@ -69,13 +72,6 @@ export function searchContent(
   return apiJson<ContentSearchResponse>(
     `/api/orgs/${encodeURIComponent(orgId)}/content/search?${qs.toString()}`,
   );
-}
-
-export interface ContentReplaceTarget {
-  sourceId: string;
-  path: string;
-  line?: number;
-  column?: number;
 }
 
 export interface ReplaceContentParams {
