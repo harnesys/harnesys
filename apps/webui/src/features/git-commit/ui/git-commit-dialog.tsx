@@ -1,8 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { Loader2Icon, SparklesIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
+  generateCommitMessage,
   getGitFileStatus,
   getGitStatus,
   gitFileStatusQueryKey,
@@ -13,6 +15,7 @@ import { Button } from '@/shared/ui/button';
 import { DialogFooter } from '@/shared/ui/dialog';
 import { Field, FieldError } from '@/shared/ui/field';
 import { Textarea } from '@/shared/ui/textarea';
+import { toast } from '@/shared/ui/toast';
 import {
   type CommitDialogResult,
   type CommitInput,
@@ -53,6 +56,7 @@ export function GitCommitDialog({
     .map(([path, status]) => ({ path, status }))
     .sort((a, b) => a.path.localeCompare(b.path));
   const [selected, setSelected] = useState<string | null>(data?.focusPath ?? null);
+  const [excluded, setExcluded] = useState<Set<string>>(new Set());
   useEffect(() => {
     if (files.length === 0) {
       setSelected(null);
@@ -62,9 +66,43 @@ export function GitCommitDialog({
       setSelected(files[0]?.path ?? null);
     }
   }, [files, selected]);
+  const checkedPaths = new Set(files.filter((f) => !excluded.has(f.path)).map((f) => f.path));
+  const commitPaths = [...checkedPaths];
+  const toggleChecked = (path: string) => {
+    setExcluded((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
+      }
+      return next;
+    });
+  };
+  const toggleAll = (checked: boolean) => {
+    setExcluded(checked ? new Set() : new Set(files.map((f) => f.path)));
+  };
+  const generateMutation = useMutation({
+    mutationFn: () => generateCommitMessage(projectId, commitPaths),
+    onSuccess: (result) => {
+      form.setValue('message', result.message, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : 'Generation failed';
+      toast.add({ title: 'Commit message failed', description: msg });
+    },
+  });
   const hasChanges = files.length > 0;
-  const handleCommit = form.handleSubmit((values) => onResolve?.({ ...values, push: false }));
-  const handleCommitPush = form.handleSubmit((values) => onResolve?.({ ...values, push: true }));
+  const canCommit = commitPaths.length > 0;
+  const handleCommit = form.handleSubmit((values) =>
+    onResolve?.({ ...values, paths: commitPaths, push: false }),
+  );
+  const handleCommitPush = form.handleSubmit((values) =>
+    onResolve?.({ ...values, paths: commitPaths, push: true }),
+  );
   return (
     <form className="flex min-h-0 flex-col gap-4" onSubmit={handleCommit}>
       <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border">
@@ -75,6 +113,9 @@ export function GitCommitDialog({
                 files={files}
                 selectedPath={selected}
                 onSelect={setSelected}
+                checkedPaths={checkedPaths}
+                onToggleChecked={toggleChecked}
+                onToggleAll={toggleAll}
                 isLoading={statusQuery.isPending}
               />
             </div>
@@ -84,15 +125,34 @@ export function GitCommitDialog({
                 name="message"
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid || undefined}>
-                    <Textarea
-                      {...field}
-                      id="git-commit-message"
-                      placeholder={hasChanges ? 'Commit message' : 'No changes to commit'}
-                      rows={4}
-                      autoFocus
-                      className="min-h-[80px] resize-y text-sm"
-                      aria-invalid={fieldState.invalid || undefined}
-                    />
+                    <div className="relative">
+                      <Textarea
+                        {...field}
+                        id="git-commit-message"
+                        placeholder={hasChanges ? 'Commit message' : 'No changes to commit'}
+                        rows={4}
+                        autoFocus
+                        className="min-h-[80px] resize-y pr-9 text-sm"
+                        aria-invalid={fieldState.invalid || undefined}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-1 right-1 size-7 text-muted-foreground"
+                        disabled={!canCommit || generateMutation.isPending}
+                        onClick={() => generateMutation.mutate()}
+                        title="Generate commit message"
+                        aria-label="Generate commit message"
+                        data-testid="git-commit-generate"
+                      >
+                        {generateMutation.isPending ? (
+                          <Loader2Icon className="size-3.5 animate-spin" />
+                        ) : (
+                          <SparklesIcon className="size-3.5" />
+                        )}
+                      </Button>
+                    </div>
                     {fieldState.error ? <FieldError>{fieldState.error.message}</FieldError> : null}
                   </Field>
                 )}
@@ -126,13 +186,13 @@ export function GitCommitDialog({
           type="button"
           variant="secondary"
           onClick={handleCommitPush}
-          disabled={!hasChanges || !hasRemote}
+          disabled={!canCommit || !hasRemote}
           title={!hasRemote ? 'No remote configured' : 'Commit and push to remote'}
         >
           Commit & Push
         </Button>
-        <Button type="button" onClick={handleCommit} disabled={!hasChanges}>
-          Commit{hasChanges ? ` · ${files.length}` : ''}
+        <Button type="button" onClick={handleCommit} disabled={!canCommit}>
+          Commit{hasChanges ? ` · ${commitPaths.length}` : ''}
         </Button>
       </DialogFooter>
     </form>

@@ -6,6 +6,7 @@ export type CommitInput = z.input<typeof commitSchema>;
 export type CommitOutput = z.output<typeof commitSchema>;
 export type CommitDialogResult = CommitOutput & {
   push?: boolean;
+  paths?: string[];
 };
 export function emptyCommit(): CommitInput {
   return { message: '' };

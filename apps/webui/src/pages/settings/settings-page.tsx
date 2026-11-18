@@ -24,6 +24,7 @@ import { OrgToolchainPane } from '@/features/manage-org-toolchain/org-toolchain-
 import { ModelsPane } from '@/features/manage-project-settings/ui/models-pane';
 import { UsagePane } from '@/features/manage-usage';
 import { VaultPane } from '@/features/manage-vault/vault-pane';
+import { VcsPane } from '@/features/manage-vcs/ui/vcs-pane';
 import { SupportPane } from '@/features/support/ui/support-pane';
 import {
   parseWindowSettingsCategory,
@@ -95,6 +96,8 @@ function SettingsPane({ category, orgId }: { category: WindowSettingsCategory; o
   switch (category) {
     case 'appearance':
       return <AppearancePane />;
+    case 'vcs':
+      return <VcsPane key={orgId} orgId={orgId} />;
     case 'chat':
       return <ChatSettingsPane />;
     case 'editor':

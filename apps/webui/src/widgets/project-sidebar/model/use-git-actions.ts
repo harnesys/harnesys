@@ -69,7 +69,8 @@ export function useGitActions(projectId: string) {
     },
   });
   const commitMutation = useMutation({
-    mutationFn: (message: string) => commitGit(projectId, message),
+    mutationFn: (input: { message: string; paths: string[] }) =>
+      commitGit(projectId, input.message, input.paths),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: gitStatusQueryKey(projectId) });
       invalidateGitOrgSummary(qc);
@@ -139,18 +140,12 @@ export function useGitActions(projectId: string) {
       if (!result) {
         return;
       }
-      const pushAfter = Boolean(
-        (
-          result as {
-            push?: boolean;
-          }
-        ).push,
-      );
-      if (!pushAfter) {
-        commitMutation.mutate(result.message);
+      const input = { message: result.message, paths: result.paths ?? [] };
+      if (!result.push) {
+        commitMutation.mutate(input);
         return;
       }
-      commitMutation.mutate(result.message, {
+      commitMutation.mutate(input, {
         onSuccess: () => {
           pushMutation.mutate();
         },

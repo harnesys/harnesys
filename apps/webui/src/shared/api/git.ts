@@ -3,6 +3,7 @@ import type {
   EventsWatchGitSummaryFrame,
   GitDiffResponse,
   GitFileStatusMap,
+  GitMachineInfo,
   GitSourceSummary,
   GitStatusResponse,
 } from '@harnesys/studio-shared';
@@ -96,12 +97,31 @@ export async function createGitBranch(
   });
 }
 
-export async function commitGit(projectId: string, message: string): Promise<{ ok: true }> {
+export async function commitGit(
+  projectId: string,
+  message: string,
+  paths: string[] = [],
+): Promise<{ ok: true }> {
   const location = await resolveGitLocation(projectId);
   return apiJson(orgSourceGitPath(projectId, 'commit'), {
     method: 'POST',
-    body: JSON.stringify({ message, ...location }),
+    body: JSON.stringify({ message, paths, ...location }),
   });
+}
+
+export async function generateCommitMessage(
+  projectId: string,
+  paths: string[],
+): Promise<{ message: string }> {
+  const location = await resolveGitLocation(projectId);
+  return apiJson(orgSourceGitPath(projectId, 'generate-message'), {
+    method: 'POST',
+    body: JSON.stringify({ paths, ...location }),
+  });
+}
+
+export function getGitMachineInfo(orgId: string): Promise<GitMachineInfo> {
+  return apiJson(`/api/orgs/${encodeURIComponent(orgId)}/git/machine`);
 }
 
 export async function pushGit(projectId: string): Promise<{ ok: true }> {
@@ -166,6 +186,7 @@ export function watchGitFileStatus(
 export const gitStatusQueryKey = (projectId: string) =>
   ['sources', projectId, 'git', 'status'] as const;
 export const gitOrgSummaryQueryKey = (orgId: string) => ['orgs', orgId, 'git', 'summary'] as const;
+export const gitMachineInfoQueryKey = (orgId: string) => ['orgs', orgId, 'git', 'machine'] as const;
 export const gitFileStatusQueryKey = (projectId: string, subPath = '') =>
   ['sources', projectId, 'git', 'file-status', subPath] as const;
 export function invalidateGitOrgSummary(qc: QueryClient): void {

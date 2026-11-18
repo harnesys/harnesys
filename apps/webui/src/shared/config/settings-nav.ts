@@ -10,6 +10,7 @@ import {
   CircleUserIcon,
   CodeIcon,
   CpuIcon,
+  GitBranchIcon,
   GlobeIcon,
   HeartHandshakeIcon,
   KeyRoundIcon,
@@ -28,6 +29,7 @@ import {
 
 export const WINDOW_SETTINGS_CATEGORIES = [
   'appearance',
+  'vcs',
   'chat',
   'editor',
   'notifications',
@@ -75,8 +77,14 @@ export const WINDOW_SETTINGS_GROUPS: SettingsNavGroup[] = [
       {
         id: 'appearance',
         label: 'Appearance',
-        description: 'Theme, scale, accent, and git status colors.',
+        description: 'Theme, scale, and accent.',
         icon: SunIcon,
+      },
+      {
+        id: 'vcs',
+        label: 'VCS',
+        description: 'Commit message model and format, git diagnostics, and status colors.',
+        icon: GitBranchIcon,
       },
       {
         id: 'chat',

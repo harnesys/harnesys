@@ -1,6 +1,7 @@
 import type { GitFileStatus } from '@harnesys/studio-shared';
 import { FileIcon, FilePlusIcon, FileXIcon, PencilIcon } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
+import { Checkbox } from '@/shared/ui/checkbox';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { RowListSkeleton } from '@/shared/ui/settings-kit';
 
@@ -12,11 +13,17 @@ export function GitCommitFileList({
   files,
   selectedPath,
   onSelect,
+  checkedPaths,
+  onToggleChecked,
+  onToggleAll,
   isLoading,
 }: {
   files: FileEntry[];
   selectedPath: string | null;
   onSelect: (path: string) => void;
+  checkedPaths: Set<string>;
+  onToggleChecked: (path: string) => void;
+  onToggleAll: (checked: boolean) => void;
   isLoading?: boolean;
 }) {
   if (isLoading) {
@@ -27,22 +34,41 @@ export function GitCommitFileList({
       <div className="p-6 text-center text-muted-foreground text-sm">No changes to commit</div>
     );
   }
+  const allChecked = files.every((file) => checkedPaths.has(file.path));
   return (
     <ScrollArea className="flex-1">
       <div className="p-1">
-        <div className="mb-1 px-2 py-1 text-[11px] text-muted-foreground uppercase tracking-wide">
-          Changes · {files.length}
+        <div className="mb-1 flex items-center gap-2 px-2 py-1">
+          <Checkbox
+            checked={allChecked}
+            onCheckedChange={(value) => onToggleAll(value === true)}
+            aria-label="Include all changes in the commit"
+            data-testid="git-commit-select-all"
+          />
+          <span className="text-[11px] text-muted-foreground uppercase tracking-wide">
+            Changes · {files.length}
+          </span>
+          <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">
+            {checkedPaths.size} selected
+          </span>
         </div>
         <ul className="flex flex-col gap-0.5">
           {files.map((file) => {
             const active = file.path === selectedPath;
+            const checked = checkedPaths.has(file.path);
             return (
-              <li key={file.path}>
+              <li key={file.path} className="flex items-center gap-1 pr-2 pl-2">
+                <Checkbox
+                  checked={checked}
+                  onCheckedChange={() => onToggleChecked(file.path)}
+                  aria-label={`Include ${file.path} in the commit`}
+                  data-testid={`git-commit-check-${file.path}`}
+                />
                 <button
                   type="button"
                   onClick={() => onSelect(file.path)}
                   className={cn(
-                    'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors',
+                    'flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1.5 text-left text-xs transition-colors',
                     active
                       ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground',
@@ -56,7 +82,14 @@ export function GitCommitFileList({
                   >
                     <StatusIcon status={file.status} />
                   </span>
-                  <span className="min-w-0 flex-1 truncate font-mono text-[12px]">{file.path}</span>
+                  <span
+                    className={cn(
+                      'min-w-0 flex-1 truncate font-mono text-[12px]',
+                      !checked && 'opacity-50',
+                    )}
+                  >
+                    {file.path}
+                  </span>
                   <span
                     className={cn(
                       'shrink-0 rounded px-1 py-0.5 font-mono text-[10px] uppercase',
