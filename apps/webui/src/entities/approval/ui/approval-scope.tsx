@@ -141,7 +141,7 @@ export function FileBlockCheckbox({
       <span
         className={cn(
           'flex size-4 shrink-0 items-center justify-center rounded-[4px] border',
-          checked ? 'border-primary bg-primary text-primary-foreground' : 'border-input',
+          checked ? 'border-live bg-live text-white' : 'border-input',
         )}
       >
         {checked ? <CheckIcon className="size-3" /> : null}
