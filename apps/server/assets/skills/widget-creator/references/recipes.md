@@ -261,29 +261,75 @@ An `orgApi` source with `onEvent` refetches when the desk or thread-error topic 
 }
 ```
 
-## Click counter and notes
+## Notes list
 
-State only, no sources. `persistedState: ["count"]` keeps the counter across reloads; `note` is not persisted, so it resets with the view. The `input` writes to `note` through its `stateKey`, and the preview markdown reads the same key, so typing updates it without an explicit action.
+A persisted list in plain state: the input writes `draft`, the button appends it, and clicking a row moves it between the open and closed lists.
 
 ```json widget
 {
   "schemaVersion": 1,
-  "title": "Counter and notes",
-  "state": { "count": 0, "note": "" },
-  "persistedState": ["count"],
+  "title": "Notes",
+  "icon": "boxes",
+  "state": { "draft": "", "notes": [], "done": [], "seq": 0 },
+  "persistedState": ["notes", "done", "seq"],
   "sources": [],
   "derived": {},
   "items": [
-    { "id": "count", "primitive": "metric", "rect": { "x": 0, "y": 0, "w": 128, "h": 64 }, "props": { "label": "Clicks" }, "bindings": { "value": { "ref": "state.count" } } },
-    { "id": "inc", "primitive": "button", "rect": { "x": 128, "y": 0, "w": 128, "h": 32 }, "props": { "label": "+1" }, "on": { "click": { "type": "incrementState", "key": "count", "delta": 1 } } },
-    { "id": "reset", "primitive": "button", "rect": { "x": 256, "y": 0, "w": 128, "h": 32 }, "props": { "label": "Reset", "variant": "outline" }, "on": { "click": { "type": "setState", "key": "count", "value": 0 } } },
-    { "id": "note", "primitive": "input", "rect": { "x": 0, "y": 64, "w": 384, "h": 64 }, "props": { "stateKey": "note", "label": "Note", "placeholder": "Type here" } },
-    { "id": "preview", "primitive": "markdown", "rect": { "x": 0, "y": 128, "w": 384, "h": 128 }, "props": {}, "bindings": { "text": { "tpl": "{{state.note}}" } } }
+    { "id": "draft", "primitive": "input", "rect": { "x": 0, "y": 0, "w": 288, "h": 64 }, "props": { "stateKey": "draft", "placeholder": "Write a note" } },
+    {
+      "id": "add",
+      "primitive": "button",
+      "rect": { "x": 288, "y": 16, "w": 96, "h": 32 },
+      "props": { "label": "Add", "variant": "secondary" },
+      "bindings": { "disabled": { "fn": "eq", "args": [{ "ref": "state.draft" }, ""] } },
+      "on": {
+        "click": {
+          "type": "sequence",
+          "actions": [
+            { "type": "incrementState", "key": "seq", "delta": 1 },
+            { "type": "setState", "key": "notes", "value": { "fn": "concat", "args": [{ "ref": "state.notes" }, [{ "id": { "ref": "state.seq" }, "text": { "ref": "state.draft" } }]] } },
+            { "type": "setState", "key": "draft", "value": "" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "open",
+      "primitive": "list",
+      "rect": { "x": 0, "y": 64, "w": 384, "h": 160 },
+      "props": { "primaryText": "text" },
+      "bindings": { "items": { "ref": "state.notes" } },
+      "on": {
+        "itemClick": {
+          "type": "sequence",
+          "actions": [
+            { "type": "setState", "key": "done", "value": { "fn": "concat", "args": [{ "ref": "state.done" }, [{ "ref": "row" }]] } },
+            { "type": "setState", "key": "notes", "value": { "fn": "where", "args": [{ "ref": "state.notes" }, "id", "neq", { "ref": "row.id" }] } }
+          ]
+        }
+      }
+    },
+    {
+      "id": "closed",
+      "primitive": "list",
+      "rect": { "x": 0, "y": 224, "w": 384, "h": 96 },
+      "props": { "primaryText": "text", "rowBindings": { "text": { "fn": "concat", "args": ["✓ ", { "ref": "row.text" }] } } },
+      "bindings": { "items": { "ref": "state.done" } },
+      "on": {
+        "itemClick": {
+          "type": "sequence",
+          "actions": [
+            { "type": "setState", "key": "notes", "value": { "fn": "concat", "args": [{ "ref": "state.notes" }, [{ "ref": "row" }]] } },
+            { "type": "setState", "key": "done", "value": { "fn": "where", "args": [{ "ref": "state.done" }, "id", "neq", { "ref": "row.id" }] } }
+          ]
+        }
+      }
+    }
   ]
 }
 ```
 
-A to-do list needs one action per row; table and list rows emit a click with the row payload but have no scoped buttons, so a checked-item list is not expressible yet.
+`row` is available inside an item event action, so `where(state.notes, "id", "neq", row.id)` drops the clicked note and the action list appends it to `done` in the same click. `rowBindings` carries per-row presentation, which is how the closed list gets its check mark. Persist both arrays and the id counter.
 
 ## Weather from an external API
 

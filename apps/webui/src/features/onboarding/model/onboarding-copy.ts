@@ -1,3 +1,5 @@
+import type { OnboardingChecklistKey, OnboardingWizardStepId } from './onboarding-progress';
+
 export interface OnboardingStep {
   title: string;
   body: string;
@@ -67,12 +69,10 @@ export const PROVIDER_KEY_LABEL = 'API key';
 export const PROVIDER_KEY_HINT =
   'Stored in the org vault. Leave empty for local runtimes that do not need a key.';
 export const PROVIDER_CONNECT_SUBMIT = 'Connect and discover';
-export const PROVIDER_CONNECTED_ANOTHER =
-  'Already connected. Connect another provider, or continue.';
-export const PROVIDER_CONNECTED_CONTINUE = 'Continue';
 export const PROVIDER_MODELS_TITLE = 'Attach models';
 export const PROVIDER_MODELS_BODY =
   'Pick the models this org can use. Attach at least one to continue.';
+export const PROVIDER_MODELS_SKIP = 'Skip for now';
 export const PROVIDER_DISCOVER = 'Discover';
 export const PROVIDER_DISCOVERING = 'Discovering…';
 export const PROVIDER_MANUAL_LABEL = 'Model name';
@@ -101,4 +101,55 @@ export const CHOOSE_BACK = 'Back';
 
 export const ONBOARDING_FOOTER = 'Data stays on your hosts. Secrets live in the org vault.';
 
-export const ONBOARDING_STEP_LABELS = ['Organization', 'Provider', 'Models', 'Agents'] as const;
+export const WIZARD_STEP_LABELS: Record<OnboardingWizardStepId, string> = {
+  provider: 'Provider',
+  models: 'Models',
+  agents: 'Agents',
+};
+
+export const WIZARD_STEP_HINTS: Record<OnboardingWizardStepId, string> = {
+  provider: 'Agents need a model to think with. Connect one API or local runtime.',
+  models: 'Pick the models this org can use. Discovery lists what the provider serves.',
+  agents: 'Genie is the default chief of staff. Add specialists only if you need them.',
+};
+
+export const CHECKLIST_TITLE = 'Getting set up';
+export const CHECKLIST_BODY =
+  'Finish these to get the most out of Harnesys. Genie in the assistant can do most of it for you.';
+export const CHECKLIST_HIDE = 'Hide checklist';
+
+export const CHECKLIST_LABELS: Record<OnboardingChecklistKey, string> = {
+  provider: 'Connect a provider',
+  models: 'Attach models',
+  agents: 'Create an agent',
+  dashboard: 'Build a dashboard',
+  board: 'Create a board',
+  issue: 'Add the first issue',
+  issueDone: 'Finish an issue',
+};
+
+export const CHECKLIST_HINTS: Record<OnboardingChecklistKey, string> = {
+  provider: 'An API or local runtime your agents can call.',
+  models: 'At least one model attached to that provider.',
+  agents: 'Genie comes first; specialists after.',
+  dashboard: 'Ask Genie to draw dashboards for your company.',
+  board: 'Boards hold the tasks and their column rules.',
+  issue: 'A task on a board, from idea to done.',
+  issueDone: 'Move the task to Todo so the rule fires, then close it.',
+};
+
+export const CHECKLIST_STARTERS: Record<OnboardingChecklistKey, string> = {
+  provider: 'Help me connect an AI provider so my agents can run.',
+  models: 'Help me choose and attach the right models.',
+  agents: 'Create an agent shaped around how my team works.',
+  dashboard: 'Build dashboards for my company: spend, fleet health, and the work in flight.',
+  board: 'Set up a board that matches how my team works.',
+  issue: "Create my first issues. I'll describe the project and the work.",
+  issueDone: 'Show me how a board rule fires an agent on a task.',
+};
+
+export const ASSISTANT_FALLBACK_STARTERS = [
+  'Show me around. What can I do in Harnesys?',
+  'Create a project and connect a repository.',
+  'Set up my first agent and a daily automation.',
+];

@@ -13,12 +13,18 @@ top-level key fails validation instead of being dropped silently.
 |---|---|
 | `schemaVersion` | literal `1` |
 | `title` | 1–120 characters |
+| `icon` | optional icon name (1–64 characters) from the shared picker set |
 | `state` | object of JSON values; keys become the `state` root |
 | `persistedState` | up to 100 state keys that survive a reload |
 | `sources` | up to 10 `WidgetSource` |
 | `derived` | name → expression (names 1–64 characters) |
 | `items` | up to 30 `WidgetItem` |
 | `primitive`, `config`, `transform` | legacy single-primitive form only |
+
+The icon set lives in `apps/webui/src/features/dashboards/model/icon-options.ts`
+(`layout-dashboard`, `activity`, `bar-chart`, `line-chart`, `pie-chart`,
+`workflow`, `server`, `boxes`, `zap`, `target`, `rocket`). An unknown name
+renders no icon; dashboards fall back to `layout-dashboard`.
 
 A doc with `items: []` renders the legacy form. New widgets always use `items`.
 

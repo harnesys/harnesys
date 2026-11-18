@@ -18,6 +18,7 @@ import {
   PROVIDER_MANUAL_HINT,
   PROVIDER_MANUAL_LABEL,
   PROVIDER_MODELS_BODY,
+  PROVIDER_MODELS_SKIP,
   PROVIDER_MODELS_TITLE,
 } from '../model/onboarding-copy';
 
@@ -34,6 +35,7 @@ export function OnboardingProviderModels({
   onAttachManual,
   onBack,
   onContinue,
+  onSkip,
 }: {
   provider: ProviderPublic;
   found: DiscoveredModelView[] | null;
@@ -47,6 +49,7 @@ export function OnboardingProviderModels({
   onAttachManual: () => void;
   onBack: () => void;
   onContinue: () => void;
+  onSkip: () => void;
 }) {
   const attachedNames = new Set(provider.models.map((item) => item.name));
   const available = (found ?? []).filter((item) => !attachedNames.has(item.name));
@@ -171,6 +174,14 @@ export function OnboardingProviderModels({
       {error ? <p className="mt-4 text-destructive text-sm">{error}</p> : null}
 
       <div className="mt-8 flex items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onSkip}
+          data-testid="onboarding-models-skip"
+        >
+          {PROVIDER_MODELS_SKIP}
+        </Button>
         <Button
           type="button"
           className="flex-1"

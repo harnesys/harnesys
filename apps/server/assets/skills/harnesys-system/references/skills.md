@@ -2,40 +2,63 @@
 
 ## What a skill is
 
-A skill is a directory with a `SKILL.md` (YAML frontmatter: `name`, `description`, optional `when_to_use`; then a markdown body of instructions) plus optional reference files. Follows the Agent Skills spec (agentskills.io): the catalog in your system prompt shows only metadata; `load_skill` loads the body; reference files load on demand via `load_skill_file` paths relative to the skill root. Keep one level of references; bodies under ~500 lines.
+A skill is a directory with a `SKILL.md`: YAML frontmatter plus a Markdown body of instructions, and optional supporting files. The format follows the Agent Skills spec. `parseSkillFile` (`packages/harnesys/src/application/skills/parse-skill-file.ts`) requires:
+
+- `name` — non-empty string.
+- `description` — non-empty string.
+- `when_to_use` (or `whenToUse`) — optional string.
+- A non-empty Markdown body.
+
+A `SKILL.md` that fails parsing is skipped from the catalog. The catalog in the system prompt shows only `name: description (when: when_to_use)`; bodies load on demand.
 
 ## Roots and precedence
 
-Load order, later overrides earlier by skill `name`:
+At run time the skill registry is composed in this order (`composeSkills` in `apps/server/src/app/infra/plugins/plugin-runtime.adapter.ts`, then `composeRunSkills`):
 
-1. **System**: `~/.harnesys/skills/` — seeded at server boot from the app bundle (`apps/server/assets/skills/`). Seed copies new skills only; the WebUI shows an "update available" flag when the bundled copy's content hash differs from the installed one, and Restore re-copies the bundle over the installed dir.
-2. **Workspace**: `<workspace>/.harnesys/skills/` — per-project skills, editable by agents with file tools.
-3. **`~/.agents/skills/`** — cross-tool shared dir (compatible with other agent tools).
-4. **Org dir** (managed via the WebUI Skills page), **plugins**, and **source-autoload** skill sources.
+1. **System** — `~/.harnesys/skills/`, seeded from `apps/server/assets/skills/` at every boot.
+2. **Host** — `~/.agents/skills/`, shared with other agent tools; read-only in the app.
+3. **Org** — `~/.harnesys/orgs/<orgId>/skills/`, managed from the Skills settings page or `create_skill`.
+4. **Plugins** — skill components contributed by installed plugins, exposed as `plugin:skill` names.
+5. **Sources** — skill directories discovered in connected repositories: `skills/`, `skills/.curated`, `skills/.experimental`, `skills/.system`, `.agents/skills`, `.claude/skills`. Gated by the org setting `skillsSourceAutoLoad` (default `true`); with it off, source skills still appear on the Skills page but are not part of the run registry.
 
-The registry scans roots at server start; a workspace skill added mid-session needs a reload (the WebUI Skills page triggers one) or a fresh run.
+Later registries win on a duplicate `name`; `load` resolves from the last registry backwards. A request like `my-skill` also matches a single `<prefix>:my-skill` name; several matches fail as ambiguous.
+
+System seeding compares the installed directory hash with the bundled one and **overwrites the installed copy when they differ**. Do not edit system skills in place; create an org skill instead. The Skills page shows "Reset to bundled" when a runtime edit drifted from the seed marker.
 
 ## Grant model (the `skills` field)
 
-- An agent definition has `skills: string[]`. **Missing or empty = no filesystem skills**: `load_skill` fails for every name.
-- Presets must list bundled skill names explicitly for them to load. Bundled today: `agent-creator`, `workspace-ops`, `issue-ops`, `find-skills`, `harnesys-system`, `addon-creator`.
-- A pack may also grant its own skill (e.g. the `web` pack ships a `browser` skill) — pack skills bypass the agent's `skills` allowlist.
-- Referencing a nonexistent skill name does not fail creation; it just never loads. Check `skills_list` / the registry before granting.
+- An agent has `skills: string[]`. Omitted or empty means **no filesystem skills**: `load_skill` fails for every name.
+- The allowlist filters roots 1–5 only. Pack-granted skills bypass it: the `web` pack ships `browser`, the `dashboards` pack ships `dashboards-widget-authoring` (a pointer that expects the filesystem skill `widget-creator` to be granted as well).
+- Referencing a nonexistent skill does not fail agent creation; it simply never loads. Confirm the name on the Skills page before granting it.
+- `load_skill` input is `{ name }` to get instructions plus the supporting-file list, or `{ name, file }` to read one `references/...` file. There is no separate `load_skill_file` tool.
 
-## Authoring a workspace skill
+## Bundled skills
 
-```
-<workspace>/.harnesys/skills/my-skill/
-  SKILL.md          # required: frontmatter + body
-  references/       # optional: extra docs loaded on demand
-```
+Seven ship in `apps/server/assets/skills/`: `agent-creator`, `addon-creator`, `find-skills`, `harnesys-system`, `issue-ops`, `widget-creator`, `workspace-ops`.
 
-- `name`: lowercase letters, digits, hyphens; must match the directory name; max 64 chars.
-- `description`: what it does + when to use, with concrete keywords — this is all the catalog shows.
-- Body: imperative instructions, checklists, exact tool names. Reference other files by relative path, one level deep.
+| Skill | Use |
+|---|---|
+| `agent-creator` | Graphs, packs, budgets, HITL and agent-authoring traps before `agents_create`. |
+| `workspace-ops` | Workspace setup: sources, git, terminals, files. |
+| `issue-ops` | Board dispatch cycle, rules, issue workflow recipes. |
+| `widget-creator` | Dashboard WidgetDoc contract, catalog, recipes, validation. |
+| `addon-creator` | Authoring an add-on package. |
+| `find-skills` | Finding and installing skills from known sources. |
+| `harnesys-system` | This manual. |
 
-Bundled skills are the style reference: read `agent-creator/SKILL.md` before writing your own.
+`agent-creator` is the style reference for writing a new skill.
 
-## Finding and installing more
+## Authoring and installing
 
-`find-skills` (bundled) searches known skill sources and explains installation into the workspace root. Ecosystem skills written for other harnesses usually reference foreign tool names (e.g. `Bash`, `Read`) — port by rewriting tool names to Harnesys equivalents (`shell`, `read_file`) before installing.
+An org skill lives at `~/.harnesys/orgs/<orgId>/skills/<name>/SKILL.md` (plus `references/`, plus an optional `.harnesys-skill.json` sidecar recording the install URL).
+
+- `name`: kebab-case matching `^[a-z0-9][a-z0-9-]*$`; for skills created through the API the directory name is the skill name.
+- `description`: what it does and when to use it, with concrete keywords — this line is all the catalog shows.
+- Body: imperative instructions, checklists, exact tool names. Keep references one level deep.
+- Create through the Skills page (name, description, when-to-use, instructions) or the `create_skill` tool.
+- Install from git through the `install_skill` tool or the page's install dialog (discover → install → update); the sidecar drives the "Update" action.
+- The Skills page reload button (`POST /orgs/:orgId/skills/reload`) re-scans roots without a server restart.
+
+## Porting foreign skills
+
+Ecosystem skills written for other harnesses reference foreign tool names. Rewrite them before installing: `Read`→`read_file`, `Write`→`write_file`, `Edit`→`edit_file`, `Glob`→`glob`, `Grep`→`grep`, `LS`→`list_dir`, `Bash`→`shell`, `WebFetch`→`fetch`. `TodoWrite`, `WebSearch`, `NotebookEdit`, `Task` and similar have no Harnesys equivalent.

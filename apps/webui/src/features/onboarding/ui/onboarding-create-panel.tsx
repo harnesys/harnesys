@@ -13,8 +13,8 @@ import {
   CREATE_WORKSPACE_HINT,
   CREATE_WORKSPACE_LABEL,
   ONBOARDING_BACK,
-  ONBOARDING_STEP_LABELS,
 } from '../model/onboarding-copy';
+import { CREATE_RAIL } from '../model/onboarding-steps';
 import { OnboardingShell } from './onboarding-shell';
 
 export function OnboardingCreatePanel({
@@ -53,7 +53,7 @@ export function OnboardingCreatePanel({
   };
 
   return (
-    <OnboardingShell testId="onboarding-create" steps={ONBOARDING_STEP_LABELS} currentStep={0}>
+    <OnboardingShell testId="onboarding-create" steps={CREATE_RAIL} currentStep={0}>
       <div className="mx-auto w-full max-w-lg">
         <button
           type="button"

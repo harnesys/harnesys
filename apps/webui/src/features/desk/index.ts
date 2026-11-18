@@ -25,6 +25,7 @@ export {
   setDeskWorkspaceWriter,
 } from './model/desk-chrome';
 export {
+  DESK_QUERY_KEY,
   deskAutomationsQueryKey,
   deskGitSummaryQuery,
   deskTerminalsKey,

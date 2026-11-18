@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { CogIcon, PlusIcon } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { dashboardsListQuery } from '@/features/dashboards/dashboards-queries';
-import { resolveDashboardIcon } from '@/features/dashboards/model/dashboard-icons';
+import { resolveIcon } from '@/features/dashboards/model/icon-options';
 import {
   openDashboardCreateDialog,
   openDashboardSettingsDialog,
@@ -131,7 +131,7 @@ function DashboardRow({
   onSelect: () => void;
   onSettings: () => void;
 }) {
-  const DashboardIcon = resolveDashboardIcon(icon);
+  const DashboardIcon = resolveIcon(icon);
   return (
     <div
       className={cn(

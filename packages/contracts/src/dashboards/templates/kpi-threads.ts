@@ -9,6 +9,7 @@ export const kpiThreadsTemplate = defineWidgetTemplate({
   doc: {
     schemaVersion: 1,
     title: 'Threads',
+    icon: 'activity',
     primitive: 'custom',
     state: {},
     sources: [

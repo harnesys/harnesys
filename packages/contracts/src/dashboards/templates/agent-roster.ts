@@ -9,6 +9,7 @@ export const agentRosterTemplate = defineWidgetTemplate({
   doc: {
     schemaVersion: 1,
     title: 'Agents',
+    icon: 'server',
     primitive: 'custom',
     state: {},
     sources: [

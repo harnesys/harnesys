@@ -1,37 +1,39 @@
 # Presets — bundled agent catalog
 
-System presets live in the app bundle (`apps/server/assets/presets/agents/<name>/{config.json, instructions.md}`) and are seeded at every server boot into the machine-level `presets` table with origin `system`, id `harnesys/<name>`. Seeding only inserts new presets and refreshes system rows; user modifications of user-origin presets are never touched. Deleting a bundled preset file removes its row on the next boot.
+Bundled agent presets live in `apps/server/assets/presets/agents/<name>/{config.json, instructions.md}`. On every boot `systemPresetsSeed` (`apps/server/src/app/infra/presets/system-presets-seed.ts`) reads them into the machine-level `presets` table in `machine.db` with origin `system`, id `harnesys/<dirname>`, version `1.0.0`. System rows are upserted on each boot, and a system row whose bundle directory disappeared is deleted. User-origin presets are never touched. Legacy single-file presets in `~/.harnesys/presets/agents/*.json` are imported once as `local/<stem>` and marked with `~/.harnesys/presets/.legacy-agents-imported`.
 
-## Agent presets
+## Agent presets (9)
 
-| Preset | Role | Packs | Skills | Budget | Purpose |
+| Preset id | Name / role | Packs | Skills | Budget | Purpose |
 |---|---|---|---|---|---|
-| `assistant` | chief-of-staff | files, shell, web, skills, issues, manager, lsp, mcp, plan, agents, threads, scheduler, webhook, semantic+knowledge+pin memory, core | agent-creator, workspace-ops, find-skills | 400 steps / 1h / ask | The owner's right hand: configures the workspace, grows the team, plans and runs work. Widest grants. |
-| `researcher` | researcher | files, web, plan, agents, threads, semantic+knowledge+pin memory, core | agent-creator | 250 steps / 1h / ask | Deep dives and web research; can spawn read-only subagents. |
-| `coder` | coder | files, shell, issues, lsp, plan, pin-memory, core | issue-ops | 300 steps / 45m / ask | Implementation work tracked through issues. |
-| `reviewer` | reviewer | files, shell, issues, core | issue-ops | 120 steps / 20m / ask | Code review against issue criteria. |
-| `tester` | tester | files, shell, plan, core | — | 150 steps / 30m / ask | Verification: runs tests, reproduces bugs. |
-| `writer` | writer | files, web, core | — | 150 steps / 30m / ask | Prose and docs; has web search for sources. |
-| `planner` | planner | files, plan, threads, core | — | 80 steps / 20m / ask | Decomposes tasks into plans. |
-| `general` | helper | files, shell, plan, core | — | 100 steps / 15m / error | Flexible subagent for bounded tasks. |
-| `explorer` | scout | files, core | — | 60 steps / 10m / error | Read-only scout: search and report, no shell. |
+| `harnesys/genie` | Genie / chief-of-staff | files, shell, web, skills, issues, manager, lsp, mcp, plan, agents, threads, semantic-memory, knowledge-memory, pin-memory, core (plus two dead names, see below) | agent-creator, workspace-ops, find-skills, harnesys-system, addon-creator, widget-creator | 400 steps / 1h / ask | The owner's right hand: configures the workspace, grows the team, plans work. Widest grants. |
+| `harnesys/coder` | Coder / coder | files, shell (command blocklist), issues, lsp, plan, pin-memory, core, agents (`ownDelegatesOnly`, `agents_handoff` and `agents_create` disabled) | issue-ops, addon-creator | 300 steps / 45m / ask | Implementation work tracked through issues. |
+| `harnesys/reviewer` | Reviewer / reviewer | files, shell (command blocklist), issues, core | issue-ops | 120 steps / 20m / ask | Code review against issue criteria. |
+| `harnesys/tester` | Tester / tester | files, shell (command blocklist), plan, core | — | 150 steps / 30m / ask | Writes and runs the checks a change needs. |
+| `harnesys/researcher` | Researcher / researcher | files, web, plan, agents, threads, knowledge-memory, semantic-memory, pin-memory, core | agent-creator | 250 steps / 1h / ask | Deep dives with sources; can spawn read-only subagents. |
+| `harnesys/planner` | Planner / planner | files, plan, threads, core | — | 80 steps / 20m / ask | Decomposes tasks into plans. |
+| `harnesys/writer` | Writer / writer | files, web, core | — | 150 steps / 30m / ask | Prose and docs; web search for sources. |
+| `harnesys/general` | General / helper | files, shell (command blocklist), plan, core | — | 100 steps / 15m / error | Flexible subagent for bounded tasks. |
+| `harnesys/explorer` | Explorer / scout | files, core | — | 60 steps / 10m / error | Read-only scout: search and report, no shell. |
 
-`explorer` and `general` end with `policy: "error"`: when their budget is gone, the run fails instead of asking. Scope their tasks accordingly.
+`explorer` and `general` run with `policy: "error"` and are the usual spawn targets; all other presets use `ask`, so an exhausted run parks for the owner.
 
-## Using presets
+**Known defect in the bundled Genie config:** its `capabilities` still list `scheduler` and `webhook`. No such packs exist in this build (the host pack list has 17 names, neither of them), so a Genie run logs `[capabilities] pack "scheduler" is not registered by the host` and gets no tools from those entries. Do not copy those two names into new agents.
 
-- `agents_create` with `presetId` instantiates exactly one agent from the preset (name, role, instructions, packs, skills, budget, graph). No extra agents are created implicitly.
-- Creating with a `parentId` produces a delegate (level `delegate`); delegates cannot enable the `agents` pack, so preset choice for children must respect that (e.g. `researcher` is not child-safe until its packs are trimmed).
-- `agents_list` shows the presets actually available in this installation; the WebUI Presets page shows the same catalog with full bodies.
+## How presets become agents
 
-## Team presets
-
-Team presets (`presets/teams/`) define role sets (roleKey → agentRef → agent preset) plus board automation rules. No team presets ship in the bundle yet; the compose-team flow accepts imported/user presets.
+- The WebUI creates an agent from a preset through `POST /api/orgs/:orgId/agents/from-preset` (`CreateAgentFromPresetBody`: `presetId`, optional `name`, `modelId`, `parentId`). The Agents section `+` button opens the preset marketplace; the onboarding "Agents" step pre-selects `harnesys/genie`.
+- `modelId` is optional in the request; when omitted the agent is created against the literal `stub` model id, so always pass a real model.
+- `parentId` makes the result a delegate (`level: delegate`); without it the agent is top-level.
+- The `agents_create` tool does **not** accept a `presetId`. An agent that wants preset-shaped agents must either create them field by field or ask the owner to use the marketplace.
+- Team presets are created with `POST /api/orgs/:orgId/teams` (`presetId` + `models` map) and return the created agents plus a board. `apps/server/assets/presets/teams/` does not exist, so no team presets ship today; the compose-team dialog works from imported or user presets.
+- Coder, reviewer and Genie are guarded by `role-preset-contract.spec.ts`: their packs, permissions and budget are asserted, so change them through the preset files rather than ad-hoc agent patches.
 
 ## Authoring notes (checked against code)
 
 - `instructions` must be a non-empty string; empty or whitespace-only fails validation.
-- The `capabilities` key in presets maps to the runtime `packs` concept (same object shape).
-- `skills` must name skills that exist in the registry at creation time; missing names are not auto-created.
-- `budget` omitted → host default `{ maxSteps: 50, policy: "ask" }`.
+- The `capabilities` key in presets maps to the runtime `packs` concept (same value shapes as `references/packs.md`).
+- `skills` must name skills that exist in the registry at creation time; missing names are not created and simply never load.
+- `budget` omitted → host default `{ maxSteps: 50, policy: "ask" }` for a default ReAct graph.
+- A preset may carry its own `graph`, `permissions`, `toolOutput`, `color`, `mcpServers`; `description` and `tags` are accepted extras used only for catalog display.
 - Folder layout: `config.json` holds every body field except `instructions`; `instructions.md` holds the prompt; the loader stitches them before validation.

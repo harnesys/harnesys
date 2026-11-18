@@ -12,6 +12,7 @@ import {
 import type { ReactNode } from 'react';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
+import { findIcon } from '../../model/icon-options';
 import type { WidgetDraft } from '../../model/inspector-store';
 
 interface WidgetInspectorHeaderProps {
@@ -49,8 +50,10 @@ export function WidgetInspectorHeader({
   onDelete,
   onDeselect,
 }: WidgetInspectorHeaderProps): ReactNode {
+  const WidgetIcon = findIcon(doc.icon);
   return (
     <div className="flex items-center gap-1 border-border/40 border-b px-2 py-1.5">
+      {WidgetIcon ? <WidgetIcon className="size-3 shrink-0 text-muted-foreground" /> : null}
       <span className="min-w-0 flex-1 truncate font-medium text-[13px]">{doc.title}</span>
       {isDraftStatus ? (
         <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[9px] uppercase">

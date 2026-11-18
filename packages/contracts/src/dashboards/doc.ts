@@ -61,6 +61,7 @@ export type WidgetItem = z.infer<typeof WidgetItemSchema>;
 export const WidgetDocSchema = z.strictObject({
   schemaVersion: z.literal(1),
   title: z.string().min(1).max(120),
+  icon: z.string().min(1).max(64).optional(),
   state: z.record(z.string(), JsonValueSchema).default({}),
   persistedState: z.array(z.string().min(1).max(64)).max(100).optional(),
   sources: z.array(WidgetSourceSchema).max(WIDGET_MAX_SOURCES).default([]),

@@ -28,6 +28,7 @@ import type { WidgetDraft } from '../../model/inspector-store';
 import { useDashboardInspectorStore } from '../../model/inspector-store';
 import { sameWidgetDoc } from '../../model/widget-form';
 import { ApproveWidgetDialog } from '../approve-widget-dialog';
+import { IconPicker } from '../icon-picker';
 import { WidgetJsonEditorDialog } from '../widget-json-editor-dialog';
 import { SourcesEditor } from './inspector-sources';
 import { StateEditor } from './inspector-state';
@@ -196,6 +197,14 @@ function WidgetConstructor({
               className="h-8"
               aria-label="Widget title"
               data-testid="inspector-widget-title"
+            />
+          </Section>
+          <Section label="Icon" hint={doc.icon}>
+            <IconPicker
+              value={doc.icon ?? null}
+              onChange={(icon) => edit({ ...doc, icon: icon ?? undefined })}
+              testIdPrefix="inspector-widget-icon"
+              allowNone
             />
           </Section>
           <Section label="Sources" hint={`${doc.sources.length}/10`}>

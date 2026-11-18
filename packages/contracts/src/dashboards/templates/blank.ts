@@ -9,6 +9,7 @@ export const blankTemplate = defineWidgetTemplate({
   doc: {
     schemaVersion: 1,
     title: 'Untitled widget',
+    icon: 'layout-dashboard',
     primitive: 'custom',
     state: {},
     sources: [],

@@ -16,6 +16,7 @@ import {
   useWaitingThreads,
 } from '@/features/desk';
 import { useIdeTabs } from '@/features/ide';
+import { OnboardingChecklist } from '@/features/onboarding';
 import { OrgHeader } from '@/features/switch-org';
 import { appMetaQuery } from '@/shared/api';
 import { studioFocusThreadId, useStudioLocation } from '@/shared/config/location';
@@ -219,8 +220,9 @@ export function ProjectSidebar({
           <div className="flex min-w-0 flex-1 items-center group-data-[collapsible=icon]:justify-center">
             <OrgHeader />
           </div>
+          <OnboardingChecklist className="shrink-0 text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden" />
           <InboxBell className="shrink-0 text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden" />
-          <AssistantChatToggle className="shrink-0 text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden" />
+          <AssistantChatToggle className="shrink-0 text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden" />{' '}
         </div>
       </SidebarHeader>
 

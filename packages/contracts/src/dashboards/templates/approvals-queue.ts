@@ -9,6 +9,7 @@ export const approvalsQueueTemplate = defineWidgetTemplate({
   doc: {
     schemaVersion: 1,
     title: 'Pending approvals',
+    icon: 'workflow',
     primitive: 'custom',
     state: {},
     sources: [

@@ -4,9 +4,12 @@ import { useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router';
 import { persistedApiUrl } from '@/features/manage-project-settings/ui/provider-endpoint';
 import { OnboardingProviderConnect } from '@/features/onboarding';
-import { ONBOARDING_STEP_LABELS } from '@/features/onboarding/model/onboarding-copy';
+import { WIZARD_STEP_HINTS } from '@/features/onboarding/model/onboarding-copy';
+import { wizardRail } from '@/features/onboarding/model/onboarding-steps';
+import { useOnboardingWizard } from '@/features/onboarding/model/use-onboarding-progress';
+import { nextWizardRoute } from '@/features/onboarding/model/wizard-route';
 import { OnboardingShell } from '@/features/onboarding/ui/onboarding-shell';
-import { catalogQuery, createProvider, listProviders } from '@/shared/api';
+import { catalogQuery, createProvider } from '@/shared/api';
 import { providersQueryKeyFor } from '@/shared/api/providers';
 import { studioPath } from '@/shared/config/routes';
 
@@ -15,12 +18,7 @@ export function OnboardingProviderPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const catalog = useQuery(catalogQuery).data;
-  const providersQuery = useQuery({
-    queryKey: ['providers', orgId],
-    queryFn: () => listProviders(orgId ?? ''),
-    enabled: !!orgId,
-  });
-  const connected = providersQuery.data?.[0] ?? null;
+  const wizard = useOnboardingWizard(orgId);
   const [draft, setDraft] = useState<{
     name: string;
     driver: Driver;
@@ -34,10 +32,13 @@ export function OnboardingProviderPage() {
   if (!orgId) {
     return <Navigate to={studioPath.onboardingChoose} replace />;
   }
+  if (wizard.ready && wizard.wizard.provider) {
+    return <Navigate to={nextWizardRoute(orgId, wizard.wizard, 'provider')} replace />;
+  }
+  const rail = wizardRail(wizard.ready ? wizard.wizard : null, 'provider');
 
   const connect = async () => {
-    if (connected) {
-      continueToModels();
+    if (!orgId) {
       return;
     }
     const trimmed = draft.name.trim();
@@ -70,22 +71,21 @@ export function OnboardingProviderPage() {
     }
   };
 
-  const continueToModels = () => {
-    void navigate(studioPath.onboardingModels(orgId), { replace: true });
-  };
-
   return (
-    <OnboardingShell testId="onboarding-provider" steps={ONBOARDING_STEP_LABELS} currentStep={1}>
+    <OnboardingShell
+      testId="onboarding-provider"
+      steps={rail.labels}
+      currentStep={rail.currentStep}
+      hint={WIZARD_STEP_HINTS.provider}
+    >
       <div className="mx-auto w-full max-w-lg">
         <OnboardingProviderConnect
           catalog={catalog}
-          connected={connected}
           draft={draft}
           busy={busy}
           error={error}
           onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
           onSubmit={() => void connect()}
-          onContinue={continueToModels}
           onBack={() => {
             void navigate(studioPath.onboardingChoose, { replace: true });
           }}

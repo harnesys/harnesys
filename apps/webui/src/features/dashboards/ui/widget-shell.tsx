@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
 import { toast } from '@/shared/ui/toast';
+import { findIcon } from '../model/icon-options';
 import { palettePrimitives, primitiveIcon } from '../model/widget-form';
 import { ApproveWidgetDialog } from './approve-widget-dialog';
 
@@ -63,6 +64,7 @@ export function WidgetShell({
   const [approveOpen, setApproveOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const draft = widget.status === 'draft';
+  const WidgetIcon = findIcon(widget.doc.icon);
 
   const importFile = async (file: File | undefined): Promise<void> => {
     if (!file) {
@@ -114,7 +116,10 @@ export function WidgetShell({
             editMode ? 'opacity-100' : 'opacity-0',
           )}
         />
-        <span className="min-w-0 flex-1 truncate font-medium text-xs">{widget.doc.title}</span>
+        <span className="flex min-w-0 flex-1 items-center gap-1.5">
+          {WidgetIcon ? <WidgetIcon className="size-3 shrink-0 text-muted-foreground" /> : null}
+          <span className="truncate font-medium text-xs">{widget.doc.title}</span>
+        </span>
         {draft ? (
           <Badge variant="secondary" className="shrink-0">
             Draft
@@ -162,6 +167,7 @@ export function WidgetShell({
                 variant="ghost"
                 size="icon-xs"
                 aria-label="Widget menu"
+                className="text-muted-foreground"
                 onClick={(event) => event.stopPropagation()}
               />
             }

@@ -1,176 +1,238 @@
 # Capability Packs — canonical inventory
 
-This is the single source of truth for what each capability pack contains. Generated from pack metadata in `packages/harnesys/src/packs/*/index.ts` (`meta.tools`); the runtime renders your own granted subset into your system prompt's Tools section.
+The pack set and every tool below are taken from the pack definitions in `packages/harnesys/src/packs/*` (each `definePack` carries `meta.tools` and a `specSchema`) and from the host pack list in `apps/server/src/app/domain/runtime/org-pack-list.ts`. There are **17 host packs and 98 pack tools**; the host additionally injects `load_skill` and `load_tools`, which belong to no pack.
+
+A run only sees the subset granted by the agent's `packs` map. This file describes what each pack contains in general; the agent's own Tools section is authoritative for that agent.
 
 ## Value shapes (the `packs` map)
 
-- `"pack": {}` — enabled with defaults.
-- `"pack": { "spec": { ... } }` — enabled with settings (per-pack options, see pack docs).
-- Key absent or `null` — pack off. Booleans (`true`/`false`) are rejected.
-- Omitting `packs` entirely on `agents_create` defaults to `{ core, files, shell }`.
-- Unknown pack name → rejected at save (`400`) and fails the run target at start; never silent.
-- The only web pack is `web` (`fetch` / `web_search` names were removed; unknown pack names fail the run target at start).
-- The `agents` pack is rejected on subagents (nesting ban).
+| Value | Meaning |
+|---|---|
+| `true` or `{}` | Pack enabled with defaults. |
+| `{ "spec": { ... } }` | Pack enabled with per-pack settings (fields below). |
+| `false`, `null`, key absent | Pack off. |
+| `{ "disabledTools": ["tool_name"] }` | Pack enabled with those tools removed. Unknown names are a fatal capability warning. |
+| `{ "exposure": { "tool_name": "deferred" } }` | Overrides exposure per tool (`direct` or `deferred`). Unknown names are a fatal warning. |
+
+- Omitting the whole packs map (or making it effectively empty) defaults the agent to `{ core, files, shell }` only (`packsFromConfig` in `apps/server/src/app/infra/runtime/agent-definition.mapper.ts`).
+- `disabledTools` and `exposure` only apply to packs that are on; entries for an inactive source raise a fatal capability warning.
+- Tool-name aliases are accepted in `disabledTools` and mode lists: `Read`→`read_file`, `Write`→`write_file`, `Edit`→`edit_file`, `Glob`→`glob`, `Grep`→`grep`, `LS`→`list_dir`, `Bash`→`shell`, `WebFetch`→`fetch` (`packages/harnesys/src/application/tool-aliases.ts`). Claude-Code-only names (`TodoWrite`, `WebSearch`, `Task`, …) have no analog and are ignored.
+- Unknown pack names are accepted at save time, then produce no tools and a `[capabilities] pack "x" is not registered by the host` warning at run start.
+- `packs.agents` is rejected for subagents (`packs.agents is forbidden for subagents (nesting ban)`).
+- Add-on packs are registered dynamically as `<addonId>.<packName>` and their tools are exposed as `<packName>_<toolName>`; they are not part of the 17 host packs.
+
+## Exposure: direct, deferred, `load_tools`
+
+- Every tool defaults to `direct`: it appears in the agent's Tools section immediately.
+- `deferred` tools are hidden from the Tools section; a tail note lists them and `load_tools(["name"])` loads the schemas for the rest of the run.
+- MCP server tools are created deferred by default (`packages/harnesys/src/application/mcp/create-mcp-tool.ts`), so an agent using MCP must call `load_tools` first.
+- A mode preset's `packs` list marks every pack not in that list as deferred (mode "preload"), and `mode.exposure` can override single tools.
+- `load_tools` is injected by the host only when the run has deferred tools; `load_skill` is injected for skill access. Neither appears in the pack tables below.
 
 ## Inventory
 
-### files — Project files: read_file / file_read_image / write_file / edit_file / list_dir / glob / grep
-- `read_file`: Read a text file with numbered lines. Omitting offset/limit returns the whole file when it fits, otherwise the first 400 lines. offset is the 1-based start line; limit is the max lines (capped at 2000). If truncated is true, more lines remain.
-- `file_read_image`: Read an image file (png, jpeg, webp) and show it to the model in the next turn. Oversized files are downscaled automatically.
-- `extract_file_text`: Extract text from PDF (text layer), DOCX, XLSX/XLS (sheets as Markdown tables) and CSV documents. Clear error for scanned PDFs and unsupported formats.
-- `write_file`: Write or create a text file under the workdir.
-### files — Project files: read_file / file_read_image / write_file / edit_file / list_dir / glob / grep
-- `read_file`: Read a text file with numbered lines. Omitting offset/limit returns the whole file when it fits, otherwise the first 400 lines. offset is the 1-based start line; limit is the max lines (capped at 2000). If truncated is true, more lines remain.
-- `file_read_image`: Read an image file (png, jpeg, webp) and show it to the model in the next turn. Oversized files are downscaled automatically.
-- `extract_file_text`: Extract text from PDF (text layer), DOCX, XLSX/XLS (sheets as Markdown tables) and CSV documents. Clear error for scanned PDFs and unsupported formats.
-- `write_file`: Write or create a text file under the workdir.
-- `write_xlsx`: Create an Excel workbook (.xlsx) with multiple sheets, bold headers and column widths.
-- `write_docx`: Create a Word document (.docx) from blocks: headings, paragraphs, bullets, tables, page breaks.
-- `edit_file`: Exact string replace in a file. Returns a unified diff.
-- `list_dir`: List directory entries under the workdir.
-- `glob`: Find files by glob pattern under the workdir.
-- `grep`: Search file contents with a regular expression.
+### core — host-mandated loop tools
+No settings. No permission gate. Always required for a functioning agent.
 
-### shell — Thread workdir shell command: shell
-- `shell`: Run a shell command; optional background / terminal.
-- `process_poll`: Read output and status of a process job.
-- `process_kill`: Kill a process job started by shell.
+| Tool | Does |
+|---|---|
+| `ask_user` | Ask the human a question and park the run until the reply. |
+| `map` | Queue a fan-out over a JSON array (max 32) for the graph `control:map` node; per-item template with `$item`/`$index`. |
+| `wait` | Park the run until a wall-clock delay (1 ms–7 d) via `control:wait`. |
 
-### core — Host-mandated core tools: ask_user / map / wait
-- `ask_user`: Ask the human a question and wait for their reply. Use for clarifications, choices, or missing information before continuing.
-- `map`: Queue a fan-out over items for the graph control:map node. items is a JSON array (max 32). Optional instruction is a per-item template with $item/$index; it overrides the node default. Optional maxTokensPerItem caps each worker text result. Each item is processed in the map body with $item/$index; results return as Map results in context. Prefer this for parallel same-graph work; use agents_spawn when you need another agent definition.
-- `wait`: Park this run until a wall-clock time (control:wait). delayMs is relative sleep (1..7d). Prefer this for mid-pipeline pauses; use schedule_set for recurring or next-session wakes after the run ends. Does not replace ask_user.
+`core` also adds the `core-tools` tail note explaining when to use `map`, `wait`, `ask_user`.
 
-### image — Image generation: image_generate
-- `image_generate`: Generate an image from a text prompt. Write a DETAILED ENGLISH prompt: subject, style, composition, lighting, mood. Returns a `thread:` locator (relPath) for the saved image artifact, which is also attached to the chat for the user.
+### files — project files
+Settings: `root` (string), `blocklist` (string[]). Gates: `fs.read` for reads, `fs.write` for writes.
 
-### web — Web: search, HTTP fetch, browser on a selectable engine
-- `web_search`: Search the web for current information. Use for facts that may be missing or outdated in the knowledge base.
-- `fetch`: HTTP request (GET/POST/PUT/PATCH/DELETE/HEAD). Only http/https URLs.
-- `browser_fetch`: One-shot page scrape to markdown without a browser session.
-- `browser`: Full agent-browser CLI surface in this thread session. Load the `browser` skill for the command reference.
-- `browser_close`: Close the browser session and stop the engine.
+| Tool | Does |
+|---|---|
+| `read_file` | Read a text file with numbered lines; offset/limit, 2000-line cap, `truncated` flag. |
+| `file_read_image` | Read png/jpeg/webp and show it to the model next turn; oversized files are downscaled. |
+| `extract_file_text` | Extract text from PDF (text layer), DOCX, XLSX/XLS (sheets as Markdown) and CSV. |
+| `write_file` | Write or create a text file under the workdir. |
+| `write_xlsx` | Create a multi-sheet Excel workbook with bold headers and column widths. |
+| `write_docx` | Create a Word document from blocks: headings, paragraphs, bullets, tables, page breaks. |
+| `edit_file` | Exact string replace; returns a unified diff. |
+| `list_dir` | List directory entries under the workdir. |
+| `glob` | Find files by glob pattern. |
+| `grep` | Search file contents with a regular expression. |
 
-### lsp — Language server tools: lsp_diagnostics / lsp_definition / lsp_references / lsp_hover
-- `lsp_diagnostics`: Language-server diagnostics for a file.
-- `lsp_definition`: Go to definition via LSP.
-- `lsp_references`: Find references via LSP.
-- `lsp_hover`: Hover / type info via LSP.
+### shell — thread shell, terminals, SSH
+Settings: `timeout` (1–600000 ms), `allowlist`, `blocklist` (string[]). Gate: `process` on every tool.
 
-### agents — Agent catalog: agents_list / agents_create / agents_create_subagent / agents_spawn / agents_handoff / agents_update / agents_delete
-- `agents_list`: List agents in this project (id, name, role, instructions, packs, model). Optional role/name filters; role is not unique. packs lists enabled source assignments per agent; tool availability derives from those sources, not from a stored tool-name list. Prefer reuse via agents_list before agents_create. Spawned children are one-shot with no interactive user: judge fit by packs/model before agents_spawn.
-- `agents_create`: Create an agent in this project. Returns { id, name }. Before creating, load_skill("agent-creator") for graphs, packs, budget, and HITL. Omit graph to let the host build a default ReAct graph; when budget is omitted the host stores { maxSteps: 50, policy: "ask" }. budget.policy is ask|error. Call agents_list first to reuse an existing agent when possible.
-- `agents_create_subagent`: Create a one-shot delegate under the calling agent. Returns { id, name }. The delegate is a spawn target, cannot ask the user, and cannot enable the agents pack; use agents_create for a standalone project agent.
-- `agents_spawn`: Queue one-shot subcontracts: the graph then runs control:spawn. calls is [{ agentId, input, budget?, permissions? }]. input is usually { messages: [{ role: "user", content: "<task>" }] }. Children cannot ask questions back (permission/approval/input tools are denied in child context); pre-approve gates with per-call permissions, or provide everything upfront. agentId accepts an exact id, a unique id prefix (8+ chars), or a name — unknown/ambiguous targets fail here with the agent list. Prefer agents_list (reuse) before agents_create. This is not the tool name control:spawn.
-- `agents_handoff`: Pass this thread to another agent (current speaker changes, origin stays). The graph then runs control:handoff. agentId from agents_list or agents_create. This is not the tool name control:handoff. Top-level agents only; delegates must be run via agents_spawn.
-- `agents_update`: Patch name/role/instructions/budget of your own delegate; graph and packs are owner-only (tools removed; use sources). budget replaces the stored budget (omitted fields drop out): maxSteps/maxTokens/deadlineMs (integers >= 1) and policy ask|error, same shape as agents_create, at least one field required. Returns { agentId }. agentId accepts an exact id, a unique id prefix (8+ chars), or a name.
-- `agents_delete`: Remove your own delegate that is not running anywhere; project UI manages top-level agents. Returns { removed, name }. agentId accepts an exact id, a unique id prefix (8+ chars), or a name.
+| Tool | Does |
+|---|---|
+| `shell` | Run a shell command; optional background, terminal or remote target. |
+| `terminal_spawn` | Start a named terminal session (host, ssh or REPL) kept across calls and shared in the sidebar. |
+| `terminal_write` | Write to a session stdin; `0x03` = Ctrl+C, `0x04` = EOF. |
+| `terminal_read` | Read session output (non-destructive), optional until-regex (max 30 s). |
+| `terminal_kill` | Kill a session or background job, including a user-opened shell. |
+| `terminal_list` | List sessions and background jobs, including user-opened ones. |
+| `port_forward` | Open an SSH port forward as a background job. |
+| `remote_copy` | Copy files over SSH through a tar pipe (push/pull). |
 
-### mcp — MCP server management: mcp_list / mcp_connect / mcp_check / mcp_toggle / mcp_remove
-- `mcp_list`: List MCP servers with config and live connection status.
-- `mcp_connect`: Register or replace an MCP server, probe it and return its tools.
-- `mcp_check`: Health-check a configured MCP server.
-- `mcp_toggle`: Enable or disable a configured MCP server.
-- `mcp_remove`: Remove an MCP server entry.
+### image — image generation
+Settings: `provider`, `model`. No permission gate.
 
-### plan — Thread execution plans: plan_save / plan_item_update / plan_get
-- `plan_save`: Create or overwrite the execution plan for this thread.
-- `plan_item_update`: Update status of a specific task item in the thread plan.
-- `plan_get`: Get current execution plan and tasks status for this thread.
+| Tool | Does |
+|---|---|
+| `image_generate` | Generate an image from a detailed English prompt; returns a `thread:` locator and attaches the image to the chat. |
 
-### threads — Thread discovery and transcripts: threads_list / threads_history / threads_search / threads_tail
-- `threads_list`: List threads in this project. Each id works with schedule_set threadId to wake that conversation and with threads_tail to read that thread's event journal (runs, failures, comments). current=true is THIS chat. hasSchedule=true already has a cron (one schedule per thread).
-- `threads_history`: Read older conversational messages of a thread before the current window. Defaults to this thread; pass threadId to read another thread in this project. People messages and final answers are returned in thread order; pass beforeSeq to page further back.
-- `threads_search`: Keyword search over thread transcripts. scope=thread (default) searches this chat; scope=org searches every thread in the project, optionally narrowed by threadId. Returns matching snippets with threadId and threadSeq, newest first.
-- `threads_tail`: Last events of a thread (run journal: runId, kind, timestamp, preview). threadId comes from threads_list rows or manager_pulse failedThreads; load missing tools via load_tools. limit 1..100, default 20.
+### web — search, HTTP, browser
+Settings: `provider` (`duckduckgo` \| `searxng`), `searxngUrl`, `maxResults` (1–20), `engine`, `allowPrivateNetwork`, `stealth`, `headed`. Gate: `network`.
+Pack skill: `browser` (bypasses the agent's `skills` allowlist).
 
-### scheduler — Cron schedules: schedule_list / schedule_set / schedule_pause / schedule_delete / schedule_peek
-- `schedule_list`: List cron schedules in this project.
-- `schedule_peek`: Read the last fire run(s) from this schedule thread journal (human detail, agent texts, tools, errors). last defaults to 1, max 99.
-- `schedule_set`: Create a cron schedule, or update it when id is set. Defaults to this agent as target. nextRunAt is the next cron instant after create, not now. threadId chooses WHERE the fire lands: omit = new dedicated schedule thread (isolated cron log); "self" = THIS chat (fires here once this run is idle; one active run per thread); uuid from threads_list = that existing conversation. Thread agent must match targetAgentId. One schedule per thread. history=none|last|all folds prior fires only on dedicated schedule threads; historyLast is how many when history=last (1–99).
-- `schedule_pause`: Pause or resume a schedule by id.
-- `schedule_delete`: Delete a schedule by id.
+| Tool | Does |
+|---|---|
+| `web_search` | Web search for current information. |
+| `fetch` | HTTP request (GET/POST/PUT/PATCH/DELETE/HEAD) for http/https URLs. |
+| `browser_fetch` | One-shot page scrape to Markdown without a browser session. |
+| `browser` | Full agent-browser CLI surface in a thread session; load the `browser` skill for commands. |
+| `browser_close` | Close the browser session and stop the engine. |
 
-### webhook — Inbound webhooks: webhook_list / webhook_set / webhook_delete
-- `webhook_list`: List inbound webhooks in this project.
-- `webhook_set`: Create a webhook, or update it when id is set. Defaults to this agent as target.
-- `webhook_delete`: Delete a webhook by id.
+### lsp — language server
+No settings. Gate: `fs.read`.
 
-### issues — Issue boards: issue_board_list / source_list / board_create / board_update / board_rule_save / board_rule_delete / board_delete / issue_create / issue_move / issue_update / issue_nudge / issue_get / issue_list / issue_comment / issue_dependency / issue_attachment_add / label_list / label_create / label_delete
-- `issue_board_list`: List issue boards with their statuses and automation rules.
-- `source_list`: List sources an issue can bind to (git or folder); marks the managed workspace source.
-- `board_create`: Create an issue board from a template (name, template, optional description/color/icon).
-- `board_update`: Edit board fields (name/description/color/icon). Manage column rules with board_rule_save / board_rule_delete.
-- `board_rule_save`: Create or update a board automation rule (trigger -> conditions -> actions). Omit ruleId to append a new rule; pass ruleId to update.
-- `board_rule_delete`: Delete a board automation rule. Requires confirm=true.
-- `board_delete`: Delete a board and all its issues. Requires confirm=true.
-- `issue_create`: Create an issue on a board (created in the board entry status unless statusKey is given). Board rules for the entered status fire on creation. Optional sourceId/branch bind the run workspace.
-- `issue_move`: Move an issue to any status of its board (transitions are free). Optional assignee override fires the new agent in a started status; optional comment.
-- `issue_update`: Edit issue fields, labels, assignee ("unassign" clears), dueDate ("clear"), or move between boards.
-- `issue_nudge`: Re-fire the assigned agent on an issue in a started status (after edits).
-- `issue_get`: Full issue view: comments, subtasks, dependencies, attachments and board automation rules.
-- `issue_list`: List issues filtered by board/status/assignee/label/priority/type.
-- `issue_comment`: Add a comment to an issue as this agent.
-- `issue_dependency`: Add or remove an issue dependency (blocks/relates/duplicate).
-- `issue_attachment_add`: Attach a source file reference (sourceId + path) to an issue.
-- `label_list`: List dispatch labels.
-- `label_create`: Create a dispatch label.
-- `label_delete`: Delete a dispatch label. Requires confirm=true.
+| Tool | Does |
+|---|---|
+| `lsp_diagnostics` | Diagnostics for a file. |
+| `lsp_definition` | Go to definition. |
+| `lsp_references` | Find references. |
+| `lsp_hover` | Hover / type info. |
 
-### manager — Manager observation: manager_pulse / usage_report
-- `manager_pulse`: Read-only org snapshot: agents with today spend vs daily budget, failed threads, pending approvals, open issues and total spend today. Start here for any "how is the org doing" question.
-- `usage_report`: Token and cost usage aggregated by day or by agent (groupBy day|agent) over an optional from/to window. Rows carry input/output tokens, cost in USD and run count.
+### agents — fleet management
+Settings: `ownDelegatesOnly` (boolean, limits `agents_update` to the caller's own delegates; delete is always own-delegates only). Gate: `agents` on create, spawn, handoff, update, delete.
+Forbidden on subagents.
 
-### google — Google Workspace: calendar_list_events / calendar_create_event / calendar_update_event / calendar_delete_event / gmail_search_messages / gmail_read_message / gmail_read_thread / gmail_download_attachment / gmail_send_message
-- `calendar_list_events`: List Google Calendar events with time-range and text filters.
-- `calendar_create_event`: Create a Google Calendar event (summary, start/end, description, location, attendees).
-- `calendar_update_event`: Update fields of a Google Calendar event.
-- `calendar_delete_event`: Delete a Google Calendar event.
-- `gmail_search_messages`: Search Gmail with Gmail search syntax; returns snippets and headers.
-- `gmail_read_message`: Read one Gmail message: headers, text/plain body, and attachments list.
-- `gmail_read_thread`: Read a Gmail thread: all messages with headers, bodies, and attachments lists.
-- `gmail_download_attachment`: Download a Gmail attachment: attach it to the chat, or write it into the workspace via savePath.
-- `gmail_send_message`: Send a plain-text email from the connected account.
+| Tool | Does |
+|---|---|
+| `agents_list` | List agents with id, name, role, instructions, packs, skills, budget, permissions, model, level, parent. |
+| `agents_create` | Create a standalone top-level agent; omitted graph → default ReAct graph, omitted budget → `{ maxSteps: 50, policy: "ask" }`. |
+| `agents_create_subagent` | Create a one-shot delegate under the caller (no user, no `agents` pack). |
+| `agents_spawn` | Queue one-shot subcontracts for the graph `control:spawn` node; per-call `budget` and `permissions`. |
+| `agents_handoff` | Transfer this thread to another top-level agent (`control:handoff`). |
+| `agents_update` | Patch name/role/instructions/budget; graph, packs and permissions stay owner-only. |
+| `agents_delete` | Remove a delegate that is not running anywhere. |
 
-### github — GitHub: repos and files, code search, issues, pull requests, CI runs, and webhook events of the connected installation
-- `github_list_repos`: List repositories of the GitHub installation.
-- `github_get_file`: Fetch a file from a repository.
-- `github_search_code`: Search code across repositories.
-- `github_issues_list`: List repository issues.
-- `github_issues_get`: Read one issue.
-- `github_issues_create`: Create an issue.
-- `github_issues_comment`: Comment on an issue or pull request.
-- `github_issues_close`: Close an issue.
-- `github_issues_add_labels`: Add labels to an issue.
-- `github_pr_list`: List pull requests.
-- `github_pr_get`: Read one pull request.
-- `github_pr_diff`: Unified diff of a pull request.
-- `github_pr_review`: Submit a pull request review.
-- `github_pr_create`: Open a pull request from a pushed branch.
-- `github_pr_update`: Update pull request title, body, or state.
-- `github_pr_merge`: Merge a pull request.
-- `github_ci_workflow_runs`: Recent workflow runs.
-- `github_ci_run_jobs`: Jobs of a workflow run.
-- `github_ci_rerun`: Re-run a workflow run.
-- `github_recent_events`: Recent webhook events of the installation.
+### mcp — MCP server management
+No settings. Gate: `mcp_manage`.
 
-### knowledge-memory — Indexed corpus: knowledge_search / knowledge_read
-- `knowledge_search`: Search the knowledge corpus (docs / wiki)
-- `knowledge_read`: Read a knowledge document by id from search hits
+| Tool | Does |
+|---|---|
+| `mcp_list` | List MCP servers with config and live connection status. |
+| `mcp_connect` | Register or replace a server, probe it, return its tools. |
+| `mcp_check` | Health-check a server. |
+| `mcp_toggle` | Enable or disable a server. |
+| `mcp_remove` | Remove a server entry. |
 
-### pin-memory — Pinned rules visible to the agent: pin_set / pin_list / pin_remove
-- `pin_set`: Upsert a pin that stays visible in the agent window
-- `pin_remove`: Remove a pin by key
-- `pin_list`: List all pins for this agent scope
+### plan — this thread's execution plan
+No settings. No permission gate. Adds the `active-plan` tail note while a plan has pending work.
 
-### semantic-memory — Curated semantic memory: memory_write / memory_list / memory_update / memory_delete
-- `memory_write`: Write a curated semantic memory fact (session or long)
-- `memory_list`: List curated semantic memory facts
-- `memory_update`: Update a semantic memory fact text by id
-- `memory_delete`: Delete a semantic memory fact by id
+| Tool | Does |
+|---|---|
+| `plan_save` | Create or overwrite the thread plan (overview + ordered items). |
+| `plan_item_update` | Update one item's status (`pending`, `in_progress`, `completed`, `failed`, `cancelled`) by id, unique prefix or order, with an optional `resultNote`. |
+| `plan_delete` | Delete the thread plan and clear it from the inspector. |
+| `plan_get` | Read the current plan and item statuses. |
 
-### skills — Org skills management: create_skill / install_skill / search_skills
-- `create_skill`: Create a new org skill from a description and markdown instructions.
-- `install_skill`: Install skills into the org from a git repository.
-- `search_skills`: Search the skills.sh registry for skills.
+### threads — thread discovery and transcripts
+No settings. Gate: `read` on the history/list/read paths.
 
+| Tool | Does |
+|---|---|
+| `threads_list` | List threads in the org; `current=true` is this chat. |
+| `threads_history` | Read older messages of this or another thread, paged with `beforeSeq`. |
+| `threads_search` | Keyword search over transcripts (`scope=thread` or `scope=org`). |
+| `threads_tail` | Last run-journal events of a thread (runId, kind, time, preview). |
+
+### issues — boards, issues, dispatch
+No settings. No permission gate. Adds the `issue-workflow` tail note.
+
+| Tool | Does |
+|---|---|
+| `issue_board_list` | List boards with statuses and automation rules. |
+| `source_list` | List sources an issue can bind to (git or folder). |
+| `board_create` | Create a board from a template (`dev`, `simple`, `crm`, `blank`). |
+| `board_update` | Edit name/description/color/icon. |
+| `board_rule_save` | Create or update a rule (trigger → conditions → actions). |
+| `board_rule_delete` | Delete a rule; requires `confirm=true`. |
+| `board_delete` | Delete a board and all its issues; requires `confirm=true`. |
+| `issue_create` | Create an issue in the entry status unless `statusKey` is given; entry rules fire. |
+| `issue_move` | Move to any status; optional assignee override and comment. |
+| `issue_update` | Edit fields, labels, assignee (`unassign`), due date (`clear`), or board. |
+| `issue_nudge` | Re-fire the assignee on an issue in a started status. |
+| `issue_get` | Full issue view: comments, subtasks, dependencies, attachments, board rules. |
+| `issue_list` | Filter by board/status/assignee/label/priority/type. |
+| `issue_comment` | Add a comment as this agent. |
+| `issue_dependency` | Add or remove a `blocks`/`relates`/`duplicate` dependency. |
+| `issue_attachment_add` | Attach a source file reference (`sourceId` + path). |
+| `label_list` | List dispatch labels. |
+| `label_create` | Create a dispatch label. |
+| `label_delete` | Delete a label; requires `confirm=true`. |
+
+### manager — org observation
+No settings. No permission gate. Read-only.
+
+| Tool | Does |
+|---|---|
+| `manager_pulse` | Org snapshot: agents with today spend vs daily budget, failed threads, pending approvals, open issues, total spend today. |
+| `usage_report` | Token and cost usage by day or by agent, with input/output tokens, USD and run count. |
+
+### dashboards — dashboards and widgets
+No settings. No permission gate. Destructive calls are marked in their descriptions.
+Pack skill: `dashboards-widget-authoring` (a pointer to the filesystem skill `widget-creator`, which must also be granted to the agent for the full contract).
+
+| Tool | Does |
+|---|---|
+| `dashboards_create` | Create an empty dashboard; returns the id. |
+| `dashboards_list` | List org dashboards with widget counts. |
+| `dashboards_get` | Dashboard detail: widgets, rects, docs, draft/active status. |
+| `dashboards_update` | Rename a dashboard. |
+| `dashboards_delete` | Delete a dashboard and all widgets (destructive). |
+| `dashboard_catalog_get` | Org API catalog for widget sources: method, path template, query and response JSON Schema. |
+| `dashboard_templates_list` | Starter widget templates with id, title, suggested rect and counts. |
+| `dashboard_templates_get` | Full WidgetDoc of one template with the org id substituted. |
+| `dashboard_widgets_validate` | Dry-run a WidgetDoc: `{ ok, issues: [{ path, message }] }`. |
+| `dashboard_widgets_create` | Create a widget (rect + doc); always lands as a draft for human approval. |
+| `dashboard_widgets_update` | Update rect and/or doc; a doc change to an agent-created widget returns it to draft. |
+| `dashboard_widgets_delete` | Delete a widget. |
+| `dashboard_widgets_move` | Batch-move widgets on the 8 px grid. |
+| `dashboard_widgets_test` | Dry-run a source definition: validates url, headers, vault secrets. |
+
+### pin-memory — pinned rules
+Settings: `store` (`kv-pin`), `maxItems`. No permission gate.
+
+| Tool | Does |
+|---|---|
+| `pin_set` | Upsert a pin that stays visible in the agent window. |
+| `pin_list` | List pins for this agent scope. |
+| `pin_remove` | Remove a pin by key. |
+
+### semantic-memory — curated facts
+Settings: `store` (`record-store`), `autoProjectSession`, `autoProjectLong`. No permission gate.
+Adds the `semantic-memory` guidance note and, when projection is on, a `memory-semantic` note.
+
+| Tool | Does |
+|---|---|
+| `memory_write` | Write a curated fact (session or long). |
+| `memory_list` | List curated facts. |
+| `memory_update` | Update a fact's text by id. |
+| `memory_delete` | Delete a fact by id. |
+
+### knowledge-memory — indexed corpus
+Settings: `store` (`knowledge`), `topK`. No permission gate. Adds the `knowledge-memory` guidance note.
+
+| Tool | Does |
+|---|---|
+| `knowledge_search` | Search the indexed knowledge corpus. |
+| `knowledge_read` | Read a document by id from search hits. |
+
+### skills — org skill management
+No settings. Gates: `fs.write` for create/install, `network` for install and search.
+
+| Tool | Does |
+|---|---|
+| `create_skill` | Create an org skill from a description and Markdown instructions. |
+| `install_skill` | Install skills into the org from a git repository. |
+| `search_skills` | Search the skills.sh registry. |

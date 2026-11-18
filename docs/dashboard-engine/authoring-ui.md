@@ -66,6 +66,8 @@ Nothing is written until Save:
 
 - Save sends the doc with `baseUpdatedAt`. A concurrent save by someone else is
   reported and can be overwritten or discarded.
+- Switching to another widget with unsaved edits opens the shared alert
+  (`ui/draft-guard.tsx`): Save and switch, Discard changes, or Keep editing.
 - Board layout writes are independent and immediate.
 - A widget created by an agent is `draft`. A human activates it with
   `POST .../widgets/:widgetId/activate`; agents cannot activate.
@@ -78,7 +80,8 @@ click-counter, kpi-threads, approvals-queue, agent-roster, spend-chart, notes.
 
 Templates use literal `w: 408` widget rects so 384-wide items fit the body, and
 are authored as complete valid docs (state wiring, sources, columns, formats).
-`templates.spec.ts` checks: the doc parses, ids are unique, source paths name
+Each template also sets `doc.icon` from the shared set; the gallery card and the
+widget header render it. `templates.spec.ts` checks: the doc parses, ids are unique, source paths name
 shipped catalog entries, every rect is on the 8 px grid and inside the widget,
 every prop parses with its descriptor, and every declared event exists.
 

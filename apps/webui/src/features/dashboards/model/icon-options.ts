@@ -13,12 +13,13 @@ import {
   ZapIcon,
 } from 'lucide-react';
 
-export interface DashboardIconOption {
+export interface IconOption {
   name: string;
   icon: LucideIcon;
 }
 
-export const DASHBOARD_ICON_OPTIONS: DashboardIconOption[] = [
+/** Icon names shared by dashboards and widgets; the stored value is the name. */
+export const ICON_OPTIONS: IconOption[] = [
   { name: 'layout-dashboard', icon: LayoutDashboardIcon },
   { name: 'activity', icon: ActivityIcon },
   { name: 'bar-chart', icon: BarChart3Icon },
@@ -32,15 +33,20 @@ export const DASHBOARD_ICON_OPTIONS: DashboardIconOption[] = [
   { name: 'rocket', icon: RocketIcon },
 ];
 
-const DASHBOARD_ICON_BY_NAME: Record<string, LucideIcon> = Object.fromEntries(
-  DASHBOARD_ICON_OPTIONS.map((option) => [option.name, option.icon]),
+const ICON_BY_NAME: Record<string, LucideIcon> = Object.fromEntries(
+  ICON_OPTIONS.map((option) => [option.name, option.icon]),
 );
 
-export function resolveDashboardIcon(name: string | null | undefined): LucideIcon {
+/** The named icon, or null when the name is absent or unknown. */
+export function findIcon(name: string | null | undefined): LucideIcon | null {
   if (!name) {
-    return LayoutDashboardIcon;
+    return null;
   }
-  return DASHBOARD_ICON_BY_NAME[name] ?? LayoutDashboardIcon;
+  return ICON_BY_NAME[name] ?? null;
 }
 
-export const DEFAULT_DASHBOARD_ICON = 'layout-dashboard';
+export function resolveIcon(name: string | null | undefined): LucideIcon {
+  return findIcon(name) ?? LayoutDashboardIcon;
+}
+
+export const DEFAULT_ICON = 'layout-dashboard';

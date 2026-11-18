@@ -9,6 +9,7 @@ export const clickCounterTemplate = defineWidgetTemplate({
   doc: {
     schemaVersion: 1,
     title: 'Click counter',
+    icon: 'zap',
     primitive: 'custom',
     state: { count: 0 },
     persistedState: ['count'],

@@ -8,6 +8,7 @@ Contract: `packages/contracts/src/dashboards/doc.ts`. Schemas: `WidgetDocSchema`
 |---|---|---|
 | `schemaVersion` | literal `1` | required |
 | `title` | string, 1-120 characters | required |
+| `icon` | optional icon name from the shared picker set (e.g. `target`), shown before the widget title | absent |
 | `state` | object of JSON values; keys become the `state` root | `{}` |
 | `persistedState` | array of up to 100 state keys, 1-64 characters each | absent |
 | `sources` | array of `WidgetSource`, at most 10 | `[]` |
@@ -18,6 +19,8 @@ Contract: `packages/contracts/src/dashboards/doc.ts`. Schemas: `WidgetDocSchema`
 | `transform` | JS source string, at most 32000 characters, legacy form only | absent |
 
 `persistedState` is live: on mount the widget loads the stored values for those keys and writes them back after a 500 ms debounce. Only keys listed there survive a reload; every other key lives for the lifetime of the view. A key written by an action or a primitive may be persisted, but it must also exist in `state` for the guard to accept bindings that read it.
+
+Known icon names: `layout-dashboard`, `activity`, `bar-chart`, `line-chart`, `pie-chart`, `workflow`, `server`, `boxes`, `zap`, `target`, `rocket`. An unknown name renders no icon.
 
 `persistedState` values are stored on the server per widget, not per viewer: anyone who opens the dashboard sees the same values, and the last write wins. Persist a key only when that shared behavior is what the user asked for; counters, drafts and filters that differ per person should stay in plain `state`.
 

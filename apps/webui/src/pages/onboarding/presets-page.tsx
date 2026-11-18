@@ -1,6 +1,8 @@
 import { Navigate, useNavigate, useParams } from 'react-router';
 import { OnboardingPresetsStep } from '@/features/onboarding';
-import { ONBOARDING_STEP_LABELS } from '@/features/onboarding/model/onboarding-copy';
+import { WIZARD_STEP_HINTS } from '@/features/onboarding/model/onboarding-copy';
+import { wizardRail } from '@/features/onboarding/model/onboarding-steps';
+import { useOnboardingWizard } from '@/features/onboarding/model/use-onboarding-progress';
 import { OnboardingShell } from '@/features/onboarding/ui/onboarding-shell';
 import { useOrgStore } from '@/features/switch-org/org-context';
 import { activateOrg } from '@/shared/api/orgs';
@@ -10,6 +12,7 @@ export function OnboardingPresetsPage() {
   const { orgId } = useParams();
   const navigate = useNavigate();
   const { setActiveOrgId } = useOrgStore();
+  const wizard = useOnboardingWizard(orgId);
 
   if (!orgId) {
     return <Navigate to={studioPath.onboardingChoose} replace />;
@@ -27,8 +30,18 @@ export function OnboardingPresetsPage() {
       });
   };
 
+  if (wizard.ready && wizard.wizard.agents) {
+    return <Navigate to={studioPath.desk(orgId)} replace />;
+  }
+  const rail = wizardRail(wizard.ready ? wizard.wizard : null, 'agents');
+
   return (
-    <OnboardingShell testId="onboarding-presets" steps={ONBOARDING_STEP_LABELS} currentStep={3}>
+    <OnboardingShell
+      testId="onboarding-presets"
+      steps={rail.labels}
+      currentStep={rail.currentStep}
+      hint={WIZARD_STEP_HINTS.agents}
+    >
       <div className="mx-auto w-full max-w-lg">
         <OnboardingPresetsStep
           orgId={orgId}

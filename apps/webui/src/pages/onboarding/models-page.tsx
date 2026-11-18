@@ -4,13 +4,16 @@ import type {
   ProviderPublic,
 } from '@harnesys/studio-shared';
 import { type QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router';
 import { mergeFields, resolveModelKind } from '@/features/manage-model';
 import { OnboardingProviderModels } from '@/features/onboarding';
-import { ONBOARDING_STEP_LABELS } from '@/features/onboarding/model/onboarding-copy';
+import { WIZARD_STEP_HINTS } from '@/features/onboarding/model/onboarding-copy';
+import { wizardRail } from '@/features/onboarding/model/onboarding-steps';
+import { useOnboardingWizard } from '@/features/onboarding/model/use-onboarding-progress';
+import { nextWizardRoute } from '@/features/onboarding/model/wizard-route';
 import { OnboardingShell } from '@/features/onboarding/ui/onboarding-shell';
-import { attachProviderModel, discoverProviderModels, listProviders } from '@/shared/api';
+import { attachProviderModel, discoverProviderModels } from '@/shared/api';
 import { providersQueryKeyFor } from '@/shared/api/providers';
 import { studioPath } from '@/shared/config/routes';
 import { Spinner } from '@/shared/ui/spinner';
@@ -19,17 +22,13 @@ export function OnboardingModelsPage() {
   const { orgId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const wizard = useOnboardingWizard(orgId);
+  const [entryWasComplete, setEntryWasComplete] = useState<boolean | null>(null);
   const [manualName, setManualName] = useState('');
   const [attaching, setAttaching] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const providersQuery = useQuery({
-    queryKey: ['providers', orgId],
-    queryFn: () => listProviders(orgId ?? ''),
-    enabled: !!orgId,
-  });
-  const rows = providersQuery.data ?? [];
-  const provider: ProviderPublic | null = rows[0] ?? null;
+  const provider: ProviderPublic | null = wizard.providers[0] ?? null;
   const providerId = provider?.id ?? null;
 
   // Discovery runs automatically once the connected provider is known;
@@ -44,6 +43,12 @@ export function OnboardingModelsPage() {
     },
     enabled: !!orgId && !!providerId,
   });
+
+  useEffect(() => {
+    if (wizard.ready && entryWasComplete === null) {
+      setEntryWasComplete(wizard.wizard.models);
+    }
+  }, [wizard.ready, wizard.wizard.models, entryWasComplete]);
 
   const attachFound = async (item: DiscoveredModelView) => {
     if (!orgId || !providerId) {
@@ -89,12 +94,21 @@ export function OnboardingModelsPage() {
   if (!orgId) {
     return <Navigate to={studioPath.onboardingChoose} replace />;
   }
-  if (providersQuery.isSuccess && !provider) {
+  if (entryWasComplete) {
+    return <Navigate to={nextWizardRoute(orgId, wizard.wizard, 'models')} replace />;
+  }
+  if (wizard.ready && !provider) {
     return <Navigate to={studioPath.onboardingProvider(orgId)} replace />;
   }
+  const rail = wizardRail(wizard.ready ? wizard.wizard : null, 'models');
   if (!provider) {
     return (
-      <OnboardingShell testId="onboarding-models" steps={ONBOARDING_STEP_LABELS} currentStep={2}>
+      <OnboardingShell
+        testId="onboarding-models"
+        steps={rail.labels}
+        currentStep={rail.currentStep}
+        hint={WIZARD_STEP_HINTS.models}
+      >
         <div className="mx-auto flex w-full max-w-lg justify-center py-16">
           <Spinner className="size-5 text-muted-foreground" />
         </div>
@@ -105,7 +119,12 @@ export function OnboardingModelsPage() {
   const discoveryError = toMessage(discoveryQuery.error);
 
   return (
-    <OnboardingShell testId="onboarding-models" steps={ONBOARDING_STEP_LABELS} currentStep={2}>
+    <OnboardingShell
+      testId="onboarding-models"
+      steps={rail.labels}
+      currentStep={rail.currentStep}
+      hint={WIZARD_STEP_HINTS.models}
+    >
       <div className="mx-auto w-full max-w-lg">
         <OnboardingProviderModels
           provider={provider}
@@ -122,6 +141,9 @@ export function OnboardingModelsPage() {
             void navigate(studioPath.onboardingProvider(orgId), { replace: true });
           }}
           onContinue={() => {
+            void navigate(studioPath.onboardingPresets(orgId), { replace: true });
+          }}
+          onSkip={() => {
             void navigate(studioPath.onboardingPresets(orgId), { replace: true });
           }}
         />

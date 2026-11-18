@@ -9,6 +9,7 @@ export const spendChartTemplate = defineWidgetTemplate({
   doc: {
     schemaVersion: 1,
     title: 'Spend',
+    icon: 'bar-chart',
     primitive: 'custom',
     state: {},
     sources: [

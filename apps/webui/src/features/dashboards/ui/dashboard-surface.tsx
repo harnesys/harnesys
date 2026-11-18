@@ -21,7 +21,7 @@ import { Button } from '@/shared/ui/button';
 import { PageHeader, PageHeaderIcon } from '@/shared/ui/page-header';
 import { Spinner } from '@/shared/ui/spinner';
 import { toast } from '@/shared/ui/toast';
-import { resolveDashboardIcon } from '../model/dashboard-icons';
+import { resolveIcon } from '../model/icon-options';
 import { BoardCanvas } from './board/board-canvas';
 import { WidgetTemplateGallery } from './widget-template-gallery';
 
@@ -109,7 +109,7 @@ export function DashboardSurface({ orgId, dashboardId }: { orgId: string; dashbo
   }
 
   const dashboard = detailQuery.data;
-  const DashboardIcon = resolveDashboardIcon(dashboard.icon);
+  const DashboardIcon = resolveIcon(dashboard.icon);
   const nextY = dashboard.widgets.reduce(
     (max, widget) => Math.max(max, widget.rect.y + widget.rect.h),
     0,

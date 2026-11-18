@@ -17,6 +17,7 @@ export function OnboardingShell({
   testId,
   steps,
   currentStep,
+  hint,
   width = 'narrow',
 }: {
   children: ReactNode;
@@ -24,6 +25,7 @@ export function OnboardingShell({
   testId?: string;
   steps?: readonly string[];
   currentStep?: number;
+  hint?: string;
   width?: keyof typeof WIDTH_CLASS;
 }) {
   return (
@@ -48,7 +50,12 @@ export function OnboardingShell({
       >
         <main className="flex flex-1 flex-col justify-center py-10 lg:py-14">
           {steps && currentStep !== undefined ? (
-            <OnboardingStepRail labels={steps} current={currentStep} />
+            <div className="mb-8">
+              <OnboardingStepRail labels={steps} current={currentStep} />
+              {hint ? (
+                <p className="mt-2 font-mono text-[11px] text-muted-foreground/80">{hint}</p>
+              ) : null}
+            </div>
           ) : null}
           {children}
         </main>
@@ -79,7 +86,7 @@ function stepLabelClass(done: boolean, active: boolean): string {
 function OnboardingStepRail({ labels, current }: { labels: readonly string[]; current: number }) {
   return (
     <ol
-      className="mb-8 flex items-center gap-2 overflow-x-auto whitespace-nowrap"
+      className="flex items-center gap-2 overflow-x-auto whitespace-nowrap"
       data-testid="onboarding-steps"
     >
       {labels.map((label, index) => {

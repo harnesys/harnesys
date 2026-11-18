@@ -1,3 +1,4 @@
+export { OnboardingChecklist } from './ui/onboarding-checklist';
 export { OnboardingChoose } from './ui/onboarding-choose';
 export { OnboardingCreatePanel } from './ui/onboarding-create-panel';
 export { OnboardingError } from './ui/onboarding-error';

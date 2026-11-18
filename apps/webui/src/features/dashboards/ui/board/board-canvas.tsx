@@ -90,7 +90,7 @@ export function BoardCanvas({
   const setDraft = useDashboardInspectorStore((state) => state.setDraft);
   const selectWidgetItem = useDashboardInspectorStore((state) => state.selectWidgetItem);
   const clearSelection = useDashboardInspectorStore((state) => state.clearSelection);
-  const guard = useDraftSelectionGuard(dashboard.widgets);
+  const guard = useDraftSelectionGuard(dashboard);
   const stacked = width > 0 && width < MOBILE_STACK_MAX_WIDTH;
   // Authored width comes from the committed layout, never from the live one:
   // a fixed reference keeps the pointer-to-grid mapping stable mid-drag.
@@ -197,7 +197,6 @@ export function BoardCanvas({
           </div>
         </div>
       ) : null}
-      {guard.dialog}
     </div>
   );
 }

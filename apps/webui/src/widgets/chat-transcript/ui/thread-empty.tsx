@@ -14,15 +14,9 @@ import {
   CategoryLandingTitle,
 } from '@/shared/ui/category-landing';
 import { AgentBulletList } from './agent-bullet-list';
+import { AssistantEmptyThread } from './assistant-empty-thread';
 
 const MAX_RECENT_THREADS = 3;
-const ASSISTANT_DESCRIPTION =
-  'Ask me anything about Harnesys. I can walk you through agents, projects, automations and settings, and help you set things up.';
-const ASSISTANT_STARTERS = [
-  'Show me around. What can I do in Harnesys?',
-  'Create a project and connect a repository.',
-  'Set up my first agent and a daily automation.',
-];
 
 export function ThreadEmpty({
   agent,
@@ -40,22 +34,7 @@ export function ThreadEmpty({
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .slice(0, MAX_RECENT_THREADS);
   if (assistant) {
-    return (
-      <CategoryLanding data-testid="chat-empty-thread" className="fade-in animate-in duration-200">
-        <CategoryLandingEyebrow>ASSISTANT</CategoryLandingEyebrow>
-        <CategoryLandingTitle>{agent.name} can help with anything</CategoryLandingTitle>
-        <CategoryLandingDescription>{ASSISTANT_DESCRIPTION}</CategoryLandingDescription>
-        <div className="mt-8">
-          <AgentBulletList
-            key={agent.id}
-            agent={agent}
-            threadId={threadId}
-            starters={ASSISTANT_STARTERS}
-            editable={false}
-          />
-        </div>
-      </CategoryLanding>
-    );
+    return <AssistantEmptyThread agent={agent} threadId={threadId} />;
   }
   return (
     <CategoryLanding data-testid="chat-empty-thread" className="fade-in animate-in duration-200">

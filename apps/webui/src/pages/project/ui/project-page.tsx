@@ -1,9 +1,12 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { PanelRightIcon } from 'lucide-react';
-import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react';
+import { type CSSProperties, type MouseEvent as ReactMouseEvent, useEffect, useRef } from 'react';
 import { Navigate, useParams } from 'react-router';
-import { useDeskStore } from '@/features/desk';
+import { DESK_QUERY_KEY, useDeskStore } from '@/features/desk';
 import { type IdeTab, useIdeSync, useIdeTabs } from '@/features/ide';
+import { ensureStarterBoard } from '@/features/onboarding/model/starter-board';
 import { useStudioLocation } from '@/shared/config/location';
+import { useStudioNavigation } from '@/shared/config/navigation';
 import { studioPath } from '@/shared/config/routes';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -61,6 +64,26 @@ function ProjectShell({
   const inspectorOpen = useDeskStore((state) => state.inspectorOpen);
   const { width: inspectorWidth, dragging, shellRef, onResizeStart } = useInspectorWidth();
   useIdeSync();
+  const queryClient = useQueryClient();
+  const { openBoard } = useStudioNavigation();
+  const seededOrg = useRef<string | null>(null);
+  useEffect(() => {
+    if (!orgId || seededOrg.current === orgId) {
+      return;
+    }
+    seededOrg.current = orgId;
+    void ensureStarterBoard(orgId)
+      .then((result) => {
+        if (!result) {
+          return;
+        }
+        void queryClient.invalidateQueries({ queryKey: DESK_QUERY_KEY });
+        if (result.created) {
+          openBoard(result.boardId);
+        }
+      })
+      .catch(() => undefined);
+  }, [orgId, openBoard, queryClient]);
   const bareProject = Boolean(params.projectId && focus.kind === 'none');
   const showInspector =
     !bareProject &&

@@ -6,13 +6,8 @@ import {
   useDeleteDashboard,
   useUpdateDashboard,
 } from '@/features/dashboards/dashboards-queries';
-import {
-  DASHBOARD_ICON_OPTIONS,
-  DEFAULT_DASHBOARD_ICON,
-} from '@/features/dashboards/model/dashboard-icons';
+import { DEFAULT_ICON } from '@/features/dashboards/model/icon-options';
 import { useOrgId } from '@/shared/config/location';
-import { entityColorTintClass, entityColorTintStyle } from '@/shared/lib/entity-colors';
-import { cn } from '@/shared/lib/utils';
 import { type DialogComponentProps, dialog } from '@/shared/services/overlay';
 import { Button } from '@/shared/ui/button';
 import { ColorSwatches } from '@/shared/ui/color-swatches';
@@ -20,6 +15,7 @@ import { DialogFooter } from '@/shared/ui/dialog';
 import { Field, FieldGroup, FieldLabel } from '@/shared/ui/field';
 import { Input } from '@/shared/ui/input';
 import { toast } from '@/shared/ui/toast';
+import { IconPicker } from './icon-picker';
 
 export type DashboardSettingsResult =
   | { action: 'created'; dashboardId: string }
@@ -72,7 +68,7 @@ export function DashboardSettingsDialog({
 
   const [name, setName] = useState(data?.initial?.name ?? '');
   const [color, setColor] = useState<string | null>(data?.initial?.color ?? null);
-  const [icon, setIcon] = useState(data?.initial?.icon ?? DEFAULT_DASHBOARD_ICON);
+  const [icon, setIcon] = useState(data?.initial?.icon ?? DEFAULT_ICON);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const saving = create.isPending || update.isPending || remove.isPending;
 
@@ -125,28 +121,12 @@ export function DashboardSettingsDialog({
           </Field>
           <Field>
             <FieldLabel>Icon</FieldLabel>
-            <div className="flex flex-wrap gap-1.5">
-              {DASHBOARD_ICON_OPTIONS.map((option) => {
-                const OptionIcon = option.icon;
-                const selected = icon === option.name;
-                return (
-                  <button
-                    key={option.name}
-                    type="button"
-                    aria-pressed={selected}
-                    className={cn(
-                      'flex size-8 items-center justify-center rounded-md border text-muted-foreground transition-colors hover:bg-muted/60',
-                      selected && cn('border-transparent', entityColorTintClass(color)),
-                    )}
-                    style={selected ? entityColorTintStyle(color) : undefined}
-                    data-testid={`dashboard-settings-icon-${option.name}`}
-                    onClick={() => setIcon(option.name)}
-                  >
-                    <OptionIcon className="size-4" />
-                  </button>
-                );
-              })}
-            </div>
+            <IconPicker
+              value={icon}
+              onChange={(name) => setIcon(name ?? DEFAULT_ICON)}
+              color={color}
+              testIdPrefix="dashboard-settings-icon"
+            />
           </Field>
         </FieldGroup>
         {!creating ? (
