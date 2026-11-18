@@ -6,15 +6,19 @@ import {
   FileIcon,
   FolderIcon,
   PenLineIcon,
+  ReplaceIcon,
   ScanSearchIcon,
+  SearchIcon,
   SquareTerminalIcon,
   TrashIcon,
 } from 'lucide-react';
+import { openFindInFilesDialog, openReplaceInFilesDialog } from '@/features/find-in-files';
 import type { useOpenNewTerminal } from '@/features/ide';
 import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
 } from '@/shared/ui/dropdown-menu';
 import { IconRef } from '@/shared/ui/icon';
 import { useExplorerDraftStore } from '../model/explorer-draft.store';
@@ -87,6 +91,27 @@ export function FileRowMenuItems({
             </DropdownMenuItem>
             {!worktreeId ? (
               <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  data-testid="folder-find-in-files"
+                  onClick={() => {
+                    void openFindInFilesDialog({ sourceId: projectId, dir: fullPath });
+                  }}
+                >
+                  <SearchIcon className="size-3.5" />
+                  Find in Folder
+                  <DropdownMenuShortcut>⇧⌘F</DropdownMenuShortcut>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  data-testid="folder-replace-in-files"
+                  onClick={() => {
+                    void openReplaceInFilesDialog({ sourceId: projectId, dir: fullPath });
+                  }}
+                >
+                  <ReplaceIcon className="size-3.5" />
+                  Replace in Folder
+                  <DropdownMenuShortcut>⇧⌘R</DropdownMenuShortcut>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   data-testid="folder-open-terminal"

@@ -32,6 +32,7 @@ export interface ContentSearchResponse {
 export interface SearchContentParams {
   q: string;
   sourceId?: string;
+  dir?: string;
   caseSensitive?: boolean;
   wholeWord?: boolean;
   regex?: boolean;
@@ -46,6 +47,9 @@ export function searchContent(
   const qs = new URLSearchParams({ q: params.q });
   if (params.sourceId) {
     qs.set('sourceId', params.sourceId);
+  }
+  if (params.dir) {
+    qs.set('dir', params.dir);
   }
   if (params.caseSensitive) {
     qs.set('caseSensitive', 'true');
@@ -65,4 +69,77 @@ export function searchContent(
   return apiJson<ContentSearchResponse>(
     `/api/orgs/${encodeURIComponent(orgId)}/content/search?${qs.toString()}`,
   );
+}
+
+export interface ContentReplaceTarget {
+  sourceId: string;
+  path: string;
+  line?: number;
+  column?: number;
+}
+
+export interface ReplaceContentParams {
+  q: string;
+  replacement: string;
+  targets?: ContentReplaceTarget[];
+  sourceId?: string;
+  dir?: string;
+  caseSensitive?: boolean;
+  wholeWord?: boolean;
+  regex?: boolean;
+  mask?: string;
+  dryRun?: boolean;
+}
+
+export interface ContentReplaceFile {
+  sourceId: string;
+  path: string;
+  replaced: number;
+}
+
+export interface ContentReplaceResponse {
+  fileCount: number;
+  matchCount: number;
+  files: ContentReplaceFile[];
+  truncated: boolean;
+  dryRun: boolean;
+  errors: ContentSearchError[];
+}
+
+export function replaceContent(
+  orgId: string,
+  params: ReplaceContentParams,
+): Promise<ContentReplaceResponse> {
+  const body: Record<string, unknown> = {
+    q: params.q,
+    replacement: params.replacement,
+  };
+  if (params.sourceId) {
+    body.sourceId = params.sourceId;
+  }
+  if (params.dir) {
+    body.dir = params.dir;
+  }
+  if (params.caseSensitive) {
+    body.caseSensitive = true;
+  }
+  if (params.wholeWord) {
+    body.wholeWord = true;
+  }
+  if (params.regex) {
+    body.regex = true;
+  }
+  if (params.mask) {
+    body.mask = params.mask;
+  }
+  if (params.dryRun) {
+    body.dryRun = true;
+  }
+  if (params.targets) {
+    body.targets = params.targets;
+  }
+  return apiJson<ContentReplaceResponse>(`/api/orgs/${encodeURIComponent(orgId)}/content/replace`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }

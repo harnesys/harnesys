@@ -38,6 +38,7 @@ import { AssistantChatToggle } from '@/widgets/assistant-chat';
 import { InboxBell } from '@/widgets/inbox-bell';
 import { normalizeShares, useAccordionStore } from '../model/accordion.store';
 import { useSectionAttention } from '../model/section-attention';
+import { useFindInFilesHotkey } from '../model/use-find-in-files-hotkey';
 import { useSectionDnd } from '../model/use-section-dnd';
 import { AccordionSection } from './accordion-section';
 import { sectionParts } from './section-parts';
@@ -105,6 +106,7 @@ export function ProjectSidebar({
   onResizeStart?: (event: ReactMouseEvent) => void;
 }) {
   const { orgId, focus } = useStudioLocation();
+  useFindInFilesHotkey();
   const { data: meta } = useQuery(appMetaQuery(orgId));
   const releases = useQuery(releasesQuery);
   const updateStatus = useAppUpdateStore((state) => state.status);

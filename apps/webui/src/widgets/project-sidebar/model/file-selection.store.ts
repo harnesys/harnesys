@@ -6,6 +6,7 @@ interface FileSelectionState {
   selectedPaths: string[];
   anchorPath: string | null;
   visiblePaths: string[];
+  selectedDirPath: string | null;
   filesActive: boolean;
 }
 type FileSelectionStore = FileSelectionState & {
@@ -14,6 +15,7 @@ type FileSelectionStore = FileSelectionState & {
   setVisiblePaths: (paths: string[]) => void;
   setFilesActive: (active: boolean) => void;
   selectSingle: (path: string) => void;
+  setSelectedDir: (path: string | null) => void;
   togglePath: (path: string) => void;
   selectRange: (targetPath: string) => void;
   setSelected: (paths: string[]) => void;
@@ -25,6 +27,7 @@ export const useFileSelectionStore = create<FileSelectionStore>((set, _get) => (
   selectedPaths: [],
   anchorPath: null,
   visiblePaths: [],
+  selectedDirPath: null,
   filesActive: false,
   setProject: (projectId) =>
     set((state) => {
@@ -37,6 +40,7 @@ export const useFileSelectionStore = create<FileSelectionStore>((set, _get) => (
         selectedPaths: [],
         anchorPath: null,
         visiblePaths: [],
+        selectedDirPath: null,
         filesActive: false,
       };
     }),
@@ -52,12 +56,14 @@ export const useFileSelectionStore = create<FileSelectionStore>((set, _get) => (
         selectedPaths: [],
         anchorPath: null,
         visiblePaths: [],
+        selectedDirPath: null,
         filesActive: false,
       };
     }),
   setVisiblePaths: (paths) => set({ visiblePaths: paths }),
   setFilesActive: (active) => set({ filesActive: active }),
   selectSingle: (path) => set({ selectedPaths: [path], anchorPath: path }),
+  setSelectedDir: (path) => set({ selectedDirPath: path }),
   togglePath: (path) =>
     set((state) => {
       const exists = state.selectedPaths.includes(path);
@@ -85,5 +91,5 @@ export const useFileSelectionStore = create<FileSelectionStore>((set, _get) => (
     }),
   setSelected: (paths) =>
     set({ selectedPaths: paths, anchorPath: paths[paths.length - 1] ?? null }),
-  clear: () => set({ selectedPaths: [], anchorPath: null }),
+  clear: () => set({ selectedPaths: [], anchorPath: null, selectedDirPath: null }),
 }));

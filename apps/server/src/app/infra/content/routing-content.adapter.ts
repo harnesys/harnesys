@@ -1,5 +1,6 @@
 import { Injectable } from '@harnesys/brix';
 import type {
+  ContentReplaceSourceResult,
   ContentSearchSourceResult,
   ContentStat,
   ContentTreeResult,
@@ -8,6 +9,7 @@ import { ContentHostNotLocalException } from '../../domain/content/content.error
 import {
   type ContentDownload,
   type ContentReadResult,
+  type ContentReplaceRequest,
   type ContentSearchOptions,
   type ContentWriteResult,
   OrgContentPort,
@@ -24,6 +26,8 @@ import {
   findSourceForContentRoute,
   readyContentHostIds,
 } from './routing-content.route.ts';
+import { proxyDownload, proxyRead } from './routing-content-read.ts';
+import { proxyReplace, proxySearch } from './routing-content-search.ts';
 import { proxyWorkerJson } from './worker-content-proxy.ts';
 
 @Injectable()
@@ -71,22 +75,7 @@ export class RoutingContentAdapter extends OrgContentPort {
       if (!ctx.remote) {
         return this.local.read(orgId, sourceId, relPath, worktreeId);
       }
-      return proxyWorkerJson<{
-        bytesBase64: string;
-        etag: string;
-        size: number;
-        mtime: string;
-      }>(this.proxy, ctx.hostId, {
-        op: 'read',
-        sourceId,
-        relPath,
-        ...(worktreeId ? { worktreeId } : {}),
-      }).then((body) => ({
-        bytes: Uint8Array.from(Buffer.from(body.bytesBase64, 'base64')),
-        etag: body.etag,
-        size: body.size,
-        mtime: body.mtime,
-      }));
+      return proxyRead(this.proxy, ctx.hostId, sourceId, relPath, worktreeId);
     });
   }
 
@@ -261,15 +250,7 @@ export class RoutingContentAdapter extends OrgContentPort {
       if (!ctx.remote) {
         return this.local.download(orgId, sourceId, relPath, worktreeId);
       }
-      return proxyWorkerJson<{ name: string; bytesBase64: string }>(this.proxy, ctx.hostId, {
-        op: 'download',
-        sourceId,
-        relPath,
-        ...(worktreeId ? { worktreeId } : {}),
-      }).then((body) => ({
-        name: body.name,
-        bytes: Uint8Array.from(Buffer.from(body.bytesBase64, 'base64')),
-      }));
+      return proxyDownload(this.proxy, ctx.hostId, sourceId, relPath, worktreeId);
     });
   }
 
@@ -284,16 +265,32 @@ export class RoutingContentAdapter extends OrgContentPort {
       if (!ctx.remote) {
         return this.local.search(orgId, sourceId, query, options, worktreeId);
       }
-      return proxyWorkerJson<ContentSearchSourceResult>(this.proxy, ctx.hostId, {
-        op: 'search',
+      return proxySearch({
+        proxy: this.proxy,
+        hostId: ctx.hostId,
         sourceId,
-        relPath: '',
         query,
-        caseSensitive: options.caseSensitive,
-        wholeWord: options.wholeWord,
-        regex: options.regex,
-        mask: options.mask.join(','),
-        limit: options.limit,
+        options,
+        ...(worktreeId ? { worktreeId } : {}),
+      });
+    });
+  }
+
+  replace(
+    orgId: string,
+    sourceId: string,
+    request: ContentReplaceRequest,
+    worktreeId?: string,
+  ): Promise<ContentReplaceSourceResult> {
+    return this.route(orgId, sourceId, (ctx) => {
+      if (!ctx.remote) {
+        return this.local.replace(orgId, sourceId, request, worktreeId);
+      }
+      return proxyReplace({
+        proxy: this.proxy,
+        hostId: ctx.hostId,
+        sourceId,
+        request,
         ...(worktreeId ? { worktreeId } : {}),
       });
     });

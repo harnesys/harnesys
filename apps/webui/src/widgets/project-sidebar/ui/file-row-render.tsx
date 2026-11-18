@@ -14,7 +14,7 @@ export interface FileTreeRowHandlers {
   gitMap?: GitFileStatusMap;
   gitTruncated?: boolean;
   onToggle: (fullPath: string) => void;
-  onSelect: (fullPath: string, event?: React.MouseEvent) => void;
+  onSelect: (fullPath: string, event?: React.MouseEvent, isDir?: boolean) => void;
   onOpen: (fullPath: string) => void;
   onStartCreate: (kind: 'file' | 'dir', parentPath: string) => void;
   onStartRename: (fullPath: string) => void;

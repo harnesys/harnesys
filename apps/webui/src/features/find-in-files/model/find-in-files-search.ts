@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import {
+  type ContentReplaceTarget,
   type ContentSearchFile,
   type ContentSearchMatch,
   type ContentSearchResponse,
@@ -12,6 +13,7 @@ export interface FindInFilesInput {
   orgId: string;
   q: string;
   sourceId: string;
+  dir: string;
   caseSensitive: boolean;
   wholeWord: boolean;
   regex: boolean;
@@ -31,6 +33,7 @@ export function findInFilesQueryKey(input: FindInFilesInput) {
     input.orgId,
     input.q,
     input.sourceId,
+    input.dir,
     input.caseSensitive,
     input.wholeWord,
     input.regex,
@@ -45,6 +48,7 @@ export function useFindInFilesSearch(input: FindInFilesInput) {
       searchContent(input.orgId, {
         q: input.q,
         ...(input.sourceId === ALL_SOURCES ? {} : { sourceId: input.sourceId }),
+        ...(input.dir.length > 0 ? { dir: input.dir } : {}),
         caseSensitive: input.caseSensitive,
         wholeWord: input.wholeWord,
         regex: input.regex,
@@ -68,4 +72,46 @@ export function flattenHits(files: ContentSearchFile[] | undefined): FindHit[] {
     }
   }
   return hits;
+}
+
+export function visibleFiles(
+  files: ContentSearchFile[],
+  replacedKeys: Set<string>,
+): ContentSearchFile[] {
+  return files
+    .map((file) => ({
+      ...file,
+      matches: file.matches.filter(
+        (match) => !replacedKeys.has(matchKey(file.sourceId, file.path, match.line, match.column)),
+      ),
+    }))
+    .filter((file) => file.matches.length > 0);
+}
+
+export function matchKey(sourceId: string, path: string, line: number, column: number): string {
+  return `${sourceId}:${path}:${line}:${column}`;
+}
+
+export function targetKey(target: ContentReplaceTarget): string {
+  return matchKey(target.sourceId, target.path, target.line ?? 0, target.column ?? 0);
+}
+
+export function hitTarget(hit: FindHit): ContentReplaceTarget {
+  return {
+    sourceId: hit.sourceId,
+    path: hit.path,
+    line: hit.match.line,
+    column: hit.match.column,
+    matchText: hit.match.text.slice(hit.match.start, hit.match.end),
+  };
+}
+
+export function visibleTargets(
+  hits: FindHit[],
+  truncated: boolean,
+): ContentReplaceTarget[] | undefined {
+  if (truncated || hits.length === 0) {
+    return undefined;
+  }
+  return hits.map(hitTarget);
 }

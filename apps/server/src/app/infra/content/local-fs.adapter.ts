@@ -1,5 +1,6 @@
 import { Injectable } from '@harnesys/brix';
 import type {
+  ContentReplaceSourceResult,
   ContentSearchSourceResult,
   ContentStat,
   ContentTreeResult,
@@ -7,6 +8,7 @@ import type {
 import {
   type ContentDownload,
   type ContentReadResult,
+  type ContentReplaceRequest,
   type ContentSearchOptions,
   type ContentWriteResult,
   OrgContentPort,
@@ -25,6 +27,7 @@ import {
   statAt,
   writeAt,
 } from './fs-content-ops.ts';
+import { replaceSourceAt } from './fs-content-replace.ts';
 import { searchSourceAt } from './fs-content-search.ts';
 import { copyAt, importAt } from './fs-copy-ops.ts';
 import { listTreeAt } from './fs-tree-walk.ts';
@@ -163,9 +166,24 @@ export class LocalFsContentAdapter extends OrgContentPort {
     return searchSourceAt(
       sourceId,
       this.contentRoot(orgId, sourceId, worktreeId),
-      '',
+      options.dir ?? '',
       query,
       options,
+    );
+  }
+
+  replace(
+    orgId: string,
+    sourceId: string,
+    request: ContentReplaceRequest,
+    worktreeId?: string,
+  ): Promise<ContentReplaceSourceResult> {
+    return replaceSourceAt(
+      this.contentRoot(orgId, sourceId, worktreeId),
+      request.options.dir ?? '',
+      request.query,
+      request.replacement,
+      request.options,
     );
   }
 

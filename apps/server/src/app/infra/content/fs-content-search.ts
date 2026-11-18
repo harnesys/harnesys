@@ -1,42 +1,21 @@
-import type { Dirent } from 'node:fs';
-import { readdir, readFile, stat } from 'node:fs/promises';
-import { basename, join } from 'node:path';
+import { basename } from 'node:path';
 import {
   type ContentSearchFile,
   type ContentSearchMatch,
   type ContentSearchSourceResult,
-  MAX_SEARCH_FILE_BYTES,
   MAX_SEARCH_LINE_CHARS,
 } from '@harnesys/contracts';
-import { SAFETY_NAMES } from '../../../const.ts';
-import {
-  ContentNotFoundException,
-  ContentPathEscapeException,
-  ContentSearchQueryException,
-} from '../../domain/content/content.error.ts';
 import type { ContentSearchOptions } from '../../domain/content/org-content.port.ts';
 import { compileSearchPattern } from '../../domain/content/search-pattern.ts';
-import {
-  type GitIgnoreLayer,
-  ignoredByLayers,
-  loadIgnoreFile,
-} from '../knowledge/knowledge-walk-ignore.ts';
-import { safe } from './fs-content-ops.ts';
+import { walkTextFiles } from './fs-search-walk.ts';
 
-const BINARY_SNIFF_BYTES = 8192;
 const SEARCH_TIME_BUDGET_MS = 8000;
-const MAX_SCANNED_ENTRIES = 50_000;
 const MAX_LINE_MATCHES = 50;
 
 interface SearchState {
-  sourceId: string;
-  mask: Bun.Glob[];
   total: number;
   limit: number;
-  scanned: number;
   truncated: boolean;
-  deadline: number;
-  files: ContentSearchFile[];
 }
 
 export async function searchSourceAt(
@@ -46,164 +25,27 @@ export async function searchSourceAt(
   query: string,
   options: ContentSearchOptions,
 ): Promise<ContentSearchSourceResult> {
-  const abs = safe(root, relPath);
-  const info = await stat(abs).catch(() => undefined);
-  if (!info) {
-    throw new ContentNotFoundException(relPath);
-  }
-  if (!info.isDirectory()) {
-    throw new ContentPathEscapeException('search path is not a directory');
-  }
-  const state: SearchState = {
-    sourceId,
-    mask: compileMask(options.mask),
-    total: 0,
-    limit: options.limit,
-    scanned: 0,
-    truncated: false,
-    deadline: Date.now() + SEARCH_TIME_BUDGET_MS,
-    files: [],
-  };
   const matcher = compileSearchPattern(query, options);
-  const rootLayer = await loadIgnoreFile(join(root, '.gitignore'));
-  const layers: GitIgnoreLayer[] = rootLayer ? [{ relDir: '', ig: rootLayer }] : [];
-  await walkDirectory(state, matcher, { dir: abs, relDir: relPath, layers });
-  return { files: state.files, matchCount: state.total, truncated: state.truncated };
-}
-
-function compileMask(mask: string[]): Bun.Glob[] {
-  const globs: Bun.Glob[] = [];
-  for (const raw of mask) {
-    const pattern = raw.trim();
-    if (!pattern) {
-      continue;
-    }
-    try {
-      globs.push(new Bun.Glob(pattern));
-    } catch {
-      throw new ContentSearchQueryException(`invalid file mask: ${pattern}`, { mask: pattern });
-    }
-  }
-  return globs;
-}
-
-interface WalkInput {
-  dir: string;
-  relDir: string;
-  layers: GitIgnoreLayer[];
-}
-
-async function walkDirectory(state: SearchState, matcher: RegExp, input: WalkInput): Promise<void> {
-  if (isSearchDone(state)) {
-    return;
-  }
-  const entries = await readdir(input.dir, { withFileTypes: true }).catch(() => []);
-  for (const entry of entries) {
-    if (isSearchDone(state)) {
-      return;
-    }
-    if (await walkEntry(state, matcher, input, entry)) {
-      return;
-    }
-  }
-}
-
-async function walkEntry(
-  state: SearchState,
-  matcher: RegExp,
-  input: WalkInput,
-  entry: Dirent,
-): Promise<boolean> {
-  if (entry.isSymbolicLink()) {
-    return false;
-  }
-  state.scanned += 1;
-  if (state.scanned > MAX_SCANNED_ENTRIES) {
-    state.truncated = true;
-    return true;
-  }
-  const relName = input.relDir ? `${input.relDir}/${entry.name}` : entry.name;
-  if (SAFETY_NAMES.has(entry.name) || ignoredByLayers(input.layers, relName, entry.isDirectory())) {
-    return false;
-  }
-  const absPath = join(input.dir, entry.name);
-  if (entry.isDirectory()) {
-    await walkDirectory(state, matcher, {
-      dir: absPath,
-      relDir: relName,
-      layers: await childLayers(input.layers, absPath, relName),
-    });
-    return false;
-  }
-  if (entry.isFile() && matchesMask(state.mask, relName)) {
-    await searchFile(state, matcher, absPath, relName);
-  }
-  return false;
-}
-
-async function childLayers(
-  layers: GitIgnoreLayer[],
-  absDir: string,
-  relDir: string,
-): Promise<GitIgnoreLayer[]> {
-  const nested = await loadIgnoreFile(join(absDir, '.gitignore'));
-  return nested ? [...layers, { relDir, ig: nested }] : layers;
-}
-
-function matchesMask(mask: Bun.Glob[], relPath: string): boolean {
-  if (mask.length === 0) {
-    return true;
-  }
-  const name = basename(relPath);
-  return mask.some((glob) => glob.match(relPath) || glob.match(name));
-}
-
-function isSearchDone(state: SearchState): boolean {
-  if (state.total >= state.limit) {
-    state.truncated = true;
-    return true;
-  }
-  if (Date.now() > state.deadline) {
-    state.truncated = true;
-    return true;
-  }
-  return false;
-}
-
-async function searchFile(
-  state: SearchState,
-  matcher: RegExp,
-  absPath: string,
-  relPath: string,
-): Promise<void> {
-  const info = await stat(absPath).catch(() => undefined);
-  if (!info || info.size === 0 || info.size > MAX_SEARCH_FILE_BYTES) {
-    return;
-  }
-  const bytes = await readFile(absPath).catch(() => undefined);
-  if (!bytes || isBinary(bytes)) {
-    return;
-  }
-  const matches = collectFileMatches(matcher, new TextDecoder('utf-8').decode(bytes), state);
-  if (matches.length === 0) {
-    return;
-  }
-  state.files.push({
-    sourceId: state.sourceId,
-    path: relPath,
-    name: basename(relPath),
-    matches,
+  const state: SearchState = { total: 0, limit: options.limit, truncated: false };
+  const files: ContentSearchFile[] = [];
+  const walk = await walkTextFiles({
+    root,
+    relPath,
+    mask: options.mask,
+    deadline: Date.now() + SEARCH_TIME_BUDGET_MS,
+    shouldStop: () => state.total >= state.limit,
+    onFile: ({ relPath: filePath, content }) => {
+      const matches = collectFileMatches(matcher, content, state);
+      if (matches.length > 0) {
+        files.push({ sourceId, path: filePath, name: basename(filePath), matches });
+      }
+    },
   });
-}
-
-function isBinary(bytes: Uint8Array): boolean {
-  const limit = Math.min(bytes.length, BINARY_SNIFF_BYTES);
-  for (let index = 0; index < limit; index += 1) {
-    if (bytes[index] === 0) {
-      return true;
-    }
-  }
-  return false;
+  return {
+    files,
+    matchCount: state.total,
+    truncated: state.truncated || walk.truncated,
+  };
 }
 
 function collectFileMatches(

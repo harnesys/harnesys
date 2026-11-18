@@ -182,7 +182,7 @@ export function FileRow({
   gitMap?: GitFileStatusMap;
   gitTruncated?: boolean;
   onToggle: (fullPath: string) => void;
-  onSelect: (fullPath: string, event?: React.MouseEvent) => void;
+  onSelect: (fullPath: string, event?: React.MouseEvent, isDir?: boolean) => void;
   onOpen: (fullPath: string) => void;
   onStartCreate: (kind: 'file' | 'dir', parentPath: string) => void;
   onStartRename: (fullPath: string) => void;
@@ -235,7 +235,7 @@ export function FileRow({
       onToggle(fullPath);
       return;
     }
-    onSelect(fullPath, event);
+    onSelect(fullPath, event, isDir);
   };
   const handleDoubleClick = () => {
     if (isDir) {
@@ -252,11 +252,11 @@ export function FileRow({
     if (isDir) {
       onToggle(fullPath);
     }
-    onSelect(fullPath);
+    onSelect(fullPath, undefined, isDir);
   };
   const handleContextMenu = () => {
     if (!selected) {
-      onSelect(fullPath);
+      onSelect(fullPath, undefined, isDir);
     }
   };
   const menuProps: FileRowMenuProps = {

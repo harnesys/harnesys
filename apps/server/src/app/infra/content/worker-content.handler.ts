@@ -25,6 +25,7 @@ import {
   statAt,
   writeAt,
 } from './fs-content-ops.ts';
+import { replaceSourceAt } from './fs-content-replace.ts';
 import { searchSourceAt } from './fs-content-search.ts';
 import { copyAt } from './fs-copy-ops.ts';
 import { listTreeAt } from './fs-tree-walk.ts';
@@ -171,6 +172,15 @@ async function executeOp(orgId: string, req: WorkerRequest, deps: ContentOpDeps)
         regex: req.regex === true,
         mask: maskList(req.mask),
         limit: req.limit ?? MAX_SEARCH_MATCHES,
+      });
+    case 'replace':
+      return replaceSourceAt(root, req.relPath, req.query ?? '', req.replacement ?? '', {
+        caseSensitive: req.caseSensitive === true,
+        wholeWord: req.wholeWord === true,
+        regex: req.regex === true,
+        mask: maskList(req.mask),
+        dryRun: req.dryRun === true,
+        ...(req.targets ? { targets: req.targets } : {}),
       });
     default:
       throw new HttpException(400, 'VALIDATION_ERROR', `unknown op`);

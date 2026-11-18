@@ -1,4 +1,5 @@
 import type {
+  ContentReplaceSourceResult,
   ContentSearchSourceResult,
   ContentStat,
   ContentTreeResult,
@@ -20,12 +21,36 @@ export interface ContentDownload {
   bytes: Uint8Array;
 }
 
-export interface ContentSearchOptions {
+export interface PatternOptions {
   caseSensitive: boolean;
   wholeWord: boolean;
   regex: boolean;
+}
+
+export interface ContentSearchOptions extends PatternOptions {
   mask: string[];
   limit: number;
+  dir?: string;
+}
+
+export interface ContentReplaceFileTarget {
+  path: string;
+  line?: number;
+  column?: number;
+  matchText?: string;
+}
+
+export interface ContentReplaceOptions extends PatternOptions {
+  mask: string[];
+  dir?: string;
+  dryRun: boolean;
+  targets?: ContentReplaceFileTarget[];
+}
+
+export interface ContentReplaceRequest {
+  query: string;
+  replacement: string;
+  options: ContentReplaceOptions;
 }
 
 export abstract class OrgContentPort {
@@ -113,4 +138,10 @@ export abstract class OrgContentPort {
     options: ContentSearchOptions,
     worktreeId?: string,
   ): Promise<ContentSearchSourceResult>;
+  abstract replace(
+    orgId: string,
+    sourceId: string,
+    request: ContentReplaceRequest,
+    worktreeId?: string,
+  ): Promise<ContentReplaceSourceResult>;
 }

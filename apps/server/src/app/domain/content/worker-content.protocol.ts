@@ -2,6 +2,7 @@ import {
   MAX_SEARCH_LIMIT,
   MAX_SEARCH_MASK_CHARS,
   MAX_SEARCH_QUERY_CHARS,
+  MAX_SEARCH_REPLACEMENT_CHARS,
 } from '@harnesys/contracts';
 import { z } from 'zod';
 
@@ -21,6 +22,7 @@ export const WorkerContentOpSchema = z.enum([
   'reveal',
   'download',
   'search',
+  'replace',
 ]);
 export type WorkerContentOp = z.infer<typeof WorkerContentOpSchema>;
 
@@ -38,6 +40,18 @@ export const WorkerContentRequestSchema = z.object({
   includeIgnored: z.boolean().optional(),
   depth: z.number().int().min(1).optional(),
   query: z.string().min(1).max(MAX_SEARCH_QUERY_CHARS).optional(),
+  replacement: z.string().max(MAX_SEARCH_REPLACEMENT_CHARS).optional(),
+  dryRun: z.boolean().optional(),
+  targets: z
+    .array(
+      z.object({
+        path: z.string().min(1),
+        line: z.number().int().min(1).optional(),
+        column: z.number().int().min(1).optional(),
+        matchText: z.string().optional(),
+      }),
+    )
+    .optional(),
   caseSensitive: z.boolean().optional(),
   wholeWord: z.boolean().optional(),
   regex: z.boolean().optional(),

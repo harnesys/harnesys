@@ -6,8 +6,8 @@ import {
   type ContentSearchResponse,
   MAX_SEARCH_MATCHES,
 } from '@harnesys/contracts';
-import type { ContentSearchOptions } from '../../domain/content/org-content.port.ts';
 import { OrgContentPort } from '../../domain/content/org-content.port.ts';
+import { searchOptionsFromQuery } from '../../domain/content/search-options.ts';
 import { compileSearchPattern } from '../../domain/content/search-pattern.ts';
 import type { SourceRecord } from '../../domain/source/source-registry.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
@@ -28,7 +28,7 @@ export class SearchContentUseCase {
 
   async execute(input: SearchContentInput): Promise<ContentSearchResponse> {
     const limit = input.query.limit ?? MAX_SEARCH_MATCHES;
-    const options = toOptions(input.query, limit);
+    const options = searchOptionsFromQuery(input.query, limit);
     compileSearchPattern(input.query.q, options);
     const targets = this.resolveTargets(input);
     const files: ContentSearchFile[] = [];
@@ -65,17 +65,4 @@ export class SearchContentUseCase {
     const sourceId = input.query.sourceId;
     return sourceId === undefined ? visible : visible.filter((row) => row.id === sourceId);
   }
-}
-
-function toOptions(query: ContentSearchQuery, limit: number): ContentSearchOptions {
-  return {
-    caseSensitive: query.caseSensitive === 'true',
-    wholeWord: query.wholeWord === 'true',
-    regex: query.regex === 'true',
-    mask: (query.mask ?? '')
-      .split(',')
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0),
-    limit,
-  };
 }

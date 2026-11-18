@@ -70,6 +70,7 @@ export function ExplorerContent({
   const selectionScope = useFileSelectionStore((s) => s.scopeWorktreeId);
   const setScope = useFileSelectionStore((s) => s.setScope);
   const setFilesActive = useFileSelectionStore((s) => s.setFilesActive);
+  const setSelectedDir = useFileSelectionStore((s) => s.setSelectedDir);
   const selectSingle = useFileSelectionStore((s) => s.selectSingle);
   const togglePath = useFileSelectionStore((s) => s.togglePath);
   const selectRange = useFileSelectionStore((s) => s.selectRange);
@@ -232,9 +233,12 @@ export function ExplorerContent({
   const activateProject = () => {
     setScope(projectId, null);
   };
-  const handleSelect = (path: string, event?: React.MouseEvent) => {
+  const handleSelect = (path: string, event?: React.MouseEvent, isDir?: boolean) => {
     activateProject();
     setFilesActive(true);
+    setSelectedDir(
+      isDir === true && !event?.shiftKey && !event?.metaKey && !event?.ctrlKey ? path : null,
+    );
     if (event?.shiftKey) {
       const anchor = useFileSelectionStore.getState().anchorPath;
       if (!anchor) {

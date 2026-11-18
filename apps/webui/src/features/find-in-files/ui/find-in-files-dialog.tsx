@@ -1,53 +1,77 @@
 import { AlertTriangleIcon, LoaderCircleIcon, SearchIcon, SearchXIcon } from 'lucide-react';
 import { type KeyboardEvent, useState } from 'react';
 import { useProjects } from '@/entities/project';
-import type { ContentSearchError, ContentSearchResponse } from '@/shared/api/content-search';
+import type { ContentSearchFile, ContentSearchResponse } from '@/shared/api/content-search';
 import { useOrgId } from '@/shared/config/location';
-import { cn } from '@/shared/lib/utils';
 import type { DialogComponentProps } from '@/shared/services/overlay';
 import { DialogTitle } from '@/shared/ui/dialog';
 import { Resizer } from '@/shared/ui/resizer';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Spinner } from '@/shared/ui/spinner';
+import type { FindInFilesMode, FindInFilesOptions } from '../index';
 import {
   ALL_SOURCES,
   type FindHit,
   flattenHits,
+  hitTarget,
   useFindInFilesSearch,
+  visibleFiles,
+  visibleTargets,
 } from '../model/find-in-files-search';
 import { useOpenFindHit } from '../model/open-find-hit';
 import { useDebouncedValue } from '../model/use-debounced-value';
 import { usePreviewHeight } from '../model/use-preview-height';
-import { FindMaskField } from './find-mask-field';
+import { useReplaceFlow } from '../model/use-replace-flow';
+import { useReplacedHits } from '../model/use-replaced-hits';
 import { FindPlaceholder } from './find-placeholder';
 import { FindPreviewPane } from './find-preview-pane';
+import { FindReplaceConfirm } from './find-replace-confirm';
+import { FindReplaceField } from './find-replace-field';
 import { FindResultsList } from './find-results-list';
+import { FindScopeRow } from './find-scope-row';
 import { FindSearchField } from './find-search-field';
 
 const DEBOUNCE_MS = 250;
 type SearchSummary = Pick<ContentSearchResponse, 'matchCount' | 'fileCount' | 'truncated'>;
 
-export function FindInFilesDialog({ onResolve }: DialogComponentProps<void>) {
+export function FindInFilesDialog({
+  onResolve,
+  data,
+}: DialogComponentProps<void, FindInFilesOptions>) {
   const orgId = useOrgId() ?? '';
+  const mode: FindInFilesMode = data?.mode ?? 'find';
   const { data: projects } = useProjects();
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(data?.initialQuery ?? '');
+  const [replacement, setReplacement] = useState('');
   const [mask, setMask] = useState('');
-  const [sourceId, setSourceId] = useState<string>(ALL_SOURCES);
+  const [sourceId, setSourceId] = useState<string>(data?.sourceId ?? ALL_SOURCES);
+  const [dir, setDir] = useState(data?.dir ?? '');
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [wholeWord, setWholeWord] = useState(false);
   const [regex, setRegex] = useState(false);
   const debouncedQ = useDebouncedValue(q.trim(), DEBOUNCE_MS);
   const debouncedMask = useDebouncedValue(mask.trim(), DEBOUNCE_MS);
-  const search = useFindInFilesSearch({
+  const searchInput = {
     orgId,
     q: debouncedQ,
     sourceId,
+    dir,
     caseSensitive,
     wholeWord,
     regex,
     mask: debouncedMask,
+  };
+  const search = useFindInFilesSearch(searchInput);
+  const flow = useReplaceFlow(orgId, {
+    q: debouncedQ,
+    replacement,
+    ...(sourceId === ALL_SOURCES ? {} : { sourceId }),
+    ...(dir.length > 0 ? { dir } : {}),
+    caseSensitive,
+    wholeWord,
+    regex,
+    ...(debouncedMask.length > 0 ? { mask: debouncedMask } : {}),
   });
-  const queryKey = [debouncedQ, debouncedMask, sourceId, caseSensitive, wholeWord, regex].join(
+  const queryKey = [debouncedQ, debouncedMask, sourceId, dir, caseSensitive, wholeWord, regex].join(
     '\n',
   );
   const [selection, setSelection] = useState<{ key: string; index: number }>({
@@ -58,9 +82,10 @@ export function FindInFilesDialog({ onResolve }: DialogComponentProps<void>) {
   const setSelected = (index: number) => {
     setSelection({ key: queryKey, index });
   };
+  const replacedHits = useReplacedHits(queryKey);
   const openHit = useOpenFindHit();
   const preview = usePreviewHeight();
-  const files = search.data?.files ?? [];
+  const files = visibleFiles(search.data?.files ?? [], replacedHits.replacedKeys);
   const hits = flattenHits(files);
   const activeIndex = hits.length === 0 ? -1 : Math.min(selected, hits.length - 1);
   const activeHit = activeIndex >= 0 ? hits[activeIndex] : undefined;
@@ -97,12 +122,40 @@ export function FindInFilesDialog({ onResolve }: DialogComponentProps<void>) {
     }
   };
 
+  const handleReplaceOne = async () => {
+    if (activeHit === undefined || debouncedQ.length === 0) {
+      return;
+    }
+    const target = hitTarget(activeHit);
+    if (await flow.replaceOne(target)) {
+      replacedHits.drop([target]);
+    }
+  };
+
+  const handleReplaceAll = async () => {
+    if (debouncedQ.length === 0) {
+      return;
+    }
+    if (flow.confirmation === null) {
+      await flow.requestPreview(visibleTargets(hits, search.data?.truncated === true));
+      return;
+    }
+    const applied = await flow.apply();
+    if (applied !== null) {
+      replacedHits.drop(applied);
+    }
+  };
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2" data-testid="find-in-files-dialog">
       <DialogTitle className="flex items-baseline gap-2 text-sm">
-        Find in Files
+        {mode === 'replace' ? 'Replace in Files' : 'Find in Files'}
         <span className="font-normal text-muted-foreground text-xs">
-          {summaryText(search.data)}
+          {summaryText({
+            matchCount: hits.length,
+            fileCount: files.length,
+            truncated: search.data?.truncated ?? false,
+          })}
         </span>
         {search.isFetching ? <Spinner className="size-3" /> : null}
       </DialogTitle>
@@ -117,44 +170,47 @@ export function FindInFilesDialog({ onResolve }: DialogComponentProps<void>) {
         onRegex={setRegex}
         onFieldKeyDown={handleKeyDown}
       />
-      <div className="flex items-center gap-2">
-        <Select
-          items={[{ value: ALL_SOURCES, label: 'All sources' }, ...sourceItems(projects ?? [])]}
-          value={sourceId}
-          onValueChange={(next) => {
-            if (typeof next === 'string') {
-              setSourceId(next);
-            }
-          }}
-        >
-          <SelectTrigger
-            className="h-7 w-56"
-            aria-label="Search scope"
-            data-testid="find-in-files-scope"
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_SOURCES}>All sources</SelectItem>
-            {(projects ?? []).map((project) => (
-              <SelectItem key={project.id} value={project.id}>
-                {project.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <span className={cn('text-status-warn text-xs', errors.length === 0 && 'hidden')}>
-          {unavailableText(errors)}
-        </span>
-        <div className="ml-auto">
-          <FindMaskField mask={mask} onMask={setMask} />
-        </div>
-      </div>
+      {mode === 'replace' ? (
+        <FindReplaceField
+          value={replacement}
+          onValue={setReplacement}
+          onReplace={handleReplaceOne}
+          onReplaceAll={handleReplaceAll}
+          replaceDisabled={activeHit === undefined}
+          replaceAllDisabled={debouncedQ.length === 0 || (search.data?.matchCount ?? 0) === 0}
+          pending={flow.pendingKind}
+        />
+      ) : null}
+      {flow.confirmation === null ? null : (
+        <FindReplaceConfirm
+          matches={flow.confirmation.matches}
+          files={flow.confirmation.files}
+          applying={flow.pending}
+          onApply={flow.apply}
+          onCancel={flow.dismiss}
+        />
+      )}
+      <FindScopeRow
+        projects={projects ?? []}
+        sourceId={sourceId}
+        onSourceId={(next) => {
+          setSourceId(next);
+          setDir('');
+        }}
+        dir={dir}
+        onClearDir={() => {
+          setDir('');
+        }}
+        mask={mask}
+        onMask={setMask}
+        errors={errors}
+      />
       <div ref={preview.containerRef} className="flex min-h-0 flex-1 flex-col gap-1.5">
         <ResultsArea
           q={debouncedQ}
           pending={search.isPending}
-          data={search.data}
+          files={files}
+          matchCount={hits.length}
           error={search.error instanceof Error ? search.error : null}
           selectedIndex={activeIndex}
           onSelect={setSelected}
@@ -178,7 +234,8 @@ export function FindInFilesDialog({ onResolve }: DialogComponentProps<void>) {
 function ResultsArea({
   q,
   pending,
-  data,
+  files,
+  matchCount,
   error,
   selectedIndex,
   onSelect,
@@ -186,7 +243,8 @@ function ResultsArea({
 }: {
   q: string;
   pending: boolean;
-  data: ContentSearchResponse | undefined;
+  files: ContentSearchFile[];
+  matchCount: number;
   error: Error | null;
   selectedIndex: number;
   onSelect: (index: number) => void;
@@ -200,26 +258,22 @@ function ResultsArea({
   if (error) {
     return <FindPlaceholder icon={<AlertTriangleIcon />} text={error.message} />;
   }
-  if (pending && data === undefined) {
+  if (pending && matchCount === 0) {
     return (
       <FindPlaceholder icon={<LoaderCircleIcon className="animate-spin" />} text="Searching…" />
     );
   }
-  if (!data || data.matchCount === 0) {
+  if (matchCount === 0) {
     return <FindPlaceholder icon={<SearchXIcon />} text="No matches found." />;
   }
   return (
     <FindResultsList
-      files={data.files}
+      files={files}
       selectedIndex={selectedIndex}
       onSelect={onSelect}
       onOpen={onOpen}
     />
   );
-}
-
-function sourceItems(projects: Array<{ id: string; name: string }>) {
-  return projects.map((project) => ({ value: project.id, label: project.name }));
 }
 
 function summaryText(data: SearchSummary | undefined): string {
@@ -231,13 +285,6 @@ function summaryText(data: SearchSummary | undefined): string {
   }
   const suffix = data.truncated ? '+' : '';
   return `${data.matchCount}${suffix} ${plural(data.matchCount, 'match', 'matches')} in ${data.fileCount} ${plural(data.fileCount, 'file', 'files')}`;
-}
-
-function unavailableText(errors: ContentSearchError[]): string {
-  if (errors.length === 0) {
-    return '';
-  }
-  return `${errors.map((error) => error.sourceName).join(', ')} unavailable`;
 }
 
 function plural(count: number, one: string, many: string): string {

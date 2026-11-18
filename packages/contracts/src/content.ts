@@ -5,6 +5,8 @@ export const MAX_DOWNLOAD_BYTES = 100 * 1024 * 1024;
 export const MAX_TREE_ENTRIES = 20_000;
 export const MAX_SEARCH_QUERY_CHARS = 200;
 export const MAX_SEARCH_MASK_CHARS = 200;
+export const MAX_SEARCH_DIR_CHARS = 400;
+export const MAX_SEARCH_REPLACEMENT_CHARS = 1000;
 export const MAX_SEARCH_LIMIT = 1000;
 export const MAX_SEARCH_MATCHES = 500;
 export const MAX_SEARCH_FILE_BYTES = 2_000_000;
@@ -131,6 +133,7 @@ export type ContentDownloadResult = z.infer<typeof ContentDownloadResultSchema>;
 export const ContentSearchQuerySchema = z.object({
   q: z.string().min(1).max(MAX_SEARCH_QUERY_CHARS),
   sourceId: z.string().min(1).optional(),
+  dir: z.string().max(MAX_SEARCH_DIR_CHARS).optional(),
   caseSensitive: z.enum(['true', 'false']).optional(),
   wholeWord: z.enum(['true', 'false']).optional(),
   regex: z.enum(['true', 'false']).optional(),
@@ -174,6 +177,52 @@ export type ContentSearchResponse = z.infer<typeof ContentSearchResponseSchema>;
 
 export interface ContentSearchSourceResult {
   files: ContentSearchFile[];
+  matchCount: number;
+  truncated: boolean;
+}
+
+export const ContentReplaceTargetSchema = z.object({
+  sourceId: z.string().min(1),
+  path: z.string().min(1),
+  line: z.number().int().min(1).optional(),
+  column: z.number().int().min(1).optional(),
+  matchText: z.string().max(MAX_SEARCH_LINE_CHARS).optional(),
+});
+export type ContentReplaceTarget = z.infer<typeof ContentReplaceTargetSchema>;
+
+export const ContentReplaceBodySchema = z.object({
+  q: z.string().min(1).max(MAX_SEARCH_QUERY_CHARS),
+  replacement: z.string().max(MAX_SEARCH_REPLACEMENT_CHARS),
+  sourceId: z.string().min(1).optional(),
+  dir: z.string().max(MAX_SEARCH_DIR_CHARS).optional(),
+  caseSensitive: z.boolean().optional(),
+  wholeWord: z.boolean().optional(),
+  regex: z.boolean().optional(),
+  mask: z.string().max(MAX_SEARCH_MASK_CHARS).optional(),
+  dryRun: z.boolean().optional(),
+  targets: z.array(ContentReplaceTargetSchema).min(1).max(MAX_SEARCH_LIMIT).optional(),
+});
+export type ContentReplaceBody = z.infer<typeof ContentReplaceBodySchema>;
+
+export const ContentReplaceFileSchema = z.object({
+  sourceId: z.string().min(1),
+  path: z.string(),
+  replaced: z.number().int().nonnegative(),
+});
+export type ContentReplaceFile = z.infer<typeof ContentReplaceFileSchema>;
+
+export const ContentReplaceResponseSchema = z.object({
+  fileCount: z.number().int().nonnegative(),
+  matchCount: z.number().int().nonnegative(),
+  files: z.array(ContentReplaceFileSchema),
+  truncated: z.boolean(),
+  dryRun: z.boolean(),
+  errors: z.array(ContentSearchErrorSchema),
+});
+export type ContentReplaceResponse = z.infer<typeof ContentReplaceResponseSchema>;
+
+export interface ContentReplaceSourceResult {
+  files: Array<{ path: string; replaced: number }>;
   matchCount: number;
   truncated: boolean;
 }

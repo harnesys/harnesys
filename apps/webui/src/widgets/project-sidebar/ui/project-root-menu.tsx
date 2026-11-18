@@ -9,32 +9,33 @@ import {
   LinkIcon,
   MoreHorizontalIcon,
   RefreshCwIcon,
+  ReplaceIcon,
   ScanSearchIcon,
+  SearchIcon,
   SettingsIcon,
   SquareTerminalIcon,
 } from 'lucide-react';
-import { useState } from 'react';
+import { openFindInFilesDialog, openReplaceInFilesDialog } from '@/features/find-in-files';
 import { useOpenNewTerminal } from '@/features/ide';
 import { openProjectSettingsDialog } from '@/features/manage-project-settings';
 import { getActiveOrgId } from '@/shared/api/active-org';
 import { refreshOrgAddonSource } from '@/shared/api/addon-sources';
 import { revealProjectEntry, sourceFilesTreeQueryKey } from '@/shared/api/files';
 import { selfNodeCached } from '@/shared/api/fleet';
-import { invalidateGitOrgSummary, pushGit, setGitRemote } from '@/shared/api/git';
+import { invalidateGitOrgSummary, pushGit } from '@/shared/api/git';
 import { type BridgedProject, projectQueryKey } from '@/shared/api/projects';
 import { getSourceHostStatus, refreshGitSource } from '@/shared/api/sources';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
 import { IconRef } from '@/shared/ui/icon';
-import { Input } from '@/shared/ui/input';
 import { toast } from '@/shared/ui/toast';
 import { useExplorerDraftStore } from '../model/explorer-draft.store';
 import { useViewerCreates } from '../model/viewer-creates';
@@ -44,16 +45,54 @@ import {
 } from '../model/worktrees-visibility.store';
 import { GitRepoMenuItems } from './git-menu';
 
+export interface ProjectRootMenuProps {
+  projectId: string;
+  dirPath: string;
+  project?: BridgedProject;
+  onAddRemote: () => void;
+}
+
 export function ProjectRootMenu({
   projectId,
   dirPath,
   project,
-}: {
-  projectId: string;
-  dirPath: string;
-  project?: BridgedProject;
-}) {
-  const [addRemoteOpen, setAddRemoteOpen] = useState(false);
+  onAddRemote,
+}: ProjectRootMenuProps) {
+  const label = dirPath || 'project root';
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label={`Folder actions · ${label}`}
+            className="opacity-0 group-hover/file:opacity-100 group-hover/ws:opacity-100 data-open:opacity-100"
+          />
+        }
+        onClick={(event) => event.stopPropagation()}
+      >
+        <MoreHorizontalIcon className="text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
+        <span className="sr-only">Folder actions</span>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
+        <ProjectRootMenuItems
+          projectId={projectId}
+          dirPath={dirPath}
+          project={project}
+          onAddRemote={onAddRemote}
+        />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+export function ProjectRootMenuItems({
+  projectId,
+  dirPath,
+  project,
+  onAddRemote,
+}: ProjectRootMenuProps) {
   const start = useExplorerDraftStore((state) => state.start);
   const viewerCreates = useViewerCreates();
   const queryClient = useQueryClient();
@@ -63,7 +102,6 @@ export function ProjectRootMenu({
   const hasRemote = project?.gitRemote != null;
   const mayHaveGit = project ? project.driver === 'host-bound' || hasGit : false;
   const isCloud = project?.driver === 'addon-cloud';
-  const label = dirPath || 'project root';
   const refreshMutation = useMutation({
     mutationFn: async (): Promise<{ conflicts?: string[] } | undefined> => {
       const orgId = getActiveOrgId();
@@ -121,147 +159,151 @@ export function ProjectRootMenu({
   };
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label={`Folder actions · ${label}`}
-              className="opacity-0 group-hover/file:opacity-100 group-hover/ws:opacity-100 data-open:opacity-100"
-            />
-          }
-          onClick={(event) => event.stopPropagation()}
+      <DropdownMenuGroup>
+        <DropdownMenuItem onClick={() => start('file', dirPath, projectId)}>
+          <FileIcon className="size-3.5" />
+          New file
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => start('dir', dirPath, projectId)}>
+          <FolderIcon className="size-3.5" />
+          New folder
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          data-testid="project-find-in-files"
+          onClick={() => {
+            void openFindInFilesDialog({
+              sourceId: projectId,
+              ...(isRoot ? {} : { dir: dirPath }),
+            });
+          }}
         >
-          <MoreHorizontalIcon className="text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
-          <span className="sr-only">Folder actions</span>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
-          <DropdownMenuGroup>
-            <DropdownMenuItem onClick={() => start('file', dirPath, projectId)}>
+          <SearchIcon className="size-3.5" />
+          Find in Files
+          <DropdownMenuShortcut>⇧⌘F</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          data-testid="project-replace-in-files"
+          onClick={() => {
+            void openReplaceInFilesDialog({
+              sourceId: projectId,
+              ...(isRoot ? {} : { dir: dirPath }),
+            });
+          }}
+        >
+          <ReplaceIcon className="size-3.5" />
+          Replace in Files
+          <DropdownMenuShortcut>⇧⌘R</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          data-testid="project-open-terminal"
+          onClick={() => {
+            void openNewTerminal(projectId, isRoot ? undefined : dirPath).catch(
+              (error: unknown) => {
+                toast.add({
+                  title: 'Failed to open terminal',
+                  description: error instanceof Error ? error.message : undefined,
+                });
+              },
+            );
+          }}
+        >
+          <SquareTerminalIcon className="size-3.5" />
+          Terminal
+        </DropdownMenuItem>
+        {viewerCreates.length > 0 ? <DropdownMenuSeparator /> : null}
+        {viewerCreates.map((template) => (
+          <DropdownMenuItem
+            key={template.viewerId}
+            onClick={() => start('file', dirPath, projectId, template)}
+          >
+            {template.icon === undefined ? (
               <FileIcon className="size-3.5" />
-              New file
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => start('dir', dirPath, projectId)}>
-              <FolderIcon className="size-3.5" />
-              New folder
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
+            ) : (
+              <IconRef icon={template.icon} className="size-3.5" />
+            )}
+            {template.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuGroup>
+      <DropdownMenuSeparator />
+      <DropdownMenuGroup>
+        <DropdownMenuItem onClick={() => void copyPath()}>
+          <ClipboardIcon className="size-3.5" />
+          Copy path
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          data-testid="project-reveal-in-finder"
+          onClick={() => {
+            revealProjectEntry(projectId, dirPath || '.').catch((error: unknown) => {
+              toast.add({
+                title: 'Reveal failed',
+                description: error instanceof Error ? error.message : undefined,
+              });
+            });
+          }}
+        >
+          <ScanSearchIcon className="size-3.5" />
+          Reveal in Finder
+        </DropdownMenuItem>
+      </DropdownMenuGroup>
+      {isRoot && mayHaveGit ? (
+        <>
+          <DropdownMenuSeparator />
+          <GitRepoMenuItems
+            projectId={projectId}
+            includeRemoteRefresh={hasGit && hasRemote}
+            remoteRefreshPending={refreshMutation.isPending}
+            onRemoteRefresh={hasGit && hasRemote ? () => refreshMutation.mutate() : undefined}
+          />
+          {hasGit && !hasRemote ? (
             <DropdownMenuItem
-              data-testid="project-open-terminal"
-              onClick={() => {
-                void openNewTerminal(projectId, isRoot ? undefined : dirPath).catch(
-                  (error: unknown) => {
-                    toast.add({
-                      title: 'Failed to open terminal',
-                      description: error instanceof Error ? error.message : undefined,
-                    });
-                  },
-                );
+              data-testid="project-add-remote"
+              onClick={(event) => {
+                event.stopPropagation();
+                onAddRemote();
               }}
             >
-              <SquareTerminalIcon className="size-3.5" />
-              Terminal
+              <LinkIcon className="size-3.5" />
+              Add remote…
             </DropdownMenuItem>
-            {viewerCreates.length > 0 ? <DropdownMenuSeparator /> : null}
-            {viewerCreates.map((template) => (
-              <DropdownMenuItem
-                key={template.viewerId}
-                onClick={() => start('file', dirPath, projectId, template)}
-              >
-                {template.icon === undefined ? (
-                  <FileIcon className="size-3.5" />
-                ) : (
-                  <IconRef icon={template.icon} className="size-3.5" />
-                )}
-                {template.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuGroup>
+          ) : null}
+          {hasGit && hasRemote ? <PublishMenuItem projectId={projectId} /> : null}
+          {hasGit ? <WorktreesToggleItem projectId={projectId} /> : null}
+        </>
+      ) : null}
+      {isRoot && isCloud ? (
+        <>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem onClick={() => void copyPath()}>
-              <ClipboardIcon className="size-3.5" />
-              Copy path
-            </DropdownMenuItem>
             <DropdownMenuItem
-              data-testid="project-reveal-in-finder"
-              onClick={() => {
-                revealProjectEntry(projectId, dirPath || '.').catch((error: unknown) => {
-                  toast.add({
-                    title: 'Reveal failed',
-                    description: error instanceof Error ? error.message : undefined,
-                  });
-                });
-              }}
+              data-testid="project-cloud-refresh"
+              disabled={refreshMutation.isPending}
+              onClick={() => refreshMutation.mutate()}
             >
-              <ScanSearchIcon className="size-3.5" />
-              Reveal in Finder
+              <RefreshCwIcon className="size-3.5" />
+              Refresh
             </DropdownMenuItem>
           </DropdownMenuGroup>
-          {isRoot && mayHaveGit ? (
-            <>
-              <DropdownMenuSeparator />
-              <GitRepoMenuItems
-                projectId={projectId}
-                includeRemoteRefresh={hasGit && hasRemote}
-                remoteRefreshPending={refreshMutation.isPending}
-                onRemoteRefresh={hasGit && hasRemote ? () => refreshMutation.mutate() : undefined}
-              />
-              {hasGit && !hasRemote ? (
-                <DropdownMenuItem
-                  data-testid="project-add-remote"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setAddRemoteOpen(true);
-                  }}
-                >
-                  <LinkIcon className="size-3.5" />
-                  Add remote…
-                </DropdownMenuItem>
-              ) : null}
-              {hasGit && hasRemote ? <PublishMenuItem projectId={projectId} /> : null}
-              {hasGit ? <WorktreesToggleItem projectId={projectId} /> : null}
-            </>
-          ) : null}
-          {isRoot && isCloud ? (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem
-                  data-testid="project-cloud-refresh"
-                  disabled={refreshMutation.isPending}
-                  onClick={() => refreshMutation.mutate()}
-                >
-                  <RefreshCwIcon className="size-3.5" />
-                  Refresh
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </>
-          ) : null}
-          {isRoot ? (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem
-                  data-testid="project-settings"
-                  onClick={() => {
-                    void openProjectSettingsDialog(projectId);
-                  }}
-                >
-                  <SettingsIcon className="size-3.5" />
-                  Settings…
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </>
-          ) : null}
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <AddRemoteDialog
-        projectId={projectId}
-        open={addRemoteOpen}
-        onClose={() => setAddRemoteOpen(false)}
-      />
+        </>
+      ) : null}
+      {isRoot ? (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem
+              data-testid="project-settings"
+              onClick={() => {
+                void openProjectSettingsDialog(projectId);
+              }}
+            >
+              <SettingsIcon className="size-3.5" />
+              Settings…
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </>
+      ) : null}
     </>
   );
 }
@@ -280,70 +322,6 @@ function WorktreesToggleItem({ projectId }: { projectId: string }) {
       {worktreesHidden ? <EyeIcon className="size-3.5" /> : <EyeOffIcon className="size-3.5" />}
       {worktreesHidden ? 'Show worktrees' : 'Hide worktrees'}
     </DropdownMenuItem>
-  );
-}
-
-function AddRemoteDialog({
-  projectId,
-  open,
-  onClose,
-}: {
-  projectId: string;
-  open: boolean;
-  onClose: () => void;
-}) {
-  const qc = useQueryClient();
-  const [url, setUrl] = useState('');
-  const save = useMutation({
-    mutationFn: () => setGitRemote(projectId, { url: url.trim() }),
-    onSuccess: async () => {
-      onClose();
-      setUrl('');
-      await qc.invalidateQueries({ queryKey: projectQueryKey });
-      invalidateGitOrgSummary(qc);
-      toast.add({ title: 'Remote added' });
-    },
-    onError: (err: unknown) => {
-      toast.add({
-        title: 'Could not add remote',
-        description: err instanceof Error ? err.message : undefined,
-      });
-    },
-  });
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) {
-          onClose();
-          setUrl('');
-        }
-      }}
-    >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add remote origin</DialogTitle>
-        </DialogHeader>
-        <Input
-          data-testid="project-add-remote-url"
-          value={url}
-          placeholder="https://github.com/user/repo.git"
-          onChange={(event) => setUrl(event.target.value)}
-        />
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            data-testid="project-add-remote-save"
-            disabled={!url.trim() || save.isPending}
-            onClick={() => save.mutate()}
-          >
-            Save
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 
