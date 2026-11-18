@@ -44,7 +44,11 @@ export async function buildMergedSkills(
   const org = deps.skills.list(orgId);
   const plugin = await pluginSkills(deps, orgId);
   const source = await sourceSkills(deps, orgId, options);
-  return [...tier, ...org, ...plugin, ...source];
+  const byName = new Map<string, OrgSkill>();
+  for (const skill of [...tier, ...org, ...plugin, ...source]) {
+    byName.set(skill.name, skill);
+  }
+  return [...byName.values()];
 }
 
 async function tierSkills(deps: MergedSkillsDeps): Promise<OrgSkill[]> {
