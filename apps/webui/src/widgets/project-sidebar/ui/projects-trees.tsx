@@ -1,3 +1,4 @@
+import { ChevronRightIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useProjects } from '@/entities/project';
 import { openAddSourceDialog } from '@/features/attach-source';
@@ -14,6 +15,7 @@ import type { BridgedProject } from '@/shared/api/projects';
 import { useOrgId } from '@/shared/config/location';
 import { setEntityRefDrag } from '@/shared/lib/entity-ref-drag';
 import { cn } from '@/shared/lib/utils';
+import { SidebarRow, SidebarRowTitle } from '@/shared/ui/sidebar-row';
 import { useExplorerExpandStore } from '../model/explorer-expand.store';
 import { useHiddenSourceIds, useSourceVisibilityStore } from '../model/source-visibility.store';
 import { useOrgGitSummaries } from '../model/use-git-changes';
@@ -86,40 +88,46 @@ function ProjectRoot({
       moveMutation.mutate(items);
     }
   };
-  const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key !== 'Enter' && event.key !== ' ') {
-      return;
-    }
-    event.preventDefault();
-    onToggle();
-  };
   return (
-    <div
-      role="treeitem"
-      tabIndex={0}
-      aria-expanded={open}
+    <SidebarRow
       className={cn(
-        'group/ws relative flex items-center rounded-md pl-1 hover:bg-sidebar-accent/70',
-        'group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center',
         dropState === 'valid' && 'bg-live/15 ring-1 ring-live ring-inset',
         dropState === 'invalid' && 'cursor-not-allowed opacity-60',
       )}
+      aria-expanded={open}
       data-drop={dropState ?? undefined}
+      draggable
+      onDragStart={(event) => {
+        event.dataTransfer.effectAllowed = 'copy';
+        setEntityRefDrag(event.dataTransfer, { kind: 'source', id: projectId, name });
+      }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      onKeyDown={handleKeyDown}
+      onClick={onToggle}
+      actions={<ProjectRootMenu projectId={projectId} dirPath="" project={project} />}
+      trailing={
+        summary?.isGit ? (
+          <span
+            className={cn(
+              'text-[9px]',
+              summary.remote ? 'text-status-live' : 'text-muted-foreground',
+            )}
+          >
+            {syncLabel(summary)}
+          </span>
+        ) : null
+      }
     >
-      <button
-        type="button"
-        className={cn('flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1 text-left text-xs')}
-        draggable
-        onDragStart={(event) => {
-          event.dataTransfer.effectAllowed = 'copy';
-          setEntityRefDrag(event.dataTransfer, { kind: 'source', id: projectId, name });
-        }}
-        onClick={onToggle}
-      >
+      <span className="flex min-w-0 items-center gap-1.5">
+        <span className="flex size-4 shrink-0 items-center justify-center">
+          <ChevronRightIcon
+            className={cn(
+              'size-3.5 text-sidebar-foreground/50 transition-transform',
+              open && 'rotate-90',
+            )}
+          />
+        </span>
         <SourceRootIcon
           driver={project?.driver}
           hasGit={project?.hasGit === true}
@@ -128,29 +136,9 @@ function ProjectRoot({
           isLocal={project?.hostId != null && project.hostId === selfNodeCached()}
           open={open}
         />
-        <span
-          className={cn(
-            'min-w-0 flex-1 truncate text-muted-foreground text-sm',
-            'group-data-[collapsible=icon]:hidden',
-          )}
-        >
-          {name}
-        </span>
-        {summary?.isGit ? (
-          <span
-            className={cn(
-              'shrink-0 text-[9px] group-hover/ws:hidden group-data-[collapsible=icon]:hidden',
-              summary.remote ? 'text-status-live' : 'text-muted-foreground',
-            )}
-          >
-            {syncLabel(summary)}
-          </span>
-        ) : null}
-      </button>
-      <span className="absolute top-1/2 right-1 -translate-y-1/2 group-data-[collapsible=icon]:hidden">
-        <ProjectRootMenu projectId={projectId} dirPath="" project={project} />
+        <SidebarRowTitle>{name}</SidebarRowTitle>
       </span>
-    </div>
+    </SidebarRow>
   );
 }
 export function ProjectsTrees({ projectIds }: { projectIds: string[] }) {

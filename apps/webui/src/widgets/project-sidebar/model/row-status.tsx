@@ -26,12 +26,7 @@ export function threadTime(iso: string, timeZone: string): string {
   return formatShortDate(iso, timeZone);
 }
 
-export function rowRight(
-  status: RowRunStatus,
-  unread: boolean,
-  time: string,
-  scope: string,
-): ReactNode {
+export function rowRight(status: RowRunStatus, unread: boolean, time: string): ReactNode {
   if (status) {
     return (
       <span
@@ -56,9 +51,8 @@ export function rowRight(
   return (
     <span
       className={cn(
-        'shrink-0 font-mono text-[10px] text-muted-foreground/70 leading-none',
-        `group-focus-within/${scope}:hidden`,
-        `group-hover/${scope}:hidden`,
+        'shrink-0 font-mono text-[11px] text-muted-foreground/70 leading-4',
+        'group-hover/row:hidden',
       )}
     >
       {time}

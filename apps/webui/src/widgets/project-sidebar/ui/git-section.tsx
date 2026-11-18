@@ -1,9 +1,11 @@
+import { ChevronRightIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useIdeStore } from '@/features/ide';
 import { useStudioNavigation } from '@/shared/config/navigation';
 import { gitStatusColorClass, useGitStatusColors } from '@/shared/lib/git-status-colors';
 import { cn } from '@/shared/lib/utils';
 import { FolderTypeIcon } from '@/shared/ui/icons';
+import { SidebarRow, SidebarRowTitle } from '@/shared/ui/sidebar-row';
 import { type GitProjectChanges, useGitChanges, useGitFileChanges } from '../model/use-git-changes';
 import { gitFileStatusLabel } from './git-file-decorations';
 import { GitSectionMenu } from './git-menu';
@@ -28,7 +30,7 @@ export function GitSection() {
     });
   };
   return (
-    <div className="flex flex-col gap-0.5 pl-1 group-data-[collapsible=icon]:hidden">
+    <div className="flex flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
       {showFolders
         ? changes.map((entry) => {
             const open = expanded.has(entry.project.id);
@@ -39,20 +41,20 @@ export function GitSection() {
                   open={open}
                   onToggle={() => toggleExpanded(entry.project.id)}
                 />
-                {open ? <GitProjectFiles entry={entry} /> : null}
+                {open ? <GitProjectFiles entry={entry} depth={1} /> : null}
               </div>
             );
           })
         : changes.map((entry) => (
             <div key={entry.project.id} data-testid={`git-project-${entry.project.id}`}>
-              <GitProjectFiles entry={entry} />
+              <GitProjectFiles entry={entry} depth={0} />
             </div>
           ))}
     </div>
   );
 }
 
-function GitProjectFiles({ entry }: { entry: GitProjectChanges }) {
+function GitProjectFiles({ entry, depth }: { entry: GitProjectChanges; depth: number }) {
   const files = useGitFileChanges(entry.project.id);
   const { openDiff } = useStudioNavigation();
   const gitColors = useGitStatusColors((state) => state.colors);
@@ -64,27 +66,28 @@ function GitProjectFiles({ entry }: { entry: GitProjectChanges }) {
         </div>
       ) : null}
       {files.map((file) => (
-        <button
+        <SidebarRow
           key={`${entry.project.id}:${file.path}`}
-          type="button"
           title={file.path}
+          depth={depth}
           onClick={() => {
             useIdeStore.getState().openDiff(entry.project.id, file.path);
             openDiff(entry.project.id, file.path);
           }}
-          className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-xs transition-colors hover:bg-sidebar-accent/70"
         >
-          <span
-            className={cn(
-              'w-3 shrink-0 text-center font-mono text-[10px] uppercase',
-              gitStatusColorClass(file.status),
-            )}
-            style={{ color: gitColors[file.status] }}
-          >
-            {gitFileStatusLabel(file.status)}
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="flex size-4 shrink-0 items-center justify-center" />
+            <span className="flex size-4 shrink-0 items-center justify-center">
+              <span
+                className={cn('font-mono text-[10px] uppercase', gitStatusColorClass(file.status))}
+                style={{ color: gitColors[file.status] }}
+              >
+                {gitFileStatusLabel(file.status)}
+              </span>
+            </span>
+            <SidebarRowTitle className="font-mono text-[12px]">{file.path}</SidebarRowTitle>
           </span>
-          <span className="min-w-0 flex-1 truncate font-mono text-[12px]">{file.path}</span>
-        </button>
+        </SidebarRow>
       ))}
     </>
   );
@@ -102,48 +105,47 @@ function GitProjectFolderRow({
   const branchLabel = entry.status
     ? (entry.status.branch ?? entry.status.head?.slice(0, 7) ?? 'HEAD')
     : null;
+  const dirty = entry.status?.dirty ? entry.status.dirtyCount : null;
+  const ahead = entry.status?.ahead ?? 0;
+  const behind = entry.status?.behind ?? 0;
   return (
-    <div
-      role="treeitem"
-      tabIndex={0}
+    <SidebarRow
+      testId={`git-project-${entry.project.id}`}
+      trailing={
+        <>
+          {branchLabel ? (
+            <span className="shrink-0 rounded-sm bg-sidebar-accent px-1 font-mono font-normal text-[10px] text-muted-foreground leading-4">
+              {branchLabel}
+            </span>
+          ) : null}
+          {dirty !== null ? (
+            <span className="shrink-0 font-normal text-[10px] text-status-warn">• {dirty}</span>
+          ) : null}
+          {ahead || behind ? (
+            <span className="shrink-0 font-normal text-[10px]">
+              ↑{ahead} ↓{behind}
+            </span>
+          ) : null}
+        </>
+      }
+      actions={<GitSectionMenu projectId={entry.project.id} />}
       aria-expanded={open}
-      className="group/ws relative flex items-center rounded-md hover:bg-sidebar-accent/70"
-      onKeyDown={(event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') {
-          return;
-        }
-        event.preventDefault();
-        onToggle();
-      }}
+      onClick={onToggle}
     >
-      <button
-        type="button"
-        className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1 text-left text-xs"
-        onClick={onToggle}
-      >
-        <FolderTypeIcon open={open} size="md" />
-        <span className="min-w-0 flex-1 truncate font-medium group-data-[collapsible=icon]:hidden">
-          {entry.project.name}
+      <span className="flex min-w-0 items-center gap-1.5">
+        <span className="flex size-4 shrink-0 items-center justify-center">
+          <ChevronRightIcon
+            className={cn(
+              'size-3.5 text-sidebar-foreground/50 transition-transform',
+              open && 'rotate-90',
+            )}
+          />
         </span>
-        {branchLabel ? (
-          <span className="shrink-0 rounded-sm bg-sidebar-accent px-1 font-mono font-normal text-[10px] text-muted-foreground leading-4 group-data-[collapsible=icon]:hidden">
-            {branchLabel}
-          </span>
-        ) : null}
-        {entry.status?.dirty ? (
-          <span className="shrink-0 font-normal text-[10px] text-status-warn group-data-[collapsible=icon]:hidden">
-            • {entry.status.dirtyCount}
-          </span>
-        ) : null}
-        {entry.status && (entry.status.ahead || entry.status.behind) ? (
-          <span className="shrink-0 font-normal text-[10px] text-muted-foreground group-data-[collapsible=icon]:hidden">
-            ↑{entry.status.ahead} ↓{entry.status.behind}
-          </span>
-        ) : null}
-      </button>
-      <span className="absolute top-1/2 right-1 -translate-y-1/2 group-data-[collapsible=icon]:hidden">
-        <GitSectionMenu projectId={entry.project.id} />
+        <span className="flex size-[18px] shrink-0 items-center justify-center">
+          <FolderTypeIcon open={open} />
+        </span>
+        <SidebarRowTitle>{entry.project.name}</SidebarRowTitle>
       </span>
-    </div>
+    </SidebarRow>
   );
 }

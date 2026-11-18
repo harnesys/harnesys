@@ -10,6 +10,7 @@ import { AGENT_THREAD_KINDS } from '@/features/desk/model/agents-display.store';
 import { useOrgTimeZone } from '@/features/switch-org/org-time-zone';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
+import { SidebarRow, SidebarRowTitle } from '@/shared/ui/sidebar-row';
 import { rowRight, runStatus, threadTime } from '../model/row-status';
 import { useThreadActions } from '../model/thread-actions';
 import {
@@ -167,82 +168,72 @@ function InlineThreadRow({
   const waiting = useThreadWaiting(thread.id);
   const status = runStatus(running, waiting);
   const hasMenu = Boolean(onPinToggle || onDelete);
-  const right = rowRight(status, thread.unread, threadTime(thread.updatedAt, timeZone), 'ithread');
+  const right = rowRight(status, thread.unread, threadTime(thread.updatedAt, timeZone));
   return (
-    <div
-      className={cn(
-        'group/ithread relative flex items-center rounded-md transition-colors hover:bg-sidebar-accent/70',
-        selected && 'bg-sidebar-accent/70 text-sidebar-accent-foreground',
-      )}
-      data-testid={`agent-thread-${thread.id}`}
-      data-selected={selected ? 'true' : 'false'}
+    <SidebarRow
+      testId={`agent-thread-${thread.id}`}
+      selected={selected}
+      leading={
+        <ThreadKindIcon
+          kind={thread.kind}
+          className="text-muted-foreground"
+          icon={thread.icon}
+          color={thread.color}
+        />
+      }
+      trailing={right}
+      actions={
+        hasMenu ? (
+          <>
+            {onPinToggle ? (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="size-5"
+                aria-label={thread.pinned ? 'Unpin thread' : 'Pin thread'}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onPinToggle();
+                }}
+              >
+                {thread.pinned ? (
+                  <PinOffIcon className="size-3 text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
+                ) : (
+                  <PinIcon className="size-3 text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
+                )}
+              </Button>
+            ) : null}
+            {onDelete ? (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="size-5"
+                aria-label="Delete thread"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onDelete();
+                }}
+              >
+                <Trash2Icon className="size-3 text-sidebar-foreground/50 group-hover/button:text-destructive" />
+              </Button>
+            ) : null}
+          </>
+        ) : null
+      }
+      onClick={onSelect}
     >
-      <button
-        type="button"
-        className="flex h-6 min-w-0 flex-1 items-center gap-1.5 rounded-md pr-2 pl-2 text-left"
-        onClick={onSelect}
-      >
-        <span className="inline-flex size-3 shrink-0 items-center justify-center text-muted-foreground">
-          <ThreadKindIcon
-            kind={thread.kind}
-            className="size-3"
-            icon={thread.icon}
-            color={thread.color}
-          />
-        </span>
+      <span className="flex min-w-0 items-center gap-1">
         {thread.pinned ? (
           <PinIcon className="size-2.5 shrink-0 text-muted-foreground" aria-hidden />
         ) : null}
         {thread.parentThreadId ? (
           <GitBranchIcon className="size-2.5 shrink-0 text-muted-foreground" aria-hidden />
         ) : null}
-        <span
-          className={cn(
-            'min-w-0 flex-1 truncate text-xs leading-none',
-            thread.unread && 'font-medium',
-          )}
-        >
+        <SidebarRowTitle className={cn(thread.unread && 'font-medium')}>
           {thread.title}
-        </span>
-        {right}
-      </button>
-      {hasMenu ? (
-        <div className="hidden items-center gap-0.5 pr-1 group-focus-within/ithread:flex group-hover/ithread:flex">
-          {onPinToggle ? (
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className="size-5"
-              aria-label={thread.pinned ? 'Unpin thread' : 'Pin thread'}
-              onClick={(event) => {
-                event.stopPropagation();
-                onPinToggle();
-              }}
-            >
-              {thread.pinned ? (
-                <PinOffIcon className="size-3 text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
-              ) : (
-                <PinIcon className="size-3 text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
-              )}
-            </Button>
-          ) : null}
-          {onDelete ? (
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className="size-5"
-              aria-label="Delete thread"
-              onClick={(event) => {
-                event.stopPropagation();
-                onDelete();
-              }}
-            >
-              <Trash2Icon className="size-3 text-sidebar-foreground/50 group-hover/button:text-destructive" />
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
+        </SidebarRowTitle>
+      </span>
+    </SidebarRow>
   );
 }
 function isLiveRunStatus(status: string | undefined): boolean {

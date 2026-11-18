@@ -8,6 +8,7 @@ import { cn } from '@/shared/lib/utils';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/shared/ui/context-menu';
 import { IconRef } from '@/shared/ui/icon';
 import { FileTypeIcon, FolderTypeIcon } from '@/shared/ui/icons';
+import { SidebarRow } from '@/shared/ui/sidebar-row';
 import { useAddonFileIcon } from '../model/addon-file-icon';
 import { useEntryActions } from '../model/use-entry-actions';
 import type { FileRowMenuProps } from './file-row-actions';
@@ -56,7 +57,7 @@ function FileRowLabel({
   addonIcon?: string;
 }) {
   return (
-    <span data-drag-label className="-ml-2 flex min-w-0 items-center gap-0.75">
+    <span data-drag-label className="flex min-w-0 items-center gap-1.5">
       {isDir ? (
         <span
           data-dir-chevron={entry.name}
@@ -72,7 +73,7 @@ function FileRowLabel({
       ) : (
         <span className="flex size-4 shrink-0 items-center justify-center" />
       )}
-      <span className="flex size-[18px] shrink-0 items-center justify-center">
+      <span className="flex size-4 shrink-0 items-center justify-center [&>svg]:size-4">
         <EntryTypeIcon
           isDir={isDir}
           isExpanded={isExpanded}
@@ -82,7 +83,7 @@ function FileRowLabel({
       </span>
       <span
         className={cn(
-          'whitespace-nowrap text-sm group-data-[collapsible=icon]:hidden',
+          'truncate text-[13px] leading-4',
           selected ? 'text-sidebar-foreground/90' : 'text-sidebar-foreground/70',
           git.decorationClass,
         )}
@@ -273,31 +274,7 @@ export function FileRow({
   };
   return (
     <ContextMenu>
-      <ContextMenuTrigger
-        role="treeitem"
-        tabIndex={0}
-        aria-expanded={isDir ? isExpanded : undefined}
-        aria-selected={selected}
-        className={cn(
-          'group/file relative flex items-center rounded-md',
-          selected && 'bg-sidebar-accent/70 text-sidebar-accent-foreground',
-          dropState === 'valid' && 'bg-live/15 ring-1 ring-live ring-inset',
-          dropState === 'invalid' && 'cursor-not-allowed opacity-60',
-        )}
-        style={{ paddingLeft: `${depth * 12 + 1}px` }}
-        data-testid={`file-${fullPath}`}
-        data-selected={selected ? 'true' : 'false'}
-        data-drop={dropState ?? undefined}
-        data-path={fullPath}
-        draggable={dragProps.draggable}
-        onDragStart={dragProps.onDragStart}
-        onDragEnd={dragProps.onDragEnd}
-        onDragOver={dragProps.onDragOver}
-        onDragLeave={dragProps.onDragLeave}
-        onDrop={dragProps.onDrop}
-        onKeyDown={handleKeyDown}
-        onContextMenu={handleContextMenu}
-      >
+      <ContextMenuTrigger className="block">
         {renamePath === fullPath ? (
           <InlineCreateInput
             kind={isDir ? 'dir' : 'file'}
@@ -306,11 +283,30 @@ export function FileRow({
             onFinish={(name) => onRenameFinish(fullPath, name)}
           />
         ) : (
-          <button
-            type="button"
-            className="flex flex-1 items-center gap-1.5 px-1.5 py-0.5 pl-2 text-left"
+          <SidebarRow
+            selected={selected}
+            depth={depth}
+            testId={`file-${fullPath}`}
+            className={cn(
+              dropState === 'valid' && 'bg-live/15 ring-1 ring-live ring-inset',
+              dropState === 'invalid' && 'cursor-not-allowed opacity-60',
+            )}
+            role="treeitem"
+            tabIndex={0}
+            aria-expanded={isDir ? isExpanded : undefined}
+            aria-selected={selected}
+            data-path={fullPath}
+            data-drop={dropState ?? undefined}
+            draggable={dragProps.draggable}
+            onDragStart={dragProps.onDragStart}
+            onDragEnd={dragProps.onDragEnd}
+            onDragOver={dragProps.onDragOver}
+            onDragLeave={dragProps.onDragLeave}
+            onDrop={dragProps.onDrop}
             onClick={handleClick}
             onDoubleClick={handleDoubleClick}
+            onKeyDown={handleKeyDown}
+            onContextMenu={handleContextMenu}
           >
             <FileRowLabel
               entry={entry}
@@ -320,7 +316,7 @@ export function FileRow({
               git={git}
               {...(addonIcon === undefined ? {} : { addonIcon })}
             />
-          </button>
+          </SidebarRow>
         )}
       </ContextMenuTrigger>
       <ContextMenuContent onClick={(event) => event.stopPropagation()}>

@@ -5,6 +5,7 @@ import { AgentRecordAvatar, statusLabel } from '@/entities/agent';
 import { useAgentHasUnread, useAgentLiveStatus } from '@/features/desk';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
+import { SidebarRow, SidebarRowTitle } from '@/shared/ui/sidebar-row';
 
 interface AgentCardProps {
   agent: Agent;
@@ -25,22 +26,14 @@ export function AgentCard({
   const status = useAgentLiveStatus(agent.id);
   const hasUnread = useAgentHasUnread(agent.id);
   return (
-    <div
-      className={cn(
-        'group/agent relative flex items-center rounded-md pl-1 transition-colors hover:bg-sidebar-accent/70',
-        selected && 'bg-sidebar-accent text-sidebar-accent-foreground',
-      )}
-      data-testid={`agent-card-${agent.id}`}
-      data-selected={selected ? 'true' : 'false'}
+    <SidebarRow
+      testId={`agent-card-${agent.id}`}
+      selected={selected}
+      className="pl-1"
       data-unread={hasUnread ? 'true' : 'false'}
-    >
-      <button
-        type="button"
-        className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left"
-        onClick={onSelect}
-      >
-        <div className="relative inline-flex size-4.5 shrink-0">
-          <AgentRecordAvatar agent={agent} className="size-4.5" />
+      leading={
+        <span className="relative inline-flex size-[18px] shrink-0">
+          <AgentRecordAvatar agent={agent} className="size-[18px]" />
           {hasUnread ? (
             <span
               title="Unread messages"
@@ -49,59 +42,60 @@ export function AgentCard({
               <span className="sr-only">Unread messages</span>
             </span>
           ) : null}
-        </div>
-        <span
-          className={cn(
-            'ml-0.5 min-w-0 flex-1 truncate text-sm leading-4',
-            status === 'offline' && 'text-muted-foreground',
-            hasUnread && 'font-medium',
-          )}
-        >
-          {agent.name}
         </span>
-      </button>
-      <div
-        className={cn(
-          'shrink-0 pr-2 font-mono text-[8px] transition-opacity group-hover/agent:opacity-0',
-          statusInk(status),
-        )}
-      >
-        {statusLabel(status)}
-      </div>
-      <div className="absolute inset-y-0 right-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/agent:opacity-100 has-[:focus-visible]:opacity-100 has-[[data-popup-open]]:opacity-100">
-        {onNewThread ? (
+      }
+      trailing={
+        <span className={cn('font-mono text-[10px]', statusInk(status))}>
+          {statusLabel(status)}
+        </span>
+      }
+      actions={
+        <>
+          {onNewThread ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              title="New thread"
+              data-testid={`agent-new-thread-${agent.id}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onNewThread();
+              }}
+            >
+              <MessageCirclePlusIcon className="text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
+              <span className="sr-only">New thread</span>
+            </Button>
+          ) : null}
+          {threadsFilter}
           <Button
             type="button"
             variant="ghost"
             size="icon-xs"
-            title="New thread"
-            data-testid={`agent-new-thread-${agent.id}`}
+            title="Configure agent"
+            data-testid={`agent-config-${agent.id}`}
             onClick={(event) => {
               event.stopPropagation();
-              onNewThread();
+              onSettings();
             }}
           >
-            <MessageCirclePlusIcon className="text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
-            <span className="sr-only">New thread</span>
+            <CogIcon className="text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
+            <span className="sr-only">Configure agent</span>
           </Button>
-        ) : null}
-        {threadsFilter}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          title="Configure agent"
-          data-testid={`agent-config-${agent.id}`}
-          onClick={(event) => {
-            event.stopPropagation();
-            onSettings();
-          }}
-        >
-          <CogIcon className="text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
-          <span className="sr-only">Configure agent</span>
-        </Button>
-      </div>
-    </div>
+        </>
+      }
+      onClick={onSelect}
+    >
+      <SidebarRowTitle
+        className={cn(
+          'ml-0.5',
+          status === 'offline' && 'text-muted-foreground',
+          hasUnread && 'font-medium',
+        )}
+      >
+        {agent.name}
+      </SidebarRowTitle>
+    </SidebarRow>
   );
 }
 function statusInk(status: AgentStatus): string {

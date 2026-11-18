@@ -5,6 +5,7 @@ import {
   repositoryWorktreesQueryKey,
 } from '@/shared/api/repository-worktrees';
 import { FolderTypeIcon } from '@/shared/ui/icons';
+import { SIDEBAR_ROW_INDENT, SidebarRow, SidebarRowTitle } from '@/shared/ui/sidebar-row';
 import { Spinner } from '@/shared/ui/spinner';
 import { useExplorerExpandStore } from '../model/explorer-expand.store';
 import { useOrgGitSummaries } from '../model/use-git-changes';
@@ -42,11 +43,11 @@ export function SourceBranches({
   if (isPending) {
     return (
       <div
-        className="flex items-center gap-1.5 py-1 text-muted-foreground"
-        style={{ paddingLeft: `${8 + depthOffset * 12}px` }}
+        className="flex h-7 items-center gap-1.5 text-muted-foreground"
+        style={{ paddingLeft: `${depthOffset * SIDEBAR_ROW_INDENT + 22}px` }}
       >
-        <Spinner className="size-3" />
-        <span className="text-xs">Loading branches…</span>
+        <Spinner className="size-4" />
+        <span className="text-[11px]">Loading branches…</span>
       </div>
     );
   }
@@ -92,32 +93,15 @@ function ActiveBranchFolder({
   };
   return (
     <div data-testid={`explorer-branch-active-${projectId}`}>
-      <div
-        role="treeitem"
-        tabIndex={0}
+      <SidebarRow
+        depth={depthOffset}
+        leading={open ? <FolderTypeIcon open /> : <FolderTypeIcon />}
         aria-expanded={open}
-        className="group/ws relative flex items-center rounded-md"
-        onKeyDown={(event) => {
-          if (event.key !== 'Enter' && event.key !== ' ') {
-            return;
-          }
-          event.preventDefault();
-          toggle();
-        }}
+        title={`${sourceName} · ${label}`}
+        onClick={toggle}
       >
-        <button
-          type="button"
-          className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1 text-left text-live/70"
-          style={{ paddingLeft: `${8 + depthOffset * 12}px` }}
-          onClick={toggle}
-          title={`${sourceName} · ${label}`}
-        >
-          <span className="flex size-[18px] shrink-0 items-center justify-center">
-            {open ? <FolderTypeIcon open size="sm" /> : <FolderTypeIcon size="sm" />}
-          </span>
-          <span className="min-w-0 flex-1 truncate text-sidebar-foreground text-xs">{label}</span>
-        </button>
-      </div>
+        <SidebarRowTitle className="text-sidebar-foreground">{label}</SidebarRowTitle>
+      </SidebarRow>
       {open ? <ExplorerContent projectId={projectId} depthOffset={depthOffset + 1} /> : null}
     </div>
   );

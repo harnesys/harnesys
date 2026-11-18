@@ -1,6 +1,7 @@
 import type { KeyboardEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { FileTypeIcon, FolderTypeIcon } from '@/shared/ui/icons';
+import { SIDEBAR_ROW_INDENT } from '@/shared/ui/sidebar-row';
 export function InlineCreateInput({
   kind,
   onFinish,
@@ -27,10 +28,13 @@ export function InlineCreateInput({
   };
   return (
     <div
-      className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-sm"
-      style={{ paddingLeft: `${depth * 12 + 4}px` }}
+      className="flex h-7 items-center gap-1.5 rounded-md pr-1.5"
+      style={{ paddingLeft: `${depth * SIDEBAR_ROW_INDENT + 6}px` }}
     >
-      {kind === 'dir' ? <FolderTypeIcon size="md" /> : <FileTypeIcon name={value} size="md" />}
+      <span className="flex size-4 shrink-0 items-center justify-center" />
+      <span className="flex size-4 shrink-0 items-center justify-center">
+        {kind === 'dir' ? <FolderTypeIcon size="sm" /> : <FileTypeIcon name={value} size="sm" />}
+      </span>
       <input
         ref={inputRef}
         type="text"
@@ -39,7 +43,7 @@ export function InlineCreateInput({
         onKeyDown={handleKeyDown}
         onBlur={() => onFinish(value)}
         placeholder={kind === 'dir' ? 'Folder name...' : 'File name...'}
-        className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+        className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-muted-foreground"
       />
     </div>
   );

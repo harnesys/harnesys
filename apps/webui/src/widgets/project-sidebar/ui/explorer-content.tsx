@@ -19,6 +19,7 @@ import {
 } from '@/shared/api/files';
 import { getGitFileStatus, gitFileStatusQueryKey } from '@/shared/api/git';
 import { useStudioNavigation } from '@/shared/config/navigation';
+import { SIDEBAR_ROW_HEIGHT, SIDEBAR_ROW_INDENT } from '@/shared/ui/sidebar-row';
 import { Spinner } from '@/shared/ui/spinner';
 import { toast } from '@/shared/ui/toast';
 import type { ViewerCreateTemplate } from '../model/explorer-draft.store';
@@ -291,9 +292,12 @@ export function ExplorerContent({
         </div>
       ) : null}
       {treeQuery.isPending ? (
-        <div className="flex items-center gap-1.5 px-2 py-2 text-muted-foreground">
-          <Spinner className="size-3" />
-          <span className="text-xs">Loading tree…</span>
+        <div
+          className="flex h-7 items-center gap-1.5 text-muted-foreground"
+          style={{ paddingLeft: `${depthOffset * SIDEBAR_ROW_INDENT + 22}px` }}
+        >
+          <Spinner className="size-4" />
+          <span className="text-[11px]">Loading tree…</span>
         </div>
       ) : null}
       {createDraft && createDraft.parentPath === '' ? (
@@ -301,14 +305,14 @@ export function ExplorerContent({
       ) : null}
       <FileTreeWindow
         rows={rows}
-        rowHeight={24}
+        rowHeight={SIDEBAR_ROW_HEIGHT}
         renderRow={renderRow}
         testId={`explorer-rows-${projectId}`}
       />
       {!treeQuery.isPending && rows.length === 0 ? (
         <p
-          className="px-2 py-2 text-muted-foreground text-xs"
-          style={{ paddingLeft: `${8 + depthOffset * 12}px` }}
+          className="flex h-7 items-center text-[11px] text-muted-foreground"
+          style={{ paddingLeft: `${depthOffset * SIDEBAR_ROW_INDENT + 6}px` }}
         >
           Empty source.
         </p>

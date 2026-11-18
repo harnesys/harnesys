@@ -1,4 +1,5 @@
 import type { GitFileStatusMap, ProjectFileEntry } from '@harnesys/studio-shared';
+import { SIDEBAR_ROW_INDENT } from '@/shared/ui/sidebar-row';
 import { Spinner } from '@/shared/ui/spinner';
 import type { FlatTreeRow } from '../model/file-tree-index';
 import { FileRow } from './file-row';
@@ -27,12 +28,12 @@ export function renderFileTreeRow(row: FlatTreeRow, h: FileTreeRowHandlers): Rea
   if (row.kind === 'loading') {
     return (
       <div
-        className="flex items-center gap-1.5 py-0.5 text-muted-foreground text-xs"
-        style={{ paddingLeft: `${row.depth * 12 + 8}px` }}
+        className="flex h-7 items-center gap-1.5 text-muted-foreground"
+        style={{ paddingLeft: `${row.depth * SIDEBAR_ROW_INDENT + 22}px` }}
         data-testid={`file-${row.fullPath}-loading`}
       >
-        <Spinner className="size-3" />
-        <span>Loading…</span>
+        <Spinner className="size-4" />
+        <span className="text-[11px]">Loading…</span>
       </div>
     );
   }

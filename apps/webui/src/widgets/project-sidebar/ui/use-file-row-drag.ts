@@ -19,7 +19,7 @@ function selectDragPaths(selected: boolean, selectedPaths: string[], fullPath: s
   return [fullPath];
 }
 
-function appendDragGhost(event: React.DragEvent<HTMLDivElement>): void {
+function appendDragGhost(event: React.DragEvent<HTMLElement>): void {
   const label = event.currentTarget.querySelector('[data-drag-label]');
   if (!(label instanceof HTMLElement)) {
     return;
@@ -71,7 +71,7 @@ export function useFileRowDrag({
 }) {
   const [dropState, setDropState] = useState<DropState>(null);
   const projects = useProjects().data ?? [];
-  const handleDragStart = (event: React.DragEvent<HTMLDivElement>) => {
+  const handleDragStart = (event: React.DragEvent<HTMLElement>) => {
     const roots = collapseToRoots(selectDragPaths(selected, selectedPaths, fullPath));
     setMoveDrag({ projectId, worktreeId, paths: roots });
     event.dataTransfer.effectAllowed = 'move';

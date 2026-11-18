@@ -8,6 +8,7 @@ import { useStudioNavigation } from '@/shared/config/navigation';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { ChannelIcon } from '@/shared/ui/icon';
+import { SidebarRow, SidebarRowTitle } from '@/shared/ui/sidebar-row';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { rowRight, runStatus, threadTime } from '../model/row-status';
 import { openThreadRecord } from '../model/thread-actions';
@@ -88,32 +89,16 @@ function ChannelRow({
     onSelectDone();
   };
   return (
-    <div
-      className={cn(
-        'group/channel relative flex items-center rounded-md transition-colors hover:bg-sidebar-accent/70',
-        selected && 'bg-sidebar-accent/70 text-sidebar-accent-foreground',
-      )}
-      data-testid={`channel-${thread.id}`}
-      data-selected={selected ? 'true' : 'false'}
+    <SidebarRow
+      testId={`channel-${thread.id}`}
+      selected={selected}
+      leading={<ChannelIcon icon={thread.icon} color={thread.color} />}
+      trailing={rowRight(status, thread.unread, threadTime(thread.updatedAt, timeZone))}
+      onClick={open}
     >
-      <button
-        type="button"
-        className="flex h-6 min-w-0 flex-1 items-center gap-1.5 rounded-md pr-2 pl-3 text-left"
-        onClick={open}
-      >
-        <span className="inline-flex size-3 shrink-0 items-center justify-center">
-          <ChannelIcon icon={thread.icon} color={thread.color} className="size-3" />
-        </span>
-        <span
-          className={cn(
-            'min-w-0 flex-1 truncate text-xs leading-none',
-            thread.unread && 'font-medium',
-          )}
-        >
-          {thread.title}
-        </span>
-        {rowRight(status, thread.unread, threadTime(thread.updatedAt, timeZone), 'channel')}
-      </button>
-    </div>
+      <SidebarRowTitle className={cn(thread.unread && 'font-medium')}>
+        {thread.title}
+      </SidebarRowTitle>
+    </SidebarRow>
   );
 }
