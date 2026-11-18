@@ -54,6 +54,23 @@ export type DeliverySettings = z.infer<typeof DeliverySettingsSchema>;
 
 export const DELIVERY_DEFAULTS: DeliverySettings = DeliverySettingsSchema.parse({});
 
+export const COMMIT_INSTRUCTIONS_MAX = 4000;
+
+export const DEFAULT_COMMIT_INSTRUCTIONS = [
+  'Conventional Commits: type(scope): imperative lowercase summary, no period.',
+  'Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert.',
+  'Add a blank line and a short body only for non-trivial changes.',
+  'Plain text only: no quotes, code fences, markdown, or explanations.',
+].join(' ');
+
+export const VcsSettingsSchema = z.object({
+  commitModelId: z.string().default(''),
+  commitInstructions: z.string().max(COMMIT_INSTRUCTIONS_MAX).default(DEFAULT_COMMIT_INSTRUCTIONS),
+});
+export type VcsSettings = z.infer<typeof VcsSettingsSchema>;
+
+export const DEFAULT_VCS_SETTINGS: VcsSettings = VcsSettingsSchema.parse({});
+
 export const OrgSettingsSchema = z.object({
   skillsSourceAutoLoad: z.boolean().default(true),
   timezone: z.string().refine(isIanaTimeZone, { message: 'unknown timezone' }).default('UTC'),
@@ -70,6 +87,7 @@ export const OrgSettingsSchema = z.object({
     commandOverrides: {},
   }),
   delivery: DeliverySettingsSchema.default(DELIVERY_DEFAULTS),
+  vcs: VcsSettingsSchema.default(DEFAULT_VCS_SETTINGS),
 });
 export type OrgSettings = z.infer<typeof OrgSettingsSchema>;
 

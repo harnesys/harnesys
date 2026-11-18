@@ -11,8 +11,10 @@ import { DeleteGitBranchUseCase } from './delete-git-branch.use-case.ts';
 import { DeleteRepositoryWorktreeUseCase } from './delete-repository-worktree.use-case.ts';
 import { DetachSourceUseCase } from './detach-source.use-case.ts';
 import { EnsureWorkspaceUseCase } from './ensure-workspace.use-case.ts';
+import { GenerateCommitMessageUseCase } from './generate-commit-message.use-case.ts';
 import { GetGitDiffUseCase } from './get-git-diff.use-case.ts';
 import { GetGitFileStatusUseCase } from './get-git-file-status.use-case.ts';
+import { GetGitMachineInfoUseCase } from './get-git-machine-info.use-case.ts';
 import { GetGitStatusUseCase } from './get-git-status.use-case.ts';
 import { GetOrgGitSummaryUseCase } from './get-org-git-summary.use-case.ts';
 import { GetSourceUseCase } from './get-source.use-case.ts';
@@ -57,10 +59,12 @@ import { SwitchGitBranchUseCase } from './switch-git-branch.use-case.ts';
     ListGitBranchesUseCase,
     GetGitStatusUseCase,
     GetGitFileStatusUseCase,
+    GetGitMachineInfoUseCase,
     GetOrgGitSummaryUseCase,
     GetGitDiffUseCase,
     StageGitUseCase,
     CommitGitUseCase,
+    GenerateCommitMessageUseCase,
     PushGitUseCase,
     PullGitUseCase,
     CheckoutGitUseCase,
@@ -96,10 +100,12 @@ import { SwitchGitBranchUseCase } from './switch-git-branch.use-case.ts';
     ListGitBranchesUseCase,
     GetGitStatusUseCase,
     GetGitFileStatusUseCase,
+    GetGitMachineInfoUseCase,
     GetOrgGitSummaryUseCase,
     GetGitDiffUseCase,
     StageGitUseCase,
     CommitGitUseCase,
+    GenerateCommitMessageUseCase,
     PushGitUseCase,
     PullGitUseCase,
     CheckoutGitUseCase,

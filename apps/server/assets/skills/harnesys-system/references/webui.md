@@ -88,7 +88,8 @@ The bell opens `/o/<orgId>/inbox`: a board with **Pending** and **History** tabs
 
 | Group | Category | Configures |
 |---|---|---|
-| Workspace | `appearance` | Theme, scale, accent, git status colors. |
+| Workspace | `appearance` | Theme, scale, accent. |
+| Workspace | `vcs` | Commit message model and format instructions, git version and author on this host, git status colors. |
 | Workspace | `chat` | Chat font size, follow mode, detail mode, detailed stats. |
 | Workspace | `editor` | Editor font, tabs, wrapping, minimap, whitespace. |
 | Workspace | `notifications` | Sound alerts for approval requests. |

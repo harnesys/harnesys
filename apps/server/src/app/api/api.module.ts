@@ -54,6 +54,7 @@ import { MachineHomeModule } from '../infra/machine-home/machine-home.module.ts'
 import { ManagerInfraModule } from '../infra/manager/manager.module.ts';
 import { AudioModule } from '../infra/model-execution/audio.module.ts';
 import { ImageModule } from '../infra/model-execution/image.module.ts';
+import { TextModule } from '../infra/model-execution/text.module.ts';
 import { PresetsModule } from '../infra/presets/presets.module.ts';
 import { ReleaseModule } from '../infra/release/release.module.ts';
 import { RuntimeModule } from '../infra/runtime/runtime.module.ts';
@@ -175,6 +176,7 @@ import { VaultController } from './rest/vault.controller.ts';
     EulaInfraModule,
     AudioModule,
     ImageModule,
+    TextModule,
     ExecutionProfileModule,
     FleetWorkerModule,
     IdentitySqliteModule,

@@ -6,6 +6,10 @@ import {
   type CreateGitBranchResult,
   CreateGitBranchUseCase,
 } from '../../application/source/create-git-branch.use-case.ts';
+import {
+  type GenerateCommitMessageResult,
+  GenerateCommitMessageUseCase,
+} from '../../application/source/generate-commit-message.use-case.ts';
 import { GetGitDiffUseCase } from '../../application/source/get-git-diff.use-case.ts';
 import { GetGitFileStatusUseCase } from '../../application/source/get-git-file-status.use-case.ts';
 import { GetGitStatusUseCase } from '../../application/source/get-git-status.use-case.ts';
@@ -54,8 +58,16 @@ const CommitGitBodySchema = z.object({
   hostId: HostIdSchema,
   worktreeId: WorktreeIdSchema,
   message: z.string().min(1),
+  paths: z.array(z.string()).optional(),
 });
 type CommitGitBody = z.infer<typeof CommitGitBodySchema>;
+
+const GenerateCommitMessageBodySchema = z.object({
+  hostId: HostIdSchema,
+  worktreeId: WorktreeIdSchema,
+  paths: z.array(z.string()).min(1),
+});
+type GenerateCommitMessageBody = z.infer<typeof GenerateCommitMessageBodySchema>;
 
 const CheckoutGitBodySchema = z.object({
   hostId: HostIdSchema,
@@ -87,6 +99,7 @@ export class SourceGitController {
     private readonly getDiff: GetGitDiffUseCase,
     private readonly stageGit: StageGitUseCase,
     private readonly commitGit: CommitGitUseCase,
+    private readonly generateCommitMessage: GenerateCommitMessageUseCase,
     private readonly pushGit: PushGitUseCase,
     private readonly pullGit: PullGitUseCase,
     private readonly checkoutGit: CheckoutGitUseCase,
@@ -165,6 +178,22 @@ export class SourceGitController {
       hostId: body.hostId,
       worktreeId: body.worktreeId,
       message: body.message,
+      ...(body.paths !== undefined ? { paths: body.paths } : {}),
+    });
+  }
+
+  @Post('generate-message')
+  generateMessage(
+    @Param('orgId') orgId: string,
+    @Param('sourceId') sourceId: string,
+    @Body(GenerateCommitMessageBodySchema) body: GenerateCommitMessageBody,
+  ): Promise<GenerateCommitMessageResult> {
+    return this.generateCommitMessage.execute({
+      orgId,
+      sourceId,
+      hostId: body.hostId,
+      worktreeId: body.worktreeId,
+      paths: body.paths,
     });
   }
 

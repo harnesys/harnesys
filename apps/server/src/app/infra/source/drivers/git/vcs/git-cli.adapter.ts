@@ -4,7 +4,7 @@ import {
   GitBranchInvalidError,
   GitDirtyError,
 } from '../../../../../domain/source/git-vcs.error.ts';
-import type { VcsProbeRaw } from '../../../../../domain/source/git-vcs.port.ts';
+import type { GitMachineInfo, VcsProbeRaw } from '../../../../../domain/source/git-vcs.port.ts';
 import { GitVcsPort } from '../../../../../domain/source/git-vcs.port.ts';
 import type {
   GitBranch,
@@ -163,7 +163,7 @@ export class GitCliAdapter extends GitVcsPort {
     throw new Error((res.stderr || res.stdout).trim() || `git add failed (${res.code})`);
   }
 
-  async commit(cwd: string, message: string): Promise<void> {
+  async commit(cwd: string, message: string, paths?: string[]): Promise<void> {
     const safeCwd = await this.resolveCwd(cwd);
     const msg = message.trim();
     if (!msg) {
@@ -172,11 +172,41 @@ export class GitCliAdapter extends GitVcsPort {
     if (msg.includes('\0')) {
       throw new Error('invalid commit message');
     }
-    const addRes = await execGit(safeCwd, ['add', '-A']);
+    const clean = (paths ?? [])
+      .map((p) => p.trim())
+      .filter((p) => p.length > 0 && !p.includes('\0') && !p.includes('\n'));
+    if (clean.length === 0) {
+      const addRes = await execGit(safeCwd, ['add', '-A']);
+      if (addRes.code !== 0) {
+        throw new Error(
+          (addRes.stderr || addRes.stdout).trim() || `git add failed (${addRes.code})`,
+        );
+      }
+      await this.runCommit(safeCwd, ['commit', '-m', msg]);
+      return;
+    }
+    const addRes = await execGit(safeCwd, ['add', '--', ...clean]);
     if (addRes.code !== 0) {
       throw new Error((addRes.stderr || addRes.stdout).trim() || `git add failed (${addRes.code})`);
     }
-    const res = await execGit(safeCwd, ['commit', '-m', msg]);
+    await this.runCommit(safeCwd, ['commit', '-m', msg, '--', ...clean]);
+  }
+
+  async getMachineInfo(): Promise<GitMachineInfo> {
+    const [version, userName, userEmail] = await Promise.all([
+      this.getVersion(),
+      execGitTrim(process.cwd(), ['config', '--get', 'user.name']).catch(() => ''),
+      execGitTrim(process.cwd(), ['config', '--get', 'user.email']).catch(() => ''),
+    ]);
+    return {
+      version,
+      userName: userName || null,
+      userEmail: userEmail || null,
+    };
+  }
+
+  private async runCommit(cwd: string, args: string[]): Promise<void> {
+    const res = await execGit(cwd, args);
     if (res.code === 0) {
       this.statusCache.clear();
       return;

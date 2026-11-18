@@ -73,6 +73,11 @@ export type GitStatusResponse = GitStatusBase & {
 export interface GitCheckoutRequest {
   branch: string;
 }
+export interface GitMachineInfo {
+  version: string | null;
+  userName: string | null;
+  userEmail: string | null;
+}
 export interface GitCreateBranchRequest {
   name: string;
   checkout?: boolean;

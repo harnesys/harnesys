@@ -202,6 +202,9 @@ export {
 export {
   type BrowserDefaultEngine,
   BrowserDefaultEngineSchema,
+  COMMIT_INSTRUCTIONS_MAX,
+  DEFAULT_COMMIT_INSTRUCTIONS,
+  DEFAULT_VCS_SETTINGS,
   DELIVERY_DEFAULTS,
   type DeliverySettings,
   DeliverySettingsSchema,
@@ -218,6 +221,8 @@ export {
   type ToolchainMode,
   ToolchainModeSchema,
   type ToolchainSettings,
+  type VcsSettings,
+  VcsSettingsSchema,
 } from './org-settings.ts';
 export {
   type ToolchainCommandSource,

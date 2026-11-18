@@ -10,6 +10,7 @@ export interface CommitGitInput {
   hostId: string;
   worktreeId: string;
   message: string;
+  paths?: string[];
 }
 
 export interface CommitGitResult {
@@ -33,7 +34,7 @@ export class CommitGitUseCase {
       worktreeId: input.worktreeId,
     });
     try {
-      await this.git.commit(cwd, message);
+      await this.git.commit(cwd, message, input.paths);
       return { ok: true };
     } catch (err) {
       return mapGitVcsError(err);

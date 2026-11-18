@@ -11,6 +11,12 @@ export interface VcsProbeRaw {
   remoteUrl: string | null;
 }
 
+export interface GitMachineInfo {
+  version: string | null;
+  userName: string | null;
+  userEmail: string | null;
+}
+
 export abstract class GitVcsPort {
   abstract probe(cwd: string): Promise<VcsProbeRaw>;
   abstract getStatus(cwd: string): Promise<GitStatusResponse>;
@@ -30,7 +36,8 @@ export abstract class GitVcsPort {
   abstract createBranch(cwd: string, name: string, checkout: boolean, from?: string): Promise<void>;
   abstract validateBranchName(cwd: string, name: string): Promise<boolean>;
   abstract stage(cwd: string, paths: string[]): Promise<void>;
-  abstract commit(cwd: string, message: string): Promise<void>;
+  abstract commit(cwd: string, message: string, paths?: string[]): Promise<void>;
+  abstract getMachineInfo(): Promise<GitMachineInfo>;
   abstract push(cwd: string): Promise<void>;
   abstract pull(cwd: string): Promise<void>;
   abstract init(cwd: string): Promise<void>;

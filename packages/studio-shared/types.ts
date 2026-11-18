@@ -85,6 +85,7 @@ export type {
   GitDiffResponse,
   GitFileStatus,
   GitFileStatusMap,
+  GitMachineInfo,
   GitSourceSummary,
   GitStatusBase,
   GitStatusCounts,
