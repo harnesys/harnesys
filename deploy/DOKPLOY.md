@@ -27,7 +27,7 @@ curl -sf https://harnesys.example.com/api/health
 
 From another machine, enroll with `relayUrl=https://harnesys.example.com` (same origin as UI).
 
-Pin a release instead of `latest` (e.g. `ghcr.io/harnesys/harnesys:0.10.4`) to control upgrades. Images are published by `.github/workflows/docker-publish.yml` (`latest` on `main`, semver on `v*` tags, amd64+arm64).
+Pin a release instead of `latest` (e.g. `ghcr.io/harnesys/harnesys:0.10.4`) to control upgrades. Images are published by `.github/workflows/docker-publish.yml` — on `v*` release tags or manually via Actions → docker-publish → Run workflow (both produce `latest` + the version tag, amd64+arm64).
 
 ## Dokploy: Compose → Raw
 
