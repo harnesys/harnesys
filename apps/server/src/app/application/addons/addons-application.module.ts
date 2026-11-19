@@ -1,7 +1,7 @@
 import { Module } from '@harnesys/brix';
 import { AddonCallPort } from '../../domain/addons/ports/addon-call.port.ts';
-import { SourceUseCaseModule } from '../source/source.use-case.module.ts';
 import { AppsUseCaseModule } from '../apps/apps.use-case.module.ts';
+import { SourceUseCaseModule } from '../source/source.use-case.module.ts';
 import { ThreadUseCaseModule } from '../threads/thread.use-case.module.ts';
 import { BridgeInboundPort } from './bridge/bridge-inbound.port.ts';
 import { NeutralBridgeInboundUseCase } from './bridge/neutral-bridge-inbound.use-case.ts';

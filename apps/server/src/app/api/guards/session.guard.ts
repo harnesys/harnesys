@@ -25,7 +25,11 @@ const LOCAL_OPS_TICKET_ROUTES: readonly TicketRoutePattern[] = [
   { method: 'POST', pattern: /^\/api\/orgs\/[^/]+\/browse-dirs$/, credential: 'ticket' },
   { method: 'POST', pattern: /^\/api\/host\/system-skills\/[^/]+\/restore$/, credential: 'ticket' },
   { method: 'POST', pattern: /^\/api\/orgs\/[^/]+\/sources$/, credential: 'ticket' },
-  { method: 'POST', pattern: /^\/api\/orgs\/[^/]+\/sources\/[^/]+\/prepare$/, credential: 'ticket' },
+  {
+    method: 'POST',
+    pattern: /^\/api\/orgs\/[^/]+\/sources\/[^/]+\/prepare$/,
+    credential: 'ticket',
+  },
   {
     method: 'GET',
     pattern: /^\/api\/orgs\/[^/]+\/sources\/[^/]+\/git-credential$/,
