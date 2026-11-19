@@ -1,3 +1,4 @@
+use std::io::{Read, Write};
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpStream};
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -31,8 +32,46 @@ const VENDOR_GOOGLE_ENV: [(&str, Option<&str>); 3] = [
     ),
 ];
 
+/// Bare TCP probe: is something occupying the host port (dev server, CLI-managed
+/// host, or a sidecar still booting)? Used only for the reuse-vs-spawn decision.
 fn host_alive() -> bool {
     TcpStream::connect_timeout(&HOST_ADDR, Duration::from_millis(300)).is_ok()
+}
+
+const PROBE_TIMEOUT: Duration = Duration::from_millis(500);
+const STATUS_LINE_PREFIX_LEN: usize = 12;
+
+fn read_status_line(stream: &mut TcpStream) -> Option<String> {
+    let mut buffer = [0u8; 128];
+    let mut filled = 0;
+    while filled < STATUS_LINE_PREFIX_LEN {
+        match stream.read(&mut buffer[filled..]) {
+            Ok(0) => break,
+            Ok(read) => filled += read,
+            Err(_) => return None,
+        }
+    }
+    String::from_utf8(buffer[..filled].to_vec()).ok()
+}
+
+/// Readiness probe: the port is bound but the host answers `/health/live` only
+/// after migrations and asset seeds, so the window must wait for a real 200.
+fn host_ready() -> bool {
+    let Ok(mut stream) = TcpStream::connect_timeout(&HOST_ADDR, PROBE_TIMEOUT) else {
+        return false;
+    };
+    let _ = stream.set_read_timeout(Some(PROBE_TIMEOUT));
+    let _ = stream.set_write_timeout(Some(PROBE_TIMEOUT));
+    let request = format!(
+        "GET /health/live HTTP/1.1\r\nHost: {HOST_ADDR}\r\nConnection: close\r\n\r\n"
+    );
+    if stream.write_all(request.as_bytes()).is_err() {
+        return false;
+    }
+    match read_status_line(&mut stream) {
+        Some(status) => status.starts_with("HTTP/1.1 200") || status.starts_with("HTTP/1.0 200"),
+        None => false,
+    }
 }
 
 struct HostProcess(Mutex<Option<CommandChild>>);
@@ -72,12 +111,12 @@ fn spawn_host(app: &AppHandle) -> Result<(), String> {
 
 fn wait_host(timeout_ms: u64) -> bool {
     for _ in 0..(timeout_ms / 200) {
-        if host_alive() {
+        if host_ready() {
             return true;
         }
         std::thread::sleep(Duration::from_millis(200));
     }
-    host_alive()
+    host_ready()
 }
 
 /// Kill the host sidecar so the updater can replace its binary (Windows NSIS).

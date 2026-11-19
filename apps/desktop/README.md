@@ -15,7 +15,7 @@ Direct commands from `apps/desktop`: `bunx tauri dev`, `bunx tauri build`, `bunx
 ## How it works
 
 - **WebUI** — `tauri.conf.json` wires dev (`beforeDevCommand` + `devUrl :5173`) and build (`beforeBuildCommand` + `frontendDist` pointing at the webui build).
-- **Host sidecar** (`src-tauri/src/lib.rs`) — TCP-probes `127.0.0.1:47474` (300 ms), reuses a live host or spawns the bundled binary, waits up to 10 s for health, then shows the window. Vendor Google credentials (`HARNESYS_GOOGLE_CLIENT_ID`, `HARNESYS_GOOGLE_API_KEY`, `HARNESYS_GOOGLE_APP_ID`) are compiled in via `option_env!` and passed to the sidecar as env.
+- **Host sidecar** (`src-tauri/src/lib.rs`) — probes `127.0.0.1:47474` with a TCP connect (300 ms) to decide reuse-vs-spawn: a live host (dev server, CLI-managed) is reused, otherwise the bundled binary is spawned. Readiness is `GET /health/live` over the same TcpStream (500 ms timeouts), retried for up to 10 s; only a real `200` reveals the window. Vendor Google credentials (`HARNESYS_GOOGLE_CLIENT_ID`, `HARNESYS_GOOGLE_API_KEY`, `HARNESYS_GOOGLE_APP_ID`) are compiled in via `option_env!` and passed to the sidecar as env.
 - **Window & tray** — single `main` window (1280×800, hidden until the host answers), close-to-tray, macOS reopen shows the window; tray menu: open, toggle dev tools, quit, theme-aware icon.
 - **Updater** — Tauri updater plugin with `latest.json` from GitHub releases (`releases/latest/download/latest.json`), minisign signatures, `stop_host` command so the NSIS installer can replace the running binary.
 
