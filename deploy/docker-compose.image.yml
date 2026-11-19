@@ -1,0 +1,54 @@
+# harnesys — paste-ready compose for Dokploy (Compose service, Raw mode).
+# Uses prebuilt images from ghcr.io — no fork, no build on the target VPS.
+#
+#   1. Dokploy → Create Service → Compose → Raw, paste this file.
+#   2. Environment tab: PUBLIC_URL=https://your-domain
+#   3. Domains tab: hostname → service `web`, port 8080, HTTPS on.
+#   4. Deploy. First owner: Containers → `host` → Open Terminal →
+#      run the owner-init one-liner from deploy/DOKPLOY.md.
+#
+# Pin to a release instead of latest (e.g. :0.10.4) to control upgrades.
+
+services:
+  host:
+    image: ghcr.io/harnesys/host:latest
+    environment:
+      NODE_ENV: production
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 47474
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      HARNESYS_HOME: /data
+    expose:
+      - "47474"
+    volumes:
+      - harnesys-data:/data
+    healthcheck:
+      test: ["CMD", "bun", "-e", "const r = await fetch('http://127.0.0.1:47474/health/live'); process.exit(r.ok ? 0 : 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    restart: unless-stopped
+
+  web:
+    image: ghcr.io/harnesys/web:latest
+    environment:
+      NODE_ENV: production
+      HARNESYS_WEB_PORT: 8080
+      HARNESYS_UPSTREAM: http://host:47474
+      HARNESYS_WEB_STATIC: /srv/dist
+    expose:
+      - "8080"
+    depends_on:
+      host:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bun", "-e", "const r = await fetch('http://127.0.0.1:8080/healthz'); process.exit(r.ok ? 0 : 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  harnesys-data:

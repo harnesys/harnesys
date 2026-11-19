@@ -1,0 +1,29 @@
+# harnesys — paste-ready compose for Dokploy (Compose service, Raw mode).
+# One prebuilt image: host API + SPA + /api proxy in a single container.
+#
+#   1. Dokploy → Create Service → Compose → Raw, paste this file.
+#   2. Environment tab: PUBLIC_URL=https://your-domain
+#   3. Domains tab: hostname → service `app`, port 8080, HTTPS on.
+#   4. Deploy, then create the first owner (see deploy/DOKPLOY.md).
+#
+# Host-only mode (no UI, worker/relay without the web): set
+# HARNESYS_WEB_ENABLED=false in the environment — the same image then
+# serves the API on 47474 only.
+
+services:
+  app:
+    image: ghcr.io/harnesys/harnesys:latest
+    environment:
+      NODE_ENV: production
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      HARNESYS_HOME: /data
+      HARNESYS_WEB_ENABLED: ${HARNESYS_WEB_ENABLED:-true}
+    expose:
+      - "8080"
+      - "47474"
+    volumes:
+      - harnesys-data:/data
+    restart: unless-stopped
+
+volumes:
+  harnesys-data:
