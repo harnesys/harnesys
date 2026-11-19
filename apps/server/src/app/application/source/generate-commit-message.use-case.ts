@@ -71,6 +71,7 @@ export class GenerateCommitMessageUseCase {
         system,
         prompt,
         maxOutputTokens: 1200,
+        orgId: input.orgId,
       });
       const message = cleanCommitMessage(result.text);
       if (!message) {

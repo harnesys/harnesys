@@ -140,6 +140,15 @@ export type SessionEvent = SessionEventScope &
         runId?: string;
       }
     | {
+        type: 'model.throttle';
+        reason: 'rpm' | 'rpd' | 'tpm' | 'tpd';
+        delayMs: number;
+        resumeAt?: number;
+        message: string;
+        seq?: number;
+        runId?: string;
+      }
+    | {
         type: 'compaction';
         id: string;
         reason: 'threshold' | 'manual';

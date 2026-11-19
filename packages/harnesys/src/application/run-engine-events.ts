@@ -237,6 +237,18 @@ export function eventToSessionEvent(ev: Event): SessionEvent | null {
       message: typeof m?.message === 'string' ? m.message : 'model retry',
     };
   }
+  if (t === 'model.throttle') {
+    const m = ev.metadata as Record<string, unknown> | undefined;
+    const delayMs = num(m?.delayMs) ?? 0;
+    const reason = m?.reason;
+    return {
+      type: 'model.throttle',
+      reason: reason === 'rpd' || reason === 'tpm' || reason === 'tpd' ? reason : ('rpm' as const),
+      delayMs,
+      resumeAt: Date.now() + delayMs,
+      message: typeof m?.message === 'string' ? m.message : 'model quota wait',
+    };
+  }
   if (t === 'compaction.completed') {
     const m = ev.metadata as Record<string, unknown> | undefined;
     const id = typeof m?.id === 'string' ? m.id : '';

@@ -19,6 +19,7 @@ import {
   mergeShellAssignment,
   rawShellAssignment,
 } from '../../domain/mode-presets/preset-shell-merge.ts';
+import { ModelQuotaFactoryPort } from '../../domain/model-quota/model-quota-factory.port.ts';
 import { WorkspaceContainerPort } from '../../domain/process-runtime/workspace-container.port.ts';
 import { LlmModelPort, LlmProviderPort } from '../../domain/provider/llm-provider.port.ts';
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
@@ -60,6 +61,7 @@ export interface WorkExecutorDeps {
   sourceSkills?: SourceSkillsPort;
   orgSettings?: OrgSettingsPort;
   issueTracker?: IssueTrackerPort;
+  modelQuotaFactory?: ModelQuotaFactoryPort;
 }
 
 export interface PlaceRunInput {

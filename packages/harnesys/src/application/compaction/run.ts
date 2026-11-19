@@ -8,6 +8,7 @@ import {
   THRESHOLD_SUMMARY_NAME,
 } from '../../domain/compaction.ts';
 import { CONSOLE_LOGGER, type Logger } from '../../ports/logger.ts';
+import type { ModelQuotaPort } from '../../ports/model-quota.ts';
 import type { ModelBinding, ModelsPort, ProviderConfig } from '../../ports/models.ts';
 import type { PathsConfig } from '../../ports/paths.ts';
 import type { ToolDefinition } from '../../ports/tools.ts';
@@ -38,6 +39,7 @@ export interface CompactionPassContext {
   hooks?: HookEmitCtx;
   guard?: CompactionGuard;
   step?: number;
+  modelQuota?: ModelQuotaPort;
 }
 export type CompactionPassEvent =
   | {
@@ -349,6 +351,7 @@ async function* writeCompactionMessage(
       sessionId: ctx.sessionId,
       rawRequestDir: ctx.paths?.threadDir,
       rawRequestMode: ctx.agent.observability?.rawRequests,
+      modelQuota: ctx.modelQuota,
     })) {
       if (ev.type === 'summary.completed' && ev.result) {
         completed = ev.result as Extract<

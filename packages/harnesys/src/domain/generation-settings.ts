@@ -68,6 +68,10 @@ export function filterGenerationSettings(
     out.providerRetryAttempts = settings.providerRetryAttempts;
     wrote = true;
   }
+  if (settings.modelLimits !== undefined) {
+    out.modelLimits = { ...settings.modelLimits };
+    wrote = true;
+  }
   if (settings.context !== undefined) {
     out.context = { ...settings.context };
     wrote = true;

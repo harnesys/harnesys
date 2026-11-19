@@ -76,6 +76,12 @@ export interface SpeechConfig {
   sampleRate?: number;
   voices?: SpeechVoice[];
 }
+export interface ModelRateLimits {
+  rpm?: number;
+  rpd?: number;
+  tpm?: number;
+  tpd?: number;
+}
 export interface ModelFields {
   id?: string;
   name?: string;
@@ -90,6 +96,7 @@ export interface ModelFields {
   defaultEffort?: Effort;
   reasoningMandatory?: boolean;
   speech?: SpeechConfig;
+  rateLimits?: ModelRateLimits;
 }
 export type ModelRecord = ModelFields & {
   name: string;

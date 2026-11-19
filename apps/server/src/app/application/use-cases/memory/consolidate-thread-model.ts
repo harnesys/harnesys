@@ -6,6 +6,7 @@ import {
   MEMORY_RECONCILE_RUBRIC,
   type MemoryRecordSource,
   type ModelBinding,
+  type ModelQuotaPort,
   type ModelUsage,
   type PendingSessionEvent,
   type RunEventStore,
@@ -115,6 +116,7 @@ export function resolveCoords(
 export async function completeOnce(
   binding: ModelBinding,
   prompt: string,
+  quota?: ModelQuotaPort,
 ): Promise<CallModelResult | undefined> {
   const stream = callModel({
     binding,
@@ -122,6 +124,7 @@ export async function completeOnce(
     messages: [{ role: 'user', content: prompt }],
     toolNames: [],
     signalOrRegistry: undefined,
+    ...(quota ? { quota } : {}),
   });
   let completed: CallModelResult | undefined;
   for await (const chunk of stream) {

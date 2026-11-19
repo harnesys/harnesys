@@ -1,6 +1,6 @@
 import { parseMemoryPolicy } from '@harnesys/contracts';
 import { and, asc, desc, eq, gte, isNull } from 'drizzle-orm';
-import type { Logger, ModelsPort } from 'harnesys';
+import type { Logger, ModelQuotaPort, ModelsPort } from 'harnesys';
 import { MEMORY_PROMOTE_CANDIDATES_LIMIT } from 'harnesys';
 import type { AgentRecord } from '../../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
@@ -21,6 +21,7 @@ export interface PromoteFactsDeps {
   logger: Logger;
   models?: ModelsPort;
   decisionCoords?: DecisionModelCoordsResolver;
+  quota?: ModelQuotaPort;
 }
 
 export class PromoteFactsUseCase {
@@ -69,7 +70,7 @@ export class PromoteFactsUseCase {
     }
     try {
       const binding = await this.deps.models.get(coords.provider, coords.model);
-      const result = await completeOnce(binding, triagePrompt(facts));
+      const result = await completeOnce(binding, triagePrompt(facts), this.deps.quota);
       if (result === undefined || result.finishReason !== 'stop') {
         this.warnTriageFallback(
           orgId,

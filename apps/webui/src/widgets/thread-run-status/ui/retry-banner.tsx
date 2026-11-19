@@ -38,6 +38,7 @@ export function RetryBanner({ threadId }: { threadId: string }) {
     return null;
   }
   const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+  const schedule = retryScheduleLabel(deadline, remaining, timeZone);
   return (
     <div
       className="mb-1.5 flex items-start gap-2 rounded-lg border border-status-warn/25 bg-status-warn/5 px-3 py-2"
@@ -46,8 +47,15 @@ export function RetryBanner({ threadId }: { threadId: string }) {
       <RefreshCwIcon className="mt-0.5 size-3.5 shrink-0 animate-spin text-status-warn" />
       <div className="min-w-0 flex-1">
         <div className="font-mono text-[11px] text-status-warn">
-          Retrying attempt {retry.attempt}/{retry.maxRetries} ·{' '}
-          {retryScheduleLabel(deadline, remaining, timeZone)}
+          {retry.kind === 'throttle' ? (
+            <>
+              Waiting for model quota ({retry.reason}) · {schedule}
+            </>
+          ) : (
+            <>
+              Retrying attempt {retry.attempt}/{retry.maxRetries} · {schedule}
+            </>
+          )}
         </div>
         <div className="break-words text-muted-foreground text-xs" title={retry.message}>
           {retry.message}
@@ -58,10 +66,12 @@ export function RetryBanner({ threadId }: { threadId: string }) {
 }
 
 export interface RetrySignal {
+  kind: 'retry' | 'throttle';
   runId?: string;
   seq?: number;
-  attempt: number;
-  maxRetries: number;
+  attempt?: number;
+  maxRetries?: number;
+  reason?: 'rpm' | 'rpd' | 'tpm' | 'tpd';
   delayMs: number;
   resumeAt?: number;
   message: string;
@@ -90,7 +100,13 @@ function lastRetry(events: SessionEvent[] | undefined, runId: string | null): Re
     if (!event || event.runId !== runId) {
       continue;
     }
-    return event.type === 'model.retry' ? event : null;
+    if (event.type === 'model.retry') {
+      return { kind: 'retry', ...event };
+    }
+    if (event.type === 'model.throttle') {
+      return { kind: 'throttle', ...event };
+    }
+    return null;
   }
   return null;
 }

@@ -6,15 +6,25 @@ import {
 } from '../application/provider-error.ts';
 import type { StreamChunk } from './ai-llm-chunks.ts';
 
-const RATE_LIMIT_RETRY_DELAYS_MS = [10_000, 20_000, 40_000, 80_000, 160_000, 300_000];
-const SERVER_ERROR_RETRY_DELAYS_MS = [2_000, 4_000, 8_000, 16_000, 32_000, 60_000];
+const RATE_LIMIT_RETRY_DELAYS_MS: [number, ...number[]] = [
+  10_000, 20_000, 40_000, 80_000, 160_000, 300_000,
+];
+const SERVER_ERROR_RETRY_DELAYS_MS: [number, ...number[]] = [
+  2_000, 4_000, 8_000, 16_000, 32_000, 60_000,
+];
+const RATE_LIMIT_FALLBACK_MS = RATE_LIMIT_RETRY_DELAYS_MS[0];
+const SERVER_ERROR_FALLBACK_MS = SERVER_ERROR_RETRY_DELAYS_MS[0];
 const RETRY_AFTER_MAX_MS = 600_000;
 const RETRY_JITTER_RATIO = 0.2;
+const RETRY_FLOOR_MS = 1_000;
+const SECONDS_TO_MS = 1_000;
 interface RetryAfterHeaders {
   'retry-after'?: string;
   'retry-after-ms'?: string;
+  'x-ratelimit-reset'?: string;
 }
-function retryAfterMsOf(error: unknown): number | undefined {
+const EPOCH_MS_THRESHOLD = 1e12;
+function adviceCandidates(error: unknown): unknown[] {
   const candidates: unknown[] = [error];
   if (RetryError.isInstance(error)) {
     candidates.push(...error.errors);
@@ -23,23 +33,63 @@ function retryAfterMsOf(error: unknown): number | undefined {
   if (cause !== undefined) {
     candidates.push(cause);
   }
-  for (const candidate of candidates) {
+  return candidates;
+}
+function considerAdvice(
+  current: number | undefined,
+  value: number | undefined,
+): number | undefined {
+  if (value === undefined || !Number.isFinite(value) || value <= 0) {
+    return current;
+  }
+  return current === undefined ? value : Math.max(current, value);
+}
+function resetAdviceMs(raw: string | undefined, nowMs: number): number | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+  const value = Number.parseFloat(raw);
+  if (!Number.isFinite(value)) {
+    return undefined;
+  }
+  const resetAtMs = value < EPOCH_MS_THRESHOLD ? value * SECONDS_TO_MS : value;
+  return Math.max(0, resetAtMs - nowMs);
+}
+function headerAdviceOf(headers: RetryAfterHeaders, nowMs: number): number | undefined {
+  let best: number | undefined;
+  const msRaw = headers['retry-after-ms'];
+  if (msRaw !== undefined) {
+    const ms = Number.parseFloat(msRaw);
+    best = considerAdvice(best, Number.isFinite(ms) ? ms : undefined);
+  }
+  const secondsRaw = headers['retry-after'];
+  if (secondsRaw !== undefined) {
+    const seconds = Number.parseFloat(secondsRaw);
+    if (Number.isFinite(seconds)) {
+      best = considerAdvice(best, seconds * SECONDS_TO_MS);
+    } else {
+      const dateMs = Date.parse(secondsRaw);
+      if (Number.isFinite(dateMs)) {
+        best = considerAdvice(best, Math.max(0, dateMs - nowMs));
+      }
+    }
+  }
+  return considerAdvice(best, resetAdviceMs(headers['x-ratelimit-reset'], nowMs));
+}
+function retryAfterMsOf(error: unknown): number | undefined {
+  const nowMs = Date.now();
+  let best: number | undefined;
+  for (const candidate of adviceCandidates(error)) {
     if (!APICallError.isInstance(candidate)) {
       continue;
     }
     const headers = candidate.responseHeaders as RetryAfterHeaders | undefined;
-    const msRaw = headers?.['retry-after-ms'];
-    const ms = msRaw === undefined ? undefined : Number.parseFloat(msRaw);
-    if (ms !== undefined && Number.isFinite(ms)) {
-      return ms;
+    if (headers === undefined) {
+      continue;
     }
-    const secondsRaw = headers?.['retry-after'];
-    const seconds = secondsRaw === undefined ? undefined : Number.parseFloat(secondsRaw);
-    if (seconds !== undefined && Number.isFinite(seconds)) {
-      return seconds * 1000;
-    }
+    best = considerAdvice(best, headerAdviceOf(headers, nowMs));
   }
-  return undefined;
+  return best;
 }
 export interface RetryPlan {
   schedule: number[];
@@ -48,7 +98,7 @@ export interface RetryPlan {
 }
 function jittered(ms: number): number {
   const delta = ms * RETRY_JITTER_RATIO;
-  return Math.max(1_000, Math.round(ms + (Math.random() * 2 - 1) * delta));
+  return Math.max(RETRY_FLOOR_MS, Math.round(ms + (Math.random() * 2 - 1) * delta));
 }
 export interface RetryPlanOptions {
   /** A clean replay was already used in this call. */
@@ -84,8 +134,10 @@ export function retryPlan(
   const advised = retryAfterMsOf(error);
   const waitMs =
     advised !== undefined
-      ? Math.min(advised, RETRY_AFTER_MAX_MS)
-      : jittered(schedule[attempt] ?? (rateLimited ? 10_000 : 2_000));
+      ? Math.min(Math.max(0, advised), RETRY_AFTER_MAX_MS)
+      : jittered(
+          schedule[attempt] ?? (rateLimited ? RATE_LIMIT_FALLBACK_MS : SERVER_ERROR_FALLBACK_MS),
+        );
   return { schedule, waitMs, replay };
 }
 export function retryChunk(error: unknown, attempt: number, plan: RetryPlan): StreamChunk {

@@ -50,6 +50,7 @@ export type {
   ModelOrigin,
   ModelPricing,
   ModelPricingOverride,
+  ModelRateLimits,
   ModelRecord,
   ModelTopProvider,
   SpeechConfig,

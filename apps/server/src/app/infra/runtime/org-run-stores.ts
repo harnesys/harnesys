@@ -189,6 +189,7 @@ function buildConsolidationUseCase(
       resolveProviderApiKey(deps.secrets, deps.orgId, provider.id, provider.apiKey),
   });
   const agentModelCoords = modelCoordsOf(deps);
+  const quota = deps.modelQuotaFactory?.forOrg(deps.orgId);
   const consolidateModelCoords = (modelId: string) => {
     const model = deps.models.findById(deps.orgId, modelId);
     const provider = model ? deps.providers.findById(deps.orgId, model.providerId) : undefined;
@@ -202,6 +203,7 @@ function buildConsolidationUseCase(
     events: runEvents,
     agents: deps.agents,
     logger: CONSOLE_LOGGER,
+    ...(quota ? { quota } : {}),
     embeddings,
     agentModelCoords,
     consolidateModelCoords,
@@ -210,6 +212,7 @@ function buildConsolidationUseCase(
       models: modelsPort,
       events: runEvents,
       logger: CONSOLE_LOGGER,
+      ...(quota ? { quota } : {}),
       embeddings,
       episodic: new OrgEpisodicPort(session.db),
       agentModelCoords,
@@ -220,6 +223,7 @@ function buildConsolidationUseCase(
       agents: deps.agents,
       logger: CONSOLE_LOGGER,
       models: modelsPort,
+      ...(quota ? { quota } : {}),
       decisionCoords: () =>
         findDecisionModelCoords({
           orgId: deps.orgId,

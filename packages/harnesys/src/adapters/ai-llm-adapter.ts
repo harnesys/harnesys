@@ -1,13 +1,16 @@
 import { streamText } from 'ai';
 import type { RequestPlan } from '../application/llm-request-plan.ts';
 import type { AgentGenerationSettings, RawRequestMode } from '../domain/agent-definition.ts';
+import type { ModelQuotaPort } from '../ports/model-quota.ts';
 import type { ModelBinding } from '../ports/models.ts';
 import type { ToolDefinition } from '../ports/tools.ts';
 import { cacheBreakpointDrivers, withCacheBreakpoints } from './ai-llm-cache.ts';
 import { type StreamChunk, toAiTools } from './ai-llm-chunks.ts';
+import { completedChunk, persistCallRawRequest } from './ai-llm-complete.ts';
 import { toModelMessages } from './ai-llm-messages.ts';
 import { type NormalizeReport, normalizeToolSequence } from './ai-llm-normalize.ts';
 import { buildProvider, effortStreamOptions } from './ai-llm-provider.ts';
+import { acquireLease, type QuotaLease, usageTokensOf } from './ai-llm-quota.ts';
 import { abortableSleep, driverErrorStatus, retryChunk, retryPlan } from './ai-llm-retry.ts';
 import {
   consumeParts,
@@ -15,7 +18,6 @@ import {
   type PartContext,
   type StreamState,
 } from './ai-llm-stream-parts.ts';
-import { persistRawRequestIfConfigured } from './raw-request-persist.ts';
 
 export type { CallModelResult, StreamChunk } from './ai-llm-chunks.ts';
 export { abortableSleep, driverErrorStatus } from './ai-llm-retry.ts';
@@ -37,6 +39,7 @@ export interface CallModelOptions {
   rawRequestDir?: string;
   rawRequestMode?: RawRequestMode;
   rawRequestPlan?: RequestPlan;
+  quota?: ModelQuotaPort;
 }
 function positiveModelNumber(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined;
@@ -156,73 +159,6 @@ function buildStreamConfig(
   }
   return { config: streamConfig, normalization: report };
 }
-async function resolveStructured(result: unknown): Promise<unknown> {
-  try {
-    const object = await (result as { object?: PromiseLike<unknown> }).object;
-    if (object !== undefined) {
-      return object;
-    }
-  } catch {}
-  return undefined;
-}
-async function resolveUsage(result: unknown): Promise<unknown> {
-  let usage: unknown = (globalThis as Record<string, unknown>).__harnesys_last_usage;
-  try {
-    const total = await (result as { totalUsage?: PromiseLike<unknown> }).totalUsage;
-    if (total) {
-      usage = total;
-    }
-  } catch {}
-  try {
-    const single = await (result as { usage?: PromiseLike<unknown> }).usage;
-    if (single && !usage) {
-      usage = single;
-    }
-  } catch {}
-  return usage;
-}
-async function completedChunk(result: unknown, state: StreamState): Promise<StreamChunk> {
-  let finishReason = state.finishReason;
-  if (state.toolCalls.length > 0 && finishReason !== 'tool-calls' && finishReason !== 'length') {
-    finishReason = 'tool-calls';
-  }
-  const structured = await resolveStructured(result);
-  const usage = await resolveUsage(result);
-  return {
-    type: 'completed',
-    finishReason,
-    text: state.fullText || undefined,
-    reasoning: state.reasoningText || undefined,
-    toolCalls: state.toolCalls.length > 0 ? state.toolCalls : undefined,
-    structured,
-    sources: state.sources.length > 0 ? state.sources : undefined,
-    files: state.files.length > 0 ? state.files : undefined,
-    usage,
-  };
-}
-async function persistCallRawRequest(
-  options: CallModelOptions,
-  result: unknown,
-  driver: string,
-  toolNames: string[],
-  normalization?: NormalizeReport,
-): Promise<void> {
-  await persistRawRequestIfConfigured(
-    options.rawRequestDir,
-    options.rawRequestMode,
-    result,
-    {
-      provider: driver,
-      model: options.binding.name,
-    },
-    {
-      ...(options.runId ? { runId: options.runId } : {}),
-      ...(options.rawRequestPlan ? { plan: options.rawRequestPlan } : {}),
-      summary: { messageCount: options.messages.length, toolNames },
-      ...(normalization ? { normalization } : {}),
-    },
-  );
-}
 function normalizeDriverStatus(err: unknown): unknown {
   const status = driverErrorStatus(err);
   if (status !== undefined && (err as { statusCode?: unknown }).statusCode === undefined) {
@@ -301,6 +237,18 @@ export async function* callModel(options: CallModelOptions): AsyncGenerator<Stre
   const { config: streamConfig, normalization } = buildStreamConfig(options, context);
   const idleMs = streamIdleTimeoutMs(options.settings?.generation);
   const attemptLimit = options.settings?.generation?.providerRetryAttempts;
+  let completedUsage: number | undefined;
+  const lease: QuotaLease = yield* acquireLease({
+    quota: options.quota,
+    binding: options.binding,
+    generation: options.settings?.generation,
+    prompt: options.prompt,
+    messages: options.messages,
+    signal: context.signal,
+  });
+  if (lease.aborted) {
+    return;
+  }
   let state = emptyStreamState();
   let alreadyReplayed = false;
   let internal: AbortController | undefined;
@@ -321,7 +269,9 @@ export async function* callModel(options: CallModelOptions): AsyncGenerator<Stre
         if (state.chunkBuffer) {
           yield { type: 'chunk', text: state.chunkBuffer, chunkId: crypto.randomUUID() };
         }
-        yield await completedChunk(result, state);
+        const completion = await completedChunk(result, state);
+        completedUsage = usageTokensOf(completion.usage);
+        yield completion;
         return;
       } catch (err) {
         const retry = streamErrorChunk(err, context, state, attempt, {
@@ -338,5 +288,6 @@ export async function* callModel(options: CallModelOptions): AsyncGenerator<Stre
     }
   } finally {
     context.signal?.removeEventListener('abort', onOuterAbort);
+    lease.settle(completedUsage);
   }
 }

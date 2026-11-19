@@ -3,6 +3,7 @@ export { isPathBlocked } from './src/adapters/actions/path-blocklist.ts';
 export { canonicalizePath } from './src/adapters/actions/path-resolve.ts';
 export type { CallModelResult, StreamChunk } from './src/adapters/ai-llm-adapter.ts';
 export { callModel } from './src/adapters/ai-llm-adapter.ts';
+export { InMemoryModelQuota } from './src/adapters/in-memory-model-quota.ts';
 export { InMemoryRunEventStore } from './src/adapters/in-memory-run-event-store.ts';
 export { InMemoryRunLifecycleStore } from './src/adapters/in-memory-run-lifecycle-store.ts';
 export { InMemoryRuntimeState } from './src/adapters/in-memory-runtime-state.ts';
@@ -317,6 +318,15 @@ export type {
   McpToolInfo,
   McpTransport,
 } from './src/domain/mcp.ts';
+export {
+  admitQuota,
+  bucketWindowStartMs,
+  emptyQuotaState,
+  type QuotaBucketState,
+  type QuotaKeyState,
+  type QuotaState,
+  settleQuota,
+} from './src/domain/model-quota.ts';
 export type {
   AgentPacks,
   CapabilityScope,
@@ -694,6 +704,8 @@ export type {
   SemanticUpdateInput,
   SemanticUpsertInput,
 } from './src/ports/memory.ts';
+export type { ModelQuotaPort, QuotaAdmission, QuotaBucket } from './src/ports/model-quota.ts';
+export { QUOTA_BUCKETS } from './src/ports/model-quota.ts';
 export type {
   DiscoveredModel,
   DiscoverInput,
@@ -703,6 +715,7 @@ export type {
   ModelKind,
   ModelPricing,
   ModelPricingOverride,
+  ModelRateLimits,
   ModelRecord,
   ModelsApi,
   ModelsPort,

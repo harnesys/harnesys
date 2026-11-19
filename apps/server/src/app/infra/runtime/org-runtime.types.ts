@@ -32,6 +32,7 @@ import { LspPort } from '../../domain/lsp/lsp.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { ModePresetRegistryPort } from '../../domain/mode-presets/mode-preset-registry.port.ts';
+import { ModelQuotaFactoryPort } from '../../domain/model-quota/model-quota-factory.port.ts';
 import { PermissionRuleStorePort } from '../../domain/permissions/permission-rule-store.port.ts';
 import { PlanEventsPort } from '../../domain/plan/plan-events.port.ts';
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
@@ -145,4 +146,5 @@ export interface OrgRuntimeDeps {
   skills?: OrgSkillsDeps;
   sourcesPack?: OrgSourcesDeps;
   waitGate?: WaitTickerGatePort;
+  modelQuotaFactory?: ModelQuotaFactoryPort;
 }

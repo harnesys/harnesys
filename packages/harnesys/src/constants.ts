@@ -116,6 +116,7 @@ export const EVENT_TYPES = {
   USER_MESSAGE: 'user.message',
   MODEL_REQUESTED: 'model.requested',
   MODEL_RETRY: 'model.retry',
+  MODEL_THROTTLE: 'model.throttle',
   MODEL_DELTA: 'model.delta',
   MODEL_REASONING: 'model.reasoning',
   MODEL_REASONING_START: 'model.reasoning-start',
@@ -357,6 +358,7 @@ export const LLM_CHUNK_EVENTS: Record<string, string> = {
   file: 'model.file',
   chunk: 'model.chunk',
   retry: 'model.retry',
+  throttle: 'model.throttle',
 };
 export const PASSTHROUGH_MODEL_EVENTS = new Set([
   'model.delta',
@@ -371,6 +373,7 @@ export const PASSTHROUGH_MODEL_EVENTS = new Set([
   'model.file',
   'model.stats',
   'model.retry',
+  'model.throttle',
 ]);
 export const CHARS_PER_TOKEN_ESTIMATE = 4;
 export const RAW_REQUEST_MAX_CHARS = 1_000_000;

@@ -7,6 +7,7 @@ import type { AgentsResolve } from '../ports/create-runtime.ts';
 import type { FileAccessPolicy } from '../ports/file-access.ts';
 import type { ContextFileRunEntry } from '../ports/llm-plan.ts';
 import type { Logger } from '../ports/logger.ts';
+import type { ModelQuotaPort } from '../ports/model-quota.ts';
 import type { ModelsPort, ProviderConfig } from '../ports/models.ts';
 import type { PathsConfig } from '../ports/paths.ts';
 import type { PermissionGrantsPort } from '../ports/permission-grants-port.ts';
@@ -42,6 +43,7 @@ export interface RunEngineDeps {
   toolRegistry: Map<string, ToolDefinition>;
   toolMessages: 'barrier' | 'ordered';
   mergeState?: (key: string, a: unknown, b: unknown) => unknown;
+  modelQuota?: ModelQuotaPort;
   packRegistrations?: PackRegistration[];
   skills?: SkillRegistry;
   agents: AgentsResolve;

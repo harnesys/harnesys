@@ -6,6 +6,7 @@ import { KnowledgeSearchPort } from '../../domain/knowledge/knowledge-search.por
 import { KnowledgeStorePort } from '../../domain/knowledge/knowledge-store.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
+import { ModelQuotaFactoryPort } from '../../domain/model-quota/model-quota-factory.port.ts';
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
 import { WorkspaceContainerPort } from '../../domain/process-runtime/workspace-container.port.ts';
 import { SourceSkillsPort } from '../../domain/skills/source-skills.port.ts';
@@ -51,6 +52,7 @@ export class WorkerWorkExecutor {
     private readonly knowledgeStore: KnowledgeStorePort,
     private readonly plugins: PluginRuntimePort,
     private readonly sourceSkills: SourceSkillsPort,
+    private readonly modelQuotaFactory: ModelQuotaFactoryPort,
     logger: Logger,
   ) {
     this.log = logger.child('worker-work-executor');
@@ -136,6 +138,7 @@ export class WorkerWorkExecutor {
         token: identity.token,
         runId: envelope.runId,
       }),
+      ...(this.modelQuotaFactory ? { modelQuotaFactory: this.modelQuotaFactory } : {}),
       logger: this.log,
     };
   }

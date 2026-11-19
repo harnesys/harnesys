@@ -165,6 +165,7 @@ export async function prepareExecuteGraphOpts(
     ...(opts.permissionGrants !== undefined ? { permissionGrants: opts.permissionGrants } : {}),
     ...(answer?.note !== undefined ? { resumeNote: answer.note } : {}),
     childJournal,
+    ...(deps.modelQuota ? { modelQuota: deps.modelQuota } : {}),
     ...(deps.childRunner ? { childRunner: deps.childRunner } : {}),
     logger: runLogger,
     ...(opts.channelNote ? { channelNote: opts.channelNote } : {}),

@@ -59,6 +59,7 @@ function mergeSyncedFields(current: ModelFieldsInput, synced: ModelFieldsInput):
     defaultEffort: synced.defaultEffort ?? current.defaultEffort,
     reasoningMandatory: synced.reasoningMandatory ?? current.reasoningMandatory,
     speech: current.speech,
+    rateLimits: current.rateLimits,
   };
 }
 export function EditModelDialog({

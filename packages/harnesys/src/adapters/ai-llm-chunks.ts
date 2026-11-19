@@ -76,6 +76,12 @@ export type StreamChunk =
       message: string;
     }
   | {
+      type: 'throttle';
+      reason: 'rpm' | 'rpd' | 'tpm' | 'tpd';
+      delayMs: number;
+      message: string;
+    }
+  | {
       type: 'completed';
       finishReason: string;
       text?: string;

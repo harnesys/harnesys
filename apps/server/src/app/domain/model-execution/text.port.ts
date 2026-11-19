@@ -4,6 +4,7 @@ export interface TextGenerationInput {
   system?: string;
   prompt: string;
   maxOutputTokens?: number;
+  orgId?: string;
 }
 
 export interface TextGenerationResult {

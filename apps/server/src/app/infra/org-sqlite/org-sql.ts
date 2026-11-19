@@ -932,3 +932,16 @@ CREATE TABLE IF NOT EXISTS org_memory_settings (
   updated_at TEXT NOT NULL
 );
 `;
+
+export const CREATE_MODEL_QUOTA_WINDOWS_SQL = `
+CREATE TABLE IF NOT EXISTS model_quota_windows (
+  model_key TEXT NOT NULL,
+  bucket TEXT NOT NULL,
+  window_start INTEGER NOT NULL,
+  requests INTEGER NOT NULL DEFAULT 0,
+  tokens INTEGER NOT NULL DEFAULT 0,
+  reserved_requests INTEGER NOT NULL DEFAULT 0,
+  reserved_tokens INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (model_key, bucket)
+);
+`;

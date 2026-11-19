@@ -1,5 +1,6 @@
 import type { AgentHook, AgentLevel, MemoryPolicy } from '@harnesys/contracts';
 import { validateStructural } from '../application/validate.ts';
+import type { ModelRateLimits } from '../ports/models.ts';
 import type { PermissionMap } from '../ports/permissions.ts';
 import { ValidationError } from './errors.ts';
 import type { Expr } from './expr.ts';
@@ -42,6 +43,8 @@ export interface AgentGenerationSettings {
   streamIdleTimeoutMs?: number;
   /** Provider retry attempts per transient error (min 1 = no retries, default 6). */
   providerRetryAttempts?: number;
+  /** Local rate-limit override; set values replace the model's limits entirely. */
+  modelLimits?: ModelRateLimits;
   /** Context-management tuning knobs. */
   context?: AgentContextSettings;
 }

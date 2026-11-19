@@ -121,6 +121,7 @@ export async function createPlacedRunStack(input: PlacedRunStackInput): Promise<
     toolMessages: 'ordered',
     agents: input.agentsResolve,
     packRegistrations: input.packRegistrations,
+    ...(deps.modelQuotaFactory ? { modelQuota: deps.modelQuotaFactory.forOrg(input.orgId) } : {}),
     logger: CONSOLE_LOGGER,
   });
   const scope: CapabilityScope = {

@@ -8,6 +8,7 @@ import {
   MEMORY_REFLECT_EPISODIC_LIMIT,
   MEMORY_REFLECT_FACTS_LIMIT,
   MEMORY_REFLECT_RUBRIC,
+  type ModelQuotaPort,
   type ModelsPort,
   type ModelUsage,
   type RunEventStore,
@@ -46,6 +47,7 @@ export interface ReflectThreadDeps {
   episodic?: EpisodicPort;
   agentModelCoords?: AgentModelCoordsResolver;
   consolidateModelCoords?: ConsolidateModelCoordsResolver;
+  quota?: ModelQuotaPort;
 }
 
 export interface ReflectOrigin {
@@ -158,7 +160,7 @@ export class ReflectThreadUseCase {
     }
     const binding = await this.deps.models.get(resolved.coords.provider, resolved.coords.model);
     const prompt = reflectPrompt(sessionRows.map(toPromptRow), episodic, longRows.map(toPromptRow));
-    const result = await completeOnce(binding, prompt);
+    const result = await completeOnce(binding, prompt, this.deps.quota);
     if (result === undefined || result.finishReason !== 'stop') {
       this.deps.logger.warn('memory reflect llm failed', {
         orgId,

@@ -14,6 +14,7 @@ import type { AgentRecord } from '../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
+import { ModelQuotaFactoryPort } from '../../domain/model-quota/model-quota-factory.port.ts';
 import { LlmModelPort, LlmProviderPort } from '../../domain/provider/llm-provider.port.ts';
 import { createOrgModelsPort } from '../../domain/provider/org-models.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
@@ -43,6 +44,7 @@ export class TestAgentHookUseCase {
     private readonly machineConfig: MachineConfigPort,
     private readonly sources: SourceRegistryPort,
     private readonly sourceLocation: SourceLocationPort,
+    private readonly modelQuotaFactory?: ModelQuotaFactoryPort,
   ) {}
 
   async execute(request: TestAgentHookRequest): Promise<HookTestResponse> {
@@ -124,6 +126,7 @@ export class TestAgentHookUseCase {
 
   private hookCtx(orgId: string, agent: AgentRecord, cwd: string): HookRuntimeCtx {
     const models = createOrgModelsPort(orgId, this.providers, this.models, this.secrets);
+    const quota = this.modelQuotaFactory?.forOrg(orgId);
     return {
       cwd,
       projectDir: cwd,
@@ -137,6 +140,7 @@ export class TestAgentHookUseCase {
           messages: [{ role: 'user', content: prompt }],
           toolNames: [],
           signalOrRegistry: undefined,
+          ...(quota ? { quota } : {}),
         });
         let text = '';
         for await (const chunk of stream) {

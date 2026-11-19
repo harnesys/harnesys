@@ -24,6 +24,7 @@ import type { AgentsResolve } from '../ports/create-runtime.ts';
 import type { FileAccessPolicy } from '../ports/file-access.ts';
 import type { ContextFileRunEntry } from '../ports/llm-plan.ts';
 import type { Logger } from '../ports/logger.ts';
+import type { ModelQuotaPort } from '../ports/model-quota.ts';
 import type { ModelBinding, ModelsPort, ProviderConfig } from '../ports/models.ts';
 import type { PathsConfig } from '../ports/paths.ts';
 import type { PermissionGrantsPort } from '../ports/permission-grants-port.ts';
@@ -422,6 +423,7 @@ export interface GraphOpts {
   fileAccessFor?: (agent: AgentDefinition) => FileAccessPolicy;
   spawnPath?: string;
   runtime?: RuntimePromptInfo;
+  modelQuota?: ModelQuotaPort;
 }
 function graphSlots(
   opts: GraphOpts,
@@ -539,6 +541,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
     hooks,
     guard: compactionGuard,
     step: steps,
+    modelQuota: opts.modelQuota,
   });
   const loopGuard = createLoopGuardState();
   if (opts.startNodeId && (opts.resumePayload !== undefined || opts.rejected === true)) {
@@ -1265,6 +1268,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
               runtime: opts.runtime,
               fileAccess: opts.fileAccess,
               excludedMediaRelPaths,
+              modelQuota: opts.modelQuota,
             },
           );
           for await (const event of stream) {
@@ -1609,6 +1613,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
           signalOrRegistry: opts.signal ?? new AbortController().signal,
           outputSchema: routeOutputSchema(rn.routes),
           settings: { effort: routeRef?.effort, generation: routeRef?.generation },
+          quota: opts.modelQuota,
         });
         for await (const chunk of stream) {
           if (chunk.type === 'completed') {

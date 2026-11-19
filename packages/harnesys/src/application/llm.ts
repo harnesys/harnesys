@@ -1,11 +1,13 @@
 import { statSync } from 'node:fs';
 import { callModel, driverErrorStatus, type StreamChunk } from '../adapters/ai-llm-adapter.ts';
 import { mediaDeliveryGates } from '../adapters/ai-llm-provider.ts';
+import { usageTokensOf } from '../adapters/ai-llm-quota.ts';
 import { EXCLUSION_TTL_USER_TURNS, LLM_CHUNK_EVENTS } from '../constants.ts';
 import type { AgentDefinition, AgentModelRef } from '../domain/agent-definition.ts';
 import { codedRunError } from '../domain/errors.ts';
 import type { FileAccessPolicy } from '../ports/file-access.ts';
 import type { ContextFileRunEntry } from '../ports/llm-plan.ts';
+import type { ModelQuotaPort } from '../ports/model-quota.ts';
 import type { ModelBinding, ResolvedModel } from '../ports/models.ts';
 import type { PathsConfig } from '../ports/paths.ts';
 import type { PermissionMap } from '../ports/permissions.ts';
@@ -58,6 +60,7 @@ export interface LlmContext {
   runtime?: RuntimePromptInfo;
   fileAccess?: FileAccessPolicy;
   excludedMediaRelPaths?: Map<string, { reason: string; untilTurn: number }>;
+  modelQuota?: ModelQuotaPort;
 }
 export function formatRuntimeSection(runtime: RuntimePromptInfo | undefined): string {
   if (!runtime) {
@@ -402,6 +405,7 @@ export async function* runLlmGenerate(
     rawRequestDir: ctx.paths?.threadDir,
     rawRequestMode: ctx.agent.observability?.rawRequests ?? 'full',
     rawRequestPlan: plan,
+    quota: ctx.modelQuota,
   });
   async function* drain(messages: unknown[]): AsyncGenerator<{ type: string; data?: unknown }> {
     const stream = callModel(callOptions(messages));
@@ -483,18 +487,6 @@ export async function* runLlmGenerate(
     });
     yield { type: 'model.completed', data: out };
   }
-}
-function usageTokensOf(usage: unknown): number {
-  if (!usage || typeof usage !== 'object') {
-    return 0;
-  }
-  const u = usage as Record<string, unknown>;
-  if (typeof u.totalTokens === 'number' && Number.isFinite(u.totalTokens)) {
-    return u.totalTokens;
-  }
-  const input = typeof u.inputTokens === 'number' ? u.inputTokens : 0;
-  const output = typeof u.outputTokens === 'number' ? u.outputTokens : 0;
-  return input + output;
 }
 const SUMMARY_MARKER = '[Conversation summary of earlier messages]';
 export function buildRequestMessages(

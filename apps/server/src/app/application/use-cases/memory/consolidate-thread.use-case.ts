@@ -5,6 +5,7 @@ import {
   MEMORY_EXTRACTION_MAX_EVENTS,
   MEMORY_RECONCILE_FACTS_LIMIT,
   type ModelBinding,
+  type ModelQuotaPort,
   type ModelsPort,
   type ModelUsage,
   type RunEventStore,
@@ -53,6 +54,7 @@ export interface ConsolidateThreadDeps {
   embeddings?: EmbeddingsPort;
   agentModelCoords?: AgentModelCoordsResolver;
   consolidateModelCoords?: ConsolidateModelCoordsResolver;
+  quota?: ModelQuotaPort;
   reflect?: ReflectThreadUseCase;
   promote?: PromoteFactsUseCase;
 }
@@ -121,7 +123,11 @@ export class ConsolidateThreadUseCase {
     }
     const coords = resolved.coords;
     const binding = await this.deps.models.get(coords.provider, coords.model);
-    const extraction = await completeOnce(binding, extractionPrompt(window.consumed));
+    const extraction = await completeOnce(
+      binding,
+      extractionPrompt(window.consumed),
+      this.deps.quota,
+    );
     if (extraction === undefined || extraction.finishReason !== 'stop') {
       this.deps.logger.warn('memory extraction failed', {
         orgId,
@@ -242,7 +248,11 @@ export class ConsolidateThreadUseCase {
       return [];
     }
     const context = this.reconcileContextOf(input.orgId, input.agentName);
-    const reconcile = await completeOnce(input.binding, reconcilePrompt(input.candidates, context));
+    const reconcile = await completeOnce(
+      input.binding,
+      reconcilePrompt(input.candidates, context),
+      this.deps.quota,
+    );
     if (reconcile === undefined || reconcile.finishReason !== 'stop') {
       this.deps.logger.warn('memory reconcile failed', {
         orgId: input.orgId,

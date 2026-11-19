@@ -113,6 +113,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     toolMessages: 'ordered',
     agents: agentsResolve,
     packRegistrations,
+    ...(deps.modelQuotaFactory ? { modelQuota: deps.modelQuotaFactory.forOrg(deps.orgId) } : {}),
     logger: CONSOLE_LOGGER,
   });
 

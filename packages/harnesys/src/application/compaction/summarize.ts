@@ -1,6 +1,7 @@
 import { callModel, type StreamChunk } from '../../adapters/ai-llm-adapter.ts';
 import { SUMMARY_SYSTEM_PROMPT, SUMMARY_USER_PROMPT } from '../../constants.ts';
 import type { RawRequestMode } from '../../domain/agent-definition.ts';
+import type { ModelQuotaPort } from '../../ports/model-quota.ts';
 import type { ModelBinding } from '../../ports/models.ts';
 
 export { SUMMARY_SYSTEM_PROMPT, SUMMARY_USER_PROMPT };
@@ -26,6 +27,7 @@ export async function* streamSummary(opts: {
   sessionId?: string;
   rawRequestDir?: string;
   rawRequestMode?: RawRequestMode;
+  modelQuota?: ModelQuotaPort;
 }): AsyncGenerator<SummaryStreamEvent> {
   const messages = [...opts.head, { role: 'user', content: SUMMARY_USER_PROMPT }];
   const stream = callModel({
@@ -38,6 +40,7 @@ export async function* streamSummary(opts: {
     sessionId: opts.sessionId,
     rawRequestDir: opts.rawRequestDir,
     rawRequestMode: opts.rawRequestMode,
+    quota: opts.modelQuota,
   });
   let completed: StreamChunk | undefined;
   for await (const chunk of stream) {

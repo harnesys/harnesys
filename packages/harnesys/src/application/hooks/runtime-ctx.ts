@@ -46,6 +46,7 @@ export function createHookRuntimeCtx(input: HookRuntimeCtxInput): HookRuntimeCtx
         maybeSignal: signal,
         rawRequestDir: parent.paths?.threadDir,
         rawRequestMode: agent.observability?.rawRequests,
+        quota: parent.modelQuota,
       });
       let text = '';
       for await (const chunk of stream) {

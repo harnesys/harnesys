@@ -1,5 +1,6 @@
 import { Injectable, Logger, type ModuleDestroyHook, type ModuleInitHook } from '@harnesys/brix';
 import { parseMemoryPolicy } from '@harnesys/contracts';
+import type { ModelQuotaPort } from 'harnesys';
 import { CONSOLE_LOGGER } from 'harnesys';
 import { ConsolidateThreadUseCase } from '../../application/use-cases/memory/consolidate-thread.use-case.ts';
 import { PromoteFactsUseCase } from '../../application/use-cases/memory/promote-facts.use-case.ts';
@@ -11,6 +12,7 @@ import { MemoryCrawlerPort } from '../../domain/agent/memory-crawler.port.ts';
 import { StudioEmbeddings } from '../../domain/knowledge/embeddings.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { OrgMachineStore } from '../../domain/machine/org-machine-store.port.ts';
+import { ModelQuotaFactoryPort } from '../../domain/model-quota/model-quota-factory.port.ts';
 import { LlmModelPort, LlmProviderPort } from '../../domain/provider/llm-provider.port.ts';
 import { createOrgModelsPort } from '../../domain/provider/org-models.ts';
 import { resolveProviderApiKey } from '../../domain/secret/provider-api-key.ts';
@@ -62,6 +64,7 @@ export class MemoryCrawler extends MemoryCrawlerPort implements ModuleInitHook, 
     private readonly providers: LlmProviderPort,
     private readonly models: LlmModelPort,
     private readonly secrets: SecretStorePort,
+    private readonly modelQuotaFactory: ModelQuotaFactoryPort,
     logger: Logger,
   ) {
     super();
@@ -135,12 +138,14 @@ export class MemoryCrawler extends MemoryCrawlerPort implements ModuleInitHook, 
   private crawlOrgPass(orgId: string): Promise<string> {
     return withOrgSqliteAsync(this.layout, orgId, async (db) => {
       const nowMs = Date.now();
-      const reflect = this.reflectOf(orgId, db);
+      const quota = this.modelQuotaFactory?.forOrg(orgId);
+      const reflect = this.reflectOf(orgId, db, quota);
       const promote = new PromoteFactsUseCase({
         db,
         agents: this.agents,
         logger: CONSOLE_LOGGER,
         models: createOrgModelsPort(orgId, this.providers, this.models, this.secrets),
+        ...(quota ? { quota } : {}),
         decisionCoords: () =>
           findDecisionModelCoords({
             orgId,
@@ -149,7 +154,7 @@ export class MemoryCrawler extends MemoryCrawlerPort implements ModuleInitHook, 
             decisionModelId: decisionModelIdOf(db, orgId),
           }),
       });
-      const consolidate = this.consolidateOf(orgId, db, reflect, promote);
+      const consolidate = this.consolidateOf(orgId, db, reflect, promote, quota);
       const totals: CrawlTotals = {
         agents: 0,
         threads: 0,
@@ -235,6 +240,7 @@ export class MemoryCrawler extends MemoryCrawlerPort implements ModuleInitHook, 
     db: OrgSqliteDb,
     reflect: ReflectThreadUseCase,
     promote: PromoteFactsUseCase,
+    quota: ModelQuotaPort | undefined,
   ): ConsolidateThreadUseCase {
     return new ConsolidateThreadUseCase({
       db,
@@ -242,6 +248,7 @@ export class MemoryCrawler extends MemoryCrawlerPort implements ModuleInitHook, 
       events: new SqliteRunEventStore(db),
       agents: this.agents,
       logger: CONSOLE_LOGGER,
+      ...(quota ? { quota } : {}),
       embeddings: this.embeddingsOf(orgId, db),
       agentModelCoords: (agent: AgentRecord) => this.coordsOf(orgId, agent.modelId),
       consolidateModelCoords: (modelId: string) => this.coordsOf(orgId, modelId),
@@ -250,12 +257,17 @@ export class MemoryCrawler extends MemoryCrawlerPort implements ModuleInitHook, 
     });
   }
 
-  private reflectOf(orgId: string, db: OrgSqliteDb): ReflectThreadUseCase {
+  private reflectOf(
+    orgId: string,
+    db: OrgSqliteDb,
+    quota: ModelQuotaPort | undefined,
+  ): ReflectThreadUseCase {
     return new ReflectThreadUseCase({
       db,
       models: createOrgModelsPort(orgId, this.providers, this.models, this.secrets),
       events: new SqliteRunEventStore(db),
       logger: CONSOLE_LOGGER,
+      ...(quota ? { quota } : {}),
       embeddings: this.embeddingsOf(orgId, db),
       episodic: new OrgEpisodicPort(db),
       agentModelCoords: (agent: AgentRecord) => this.coordsOf(orgId, agent.modelId),

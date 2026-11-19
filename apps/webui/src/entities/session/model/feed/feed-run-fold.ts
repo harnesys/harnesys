@@ -54,7 +54,7 @@ export function runProcess(fold: RunFold, ev: SessionEvent, index: number): void
     closeRun(fold, failed, ev.type as FeedRunTerminal);
     return;
   }
-  if (ev.type === 'model.retry') {
+  if (ev.type === 'model.retry' || ev.type === 'model.throttle') {
     return;
   }
   let run = fold.current;

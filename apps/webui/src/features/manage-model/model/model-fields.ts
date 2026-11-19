@@ -7,11 +7,11 @@ import {
   MODALITIES,
   MODEL_FEATURES,
   MODEL_KINDS,
-  type Modality,
   type ModelArchitecture,
   type ModelFeature,
   type ModelKind,
   type ModelPricing,
+  type ModelRateLimits,
   type ModelRecord,
   type ModelTopProvider,
   type ProviderModelPublic,
@@ -20,6 +20,12 @@ import {
 } from '@harnesys/studio-shared';
 import { z } from 'zod';
 import { optionalAmount, optionalPrice } from './model-field-values';
+import {
+  emptyRateLimitFields,
+  rateLimitFieldsFrom,
+  rateLimitsSchema,
+  toRateLimits,
+} from './model-rate-limit-fields';
 import {
   emptySpeechFields,
   speechFieldsFrom,
@@ -45,6 +51,7 @@ export const modelFieldsSchema = z
     defaultEffort: z.enum(EFFORTS).optional(),
     reasoningMandatory: z.boolean().optional(),
     speech: speechSchema,
+    rateLimits: rateLimitsSchema,
   })
   .superRefine((value, ctx) => {
     if (value.kind === 'embed') {
@@ -88,6 +95,7 @@ export interface ModelFieldsDraft {
   defaultEffort?: Effort;
   reasoningMandatory?: boolean;
   speech?: SpeechConfig;
+  rateLimits?: ModelRateLimits;
 }
 export type ModelEditorDraft = ModelFieldsDraft & {
   kind: ModelKind;
@@ -107,6 +115,7 @@ export function emptyModelFields(kind: ModelKind = 'chat'): ModelFieldsInput {
     defaultEffort: undefined,
     reasoningMandatory: undefined,
     speech: emptySpeechFields(),
+    rateLimits: emptyRateLimitFields(),
   };
 }
 export function resolveModelKind(raw?: string): ModelKind {
@@ -161,6 +170,7 @@ export function modelFieldsFrom(row: {
     defaultEffort,
     reasoningMandatory: fields.reasoningMandatory,
     speech: speechFieldsFrom(fields.speech),
+    rateLimits: rateLimitFieldsFrom(fields.rateLimits),
   };
 }
 export function mergeFields(base?: ModelFieldsDraft, extra?: ModelFieldsDraft): ModelFieldsDraft {
@@ -177,14 +187,17 @@ export function mergeFields(base?: ModelFieldsDraft, extra?: ModelFieldsDraft): 
     defaultEffort: extra?.defaultEffort ?? base?.defaultEffort,
     reasoningMandatory: extra?.reasoningMandatory ?? base?.reasoningMandatory,
     speech: extra?.speech ?? base?.speech,
+    rateLimits: extra?.rateLimits ?? base?.rateLimits,
   };
 }
 export function toModelDraft(values: ModelFieldsOutput): ModelFieldsDraft {
-  if (values.kind === 'embed') {
-    return toEmbedDraft(values);
-  }
-  const draft = toChatDraft(values);
-  return values.kind === 'speech' ? { ...draft, speech: toSpeechConfig(values.speech) } : draft;
+  const draft = values.kind === 'embed' ? toEmbedDraft(values) : toChatDraft(values);
+  const rateLimits = toRateLimits(values.rateLimits);
+  return {
+    ...draft,
+    ...(values.kind === 'speech' ? { speech: toSpeechConfig(values.speech) } : {}),
+    ...(rateLimits ? { rateLimits } : {}),
+  };
 }
 export function toEditorDraft(values: ModelFieldsOutput): ModelEditorDraft {
   return { kind: values.kind, ...toModelDraft(values) };
@@ -298,53 +311,3 @@ function stringifyPrice(value: string | undefined): string {
   }
   return value;
 }
-export function toggleItem<T>(list: T[], item: T): T[] {
-  return list.includes(item) ? list.filter((entry) => entry !== item) : [...list, item];
-}
-export const MODALITY_ITEMS: {
-  value: Modality;
-  label: string;
-}[] = [
-  { value: 'text', label: 'Text' },
-  { value: 'image', label: 'Image' },
-  { value: 'audio', label: 'Audio' },
-  { value: 'video', label: 'Video' },
-  { value: 'file', label: 'File' },
-];
-export const FEATURE_ITEMS: {
-  value: ModelFeature;
-  label: string;
-}[] = [
-  { value: 'tools', label: 'Function Calling' },
-  { value: 'structured', label: 'Structured Output' },
-  { value: 'streaming', label: 'Streaming' },
-  { value: 'reasoning', label: 'Reasoning' },
-  { value: 'cache', label: 'Prompt Cache' },
-];
-export const EFFORT_ITEMS: {
-  value: Effort;
-  label: string;
-}[] = [
-  { value: 'none', label: 'None' },
-  { value: 'minimal', label: 'Minimal' },
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'xhigh', label: 'Extra High' },
-  { value: 'max', label: 'Max' },
-];
-export const KIND_ITEMS: {
-  value: ModelKind;
-  label: string;
-  hint: string;
-}[] = [
-  { value: 'chat', label: 'Chat', hint: 'Completions / agents' },
-  { value: 'embed', label: 'Embedding', hint: 'Vector index / search' },
-  { value: 'image', label: 'Image', hint: 'Image generation' },
-  { value: 'audio', label: 'Audio', hint: 'Speech / audio' },
-  { value: 'decision', label: 'Decision', hint: 'System One / structured choice' },
-  { value: 'rerank', label: 'Rerank', hint: 'Document reranking' },
-  { value: 'speech', label: 'Speech', hint: 'Text to speech' },
-  { value: 'transcription', label: 'Transcription', hint: 'Speech to text' },
-  { value: 'video', label: 'Video', hint: 'Video generation' },
-];

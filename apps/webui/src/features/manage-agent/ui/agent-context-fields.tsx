@@ -21,6 +21,10 @@ const HINT_CLASS = 'text-[11px] text-muted-foreground leading-snug';
 type ContextNumberField =
   | 'ctxLengthCutContinuations'
   | 'providerRetryAttempts'
+  | 'modelLimitRpm'
+  | 'modelLimitRpd'
+  | 'modelLimitTpm'
+  | 'modelLimitTpd'
   | 'ctxSpawnHeadChars'
   | 'ctxSpawnTailChars'
   | 'toolOutputMaxChars'
@@ -247,6 +251,52 @@ export function AgentContextFields({
             label="Provider retry attempts"
             description="Retries for transient provider errors (429, 5xx). 1 = no retries; blank = the full backoff schedule (6)."
             placeholder="6"
+            idPrefix={idPrefix}
+            onCommit={onCommit}
+          />
+        </div>
+      </FieldSet>
+      <FieldSet className="gap-2.5">
+        <FieldLegend variant="label" className="text-muted-foreground text-xs">
+          Model rate limits
+        </FieldLegend>
+        <FieldDescription className={HINT_CLASS}>
+          When set, replaces the model&apos;s rate limits entirely.
+        </FieldDescription>
+        <div className="grid grid-cols-2 gap-2.5">
+          <ContextNumber
+            control={control}
+            name="modelLimitRpm"
+            label="Requests/min"
+            description="Max model requests per minute allowed by this instance."
+            placeholder="60"
+            idPrefix={idPrefix}
+            onCommit={onCommit}
+          />
+          <ContextNumber
+            control={control}
+            name="modelLimitRpd"
+            label="Requests/day"
+            description="Max model requests per day allowed by this instance."
+            placeholder="1000"
+            idPrefix={idPrefix}
+            onCommit={onCommit}
+          />
+          <ContextNumber
+            control={control}
+            name="modelLimitTpm"
+            label="Tokens/min"
+            description="Max tokens per minute allowed by this instance."
+            placeholder="100000"
+            idPrefix={idPrefix}
+            onCommit={onCommit}
+          />
+          <ContextNumber
+            control={control}
+            name="modelLimitTpd"
+            label="Tokens/day"
+            description="Max tokens per day allowed by this instance."
+            placeholder="1000000"
             idPrefix={idPrefix}
             onCommit={onCommit}
           />

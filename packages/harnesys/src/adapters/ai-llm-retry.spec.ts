@@ -47,6 +47,65 @@ describe('retryPlan', () => {
     expect(plan?.waitMs).toBeGreaterThanOrEqual(600_000 * 0.8);
   });
 
+  test('honors HTTP-date Retry-After values', () => {
+    const inTenMinutes = new Date(Date.now() + 10 * 60_000).toUTCString();
+    const plan = retryPlan(
+      apiError(429, 'rate limited', { 'retry-after': inTenMinutes }),
+      false,
+      undefined,
+      0,
+    );
+    expect(plan?.waitMs).toBeGreaterThanOrEqual(9 * 60_000);
+    expect(plan?.waitMs).toBeLessThanOrEqual(600_000);
+  });
+
+  test('short advice replaces the schedule instead of extending it', () => {
+    const plan = retryPlan(
+      apiError(429, 'rate limited', { 'retry-after': '1' }),
+      false,
+      undefined,
+      2,
+    );
+    expect(plan?.waitMs).toBeGreaterThanOrEqual(900);
+    expect(plan?.waitMs).toBeLessThanOrEqual(1_100);
+  });
+
+  test('reads X-RateLimit-Reset as epoch seconds', () => {
+    const inTwoMinutes = Math.floor((Date.now() + 2 * 60_000) / 1000).toString();
+    const plan = retryPlan(
+      apiError(429, 'rate limited', { 'x-ratelimit-reset': inTwoMinutes }),
+      false,
+      undefined,
+      0,
+    );
+    expect(plan?.waitMs).toBeGreaterThanOrEqual(60_000);
+    expect(plan?.waitMs).toBeLessThanOrEqual(600_000);
+  });
+
+  test('reads X-RateLimit-Reset as epoch milliseconds', () => {
+    const inThreeMinutes = (Date.now() + 3 * 60_000).toString();
+    const plan = retryPlan(
+      apiError(429, 'rate limited', { 'x-ratelimit-reset': inThreeMinutes }),
+      false,
+      undefined,
+      0,
+    );
+    expect(plan?.waitMs).toBeGreaterThanOrEqual(2 * 60_000);
+    expect(plan?.waitMs).toBeLessThanOrEqual(600_000);
+  });
+
+  test('ignores a reset timestamp already in the past', () => {
+    const past = Math.floor((Date.now() - 60_000) / 1000).toString();
+    const plan = retryPlan(
+      apiError(429, 'rate limited', { 'x-ratelimit-reset': past }),
+      false,
+      undefined,
+      0,
+    );
+    expect(plan?.waitMs).toBeGreaterThanOrEqual(10_000 * 0.8);
+    expect(plan?.waitMs).toBeLessThanOrEqual(10_000 * 1.2);
+  });
+
   test('allows exactly one clean replay after emission started', () => {
     const err = apiError(502, 'bad gateway');
     const first = retryPlan(err, true, undefined, 0);

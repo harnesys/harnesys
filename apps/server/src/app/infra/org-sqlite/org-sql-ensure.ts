@@ -23,6 +23,7 @@ import {
   CREATE_MEMORY_PROMOTIONS_SQL,
   CREATE_MEMORY_REFLECTS_SQL,
   CREATE_MODE_PRESETS_SQL,
+  CREATE_MODEL_QUOTA_WINDOWS_SQL,
   CREATE_NODES_SQL,
   CREATE_ORG_EXECUTION_SETTINGS_SQL,
   CREATE_ORG_MEMORY_SETTINGS_SQL,
@@ -275,6 +276,7 @@ export function ensureOrgSchema(
   if (all) {
     migrateOrgMemorySettingsModelColumns(exec, all);
   }
+  exec(CREATE_MODEL_QUOTA_WINDOWS_SQL);
   ensureFleetSchema(exec);
   migratePendingRunEventsAttributionColumns(exec, all);
   exec(CREATE_DASHBOARDS_SQL);

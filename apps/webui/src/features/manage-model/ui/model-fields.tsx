@@ -21,16 +21,19 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
 import {
   type AddModelInput,
   type AddModelOutput,
-  EFFORT_ITEMS,
-  FEATURE_ITEMS,
   isEmbedKind,
   isSupportedKind,
-  KIND_ITEMS,
-  MODALITY_ITEMS,
   type ModelFieldsInput,
   type ModelFieldsOutput,
-  toggleItem,
 } from '../model/model-fields';
+import {
+  EFFORT_ITEMS,
+  FEATURE_ITEMS,
+  KIND_ITEMS,
+  MODALITY_ITEMS,
+  toggleItem,
+} from '../model/model-items';
+import { RateLimitSettings } from './model-rate-limit-fields';
 import { SpeechSettings } from './model-speech-fields';
 
 const MODALITY_ICONS = {
@@ -126,6 +129,7 @@ export function ModelFields({
         )}
       />
       {embed ? <EmbedLimits control={fields} /> : <ChatLimits control={fields} />}
+      <RateLimitSettings control={fields} />
       {embed ? null : (
         <>
           <Controller

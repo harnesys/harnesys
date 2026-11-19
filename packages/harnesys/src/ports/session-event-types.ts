@@ -13,6 +13,7 @@ export type SessionEventType =
   | 'model.usage'
   | 'model.stats'
   | 'model.retry'
+  | 'model.throttle'
   | 'compaction'
   | 'compaction.progress'
   | 'run.completed'

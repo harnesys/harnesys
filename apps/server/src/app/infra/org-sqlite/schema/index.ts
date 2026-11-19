@@ -185,6 +185,11 @@ export {
   modePresetsTable,
 } from './mode-presets.ts';
 export {
+  type ModelQuotaWindowInsert,
+  type ModelQuotaWindowRow,
+  modelQuotaWindowsTable,
+} from './model-quota-windows.ts';
+export {
   type NodeCommandInsert,
   type NodeCommandRow,
   nodeCommandsTable,
