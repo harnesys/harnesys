@@ -9,12 +9,14 @@ Role is per organization on one machine: Create org → this host is relay for t
 ```bash
 docker run -d --name harnesys \
   -p 8080:8080 \
-  -v harnesys-data:/data \
+  -v ~/.harnesys:/data \
   -e PUBLIC_URL=https://harnesys.example.com \
   -e OWNER_PASSWORD=change-me \
   --restart unless-stopped \
   ghcr.io/harnesys/harnesys:latest
 ```
+
+Data lives in `~/.harnesys` on the host — the same home directory the desktop app uses (`HARNESYS_HOME` inside the container is `/data`, mounted from there). Override the host path with `HARNESYS_DATA_DIR` (compose) or your own `-v` target. Do not run the desktop app and a container against the same `~/.harnesys` at the same time — the SQLite homes conflict; stop one before starting the other.
 
 The first owner is created at boot from `OWNER_PASSWORD` (login defaults to `owner`, override with `OWNER_LOGIN`/`OWNER_NAME`). The hook fires only while no users exist — after that the variable is ignored, so it is safe to leave it set or remove it later. Then open `PUBLIC_URL` and sign in with that login/password.
 
@@ -45,6 +47,7 @@ Pin a release instead of `latest` (e.g. `ghcr.io/harnesys/harnesys:0.10.4`) to c
 | `HARNESYS_WEB_ENABLED` | `true` | `false` = API-only node (port `47474`, no UI) |
 | `OWNER_PASSWORD` | required when `HARNESYS_WEB_ENABLED=false` | first owner password, applied at boot only while no users exist; API-only nodes refuse to start without it |
 | `OWNER_LOGIN` / `OWNER_NAME` | `owner` / `Owner` | optional first-owner overrides |
+| `HARNESYS_DATA_DIR` | `~/.harnesys` | host path bound to `/data` (compose only; with plain `docker run` pass your own `-v`) |
 | `HARNESYS_MASTER_KEY` | generated into `/data` | optional fixed master key |
 | `HARNESYS_GOOGLE_DEVICE_CLIENT_ID` / `..._SECRET` / `HARNESYS_GOOGLE_API_KEY` / `HARNESYS_GOOGLE_APP_ID` | — | optional Google device OAuth (Drive on a headless VPS) |
 
@@ -54,7 +57,7 @@ You may protect the SPA with Basic Auth, but if this machine serves any org as r
 
 ## Data
 
-Everything persists in the `harnesys-data` volume mounted at `/data` (`HARNESYS_HOME`): org DBs, `config.json`, `machine.json`, `master.key`. Do not store runtime data under Dokploy’s git `code/` checkout (it is wiped on redeploy).
+Everything persists in the bind mount at `/data` (`HARNESYS_HOME`), default host path `~/.harnesys` (override with `HARNESYS_DATA_DIR`): org DBs, `config.json`, `machine.json`, `master.key`. The path survives container redeploys; deleting it wipes the instance. Do not store runtime data under Dokploy’s git `code/` checkout (it is wiped on redeploy).
 
 ## Advanced path: build from source
 

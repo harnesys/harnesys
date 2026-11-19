@@ -26,8 +26,9 @@ services:
       - "8080"
       - "47474"
     volumes:
-      - harnesys-data:/data
+      # Data home on the host, same dir the desktop app uses (~/.harnesys).
+      # Override with the HARNESYS_DATA_DIR env var (set it in the Dokploy
+      # Environment tab or your shell before running compose).
+      - ${HARNESYS_DATA_DIR:-~/.harnesys}:/data
     restart: unless-stopped
 
-volumes:
-  harnesys-data:
