@@ -3,7 +3,9 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { Brix, Logger, parseConfigYaml } from '@harnesys/brix';
 import { AppModule } from './app/app.module';
+import { InitOwnerUseCase } from './app/application/identity/init-owner.use-case.ts';
 import { RefreshAllSourceVcsUseCase } from './app/application/source/refresh-all-source-vcs.use-case.ts';
+import { OwnerAlreadyInitializedException } from './app/domain/identity/identity.error.ts';
 import { HostFsLayoutPort } from './app/domain/machine/host-fs-layout.port.ts';
 import { fleetWorkerWebsocket, registerFleetWorkerWs } from './app/infra/fleet-hub/fleet-worker.ws';
 import { importLegacyUserPresets } from './app/infra/presets/legacy-user-presets.ts';
@@ -59,6 +61,26 @@ try {
 
 registerFleetWorkerWs(app.hono, app.container);
 registerTerminalWs(app.hono, app.container);
+
+const ownerPassword = process.env.OWNER_PASSWORD;
+if (ownerPassword) {
+  const ownerLogger = app.container.resolve<Logger>(Logger).child('owner-bootstrap');
+  try {
+    const result = await app.container.resolve<InitOwnerUseCase>(InitOwnerUseCase).execute({
+      login: process.env.OWNER_LOGIN || 'owner',
+      name: process.env.OWNER_NAME || 'Owner',
+      password: ownerPassword,
+    });
+    ownerLogger.info({ userId: result.userId }, 'owner created from env');
+  } catch (error) {
+    if (error instanceof OwnerAlreadyInitializedException) {
+      ownerLogger.info({}, 'users already exist, OWNER_PASSWORD ignored');
+    } else {
+      ownerLogger.warn({ error }, 'owner bootstrap failed');
+    }
+  }
+}
+
 await app.serve({ idleTimeout: 120, websocket: fleetWorkerWebsocket as object });
 void app.container
   .resolve<RefreshAllSourceVcsUseCase>(RefreshAllSourceVcsUseCase)

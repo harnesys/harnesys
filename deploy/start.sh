@@ -6,6 +6,10 @@
 set -eu
 
 if [ "${HARNESYS_WEB_ENABLED:-true}" = "false" ]; then
+  if [ -z "${OWNER_PASSWORD:-}" ]; then
+    echo "OWNER_PASSWORD is required when HARNESYS_WEB_ENABLED=false: the first owner is created from it at boot (no exec needed)" >&2
+    exit 1
+  fi
   exec bun apps/server/src/main.ts
 fi
 

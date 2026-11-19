@@ -16,13 +16,7 @@ docker run -d --name harnesys \
   ghcr.io/harnesys/harnesys:latest
 ```
 
-Create the first owner before any browser login. `POST /api/session/owner/init` answers only from loopback, so it runs inside the container:
-
-```bash
-docker exec harnesys bun -e 'const r = await fetch("http://127.0.0.1:47474/api/session/owner/init", {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify({login: "owner", name: "Owner", password: process.env.OWNER_PASSWORD})}); console.log(await r.text());'
-```
-
-Then open `PUBLIC_URL` and sign in with that login/password.
+The first owner is created at boot from `OWNER_PASSWORD` (login defaults to `owner`, override with `OWNER_LOGIN`/`OWNER_NAME`). The hook fires only while no users exist — after that the variable is ignored, so it is safe to leave it set or remove it later. Then open `PUBLIC_URL` and sign in with that login/password.
 
 Checks:
 
@@ -41,7 +35,7 @@ Pin a release instead of `latest` (e.g. `ghcr.io/harnesys/harnesys:0.10.4`) to c
 2. Paste `deploy/docker-compose.unified.yml`.
 3. Environment tab: `PUBLIC_URL=https://harnesys.example.com` (and optional vars below).
 4. Domains tab: hostname → service `app`, port `8080`, HTTPS on.
-5. Deploy; the container must turn healthy. First owner: Containers → `app` → **Open Terminal**, run the `bun -e '...'` one-liner from the quick path (the container env already has `OWNER_PASSWORD`).
+5. Deploy; the container must turn healthy. First owner: set `OWNER_PASSWORD` in the Environment tab before deploying (or after — then restart the service once).
 
 ## Env switches
 
@@ -49,6 +43,8 @@ Pin a release instead of `latest` (e.g. `ghcr.io/harnesys/harnesys:0.10.4`) to c
 |---|---|---|
 | `PUBLIC_URL` | — | public origin, becomes `host.publicOrigin` and the relay URL hint |
 | `HARNESYS_WEB_ENABLED` | `true` | `false` = API-only node (port `47474`, no UI) |
+| `OWNER_PASSWORD` | required when `HARNESYS_WEB_ENABLED=false` | first owner password, applied at boot only while no users exist; API-only nodes refuse to start without it |
+| `OWNER_LOGIN` / `OWNER_NAME` | `owner` / `Owner` | optional first-owner overrides |
 | `HARNESYS_MASTER_KEY` | generated into `/data` | optional fixed master key |
 | `HARNESYS_GOOGLE_DEVICE_CLIENT_ID` / `..._SECRET` / `HARNESYS_GOOGLE_API_KEY` / `HARNESYS_GOOGLE_APP_ID` | — | optional Google device OAuth (Drive on a headless VPS) |
 

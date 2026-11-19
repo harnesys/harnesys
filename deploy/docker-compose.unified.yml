@@ -2,9 +2,10 @@
 # One prebuilt image: host API + SPA + /api proxy in a single container.
 #
 #   1. Dokploy → Create Service → Compose → Raw, paste this file.
-#   2. Environment tab: PUBLIC_URL=https://your-domain
+#   2. Environment tab: PUBLIC_URL=https://your-domain, OWNER_PASSWORD=change-me
 #   3. Domains tab: hostname → service `app`, port 8080, HTTPS on.
-#   4. Deploy, then create the first owner (see deploy/DOKPLOY.md).
+#   4. Deploy — the first owner is created from OWNER_PASSWORD at boot
+#      (only while no users exist, then the variable is ignored).
 #
 # Host-only mode (no UI, worker/relay without the web): set
 # HARNESYS_WEB_ENABLED=false in the environment — the same image then
@@ -18,6 +19,9 @@ services:
       PUBLIC_URL: ${PUBLIC_URL:-}
       HARNESYS_HOME: /data
       HARNESYS_WEB_ENABLED: ${HARNESYS_WEB_ENABLED:-true}
+      OWNER_PASSWORD: ${OWNER_PASSWORD:-}
+      OWNER_LOGIN: ${OWNER_LOGIN:-}
+      OWNER_NAME: ${OWNER_NAME:-}
     expose:
       - "8080"
       - "47474"
