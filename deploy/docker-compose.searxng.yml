@@ -1,0 +1,59 @@
+# harnesys — unified image + self-hosted SearXNG for the web_search pack.
+# Paste-ready for Dokploy (Compose service, Raw mode).
+#
+#   1. Dokploy → Create Service → Compose → Raw, paste this file.
+#   2. Environment tab: PUBLIC_URL, OWNER_PASSWORD (see deploy/DOKPLOY.md).
+#   3. Domains tab: hostname → service `app`, port 8080, HTTPS on.
+#   4. Deploy. Then in the UI: agent web pack settings → provider `searxng`,
+#      URL `http://searxng:8080` (the in-container service name).
+#
+# SearXNG is reachable only inside the compose network (no published ports).
+
+services:
+  app:
+    image: ghcr.io/harnesys/harnesys:latest
+    environment:
+      NODE_ENV: production
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      HARNESYS_HOME: /data
+      HARNESYS_WEB_ENABLED: ${HARNESYS_WEB_ENABLED:-true}
+      OWNER_PASSWORD: ${OWNER_PASSWORD:-}
+      OWNER_LOGIN: ${OWNER_LOGIN:-}
+      OWNER_NAME: ${OWNER_NAME:-}
+    expose:
+      - "8080"
+      - "47474"
+    volumes:
+      - ${HARNESYS_DATA_DIR:-~/.harnesys}:/data
+    restart: unless-stopped
+
+  searxng:
+    image: searxng/searxng:latest
+    environment:
+      SEARXNG_BASE_URL: http://searxng:8080/
+      SEARXNG_SECRET: ${SEARXNG_SECRET:-harnesys-local}
+    configs:
+      - source: searxng-settings
+        target: /etc/searxng/settings.yml
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+configs:
+  searxng-settings:
+    content: |
+      use_default_settings: true
+
+      server:
+        secret_key: "${SEARXNG_SECRET:-harnesys-local}"
+        limiter: false
+        public_instance: false
+
+      search:
+        formats:
+          - html
+          - json

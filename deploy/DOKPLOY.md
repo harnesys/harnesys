@@ -51,6 +51,10 @@ Pin a release instead of `latest` (e.g. `ghcr.io/harnesys/harnesys:0.10.4`) to c
 | `HARNESYS_MASTER_KEY` | generated into `/data` | optional fixed master key |
 | `HARNESYS_GOOGLE_DEVICE_CLIENT_ID` / `..._SECRET` / `HARNESYS_GOOGLE_API_KEY` / `HARNESYS_GOOGLE_APP_ID` | — | optional Google device OAuth (Drive on a headless VPS) |
 
+## Web search with SearXNG
+
+Paste `deploy/docker-compose.searxng.yml` instead of the unified one — same `app` plus an internal-only SearXNG service (JSON API enabled, settings inlined via a compose config). After deploy, set the web pack provider to `searxng` with URL `http://searxng:8080` in the agent settings.
+
 ## Edge auth (optional, UI only)
 
 You may protect the SPA with Basic Auth, but if this machine serves any org as relay, leave `/api` and the WebSocket upgrades reachable without Basic Auth — browsers can attach no custom headers to SSE/WS, while API clients authenticate with their own session tokens. If Dokploy cannot exclude `/api`, use two hostnames (`app.*` with auth, `relay.*` without) and set `PUBLIC_URL` to the relay hostname; in that case run the relay node with `HARNESYS_WEB_ENABLED=false` and publish its `47474`. Browser login happens in the app: `POST /api/session/login`, access token in memory, refresh cookie `harnesys.refresh`.
