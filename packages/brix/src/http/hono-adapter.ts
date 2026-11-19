@@ -1,14 +1,20 @@
 import 'reflect-metadata';
 import { Hono } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 import type { ContentfulStatusCode, StatusCode } from 'hono/utils/http-status';
 import { type Container, type Provider, resolveMultiProviders } from '../di/container';
 import type { UnknownClass } from '../di/injectable';
 import type { DynamicModule } from '../di/module';
 import { buildModuleGraph, describeToken } from '../di/module-graph';
 import { ForbiddenException, UnauthorizedException } from '../errors/domain-exception';
-import type { ErrorMapper, ErrorResponse } from '../errors/error-filter';
-import { APP_FILTER, type ErrorFilter, mapToErrorResponse } from '../errors/error-filter';
-import { BadRequestException, NotFoundException } from '../errors/http-exception';
+import {
+  APP_FILTER,
+  type ErrorFilter,
+  type ErrorMapper,
+  type ErrorResponse,
+  mapToErrorResponse,
+} from '../errors/error-filter';
+import { BadRequestException, HttpException, NotFoundException } from '../errors/http-exception';
 import type { CanActivate } from '../guards/can-activate';
 import { createGuardContext, runGuards } from '../guards/can-activate';
 import { APP_GUARD, getGuardClasses, IS_PUBLIC_KEY, isPublic } from '../guards/decorators';
@@ -24,6 +30,8 @@ import { getRouteTable, joinPaths } from './routes';
 export type NotFoundBody = ErrorResponse;
 
 export type ForbiddenBody = ErrorResponse;
+
+const MAX_REQUEST_BODY_BYTES = 64 * 1024 * 1024;
 
 export function mapForbidden(
   path: string,
@@ -284,6 +292,18 @@ export function buildHonoWithProviders(args: {
   container: Container;
 }): HonoBuild {
   const app = new Hono<BrixEnv>();
+  app.use(
+    bodyLimit({
+      maxSize: MAX_REQUEST_BODY_BYTES,
+      onError: (c) => {
+        const body = mapToErrorResponse(
+          new HttpException(413, 'PAYLOAD_TOO_LARGE', 'Request body exceeds the size limit'),
+          { path: c.req.path, traceId: getTraceId(c) },
+        );
+        return c.json(body, body.statusCode as ContentfulStatusCode);
+      },
+    }),
+  );
   const graph = buildModuleGraph(args.modules, { multi: [APP_GUARD, HEALTH_CHECK] });
   args.container.registerModules(graph);
   const mapError = resolveErrorMapper(args.container);

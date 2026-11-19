@@ -12,6 +12,14 @@ export class AccountLockedException extends HttpException {
   }
 }
 
+export class LoginRateLimitedException extends HttpException {
+  constructor(readonly retryAfterSec: number) {
+    super(429, 'LOGIN_RATE_LIMITED', 'Too many login attempts from this source; try again later', {
+      retryAfterSec,
+    });
+  }
+}
+
 export class SessionExpiredException extends HttpException {
   constructor() {
     super(401, 'SESSION_EXPIRED', 'Session is unknown, expired, or revoked');

@@ -3,6 +3,7 @@ import { Injectable } from '@harnesys/brix';
 import {
   AccountLockedException,
   InvalidCredentialsException,
+  LoginRateLimitedException,
 } from '../../domain/identity/identity.error.ts';
 import { IdentityAudit } from '../../domain/identity/identity-audit.port.ts';
 import { PasswordHasher } from '../../domain/identity/password-hasher.port.ts';
@@ -27,6 +28,7 @@ import {
 const LOCKOUT_WINDOW_MS = 15 * 60 * 1000;
 const LOCKOUT_FAILURE_LIMIT = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+const IP_FAILURE_LIMIT = 30;
 const TIMING_PARITY_HASH_INPUT = 'harnesys-unknown-login';
 
 let timingParityHash: string | null = null;
@@ -34,6 +36,7 @@ let timingParityHash: string | null = null;
 export interface LoginInput {
   login: string;
   password: string;
+  ip?: string;
   now?: string;
 }
 
@@ -50,6 +53,22 @@ export class LoginUseCase {
   async execute(input: LoginInput): Promise<SessionTokens> {
     const now = input.now ?? new Date().toISOString();
     const nowMs = Date.parse(now);
+    const ipKey = input.ip ? `ip:${input.ip}` : null;
+    if (ipKey !== null) {
+      const ipLocked = this.sourceLimitException(ipKey, IP_FAILURE_LIMIT, nowMs);
+      if (ipLocked) {
+        this.audit.append(
+          identityAuditRow(now, {
+            actorKind: 'anonymous',
+            actorId: input.login,
+            action: 'rate_limited',
+            result: 'denied',
+            reason: 'source failure limit',
+          }),
+        );
+        throw ipLocked;
+      }
+    }
     const locked = this.lockException(input.login, nowMs);
     if (locked) {
       this.audit.append(
@@ -66,6 +85,9 @@ export class LoginUseCase {
     const user = await this.authenticate(input.login, input.password);
     if (!user) {
       this.attempts.record(input.login, now);
+      if (ipKey !== null) {
+        this.attempts.record(ipKey, now);
+      }
       this.audit.append(
         identityAuditRow(now, {
           actorKind: 'anonymous',
@@ -79,6 +101,9 @@ export class LoginUseCase {
     }
     const tokens = await this.startSession(user.id, now, nowMs);
     this.attempts.clear(input.login);
+    if (ipKey !== null) {
+      this.attempts.clear(ipKey);
+    }
     this.audit.append(
       identityAuditRow(now, {
         actorKind: 'user',
@@ -93,7 +118,26 @@ export class LoginUseCase {
 
   private lockException(login: string, nowMs: number): AccountLockedException | null {
     const failures = this.attempts.listSince(login, isoAt(nowMs - LOCKOUT_WINDOW_MS));
-    if (failures.length < LOCKOUT_FAILURE_LIMIT) {
+    const limited = this.limitedException(failures, LOCKOUT_FAILURE_LIMIT, nowMs);
+    return limited === null ? null : new AccountLockedException(limited.retryAfterSec);
+  }
+
+  private sourceLimitException(
+    key: string,
+    limit: number,
+    nowMs: number,
+  ): LoginRateLimitedException | null {
+    const failures = this.attempts.listSince(key, isoAt(nowMs - LOCKOUT_WINDOW_MS));
+    const limited = this.limitedException(failures, limit, nowMs);
+    return limited === null ? null : new LoginRateLimitedException(limited.retryAfterSec);
+  }
+
+  private limitedException(
+    failures: LoginAttemptRow[],
+    limit: number,
+    nowMs: number,
+  ): { retryAfterSec: number } | null {
+    if (failures.length < limit) {
       return null;
     }
     const lastFailureMs = Date.parse((failures[failures.length - 1] as LoginAttemptRow).at);
@@ -101,7 +145,7 @@ export class LoginUseCase {
     if (unlockAtMs <= nowMs) {
       return null;
     }
-    return new AccountLockedException(Math.ceil((unlockAtMs - nowMs) / 1000));
+    return { retryAfterSec: Math.ceil((unlockAtMs - nowMs) / 1000) };
   }
 
   private async authenticate(login: string, password: string): Promise<UserRecord | null> {

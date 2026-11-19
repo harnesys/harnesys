@@ -89,6 +89,23 @@ function isLoopbackPeer(ctx: BrixContext): boolean {
   }
 }
 
+interface ClientSource {
+  ip?: string;
+}
+
+function clientSourceOf(ctx: BrixContext): ClientSource {
+  const forwarded = ctx.req.header('x-forwarded-for')?.split(',').at(-1)?.trim();
+  if (forwarded) {
+    return { ip: forwarded };
+  }
+  try {
+    const remote = getConnInfo(ctx).remote.address;
+    return { ip: typeof remote === 'string' ? remote : undefined };
+  } catch {
+    return {};
+  }
+}
+
 function setRefreshCookie(ctx: BrixContext, value: string, expiresAt: string): void {
   setCookie(ctx, REFRESH_COOKIE, value, {
     path: REFRESH_COOKIE_PATH,
@@ -147,7 +164,12 @@ export class SessionController {
     @Body(SessionLoginBodySchema) body: SessionLoginBody,
     @Ctx() ctx: BrixContext,
   ): Promise<SessionAccessTokens> {
-    const tokens = await this.sessionLogin.execute(body);
+    const source = clientSourceOf(ctx);
+    const tokens = await this.sessionLogin.execute({
+      login: body.login,
+      password: body.password,
+      ip: source.ip,
+    });
     setRefreshCookie(ctx, tokens.refreshToken, tokens.refreshExpiresAt);
     return toAccessTokens(tokens);
   }

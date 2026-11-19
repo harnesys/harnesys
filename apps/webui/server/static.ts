@@ -16,8 +16,15 @@ const MIME: Record<string, string> = {
   '.woff2': 'font/woff2',
 };
 
+const SECURITY_HEADERS: Record<string, string> = {
+  'content-security-policy': "frame-ancestors 'none'",
+  'referrer-policy': 'strict-origin-when-cross-origin',
+  'x-content-type-options': 'nosniff',
+  'x-frame-options': 'DENY',
+};
+
 function notFound(): Response {
-  return new Response('not found', { status: 404 });
+  return new Response('not found', { status: 404, headers: SECURITY_HEADERS });
 }
 
 function mimeTypeOf(path: string): string {
@@ -53,7 +60,7 @@ export function createStaticHandler(staticDir: string): StaticHandler {
       }
     }
     return new Response(Bun.file(target), {
-      headers: { 'content-type': mimeTypeOf(target) },
+      headers: { ...SECURITY_HEADERS, 'content-type': mimeTypeOf(target) },
     });
   };
 }
