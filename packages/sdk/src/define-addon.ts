@@ -59,7 +59,7 @@ export interface SourceBackendHandlers {
     params: Omit<HostMethodParams<'source.stat'>, '_meta'>,
     ctx: AddonContext,
   ): HostMethodResult<'source.stat'> | Promise<HostMethodResult<'source.stat'>>;
-  download(
+  download?(
     params: Omit<HostMethodParams<'source.download'>, '_meta'>,
     ctx: AddonContext,
   ): HostMethodResult<'source.download'> | Promise<HostMethodResult<'source.download'>>;
@@ -159,11 +159,11 @@ function sourceHandlerNames(sources: Record<string, SourceBackendHandlers> | und
   if (sources === undefined || Object.keys(sources).length === 0) {
     return [];
   }
-  const names = ['source.list', 'source.stat', 'source.download'];
+  const names = ['source.list', 'source.stat'];
   const implementations = Object.values(sources);
   const anyOp = (op: keyof SourceBackendHandlers): boolean =>
     implementations.some((backend) => backend[op] !== undefined);
-  for (const op of ['upload', 'mkdir', 'remove', 'export'] as const) {
+  for (const op of ['download', 'upload', 'mkdir', 'remove', 'export'] as const) {
     if (anyOp(op)) {
       names.push(`source.${op}`);
     }

@@ -22,7 +22,7 @@ import { UploadInstallArchiveUseCase } from '../../../application/addons/package
 import { AddonReconciler } from '../../../application/addons/reconcile/reconciler.ts';
 import { RunDispatchPort } from '../../../application/addons/run-dispatch.port.ts';
 import { AddonCloudMaterializer } from '../../../application/addons/sources/addon-cloud.materializer.ts';
-import { AttachAddonCloudSourceUseCase } from '../../../application/addons/sources/attach-addon-cloud-source.use-case.ts';
+import { AttachAddonSourceUseCase } from '../../../application/addons/sources/attach-addon-source.use-case.ts';
 import { BrowseAddonCloudFolderUseCase } from '../../../application/addons/sources/browse-addon-cloud-folder.use-case.ts';
 import { ListAddonCloudSourcesUseCase } from '../../../application/addons/sources/list-addon-cloud-sources.use-case.ts';
 import { PrepareAddonCloudSourceUseCase } from '../../../application/addons/sources/prepare-addon-cloud-source.use-case.ts';
@@ -313,7 +313,7 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     SetGrantsUseCase,
     SetConfigUseCase,
     SetBindingsUseCase,
-    AttachAddonCloudSourceUseCase,
+    AttachAddonSourceUseCase,
     BrowseAddonCloudFolderUseCase,
     ListAddonCloudSourcesUseCase,
     PrepareAddonCloudSourceUseCase,

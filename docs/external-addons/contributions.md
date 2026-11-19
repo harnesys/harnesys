@@ -18,7 +18,7 @@ A contribution is `{ id, family, v?, optional?, descriptor }`. The `id` matches
 | `worker` | `workers` | `worker.start` / `worker.stop` | `worker` |
 | `hook` | `hooks` | `hook.deliver` | `events.subscribe` / `accounts.use` |
 | `transport` | `transport` | `transport.send/edit/typing` | `bridge.inbound` |
-| `source-kind` | `sources` | `source.list/stat/download` (+ optional ops) | `source` |
+| `source-kind` | `sources` | `source.list/stat` (+ optional ops) | `source` |
 | `content` | — (package files) | host registers skills/prompts | — |
 | `config` | `notifications['config.changed']` | notification | baseline `config.read` |
 | `view` | — (data via routes) | host renders sections | — |
@@ -209,9 +209,21 @@ const sources = {
 };
 ```
 
-`list`, `stat`, `download` are required; `upload`, `mkdir`, `remove`, `export` are
-optional and the host infers capabilities from what you implement. Bytes travel as base64
-chunks. Requires the `source` permission.
+`list` and `stat` are required; `download`, `upload`, `mkdir`, `remove`, `export` are optional and the host infers capabilities from what you implement. Bytes travel as base64 chunks. Requires the `source` permission.
+
+The optional descriptor `mount` selects what attaching a source produces:
+
+- `mount: 'cloud'` (default) — the source is a file mirror served by the add-on backend
+  (`source.download`/`upload` drive the mirror and sync-back). Implement the handlers
+  your surface needs; the host requires `download` whenever the kind is attached.
+- `mount: 'git'` — the source is a core git repository, cloned and pushed by the host
+  with the bound account's credentials (short-lived provider tokens via the git
+  credential helper; no token ever reaches the add-on). Only `source.list` and
+  `source.stat` are required. Entries the user can attach must carry `url`: an HTTPS
+  clone URL (`{ id: 'owner/repo', name: 'owner/repo', kind: 'folder', url: 'https://…' }`).
+  Repositories are leaves — `list` returns the attachable entries at the root and empty
+  results for any other `folderId`. Works for any git host (GitHub, GitLab, Bitbucket, …);
+  the host never hardcodes a vendor.
 
 ## content
 

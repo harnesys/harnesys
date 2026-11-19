@@ -43,6 +43,7 @@ function toView(addonId: string, descriptor: SourceKindDescriptor): AddonSourceK
     id: descriptor.id,
     title: l10nText(descriptor.title),
     connection: descriptor.connection,
+    mount: descriptor.mount === 'git' ? 'git' : 'cloud',
     ...(descriptor.supportsRootMount === undefined
       ? {}
       : { supportsRootMount: descriptor.supportsRootMount }),

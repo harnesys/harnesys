@@ -13,6 +13,20 @@ const DEV_HOME =
   resolve(trimmed(process.env.DEV_HARNEYSYS_HOME) ?? join(homedir(), '.harnesys-dev'));
 const DEV_UI_PORT = trimmed(process.env.DEV_UI_PORT) ?? '5173';
 const root = join(import.meta.dir, '..');
+
+// Builtin add-ons are scanned from add-ons/ (manifest) while their runtime
+// entry is dist/index.js; a stale bundle makes the host fail the handshake
+// with `AddonHandlersMismatchError`. Build them before the server starts.
+const addonBuild = Bun.spawnSync(['bun', 'run', 'scripts/addon-build.ts'], {
+  cwd: root,
+  stdout: 'inherit',
+  stderr: 'inherit',
+});
+if (addonBuild.exitCode !== 0) {
+  console.error('dev: builtin add-on build failed; not starting the dev stand');
+  process.exit(addonBuild.exitCode ?? 1);
+}
+
 const ui = Bun.spawn({
   cmd: ['bunx', 'vite'],
   cwd: join(root, 'apps', 'webui'),

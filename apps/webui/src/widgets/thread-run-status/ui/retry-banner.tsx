@@ -9,13 +9,21 @@ const TICK_MS = 500;
 const COUNTDOWN_MAX_S = 90;
 const DAY_MS = 86_400_000;
 
+type RetryEvent = Extract<SessionEvent, { type: 'model.retry' | 'model.throttle' }>;
+
 export function useRetrySignal(threadId: string | null): RetrySignal | null {
   const runId = useSessionStore((state) =>
     threadId ? (state.activeRuns[threadId]?.runId ?? null) : null,
   );
-  return useSessionStore((state) =>
-    lastRetry(threadId ? state.events[threadId] : undefined, runId),
+  const event = useSessionStore((state) =>
+    threadId ? lastRetryEvent(state.events[threadId], runId) : null,
   );
+  if (!event) {
+    return null;
+  }
+  return event.type === 'model.retry'
+    ? { kind: 'retry', ...event }
+    : { kind: 'throttle', ...event };
 }
 
 export function RetryBanner({ threadId }: { threadId: string }) {
@@ -91,7 +99,10 @@ function retryScheduleLabel(deadline: number, remainingSeconds: number, timeZone
   return `resumes at ${formatClock(deadline, timeZone)}`;
 }
 
-function lastRetry(events: SessionEvent[] | undefined, runId: string | null): RetrySignal | null {
+function lastRetryEvent(
+  events: SessionEvent[] | undefined,
+  runId: string | null,
+): RetryEvent | null {
   if (!events || !runId) {
     return null;
   }
@@ -100,11 +111,8 @@ function lastRetry(events: SessionEvent[] | undefined, runId: string | null): Re
     if (!event || event.runId !== runId) {
       continue;
     }
-    if (event.type === 'model.retry') {
-      return { kind: 'retry', ...event };
-    }
-    if (event.type === 'model.throttle') {
-      return { kind: 'throttle', ...event };
+    if (event.type === 'model.retry' || event.type === 'model.throttle') {
+      return event;
     }
     return null;
   }

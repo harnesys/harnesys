@@ -39,6 +39,8 @@ export interface FamilyModule<D extends JsonObject = JsonObject> {
   schema(v: number): z.ZodType<D>;
   crossCheck?(d: D, manifest: AddonManifest): readonly Violation[];
   readonly handlers: readonly HandlerSpec[];
+  /** Per-descriptor handler requirements; falls back to `handlers` when absent. */
+  handlersFor?(d: D): readonly HandlerSpec[];
   readonly permissions: readonly string[];
   readonly warnings?: readonly L10n[];
   register(owner: OwnerKey, d: D): Disposable;

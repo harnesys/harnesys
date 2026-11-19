@@ -8,6 +8,7 @@ export interface AnyFamilyModule {
   readonly versions: readonly number[];
   schema(v: number): z.ZodType<Record<string, unknown>>;
   readonly handlers: readonly HandlerSpec[];
+  handlersFor?(descriptor: never): readonly HandlerSpec[];
   readonly permissions: readonly string[];
   register(owner: OwnerKey, descriptor: never): Disposable;
   crossCheck?(descriptor: never, manifest: AddonManifest): readonly Violation[];

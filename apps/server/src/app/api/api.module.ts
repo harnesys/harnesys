@@ -133,6 +133,7 @@ import { SessionController } from './rest/session.controller.ts';
 import { SkillsController } from './rest/skills.controller.ts';
 import { SkillsSearchController } from './rest/skills-search.controller.ts';
 import { SourceGitController } from './rest/source-git.controller.ts';
+import { SourceGitCredentialController } from './rest/source-git-credential.controller.ts';
 import { SourceMaterializeController } from './rest/source-materialize.controller.ts';
 import { SourceVcsController } from './rest/source-vcs.controller.ts';
 import { SourceWorktreesController } from './rest/source-worktrees.controller.ts';
@@ -244,6 +245,7 @@ import { VaultController } from './rest/vault.controller.ts';
     SourcesController,
     SourceVcsController,
     SourceGitController,
+    SourceGitCredentialController,
     SourceMaterializeController,
     SourceWorktreesController,
     TerminalsController,

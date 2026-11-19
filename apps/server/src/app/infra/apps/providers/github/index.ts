@@ -37,7 +37,7 @@ const setup: ConnectHandler<AppSetupResult> = {
       setup_url: ctx.urls.redirectUri,
       ...(hookUrl ? { hook_attributes: { url: hookUrl, active: true } } : {}),
       public: false,
-      default_permissions: { contents: 'read', metadata: 'read', issues: 'write' },
+      default_permissions: { contents: 'write', metadata: 'read', issues: 'write' },
     };
     return {
       type: 'wait',
@@ -115,6 +115,7 @@ const appKind: AppKindModule = {
         'Let Harnesys create the GitHub App automatically, or create one manually in GitHub settings.',
         'Register the redirect URI and webhook URL shown here on the App, and set the Setup URL to the same redirect URI.',
         'Grant the permissions the addon needs and install the App on an organization or repositories.',
+        'Pushing commits requires the Contents: read and write permission. Apps created earlier with read-only Contents must be updated in GitHub settings.',
       ],
       consoleUrl: 'https://github.com/settings/apps',
     },

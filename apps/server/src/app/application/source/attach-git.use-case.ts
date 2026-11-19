@@ -64,9 +64,13 @@ export class AttachGitUseCase {
     accountId: string | null;
   } {
     if (input.accountId) {
+      const remoteUrl = input.url?.trim() || githubRemoteUrl(input.repo);
+      if (!remoteUrl) {
+        throw new SourcePathInvalidException('remote url is required');
+      }
       return {
         engine: 'git',
-        remoteUrl: githubRemoteUrl(input.repo),
+        remoteUrl,
         credRef: null,
         defaultBranch: input.branch?.trim() || null,
         accountId: input.accountId,

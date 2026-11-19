@@ -11,6 +11,7 @@ export interface CloudRemoteEntry {
   modifiedAt?: string;
   mimeType?: string;
   export?: CloudRemoteExport;
+  url?: string;
 }
 
 export interface CloudRemoteUploadInput {

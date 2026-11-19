@@ -1,8 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { appMetaQuery, fleetNodesQuery } from '@/shared/api';
 import { getActiveOrgId } from '@/shared/api/active-org';
+import { type AddonSourceKind, orgAddonSourceKindsQuery } from '@/shared/api/addon-sources';
+import { orgAddonsQuery } from '@/shared/api/addons';
 import { projectQueryKey } from '@/shared/api/projects';
 import { attachGit, attachLocalFolder } from '@/shared/api/sources';
 import type { DialogComponentProps } from '@/shared/services/overlay';
@@ -13,6 +16,7 @@ import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { toast } from '@/shared/ui/toast';
+import { AddonSourcePicker } from '@/widgets/addon-source-picker';
 import { FolderBrowser } from '@/widgets/folder-browser';
 import {
   type AddSourceFieldsInput,
@@ -27,6 +31,12 @@ const visibilityItems = [
   { value: 'host', label: 'Host' },
 ];
 
+interface AddonSourceTab {
+  addonId: string;
+  kind: AddonSourceKind;
+  value: string;
+}
+
 export function AddSourceDialog({ onResolve }: DialogComponentProps<boolean>) {
   const queryClient = useQueryClient();
   const { data: nodes } = useQuery(fleetNodesQuery);
@@ -38,9 +48,9 @@ export function AddSourceDialog({ onResolve }: DialogComponentProps<boolean>) {
     resolver: zodResolver(addSourceFieldsSchema),
     defaultValues: emptyAddSourceFields(defaultHostId),
   });
-  const tab = form.watch('tab');
-  const hostId = form.watch('hostId');
   const orgId = getActiveOrgId();
+  const [activeTab, setActiveTab] = useState<string>('folder');
+  const hostId = form.watch('hostId');
   const mutation = useMutation({
     mutationFn: (values: AddSourceFieldsOutput) => {
       if (!orgId) {
@@ -73,198 +83,250 @@ export function AddSourceDialog({ onResolve }: DialogComponentProps<boolean>) {
       toast.add({ title: 'Attach failed', description: msg });
     },
   });
-  const isGit = tab === 'git';
+  const { data: addons } = useQuery(orgAddonsQuery(orgId ?? ''));
+  const enabledAddonIds = (addons?.items ?? [])
+    .filter((addon) => addon.enabled)
+    .map((addon) => addon.addonId)
+    .sort((a, b) => a.localeCompare(b));
+  const sourceTabs = useQueries({
+    queries: enabledAddonIds.map((addonId) => orgAddonSourceKindsQuery(orgId ?? '', addonId)),
+    combine: (results) =>
+      enabledAddonIds.flatMap((addonId, index) => {
+        const kinds = results[index]?.data?.kinds ?? [];
+        return [...kinds]
+          .sort((a, b) => a.id.localeCompare(b.id))
+          .map((kind): AddonSourceTab => ({ addonId, kind, value: `addon:${addonId}:${kind.id}` }));
+      }),
+  });
+  const handlePickerAttached = async () => {
+    await queryClient.invalidateQueries({ queryKey: projectQueryKey });
+    toast.add({ title: 'Source added' });
+    onResolve?.(true);
+  };
+  const staticTabActive = activeTab === 'folder' || activeTab === 'git';
+  const selectedSourceTab = staticTabActive
+    ? null
+    : (sourceTabs.find((tab) => tab.value === activeTab) ?? null);
+  const tabsValue = staticTabActive || selectedSourceTab ? activeTab : 'folder';
+  const isGit = activeTab === 'git';
+  const cancelButton = (
+    <Button type="button" variant="outline" onClick={() => onResolve?.()}>
+      Cancel
+    </Button>
+  );
   return (
-    <form
-      className="flex flex-col gap-4"
-      onSubmit={form.handleSubmit((values) => {
-        mutation.mutate(values);
-      })}
+    <Tabs
+      className="gap-4"
+      value={tabsValue}
+      onValueChange={(value) => {
+        setActiveTab(value);
+        if (value === 'folder' || value === 'git') {
+          form.setValue('tab', value satisfies AddSourceTab);
+        }
+      }}
     >
-      <Tabs
-        value={tab}
-        onValueChange={(value) => {
-          if (value === 'folder' || value === 'git') {
-            form.setValue('tab', value satisfies AddSourceTab);
-          }
-        }}
-      >
-        <TabsList className="w-full">
-          <TabsTrigger value="folder" className="flex-1">
-            Folder
+      <TabsList className="w-full">
+        <TabsTrigger value="folder" className="flex-1">
+          Folder
+        </TabsTrigger>
+        <TabsTrigger value="git" className="flex-1">
+          Remote Git
+        </TabsTrigger>
+        {sourceTabs.map((tab) => (
+          <TabsTrigger key={tab.value} value={tab.value} className="flex-1">
+            {tab.kind.title}
           </TabsTrigger>
-          <TabsTrigger value="git" className="flex-1">
-            Remote Git
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="folder">
+        ))}
+      </TabsList>
+      {selectedSourceTab ? (
+        <>
+          <TabsContent value={selectedSourceTab.value}>
+            <AddonSourcePicker
+              orgId={orgId ?? ''}
+              addonId={selectedSourceTab.addonId}
+              kind={selectedSourceTab.kind}
+              onChanged={handlePickerAttached}
+            />
+          </TabsContent>
+          <DialogFooter>{cancelButton}</DialogFooter>
+        </>
+      ) : (
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={form.handleSubmit((values) => {
+            mutation.mutate(values);
+          })}
+        >
+          <TabsContent value="folder">
+            <FieldGroup>
+              <Controller
+                control={form.control}
+                name="absolutePath"
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid || undefined}>
+                    <FieldLabel htmlFor="add-source-folder-path">Folder path</FieldLabel>
+                    <FolderBrowser
+                      key={hostId || 'local'}
+                      orgId={orgId ?? undefined}
+                      hostId={hostId || undefined}
+                      autoFocus
+                      inputId="add-source-folder-path"
+                      invalid={fieldState.invalid || undefined}
+                      onChange={field.onChange}
+                    />
+                    <FieldDescription>
+                      Browse the selected host and pick a folder, or type a path and press Apply.
+                    </FieldDescription>
+                    {fieldState.error ? <FieldError>{fieldState.error.message}</FieldError> : null}
+                  </Field>
+                )}
+              />
+            </FieldGroup>
+          </TabsContent>
+          <TabsContent value="git">
+            <FieldGroup>
+              <Controller
+                control={form.control}
+                name="url"
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid || undefined}>
+                    <FieldLabel htmlFor="add-source-git-url">Repository URL</FieldLabel>
+                    <Input
+                      {...field}
+                      id="add-source-git-url"
+                      placeholder="https://github.com/org/repo.git"
+                      autoFocus={isGit}
+                      aria-invalid={fieldState.invalid || undefined}
+                    />
+                    <FieldDescription>Public HTTPS URL (no token in config).</FieldDescription>
+                    {fieldState.error ? <FieldError>{fieldState.error.message}</FieldError> : null}
+                  </Field>
+                )}
+              />
+              <Controller
+                control={form.control}
+                name="branch"
+                render={({ field }) => (
+                  <Field>
+                    <FieldLabel htmlFor="add-source-git-branch">Branch</FieldLabel>
+                    <Input
+                      {...field}
+                      id="add-source-git-branch"
+                      placeholder="Default branch if empty"
+                    />
+                    <FieldDescription>
+                      Leave empty to use the remote default branch.
+                    </FieldDescription>
+                  </Field>
+                )}
+              />
+              <Controller
+                control={form.control}
+                name="credRef"
+                render={({ field }) => (
+                  <Field>
+                    <FieldLabel htmlFor="add-source-git-cred">Credential reference</FieldLabel>
+                    <Input
+                      {...field}
+                      id="add-source-git-cred"
+                      placeholder="Optional credential reference"
+                    />
+                    <FieldDescription>
+                      Reference to a stored credential for private repositories.
+                    </FieldDescription>
+                  </Field>
+                )}
+              />
+            </FieldGroup>
+          </TabsContent>
           <FieldGroup>
             <Controller
               control={form.control}
-              name="absolutePath"
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid || undefined}>
-                  <FieldLabel htmlFor="add-source-folder-path">Folder path</FieldLabel>
-                  <FolderBrowser
-                    key={hostId || 'local'}
-                    orgId={orgId ?? undefined}
-                    hostId={hostId || undefined}
-                    autoFocus
-                    inputId="add-source-folder-path"
-                    invalid={fieldState.invalid || undefined}
-                    onChange={field.onChange}
-                  />
+              name="name"
+              render={({ field }) => (
+                <Field>
+                  <FieldLabel htmlFor="add-source-name">Name</FieldLabel>
+                  <Input {...field} id="add-source-name" placeholder="Optional display name" />
+                  <FieldDescription>Defaults to the folder or repository name.</FieldDescription>
+                </Field>
+              )}
+            />
+            {showNodes ? (
+              <Controller
+                control={form.control}
+                name="hostId"
+                render={({ field }) => (
+                  <Field>
+                    <FieldLabel htmlFor="add-source-host">Host</FieldLabel>
+                    <Select
+                      items={nodeItems}
+                      value={field.value ?? defaultHostId}
+                      onValueChange={(next) => {
+                        if (typeof next === 'string') {
+                          field.onChange(next);
+                        }
+                      }}
+                    >
+                      <SelectTrigger id="add-source-host" size="sm" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="w-full" align="start">
+                        {nodeItems.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FieldDescription>
+                      Host that owns the folder or materializes the clone.
+                    </FieldDescription>
+                  </Field>
+                )}
+              />
+            ) : null}
+            <Controller
+              control={form.control}
+              name="uiVisibility"
+              render={({ field }) => (
+                <Field>
+                  <FieldLabel htmlFor="add-source-visibility">Visibility</FieldLabel>
+                  <Select
+                    items={visibilityItems}
+                    value={field.value}
+                    onValueChange={(next) => {
+                      if (next === 'org' || next === 'host') {
+                        field.onChange(next);
+                      }
+                    }}
+                  >
+                    <SelectTrigger id="add-source-visibility" size="sm" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="w-full" align="start">
+                      {visibilityItems.map((item) => (
+                        <SelectItem key={item.value} value={item.value}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FieldDescription>
-                    Browse the selected host and pick a folder, or type a path and press Apply.
+                    Org shows the source to everyone; Host keeps it visible on the selected host
+                    only.
                   </FieldDescription>
-                  {fieldState.error ? <FieldError>{fieldState.error.message}</FieldError> : null}
                 </Field>
               )}
             />
           </FieldGroup>
-        </TabsContent>
-        <TabsContent value="git">
-          <FieldGroup>
-            <Controller
-              control={form.control}
-              name="url"
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid || undefined}>
-                  <FieldLabel htmlFor="add-source-git-url">Repository URL</FieldLabel>
-                  <Input
-                    {...field}
-                    id="add-source-git-url"
-                    placeholder="https://github.com/org/repo.git"
-                    autoFocus={isGit}
-                    aria-invalid={fieldState.invalid || undefined}
-                  />
-                  <FieldDescription>Public HTTPS URL (no token in config).</FieldDescription>
-                  {fieldState.error ? <FieldError>{fieldState.error.message}</FieldError> : null}
-                </Field>
-              )}
-            />
-            <Controller
-              control={form.control}
-              name="branch"
-              render={({ field }) => (
-                <Field>
-                  <FieldLabel htmlFor="add-source-git-branch">Branch</FieldLabel>
-                  <Input
-                    {...field}
-                    id="add-source-git-branch"
-                    placeholder="Default branch if empty"
-                  />
-                  <FieldDescription>Leave empty to use the remote default branch.</FieldDescription>
-                </Field>
-              )}
-            />
-            <Controller
-              control={form.control}
-              name="credRef"
-              render={({ field }) => (
-                <Field>
-                  <FieldLabel htmlFor="add-source-git-cred">Credential reference</FieldLabel>
-                  <Input
-                    {...field}
-                    id="add-source-git-cred"
-                    placeholder="Optional credential reference"
-                  />
-                  <FieldDescription>
-                    Reference to a stored credential for private repositories.
-                  </FieldDescription>
-                </Field>
-              )}
-            />
-          </FieldGroup>
-        </TabsContent>
-      </Tabs>
-      <FieldGroup>
-        <Controller
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <Field>
-              <FieldLabel htmlFor="add-source-name">Name</FieldLabel>
-              <Input {...field} id="add-source-name" placeholder="Optional display name" />
-              <FieldDescription>Defaults to the folder or repository name.</FieldDescription>
-            </Field>
-          )}
-        />
-        {showNodes ? (
-          <Controller
-            control={form.control}
-            name="hostId"
-            render={({ field }) => (
-              <Field>
-                <FieldLabel htmlFor="add-source-host">Host</FieldLabel>
-                <Select
-                  items={nodeItems}
-                  value={field.value ?? defaultHostId}
-                  onValueChange={(next) => {
-                    if (typeof next === 'string') {
-                      field.onChange(next);
-                    }
-                  }}
-                >
-                  <SelectTrigger id="add-source-host" size="sm" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="w-full" align="start">
-                    {nodeItems.map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FieldDescription>
-                  Host that owns the folder or materializes the clone.
-                </FieldDescription>
-              </Field>
-            )}
-          />
-        ) : null}
-        <Controller
-          control={form.control}
-          name="uiVisibility"
-          render={({ field }) => (
-            <Field>
-              <FieldLabel htmlFor="add-source-visibility">Visibility</FieldLabel>
-              <Select
-                items={visibilityItems}
-                value={field.value}
-                onValueChange={(next) => {
-                  if (next === 'org' || next === 'host') {
-                    field.onChange(next);
-                  }
-                }}
-              >
-                <SelectTrigger id="add-source-visibility" size="sm" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="w-full" align="start">
-                  {visibilityItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FieldDescription>
-                Org shows the source to everyone; Host keeps it visible on the selected host only.
-              </FieldDescription>
-            </Field>
-          )}
-        />
-      </FieldGroup>
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={() => onResolve?.()}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? 'Adding…' : 'Add source'}
-        </Button>
-      </DialogFooter>
-    </form>
+          <DialogFooter>
+            {cancelButton}
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? 'Adding...' : 'Add source'}
+            </Button>
+          </DialogFooter>
+        </form>
+      )}
+    </Tabs>
   );
 }

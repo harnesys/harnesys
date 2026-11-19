@@ -8,7 +8,7 @@ const manifest = parseAddonManifest(
 describe('harnesys.github manifest', () => {
   test('parses with the expected identity', () => {
     expect(manifest.id).toBe('harnesys.github');
-    expect(manifest.version).toBe('1.0.0');
+    expect(manifest.version).toBe('1.1.0');
     expect(manifest.runtime).toEqual({ entry: 'dist/index.js', profile: 'trusted' });
   });
 

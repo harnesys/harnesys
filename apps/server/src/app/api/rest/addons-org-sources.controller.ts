@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, UseGuards } from '@harnesys/brix';
 import type { Source } from '@harnesys/contracts';
 import { z } from 'zod';
-import { AttachAddonCloudSourceUseCase } from '../../application/addons/sources/attach-addon-cloud-source.use-case.ts';
+import { AttachAddonSourceUseCase } from '../../application/addons/sources/attach-addon-source.use-case.ts';
 import { BrowseAddonCloudFolderUseCase } from '../../application/addons/sources/browse-addon-cloud-folder.use-case.ts';
 import { ListAddonCloudSourcesUseCase } from '../../application/addons/sources/list-addon-cloud-sources.use-case.ts';
 import { RefreshAddonCloudSourceUseCase } from '../../application/addons/sources/refresh-addon-cloud-source.use-case.ts';
@@ -29,6 +29,7 @@ interface AddonSourceKindResponse {
   id: string;
   title: string;
   connection?: string;
+  mount: 'cloud' | 'git';
   accountIds: string[];
   attached: number;
   supportsRootMount?: boolean;
@@ -44,7 +45,7 @@ export class AddonsOrgSourcesController {
     private readonly kinds: AddonSourceKindsPort,
     private readonly accountBindings: BindingRepositoryPort,
     private readonly browseFolder: BrowseAddonCloudFolderUseCase,
-    private readonly attachSource: AttachAddonCloudSourceUseCase,
+    private readonly attachSource: AttachAddonSourceUseCase,
     private readonly listSources: ListAddonCloudSourcesUseCase,
     private readonly refreshSource: RefreshAddonCloudSourceUseCase,
     private readonly detachSource: DetachSourceUseCase,
@@ -64,6 +65,7 @@ export class AddonsOrgSourcesController {
         id: kind.id,
         title: kind.title,
         ...(kind.connection === undefined ? {} : { connection: kind.connection }),
+        mount: kind.mount,
         accountIds:
           kind.connection === undefined
             ? []

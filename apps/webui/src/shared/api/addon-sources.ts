@@ -7,6 +7,7 @@ export interface AddonSourceKind {
   id: string;
   title: string;
   connection?: string;
+  mount: 'cloud' | 'git';
   accountIds: string[];
   attached: number;
   supportsRootMount?: boolean;
@@ -27,6 +28,7 @@ export interface AddonSourceEntry {
   size?: number;
   modifiedAt?: string;
   mimeType?: string;
+  url?: string;
 }
 
 export interface AddonSourceBrowseResponse {

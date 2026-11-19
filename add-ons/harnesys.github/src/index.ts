@@ -2,6 +2,7 @@ import type { AddonContext, RouteHandler } from '@harnesys/sdk';
 import { defineAddon, startAddonProcess } from '@harnesys/sdk';
 import { githubJson } from './github-client.ts';
 import { type GithubRepoSummary, isRecord, repoOf } from './github-mappers.ts';
+import { githubReposSource } from './github-source.ts';
 import { repoEventsTrigger } from './repo-events-trigger.ts';
 import { repoEventsWorker } from './repo-events-worker.ts';
 import { issueTools } from './tools-issues.ts';
@@ -9,7 +10,7 @@ import { prTools } from './tools-prs.ts';
 import { repoTools } from './tools-repos.ts';
 
 const ADDON_ID = 'harnesys.github';
-const ADDON_VERSION = '1.0.0';
+const ADDON_VERSION = '1.1.0';
 
 const repos: RouteHandler = async (_request, ctx: AddonContext) => {
   const wire = await githubJson<{ repositories: unknown[] }>(ctx, {
@@ -27,6 +28,7 @@ const repos: RouteHandler = async (_request, ctx: AddonContext) => {
 
 export const addon = defineAddon({
   tools: { ...repoTools, ...issueTools, ...prTools },
+  sources: { 'github-repos': githubReposSource },
   triggers: { 'github.repo-events': repoEventsTrigger },
   workers: { 'repo-poller': repoEventsWorker },
   routes: { repos },

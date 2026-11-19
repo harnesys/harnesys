@@ -59,15 +59,15 @@ describe('retryPlan', () => {
     expect(plan?.waitMs).toBeLessThanOrEqual(600_000);
   });
 
-  test('short advice replaces the schedule instead of extending it', () => {
+  test('short advice floors at the schedule instead of collapsing it', () => {
     const plan = retryPlan(
       apiError(429, 'rate limited', { 'retry-after': '1' }),
       false,
       undefined,
       2,
     );
-    expect(plan?.waitMs).toBeGreaterThanOrEqual(900);
-    expect(plan?.waitMs).toBeLessThanOrEqual(1_100);
+    expect(plan?.waitMs).toBeGreaterThanOrEqual(40_000 * 0.8);
+    expect(plan?.waitMs).toBeLessThanOrEqual(40_000 * 1.2);
   });
 
   test('reads X-RateLimit-Reset as epoch seconds', () => {

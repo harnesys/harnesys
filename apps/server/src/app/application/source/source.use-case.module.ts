@@ -20,6 +20,7 @@ import { GetOrgGitSummaryUseCase } from './get-org-git-summary.use-case.ts';
 import { GetSourceUseCase } from './get-source.use-case.ts';
 import { GetSourceHostStatusUseCase } from './get-source-host-status.use-case.ts';
 import { GetSourceLocationUseCase } from './get-source-location.use-case.ts';
+import { GitCredentialUseCase } from './git-credential.use-case.ts';
 import { GitWorktreeResolver } from './git-worktree-resolver.ts';
 import { InitGitUseCase } from './init-git.use-case.ts';
 import { ListGitBranchesUseCase } from './list-git-branches.use-case.ts';
@@ -50,6 +51,7 @@ import { SwitchGitBranchUseCase } from './switch-git-branch.use-case.ts';
     CreateHostDirUseCase,
     AttachLocalFolderUseCase,
     AttachGitUseCase,
+    GitCredentialUseCase,
     PrepareGitSourceUseCase,
     GitWorktreeResolver,
     RefreshAllSourceVcsUseCase,
@@ -91,6 +93,7 @@ import { SwitchGitBranchUseCase } from './switch-git-branch.use-case.ts';
     CreateHostDirUseCase,
     AttachLocalFolderUseCase,
     AttachGitUseCase,
+    GitCredentialUseCase,
     PrepareGitSourceUseCase,
     GitWorktreeResolver,
     RefreshAllSourceVcsUseCase,

@@ -3,6 +3,7 @@ export interface AddonSourceKindView {
   id: string;
   title: string;
   connection?: string;
+  mount: 'cloud' | 'git';
   supportsRootMount?: boolean;
   supportsSearch?: boolean;
   rootTitle?: string;

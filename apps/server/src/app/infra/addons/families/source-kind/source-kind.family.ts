@@ -18,6 +18,12 @@ export const HANDLERS: readonly HandlerSpec[] = [
   handlerSpec('source.export', { required: false }),
 ];
 
+const GIT_MOUNT_HANDLERS: readonly HandlerSpec[] = HANDLERS.map((handler) =>
+  handler.method === 'source.list' || handler.method === 'source.stat'
+    ? handler
+    : { ...handler, required: false },
+);
+
 export interface AddonSourceKindEntry {
   owner: OwnerKey;
   descriptor: SourceKindSchema;
@@ -66,6 +72,10 @@ export class SourceKindFamilyModule implements FamilyModule<SourceKindSchema> {
 
   schema(_v: number): z.ZodType<SourceKindSchema> {
     return SourceKindDescriptorSchema as z.ZodType<SourceKindSchema>;
+  }
+
+  handlersFor(d: SourceKindSchema): readonly HandlerSpec[] {
+    return d.mount === 'git' ? GIT_MOUNT_HANDLERS : HANDLERS;
   }
 
   register(owner: OwnerKey, d: SourceKindSchema): Disposable {

@@ -137,6 +137,8 @@ export const CloudRemoteEntrySchema = z.object({
   modifiedAt: z.string().min(1).optional(),
   mimeType: z.string().min(1).optional(),
   export: CloudRemoteExportSchema.optional(),
+  /** HTTPS clone URL; required on entries of `mount: 'git'` source kinds. */
+  url: z.string().min(1).optional(),
 });
 export type CloudRemoteEntryWire = z.infer<typeof CloudRemoteEntrySchema>;
 export type CloudRemoteExportWire = z.infer<typeof CloudRemoteExportSchema>;

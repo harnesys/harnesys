@@ -1,6 +1,6 @@
 {
   "id": "harnesys.github",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "platform": 1,
   "title": "GitHub",
   "description": "GitHub repositories, issues, pull requests and CI workflow runs for every connected GitHub App installation, plus a github.repo-events trigger that polls repos for new issues, pull requests and workflow runs. Installation tokens are issued by the host and never enter the add-on process.",
@@ -39,6 +39,10 @@
     {
       "id": "trigger",
       "reason": "Fire github.repo-events instances for new issues, pull requests and workflow runs"
+    },
+    {
+      "id": "source",
+      "reason": "Expose repositories of the bound installation as attachable sources"
     }
   ],
   "connections": [
@@ -922,6 +926,16 @@
         "method": "GET",
         "path": "/repos",
         "role": "member"
+      }
+    },
+    {
+      "id": "github-repos",
+      "family": "source-kind",
+      "descriptor": {
+        "id": "github-repos",
+        "title": "GitHub repository",
+        "connection": "github",
+        "mount": "git"
       }
     }
   ],

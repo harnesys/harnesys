@@ -18,24 +18,38 @@ export const TICKET_HEADER_NAME = 'X-Harnesys-Ticket';
 interface TicketRoutePattern {
   method: string;
   pattern: RegExp;
+  credential: 'ticket' | 'key';
 }
 
 const LOCAL_OPS_TICKET_ROUTES: readonly TicketRoutePattern[] = [
-  { method: 'POST', pattern: /^\/api\/orgs\/[^/]+\/browse-dirs$/ },
-  { method: 'POST', pattern: /^\/api\/host\/system-skills\/[^/]+\/restore$/ },
-  { method: 'POST', pattern: /^\/api\/orgs\/[^/]+\/sources$/ },
-  { method: 'POST', pattern: /^\/api\/orgs\/[^/]+\/sources\/[^/]+\/prepare$/ },
+  { method: 'POST', pattern: /^\/api\/orgs\/[^/]+\/browse-dirs$/, credential: 'ticket' },
+  { method: 'POST', pattern: /^\/api\/host\/system-skills\/[^/]+\/restore$/, credential: 'ticket' },
+  { method: 'POST', pattern: /^\/api\/orgs\/[^/]+\/sources$/, credential: 'ticket' },
+  { method: 'POST', pattern: /^\/api\/orgs\/[^/]+\/sources\/[^/]+\/prepare$/, credential: 'ticket' },
+  {
+    method: 'GET',
+    pattern: /^\/api\/orgs\/[^/]+\/sources\/[^/]+\/git-credential$/,
+    credential: 'key',
+  },
 ];
 
-export function isLocalOpsTicketRoute(pathname: string, method: string): boolean {
-  return LOCAL_OPS_TICKET_ROUTES.some(
+export function localOpsCredentialParam(pathname: string, method: string): 'ticket' | 'key' | null {
+  const route = LOCAL_OPS_TICKET_ROUTES.find(
     (route) => route.method === method && route.pattern.test(pathname),
   );
+  return route?.credential ?? null;
 }
 
 export function hasTicketCredential(request: Request): boolean {
   const url = new URL(request.url);
   return request.headers.has(TICKET_HEADER_NAME) || url.searchParams.has('ticket');
+}
+
+export function hasLocalOpsCredential(request: Request, credential: 'ticket' | 'key'): boolean {
+  if (credential === 'ticket') {
+    return hasTicketCredential(request);
+  }
+  return new URL(request.url).searchParams.has('key');
 }
 
 export const SessionPrincipal = createParamDecorator((_data, paramContext) => {
@@ -59,10 +73,8 @@ export class SessionGuard extends CanActivate {
     const accessToken = extractBearerToken(ctx.request.headers.get('Authorization'));
     if (!accessToken) {
       const url = new URL(ctx.request.url);
-      if (
-        isLocalOpsTicketRoute(url.pathname, ctx.request.method) &&
-        hasTicketCredential(ctx.request)
-      ) {
+      const credential = localOpsCredentialParam(url.pathname, ctx.request.method);
+      if (credential !== null && hasLocalOpsCredential(ctx.request, credential)) {
         return true;
       }
       throw new SessionExpiredException();

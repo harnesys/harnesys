@@ -1,5 +1,6 @@
 import { Module } from '@harnesys/brix';
 import { AddonCallPort } from '../../domain/addons/ports/addon-call.port.ts';
+import { SourceUseCaseModule } from '../source/source.use-case.module.ts';
 import { AppsUseCaseModule } from '../apps/apps.use-case.module.ts';
 import { ThreadUseCaseModule } from '../threads/thread.use-case.module.ts';
 import { BridgeInboundPort } from './bridge/bridge-inbound.port.ts';
@@ -26,7 +27,7 @@ import { AddonReconciler } from './reconcile/reconciler.ts';
 import { RunDispatchPort } from './run-dispatch.port.ts';
 import { ThreadRunDispatchService } from './run-dispatch.service.ts';
 import { AddonCloudMaterializer } from './sources/addon-cloud.materializer.ts';
-import { AttachAddonCloudSourceUseCase } from './sources/attach-addon-cloud-source.use-case.ts';
+import { AttachAddonSourceUseCase } from './sources/attach-addon-source.use-case.ts';
 import { BrowseAddonCloudFolderUseCase } from './sources/browse-addon-cloud-folder.use-case.ts';
 import { ListAddonCloudSourcesUseCase } from './sources/list-addon-cloud-sources.use-case.ts';
 import { PrepareAddonCloudSourceUseCase } from './sources/prepare-addon-cloud-source.use-case.ts';
@@ -54,7 +55,7 @@ const useCases = [
   FireTriggerUseCase,
   RunJobUseCase,
   NeutralBridgeInboundUseCase,
-  AttachAddonCloudSourceUseCase,
+  AttachAddonSourceUseCase,
   BrowseAddonCloudFolderUseCase,
   ListAddonCloudSourcesUseCase,
   PrepareAddonCloudSourceUseCase,
@@ -72,7 +73,7 @@ const services = [
 ];
 
 @Module({
-  imports: [ThreadUseCaseModule, AppsUseCaseModule],
+  imports: [ThreadUseCaseModule, AppsUseCaseModule, SourceUseCaseModule],
   providers: [
     ...useCases,
     ...services,

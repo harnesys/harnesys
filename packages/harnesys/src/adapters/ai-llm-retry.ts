@@ -132,12 +132,14 @@ export function retryPlan(
   }
   const replay = emitted;
   const advised = retryAfterMsOf(error);
-  const waitMs =
-    advised !== undefined
-      ? Math.min(Math.max(0, advised), RETRY_AFTER_MAX_MS)
-      : jittered(
-          schedule[attempt] ?? (rateLimited ? RATE_LIMIT_FALLBACK_MS : SERVER_ERROR_FALLBACK_MS),
-        );
+  const cappedAdvice =
+    advised !== undefined ? Math.min(Math.max(0, advised), RETRY_AFTER_MAX_MS) : undefined;
+  const fallbackMs = jittered(
+    schedule[attempt] ?? (rateLimited ? RATE_LIMIT_FALLBACK_MS : SERVER_ERROR_FALLBACK_MS),
+  );
+  const waitMs = rateLimited
+    ? Math.max(cappedAdvice ?? 0, fallbackMs)
+    : (cappedAdvice ?? fallbackMs);
   return { schedule, waitMs, replay };
 }
 export function retryChunk(error: unknown, attempt: number, plan: RetryPlan): StreamChunk {

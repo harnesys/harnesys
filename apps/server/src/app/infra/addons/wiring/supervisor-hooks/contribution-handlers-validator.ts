@@ -1,6 +1,7 @@
 import { Injectable } from '@harnesys/brix';
+import type { HandlerSpec } from '../../../../domain/addons/family-module.ts';
 import { AddonPackageCatalogPort } from '../../../../domain/addons/ports/addon-package-catalog.port.ts';
-import { FamilyModuleList } from '../../families/family-module-list.ts';
+import { type AnyFamilyModule, FamilyModuleList } from '../../families/family-module-list.ts';
 import type { SupervisorHandlersValidator } from '../../supervisor/supervisor-deps.ts';
 
 /**
@@ -33,10 +34,7 @@ export class ContributionHandlersValidator implements SupervisorHandlersValidato
       if (!family?.versions.includes(contribution.v ?? 1)) {
         continue;
       }
-      for (const handler of family.handlers) {
-        if (!handler.required) {
-          continue;
-        }
+      for (const handler of requiredHandlersOf(family, contribution.descriptor)) {
         if (!provided.has(handler.method)) {
           missing.add(handler.method);
         }
@@ -44,4 +42,10 @@ export class ContributionHandlersValidator implements SupervisorHandlersValidato
     }
     return { ok: missing.size === 0, missing: [...missing] };
   }
+}
+
+function requiredHandlersOf(family: AnyFamilyModule, descriptor: unknown): readonly HandlerSpec[] {
+  return (family.handlersFor?.(descriptor as never) ?? family.handlers).filter(
+    (handler) => handler.required,
+  );
 }
