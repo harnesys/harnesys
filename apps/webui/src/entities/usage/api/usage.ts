@@ -3,6 +3,7 @@ import type {
   PriceOverride,
   PriceOverridesResponse,
   UsageGroupBy,
+  UsageIssuesReport,
   UsageReport,
   UsageRunsReport,
 } from '../model/usage';
@@ -46,6 +47,23 @@ export function getUsageRuns(
     search.set('limit', String(params.limit));
   }
   return apiJson<UsageRunsReport>(`${usageBase(orgId)}/runs?${search.toString()}`);
+}
+
+export function getUsageIssues(
+  orgId: string,
+  params: { from?: string; to?: string; limit?: number },
+): Promise<UsageIssuesReport> {
+  const search = new URLSearchParams();
+  if (params.from) {
+    search.set('from', params.from);
+  }
+  if (params.to) {
+    search.set('to', params.to);
+  }
+  if (params.limit !== undefined) {
+    search.set('limit', String(params.limit));
+  }
+  return apiJson<UsageIssuesReport>(`${usageBase(orgId)}/issues?${search.toString()}`);
 }
 
 export function getPriceOverrides(orgId: string): Promise<PriceOverridesResponse> {

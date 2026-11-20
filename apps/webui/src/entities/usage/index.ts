@@ -2,6 +2,7 @@ export {
   deletePriceOverride,
   getPriceOverrides,
   getUsage,
+  getUsageIssues,
   getUsageRuns,
   setPriceOverride,
 } from './api/usage';
@@ -10,6 +11,8 @@ export type {
   PriceOverridesResponse,
   UsageGroupBy,
   UsageGroupRow,
+  UsageIssueRow,
+  UsageIssuesReport,
   UsageMemberRow,
   UsagePricingSource,
   UsageReport,

@@ -1,7 +1,7 @@
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import type { UsageGroupBy } from '@/entities/usage';
-import { getUsage, getUsageRuns } from '@/entities/usage';
+import { getUsage, getUsageIssues, getUsageRuns } from '@/entities/usage';
 import { useOrgTimeZone } from '@/features/switch-org/org-time-zone';
 import { fetchOrgAgents } from '@/shared/api/agents';
 import { startOfDayInTimeZone } from '@/shared/lib/time-zone';
@@ -57,6 +57,12 @@ export function useUsageBoard(orgId: string) {
       getUsageRuns(orgId, { ...usageRangeFromPreset(preset, timeZone), limit: RUNS_LIMIT }),
     enabled: Boolean(orgId),
   });
+  const issuesQuery = useQuery({
+    queryKey: ['usage', orgId, 'issues', preset, timeZone],
+    queryFn: () =>
+      getUsageIssues(orgId, { ...usageRangeFromPreset(preset, timeZone), limit: RUNS_LIMIT }),
+    enabled: Boolean(orgId),
+  });
   const compare = agents.length >= 2;
   const perAgentQueries = useQueries({
     queries: agents.map((agentId) => ({
@@ -95,6 +101,7 @@ export function useUsageBoard(orgId: string) {
     agentNames: agentNamesOf(agentsQuery.data?.items ?? []),
     todaySpend: todaySpendOf(todayQuery.data?.rows ?? []),
     runs: runsQuery.data,
+    issues: issuesQuery.data,
     report: reportQuery.data,
     isLoading: reportQuery.isLoading,
   };

@@ -3,12 +3,15 @@ import { DeletePriceOverrideUseCase } from '../../application/usage/delete-price
 import { ListPriceOverridesUseCase } from '../../application/usage/list-price-overrides.use-case.ts';
 import { RunUsageUseCase } from '../../application/usage/run-usage.use-case.ts';
 import { SetPriceOverrideUseCase } from '../../application/usage/set-price-override.use-case.ts';
+import { UsageIssuesReportUseCase } from '../../application/usage/usage-issues-report.use-case.ts';
 import { UsageReportUseCase } from '../../application/usage/usage-report.use-case.ts';
 import { UsageRunsReportUseCase } from '../../application/usage/usage-runs-report.use-case.ts';
-import type { UsageReport } from '../../domain/usage/usage-port.ts';
+import type { UsageIssuesReport, UsageReport } from '../../domain/usage/usage-port.ts';
 import {
   type PriceOverrideBody,
   PriceOverrideBodySchema,
+  type UsageIssuesQuery,
+  UsageIssuesQuerySchema,
   type UsageQuery,
   UsageQuerySchema,
   type UsageRunsQuery,
@@ -20,6 +23,7 @@ export class UsageController {
   constructor(
     private readonly report: UsageReportUseCase,
     private readonly runs: UsageRunsReportUseCase,
+    private readonly issues: UsageIssuesReportUseCase,
     private readonly runUsageUseCase: RunUsageUseCase,
     private readonly setPriceOverride: SetPriceOverrideUseCase,
     private readonly listPriceOverrides: ListPriceOverridesUseCase,
@@ -43,6 +47,19 @@ export class UsageController {
   @Get('runs')
   listRuns(@Param('orgId') orgId: string, @Query(UsageRunsQuerySchema) query: UsageRunsQuery) {
     return this.runs.execute({
+      orgId,
+      ...(query.from ? { from: query.from } : {}),
+      ...(query.to ? { to: query.to } : {}),
+      ...(query.limit === undefined ? {} : { limit: query.limit }),
+    });
+  }
+
+  @Get('issues')
+  listIssues(
+    @Param('orgId') orgId: string,
+    @Query(UsageIssuesQuerySchema) query: UsageIssuesQuery,
+  ): UsageIssuesReport {
+    return this.issues.execute({
       orgId,
       ...(query.from ? { from: query.from } : {}),
       ...(query.to ? { to: query.to } : {}),

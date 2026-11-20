@@ -9,6 +9,7 @@ import {
 } from '../model/usage-filters';
 import { useUsageBoard } from '../model/use-usage';
 import { UsageChart } from './usage-chart';
+import { UsageIssuesTable } from './usage-issues-table';
 import { UsageRunsTable } from './usage-runs-table';
 import { UsageTable } from './usage-table';
 
@@ -38,6 +39,7 @@ export function UsageBoard({ orgId }: { orgId: string }) {
         groupBy={board.groupBy}
         preset={board.preset}
         agentOptions={board.agentOptions}
+        agentNames={board.agentNames}
         selectedAgents={board.agents}
         perAgentRows={board.perAgentRows}
         onToggleAgent={board.toggleAgent}
@@ -114,6 +116,14 @@ export function UsageBoard({ orgId }: { orgId: string }) {
           todaySpend={board.todaySpend}
         />
       </SettingsSection>
+      {board.issues && board.issues.rows.length > 0 ? (
+        <SettingsSection
+          label="Issues"
+          description="Cost per issue task for the selected range, most expensive first."
+        >
+          <UsageIssuesTable report={board.issues} agentNames={board.agentNames} />
+        </SettingsSection>
+      ) : null}
       {board.runs ? (
         <SettingsSection
           label="Runs"

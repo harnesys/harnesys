@@ -89,3 +89,31 @@ export const UsageRunsReportSchema = z.object({
   totals: UsageRunsTotalsSchema,
 });
 export type UsageRunsReport = z.infer<typeof UsageRunsReportSchema>;
+
+export const UsageIssuesQuerySchema = z.object({
+  from: z.string().optional(),
+  to: z.string().optional(),
+  limit: z.coerce.number().int().optional(),
+});
+export type UsageIssuesQuery = z.infer<typeof UsageIssuesQuerySchema>;
+
+export const UsageIssueRowSchema = z.object({
+  issueId: z.string(),
+  title: z.string(),
+  statusKey: z.string(),
+  agents: z.array(z.string()),
+  inputTokens: z.number(),
+  outputTokens: z.number(),
+  cacheReadTokens: z.number(),
+  cacheWriteTokens: z.number(),
+  costUsd: z.number(),
+  runs: z.number(),
+  lastTs: z.string(),
+});
+export type UsageIssueRow = z.infer<typeof UsageIssueRowSchema>;
+
+export const UsageIssuesReportSchema = z.object({
+  rows: z.array(UsageIssueRowSchema),
+  totals: UsageRunsTotalsSchema,
+});
+export type UsageIssuesReport = z.infer<typeof UsageIssuesReportSchema>;

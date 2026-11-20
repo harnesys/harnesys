@@ -67,6 +67,25 @@ export interface UsageRunsReport {
   totals: UsageRunsTotals;
 }
 
+export interface UsageIssueRow {
+  issueId: string;
+  title: string;
+  statusKey: string;
+  agents: string[];
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  costUsd: number;
+  runs: number;
+  lastTs: string;
+}
+
+export interface UsageIssuesReport {
+  rows: UsageIssueRow[];
+  totals: UsageRunsTotals;
+}
+
 export interface PriceOverride {
   modelId: string;
   inputPer1M: number;

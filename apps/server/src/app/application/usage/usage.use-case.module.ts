@@ -3,6 +3,7 @@ import { DeletePriceOverrideUseCase } from './delete-price-override.use-case.ts'
 import { ListPriceOverridesUseCase } from './list-price-overrides.use-case.ts';
 import { RunUsageUseCase } from './run-usage.use-case.ts';
 import { SetPriceOverrideUseCase } from './set-price-override.use-case.ts';
+import { UsageIssuesReportUseCase } from './usage-issues-report.use-case.ts';
 import { UsageReportUseCase } from './usage-report.use-case.ts';
 import { UsageRunsReportUseCase } from './usage-runs-report.use-case.ts';
 
@@ -10,6 +11,7 @@ import { UsageRunsReportUseCase } from './usage-runs-report.use-case.ts';
   providers: [
     UsageReportUseCase,
     UsageRunsReportUseCase,
+    UsageIssuesReportUseCase,
     RunUsageUseCase,
     SetPriceOverrideUseCase,
     ListPriceOverridesUseCase,
@@ -18,6 +20,7 @@ import { UsageRunsReportUseCase } from './usage-runs-report.use-case.ts';
   exports: [
     UsageReportUseCase,
     UsageRunsReportUseCase,
+    UsageIssuesReportUseCase,
     RunUsageUseCase,
     SetPriceOverrideUseCase,
     ListPriceOverridesUseCase,

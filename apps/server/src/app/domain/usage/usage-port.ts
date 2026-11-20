@@ -1,5 +1,6 @@
 import type {
   UsageGroupRow,
+  UsageIssuesReport,
   UsageMemberRow,
   UsagePricingSource,
   UsageReport,
@@ -11,6 +12,7 @@ import type {
 
 export type {
   UsageGroupRow,
+  UsageIssuesReport,
   UsageMemberRow,
   UsagePricingSource,
   UsageReport,
@@ -128,6 +130,13 @@ export interface UsageRunsReportRequest {
   limit?: number;
 }
 
+export interface UsageIssuesReportRequest {
+  orgId: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+}
+
 export const USAGE_RUNS_LIMIT_DEFAULT = 50;
 export const USAGE_RUNS_LIMIT_MAX = 200;
 
@@ -170,6 +179,10 @@ export abstract class UsagePort {
     toIso: string,
   ): number;
   abstract runsReport(orgId: string, request: UsageRunsReportRequest): UsageRunsReport;
+  abstract issuesReport(
+    orgId: string,
+    request: UsageIssuesReportRequest,
+  ): UsageIssuesReport;
   abstract getPriceOverride(orgId: string, modelId: string): PriceOverride | null;
   abstract listPriceOverrides(orgId: string): PriceOverride[];
   abstract setPriceOverride(orgId: string, modelId: string, price: ManualPrice): void;

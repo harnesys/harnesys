@@ -15,6 +15,7 @@ import { ManagerTailPort } from '../../../domain/manager/manager-tail.port.ts';
 import { OrgSettingsPort } from '../../../domain/skills/org-settings.port.ts';
 import type {
   NewUsageRecord,
+  UsageIssuesReport,
   UsageReport,
   UsageRunsReport,
   UsageSummary,
@@ -46,6 +47,9 @@ export class FakeUsage extends UsagePort {
     return this.spendByAgent.get(agentId) ?? 0;
   }
   runsReport(): UsageRunsReport {
+    return { rows: [], totals: { inputTokens: 0, outputTokens: 0, costUsd: 0, runs: 0 } };
+  }
+  issuesReport(): UsageIssuesReport {
     return { rows: [], totals: { inputTokens: 0, outputTokens: 0, costUsd: 0, runs: 0 } };
   }
   getPriceOverride(): null {

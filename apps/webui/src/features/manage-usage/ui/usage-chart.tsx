@@ -154,11 +154,13 @@ function rangeLabel(preset: number, comparing: boolean): string {
 
 function AgentFilter({
   options,
+  agentNames,
   selected,
   onToggle,
   onClear,
 }: {
   options: string[];
+  agentNames: Record<string, string>;
   selected: string[];
   onToggle: (agentId: string) => void;
   onClear: () => void;
@@ -180,7 +182,7 @@ function AgentFilter({
               onCheckedChange={() => onToggle(agentId)}
               onSelect={(event) => event.preventDefault()}
             >
-              <span className="font-mono text-xs">{shortAgent(agentId)}</span>
+              <span className="text-xs">{agentNames[agentId] ?? shortAgent(agentId)}</span>
             </DropdownMenuCheckboxItem>
           ))}
         </DropdownMenuGroup>
@@ -203,6 +205,7 @@ interface UsageChartProps {
   groupBy: UsageGroupBy;
   preset: number;
   agentOptions: string[];
+  agentNames: Record<string, string>;
   selectedAgents: string[];
   perAgentRows: { agentId: string; rows: UsageGroupRow[] }[];
   onToggleAgent: (agentId: string) => void;
@@ -214,6 +217,7 @@ export function UsageChart({
   groupBy,
   preset,
   agentOptions,
+  agentNames,
   selectedAgents,
   perAgentRows,
   onToggleAgent,
@@ -234,6 +238,7 @@ export function UsageChart({
       actions={
         <AgentFilter
           options={agentOptions}
+          agentNames={agentNames}
           selected={selectedAgents}
           onToggle={onToggleAgent}
           onClear={onClearAgents}

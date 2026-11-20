@@ -8,6 +8,8 @@ import type {
   ManualPrice,
   NewUsageRecord,
   PriceOverride,
+  UsageIssuesReport,
+  UsageIssuesReportRequest,
   UsageMemberAggregateRow,
   UsageMemberNameRow,
   UsagePort,
@@ -22,6 +24,7 @@ import { byMemberOf, clampRunsLimit } from '../../domain/usage/usage-port.ts';
 import { type OrgSqliteDb, withOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 import { runsTable } from '../org-sqlite/schema/runs.ts';
 import { budgetMarksTable, priceOverridesTable, usageTable } from '../org-sqlite/schema/usage.ts';
+import { selectIssuesReport } from './usage-issues.report.ts';
 import { keyExpressionOf, reportRangeOffsetModifier } from './usage-report.helpers.ts';
 import { selectRunsReport } from './usage-runs.report.ts';
 import { selectUsageSummary } from './usage-summary.report.ts';
@@ -185,6 +188,13 @@ export class UsageAdapter implements UsagePort {
     const to = request.to ?? new Date().toISOString();
     const limit = clampRunsLimit(request.limit);
     return withOrgSqlite(this.layout, orgId, (db) => selectRunsReport(db, from, to, limit));
+  }
+
+  issuesReport(orgId: string, request: UsageIssuesReportRequest): UsageIssuesReport {
+    const from = request.from ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const to = request.to ?? new Date().toISOString();
+    const limit = clampRunsLimit(request.limit);
+    return withOrgSqlite(this.layout, orgId, (db) => selectIssuesReport(db, from, to, limit));
   }
 
   getPriceOverride(orgId: string, modelId: string): PriceOverride | null {
