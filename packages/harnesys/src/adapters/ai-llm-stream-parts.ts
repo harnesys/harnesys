@@ -1,6 +1,7 @@
 import { STREAM_CHUNK_SIZE } from '../constants.ts';
 import type { ToolDefinition } from '../ports/tools.ts';
 import { canonicalToolName, type StreamChunk, toStreamError } from './ai-llm-chunks.ts';
+import { plainToolCallArgs } from './tool-call-args.ts';
 
 export interface ToolCallRecord {
   name: string;
@@ -98,7 +99,7 @@ function handleToolCall(part: Record<string, unknown>, context: PartContext): St
     id?: string;
   };
   const name = canonicalToolName(String(tc.toolName ?? ''), context.registry);
-  const args = (tc.input ?? tc.args) as unknown;
+  const args = plainToolCallArgs(tc.input ?? tc.args);
   const id = String(tc.toolCallId ?? tc.id ?? '');
   context.state.toolCalls.push({ name, args, id });
   return [{ type: 'tool-call', name, args, id }];

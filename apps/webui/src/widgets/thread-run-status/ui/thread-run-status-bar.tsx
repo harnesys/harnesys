@@ -11,8 +11,8 @@ import {
 import { useState } from 'react';
 import { useSessionStore, useThreadFeed } from '@/entities/session';
 import { useThreadStore } from '@/entities/thread';
-import { type RunPhase, retryRun, useRunPhase } from '@/features/send-message';
-import { cancelRun, nudgeIssueRecord } from '@/shared/api';
+import { type RunPhase, rerunIssueTask, retryRun, useRunPhase } from '@/features/send-message';
+import { cancelRun } from '@/shared/api';
 import { useOrgId } from '@/shared/config/location';
 import { Button } from '@/shared/ui/button';
 import { RunAttributionBadge } from '@/shared/ui/run-attribution-badge';
@@ -335,9 +335,9 @@ async function restart(input: RestartInput): Promise<void> {
       if (!orgId) {
         throw new Error('organization is not selected');
       }
-      const issue = await nudgeIssueRecord(orgId, issueId);
+      await rerunIssueTask({ orgId, threadId, issueId });
       useThreadStore.getState().setLastError(threadId, null);
-      toast.add({ title: 'Task re-fired', description: issue.title, type: 'success' });
+      toast.add({ title: 'Task re-run from a clean slate', type: 'success' });
     } else {
       await retryRun(threadId, runId);
       useThreadStore.getState().setLastError(threadId, null);
@@ -365,9 +365,9 @@ async function relaunch(input: RelaunchInput): Promise<void> {
       if (!orgId) {
         throw new Error('organization is not selected');
       }
-      const issue = await nudgeIssueRecord(orgId, issueId);
+      await rerunIssueTask({ orgId, threadId, issueId });
       useThreadStore.getState().setLastError(threadId, null);
-      toast.add({ title: 'Task re-fired', description: issue.title, type: 'success' });
+      toast.add({ title: 'Task re-run from a clean slate', type: 'success' });
       return;
     }
     if (!runId || runId.startsWith('launch:')) {

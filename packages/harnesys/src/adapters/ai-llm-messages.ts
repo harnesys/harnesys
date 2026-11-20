@@ -1,3 +1,5 @@
+import { plainToolCallArgs } from './tool-call-args.ts';
+
 type MessageRecord = Record<string, unknown>;
 function userContentParts(content: unknown[]): MessageRecord[] {
   const parts: MessageRecord[] = [];
@@ -42,7 +44,7 @@ function userMessage(item: MessageRecord): MessageRecord {
 function toolCallPart(tc: MessageRecord): MessageRecord {
   const id = String((tc.id ?? tc.toolCallId ?? '') as string);
   const name = String((tc.name ?? tc.toolName ?? 'tool') as string);
-  const input = (tc.args ?? tc.input ?? {}) as unknown;
+  const input = plainToolCallArgs(tc.args ?? tc.input);
   return { type: 'tool-call', toolCallId: id, toolName: name, input };
 }
 function assistantContent(

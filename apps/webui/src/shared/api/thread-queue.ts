@@ -51,8 +51,14 @@ export function deleteThreadQueueItem(threadId: string, itemId: string): Promise
   });
 }
 
-export function deliverThreadQueueItem(threadId: string, itemId: string): Promise<void> {
-  return apiJson<void>(`${queueBase(threadId)}/${encodeURIComponent(itemId)}/deliver`, {
-    method: 'POST',
-  }).then(() => undefined);
+export function deliverThreadQueueItem(
+  threadId: string,
+  itemId: string,
+): Promise<ThreadQueueItem[]> {
+  return apiJson<ThreadQueueResponse>(
+    `${queueBase(threadId)}/${encodeURIComponent(itemId)}/deliver`,
+    {
+      method: 'POST',
+    },
+  ).then((res) => res.items);
 }

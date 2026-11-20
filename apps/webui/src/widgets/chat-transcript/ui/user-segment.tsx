@@ -2,6 +2,7 @@ import type { SessionEvent } from '@harnesys/studio-shared';
 import {
   isIssueHumanText,
   isScheduledHumanText,
+  issueTaskAttrs,
   scheduledTaskName,
   TRIGGER_HUMAN_ORIGIN,
   visibleScheduledText,
@@ -16,10 +17,11 @@ import {
   deleteUserMessage,
   editUserMessage,
   reloadUserMessage,
+  rerunIssueTask,
   sendMessage,
 } from '@/features/send-message';
 import { branchThread } from '@/features/switch-thread';
-import { studioFocusProjectId, useStudioLocation } from '@/shared/config/location';
+import { studioFocusProjectId, useOrgId, useStudioLocation } from '@/shared/config/location';
 import { useStudioNavigation } from '@/shared/config/navigation';
 import { toast } from '@/shared/ui/toast';
 import { splitDirectiveTags } from '../model/directive-tag';
@@ -93,9 +95,15 @@ export function UserSegment({
   }
   if (issueWake) {
     return (
-      <div className="flex justify-end">
-        <IssueWakeBanner text={rawText} />
-      </div>
+      <IssueWakeSegment
+        rawText={rawText}
+        segmentKey={segmentKey}
+        threadId={threadId}
+        runId={runId}
+        event={event}
+        inherited={inherited}
+        readOnly={readOnly}
+      />
     );
   }
   const content = (
@@ -242,6 +250,81 @@ function UserSegmentActions({
           deleteOptimisticUserMessage(threadId, clientEventId);
         }
       }}
+    />
+  );
+}
+
+function IssueWakeSegment({
+  rawText,
+  segmentKey,
+  threadId,
+  runId,
+  event,
+  inherited,
+  readOnly,
+}: {
+  rawText: string;
+  segmentKey: string;
+  threadId?: string;
+  runId?: string;
+  event: SessionEvent & { type: 'user' };
+  inherited: boolean;
+  readOnly: boolean;
+}) {
+  const actions =
+    !inherited && !readOnly && threadId ? (
+      <IssueSegmentActions
+        entryId={
+          event.clientEventId ??
+          (runId && event.seq !== undefined ? `${runId}:${event.seq}` : segmentKey)
+        }
+        rawText={rawText}
+        threadId={threadId}
+        issueId={issueTaskAttrs(rawText)?.issueId ?? null}
+      />
+    ) : null;
+  return (
+    <div className="group/message flex flex-col items-end gap-2">
+      <div className="flex justify-end">
+        <IssueWakeBanner text={rawText} />
+      </div>
+      {actions}
+    </div>
+  );
+}
+
+function IssueSegmentActions({
+  entryId,
+  rawText,
+  threadId,
+  issueId,
+}: {
+  entryId: string;
+  rawText: string;
+  threadId: string;
+  issueId: string | null;
+}) {
+  const orgId = useOrgId();
+  return (
+    <MessageActions
+      entryId={entryId}
+      align="end"
+      onCopy={() => {
+        void navigator.clipboard.writeText(rawText);
+        toast.add({ title: 'Copied.' });
+      }}
+      onRetry={
+        issueId && orgId
+          ? () => {
+              void rerunIssueTask({ orgId, threadId, issueId }).catch((error) => {
+                toast.add({
+                  title: 'Could not re-run',
+                  description: error instanceof Error ? error.message : 'Re-run failed',
+                });
+              });
+            }
+          : undefined
+      }
     />
   );
 }

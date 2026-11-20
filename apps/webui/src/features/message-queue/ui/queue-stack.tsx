@@ -42,8 +42,15 @@ export function ThreadQueueStack({ threadId }: { threadId: string }) {
   async function handleDeliver(item: ThreadQueueItem) {
     setBusyId(item.itemId);
     try {
-      await deliverThreadQueueItem(threadId, item.itemId);
-      await useThreadQueueStore.getState().refresh(threadId);
+      const items = await deliverThreadQueueItem(threadId, item.itemId);
+      useThreadQueueStore.getState().apply(threadId, items);
+      if (items.some((queued) => queued.itemId === item.itemId)) {
+        toast.add({
+          type: 'info',
+          title: 'Agent is busy',
+          description: 'The message stays queued and will be sent as soon as the run finishes.',
+        });
+      }
     } catch (error) {
       toast.add({
         title: 'Could not send now',

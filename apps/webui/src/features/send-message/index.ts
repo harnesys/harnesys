@@ -6,6 +6,7 @@ export {
 } from './model/delete-turn';
 export { type AskRef, rejectAsk, respondToAsk, retryRun } from './model/hitl-actions';
 export { type PendingHitl, pendingHitl } from './model/pending-hitl';
+export { rerunIssueTask } from './model/reload-issue-task';
 export {
   editUserMessage,
   type ReloadUserMessageInput,
