@@ -5,6 +5,7 @@ import { hasPendingAppend, useSessionStore } from '@/entities/session';
 import { toClientThread, useThreadStore } from '@/entities/thread';
 import { useThreadQueueStore } from '@/features/message-queue';
 import { getThread } from '@/shared/api';
+import { playNotifySound } from '@/shared/lib/notification-sound';
 import { trace } from '@/shared/lib/trace';
 import { duplicateDelivery } from './delivery';
 import { syncRunStateFromThread } from './sync-run-state';
@@ -106,11 +107,13 @@ function handleTerminal(threadId: string, event: SessionEvent, orgId: string | u
     session.finishRun(threadId);
   }
   void reconcileThread(threadId);
+  const viewing = useThreadStore.getState().isViewingAtEnd?.(threadId) ?? false;
   if (orgId && orgId !== useActiveOrgStore.getState().orgId) {
     useOrgActivityStore.getState().bump(orgId, 1);
   } else {
     maybeMarkUnread(threadId);
   }
+  playNotifySound({ kind: 'thread-finished', threadId, viewing });
 }
 
 function handleUserEvent(threadId: string, event: SessionEvent): void {

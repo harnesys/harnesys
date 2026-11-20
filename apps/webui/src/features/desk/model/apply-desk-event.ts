@@ -7,6 +7,7 @@ import { toClientThread, useThreadStore } from '@/entities/thread';
 import { useIssueDrawerStore } from '@/features/manage-issues/model/issue-drawer.store';
 import { useThreadQueueStore } from '@/features/message-queue';
 import { studioPath } from '@/shared/config/routes';
+import { playNotifySound } from '@/shared/lib/notification-sound';
 import { toast } from '@/shared/ui/toast';
 import { useAgentsDisplayStore } from './agents-display.store';
 import { useDeskStore } from './desk.store';
@@ -71,6 +72,7 @@ export function applyDeskEvent(event: DeskEvent, nav?: DeskEventNavigation): voi
       return;
     }
     case 'issue-rule-notification': {
+      playNotifySound({ kind: 'board-rule-raised', issueId: event.issueId, text: event.text });
       const issue = useIssueStore.getState().byId(event.issueId);
       toast.add({
         title: issue?.title ?? 'Board rule',

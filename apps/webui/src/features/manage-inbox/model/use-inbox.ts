@@ -12,7 +12,7 @@ import {
 import { watchApprovalEvents } from '@/shared/api/events';
 import { cancelRun } from '@/shared/api/threads';
 import { useOrgId } from '@/shared/config/location';
-import { playInboxSound } from '@/shared/lib/notification-sound';
+import { playNotifySound } from '@/shared/lib/notification-sound';
 import { showSystemNotification } from '@/shared/lib/system-notification';
 import { toast } from '@/shared/ui/toast';
 
@@ -26,7 +26,7 @@ export function useInbox(status?: ApprovalStatus) {
     return watchApprovalEvents((eventOrgId, frame) => {
       if (eventOrgId === orgId) {
         if (frame.type === 'requested') {
-          playInboxSound();
+          playNotifySound({ kind: 'approval-requested', approvalId: frame.approval.id });
           showSystemNotification('Approval needed', frame.approval.question);
         }
         void queryClient.invalidateQueries({ queryKey: [...inboxQueryKey, orgId] });

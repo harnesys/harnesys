@@ -26,6 +26,7 @@ import { projectQueryKey } from '@/shared/api/project-base';
 import { sourcesListQueryKey } from '@/shared/api/sources';
 import { studioFocusProjectId, useStudioLocation } from '@/shared/config/location';
 import { studioPath } from '@/shared/config/routes';
+import { playNotifySound } from '@/shared/lib/notification-sound';
 import { useAgentsDisplayStore } from '../model/agents-display.store';
 import { applyDeskEvent } from '../model/apply-desk-event';
 import { ensureApprovalChimeUnlock, notifyApprovalRequested } from '../model/approval-chime';
@@ -167,6 +168,11 @@ export function DeskSync() {
           at: event.at,
         });
         useThreadStore.getState().markUnread(event.threadId);
+        playNotifySound({
+          kind: 'thread-finished',
+          threadId: event.threadId,
+          viewing: useThreadStore.getState().isViewingAtEnd?.(event.threadId) ?? false,
+        });
         void refreshThread(event.threadId, { force: true });
         return;
       }
