@@ -34,7 +34,7 @@ Hard rules:
 |---|---|
 | `instructions` | System prompt. The only prompt; it is registered as prompt key `main`. Write it self-contained (see §8). |
 | `packs` | Sources of tools, not tool names (see §3). |
-| `skills` | Registry skill names to attach (`search_skills` to browse). Names must exist; unknown names are rejected. |
+| `skills` | Registry skill names to attach (`search_skills` to browse). Names must exist; unknown names are rejected. Before configuring: confirm the skill is installed (visible in the registry) **and** grant it here — installing alone never gives an agent access. |
 | `mcpServers` | MCP server ids; tools arrive only for listed servers. |
 | `model` | `{ provider, model, effort?, generation? }`. Must match the provider catalog (`model not found: provider/model` otherwise). Omitted: the creator's model is inherited; if you have no model either, creation fails with `model is required: no model ref given and creator has no model`. |
 | `budget` | See §4. Omitted: host stores `{ maxSteps: 50, policy: "ask" }`. |

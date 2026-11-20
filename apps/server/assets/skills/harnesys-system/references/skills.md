@@ -27,6 +27,8 @@ System seeding compares the installed directory hash with the bundled one and **
 
 ## Grant model (the `skills` field)
 
+Installing a skill (Skills page, `install_skill`, `create_skill`, seeding) only adds it to the **org registry** — no agent can use it yet. Access is per agent: the skill name must be granted in that agent's `skills` field. Install ≠ grant.
+
 - An agent has `skills: string[]`. Omitted or empty means **no filesystem skills**: `load_skill` fails for every name.
 - The allowlist filters roots 1–5 only. Pack-granted skills bypass it: the `web` pack ships `browser`, the `dashboards` pack ships `dashboards-widget-authoring` (a pointer that expects the filesystem skill `widget-creator` to be granted as well).
 - Referencing a nonexistent skill does not fail agent creation; it simply never loads. Confirm the name on the Skills page before granting it.
