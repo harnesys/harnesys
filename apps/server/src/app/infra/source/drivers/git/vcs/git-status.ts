@@ -175,7 +175,7 @@ export async function getFileStatus(
   if (elapsed > GIT_SLOW_THRESHOLD_MS) {
     const slowCount = (prev?.slowCount ?? 0) + 1;
     const truncated = slowCount >= 2;
-    const map = truncated ? {} : parsePorcelain(raw);
+    const map = truncated ? (prev?.map ?? parsePorcelain(raw)) : parsePorcelain(raw);
     statusCache.set(cacheKey, { map, truncated, mtimeKey, ts: now, slowCount });
     return { map, truncated };
   }
