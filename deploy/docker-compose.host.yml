@@ -12,6 +12,7 @@ services:
       context: ..
       dockerfile: deploy/host.Dockerfile
     image: ghcr.io/harnesys/host
+    pull_policy: always
     environment:
       NODE_ENV: production
       SERVER_HOST: 0.0.0.0

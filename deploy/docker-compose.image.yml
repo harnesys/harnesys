@@ -12,6 +12,7 @@
 services:
   host:
     image: ghcr.io/harnesys/host:latest
+    pull_policy: always
     environment:
       NODE_ENV: production
       SERVER_HOST: 0.0.0.0

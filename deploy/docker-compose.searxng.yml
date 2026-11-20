@@ -12,6 +12,7 @@
 services:
   app:
     image: ghcr.io/harnesys/harnesys:latest
+    pull_policy: always
     environment:
       NODE_ENV: production
       PUBLIC_URL: ${PUBLIC_URL:-}
