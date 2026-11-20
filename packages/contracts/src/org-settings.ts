@@ -71,6 +71,13 @@ export type VcsSettings = z.infer<typeof VcsSettingsSchema>;
 
 export const DEFAULT_VCS_SETTINGS: VcsSettings = VcsSettingsSchema.parse({});
 
+export const OnboardingSettingsSchema = z.object({
+  starterBoardSeeded: z.boolean().default(false),
+});
+export type OnboardingSettings = z.infer<typeof OnboardingSettingsSchema>;
+
+export const DEFAULT_ONBOARDING_SETTINGS: OnboardingSettings = OnboardingSettingsSchema.parse({});
+
 export const OrgSettingsSchema = z.object({
   skillsSourceAutoLoad: z.boolean().default(true),
   timezone: z.string().refine(isIanaTimeZone, { message: 'unknown timezone' }).default('UTC'),
@@ -88,6 +95,7 @@ export const OrgSettingsSchema = z.object({
   }),
   delivery: DeliverySettingsSchema.default(DELIVERY_DEFAULTS),
   vcs: VcsSettingsSchema.default(DEFAULT_VCS_SETTINGS),
+  onboarding: OnboardingSettingsSchema.default(DEFAULT_ONBOARDING_SETTINGS),
 });
 export type OrgSettings = z.infer<typeof OrgSettingsSchema>;
 

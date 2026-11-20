@@ -230,6 +230,7 @@ export function createSnapshotOrgSettings(snapshot: OrgExecutionSnapshot): OrgSe
       toolchain: OrgSettingsSchema.parse({}).toolchain,
       delivery: OrgSettingsSchema.parse({}).delivery,
       vcs: OrgSettingsSchema.parse({}).vcs,
+      onboarding: OrgSettingsSchema.parse({}).onboarding,
     }),
     set: () => {
       throw new Error('org execution replica is read-only');

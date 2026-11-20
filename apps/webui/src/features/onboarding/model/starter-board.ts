@@ -8,6 +8,7 @@ import {
   saveBoardRule,
 } from '@/shared/api';
 import { loadOnboardingState, patchOnboardingState } from './onboarding-storage';
+import { getOrgSettings, patchOrgSettings } from '@/shared/api/org-skills';
 
 export const STARTER_BOARD_NAME = 'Getting started';
 
@@ -84,9 +85,11 @@ export function ensureStarterBoard(orgId: string): Promise<StarterBoardResult | 
 
 async function seedStarterBoard(orgId: string): Promise<StarterBoardResult | null> {
   const stored = loadOnboardingState();
+  const settings = await getOrgSettings(orgId);
+  const seeded = settings.onboarding.starterBoardSeeded || Boolean(stored.starterBoardSeededAt);
   let boardId = stored.starterBoardId;
   let created = false;
-  if (!stored.starterBoardSeededAt) {
+  if (!seeded) {
     const known = await listIssueBoards(orgId);
     const existing =
       known.find((board) => board.id === stored.starterBoardId) ??
@@ -119,6 +122,7 @@ async function seedStarterBoard(orgId: string): Promise<StarterBoardResult | nul
       starterBoardId: board.id,
       starterBoardSeededAt: new Date().toISOString(),
     });
+    await patchOrgSettings(orgId, { onboarding: { starterBoardSeeded: true } });
   }
   await ensureStarterRule(orgId);
   return boardId ? { boardId, created } : null;
