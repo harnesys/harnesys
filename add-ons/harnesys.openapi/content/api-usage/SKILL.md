@@ -20,6 +20,15 @@ everything goes through the `api_*` tools.
 3. Call with the verb tool that matches the operation's method: `api_get`, `api_post`,
    `api_put`, `api_patch`, `api_delete`.
 
+## Authentication
+
+Authentication is already handled: the administrator configures each project's
+credentials on the addon page, and the gateway injects them into every call.
+Never supply `Authorization` headers, API keys, tokens or auth-related query
+parameters — even if the API's documentation or schemas mention them. Just pass
+the business parameters from `api_docs`; `api_docs` also shows an `auth` line
+describing what is injected for the project.
+
 ## Call shape
 
 `{"project": "acme", "operation": "get_users_id", "params": {"id": "42"}}`

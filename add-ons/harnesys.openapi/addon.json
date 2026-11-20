@@ -1,6 +1,6 @@
 {
   "id": "harnesys.openapi",
-  "version": "1.0.11",
+  "version": "1.0.13",
   "platform": 1,
   "title": "OpenAPI Gateway",
   "description": "Call external HTTP APIs from agents through OpenAPI specifications. Import a spec, pick the operations to expose, store per-project credentials, and grant agents access project by project and operation by operation.",
@@ -270,7 +270,8 @@
         "id": "project-edit",
         "method": "POST",
         "path": "/projects/edit/:id",
-        "role": "admin"
+        "role": "admin",
+        "bodyLimitKb": 4096
       }
     },
     {

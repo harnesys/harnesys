@@ -41,6 +41,7 @@ export const apiDocs: ToolHandler = async (input, ctx) => {
     method: operation.method,
     path: operation.pathTemplate,
     summary: operation.summary,
+    auth: authNoteOf(project),
     params: operation.spec.params,
     body:
       operation.spec.bodySchema === null
@@ -143,4 +144,15 @@ function optionalLimit(raw: unknown, fallback: number, max: number): number {
     return fallback;
   }
   return Math.min(max, Math.max(1, Math.floor(raw)));
+}
+
+function authNoteOf(project: ProjectRow): string {
+  const place =
+    project.authKind === 'header' || project.authKind === 'query'
+      ? ` into the '${project.authParam ?? ''}' ${project.authKind} parameter`
+      : '';
+  if (project.authKind === 'none') {
+    return 'no authentication is required';
+  }
+  return `credentials configured by the administrator are injected automatically${place}; never supply auth parameters yourself`;
 }
