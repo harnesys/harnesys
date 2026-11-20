@@ -15,8 +15,9 @@ export function ensurePrunedChildren(args: {
   projectId: string;
   dirPath: string;
   state: LazyChildrenState;
+  worktreeId?: string;
 }): void {
-  const { qc, treeKey, projectId, dirPath, state } = args;
+  const { qc, treeKey, projectId, dirPath, state, worktreeId } = args;
   const cached = qc.getQueryData<ProjectFileEntry[]>(treeKey) ?? [];
   const entry = cached.find((item) => item.path === dirPath);
   if (entry?.kind !== 'dir') {
@@ -36,7 +37,7 @@ export function ensurePrunedChildren(args: {
   }
   state.fetched.add(dirPath);
   const includeIgnored = entry.ignored === true;
-  void listSourceFiles(projectId, dirPath, { includeIgnored, depth: 1 })
+  void listSourceFiles(projectId, dirPath, { includeIgnored, depth: 1, worktreeId })
     .then((fetched) => {
       qc.setQueryData<ProjectFileEntry[]>(treeKey, (old) => {
         const prev = old ?? [];

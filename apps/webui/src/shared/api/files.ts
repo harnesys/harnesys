@@ -41,12 +41,13 @@ function contentBase(orgId: string, sourceId: string): string {
 export function listSourceFiles(
   projectId: string,
   subPath = '',
-  options?: { includeIgnored?: boolean; depth?: number },
+  options?: { includeIgnored?: boolean; depth?: number; worktreeId?: string },
 ) {
   const orgId = requireOrgId();
   return listContentTree(orgId, projectId, subPath, {
     includeIgnored: options?.includeIgnored,
     depth: options?.depth,
+    worktreeId: options?.worktreeId,
   }).then((tree) =>
     tree.entries.map((entry) =>
       toEntry(entry, entry.type === 'dir' && options?.depth !== undefined),
@@ -88,9 +89,12 @@ export async function listSourceFilesTree(
     }
     throw error;
   }
-  return tree.entries
-    .filter((entry) => options?.includeHidden || !entry.name.startsWith('.'))
-    .map((entry) => toEntry(entry));
+  return (
+    tree.entries
+      .filter((entry) => options?.includeHidden || !entry.name.startsWith('.'))
+      // The walk never recurses into ignored dirs, so their children must lazy-load.
+      .map((entry) => toEntry(entry, entry.type === 'dir' && entry.ignored === true))
+  );
 }
 
 export async function createProjectFile(

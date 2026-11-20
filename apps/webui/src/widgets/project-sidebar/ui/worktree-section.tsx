@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { startTransition, useEffect, useState } from 'react';
+import { startTransition, useEffect, useRef, useState } from 'react';
 import { useIdeStore } from '@/features/ide';
 import {
   buildMoveItems,
@@ -28,6 +28,7 @@ import { Spinner } from '@/shared/ui/spinner';
 import { toast } from '@/shared/ui/toast';
 import { useExplorerExpandStore } from '../model/explorer-expand.store';
 import { useExplorerHiddenStore } from '../model/explorer-hidden.store';
+import { createLazyChildrenState, ensurePrunedChildren } from '../model/explorer-lazy-children';
 import { useFileSelectionStore } from '../model/file-selection.store';
 import { type FlatTreeRow, flattenFileTree, indexFileTree } from '../model/file-tree-index';
 import { worktreeBranchKey } from './branch-keys';
@@ -75,6 +76,7 @@ export function WorktreeSection({
   const activeSelectedPaths =
     selectionProjectId === projectId && selectionScope === worktree.id ? selectedPaths : [];
   const moveMutation = useMoveProjectFiles(projectId, worktree.id);
+  const lazyState = useRef(createLazyChildrenState());
   const treeIndex = indexFileTree(treeQuery.data ?? []);
   const expandedDirs = new Set(dirs);
   const rows = flattenFileTree({
@@ -106,6 +108,16 @@ export function WorktreeSection({
         prev.includes(dirPath) ? prev.filter((p) => p !== dirPath) : [...prev, dirPath],
       ),
     );
+    if (!dirs.includes(dirPath)) {
+      ensurePrunedChildren({
+        qc,
+        treeKey,
+        projectId,
+        dirPath,
+        state: lazyState.current,
+        worktreeId: worktree.id,
+      });
+    }
   };
 
   const handleSelect = (path: string) => {
