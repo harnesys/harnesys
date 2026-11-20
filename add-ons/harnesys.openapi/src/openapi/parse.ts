@@ -71,13 +71,18 @@ function buildOperation(input: OperationBuildInput): NormalizedOperation {
   const { path, method, pathItem, operation, sharedParams, resolver, warnings, usedIds } = input;
   const params = mergeParams(sharedParams, extractParams(operation.parameters, resolver));
   const body = extractRequestBody(pathItem, operation, resolver);
-  if (body.required && !body.json) {
+  if (body.required && !body.json && !body.multipart) {
     warnings.push(
-      `operation '${path} ${method.toUpperCase()}' requires a request body without an application/json media type; body input is disabled`,
+      `operation '${path} ${method.toUpperCase()}' requires a request body without a supported media type; body input is disabled`,
     );
-  } else if (!body.json && body.schema === null && operation.requestBody !== undefined) {
+  } else if (
+    !body.json &&
+    !body.multipart &&
+    body.schema === null &&
+    operation.requestBody !== undefined
+  ) {
     warnings.push(
-      `operation '${path} ${method.toUpperCase()}' has no application/json media type; body input is disabled`,
+      `operation '${path} ${method.toUpperCase()}' has no application/json or multipart/form-data media type; body input is disabled`,
     );
   }
   return {
@@ -86,8 +91,9 @@ function buildOperation(input: OperationBuildInput): NormalizedOperation {
     path,
     summary: summaryOf(operation),
     params,
-    bodyRequired: body.required && body.json,
+    bodyRequired: body.required && (body.json || body.multipart),
     bodySchema: body.json ? body.schema : null,
+    multipart: body.multipart,
     responses: extractResponses(operation.responses, resolver),
   };
 }

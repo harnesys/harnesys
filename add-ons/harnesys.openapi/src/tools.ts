@@ -4,6 +4,7 @@ import { executeCall, requireAgent } from './call.ts';
 import { getProject } from './store.ts';
 import { grantedOperationIds, hasGrant, listGrantedOperations } from './store-grants.ts';
 import { getOperation } from './store-operations.ts';
+import type { OperationSpec } from './openapi/types.ts';
 import type { OperationRow, ProjectRow } from './types.ts';
 
 const LIST_LIMIT_DEFAULT = 50;
@@ -43,10 +44,7 @@ export const apiDocs: ToolHandler = async (input, ctx) => {
     summary: operation.summary,
     auth: authNoteOf(project),
     params: operation.spec.params,
-    body:
-      operation.spec.bodySchema === null
-        ? null
-        : { required: operation.spec.bodyRequired, schema: operation.spec.bodySchema },
+    body: docsBodyOf(operation.spec),
     responses: operation.spec.responses,
   };
 };
@@ -144,6 +142,15 @@ function optionalLimit(raw: unknown, fallback: number, max: number): number {
     return fallback;
   }
   return Math.min(max, Math.max(1, Math.floor(raw)));
+}
+
+function docsBodyOf(spec: OperationSpec): unknown {
+  if (spec.multipart === true) {
+    return { kind: 'multipart', required: spec.bodyRequired };
+  }
+  return spec.bodySchema === null
+    ? null
+    : { required: spec.bodyRequired, schema: spec.bodySchema };
 }
 
 function authNoteOf(project: ProjectRow): string {

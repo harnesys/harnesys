@@ -25,6 +25,7 @@ export interface NormalizedOperation {
   params: NormalizedParam[];
   bodyRequired: boolean;
   bodySchema: Record<string, unknown> | null;
+  multipart: boolean;
   responses: ResponseDoc[];
 }
 
@@ -38,5 +39,6 @@ export interface OperationSpec {
   params: NormalizedParam[];
   bodyRequired: boolean;
   bodySchema: Record<string, unknown> | null;
+  multipart?: boolean;
   responses: ResponseDoc[];
 }

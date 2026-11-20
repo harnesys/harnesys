@@ -45,10 +45,11 @@ export class DocumentRefResolver {
 export interface ExtractedBody {
   required: boolean;
   json: boolean;
+  multipart: boolean;
   schema: Record<string, unknown> | null;
 }
 
-const EMPTY_BODY: ExtractedBody = { required: false, json: false, schema: null };
+const EMPTY_BODY: ExtractedBody = { required: false, json: false, multipart: false, schema: null };
 
 export function extractParams(raw: unknown, resolver: DocumentRefResolver): NormalizedParam[] {
   if (!Array.isArray(raw)) {
@@ -122,6 +123,7 @@ export function specOfOperation(
     })),
     bodyRequired: operation.bodyRequired,
     bodySchema: withSchemas ? operation.bodySchema : null,
+    ...(operation.multipart ? { multipart: true } : {}),
     responses: withSchemas ? operation.responses.slice(0, 10) : [],
   };
 }
@@ -169,11 +171,20 @@ function resolveRequestBody(raw: unknown, resolver: DocumentRefResolver): Extrac
     return null;
   }
   const required = source.required === true;
-  const media = pickJsonMedia(recordOf(source.content) ?? {});
-  if (media === null) {
-    return { required, json: false, schema: null };
+  const content = recordOf(source.content) ?? {};
+  const media = pickJsonMedia(content);
+  if (media !== null) {
+    return {
+      required,
+      json: true,
+      multipart: false,
+      schema: schemaConverter(resolver)(media.schema),
+    };
   }
-  return { required, json: true, schema: schemaConverter(resolver)(media.schema) };
+  if (content['multipart/form-data'] !== undefined) {
+    return { required, json: false, multipart: true, schema: null };
+  }
+  return { required, json: false, multipart: false, schema: null };
 }
 
 function bodyParameterOf(raw: unknown, resolver: DocumentRefResolver): ExtractedBody | null {
@@ -186,6 +197,7 @@ function bodyParameterOf(raw: unknown, resolver: DocumentRefResolver): Extracted
       return {
         required: param.required === true,
         json: true,
+        multipart: false,
         schema: schemaConverter(resolver)(param.schema),
       };
     }

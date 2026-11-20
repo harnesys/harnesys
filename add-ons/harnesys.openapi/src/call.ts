@@ -1,6 +1,7 @@
 import type { AddonContext } from '@harnesys/sdk';
 import { AddonError } from '@harnesys/sdk';
 import { authInjectionFor } from './auth.ts';
+import { type MultipartFile, multipartPayload, parseFiles } from './multipart.ts';
 import type { NormalizedParam, OperationSpec } from './openapi/types.ts';
 import { responsePayload } from './truncate.ts';
 import type { HttpResponse, ProjectRecord } from './types.ts';
@@ -36,6 +37,12 @@ export function splitOperationParams(
   for (const param of spec.params) {
     if (param.required && !isProvided(param, input, result)) {
       result.missing.push(`${param.name} (${param.in})`);
+    }
+  }
+  for (const [name, value] of Object.entries(result.path)) {
+    if (value.length === 0) {
+      delete result.path[name];
+      result.missing.push(`${name} (path, non-empty value required)`);
     }
   }
   return result;
@@ -112,15 +119,29 @@ export async function executeCall(
       detail: `missing required parameters: ${split.missing.join(', ')}`,
     });
   }
-  const body = requestBodyText(operation.method, spec, input.body);
+  const multipart = spec.multipart === true;
+  let files: MultipartFile[];
+  try {
+    files = parseFiles(input.files);
+  } catch (error) {
+    throw new AddonError('invalid_params', { detail: messageOf(error) });
+  }
+  if (files.length > 0 && !multipart) {
+    throw new AddonError('invalid_params', {
+      detail: 'files are only supported for multipart/form-data operations; check api_docs',
+    });
+  }
+  const request = multipart
+    ? multipartBody(spec, input.body, files)
+    : jsonBody(operation.method, spec, input.body);
   const auth = await authInjectionFor(ctx, project);
   const url = withQuery(buildUrl(project.baseUrl, operation.pathTemplate, split.path), {
     ...split.query,
     ...auth.query,
   });
   const headers: Record<string, string> = { ...split.headers, ...auth.headers };
-  if (body !== undefined) {
-    headers['Content-Type'] = 'application/json';
+  if (request !== undefined) {
+    headers['Content-Type'] = request.contentType;
   }
   const startedAt = Date.now();
   let response: HttpResponse;
@@ -129,7 +150,8 @@ export async function executeCall(
       url,
       method: operation.method as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
       headers,
-      ...(body !== undefined ? { body } : {}),
+      ...(request?.text !== undefined ? { body: request.text } : {}),
+      ...(request?.base64 !== undefined ? { bodyBase64: request.base64 } : {}),
     });
   } catch (error) {
     ctx.log.warn(`api call failed: ${messageOf(error)}`, {
@@ -155,7 +177,50 @@ export async function executeCall(
   };
 }
 
-function requestBodyText(method: string, spec: OperationSpec, body: unknown): string | undefined {
+interface BodyPayload {
+  text?: string;
+  base64?: string;
+  contentType: string;
+}
+
+function multipartBody(
+  spec: OperationSpec,
+  body: unknown,
+  files: MultipartFile[],
+): BodyPayload | undefined {
+  const fields = bodyFields(body);
+  if (fields === null) {
+    throw new AddonError('invalid_params', {
+      detail: 'this multipart/form-data operation expects body as an object of form fields',
+    });
+  }
+  if (Object.keys(fields).length === 0 && files.length === 0) {
+    if (spec.bodyRequired) {
+      throw new AddonError('invalid_params', {
+        detail: 'the operation requires form fields or files',
+      });
+    }
+    return undefined;
+  }
+  const payload = multipartPayload(fields, files);
+  return { base64: payload.bodyBase64, contentType: payload.contentType };
+}
+
+function bodyFields(body: unknown): Record<string, string> | null {
+  if (body === undefined || body === null) {
+    return {};
+  }
+  if (typeof body !== 'object' || Array.isArray(body)) {
+    return null;
+  }
+  const fields: Record<string, string> = {};
+  for (const [key, value] of Object.entries(body)) {
+    fields[key] = scalarText(value);
+  }
+  return fields;
+}
+
+function jsonBody(method: string, spec: OperationSpec, body: unknown): BodyPayload | undefined {
   const value = unwrapJsonText(body);
   if (value === undefined || value === null) {
     if (spec.bodyRequired) {
@@ -173,7 +238,7 @@ function requestBodyText(method: string, spec: OperationSpec, body: unknown): st
       detail: 'operation takes no JSON request body; remove body or check api_docs',
     });
   }
-  return JSON.stringify(value);
+  return { text: JSON.stringify(value), contentType: 'application/json' };
 }
 
 /**

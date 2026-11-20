@@ -39,6 +39,11 @@ describing what is injected for the project.
   the JSON object exactly as the schema describes. Pass it as a structured value —
   never as a pre-serialized JSON string; a quoted string that parses as JSON is
   unwrapped, and a string that does not parse is sent as a JSON string.
+- `files` (only `api_post`/`api_put`/`api_patch` and only when `api_docs` shows
+  `body: {kind: "multipart"}`): array of `{name, filename?, contentType?, content? |
+  contentBase64?}`. `content` is file text, `contentBase64` is binary content
+  encoded as base64 — exactly one of the two. Form fields go in `body` as a flat
+  object. JSON operations ignore `files`.
 - Unknown or missing parameters return `invalid_params` listing what is expected.
 
 ## Results and errors

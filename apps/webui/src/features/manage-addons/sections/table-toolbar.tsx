@@ -52,7 +52,7 @@ export function TableToolbar({
         <Input
           value={search}
           placeholder="Search..."
-          className="h-8 w-48"
+          className="ml-auto h-8 w-48"
           disabled={disabled}
           onChange={(event) => onSearch(event.target.value)}
           data-testid="addon-table-search"

@@ -53,6 +53,12 @@ describe('splitOperationParams', () => {
     expect(split.missing).toEqual([]);
     expect(split.unknown).toEqual([]);
   });
+
+  test('empty path values are reported as missing', () => {
+    const split = splitOperationParams(SPEC, { petId: '' });
+    expect(split.missing).toEqual(['petId (path, non-empty value required)']);
+    expect(split.path).toEqual({});
+  });
 });
 
 describe('buildUrl', () => {
