@@ -7,8 +7,8 @@ import {
   listIssues,
   saveBoardRule,
 } from '@/shared/api';
-import { loadOnboardingState, patchOnboardingState } from './onboarding-storage';
 import { getOrgSettings, patchOrgSettings } from '@/shared/api/org-skills';
+import { loadOnboardingState, patchOnboardingState } from './onboarding-storage';
 
 export const STARTER_BOARD_NAME = 'Getting started';
 

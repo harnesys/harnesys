@@ -12,10 +12,7 @@ export interface MultipartPayload {
   contentType: string;
 }
 
-export type FileReader = (
-  path: string,
-  offset: number,
-) => Promise<{ data: string; eof: boolean }>;
+export type FileReader = (path: string, offset: number) => Promise<{ data: string; eof: boolean }>;
 
 const MAX_FILE_CHUNKS = 1024;
 

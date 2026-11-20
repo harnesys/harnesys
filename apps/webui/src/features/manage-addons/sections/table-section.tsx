@@ -1,75 +1,32 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { fetchAddonRoute, orgAddonDetailQueryKey } from '@/shared/api/addons';
-import { alert } from '@/shared/services/overlay';
 import { Button } from '@/shared/ui/button';
 import { RowItem, RowSection } from '@/shared/ui/capability-rows';
-import { Checkbox } from '@/shared/ui/checkbox';
 import { SettingsErrorBanner } from '@/shared/ui/settings-kit';
-import { Switch } from '@/shared/ui/switch';
-import { handleSectionResult, resolveL10nText, routeParamsOf } from '../lib/route-call';
+import {
+  filterParamsOf,
+  handleSectionResult,
+  resolveL10nText,
+  routeParamsOf,
+  withConfirm,
+} from '../lib/route-call';
 import type { SectionProps } from '../lib/section-props';
 import type {
   AddonColumn,
+  AddonRouteRef,
   AddonSectionAction,
   AddonTableFilter,
   SectionL10n,
 } from '../lib/view-sections';
 import { RowFormDialog } from './row-form-dialog';
-import { rowKeyOf, rowSearchText, type TableRow, TableRowItem } from './table-row';
+import { allSelectedOf, selectedRowsOf, type TableRow, visibleRowsOf } from './table-row';
 import { TableToolbar } from './table-toolbar';
+import { TableView } from './table-view';
 
 interface TableResponse {
   rows?: Record<string, unknown>[];
   nextCursor?: string;
-}
-
-function withConfirm(action: AddonSectionAction, run: () => void): void {
-  if (action.confirm) {
-    void alert
-      .confirm({
-        title: resolveL10nText(action.confirm),
-        testId: `addon-action-confirm-${action.id}`,
-      })
-      .then((ok) => {
-        if (ok) {
-          run();
-        }
-      });
-    return;
-  }
-  run();
-}
-
-function filterParamsOf(
-  filters: AddonTableFilter[],
-  values: Record<string, string>,
-): Record<string, string> {
-  const params: Record<string, string> = {};
-  for (const filter of filters) {
-    const value = values[filter.key];
-    if (value !== undefined && value !== '') {
-      params[filter.key] = value;
-    }
-  }
-  return params;
-}
-
-function selectedRowsOf(rows: TableRow[], selected: Set<string>): TableRow[] {
-  return rows.filter((row, index) => selected.has(rowKeyOf(row, index)) && row.id !== undefined);
-}
-
-function visibleRowsOf(rows: TableRow[], columns: AddonColumn[], needle: string): TableRow[] {
-  if (!needle) {
-    return rows;
-  }
-  return rows.filter((row, index) =>
-    `${rowKeyOf(row, index)} ${rowSearchText(columns, row)}`.toLowerCase().includes(needle),
-  );
-}
-
-function allSelectedOf(rows: TableRow[], selected: Set<string>): boolean {
-  return rows.length > 0 && rows.every((row, index) => selected.has(rowKeyOf(row, index)));
 }
 
 export function TableSection({ orgId, addonId, detail, section }: SectionProps) {
@@ -114,11 +71,10 @@ export function TableSection({ orgId, addonId, detail, section }: SectionProps) 
       cursor,
     ] as const,
     queryFn: async () => {
-      const page = (await fetchAddonRoute(orgId, addonId, source?.route ?? '/', {
+      return (await fetchAddonRoute(orgId, addonId, source?.route ?? '/', {
         ...params,
         ...(cursor ? { cursor } : {}),
       })) as TableResponse;
-      return page;
     },
     enabled,
   });
@@ -154,16 +110,21 @@ export function TableSection({ orgId, addonId, detail, section }: SectionProps) 
 
   const selectedRows = selectable ? selectedRowsOf(rows, selected) : [];
 
-  const callAction = async (action: AddonSectionAction, row: Record<string, unknown>) => {
+  const postAction = async (
+    routeRef: AddonRouteRef,
+    route: string,
+    body?: Record<string, unknown>,
+    row?: TableRow,
+  ) => {
     setBusy(true);
     setError(null);
     try {
       const response = await fetchAddonRoute(
         orgId,
         addonId,
-        action.route.route,
-        { ...routeParamsOf(action.route, row), ...filterParams },
-        { method: 'POST' },
+        route,
+        { ...routeParamsOf(routeRef, row), ...filterParams },
+        { method: 'POST', ...(body === undefined ? {} : { body }) },
       );
       handleSectionResult(response, refresh);
       await invalidate();
@@ -174,29 +135,12 @@ export function TableSection({ orgId, addonId, detail, section }: SectionProps) 
     }
   };
 
-  const callSelectionAction = async (action: AddonSectionAction, ids: unknown[]) => {
-    setBusy(true);
-    setError(null);
-    try {
-      const response = await fetchAddonRoute(orgId, addonId, action.route.route, filterParams, {
-        method: 'POST',
-        body: { ids },
-      });
-      handleSectionResult(response, refresh);
-      await invalidate();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const runAction = (action: AddonSectionAction, row: Record<string, unknown>) => {
+  const runAction = (action: AddonSectionAction, row: TableRow) => {
     if (action.kind === 'form') {
       setRowForm({ action, row });
       return;
     }
-    withConfirm(action, () => void callAction(action, row));
+    withConfirm(action, () => void postAction(action.route, action.route.route, undefined, row));
   };
 
   const runSelectionAction = (action: AddonSectionAction) => {
@@ -206,7 +150,10 @@ export function TableSection({ orgId, addonId, detail, section }: SectionProps) 
     }
     withConfirm(
       action,
-      () => void callSelectionAction(action, ids).then(() => setSelected(new Set())),
+      () =>
+        void postAction(action.route, action.route.route, { ids }).then(() =>
+          setSelected(new Set()),
+        ),
     );
   };
 
@@ -228,28 +175,12 @@ export function TableSection({ orgId, addonId, detail, section }: SectionProps) 
   const masterAction = rowActions.find(
     (action) => action.kind === 'switch' && action.batchRoute !== undefined,
   );
-  const masterCheckedKey = masterAction?.checkedKey;
-  const masterChecked =
-    masterCheckedKey !== undefined &&
-    visibleRows.length > 0 &&
-    visibleRows.every((row) => row[masterCheckedKey] === true);
   const runMasterToggle = (enabled: boolean) => {
-    if (!masterAction) {
+    if (masterAction === undefined || masterAction.batchRoute === undefined) {
       return;
     }
-    withConfirm(
-      masterAction,
-      () =>
-        void fetchAddonRoute(orgId, addonId, masterAction.batchRoute?.route ?? '', filterParams, {
-          method: 'POST',
-          body: { enabled },
-        })
-          .then((response) => {
-            handleSectionResult(response, refresh);
-            return invalidate();
-          })
-          .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err))),
-    );
+    const routeRef = masterAction.batchRoute;
+    withConfirm(masterAction, () => void postAction(routeRef, routeRef.route, { enabled }));
   };
   const toggleAllVisible = () => {
     setSelected((current) => {
@@ -335,69 +266,20 @@ export function TableSection({ orgId, addonId, detail, section }: SectionProps) 
       {visibleRows.length === 0 ? (
         <RowItem title={rows.length === 0 ? 'Nothing here yet' : 'No matches'} />
       ) : (
-        <div
-          className="max-h-[420px] overflow-y-auto rounded-lg border"
-          data-testid="addon-table-rows"
-        >
-          <table className="w-full border-collapse text-sm">
-            <thead className="sticky top-0 z-10 bg-popover">
-              <tr>
-                {selectable ? (
-                  <th className="w-8 px-2 py-2">
-                    <Checkbox
-                      checked={allVisibleSelected}
-                      disabled={busy}
-                      onCheckedChange={() => toggleAllVisible()}
-                      aria-label="Select all rows"
-                      data-testid="addon-table-select-all"
-                    />
-                  </th>
-                ) : null}
-                {columns.map((column) => (
-                  <th
-                    key={column.key}
-                    className="px-2 py-2 text-left font-medium text-muted-foreground text-xs uppercase tracking-wide"
-                  >
-                    {resolveL10nText(column.label)}
-                  </th>
-                ))}
-                {rowActions.length > 0 ? (
-                  <th
-                    aria-label="Actions"
-                    className="sticky right-0 z-10 bg-popover px-2 py-2 text-right"
-                  >
-                    <div className="flex justify-end">
-                      {masterAction ? (
-                        <Switch
-                          checked={masterChecked}
-                          disabled={busy}
-                          aria-label="Toggle all rows"
-                          onCheckedChange={(checked) => runMasterToggle(checked === true)}
-                          data-testid="addon-table-master-toggle"
-                        />
-                      ) : null}
-                    </div>
-                  </th>
-                ) : null}
-              </tr>
-            </thead>
-            <tbody>
-              {visibleRows.map((row, index) => (
-                <TableRowItem
-                  key={rowKeyOf(row, index)}
-                  columns={columns}
-                  row={row}
-                  actions={rowActions}
-                  busy={busy}
-                  selectable={selectable}
-                  selected={selected.has(rowKeyOf(row, index))}
-                  onToggle={(checked) => toggleRow(rowKeyOf(row, index), checked)}
-                  onAction={runAction}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <TableView
+          columns={columns}
+          rows={visibleRows}
+          rowActions={rowActions}
+          busy={busy}
+          selectable={selectable}
+          selected={selected}
+          allSelected={allVisibleSelected}
+          masterAction={masterAction}
+          onToggleRow={toggleRow}
+          onToggleAll={toggleAllVisible}
+          onMasterToggle={runMasterToggle}
+          onAction={runAction}
+        />
       )}
       {result.data?.nextCursor ? (
         <div>

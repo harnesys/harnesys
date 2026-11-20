@@ -139,6 +139,27 @@ export function rowSearchText(columns: AddonColumn[], row: TableRow): string {
     .join(' ');
 }
 
+export function selectedRowsOf(rows: TableRow[], selected: Set<string>): TableRow[] {
+  return rows.filter((row, index) => selected.has(rowKeyOf(row, index)) && row.id !== undefined);
+}
+
+export function visibleRowsOf(
+  rows: TableRow[],
+  columns: AddonColumn[],
+  needle: string,
+): TableRow[] {
+  if (!needle) {
+    return rows;
+  }
+  return rows.filter((row, index) =>
+    `${rowKeyOf(row, index)} ${rowSearchText(columns, row)}`.toLowerCase().includes(needle),
+  );
+}
+
+export function allSelectedOf(rows: TableRow[], selected: Set<string>): boolean {
+  return rows.length > 0 && rows.every((row, index) => selected.has(rowKeyOf(row, index)));
+}
+
 const BADGE_TONES: Record<string, 'ok' | 'warn' | 'danger' | 'neutral'> = {
   active: 'ok',
   bound: 'ok',

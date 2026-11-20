@@ -1,5 +1,11 @@
+import { alert } from '@/shared/services/overlay';
 import { toast } from '@/shared/ui/toast';
-import type { AddonRouteRef, SectionL10n } from './view-sections';
+import type {
+  AddonRouteRef,
+  AddonSectionAction,
+  AddonTableFilter,
+  SectionL10n,
+} from './view-sections';
 
 export interface SectionCallResult {
   toast?: string;
@@ -33,6 +39,37 @@ export function routeParamsOf(
     }
   }
   return params;
+}
+
+export function filterParamsOf(
+  filters: AddonTableFilter[],
+  values: Record<string, string>,
+): Record<string, string> {
+  const params: Record<string, string> = {};
+  for (const filter of filters) {
+    const value = values[filter.key];
+    if (value !== undefined && value !== '') {
+      params[filter.key] = value;
+    }
+  }
+  return params;
+}
+
+export function withConfirm(action: AddonSectionAction, run: () => void): void {
+  if (action.confirm) {
+    void alert
+      .confirm({
+        title: resolveL10nText(action.confirm),
+        testId: `addon-action-confirm-${action.id}`,
+      })
+      .then((ok) => {
+        if (ok) {
+          run();
+        }
+      });
+    return;
+  }
+  run();
 }
 
 export function handleSectionResult(
