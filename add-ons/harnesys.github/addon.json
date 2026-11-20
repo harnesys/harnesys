@@ -841,7 +841,7 @@
           "perDay": 500,
           "throttleSec": 5
         },
-        "icon": "github",
+        "icon": "git-branch",
         "color": "#a78bfa"
       }
     },
@@ -939,6 +939,6 @@
       }
     }
   ],
-  "icon": "github",
+  "icon": "assets/icon.svg",
   "color": "#a78bfa"
 }

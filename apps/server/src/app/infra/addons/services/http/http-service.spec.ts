@@ -10,17 +10,24 @@ import {
   FakeFetch,
   NullLogger,
 } from '../spec-fakes.ts';
-import { evaluateAddonEgress } from './addon-egress.ts';
+import { type AddonEgressOptions, evaluateAddonEgress } from './addon-egress.ts';
 import { HttpHostService } from './http-service.ts';
 
 class EgressOverrideHttpService extends HttpHostService {
   addresses: Array<{ address: string }> = [{ address: '93.184.216.34' }];
-  override checkEgress(url: URL, allowedHosts: readonly string[] | null): Promise<void> {
-    return Promise.resolve().then(() => evaluateAddonEgress(url, allowedHosts, this.addresses));
+  override checkEgress(
+    url: URL,
+    allowedHosts: readonly string[] | null,
+    options: AddonEgressOptions = {},
+  ): Promise<void> {
+    return Promise.resolve().then(() =>
+      evaluateAddonEgress(url, allowedHosts, this.addresses, options),
+    );
   }
 }
 
 const grants: EffectiveGrants = [{ id: 'http.fetch', scope: { hosts: ['api.github.com'] } }];
+const insecureGrants: EffectiveGrants = [{ id: 'http.fetch', scope: { allowHttp: true } }];
 
 describe('http service egress', () => {
   function service(): EgressOverrideHttpService {
@@ -50,6 +57,32 @@ describe('http service egress', () => {
     svc.addresses = [{ address: '169.254.169.254' }];
     await expect(
       svc.methods[0]?.handle(callCtx([{ id: 'http.fetch' }]), { url: 'https://api.github.com/x' }),
+    ).rejects.toMatchObject({ reason: 'permission_denied' });
+  });
+
+  test('allowHttp scope admits plain http', async () => {
+    const svc = service();
+    svc.addresses = [{ address: '93.184.216.34' }];
+    const result = (await svc.methods[0]?.handle(callCtx(insecureGrants), {
+      url: 'http://api.example.com/x',
+    })) as { status: number };
+    expect(result.status).toBe(200);
+  });
+
+  test('allowHttp scope admits private network addresses', async () => {
+    const svc = service();
+    svc.addresses = [{ address: '127.0.0.1' }];
+    const result = (await svc.methods[0]?.handle(callCtx(insecureGrants), {
+      url: 'http://127.0.0.1:3210/users',
+    })) as { status: number };
+    expect(result.status).toBe(200);
+  });
+
+  test('allowHttp false keeps private addresses blocked', async () => {
+    const svc = service();
+    svc.addresses = [{ address: '127.0.0.1' }];
+    await expect(
+      svc.methods[0]?.handle(callCtx([{ id: 'http.fetch' }]), { url: 'http://127.0.0.1/x' }),
     ).rejects.toMatchObject({ reason: 'permission_denied' });
   });
 });

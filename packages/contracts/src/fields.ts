@@ -8,6 +8,7 @@ export const FieldTypeSchema = z.enum([
   'select',
   'number',
   'boolean',
+  'file',
   'group',
 ]);
 export type FieldType = z.infer<typeof FieldTypeSchema>;
@@ -20,6 +21,8 @@ export const FieldOptionSchema = z.object({
   label: z.string(),
   /** Hint shown for the currently selected option. */
   help: z.string().optional(),
+  /** Group label used by multi-value pickers that render grouped panels. */
+  group: z.string().optional(),
 });
 export type FieldOption = z.infer<typeof FieldOptionSchema>;
 
@@ -49,12 +52,16 @@ export const FieldOptionsFromSchema = z.discriminatedUnion('kind', [
     route: z.string().min(1),
     /** Field keys passed to the route as query params. */
     dependsOn: z.array(z.string().min(1)).optional(),
+    /** Static query params always sent to the route alongside `dependsOn` values. */
+    params: z.record(z.string(), z.string()).optional(),
     /** Response body key holding the rows. Defaults to `rows`. */
     listKey: z.string().min(1).optional(),
     /** Row field used as the option value. */
     valueKey: z.string().min(1),
     /** Row field used as the option label. Defaults to `valueKey`. */
     labelKey: z.string().min(1).optional(),
+    /** Row field used to group options in multi-value pickers. */
+    groupKey: z.string().min(1).optional(),
   }),
   z.object({
     kind: z.literal('connections'),

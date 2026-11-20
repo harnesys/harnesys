@@ -1,4 +1,5 @@
 import { registerFormWidget } from '../widget-registry';
+import { ChecklistWidget } from './checklist-widget.tsx';
 import { ChipsWidget } from './chips-widget.tsx';
 import { ComboboxWidget } from './combobox-widget.tsx';
 import { SwitchWidget } from './switch-widget.tsx';
@@ -11,6 +12,7 @@ import { TagsWidget } from './tags-widget.tsx';
  */
 export function registerBuiltinFormWidgets(): void {
   registerFormWidget('chips', ChipsWidget);
+  registerFormWidget('checklist', ChecklistWidget);
   registerFormWidget('switch', SwitchWidget);
   registerFormWidget('tags', TagsWidget);
   registerFormWidget('combobox', ComboboxWidget);

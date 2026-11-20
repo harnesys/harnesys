@@ -123,6 +123,17 @@
         "typescript": "^5.9.3",
       },
     },
+    "add-ons/harnesys.openapi": {
+      "name": "harnesys.openapi",
+      "version": "1.0.0",
+      "dependencies": {
+        "@harnesys/sdk": "file:../../packages/sdk",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "^5.9.3",
+      },
+    },
     "add-ons/harnesys.scheduler": {
       "name": "harnesys.scheduler",
       "version": "1.0.0",
@@ -199,7 +210,7 @@
     },
     "apps/cli": {
       "name": "@harnesys/cli",
-      "version": "0.9.9",
+      "version": "0.10.5",
       "devDependencies": {
         "@types/bun": "^1.4.2",
         "typescript": "^5.9.3",
@@ -207,14 +218,14 @@
     },
     "apps/desktop": {
       "name": "@harnesys/desktop",
-      "version": "0.9.9",
+      "version": "0.10.5",
       "devDependencies": {
         "@tauri-apps/cli": "^2",
       },
     },
     "apps/server": {
       "name": "@harnesys/server",
-      "version": "0.9.9",
+      "version": "0.10.5",
       "dependencies": {
         "@ai-sdk/openai": "3.0.90",
         "@ai-sdk/openai-compatible": "3.0.30",
@@ -244,7 +255,7 @@
     },
     "apps/webui": {
       "name": "@harnesys/webui",
-      "version": "0.9.9",
+      "version": "0.10.5",
       "dependencies": {
         "@base-ui/react": "^1.9.0",
         "@floating-ui/dom": "^1.8.0",
@@ -1502,6 +1513,8 @@
 
     "harnesys.notion": ["harnesys.notion@workspace:add-ons/harnesys.notion"],
 
+    "harnesys.openapi": ["harnesys.openapi@workspace:add-ons/harnesys.openapi"],
+
     "harnesys.scheduler": ["harnesys.scheduler@workspace:add-ons/harnesys.scheduler"],
 
     "harnesys.telegram-account": ["harnesys.telegram-account@workspace:add-ons/harnesys.telegram-account"],
@@ -2514,6 +2527,10 @@
 
     "harnesys.notion/@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
 
+    "harnesys.openapi/@harnesys/sdk": ["@harnesys/sdk@file:packages/sdk", { "dependencies": { "zod": "^4.4.3" }, "devDependencies": { "@types/bun": "^1.4.2", "typescript": "^5.9.3" }, "peerDependencies": { "typescript": "^5.9.3" }, "optionalPeers": ["typescript"] }],
+
+    "harnesys.openapi/@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
+
     "harnesys.scheduler/@harnesys/sdk": ["@harnesys/sdk@file:packages/sdk", { "dependencies": { "zod": "^4.4.3" }, "devDependencies": { "@types/bun": "^1.4.2", "typescript": "^5.9.3" }, "peerDependencies": { "typescript": "^5.9.3" }, "optionalPeers": ["typescript"] }],
 
     "harnesys.scheduler/@harnesys/studio-shared": ["@harnesys/studio-shared@file:packages/studio-shared", { "dependencies": { "@harnesys/contracts": "workspace:*", "harnesys": "workspace:*" }, "devDependencies": { "@biomejs/biome": "2.5.6" } }],
@@ -2737,6 +2754,8 @@
     "harnesys.google-youtube/@types/bun/bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
 
     "harnesys.notion/@types/bun/bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
+
+    "harnesys.openapi/@types/bun/bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
 
     "harnesys.scheduler/@harnesys/studio-shared/@biomejs/biome": ["@biomejs/biome@2.5.6", "", { "optionalDependencies": { "@biomejs/cli-darwin-arm64": "2.5.6", "@biomejs/cli-darwin-x64": "2.5.6", "@biomejs/cli-linux-arm64": "2.5.6", "@biomejs/cli-linux-arm64-musl": "2.5.6", "@biomejs/cli-linux-x64": "2.5.6", "@biomejs/cli-linux-x64-musl": "2.5.6", "@biomejs/cli-win32-arm64": "2.5.6", "@biomejs/cli-win32-x64": "2.5.6" }, "bin": { "biome": "bin/biome" } }, "sha512-lxVNjv7UF6KfhMJfL9gaUHbWdJdHbsAj6OSmwSYNdhRuG67NxNQ4Xdvh3TUxsSK9sBzJBQhEJj3AopmmNJ5pSA=="],
 

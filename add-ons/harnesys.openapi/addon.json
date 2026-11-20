@@ -1,0 +1,711 @@
+{
+  "id": "harnesys.openapi",
+  "version": "1.0.11",
+  "platform": 1,
+  "title": "OpenAPI Gateway",
+  "description": "Call external HTTP APIs from agents through OpenAPI specifications. Import a spec, pick the operations to expose, store per-project credentials, and grant agents access project by project and operation by operation.",
+  "runtime": {
+    "entry": "dist/index.js",
+    "profile": "trusted"
+  },
+  "activation": "lazy",
+  "connections": [],
+  "permissions": [
+    {
+      "id": "http.fetch",
+      "scope": {
+        "allowHttp": true
+      },
+      "reason": "Call the configured project APIs on behalf of agents; project URLs are runtime data, so the grant covers any host and may include insecure http URLs for local or internal APIs"
+    },
+    {
+      "id": "agents.read",
+      "reason": "List organization agents to grant API access per agent on the Operations table"
+    }
+  ],
+  "data": {
+    "migrations": "migrations",
+    "quotaMb": 16
+  },
+  "contributions": [
+    {
+      "id": "api",
+      "family": "tool-pack",
+      "descriptor": {
+        "name": "api",
+        "title": "API calls",
+        "description": "Call imported external APIs: list the operations granted to you, read an operation's schema, and execute GET/POST/PUT/PATCH/DELETE calls against the project",
+        "skills": [
+          "usage"
+        ],
+        "tools": [
+          {
+            "name": "list",
+            "description": "List the API operations granted to the calling agent: project, operation id, method, path, summary. Filter by project; limit defaults to 50, max 200.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "Project name or id to filter by"
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 200,
+                  "description": "How many operations to return"
+                }
+              }
+            }
+          },
+          {
+            "name": "docs",
+            "description": "Read the detailed schema of one granted operation: parameters (name, location, required, schema), JSON request body, documented responses. Always check docs before a first call with non-trivial parameters.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "Project name or id"
+                },
+                "operation": {
+                  "type": "string",
+                  "description": "Operation id from api_list"
+                }
+              },
+              "required": [
+                "project",
+                "operation"
+              ]
+            }
+          },
+          {
+            "name": "get",
+            "description": "Execute a granted GET operation. params is one flat object with path, query and header parameters as named in api_docs; the addon routes them to the right place.",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "Project name or id"
+                },
+                "operation": {
+                  "type": "string",
+                  "description": "Operation id from api_list"
+                },
+                "params": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "Flat object of path/query/header parameters"
+                }
+              },
+              "required": [
+                "project",
+                "operation"
+              ]
+            }
+          },
+          {
+            "name": "post",
+            "description": "Execute a granted POST operation. params carries path/query/header parameters; body is the JSON request body when the operation declares one.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "Project name or id"
+                },
+                "operation": {
+                  "type": "string",
+                  "description": "Operation id from api_list"
+                },
+                "params": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "Flat object of path/query/header parameters"
+                },
+                "body": {
+                  "description": "JSON request body (only for operations that declare one)"
+                }
+              },
+              "required": [
+                "project",
+                "operation"
+              ]
+            }
+          },
+          {
+            "name": "put",
+            "description": "Execute a granted PUT operation. params carries path/query/header parameters; body is the JSON request body when the operation declares one.",
+            "effect": "write",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "Project name or id"
+                },
+                "operation": {
+                  "type": "string",
+                  "description": "Operation id from api_list"
+                },
+                "params": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "Flat object of path/query/header parameters"
+                },
+                "body": {
+                  "description": "JSON request body (only for operations that declare one)"
+                }
+              },
+              "required": [
+                "project",
+                "operation"
+              ]
+            }
+          },
+          {
+            "name": "patch",
+            "description": "Execute a granted PATCH operation. params carries path/query/header parameters; body is the JSON request body when the operation declares one.",
+            "effect": "write",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "Project name or id"
+                },
+                "operation": {
+                  "type": "string",
+                  "description": "Operation id from api_list"
+                },
+                "params": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "Flat object of path/query/header parameters"
+                },
+                "body": {
+                  "description": "JSON request body (only for operations that declare one)"
+                }
+              },
+              "required": [
+                "project",
+                "operation"
+              ]
+            }
+          },
+          {
+            "name": "delete",
+            "description": "Execute a granted DELETE operation. This is a destructive call and may be subject to host approval.",
+            "effect": "destructive",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "Project name or id"
+                },
+                "operation": {
+                  "type": "string",
+                  "description": "Operation id from api_list"
+                },
+                "params": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "Flat object of path/query/header parameters"
+                }
+              },
+              "required": [
+                "project",
+                "operation"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "projects",
+      "family": "route",
+      "descriptor": {
+        "id": "projects",
+        "method": "GET",
+        "path": "/projects",
+        "role": "member"
+      }
+    },
+    {
+      "id": "project-delete",
+      "family": "route",
+      "descriptor": {
+        "id": "project-delete",
+        "method": "POST",
+        "path": "/projects/delete/:id",
+        "role": "admin"
+      }
+    },
+    {
+      "id": "project-import",
+      "family": "route",
+      "descriptor": {
+        "id": "project-import",
+        "method": "POST",
+        "path": "/projects/import",
+        "role": "admin",
+        "bodyLimitKb": 4096
+      }
+    },
+    {
+      "id": "project-edit",
+      "family": "route",
+      "descriptor": {
+        "id": "project-edit",
+        "method": "POST",
+        "path": "/projects/edit/:id",
+        "role": "admin"
+      }
+    },
+    {
+      "id": "project-test",
+      "family": "route",
+      "descriptor": {
+        "id": "project-test",
+        "method": "POST",
+        "path": "/projects/test/:id",
+        "role": "admin"
+      }
+    },
+    {
+      "id": "agents",
+      "family": "route",
+      "descriptor": {
+        "id": "agents",
+        "method": "GET",
+        "path": "/agents",
+        "role": "member"
+      }
+    },
+    {
+      "id": "operations",
+      "family": "route",
+      "descriptor": {
+        "id": "operations",
+        "method": "GET",
+        "path": "/operations",
+        "role": "member"
+      }
+    },
+    {
+      "id": "grants-toggle",
+      "family": "route",
+      "descriptor": {
+        "id": "grants-toggle",
+        "method": "POST",
+        "path": "/grants/toggle",
+        "role": "admin"
+      }
+    },
+    {
+      "id": "grants-set-all",
+      "family": "route",
+      "descriptor": {
+        "id": "grants-set-all",
+        "method": "POST",
+        "path": "/grants/set-all",
+        "role": "admin"
+      }
+    },
+    {
+      "id": "usage",
+      "family": "content",
+      "descriptor": {
+        "id": "usage",
+        "title": "API gateway usage",
+        "kind": "skill",
+        "path": "content/api-usage"
+      }
+    },
+    {
+      "id": "main",
+      "family": "view",
+      "descriptor": {
+        "id": "main",
+        "title": "OpenAPI Gateway",
+        "sections": [
+          {
+            "type": "status"
+          },
+          {
+            "type": "capabilities"
+          },
+          {
+            "type": "permissions"
+          },
+          {
+            "type": "table",
+            "title": "Projects",
+            "source": {
+              "route": "/projects"
+            },
+            "headerActions": [
+              {
+                "id": "add",
+                "label": "Add project",
+                "kind": "form",
+                "route": {
+                  "route": "/projects/import"
+                },
+                "fields": [
+                  {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text",
+                    "required": true,
+                    "help": "Unique project name; agents address it by this name"
+                  },
+                  {
+                    "key": "baseUrl",
+                    "label": "Base URL",
+                    "type": "url",
+                    "required": false,
+                    "help": "Leave empty to use the first server URL from the spec; http:// URLs are allowed for local or internal APIs but are insecure \u2014 prefer https"
+                  },
+                  {
+                    "key": "authKind",
+                    "label": "Auth kind",
+                    "type": "select",
+                    "required": true,
+                    "default": "none",
+                    "options": [
+                      {
+                        "value": "none",
+                        "label": "None"
+                      },
+                      {
+                        "value": "bearer",
+                        "label": "Bearer token"
+                      },
+                      {
+                        "value": "basic",
+                        "label": "Basic (user + token)"
+                      },
+                      {
+                        "value": "header",
+                        "label": "Custom header"
+                      },
+                      {
+                        "value": "query",
+                        "label": "Query parameter"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "authParam",
+                    "label": "Header or query parameter name",
+                    "type": "text",
+                    "required": false,
+                    "help": "e.g. X-Api-Key",
+                    "visibleWhen": {
+                      "key": "authKind",
+                      "oneOf": [
+                        "header",
+                        "query"
+                      ]
+                    }
+                  },
+                  {
+                    "key": "token",
+                    "label": "Token or password",
+                    "type": "secret",
+                    "required": false,
+                    "help": "Stored in the addon secret store; never shown again",
+                    "visibleWhen": {
+                      "key": "authKind",
+                      "oneOf": [
+                        "bearer",
+                        "basic",
+                        "header",
+                        "query"
+                      ]
+                    }
+                  },
+                  {
+                    "key": "user",
+                    "label": "User (basic auth only)",
+                    "type": "text",
+                    "required": false,
+                    "visibleWhen": {
+                      "key": "authKind",
+                      "equals": "basic"
+                    }
+                  },
+                  {
+                    "key": "spec",
+                    "label": "OpenAPI document (JSON file)",
+                    "type": "file",
+                    "required": true,
+                    "widget": {
+                      "kind": "file",
+                      "params": {
+                        "maxKb": 4096
+                      }
+                    },
+                    "help": "OpenAPI 3.x or Swagger 2.0 document as a .json file; up to 4 MB"
+                  }
+                ]
+              }
+            ],
+            "columns": [
+              {
+                "key": "name",
+                "label": "Project",
+                "format": "text"
+              },
+              {
+                "key": "baseUrl",
+                "label": "Base URL",
+                "format": "text"
+              },
+              {
+                "key": "security",
+                "label": "Security",
+                "format": "badge"
+              },
+              {
+                "key": "auth",
+                "label": "Auth",
+                "format": "text"
+              },
+              {
+                "key": "operations",
+                "label": "Ops",
+                "format": "number"
+              },
+              {
+                "key": "specSha",
+                "label": "Spec sha",
+                "format": "copy"
+              },
+              {
+                "key": "updatedAt",
+                "label": "Updated",
+                "format": "datetime"
+              }
+            ],
+            "rowActions": [
+              {
+                "id": "edit",
+                "label": "Edit",
+                "kind": "form",
+                "route": {
+                  "route": "/projects/edit/:id"
+                },
+                "prefill": {
+                  "authKind": "authKind",
+                  "authParam": "authParam"
+                },
+                "formActions": [
+                  {
+                    "id": "test",
+                    "label": "Test connection",
+                    "route": {
+                      "route": "/projects/test/:id"
+                    }
+                  },
+                  {
+                    "id": "delete",
+                    "label": "Delete project",
+                    "route": {
+                      "route": "/projects/delete/:id"
+                    },
+                    "confirm": "Delete this project? Its operations, grants and stored token are removed.",
+                    "destructive": true
+                  }
+                ],
+                "fields": [
+                  {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text",
+                    "required": false,
+                    "help": "Leave empty to keep the current name"
+                  },
+                  {
+                    "key": "baseUrl",
+                    "label": "Base URL",
+                    "type": "url",
+                    "required": false,
+                    "help": "Leave empty to keep the current URL; http:// is allowed for local or internal APIs but is insecure"
+                  },
+                  {
+                    "key": "spec",
+                    "label": "OpenAPI document (JSON file)",
+                    "type": "file",
+                    "required": false,
+                    "widget": {
+                      "kind": "file",
+                      "params": {
+                        "maxKb": 4096
+                      }
+                    },
+                    "help": "Leave empty to keep the current spec; a new document is re-imported in place and grants are preserved"
+                  },
+                  {
+                    "key": "authKind",
+                    "label": "Auth kind",
+                    "type": "select",
+                    "required": false,
+                    "help": "Leave empty to keep the current auth kind",
+                    "options": [
+                      {
+                        "value": "none",
+                        "label": "None"
+                      },
+                      {
+                        "value": "bearer",
+                        "label": "Bearer token"
+                      },
+                      {
+                        "value": "basic",
+                        "label": "Basic (user + token)"
+                      },
+                      {
+                        "value": "header",
+                        "label": "Custom header"
+                      },
+                      {
+                        "value": "query",
+                        "label": "Query parameter"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "authParam",
+                    "label": "Header or query parameter name",
+                    "type": "text",
+                    "required": false,
+                    "help": "e.g. X-Api-Key",
+                    "visibleWhen": {
+                      "key": "authKind",
+                      "oneOf": [
+                        "header",
+                        "query"
+                      ]
+                    }
+                  },
+                  {
+                    "key": "token",
+                    "label": "Token or password",
+                    "type": "secret",
+                    "required": false,
+                    "help": "Leave empty to keep the stored token",
+                    "visibleWhen": {
+                      "key": "authKind",
+                      "oneOf": [
+                        "bearer",
+                        "basic",
+                        "header",
+                        "query"
+                      ]
+                    }
+                  },
+                  {
+                    "key": "user",
+                    "label": "User (basic auth only)",
+                    "type": "text",
+                    "required": false,
+                    "help": "Leave empty to keep the stored user",
+                    "visibleWhen": {
+                      "key": "authKind",
+                      "equals": "basic"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "table",
+            "title": "Operations",
+            "source": {
+              "route": "/operations"
+            },
+            "pageSize": 100,
+            "search": true,
+            "filters": [
+              {
+                "key": "projectId",
+                "label": "Project",
+                "optionsFrom": {
+                  "route": "/projects",
+                  "valueKey": "id",
+                  "labelKey": "name"
+                }
+              },
+              {
+                "key": "agentId",
+                "label": "Agent",
+                "optionsFrom": {
+                  "route": "/agents",
+                  "valueKey": "id",
+                  "labelKey": "name"
+                }
+              }
+            ],
+            "columns": [
+              {
+                "key": "project",
+                "label": "Project",
+                "format": "text"
+              },
+              {
+                "key": "operation",
+                "label": "Operation",
+                "format": "text"
+              },
+              {
+                "key": "method",
+                "label": "Method",
+                "format": "badge"
+              },
+              {
+                "key": "path",
+                "label": "Path",
+                "format": "text"
+              },
+              {
+                "key": "summary",
+                "label": "Summary",
+                "format": "text"
+              }
+            ],
+            "rowActions": [
+              {
+                "id": "grant",
+                "label": "Granted to the selected agent",
+                "kind": "switch",
+                "checkedKey": "granted",
+                "route": {
+                  "route": "/grants/toggle"
+                },
+                "batchRoute": {
+                  "route": "/grants/set-all"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "icon": "globe",
+  "color": "#0ea5e9"
+}

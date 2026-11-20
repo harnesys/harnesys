@@ -149,6 +149,17 @@ handshake with `incompatible_handlers`.
 host imports your bundle and runs the runtime itself; the guard prevents a second stdio
 loop.
 
+### Call identity
+
+Every host call carries `ctx.meta`: `{ correlationId, principal, agentId?, threadId?,
+runId?, orgId?, locale }`. On `tools.call` made from an agent session the meta identifies
+the caller: `principal: { type: 'agent', id }` plus `agentId` and `threadId` — a
+tool-pack can enforce per-agent behavior (grants, quotas) by reading `ctx.meta.agentId`.
+`route.handle` from an authenticated org request carries `principal: { type: 'user', id }`
+and no `agentId`; anything outside a session (jobs, triggers, hooks) is
+`principal: { type: 'system' }`. Never trust the meta as an authorization proof for
+admin-grade operations — pair it with your own grant tables if you need scoping.
+
 ## Idempotency and lifecycle
 
 The host restarts your process freely, so handlers must tolerate repeats:

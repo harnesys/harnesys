@@ -13,12 +13,41 @@ export interface AddonColumn {
   format: 'text' | 'datetime' | 'number' | 'badge' | 'link' | 'copy';
 }
 
+export interface AddonTableFilter {
+  key: string;
+  label: SectionL10n;
+  /** Static filter options; `optionsFrom` takes precedence when both are set. */
+  options?: { value: string; label: string }[];
+  /** Options resolved from an add-on-owned GET route. */
+  optionsFrom?: { route: string; valueKey: string; labelKey?: string };
+}
+
+export interface AddonFormDialogAction {
+  id: string;
+  label: SectionL10n;
+  route: AddonRouteRef;
+  confirm?: SectionL10n;
+  destructive?: boolean;
+}
+
 export interface AddonSectionAction {
   id: string;
   label: SectionL10n;
   route: AddonRouteRef;
   confirm?: SectionL10n;
   destructive?: boolean;
+  /** Render as a switch bound to `checkedKey`, or as a modal form over `fields`. */
+  kind?: 'switch' | 'form';
+  /** Row field holding the switch state; requires `kind: 'switch'`. */
+  checkedKey?: string;
+  /** Form fields for the modal; requires `kind: 'form'`. */
+  fields?: FieldSpec[];
+  /** Maps form field keys to row keys for initial values; requires `kind: 'form'`. */
+  prefill?: Record<string, string>;
+  /** Extra footer buttons inside the `kind: 'form'` dialog (e.g. test, delete). */
+  formActions?: AddonFormDialogAction[];
+  /** Header master switch POSTs this route with `{ enabled }` to set every row in the filter context. */
+  batchRoute?: AddonRouteRef;
 }
 
 export type AddonViewSection =
@@ -36,6 +65,16 @@ export type AddonViewSection =
       columns: AddonColumn[];
       rowActions?: AddonSectionAction[];
       pageSize?: number;
+      /** Render checkboxes and enable `selectionActions` on selected rows. */
+      selectable?: boolean;
+      /** Bulk actions POSTed once with `{ ids }` of the selected rows. */
+      selectionActions?: AddonSectionAction[];
+      /** Actions rendered in the section header (e.g. a create-form button). */
+      headerActions?: AddonSectionAction[];
+      /** Filters rendered above the rows; each adds `key=value` to the source query and to action calls as the filter context. */
+      filters?: AddonTableFilter[];
+      /** Render a text search input filtering the loaded rows client-side. */
+      search?: boolean;
     }
   | {
       type: 'form';
@@ -43,6 +82,8 @@ export type AddonViewSection =
       fields: FieldSpec[];
       submit: AddonRouteRef;
       confirm?: SectionL10n;
+      /** Render as a modal opened by a button labeled with the title. */
+      modal?: boolean;
     }
   | { type: 'actions'; actions: AddonSectionAction[] }
   | { type: 'markdown'; body: SectionL10n }

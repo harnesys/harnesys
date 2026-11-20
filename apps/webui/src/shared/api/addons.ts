@@ -283,7 +283,7 @@ export function fetchAddonRoute(
 ): Promise<unknown> {
   const url = orgAddonRouteUrl(orgId, addonId, route, params);
   const query = new URLSearchParams(params).toString();
-  const withQuery = options.method === 'GET' && query ? `${url}?${query}` : url;
+  const withQuery = query ? `${url}?${query}` : url;
   return apiJson<unknown>(withQuery, {
     method: options.method ?? 'GET',
     body: options.body === undefined ? undefined : JSON.stringify(options.body),

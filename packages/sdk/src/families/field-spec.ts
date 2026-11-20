@@ -8,6 +8,7 @@ export type FieldType =
   | 'select'
   | 'number'
   | 'boolean'
+  | 'file'
   | 'group';
 
 export type FieldValue = string | number | boolean | null;
@@ -17,6 +18,8 @@ export interface FieldOption {
   label: string;
   /** Hint shown for the currently selected option. */
   help?: string;
+  /** Group label used by multi-value pickers that render grouped panels. */
+  group?: string;
 }
 
 /** Conditional visibility: show the field only when `values[key]` matches. */
@@ -43,12 +46,16 @@ export type FieldOptionsFrom =
       route: string;
       /** Field keys passed to the route as query params. */
       dependsOn?: string[];
+      /** Static query params always sent to the route alongside `dependsOn` values. */
+      params?: Record<string, string>;
       /** Response body key holding the rows. Defaults to `rows`. */
       listKey?: string;
       /** Row field used as the option value. */
       valueKey: string;
       /** Row field used as the option label. Defaults to `valueKey`. */
       labelKey?: string;
+      /** Row field used to group options in multi-value pickers. */
+      groupKey?: string;
     }
   | { kind: 'connections' }
   | { kind: 'agents' };
@@ -89,6 +96,7 @@ export const FieldTypeSchema = z.enum([
   'select',
   'number',
   'boolean',
+  'file',
   'group',
 ]);
 
@@ -98,6 +106,7 @@ export const FieldOptionSchema = z.object({
   value: z.string(),
   label: z.string(),
   help: z.string().optional(),
+  group: z.string().optional(),
 });
 
 export const FieldVisibleWhenSchema = z.object({
@@ -116,9 +125,11 @@ export const FieldOptionsFromSchema: z.ZodType<FieldOptionsFrom> = z.union([
     kind: z.literal('addonRoute'),
     route: z.string().min(1),
     dependsOn: z.array(z.string().min(1)).optional(),
+    params: z.record(z.string(), z.string()).optional(),
     listKey: z.string().min(1).optional(),
     valueKey: z.string().min(1),
     labelKey: z.string().min(1).optional(),
+    groupKey: z.string().min(1).optional(),
   }),
   z.object({ kind: z.literal('connections') }),
   z.object({ kind: z.literal('agents') }),

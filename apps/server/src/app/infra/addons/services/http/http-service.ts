@@ -10,7 +10,7 @@ import { PermissionEngine } from '../../dispatcher/permission-engine.ts';
 import { resolveBoundAccountId } from '../account-binding.ts';
 import { serviceMethod } from '../method.ts';
 import { BindingsReader } from '../sinks.ts';
-import { resolveAddonEgress } from './addon-egress.ts';
+import { type AddonEgressOptions, resolveAddonEgress } from './addon-egress.ts';
 import { AddonHttpFetchPort } from './addon-fetch.port.ts';
 
 const MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
@@ -67,7 +67,7 @@ export class HttpHostService implements HostServiceModule {
       params.auth?.scheme === 'path'
         ? await this.urlWithPathCredential(ctx, params.url, params.auth)
         : new URL(params.url);
-    await this.checkEgress(url, this.allowedHosts(ctx));
+    await this.checkEgress(url, this.allowedHosts(ctx), this.egressOptions(ctx));
     const authHeader =
       params.auth && params.auth.scheme !== 'path'
         ? await this.buildAuthHeader(ctx, params.auth)
@@ -103,14 +103,22 @@ export class HttpHostService implements HostServiceModule {
     };
   }
 
-  protected checkEgress(url: URL, allowedHosts: readonly string[] | null): Promise<void> {
-    return resolveAddonEgress(url, allowedHosts);
+  protected checkEgress(
+    url: URL,
+    allowedHosts: readonly string[] | null,
+    options: AddonEgressOptions = {},
+  ): Promise<void> {
+    return resolveAddonEgress(url, allowedHosts, options);
   }
 
   private allowedHosts(ctx: HostCallContext): readonly string[] | null {
-    const scope = this.engine.scopeOf(ctx.grants, 'http.fetch');
-    const hosts = scope?.hosts;
+    const hosts = this.engine.scopeOf(ctx.grants, 'http.fetch')?.hosts;
     return Array.isArray(hosts) ? hosts.map(String) : null;
+  }
+
+  private egressOptions(ctx: HostCallContext): AddonEgressOptions {
+    const allowHttp = this.engine.scopeOf(ctx.grants, 'http.fetch')?.allowHttp;
+    return { allowHttp: allowHttp === true };
   }
 
   private async credentialsOf(

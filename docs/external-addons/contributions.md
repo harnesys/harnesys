@@ -59,6 +59,9 @@ has no consumer that acts on them yet. Do not build behavior on them.
 - `effect`: `read` | `write` | `destructive` (drives host approval policy);
   `idempotent` allows safe retries (`timeoutSec` default 60 cap 600, `maxResultKb`
   default 256).
+- Tool calls made from an agent session carry the caller in `ctx.meta` (`agentId`,
+  `threadId`); calls started outside a session (routes, jobs) do not. Per-agent
+  scoping inside the pack is the add-on's own data + check, keyed by `ctx.meta.agentId`.
 - `inputSchema`/`outputSchema` is a JSON Schema subset validated by the host before and
   after the call (`invalid_params` / `invalid_response`): `type`, `properties`,
   `required`, `items`, `enum`, `const`, `additionalProperties`, numeric/length/pattern/

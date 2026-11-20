@@ -15,6 +15,7 @@ import {
 } from '@/shared/ui/select';
 import { Textarea } from '@/shared/ui/textarea';
 import { type AddonFormContext, fieldControlId, formWidget } from './widget-registry';
+import { FileInput } from './widgets/file-input.tsx';
 import { registerBuiltinFormWidgets } from './widgets/register-builtin-widgets';
 import { useFieldOptions } from './widgets/use-field-options';
 
@@ -161,6 +162,20 @@ function FieldControl({
         disabled={disabled}
         values={values}
         addon={addon}
+        onChange={onChange}
+      />
+    );
+  }
+  if (field.type === 'file') {
+    return (
+      <FileInput
+        id={id}
+        value={value === undefined || value === null ? '' : String(value)}
+        maxKb={
+          typeof field.widget?.params?.maxKb === 'number' ? field.widget.params.maxKb : undefined
+        }
+        placeholder={field.placeholder}
+        disabled={disabled}
         onChange={onChange}
       />
     );

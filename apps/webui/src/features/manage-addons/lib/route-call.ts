@@ -35,9 +35,12 @@ export function routeParamsOf(
   return params;
 }
 
-export function handleSectionResult(result: unknown, onRefresh: () => void): void {
+export function handleSectionResult(
+  result: unknown,
+  onRefresh: () => void,
+): SectionCallResult | null {
   if (!isSectionResult(result)) {
-    return;
+    return null;
   }
   if (result.toast) {
     toast.add({ type: 'info', title: result.toast });
@@ -45,6 +48,7 @@ export function handleSectionResult(result: unknown, onRefresh: () => void): voi
   if (result.refresh) {
     onRefresh();
   }
+  return result;
 }
 
 function isSectionResult(value: unknown): value is SectionCallResult {

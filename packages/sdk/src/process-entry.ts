@@ -122,7 +122,11 @@ export async function startAddonProcess(options: StartAddonProcessOptions): Prom
   function replyError(id: string | number | null, error: unknown): void {
     const data = isAddonError(error)
       ? error.toData()
-      : { reason: 'internal' as const, retryable: false };
+      : {
+          reason: 'internal' as const,
+          retryable: false,
+          detail: error instanceof Error ? error.message : String(error),
+        };
     if (!isAddonError(error)) {
       wiring.stderr.write(
         `addon request failed: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`,

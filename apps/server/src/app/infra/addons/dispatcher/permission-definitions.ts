@@ -41,7 +41,10 @@ function scopedListCovers(
   return listContains(granted[key], needed[key]);
 }
 
-const hostsScope = z.object({ hosts: z.array(z.string()).min(1) });
+const hostsScope = z.object({
+  hosts: z.array(z.string()).min(1),
+  allowHttp: z.boolean().optional(),
+});
 const connectionsScope = z.object({ connections: z.array(z.string()).min(1) });
 const patternsScope = z.object({ patterns: z.array(z.string()).min(1) });
 
@@ -117,7 +120,11 @@ function simple(
 
 function describeHostScope(scope: JsonObject | undefined): L10n {
   const hosts = Array.isArray(scope?.hosts) ? scope.hosts.join(', ') : 'any host';
-  return `Send HTTP requests to: ${hosts}`;
+  const insecure =
+    scope?.allowHttp === true
+      ? '; plain http and private network addresses are allowed (insecure)'
+      : '';
+  return `Send HTTP requests to: ${hosts}${insecure}`;
 }
 
 function describeConnectionScope(action: string, scope: JsonObject | undefined): L10n {

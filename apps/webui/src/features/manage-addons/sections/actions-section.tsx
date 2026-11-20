@@ -30,6 +30,9 @@ export function ActionsSection({ orgId, addonId, section, onRefresh }: SectionPr
       await queryClient.invalidateQueries({
         queryKey: orgAddonDetailQueryKey(orgId, addonId),
       });
+      await queryClient.invalidateQueries({
+        queryKey: ['addon-route-options', orgId, addonId],
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {

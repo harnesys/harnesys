@@ -11,6 +11,7 @@ import type { Disposable, OwnerKey } from '../../../../domain/addons/owner.ts';
 import type { ToolCallResult } from '../../../../domain/addons/ports/addon-call.port.ts';
 import { AddonCallPort } from '../../../../domain/addons/ports/addon-call.port.ts';
 import { PackRegistryPort } from '../../../../domain/capabilities/pack-registry.port.ts';
+import { getHostToolScope } from '../../../runtime/host-tool-scope.ts';
 import { AddonContentRegistry } from '../content/content.family.ts';
 import { loadAddonSkill, locateSkillSource } from '../content/skill-source.ts';
 import { l10nText } from '../shared.ts';
@@ -203,8 +204,9 @@ export class ToolPackFamilyModule implements FamilyModule<ToolPackSchema> {
       description: l10nText(tool.description),
       input: tool.inputSchema as JsonSchema,
       sideEffect: tool.effect,
-      execute: (input: unknown): Promise<ToolCallResult> =>
-        this.calls.callTool(
+      execute: (input: unknown): Promise<ToolCallResult> => {
+        const scope = getHostToolScope();
+        return this.calls.callTool(
           owner.orgId,
           owner.addonId,
           {
@@ -217,8 +219,16 @@ export class ToolPackFamilyModule implements FamilyModule<ToolPackSchema> {
               tool.timeoutSec ? tool.timeoutSec * 1000 : DEFAULT_TOOL_TIMEOUT_MS,
               MAX_TOOL_TIMEOUT_MS,
             ),
+            ...(scope === undefined
+              ? {}
+              : {
+                  principal: { type: 'agent', id: scope.agentId } as const,
+                  agentId: scope.agentId,
+                  threadId: scope.threadId,
+                }),
           },
-        ),
+        );
+      },
     };
   }
 }

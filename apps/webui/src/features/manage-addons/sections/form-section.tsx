@@ -1,7 +1,8 @@
 import type { FieldSpec, FieldValue } from '@harnesys/contracts';
-import { useQuery } from '@tanstack/react-query';
+import { fieldVisible } from '@harnesys/contracts';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { fetchAddonRoute } from '@/shared/api/addons';
+import { fetchAddonRoute, orgAddonDetailQueryKey } from '@/shared/api/addons';
 import { orgScopedAgentsQuery } from '@/shared/api/agents';
 import {
   buildValidator,
@@ -12,7 +13,15 @@ import {
   RequiredMark,
 } from '@/shared/descriptor-forms';
 import { alert } from '@/shared/services/overlay';
+import { Button } from '@/shared/ui/button';
 import { ROW_SECTION_DIVIDER } from '@/shared/ui/capability-rows';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/shared/ui/dialog';
 import {
   SettingsErrorBanner,
   SettingsField,
@@ -24,6 +33,81 @@ import type { SectionProps } from '../lib/section-props';
 import type { AddonRouteRef, SectionL10n } from '../lib/view-sections';
 
 export function FormSection({ orgId, addonId, detail, section, onRefresh }: SectionProps) {
+  const title = section.title as SectionL10n | undefined;
+  if (section.modal === true && title) {
+    return (
+      <ModalFormSection
+        title={resolveL10nText(title)}
+        orgId={orgId}
+        addonId={addonId}
+        detail={detail}
+        section={section}
+        onRefresh={onRefresh}
+      />
+    );
+  }
+  return (
+    <FormSectionBody
+      orgId={orgId}
+      addonId={addonId}
+      detail={detail}
+      section={section}
+      onRefresh={onRefresh}
+    />
+  );
+}
+
+function ModalFormSection({
+  title,
+  orgId,
+  addonId,
+  detail,
+  section,
+  onRefresh,
+}: Omit<SectionProps, 'installed'> & { title: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger
+          render={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              data-testid={`addon-form-modal-${title.toLowerCase().replace(/\s+/g, '-')}`}
+            />
+          }
+        >
+          {title}
+        </DialogTrigger>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+          </DialogHeader>
+          <FormSectionBody
+            orgId={orgId}
+            addonId={addonId}
+            detail={detail}
+            section={section}
+            onRefresh={onRefresh}
+            onDone={() => setOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function FormSectionBody({
+  orgId,
+  addonId,
+  detail,
+  section,
+  onRefresh,
+  onDone,
+}: Omit<SectionProps, 'installed'> & { onDone?: () => void }) {
+  const queryClient = useQueryClient();
   const [values, setValues] = useState<Record<string, FieldValue>>({});
   const [secrets, setSecrets] = useState<Record<string, string>>({});
   const [pending, setPending] = useState(false);
@@ -38,7 +122,9 @@ export function FormSection({ orgId, addonId, detail, section, onRefresh }: Sect
   const title = section.title as SectionL10n | undefined;
   const submitRef = section.submit as AddonRouteRef | undefined;
   const confirm = section.confirm as SectionL10n | undefined;
-  const fields = Array.isArray(section.fields) ? (section.fields as FieldSpec[]) : [];
+  const fields = (Array.isArray(section.fields) ? (section.fields as FieldSpec[]) : []).filter(
+    (field) => fieldVisible(field, values),
+  );
   if (!title || !submitRef) {
     return null;
   }
@@ -76,6 +162,9 @@ export function FormSection({ orgId, addonId, detail, section, onRefresh }: Sect
       handleSectionResult(response, onRefresh);
       setValues(initialFieldValues(fields));
       setSecrets({});
+      onDone?.();
+      void queryClient.invalidateQueries({ queryKey: ['addon-route-options', orgId, addonId] });
+      void queryClient.invalidateQueries({ queryKey: orgAddonDetailQueryKey(orgId, addonId) });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {

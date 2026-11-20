@@ -1,4 +1,3 @@
-import type { StudioErrorBody } from '@harnesys/studio-shared';
 import { env } from '@/shared/config/env';
 import { getActiveOrgId } from './active-org';
 import { selfNodeCached } from './self-node';
@@ -45,12 +44,35 @@ function applyAuthHeaders(headers: Headers, path: string): void {
   }
 }
 
+interface ErrorResponseLike {
+  error?: unknown;
+  message?: unknown;
+  details?: { issues?: Array<{ path?: unknown[]; message?: string }> };
+}
+
+function issueText(issues: Array<{ path?: unknown[]; message?: string }>): string {
+  return issues
+    .map((issue) =>
+      issue.path && issue.path.length > 0
+        ? `${issue.path.map(String).join('.')}: ${issue.message ?? 'invalid'}`
+        : (issue.message ?? 'invalid'),
+    )
+    .join('; ');
+}
+
 function errorMessageFromBody(body: unknown, fallback: string): string {
   if (!body || typeof body !== 'object') {
     return fallback;
   }
-  const record = body as StudioErrorBody & { message?: string };
-  return record.error ?? record.message ?? fallback;
+  const record = body as ErrorResponseLike;
+  if (typeof record.error === 'string' && record.error.length > 0) {
+    return record.error;
+  }
+  if (typeof record.message === 'string' && record.message.length > 0) {
+    const issues = record.details?.issues;
+    return issues && issues.length > 0 ? `${record.message}: ${issueText(issues)}` : record.message;
+  }
+  return fallback;
 }
 
 async function throwIfNotOk(response: Response): Promise<void> {

@@ -8,14 +8,15 @@ import type {
 export type AddonRouteOptions = Extract<FieldOptionsFrom, { kind: 'addonRoute' }>;
 
 /**
- * Query params from `dependsOn` values. `null` while a dependency is empty:
- * the route must not be fetched with a missing key.
+ * Query params for an `optionsFrom.addonRoute` source: static `params` merged
+ * with `dependsOn` values. `null` while a dependency is empty: the route must
+ * not be fetched with a missing key.
  */
 export function routeOptionsParams(
   source: AddonRouteOptions,
   values: Record<string, FieldValue>,
 ): Record<string, string> | null {
-  const params: Record<string, string> = {};
+  const params: Record<string, string> = { ...source.params };
   for (const key of source.dependsOn ?? []) {
     const value = values[key];
     if (value === undefined || value === null || value === '') {
@@ -46,9 +47,11 @@ export function optionsFromRouteBody(body: unknown, source: AddonRouteOptions): 
       continue;
     }
     const label = record[source.labelKey ?? source.valueKey];
+    const group = source.groupKey === undefined ? undefined : record[source.groupKey];
     options.push({
       value: String(value),
       label: label === undefined || label === null ? String(value) : String(label),
+      group: typeof group === 'string' && group.length > 0 ? group : undefined,
     });
   }
   return options;

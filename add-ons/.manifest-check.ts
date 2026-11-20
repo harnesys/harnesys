@@ -1,5 +1,6 @@
 import {
   ConfigDescriptorSchema,
+  ContentDescriptorSchema,
   RouteDescriptorSchema,
   ToolPackDescriptorSchema,
   TransportDescriptorSchema,
@@ -15,6 +16,7 @@ interface DescriptorSchema {
 
 const schemas: Record<string, DescriptorSchema> = {
   config: ConfigDescriptorSchema,
+  content: ContentDescriptorSchema,
   transport: TransportDescriptorSchema,
   worker: WorkerDescriptorSchema,
   'tool-pack': ToolPackDescriptorSchema,
