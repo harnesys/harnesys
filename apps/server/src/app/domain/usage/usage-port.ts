@@ -179,10 +179,7 @@ export abstract class UsagePort {
     toIso: string,
   ): number;
   abstract runsReport(orgId: string, request: UsageRunsReportRequest): UsageRunsReport;
-  abstract issuesReport(
-    orgId: string,
-    request: UsageIssuesReportRequest,
-  ): UsageIssuesReport;
+  abstract issuesReport(orgId: string, request: UsageIssuesReportRequest): UsageIssuesReport;
   abstract getPriceOverride(orgId: string, modelId: string): PriceOverride | null;
   abstract listPriceOverrides(orgId: string): PriceOverride[];
   abstract setPriceOverride(orgId: string, modelId: string, price: ManualPrice): void;

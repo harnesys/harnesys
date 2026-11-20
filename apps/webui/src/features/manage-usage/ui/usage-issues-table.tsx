@@ -56,18 +56,10 @@ function agentNamesOf(row: UsageIssueRow, agentNames: Record<string, string>): s
   if (row.agents.length === 0) {
     return '—';
   }
-  return row.agents
-    .map((agentId) => agentNames[agentId] ?? agentId.slice(0, 8))
-    .join(', ');
+  return row.agents.map((agentId) => agentNames[agentId] ?? agentId.slice(0, 8)).join(', ');
 }
 
-function IssueRow({
-  row,
-  agentNames,
-}: {
-  row: UsageIssueRow;
-  agentNames: Record<string, string>;
-}) {
+function IssueRow({ row, agentNames }: { row: UsageIssueRow; agentNames: Record<string, string> }) {
   const timeZone = useOrgTimeZone();
   const tokens = row.inputTokens + row.outputTokens + row.cacheReadTokens + row.cacheWriteTokens;
   return (
