@@ -1,5 +1,5 @@
 import { appendFile, mkdir, open, stat as statFile, writeFile } from 'node:fs/promises';
-import { basename, dirname, relative, sep } from 'node:path';
+import { basename, dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { Injectable } from '@harnesys/brix';
 import { AddonError } from '@harnesys/sdk';
 import { resolveWorkspaceFilePath } from 'harnesys/file-access';
@@ -13,6 +13,7 @@ import { HostFsLayoutPort } from '../../../../domain/machine/host-fs-layout.port
 import { serviceMethod } from '../method.ts';
 
 const MAX_CHUNK_BYTES = 4 * 1024 * 1024;
+const THREAD_SCOPE_PREFIX = 'thread:';
 const STAT_LIMITS: HostMethodLimits = { timeoutMs: 15_000 };
 const READ_LIMITS: HostMethodLimits = {
   timeoutMs: 15_000,
@@ -107,7 +108,31 @@ export class FilesHostService implements HostServiceModule {
   }
 
   private resolve(ctx: HostCallContext, rawPath: string): ResolvedTarget {
+    if (rawPath.startsWith(THREAD_SCOPE_PREFIX)) {
+      return this.resolveThreadPath(ctx, rawPath.slice(THREAD_SCOPE_PREFIX.length));
+    }
+    if (isAbsolute(rawPath)) {
+      return { absolute: resolve(rawPath), relative: rawPath };
+    }
     const root = this.layout.ensureOrgWorkspace(ctx.orgId);
+    let absolute: string;
+    try {
+      absolute = resolveWorkspaceFilePath(root, rawPath);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new AddonError('invalid_params', { detail });
+    }
+    return { absolute, relative: relative(root, absolute).split(sep).join('/') };
+  }
+
+  private resolveThreadPath(ctx: HostCallContext, rawPath: string): ResolvedTarget {
+    if (ctx.threadId === undefined) {
+      throw new AddonError('invalid_params', {
+        detail:
+          'thread-scoped path requires a thread context (tool calls inside a thread run only)',
+      });
+    }
+    const root = this.layout.ensureThreadDir(ctx.orgId, ctx.threadId);
     let absolute: string;
     try {
       absolute = resolveWorkspaceFilePath(root, rawPath);

@@ -1,6 +1,6 @@
 {
   "id": "harnesys.openapi",
-  "version": "1.0.15",
+  "version": "1.0.21",
   "platform": 1,
   "title": "OpenAPI Gateway",
   "description": "Call external HTTP APIs from agents through OpenAPI specifications. Import a spec, pick the operations to expose, store per-project credentials, and grant agents access project by project and operation by operation.",
@@ -21,6 +21,10 @@
     {
       "id": "agents.read",
       "reason": "List organization agents to grant API access per agent on the Operations table"
+    },
+    {
+      "id": "files.read",
+      "reason": "Read file content by absolute host path or thread-scoped path for the files parameter of multipart api_* calls (uploads to project APIs); stat/read only, no write"
     }
   ],
   "data": {
@@ -133,6 +137,42 @@
                 },
                 "body": {
                   "description": "JSON request body (only for operations that declare one)"
+                },
+                "files": {
+                  "type": "array",
+                  "description": "Files for multipart/form-data operations: [{name, path | content (text) | contentBase64}]. path is an absolute host path (any file the host can read, including thread/issue attachments) or 'thread:sandbox/x.jpg' for a thread-sandbox file. Ignored for JSON operations.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Form field name for the file"
+                      },
+                      "path": {
+                        "type": "string",
+                        "description": "Absolute host path to the file, or 'thread:sandbox/x.jpg' / 'thread:attachments/<id>/x.jpg' for thread files"
+                      },
+                      "filename": {
+                        "type": "string",
+                        "description": "File name sent to the API; defaults to the path base name or name"
+                      },
+                      "contentType": {
+                        "type": "string",
+                        "description": "MIME type; defaults to application/octet-stream"
+                      },
+                      "content": {
+                        "type": "string",
+                        "description": "File content as text; exactly one of path/content/contentBase64"
+                      },
+                      "contentBase64": {
+                        "type": "string",
+                        "description": "File content as base64; exactly one of path/content/contentBase64"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ]
+                  }
                 }
               },
               "required": [
@@ -164,6 +204,42 @@
                 },
                 "body": {
                   "description": "JSON request body (only for operations that declare one)"
+                },
+                "files": {
+                  "type": "array",
+                  "description": "Files for multipart/form-data operations: [{name, path | content (text) | contentBase64}]. path is an absolute host path (any file the host can read, including thread/issue attachments) or 'thread:sandbox/x.jpg' for a thread-sandbox file. Ignored for JSON operations.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Form field name for the file"
+                      },
+                      "path": {
+                        "type": "string",
+                        "description": "Absolute host path to the file, or 'thread:sandbox/x.jpg' / 'thread:attachments/<id>/x.jpg' for thread files"
+                      },
+                      "filename": {
+                        "type": "string",
+                        "description": "File name sent to the API; defaults to the path base name or name"
+                      },
+                      "contentType": {
+                        "type": "string",
+                        "description": "MIME type; defaults to application/octet-stream"
+                      },
+                      "content": {
+                        "type": "string",
+                        "description": "File content as text; exactly one of path/content/contentBase64"
+                      },
+                      "contentBase64": {
+                        "type": "string",
+                        "description": "File content as base64; exactly one of path/content/contentBase64"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ]
+                  }
                 }
               },
               "required": [
@@ -194,6 +270,42 @@
                 },
                 "body": {
                   "description": "JSON request body (only for operations that declare one)"
+                },
+                "files": {
+                  "type": "array",
+                  "description": "Files for multipart/form-data operations: [{name, path | content (text) | contentBase64}]. path is an absolute host path (any file the host can read, including thread/issue attachments) or 'thread:sandbox/x.jpg' for a thread-sandbox file. Ignored for JSON operations.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Form field name for the file"
+                      },
+                      "path": {
+                        "type": "string",
+                        "description": "Absolute host path to the file, or 'thread:sandbox/x.jpg' / 'thread:attachments/<id>/x.jpg' for thread files"
+                      },
+                      "filename": {
+                        "type": "string",
+                        "description": "File name sent to the API; defaults to the path base name or name"
+                      },
+                      "contentType": {
+                        "type": "string",
+                        "description": "MIME type; defaults to application/octet-stream"
+                      },
+                      "content": {
+                        "type": "string",
+                        "description": "File content as text; exactly one of path/content/contentBase64"
+                      },
+                      "contentBase64": {
+                        "type": "string",
+                        "description": "File content as base64; exactly one of path/content/contentBase64"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ]
+                  }
                 }
               },
               "required": [

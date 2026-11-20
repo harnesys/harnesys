@@ -1,18 +1,24 @@
 import { describe, expect, test } from 'bun:test';
-import { multipartPayload, parseFiles } from './multipart.ts';
+import { assembleFileBytes, multipartPayload, parseFiles } from './multipart.ts';
 
 describe('parseFiles', () => {
-  test('accepts exactly one of content or contentBase64', () => {
+  test('accepts exactly one of path, content or contentBase64', () => {
     expect(parseFiles([{ name: 'image', content: 'hello' }])).toEqual([
       { name: 'image', content: 'hello' },
     ]);
     expect(parseFiles([{ name: 'image', contentBase64: 'aGk=' }])).toEqual([
       { name: 'image', contentBase64: 'aGk=' },
     ]);
+    expect(parseFiles([{ name: 'image', path: 'thread:sandbox/flag.png' }])).toEqual([
+      { name: 'image', path: 'thread:sandbox/flag.png' },
+    ]);
     expect(() => parseFiles([{ name: 'image', content: 'a', contentBase64: 'aGk=' }])).toThrow(
-      /exactly one of content/,
+      /exactly one of/,
     );
-    expect(() => parseFiles([{ name: 'image' }])).toThrow(/exactly one of content/);
+    expect(() => parseFiles([{ name: 'image', path: 'a', content: 'b' }])).toThrow(
+      /exactly one of/,
+    );
+    expect(() => parseFiles([{ name: 'image' }])).toThrow(/exactly one of/);
     expect(() => parseFiles([{ content: 'a' }])).toThrow(/name is required/);
     expect(() => parseFiles('nope')).toThrow(/must be an array/);
   });
@@ -27,6 +33,35 @@ describe('parseFiles', () => {
       contentType: 'image/png',
       contentBase64: 'aGk=',
     });
+  });
+});
+
+describe('assembleFileBytes', () => {
+  test('concatenates chunked base64 reads until eof', async () => {
+    const bytes = Buffer.from('chunk-one|chunk-two|tail');
+    const first = bytes.subarray(0, 8).toString('base64');
+    const second = bytes.subarray(8, 18).toString('base64');
+    const third = bytes.subarray(18).toString('base64');
+    const calls: Array<{ path: string; offset: number }> = [];
+    const result = await assembleFileBytes('thread:sandbox/photo.jpg', async (path, offset) => {
+      calls.push({ path, offset });
+      const data = [first, second, third][calls.length - 1] ?? '';
+      return { data, eof: calls.length === 3 };
+    });
+    expect(Buffer.from(result).toString('utf8')).toBe('chunk-one|chunk-two|tail');
+    expect(calls).toEqual([
+      { path: 'thread:sandbox/photo.jpg', offset: 0 },
+      { path: 'thread:sandbox/photo.jpg', offset: 8 },
+      { path: 'thread:sandbox/photo.jpg', offset: 18 },
+    ]);
+  });
+
+  test('propagates read errors with context', async () => {
+    await expect(
+      assembleFileBytes('thread:sandbox/missing.jpg', async () => {
+        throw new Error('no such file');
+      }),
+    ).rejects.toThrow('no such file');
   });
 });
 

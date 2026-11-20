@@ -1,7 +1,13 @@
+import { basename } from 'node:path';
 import type { AddonContext } from '@harnesys/sdk';
 import { AddonError } from '@harnesys/sdk';
 import { authInjectionFor } from './auth.ts';
-import { type MultipartFile, multipartPayload, parseFiles } from './multipart.ts';
+import {
+  assembleFileBytes,
+  type MultipartFile,
+  multipartPayload,
+  parseFiles,
+} from './multipart.ts';
 import type { NormalizedParam, OperationSpec } from './openapi/types.ts';
 import { responsePayload } from './truncate.ts';
 import type { HttpResponse, ProjectRecord } from './types.ts';
@@ -120,17 +126,7 @@ export async function executeCall(
     });
   }
   const multipart = spec.multipart === true;
-  let files: MultipartFile[];
-  try {
-    files = parseFiles(input.files);
-  } catch (error) {
-    throw new AddonError('invalid_params', { detail: messageOf(error) });
-  }
-  if (files.length > 0 && !multipart) {
-    throw new AddonError('invalid_params', {
-      detail: 'files are only supported for multipart/form-data operations; check api_docs',
-    });
-  }
+  const files = await fileSources(ctx, input, multipart);
   const request = multipart
     ? multipartBody(spec, input.body, files)
     : jsonBody(operation.method, spec, input.body);
@@ -183,21 +179,82 @@ interface BodyPayload {
   contentType: string;
 }
 
+const FILE_READ_CHUNK = 4 * 1024 * 1024;
+
+async function fileSources(
+  ctx: AddonContext,
+  input: Record<string, unknown>,
+  multipart: boolean,
+): Promise<MultipartFile[]> {
+  let files: MultipartFile[];
+  try {
+    files = await resolveFileSources(ctx, parseFiles(input.files));
+  } catch (error) {
+    if (error instanceof AddonError) {
+      throw error;
+    }
+    throw new AddonError('invalid_params', { detail: messageOf(error) });
+  }
+  if (files.length > 0 && !multipart) {
+    throw new AddonError('invalid_params', {
+      detail: 'files are only supported for multipart/form-data operations; check api_docs',
+    });
+  }
+  return files;
+}
+
+async function resolveFileSources(
+  ctx: AddonContext,
+  files: MultipartFile[],
+): Promise<MultipartFile[]> {
+  const resolved: MultipartFile[] = [];
+  for (const file of files) {
+    if (file.path === undefined) {
+      resolved.push(file);
+      continue;
+    }
+    const bytes = await assembleFileBytes(file.path, async (path, offset) => {
+      try {
+        return await ctx.files.read({ path, offset, length: FILE_READ_CHUNK });
+      } catch (error) {
+        if (error instanceof AddonError && error.reason === 'rate_limited') {
+          throw new AddonError('rate_limited', {
+            retryable: true,
+            detail: `file read '${path}' is rate limited; wait a second and retry the same call`,
+          });
+        }
+        throw new Error(
+          `cannot read file '${path}': ${messageOf(error)}; pass an absolute path on this host, or 'thread:sandbox/x.jpg' for a thread-sandbox file`,
+        );
+      }
+    });
+    resolved.push({
+      ...file,
+      path: undefined,
+      contentBase64: Buffer.from(bytes).toString('base64'),
+      ...(file.filename === undefined ? { filename: basename(file.path) } : {}),
+    });
+  }
+  return resolved;
+}
+
 function multipartBody(
   spec: OperationSpec,
   body: unknown,
   files: MultipartFile[],
 ): BodyPayload | undefined {
-  const fields = bodyFields(body);
+  const fields = bodyFields(unwrapJsonText(body));
   if (fields === null) {
     throw new AddonError('invalid_params', {
-      detail: 'this multipart/form-data operation expects body as an object of form fields',
+      detail:
+        'multipart operation: pass form fields as body (a flat object of strings) and files via the files parameter: [{name, path | content | contentBase64}]',
     });
   }
   if (Object.keys(fields).length === 0 && files.length === 0) {
     if (spec.bodyRequired) {
       throw new AddonError('invalid_params', {
-        detail: 'the operation requires form fields or files',
+        detail:
+          'the operation requires form fields or files: body for fields, files for file content',
       });
     }
     return undefined;

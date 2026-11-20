@@ -21,10 +21,10 @@ export function createHostClient(channel: HostChannel, getMeta: () => CallMeta):
       if (!spec) {
         throw new Error(`method '${entry.method}' is not in the protocol map`);
       }
-      const parsedParams = spec.params.parse({
-        ...(params as Record<string, unknown>),
+      const parsedParams = {
+        ...(spec.params.parse(params) as Record<string, unknown>),
         _meta: getMeta(),
-      });
+      };
       const raw = await channel.request(entry.method, parsedParams, options?.signal);
       return spec.result ? spec.result.parse(raw) : raw;
     };

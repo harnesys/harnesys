@@ -21,6 +21,7 @@ export interface HostCallContext {
   instanceId: string;
   generation: number;
   correlationId: string;
+  threadId?: string;
   grants: EffectiveGrants;
   now(): number;
   signal: AbortSignal;

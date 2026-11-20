@@ -22,6 +22,7 @@ export interface DispatchTarget {
   instanceId: string;
   generation: number;
   correlationId: string;
+  threadId?: string;
   signal?: AbortSignal;
 }
 
@@ -114,7 +115,7 @@ export class HostDispatcher {
 
   private acquireRate(spec: HostMethodSpec, target: DispatchTarget, method: string): void {
     const rate = spec.limits?.rate ?? DEFAULT_RATE;
-    const key = `${target.orgId}:${target.addonId}`;
+    const key = `${target.orgId}:${target.addonId}:${method}`;
     if (!this.limiter.tryAcquire(key, rate)) {
       throw new AddonError('rate_limited', {
         detail: `rate limit exceeded for ${method}`,
@@ -200,6 +201,7 @@ export class HostDispatcher {
       instanceId: target.instanceId,
       generation: target.generation,
       correlationId: target.correlationId,
+      ...(target.threadId !== undefined ? { threadId: target.threadId } : {}),
       grants,
       now: () => this.clock.now(),
       signal: controller.signal,

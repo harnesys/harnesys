@@ -11,7 +11,7 @@ import { apiCall, apiDocs, apiList } from './tools.ts';
 import { safe } from './validate.ts';
 
 const ADDON_ID = 'harnesys.openapi';
-const ADDON_VERSION = '1.0.15';
+const ADDON_VERSION = '1.0.21';
 
 export const addon = defineAddon({
   tools: {

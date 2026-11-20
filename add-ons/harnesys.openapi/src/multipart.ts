@@ -2,6 +2,7 @@ export interface MultipartFile {
   name: string;
   filename?: string;
   contentType?: string;
+  path?: string;
   content?: string;
   contentBase64?: string;
 }
@@ -9,6 +10,42 @@ export interface MultipartFile {
 export interface MultipartPayload {
   bodyBase64: string;
   contentType: string;
+}
+
+export type FileReader = (
+  path: string,
+  offset: number,
+) => Promise<{ data: string; eof: boolean }>;
+
+const MAX_FILE_CHUNKS = 1024;
+
+export async function assembleFileBytes(path: string, read: FileReader): Promise<Uint8Array> {
+  const chunks: Uint8Array[] = [];
+  let offset = 0;
+  for (let index = 0; index <= MAX_FILE_CHUNKS; index += 1) {
+    const chunk = await read(path, offset);
+    const bytes = new Uint8Array(Buffer.from(chunk.data, 'base64'));
+    chunks.push(bytes);
+    offset += bytes.byteLength;
+    if (chunk.eof) {
+      return concatBytes(chunks);
+    }
+  }
+  throw new Error(`file '${path}' exceeds ${MAX_FILE_CHUNKS} read chunks`);
+}
+
+function concatBytes(chunks: Uint8Array[]): Uint8Array {
+  let size = 0;
+  for (const chunk of chunks) {
+    size += chunk.byteLength;
+  }
+  const out = new Uint8Array(size);
+  let at = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, at);
+    at += chunk.byteLength;
+  }
+  return out;
 }
 
 export function parseFiles(raw: unknown): MultipartFile[] {
@@ -34,8 +71,12 @@ function singleFile(entry: unknown, index: number): MultipartFile {
   }
   const hasText = typeof record.content === 'string';
   const hasBase64 = typeof record.contentBase64 === 'string';
-  if (hasText === hasBase64) {
-    throw new Error(`files[${index}] must carry exactly one of content (text) or contentBase64`);
+  const hasPath = typeof record.path === 'string' && record.path.length > 0;
+  const sources = [hasText, hasBase64, hasPath].filter(Boolean).length;
+  if (sources !== 1) {
+    throw new Error(
+      `files[${index}] must carry exactly one of content (text), contentBase64, or path (thread file)`,
+    );
   }
   return {
     name,
@@ -45,6 +86,7 @@ function singleFile(entry: unknown, index: number): MultipartFile {
     ...(typeof record.contentType === 'string' && record.contentType.length > 0
       ? { contentType: record.contentType }
       : {}),
+    ...(hasPath ? { path: record.path as string } : {}),
     ...(hasText ? { content: record.content as string } : {}),
     ...(hasBase64 ? { contentBase64: record.contentBase64 as string } : {}),
   };

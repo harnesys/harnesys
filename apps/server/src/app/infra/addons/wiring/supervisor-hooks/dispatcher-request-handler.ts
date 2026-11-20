@@ -21,6 +21,12 @@ function errorDataOf(error: unknown): AddonErrorData {
   return { reason: 'internal', retryable: false, detail: String(error) };
 }
 
+function threadScopeOf(params: unknown): { threadId?: string } {
+  const meta = (params as { _meta?: { threadId?: unknown } } | undefined)?._meta;
+  const threadId = meta?.threadId;
+  return typeof threadId === 'string' && threadId.length > 0 ? { threadId } : {};
+}
+
 function jsonRpcCodeOf(reason: string): number {
   if (reason === 'invalid_params') {
     return -32602;
@@ -66,6 +72,7 @@ export class DispatcherRequestHandler implements SupervisorRequestHandler {
       instanceId: `${orgId}/${addonId}@${captured}`,
       generation: captured,
       correlationId: crypto.randomUUID(),
+      ...threadScopeOf(message.params),
     };
     if (!('id' in message)) {
       if (message.method === '$/progress') {

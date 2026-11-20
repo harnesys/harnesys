@@ -40,10 +40,14 @@ describing what is injected for the project.
   never as a pre-serialized JSON string; a quoted string that parses as JSON is
   unwrapped, and a string that does not parse is sent as a JSON string.
 - `files` (only `api_post`/`api_put`/`api_patch` and only when `api_docs` shows
-  `body: {kind: "multipart"}`): array of `{name, filename?, contentType?, content? |
-  contentBase64?}`. `content` is file text, `contentBase64` is binary content
-  encoded as base64 — exactly one of the two. Form fields go in `body` as a flat
-  object. JSON operations ignore `files`.
+  `body: {kind: "multipart"}`): array of `{name, path | content | contentBase64}` —
+  exactly one source per file. **Prefer `path`**: an absolute host path to the file,
+  e.g. `/Users/me/pics/photo.jpg` — any file the host can read, including thread
+  attachments (`.../threads/<id>/attachments/<id>/<file>`) and issue attachments.
+  The host reads the bytes itself — never read a file into your context to paste
+  base64 into the call. `thread:sandbox/photo.jpg` addresses a thread-sandbox file
+  relatively. `content` is file text; `contentBase64` is inline base64 (small files
+  only). Form fields go in `body` as a flat object. JSON operations ignore `files`.
 - Unknown or missing parameters return `invalid_params` listing what is expected.
 
 ## Results and errors
