@@ -33,6 +33,11 @@ function mimeTypeOf(path: string): string {
 
 export type StaticHandler = (pathname: string) => Promise<Response>;
 
+function cacheControlOf(target: string, root: string): string {
+  const assetsDir = join(root, 'assets') + sep;
+  return target.startsWith(assetsDir) ? 'public, max-age=31536000, immutable' : 'no-cache';
+}
+
 export function createStaticHandler(staticDir: string): StaticHandler {
   const root = resolve(staticDir);
   return async (pathname: string) => {
@@ -60,7 +65,11 @@ export function createStaticHandler(staticDir: string): StaticHandler {
       }
     }
     return new Response(Bun.file(target), {
-      headers: { ...SECURITY_HEADERS, 'content-type': mimeTypeOf(target) },
+      headers: {
+        ...SECURITY_HEADERS,
+        'content-type': mimeTypeOf(target),
+        'cache-control': cacheControlOf(target, root),
+      },
     });
   };
 }
