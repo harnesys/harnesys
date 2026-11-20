@@ -150,7 +150,7 @@ export async function executeCall(
       ...(request?.base64 !== undefined ? { bodyBase64: request.base64 } : {}),
     });
   } catch (error) {
-    ctx.log.warn(`api call failed: ${messageOf(error)}`, {
+    await ctx.log.warn(`api call failed: ${messageOf(error)}`, {
       project: project.name,
       operation: operation.operationId,
       url,
@@ -159,7 +159,7 @@ export async function executeCall(
   }
   const maxBytes = 256 * 1024;
   const payload = responsePayload(response.body, contentTypeOf(response), maxBytes);
-  ctx.log.info('api call completed', {
+  await ctx.log.info('api call completed', {
     project: project.name,
     operation: operation.operationId,
     status: response.status,
