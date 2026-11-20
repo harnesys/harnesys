@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security report
+    url: mailto:mikestotik@gmail.com
+    about: Report vulnerabilities by email, not in a public issue (see SECURITY.md).
