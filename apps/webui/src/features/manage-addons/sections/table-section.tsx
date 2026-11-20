@@ -20,7 +20,7 @@ import type {
   SectionL10n,
 } from '../lib/view-sections';
 import { RowFormDialog } from './row-form-dialog';
-import { allSelectedOf, selectedRowsOf, type TableRow, visibleRowsOf } from './table-row';
+import { allSelectedOf, rowKeyOf, selectedRowsOf, type TableRow, visibleRowsOf } from './table-row';
 import { TableToolbar } from './table-toolbar';
 import { TableView } from './table-view';
 
