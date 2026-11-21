@@ -5,38 +5,29 @@ import {
   gitWorktreePath,
 } from '../../../../domain/source/git-repository-layout.ts';
 import { GitOperationException } from '../../../../domain/source/source.error.ts';
+import { applyCredentialHelper, gitCredentialArgs } from './git-credential-helper.ts';
+import { runGit } from './git-run.ts';
 
 export type { GitRepositoryLayout };
 export const worktreePath = gitWorktreePath;
-
-export function sanitizeGitText(text: string): string {
-  return text
-    .replace(/\b(https?|git|ssh):\/\/[^\s'"\\]+/gi, (url) => {
-      try {
-        const parsed = new URL(url);
-        if (parsed.username || parsed.password) {
-          parsed.username = '';
-          parsed.password = '';
-          return parsed.toString();
-        }
-      } catch {
-        return url.replace(/\/\/[^/@\s]+@/g, '//');
-      }
-      return url;
-    })
-    .replace(/\/\/[^/@\s]+@/g, '//');
-}
 
 export function isBareRepoReady(bareRepoPath: string): boolean {
   return existsSync(join(bareRepoPath, 'HEAD')) && existsSync(join(bareRepoPath, 'objects'));
 }
 
-export async function cloneBare(url: string, targetRepoPath: string): Promise<void> {
+export async function cloneBare(
+  url: string,
+  targetRepoPath: string,
+  credentialUrl?: string,
+): Promise<void> {
   if (existsSync(targetRepoPath)) {
     throw new GitOperationException(`bare repo already exists: ${targetRepoPath}`);
   }
   mkdirSync(dirname(targetRepoPath), { recursive: true });
-  await runGit(['clone', '--bare', url, targetRepoPath]);
+  await runGit([...gitCredentialArgs(credentialUrl), 'clone', '--bare', url, targetRepoPath]);
+  if (credentialUrl) {
+    await applyCredentialHelper(targetRepoPath, url, credentialUrl);
+  }
   await runGit(
     ['config', 'remote.origin.fetch', '+refs/heads/*:refs/remotes/origin/*'],
     targetRepoPath,
@@ -142,6 +133,7 @@ export async function ensureMaterialized(input: {
   layout: GitRepositoryLayout;
   worktreeId: string;
   branch?: string;
+  credentialUrl?: string;
 }): Promise<{ activeBranch: string; contentRoot: string; layout: GitRepositoryLayout }> {
   const bare = resolve(input.layout.bareRepoPath);
   const worktreesRoot = resolve(input.layout.worktreesRoot);
@@ -150,7 +142,7 @@ export async function ensureMaterialized(input: {
     rmSync(bare, { recursive: true, force: true });
   }
   if (!existsSync(bare)) {
-    await cloneBare(input.url, bare);
+    await cloneBare(input.url, bare, input.credentialUrl);
   }
   mkdirSync(worktreesRoot, { recursive: true });
   const activeBranch = input.branch?.trim() || (await detectDefaultBranch(bare));
@@ -161,29 +153,6 @@ export async function ensureMaterialized(input: {
     contentRoot,
     layout,
   };
-}
-
-export async function applyCredentialHelper(
-  layout: GitRepositoryLayout,
-  remoteUrl: string,
-  credentialUrl: string,
-): Promise<void> {
-  const bare = resolve(layout.bareRepoPath);
-  if (!existsSync(bare)) {
-    throw new GitOperationException(`bare repo missing: ${bare}`);
-  }
-  const parsed = new URL(remoteUrl);
-  if (parsed.protocol !== 'https:') {
-    return;
-  }
-  parsed.username = '';
-  parsed.password = '';
-  const configKey = `credential.${parsed.protocol}//${parsed.host}.helper`;
-  const helper =
-    `!f() { t=$(curl -sf '${credentialUrl}') || exit 0; ` +
-    `printf 'username=x-access-token\\npassword=%s\\n' "$t"; }; f`;
-  await runGit(['remote', 'set-url', 'origin', parsed.toString()], bare);
-  await runGit(['config', '--replace-all', configKey, helper], bare);
 }
 
 export async function refreshWorktree(
@@ -312,27 +281,4 @@ async function refExists(cwd: string, ref: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-async function runGit(args: string[], cwd?: string): Promise<string> {
-  const proc = Bun.spawn(['git', ...args], {
-    cwd,
-    stdout: 'pipe',
-    stderr: 'pipe',
-    env: {
-      ...process.env,
-      GIT_TERMINAL_PROMPT: '0',
-    },
-  });
-  const [stdout, stderr, code] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ]);
-  if (code !== 0) {
-    const safeArgs = args.map((arg) => sanitizeGitText(arg)).join(' ');
-    const detail = sanitizeGitText((stderr || stdout || `exit ${code}`).trim());
-    throw new GitOperationException(`git ${safeArgs} failed: ${detail}`);
-  }
-  return stdout.trim();
 }

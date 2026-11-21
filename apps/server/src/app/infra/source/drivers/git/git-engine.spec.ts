@@ -5,10 +5,10 @@ import { join } from 'node:path';
 import {
   ensureMaterialized,
   refreshWorktree,
-  sanitizeGitText,
   switchWorktreeBranch,
   worktreePath,
 } from './git-engine.ts';
+import { sanitizeGitText } from './git-run.ts';
 
 const roots: string[] = [];
 

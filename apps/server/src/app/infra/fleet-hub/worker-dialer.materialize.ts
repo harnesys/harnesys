@@ -6,7 +6,7 @@ import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
 import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { hasGitVcs, sourceHostAvailability } from '../../domain/source/vcs-capability.ts';
-import { sanitizeGitText } from '../source/drivers/git/git-engine.ts';
+import { sanitizeGitText } from '../source/drivers/git/git-run.ts';
 import { resolveFleetSecretByOperation } from './fleet-secret-resolver.ts';
 import type { DialerSession } from './worker-dialer.session.ts';
 

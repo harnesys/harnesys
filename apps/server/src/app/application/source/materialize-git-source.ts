@@ -64,10 +64,7 @@ export async function materializeGitSourceOnHost(
   });
   try {
     let url = input.url;
-    let credentialUrl: string | null = null;
-    if (input.accountId && input.credentialUrl) {
-      credentialUrl = input.credentialUrl;
-    } else if (input.credRef && input.resolveCredential) {
+    if (!input.credentialUrl && input.credRef && input.resolveCredential) {
       const secret = await input.resolveCredential(input.credRef);
       if (secret) {
         url = embedCredential(url, secret);
@@ -85,14 +82,8 @@ export async function materializeGitSourceOnHost(
       worktreeId: input.worktreeId,
       branch: input.branch,
       layout: gitLayout,
+      ...(input.credentialUrl ? { credentialUrl: input.credentialUrl } : {}),
     });
-    if (credentialUrl) {
-      await input.driver.configureCredentialHelper({
-        layout: gitLayout,
-        remoteUrl: input.url,
-        credentialUrl,
-      });
-    }
     const readyAt = new Date().toISOString();
     const readyRevision = nextRevision + 1;
     input.materializations.upsert({

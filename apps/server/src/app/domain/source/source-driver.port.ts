@@ -9,6 +9,7 @@ export interface EnsureMaterializedInput {
   worktreeId: string;
   branch?: string;
   layout: GitRepositoryLayout;
+  credentialUrl?: string;
 }
 
 export interface EnsureMaterializedResult {

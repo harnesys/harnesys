@@ -8,8 +8,8 @@ import {
   SourceDriverPort,
   type SwitchBranchResult,
 } from '../../../../domain/source/source-driver.port.ts';
+import { applyCredentialHelper } from './git-credential-helper.ts';
 import {
-  applyCredentialHelper,
   createWorktreeBranch,
   ensureMaterialized,
   listLocalBranches,
@@ -35,11 +35,12 @@ export class GitDriver extends SourceDriverPort {
       layout: input.layout,
       worktreeId: input.worktreeId,
       branch: input.branch,
+      ...(input.credentialUrl ? { credentialUrl: input.credentialUrl } : {}),
     });
   }
 
   configureCredentialHelper(input: ConfigureCredentialHelperInput): Promise<void> {
-    return applyCredentialHelper(input.layout, input.remoteUrl, input.credentialUrl);
+    return applyCredentialHelper(input.layout.bareRepoPath, input.remoteUrl, input.credentialUrl);
   }
 
   resolveContentRoot(layout: GitRepositoryLayout, worktreeId: string): string {
