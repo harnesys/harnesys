@@ -1,9 +1,12 @@
 import type { PlanItemStatus } from '@harnesys/studio-shared';
-import { ChevronDownIcon, ListTodoIcon, XIcon } from 'lucide-react';
+import { ChevronDownIcon, ListTodoIcon, Trash2Icon, XIcon } from 'lucide-react';
 import { PlanStatusIcon, usePlanStore, useThreadPlan } from '@/entities/plan';
+import { deleteThreadPlan } from '@/shared/api';
 import { cn } from '@/shared/lib/utils';
+import { alert } from '@/shared/services/overlay';
 import { Button } from '@/shared/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/shared/ui/collapsible';
+import { toast } from '@/shared/ui/toast';
 
 export function ThreadPlanBanner({ threadId }: { threadId: string }) {
   const plan = useThreadPlan(threadId);
@@ -18,6 +21,31 @@ export function ThreadPlanBanner({ threadId }: { threadId: string }) {
   const allSettled = plan.items.every((item) => settled(item.status));
   const collapsedLabel = allSettled ? 'Done!' : (active?.title ?? null);
   const done = plan.items.filter((item) => item.status === 'completed').length;
+  const handleDelete = () => {
+    void alert
+      .confirm({
+        title: 'Delete plan?',
+        description: 'Removes the agent plan for this thread.',
+        confirmText: 'Delete',
+        variant: 'destructive',
+        testId: 'delete-plan-dialog',
+      })
+      .then(async (confirmed) => {
+        if (!confirmed) {
+          return;
+        }
+        try {
+          await deleteThreadPlan(threadId);
+          usePlanStore.getState().removeForThread(threadId);
+          toast.add({ title: 'Plan deleted' });
+        } catch (error) {
+          toast.add({
+            title: 'Failed to delete plan',
+            description: error instanceof Error ? error.message : 'Unknown error',
+          });
+        }
+      });
+  };
   return (
     <Collapsible
       defaultOpen
@@ -37,6 +65,16 @@ export function ThreadPlanBanner({ threadId }: { threadId: string }) {
           ) : null}
           <ChevronDownIcon className="size-3 shrink-0 text-muted-foreground transition-transform group-data-[panel-open]:rotate-180" />
         </CollapsibleTrigger>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          aria-label="Delete plan"
+          data-testid="thread-plan-banner-delete"
+          className={cn('size-5 shrink-0 text-muted-foreground', !allSettled && 'hidden')}
+          onClick={handleDelete}
+        >
+          <Trash2Icon />
+        </Button>
         <Button
           variant="ghost"
           size="icon-xs"
