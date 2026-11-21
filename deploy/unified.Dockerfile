@@ -36,9 +36,12 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# git + node/npm are required at runtime: plugin/skill install clones repos
-# (git) and curated LSP installs run `npm i -g` (see infra/lsp/install-lsp-binary.ts).
-RUN apk add --no-cache git nodejs npm
+# git + node/npm + curl are required at runtime: plugin/skill install clones
+# repos (git), curated LSP installs run `npm i -g` (see
+# infra/lsp/install-lsp-binary.ts), and the git credential helper fetches tokens
+# with `curl` (infra/source/drivers/git/git-credential-helper.ts). Alpine's git
+# pulls libcurl but not the curl CLI, so curl is installed explicitly.
+RUN apk add --no-cache git nodejs npm curl
 
 COPY package.json bun.lock tsconfig.json ./
 COPY packages/brix/package.json packages/brix/

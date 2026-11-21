@@ -65,7 +65,7 @@ Everything persists in the bind mount at `/data` (`HARNESYS_HOME`), default host
 
 ## Developer toolchain inside the container
 
-The image ships `git`, `node`, and `npm` (Alpine) next to Bun, so the workspace tools work out of the box: skill/plugin install clones repos, and the LSP "Install" buttons run `npm i -g` without extra setup. Go and Rust are not included — installing `gopls` or `rust-analyzer` from the UI returns a clear error until a Go/Rust toolchain is available on the host.
+The image ships `git`, `node`, `npm`, and `curl` (Alpine) next to Bun, so the workspace tools work out of the box: skill/plugin install clones repos, the LSP "Install" buttons run `npm i -g` without extra setup, and private git sources authenticate through the credential helper that fetches tokens with `curl`. Go and Rust are not included — installing `gopls` or `rust-analyzer` from the UI returns a clear error until a Go/Rust toolchain is available on the host.
 
 `HOME` inside the container points at `/data`, so **the whole home directory lives on the volume** and survives image updates: dotfiles, git identity (`/data/.gitconfig`), Bun globals (`/data/.bun`), npm globals (`/data/.npm-global`), node versions (`/data/.nvm/versions/node`), Go binaries (`/data/go/bin`), Rust/Cargo (`/data/.cargo`, `/data/.rustup`), and anything else written under `~`. Those directories are already on the effective PATH, so tools installed through a workspace terminal are picked up after a redeploy.
 
