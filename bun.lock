@@ -210,7 +210,7 @@
     },
     "apps/cli": {
       "name": "@harnesys/cli",
-      "version": "0.10.9",
+      "version": "0.10.10",
       "devDependencies": {
         "@types/bun": "^1.4.2",
         "typescript": "^5.9.3",
@@ -218,14 +218,14 @@
     },
     "apps/desktop": {
       "name": "@harnesys/desktop",
-      "version": "0.10.9",
+      "version": "0.10.10",
       "devDependencies": {
         "@tauri-apps/cli": "^2",
       },
     },
     "apps/server": {
       "name": "@harnesys/server",
-      "version": "0.10.9",
+      "version": "0.10.10",
       "dependencies": {
         "@ai-sdk/openai": "3.0.90",
         "@ai-sdk/openai-compatible": "3.0.30",
@@ -255,7 +255,7 @@
     },
     "apps/webui": {
       "name": "@harnesys/webui",
-      "version": "0.10.9",
+      "version": "0.10.10",
       "dependencies": {
         "@base-ui/react": "^1.9.0",
         "@floating-ui/dom": "^1.8.0",
@@ -2418,13 +2418,11 @@
 
     "@harnesys/cli/@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
 
-    "@harnesys/contracts/@harnesys/sdk": ["@harnesys/sdk@file:packages/sdk", { "dependencies": { "zod": "^4.4.3" }, "devDependencies": { "@types/bun": "^1.4.2", "typescript": "^5.9.3" }, "peerDependencies": { "typescript": "^5.9.3" }, "optionalPeers": ["typescript"] }],
-
     "@harnesys/contracts/@types/bun": ["@types/bun@1.4.5", "", { "dependencies": { "bun-types": "1.4.5" } }, "sha512-DpgwNI9z0L1S0gtb45QLCWgwCUcMLnsHYMJHQvpNj7erGiCGBvpggltAIeARrtobNMKMuy0UP7i56tKKgwFs/Q=="],
 
     "@harnesys/create-addon/@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
 
-    "@harnesys/sdk/@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
+    "@harnesys/sdk/@types/bun": ["@types/bun@1.4.5", "", { "dependencies": { "bun-types": "1.4.5" } }, "sha512-DpgwNI9z0L1S0gtb45QLCWgwCUcMLnsHYMJHQvpNj7erGiCGBvpggltAIeARrtobNMKMuy0UP7i56tKKgwFs/Q=="],
 
     "@harnesys/server/@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
 
@@ -2692,7 +2690,7 @@
 
     "@harnesys/create-addon/@types/bun/bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
 
-    "@harnesys/sdk/@types/bun/bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
+    "@harnesys/sdk/@types/bun/bun-types": ["bun-types@1.4.5", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-ECHn+9dhL3wv0G6u0+7dQvrnaimXiRDxxerYBmhTaLyJEEuvTPWk2Fye3XIf5Y++JIIiHKfQw4Z7V5D8KuiXbg=="],
 
     "@harnesys/server/@types/bun/bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
 

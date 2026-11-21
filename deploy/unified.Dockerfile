@@ -15,6 +15,7 @@ COPY packages/contracts/package.json packages/contracts/
 COPY packages/sdk/package.json packages/sdk/
 COPY packages/studio-shared/package.json packages/studio-shared/
 COPY packages/harnesys/package.json packages/harnesys/
+COPY packages/create-addon/package.json packages/create-addon/
 COPY apps/server/package.json apps/server/
 COPY apps/webui/package.json apps/webui/
 COPY apps/cli/package.json apps/cli/
@@ -41,6 +42,7 @@ COPY packages/contracts/package.json packages/contracts/
 COPY packages/sdk/package.json packages/sdk/
 COPY packages/studio-shared/package.json packages/studio-shared/
 COPY packages/harnesys/package.json packages/harnesys/
+COPY packages/create-addon/package.json packages/create-addon/
 COPY apps/server/package.json apps/server/
 COPY apps/webui/package.json apps/webui/
 COPY apps/cli/package.json apps/cli/
