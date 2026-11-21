@@ -172,14 +172,13 @@ export async function getFileStatus(
     .catch(() => '');
   const elapsed = Date.now() - start;
   const prev = statusCache.get(cacheKey);
+  const map = parsePorcelain(raw);
   if (elapsed > GIT_SLOW_THRESHOLD_MS) {
     const slowCount = (prev?.slowCount ?? 0) + 1;
     const truncated = slowCount >= 2;
-    const map = truncated ? (prev?.map ?? parsePorcelain(raw)) : parsePorcelain(raw);
     statusCache.set(cacheKey, { map, truncated, mtimeKey, ts: now, slowCount });
     return { map, truncated };
   }
-  const map = parsePorcelain(raw);
   statusCache.set(cacheKey, { map, truncated: false, mtimeKey, ts: now, slowCount: 0 });
   return { map, truncated: false };
 }
