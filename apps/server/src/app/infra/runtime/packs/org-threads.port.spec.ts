@@ -61,7 +61,7 @@ function agent(id: string): AgentRecord {
     mcpServers: [],
     enabledPlugins: {},
     defaultModeId: null,
-  defaultRunDirectory: null,
+    defaultRunDirectory: null,
     config: {},
     hooks: [],
     createdAt: '2026-01-01T00:00:00.000Z',

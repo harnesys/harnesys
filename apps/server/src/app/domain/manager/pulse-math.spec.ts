@@ -26,7 +26,7 @@ function agentOf(id: string, overrides: Partial<AgentRecord> = {}): AgentRecord 
     mcpServers: [],
     enabledPlugins: {},
     defaultModeId: null,
-  defaultRunDirectory: null,
+    defaultRunDirectory: null,
     config: {},
     hooks: [],
     createdAt: NOW,

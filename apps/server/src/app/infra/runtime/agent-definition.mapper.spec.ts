@@ -22,7 +22,7 @@ function recordOf(config: Record<string, unknown>) {
     mcpServers: [],
     enabledPlugins: {},
     defaultModeId: null,
-  defaultRunDirectory: null,
+    defaultRunDirectory: null,
     config,
     hooks: [],
     createdAt: '2026-01-01T00:00:00Z',

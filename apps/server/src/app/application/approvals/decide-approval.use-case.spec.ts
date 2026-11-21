@@ -58,7 +58,7 @@ function agentRecord(): AgentRecord {
     mcpServers: [],
     enabledPlugins: {},
     defaultModeId: null,
-  defaultRunDirectory: null,
+    defaultRunDirectory: null,
     config: {},
     hooks: [],
     createdAt: new Date(0).toISOString(),

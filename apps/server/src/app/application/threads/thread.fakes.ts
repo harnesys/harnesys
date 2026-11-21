@@ -231,7 +231,7 @@ export function memoryAgent(
     mcpServers: [],
     enabledPlugins: {},
     defaultModeId: null,
-  defaultRunDirectory: null,
+    defaultRunDirectory: null,
     config: {},
     hooks: [],
     createdAt: now,
