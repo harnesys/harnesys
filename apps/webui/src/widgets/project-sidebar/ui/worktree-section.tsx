@@ -17,13 +17,8 @@ import {
   repositoryWorktreesQueryKey,
 } from '@/shared/api/repository-worktrees';
 import { cn } from '@/shared/lib/utils';
-import { FolderTypeIcon } from '@/shared/ui/icons';
-import {
-  SIDEBAR_ROW_HEIGHT,
-  SIDEBAR_ROW_INDENT,
-  SidebarRow,
-  SidebarRowTitle,
-} from '@/shared/ui/sidebar-row';
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/shared/ui/context-menu';
+import { SIDEBAR_ROW_HEIGHT, SIDEBAR_ROW_INDENT, SidebarRow } from '@/shared/ui/sidebar-row';
 import { Spinner } from '@/shared/ui/spinner';
 import { toast } from '@/shared/ui/toast';
 import { useExplorerExpandStore } from '../model/explorer-expand.store';
@@ -31,6 +26,7 @@ import { useExplorerHiddenStore } from '../model/explorer-hidden.store';
 import { createLazyChildrenState, ensurePrunedChildren } from '../model/explorer-lazy-children';
 import { useFileSelectionStore } from '../model/file-selection.store';
 import { type FlatTreeRow, flattenFileTree, indexFileTree } from '../model/file-tree-index';
+import { BranchFolderLabel } from './branch-folder-label';
 import { worktreeBranchKey } from './branch-keys';
 import { renderFileTreeRow } from './file-row-render';
 import { FileTreeWindow } from './file-tree-window';
@@ -250,32 +246,47 @@ export function WorktreeSection({
       className="opacity-70 group-data-[collapsible=icon]:hidden"
       data-testid={`explorer-worktree-${worktree.id}`}
     >
-      <SidebarRow
-        depth={depthOffset}
-        leading={<FolderTypeIcon open={expanded} />}
-        actions={
-          <WorktreeRootMenu
+      <ContextMenu>
+        <ContextMenuTrigger className="block">
+          <SidebarRow
+            depth={depthOffset}
+            actions={
+              <WorktreeRootMenu
+                projectId={projectId}
+                orgId={orgId}
+                worktree={worktree}
+                onRefresh={invalidateTree}
+              />
+            }
+            className={cn(
+              rootDrop === 'valid' && 'bg-live/15 ring-1 ring-live ring-inset',
+              rootDrop === 'invalid' && 'cursor-not-allowed opacity-60',
+            )}
+            aria-expanded={expanded}
+            title={rootTitle}
+            data-path={rootLabel}
+            data-drop={rootDrop ?? undefined}
+            onDragOver={handleRootDragOver}
+            onDragLeave={handleRootDragLeave}
+            onDrop={handleRootDrop}
+            onClick={() => toggleBranch(projectId, branchKey)}
+          >
+            <BranchFolderLabel
+              open={expanded}
+              label={rootLabel}
+              titleClassName="text-sidebar-foreground/70"
+            />
+          </SidebarRow>
+        </ContextMenuTrigger>
+        <ContextMenuContent onClick={(event) => event.stopPropagation()}>
+          <WorktreeRootMenuItems
             projectId={projectId}
             orgId={orgId}
             worktree={worktree}
             onRefresh={invalidateTree}
           />
-        }
-        className={cn(
-          rootDrop === 'valid' && 'bg-live/15 ring-1 ring-live ring-inset',
-          rootDrop === 'invalid' && 'cursor-not-allowed opacity-60',
-        )}
-        aria-expanded={expanded}
-        title={rootTitle}
-        data-path={rootLabel}
-        data-drop={rootDrop ?? undefined}
-        onDragOver={handleRootDragOver}
-        onDragLeave={handleRootDragLeave}
-        onDrop={handleRootDrop}
-        onClick={() => toggleBranch(projectId, branchKey)}
-      >
-        <SidebarRowTitle className="text-sidebar-foreground/70">{rootLabel}</SidebarRowTitle>
-      </SidebarRow>
+        </ContextMenuContent>
+      </ContextMenu>
       {expanded ? (
         <div className="flex min-h-full flex-col gap-0.5">
           {treeQuery.isPending ? (
@@ -310,4 +321,4 @@ export function WorktreeSection({
   );
 }
 
-import { WorktreeRootMenu } from './worktree-root-menu';
+import { WorktreeRootMenu, WorktreeRootMenuItems } from './worktree-root-menu';

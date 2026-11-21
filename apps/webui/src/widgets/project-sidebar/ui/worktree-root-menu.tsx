@@ -26,19 +26,56 @@ import {
 import { toast } from '@/shared/ui/toast';
 import { worktreeFilesTreeQueryKey } from './worktree-tree-key';
 
-export function WorktreeRootMenu({
-  projectId,
-  orgId,
-  worktree,
-  onRefresh,
-}: {
+export interface WorktreeRootMenuProps {
   projectId: string;
   orgId: string;
   worktree: RepositoryWorktree;
   onRefresh: () => void;
-}) {
-  const qc = useQueryClient();
+}
+
+interface WorktreeRootMenuItemsProps extends WorktreeRootMenuProps {
+  onDone?: () => void;
+}
+
+export function WorktreeRootMenu({ projectId, orgId, worktree, onRefresh }: WorktreeRootMenuProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  return (
+    <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label={`Worktree actions · ${worktree.branch}`}
+            className="opacity-0 group-hover/ws:opacity-100 data-open:opacity-100"
+          />
+        }
+        onClick={(event) => event.stopPropagation()}
+      >
+        <MoreHorizontalIcon className="text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
+        <span className="sr-only">Worktree actions</span>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
+        <WorktreeRootMenuItems
+          projectId={projectId}
+          orgId={orgId}
+          worktree={worktree}
+          onRefresh={onRefresh}
+          onDone={() => setMenuOpen(false)}
+        />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+export function WorktreeRootMenuItems({
+  projectId,
+  orgId,
+  worktree,
+  onRefresh,
+  onDone,
+}: WorktreeRootMenuItemsProps) {
+  const qc = useQueryClient();
   const [confirming, setConfirming] = useState(false);
   const deleteMutation = useMutation({
     mutationFn: () => deleteRepositoryWorktree(orgId, projectId, worktree.id),
@@ -69,77 +106,52 @@ export function WorktreeRootMenu({
       toast.add({ title: 'Could not copy' });
     }
   };
+  if (confirming) {
+    return (
+      <DropdownMenuGroup>
+        <DropdownMenuItem
+          variant="destructive"
+          data-testid={`worktree-delete-confirm-${worktree.id}`}
+          disabled={deleteMutation.isPending}
+          onClick={() => {
+            deleteMutation.mutate();
+            setConfirming(false);
+            onDone?.();
+          }}
+        >
+          <TrashIcon className="size-3.5" />
+          Confirm delete
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setConfirming(false)}>Cancel</DropdownMenuItem>
+      </DropdownMenuGroup>
+    );
+  }
   return (
-    <DropdownMenu
-      open={menuOpen}
-      onOpenChange={(next) => {
-        setMenuOpen(next);
-        if (!next) {
-          setConfirming(false);
-        }
-      }}
-    >
-      <DropdownMenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label={`Worktree actions · ${worktree.branch}`}
-            className="opacity-0 group-hover/ws:opacity-100 data-open:opacity-100"
-          />
-        }
-        onClick={(event) => event.stopPropagation()}
+    <>
+      <DropdownMenuGroup>
+        <DropdownMenuItem data-testid={`worktree-refresh-${worktree.id}`} onClick={onRefresh}>
+          <RefreshCwIcon className="size-3.5" />
+          Refresh
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => void revealProjectEntry(projectId, '', worktree.id)}>
+          <ScanSearchIcon className="size-3.5" />
+          Reveal in Finder
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => void copyText(worktree.branch, 'Branch copied')}>
+          <ClipboardIcon className="size-3.5" />
+          Copy branch
+        </DropdownMenuItem>
+      </DropdownMenuGroup>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem
+        variant="destructive"
+        data-testid={`worktree-delete-${worktree.id}`}
+        closeOnClick={false}
+        onClick={() => setConfirming(true)}
       >
-        <MoreHorizontalIcon className="text-sidebar-foreground/50 group-hover/button:text-sidebar-foreground" />
-        <span className="sr-only">Worktree actions</span>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
-        {confirming ? (
-          <DropdownMenuGroup>
-            <DropdownMenuItem
-              variant="destructive"
-              data-testid={`worktree-delete-confirm-${worktree.id}`}
-              disabled={deleteMutation.isPending}
-              onClick={() => {
-                deleteMutation.mutate();
-                setConfirming(false);
-                setMenuOpen(false);
-              }}
-            >
-              <TrashIcon className="size-3.5" />
-              Confirm delete
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setConfirming(false)}>Cancel</DropdownMenuItem>
-          </DropdownMenuGroup>
-        ) : (
-          <>
-            <DropdownMenuGroup>
-              <DropdownMenuItem data-testid={`worktree-refresh-${worktree.id}`} onClick={onRefresh}>
-                <RefreshCwIcon className="size-3.5" />
-                Refresh
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => void revealProjectEntry(projectId, '', worktree.id)}>
-                <ScanSearchIcon className="size-3.5" />
-                Reveal in Finder
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => void copyText(worktree.branch, 'Branch copied')}>
-                <ClipboardIcon className="size-3.5" />
-                Copy branch
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              variant="destructive"
-              data-testid={`worktree-delete-${worktree.id}`}
-              closeOnClick={false}
-              onClick={() => setConfirming(true)}
-            >
-              <TrashIcon className="size-3.5" />
-              Delete worktree…
-            </DropdownMenuItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <TrashIcon className="size-3.5" />
+        Delete worktree...
+      </DropdownMenuItem>
+    </>
   );
 }

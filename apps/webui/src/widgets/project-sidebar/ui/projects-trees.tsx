@@ -267,6 +267,7 @@ export function ProjectsTrees({ projectIds }: { projectIds: string[] }) {
             {open ? (
               <SourceBranches
                 projectId={id}
+                project={project}
                 sourceName={project.name}
                 hasGit={project.hasGit === true}
                 depthOffset={1}
