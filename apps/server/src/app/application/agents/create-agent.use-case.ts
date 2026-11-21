@@ -13,6 +13,7 @@ import {
   stripHookConfig,
   toAgentPublic,
   validateDefaultModeId,
+  validateDefaultRunDirectory,
   validateExecutionProfileId,
 } from './agent.helpers.ts';
 import { validateAgentHooks } from './agent-hooks.validation.ts';
@@ -56,6 +57,7 @@ export class CreateAgentUseCase {
       name,
       modelId,
       defaultModeId,
+      defaultRunDirectory: validateDefaultRunDirectory(request.body.defaultRunDirectory ?? null),
       executionProfileId,
       hooks,
     });
@@ -85,6 +87,7 @@ interface BuildCreateRecordInput {
   name: string;
   modelId: string;
   defaultModeId: string | null;
+  defaultRunDirectory: string | null;
   executionProfileId: string | null;
   hooks: AgentHook[];
 }
@@ -111,6 +114,7 @@ function buildCreateRecord(input: BuildCreateRecordInput): AgentRecord {
     mcpServers: body.mcpServers ?? [],
     enabledPlugins: body.enabledPlugins ?? {},
     defaultModeId: input.defaultModeId,
+    defaultRunDirectory: input.defaultRunDirectory,
     config: withDefaultReactConfig(stripHookConfig(body.config ?? {})),
     hooks: input.hooks,
     createdAt: now,

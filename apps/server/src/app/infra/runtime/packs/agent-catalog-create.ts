@@ -68,6 +68,7 @@ function createAgentFromCatalog(
     level: input.parentId ? 'delegate' : 'top',
     parentId: input.parentId ?? null,
     executionProfileId: null,
+    defaultRunDirectory: null,
     status: 'active',
     sharedSourceIds: [],
     sourceLevels: {},

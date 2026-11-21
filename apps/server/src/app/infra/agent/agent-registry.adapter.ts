@@ -21,6 +21,7 @@ const CONFIG_SKILLS = 'skills';
 const CONFIG_MCP = 'mcpServers';
 const CONFIG_PLUGINS = 'enabledPlugins';
 const CONFIG_DEFAULT_MODE = 'defaultModeId';
+const CONFIG_DEFAULT_RUN_DIRECTORY = 'defaultRunDirectory';
 const CONFIG_HOOKS = 'hooksJson';
 const CONFIG_HOOKS_LEGACY = 'hooks';
 const CONFIG_SHARED_SOURCES = 'sharedSourceIds';
@@ -171,6 +172,7 @@ function packConfig(rec: AgentRecord): Record<string, unknown> {
     [CONFIG_MCP]: rec.mcpServers,
     [CONFIG_PLUGINS]: rec.enabledPlugins,
     [CONFIG_DEFAULT_MODE]: rec.defaultModeId,
+    [CONFIG_DEFAULT_RUN_DIRECTORY]: rec.defaultRunDirectory,
     [CONFIG_HOOKS]: rec.hooks,
     [CONFIG_SHARED_SOURCES]: rec.sharedSourceIds,
     [CONFIG_SOURCE_LEVELS]: rec.sourceLevels,
@@ -193,6 +195,7 @@ function toRecord(row: AgentRow): AgentRecord {
     CONFIG_MCP,
     CONFIG_PLUGINS,
     CONFIG_DEFAULT_MODE,
+    CONFIG_DEFAULT_RUN_DIRECTORY,
     CONFIG_HOOKS,
     CONFIG_HOOKS_LEGACY,
     CONFIG_SHARED_SOURCES,
@@ -218,6 +221,7 @@ function toRecord(row: AgentRow): AgentRecord {
     mcpServers,
     enabledPlugins,
     defaultModeId,
+    defaultRunDirectory: parseNullableString(packed[CONFIG_DEFAULT_RUN_DIRECTORY]),
     config,
     hooks,
     createdAt: row.createdAt,

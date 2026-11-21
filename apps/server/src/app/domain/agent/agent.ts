@@ -19,6 +19,7 @@ export interface AgentRecord {
   mcpServers: string[];
   enabledPlugins: Record<string, boolean>;
   defaultModeId: string | null;
+  defaultRunDirectory: string | null;
   config: Record<string, unknown>;
   hooks: AgentHook[];
   createdAt: string;
@@ -42,6 +43,7 @@ export type AgentPatch = Partial<{
   mcpServers: string[];
   enabledPlugins: Record<string, boolean>;
   defaultModeId: string | null;
+  defaultRunDirectory: string | null;
   config: Record<string, unknown>;
   hooks: AgentHook[];
 }>;

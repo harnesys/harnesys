@@ -13,6 +13,7 @@ import {
   stripHookConfig,
   toAgentPublic,
   validateDefaultModeId,
+  validateDefaultRunDirectory,
   validateExecutionProfileId,
 } from './agent.helpers.ts';
 import { validateAgentHooks } from './agent-hooks.validation.ts';
@@ -85,6 +86,9 @@ function buildUpdatePatch(
       request.orgId,
       body.executionProfileId,
     );
+  }
+  if (body.defaultRunDirectory !== undefined) {
+    patch.defaultRunDirectory = validateDefaultRunDirectory(body.defaultRunDirectory);
   }
   return patch;
 }

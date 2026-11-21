@@ -69,6 +69,7 @@ export const agentFieldsSchema = z.object({
   budgetExtendPercent: optionalPositiveInt,
   budgetSpawnMode: z.enum(['pool', 'inherit']),
   defaultModeId: z.string().nullable(),
+  defaultRunDirectory: z.string().nullable(),
   executionProfileId: z.string().nullable(),
   modes: agentModesSchema,
   permissions: z
@@ -129,6 +130,7 @@ export function emptyAgentFields(): AgentFieldsInput {
     budgetExtendPercent: '',
     budgetSpawnMode: 'pool',
     defaultModeId: null,
+    defaultRunDirectory: null,
     executionProfileId: null,
     modes: [],
     permissions: null,
@@ -147,6 +149,7 @@ export function agentFieldsFrom(agent: {
   budget?: AgentBudget | null;
   budgetUsdDaily?: number | null;
   defaultModeId?: string | null;
+  defaultRunDirectory?: string | null;
   executionProfileId?: string | null;
   modes?: AgentMode[];
   permissions?: PermissionMap | null;
@@ -160,6 +163,7 @@ export function agentFieldsFrom(agent: {
     modelId: agent.modelId,
     effort: agent.effort ?? null,
     defaultModeId: agent.defaultModeId ?? null,
+    defaultRunDirectory: agent.defaultRunDirectory ?? null,
     executionProfileId: agent.executionProfileId ?? null,
     modes: (agent.modes ?? []).map(modeToFields),
     permissions: agent.permissions ?? null,
@@ -221,6 +225,7 @@ export function toAgentDraft(values: AgentFieldsOutput): {
   budget: AgentBudget | null;
   budgetUsdDaily: number | null;
   defaultModeId: string | null;
+  defaultRunDirectory: string | null;
   executionProfileId: string | null;
   modes: AgentMode[];
   permissions: PermissionMap | null;
@@ -261,6 +266,7 @@ export function toAgentDraft(values: AgentFieldsOutput): {
     modelId: values.modelId,
     effort: values.effort,
     defaultModeId: values.defaultModeId,
+    defaultRunDirectory: values.defaultRunDirectory,
     executionProfileId: values.executionProfileId,
     modes: values.modes.map(fieldsToMode),
     generation,

@@ -38,6 +38,7 @@ export function agentDraftFromPreset(preset: AgentPresetRecord): Agent {
     hooks: [],
     enabledPlugins: {},
     defaultModeId: null,
+    defaultRunDirectory: null,
     executionProfileId: null,
     modes: [],
     createdAt: '',

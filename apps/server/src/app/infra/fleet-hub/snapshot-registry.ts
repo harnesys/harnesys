@@ -39,6 +39,7 @@ export function agentRecordFromSnapshot(agent: AgentSnapshot): AgentRecord {
     level: agent.level,
     parentId: agent.parentId,
     executionProfileId: agent.executionProfileId,
+    defaultRunDirectory: agent.defaultRunDirectory,
     status: agent.status,
     sharedSourceIds: agent.sharedSourceIds,
     sourceLevels: agent.sourceLevels ?? {},

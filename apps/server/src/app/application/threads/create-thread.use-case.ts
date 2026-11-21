@@ -76,7 +76,7 @@ export class CreateThreadUseCase {
         ...(request.body.color !== undefined ? { color: request.body.color } : {}),
       },
       runProfileId: null,
-      runDirectory: null,
+      runDirectory: agent.defaultRunDirectory ?? null,
       createdAt: now,
       updatedAt: now,
       lastReadAt: now,

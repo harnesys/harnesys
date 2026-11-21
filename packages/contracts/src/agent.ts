@@ -32,6 +32,7 @@ export const AgentPublicSchema = z.object({
   mcpServers: z.array(z.string()),
   enabledPlugins: z.record(z.string(), z.boolean()),
   defaultModeId: z.string().nullable(),
+  defaultRunDirectory: z.string().nullable(),
   config: z.record(z.string(), z.unknown()).optional(),
   hooks: AgentHooksSchema.default([]),
   createdAt: z.string().min(1),
@@ -61,6 +62,7 @@ export const CreateAgentBodySchema = z.object({
   mcpServers: z.array(z.string()).optional(),
   enabledPlugins: z.record(z.string(), z.boolean()).optional(),
   defaultModeId: z.string().nullable().optional(),
+  defaultRunDirectory: z.string().nullable().optional(),
   config: z.record(z.string(), z.unknown()).optional(),
   hooks: AgentHooksSchema.optional(),
 });

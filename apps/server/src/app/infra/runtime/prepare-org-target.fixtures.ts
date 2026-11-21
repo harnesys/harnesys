@@ -212,6 +212,7 @@ export function agentRecord(sharedSourceIds: string[] = []): AgentRecord {
     mcpServers: [],
     enabledPlugins: {},
     defaultModeId: 'plan',
+  defaultRunDirectory: null,
     config: { permissionsJson: { 'fs.write': 'allow', process: 'allow' } },
     hooks: [],
     createdAt: now,

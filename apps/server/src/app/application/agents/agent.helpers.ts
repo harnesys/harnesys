@@ -28,6 +28,7 @@ export function toAgentPublic(record: AgentRecord): AgentPublic {
     mcpServers: record.mcpServers,
     enabledPlugins: record.enabledPlugins,
     defaultModeId: record.defaultModeId,
+    defaultRunDirectory: record.defaultRunDirectory,
     hooks: record.hooks,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
@@ -90,6 +91,18 @@ export function validateExecutionProfileId(
     throw new AgentValidationException(`unknown executionProfileId: ${executionProfileId}`);
   }
   return executionProfileId;
+}
+
+export function validateDefaultRunDirectory(defaultRunDirectory: string | null): string | null {
+  if (defaultRunDirectory === null) {
+    return null;
+  }
+  if (!defaultRunDirectory.startsWith('/')) {
+    throw new AgentValidationException(
+      `defaultRunDirectory must be an absolute path: ${defaultRunDirectory}`,
+    );
+  }
+  return defaultRunDirectory;
 }
 
 export function uniqueAgentName(

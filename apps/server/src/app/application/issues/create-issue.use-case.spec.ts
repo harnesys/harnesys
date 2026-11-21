@@ -73,6 +73,7 @@ function agentRecord(): AgentRecord {
     mcpServers: [],
     enabledPlugins: {},
     defaultModeId: null,
+  defaultRunDirectory: null,
     config: {},
     hooks: [],
     createdAt: NOW,

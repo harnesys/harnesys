@@ -37,6 +37,7 @@ export interface Agent {
   hooks: AgentHook[];
   enabledPlugins: Record<string, boolean>;
   defaultModeId: string | null;
+  defaultRunDirectory: string | null;
   executionProfileId: string | null;
   modes: AgentMode[];
   createdAt: string;
@@ -68,6 +69,7 @@ export interface AgentDraft {
   hooks?: AgentHook[];
   enabledPlugins?: Record<string, boolean>;
   defaultModeId?: string | null;
+  defaultRunDirectory?: string | null;
   executionProfileId?: string | null;
   modes?: AgentMode[];
 }
@@ -91,6 +93,7 @@ export type AgentPatch = Partial<
     | 'hooks'
     | 'enabledPlugins'
     | 'defaultModeId'
+    | 'defaultRunDirectory'
     | 'executionProfileId'
     | 'modes'
   >

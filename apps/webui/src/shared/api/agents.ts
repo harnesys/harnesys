@@ -111,6 +111,7 @@ export interface CreateAgentInput {
   hooks?: AgentHook[];
   enabledPlugins?: Record<string, boolean>;
   defaultModeId?: string | null;
+  defaultRunDirectory?: string | null;
   modes?: AgentMode[];
 }
 export interface UpdateAgentInput {
@@ -132,6 +133,7 @@ export interface UpdateAgentInput {
   hooks?: AgentHook[];
   enabledPlugins?: Record<string, boolean>;
   defaultModeId?: string | null;
+  defaultRunDirectory?: string | null;
   modes?: AgentMode[];
 }
 export type AgentPresetCapabilities = Record<string, PackAssignment | null>;

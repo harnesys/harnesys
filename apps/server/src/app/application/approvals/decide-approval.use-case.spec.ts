@@ -58,6 +58,7 @@ function agentRecord(): AgentRecord {
     mcpServers: [],
     enabledPlugins: {},
     defaultModeId: null,
+  defaultRunDirectory: null,
     config: {},
     hooks: [],
     createdAt: new Date(0).toISOString(),
@@ -231,7 +232,9 @@ describe('DecideApprovalUseCase rule persistence', () => {
 
   test('global rule lands org-wide with a default mode', async () => {
     const { useCase, rules, agents, modes } = build();
-    agents.agent = agents.agent ? { ...agents.agent, defaultModeId: 'plan' } : agents.agent;
+    agents.agent = agents.agent
+      ? { ...agents.agent, defaultModeId: 'plan', defaultRunDirectory: null }
+      : agents.agent;
     const result = await useCase.execute({
       orgId: 'org-1',
       approvalId: 'approval-1',

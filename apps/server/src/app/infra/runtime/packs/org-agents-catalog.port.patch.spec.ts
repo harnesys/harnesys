@@ -27,6 +27,7 @@ function agentRecord(parts: Partial<AgentRecord> = {}): AgentRecord {
     mcpServers: [],
     enabledPlugins: {},
     defaultModeId: null,
+    defaultRunDirectory: null,
     config: { graphJson: { nodes: [] } },
     hooks: [],
     createdAt: NOW,

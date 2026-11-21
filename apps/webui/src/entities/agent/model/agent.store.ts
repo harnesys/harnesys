@@ -32,6 +32,10 @@ function patchedAgent(agent: Agent, patch: AgentPatch, name?: string): Agent {
     enabledPlugins:
       patch.enabledPlugins !== undefined ? patch.enabledPlugins : agent.enabledPlugins,
     defaultModeId: patch.defaultModeId !== undefined ? patch.defaultModeId : agent.defaultModeId,
+    defaultRunDirectory:
+      patch.defaultRunDirectory !== undefined
+        ? patch.defaultRunDirectory
+        : agent.defaultRunDirectory,
     modes: patch.modes !== undefined ? patch.modes : agent.modes,
     initials: name ? initialsFromName(name) : agent.initials,
   };
@@ -67,6 +71,7 @@ function draftToAgent(orgId: string, draft: AgentDraft, name: string): Agent {
     hooks: draft.hooks ?? [],
     enabledPlugins: draft.enabledPlugins ?? {},
     defaultModeId: draft.defaultModeId ?? null,
+    defaultRunDirectory: draft.defaultRunDirectory ?? null,
     executionProfileId: draft.executionProfileId ?? null,
     modes: draft.modes ?? [],
     createdAt: now,

@@ -42,6 +42,7 @@ export async function updateAgent(orgId: string, agentId: string, draft: AgentDr
     instructions: draft.instructions,
     modelId: draft.modelId ?? current.modelId ?? undefined,
     defaultModeId: draft.defaultModeId ?? null,
+    defaultRunDirectory: draft.defaultRunDirectory ?? null,
     executionProfileId: draft.executionProfileId ?? null,
     enabledPlugins: draft.enabledPlugins,
     ...(draft.budgetUsdDaily !== undefined ? { budgetUsdDaily: draft.budgetUsdDaily } : {}),

@@ -31,6 +31,7 @@ export async function createAgent(
     parentId: draft.parentId ?? null,
     enabledPlugins: draft.enabledPlugins,
     defaultModeId: draft.defaultModeId ?? null,
+    defaultRunDirectory: draft.defaultRunDirectory ?? null,
     sharedSourceIds: draft.sharedSourceIds ?? [],
     sourceLevels: draft.sourceLevels ?? {},
     ...(Object.keys(config).length > 0 ? { config } : {}),
