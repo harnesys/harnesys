@@ -33,7 +33,7 @@ export function SidebarRow({
   return (
     <div
       className={cn(
-        'group/row relative flex rounded-md pl-2 transition-colors',
+        'group/row relative flex rounded-md pl-1 transition-colors',
         selected
           ? 'bg-sidebar-accent/70 text-sidebar-accent-foreground'
           : 'hover:bg-sidebar-accent/70',

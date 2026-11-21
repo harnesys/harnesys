@@ -1,5 +1,5 @@
 import type { ThreadKind } from '@harnesys/studio-shared';
-import { CalendarClockIcon, EarthIcon, MessageCircle, SquareKanbanIcon } from 'lucide-react';
+import { CalendarClockIcon, EarthIcon, MessagesSquareIcon, SquareKanbanIcon } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { ChannelIcon } from '@/shared/ui/icon';
 
@@ -40,6 +40,6 @@ export function ThreadKindIcon({
     case 'group':
       return <ChannelIcon icon={icon} color={color} className={className} />;
     case 'chat':
-      return <MessageCircle className={cn(className, ink)} aria-hidden />;
+      return <MessagesSquareIcon className={cn(className, ink)} aria-hidden />;
   }
 }
