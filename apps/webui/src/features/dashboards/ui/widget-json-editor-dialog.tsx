@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/dialog';
+import { MonacoBoundary } from '@/shared/ui/monaco-boundary';
 import { useTheme } from '@/shared/ui/theme-provider';
 import { editorThemeName } from '@/widgets/file-pane/model/editor-setup';
 import { defineAppThemes } from '@/widgets/file-pane/ui/monaco-themes';
@@ -86,7 +87,6 @@ export function WidgetJsonEditorDialog({
 }: WidgetJsonEditorDialogProps) {
   const { theme } = useTheme();
   const [raw, setRaw] = useState<string>(() => (initial ? docJson(initial) : defaultDocJson()));
-  // Re-seed the editor whenever the dialog is (re)opened with a different doc.
   const seed = open ? seedKey(initial) : null;
   const [seeded, setSeeded] = useState<string | null>(seed);
   if (seed !== null && seed !== seeded) {
@@ -115,21 +115,25 @@ export function WidgetJsonEditorDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-hidden rounded-lg border">
-          <Editor
-            height="100%"
-            value={raw}
-            language="json"
-            theme={editorThemeName(theme)}
-            options={{
-              minimap: { enabled: false },
-              formatOnPaste: true,
-              formatOnType: true,
-              tabSize: 2,
-            }}
-            loading={<span className="p-3 text-muted-foreground text-xs">Loading editor…</span>}
-            beforeMount={defineAppThemes}
-            onChange={(value) => setRaw(value ?? '')}
-          />
+          <MonacoBoundary
+            fallback={<span className="p-3 text-muted-foreground text-xs">Loading editor...</span>}
+          >
+            <Editor
+              height="100%"
+              value={raw}
+              language="json"
+              theme={editorThemeName(theme)}
+              options={{
+                minimap: { enabled: false },
+                formatOnPaste: true,
+                formatOnType: true,
+                tabSize: 2,
+              }}
+              loading={<span className="p-3 text-muted-foreground text-xs">Loading editor...</span>}
+              beforeMount={defineAppThemes}
+              onChange={(value) => setRaw(value ?? '')}
+            />
+          </MonacoBoundary>
         </div>
         {validation.errors.length > 0 ? (
           <div className="flex max-h-28 flex-col gap-0.5 overflow-y-auto rounded-md bg-destructive/10 px-3 py-2 text-destructive text-xs">

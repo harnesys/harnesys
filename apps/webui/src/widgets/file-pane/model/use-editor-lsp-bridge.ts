@@ -12,7 +12,7 @@ import {
   useLspSessionsStore,
 } from '@/features/lsp-bridge';
 import { getActiveOrgId } from '@/shared/api/active-org';
-import { monaco } from '@/shared/lib/monaco';
+import { ensureMonaco, type Monaco } from '@/shared/lib/monaco';
 import { toModelPath } from './editor-setup';
 
 export function useEditorLspBridge(projectId: string, path: string | null, languageId: string) {
@@ -37,6 +37,8 @@ export function useEditorLspBridge(projectId: string, path: string | null, langu
     let bridge: LspBridge | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     let attempts = 0;
+    let cancelled = false;
+    let monacoNs: Monaco | null = null;
     const report = (next: LspBridgeStatus, message?: string) => {
       setStatus(next);
       useLspSessionsStore.getState().upsert(projectId, {
@@ -47,15 +49,18 @@ export function useEditorLspBridge(projectId: string, path: string | null, langu
       });
     };
     const tryAttach = () => {
+      if (cancelled || !monacoNs) {
+        return;
+      }
       attempts += 1;
       const modelPath = toModelPath(path);
-      if (monaco.editor.getModel(monaco.Uri.parse(modelPath))) {
+      if (monacoNs.editor.getModel(monacoNs.Uri.parse(modelPath))) {
         report('starting');
         bridge = attachLspBridge({
           orgId,
           sourceId: projectId,
           path,
-          monaco,
+          monaco: monacoNs,
           onStatus: report,
           onGap: setGap,
           onActivity: () => setPulse((n) => n + 1),
@@ -66,8 +71,15 @@ export function useEditorLspBridge(projectId: string, path: string | null, langu
         retryTimer = setTimeout(tryAttach, 100);
       }
     };
-    tryAttach();
+    void ensureMonaco().then((ns) => {
+      if (cancelled) {
+        return;
+      }
+      monacoNs = ns;
+      tryAttach();
+    });
     return () => {
+      cancelled = true;
       if (retryTimer) {
         clearTimeout(retryTimer);
       }

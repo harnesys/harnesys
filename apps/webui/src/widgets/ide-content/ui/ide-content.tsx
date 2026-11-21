@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { toClientAgentFromPublic, useAgentStore } from '@/entities/agent';
 import { toClientThread, useThreadStore } from '@/entities/thread';
-import { DashboardSurface } from '@/features/dashboards/ui/dashboard-surface';
 import { useDeskReady } from '@/features/desk';
 import { GitCommitDiffView } from '@/features/git-commit';
 import { type IdeTab, useIdeStore } from '@/features/ide';
@@ -12,21 +11,40 @@ import { HitlPrompt } from '@/features/send-message';
 import { ApiError, getOrgAgent, getThread } from '@/shared/api';
 import { useOrgId } from '@/shared/config/location';
 import { useStudioNavigation } from '@/shared/config/navigation';
+import { Spinner } from '@/shared/ui/spinner';
 import { ChatComposer } from '@/widgets/chat-composer';
 import { SpawnView, ThreadPanel } from '@/widgets/chat-transcript';
 import {
   AddonViewerFrame,
   AttachmentPreview,
   attachmentPreviewKind,
-  DxfPreview,
   MediaPreview,
   TextEditor,
   useAddonViewer,
 } from '@/widgets/file-pane';
-import { TerminalView } from '@/widgets/terminal-pane';
 import { ThreadDock } from '@/widgets/thread-dock';
 import { JournalComposer, ThreadJournal } from '@/widgets/thread-journal';
 import { ThreadFileTabContent } from './thread-file-tab';
+
+const DashboardSurface = lazy(() =>
+  import('@/features/dashboards/ui/dashboard-surface').then((module) => ({
+    default: module.DashboardSurface,
+  })),
+);
+const DxfPreview = lazy(() =>
+  import('@/widgets/file-pane/ui/dxf-preview').then((module) => ({ default: module.DxfPreview })),
+);
+const TerminalView = lazy(() =>
+  import('@/widgets/terminal-pane').then((module) => ({ default: module.TerminalView })),
+);
+
+function SurfaceFallback() {
+  return (
+    <div className="flex min-h-0 flex-1 items-center justify-center text-muted-foreground">
+      <Spinner className="size-5" />
+    </div>
+  );
+}
 
 function isNotFound(error: Error | null): boolean {
   return error instanceof ApiError && error.status === 404;
@@ -164,7 +182,9 @@ function FileTabContent({
         <MediaPreview projectId={projectId} path={path} kind={kind} worktreeId={worktreeId} />
       ) : null}
       {kind === 'dxf' ? (
-        <DxfPreview projectId={projectId} path={path} worktreeId={worktreeId} />
+        <Suspense fallback={<SurfaceFallback />}>
+          <DxfPreview projectId={projectId} path={path} worktreeId={worktreeId} />
+        </Suspense>
       ) : null}
     </div>
   );
@@ -181,7 +201,11 @@ export function IdeTabContent({ tab, projectId }: { tab: IdeTab; projectId: stri
     return <BoardSurface projectId={projectId} boardId={tab.boardId} />;
   }
   if (tab.kind === 'dashboard' && tab.dashboardId) {
-    return <DashboardSurface orgId={orgId} dashboardId={tab.dashboardId} />;
+    return (
+      <Suspense fallback={<SurfaceFallback />}>
+        <DashboardSurface orgId={orgId} dashboardId={tab.dashboardId} />
+      </Suspense>
+    );
   }
   if (tab.kind === 'spawn' && tab.threadId && tab.spawnId) {
     return <SpawnView tab={tab} threadId={tab.threadId} spawnId={tab.spawnId} />;
@@ -227,7 +251,11 @@ export function IdeTabContent({ tab, projectId }: { tab: IdeTab; projectId: stri
     );
   }
   if (tab.kind === 'terminal' && tab.terminalSessionId) {
-    return <TerminalView projectId={projectId} sessionId={tab.terminalSessionId} />;
+    return (
+      <Suspense fallback={<SurfaceFallback />}>
+        <TerminalView projectId={projectId} sessionId={tab.terminalSessionId} />
+      </Suspense>
+    );
   }
   return null;
 }

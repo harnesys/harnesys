@@ -8,7 +8,6 @@ import { markProjectFileDirty } from '@/features/open-file';
 import { ApiError } from '@/shared/api';
 import { readProjectFileText, sourceFileContentQueryKey } from '@/shared/api/files';
 import { useEditorPreferences } from '@/shared/lib/editor-preferences';
-import '@/shared/lib/monaco';
 import { detectLanguage } from '@/shared/lib/tool-code';
 import { useTheme } from '@/shared/ui/theme-provider';
 import { takePendingReveal } from '../model/definition-reveal';
@@ -260,7 +259,7 @@ export function TextEditor({
   }, []);
   const handleBeforeMount = (monaco: Parameters<OnMount>[1]) => {
     defineAppThemes(monaco);
-    ensureJsxTagSemanticTokens(monaco);
+    void ensureJsxTagSemanticTokens(monaco);
     ensureMonacoImportLinkProviders(monaco);
   };
   const handleMount: OnMount = (editor, monaco) => {
@@ -294,7 +293,7 @@ export function TextEditor({
     };
     editor.updateOptions({});
     defineAppThemes(monaco);
-    ensureJsxTagSemanticTokens(monaco);
+    void ensureJsxTagSemanticTokens(monaco);
     monaco.editor.setTheme(editorThemeName(theme));
   };
   const options = createEditorOptions(prefs);

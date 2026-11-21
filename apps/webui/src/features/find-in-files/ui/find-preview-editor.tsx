@@ -3,8 +3,8 @@ import type { editor } from 'monaco-editor';
 import { useEffect, useRef } from 'react';
 import type { ContentSearchFile, ContentSearchMatch } from '@/shared/api/content-search';
 import { useEditorPreferences } from '@/shared/lib/editor-preferences';
-import '@/shared/lib/monaco';
 import { detectLanguage } from '@/shared/lib/tool-code';
+import { MonacoBoundary } from '@/shared/ui/monaco-boundary';
 import { useTheme } from '@/shared/ui/theme-provider';
 import { createEditorOptions, editorThemeName } from '@/widgets/file-pane/model/editor-setup';
 import { defineAppThemes } from '@/widgets/file-pane/ui/monaco-themes';
@@ -46,36 +46,38 @@ export function FindPreviewEditor({ file, match, content }: FindPreviewEditorPro
   }, [content, file, match]);
   const language = detectLanguage(file.path) ?? 'plaintext';
   return (
-    <Editor
-      key={`${file.sourceId}:${file.path}`}
-      height="100%"
-      language={language}
-      theme={editorThemeName(theme)}
-      value={content}
-      loading={null}
-      beforeMount={handleBeforeMount}
-      onMount={handleMount}
-      options={{
-        ...createEditorOptions(prefs),
-        readOnly: true,
-        domReadOnly: true,
-        folding: false,
-        glyphMargin: false,
-        minimap: { enabled: false },
-        stickyScroll: { enabled: false },
-        renderLineHighlight: 'none',
-        selectionHighlight: false,
-        occurrencesHighlight: 'off',
-        overviewRulerLanes: 0,
-        hideCursorInOverviewRuler: true,
-        contextmenu: false,
-        links: false,
-        cursorBlinking: 'solid',
-        lineDecorationsWidth: 4,
-        lineNumbersMinChars: 3,
-        padding: { top: 4, bottom: 4 },
-      }}
-    />
+    <MonacoBoundary>
+      <Editor
+        key={`${file.sourceId}:${file.path}`}
+        height="100%"
+        language={language}
+        theme={editorThemeName(theme)}
+        value={content}
+        loading={null}
+        beforeMount={handleBeforeMount}
+        onMount={handleMount}
+        options={{
+          ...createEditorOptions(prefs),
+          readOnly: true,
+          domReadOnly: true,
+          folding: false,
+          glyphMargin: false,
+          minimap: { enabled: false },
+          stickyScroll: { enabled: false },
+          renderLineHighlight: 'none',
+          selectionHighlight: false,
+          occurrencesHighlight: 'off',
+          overviewRulerLanes: 0,
+          hideCursorInOverviewRuler: true,
+          contextmenu: false,
+          links: false,
+          cursorBlinking: 'solid',
+          lineDecorationsWidth: 4,
+          lineNumbersMinChars: 3,
+          padding: { top: 4, bottom: 4 },
+        }}
+      />
+    </MonacoBoundary>
   );
 }
 

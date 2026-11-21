@@ -1,39 +1,83 @@
-import type { ReactNode } from 'react';
+import { lazy, type ReactNode, Suspense } from 'react';
 import { Navigate, Outlet, type RouteObject, useParams } from 'react-router';
 import { DeskSync, OrgDeskSync } from '@/features/desk';
-import { AddonDetailPage } from '@/features/manage-addons/addon-detail-page';
-import { AppProviderPage } from '@/features/manage-apps/ui/provider-page';
-import { WorkerRelayPage } from '@/features/relay-link';
 import { OrgBootstrap } from '@/features/switch-org/org-bootstrap';
 import { useOrgStore } from '@/features/switch-org/org-context';
 import { OrgScopeSync } from '@/features/switch-org/org-scope-sync';
 import { OrgTimeZoneProvider } from '@/features/switch-org/org-time-zone';
-import { AcceptInvitePage } from '@/pages/accept-invite';
-import { InboxPage } from '@/pages/inbox';
-import {
-  OnboardingChoosePage,
-  OnboardingCreatePage,
-  OnboardingJoinPage,
-  OnboardingModelsPage,
-  OnboardingPresetsPage,
-  OnboardingProviderPage,
-} from '@/pages/onboarding';
 import { ProjectPage } from '@/pages/project';
-import { ScrollProbePage } from '@/pages/scroll-probe';
-import { SettingsPage } from '@/pages/settings/settings-page';
-import { SignInPage } from '@/pages/sign-in';
-import { SignUpPage } from '@/pages/sign-up';
 import { useOrgId } from '@/shared/config/location';
 import { studioPath } from '@/shared/config/routes';
 import { OverlayProvider } from '@/shared/services/overlay';
+import { Spinner } from '@/shared/ui/spinner';
 import { AssistantChat } from '@/widgets/assistant-chat';
+
+const AcceptInvitePage = lazy(() =>
+  import('@/pages/accept-invite').then((module) => ({ default: module.AcceptInvitePage })),
+);
+const InboxPage = lazy(() =>
+  import('@/pages/inbox').then((module) => ({ default: module.InboxPage })),
+);
+const OnboardingChoosePage = lazy(() =>
+  import('@/pages/onboarding').then((module) => ({ default: module.OnboardingChoosePage })),
+);
+const OnboardingCreatePage = lazy(() =>
+  import('@/pages/onboarding').then((module) => ({ default: module.OnboardingCreatePage })),
+);
+const OnboardingJoinPage = lazy(() =>
+  import('@/pages/onboarding').then((module) => ({ default: module.OnboardingJoinPage })),
+);
+const OnboardingModelsPage = lazy(() =>
+  import('@/pages/onboarding').then((module) => ({ default: module.OnboardingModelsPage })),
+);
+const OnboardingPresetsPage = lazy(() =>
+  import('@/pages/onboarding').then((module) => ({ default: module.OnboardingPresetsPage })),
+);
+const OnboardingProviderPage = lazy(() =>
+  import('@/pages/onboarding').then((module) => ({ default: module.OnboardingProviderPage })),
+);
+const ScrollProbePage = lazy(() =>
+  import('@/pages/scroll-probe').then((module) => ({ default: module.ScrollProbePage })),
+);
+const SettingsPage = lazy(() =>
+  import('@/pages/settings/settings-page').then((module) => ({ default: module.SettingsPage })),
+);
+const SignInPage = lazy(() =>
+  import('@/pages/sign-in').then((module) => ({ default: module.SignInPage })),
+);
+const SignUpPage = lazy(() =>
+  import('@/pages/sign-up').then((module) => ({ default: module.SignUpPage })),
+);
+const AddonDetailPage = lazy(() =>
+  import('@/features/manage-addons/addon-detail-page').then((module) => ({
+    default: module.AddonDetailPage,
+  })),
+);
+const AppProviderPage = lazy(() =>
+  import('@/features/manage-apps/ui/provider-page').then((module) => ({
+    default: module.AppProviderPage,
+  })),
+);
+const WorkerRelayPage = lazy(() =>
+  import('@/features/relay-link').then((module) => ({ default: module.WorkerRelayPage })),
+);
+
+function RouteFallback() {
+  return (
+    <div className="flex h-dvh w-full items-center justify-center text-muted-foreground">
+      <Spinner className="size-5" />
+    </div>
+  );
+}
 
 function AppFrame() {
   const orgId = useOrgId();
   return (
     <OrgTimeZoneProvider orgId={orgId}>
       <OverlayProvider />
-      <Outlet />
+      <Suspense fallback={<RouteFallback />}>
+        <Outlet />
+      </Suspense>
     </OrgTimeZoneProvider>
   );
 }

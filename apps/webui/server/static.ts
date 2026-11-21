@@ -1,5 +1,6 @@
 import { statSync } from 'node:fs';
 import { extname, join, normalize, resolve, sep } from 'node:path';
+import { compressFile, isCompressible, pickEncoding } from './static-compression.ts';
 
 const MIME: Record<string, string> = {
   '.css': 'text/css; charset=utf-8',
@@ -31,7 +32,7 @@ function mimeTypeOf(path: string): string {
   return MIME[extname(path).toLowerCase()] ?? 'application/octet-stream';
 }
 
-export type StaticHandler = (pathname: string) => Promise<Response>;
+export type StaticHandler = (pathname: string, acceptEncoding: string | null) => Promise<Response>;
 
 function cacheControlOf(target: string, root: string): string {
   const assetsDir = join(root, 'assets') + sep;
@@ -40,7 +41,7 @@ function cacheControlOf(target: string, root: string): string {
 
 export function createStaticHandler(staticDir: string): StaticHandler {
   const root = resolve(staticDir);
-  return async (pathname: string) => {
+  return async (pathname, acceptEncoding) => {
     let relative: string;
     try {
       relative = decodeURIComponent(pathname);
@@ -55,21 +56,32 @@ export function createStaticHandler(staticDir: string): StaticHandler {
     if (statSync(target, { throwIfNoEntry: false })?.isDirectory()) {
       target = join(target, 'index.html');
     }
-    if (!(await Bun.file(target).exists())) {
+    let stats = statSync(target, { throwIfNoEntry: false });
+    if (!stats?.isFile()) {
       if (extname(relative) !== '') {
         return notFound();
       }
       target = join(root, 'index.html');
-      if (!(await Bun.file(target).exists())) {
+      stats = statSync(target, { throwIfNoEntry: false });
+      if (!stats?.isFile()) {
         return notFound();
       }
     }
-    return new Response(Bun.file(target), {
-      headers: {
-        ...SECURITY_HEADERS,
-        'content-type': mimeTypeOf(target),
-        'cache-control': cacheControlOf(target, root),
-      },
+    const headers = {
+      ...SECURITY_HEADERS,
+      'content-type': mimeTypeOf(target),
+      'cache-control': cacheControlOf(target, root),
+    };
+    if (!isCompressible(target, stats.size)) {
+      return new Response(Bun.file(target), { headers });
+    }
+    const encoding = pickEncoding(acceptEncoding);
+    const compressed = encoding ? await compressFile(target, stats.mtimeMs, encoding) : null;
+    if (!encoding || !compressed) {
+      return new Response(Bun.file(target), { headers: { ...headers, vary: 'accept-encoding' } });
+    }
+    return new Response(compressed, {
+      headers: { ...headers, 'content-encoding': encoding, vary: 'accept-encoding' },
     });
   };
 }

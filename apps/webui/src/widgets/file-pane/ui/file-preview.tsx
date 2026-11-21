@@ -3,6 +3,7 @@ import { DownloadIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { detectLanguage } from '@/shared/lib/tool-code';
 import { FileTypeIcon } from '@/shared/ui/icons';
+import { MonacoBoundary } from '@/shared/ui/monaco-boundary';
 import { Spinner } from '@/shared/ui/spinner';
 import { useTheme } from '@/shared/ui/theme-provider';
 import { DocumentPreview } from '@/widgets/ide-content/ui/document-preview';
@@ -10,7 +11,6 @@ import { PreviewHint } from '@/widgets/ide-content/ui/preview-hint';
 import { editorThemeName } from '../model/editor-setup';
 import { ImageViewer } from './image-viewer';
 import { defineAppThemes } from './monaco-themes';
-import '@/shared/lib/monaco';
 
 export type FilePreviewKind =
   | 'image'
@@ -113,15 +113,23 @@ function TextBlobPreview({ url, name }: { url: string; name: string }) {
     );
   }
   return (
-    <Editor
-      height="100%"
-      value={text}
-      language={detectLanguage(name) ?? 'plaintext'}
-      theme={editorThemeName(theme)}
-      options={{ readOnly: true, minimap: { enabled: false } }}
-      loading={<Spinner className="size-5 text-muted-foreground" />}
-      beforeMount={defineAppThemes}
-    />
+    <MonacoBoundary
+      fallback={
+        <div className="flex flex-1 items-center justify-center text-muted-foreground">
+          <Spinner className="size-5" />
+        </div>
+      }
+    >
+      <Editor
+        height="100%"
+        value={text}
+        language={detectLanguage(name) ?? 'plaintext'}
+        theme={editorThemeName(theme)}
+        options={{ readOnly: true, minimap: { enabled: false } }}
+        loading={<Spinner className="size-5 text-muted-foreground" />}
+        beforeMount={defineAppThemes}
+      />
+    </MonacoBoundary>
   );
 }
 

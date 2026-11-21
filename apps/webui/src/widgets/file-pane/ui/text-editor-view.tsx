@@ -1,6 +1,7 @@
 import Editor, { type OnMount } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import type { LspBridgeStatus, LspGap } from '@/features/lsp-bridge';
+import { MonacoBoundary } from '@/shared/ui/monaco-boundary';
 import type { MarkdownEditorMode } from '../model/use-markdown-editor-mode';
 import { type EditorCursor, EditorStatusBar } from './editor-status-bar';
 import { MarkdownFilePreview } from './markdown-file-preview';
@@ -64,18 +65,20 @@ export function TextEditorView({
         {markdownMode === 'view' ? (
           <MarkdownFilePreview text={value} />
         ) : (
-          <Editor
-            height="100%"
-            path={toModelPath(path)}
-            language={language}
-            theme={theme}
-            value={value}
-            loading={null}
-            beforeMount={beforeMount}
-            onMount={onMount}
-            onChange={(next) => onChange(next ?? '')}
-            options={options}
-          />
+          <MonacoBoundary>
+            <Editor
+              height="100%"
+              path={toModelPath(path)}
+              language={language}
+              theme={theme}
+              value={value}
+              loading={null}
+              beforeMount={beforeMount}
+              onMount={onMount}
+              onChange={(next) => onChange(next ?? '')}
+              options={options}
+            />
+          </MonacoBoundary>
         )}
       </div>
       <EditorStatusBar

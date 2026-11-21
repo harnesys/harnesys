@@ -1,6 +1,13 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { PanelRightIcon } from 'lucide-react';
-import { type CSSProperties, type MouseEvent as ReactMouseEvent, useEffect, useRef } from 'react';
+import {
+  type CSSProperties,
+  lazy,
+  type MouseEvent as ReactMouseEvent,
+  Suspense,
+  useEffect,
+  useRef,
+} from 'react';
 import { Navigate, useParams } from 'react-router';
 import { DESK_QUERY_KEY, useDeskStore } from '@/features/desk';
 import { type IdeTab, useIdeSync, useIdeTabs } from '@/features/ide';
@@ -13,13 +20,18 @@ import { Button } from '@/shared/ui/button';
 import { Resizer } from '@/shared/ui/resizer';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/shared/ui/sidebar';
 import { AgentInspector } from '@/widgets/agent-inspector';
-import { DashboardInspector } from '@/widgets/dashboard-inspector';
 import { FileInspector } from '@/widgets/file-inspector';
 import { IdeHome } from '@/widgets/ide-home';
 import { ProjectSidebar } from '@/widgets/project-sidebar';
 import { useInspectorWidth } from '../model/inspector-width';
 import { useSidebarWidth } from '../model/sidebar-width';
 import { IdeLayoutView } from './ide-layout-view';
+
+const DashboardInspector = lazy(() =>
+  import('@/widgets/dashboard-inspector').then((module) => ({
+    default: module.DashboardInspector,
+  })),
+);
 export function ProjectPage() {
   const { width: sidebarWidth, dragging: sidebarDragging, onResizeStart } = useSidebarWidth();
   return (
@@ -43,7 +55,9 @@ function InspectorFallback({
 }): React.ReactNode {
   if (activeTab.kind === 'dashboard' && orgId) {
     return (
-      <DashboardInspector width={width} orgId={orgId} dashboardId={activeTab.dashboardId ?? ''} />
+      <Suspense fallback={null}>
+        <DashboardInspector width={width} orgId={orgId} dashboardId={activeTab.dashboardId ?? ''} />
+      </Suspense>
     );
   }
   return <AgentInspector width={width} />;

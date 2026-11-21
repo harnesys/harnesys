@@ -8,6 +8,8 @@ export function createApp(config: WebConfig): Hono {
   const serveStatic = createStaticHandler(config.staticDir);
   app.get('/healthz', (c) => c.json({ ok: true }));
   app.all('/api/*', (c) => proxyApiRequest(c, config));
-  app.get('*', async (c) => serveStatic(new URL(c.req.url).pathname));
+  app.get('*', async (c) =>
+    serveStatic(new URL(c.req.url).pathname, c.req.header('accept-encoding') ?? null),
+  );
   return app;
 }

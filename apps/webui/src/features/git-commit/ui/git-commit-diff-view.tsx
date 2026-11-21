@@ -1,9 +1,8 @@
-import { loader } from '@monaco-editor/react';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2Icon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getGitDiff, gitDiffQueryKey } from '@/shared/api/git';
-import '@/shared/lib/monaco';
+import { ensureMonaco } from '@/shared/lib/monaco';
 import { detectLanguage } from '@/shared/lib/tool-code';
 import { useTheme } from '@/shared/ui/theme-provider';
 import {
@@ -157,7 +156,7 @@ function MonacoDiffEditor({
   );
   useEffect(() => {
     if (!monacoPromise) {
-      monacoPromise = loader.init();
+      monacoPromise = ensureMonaco();
     }
     monacoPromise
       .then((monaco) => {

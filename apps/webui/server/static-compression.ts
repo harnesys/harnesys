@@ -1,6 +1,6 @@
-import { brotliCompress, constants, gzip } from 'node:zlib';
-import { promisify } from 'node:util';
 import { extname } from 'node:path';
+import { promisify } from 'node:util';
+import { brotliCompress, constants, gzip } from 'node:zlib';
 
 const brotliAsync = promisify(brotliCompress);
 const gzipAsync = promisify(gzip);
@@ -101,9 +101,7 @@ export async function compressFile(
   const raw = new Uint8Array(await Bun.file(path).arrayBuffer());
   const compressed =
     encoding === 'br'
-      ? new Uint8Array(
-          await brotliAsync(raw, { params: { [constants.BROTLI_PARAM_QUALITY]: 5 } }),
-        )
+      ? new Uint8Array(await brotliAsync(raw, { params: { [constants.BROTLI_PARAM_QUALITY]: 5 } }))
       : new Uint8Array(await gzipAsync(raw, { level: 6 }));
   if (compressed.byteLength >= raw.byteLength) {
     return null;

@@ -1,6 +1,4 @@
 import type * as monacoNs from 'monaco-editor';
-import { StandaloneServices } from 'monaco-editor/editor/standalone/browser/standaloneServices.js';
-import { IConfigurationService } from 'monaco-editor/platform/configuration/common/configuration.js';
 
 type Monaco = typeof monacoNs;
 interface LineSpan {
@@ -67,11 +65,15 @@ function collectLineSpans(text: string, tail: string): LineSpan[] {
   }
   return spans;
 }
-export function ensureJsxTagSemanticTokens(monaco: Monaco) {
+export async function ensureJsxTagSemanticTokens(monaco: Monaco): Promise<void> {
   if (registered) {
     return;
   }
   registered = true;
+  const [{ StandaloneServices }, { IConfigurationService }] = await Promise.all([
+    import('monaco-editor/editor/standalone/browser/standaloneServices.js'),
+    import('monaco-editor/platform/configuration/common/configuration.js'),
+  ]);
   const configuration = StandaloneServices.get(IConfigurationService);
   configuration.updateValues([['editor.semanticHighlighting.enabled', true]]);
   for (const languageId of ['typescript', 'javascript'] as const) {

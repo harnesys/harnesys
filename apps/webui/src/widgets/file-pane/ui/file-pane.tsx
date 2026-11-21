@@ -1,11 +1,16 @@
+import { lazy, Suspense } from 'react';
 import { openFileKind, useProjectOpenFiles } from '@/features/open-file';
 import { getActiveOrgId } from '@/shared/api/active-org';
 import { studioFocusProjectId, useStudioLocation } from '@/shared/config/location';
+import { Spinner } from '@/shared/ui/spinner';
 import { useAddonViewer } from '../model/use-addon-viewer';
 import { AddonViewerFrame } from './addon-viewer-frame';
-import { DxfPreview } from './dxf-preview';
 import { MediaPreview } from './media-preview';
 import { TextEditor } from './text-editor';
+
+const DxfPreview = lazy(() =>
+  import('./dxf-preview').then((module) => ({ default: module.DxfPreview })),
+);
 
 export function FilePane() {
   const projectId = studioFocusProjectId(useStudioLocation().focus);
@@ -38,7 +43,17 @@ export function FilePane() {
       {kind === 'image' || kind === 'pdf' ? (
         <MediaPreview projectId={projectId} path={active.path} kind={kind} />
       ) : null}
-      {kind === 'dxf' ? <DxfPreview projectId={projectId} path={active.path} /> : null}
+      {kind === 'dxf' ? (
+        <Suspense
+          fallback={
+            <div className="flex flex-1 items-center justify-center text-muted-foreground">
+              <Spinner className="size-5" />
+            </div>
+          }
+        >
+          <DxfPreview projectId={projectId} path={active.path} />
+        </Suspense>
+      ) : null}
     </section>
   );
 }
