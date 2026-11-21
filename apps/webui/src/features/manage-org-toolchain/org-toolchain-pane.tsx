@@ -179,7 +179,7 @@ export function OrgToolchainPane({ orgId }: { orgId: string }) {
 
         <SettingsField
           label="Shell"
-          description="Login shell used to probe PATH in auto mode."
+          description="Login shell used to probe PATH and to start interactive terminals."
           htmlFor="toolchain-shell"
         >
           <Select

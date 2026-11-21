@@ -1,7 +1,12 @@
 import { Injectable } from '@harnesys/brix';
 import type { TerminalSessionRecord } from '@harnesys/studio-shared';
 import type { ProcessJobRegistry } from 'harnesys';
-import { createProcessJobRegistry, type ProcessJobRecord, sweepSshSockets } from 'harnesys';
+import {
+  createProcessJobRegistry,
+  defaultShell,
+  type ProcessJobRecord,
+  sweepSshSockets,
+} from 'harnesys';
 import { TerminalNameConflictException } from '../../domain/terminal/terminal.error.ts';
 import { TerminalEventsPort } from '../../domain/terminal/terminal-events.port.ts';
 import {
@@ -12,6 +17,7 @@ import {
   type TerminalScrollback,
   TerminalSessionsPort,
 } from '../../domain/terminal/terminal-session.port.ts';
+import { ToolchainPort } from '../../domain/toolchain/toolchain.port.ts';
 
 interface SessionMeta {
   projectId: string;
@@ -57,7 +63,10 @@ export class TerminalSessionsAdapter extends TerminalSessionsPort {
   private readonly titleIndexByProject = new Map<string, number>();
   private readonly exitWatched = new Set<string>();
 
-  constructor(private readonly events: TerminalEventsPort) {
+  constructor(
+    private readonly events: TerminalEventsPort,
+    private readonly toolchain: ToolchainPort,
+  ) {
     super();
     this.jobs = createProcessJobRegistry();
     this.sweepSshSockets();
@@ -104,13 +113,15 @@ export class TerminalSessionsAdapter extends TerminalSessionsPort {
     const titleIndex = (this.titleIndexByProject.get(input.projectId) ?? 0) + 1;
     this.titleIndexByProject.set(input.projectId, titleIndex);
     const title = titleIndex === 1 ? 'Terminal' : `Terminal ${titleIndex}`;
+    const resolution = input.orgId === undefined ? undefined : this.toolchain.resolve(input.orgId);
     const job = this.jobs.start({
       cwd: input.cwd,
       mode: 'pty',
-      command: process.env.SHELL ?? '/bin/zsh',
+      command: input.shell ?? resolution?.shell ?? defaultShell(),
       title,
       origin: 'user',
       ...(input.orgId === undefined ? {} : { orgId: input.orgId }),
+      ...(resolution === undefined ? {} : { env: { PATH: resolution.pathEnv } }),
     });
     const meta: SessionMeta = { projectId: input.projectId, orgId: input.orgId ?? '' };
     this.metaBySession.set(job.id, meta);

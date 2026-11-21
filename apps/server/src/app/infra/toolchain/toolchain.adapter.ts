@@ -2,6 +2,7 @@ import { homedir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import { Injectable } from '@harnesys/brix';
 import type { ToolchainDiscovery, ToolchainMode, ToolchainNodeVersion } from '@harnesys/contracts';
+import { defaultShell } from 'harnesys';
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
 import { ToolchainPort, type ToolchainResolution } from '../../domain/toolchain/toolchain.port.ts';
 import { isExecutable, loginShellPath, splitPathEnv } from './effective-path.ts';
@@ -93,11 +94,21 @@ export class ToolchainAdapter extends ToolchainPort {
       overrideDirs: overrideDirs(overrides),
       home,
     });
+    const shell = this.resolvedShell(settings, home);
     return {
       pathEnv: dirs.join(delimiter),
       dirs,
       ...(nodeBin !== undefined ? { nodeBin } : {}),
+      shell,
     };
+  }
+
+  private resolvedShell(settings: { mode: ToolchainMode; shell: string }, home: string): string {
+    const candidate = resolveShellPath(settings.shell, home, process.env.SHELL, detectedShells());
+    if (candidate !== undefined && isExecutable(candidate)) {
+      return candidate;
+    }
+    return defaultShell();
   }
 
   private probedDirs(settings: { mode: ToolchainMode; shell: string }, home: string): string[] {

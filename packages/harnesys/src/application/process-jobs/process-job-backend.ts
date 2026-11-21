@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import type { ProcessJobRecord, ProcessJobStartInput } from '../../domain/process-job.ts';
 export interface ProcessSpawnBackendStartInput extends ProcessJobStartInput {
   record: ProcessJobRecord;
@@ -8,12 +9,18 @@ export interface ProcessSpawnBackend {
   start(input: ProcessSpawnBackendStartInput): Bun.Subprocess;
   kill(record: ProcessJobRecord, proc: Bun.Subprocess): void;
 }
-function defaultShell(): string {
+const UNIX_SHELL_CANDIDATES = ['/bin/zsh', '/usr/bin/zsh', '/bin/bash', '/usr/bin/bash', '/bin/sh'];
+
+export function defaultShell(): string {
+  if (process.platform === 'win32') {
+    const fromEnv = process.env.SHELL?.trim() ?? process.env.COMSPEC?.trim();
+    return fromEnv && existsSync(fromEnv) ? fromEnv : 'powershell.exe';
+  }
   const fromEnv = process.env.SHELL?.trim();
-  if (fromEnv) {
+  if (fromEnv && existsSync(fromEnv)) {
     return fromEnv;
   }
-  return process.platform === 'win32' ? 'powershell.exe' : '/bin/zsh';
+  return UNIX_SHELL_CANDIDATES.find((candidate) => existsSync(candidate)) ?? 'sh';
 }
 function killProcessGroup(pid: number): void {
   try {

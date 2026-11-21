@@ -1,11 +1,13 @@
 import { Module } from '@harnesys/brix';
 import { TerminalEventsPort } from '../../domain/terminal/terminal-events.port.ts';
 import { TerminalSessionsPort } from '../../domain/terminal/terminal-session.port.ts';
+import { ToolchainModule } from '../toolchain/toolchain.module.ts';
 import { TerminalEventsAdapter } from './terminal-events.adapter.ts';
 import { TerminalSessionsAdapter } from './terminal-sessions.adapter.ts';
 
 @Module({
   global: true,
+  imports: [ToolchainModule],
   providers: [
     { provide: TerminalSessionsPort, useClass: TerminalSessionsAdapter },
     { provide: TerminalEventsPort, useClass: TerminalEventsAdapter },

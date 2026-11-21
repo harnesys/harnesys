@@ -9,6 +9,7 @@ export interface CreateTerminalSessionInput {
   projectId: string;
   cwd: string;
   orgId?: string;
+  shell?: string;
 }
 
 export interface TerminalScrollback {

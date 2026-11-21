@@ -41,7 +41,8 @@ ENV NODE_ENV=production
 # infra/lsp/install-lsp-binary.ts), and the git credential helper fetches tokens
 # with `curl` (infra/source/drivers/git/git-credential-helper.ts). Alpine's git
 # pulls libcurl but not the curl CLI, so curl is installed explicitly.
-RUN apk add --no-cache git nodejs npm curl
+# zsh/bash: interactive terminals run the login shell reported by SHELL.
+RUN apk add --no-cache git nodejs npm curl zsh bash
 
 COPY package.json bun.lock tsconfig.json ./
 COPY packages/brix/package.json packages/brix/
@@ -80,7 +81,10 @@ ENV HARNESYS_HOME=/data \
     HARNESYS_UPSTREAM=http://127.0.0.1:47474 \
     HARNESYS_WEB_STATIC=/srv/dist \
     HOME=/data \
-    NPM_CONFIG_PREFIX=/data/.npm-global
+    SHELL=/bin/zsh \
+    BUN_INSTALL=/data/.bun \
+    NPM_CONFIG_PREFIX=/data/.npm-global \
+    PATH=/data/.bun/bin:/data/.npm-global/bin:/data/.local/bin:/data/go/bin:/data/.cargo/bin:$PATH
 VOLUME /data
 
 HEALTHCHECK --interval=10s --timeout=5s --retries=6 --start-period=30s \

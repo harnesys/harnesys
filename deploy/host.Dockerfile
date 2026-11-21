@@ -10,7 +10,8 @@ ENV NODE_ENV=production
 # infra/lsp/install-lsp-binary.ts), and the git credential helper fetches tokens
 # with `curl` (infra/source/drivers/git/git-credential-helper.ts). Alpine's git
 # pulls libcurl but not the curl CLI, so curl is installed explicitly.
-RUN apk add --no-cache git nodejs npm curl
+# zsh/bash: interactive terminals run the login shell reported by SHELL.
+RUN apk add --no-cache git nodejs npm curl zsh bash
 
 # Workspace layout must be complete BEFORE bun install: bun snapshots each
 # workspace into node_modules/.bun at install time, so sources copied after
@@ -50,7 +51,10 @@ ENV HARNESYS_ADDONS_DIR=/app/build/assets/add-ons
 # User-level state (git identity, bun/npm global packages, LSP binaries, node
 # manager roots) must land on the /data volume to survive container replacement.
 ENV HOME=/data
+ENV SHELL=/bin/zsh
+ENV BUN_INSTALL=/data/.bun
 ENV NPM_CONFIG_PREFIX=/data/.npm-global
+ENV PATH=/data/.bun/bin:/data/.npm-global/bin:/data/.local/bin:/data/go/bin:/data/.cargo/bin:$PATH
 VOLUME /data
 
 EXPOSE 47474

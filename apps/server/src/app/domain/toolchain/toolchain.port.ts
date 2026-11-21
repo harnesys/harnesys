@@ -4,6 +4,7 @@ export interface ToolchainResolution {
   pathEnv: string;
   dirs: string[];
   nodeBin?: string;
+  shell?: string;
 }
 
 export abstract class ToolchainPort {

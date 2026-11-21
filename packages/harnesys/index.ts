@@ -135,6 +135,7 @@ export type {
   ProcessSpawnBackend,
   ProcessSpawnBackendStartInput,
 } from './src/application/process-jobs/process-job-backend.ts';
+export { defaultShell } from './src/application/process-jobs/process-job-backend.ts';
 export { createProcessJobRegistry } from './src/application/process-jobs/process-job-registry.ts';
 export { compileUntil, matchesUntil } from './src/application/process-jobs/read-until.ts';
 export {

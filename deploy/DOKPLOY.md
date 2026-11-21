@@ -67,7 +67,7 @@ Everything persists in the bind mount at `/data` (`HARNESYS_HOME`), default host
 
 The image ships `git`, `node`, `npm`, and `curl` (Alpine) next to Bun, so the workspace tools work out of the box: skill/plugin install clones repos, the LSP "Install" buttons run `npm i -g` without extra setup, and private git sources authenticate through the credential helper that fetches tokens with `curl`. Go and Rust are not included — installing `gopls` or `rust-analyzer` from the UI returns a clear error until a Go/Rust toolchain is available on the host.
 
-`HOME` inside the container points at `/data`, so **the whole home directory lives on the volume** and survives image updates: dotfiles, git identity (`/data/.gitconfig`), Bun globals (`/data/.bun`), npm globals (`/data/.npm-global`), node versions (`/data/.nvm/versions/node`), Go binaries (`/data/go/bin`), Rust/Cargo (`/data/.cargo`, `/data/.rustup`), and anything else written under `~`. Those directories are already on the effective PATH, so tools installed through a workspace terminal are picked up after a redeploy.
+`HOME` inside the container points at `/data`, so **the whole home directory lives on the volume** and survives image updates: dotfiles, git identity (`/data/.gitconfig`), Bun globals (`/data/.bun`), npm globals (`/data/.npm-global`), node versions (`/data/.nvm/versions/node`), Go binaries (`/data/go/bin`), Rust/Cargo (`/data/.cargo`, `/data/.rustup`), and anything else written under `~`. Those directories are already on the effective PATH, so tools installed through a workspace terminal are picked up after a redeploy. `SHELL` is `/bin/zsh` (zsh and bash ship in the image) and interactive terminals receive the resolved PATH plus the persistent dirs above.
 
 What does **not** survive: packages installed into system paths (`apk add ...`, files under `/usr/bin`, `/lib`). Those belong to the image layer, which is replaced on update. Install languages and tools into the home directory instead — `rustup`, `go install`, `nvm`, `npm i -g`, `bun add -g` all land on the volume with `HOME=/data`. Note that musl/Alpine containers need musl-compatible builds (the UI Node installer handles this automatically).
 
@@ -76,6 +76,8 @@ Setup flow in the UI:
 1. **Git identity** — Settings → VCS → "Git on this machine": set `user.name` / `user.email`; they are written to the global git config and used for commits. Pushing to HTTPS remotes still needs credentials (a PAT in the remote URL or a mounted SSH key); the identity alone is not authentication.
 2. **Node versions** — Settings → Toolchain → "Install Node version": enter `22`, `22.14`, or a full version; it downloads the official build (or a musl build in Alpine containers) into the nvm layout and appears in the "Node version" picker. No version is imposed — pin any discovered version or leave it on Auto.
 3. **Language servers** — Settings → Toolchain → Dependencies → Install (or LSP → Available servers → Add & install). Installs fall back to `bun add -g` when npm is absent.
+
+Settings → Toolchain is not just diagnostics: the **Shell** picker chooses the shell for interactive terminals, and the Mode/extra-dirs/overrides define the PATH those terminals and agents receive.
 
 ### Updating the image
 
