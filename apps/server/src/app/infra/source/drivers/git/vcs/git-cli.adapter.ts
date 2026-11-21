@@ -12,6 +12,7 @@ import type {
   GitFileStatusMap,
   GitStatusResponse,
 } from '../../../../../domain/source/git-vcs.types.ts';
+import { getAheadBehind } from './git-ahead-behind.ts';
 import { getDiff } from './git-diff.ts';
 import { execGit, execGitTrim } from './git-exec.ts';
 import { getFileStatus, getMtimeKey, getStatus } from './git-status.ts';
@@ -54,7 +55,7 @@ export class GitCliAdapter extends GitVcsPort {
     const safeCwd = await this.resolveCwd(cwd);
     return getStatus(
       safeCwd,
-      (c) => this.getAheadBehind(c),
+      (c) => getAheadBehind(c),
       () => this.getVersion(),
       (c) => this.listBranches(c),
     );
@@ -118,6 +119,23 @@ export class GitCliAdapter extends GitVcsPort {
       throw new GitDirtyError(err.trim());
     }
     throw new Error(err.trim() || `git checkout failed (${res.code})`);
+  }
+
+  async merge(cwd: string, branch: string): Promise<void> {
+    const safeCwd = await this.resolveCwd(cwd);
+    if (!branch || branch.includes('\0') || branch.includes('\n')) {
+      throw new GitBranchInvalidError('invalid branch name');
+    }
+    const res = await execGit(safeCwd, ['merge', branch]);
+    if (res.code === 0) {
+      this.statusCache.clear();
+      return;
+    }
+    const err = (res.stderr + res.stdout).trim();
+    if (/would be overwritten|local changes/i.test(err)) {
+      throw new GitDirtyError(err);
+    }
+    throw new Error(err || `git merge failed (${res.code})`);
   }
 
   async createBranch(cwd: string, name: string, checkout: boolean, from?: string): Promise<void> {
@@ -262,7 +280,7 @@ export class GitCliAdapter extends GitVcsPort {
     const safeCwd = await this.resolveCwd(cwd);
     const existing = await getStatus(
       safeCwd,
-      (c) => this.getAheadBehind(c),
+      (c) => getAheadBehind(c),
       () => this.getVersion(),
       (c) => this.listBranches(c),
     );
@@ -297,27 +315,6 @@ export class GitCliAdapter extends GitVcsPort {
     const safeCwd = await this.resolveCwd(cwd);
     const res = await execGit(safeCwd, ['check-ref-format', '--branch', name]);
     return res.code === 0;
-  }
-
-  private async getAheadBehind(cwd: string): Promise<{
-    ahead: number;
-    behind: number;
-  }> {
-    const out = await execGitTrim(cwd, [
-      'rev-list',
-      '--left-right',
-      '--count',
-      'HEAD...@{u}',
-    ]).catch(() => '');
-    if (!out) {
-      return { ahead: 0, behind: 0 };
-    }
-    const parts = out.split(/\s+/);
-    const ahead = Number(parts[0] ?? 0);
-    const behind = Number(parts[1] ?? 0);
-    return Number.isNaN(ahead) || Number.isNaN(behind)
-      ? { ahead: 0, behind: 0 }
-      : { ahead, behind };
   }
 
   private async getVersion(): Promise<string | null> {

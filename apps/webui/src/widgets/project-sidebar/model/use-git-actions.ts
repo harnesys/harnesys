@@ -11,6 +11,7 @@ import {
   gitFileStatusQueryKey,
   gitStatusQueryKey,
   invalidateGitOrgSummary,
+  mergeGitBranch,
   pullGit,
   pushGit,
   stageGit,
@@ -31,6 +32,21 @@ export function useGitActions(projectId: string) {
     onError: (err: unknown) => {
       const msg = err instanceof Error ? err.message : 'Checkout failed';
       toast.add({ title: 'Checkout failed', description: msg });
+    },
+  });
+  const mergeMutation = useMutation({
+    mutationFn: (branch: string) => mergeGitBranch(projectId, branch),
+    onSuccess: (_data, branch) => {
+      void qc.invalidateQueries({ queryKey: gitStatusQueryKey(projectId) });
+      invalidateGitOrgSummary(qc);
+      void qc.invalidateQueries({ queryKey: gitFileStatusQueryKey(projectId) });
+      void qc.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'file-status'] });
+      void qc.invalidateQueries({ queryKey: sourceFilesTreeQueryKey(projectId) });
+      toast.add({ title: `Merged '${branch}'` });
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : 'Merge failed';
+      toast.add({ title: 'Merge failed', description: msg });
     },
   });
   const deleteMutation = useMutation({
@@ -169,6 +185,7 @@ export function useGitActions(projectId: string) {
   };
   return {
     checkoutMutation,
+    mergeMutation,
     createMutation,
     deleteMutation,
     commitMutation,

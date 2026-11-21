@@ -33,6 +33,7 @@ export abstract class GitVcsPort {
     recent: GitBranch[];
   }>;
   abstract checkout(cwd: string, branch: string): Promise<void>;
+  abstract merge(cwd: string, branch: string): Promise<void>;
   abstract createBranch(cwd: string, name: string, checkout: boolean, from?: string): Promise<void>;
   abstract validateBranchName(cwd: string, name: string): Promise<boolean>;
   abstract stage(cwd: string, paths: string[]): Promise<void>;

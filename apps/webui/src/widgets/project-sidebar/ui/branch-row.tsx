@@ -12,6 +12,7 @@ export function BranchRow({
   current,
   onCheckout,
   onNewBranch,
+  onMerge,
   onDelete,
   deletePending,
 }: {
@@ -19,6 +20,7 @@ export function BranchRow({
   current: boolean;
   onCheckout: () => void;
   onNewBranch: () => void;
+  onMerge?: () => void;
   onDelete?: () => void;
   deletePending?: boolean;
 }) {
@@ -37,6 +39,9 @@ export function BranchRow({
         ) : (
           <DropdownMenuItem disabled>Current branch</DropdownMenuItem>
         )}
+        {!current && onMerge ? (
+          <DropdownMenuItem onClick={onMerge}>Merge into current</DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem onClick={onNewBranch}>
           New Branch from &apos;{name}&apos;...
         </DropdownMenuItem>

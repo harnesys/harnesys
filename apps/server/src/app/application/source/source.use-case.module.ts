@@ -26,6 +26,7 @@ import { InitGitUseCase } from './init-git.use-case.ts';
 import { ListGitBranchesUseCase } from './list-git-branches.use-case.ts';
 import { ListRepositoryWorktreesUseCase } from './list-repository-worktrees.use-case.ts';
 import { ListSourcesUseCase } from './list-sources.use-case.ts';
+import { MergeGitBranchUseCase } from './merge-git-branch.use-case.ts';
 import { PrepareGitSourceUseCase } from './prepare-git-source.use-case.ts';
 import { PullGitUseCase } from './pull-git.use-case.ts';
 import { PushGitUseCase } from './push-git.use-case.ts';
@@ -70,6 +71,7 @@ import { SwitchGitBranchUseCase } from './switch-git-branch.use-case.ts';
     PushGitUseCase,
     PullGitUseCase,
     CheckoutGitUseCase,
+    MergeGitBranchUseCase,
     CreateGitBranchUseCase,
     DeleteGitBranchUseCase,
     CreateRepositoryWorktreeUseCase,
@@ -112,6 +114,7 @@ import { SwitchGitBranchUseCase } from './switch-git-branch.use-case.ts';
     PushGitUseCase,
     PullGitUseCase,
     CheckoutGitUseCase,
+    MergeGitBranchUseCase,
     CreateGitBranchUseCase,
     DeleteGitBranchUseCase,
     CreateRepositoryWorktreeUseCase,

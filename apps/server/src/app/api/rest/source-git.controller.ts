@@ -14,6 +14,7 @@ import { GetGitDiffUseCase } from '../../application/source/get-git-diff.use-cas
 import { GetGitFileStatusUseCase } from '../../application/source/get-git-file-status.use-case.ts';
 import { GetGitStatusUseCase } from '../../application/source/get-git-status.use-case.ts';
 import { InitGitUseCase } from '../../application/source/init-git.use-case.ts';
+import { MergeGitBranchUseCase } from '../../application/source/merge-git-branch.use-case.ts';
 import { PullGitUseCase } from '../../application/source/pull-git.use-case.ts';
 import { PushGitUseCase } from '../../application/source/push-git.use-case.ts';
 import { StageGitUseCase } from '../../application/source/stage-git.use-case.ts';
@@ -76,6 +77,13 @@ const CheckoutGitBodySchema = z.object({
 });
 type CheckoutGitBody = z.infer<typeof CheckoutGitBodySchema>;
 
+const MergeGitBodySchema = z.object({
+  hostId: HostIdSchema,
+  worktreeId: WorktreeIdSchema,
+  branch: z.string().min(1),
+});
+type MergeGitBody = z.infer<typeof MergeGitBodySchema>;
+
 const CreateGitBranchBodySchema = z.object({
   hostId: HostIdSchema,
   worktreeId: WorktreeIdSchema,
@@ -103,6 +111,7 @@ export class SourceGitController {
     private readonly pushGit: PushGitUseCase,
     private readonly pullGit: PullGitUseCase,
     private readonly checkoutGit: CheckoutGitUseCase,
+    private readonly mergeGitBranch: MergeGitBranchUseCase,
     private readonly createGitBranch: CreateGitBranchUseCase,
     private readonly initGit: InitGitUseCase,
   ) {}
@@ -232,6 +241,21 @@ export class SourceGitController {
     @Body(CheckoutGitBodySchema) body: CheckoutGitBody,
   ): Promise<{ ok: true }> {
     return this.checkoutGit.execute({
+      orgId,
+      sourceId,
+      hostId: body.hostId,
+      worktreeId: body.worktreeId,
+      branch: body.branch,
+    });
+  }
+
+  @Post('merge')
+  merge(
+    @Param('orgId') orgId: string,
+    @Param('sourceId') sourceId: string,
+    @Body(MergeGitBodySchema) body: MergeGitBody,
+  ): Promise<{ ok: true }> {
+    return this.mergeGitBranch.execute({
       orgId,
       sourceId,
       hostId: body.hostId,

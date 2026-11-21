@@ -26,6 +26,7 @@ function BranchLists({
   filteredLocal,
   onCheckout,
   onNewBranch,
+  onMerge,
   onDelete,
   deletePending,
 }: {
@@ -33,6 +34,7 @@ function BranchLists({
   filteredLocal: { name: string; current?: boolean }[];
   onCheckout: (name: string) => void;
   onNewBranch: (from?: string) => void;
+  onMerge: (name: string) => void;
   onDelete: (name: string) => void;
   deletePending: boolean;
 }) {
@@ -50,6 +52,7 @@ function BranchLists({
                 current={Boolean(b.current)}
                 onCheckout={() => onCheckout(b.name)}
                 onNewBranch={() => onNewBranch(b.name)}
+                onMerge={() => onMerge(b.name)}
                 onDelete={() => onDelete(b.name)}
                 deletePending={deletePending}
               />
@@ -70,6 +73,7 @@ function BranchLists({
               current={Boolean(b.current)}
               onCheckout={() => onCheckout(b.name)}
               onNewBranch={() => onNewBranch(b.name)}
+              onMerge={() => onMerge(b.name)}
               onDelete={() => onDelete(b.name)}
               deletePending={deletePending}
             />
@@ -99,6 +103,7 @@ export function GitActiveRepoMenuItems({
   const selectedPaths = useFileSelectionStore((s) => s.selectedPaths);
   const {
     checkoutMutation,
+    mergeMutation,
     commitMutation,
     pushMutation,
     pullMutation,
@@ -189,6 +194,7 @@ export function GitActiveRepoMenuItems({
         filteredLocal={filteredLocal}
         onCheckout={(name) => checkoutMutation.mutate(name)}
         onNewBranch={handleNewBranch}
+        onMerge={(name) => mergeMutation.mutate(name)}
         onDelete={(name) => deleteMutation.mutate(name)}
         deletePending={deleteMutation.isPending}
       />

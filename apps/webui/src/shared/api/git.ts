@@ -82,6 +82,18 @@ export async function checkoutGitBranch(projectId: string, branch: string): Prom
   return { ok: true };
 }
 
+export async function mergeGitBranch(projectId: string, branch: string): Promise<{ ok: true }> {
+  const orgId = getActiveOrgId();
+  if (!orgId) {
+    throw new ApiError(400, 'No active org');
+  }
+  const location = await resolveGitLocation(projectId);
+  return apiJson(orgSourceGitPath(projectId, 'merge'), {
+    method: 'POST',
+    body: JSON.stringify({ branch, ...location }),
+  });
+}
+
 export async function createGitBranch(
   projectId: string,
   input: {
