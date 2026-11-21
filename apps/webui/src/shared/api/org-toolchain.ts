@@ -27,3 +27,10 @@ export function orgToolchainQuery(orgId: string) {
 export function refreshOrgToolchain(orgId: string): Promise<ToolchainDiscovery> {
   return apiJson<ToolchainDiscovery>(`${toolchainBase(orgId)}/refresh`, { method: 'POST' });
 }
+
+export function installOrgNodeVersion(orgId: string, version: string): Promise<ToolchainDiscovery> {
+  return apiJson<ToolchainDiscovery>(`${toolchainBase(orgId)}/node-versions`, {
+    method: 'POST',
+    body: JSON.stringify({ version }),
+  });
+}

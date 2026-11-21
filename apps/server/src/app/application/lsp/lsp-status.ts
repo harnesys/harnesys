@@ -5,7 +5,7 @@ import type {
   OrgLspListResponse,
   PluginDiagnostic,
 } from '@harnesys/contracts';
-import { LSP_CATALOG } from '../../domain/lsp/lsp-catalog.ts';
+import { installDisplay, LSP_CATALOG } from '../../domain/lsp/lsp-catalog.ts';
 import {
   disabledFileEntries,
   isFileDisabled,
@@ -162,7 +162,7 @@ export function buildCatalog(
     command: spec.command,
     ...(spec.args !== undefined ? { args: spec.args } : {}),
     extensionToLanguage: spec.extensionToLanguage,
-    install: spec.install,
+    install: installDisplay(spec.plan),
     installed: known.has(spec.serverId),
     binaryOk: hasBinary(spec.command),
   }));

@@ -17,6 +17,11 @@ export interface GitMachineInfo {
   userEmail: string | null;
 }
 
+export interface GitIdentity {
+  userName: string;
+  userEmail: string;
+}
+
 export abstract class GitVcsPort {
   abstract probe(cwd: string): Promise<VcsProbeRaw>;
   abstract getStatus(cwd: string): Promise<GitStatusResponse>;
@@ -39,6 +44,7 @@ export abstract class GitVcsPort {
   abstract stage(cwd: string, paths: string[]): Promise<void>;
   abstract commit(cwd: string, message: string, paths?: string[]): Promise<void>;
   abstract getMachineInfo(): Promise<GitMachineInfo>;
+  abstract setIdentity(identity: GitIdentity): Promise<GitMachineInfo>;
   abstract push(cwd: string): Promise<void>;
   abstract pull(cwd: string): Promise<void>;
   abstract init(cwd: string): Promise<void>;

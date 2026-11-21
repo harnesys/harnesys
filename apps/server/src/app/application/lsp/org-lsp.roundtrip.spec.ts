@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ToolchainDiscovery } from '@harnesys/contracts';
+import type { ToolchainDiscovery, ToolchainNodeVersion } from '@harnesys/contracts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { PluginRegistryPort } from '../../domain/plugin/plugin-registry.port.ts';
 import { PluginRuntimePort } from '../../domain/plugin/plugin-runtime.port.ts';
@@ -43,6 +43,10 @@ class MissingToolchain extends ToolchainPort {
   }
 
   override invalidate(_orgId: string): void {}
+
+  override installNodeVersion(_orgId: string, _version: string): Promise<ToolchainNodeVersion> {
+    return Promise.reject(new Error('not used in this spec'));
+  }
 
   override discover(_orgId: string, _commands: readonly string[]): Promise<ToolchainDiscovery> {
     return Promise.resolve({

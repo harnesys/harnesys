@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { installOrgLspBinary, orgLspQueryKey } from '@/shared/api/org-lsp';
 import { orgSettingsQuery, orgSettingsQueryKey, patchOrgSettings } from '@/shared/api/org-skills';
 import {
+  installOrgNodeVersion,
   orgToolchainQuery,
   orgToolchainQueryKey,
   refreshOrgToolchain,
@@ -53,6 +54,7 @@ export function OrgToolchainPane({ orgId }: { orgId: string }) {
   const settingsQuery = useQuery(orgSettingsQuery(orgId));
   const [draft, setDraft] = useState<ToolchainSettings | null>(null);
   const [extraDir, setExtraDir] = useState('');
+  const [nodeVersion, setNodeVersion] = useState('');
 
   const saved = settingsQuery.data?.toolchain ?? DEFAULT_TOOLCHAIN;
   const current = draft ?? saved;
@@ -100,6 +102,18 @@ export function OrgToolchainPane({ orgId }: { orgId: string }) {
     },
     onError: (error) => {
       toast.add({ title: 'Install failed', description: errorMessage(error) });
+    },
+  });
+
+  const installNode = useMutation({
+    mutationFn: () => installOrgNodeVersion(orgId, nodeVersion.trim()),
+    onSuccess: (next) => {
+      queryClient.setQueryData(orgToolchainQueryKey(orgId), next);
+      setNodeVersion('');
+      toast.add({ title: 'Node version installed' });
+    },
+    onError: (error) => {
+      toast.add({ title: 'Node install failed', description: errorMessage(error) });
     },
   });
 
@@ -221,6 +235,34 @@ export function OrgToolchainPane({ orgId }: { orgId: string }) {
               </SelectGroup>
             </SelectContent>
           </Select>
+        </SettingsField>
+
+        <SettingsField
+          label="Install Node version"
+          description="Downloads into the nvm layout (~/.nvm/versions/node) and appears in the picker. Uses official builds on macOS/Linux and musl builds in Alpine containers. Accepts 22, 22.14 or a full version."
+          htmlFor="toolchain-node-install"
+        >
+          <div className="flex items-center gap-2">
+            <Input
+              id="toolchain-node-install"
+              aria-label="Node version to install"
+              placeholder="e.g. 22"
+              className="h-7 w-40 font-mono text-xs"
+              value={nodeVersion}
+              onChange={(event) => setNodeVersion(event.target.value)}
+              data-testid="toolchain-node-install-input"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              disabled={nodeVersion.trim().length === 0 || installNode.isPending}
+              onClick={() => installNode.mutate()}
+              data-testid="toolchain-node-install"
+            >
+              {installNode.isPending ? 'Installing...' : 'Install'}
+            </Button>
+          </div>
         </SettingsField>
       </SettingsSection>
 

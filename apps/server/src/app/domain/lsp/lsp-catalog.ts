@@ -1,3 +1,7 @@
+export type LspInstallPlan =
+  | { kind: 'npm'; packages: string[] }
+  | { kind: 'shell'; command: string; requires: string };
+
 export interface LspCatalogSpec {
   serverId: string;
   label: string;
@@ -5,7 +9,7 @@ export interface LspCatalogSpec {
   command: string;
   args?: string[];
   extensionToLanguage: Record<string, string>;
-  install: string;
+  plan: LspInstallPlan;
 }
 
 export const LSP_CATALOG: LspCatalogSpec[] = [
@@ -21,7 +25,7 @@ export const LSP_CATALOG: LspCatalogSpec[] = [
       '.js': 'javascript',
       '.jsx': 'javascriptreact',
     },
-    install: 'npm i -g typescript-language-server typescript',
+    plan: { kind: 'npm', packages: ['typescript-language-server', 'typescript'] },
   },
   {
     serverId: 'python',
@@ -33,7 +37,7 @@ export const LSP_CATALOG: LspCatalogSpec[] = [
       '.py': 'python',
       '.pyi': 'python',
     },
-    install: 'npm i -g pyright',
+    plan: { kind: 'npm', packages: ['pyright'] },
   },
   {
     serverId: 'go',
@@ -43,7 +47,11 @@ export const LSP_CATALOG: LspCatalogSpec[] = [
     extensionToLanguage: {
       '.go': 'go',
     },
-    install: 'go install golang.org/x/tools/gopls@latest',
+    plan: {
+      kind: 'shell',
+      command: 'go install golang.org/x/tools/gopls@latest',
+      requires: 'go',
+    },
   },
   {
     serverId: 'rust',
@@ -53,7 +61,11 @@ export const LSP_CATALOG: LspCatalogSpec[] = [
     extensionToLanguage: {
       '.rs': 'rust',
     },
-    install: 'rustup component add rust-analyzer',
+    plan: {
+      kind: 'shell',
+      command: 'rustup component add rust-analyzer',
+      requires: 'rustup',
+    },
   },
   {
     serverId: 'css',
@@ -64,7 +76,7 @@ export const LSP_CATALOG: LspCatalogSpec[] = [
     extensionToLanguage: {
       '.css': 'css',
     },
-    install: 'npm i -g vscode-langservers-extracted',
+    plan: { kind: 'npm', packages: ['vscode-langservers-extracted'] },
   },
   {
     serverId: 'html',
@@ -75,7 +87,7 @@ export const LSP_CATALOG: LspCatalogSpec[] = [
     extensionToLanguage: {
       '.html': 'html',
     },
-    install: 'npm i -g vscode-langservers-extracted',
+    plan: { kind: 'npm', packages: ['vscode-langservers-extracted'] },
   },
   {
     serverId: 'stylelint',
@@ -89,7 +101,7 @@ export const LSP_CATALOG: LspCatalogSpec[] = [
       '.less': 'less',
       '.scss': 'scss',
     },
-    install: 'npm i -g @stylelint/language-server stylelint',
+    plan: { kind: 'npm', packages: ['@stylelint/language-server', 'stylelint'] },
   },
   {
     serverId: 'markuplint',
@@ -101,7 +113,7 @@ export const LSP_CATALOG: LspCatalogSpec[] = [
     extensionToLanguage: {
       '.html': 'html',
     },
-    install: 'npm i -g @markuplint/language-server markuplint',
+    plan: { kind: 'npm', packages: ['@markuplint/language-server', 'markuplint'] },
   },
   {
     serverId: 'json',
@@ -112,7 +124,7 @@ export const LSP_CATALOG: LspCatalogSpec[] = [
     extensionToLanguage: {
       '.json': 'json',
     },
-    install: 'npm i -g vscode-langservers-extracted',
+    plan: { kind: 'npm', packages: ['vscode-langservers-extracted'] },
   },
   {
     serverId: 'bash',
@@ -124,7 +136,7 @@ export const LSP_CATALOG: LspCatalogSpec[] = [
       '.sh': 'shellscript',
       '.bash': 'shellscript',
     },
-    install: 'npm i -g bash-language-server',
+    plan: { kind: 'npm', packages: ['bash-language-server'] },
   },
   {
     serverId: 'yaml',
@@ -136,24 +148,35 @@ export const LSP_CATALOG: LspCatalogSpec[] = [
       '.yaml': 'yaml',
       '.yml': 'yaml',
     },
-    install: 'npm i -g yaml-language-server',
+    plan: { kind: 'npm', packages: ['yaml-language-server'] },
   },
 ];
 
-const INSTALL_BY_COMMAND = new Map<string, string>(
-  LSP_CATALOG.map((entry) => [entry.command, entry.install]),
+const PLAN_BY_COMMAND = new Map<string, LspInstallPlan>(
+  LSP_CATALOG.map((entry) => [entry.command, entry.plan]),
 );
 
-export function installForCommand(command: string): string | undefined {
-  return INSTALL_BY_COMMAND.get(command);
+export function planForCommand(command: string): LspInstallPlan | undefined {
+  return PLAN_BY_COMMAND.get(command);
+}
+
+export function installDisplay(plan: LspInstallPlan): string {
+  if (plan.kind === 'shell') {
+    return plan.command;
+  }
+  return `npm i -g ${plan.packages.join(' ')}`;
+}
+
+export function catalogSpecById(serverId: string): LspCatalogSpec | undefined {
+  return LSP_CATALOG.find((entry) => entry.serverId === serverId);
 }
 
 export interface LspInstallSpec {
   command: string;
-  install: string;
+  plan: LspInstallPlan;
 }
 
 export function lspInstallSpecForCommand(command: string): LspInstallSpec | undefined {
-  const install = installForCommand(command);
-  return install === undefined ? undefined : { command, install };
+  const plan = planForCommand(command);
+  return plan === undefined ? undefined : { command, plan };
 }

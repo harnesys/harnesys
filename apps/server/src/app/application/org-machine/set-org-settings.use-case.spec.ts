@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ToolchainDiscovery } from '@harnesys/contracts';
+import type { ToolchainDiscovery, ToolchainNodeVersion } from '@harnesys/contracts';
 import { LspPort } from '../../domain/lsp/lsp.port.ts';
 import type { ToolchainResolution } from '../../domain/toolchain/toolchain.port.ts';
 import { ToolchainPort } from '../../domain/toolchain/toolchain.port.ts';
@@ -61,6 +61,10 @@ class RecordingToolchain extends ToolchainPort {
 
   override invalidate(orgId: string): void {
     this.invalidated.push(orgId);
+  }
+
+  override installNodeVersion(_orgId: string, _version: string): Promise<ToolchainNodeVersion> {
+    return Promise.reject(new Error('not used in this spec'));
   }
 
   override discover(_orgId: string, _commands: readonly string[]): Promise<ToolchainDiscovery> {

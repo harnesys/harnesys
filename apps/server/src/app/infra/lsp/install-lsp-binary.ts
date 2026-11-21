@@ -1,5 +1,5 @@
 import type { LspInstallSpec } from '../../domain/lsp/lsp-catalog.ts';
-import { installForCommand } from '../../domain/lsp/lsp-catalog.ts';
+import type { LspPackageManager } from '../../domain/lsp/lsp-install.port.ts';
 
 export interface InstallLspBinaryResult {
   stdout: string;
@@ -9,22 +9,27 @@ export interface InstallLspBinaryResult {
 const INSTALL_TIMEOUT_MS = 300_000;
 const OUTPUT_TAIL_LINES = 8;
 
-export function installSpecForCommand(command: string): LspInstallSpec | undefined {
-  const install = installForCommand(command);
-  return install === undefined ? undefined : { command, install };
+export function installCommand(spec: LspInstallSpec, manager: LspPackageManager): string {
+  if (spec.plan.kind === 'shell') {
+    return spec.plan.command;
+  }
+  return manager === 'bun'
+    ? `bun add -g ${spec.plan.packages.join(' ')}`
+    : `npm install -g ${spec.plan.packages.join(' ')}`;
 }
 
 export async function installLspBinary(
   spec: LspInstallSpec,
-  pathEnv: string,
+  context: { pathEnv: string; packageManager: LspPackageManager },
 ): Promise<InstallLspBinaryResult> {
-  const proc = Bun.spawn(['/bin/sh', '-lc', spec.install], {
+  const command = installCommand(spec, context.packageManager);
+  const proc = Bun.spawn(['/bin/sh', '-lc', command], {
     stdin: 'ignore',
     stdout: 'pipe',
     stderr: 'pipe',
     env: {
       ...process.env,
-      PATH: pathEnv,
+      PATH: context.pathEnv,
     },
   });
   let timedOut = false;
@@ -46,7 +51,7 @@ export async function installLspBinary(
       throw new Error(`install timeout after ${INSTALL_TIMEOUT_MS / 1000}s`);
     }
     if (code !== 0) {
-      throw new Error(tailOf(stderr || stdout) || `${spec.install} failed (${code})`);
+      throw new Error(tailOf(stderr || stdout) || `${command} failed (${code})`);
     }
     return { stdout, stderr };
   } finally {

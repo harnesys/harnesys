@@ -1,10 +1,11 @@
 import { homedir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import { Injectable } from '@harnesys/brix';
-import type { ToolchainDiscovery, ToolchainMode } from '@harnesys/contracts';
+import type { ToolchainDiscovery, ToolchainMode, ToolchainNodeVersion } from '@harnesys/contracts';
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
 import { ToolchainPort, type ToolchainResolution } from '../../domain/toolchain/toolchain.port.ts';
 import { isExecutable, loginShellPath, splitPathEnv } from './effective-path.ts';
+import { downloadNodeVersion } from './node-installer.ts';
 import {
   assembleDirs,
   commandStatus,
@@ -72,6 +73,12 @@ export class ToolchainAdapter extends ToolchainPort {
       ),
       mode: settings.mode,
     };
+  }
+
+  override async installNodeVersion(orgId: string, version: string): Promise<ToolchainNodeVersion> {
+    const entry = await downloadNodeVersion({ version, home: homedir() });
+    this.invalidate(orgId);
+    return entry;
   }
 
   private compute(orgId: string): ToolchainResolution {

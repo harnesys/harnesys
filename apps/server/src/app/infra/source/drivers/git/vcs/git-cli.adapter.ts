@@ -4,7 +4,11 @@ import {
   GitBranchInvalidError,
   GitDirtyError,
 } from '../../../../../domain/source/git-vcs.error.ts';
-import type { GitMachineInfo, VcsProbeRaw } from '../../../../../domain/source/git-vcs.port.ts';
+import type {
+  GitIdentity,
+  GitMachineInfo,
+  VcsProbeRaw,
+} from '../../../../../domain/source/git-vcs.port.ts';
 import { GitVcsPort } from '../../../../../domain/source/git-vcs.port.ts';
 import type {
   GitBranch,
@@ -15,6 +19,7 @@ import type {
 import { getAheadBehind } from './git-ahead-behind.ts';
 import { getDiff } from './git-diff.ts';
 import { execGit, execGitTrim } from './git-exec.ts';
+import { readMachineInfo, writeGlobalIdentity } from './git-machine.ts';
 import { getFileStatus, getMtimeKey, getStatus } from './git-status.ts';
 
 interface StatusCache {
@@ -211,16 +216,12 @@ export class GitCliAdapter extends GitVcsPort {
   }
 
   async getMachineInfo(): Promise<GitMachineInfo> {
-    const [version, userName, userEmail] = await Promise.all([
-      this.getVersion(),
-      execGitTrim(process.cwd(), ['config', '--get', 'user.name']).catch(() => ''),
-      execGitTrim(process.cwd(), ['config', '--get', 'user.email']).catch(() => ''),
-    ]);
-    return {
-      version,
-      userName: userName || null,
-      userEmail: userEmail || null,
-    };
+    return readMachineInfo(() => this.getVersion());
+  }
+
+  async setIdentity(identity: GitIdentity): Promise<GitMachineInfo> {
+    await writeGlobalIdentity(identity);
+    return this.getMachineInfo();
   }
 
   private async runCommit(cwd: string, args: string[]): Promise<void> {

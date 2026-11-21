@@ -5,8 +5,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# git is required at runtime: plugin/skill install clones repos via Bun.spawn('git').
-RUN apk add --no-cache git
+# git + node/npm are required at runtime: plugin/skill install clones repos
+# (git) and curated LSP installs run `npm i -g` (see infra/lsp/install-lsp-binary.ts).
+RUN apk add --no-cache git nodejs npm
 
 # Workspace layout must be complete BEFORE bun install: bun snapshots each
 # workspace into node_modules/.bun at install time, so sources copied after
@@ -43,6 +44,10 @@ RUN bun run addon:build && bun run addon:payload build/assets/add-ons
 
 ENV HARNESYS_HOME=/data
 ENV HARNESYS_ADDONS_DIR=/app/build/assets/add-ons
+# User-level state (git identity, bun/npm global packages, LSP binaries, node
+# manager roots) must land on the /data volume to survive container replacement.
+ENV HOME=/data
+ENV NPM_CONFIG_PREFIX=/data/.npm-global
 VOLUME /data
 
 EXPOSE 47474

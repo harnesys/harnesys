@@ -63,6 +63,18 @@ You may protect the SPA with Basic Auth, but if this machine serves any org as r
 
 Everything persists in the bind mount at `/data` (`HARNESYS_HOME`), default host path `~/.harnesys` (override with `HARNESYS_DATA_DIR`): org DBs, `config.json`, `machine.json`, `master.key`. The path survives container redeploys; deleting it wipes the instance. Do not store runtime data under Dokploy’s git `code/` checkout (it is wiped on redeploy).
 
+## Developer toolchain inside the container
+
+The image ships `git`, `node`, and `npm` (Alpine) next to Bun, so the workspace tools work out of the box: skill/plugin install clones repos, and the LSP "Install" buttons run `npm i -g` without extra setup. Go and Rust are not included — installing `gopls` or `rust-analyzer` from the UI returns a clear error until a Go/Rust toolchain is available on the host.
+
+`HOME` inside the container points at `/data`, so user-level state survives redeploys on the bind mount: git identity (`/data/.gitconfig`), Bun globals (`/data/.bun`), npm globals (`/data/.npm-global`, already on PATH), and node versions installed through the UI (`/data/.nvm/versions/node`).
+
+Setup flow in the UI:
+
+1. **Git identity** — Settings → VCS → "Git on this machine": set `user.name` / `user.email`; they are written to the global git config and used for commits. Pushing to HTTPS remotes still needs credentials (a PAT in the remote URL or a mounted SSH key); the identity alone is not authentication.
+2. **Node versions** — Settings → Toolchain → "Install Node version": enter `22`, `22.14`, or a full version; it downloads the official build (or a musl build in Alpine containers) into the nvm layout and appears in the "Node version" picker. No version is imposed — pin any discovered version or leave it on Auto.
+3. **Language servers** — Settings → Toolchain → Dependencies → Install (or LSP → Available servers → Add & install). Installs fall back to `bun add -g` when npm is absent.
+
 ## Advanced path: build from source
 
 Two-image variant for self-builders (host and web built separately): `deploy/docker-compose.yml` (host + web, domain → `web:8080`) or `deploy/docker-compose.host.yml` (host only, domain → `host:47474`). Build context paths are `..` (repo root) relative to `deploy/`. Building on the VPS needs ~4 GB RAM and several minutes.

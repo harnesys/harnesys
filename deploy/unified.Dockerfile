@@ -36,8 +36,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# git is required at runtime: plugin/skill install clones repos via Bun.spawn('git').
-RUN apk add --no-cache git
+# git + node/npm are required at runtime: plugin/skill install clones repos
+# (git) and curated LSP installs run `npm i -g` (see infra/lsp/install-lsp-binary.ts).
+RUN apk add --no-cache git nodejs npm
 
 COPY package.json bun.lock tsconfig.json ./
 COPY packages/brix/package.json packages/brix/
@@ -74,7 +75,9 @@ ENV HARNESYS_HOME=/data \
     SERVER_PORT=47474 \
     HARNESYS_WEB_PORT=8080 \
     HARNESYS_UPSTREAM=http://127.0.0.1:47474 \
-    HARNESYS_WEB_STATIC=/srv/dist
+    HARNESYS_WEB_STATIC=/srv/dist \
+    HOME=/data \
+    NPM_CONFIG_PREFIX=/data/.npm-global
 VOLUME /data
 
 HEALTHCHECK --interval=10s --timeout=5s --retries=6 --start-period=30s \

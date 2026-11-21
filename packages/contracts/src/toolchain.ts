@@ -40,3 +40,11 @@ export const ToolchainDiscoverySchema = z.object({
   mode: ToolchainModeSchema,
 });
 export type ToolchainDiscovery = z.infer<typeof ToolchainDiscoverySchema>;
+
+export const ToolchainNodeInstallBodySchema = z.object({
+  version: z
+    .string()
+    .min(1)
+    .regex(/^v?\d+(\.\d+){0,2}$/, 'use a node version like 22 or 22.14.0'),
+});
+export type ToolchainNodeInstallBody = z.infer<typeof ToolchainNodeInstallBodySchema>;

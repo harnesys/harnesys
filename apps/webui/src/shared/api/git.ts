@@ -136,6 +136,16 @@ export function getGitMachineInfo(orgId: string): Promise<GitMachineInfo> {
   return apiJson(`/api/orgs/${encodeURIComponent(orgId)}/git/machine`);
 }
 
+export function putGitMachineIdentity(
+  orgId: string,
+  body: { userName: string; userEmail: string },
+): Promise<GitMachineInfo> {
+  return apiJson(`/api/orgs/${encodeURIComponent(orgId)}/git/machine`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+}
+
 export async function pushGit(projectId: string): Promise<{ ok: true }> {
   const location = await resolveGitLocation(projectId);
   return apiJson(orgSourceGitPath(projectId, 'push'), {

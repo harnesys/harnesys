@@ -125,6 +125,10 @@ export {
   TaskEnvelopeSchema,
 } from './fleet-secrets.ts';
 export {
+  type GitIdentityBody,
+  GitIdentityBodySchema,
+} from './git-machine.ts';
+export {
   type LspCatalogEntry,
   LspCatalogEntrySchema,
   type LspServerStatus,
@@ -231,6 +235,8 @@ export {
   ToolchainCommandStatusSchema,
   type ToolchainDiscovery,
   ToolchainDiscoverySchema,
+  type ToolchainNodeInstallBody,
+  ToolchainNodeInstallBodySchema,
   type ToolchainNodeManager,
   ToolchainNodeManagerSchema,
   type ToolchainNodeVersion,

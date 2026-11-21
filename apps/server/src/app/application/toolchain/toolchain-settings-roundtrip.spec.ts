@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { accessSync, constants, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { OrgSettings, ToolchainDiscovery } from '@harnesys/contracts';
+import type { OrgSettings, ToolchainDiscovery, ToolchainNodeVersion } from '@harnesys/contracts';
 import { OrgSettingsSchema } from '@harnesys/contracts';
 import { LspPort } from '../../domain/lsp/lsp.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
@@ -86,6 +86,13 @@ class StubbedToolchain extends ToolchainPort {
   }
 
   override invalidate(_orgId: string): void {}
+
+  override async installNodeVersion(
+    _orgId: string,
+    _version: string,
+  ): Promise<ToolchainNodeVersion> {
+    throw new Error('not used in this spec');
+  }
 
   override async discover(orgId: string, commands: readonly string[]): Promise<ToolchainDiscovery> {
     return {

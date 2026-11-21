@@ -89,6 +89,7 @@ export function globalBinDirs(home: string, nodeBin?: string): string[] {
   const dirs = [
     ...(nodeBin !== undefined ? [nodeBin] : []),
     join(home, '.bun/bin'),
+    join(home, '.npm-global/bin'),
     join(home, 'Library/pnpm'),
     join(home, '.local/share/pnpm'),
     join(home, '.yarn/bin'),

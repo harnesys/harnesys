@@ -34,6 +34,7 @@ import { RefreshAllSourceVcsUseCase } from './refresh-all-source-vcs.use-case.ts
 import { RefreshGitSourceUseCase } from './refresh-git-source.use-case.ts';
 import { RefreshSourceVcsUseCase } from './refresh-source-vcs.use-case.ts';
 import { RenameSourceUseCase } from './rename-source.use-case.ts';
+import { SetGitIdentityUseCase } from './set-git-identity.use-case.ts';
 import { SetGitRemoteUseCase } from './set-git-remote.use-case.ts';
 import { SetSourceAvailabilityUseCase } from './set-source-availability.use-case.ts';
 import { SetSourceVisibilityUseCase } from './set-source-visibility.use-case.ts';
@@ -82,6 +83,7 @@ import { SwitchGitBranchUseCase } from './switch-git-branch.use-case.ts';
     SetSourceVisibilityUseCase,
     RenameSourceUseCase,
     SetGitRemoteUseCase,
+    SetGitIdentityUseCase,
     SetSourceAvailabilityUseCase,
     SourcesToolsProvider,
   ],
@@ -125,6 +127,7 @@ import { SwitchGitBranchUseCase } from './switch-git-branch.use-case.ts';
     SetSourceVisibilityUseCase,
     RenameSourceUseCase,
     SetGitRemoteUseCase,
+    SetGitIdentityUseCase,
     SetSourceAvailabilityUseCase,
   ],
 })
