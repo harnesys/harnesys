@@ -16,7 +16,7 @@ docker run -d --name harnesys \
   ghcr.io/harnesys/harnesys:latest
 ```
 
-Data lives in `~/.harnesys` on the host — the same home directory the desktop app uses (`HARNESYS_HOME` inside the container is `/data`, mounted from there). Override the host path with `HARNESYS_DATA_DIR` (compose) or your own `-v` target. Do not run the desktop app and a container against the same `~/.harnesys` at the same time — the SQLite homes conflict; stop one before starting the other.
+Data lives in `~/.harnesys` on the host — the same home directory the desktop app uses (`HARNESYS_HOME` inside the container is `/data`, mounted from there). Override the host path with `HARNESYS_DATA_DIR` (compose) or your own `-v` target. On Dokploy, set `HARNESYS_DATA_DIR` to an absolute host path: a bare `~` can expand to an unexpected directory, and a wrong bind mount loses the volume (orgs and user toolchains alike) on redeploy. Do not run the desktop app and a container against the same `~/.harnesys` at the same time — the SQLite homes conflict; stop one before starting the other.
 
 The first owner is created at boot from `OWNER_PASSWORD` (login defaults to `owner`, override with `OWNER_LOGIN`/`OWNER_NAME`). The hook fires only while no users exist — after that the variable is ignored, so it is safe to leave it set or remove it later. Then open `PUBLIC_URL` and sign in with that login/password.
 
@@ -67,13 +67,19 @@ Everything persists in the bind mount at `/data` (`HARNESYS_HOME`), default host
 
 The image ships `git`, `node`, and `npm` (Alpine) next to Bun, so the workspace tools work out of the box: skill/plugin install clones repos, and the LSP "Install" buttons run `npm i -g` without extra setup. Go and Rust are not included — installing `gopls` or `rust-analyzer` from the UI returns a clear error until a Go/Rust toolchain is available on the host.
 
-`HOME` inside the container points at `/data`, so user-level state survives redeploys on the bind mount: git identity (`/data/.gitconfig`), Bun globals (`/data/.bun`), npm globals (`/data/.npm-global`, already on PATH), and node versions installed through the UI (`/data/.nvm/versions/node`).
+`HOME` inside the container points at `/data`, so **the whole home directory lives on the volume** and survives image updates: dotfiles, git identity (`/data/.gitconfig`), Bun globals (`/data/.bun`), npm globals (`/data/.npm-global`), node versions (`/data/.nvm/versions/node`), Go binaries (`/data/go/bin`), Rust/Cargo (`/data/.cargo`, `/data/.rustup`), and anything else written under `~`. Those directories are already on the effective PATH, so tools installed through a workspace terminal are picked up after a redeploy.
+
+What does **not** survive: packages installed into system paths (`apk add ...`, files under `/usr/bin`, `/lib`). Those belong to the image layer, which is replaced on update. Install languages and tools into the home directory instead — `rustup`, `go install`, `nvm`, `npm i -g`, `bun add -g` all land on the volume with `HOME=/data`. Note that musl/Alpine containers need musl-compatible builds (the UI Node installer handles this automatically).
 
 Setup flow in the UI:
 
 1. **Git identity** — Settings → VCS → "Git on this machine": set `user.name` / `user.email`; they are written to the global git config and used for commits. Pushing to HTTPS remotes still needs credentials (a PAT in the remote URL or a mounted SSH key); the identity alone is not authentication.
 2. **Node versions** — Settings → Toolchain → "Install Node version": enter `22`, `22.14`, or a full version; it downloads the official build (or a musl build in Alpine containers) into the nvm layout and appears in the "Node version" picker. No version is imposed — pin any discovered version or leave it on Auto.
 3. **Language servers** — Settings → Toolchain → Dependencies → Install (or LSP → Available servers → Add & install). Installs fall back to `bun add -g` when npm is absent.
+
+### Updating the image
+
+Redeploy pulls the new image; only the image layer changes, `/data` is untouched, and installed toolchains keep working. Check the update by opening Settings → Toolchain and pressing **Refresh** — discovered node versions, PATH dirs, and Dependencies states are re-probed. The only thing to redo manually after an update: anything the previous image provided that is gone in the new one (for example a package you added with `apk add` inside the running container).
 
 ## Advanced path: build from source
 

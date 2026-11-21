@@ -26,6 +26,11 @@ export interface InstallOrgLspBinaryRequest {
   serverId: string;
 }
 
+const TOOLCHAIN_HINT: Record<string, string> = {
+  go: '~/go (GOPATH) and keep GOROOT inside the home directory',
+  rustup: '~/.cargo and ~/.rustup',
+};
+
 @Injectable()
 export class InstallOrgLspBinaryUseCase {
   constructor(
@@ -99,7 +104,8 @@ export class InstallOrgLspBinaryUseCase {
       return;
     }
     throw new ValidationException(
-      `"${requires}" is not installed on this host — install the ${requires} toolchain first, then retry`,
+      `"${requires}" is not installed on this host — install the ${requires} toolchain first, then retry. ` +
+        `Install it under the home directory (${TOOLCHAIN_HINT[requires] ?? '~'}) so it survives container updates`,
     );
   }
 
