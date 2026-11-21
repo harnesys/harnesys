@@ -184,6 +184,12 @@ export function WorktreeSection({
     moveMutation.mutate(items);
   };
 
+  const handleRootClick = (event: React.MouseEvent) => {
+    if ((event.target as Element | null)?.closest?.('[data-branch-chevron]')) {
+      toggleBranch(projectId, branchKey);
+    }
+  };
+
   const handleRootDragOver = (event: React.DragEvent) => {
     const drag = moveDrag();
     if (!drag || !sameMoveScope(drag, projectId, worktree.id)) {
@@ -269,7 +275,8 @@ export function WorktreeSection({
             onDragOver={handleRootDragOver}
             onDragLeave={handleRootDragLeave}
             onDrop={handleRootDrop}
-            onClick={() => toggleBranch(projectId, branchKey)}
+            onClick={handleRootClick}
+            onDoubleClick={() => toggleBranch(projectId, branchKey)}
           >
             <BranchFolderLabel
               open={expanded}

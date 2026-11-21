@@ -102,6 +102,11 @@ function ActiveBranchFolder({
   const toggle = () => {
     toggleBranch(projectId, ACTIVE_BRANCH_KEY);
   };
+  const handleClick = (event: React.MouseEvent) => {
+    if ((event.target as Element | null)?.closest?.('[data-branch-chevron]')) {
+      toggle();
+    }
+  };
   return (
     <div data-testid={`explorer-branch-active-${projectId}`}>
       <ContextMenu>
@@ -110,7 +115,8 @@ function ActiveBranchFolder({
             depth={depthOffset}
             aria-expanded={open}
             title={`${sourceName} · ${label}`}
-            onClick={toggle}
+            onClick={handleClick}
+            onDoubleClick={toggle}
           >
             <BranchFolderLabel open={open} label={label} titleClassName="text-sidebar-foreground" />
           </SidebarRow>

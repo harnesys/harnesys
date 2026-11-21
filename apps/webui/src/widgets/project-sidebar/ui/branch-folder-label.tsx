@@ -14,7 +14,10 @@ export function BranchFolderLabel({
 }) {
   return (
     <span className="flex min-w-0 items-center gap-1.5">
-      <span className="flex size-4 shrink-0 items-center justify-center">
+      <span
+        data-branch-chevron
+        className="flex size-4 shrink-0 cursor-pointer items-center justify-center"
+      >
         <ChevronRightIcon
           className={cn(
             'size-3.5 text-sidebar-foreground/50 transition-transform',
