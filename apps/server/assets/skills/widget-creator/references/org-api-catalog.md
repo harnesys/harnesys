@@ -34,6 +34,7 @@ Query: none
 | `items[].mcpServers` | array of string |
 | `items[].enabledPlugins` | object |
 | `items[].defaultModeId` | string \| null |
+| `items[].defaultRunDirectory` | string \| null |
 | `items[].config` | object |
 | `items[].hooks` | array of object |
 | `items[].hooks[].id` | string |
