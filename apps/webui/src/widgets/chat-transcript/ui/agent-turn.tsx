@@ -109,11 +109,12 @@ export function AssistantMessageView({
   const agent = useAgentStore((state) => (runAgentId ? state.byId(runAgentId) : undefined));
   const firstAssistantIndex = segments.findIndex((segment) => segment.kind !== 'user');
   const lastSegment = segments[segments.length - 1];
+  const lastIsEmptyActivity = lastSegment?.kind === 'activity' && lastSegment.items.length === 0;
   const pendingReply =
     streaming &&
     run.terminal === null &&
     !run.hasInFlight &&
-    (!lastSegment || lastSegment.kind === 'user');
+    (!lastSegment || lastSegment.kind === 'user' || lastIsEmptyActivity);
   const answerText = segments
     .filter((segment) => segment.kind === 'text' || segment.kind === 'compaction')
     .map((segment) => segment.text)

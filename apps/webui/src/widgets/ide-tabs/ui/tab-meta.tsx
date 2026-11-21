@@ -17,6 +17,7 @@ import { dashboardsListQuery } from '@/features/dashboards/dashboards-queries';
 import { useOrgTerminals } from '@/features/desk';
 import type { IdeTab } from '@/features/ide';
 import { resolveBoardIcon } from '@/features/manage-issues';
+import { useRunPhase } from '@/features/send-message';
 import { useOrgId } from '@/shared/config/location';
 import { entityColorTintClass } from '@/shared/lib/entity-colors';
 import { cn } from '@/shared/lib/utils';
@@ -31,7 +32,12 @@ export function TabIcon({ tab }: { tab: IdeTab }) {
     return <FileTypeIcon name={tab.path} size="xs" className="opacity-70" />;
   }
   if (tab.kind === 'thread' && tab.threadId) {
-    return <ThreadTabIcon threadId={tab.threadId} />;
+    return (
+      <>
+        <ThreadTabIcon threadId={tab.threadId} />
+        <ThreadRunningDot threadId={tab.threadId} />
+      </>
+    );
   }
   if (tab.kind === 'spawn') {
     return <WorkflowIcon className="size-3.5 shrink-0 opacity-70" />;
@@ -86,6 +92,19 @@ function ThreadTabIcon({ threadId }: { threadId: string }) {
     return <AgentRecordAvatar agent={agent} title={agent.name} />;
   }
   return <MessageSquareIcon className="size-3.5 shrink-0 opacity-70" />;
+}
+export function ThreadRunningDot({ threadId }: { threadId: string }) {
+  const phase = useRunPhase(threadId);
+  if (phase !== 'live' && phase !== 'queued') {
+    return null;
+  }
+  return (
+    <span
+      data-testid={`tab-running-dot-${threadId}`}
+      title={phase === 'queued' ? 'Run is queued' : 'Agent is working'}
+      className="relative inline-flex size-1.5 shrink-0 animate-pulse rounded-full bg-live"
+    />
+  );
 }
 export function useTabLabel(tab: IdeTab): string {
   const title = useThreadStore((state) =>

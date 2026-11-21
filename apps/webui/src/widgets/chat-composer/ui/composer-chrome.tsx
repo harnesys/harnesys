@@ -113,7 +113,7 @@ export function composerPlaceholder({
 export function streamStatusLabel(phase: RunPhase): string | null {
   switch (phase) {
     case 'live':
-      return 'Agent is working…';
+      return null;
     case 'queued':
       return 'Queued…';
     default:
