@@ -1,9 +1,59 @@
+import type { FieldSpec } from '../../../../domain/apps/field.ts';
+import type { ConnectResumeCtx } from '../../../../domain/apps/provider-module.ts';
 import type { JsonObject } from '../../../../domain/apps/records.ts';
 
-export function manifestPage(state: string, manifest: unknown): string {
+export const ORGANIZATION_FIELD = 'organization';
+
+export function organizationFieldSpec(): FieldSpec {
+  return {
+    key: ORGANIZATION_FIELD,
+    label: 'Organization',
+    type: 'text',
+    required: false,
+    placeholder: 'my-organization',
+    help: 'Leave empty to register the App on your personal account.',
+    pattern: {
+      regex: '^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$',
+      hint: 'Letters, digits and hyphens; cannot start or end with a hyphen.',
+    },
+  };
+}
+
+export function organizationOf(ctx: ConnectResumeCtx): string | undefined {
+  const value = ctx.inputs[ORGANIZATION_FIELD];
+  const organization = typeof value === 'string' ? value.trim() : '';
+  return organization === '' ? undefined : organization;
+}
+
+export function manifestStateOf(ctx: ConnectResumeCtx): string {
+  const value = ctx.sessionState.manifestState;
+  return typeof value === 'string' ? value : '';
+}
+
+export function manifestOf(ctx: ConnectResumeCtx): Record<string, unknown> {
+  const hookUrl = publicHookUrl(ctx.urls.webhookUrl);
+  return {
+    name: `Harnesys ${ctx.orgId.slice(0, 8)}`,
+    url: 'https://github.com',
+    redirect_url: ctx.urls.redirectUri,
+    setup_url: ctx.urls.redirectUri,
+    ...(hookUrl ? { hook_attributes: { url: hookUrl, active: true } } : {}),
+    public: false,
+    default_permissions: { contents: 'write', metadata: 'read', issues: 'write' },
+  };
+}
+
+export function manifestPage(state: string, manifest: unknown, organization?: string): string {
   const encoded = escapeAttribute(JSON.stringify(manifest));
-  const action = `https://github.com/settings/apps/new?state=${encodeURIComponent(state)}`;
+  const action = manifestAction(state, organization);
   return `<!doctype html><html><head><meta charset="utf-8"><title>Create GitHub App</title></head><body><p>Redirecting to GitHub…</p><form id="f" method="post" action="${escapeAttribute(action)}"><input type="hidden" name="manifest" value="${encoded}"><button type="submit">Continue</button></form><script nonce="{{nonce}}">document.getElementById('f').submit();</script></body></html>`;
+}
+
+function manifestAction(state: string, organization?: string): string {
+  const base = organization
+    ? `https://github.com/organizations/${encodeURIComponent(organization)}/settings/apps/new`
+    : 'https://github.com/settings/apps/new';
+  return `${base}?state=${encodeURIComponent(state)}`;
 }
 
 function escapeAttribute(value: string): string {

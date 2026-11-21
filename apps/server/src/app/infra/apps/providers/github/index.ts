@@ -19,9 +19,12 @@ import {
   installationEffects,
   installationRef,
   lowerHeader,
+  manifestOf,
   manifestPage,
+  manifestStateOf,
+  organizationFieldSpec,
+  organizationOf,
   parseBody,
-  publicHookUrl,
 } from './support.ts';
 
 const PROVIDER_ID = 'github';
@@ -29,31 +32,30 @@ const API = 'https://api.github.com';
 
 const setup: ConnectHandler<AppSetupResult> = {
   async start(ctx) {
-    const hookUrl = publicHookUrl(ctx.urls.webhookUrl);
-    const manifest = {
-      name: `Harnesys ${ctx.orgId.slice(0, 8)}`,
-      url: 'https://github.com',
-      redirect_url: ctx.urls.redirectUri,
-      setup_url: ctx.urls.redirectUri,
-      ...(hookUrl ? { hook_attributes: { url: hookUrl, active: true } } : {}),
-      public: false,
-      default_permissions: { contents: 'write', metadata: 'read', issues: 'write' },
-    };
     return {
       type: 'wait',
       launch: {
-        kind: 'html',
-        html: manifestPage(ctx.state, manifest),
-        formActionHosts: ['github.com'],
+        kind: 'form',
+        fields: [organizationFieldSpec()],
+        text: 'Register the GitHub App on a personal account, or enter an organization to register it under the organization.',
       },
-      state: {},
+      state: { manifestState: ctx.state },
       ttlSec: 900,
     };
   },
   async resume(ctx) {
     const code = ctx.params.code;
     if (!code) {
-      throw new ProviderError('invalid_input');
+      return {
+        type: 'wait',
+        launch: {
+          kind: 'html',
+          html: manifestPage(manifestStateOf(ctx), manifestOf(ctx), organizationOf(ctx)),
+          formActionHosts: ['github.com'],
+        },
+        state: {},
+        ttlSec: 900,
+      };
     }
     const outcome = requireHttp(
       await ctx.http.send({
@@ -112,7 +114,7 @@ const appKind: AppKindModule = {
     ],
     help: {
       steps: [
-        'Let Harnesys create the GitHub App automatically, or create one manually in GitHub settings.',
+        'Let Harnesys create the GitHub App automatically, on your personal account or under an organization, or create one manually in GitHub settings.',
         'Register the redirect URI and webhook URL shown here on the App, and set the Setup URL to the same redirect URI.',
         'Grant the permissions the addon needs and install the App on an organization or repositories.',
         'Pushing commits requires the Contents: read and write permission. Apps created earlier with read-only Contents must be updated in GitHub settings.',
