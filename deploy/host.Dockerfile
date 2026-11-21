@@ -5,6 +5,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# git is required at runtime: plugin/skill install clones repos via Bun.spawn('git').
+RUN apk add --no-cache git
+
 # Workspace layout must be complete BEFORE bun install: bun snapshots each
 # workspace into node_modules/.bun at install time, so sources copied after
 # install are invisible to resolution (add-ons fail with "Could not resolve

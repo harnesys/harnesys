@@ -36,6 +36,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# git is required at runtime: plugin/skill install clones repos via Bun.spawn('git').
+RUN apk add --no-cache git
+
 COPY package.json bun.lock tsconfig.json ./
 COPY packages/brix/package.json packages/brix/
 COPY packages/contracts/package.json packages/contracts/
