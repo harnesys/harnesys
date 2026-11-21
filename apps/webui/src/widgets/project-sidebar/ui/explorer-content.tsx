@@ -10,6 +10,8 @@ import {
   useMoveProjectFiles,
 } from '@/features/move-project-files';
 import { openProjectFile } from '@/features/open-file';
+import { watchMaterializationChanged } from '@/shared/api';
+import { getActiveOrgId } from '@/shared/api/active-org';
 import {
   createProjectFile,
   deleteProjectFile,
@@ -18,6 +20,7 @@ import {
   writeProjectFileContent,
 } from '@/shared/api/files';
 import { getGitFileStatus, gitFileStatusQueryKey } from '@/shared/api/git';
+import { sourceHostStatusQuery, sourceHostStatusQueryKey } from '@/shared/api/sources';
 import { useStudioNavigation } from '@/shared/config/navigation';
 import { SIDEBAR_ROW_HEIGHT, SIDEBAR_ROW_INDENT } from '@/shared/ui/sidebar-row';
 import { Spinner } from '@/shared/ui/spinner';
@@ -37,6 +40,7 @@ import { fetchViewerTemplate } from '../model/viewer-creates';
 import { renderFileTreeRow } from './file-row-render';
 import { FileTreeWindow } from './file-tree-window';
 import { InlineCreateInput } from './inline-create-input';
+import { SourceTreeStatus } from './source-tree-status';
 
 const EMPTY_DIRS: string[] = [];
 
@@ -84,6 +88,25 @@ export function ExplorerContent({
     queryFn: () => listSourceFilesTree(projectId, { includeHidden: showHidden }),
     staleTime: 60000,
   });
+  const orgId = getActiveOrgId() ?? '';
+  const statusQuery = useQuery(sourceHostStatusQuery(orgId, projectId));
+  const statuses = statusQuery.data?.statuses ?? [];
+  const sourceTracked = Boolean(orgId && projectId);
+  const sourceReady = !sourceTracked || statuses.some((row) => row.materialization === 'ready');
+  const sourceFailed = statuses.some((row) => row.materialization === 'failed');
+  const preparingSource = sourceTracked && !sourceReady && !sourceFailed;
+  useEffect(() => {
+    if (!orgId || !projectId) {
+      return;
+    }
+    return watchMaterializationChanged(orgId, (frame) => {
+      if (frame.sourceId !== projectId) {
+        return;
+      }
+      void qc.invalidateQueries({ queryKey: sourceFilesTreeQueryKey(projectId) });
+      void qc.invalidateQueries({ queryKey: sourceHostStatusQueryKey(orgId, projectId) });
+    });
+  }, [orgId, projectId, qc]);
   const gitFileStatusQuery = useQuery({
     queryKey: gitFileStatusQueryKey(projectId),
     queryFn: () => getGitFileStatus(projectId),
@@ -314,12 +337,11 @@ export function ExplorerContent({
         testId={`explorer-rows-${projectId}`}
       />
       {!treeQuery.isPending && rows.length === 0 ? (
-        <p
-          className="flex h-7 items-center text-[11px] text-muted-foreground"
-          style={{ paddingLeft: `${depthOffset * SIDEBAR_ROW_INDENT + 6}px` }}
-        >
-          Empty source.
-        </p>
+        <SourceTreeStatus
+          preparing={preparingSource}
+          failed={sourceFailed}
+          depthOffset={depthOffset}
+        />
       ) : null}
     </div>
   );
