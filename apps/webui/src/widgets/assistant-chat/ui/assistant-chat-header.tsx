@@ -1,6 +1,7 @@
-import { CheckIcon, GripVerticalIcon, PlusIcon } from 'lucide-react';
+import { CheckIcon, GripVerticalIcon, PinIcon, PinOffIcon, PlusIcon } from 'lucide-react';
 import { AgentRecordAvatar } from '@/entities/agent';
 import { openNewThread } from '@/features/switch-thread';
+import { cn } from '@/shared/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +29,8 @@ export function AssistantChatHeader({
   const { agent, agents, threads, thread } = useAssistantChat();
   const setAgent = useAssistantChatStore((state) => state.setAgent);
   const setThread = useAssistantChatStore((state) => state.setThread);
+  const pinned = useAssistantChatStore((state) => state.pinned);
+  const togglePinned = useAssistantChatStore((state) => state.togglePinned);
   let agentBlock = <span className="px-1 text-muted-foreground text-xs">No agents</span>;
   if (agent) {
     agentBlock = (
@@ -79,60 +82,77 @@ export function AssistantChatHeader({
         aria-hidden="true"
       />
       {agentBlock}
-      {thread ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            data-no-drag
-            className="ms-auto flex min-w-0 items-center gap-1 rounded-md px-2 py-0.5 text-muted-foreground text-xs outline-none hover:bg-muted/60"
-            title="Switch thread"
-            aria-label="Switch thread"
-            data-testid="assistant-chat-thread"
-          >
-            <span className="truncate">{thread.title}</span>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" side="bottom" className="max-w-64">
-            <DropdownMenuItem
-              className="gap-2"
-              data-testid="assistant-chat-new-thread"
-              onClick={() => {
-                if (!agent) {
-                  return;
-                }
-                void openNewThread(agent.id, agent.orgId)
-                  .then((threadId) => {
-                    if (threadId) {
-                      setThread(agent.id, threadId);
-                    }
-                  })
-                  .catch((error: unknown) => {
-                    toast.add({
-                      title: 'Could not start chat',
-                      description: error instanceof Error ? error.message : undefined,
-                    });
-                  });
-              }}
+      <div className="ms-auto flex items-center gap-1">
+        {thread ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              data-no-drag
+              className="flex min-w-0 items-center gap-1 rounded-md px-2 py-0.5 text-muted-foreground text-xs outline-none hover:bg-muted/60"
+              title="Switch thread"
+              aria-label="Switch thread"
+              data-testid="assistant-chat-thread"
             >
-              <PlusIcon className="size-3.5" />
-              <span className="min-w-0 flex-1 truncate">New chat</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {threads.map((item) => (
+              <span className="truncate">{thread.title}</span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="bottom" className="max-w-64">
               <DropdownMenuItem
-                key={item.id}
                 className="gap-2"
+                data-testid="assistant-chat-new-thread"
                 onClick={() => {
-                  if (agent) {
-                    setThread(agent.id, item.id);
+                  if (!agent) {
+                    return;
                   }
+                  void openNewThread(agent.id, agent.orgId)
+                    .then((threadId) => {
+                      if (threadId) {
+                        setThread(agent.id, threadId);
+                      }
+                    })
+                    .catch((error: unknown) => {
+                      toast.add({
+                        title: 'Could not start chat',
+                        description: error instanceof Error ? error.message : undefined,
+                      });
+                    });
                 }}
               >
-                <span className="min-w-0 flex-1 truncate">{item.title}</span>
-                {item.id === thread.id ? <CheckIcon className="size-3.5" /> : null}
+                <PlusIcon className="size-3.5" />
+                <span className="min-w-0 flex-1 truncate">New chat</span>
               </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : null}
+              <DropdownMenuSeparator />
+              {threads.map((item) => (
+                <DropdownMenuItem
+                  key={item.id}
+                  className="gap-2"
+                  onClick={() => {
+                    if (agent) {
+                      setThread(agent.id, item.id);
+                    }
+                  }}
+                >
+                  <span className="min-w-0 flex-1 truncate">{item.title}</span>
+                  {item.id === thread.id ? <CheckIcon className="size-3.5" /> : null}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
+        <button
+          type="button"
+          data-no-drag
+          className={cn(
+            'flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted/60 hover:text-foreground',
+            pinned && 'bg-muted text-foreground',
+          )}
+          title={pinned ? 'Unpin assistant' : 'Pin assistant'}
+          aria-label={pinned ? 'Unpin assistant' : 'Pin assistant'}
+          aria-pressed={pinned}
+          data-testid="assistant-chat-pin"
+          onClick={() => togglePinned()}
+        >
+          {pinned ? <PinIcon className="size-4" /> : <PinOffIcon className="size-4" />}
+        </button>
+      </div>
     </header>
   );
 }

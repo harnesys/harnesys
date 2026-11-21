@@ -9,10 +9,10 @@ import { PageHeader, PageHeaderIcon } from '@/shared/ui/page-header';
 import { toast } from '@/shared/ui/toast';
 import { ToggleGroup, ToggleGroupItem } from '@/shared/ui/toggle-group';
 import { resolveBoardIcon } from '../model/board-icons';
-import { useIssueDrawerStore } from '../model/issue-drawer.store';
 import { applyIssueFilters, sortIssues } from '../model/issue-filters';
 import type { IssueViewMode } from '../model/issue-view.store';
 import { useBoardViewSettings, useIssueViewStore } from '../model/issue-view.store';
+import { startCreateIssue } from '../model/issues';
 import { BoardColumnsPopover } from './board-columns-popover';
 import { BoardFilterPopover } from './board-filter-popover';
 import { BoardKanban } from './board-kanban';
@@ -31,7 +31,6 @@ export function BoardSurface({ projectId, boardId }: { projectId: string; boardI
   const settings = useBoardViewSettings(boardId);
   const setViewMode = (mode: IssueViewMode) =>
     useIssueViewStore.getState().patch(boardId, { mode });
-  const startCreate = useIssueDrawerStore((state) => state.startCreate);
   if (!board) {
     return (
       <div className="flex flex-1 items-center justify-center text-muted-foreground text-sm">
@@ -117,7 +116,7 @@ export function BoardSurface({ projectId, boardId }: { projectId: string; boardI
                     });
                     return;
                   }
-                  startCreate(boardId, entryStatus.key);
+                  void startCreateIssue(orgId, { boardId, statusKey: entryStatus.key });
                 }}
               >
                 <PlusIcon className="size-3.5" />

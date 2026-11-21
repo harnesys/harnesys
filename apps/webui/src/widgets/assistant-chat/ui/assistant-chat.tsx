@@ -50,10 +50,12 @@ function AssistantChatSurface() {
   const status = useAgentLiveStatus(agent?.id ?? '');
   const unread = useAgentHasUnread(agent?.id ?? '');
   const open = useAssistantChatStore((state) => state.open);
+  const pinned = useAssistantChatStore((state) => state.pinned);
   const position = useAssistantChatStore((state) => state.position);
   const size = useAssistantChatStore((state) => state.size);
   const setPosition = useAssistantChatStore((state) => state.setPosition);
   const setSize = useAssistantChatStore((state) => state.setSize);
+  const setOpen = useAssistantChatStore((state) => state.setOpen);
   const toggleOpen = useAssistantChatStore((state) => state.toggleOpen);
   const containerRef = useRef<HTMLElement | null>(null);
   const dragRef = useRef<DragStart | null>(null);
@@ -77,6 +79,24 @@ function AssistantChatSurface() {
       bottom: Math.min(position.bottom, maxBottom),
     });
   }, [open, position, setPosition]);
+  useEffect(() => {
+    if (!open || pinned) {
+      return;
+    }
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Node | null;
+      if (!target || containerRef.current?.contains(target)) {
+        return;
+      }
+      const appRoot = document.getElementById('root');
+      if (appRoot && !appRoot.contains(target)) {
+        return;
+      }
+      setOpen(false);
+    }
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    return () => document.removeEventListener('pointerdown', handlePointerDown, true);
+  }, [open, pinned, setOpen]);
   function startDrag(event: React.PointerEvent<HTMLElement>) {
     if (
       event.button !== 0 ||

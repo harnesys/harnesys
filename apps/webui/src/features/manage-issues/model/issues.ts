@@ -2,6 +2,7 @@ import type { UpdateIssueBody } from '@harnesys/contracts';
 import type { IssuePriority, IssueRecord } from '@harnesys/studio-shared';
 import { useIssueStore } from '@/entities/issue';
 import {
+  commitIssueRecord,
   createIssueRecord,
   deleteIssueRecord,
   updateIssueRecord,
@@ -11,7 +12,8 @@ import { selfNodeCached } from '@/shared/api/fleet';
 import { createRepositoryWorktree } from '@/shared/api/repository-worktrees';
 import { randomUUID } from '@/shared/lib/random-uuid';
 import { toast } from '@/shared/ui/toast';
-import type { IssueFormDraft } from './issue-draft';
+import { type IssueFormDraft, NEW_ISSUE_TITLE } from './issue-draft';
+import { useIssueDrawerStore } from './issue-drawer.store';
 import { errorMessage } from './issue-errors';
 
 export async function createIssueFromDraft(
@@ -42,6 +44,51 @@ export async function createIssueFromDraft(
   } catch (error) {
     toast.add({ title: 'Create failed', description: errorMessage(error), type: 'error' });
     return null;
+  }
+}
+
+export async function startCreateIssue(
+  orgId: string,
+  input: { boardId: string; statusKey: string; parentIssueId?: string },
+): Promise<void> {
+  const issue = await createDraftIssue(orgId, input);
+  if (issue) {
+    useIssueDrawerStore.getState().openDraft(issue.id);
+  }
+}
+
+export async function createDraftIssue(
+  orgId: string,
+  input: { boardId: string; statusKey: string; parentIssueId?: string },
+): Promise<IssueRecord | null> {
+  try {
+    const issue = await createIssueRecord(orgId, {
+      boardId: input.boardId,
+      title: NEW_ISSUE_TITLE,
+      statusKey: input.statusKey || undefined,
+      parentIssueId: input.parentIssueId,
+      deferRules: true,
+    });
+    useIssueStore.getState().upsert(issue);
+    return issue;
+  } catch (error) {
+    toast.add({ title: 'Create failed', description: errorMessage(error), type: 'error' });
+    return null;
+  }
+}
+
+export async function commitIssue(
+  orgId: string,
+  issueId: string,
+  statusKey: string,
+): Promise<boolean> {
+  try {
+    const issue = await commitIssueRecord(orgId, issueId, statusKey);
+    useIssueStore.getState().upsert(issue);
+    return true;
+  } catch (error) {
+    toast.add({ title: 'Save failed', description: errorMessage(error), type: 'error' });
+    return false;
   }
 }
 

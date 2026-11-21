@@ -1,20 +1,23 @@
 import { create } from 'zustand';
 
-export type IssueDrawerTarget =
-  | { mode: 'edit'; issueId: string }
-  | { mode: 'create'; boardId: string; statusKey: string; parentIssueId?: string };
+export interface IssueDrawerTarget {
+  issueId: string;
+  draft: boolean;
+}
 
 interface IssueDrawerState {
   target: IssueDrawerTarget | null;
   openIssue: (issueId: string) => void;
-  startCreate: (boardId: string, statusKey: string, parentIssueId?: string) => void;
+  openDraft: (issueId: string) => void;
+  markCommitted: () => void;
   close: () => void;
 }
 
 export const useIssueDrawerStore = create<IssueDrawerState>((set) => ({
   target: null,
-  openIssue: (issueId) => set({ target: { mode: 'edit', issueId } }),
-  startCreate: (boardId, statusKey, parentIssueId) =>
-    set({ target: { mode: 'create', boardId, statusKey, parentIssueId } }),
+  openIssue: (issueId) => set({ target: { issueId, draft: false } }),
+  openDraft: (issueId) => set({ target: { issueId, draft: true } }),
+  markCommitted: () =>
+    set((state) => (state.target ? { target: { ...state.target, draft: false } } : state)),
   close: () => set({ target: null }),
 }));

@@ -19,7 +19,6 @@ import {
   issueTypeIcon,
   priorityMeta,
 } from '../../model/issue-meta';
-import { IssueCreateSourceFields } from './issue-create-source-fields';
 import { IssueDueDate } from './issue-due-date';
 import { IssueFireTrail } from './issue-fire-trail';
 import { IssueLabelField } from './issue-label-input';
@@ -29,8 +28,7 @@ const NONE = '__none__';
 export interface MetadataPanelProps {
   orgId: string;
   draft: IssueFormDraft;
-  issue: IssueRecord | null;
-  boardId: string;
+  issue: IssueRecord;
   agents: Agent[];
   boards: IssueBoardRecord[];
   statuses: BoardStatus[];
@@ -53,7 +51,6 @@ export function IssueMetadataPanel({
   orgId,
   draft,
   issue,
-  boardId,
   agents,
   boards,
   statuses,
@@ -63,7 +60,6 @@ export function IssueMetadataPanel({
   onBoardChange,
 }: MetadataPanelProps) {
   const timeZone = useOrgTimeZone();
-  const isCreateMode = !issue;
   const statusValue: string = draft.statusKey;
   const assignableAgents = agents.filter((agent) => !agent.parentId);
   return (
@@ -157,7 +153,7 @@ export function IssueMetadataPanel({
       <MetaField title="Board">
         <Select
           items={boards.map((board) => ({ value: board.id, label: board.name }))}
-          value={issue?.boardId ?? boardId}
+          value={issue.boardId}
           onValueChange={(value) => value && onBoardChange(String(value))}
         >
           <SelectTrigger className="w-full">
@@ -195,10 +191,6 @@ export function IssueMetadataPanel({
           </SelectContent>
         </Select>
       </MetaField>
-
-      {isCreateMode ? (
-        <IssueCreateSourceFields orgId={orgId} draft={draft} onDraftChange={onDraftChange} />
-      ) : null}
 
       <MetaField title="Type">
         <Select
@@ -272,17 +264,15 @@ export function IssueMetadataPanel({
         onChange={(labels) => onDraftChange({ ...draft, labels })}
       />
 
-      {!isCreateMode && issue ? (
-        <div className="space-y-2.5 border-t pt-4 text-[11px] text-muted-foreground">
-          <ReadOnlyRow label="Created" value={formatFullDate(issue.createdAt, timeZone)} />
-          <ReadOnlyRow label="Updated" value={formatFullDate(issue.updatedAt, timeZone)} />
-          {issue.closedAt ? (
-            <ReadOnlyRow label="Closed" value={formatFullDate(issue.closedAt, timeZone)} />
-          ) : null}
-        </div>
-      ) : null}
+      <div className="space-y-2.5 border-t pt-4 text-[11px] text-muted-foreground">
+        <ReadOnlyRow label="Created" value={formatFullDate(issue.createdAt, timeZone)} />
+        <ReadOnlyRow label="Updated" value={formatFullDate(issue.updatedAt, timeZone)} />
+        {issue.closedAt ? (
+          <ReadOnlyRow label="Closed" value={formatFullDate(issue.closedAt, timeZone)} />
+        ) : null}
+      </div>
 
-      {issue && issue.fireTrail.length > 0 ? (
+      {issue.fireTrail.length > 0 ? (
         <MetaField title="Fires">
           <IssueFireTrail orgId={orgId} issue={issue} agents={agents} statuses={statuses} />
         </MetaField>

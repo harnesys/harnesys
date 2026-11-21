@@ -14,6 +14,7 @@ import type {
   AddIssueCommentBody,
   AddIssueDependencyBody,
   AddIssueSourceAttachmentBody,
+  CommitIssueBody,
   CreateIssueBody,
   CreateIssueResponse,
   CreateIssueWorktreeBody,
@@ -30,6 +31,7 @@ import {
   AddIssueCommentBodySchema,
   AddIssueDependencyBodySchema,
   AddIssueSourceAttachmentBodySchema,
+  CommitIssueBodySchema,
   CreateIssueBodySchema,
   CreateIssueWorktreeBodySchema,
   ListIssuesQuerySchema,
@@ -91,6 +93,15 @@ export class IssuesController {
     @Body(CreateIssueBodySchema) body: CreateIssueBody,
   ): Promise<CreateIssueResponse> {
     return this.createIssue.execute({ orgId, body });
+  }
+
+  @Post(':issueId/commit')
+  async commit(
+    @Param('orgId') orgId: string,
+    @Param('issueId') issueId: string,
+    @Body(CommitIssueBodySchema) body: CommitIssueBody,
+  ): Promise<CreateIssueResponse> {
+    return this.createIssue.commit({ orgId, issueId, statusKey: body.statusKey });
   }
 
   @Get(':issueId')

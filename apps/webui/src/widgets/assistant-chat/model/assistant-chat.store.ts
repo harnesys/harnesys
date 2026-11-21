@@ -18,6 +18,7 @@ const DEFAULT_SIZE: AssistantChatSize = { width: 400, height: 620 };
 interface AssistantChatState {
   visible: boolean;
   open: boolean;
+  pinned: boolean;
   agentId: string | null;
   threadByAgent: Record<string, string>;
   position: AssistantChatPosition;
@@ -26,6 +27,8 @@ interface AssistantChatState {
   hide: () => void;
   toggleVisible: () => void;
   toggleOpen: () => void;
+  setOpen: (open: boolean) => void;
+  togglePinned: () => void;
   setAgent: (agentId: string) => void;
   setThread: (agentId: string, threadId: string) => void;
   setPosition: (position: AssistantChatPosition) => void;
@@ -37,6 +40,7 @@ export const useAssistantChatStore = create<AssistantChatState>()(
     (set) => ({
       visible: true,
       open: false,
+      pinned: false,
       agentId: null,
       threadByAgent: {},
       position: DEFAULT_POSITION,
@@ -46,6 +50,8 @@ export const useAssistantChatStore = create<AssistantChatState>()(
       toggleVisible: () =>
         set((state) => (state.visible ? { visible: false } : { visible: true, open: true })),
       toggleOpen: () => set((state) => ({ open: !state.open })),
+      setOpen: (open) => set({ open }),
+      togglePinned: () => set((state) => ({ pinned: !state.pinned })),
       setAgent: (agentId) => set({ agentId }),
       setThread: (agentId, threadId) =>
         set((state) => ({
@@ -59,6 +65,7 @@ export const useAssistantChatStore = create<AssistantChatState>()(
       partialize: (state) => ({
         visible: state.visible,
         open: state.open,
+        pinned: state.pinned,
         agentId: state.agentId,
         threadByAgent: state.threadByAgent,
         position: state.position,

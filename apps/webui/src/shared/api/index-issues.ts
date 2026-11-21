@@ -18,6 +18,7 @@ export {
 } from './issue-labels';
 export {
   addBoardStatus,
+  commitIssueRecord,
   createIssueBoard,
   createIssueRecord,
   deleteIssueBoard,

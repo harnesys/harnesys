@@ -2,7 +2,6 @@ export {
   confirmDeleteIssue,
   createBoardFromTemplate,
   createIssueBoardRecord,
-  createIssueFromDraft,
   deleteIssueBoardCascade,
   type IssueFormDraft,
   moveIssueStatus,

@@ -5,7 +5,7 @@ import { useActiveOrgStore } from '@/entities/org-machine';
 import { setActiveThreadId } from '@/entities/thread';
 import { useDeskStore } from '@/features/desk';
 import { useIdeStore } from '@/features/ide';
-import { useIssueDrawerStore } from '@/features/manage-issues/model/issue-drawer.store';
+import { startCreateIssue } from '@/features/manage-issues/model/issues';
 import { openNewThread } from '@/features/switch-thread';
 import { useOrgId } from '@/shared/config/location';
 import { useStudioNavigation } from '@/shared/config/navigation';
@@ -78,7 +78,7 @@ export function IdeHome() {
                   });
                   return;
                 }
-                useIssueDrawerStore.getState().startCreate(boardId, entryStatus.key);
+                void startCreateIssue(orgId, { boardId, statusKey: entryStatus.key });
                 openBoard(boardId);
               });
             }}

@@ -14,8 +14,7 @@ import {
   parseIssueCardDragId,
   rulesForStatus,
 } from '../model/board-columns';
-import { useIssueDrawerStore } from '../model/issue-drawer.store';
-import { moveIssueStatus } from '../model/issues';
+import { moveIssueStatus, startCreateIssue } from '../model/issues';
 import { openBoardColumnRulesDialog } from './board-column-rules-dialog';
 import { IssueCard } from './issue-card';
 
@@ -38,7 +37,6 @@ export function BoardColumn({
 }) {
   const [dragOver, setDragOver] = useState(false);
   const labels = useIssueLabelStore((state) => state.items);
-  const startCreate = useIssueDrawerStore((state) => state.startCreate);
   const quick = canQuickCreate(status);
   return (
     <section
@@ -94,7 +92,7 @@ export function BoardColumn({
             className="ml-auto size-6 shrink-0 text-muted-foreground hover:text-foreground"
             title={`Create issue in ${status.label}`}
             data-testid={`issue-quick-create-${status.key}`}
-            onClick={() => startCreate(boardId, status.key)}
+            onClick={() => void startCreateIssue(orgId, { boardId, statusKey: status.key })}
           >
             <PlusIcon className="size-3.5" />
             <span className="sr-only">Add to {status.label}</span>

@@ -1,17 +1,20 @@
+import type { IssueRecord } from '@harnesys/studio-shared';
 import { useEffect, useRef, useState } from 'react';
 import { useIssueStore } from '@/entities/issue';
 import { cn } from '@/shared/lib/utils';
 import { Resizer } from '@/shared/ui/resizer';
 import { Sheet, SheetContent } from '@/shared/ui/sheet';
 import { Spinner } from '@/shared/ui/spinner';
+import { confirmDeleteIssue } from '../model/issue-dialogs';
 import {
   draftDiff,
   draftFromRecord,
   emptyIssueDraft,
   type IssueFormDraft,
+  isPristineDraft,
 } from '../model/issue-draft';
 import { type IssueDrawerTarget, useIssueDrawerStore } from '../model/issue-drawer.store';
-import { createIssueFromDraft, updateIssuePatch } from '../model/issues';
+import { commitIssue, deleteIssue, updateIssuePatch } from '../model/issues';
 import { useIssueDetail } from '../model/use-issue-detail';
 import { DrawerBody } from './issue-drawer/issue-drawer-body';
 import { DrawerProblem } from './issue-drawer/issue-drawer-header';
@@ -23,52 +26,66 @@ export function IssueDrawer({ orgId }: { orgId: string }) {
   const target = useIssueDrawerStore((state) => state.target);
   const closeDrawer = useIssueDrawerStore((state) => state.close);
   const openIssue = useIssueDrawerStore((state) => state.openIssue);
-  const issueId = target?.mode === 'edit' ? target.issueId : null;
+  const markCommitted = useIssueDrawerStore((state) => state.markCommitted);
+  const issueId = target?.issueId ?? null;
+  const isDraft = target?.draft ?? false;
   const issue = useIssueStore((state) => (issueId ? state.byId(issueId) : undefined));
   const detailState = useIssueDetail(orgId, issueId);
-  const { draft, setDraft, boardId, setCreateBoardId } = useIssueDraft(target);
+  const { draft, setDraft, seed } = useIssueDraft(target);
   const { width, isResizing, onResizeStart } = useResizablePanel();
   const [saving, setSaving] = useState(false);
 
-  const editMode = target?.mode === 'edit';
-  const waitingDetail = Boolean(editMode) && detailState.loading && !detailState.detail;
-  const brokenDetail =
-    Boolean(editMode) && !waitingDetail && (Boolean(detailState.error) || !issue);
+  const waitingDetail = Boolean(issueId) && detailState.loading && !detailState.detail;
+  const brokenDetail = Boolean(issueId) && !waitingDetail && (Boolean(detailState.error) || !issue);
   const showContent = target !== null && !waitingDetail && !brokenDetail;
 
   const save = async (): Promise<void> => {
-    if (draft.title.trim().length === 0 || saving) {
-      return;
-    }
-    if (target?.mode === 'create') {
-      setSaving(true);
-      const created = await createIssueFromDraft(orgId, {
-        ...draft,
-        boardId,
-        parentIssueId: target.parentIssueId,
-      });
-      setSaving(false);
-      if (created) {
-        closeDrawer();
-        openIssue(created.id);
-      }
-      return;
-    }
-    if (!issue) {
-      return;
-    }
-    const body = draftDiff(issue, draft);
-    if (Object.keys(body).length === 0) {
+    if (!issue || saving || draft.title.trim().length === 0) {
       return;
     }
     setSaving(true);
-    const ok = await updateIssuePatch(orgId, issue.id, body);
+    const body = draftDiff(issue, draft);
+    if (Object.keys(body).length > 0) {
+      await updateIssuePatch(orgId, issue.id, body);
+    }
+    if (isDraft && (await commitIssue(orgId, issue.id, draft.statusKey))) {
+      markCommitted();
+    }
     setSaving(false);
-    if (ok) {
-      const fresh = useIssueStore.getState().byId(issue.id);
-      if (fresh) {
-        setDraft(draftFromRecord(fresh));
+    const fresh = useIssueStore.getState().byId(issue.id);
+    if (fresh) {
+      setDraft(draftFromRecord(fresh));
+    }
+  };
+
+  const flush = async (): Promise<void> => {
+    if (!issue) {
+      closeDrawer();
+      return;
+    }
+    if (isDraft) {
+      if (seed && isPristineDraft(issue, seed, draft, detailState.detail)) {
+        await deleteIssue(orgId, issue.id);
+        closeDrawer();
+        return;
       }
+      await save();
+    }
+    closeDrawer();
+  };
+
+  const switchTo = async (nextIssueId: string): Promise<void> => {
+    await flush();
+    openIssue(nextIssueId);
+  };
+
+  const remove = async (): Promise<void> => {
+    if (!issue) {
+      return;
+    }
+    if (await confirmDeleteIssue(issue)) {
+      await deleteIssue(orgId, issue.id);
+      closeDrawer();
     }
   };
 
@@ -87,7 +104,7 @@ export function IssueDrawer({ orgId }: { orgId: string }) {
   });
 
   return (
-    <Sheet open={Boolean(target)} onOpenChange={(open) => !open && closeDrawer()}>
+    <Sheet open={Boolean(target)} onOpenChange={(open) => !open && void flush()}>
       <SheetContent
         side="right"
         showCloseButton={false}
@@ -110,22 +127,25 @@ export function IssueDrawer({ orgId }: { orgId: string }) {
             </div>
           ) : null}
           {brokenDetail ? (
-            <DrawerProblem message={detailState.error ?? 'Issue not found'} onClose={closeDrawer} />
+            <DrawerProblem
+              message={detailState.error ?? 'Issue not found'}
+              onClose={() => void flush()}
+            />
           ) : null}
-          {showContent && target ? (
+          {showContent && target && issue ? (
             <DrawerBody
               orgId={orgId}
-              target={target}
-              issue={issue ?? null}
+              issue={issue}
               detail={detailState}
               draft={draft}
               setDraft={setDraft}
-              boardId={boardId}
-              setCreateBoardId={setCreateBoardId}
+              boardId={issue.boardId}
               saving={saving}
+              isDraft={isDraft}
               onSave={() => void save()}
-              onClose={closeDrawer}
-              onOpenIssue={openIssue}
+              onDelete={() => void remove()}
+              onClose={() => void flush()}
+              onOpenIssue={(nextId) => void switchTo(nextId)}
             />
           ) : null}
         </div>
@@ -137,37 +157,27 @@ export function IssueDrawer({ orgId }: { orgId: string }) {
 function useIssueDraft(target: IssueDrawerTarget | null): {
   draft: IssueFormDraft;
   setDraft: (draft: IssueFormDraft) => void;
-  boardId: string;
-  setCreateBoardId: (boardId: string) => void;
+  seed: IssueRecord | null;
 } {
-  const issueId = target?.mode === 'edit' ? target.issueId : null;
-  const issue = useIssueStore((state) => (issueId ? state.byId(issueId) : undefined));
+  const issue = useIssueStore((state) => (target ? state.byId(target.issueId) : undefined));
   const [draft, setDraft] = useState<IssueFormDraft>(emptyIssueDraft);
-  const [createBoardId, setCreateBoardId] = useState('');
+  const [seed, setSeed] = useState<IssueRecord | null>(null);
   const appliedKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (!target) {
       appliedKey.current = null;
+      setSeed(null);
       return;
     }
-    if (target.mode === 'create') {
-      const key = `create-${target.boardId}-${target.statusKey}-${target.parentIssueId ?? ''}`;
-      if (appliedKey.current !== key) {
-        setDraft(emptyIssueDraft(target.statusKey));
-        setCreateBoardId(target.boardId);
-        appliedKey.current = key;
-      }
-      return;
-    }
-    if (issue && appliedKey.current !== target.issueId) {
+    if (issue && appliedKey.current !== issue.id) {
       setDraft(draftFromRecord(issue));
-      appliedKey.current = target.issueId;
+      setSeed(issue);
+      appliedKey.current = issue.id;
     }
   }, [target, issue]);
 
-  const boardId = target?.mode === 'create' ? createBoardId : (issue?.boardId ?? '');
-  return { draft, setDraft, boardId, setCreateBoardId };
+  return { draft, setDraft, seed };
 }
 
 function useResizablePanel(): {

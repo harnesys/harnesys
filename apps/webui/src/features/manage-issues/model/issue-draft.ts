@@ -1,4 +1,4 @@
-import type { UpdateIssueBody } from '@harnesys/contracts';
+import type { GetIssueResponse, UpdateIssueBody } from '@harnesys/contracts';
 import type { IssueRecord, IssueType } from '@harnesys/studio-shared';
 
 export interface IssueFormDraft {
@@ -16,6 +16,7 @@ export interface IssueFormDraft {
 
 export const ISSUE_DRAFT_DEFAULT_PRIORITY = 2;
 export const ISSUE_DRAFT_DEFAULT_TYPE: IssueType = 'task';
+export const NEW_ISSUE_TITLE = 'New issue';
 
 export function emptyIssueDraft(statusKey = ''): IssueFormDraft {
   return {
@@ -47,15 +48,41 @@ export function draftFromIssue(issue: IssueRecord): IssueFormDraft {
   };
 }
 
-export function draftFromSubtask(parent: IssueRecord): IssueFormDraft {
-  return {
-    ...emptyIssueDraft(parent.statusKey),
-    dueDate: parent.dueDate,
-  };
-}
-
 export function draftFromRecord(issue: IssueRecord): IssueFormDraft {
   return draftFromIssue(issue);
+}
+
+export function isPristineDraft(
+  issue: IssueRecord,
+  seed: IssueRecord,
+  draft: IssueFormDraft,
+  detail: GetIssueResponse | null,
+): boolean {
+  if (
+    issue.statusKey !== seed.statusKey ||
+    issue.assigneeAgentId !== seed.assigneeAgentId ||
+    issue.boardId !== seed.boardId ||
+    issue.sourceId !== seed.sourceId ||
+    issue.branch !== seed.branch ||
+    draft.statusKey !== seed.statusKey
+  ) {
+    return false;
+  }
+  if (Object.keys(draftDiff(seed, draft)).length > 0) {
+    return false;
+  }
+  if (!detail) {
+    return true;
+  }
+  return (
+    detail.attachments.length === 0 &&
+    detail.subtasks.length === 0 &&
+    detail.dependencies.length === 0 &&
+    detail.dependents.length === 0 &&
+    detail.comments.length === 0 &&
+    detail.worktree === null &&
+    detail.execution === null
+  );
 }
 
 export function draftDiff(issue: IssueRecord, draft: IssueFormDraft): UpdateIssueBody {

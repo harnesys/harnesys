@@ -208,6 +208,20 @@ export async function createIssueRecord(
   return res.issue;
 }
 
+export function commitIssueRecord(
+  orgId: string,
+  issueId: string,
+  statusKey?: string,
+): Promise<IssueRecord> {
+  return apiJson<CreateIssueResponse>(
+    `${issuesBase(requireOrgId(orgId))}/${encodeURIComponent(issueId)}/commit`,
+    {
+      method: 'POST',
+      body: JSON.stringify(statusKey ? { statusKey } : {}),
+    },
+  ).then((res) => res.issue);
+}
+
 export function updateIssueRecord(
   orgId: string,
   issueId: string,

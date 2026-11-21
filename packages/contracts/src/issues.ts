@@ -166,8 +166,14 @@ export const CreateIssueBodySchema = z.object({
   sourceId: z.string().uuid().optional(),
   branch: z.string().trim().min(1).optional(),
   worktreeOnStatus: z.string().trim().min(1).optional(),
+  deferRules: z.boolean().optional(),
 });
 export type CreateIssueBody = z.infer<typeof CreateIssueBodySchema>;
+
+export const CommitIssueBodySchema = z.object({
+  statusKey: z.string().min(1).optional(),
+});
+export type CommitIssueBody = z.infer<typeof CommitIssueBodySchema>;
 
 export const UpdateIssueBodySchema = z.object({
   boardId: z.string().uuid().optional(),

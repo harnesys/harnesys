@@ -6,11 +6,9 @@ import type { Agent } from '@/entities/agent';
 import { useAgentStore } from '@/entities/agent';
 import { useIssueBoardStore, useIssueStore } from '@/entities/issue';
 import { Separator } from '@/shared/ui/separator';
-import { confirmDeleteIssue } from '../../model/issue-dialogs';
 import type { IssueFormDraft } from '../../model/issue-draft';
 import { draftDiff } from '../../model/issue-draft';
-import type { IssueDrawerTarget } from '../../model/issue-drawer.store';
-import { deleteIssue, moveIssueStatus, updateIssuePatch } from '../../model/issues';
+import { moveIssueStatus, updateIssuePatch } from '../../model/issues';
 import type { IssueDetailState } from '../../model/use-issue-detail';
 import { IssueAttachments } from './issue-attachments';
 import { IssueComments } from './issue-comments';
@@ -24,36 +22,36 @@ import { IssueVcsPanel } from './issue-vcs-panel';
 
 export interface DrawerBodyProps {
   orgId: string;
-  target: IssueDrawerTarget;
-  issue: IssueRecord | null;
+  issue: IssueRecord;
   detail: IssueDetailState;
   draft: IssueFormDraft;
   setDraft: (draft: IssueFormDraft) => void;
   boardId: string;
-  setCreateBoardId: (boardId: string) => void;
   saving: boolean;
+  isDraft: boolean;
   onSave: () => void;
+  onDelete: () => void;
   onClose: () => void;
   onOpenIssue: (issueId: string) => void;
 }
 
 export function DrawerBody({
   orgId,
-  target,
   issue,
   detail,
   draft,
   setDraft,
   boardId,
-  setCreateBoardId,
   saving,
+  isDraft,
   onSave,
+  onDelete,
   onClose,
   onOpenIssue,
 }: DrawerBodyProps) {
   const [copied, setCopied] = useState(false);
   const parent = useIssueStore((state) => {
-    const parentId = issue?.parentIssueId;
+    const parentId = issue.parentIssueId;
     return parentId ? state.byId(parentId) : undefined;
   });
   const agents = useAgentStore(
@@ -64,12 +62,18 @@ export function DrawerBody({
     state.boards.some((item) => item.id === boardId && item.status === 'archived'),
   );
   const statuses: BoardStatus[] =
-    useIssueBoardStore((state) => state.boardById(issue?.boardId ?? boardId)?.statuses) ?? [];
-  const dirty = issue ? Object.keys(draftDiff(issue, draft)).length > 0 : false;
+    useIssueBoardStore((state) => state.boardById(boardId)?.statuses) ?? [];
+  const dirty = Object.keys(draftDiff(issue, draft)).length > 0;
 
   const onStatusChange = (statusKey: string): void => {
-    if (!issue || archived || statusKey === issue.statusKey) {
+    if (archived) {
+      return;
+    }
+    if (isDraft) {
       setDraft({ ...draft, statusKey });
+      return;
+    }
+    if (statusKey === issue.statusKey) {
       return;
     }
     void moveIssueStatus(orgId, issue.id, statusKey).then((ok) => {
@@ -80,21 +84,14 @@ export function DrawerBody({
   };
 
   const onAssigneeChange = (agentId: string | null): void => {
-    if (!issue) {
-      setDraft({ ...draft, assigneeAgentId: agentId ?? '' });
-      return;
-    }
     if (archived) {
       return;
     }
+    setDraft({ ...draft, assigneeAgentId: agentId ?? '' });
     void updateIssuePatch(orgId, issue.id, { assigneeAgentId: agentId });
   };
 
   const onBoardChange = (nextBoardId: string): void => {
-    if (!issue) {
-      setCreateBoardId(nextBoardId);
-      return;
-    }
     if (archived || nextBoardId === issue.boardId) {
       return;
     }
@@ -105,15 +102,12 @@ export function DrawerBody({
     <>
       <DrawerHeader
         draft={draft}
-        isCreateMode={target.mode === 'create'}
         issue={issue}
         parent={parent ?? null}
         copied={copied}
+        autoFocusTitle={isDraft}
         onTitleChange={(title) => setDraft({ ...draft, title })}
         onCopy={() => {
-          if (!issue) {
-            return;
-          }
           void navigator.clipboard.writeText(issue.id).then(() => {
             setCopied(true);
             window.setTimeout(() => setCopied(false), 2000);
@@ -135,7 +129,7 @@ export function DrawerBody({
             onChange={(description) => setDraft({ ...draft, description })}
           />
           <Separator />
-          {target.mode === 'edit' && detail.detail && issue ? (
+          {detail.detail ? (
             <DetailSections
               orgId={orgId}
               issue={issue}
@@ -150,7 +144,6 @@ export function DrawerBody({
           orgId={orgId}
           draft={draft}
           issue={issue}
-          boardId={boardId}
           agents={agents}
           boards={boards.filter((item) => item.status === 'active')}
           statuses={statuses}
@@ -161,24 +154,12 @@ export function DrawerBody({
         />
       </div>
       <DrawerFooter
-        draft={draft}
-        isCreateMode={target.mode === 'create'}
-        issue={issue}
-        statuses={statuses}
         saving={saving}
         canSave={draft.title.trim().length > 0}
         dirty={dirty}
+        isDraft={isDraft}
         onSave={onSave}
-        onDelete={() => {
-          if (!issue) {
-            return;
-          }
-          void confirmDeleteIssue(issue).then((confirmed) => {
-            if (confirmed) {
-              void deleteIssue(orgId, issue.id).then(onClose);
-            }
-          });
-        }}
+        onDelete={onDelete}
       />
     </>
   );

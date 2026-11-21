@@ -14,7 +14,8 @@ export { useIssueDrawerStore } from './issue-drawer.store';
 export { applyIssueFilters, sortIssues } from './issue-filters';
 export { useBoardViewSettings, useIssueViewStore } from './issue-view.store';
 export {
-  createIssueFromDraft,
+  commitIssue,
+  createDraftIssue,
   deleteIssue,
   moveIssueStatus,
   setIssuePriority,
