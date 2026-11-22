@@ -42,6 +42,7 @@ export type {
   SpawnToolStat,
   ThreadFeed,
   ThreadFeeds,
+  ToolCallDone,
   ToolCallEvent,
   ToolEventPair,
 } from './model/feed/feed-types.ts';

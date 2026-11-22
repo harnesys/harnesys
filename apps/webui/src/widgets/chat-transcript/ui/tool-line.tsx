@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import type { MapInfo, ToolEventPair } from '@/entities/session';
+import type { MapInfo, ToolCallDone, ToolEventPair } from '@/entities/session';
 import { mapLineHint, useFeedMap } from '@/entities/session';
 import { getThreadEvent } from '@/shared/api';
 import { useChatPreferences } from '@/shared/lib/chat-preferences';
@@ -158,11 +158,12 @@ async function loadFullThreadEvent(
   return getThreadEvent(threadId, threadSeq);
 }
 
+function isDoneToolEvent(event: SessionEvent | undefined): event is ToolCallDone {
+  return event?.type === 'tool' && (event.phase === 'completed' || event.phase === 'failed');
+}
+
 function resolvedPair(pair: ToolEventPair, event: SessionEvent | undefined): ToolEventPair {
-  if (event?.type !== 'tool' || event.threadSeq !== pair.result?.threadSeq) {
-    return pair;
-  }
-  if (event.phase !== 'completed' && event.phase !== 'failed') {
+  if (!isDoneToolEvent(event) || event.threadSeq !== pair.result?.threadSeq) {
     return pair;
   }
   return { ...pair, result: event };
