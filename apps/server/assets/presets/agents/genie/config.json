@@ -112,10 +112,6 @@
       "map_done": {
         "type": "control:yield",
         "value": "$output.text"
-      },
-      "wait": {
-        "type": "control:wait",
-        "untilMs": "$state.waitUntilMs"
       }
     },
     "edges": [
@@ -149,11 +145,6 @@
       },
       {
         "from": "act",
-        "to": "wait",
-        "when": "exists($state.waitUntilMs)"
-      },
-      {
-        "from": "act",
         "to": "think"
       },
       {
@@ -167,10 +158,6 @@
       },
       {
         "from": "map",
-        "to": "think"
-      },
-      {
-        "from": "wait",
         "to": "think"
       },
       {

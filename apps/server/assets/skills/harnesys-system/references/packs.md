@@ -38,7 +38,7 @@ No settings. No permission gate. Always required for a functioning agent.
 |---|---|
 | `ask_user` | Ask the human a question and park the run until the reply. |
 | `map` | Queue a fan-out over a JSON array (max 32) for the graph `control:map` node; per-item template with `$item`/`$index`. |
-| `wait` | Park the run until a wall-clock delay (1 ms–7 d) via `control:wait`. |
+| `wait` | Park the run until a wall-clock delay (1 ms–7 d) or until a signal settles (`signal: 'issue:<id>'`); optional `timeoutMs` bounds a signal wait (default 30 min). |
 
 `core` also adds the `core-tools` tail note explaining when to use `map`, `wait`, `ask_user`.
 

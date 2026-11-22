@@ -14,9 +14,10 @@ Rules evaluate on `issue_created` and `status_entered` events, in `position` ord
 
 | Aspect | Behavior |
 |---|---|
-| Trigger | `issue_created`, or `status_entered` with a `statusKey` |
+| Trigger | `issue_created`, `status_entered` with a `statusKey`, or `run_settled` (the issue's execution finished or failed) |
 | Conditions | AND of `has_label`; all must match |
-| `assign_agent` | Last matching rule wins |
+| `assign_agent` | Last matching rule wins; rejected on `run_settled` rules (a settled execution must not re-dispatch itself) |
+| `wake_agent` | Resume runs of that agent parked on this issue via `wait` with `signal: 'issue:<id>'` |
 | `set_status` | Cascades; cap 5 transitions, repeats blocked within one cascade |
 | `notify_owner` | UI toast to the owner |
 | Fire condition | A run fires only when the entered status category is `started` |
@@ -77,6 +78,27 @@ Flow: create issues with the matching stage label → move into the work column 
 1. `label_create` for the stage labels (`dev`, `qa`, `review`).
 2. `board_rule_save` per column: trigger + condition + action.
 3. Verify with `issue_board_list` (rules are visible there) before relying on them.
+
+## Recipe: await a dispatched run
+
+A coordinator that hands work to another agent parks on the issue signal instead of sleeping:
+
+1. Dispatch as usual (rule fires or explicit assignee) — the executor's run starts.
+2. `wait` with `signal: 'issue:<issueId>'` and an optional `timeoutMs` (default 30 min).
+   The run parks immediately — no graph edits needed, the `wait` tool is core.
+3. The run resumes within ~1 s of the executor's run settling (completed, failed or
+   cancelled). On timeout it resumes with `timedOut: true`.
+4. Read the tool result: `signal settled` → report the issue outcome (`issue_get`);
+   `wait timed out` → the executor is still working, report the timeout.
+
+Semantics: "settled" means the issue's latest execution is no longer active
+(`reserved`/`active`/`handoff`). A re-dispatch keeps the wait pending; a question the executor
+asks (`needs_input`) does not settle; an issue that was never dispatched waits for the timeout.
+A board rule with `run_settled` → `wake_agent` resumes parked runs without an explicit wait.
+
+`issue_get` shows the execution only while it is active — `null` can also mean the run
+already finished; check `fireTrail` or the executor thread to distinguish that from
+"never dispatched".
 
 ## Common mistakes
 
