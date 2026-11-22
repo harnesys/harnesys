@@ -111,6 +111,12 @@ export class InMemoryRunEventStore implements RunEventStore {
       this.insertion.filter((e) => e.threadId === threadId).map((e) => e.event),
     );
   }
+  eventAt(threadId: string, threadSeq: number): Promise<SessionEvent | null> {
+    const entry = this.insertion.find(
+      (candidate) => candidate.threadId === threadId && threadSeqOf(candidate.event) === threadSeq,
+    );
+    return Promise.resolve(entry ? entry.event : null);
+  }
   hasRun(runId: string): Promise<boolean> {
     const stored = this.events.get(runId);
     return Promise.resolve(stored !== undefined && stored.length > 0);

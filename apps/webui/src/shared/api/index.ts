@@ -241,6 +241,7 @@ export {
   deleteThreadUserEvent,
   getRunEventsStream,
   getThread,
+  getThreadEvent,
   getThreadPlan,
   listThreads,
   markThreadRead,

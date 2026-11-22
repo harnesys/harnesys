@@ -201,6 +201,18 @@ export class SqliteRunEventStore implements RunEventStore {
     );
   }
 
+  eventAt(threadId: string, threadSeq: number): Promise<SessionEvent | null> {
+    const row = this.db
+      .select({ event: runEventsTable, agentId: runsTable.agentId, agentName: runsTable.agentName })
+      .from(runEventsTable)
+      .leftJoin(runsTable, eq(runsTable.runId, runEventsTable.runId))
+      .where(and(eq(runEventsTable.threadId, threadId), eq(runEventsTable.threadSeq, threadSeq)))
+      .get();
+    return Promise.resolve(
+      row ? rowToEvent(row.event, { id: row.agentId, name: row.agentName }) : null,
+    );
+  }
+
   hasRun(runId: string): Promise<boolean> {
     const row = this.db
       .select({ threadSeq: runEventsTable.threadSeq })

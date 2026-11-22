@@ -56,6 +56,7 @@ export type SessionEvent = SessionEventScope &
         name: string;
         input?: unknown;
         output?: unknown;
+        outputTruncated?: boolean;
         message?: string;
         delta?: string;
         seq?: number;

@@ -86,6 +86,9 @@ export class FakeStore implements RunEventStore {
   listByThread(): Promise<SessionEvent[]> {
     return Promise.reject(new Error('not used'));
   }
+  eventAt(): Promise<SessionEvent | null> {
+    return Promise.reject(new Error('not used'));
+  }
   hasRun(): Promise<boolean> {
     return Promise.reject(new Error('not used'));
   }

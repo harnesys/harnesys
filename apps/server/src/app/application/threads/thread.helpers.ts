@@ -18,6 +18,7 @@ import type {
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadParticipantRepositoryPort } from '../../domain/thread/thread-participant-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
+import { projectThreadEvents } from './thread-events-projection.ts';
 
 export const DEFAULT_THREAD_TITLE = 'New chat';
 
@@ -301,7 +302,7 @@ export function toThreadPublic(
 ): ThreadPublic {
   return {
     ...toThreadSummary(input),
-    events: input.events,
+    events: projectThreadEvents(input.events),
     inheritedEventCount: input.inheritedEventCount ?? 0,
   };
 }

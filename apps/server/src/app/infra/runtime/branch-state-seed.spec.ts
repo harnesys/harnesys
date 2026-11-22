@@ -65,6 +65,9 @@ class StubEvents implements RunEventStore {
   async listByThread(): Promise<SessionEvent[]> {
     return this.byThread;
   }
+  async eventAt(_threadId: string, threadSeq: number): Promise<SessionEvent | null> {
+    return this.byThread.find((event) => event.threadSeq === threadSeq) ?? null;
+  }
   async hasRun(): Promise<boolean> {
     return false;
   }

@@ -11,6 +11,7 @@ import { DeleteThreadEventUseCase } from './delete-thread-event.use-case.ts';
 import { DeleteThreadPlanUseCase } from './delete-thread-plan.use-case.ts';
 import { GetThreadUseCase } from './get-thread.use-case.ts';
 import { GetThreadAttachmentUseCase } from './get-thread-attachment.use-case.ts';
+import { GetThreadEventUseCase } from './get-thread-event.use-case.ts';
 import { GetThreadPlanUseCase } from './get-thread-plan.use-case.ts';
 import { GetThreadRawModelRequestUseCase } from './get-thread-raw-model-request.use-case.ts';
 import { ListThreadAttachmentsUseCase } from './list-thread-attachments.use-case.ts';
@@ -39,6 +40,7 @@ const useCases = [
   CreateThreadUseCase,
   ListThreadsUseCase,
   GetThreadUseCase,
+  GetThreadEventUseCase,
   SendThreadMessageUseCase,
   SendThreadRunUseCase,
   CancelRunUseCase,

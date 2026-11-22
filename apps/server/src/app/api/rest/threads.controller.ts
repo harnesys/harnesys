@@ -39,6 +39,8 @@ import { DeleteThreadUseCase } from '../../application/threads/delete-thread.use
 import { DeleteThreadEventUseCase } from '../../application/threads/delete-thread-event.use-case.ts';
 import { DeleteThreadPlanUseCase } from '../../application/threads/delete-thread-plan.use-case.ts';
 import { GetThreadUseCase } from '../../application/threads/get-thread.use-case.ts';
+import type { GetThreadEventResponse } from '../../application/threads/get-thread-event.use-case.ts';
+import { GetThreadEventUseCase } from '../../application/threads/get-thread-event.use-case.ts';
 import { GetThreadPlanUseCase } from '../../application/threads/get-thread-plan.use-case.ts';
 import { ListThreadsUseCase } from '../../application/threads/list-threads.use-case.ts';
 import { MarkThreadReadUseCase } from '../../application/threads/mark-thread-read.use-case.ts';
@@ -69,6 +71,7 @@ export class ThreadsController {
     private readonly retryRun: RetryRunUseCase,
     private readonly markThreadRead: MarkThreadReadUseCase,
     private readonly getThreadPlan: GetThreadPlanUseCase,
+    private readonly getThreadEvent: GetThreadEventUseCase,
     private readonly deleteThreadPlan: DeleteThreadPlanUseCase,
     private readonly streamRunEvents: StreamRunEventsUseCase,
     private readonly deleteThread: DeleteThreadUseCase,
@@ -204,6 +207,19 @@ export class ThreadsController {
   @HttpCode(204)
   async remove(@Param('orgId') orgId: string, @Param('threadId') threadId: string): Promise<void> {
     await this.deleteThread.execute({ orgId, threadId });
+  }
+
+  @Get(':threadId/events/:threadSeq')
+  event(
+    @Param('orgId') orgId: string,
+    @Param('threadId') threadId: string,
+    @Param('threadSeq') threadSeq: string,
+  ): Promise<GetThreadEventResponse> {
+    return this.getThreadEvent.execute({
+      orgId,
+      threadId,
+      threadSeq: Number(threadSeq),
+    });
   }
 
   @Delete(':threadId/events/:threadSeq')

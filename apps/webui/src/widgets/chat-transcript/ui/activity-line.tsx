@@ -21,6 +21,7 @@ export function ActivityLine({
   defaultOpen,
   hasContent = false,
   indentContent = true,
+  onOpenChange,
   children,
 }: {
   icon: LucideIcon;
@@ -34,6 +35,7 @@ export function ActivityLine({
   defaultOpen?: boolean;
   hasContent?: boolean;
   indentContent?: boolean;
+  onOpenChange?: (open: boolean) => void;
   children?: ReactNode;
 }) {
   const [manual, setManual] = useState<boolean | undefined>(undefined);
@@ -41,8 +43,12 @@ export function ActivityLine({
   const collapsible = hasContent && Boolean(children);
   const headerRef = useRef<HTMLDivElement>(null);
   useScrollAnchor(headerRef, Boolean(open));
+  const changeOpen = (next: boolean): void => {
+    setManual(next);
+    onOpenChange?.(next);
+  };
   return (
-    <Collapsible open={collapsible ? open : false} onOpenChange={setManual}>
+    <Collapsible open={collapsible ? open : false} onOpenChange={changeOpen}>
       <div
         ref={headerRef}
         className="flex min-h-6 w-full min-w-0 items-center gap-2 text-[13px] leading-none opacity-60"

@@ -21,6 +21,8 @@ function fakeStore(runs: string[], events: SessionEvent[]): RunEventStore {
       throw new Error('not used');
     },
     listByThread: (threadId) => Promise.resolve(threadId === THREAD_ID ? events : []),
+    eventAt: (_threadId, threadSeq) =>
+      Promise.resolve(events.find((event) => event.threadSeq === threadSeq) ?? null),
     hasRun: (runId) => Promise.resolve(runSet.has(runId)),
     appendForThread: () => {
       throw new Error('not used');

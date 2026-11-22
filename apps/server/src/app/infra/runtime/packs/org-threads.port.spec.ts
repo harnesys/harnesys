@@ -80,6 +80,12 @@ class FakeEvents implements RunEventStore {
     return this.byThread.get(threadId) ?? [];
   }
 
+  async eventAt(threadId: string, threadSeq: number): Promise<SessionEvent | null> {
+    return (
+      (this.byThread.get(threadId) ?? []).find((event) => event.threadSeq === threadSeq) ?? null
+    );
+  }
+
   append(): Promise<SessionEvent[]> {
     throw new Error('not used');
   }

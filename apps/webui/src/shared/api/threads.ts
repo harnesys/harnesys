@@ -97,6 +97,13 @@ export function getThread(id: string): Promise<ThreadRecord> {
   );
 }
 
+export function getThreadEvent(id: string, threadSeq: number): Promise<SessionEvent> {
+  const orgId = requireOrgId();
+  return apiJson<{ event: SessionEvent }>(
+    `${threadsBase(orgId)}/${encodeURIComponent(id)}/events/${threadSeq}`,
+  ).then((res) => res.event);
+}
+
 export function createThreadRecord(body: CreateThreadInput): Promise<ThreadRecord> {
   const orgId = requireOrgId();
   if (!body.agentId) {

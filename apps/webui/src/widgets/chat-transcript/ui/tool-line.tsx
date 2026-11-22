@@ -1,3 +1,5 @@
+import type { SessionEvent } from '@harnesys/studio-shared';
+import { useQuery } from '@tanstack/react-query';
 import {
   Code2Icon,
   FileTextIcon,
@@ -11,6 +13,7 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import type { MapInfo, ToolEventPair } from '@/entities/session';
 import { mapLineHint, useFeedMap } from '@/entities/session';
+import { getThreadEvent } from '@/shared/api';
 import { useChatPreferences } from '@/shared/lib/chat-preferences';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -136,6 +139,34 @@ function badgeTone(chip: string, exitFailed: boolean, httpFailed: boolean): Acti
   }
   return 'default';
 }
+
+function truncatedEventSeq(pair: ToolEventPair): number | undefined {
+  const result = pair.result;
+  if (result?.outputTruncated && result.threadSeq !== undefined) {
+    return result.threadSeq;
+  }
+  return undefined;
+}
+
+async function loadFullThreadEvent(
+  threadId: string | undefined,
+  threadSeq: number | undefined,
+): Promise<SessionEvent | undefined> {
+  if (threadId === undefined || threadSeq === undefined) {
+    return undefined;
+  }
+  return getThreadEvent(threadId, threadSeq);
+}
+
+function resolvedPair(pair: ToolEventPair, event: SessionEvent | undefined): ToolEventPair {
+  if (event?.type !== 'tool' || event.threadSeq !== pair.result?.threadSeq) {
+    return pair;
+  }
+  if (event.phase !== 'completed' && event.phase !== 'failed') {
+    return pair;
+  }
+  return { ...pair, result: event };
+}
 export function ToolLine({
   pair,
   live,
@@ -149,23 +180,33 @@ export function ToolLine({
 }) {
   const feedDetail = useChatPreferences((state) => state.feedDetail);
   const [inputOpen, setInputOpen] = useState(false);
-  const caption = toolCaption(pair.call, pair.result);
-  const detail = toolDetail(pair.call, pair.result);
+  const [expanded, setExpanded] = useState(false);
+  const map = useFeedMap(threadId ?? null, pair.call.toolCallId);
+  const truncatedSeq = truncatedEventSeq(pair);
+  const autoOpen = isAutoOpen(feedDetail, live) || (feedDetail !== 'manual' && Boolean(map));
+  const fullEvent = useQuery({
+    queryKey: ['thread-event', threadId, truncatedSeq],
+    queryFn: () => loadFullThreadEvent(threadId, truncatedSeq),
+    enabled: (expanded || autoOpen) && truncatedSeq !== undefined && threadId !== undefined,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  const view = resolvedPair(pair, fullEvent.data);
+  const caption = toolCaption(view.call, view.result);
+  const detail = toolDetail(view.call, view.result);
   const meta = toolMeta(detail);
   const Icon = ICONS[caption.kind];
   const awaitingConfirm = pair.call.phase === 'requested' && !pair.result;
   const askPrompt = pair.ask?.prompt?.trim() ? pair.ask.prompt.trim() : null;
   const hasConfirm = Boolean(pair.ask) || awaitingConfirm;
-  const map = useFeedMap(threadId ?? null, pair.call.toolCallId);
   const mapRunning = map?.status === 'running';
   const mapHint = map ? mapLineHint(map) : null;
   const mapBadges = mapBadgesFor(map);
   const active = runLive && (live || awaitingConfirm || mapRunning);
   const failed = pair.result?.phase === 'failed' || map?.status === 'failed';
-  const rawInput = toolInput(pair);
+  const rawInput = toolInput(view);
   const hasInput = Boolean(rawInput.trim().length > 0);
-  const image = parseImageArtifact(pair);
-  const file = parseFileArtifact(pair);
+  const image = parseImageArtifact(view);
+  const file = parseFileArtifact(view);
   const exitFailed =
     detail.type === 'terminal' && detail.exitCode !== undefined && detail.exitCode !== 0;
   const httpFailed = detail.type === 'http' && (!detail.ok || detail.status >= 400);
@@ -186,8 +227,9 @@ export function ToolLine({
         badges={badges}
         active={active}
         failed={failed}
-        defaultOpen={isAutoOpen(feedDetail, live) || (feedDetail !== 'manual' && Boolean(map))}
+        defaultOpen={autoOpen}
         hasContent
+        onOpenChange={setExpanded}
         tail={
           hasInput ? (
             <Button
