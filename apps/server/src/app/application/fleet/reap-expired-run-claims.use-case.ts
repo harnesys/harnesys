@@ -5,9 +5,11 @@ import {
   WORKER_LEASE_EXPIRED_MESSAGE,
 } from '../../domain/fleet/expired-claim-reaping.ts';
 import { PendingPlacementPort } from '../../domain/fleet/pending-placement.port.ts';
+import { IssueEventsPort } from '../../domain/issue/issue-events.port.ts';
 import { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
 import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
+import { releaseIssueExecution } from '../issues/release-issue-execution.ts';
 
 export interface ReapExpiredRunClaimsInput {
   orgId: string;
@@ -25,6 +27,7 @@ export class ReapExpiredRunClaimsUseCase {
     private readonly pending: PendingPlacementPort,
     private readonly worktrees: RepositoryWorktreePort,
     private readonly issueExecutions: IssueExecutionPort,
+    private readonly issueEvents: IssueEventsPort,
   ) {}
 
   async execute(input: ReapExpiredRunClaimsInput): Promise<ReapExpiredRunClaimsResult> {
@@ -64,8 +67,16 @@ export class ReapExpiredRunClaimsUseCase {
       return false;
     }
     this.pending.remove(orgId, record.runId);
-    this.worktrees.clearActiveRun(orgId, record.runId, now);
-    this.issueExecutions.releaseByRunId(orgId, record.runId, now);
+    releaseIssueExecution(
+      {
+        orgId,
+        issueExecutions: this.issueExecutions,
+        events: this.issueEvents,
+        worktrees: this.worktrees,
+      },
+      record.runId,
+      now,
+    );
     return true;
   }
 }

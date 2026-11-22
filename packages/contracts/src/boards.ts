@@ -27,7 +27,7 @@ export const BoardStatusInputSchema = z.object({
 });
 export type BoardStatusInput = z.infer<typeof BoardStatusInputSchema>;
 
-export const RULE_TRIGGER_TYPES = ['status_entered', 'issue_created'] as const;
+export const RULE_TRIGGER_TYPES = ['status_entered', 'issue_created', 'run_settled'] as const;
 export type RuleTriggerType = (typeof RULE_TRIGGER_TYPES)[number];
 
 export const RULE_CONDITION_TYPES = [
@@ -47,6 +47,7 @@ export const RULE_ACTION_TYPES = [
   'remove_label',
   'unassign',
   'stop',
+  'wake_agent',
 ] as const;
 export type RuleActionType = (typeof RULE_ACTION_TYPES)[number];
 
@@ -59,9 +60,13 @@ export type StatusEnteredTrigger = z.infer<typeof StatusEnteredTriggerSchema>;
 export const IssueCreatedTriggerSchema = z.object({ type: z.literal(RULE_TRIGGER_TYPES[1]) });
 export type IssueCreatedTrigger = z.infer<typeof IssueCreatedTriggerSchema>;
 
+export const RunSettledTriggerSchema = z.object({ type: z.literal(RULE_TRIGGER_TYPES[2]) });
+export type RunSettledTrigger = z.infer<typeof RunSettledTriggerSchema>;
+
 export const RuleTriggerSchema = z.discriminatedUnion('type', [
   StatusEnteredTriggerSchema,
   IssueCreatedTriggerSchema,
+  RunSettledTriggerSchema,
 ]);
 export type RuleTrigger = z.infer<typeof RuleTriggerSchema>;
 
@@ -141,6 +146,12 @@ export type UnassignAction = z.infer<typeof UnassignActionSchema>;
 export const StopActionSchema = z.object({ type: z.literal(RULE_ACTION_TYPES[6]) });
 export type StopAction = z.infer<typeof StopActionSchema>;
 
+export const WakeAgentActionSchema = z.object({
+  type: z.literal(RULE_ACTION_TYPES[7]),
+  agentId: z.string().uuid(),
+});
+export type WakeAgentAction = z.infer<typeof WakeAgentActionSchema>;
+
 export const RuleActionSchema = z.discriminatedUnion('type', [
   AssignAgentActionSchema,
   SetStatusActionSchema,
@@ -149,6 +160,7 @@ export const RuleActionSchema = z.discriminatedUnion('type', [
   RemoveLabelActionSchema,
   UnassignActionSchema,
   StopActionSchema,
+  WakeAgentActionSchema,
 ]);
 export type RuleAction = z.infer<typeof RuleActionSchema>;
 

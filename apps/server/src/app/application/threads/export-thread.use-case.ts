@@ -11,9 +11,9 @@ import { ThreadParticipantRepositoryPort } from '../../domain/thread/thread-part
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { membersOf, participantsOf } from './thread.helpers.ts';
 import {
-  buildThreadExportBundle,
+  createThreadExportBundle,
   type ThreadExportBundle,
-  type ThreadExportFile,
+  type ThreadExportSource,
 } from './thread-export-bundle.ts';
 import { isThreadRawModelRequestName } from './thread-raw-model-request-name.ts';
 
@@ -45,15 +45,15 @@ export class ExportThreadUseCase {
       this.reader.readRuns(request.orgId, request.threadId),
       this.reader.readSnapshots(request.orgId, request.threadId),
       this.reader.readPlan(request.orgId, request.threadId),
-      readRawRequests(join(threadDir, 'raw-model-requests')),
-      readToolOutputs(join(threadDir, 'tool-outputs')),
+      readSources(join(threadDir, 'raw-model-requests'), isThreadRawModelRequestName),
+      readSources(join(threadDir, 'tool-outputs'), acceptAll),
     ]);
     const deps = {
       threadAgents: this.threadAgents,
       participants: this.participants,
       agents: this.agents,
     };
-    return buildThreadExportBundle({
+    return createThreadExportBundle({
       orgId: request.orgId,
       thread,
       members: membersOf(deps, request.orgId, request.threadId),
@@ -70,25 +70,22 @@ export class ExportThreadUseCase {
   }
 }
 
-async function readRawRequests(dir: string): Promise<ThreadExportFile[]> {
-  const names = await listFileNames(dir);
-  const files: ThreadExportFile[] = [];
-  for (const name of names) {
-    if (!isThreadRawModelRequestName(name)) {
-      continue;
-    }
-    files.push({ name, bytes: new Uint8Array(await readFile(join(dir, name))) });
-  }
-  return files;
+function acceptAll(): boolean {
+  return true;
 }
 
-async function readToolOutputs(dir: string): Promise<ThreadExportFile[]> {
+async function readSources(
+  dir: string,
+  accept: (name: string) => boolean,
+): Promise<ThreadExportSource[]> {
   const names = await listFileNames(dir);
-  const files: ThreadExportFile[] = [];
-  for (const name of names) {
-    files.push({ name, bytes: new Uint8Array(await readFile(join(dir, name))) });
-  }
-  return files;
+  return names
+    .filter(accept)
+    .map((name) => ({ name, bytes: () => readFileBytes(join(dir, name)) }));
+}
+
+async function readFileBytes(path: string): Promise<Uint8Array> {
+  return new Uint8Array(await readFile(path));
 }
 
 async function listFileNames(dir: string): Promise<string[]> {

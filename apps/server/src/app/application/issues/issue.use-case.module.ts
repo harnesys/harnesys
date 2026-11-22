@@ -31,6 +31,7 @@ import { RemoveBoardStatusUseCase } from './remove-board-status.use-case.ts';
 import { RemoveIssueDependencyUseCase } from './remove-issue-dependency.use-case.ts';
 import { ReorderBoardRulesUseCase } from './reorder-board-rules.use-case.ts';
 import { ReorderBoardStatusesUseCase } from './reorder-board-statuses.use-case.ts';
+import { RunSettledRulesUseCase } from './run-settled-rules.use-case.ts';
 import { SaveBoardRuleUseCase } from './save-board-rule.use-case.ts';
 import { SetIssueBoardArchiveUseCase } from './set-issue-board-archive.use-case.ts';
 import { UpdateBoardStatusUseCase } from './update-board-status.use-case.ts';
@@ -75,6 +76,7 @@ const useCases = [
   DeleteIssueLabelUseCase,
   NudgeIssueUseCase,
   CreateIssueWorktreeUseCase,
+  RunSettledRulesUseCase,
 ];
 
 @Module({

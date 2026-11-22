@@ -8,6 +8,7 @@ import {
   type IssueFireRequest,
   type IssueFireResult,
 } from '../../domain/issue/issue-fire.port.ts';
+import { IssueWakePort } from '../../domain/issue/issue-wake.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { type HostConfig, MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
@@ -42,6 +43,10 @@ export class MemoryIssueExecutions extends IssueExecutionPort {
   }
 
   findByRunId(): never {
+    throw new Error('not used');
+  }
+
+  findLatestByIssue(): never {
     throw new Error('not used');
   }
 
@@ -134,6 +139,15 @@ export class StubEvents extends IssueEventsPort {
 
   emit(orgId: string): void {
     this.emitted.push(orgId);
+  }
+}
+
+export class StubWake extends IssueWakePort {
+  readonly calls: Array<{ orgId: string; wakeKey: string; agentId?: string }> = [];
+
+  wake(orgId: string, wakeKey: string, agentId?: string): Promise<number> {
+    this.calls.push({ orgId, wakeKey, ...(agentId !== undefined ? { agentId } : {}) });
+    return Promise.resolve(0);
   }
 }
 

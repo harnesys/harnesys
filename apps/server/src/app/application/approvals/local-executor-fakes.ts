@@ -41,6 +41,9 @@ class StubLifecycle implements RunLifecycleStore {
   listDueTimers(): Promise<RunRecord[]> {
     return Promise.resolve([]);
   }
+  listWaitingAwait(): Promise<RunRecord[]> {
+    return Promise.resolve([]);
+  }
   listStaleRunning(): Promise<RunRecord[]> {
     return Promise.resolve([]);
   }
@@ -104,6 +107,10 @@ export class StubLocalExecutor extends LocalExecutorPort {
   }
 
   tickWaitTimers(): never {
+    throw new Error('not used');
+  }
+
+  wakeRuns(): never {
     throw new Error('not used');
   }
 
@@ -198,6 +205,10 @@ export class RecordingExecutor extends LocalExecutorPort {
   }
 
   tickWaitTimers(): never {
+    throw new Error('not used');
+  }
+
+  wakeRuns(): never {
     throw new Error('not used');
   }
 

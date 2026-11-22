@@ -93,6 +93,9 @@ class StubLifecycle implements RunLifecycleStore {
   listDueTimers(): Promise<RunRecord[]> {
     return Promise.resolve([]);
   }
+  listWaitingAwait(): Promise<RunRecord[]> {
+    return Promise.resolve([]);
+  }
   listStaleRunning(): Promise<RunRecord[]> {
     return Promise.resolve([]);
   }
@@ -192,6 +195,9 @@ export class StubExecutor extends LocalExecutorPort {
     throw new Error('not used');
   }
   tickWaitTimers(): Promise<number> {
+    throw new Error('not used');
+  }
+  wakeRuns(): Promise<number> {
     throw new Error('not used');
   }
   countWaitingTimers(): Promise<number> {

@@ -49,6 +49,10 @@ export class MemoryIssueExecutions extends IssueExecutionPort {
     throw new Error('not used');
   }
 
+  findLatestByIssue(): IssueExecution | null {
+    throw new Error('not used');
+  }
+
   listActive(): IssueExecution[] {
     throw new Error('not used');
   }

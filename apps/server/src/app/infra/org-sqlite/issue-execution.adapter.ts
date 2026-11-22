@@ -1,5 +1,5 @@
 import { Injectable } from '@harnesys/brix';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import {
   IssueExecutionPort,
   type ReserveIssueExecutionInput,
@@ -66,6 +66,20 @@ export class IssueExecutionAdapter extends IssueExecutionPort {
         .select()
         .from(issueExecutionsTable)
         .where(and(eq(issueExecutionsTable.orgId, orgId), eq(issueExecutionsTable.runId, runId)))
+        .get();
+      return row ? mapRow(row) : null;
+    });
+  }
+
+  findLatestByIssue(orgId: string, issueId: string): IssueExecution | null {
+    return withOrgSqlite(this.layout, orgId, (db) => {
+      const row = db
+        .select()
+        .from(issueExecutionsTable)
+        .where(
+          and(eq(issueExecutionsTable.orgId, orgId), eq(issueExecutionsTable.issueId, issueId)),
+        )
+        .orderBy(desc(issueExecutionsTable.createdAt), desc(issueExecutionsTable.id))
         .get();
       return row ? mapRow(row) : null;
     });
@@ -203,7 +217,7 @@ export class IssueExecutionAdapter extends IssueExecutionPort {
         .from(issueExecutionsTable)
         .where(and(eq(issueExecutionsTable.orgId, orgId), eq(issueExecutionsTable.runId, runId)))
         .get();
-      if (!existing) {
+      if (!existing || existing.state === 'released') {
         return null;
       }
       db.update(issueExecutionsTable)

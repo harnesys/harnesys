@@ -16,6 +16,7 @@ import { IssueEventsPort } from '../../domain/issue/issue-events.port.ts';
 import { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
 import { IssueFirePort } from '../../domain/issue/issue-fire.port.ts';
 import { IssueRepositoryPort } from '../../domain/issue/issue-repository.port.ts';
+import { IssueWakePort } from '../../domain/issue/issue-wake.port.ts';
 import { IssueLabelRepositoryPort } from '../../domain/issue/label-repository.port.ts';
 import {
   applyLabelMutations,
@@ -30,6 +31,7 @@ import { SourceMaterializationPort } from '../../domain/source/source-materializ
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import { hasGitVcs } from '../../domain/source/vcs-capability.ts';
 import { resolveEffectiveProfile } from '../execution-profile/resolve-effective-profile.ts';
+import { applyResolvedWakes } from './apply-resolved-wakes.ts';
 import { CreateIssueWorktreeUseCase } from './create-issue-worktree.use-case.ts';
 import { dispatchIssueExecution } from './dispatch-issue-execution.ts';
 import {
@@ -62,6 +64,7 @@ export class UpdateIssueStatusUseCase {
     private readonly executions: IssueExecutionPort,
     private readonly fire: IssueFirePort,
     private readonly events: IssueEventsPort,
+    private readonly wake: IssueWakePort,
     private readonly worktrees: RepositoryWorktreePort,
     private readonly machineConfig: MachineConfigPort,
     private readonly layout: HostFsLayoutPort,
@@ -113,6 +116,7 @@ export class UpdateIssueStatusUseCase {
       now,
       actorAgentId: request.actorAgentId ?? null,
     });
+    await applyResolvedWakes({ wake: this.wake }, orgId, issue.id, resolved);
     this.events.emit(orgId, { type: 'issue', issue: finalIssue });
     this.autoCreateWorktree(orgId, finalIssue);
     for (const text of resolved.notifications) {

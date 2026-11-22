@@ -9,7 +9,8 @@ export type IssueDomainEvent =
   | { type: 'board-deleted'; boardId: string }
   | { type: 'rule-notification'; boardId: string; issueId: string; text: string }
   | { type: 'label'; label: IssueLabelRecord }
-  | { type: 'label-deleted'; labelId: string };
+  | { type: 'label-deleted'; labelId: string }
+  | { type: 'issue-execution-settled'; issueId: string; runId: string; agentId: string };
 
 export type IssueDomainEventListener = (orgId: string, event: IssueDomainEvent) => void;
 

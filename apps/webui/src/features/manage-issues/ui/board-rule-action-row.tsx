@@ -1,4 +1,9 @@
-import type { BoardStatus, ExecutionProfileListItem, RuleAction } from '@harnesys/contracts';
+import type {
+  BoardStatus,
+  ExecutionProfileListItem,
+  RuleAction,
+  RuleTriggerType,
+} from '@harnesys/contracts';
 import type { IssueLabelRecord } from '@harnesys/studio-shared';
 import { PlusIcon, TrashIcon } from 'lucide-react';
 import { useState } from 'react';
@@ -15,6 +20,7 @@ const INHERIT_PROFILE = '__inherit__';
 
 const ACTION_TYPE_ITEMS = [
   { value: 'assign_agent', label: 'Assign to' },
+  { value: 'wake_agent', label: 'Wake agent' },
   { value: 'set_status', label: 'Move to' },
   { value: 'add_label', label: 'Add label' },
   { value: 'remove_label', label: 'Remove label' },
@@ -35,6 +41,7 @@ export function ActionRow({
   profiles,
   defaultProfileId,
   labels,
+  triggerType,
   onPatch,
   onRemove,
 }: {
@@ -45,11 +52,18 @@ export function ActionRow({
   profiles: ExecutionProfileListItem[];
   defaultProfileId: string;
   labels: IssueLabelRecord[];
+  triggerType: RuleTriggerType;
   onPatch: (action: RuleAction) => void;
   onRemove: () => void;
 }) {
   const statusItems = sortedStatuses(statuses);
   const assignableAgents = agents.filter((agent) => !agent.parentId);
+  const actionItems =
+    triggerType === 'run_settled'
+      ? ACTION_TYPE_ITEMS.filter(
+          (item) => item.value !== 'assign_agent' || item.value === action.type,
+        )
+      : ACTION_TYPE_ITEMS;
   const agent =
     action.type === 'assign_agent'
       ? assignableAgents.find((item) => item.id === action.agentId)
@@ -63,7 +77,7 @@ export function ActionRow({
   return (
     <div className="flex items-center gap-2" data-testid={`rule-action-${action.type}`}>
       <Select
-        items={ACTION_TYPE_ITEMS}
+        items={actionItems}
         value={action.type}
         onValueChange={(value) => {
           const next = switchActionType(String(value), assignableAgents, statusItems, labels);
@@ -76,7 +90,7 @@ export function ActionRow({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {ACTION_TYPE_ITEMS.map((item) => (
+          {actionItems.map((item) => (
             <SelectItem key={item.value} value={item.value}>
               {item.label}
             </SelectItem>
@@ -91,6 +105,13 @@ export function ActionRow({
             profiles={profiles}
             inheritedProfileId={inheritedProfileId}
             onPatch={onPatch}
+          />
+        ) : null}
+        {action.type === 'wake_agent' ? (
+          <AgentSelect
+            agents={assignableAgents}
+            value={action.agentId}
+            onChange={(agentId) => onPatch({ type: 'wake_agent', agentId })}
           />
         ) : null}
         {action.type === 'set_status' ? (
@@ -172,6 +193,51 @@ export function ActionRow({
   );
 }
 
+function AgentSelect({
+  agents,
+  value,
+  onChange,
+}: {
+  agents: Agent[];
+  value: string;
+  onChange: (agentId: string) => void;
+}) {
+  return (
+    <Select
+      items={agents.map((item) => ({ value: item.id, label: item.name }))}
+      value={value}
+      onValueChange={(next) => next && onChange(String(next))}
+    >
+      <SelectTrigger size="sm" className={FIELD_CLASS}>
+        <SelectValue placeholder="Agent">
+          {(selectedValue: unknown) => {
+            const selected = agents.find((item) => item.id === selectedValue);
+            if (!selected) {
+              return 'Select an agent';
+            }
+            return (
+              <span className="flex min-w-0 items-center gap-1.5">
+                <AgentRecordAvatar agent={selected} />
+                <span className="truncate">{selected.name}</span>
+              </span>
+            );
+          }}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {agents.map((item) => (
+          <SelectItem key={item.id} value={item.id}>
+            <span className="flex items-center gap-1.5">
+              <AgentRecordAvatar agent={item} />
+              {item.name}
+            </span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 function AssignControls({
   action,
   agents,
@@ -190,38 +256,11 @@ function AssignControls({
   }
   return (
     <>
-      <Select
-        items={agents.map((item) => ({ value: item.id, label: item.name }))}
+      <AgentSelect
+        agents={agents}
         value={action.agentId}
-        onValueChange={(value) => value && onPatch({ ...action, agentId: String(value) })}
-      >
-        <SelectTrigger size="sm" className={FIELD_CLASS}>
-          <SelectValue placeholder="Agent">
-            {(value: unknown) => {
-              const selected = agents.find((item) => item.id === value);
-              if (!selected) {
-                return 'Select an agent';
-              }
-              return (
-                <span className="flex min-w-0 items-center gap-1.5">
-                  <AgentRecordAvatar agent={selected} />
-                  <span className="truncate">{selected.name}</span>
-                </span>
-              );
-            }}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {agents.map((item) => (
-            <SelectItem key={item.id} value={item.id}>
-              <span className="flex items-center gap-1.5">
-                <AgentRecordAvatar agent={item} />
-                {item.name}
-              </span>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        onChange={(agentId) => onPatch({ ...action, agentId })}
+      />
       {profiles.length > 0 ? (
         <Select
           items={[
@@ -267,20 +306,27 @@ export function ActionAdd({
   agents,
   statuses,
   labels,
+  triggerType,
   onAdd,
 }: {
   ruleId: string;
   agents: Agent[];
   statuses: BoardStatus[];
   labels: IssueLabelRecord[];
+  triggerType: RuleTriggerType;
   onAdd: (action: RuleAction) => void;
 }) {
   const [open, setOpen] = useState(false);
   const assignableAgents = agents.filter((agent) => !agent.parentId);
   const statusItems = sortedStatuses(statuses);
+  const actionItems =
+    triggerType === 'run_settled'
+      ? ACTION_TYPE_ITEMS.filter((item) => item.value !== 'assign_agent')
+      : ACTION_TYPE_ITEMS;
   const disabled = new Set<string>();
   if (assignableAgents.length === 0) {
     disabled.add('assign_agent');
+    disabled.add('wake_agent');
   }
   if (statusItems.length === 0) {
     disabled.add('set_status');
@@ -304,7 +350,7 @@ export function ActionAdd({
           Add action
         </PopoverTitle>
         <div className="flex flex-col gap-0.5">
-          {ACTION_TYPE_ITEMS.map((item) => (
+          {actionItems.map((item) => (
             <ActionOption
               key={item.value}
               label={item.label}
@@ -352,6 +398,10 @@ function switchActionType(
   labels: IssueLabelRecord[],
 ): RuleAction | null {
   if (type === 'assign_agent') {
+    const agent = agents[0];
+    return agent ? { type, agentId: agent.id } : null;
+  }
+  if (type === 'wake_agent') {
     const agent = agents[0];
     return agent ? { type, agentId: agent.id } : null;
   }

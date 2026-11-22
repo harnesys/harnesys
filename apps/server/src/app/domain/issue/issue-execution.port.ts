@@ -19,6 +19,7 @@ export abstract class IssueExecutionPort {
   abstract findActiveByIssue(orgId: string, issueId: string): IssueExecution | null;
   abstract findByCorrelationId(orgId: string, correlationId: string): IssueExecution | null;
   abstract findByRunId(orgId: string, runId: string): IssueExecution | null;
+  abstract findLatestByIssue(orgId: string, issueId: string): IssueExecution | null;
   abstract listActive(orgId: string): IssueExecution[];
   abstract reserve(input: ReserveIssueExecutionInput): IssueExecution;
   abstract setWorktree(

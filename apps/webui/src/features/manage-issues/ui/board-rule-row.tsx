@@ -21,6 +21,7 @@ import { ConditionAdd, ConditionRow } from './board-rule-condition-row';
 const EVENT_ITEMS = [
   { value: 'status_entered', label: 'Entering a status' },
   { value: 'issue_created', label: 'Issue created' },
+  { value: 'run_settled', label: 'A run settles' },
 ];
 
 export function RuleRow({
@@ -147,6 +148,8 @@ export function RuleRow({
                   onValueChange={(value) => {
                     if (value === 'issue_created') {
                       onPatch({ trigger: { type: 'issue_created' } });
+                    } else if (value === 'run_settled') {
+                      onPatch({ trigger: { type: 'run_settled' } });
                     } else if (statusItems[0]) {
                       onPatch({
                         trigger: { type: 'status_entered', statusKey: statusItems[0].key },
@@ -233,6 +236,7 @@ export function RuleRow({
                 profiles={profiles}
                 defaultProfileId={defaultProfileId}
                 labels={labels}
+                triggerType={rule.trigger.type}
                 onPatch={(next) =>
                   onPatch({
                     actions: rule.actions.map((item, i) => (i === actionIndex ? next : item)),
@@ -248,6 +252,7 @@ export function RuleRow({
               agents={agents}
               statuses={statuses}
               labels={labels}
+              triggerType={rule.trigger.type}
               onAdd={(action) => onPatch({ actions: [...rule.actions, action] })}
             />
           </Section>

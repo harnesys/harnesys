@@ -171,9 +171,9 @@ export const GRAPH_NODE_SPECS: GraphNodeSpec[] = [
     type: 'control:wait',
     group: 'control',
     label: 'Wait',
-    summary: 'Sleep or gate.',
+    summary: 'Sleep, gate or await.',
     description:
-      'Parks the run as waiting. Sleep: delayMs or untilMs. Gate: resumeSchema (+ optional timeoutMs). HITL asks stay on needs_input; this status is waiting.',
+      'Parks the run as waiting. Sleep: delayMs or untilMs. Gate: resumeSchema (+ optional timeoutMs). Await: awaitKey expr with a required timeoutMs; resumes when the external signal settles, or continues with timedOut: true when the timeout expires.',
     inPalette: true,
     ports: { in: true, out: true },
     defaults: () => ({

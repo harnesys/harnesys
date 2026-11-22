@@ -278,7 +278,7 @@ export function ControlNodeFields({
                 }
                 const n = Number(raw);
                 if (Number.isFinite(n) && n >= 1) {
-                  const { untilMs: _u, timeoutMs: _t, onTimeout: _o, ...rest } = node;
+                  const { untilMs: _u, timeoutMs: _t, onTimeout: _o, awaitKey: _a, ...rest } = node;
                   onChange({ ...rest, type: 'control:wait', delayMs: n });
                 }
               }}
@@ -296,8 +296,25 @@ export function ControlNodeFields({
                   onChange({ ...rest, type: 'control:wait' });
                   return;
                 }
-                const { delayMs: _d, timeoutMs: _t, onTimeout: _o, ...rest } = node;
+                const { delayMs: _d, timeoutMs: _t, onTimeout: _o, awaitKey: _a, ...rest } = node;
                 onChange({ ...rest, type: 'control:wait', untilMs: event.target.value });
+              }}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="graph-wait-await">Await key (expr)</FieldLabel>
+            <GraphInput
+              id="graph-wait-await"
+              value={typeof node.awaitKey === 'string' ? node.awaitKey : ''}
+              onChange={(event) => {
+                const v = event.target.value.trim();
+                if (!v) {
+                  const { awaitKey: _a, ...rest } = node;
+                  onChange({ ...rest, type: 'control:wait' });
+                  return;
+                }
+                const { delayMs: _d, untilMs: _u, ...rest } = node;
+                onChange({ ...rest, type: 'control:wait', awaitKey: event.target.value });
               }}
             />
           </Field>

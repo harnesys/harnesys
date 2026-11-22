@@ -21,6 +21,7 @@ export interface ResolvedFire {
   removeLabelIds: string[];
   unassign: boolean;
   notifications: string[];
+  wakes: string[];
   matchedRuleIds: string[];
   skippedRules: SkippedRule[];
   stop: EngineStop | null;
@@ -71,6 +72,7 @@ function toResolvedFire(outcome: EngineOutcome, input: ResolveFireInput): Resolv
     removeLabelIds: outcome.removeLabelIds,
     unassign: outcome.unassign,
     notifications: outcome.notifications.map((notification) => notification.text),
+    wakes: outcome.wakes.map((wake) => wake.agentId),
     matchedRuleIds: outcome.matchedRuleIds,
     skippedRules: outcome.skippedRules,
     stop: outcome.stop,

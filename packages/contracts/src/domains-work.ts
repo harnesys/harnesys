@@ -28,11 +28,13 @@ export type {
   RuleSkipReason,
   RuleTrigger,
   RuleTriggerType,
+  RunSettledTrigger,
   SetStatusAction,
   StatusCategory,
   StatusEnteredTrigger,
   StopAction,
   UnassignAction,
+  WakeAgentAction,
 } from './boards.ts';
 export {
   AddLabelActionSchema,
@@ -64,11 +66,13 @@ export {
   RuleConditionSchema,
   RuleSkipReasonSchema,
   RuleTriggerSchema,
+  RunSettledTriggerSchema,
   SetStatusActionSchema,
   StatusCategorySchema,
   StatusEnteredTriggerSchema,
   StopActionSchema,
   UnassignActionSchema,
+  WakeAgentActionSchema,
 } from './boards.ts';
 export type {
   CreateIssueWorktreeBody,

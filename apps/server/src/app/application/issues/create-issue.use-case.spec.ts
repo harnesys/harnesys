@@ -24,6 +24,7 @@ import {
   StubEvents,
   StubIssueFire,
   StubMachineConfig,
+  StubWake,
 } from './create-issue.use-case.work-fakes.ts';
 
 const NOW = new Date(0).toISOString();
@@ -139,6 +140,7 @@ function buildUseCase(parts: {
     parts.executions,
     parts.fire,
     new StubEvents(),
+    new StubWake(),
     new MemorySources(parts.source),
     new StubProfiles(),
     createWorktrees(),

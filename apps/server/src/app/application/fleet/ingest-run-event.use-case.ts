@@ -6,9 +6,11 @@ import { approvalRequestForPark, observeParks } from '../../domain/approval/park
 import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
 import { FleetEventsPort } from '../../domain/fleet/fleet-events.port.ts';
 import { WORK_CLAIM_LEASE_SEC } from '../../domain/fleet/work-claim.constants.ts';
+import { IssueEventsPort } from '../../domain/issue/issue-events.port.ts';
 import { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
 import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
+import { releaseIssueExecution } from '../issues/release-issue-execution.ts';
 
 export interface IngestRunEventInput {
   orgId: string;
@@ -36,6 +38,7 @@ export class IngestRunEventUseCase {
     private readonly fleetEvents: FleetEventsPort,
     private readonly worktrees: RepositoryWorktreePort,
     private readonly issueExecutions: IssueExecutionPort,
+    private readonly issueEvents: IssueEventsPort,
     logger: Logger,
   ) {
     this.log = logger.child('ingest-run-event');
@@ -99,8 +102,16 @@ export class IngestRunEventUseCase {
       if (released) {
         this.fleetEvents.emit(input.orgId);
       }
-      this.worktrees.clearActiveRun(input.orgId, input.runId, now);
-      this.issueExecutions.releaseByRunId(input.orgId, input.runId, now);
+      releaseIssueExecution(
+        {
+          orgId: input.orgId,
+          issueExecutions: this.issueExecutions,
+          events: this.issueEvents,
+          worktrees: this.worktrees,
+        },
+        input.runId,
+        now,
+      );
       const after = await lifecycle.get(input.runId);
       if (after && after.status === 'running') {
         const to = terminalStatusOf(incoming);

@@ -60,6 +60,7 @@ export class SaveBoardRuleUseCase {
   private validateReferences(orgId: string, board: IssueBoardRecord, input: BoardRuleInput): void {
     const statusKeys = new Set(board.statuses.map((status) => status.key));
     this.validateTrigger(statusKeys, input.trigger);
+    this.validateRunSettledActions(input.trigger, input.actions);
     this.validateConditions(orgId, input.conditions);
     this.validateActions(orgId, statusKeys, input.actions);
   }
@@ -67,6 +68,15 @@ export class SaveBoardRuleUseCase {
   private validateTrigger(statusKeys: Set<string>, trigger: RuleTrigger): void {
     if (trigger.type === 'status_entered' && !statusKeys.has(trigger.statusKey)) {
       throw new RuleValidationException(`unknown rule status: ${trigger.statusKey}`);
+    }
+  }
+
+  private validateRunSettledActions(trigger: RuleTrigger, actions: RuleAction[]): void {
+    if (trigger.type !== 'run_settled') {
+      return;
+    }
+    if (actions.some((action) => action.type === 'assign_agent')) {
+      throw new RuleValidationException('run_settled rules cannot assign an agent');
     }
   }
 
@@ -90,6 +100,12 @@ export class SaveBoardRuleUseCase {
   private validateAction(orgId: string, statusKeys: Set<string>, action: RuleAction): void {
     if (action.type === 'assign_agent') {
       this.validateAgentAction(orgId, action);
+      return;
+    }
+    if (action.type === 'wake_agent') {
+      if (!this.agents.findById(orgId, action.agentId)) {
+        throw new RuleValidationException(`unknown rule agent: ${action.agentId}`);
+      }
       return;
     }
     if (action.type === 'set_status' && !statusKeys.has(action.statusKey)) {

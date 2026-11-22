@@ -53,6 +53,9 @@ function describeTrigger(trigger: RuleTrigger, statuses: BoardStatus[]): ReactNo
   if (trigger.type === 'issue_created') {
     return <>When created</>;
   }
+  if (trigger.type === 'run_settled') {
+    return <>When a run settles</>;
+  }
   return (
     <>
       When entering <Value>{statusTitle(trigger.statusKey, statuses)}</Value>
@@ -104,6 +107,12 @@ export function describeAction(
       return (
         <>
           Assign to <Value>{agentName(action.agentId, agents)}</Value>
+        </>
+      );
+    case 'wake_agent':
+      return (
+        <>
+          Wake <Value>{agentName(action.agentId, agents)}</Value>
         </>
       );
     case 'set_status':

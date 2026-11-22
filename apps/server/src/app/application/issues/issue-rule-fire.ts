@@ -11,6 +11,7 @@ import type { IssueEventsPort } from '../../domain/issue/issue-events.port.ts';
 import type { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
 import type { IssueFirePort } from '../../domain/issue/issue-fire.port.ts';
 import type { IssueRepositoryPort } from '../../domain/issue/issue-repository.port.ts';
+import type { IssueWakePort } from '../../domain/issue/issue-wake.port.ts';
 import type { IssueLabelRepositoryPort } from '../../domain/issue/label-repository.port.ts';
 import {
   applyLabelMutations,
@@ -24,8 +25,10 @@ import type { SourceDriverPort } from '../../domain/source/source-driver.port.ts
 import type { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import type { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import { resolveEffectiveProfile } from '../execution-profile/resolve-effective-profile.ts';
+import { applyResolvedWakes } from './apply-resolved-wakes.ts';
 import { dispatchIssueExecution } from './dispatch-issue-execution.ts';
 import { engineRefs, issueClosedChecker } from './issue-rule-support.ts';
+import { persistRuleOutcome } from './persist-rule-outcome.ts';
 
 export interface IssueRuleFireDeps {
   issues: IssueRepositoryPort;
@@ -43,6 +46,7 @@ export interface IssueRuleFireDeps {
   layout: HostFsLayoutPort;
   driver: SourceDriverPort;
   materializations: SourceMaterializationPort;
+  wake: IssueWakePort;
   log: Logger;
 }
 
@@ -76,7 +80,7 @@ export async function fireIssueRules(
   const labelIds = applyLabelMutations(issue.labels, resolved);
   if (resolved.agentId === null) {
     emitNotifications(deps, orgId, board.id, issue.id, resolved);
-    return persistOutcome(deps, {
+    const persisted = persistRuleOutcome(deps, {
       orgId,
       issue,
       finalStatusKey: resolved.finalStatusKey,
@@ -84,13 +88,15 @@ export async function fireIssueRules(
       labelIds,
       unassign: resolved.unassign,
     });
+    await applyResolvedWakes(deps, orgId, issue.id, resolved);
+    return persisted;
   }
   const finalCategory = board.statuses.find(
     (status) => status.key === resolved.finalStatusKey,
   )?.category;
   if (finalCategory !== 'started') {
     emitNotifications(deps, orgId, board.id, issue.id, resolved);
-    return persistOutcome(deps, {
+    const persisted = persistRuleOutcome(deps, {
       orgId,
       issue,
       finalStatusKey: resolved.finalStatusKey,
@@ -98,6 +104,8 @@ export async function fireIssueRules(
       labelIds,
       unassign: resolved.unassign,
     });
+    await applyResolvedWakes(deps, orgId, issue.id, resolved);
+    return persisted;
   }
   const agent = deps.agents.findById(orgId, resolved.agentId);
   const effective = resolveEffectiveProfile({
@@ -119,7 +127,7 @@ export async function fireIssueRules(
     issueRuleProfileId: resolved.executionProfileId,
     profileId: effective.profileId,
     onReserved: () => {
-      updated = persistOutcome(deps, {
+      updated = persistRuleOutcome(deps, {
         orgId,
         issue,
         finalStatusKey: resolved.finalStatusKey,
@@ -140,7 +148,7 @@ export async function fireIssueRules(
     driver: deps.driver,
   });
   if (dispatch.kind === 'blocked') {
-    updated = persistOutcome(deps, {
+    updated = persistRuleOutcome(deps, {
       orgId,
       issue,
       finalStatusKey: resolved.finalStatusKey,
@@ -150,7 +158,9 @@ export async function fireIssueRules(
     });
   }
   emitNotifications(deps, orgId, board.id, issue.id, resolved);
-  return updated ?? deps.issues.findById(orgId, issue.id) ?? issue;
+  const result = updated ?? deps.issues.findById(orgId, issue.id) ?? issue;
+  await applyResolvedWakes(deps, orgId, issue.id, resolved);
+  return result;
 }
 
 function emitNotifications(
@@ -173,40 +183,4 @@ function warnStop(log: Logger, orgId: string, boardId: string, resolved: Resolve
     { orgId, boardId, reason: resolved.stop.reason, statusKey: resolved.stop.statusKey },
     'board rule cascade stopped',
   );
-}
-
-function persistOutcome(
-  deps: IssueRuleFireDeps,
-  input: {
-    orgId: string;
-    issue: IssueRecord;
-    finalStatusKey: string;
-    firedAgentId: string | null;
-    labelIds: string[];
-    unassign: boolean;
-  },
-): IssueRecord {
-  const { orgId, issue, finalStatusKey, firedAgentId, labelIds, unassign } = input;
-  const labelsChanged =
-    labelIds.length !== issue.labels.length ||
-    labelIds.some((labelId) => !issue.labels.includes(labelId));
-  if (finalStatusKey === issue.statusKey && firedAgentId === null && !unassign && !labelsChanged) {
-    return issue;
-  }
-  const board = deps.boards.findById(orgId, issue.boardId);
-  const category = board?.statuses.find((status) => status.key === finalStatusKey)?.category;
-  const now = new Date().toISOString();
-  let assigneeAgentId = issue.assigneeAgentId;
-  if (firedAgentId !== null) {
-    assigneeAgentId = firedAgentId;
-  } else if (unassign) {
-    assigneeAgentId = null;
-  }
-  return deps.issues.update(orgId, issue.id, {
-    statusKey: finalStatusKey,
-    labels: labelIds,
-    assigneeAgentId,
-    closedAt: category === 'finished' || category === 'cancelled' ? (issue.closedAt ?? now) : null,
-    updatedAt: now,
-  });
 }

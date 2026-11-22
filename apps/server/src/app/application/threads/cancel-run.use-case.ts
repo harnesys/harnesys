@@ -4,11 +4,13 @@ import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
 import { FleetEventsPort } from '../../domain/fleet/fleet-events.port.ts';
 import { NodeCommandQueuePort } from '../../domain/fleet/node-command-queue.port.ts';
 import { PendingPlacementPort } from '../../domain/fleet/pending-placement.port.ts';
+import { IssueEventsPort } from '../../domain/issue/issue-events.port.ts';
 import { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
 import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { ThreadNotFoundException } from '../../domain/thread/thread.error.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
+import { releaseIssueExecution } from '../issues/release-issue-execution.ts';
 
 export interface CancelRunRequest {
   orgId: string;
@@ -25,6 +27,7 @@ export class CancelRunUseCase {
     private readonly fleetEvents: FleetEventsPort,
     private readonly worktrees: RepositoryWorktreePort,
     private readonly issueExecutions: IssueExecutionPort,
+    private readonly issueEvents: IssueEventsPort,
     private readonly claims: EventClaimPort,
     private readonly commands: NodeCommandQueuePort,
   ) {}
@@ -46,8 +49,16 @@ export class CancelRunUseCase {
     this.queueWorkerCancel(request.orgId, request.runId);
     const result = await this.executor.cancel(request.orgId, request.runId);
     const now = new Date().toISOString();
-    this.worktrees.clearActiveRun(request.orgId, request.runId, now);
-    this.issueExecutions.releaseByRunId(request.orgId, request.runId, now);
+    releaseIssueExecution(
+      {
+        orgId: request.orgId,
+        issueExecutions: this.issueExecutions,
+        events: this.issueEvents,
+        worktrees: this.worktrees,
+      },
+      request.runId,
+      now,
+    );
     if (hadPending) {
       this.fleetEvents.emit(request.orgId);
     }

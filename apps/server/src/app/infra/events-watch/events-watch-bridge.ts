@@ -119,7 +119,11 @@ export class EventsWatchBridge implements ModuleInitHook, ModuleDestroyHook {
   }
 
   private publishIssue(orgId: string, event: IssueDomainEvent): void {
-    this.publishDesk(orgId, toDeskIssueEvent(event));
+    const deskEvent = toDeskIssueEvent(event);
+    if (deskEvent === null) {
+      return;
+    }
+    this.publishDesk(orgId, deskEvent);
   }
 
   private publishDesk(orgId: string, event: DeskEvent): void {
@@ -191,7 +195,7 @@ export class EventsWatchBridge implements ModuleInitHook, ModuleDestroyHook {
   }
 }
 
-function toDeskIssueEvent(event: IssueDomainEvent): DeskEvent {
+function toDeskIssueEvent(event: IssueDomainEvent): DeskEvent | null {
   switch (event.type) {
     case 'issue': {
       const { orgId: _orgId, ...issue } = event.issue;
@@ -199,6 +203,9 @@ function toDeskIssueEvent(event: IssueDomainEvent): DeskEvent {
     }
     case 'issue-deleted': {
       return { type: 'issue-deleted', issueId: event.issueId, boardId: event.boardId };
+    }
+    case 'issue-execution-settled': {
+      return null;
     }
     case 'board': {
       const { orgId: _orgBoard, ...board } = event.board;

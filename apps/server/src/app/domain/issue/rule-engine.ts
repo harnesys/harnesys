@@ -5,6 +5,7 @@ import type {
   RuleCondition,
   RuleTrigger,
   SetStatusAction,
+  WakeAgentAction,
 } from '@harnesys/contracts';
 import type { BoardRuleRecord } from './board.ts';
 import {
@@ -14,6 +15,7 @@ import {
   type EngineOutcome,
   type EngineRefs,
   type EngineStop,
+  type EngineWake,
   MAX_CASCADE_TRANSITIONS,
   type RuleEvent,
   type RunRulesInput,
@@ -29,6 +31,7 @@ export type {
   EngineRefs,
   EngineStop,
   EngineStopReason,
+  EngineWake,
   RuleEvent,
   RunRulesInput,
   SkippedRule,
@@ -52,6 +55,7 @@ interface EngineState {
   addLabelIds: string[];
   removeLabelIds: string[];
   notifications: EngineNotification[];
+  wakes: EngineWake[];
   matchedRuleIds: string[];
   skippedRules: SkippedRule[];
   visited: Set<string>;
@@ -63,6 +67,9 @@ interface EngineState {
 export function triggerMatches(trigger: RuleTrigger, event: RuleEvent): boolean {
   if (trigger.type === 'issue_created') {
     return event.type === 'issue_created';
+  }
+  if (trigger.type === 'run_settled') {
+    return event.type === 'run_settled';
   }
   return event.type === 'status_entered' && trigger.statusKey === event.statusKey;
 }
@@ -131,6 +138,7 @@ export function runRules(input: RunRulesInput): EngineOutcome {
     addLabelIds: state.addLabelIds,
     removeLabelIds: state.removeLabelIds,
     notifications: state.notifications,
+    wakes: state.wakes,
     matchedRuleIds: state.matchedRuleIds,
     skippedRules: state.skippedRules,
     stop: state.stop,
@@ -165,6 +173,7 @@ function createState(input: RunRulesInput, events: RuleEvent[]): EngineState {
     addLabelIds: [],
     removeLabelIds: [],
     notifications: [],
+    wakes: [],
     matchedRuleIds: [],
     skippedRules: [],
     visited,
@@ -226,6 +235,9 @@ function applyAction(context: EngineContext, rule: BoardRuleRecord, action: Rule
     case 'notify_owner':
       applyNotify(context.state, rule, action);
       return;
+    case 'wake_agent':
+      applyWake(context, rule, action);
+      return;
     case 'stop':
       context.state.stopped = true;
       return;
@@ -283,6 +295,17 @@ function applyRemoveLabel(state: EngineState, labelId: string): void {
 
 function applyNotify(state: EngineState, rule: BoardRuleRecord, action: NotifyOwnerAction): void {
   state.notifications.push({ ruleId: rule.id, text: action.text });
+}
+
+function applyWake(context: EngineContext, rule: BoardRuleRecord, action: WakeAgentAction): void {
+  const { state, refs } = context;
+  if (!refs.agentExists(action.agentId)) {
+    markSkipped(state, rule.id, 'dead-ref');
+    return;
+  }
+  if (!state.wakes.some((wake) => wake.agentId === action.agentId)) {
+    state.wakes.push({ agentId: action.agentId });
+  }
 }
 
 function applyStatus(context: EngineContext, rule: BoardRuleRecord, action: SetStatusAction): void {
