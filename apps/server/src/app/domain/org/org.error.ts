@@ -17,3 +17,18 @@ export class OrgWorkspacePathInvalidException extends ValidationException {
     super(`Organization workspace path must be absolute: ${localPath}`, { localPath });
   }
 }
+
+export class OrgBackupInvalidException extends ValidationException {
+  constructor(reason: string) {
+    super(`Invalid organization backup: ${reason}`);
+  }
+}
+
+export class OrgBackupConflictException extends ValidationException {
+  constructor(orgId: string) {
+    super(
+      `Organization ${orgId} already exists on this machine. Delete or rename it before restoring this backup.`,
+      { orgId },
+    );
+  }
+}

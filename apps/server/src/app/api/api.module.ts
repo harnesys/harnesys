@@ -117,6 +117,7 @@ import { ModelImageController } from './rest/model-image.controller.ts';
 import { ModelSpeechController } from './rest/model-speech.controller.ts';
 import { ModelTranscriptionController } from './rest/model-transcription.controller.ts';
 import { ModelVoicesController } from './rest/model-voices.controller.ts';
+import { OrgBackupController } from './rest/org-backup.controller.ts';
 import { OrgGitController } from './rest/org-git.controller.ts';
 import { OrgsController } from './rest/orgs.controller.ts';
 import { PermissionRulesController } from './rest/permission-rules.controller.ts';
@@ -224,6 +225,7 @@ import { VaultController } from './rest/vault.controller.ts';
     EulaController,
     AgentHooksController,
     OrgsController,
+    OrgBackupController,
     SessionController,
     MembersController,
     AuditController,

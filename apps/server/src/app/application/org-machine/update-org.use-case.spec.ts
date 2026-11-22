@@ -35,6 +35,7 @@ class FakeOrgDb extends OrgDbPort {
   rename(orgId: string, name: string): void {
     this.renamed.push({ orgId, name });
   }
+  snapshot(): void {}
 }
 
 describe('UpdateOrgUseCase', () => {

@@ -23,6 +23,7 @@ import {
 } from '@/shared/ui/settings-kit';
 import { Textarea } from '@/shared/ui/textarea';
 import { toast } from '@/shared/ui/toast';
+import { OrgBackupSection } from './ui/org-backup-section';
 import { OrgDeliverySection } from './ui/org-delivery-section';
 import { OrgTimezoneSection } from './ui/org-timezone-section';
 
@@ -198,6 +199,8 @@ function OrgGeneralForm({ entry }: { entry: MachineOrgEntry }) {
       <OrgTimezoneSection orgId={entry.orgId} />
 
       <OrgDeliverySection orgId={entry.orgId} />
+
+      {isRelay ? <OrgBackupSection orgId={entry.orgId} orgName={entry.name} /> : null}
 
       {isWorker ? (
         <SettingsSection label="Danger" testId="org-general-danger">

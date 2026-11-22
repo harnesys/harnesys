@@ -38,6 +38,26 @@ export const OrgMachineFileSchema = z.object({
 });
 export type OrgMachineFile = z.infer<typeof OrgMachineFileSchema>;
 
+export const ORG_BACKUP_FORMAT = 'harnesys-org-backup';
+export const ORG_BACKUP_VERSION = 1;
+
+export const OrgBackupFileDigestSchema = z.object({
+  sizeBytes: z.number().int().nonnegative(),
+  sha256: z.string().length(64),
+});
+export type OrgBackupFileDigest = z.infer<typeof OrgBackupFileDigestSchema>;
+
+export const OrgBackupManifestSchema = z.object({
+  format: z.literal(ORG_BACKUP_FORMAT),
+  version: z.literal(ORG_BACKUP_VERSION),
+  createdAt: z.string().datetime(),
+  orgId: OrgIdSchema,
+  orgName: z.string().min(1),
+  orgDb: OrgBackupFileDigestSchema,
+  data: OrgBackupFileDigestSchema.nullable(),
+});
+export type OrgBackupManifest = z.infer<typeof OrgBackupManifestSchema>;
+
 export const OrgsListResponseSchema = z.object({
   orgs: z.array(MachineOrgEntrySchema),
   activeOrgId: OrgIdSchema.nullable(),

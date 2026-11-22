@@ -22,6 +22,7 @@ export async function downloadThreadExport(
     fileNameFromDisposition(response.headers.get('Content-Disposition')) ??
     `harnesys-thread-${threadId}.zip`;
   const blob = await zipBlob(response, onProgress);
+  await assertCompleteZip(blob);
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
@@ -54,6 +55,21 @@ async function zipBlob(
     onProgress(received);
   }
   return new Blob(chunks as BlobPart[], { type: 'application/zip' });
+}
+
+async function assertCompleteZip(blob: Blob): Promise<void> {
+  const tail = new Uint8Array(
+    await blob.slice(Math.max(0, blob.size - 22), blob.size).arrayBuffer(),
+  );
+  const hasEndOfCentralDirectory =
+    tail.length >= 4 &&
+    tail[0] === 0x50 &&
+    tail[1] === 0x4b &&
+    tail[2] === 0x05 &&
+    tail[3] === 0x06;
+  if (!hasEndOfCentralDirectory) {
+    throw new ApiError(500, 'Thread export incomplete');
+  }
 }
 
 function fileNameFromDisposition(value: string | null): string | null {

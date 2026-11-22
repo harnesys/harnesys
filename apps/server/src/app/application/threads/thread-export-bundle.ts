@@ -82,29 +82,10 @@ export function createThreadExportBundle(input: ThreadExportBundleInput): Thread
     { name: 'plan.json', bytes: jsonBytes(planPayload(input.plan)) },
     { name: 'attachments.json', bytes: jsonBytes({ attachments: input.attachments }) },
   ];
-  const manifest = jsonBytes({
-    format: FORMAT,
-    version: FORMAT_VERSION,
-    exportedAt: input.exportedAt,
-    orgId: input.orgId,
-    threadId: input.thread.id,
-    threadTitle: input.thread.title,
-    threadKind: input.thread.kind,
-    counts: {
-      events: input.events.length,
-      errors: errorEvents.length,
-      compactions: compactions.length,
-      runs: input.runs.length,
-      snapshots: input.snapshots.length,
-      rawModelRequests: input.rawRequests.length,
-      toolOutputs: input.toolOutputs.length,
-      attachments: input.attachments.length,
-      members: input.members.length,
-      participants: input.participants.length,
-    },
-    files: archiveFileNames(staticFiles, input).sort(),
-  });
   const queue = new ByteQueue(QUEUE_HIGH_WATER);
+  const emittedRaw: string[] = [];
+  const emittedTool: string[] = [];
+  const missing: string[] = [];
   const zip = new Zip((err, chunk, final) => {
     if (err) {
       queue.fail(err);
@@ -151,8 +132,20 @@ export function createThreadExportBundle(input: ThreadExportBundleInput): Thread
     flush();
     file.push(new Uint8Array(0), true);
   };
-  const pushSource = async (name: string, source: ThreadExportSource): Promise<void> => {
-    await pushBytes(name, await source.bytes());
+  const pushSource = async (
+    name: string,
+    source: ThreadExportSource,
+    emitted: string[],
+  ): Promise<void> => {
+    let bytes: Uint8Array;
+    try {
+      bytes = await source.bytes();
+    } catch {
+      missing.push(name);
+      return;
+    }
+    await pushBytes(name, bytes);
+    emitted.push(name);
   };
   const pushBytes = async (name: string, bytes: Uint8Array): Promise<void> => {
     const file = new ZipDeflate(name, { level: ARCHIVE_LEVEL });
@@ -164,18 +157,49 @@ export function createThreadExportBundle(input: ThreadExportBundleInput): Thread
     }
     file.push(new Uint8Array(0), true);
   };
+  const buildManifest = (): Uint8Array =>
+    jsonBytes({
+      format: FORMAT,
+      version: FORMAT_VERSION,
+      exportedAt: input.exportedAt,
+      orgId: input.orgId,
+      threadId: input.thread.id,
+      threadTitle: input.thread.title,
+      threadKind: input.thread.kind,
+      counts: {
+        events: input.events.length,
+        errors: errorEvents.length,
+        compactions: compactions.length,
+        runs: input.runs.length,
+        snapshots: input.snapshots.length,
+        rawModelRequests: emittedRaw.length,
+        toolOutputs: emittedTool.length,
+        attachments: input.attachments.length,
+        members: input.members.length,
+        participants: input.participants.length,
+        missing: missing.length,
+      },
+      files: [
+        'manifest.json',
+        'events.jsonl',
+        ...staticFiles.map((file) => file.name),
+        ...emittedRaw,
+        ...emittedTool,
+      ].sort(),
+      missing: missing.sort(),
+    });
   const run = async (): Promise<void> => {
     for (const file of staticFiles) {
       pushSync(file.name, file.bytes);
     }
     await pushEvents('events.jsonl', input.events);
     for (const source of input.rawRequests) {
-      await pushSource(`raw-model-requests/${source.name}`, source);
+      await pushSource(`raw-model-requests/${source.name}`, source, emittedRaw);
     }
     for (const source of input.toolOutputs) {
-      await pushSource(`tool-outputs/${source.name}`, source);
+      await pushSource(`tool-outputs/${source.name}`, source, emittedTool);
     }
-    pushSync('manifest.json', manifest);
+    pushSync('manifest.json', buildManifest());
     zip.end();
   };
   void run().catch((error: unknown) => {
@@ -202,19 +226,6 @@ export function createThreadExportBundle(input: ThreadExportBundleInput): Thread
       },
     }),
   };
-}
-
-function archiveFileNames(
-  staticFiles: ThreadExportStaticFile[],
-  input: ThreadExportBundleInput,
-): string[] {
-  return [
-    'manifest.json',
-    'events.jsonl',
-    ...staticFiles.map((file) => file.name),
-    ...input.rawRequests.map((source) => `raw-model-requests/${source.name}`),
-    ...input.toolOutputs.map((source) => `tool-outputs/${source.name}`),
-  ];
 }
 
 function eventLine(event: ThreadExportEvent): Record<string, unknown> {

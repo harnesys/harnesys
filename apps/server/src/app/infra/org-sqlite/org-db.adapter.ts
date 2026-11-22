@@ -69,6 +69,15 @@ export class OrgDbAdapter extends OrgDbPort {
     }
   }
 
+  snapshot(orgId: string, outPath: string): void {
+    const sqlite = this.open(orgId);
+    try {
+      sqlite.exec(`VACUUM INTO '${outPath.replaceAll("'", "''")}'`);
+    } finally {
+      sqlite.close();
+    }
+  }
+
   private open(orgId: string): Database {
     const sqlite = new Database(this.layout.orgDbPath(orgId), { create: true });
     configureOrgSqlite(sqlite);
