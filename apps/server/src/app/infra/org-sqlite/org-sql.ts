@@ -595,6 +595,7 @@ CREATE TABLE IF NOT EXISTS runs (
   status TEXT NOT NULL,
   interrupt_id TEXT,
   wait_fire_at INTEGER,
+  wake_key TEXT,
   parent_run_id TEXT,
   attempt INTEGER NOT NULL DEFAULT 1,
   lease_instance_id TEXT,
@@ -612,6 +613,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS runs_active_root_idx ON runs(thread_id)
 CREATE INDEX IF NOT EXISTS runs_claim_idx ON runs(status, created_at);
 CREATE INDEX IF NOT EXISTS runs_ask_ttl_idx ON runs(status, updated_at);
 CREATE INDEX IF NOT EXISTS runs_wait_fire_idx ON runs(status, wait_fire_at);
+CREATE INDEX IF NOT EXISTS runs_wake_key_idx ON runs(status, wake_key);
 `;
 
 export const CREATE_RUN_EVENTS_SQL = `

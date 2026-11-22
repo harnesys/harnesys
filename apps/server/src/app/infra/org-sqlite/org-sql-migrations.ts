@@ -37,6 +37,20 @@ export function migrateRunsAttributionColumns(
   }
 }
 
+export function migrateRunsWakeKeyColumn(
+  exec: (sql: string) => void,
+  all: (sql: string) => ColumnInfo[],
+): void {
+  const present = new Set(all('PRAGMA table_info(runs)').map((col) => col.name));
+  if (present.size === 0) {
+    return;
+  }
+  if (!present.has('wake_key')) {
+    exec(`ALTER TABLE runs ADD COLUMN wake_key TEXT`);
+  }
+  exec('CREATE INDEX IF NOT EXISTS runs_wake_key_idx ON runs(status, wake_key)');
+}
+
 export function migrateModePresetToolColumns(
   exec: (sql: string) => void,
   all?: (sql: string) => ColumnInfo[],

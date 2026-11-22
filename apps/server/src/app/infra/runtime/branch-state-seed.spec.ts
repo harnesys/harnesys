@@ -43,6 +43,10 @@ class StubLifecycle implements RunLifecycleStore {
     return [];
   }
 
+  async listWaitingAwait(): Promise<RunRecord[]> {
+    return [];
+  }
+
   async listStaleRunning(): Promise<RunRecord[]> {
     return [];
   }

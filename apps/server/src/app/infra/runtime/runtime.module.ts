@@ -1,4 +1,5 @@
 import { Module } from '@harnesys/brix';
+import { IssueWakePort } from '../../domain/issue/issue-wake.port.ts';
 import { PlanEventsPort } from '../../domain/plan/plan-events.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { RunLifecycleReaderPort } from '../../domain/thread/run-lifecycle-reader.port.ts';
@@ -13,6 +14,7 @@ import { DeskModule } from '../desk/desk.module.ts';
 import { FileAccessModule } from '../file-access/file-access.module.ts';
 import { FleetHubModule } from '../fleet-hub/fleet-hub.module.ts';
 import { IssueInfraModule } from '../issues/issue.module.ts';
+import { IssueWakeAdapter } from '../issues/issue-wake.adapter.ts';
 import { KnowledgeModule } from '../knowledge/knowledge.module.ts';
 import { LspModule } from '../lsp/lsp.module.ts';
 import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
@@ -61,10 +63,12 @@ import { WaitTickerGateAdapter } from './wait-ticker-gate.adapter.ts';
   providers: [
     { provide: WaitTickerGatePort, useClass: WaitTickerGateAdapter },
     { provide: LocalExecutorPort, useClass: LocalExecutorAdapter },
+    { provide: IssueWakePort, useClass: IssueWakeAdapter },
     { provide: RunLifecycleReaderPort, useClass: RunLifecycleReaderAdapter },
   ],
   exports: [
     LocalExecutorPort,
+    IssueWakePort,
     RunLifecycleReaderPort,
     PlanEventsPort,
     ThreadEventsPort,

@@ -16,6 +16,7 @@ export const runsTable = sqliteTable(
     status: text('status').notNull(),
     interruptId: text('interrupt_id'),
     waitFireAt: integer('wait_fire_at'),
+    wakeKey: text('wake_key'),
     parentRunId: text('parent_run_id'),
     attempt: integer('attempt').notNull().default(1),
     leaseInstanceId: text('lease_instance_id'),
@@ -32,6 +33,7 @@ export const runsTable = sqliteTable(
     claimIdx: index('runs_claim_idx').on(table.status, table.createdAt),
     askTtlIdx: index('runs_ask_ttl_idx').on(table.status, table.updatedAt),
     waitFireIdx: index('runs_wait_fire_idx').on(table.status, table.waitFireAt),
+    wakeKeyIdx: index('runs_wake_key_idx').on(table.status, table.wakeKey),
   }),
 );
 

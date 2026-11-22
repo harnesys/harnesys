@@ -14,6 +14,7 @@ import { createOrgModelsPort } from '../../domain/provider/org-models.ts';
 import { ThreadNotFoundException } from '../../domain/thread/thread.error.ts';
 import { openOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 import { type ApprovalResumeSweep, createApprovalResumeSweep } from './approval-resume-sweep.ts';
+import { createAwaitSignalResolver } from './await-signal-resolvers.ts';
 import { createBranchSeed } from './branch-state-seed.ts';
 import { runInHostToolScope } from './host-tool-scope.ts';
 import { wireOrgPlugins } from './org-plugin-wiring.ts';
@@ -38,8 +39,10 @@ import {
   truncateThreadHistory,
   undoThreadCompaction,
 } from './truncate-thread-state.ts';
-import { sweepWaitTimers, type ThreadSessionRef } from './wait-ticker.ts';
+import { createWaitTicker, type ThreadSessionRef } from './wait-ticker.ts';
 import { reconcileWorkspaces, type ThreadBinding } from './workspace-target.ts';
+
+const WAITING_RUNS_SQL = `SELECT COUNT(*) AS c FROM runs WHERE status = 'waiting' AND wait_fire_at IS NOT NULL`;
 
 export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> {
   const session = openOrgSqlite(deps.layout, deps.orgId);
@@ -231,20 +234,15 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     return handle;
   }
 
-  async function tickWaitTimers(): Promise<number> {
-    const resumed = await sweepWaitTimers({
-      lifecycle: runLifecycle,
-      events: runEvents,
-      kick: () => claimer?.kick(),
-    });
-    const row = session.sqlite
-      .query(`SELECT COUNT(*) AS c FROM runs WHERE status = 'waiting' AND wait_fire_at IS NOT NULL`)
-      .get() as { c: number } | undefined;
-    if (deps.waitGate && (row?.c ?? 0) === 0) {
-      deps.waitGate.release(deps.orgId);
-    }
-    return resumed;
-  }
+  const waitTicker = createWaitTicker({
+    lifecycle: runLifecycle,
+    events: runEvents,
+    kick: () => claimer?.kick(),
+    isAwaitSettled: createAwaitSignalResolver(deps.orgId, deps.issueExecutions),
+    countWaitingTimers: () =>
+      (session.sqlite.query(WAITING_RUNS_SQL).get() as { c: number } | undefined)?.c ?? 0,
+    releaseGate: () => deps.waitGate?.release(deps.orgId),
+  });
 
   const runControl = {
     lifecycle: runLifecycle,
@@ -318,7 +316,8 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
         threadSeq,
       );
     },
-    tickWaitTimers,
+    tickWaitTimers: () => waitTicker.tick(),
+    wakeRuns: waitTicker.wake,
     listMcpServers: () => plugin.listMcp(),
     reloadMcp: (serverId, entry) => plugin.applyMcp(serverId, entry),
     close() {

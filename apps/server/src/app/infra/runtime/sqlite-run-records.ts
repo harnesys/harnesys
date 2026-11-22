@@ -27,6 +27,7 @@ export function rowToRecord(row: RunRow): RunRecord {
     status: row.status as RunLifecycleStatus,
     interruptId: row.interruptId ?? undefined,
     waitFireAt: row.waitFireAt ?? undefined,
+    wakeKey: row.wakeKey ?? undefined,
     parentRunId: row.parentRunId ?? undefined,
     attempt: row.attempt,
     leaseInstanceId: row.leaseInstanceId ?? undefined,

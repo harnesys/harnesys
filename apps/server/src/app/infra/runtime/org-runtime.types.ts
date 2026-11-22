@@ -27,6 +27,7 @@ import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
 import { NodeCommandQueuePort } from '../../domain/fleet/node-command-queue.port.ts';
 import { NodeRepository } from '../../domain/fleet/node-repository.port.ts';
 import type { RunIsolation } from '../../domain/fleet/placement.ts';
+import { IssueEventsPort } from '../../domain/issue/issue-events.port.ts';
 import { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
 import { LspPort } from '../../domain/lsp/lsp.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
@@ -95,6 +96,7 @@ export interface OrgRuntime {
   removeThreadEvent(threadId: string, threadSeq: number): Promise<SessionEvent>;
   stream(runId: string, fromSeq?: number): AsyncIterable<SessionEvent>;
   tickWaitTimers(): Promise<number>;
+  wakeRuns(wakeKey: string, agentId?: string): Promise<number>;
   listMcpServers(): Promise<McpServerInfo[]>;
   reloadMcp(serverId: string, entry: StdioEntry | UrlEntry | null): Promise<void>;
   close(): void;
@@ -142,6 +144,7 @@ export interface OrgRuntimeDeps {
   knowledge?: OrgKnowledgeDeps;
   issues?: OrgIssueDeps;
   issueExecutions?: IssueExecutionPort;
+  issueEvents?: IssueEventsPort;
   manager?: OrgManagerDeps;
   skills?: OrgSkillsDeps;
   sourcesPack?: OrgSourcesDeps;

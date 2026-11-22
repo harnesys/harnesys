@@ -22,6 +22,7 @@ import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.po
 import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
 import { NodeCommandQueuePort } from '../../domain/fleet/node-command-queue.port.ts';
 import { NodeRepository } from '../../domain/fleet/node-repository.port.ts';
+import { IssueEventsPort } from '../../domain/issue/issue-events.port.ts';
 import { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
 import { KnowledgeSearchPort } from '../../domain/knowledge/knowledge-search.port.ts';
 import { KnowledgeStorePort } from '../../domain/knowledge/knowledge-store.port.ts';
@@ -102,6 +103,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     private readonly knowledgeStore: KnowledgeStorePort,
     private readonly waitGate: WaitTickerGatePort,
     private readonly issueExecutions: IssueExecutionPort,
+    private readonly issueEvents: IssueEventsPort,
     private readonly containers: WorkspaceContainerPort,
     private readonly nodes: NodeRepository,
     private readonly worktrees: RepositoryWorktreePort,
@@ -199,6 +201,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       },
       waitGate: this.waitGate,
       issueExecutions: this.issueExecutions,
+      issueEvents: this.issueEvents,
       ...packToolsDeps(),
       ...(this.lsp ? { lsp: this.lsp } : {}),
     });
@@ -298,6 +301,10 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
   async tickWaitTimers(orgId: string): Promise<number> {
     const rt = await this.ensure(orgId);
     return rt.tickWaitTimers();
+  }
+
+  async wakeRuns(orgId: string, wakeKey: string, agentId?: string): Promise<number> {
+    return (await this.ensure(orgId)).wakeRuns(wakeKey, agentId);
   }
 
   async countWaitingTimers(orgId: string): Promise<number> {

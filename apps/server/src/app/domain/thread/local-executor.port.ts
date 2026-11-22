@@ -96,6 +96,7 @@ export abstract class LocalExecutorPort {
     fromSeq?: number,
   ): Promise<AsyncIterable<SessionEvent>>;
   abstract tickWaitTimers(orgId: string): Promise<number>;
+  abstract wakeRuns(orgId: string, wakeKey: string, agentId?: string): Promise<number>;
   abstract countWaitingTimers(orgId: string): Promise<number>;
   abstract listMcpServers(orgId: string): Promise<McpServerInfo[]>;
   abstract invalidateRuntime(orgId: string): Promise<void>;

@@ -55,6 +55,9 @@ export class FakeExecutor extends LocalExecutorPort {
   tickWaitTimers(): Promise<number> {
     return Promise.resolve(0);
   }
+  wakeRuns(): Promise<number> {
+    return Promise.resolve(0);
+  }
   countWaitingTimers(): Promise<number> {
     return Promise.resolve(0);
   }

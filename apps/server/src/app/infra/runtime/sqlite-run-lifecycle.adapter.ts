@@ -133,18 +133,15 @@ export class SqliteRunLifecycleStore implements RunLifecycleStore {
           park: patch.to === 'needs_input',
         });
         const lastSeq = maxSeqOf(stored, record.lastSeq);
-        let waitFireAt: number | null = record.waitFireAt ?? null;
-        if (patch.waitFireAt === null) {
-          waitFireAt = null;
-        } else if (patch.waitFireAt !== undefined) {
-          waitFireAt = patch.waitFireAt;
-        }
+        const waitFireAt = mergeNullableValue(record.waitFireAt ?? null, patch.waitFireAt);
+        const wakeKey = mergeNullableValue(record.wakeKey ?? null, patch.wakeKey);
         tx.update(runsTable)
           .set({
             status: patch.to,
             interruptId:
               patch.interruptId === null ? null : (patch.interruptId ?? record.interruptId ?? null),
             waitFireAt,
+            wakeKey,
             attempt: patch.advanceAttempt ? record.attempt + 1 : record.attempt,
             leaseInstanceId: null,
             leaseExpiresAt: null,
@@ -210,6 +207,19 @@ export class SqliteRunLifecycleStore implements RunLifecycleStore {
     );
   }
 
+  listWaitingAwait(opts?: { limit?: number }): Promise<RunRecord[]> {
+    return Promise.resolve(
+      this.db
+        .select()
+        .from(runsTable)
+        .where(and(eq(runsTable.status, 'waiting'), sql`${runsTable.wakeKey} IS NOT NULL`))
+        .orderBy(asc(runsTable.updatedAt))
+        .limit(opts?.limit ?? DEFAULT_LIST_LIMIT)
+        .all()
+        .map(rowToRecord),
+    );
+  }
+
   listStaleRunning(opts?: {
     limit?: number;
     now?: number;
@@ -236,4 +246,14 @@ export class SqliteRunLifecycleStore implements RunLifecycleStore {
         .map(rowToRecord),
     );
   }
+}
+
+function mergeNullableValue<T>(current: T | null, patchValue: T | null | undefined): T | null {
+  if (patchValue === null) {
+    return null;
+  }
+  if (patchValue === undefined) {
+    return current;
+  }
+  return patchValue;
 }

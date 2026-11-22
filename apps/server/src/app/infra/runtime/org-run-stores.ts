@@ -85,6 +85,7 @@ export function createOrgRunStores(
           {
             orgId: deps.orgId,
             logger: CONSOLE_LOGGER,
+            ...(deps.issueEvents ? { events: deps.issueEvents } : {}),
             ...(deps.issueExecutions ? { issueExecutions: deps.issueExecutions } : {}),
             ...(deps.worktrees ? { worktrees: deps.worktrees } : {}),
           },

@@ -94,6 +94,7 @@ import {
   migrateIssuesBranchColumns,
   migrateModePresetToolColumns,
   migrateRunsAttributionColumns,
+  migrateRunsWakeKeyColumn,
   migrateThreadMessageQueueModeColumn,
   migrateThreadsBindingColumns,
   migrateThreadsPolicyContextWindow,
@@ -227,6 +228,9 @@ export function ensureOrgSchema(
   exec(CREATE_ISSUE_EXECUTIONS_SQL);
   if (all) {
     migrateIssueExecutionCorrelationIndex(exec, all);
+  }
+  if (all) {
+    migrateRunsWakeKeyColumn(exec, all);
   }
   exec(CREATE_RUNS_SQL);
   assertRunsAgentSnapshot(all);
