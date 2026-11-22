@@ -83,6 +83,9 @@ class FakeLifecycle implements RunLifecycleStore {
   async listDueTimers(): Promise<RunRecord[]> {
     return [];
   }
+  async listWaitingAwait(): Promise<RunRecord[]> {
+    return [];
+  }
   async listStaleRunning(): Promise<RunRecord[]> {
     return this.stale;
   }

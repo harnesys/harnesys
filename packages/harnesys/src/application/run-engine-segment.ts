@@ -225,6 +225,7 @@ async function pauseOnWaiting(
     to: 'waiting',
     interruptId: interrupt.interruptId,
     waitFireAt: typeof fireAt === 'number' ? fireAt : null,
+    wakeKey: typeof interrupt.wakeKey === 'string' ? interrupt.wakeKey : null,
   });
 }
 async function pauseOnInterrupt(

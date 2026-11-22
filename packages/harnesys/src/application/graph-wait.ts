@@ -8,15 +8,17 @@ export interface WaitNodeSpec {
   type: 'control:wait';
   delayMs?: number;
   untilMs?: Expr;
+  awaitKey?: Expr;
   timeoutMs?: number;
   onTimeout?: 'fail' | 'continue' | 'interrupt';
   reason?: InterruptReason;
   resumeSchema?: JsonSchema;
 }
 export interface PreparedWait {
-  mode: 'sleep' | 'gate';
+  mode: 'sleep' | 'gate' | 'await';
   fireAt?: number;
   onTimeout?: 'fail' | 'continue' | 'interrupt';
+  wakeKey?: string;
   reason: InterruptReason;
   resumeSchema: JsonSchema;
   interruptId: string;
@@ -29,10 +31,33 @@ const DEFAULT_RESUME: JsonSchema = {
 export function prepareWait(node: WaitNodeSpec, slots: Slots): PreparedWait {
   const hasDelay = node.delayMs !== undefined;
   const hasUntil = node.untilMs !== undefined;
-  if (hasDelay && hasUntil) {
-    throw codedRunError('wait_mode', 'delayMs and untilMs are mutually exclusive');
+  const hasAwait = node.awaitKey !== undefined;
+  if ((hasDelay ? 1 : 0) + (hasUntil ? 1 : 0) + (hasAwait ? 1 : 0) > 1) {
+    throw codedRunError('wait_mode', 'delayMs, untilMs and awaitKey are mutually exclusive');
   }
   const interruptId = crypto.randomUUID();
+  if (hasAwait) {
+    if (node.timeoutMs === undefined) {
+      throw codedRunError('wait_await_timeout', 'awaitKey requires timeoutMs');
+    }
+    if (!Number.isFinite(node.timeoutMs) || node.timeoutMs < 1) {
+      throw codedRunError('wait_timeout', 'timeoutMs must be >= 1');
+    }
+    const raw = evalExpr(node.awaitKey as string, slots);
+    if (typeof raw !== 'string' || raw.length === 0) {
+      throw codedRunError('wait_mode', 'awaitKey must evaluate to a non-empty string');
+    }
+    return {
+      mode: 'await',
+      fireAt: Date.now() + node.timeoutMs,
+      onTimeout: node.onTimeout ?? 'continue',
+      wakeKey: raw,
+      reason: node.reason ?? 'wait',
+      resumeSchema: node.resumeSchema ?? DEFAULT_RESUME,
+      interruptId,
+      source: 'wait',
+    };
+  }
   if (hasDelay || hasUntil) {
     if (node.timeoutMs !== undefined) {
       throw codedRunError('wait_mode', 'timeoutMs is not valid with sleep');

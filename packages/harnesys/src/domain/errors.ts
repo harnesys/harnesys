@@ -86,6 +86,25 @@ export class AskUserInterrupt extends Error {
     this.resumeSchema = input.resumeSchema;
   }
 }
+export class WaitInterrupt extends Error {
+  readonly wakeKey?: string;
+  readonly fireAt: number;
+  readonly onTimeout?: 'continue';
+  interruptId?: string;
+  constructor(input: {
+    wakeKey?: string;
+    fireAt: number;
+    onTimeout?: 'continue';
+    interruptId?: string;
+  }) {
+    super('wait interrupt');
+    this.name = 'WaitInterrupt';
+    this.wakeKey = input.wakeKey;
+    this.fireAt = input.fireAt;
+    this.onTimeout = input.onTimeout;
+    this.interruptId = input.interruptId;
+  }
+}
 export class DelegatedPermissionAsk extends Error {
   readonly agentId: string;
   readonly agentType: string;

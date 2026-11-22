@@ -1,5 +1,5 @@
 import { SANDBOX_DENIED_STATE_TOOLS } from '../constants.ts';
-import { AskUserInterrupt } from '../domain/errors.ts';
+import { AskUserInterrupt, WaitInterrupt } from '../domain/errors.ts';
 import type { JsonSchema } from '../domain/json-schema.ts';
 import { presentCallOutput, serializeToolOutput } from './clip-tool-output.ts';
 import { unsupportedControlIntentText } from './graph-agent-controls.ts';
@@ -20,7 +20,7 @@ import {
   recordGranted,
   validCheckpointEntries,
 } from './tool-approve-checkpoint.ts';
-import { ensureAskInterruptId, isAskResumeForCall } from './tool-ask.ts';
+import { ensureAskInterruptId, isAskResumeForCall, isWaitResumeForCall } from './tool-ask.ts';
 import type { ToolCallContext, ToolCallResult } from './tool-call.ts';
 import { buildToolMessage, type ToolMessage } from './tool-message.ts';
 import {
@@ -236,9 +236,11 @@ export async function runSingleToolCall(
         threadDir: ctx.paths?.threadDir,
       },
       signal: ctx.signal,
-      resume: isAskResumeForCall(ctx.resumeInterruptId, call.id)
-        ? (ctx.resume ?? undefined)
-        : undefined,
+      resume:
+        isAskResumeForCall(ctx.resumeInterruptId, call.id) ||
+        isWaitResumeForCall(ctx.resumeInterruptId, call.id)
+          ? (ctx.resume ?? undefined)
+          : undefined,
       sandbox: ctx.sandbox,
       env: ctx.env,
       agentId: ctx.agentId,
@@ -318,6 +320,12 @@ export async function runSingleToolCall(
         };
       }
       ensureAskInterruptId(e, call.id);
+      throw e;
+    }
+    if (e instanceof WaitInterrupt) {
+      if (!e.interruptId) {
+        e.interruptId = `wait/${call.id}`;
+      }
       throw e;
     }
     const content = failureText(e);

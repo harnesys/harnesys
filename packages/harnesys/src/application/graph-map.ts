@@ -7,7 +7,6 @@ import {
   STATE_MAP_MAX_TOKENS_KEY,
   STATE_SPAWN_RESULTS_KEY,
   STATE_SPAWNS_KEY,
-  STATE_WAIT_UNTIL_MS_KEY,
 } from '../constants.ts';
 import type {
   AgentDefinition,
@@ -158,7 +157,6 @@ const WORKER_STATE_DROP_KEYS = [
   STATE_MAP_ITEMS_KEY,
   STATE_MAP_INSTRUCTION_KEY,
   STATE_MAP_MAX_TOKENS_KEY,
-  STATE_WAIT_UNTIL_MS_KEY,
   '$resume',
 ];
 const mapWorkerNote: LlmNoteProvider = () => [

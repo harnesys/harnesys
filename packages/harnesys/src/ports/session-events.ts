@@ -294,10 +294,11 @@ export type SessionEvent = SessionEventScope &
     | {
         type: 'wait.started';
         askId: string;
-        mode: 'sleep' | 'gate';
+        mode: 'sleep' | 'gate' | 'await';
         fireAt?: number;
         source: 'timer' | 'wait';
         onTimeout?: 'fail' | 'continue' | 'interrupt';
+        wakeKey?: string;
         schema?: JsonSchema;
         prompt?: string;
         seq?: number;
@@ -307,7 +308,7 @@ export type SessionEvent = SessionEventScope &
         type: 'wait.resumed';
         nodeId: string;
         timedOut: boolean;
-        source: 'timer' | 'respond';
+        source: 'timer' | 'respond' | 'signal';
         seq?: number;
         runId?: string;
       }

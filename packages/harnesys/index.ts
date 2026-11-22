@@ -232,6 +232,11 @@ export type {
 } from './src/domain/agent-definition.ts';
 export { defineAgent } from './src/domain/agent-definition.ts';
 export type { Attachment, AttachmentKind, SendFile } from './src/domain/attachment.ts';
+export {
+  ISSUE_WAKE_PREFIX,
+  issueWakeKey,
+  parseIssueWakeKey,
+} from './src/domain/await-key.ts';
 export type {
   CompactionMessage,
   CompactionSpec,
@@ -252,6 +257,7 @@ export {
   ResumeHashError,
   ThreadBusyError,
   ValidationError,
+  WaitInterrupt,
 } from './src/domain/errors.ts';
 export type {
   AgentEventMeta,

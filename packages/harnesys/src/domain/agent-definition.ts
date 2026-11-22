@@ -243,6 +243,7 @@ export type Node =
       type: 'control:wait';
       delayMs?: number;
       untilMs?: Expr;
+      awaitKey?: Expr;
       timeoutMs?: number;
       onTimeout?: 'fail' | 'continue' | 'interrupt';
       reason?: InterruptReason;

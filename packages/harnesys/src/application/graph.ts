@@ -16,7 +16,7 @@ import type {
   ToolCallFixed,
 } from '../domain/agent-definition.ts';
 import type { Attachment, AttachmentKind } from '../domain/attachment.ts';
-import { AskUserInterrupt, DelegatedPermissionAsk } from '../domain/errors.ts';
+import { AskUserInterrupt, DelegatedPermissionAsk, WaitInterrupt } from '../domain/errors.ts';
 import type { JsonSchema } from '../domain/json-schema.ts';
 import type { ProcessJobTarget } from '../domain/process-job.ts';
 import type { Event } from '../domain/snapshot.ts';
@@ -67,7 +67,6 @@ import {
   clearQueuedHandoff,
   clearQueuedMap,
   clearQueuedSpawns,
-  clearQueuedWait,
   collectPlanNodeTypes,
 } from './graph-agent-controls.ts';
 import { isSkippedEntry, matchOutgoing } from './graph-edges.ts';
@@ -812,6 +811,29 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
           yield e;
         }
       }
+      if (interruptSource === 'tool_wait' && node.type === 'tool:call') {
+        const timedOut =
+          opts.resumePayload !== undefined &&
+          typeof opts.resumePayload === 'object' &&
+          opts.resumePayload !== null &&
+          (
+            opts.resumePayload as {
+              timedOut?: unknown;
+            }
+          ).timedOut === true;
+        const cause = (opts.resumePayload as { cause?: unknown } | undefined)?.cause;
+        let source: 'timer' | 'respond' | 'signal' = 'respond';
+        if (cause === 'signal') {
+          source = 'signal';
+        } else if (cause === 'timer') {
+          source = 'timer';
+        }
+        yield await commit('running', 'wait.resumed', 'recorded', {
+          nodeId: cur,
+          timedOut,
+          source,
+        });
+      }
       if (isSkippedEntry(node.type, opts.rejected, interruptSource)) {
         st.$resume = opts.rejected ? null : opts.resumePayload;
         if (node.type === 'control:wait') {
@@ -824,11 +846,17 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
                 timedOut?: unknown;
               }
             ).timedOut === true;
-          clearQueuedWait(st);
+          const cause = (opts.resumePayload as { cause?: unknown } | undefined)?.cause;
+          let source: 'timer' | 'respond' | 'signal' = 'respond';
+          if (cause === 'signal') {
+            source = 'signal';
+          } else if (cause === 'timer' || interruptSource === 'timer') {
+            source = 'timer';
+          }
           yield await commit('running', 'wait.resumed', 'recorded', {
             nodeId: cur,
             timedOut,
-            source: interruptSource === 'timer' ? 'timer' : 'respond',
+            source,
           });
         }
         const edgeSlots = graphSlots(opts, st, input, output);
@@ -1486,6 +1514,45 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
           permissionGrants: opts.permissionGrants,
         });
       } catch (e) {
+        if (e instanceof WaitInterrupt) {
+          const interruptId = e.interruptId ?? crypto.randomUUID();
+          delete st.$resume;
+          const resumeSchema: Record<string, unknown> = {
+            type: 'object',
+            properties: {
+              timedOut: { type: 'boolean' },
+              cause: { type: 'string' },
+            },
+          };
+          const snap = mkSnap(ctx(), 'waiting');
+          snap.cursor.interrupt = {
+            interruptId,
+            reason: 'wait',
+            resumeSchema,
+            nodeId: cur,
+            source: 'tool_wait',
+            waitMode: e.wakeKey === undefined ? 'sleep' : 'await',
+            ...(e.onTimeout !== undefined ? { onTimeout: e.onTimeout } : {}),
+            ...(e.wakeKey !== undefined ? { wakeKey: e.wakeKey } : {}),
+            output,
+          };
+          snap.cursor.timers = [{ id: interruptId, fireAt: e.fireAt }];
+          seq += 1;
+          const ev: Event = { ...mkEv(ctx(), 'wait.started'), agentId: agent.id };
+          ev.metadata = {
+            interruptId,
+            reason: 'wait',
+            resumeSchema,
+            mode: e.wakeKey === undefined ? 'sleep' : 'await',
+            fireAt: e.fireAt,
+            ...(e.onTimeout !== undefined ? { onTimeout: e.onTimeout } : {}),
+            ...(e.wakeKey !== undefined ? { wakeKey: e.wakeKey } : {}),
+            source: e.wakeKey === undefined ? 'timer' : 'wait',
+          };
+          await opts.state.commit(snap, [ev], { kind: 'recorded', sequence: seq });
+          yield ev;
+          break;
+        }
         if (e instanceof AskUserInterrupt) {
           const interruptId = e.interruptId ?? crypto.randomUUID();
           delete st.$resume;
@@ -2124,6 +2191,9 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
         waitMode: preparedWait.mode,
         onTimeout: preparedWait.onTimeout,
       };
+      if (preparedWait.wakeKey !== undefined) {
+        snap.cursor.interrupt.wakeKey = preparedWait.wakeKey;
+      }
       if (preparedWait.fireAt !== undefined) {
         snap.cursor.timers = [{ id: preparedWait.interruptId, fireAt: preparedWait.fireAt }];
       }
@@ -2137,6 +2207,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
         mode: preparedWait.mode,
         fireAt: preparedWait.fireAt,
         onTimeout: preparedWait.onTimeout,
+        wakeKey: preparedWait.wakeKey,
       };
       await opts.state.commit(snap, [ev], { kind: 'recorded', sequence: seq });
       yield ev;

@@ -396,26 +396,29 @@ export function eventToSessionEvent(ev: Event): SessionEvent | null {
   }
   if (t === 'wait.started') {
     const m = ev.metadata as Record<string, unknown> | undefined;
+    const mode = m?.mode === 'gate' || m?.mode === 'await' ? m.mode : 'sleep';
     return {
       type: 'wait.started',
       askId: String(m?.interruptId ?? ''),
-      mode: m?.mode === 'gate' ? 'gate' : 'sleep',
+      mode,
       fireAt: typeof m?.fireAt === 'number' ? m.fireAt : undefined,
       source: m?.source === 'timer' ? 'timer' : 'wait',
       ...(m?.onTimeout === 'fail' || m?.onTimeout === 'continue' || m?.onTimeout === 'interrupt'
         ? { onTimeout: m.onTimeout }
         : {}),
+      ...(typeof m?.wakeKey === 'string' ? { wakeKey: m.wakeKey } : {}),
       schema: (m?.resumeSchema as Record<string, unknown>) ?? undefined,
       prompt: typeof m?.reason === 'string' ? m.reason : undefined,
     };
   }
   if (t === 'wait.resumed') {
     const m = ev.metadata as Record<string, unknown> | undefined;
+    const source = m?.source === 'timer' || m?.source === 'signal' ? m.source : 'respond';
     return {
       type: 'wait.resumed',
       nodeId: String(m?.nodeId ?? ''),
       timedOut: m?.timedOut === true,
-      source: m?.source === 'timer' ? 'timer' : 'respond',
+      source,
     };
   }
   if (t === 'map.started') {

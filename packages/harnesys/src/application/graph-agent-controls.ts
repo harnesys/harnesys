@@ -7,8 +7,6 @@ import {
   STATE_MAP_ITEMS_KEY,
   STATE_MAP_MAX_TOKENS_KEY,
   STATE_SPAWNS_KEY,
-  STATE_WAIT_UNTIL_MS_KEY,
-  WAIT_TOOL,
 } from '../constants.ts';
 import type { AgentNodes } from '../domain/agent-definition.ts';
 import type { PathsConfig } from '../ports/paths.ts';
@@ -25,8 +23,6 @@ export {
   STATE_MAP_ITEMS_KEY,
   STATE_MAP_MAX_TOKENS_KEY,
   STATE_SPAWNS_KEY,
-  STATE_WAIT_UNTIL_MS_KEY,
-  WAIT_TOOL,
 };
 export interface AgentControlToolResult {
   name: string;
@@ -99,10 +95,6 @@ const CONTROL_INTENTS: Record<
     nodeType: 'control:map',
     hint: 'Process the items inline or add a control:map node via the agent form.',
   },
-  [WAIT_TOOL]: {
-    nodeType: 'control:wait',
-    hint: 'Continue without pausing or add a control:wait node via the agent form.',
-  },
 };
 export function collectPlanNodeTypes(nodes: AgentNodes): Set<string> {
   const out = new Set<string>();
@@ -133,7 +125,6 @@ export function applyAgentControlToolResults(
   let mapItems: unknown[] | undefined;
   let mapInstruction: string | undefined;
   let mapMaxTokensPerItem: number | undefined;
-  let waitUntilMs: number | undefined;
   for (const row of results) {
     if (row.isError) {
       continue;
@@ -161,11 +152,6 @@ export function applyAgentControlToolResults(
       ) {
         mapMaxTokensPerItem = rec.maxTokensPerItem;
       }
-    } else if (row.name === WAIT_TOOL) {
-      const rec = asRecord(row.result);
-      if (rec && typeof rec.waitUntilMs === 'number' && Number.isFinite(rec.waitUntilMs)) {
-        waitUntilMs = rec.waitUntilMs;
-      }
     }
   }
   if (queued.length > 0) {
@@ -185,9 +171,6 @@ export function applyAgentControlToolResults(
   if (mapMaxTokensPerItem !== undefined) {
     state[STATE_MAP_MAX_TOKENS_KEY] = mapMaxTokensPerItem;
   }
-  if (waitUntilMs !== undefined) {
-    state[STATE_WAIT_UNTIL_MS_KEY] = waitUntilMs;
-  }
 }
 export function clearQueuedSpawns(state: Record<string, unknown>): void {
   delete state[STATE_SPAWNS_KEY];
@@ -199,9 +182,6 @@ export function clearQueuedMap(state: Record<string, unknown>): void {
   delete state[STATE_MAP_ITEMS_KEY];
   delete state[STATE_MAP_INSTRUCTION_KEY];
   delete state[STATE_MAP_MAX_TOKENS_KEY];
-}
-export function clearQueuedWait(state: Record<string, unknown>): void {
-  delete state[STATE_WAIT_UNTIL_MS_KEY];
 }
 export function appendAssistantNote(
   state: Record<string, unknown>,

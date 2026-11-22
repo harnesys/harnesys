@@ -156,6 +156,11 @@ export class InMemoryRunLifecycleStore implements RunLifecycleStore {
     } else if (patch.waitFireAt !== undefined) {
       record.waitFireAt = patch.waitFireAt;
     }
+    if (patch.wakeKey === null) {
+      delete record.wakeKey;
+    } else if (patch.wakeKey !== undefined) {
+      record.wakeKey = patch.wakeKey;
+    }
     if (patch.advanceAttempt) {
       record.attempt += 1;
     }
@@ -221,6 +226,15 @@ export class InMemoryRunLifecycleStore implements RunLifecycleStore {
     }
     out.sort((a, b) => (a.waitFireAt ?? 0) - (b.waitFireAt ?? 0));
     return Promise.resolve(out.slice(0, opts?.limit ?? DEFAULT_LIST_LIMIT));
+  }
+  listWaitingAwait(opts?: { limit?: number }): Promise<RunRecord[]> {
+    return Promise.resolve(
+      this.select(
+        (record) => record.status === 'waiting' && typeof record.wakeKey === 'string',
+        (record) => record.updatedAt,
+        opts?.limit,
+      ),
+    );
   }
   listStaleRunning(opts?: {
     limit?: number;

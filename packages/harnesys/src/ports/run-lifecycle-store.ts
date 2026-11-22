@@ -23,6 +23,7 @@ export interface RunRecord {
   status: RunLifecycleStatus;
   interruptId?: string;
   waitFireAt?: number;
+  wakeKey?: string;
   parentRunId?: string;
   attempt: number;
   leaseInstanceId?: string;
@@ -46,6 +47,7 @@ export interface RunTransitionPatch {
   to: RunLifecycleStatus;
   interruptId?: string | null;
   waitFireAt?: number | null;
+  wakeKey?: string | null;
   advanceAttempt?: boolean;
   events?: PendingSessionEvent[];
 }
@@ -59,5 +61,6 @@ export interface RunLifecycleStore {
   renewLease(runId: string, instanceId: string, ttlMs: number): Promise<boolean>;
   listClaimable(opts?: { limit?: number; before?: string }): Promise<RunRecord[]>;
   listDueTimers(opts?: { limit?: number; now?: number }): Promise<RunRecord[]>;
+  listWaitingAwait(opts?: { limit?: number }): Promise<RunRecord[]>;
   listStaleRunning(opts?: { limit?: number; now?: number; graceMs?: number }): Promise<RunRecord[]>;
 }

@@ -25,7 +25,8 @@ export interface Cursor {
       toolCallId: string;
     };
     output?: unknown;
-    waitMode?: 'sleep' | 'gate';
+    waitMode?: 'sleep' | 'gate' | 'await';
+    wakeKey?: string;
     onTimeout?: 'fail' | 'continue' | 'interrupt';
     budgetKind?: BudgetLimitKind;
     budgetLimit?: number;

@@ -101,7 +101,8 @@ export const issuesCapability = definePack<IssuesCapabilityPorts, Record<string,
         tag: 'issue-workflow',
         text:
           'When planning work for issue boards, dispatching agents through issues, or setting up board automation, load_skill("issue-ops") for the dispatch cycle and workflow recipes (available when the skill is enabled for this agent). ' +
-          'Wire columns with board_rule_save so issues fire the right agent on entry; verify rules with issue_board_list.',
+          'Wire columns with board_rule_save so issues fire the right agent on entry; verify rules with issue_board_list. ' +
+          "To park this run until a dispatched issue settles, call wait with signal: 'issue:<issueId>' (optional timeoutMs bounds the wait, default 30 min); the run resumes when the issue's latest execution is no longer active, otherwise it continues until timeoutMs expires.",
       },
     ],
   }),

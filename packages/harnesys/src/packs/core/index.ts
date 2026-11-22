@@ -20,7 +20,7 @@ export const coreCapability = definePack<Record<string, unknown>, Record<string,
       {
         name: 'wait',
         description:
-          'Park this run until a wall-clock time (control:wait). delayMs is relative sleep (1..7d). Prefer this for mid-pipeline pauses. Does not replace ask_user.',
+          "Park this run until a wall-clock delay elapses (delayMs, 1 ms–7 d) or until a signal settles (signal, e.g. 'issue:<issueId>' resumes the run when the issue's dispatched execution is no longer active; optional timeoutMs bounds a signal wait, default 30 min). Does not replace ask_user.",
       },
     ],
     skills: [],

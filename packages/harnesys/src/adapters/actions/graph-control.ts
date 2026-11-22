@@ -3,9 +3,11 @@ import {
   MAP_INSTRUCTION_MAX_CHARS,
   MAP_ITEM_LIMIT,
   MAP_TOOL,
+  WAIT_AWAIT_TIMEOUT_DEFAULT_MS,
   WAIT_DELAY_MS_MAX,
   WAIT_TOOL,
 } from '../../constants.ts';
+import { WaitInterrupt } from '../../domain/errors.ts';
 import type { ToolContext, ToolDefinition } from '../../ports/tools.ts';
 import { tool } from '../../ports/tools.ts';
 
@@ -98,10 +100,61 @@ export function mapTool(): ToolDefinition {
     },
   });
 }
+interface WaitToolInput {
+  delayMs: number;
+}
+interface WaitSignalInput {
+  signal: string;
+  timeoutMs: number;
+}
+function parseWaitDelay(input: unknown): WaitToolInput {
+  const rec = input as { delayMs?: unknown };
+  const delayMs = rec.delayMs;
+  if (
+    typeof delayMs !== 'number' ||
+    !Number.isFinite(delayMs) ||
+    delayMs < 1 ||
+    delayMs > WAIT_DELAY_MS_MAX
+  ) {
+    throw new Error(`invalid delayMs ${String(delayMs)}`);
+  }
+  return { delayMs };
+}
+function parseWaitSignal(input: unknown): WaitSignalInput {
+  const rec = input as { signal?: unknown; timeoutMs?: unknown };
+  const signal = rec.signal;
+  if (typeof signal !== 'string' || signal.trim().length === 0) {
+    throw new Error(`invalid signal ${String(signal)}`);
+  }
+  const sep = signal.indexOf(':');
+  if (sep <= 0 || sep === signal.length - 1) {
+    throw new Error(`invalid signal ${signal}; expected '<kind>:<id>'`);
+  }
+  let timeoutMs = WAIT_AWAIT_TIMEOUT_DEFAULT_MS;
+  if (rec.timeoutMs !== undefined) {
+    if (
+      typeof rec.timeoutMs !== 'number' ||
+      !Number.isInteger(rec.timeoutMs) ||
+      rec.timeoutMs < 1 ||
+      rec.timeoutMs > WAIT_DELAY_MS_MAX
+    ) {
+      throw new Error(`invalid timeoutMs ${String(rec.timeoutMs)}`);
+    }
+    timeoutMs = rec.timeoutMs;
+  }
+  return { signal, timeoutMs };
+}
+function waitResumeText(resume: unknown): string {
+  const payload = resume as { timedOut?: unknown; cause?: unknown };
+  if (payload.timedOut === true) {
+    return 'wait timed out';
+  }
+  return payload.cause === 'signal' ? 'signal settled' : 'wait elapsed';
+}
 export function wait(): ToolDefinition {
   return tool(WAIT_TOOL, {
     description:
-      'Park this run until a wall-clock time (control:wait). delayMs is relative sleep (1..7d). Prefer this for mid-pipeline pauses. Does not replace ask_user.',
+      "Park this run until a wall-clock delay elapses (delayMs, 1 ms–7 d) or until a signal settles (signal, e.g. 'issue:<issueId>' resumes the run when the issue's dispatched execution is no longer active; optional timeoutMs bounds a signal wait, default 30 min, resume payload timedOut: true on expiry). Does not replace ask_user.",
     group: 'control',
     input: {
       type: 'object',
@@ -110,24 +163,50 @@ export function wait(): ToolDefinition {
           type: 'integer',
           minimum: 1,
           maximum: WAIT_DELAY_MS_MAX,
-          description: 'Milliseconds to sleep before the graph continues',
+          description:
+            'Milliseconds to sleep before the run continues. Mutually exclusive with signal.',
+        },
+        signal: {
+          type: 'string',
+          minLength: 1,
+          description:
+            "Wake key to park on, format '<kind>:<id>' (e.g. 'issue:<issueId>'). Mutually exclusive with delayMs.",
+        },
+        timeoutMs: {
+          type: 'integer',
+          minimum: 1,
+          maximum: WAIT_DELAY_MS_MAX,
+          description: 'Signal wait fallback in ms. Default 30 min.',
         },
       },
-      required: ['delayMs'],
       additionalProperties: false,
     },
     execute(input, ctx: ToolContext) {
+      if (ctx.resume !== undefined && ctx.resume !== null) {
+        return waitResumeText(ctx.resume);
+      }
       if (ctx.sandbox) {
         return sandboxDenyText(WAIT_TOOL, 'user input');
       }
       const rec = input as {
         delayMs?: unknown;
+        signal?: unknown;
       };
-      const delayMs = typeof rec.delayMs === 'number' ? rec.delayMs : Number.NaN;
-      if (!Number.isFinite(delayMs) || delayMs < 1 || delayMs > WAIT_DELAY_MS_MAX) {
-        throw new Error(`invalid delayMs ${String(rec.delayMs)}`);
+      const hasDelay = typeof rec.delayMs === 'number';
+      const hasSignal = typeof rec.signal === 'string' && rec.signal.trim().length > 0;
+      if (hasDelay === hasSignal) {
+        throw new Error('provide exactly one of delayMs or signal');
       }
-      return { delayMs, waitUntilMs: Date.now() + delayMs };
+      if (hasSignal) {
+        const { signal, timeoutMs } = parseWaitSignal(input);
+        throw new WaitInterrupt({
+          wakeKey: signal,
+          fireAt: Date.now() + timeoutMs,
+          onTimeout: 'continue',
+        });
+      }
+      const { delayMs } = parseWaitDelay(input);
+      throw new WaitInterrupt({ fireAt: Date.now() + delayMs });
     },
   });
 }
