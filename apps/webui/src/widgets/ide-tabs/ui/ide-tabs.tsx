@@ -1,5 +1,12 @@
 import { EllipsisIcon, PanelRightIcon, XIcon } from 'lucide-react';
-import { type ReactNode, type RefObject, useLayoutEffect, useRef, useState } from 'react';
+import {
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { useNavigate } from 'react-router';
 import { useActiveOrgStore } from '@/entities/org-machine';
 import { setActiveThreadId, useThreadStore } from '@/entities/thread';
@@ -35,7 +42,8 @@ export function IdeGroupTabs({
   const { openDesk } = useStudioNavigation();
   const inspectorOpen = useDeskStore((state) => state.inspectorOpen);
   const activeRef = useRef<HTMLDivElement | null>(null);
-  const [dropAnchor, setDropAnchor] = useState<IdeTabDropAnchor | null>(null);
+  const [hoverId, setHoverId] = useState<string | null>(null);
+  const [displacedId, setDisplacedId] = useState<string | null>(null);
   const tabs = group
     ? group.tabIds
         .map((id) => ws.tabs.find((t) => t.id === id))
@@ -56,6 +64,14 @@ export function IdeGroupTabs({
       el.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
     }
   }, []);
+  useEffect(() => {
+    const clear = () => {
+      setHoverId(null);
+      setDisplacedId(null);
+    };
+    window.addEventListener('dragend', clear);
+    return () => window.removeEventListener('dragend', clear);
+  }, []);
   if (!group) {
     return null;
   }
@@ -74,7 +90,6 @@ export function IdeGroupTabs({
       }}
       onDrop={(e) => {
         e.preventDefault();
-        setDropAnchor(null);
         const drag = takeIdeDrag();
         if (!drag) {
           return;
@@ -92,9 +107,9 @@ export function IdeGroupTabs({
               groupId={groupId}
               isActive={tab.id === activeId}
               scrollRef={activeRef}
-              dropSide={dropAnchor?.tabId === tab.id ? dropAnchor.side : null}
-              onDragOverTab={(tabId, side) => setDropAnchor({ tabId, side })}
-              onDragLeaveTab={() => setDropAnchor(null)}
+              isHover={hoverId === tab.id}
+              isDisplaced={displacedId === tab.id}
+              onDragOverTab={handleDragOverTab}
               onSelect={() => handleSelect(tab)}
               onClose={() => handleCloseTab(tab.id)}
               menu={
@@ -194,15 +209,42 @@ export function IdeGroupTabs({
       openDesk();
     }
   }
+  function handleDragOverTab(targetId: string, cursorAfter: boolean) {
+    const drag = ideDrag();
+    if (!drag) {
+      return;
+    }
+    setHoverId(targetId);
+    if (drag.tabId === targetId) {
+      return;
+    }
+    const { reorderTab, moveTab } = useIdeStore.getState();
+    const draggedIdx = tabs.findIndex((t) => t.id === drag.tabId);
+    const targetIdx = tabs.findIndex((t) => t.id === targetId);
+    if (draggedIdx === -1 || targetIdx === -1) {
+      moveTab(drag.tabId, groupId, targetId, cursorAfter);
+      setDisplacedId(targetId);
+      return;
+    }
+    if (draggedIdx < targetIdx && cursorAfter) {
+      reorderTab(drag.tabId, targetId, true);
+      setDisplacedId(targetId);
+      return;
+    }
+    if (draggedIdx > targetIdx && !cursorAfter) {
+      reorderTab(drag.tabId, targetId, false);
+      setDisplacedId(targetId);
+    }
+  }
 }
 function IdeTabView({
   tab,
   groupId,
   isActive,
   scrollRef,
-  dropSide,
+  isHover,
+  isDisplaced,
   onDragOverTab,
-  onDragLeaveTab,
   onSelect,
   onClose,
   menu,
@@ -211,9 +253,9 @@ function IdeTabView({
   groupId: string;
   isActive: boolean;
   scrollRef: RefObject<HTMLDivElement | null>;
-  dropSide: 'before' | 'after' | null;
-  onDragOverTab: (tabId: string, side: IdeTabDropSide) => void;
-  onDragLeaveTab: () => void;
+  isHover: boolean;
+  isDisplaced: boolean;
+  onDragOverTab: (tabId: string, cursorAfter: boolean) => void;
   onSelect: () => void;
   onClose: () => void;
   menu: ReactNode;
@@ -244,46 +286,22 @@ function IdeTabView({
               }
               e.preventDefault();
               const rect = e.currentTarget.getBoundingClientRect();
-              onDragOverTab(tab.id, e.clientX > rect.left + rect.width / 2 ? 'after' : 'before');
-            }}
-            onDragLeave={(e) => {
-              if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-                onDragLeaveTab();
-              }
+              onDragOverTab(tab.id, e.clientX > rect.left + rect.width / 2);
             }}
             onDrop={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onDragLeaveTab();
-              const drag = takeIdeDrag();
-              if (!drag) {
-                return;
-              }
-              const after = dropSide === 'after';
-              const { moveTab, reorderTab } = useIdeStore.getState();
-              if (drag.fromGroupId === groupId) {
-                reorderTab(drag.tabId, tab.id, after);
-                return;
-              }
-              moveTab(drag.tabId, groupId, tab.id, after);
+              takeIdeDrag();
             }}
             className={cn(
               'group/tab relative flex max-w-52 shrink-0 animate-tab-enter items-center rounded-md p-0.5 pl-2 text-[0.74rem] transition-colors duration-150',
               selected
                 ? 'bg-muted text-foreground'
                 : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-              dropSide !== null && 'ring-1 ring-ring',
+              isDisplaced && 'ring-1 ring-ring',
+              isHover && !isDisplaced && 'ring-1 ring-ring/50',
             )}
           >
-            {dropSide ? (
-              <span
-                aria-hidden="true"
-                className={cn(
-                  'pointer-events-none absolute inset-y-0.5 z-20 w-0.5 rounded-full bg-ring',
-                  dropSide === 'before' ? '-left-1' : '-right-1',
-                )}
-              />
-            ) : null}
             <button
               type="button"
               className="relative flex min-w-0 flex-1 items-center gap-1.5 truncate"
