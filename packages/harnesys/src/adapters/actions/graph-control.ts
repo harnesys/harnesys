@@ -8,6 +8,7 @@ import {
   WAIT_TOOL,
 } from '../../constants.ts';
 import { WaitInterrupt } from '../../domain/errors.ts';
+import { parseSignalKey } from '../../domain/signal-key.ts';
 import type { ToolContext, ToolDefinition } from '../../ports/tools.ts';
 import { tool } from '../../ports/tools.ts';
 
@@ -126,8 +127,7 @@ function parseWaitSignal(input: unknown): WaitSignalInput {
   if (typeof signal !== 'string' || signal.trim().length === 0) {
     throw new Error(`invalid signal ${String(signal)}`);
   }
-  const sep = signal.indexOf(':');
-  if (sep <= 0 || sep === signal.length - 1) {
+  if (parseSignalKey(signal) === null) {
     throw new Error(`invalid signal ${signal}; expected '<kind>:<id>'`);
   }
   let timeoutMs = WAIT_AWAIT_TIMEOUT_DEFAULT_MS;
@@ -154,7 +154,7 @@ function waitResumeText(resume: unknown): string {
 export function wait(): ToolDefinition {
   return tool(WAIT_TOOL, {
     description:
-      "Park this run until a wall-clock delay elapses (delayMs, 1 ms–7 d) or until a signal settles (signal, e.g. 'issue:<issueId>' resumes the run when the issue's dispatched execution is no longer active; optional timeoutMs bounds a signal wait, default 30 min, resume payload timedOut: true on expiry). Does not replace ask_user.",
+      "Park this run until a wall-clock delay elapses (delayMs, 1 ms–7 d) or until a signal settles (signal, e.g. 'issue:<issueId>' resumes when the issue's dispatched execution is no longer active; free-form keys like 'deploy:done' work with the signals pack and signal_fire; optional timeoutMs bounds a signal wait, default 30 min, resume payload timedOut: true on expiry). Does not replace ask_user.",
     group: 'control',
     input: {
       type: 'object',

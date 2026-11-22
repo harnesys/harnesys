@@ -402,6 +402,7 @@ export type {
 } from './src/domain/run-result.ts';
 export type { PermissionMode } from './src/domain/schedule.ts';
 export { PERMISSION_MODES } from './src/domain/schedule.ts';
+export { parseSignalKey, type SignalKey } from './src/domain/signal-key.ts';
 export type { SkillDocument, SkillSummary } from './src/domain/skill.ts';
 export type { CommitKind, Cursor, CursorPhase, Event, Snapshot } from './src/domain/snapshot.ts';
 export { RUNTIME_VERSION } from './src/domain/snapshot.ts';
@@ -464,6 +465,8 @@ export {
 } from './src/packs/shell/command-glob.ts';
 export { programOf, segmentCommand } from './src/packs/shell/shell-chain.ts';
 export { SHELL_FLOOR_PATTERNS } from './src/packs/shell/shell-floor.ts';
+export type { SignalsCapabilityPorts } from './src/packs/signals/index.ts';
+export { signalsCapability } from './src/packs/signals/index.ts';
 export type { SourcesCapabilityPorts } from './src/packs/sources/index.ts';
 export { sourcesCapability } from './src/packs/sources/index.ts';
 export {
@@ -794,6 +797,8 @@ export type {
   SessionEventType,
   SessionHandle,
 } from './src/ports/session.ts';
+export { SignalStorePort } from './src/ports/signal-store.ts';
+export { SignalWakePort } from './src/ports/signal-wake.ts';
 export type { SkillRegistry } from './src/ports/skills.ts';
 export type {
   SourcesAttachFolderInput,
