@@ -16,6 +16,7 @@ import { GetGitDiffUseCase } from './get-git-diff.use-case.ts';
 import { GetGitFileStatusUseCase } from './get-git-file-status.use-case.ts';
 import { GetGitMachineInfoUseCase } from './get-git-machine-info.use-case.ts';
 import { GetGitStatusUseCase } from './get-git-status.use-case.ts';
+import { GetOrgGitFileStatusUseCase } from './get-org-git-file-status.use-case.ts';
 import { GetOrgGitSummaryUseCase } from './get-org-git-summary.use-case.ts';
 import { GetSourceUseCase } from './get-source.use-case.ts';
 import { GetSourceHostStatusUseCase } from './get-source-host-status.use-case.ts';
@@ -64,6 +65,7 @@ import { SwitchGitBranchUseCase } from './switch-git-branch.use-case.ts';
     GetGitStatusUseCase,
     GetGitFileStatusUseCase,
     GetGitMachineInfoUseCase,
+    GetOrgGitFileStatusUseCase,
     GetOrgGitSummaryUseCase,
     GetGitDiffUseCase,
     StageGitUseCase,
@@ -108,6 +110,7 @@ import { SwitchGitBranchUseCase } from './switch-git-branch.use-case.ts';
     GetGitStatusUseCase,
     GetGitFileStatusUseCase,
     GetGitMachineInfoUseCase,
+    GetOrgGitFileStatusUseCase,
     GetOrgGitSummaryUseCase,
     GetGitDiffUseCase,
     StageGitUseCase,

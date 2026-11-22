@@ -16,6 +16,7 @@ import {
   deskAutomationsQuery,
   deskAutomationsQueryKey,
   deskBoardsQuery,
+  deskGitFileStatusQuery,
   deskGitSummaryQuery,
   deskIssuesQuery,
   deskLabelsQuery,
@@ -55,6 +56,23 @@ export function useDeskOrgExtrasSync(orgId: string | null): void {
   // единственное место, которое делает первый HTTP-фетч summary. Далее
   // обновления только через SSE (setQueryData) — без HTTP.
   useQuery({ ...deskGitSummaryQuery(orgId ?? ''), enabled: Boolean(orgId) });
+  const fileStatusQuery = useQuery({
+    ...deskGitFileStatusQuery(orgId ?? ''),
+    enabled: Boolean(orgId),
+  });
+  // Гидрация единого источника изменений: одна bulk-выгрузка карт по всем
+  // git-источникам раскладывается в per-source кэши. Дальше только SSE.
+  useEffect(() => {
+    if (!fileStatusQuery.data) {
+      return;
+    }
+    for (const entry of fileStatusQuery.data) {
+      queryClient.setQueryData(gitFileStatusQueryKey(entry.sourceId), {
+        map: entry.map,
+        truncated: entry.truncated,
+      });
+    }
+  }, [fileStatusQuery.data, queryClient]);
   useEffect(() => {
     if (!orgId) {
       return;

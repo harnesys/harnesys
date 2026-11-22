@@ -4,6 +4,7 @@ import type {
   GitDiffResponse,
   GitFileStatusMap,
   GitMachineInfo,
+  GitOrgFileStatus,
   GitSourceSummary,
   GitStatusResponse,
 } from '@harnesys/studio-shared';
@@ -182,6 +183,10 @@ export function getOrgGitSummary(orgId: string): Promise<GitSourceSummary[]> {
   return apiJson(`/api/orgs/${encodeURIComponent(orgId)}/git/summary`);
 }
 
+export function getOrgGitFileStatus(orgId: string): Promise<GitOrgFileStatus[]> {
+  return apiJson(`/api/orgs/${encodeURIComponent(orgId)}/git/file-status`);
+}
+
 export function watchGitSummary(onData: (summaries: GitSourceSummary[]) => void): () => void {
   return watchEventSource(eventsWatchUrl, 'git-summary', (data) => {
     try {
@@ -208,6 +213,8 @@ export function watchGitFileStatus(
 export const gitStatusQueryKey = (projectId: string) =>
   ['sources', projectId, 'git', 'status'] as const;
 export const gitOrgSummaryQueryKey = (orgId: string) => ['orgs', orgId, 'git', 'summary'] as const;
+export const gitOrgFileStatusQueryKey = (orgId: string) =>
+  ['orgs', orgId, 'git', 'file-status'] as const;
 export const gitMachineInfoQueryKey = (orgId: string) => ['orgs', orgId, 'git', 'machine'] as const;
 export const gitFileStatusQueryKey = (projectId: string, subPath = '') =>
   ['sources', projectId, 'git', 'file-status', subPath] as const;

@@ -87,12 +87,14 @@ export type {
   GitFileStatus,
   GitFileStatusMap,
   GitMachineInfo,
+  GitOrgFileStatus,
   GitSourceSummary,
   GitStatusBase,
   GitStatusCounts,
   GitStatusResponse,
   GitSummaryCounts,
 } from './src/git.ts';
+export { countGitFileStatuses } from './src/git.ts';
 export type {
   AgentContextSettings,
   AgentGenerationSettings,

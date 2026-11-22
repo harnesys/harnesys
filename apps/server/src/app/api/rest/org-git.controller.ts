@@ -1,7 +1,9 @@
 import { Body, Controller, Get, Param, Put } from '@harnesys/brix';
 import type { GitIdentityBody } from '@harnesys/contracts';
 import { GitIdentityBodySchema } from '@harnesys/contracts';
+import type { GitOrgFileStatus } from '@harnesys/studio-shared';
 import { GetGitMachineInfoUseCase } from '../../application/source/get-git-machine-info.use-case.ts';
+import { GetOrgGitFileStatusUseCase } from '../../application/source/get-org-git-file-status.use-case.ts';
 import { GetOrgGitSummaryUseCase } from '../../application/source/get-org-git-summary.use-case.ts';
 import type { GitSourceSummary } from '../../application/source/git-summary.util.ts';
 import { SetGitIdentityUseCase } from '../../application/source/set-git-identity.use-case.ts';
@@ -11,6 +13,7 @@ import type { GitMachineInfo } from '../../domain/source/git-vcs.port.ts';
 export class OrgGitController {
   constructor(
     private readonly getOrgGitSummary: GetOrgGitSummaryUseCase,
+    private readonly getOrgGitFileStatus: GetOrgGitFileStatusUseCase,
     private readonly getGitMachineInfo: GetGitMachineInfoUseCase,
     private readonly setGitIdentity: SetGitIdentityUseCase,
   ) {}
@@ -18,6 +21,11 @@ export class OrgGitController {
   @Get('summary')
   summary(@Param('orgId') orgId: string): Promise<GitSourceSummary[]> {
     return this.getOrgGitSummary.execute({ orgId });
+  }
+
+  @Get('file-status')
+  fileStatus(@Param('orgId') orgId: string): Promise<GitOrgFileStatus[]> {
+    return this.getOrgGitFileStatus.execute({ orgId });
   }
 
   @Get('machine')

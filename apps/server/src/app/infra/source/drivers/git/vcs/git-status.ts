@@ -1,9 +1,9 @@
 import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
+import { countGitFileStatuses } from '@harnesys/studio-shared';
 import type {
   GitBranch,
   GitFileStatusMap,
-  GitStatusCounts,
   GitStatusResponse,
 } from '../../../../../domain/source/git-vcs.types.ts';
 import { execGit, execGitTrim } from './git-exec.ts';
@@ -56,7 +56,7 @@ export async function getStatus(
       execGitTrim(safeCwd, ['config', '--get', 'remote.origin.url']).catch(() => ''),
     ]);
   const headState = await resolveHeadState(safeCwd, branchRaw, head);
-  const counts = countStatuses(parsePorcelain(porcelain));
+  const counts = countGitFileStatuses(parsePorcelain(porcelain));
   const dirtyCount = Object.values(counts).reduce((a, b) => a + b, 0);
   const branches = await listBranches(safeCwd).catch(() => ({
     local: [] as GitBranch[],
@@ -100,43 +100,6 @@ async function resolveHeadState(
     return { branch, detached: false, headShort: null, noCommits: true };
   }
   return { branch: null, detached: true, headShort: head || null, noCommits: false };
-}
-
-function countStatuses(map: GitFileStatusMap): GitStatusCounts {
-  const counts: GitStatusCounts = {
-    added: 0,
-    modified: 0,
-    deleted: 0,
-    untracked: 0,
-    staged: 0,
-    conflicted: 0,
-    renamed: 0,
-  };
-  for (const v of Object.values(map)) {
-    if (v === 'ignored') {
-      continue;
-    }
-    bumpCount(counts, v);
-  }
-  return counts;
-}
-
-function bumpCount(counts: GitStatusCounts, status: string): void {
-  if (status === 'added') {
-    counts.added++;
-  } else if (status === 'modified') {
-    counts.modified++;
-  } else if (status === 'deleted') {
-    counts.deleted++;
-  } else if (status === 'untracked') {
-    counts.untracked++;
-  } else if (status === 'staged') {
-    counts.staged++;
-  } else if (status === 'conflicted') {
-    counts.conflicted++;
-  } else if (status === 'renamed') {
-    counts.renamed++;
-  }
 }
 
 export async function getFileStatus(

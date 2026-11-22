@@ -31,14 +31,17 @@ export function useGitStatus(projectId: string): GitStatus | null {
 }
 export function GitTitle() {
   const summaries = useOrgGitSummaries() ?? [];
+  const changes = useGitChanges();
   let dirtyTotal = 0;
+  for (const change of changes) {
+    dirtyTotal += change.files.length;
+  }
   let aheadTotal = 0;
   let behindTotal = 0;
   for (const summary of summaries) {
     if (!summary.isGit) {
       continue;
     }
-    dirtyTotal += summary.dirtyCount ?? 0;
     aheadTotal += summary.ahead ?? 0;
     behindTotal += summary.behind ?? 0;
   }

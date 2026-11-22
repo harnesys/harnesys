@@ -6,7 +6,7 @@ import { gitStatusColorClass, useGitStatusColors } from '@/shared/lib/git-status
 import { cn } from '@/shared/lib/utils';
 import { FolderTypeIcon } from '@/shared/ui/icons';
 import { SidebarRow, SidebarRowTitle } from '@/shared/ui/sidebar-row';
-import { type GitProjectChanges, useGitChanges, useGitFileChanges } from '../model/use-git-changes';
+import { type GitProjectChanges, useGitChanges } from '../model/use-git-changes';
 import { gitFileStatusLabel } from './git-file-decorations';
 import { GitSectionMenu } from './git-menu';
 import { SidebarEmpty } from './sidebar-empty';
@@ -55,7 +55,7 @@ export function GitSection() {
 }
 
 function GitProjectFiles({ entry, depth }: { entry: GitProjectChanges; depth: number }) {
-  const files = useGitFileChanges(entry.project.id);
+  const { files } = entry;
   const { openDiff } = useStudioNavigation();
   const gitColors = useGitStatusColors((state) => state.colors);
   return (
@@ -102,12 +102,10 @@ function GitProjectFolderRow({
   open: boolean;
   onToggle: () => void;
 }) {
-  const branchLabel = entry.status
-    ? (entry.status.branch ?? entry.status.head?.slice(0, 7) ?? 'HEAD')
-    : null;
-  const dirty = entry.status?.dirty ? entry.status.dirtyCount : null;
-  const ahead = entry.status?.ahead ?? 0;
-  const behind = entry.status?.behind ?? 0;
+  const branchLabel = entry.branch ?? entry.head?.slice(0, 7) ?? 'HEAD';
+  const dirty = entry.files.length > 0 ? entry.files.length : null;
+  const ahead = entry.ahead;
+  const behind = entry.behind;
   return (
     <SidebarRow
       testId={`git-project-${entry.project.id}`}

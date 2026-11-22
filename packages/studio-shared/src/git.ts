@@ -27,6 +27,11 @@ export interface GitSummaryCounts {
   untracked: number;
   conflicted: number;
 }
+export interface GitOrgFileStatus {
+  sourceId: string;
+  map: GitFileStatusMap;
+  truncated: boolean;
+}
 export interface GitSourceSummary {
   sourceId: string;
   isGit: boolean;
@@ -91,4 +96,23 @@ export interface GitDiffResponse {
   diff: string | null;
   isBinary: boolean;
   truncated?: boolean;
+}
+
+export function countGitFileStatuses(map: GitFileStatusMap): GitStatusCounts {
+  const counts: GitStatusCounts = {
+    added: 0,
+    modified: 0,
+    deleted: 0,
+    untracked: 0,
+    staged: 0,
+    conflicted: 0,
+    renamed: 0,
+  };
+  for (const status of Object.values(map)) {
+    if (status === 'ignored') {
+      continue;
+    }
+    counts[status] += 1;
+  }
+  return counts;
 }

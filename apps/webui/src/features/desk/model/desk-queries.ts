@@ -8,7 +8,12 @@ import {
   listOrgTerminals,
   listThreads,
 } from '@/shared/api';
-import { getOrgGitSummary, gitOrgSummaryQueryKey } from '@/shared/api/git';
+import {
+  getOrgGitFileStatus,
+  getOrgGitSummary,
+  gitOrgFileStatusQueryKey,
+  gitOrgSummaryQueryKey,
+} from '@/shared/api/git';
 
 export const DESK_QUERY_KEY = ['desk'] as const;
 
@@ -87,6 +92,15 @@ export function deskGitSummaryQuery(orgId: string) {
   return queryOptions({
     queryKey: gitOrgSummaryQueryKey(orgId),
     queryFn: () => getOrgGitSummary(orgId),
+    enabled: Boolean(orgId),
+    staleTime: Infinity,
+  });
+}
+
+export function deskGitFileStatusQuery(orgId: string) {
+  return queryOptions({
+    queryKey: gitOrgFileStatusQueryKey(orgId),
+    queryFn: () => getOrgGitFileStatus(orgId),
     enabled: Boolean(orgId),
     staleTime: Infinity,
   });

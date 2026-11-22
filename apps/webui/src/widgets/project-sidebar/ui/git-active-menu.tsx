@@ -17,7 +17,7 @@ import {
 } from '@/shared/ui/dropdown-menu';
 import { useFileSelectionStore } from '../model/file-selection.store';
 import { useGitActions } from '../model/use-git-actions';
-import type { GitStatus } from '../model/use-git-changes';
+import { type GitStatus, useGitFileChanges } from '../model/use-git-changes';
 import { BranchRow } from './branch-row';
 import { formatCountsShort } from './git-counts';
 
@@ -101,6 +101,8 @@ export function GitActiveRepoMenuItems({
 }) {
   const [filter] = useState('');
   const selectedPaths = useFileSelectionStore((s) => s.selectedPaths);
+  const { files: changedFiles, counts: changeCounts } = useGitFileChanges(projectId);
+  const dirty = changedFiles.length > 0;
   const {
     checkoutMutation,
     mergeMutation,
@@ -126,19 +128,14 @@ export function GitActiveRepoMenuItems({
     ? recentBranches.filter((b) => b.name.toLowerCase().includes(filterQuery))
     : recentBranches;
   let commitSuffix = '';
-  if (status.dirty) {
-    commitSuffix = status.counts
-      ? ` • ${formatCountsShort(status.counts)}`
-      : ` • ${status.dirtyCount}`;
+  if (dirty) {
+    commitSuffix = ` • ${formatCountsShort(changeCounts)}`;
   }
   const hasRemote = Boolean(status.remote);
   return (
     <>
       <DropdownMenuGroup>
-        <DropdownMenuItem
-          onClick={handleCommit}
-          disabled={!status.dirty || commitMutation.isPending}
-        >
+        <DropdownMenuItem onClick={handleCommit} disabled={!dirty || commitMutation.isPending}>
           <GitCommitVerticalIcon className="size-3" />
           Commit{commitSuffix}
         </DropdownMenuItem>

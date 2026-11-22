@@ -23,6 +23,7 @@ import { SidebarTrigger } from '@/shared/ui/sidebar';
 import { ideDrag, setIdeDrag, takeIdeDrag } from '../model/ide-dnd';
 import { GroupMenuItems } from './group-menu-items';
 import { TabIcon, useTabLabel } from './tab-meta';
+import { useTabFlip } from './use-tab-flip';
 
 export function IdeGroupTabs({
   groupId,
@@ -42,8 +43,9 @@ export function IdeGroupTabs({
   const { openDesk } = useStudioNavigation();
   const inspectorOpen = useDeskStore((state) => state.inspectorOpen);
   const activeRef = useRef<HTMLDivElement | null>(null);
+  const tabsBoxRef = useRef<HTMLDivElement | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
-  const [displacedId, setDisplacedId] = useState<string | null>(null);
+  const captureFlip = useTabFlip(tabsBoxRef, group ? group.tabIds.join('|') : '');
   const tabs = group
     ? group.tabIds
         .map((id) => ws.tabs.find((t) => t.id === id))
@@ -67,7 +69,6 @@ export function IdeGroupTabs({
   useEffect(() => {
     const clear = () => {
       setHoverId(null);
-      setDisplacedId(null);
     };
     window.addEventListener('dragend', clear);
     return () => window.removeEventListener('dragend', clear);
@@ -99,7 +100,7 @@ export function IdeGroupTabs({
     >
       {leading ? <SidebarTrigger className="mr-1 shrink-0" /> : null}
       <ScrollArea className="min-w-0 flex-1">
-        <div className="flex items-center gap-1">
+        <div ref={tabsBoxRef} className="flex items-center gap-1">
           {tabs.map((tab) => (
             <IdeTabView
               key={tab.id}
@@ -108,7 +109,6 @@ export function IdeGroupTabs({
               isActive={tab.id === activeId}
               scrollRef={activeRef}
               isHover={hoverId === tab.id}
-              isDisplaced={displacedId === tab.id}
               onDragOverTab={handleDragOverTab}
               onSelect={() => handleSelect(tab)}
               onClose={() => handleCloseTab(tab.id)}
@@ -222,19 +222,17 @@ export function IdeGroupTabs({
     const draggedIdx = tabs.findIndex((t) => t.id === drag.tabId);
     const targetIdx = tabs.findIndex((t) => t.id === targetId);
     if (draggedIdx === -1 || targetIdx === -1) {
+      captureFlip();
       moveTab(drag.tabId, groupId, targetId, cursorAfter);
-      setDisplacedId(targetId);
       return;
     }
-    if (draggedIdx < targetIdx && cursorAfter) {
-      reorderTab(drag.tabId, targetId, true);
-      setDisplacedId(targetId);
+    const moveAfter = draggedIdx < targetIdx && cursorAfter;
+    const moveBefore = draggedIdx > targetIdx && !cursorAfter;
+    if (!moveAfter && !moveBefore) {
       return;
     }
-    if (draggedIdx > targetIdx && !cursorAfter) {
-      reorderTab(drag.tabId, targetId, false);
-      setDisplacedId(targetId);
-    }
+    captureFlip();
+    reorderTab(drag.tabId, targetId, moveAfter);
   }
 }
 function IdeTabView({
@@ -243,7 +241,6 @@ function IdeTabView({
   isActive,
   scrollRef,
   isHover,
-  isDisplaced,
   onDragOverTab,
   onSelect,
   onClose,
@@ -254,7 +251,6 @@ function IdeTabView({
   isActive: boolean;
   scrollRef: RefObject<HTMLDivElement | null>;
   isHover: boolean;
-  isDisplaced: boolean;
   onDragOverTab: (tabId: string, cursorAfter: boolean) => void;
   onSelect: () => void;
   onClose: () => void;
@@ -271,6 +267,7 @@ function IdeTabView({
             role="tab"
             tabIndex={0}
             data-testid={`ide-tab-${tab.id}`}
+            data-tab-id={tab.id}
             data-selected={selected ? 'true' : 'false'}
             draggable
             onDragStart={(e) => {
@@ -298,8 +295,7 @@ function IdeTabView({
               selected
                 ? 'bg-muted text-foreground'
                 : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-              isDisplaced && 'ring-1 ring-ring',
-              isHover && !isDisplaced && 'ring-1 ring-ring/50',
+              isHover && 'ring-1 ring-ring',
             )}
           >
             <button

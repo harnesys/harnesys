@@ -1,14 +1,15 @@
 import type {
   GitFileStatus,
+  GitFileStatusMap,
   GitSourceSummary,
   GitStatusCounts,
   GitStatusResponse,
-  GitSummaryCounts,
 } from '@harnesys/studio-shared';
-import { useQuery } from '@tanstack/react-query';
+import { countGitFileStatuses } from '@harnesys/studio-shared';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { useActiveOrgStore } from '@/entities/org-machine';
 import { type Project, useProjects } from '@/entities/project';
-import { deskGitSummaryQuery, useDeskReady } from '@/features/desk';
+import { deskGitSummaryQuery } from '@/features/desk';
 import { getGitFileStatus, gitFileStatusQueryKey } from '@/shared/api/git';
 import { useStudioLocation } from '@/shared/config/location';
 
@@ -19,50 +20,26 @@ export type GitStatus = Extract<
   }
 >;
 
-export interface GitProjectChanges {
-  project: Project;
-  status: GitStatus | null;
-  truncated: boolean;
-}
-
 export interface GitFileRow {
   path: string;
   status: GitFileStatus;
 }
 
-function toStatusCounts(counts: GitSummaryCounts | undefined): GitStatusCounts | undefined {
-  if (!counts) {
-    return undefined;
-  }
-  return {
-    added: 0,
-    modified: counts.modified,
-    deleted: 0,
-    untracked: counts.untracked,
-    staged: counts.staged,
-    conflicted: counts.conflicted,
-    renamed: 0,
-  };
+export interface GitFileChanges {
+  files: GitFileRow[];
+  counts: GitStatusCounts;
+  truncated: boolean;
 }
 
-function toGitStatus(summary: GitSourceSummary): GitStatus | null {
-  if (!summary.isGit) {
-    return null;
-  }
-  const dirtyCount = summary.dirtyCount ?? 0;
-  return {
-    isGit: true,
-    branch: summary.branch ?? null,
-    detached: false,
-    head: summary.head ?? null,
-    ahead: summary.ahead ?? 0,
-    behind: summary.behind ?? 0,
-    dirty: dirtyCount > 0,
-    dirtyCount,
-    counts: toStatusCounts(summary.counts),
-    noCommits: summary.noCommits ?? false,
-    truncated: summary.truncated,
-  };
+export interface GitProjectChanges {
+  project: Project;
+  files: GitFileRow[];
+  counts: GitStatusCounts;
+  truncated: boolean;
+  branch: string | null;
+  head: string | null;
+  ahead: number;
+  behind: number;
 }
 
 export function useOrgGitSummaries(): GitSourceSummary[] | null {
@@ -78,50 +55,62 @@ export function useOrgGitSummaries(): GitSourceSummary[] | null {
   return orgId ? (summaryQuery.data ?? null) : null;
 }
 
-export function useGitChanges(): GitProjectChanges[] {
-  const projectQuery = useProjects();
-  const projects = projectQuery.data ?? [];
-  const summaries = useOrgGitSummaries();
-  if (!summaries) {
-    return [];
-  }
-  const bySource = new Map(summaries.map((s) => [s.sourceId, s]));
-  const result: GitProjectChanges[] = [];
-  for (const project of projects) {
-    if (!project.hasGit) {
-      continue;
-    }
-    const summary = bySource.get(project.id);
-    if (!summary?.isGit) {
-      continue;
-    }
-    const status = toGitStatus(summary);
-    if (!status || (!status.dirty && !status.truncated)) {
-      continue;
-    }
-    result.push({ project, status, truncated: Boolean(summary.truncated) });
-  }
-  return result;
+function toFileRows(map: GitFileStatusMap): GitFileRow[] {
+  return Object.entries(map)
+    .filter(([, status]) => status !== 'ignored')
+    .map(([path, status]) => ({ path, status }))
+    .sort((a, b) => a.path.localeCompare(b.path));
 }
 
-export function useGitFileChanges(projectId: string): GitFileRow[] {
-  const { orgId: routeOrgId } = useStudioLocation();
-  const storeOrgId = useActiveOrgStore((state) => state.orgId);
-  const orgId = routeOrgId ?? storeOrgId;
-  // Wait for the desk basket: an early fetch hits git before host routing
-  // (rememberProjectNode) is known and caches an empty status forever.
-  const deskReady = useDeskReady(orgId);
+// Единый источник изменений: per-source карта file-status, гидратированная при
+// старте (useDeskOrgExtrasSync) и обновляемая только SSE. Читается из кэша, без HTTP.
+export function useGitFileChanges(projectId: string): GitFileChanges {
   const query = useQuery({
     queryKey: gitFileStatusQueryKey(projectId),
     queryFn: () => getGitFileStatus(projectId),
-    enabled: Boolean(projectId) && Boolean(orgId) && deskReady,
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    enabled: false,
   });
   const map = query.data?.map ?? {};
-  return Object.entries(map)
-    .filter(([, s]) => s !== 'ignored')
-    .map(([path, status]) => ({ path, status }))
-    .sort((a, b) => a.path.localeCompare(b.path));
+  return {
+    files: toFileRows(map),
+    counts: countGitFileStatuses(map),
+    truncated: query.data?.truncated ?? false,
+  };
+}
+
+export function useGitChanges(): GitProjectChanges[] {
+  const projects = useProjects().data ?? [];
+  const gitProjects = projects.filter((project) => project.hasGit);
+  const results = useQueries({
+    queries: gitProjects.map((project) => ({
+      queryKey: gitFileStatusQueryKey(project.id),
+      queryFn: () => getGitFileStatus(project.id),
+      enabled: false,
+    })),
+  });
+  const summaries = useOrgGitSummaries() ?? [];
+  const bySource = new Map(summaries.map((summary) => [summary.sourceId, summary]));
+  const changes: GitProjectChanges[] = [];
+  gitProjects.forEach((project, index) => {
+    const data = results[index]?.data;
+    const map = data?.map ?? {};
+    const files = toFileRows(map);
+    const truncated = data?.truncated ?? false;
+    if (files.length === 0 && !truncated) {
+      return;
+    }
+    const summary = bySource.get(project.id);
+    const isGit = summary?.isGit ?? false;
+    changes.push({
+      project,
+      files,
+      counts: countGitFileStatuses(map),
+      truncated,
+      branch: isGit ? (summary?.branch ?? null) : null,
+      head: isGit ? (summary?.head ?? null) : null,
+      ahead: isGit ? (summary?.ahead ?? 0) : 0,
+      behind: isGit ? (summary?.behind ?? 0) : 0,
+    });
+  });
+  return changes;
 }
