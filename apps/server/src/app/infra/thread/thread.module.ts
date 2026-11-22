@@ -3,6 +3,7 @@ import { AttachmentRepositoryPort } from '../../domain/thread/attachment-reposit
 import { AttachmentStoragePort } from '../../domain/thread/attachment-storage.port.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadEventsPort } from '../../domain/thread/thread-events.port.ts';
+import { ThreadExportReaderPort } from '../../domain/thread/thread-export-reader.port.ts';
 import { ThreadParticipantRepositoryPort } from '../../domain/thread/thread-participant-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
@@ -10,6 +11,7 @@ import { AttachmentRepositoryAdapter } from './attachment-repository.adapter.ts'
 import { AttachmentStorageAdapter } from './attachment-storage.adapter.ts';
 import { ThreadAgentRepositoryAdapter } from './thread-agent-repository.adapter.ts';
 import { ThreadEventsAdapter } from './thread-events.adapter.ts';
+import { ThreadExportReaderAdapter } from './thread-export-reader.adapter.ts';
 import { ThreadParticipantRepositoryAdapter } from './thread-participant-repository.adapter.ts';
 import { ThreadRepositoryAdapter } from './thread-repository.adapter.ts';
 
@@ -23,6 +25,7 @@ import { ThreadRepositoryAdapter } from './thread-repository.adapter.ts';
     { provide: AttachmentRepositoryPort, useClass: AttachmentRepositoryAdapter },
     { provide: AttachmentStoragePort, useClass: AttachmentStorageAdapter },
     { provide: ThreadEventsPort, useClass: ThreadEventsAdapter },
+    { provide: ThreadExportReaderPort, useClass: ThreadExportReaderAdapter },
   ],
   exports: [
     ThreadRepositoryPort,
@@ -31,6 +34,7 @@ import { ThreadRepositoryAdapter } from './thread-repository.adapter.ts';
     AttachmentRepositoryPort,
     AttachmentStoragePort,
     ThreadEventsPort,
+    ThreadExportReaderPort,
   ],
 })
 export class ThreadModule {}

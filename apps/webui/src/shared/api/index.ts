@@ -208,6 +208,7 @@ export {
   stopTerminal,
   type TerminalSessionRecord,
 } from './terminals';
+export { downloadThreadExport } from './thread-export';
 export {
   listThreadAttachments,
   listThreadFiles,

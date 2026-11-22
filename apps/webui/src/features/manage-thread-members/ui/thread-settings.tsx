@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { ThreadColorPicker, ThreadIconPicker } from '@/shared/ui/thread-appearance-picker';
 import { toast } from '@/shared/ui/toast';
 import { mutateThread } from '../model/thread-members-mutation';
+import { DownloadThreadDiagnostics } from './download-thread-diagnostics';
 import { ThreadContextFiles } from './thread-context-files';
 import { ThreadMemberList } from './thread-member-list';
 import {
@@ -59,6 +60,7 @@ export function ThreadSettings({ thread, className }: { thread: Thread; classNam
         <HistoryAnchorField thread={thread} />
         {isGroup ? <AutoReplyAgentField thread={thread} /> : null}
         {isGroup ? <MentionGatingField thread={thread} /> : null}
+        <DownloadThreadDiagnostics thread={thread} />
         {canDelete ? <DeleteThreadButton thread={thread} isGroup={isGroup} /> : null}
       </PopoverContent>
     </Popover>

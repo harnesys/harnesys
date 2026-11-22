@@ -142,6 +142,7 @@ import { TeamsController } from './rest/teams.controller.ts';
 import { OrgTerminalsController, TerminalsController } from './rest/terminals.controller.ts';
 import { ThreadAttachmentsController } from './rest/thread-attachments.controller.ts';
 import { ThreadCompactController } from './rest/thread-compact.controller.ts';
+import { ThreadExportController } from './rest/thread-export.controller.ts';
 import { ThreadFilesController } from './rest/thread-files.controller.ts';
 import { ThreadMessageQueueController } from './rest/thread-message-queue.controller.ts';
 import { ThreadRawModelRequestsController } from './rest/thread-raw-model-requests.controller.ts';
@@ -287,6 +288,7 @@ import { VaultController } from './rest/vault.controller.ts';
     ThreadAttachmentsController,
     ThreadFilesController,
     ThreadCompactController,
+    ThreadExportController,
     ThreadMessageQueueController,
     ThreadRawModelRequestsController,
     ApprovalsController,

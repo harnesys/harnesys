@@ -4,8 +4,7 @@ import { Injectable } from '@harnesys/brix';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { ThreadNotFoundException } from '../../domain/thread/thread.error.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
-
-const NAME_PATTERN = /^\d{13}-[0-9a-f-]{36}\.json$/;
+import { isThreadRawModelRequestName } from './thread-raw-model-request-name.ts';
 
 export interface ThreadRawModelRequest {
   name: string;
@@ -25,7 +24,7 @@ export class GetThreadRawModelRequestUseCase {
     if (!this.threads.findById(orgId, threadId)) {
       throw new ThreadNotFoundException(threadId);
     }
-    if (!NAME_PATTERN.test(name)) {
+    if (!isThreadRawModelRequestName(name)) {
       throw new ThreadNotFoundException(name);
     }
     const path = join(this.layout.threadDir(orgId, threadId), 'raw-model-requests', name);

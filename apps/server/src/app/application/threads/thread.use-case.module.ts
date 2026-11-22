@@ -9,6 +9,7 @@ import { CreateThreadUseCase } from './create-thread.use-case.ts';
 import { DeleteThreadUseCase } from './delete-thread.use-case.ts';
 import { DeleteThreadEventUseCase } from './delete-thread-event.use-case.ts';
 import { DeleteThreadPlanUseCase } from './delete-thread-plan.use-case.ts';
+import { ExportThreadUseCase } from './export-thread.use-case.ts';
 import { GetThreadUseCase } from './get-thread.use-case.ts';
 import { GetThreadAttachmentUseCase } from './get-thread-attachment.use-case.ts';
 import { GetThreadEventUseCase } from './get-thread-event.use-case.ts';
@@ -49,6 +50,7 @@ const useCases = [
   MarkThreadReadUseCase,
   GetThreadPlanUseCase,
   DeleteThreadPlanUseCase,
+  ExportThreadUseCase,
   RespondRunUseCase,
   RetryRunUseCase,
   StreamRunEventsUseCase,
