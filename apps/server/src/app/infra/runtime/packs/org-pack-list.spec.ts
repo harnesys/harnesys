@@ -32,6 +32,7 @@ describe('org pack single source', () => {
       'plan',
       'semantic-memory',
       'shell',
+      'signals',
       'skills',
       'sources',
       'threads',

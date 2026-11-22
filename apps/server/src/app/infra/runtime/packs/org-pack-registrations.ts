@@ -11,6 +11,7 @@ import {
   planCapability,
   registerPack,
   shellCapability,
+  signalsCapability,
   sourcesCapability,
 } from 'harnesys';
 import { lspCapability } from 'harnesys/lsp';
@@ -80,6 +81,8 @@ export function registrationForPack(packName: string, ctx: WireOrgPackContext) {
       return threadsRegistration(ctx);
     case 'issues':
       return issuesRegistration(ctx);
+    case 'signals':
+      return signalsRegistration(ctx);
     case 'manager':
       return managerRegistration(ctx);
     case 'dashboards':
@@ -161,6 +164,17 @@ function issuesRegistration(ctx: WireOrgPackContext) {
   }
   return registerPack(issuesCapability, {
     ports: { issues: tracker },
+    resolveScope: ctx.liveScope,
+  });
+}
+
+function signalsRegistration(ctx: WireOrgPackContext) {
+  const tools = ctx.deps.signals;
+  if (!tools) {
+    return undefined;
+  }
+  return registerPack(signalsCapability, {
+    ports: { signals: tools.store, wake: tools.wake },
     resolveScope: ctx.liveScope,
   });
 }

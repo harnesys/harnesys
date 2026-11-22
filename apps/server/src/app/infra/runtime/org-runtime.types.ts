@@ -61,6 +61,7 @@ import type { OrgKnowledgeDeps } from './packs/org-knowledge.port.ts';
 import type { OrgManagerDeps } from './packs/org-manager.port.ts';
 import type { OrgSkillsDeps } from './packs/org-skills.pack.port.ts';
 import type { OrgSourcesDeps } from './packs/org-sources.pack.port.ts';
+import type { SignalToolsDeps } from './packs/signal-tools.holder.ts';
 
 export interface OrgRuntime {
   orgId: string;
@@ -144,6 +145,7 @@ export interface OrgRuntimeDeps {
   knowledge?: OrgKnowledgeDeps;
   issues?: OrgIssueDeps;
   issueExecutions?: IssueExecutionPort;
+  signals?: SignalToolsDeps;
   issueEvents?: IssueEventsPort;
   manager?: OrgManagerDeps;
   skills?: OrgSkillsDeps;

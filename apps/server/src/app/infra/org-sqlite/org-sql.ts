@@ -566,6 +566,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS issue_executions_org_correlation_unique
 CREATE INDEX IF NOT EXISTS issue_executions_run_idx ON issue_executions(org_id, run_id);
 `;
 
+export const CREATE_SIGNALS_SQL = `
+CREATE TABLE IF NOT EXISTS signals (
+  key TEXT PRIMARY KEY NOT NULL,
+  fired_at TEXT NOT NULL
+);
+`;
+
 export function migrateIssueExecutionCorrelationIndex(
   exec: (sql: string) => void,
   all?: (sql: string) => ColumnInfo[],

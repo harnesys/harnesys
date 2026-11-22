@@ -43,6 +43,7 @@ import { registrationForPack } from './org-pack-registrations.ts';
 import { isPackSatisfied } from './org-pack-requirements.ts';
 import type { OrgSkillsDeps } from './org-skills.pack.port.ts';
 import type { OrgSourcesDeps } from './org-sources.pack.port.ts';
+import type { SignalToolsDeps } from './signal-tools.holder.ts';
 
 export interface WireOrgPacksDeps {
   orgId: string;
@@ -58,6 +59,7 @@ export interface WireOrgPacksDeps {
   triggerInstances?: TriggerInstanceRepositoryPort;
   issues?: OrgIssueDeps;
   issueTracker?: IssueTrackerPort;
+  signals?: SignalToolsDeps;
   manager?: OrgManagerDeps;
   knowledge?: OrgKnowledgeDeps;
   sources?: SourceRegistryPort;
@@ -87,6 +89,7 @@ export interface WireOrgPackFilter {
   deskEvents?: DeskEventsPort;
   issues?: OrgIssueDeps;
   issueTracker?: IssueTrackerPort;
+  signals?: SignalToolsDeps;
   manager?: OrgManagerDeps;
   knowledge?: OrgKnowledgeDeps;
   skills?: OrgSkillsDeps;

@@ -14,7 +14,7 @@ import { createOrgModelsPort } from '../../domain/provider/org-models.ts';
 import { ThreadNotFoundException } from '../../domain/thread/thread.error.ts';
 import { openOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 import { type ApprovalResumeSweep, createApprovalResumeSweep } from './approval-resume-sweep.ts';
-import { createAwaitSignalResolver } from './await-signal-resolvers.ts';
+import { createAwaitSignalCheck } from './await-signal-resolvers.ts';
 import { createBranchSeed } from './branch-state-seed.ts';
 import { runInHostToolScope } from './host-tool-scope.ts';
 import { wireOrgPlugins } from './org-plugin-wiring.ts';
@@ -238,7 +238,10 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     lifecycle: runLifecycle,
     events: runEvents,
     kick: () => claimer?.kick(),
-    isAwaitSettled: createAwaitSignalResolver(deps.orgId, deps.issueExecutions),
+    isAwaitSettled: createAwaitSignalCheck(deps.orgId, {
+      issueExecutions: deps.issueExecutions,
+      signals: deps.signals?.store,
+    }),
     countWaitingTimers: () =>
       (session.sqlite.query(WAITING_RUNS_SQL).get() as { c: number } | undefined)?.c ?? 0,
     releaseGate: () => deps.waitGate?.release(deps.orgId),

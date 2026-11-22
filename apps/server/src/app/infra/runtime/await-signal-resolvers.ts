@@ -1,44 +1,48 @@
-import { ISSUE_WAKE_PREFIX, parseIssueWakeKey } from 'harnesys';
+import { ISSUE_WAKE_PREFIX, parseIssueWakeKey, type SignalStorePort } from 'harnesys';
 import { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
 import { isActiveIssueExecutionState } from '../../domain/issue/issue-execution.ts';
 
 export interface AwaitSignalResolver {
   prefix: string;
-  isSettled(wakeKey: string): boolean;
+  isSettled(orgId: string, wakeKey: string): boolean;
 }
 
-export function createAwaitSignalResolver(
-  orgId: string,
-  executions: IssueExecutionPort | undefined,
-): (wakeKey: string) => boolean {
-  const resolvers = buildResolvers(orgId, executions);
+export interface AwaitSignalDeps {
+  issueExecutions?: IssueExecutionPort;
+  signals?: SignalStorePort;
+}
+
+export type AwaitSignalCheck = (wakeKey: string) => boolean;
+
+/**
+ * Extension point for state-derived signal kinds. A new trigger type registers
+ * one resolver (prefix + settled check) here; free-form keys fall through to the
+ * signals store without any registration.
+ */
+export function createAwaitSignalCheck(orgId: string, deps: AwaitSignalDeps): AwaitSignalCheck {
+  const resolvers = buildResolvers(deps);
   return (wakeKey: string): boolean => {
     for (const resolver of resolvers) {
       if (wakeKey.startsWith(resolver.prefix)) {
-        return resolver.isSettled(wakeKey);
+        return resolver.isSettled(orgId, wakeKey);
       }
     }
-    return false;
+    return deps.signals?.isFired(orgId, wakeKey) ?? false;
   };
 }
 
-function buildResolvers(
-  orgId: string,
-  executions: IssueExecutionPort | undefined,
-): AwaitSignalResolver[] {
-  if (executions === undefined) {
-    return [];
+function buildResolvers(deps: AwaitSignalDeps): AwaitSignalResolver[] {
+  const out: AwaitSignalResolver[] = [];
+  if (deps.issueExecutions !== undefined) {
+    out.push(createIssueAwaitResolver(deps.issueExecutions));
   }
-  return [createIssueAwaitResolver(orgId, executions)];
+  return out;
 }
 
-function createIssueAwaitResolver(
-  orgId: string,
-  executions: IssueExecutionPort,
-): AwaitSignalResolver {
+function createIssueAwaitResolver(executions: IssueExecutionPort): AwaitSignalResolver {
   return {
     prefix: ISSUE_WAKE_PREFIX,
-    isSettled(wakeKey: string): boolean {
+    isSettled(orgId: string, wakeKey: string): boolean {
       const issueId = parseIssueWakeKey(wakeKey);
       if (issueId === null) {
         return false;

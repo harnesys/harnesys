@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { OrgSettings } from '@harnesys/contracts';
 import { OrgSettingsSchema } from '@harnesys/contracts';
 import type { McpManagePort } from 'harnesys';
+import { SignalStorePort, SignalWakePort } from 'harnesys';
 import type { OrgDashboardsDeps } from '../../../application/dashboards/dashboard-tools.holder.ts';
 import { LspPort } from '../../../domain/lsp/lsp.port.ts';
 import { HostFsLayoutPort } from '../../../domain/machine/host-fs-layout.port.ts';
@@ -51,6 +52,19 @@ function fullDeps(): WireOrgPacksDeps {
     manager: {} as OrgManagerDeps,
     skills: {} as OrgSkillsDeps,
     sourcesPack: {} as OrgSourcesDeps,
+    signals: {
+      store: new (class extends SignalStorePort {
+        recordFire(): void {}
+        isFired(): boolean {
+          return false;
+        }
+      })(),
+      wake: new (class extends SignalWakePort {
+        wake(): Promise<number> {
+          return Promise.resolve(0);
+        }
+      })(),
+    },
     mcpManage: {} as McpManagePort,
     lsp: {} as LspPort,
     secrets: {} as SecretStorePort,

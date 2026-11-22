@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@harnesys/brix';
 import type { CreateIssueBody, CreateIssueResponse } from '@harnesys/contracts';
+import { SignalWakePort } from 'harnesys';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { ExecutionProfilePort } from '../../domain/execution-profile/execution-profile.port.ts';
 import { BoardValidationException } from '../../domain/issue/board.error.ts';
@@ -21,7 +22,6 @@ import { IssueEventsPort } from '../../domain/issue/issue-events.port.ts';
 import { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
 import { IssueFirePort } from '../../domain/issue/issue-fire.port.ts';
 import { IssueRepositoryPort } from '../../domain/issue/issue-repository.port.ts';
-import { IssueWakePort } from '../../domain/issue/issue-wake.port.ts';
 import { IssueLabelRepositoryPort } from '../../domain/issue/label-repository.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
@@ -57,7 +57,7 @@ export class CreateIssueUseCase {
     private readonly executions: IssueExecutionPort,
     private readonly fire: IssueFirePort,
     private readonly events: IssueEventsPort,
-    private readonly wake: IssueWakePort,
+    private readonly wake: SignalWakePort,
     private readonly sources: SourceRegistryPort,
     private readonly profiles: ExecutionProfilePort,
     private readonly worktrees: RepositoryWorktreePort,

@@ -1,5 +1,5 @@
 import { Module } from '@harnesys/brix';
-import { IssueWakePort } from '../../domain/issue/issue-wake.port.ts';
+import { SignalStorePort, SignalWakePort } from 'harnesys';
 import { PlanEventsPort } from '../../domain/plan/plan-events.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { RunLifecycleReaderPort } from '../../domain/thread/run-lifecycle-reader.port.ts';
@@ -14,12 +14,12 @@ import { DeskModule } from '../desk/desk.module.ts';
 import { FileAccessModule } from '../file-access/file-access.module.ts';
 import { FleetHubModule } from '../fleet-hub/fleet-hub.module.ts';
 import { IssueInfraModule } from '../issues/issue.module.ts';
-import { IssueWakeAdapter } from '../issues/issue-wake.adapter.ts';
 import { KnowledgeModule } from '../knowledge/knowledge.module.ts';
 import { LspModule } from '../lsp/lsp.module.ts';
 import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
 import { McpModule } from '../mcp/mcp.module.ts';
 import { ModePresetsModule } from '../mode-presets/mode-presets.module.ts';
+import { SignalStoreAdapter } from '../org-sqlite/signal-store.adapter.ts';
 import { PlanModule } from '../plan/plan.module.ts';
 import { PluginsModule } from '../plugins/plugins.module.ts';
 import { WorkspaceContainerModule } from '../process-runtime/workspace-container.module.ts';
@@ -30,7 +30,9 @@ import { SourceModule } from '../source/source.module.ts';
 import { TerminalModule } from '../terminal/terminal.module.ts';
 import { ThreadModule } from '../thread/thread.module.ts';
 import { LocalExecutorAdapter } from './local-executor.adapter.ts';
+import { SignalModule } from './packs/signal.module.ts';
 import { RunLifecycleReaderAdapter } from './run-lifecycle-reader.adapter.ts';
+import { SignalWakeAdapter } from './signal-wake.adapter.ts';
 import { WaitTickerGateAdapter } from './wait-ticker-gate.adapter.ts';
 
 @Module({
@@ -56,6 +58,7 @@ import { WaitTickerGateAdapter } from './wait-ticker-gate.adapter.ts';
     LspModule,
     McpModule,
     IssueInfraModule,
+    SignalModule,
     WorkspaceContainerModule,
     FleetHubModule,
     BrowserModule,
@@ -63,12 +66,14 @@ import { WaitTickerGateAdapter } from './wait-ticker-gate.adapter.ts';
   providers: [
     { provide: WaitTickerGatePort, useClass: WaitTickerGateAdapter },
     { provide: LocalExecutorPort, useClass: LocalExecutorAdapter },
-    { provide: IssueWakePort, useClass: IssueWakeAdapter },
+    { provide: SignalWakePort, useClass: SignalWakeAdapter },
+    { provide: SignalStorePort, useClass: SignalStoreAdapter },
     { provide: RunLifecycleReaderPort, useClass: RunLifecycleReaderAdapter },
   ],
   exports: [
     LocalExecutorPort,
-    IssueWakePort,
+    SignalWakePort,
+    SignalStorePort,
     RunLifecycleReaderPort,
     PlanEventsPort,
     ThreadEventsPort,

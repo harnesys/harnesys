@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@harnesys/brix';
 import type { IssuePublic, UpdateIssueStatusBody } from '@harnesys/contracts';
+import { SignalWakePort } from 'harnesys';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { ExecutionProfilePort } from '../../domain/execution-profile/execution-profile.port.ts';
 import { LOCAL_EXECUTION_PROFILE_ID } from '../../domain/execution-profile/execution-profile.ts';
@@ -16,7 +17,6 @@ import { IssueEventsPort } from '../../domain/issue/issue-events.port.ts';
 import { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
 import { IssueFirePort } from '../../domain/issue/issue-fire.port.ts';
 import { IssueRepositoryPort } from '../../domain/issue/issue-repository.port.ts';
-import { IssueWakePort } from '../../domain/issue/issue-wake.port.ts';
 import { IssueLabelRepositoryPort } from '../../domain/issue/label-repository.port.ts';
 import {
   applyLabelMutations,
@@ -64,7 +64,7 @@ export class UpdateIssueStatusUseCase {
     private readonly executions: IssueExecutionPort,
     private readonly fire: IssueFirePort,
     private readonly events: IssueEventsPort,
-    private readonly wake: IssueWakePort,
+    private readonly wake: SignalWakePort,
     private readonly worktrees: RepositoryWorktreePort,
     private readonly machineConfig: MachineConfigPort,
     private readonly layout: HostFsLayoutPort,

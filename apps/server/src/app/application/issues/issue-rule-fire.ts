@@ -1,4 +1,5 @@
 import type { Logger } from '@harnesys/brix';
+import type { SignalWakePort } from 'harnesys';
 import type { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import type { ExecutionProfilePort } from '../../domain/execution-profile/execution-profile.port.ts';
 import { LOCAL_EXECUTION_PROFILE_ID } from '../../domain/execution-profile/execution-profile.ts';
@@ -11,7 +12,6 @@ import type { IssueEventsPort } from '../../domain/issue/issue-events.port.ts';
 import type { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
 import type { IssueFirePort } from '../../domain/issue/issue-fire.port.ts';
 import type { IssueRepositoryPort } from '../../domain/issue/issue-repository.port.ts';
-import type { IssueWakePort } from '../../domain/issue/issue-wake.port.ts';
 import type { IssueLabelRepositoryPort } from '../../domain/issue/label-repository.port.ts';
 import {
   applyLabelMutations,
@@ -46,7 +46,7 @@ export interface IssueRuleFireDeps {
   layout: HostFsLayoutPort;
   driver: SourceDriverPort;
   materializations: SourceMaterializationPort;
-  wake: IssueWakePort;
+  wake: SignalWakePort;
   log: Logger;
 }
 

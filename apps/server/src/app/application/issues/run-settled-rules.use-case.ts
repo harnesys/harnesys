@@ -1,4 +1,5 @@
 import { Injectable, Logger, type ModuleDestroyHook, type ModuleInitHook } from '@harnesys/brix';
+import { SignalWakePort } from 'harnesys';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { IssueBoardRepositoryPort } from '../../domain/issue/board-repository.port.ts';
 import { hasOpenBlockers } from '../../domain/issue/dependency-cycle.ts';
@@ -6,7 +7,6 @@ import { IssueDependencyRepositoryPort } from '../../domain/issue/issue-dependen
 import type { IssueDomainEvent } from '../../domain/issue/issue-events.port.ts';
 import { IssueEventsPort } from '../../domain/issue/issue-events.port.ts';
 import { IssueRepositoryPort } from '../../domain/issue/issue-repository.port.ts';
-import { IssueWakePort } from '../../domain/issue/issue-wake.port.ts';
 import { IssueLabelRepositoryPort } from '../../domain/issue/label-repository.port.ts';
 import { applyLabelMutations, resolveFire } from '../../domain/issue/resolve-fire.ts';
 import { applyResolvedWakes } from './apply-resolved-wakes.ts';
@@ -27,7 +27,7 @@ export class RunSettledRulesUseCase implements ModuleInitHook, ModuleDestroyHook
     private readonly agents: AgentRegistryPort,
     private readonly labels: IssueLabelRepositoryPort,
     private readonly events: IssueEventsPort,
-    private readonly wake: IssueWakePort,
+    private readonly wake: SignalWakePort,
     logger: Logger,
   ) {
     this.log = logger.child('run-settled-rules');

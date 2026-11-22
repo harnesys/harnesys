@@ -24,6 +24,8 @@ function packDependencySatisfied(packName: string, deps: WireOrgPackFilter): boo
       return deps.skills !== undefined;
     case 'sources':
       return deps.sourcesPack !== undefined;
+    case 'signals':
+      return deps.signals !== undefined;
     case 'mcp':
       return deps.mcpManage !== undefined;
     case 'lsp':

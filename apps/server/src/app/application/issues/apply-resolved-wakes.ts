@@ -1,9 +1,9 @@
+import type { SignalWakePort } from 'harnesys';
 import { issueWakeKey } from 'harnesys';
-import type { IssueWakePort } from '../../domain/issue/issue-wake.port.ts';
 import type { ResolvedFire } from '../../domain/issue/resolve-fire.ts';
 
 export async function applyResolvedWakes(
-  deps: { wake: IssueWakePort },
+  deps: { wake: SignalWakePort },
   orgId: string,
   issueId: string,
   resolved: ResolvedFire,

@@ -1,4 +1,5 @@
 import type { RepositoryWorktree } from '@harnesys/contracts';
+import { SignalWakePort } from 'harnesys';
 import { IssueEventsPort } from '../../domain/issue/issue-events.port.ts';
 import type { ReserveIssueExecutionInput } from '../../domain/issue/issue-execution.port.ts';
 import { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
@@ -8,7 +9,6 @@ import {
   type IssueFireRequest,
   type IssueFireResult,
 } from '../../domain/issue/issue-fire.port.ts';
-import { IssueWakePort } from '../../domain/issue/issue-wake.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { type HostConfig, MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
@@ -142,7 +142,7 @@ export class StubEvents extends IssueEventsPort {
   }
 }
 
-export class StubWake extends IssueWakePort {
+export class StubWake extends SignalWakePort {
   readonly calls: Array<{ orgId: string; wakeKey: string; agentId?: string }> = [];
 
   wake(orgId: string, wakeKey: string, agentId?: string): Promise<number> {

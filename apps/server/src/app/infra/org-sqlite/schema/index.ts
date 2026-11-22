@@ -250,6 +250,7 @@ export {
   type RunRow,
   runsTable,
 } from './runs.ts';
+export { type SignalRow, signalsTable } from './signals.ts';
 export {
   type SourceOperationGrantInsert,
   type SourceOperationGrantRow,

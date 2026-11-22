@@ -17,6 +17,7 @@ const ORG_PACK_NAMES: readonly string[] = [
   'knowledge-memory',
   'skills',
   'sources',
+  'signals',
 ];
 
 const HOST_WIRED_PACKS: ReadonlySet<string> = new Set([
@@ -38,6 +39,7 @@ const HOST_WIRED_PACKS: ReadonlySet<string> = new Set([
   'knowledge-memory',
   'skills',
   'sources',
+  'signals',
 ]);
 
 export function orgPackNames(): string[] {

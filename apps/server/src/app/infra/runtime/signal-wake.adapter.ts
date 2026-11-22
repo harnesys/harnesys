@@ -1,9 +1,9 @@
 import { Injectable } from '@harnesys/brix';
-import { IssueWakePort } from '../../domain/issue/issue-wake.port.ts';
+import { SignalWakePort } from 'harnesys';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 
 @Injectable()
-export class IssueWakeAdapter extends IssueWakePort {
+export class SignalWakeAdapter extends SignalWakePort {
   constructor(private readonly executor: LocalExecutorPort) {
     super();
   }
