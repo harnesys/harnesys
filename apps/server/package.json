@@ -1,6 +1,6 @@
 {
   "name": "@harnesys/server",
-  "version": "0.10.19",
+  "version": "0.10.20",
   "module": "src/main.ts",
   "type": "module",
   "private": true,
