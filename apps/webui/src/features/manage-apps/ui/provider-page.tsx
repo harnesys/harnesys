@@ -341,7 +341,7 @@ function ConfirmDeleteDialog({
 }) {
   return (
     <Dialog open onOpenChange={(open) => (open ? undefined : onCancel())}>
-      <DialogContent>
+      <DialogContent layoutKey="app-delete-confirm">
         <DialogHeader>
           <DialogTitle>
             {kind === 'app' ? 'Delete application?' : 'Disconnect account?'}

@@ -1,6 +1,8 @@
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 import { XIcon } from 'lucide-react';
 import type * as React from 'react';
+import { RESIZE_HANDLES } from '@/shared/lib/resize-handles';
+import { useDialogLayout } from '@/shared/lib/use-dialog-layout';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 
@@ -32,22 +34,45 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  layoutKey,
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean;
+  layoutKey?: string;
 }) {
+  const layout = useDialogLayout(layoutKey);
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Popup
+        ref={layout.ref}
         data-slot="dialog-content"
+        data-dragging={layout.dragging}
+        style={layout.style}
         className={cn(
-          'data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-popover-foreground text-sm outline-none ring-1 ring-foreground/10 duration-100 data-closed:animate-out data-open:animate-in sm:max-w-sm',
+          'data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed z-50 grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-xl bg-popover p-4 text-popover-foreground text-sm outline-none ring-1 ring-foreground/10 duration-100 data-closed:animate-out data-open:animate-in sm:max-w-sm',
+          layout.className,
           className,
         )}
+        onPointerDown={layout.onPointerDown}
+        onPointerMove={layout.onPointerMove}
+        onPointerUp={layout.onPointerUp}
+        onPointerCancel={layout.onPointerCancel}
         {...props}
       >
         {children}
+        {RESIZE_HANDLES.map((handle) => (
+          <span
+            key={handle.direction}
+            className={cn('absolute z-10 touch-none', handle.className)}
+            aria-hidden="true"
+            data-testid={`dialog-resize-${handle.direction}`}
+            onPointerDown={(event) => layout.onResizeStart(event, handle.direction)}
+            onPointerMove={layout.onResizeMove}
+            onPointerUp={layout.onResizeEnd}
+            onPointerCancel={layout.onResizeEnd}
+          />
+        ))}
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"

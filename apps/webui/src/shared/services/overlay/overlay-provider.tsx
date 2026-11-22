@@ -44,6 +44,7 @@ function DialogHost() {
     <Dialog open onOpenChange={handleOpenChange}>
       <DialogContent
         data-testid={options.testId}
+        layoutKey={options.layoutKey ?? options.testId}
         className={cn('flex max-h-[90vh] min-h-0 flex-col', options.className ?? 'sm:max-w-md')}
       >
         {(options.title || options.description) && (

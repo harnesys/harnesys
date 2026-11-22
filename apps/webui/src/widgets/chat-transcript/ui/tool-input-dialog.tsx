@@ -28,7 +28,7 @@ export function ToolInputDialog({ open, onOpenChange, toolName, rawInput }: Tool
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[85vh] flex-col p-4 sm:max-w-xl">
+      <DialogContent layoutKey="tool-input" className="flex max-h-[85vh] flex-col p-4 sm:max-w-xl">
         <DialogHeader className="flex flex-row items-center justify-between pr-6 pb-1">
           <div>
             <DialogTitle className="font-semibold text-sm">

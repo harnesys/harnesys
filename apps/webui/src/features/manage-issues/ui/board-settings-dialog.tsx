@@ -42,6 +42,7 @@ export function openBoardSettingsDialog(orgId: string, boardId: string) {
   return dialog.open(BoardSettingsDialog, {
     title: 'Board settings',
     data: { orgId, boardId, mode: 'edit' },
+    layoutKey: 'board-settings',
     className: 'sm:max-w-xl',
   });
 }
@@ -51,6 +52,7 @@ export function openBoardCreateSettingsDialog(orgId: string, boardId: string) {
     title: 'New board',
     description: 'Name the board and set up its columns, color and automation.',
     data: { orgId, boardId, mode: 'create' },
+    layoutKey: 'board-create',
     className: 'sm:max-w-lg',
   });
 }

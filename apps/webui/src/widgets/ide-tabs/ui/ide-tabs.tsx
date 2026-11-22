@@ -1,41 +1,22 @@
-import {
-  EllipsisIcon,
-  PanelBottomIcon,
-  PanelLeftIcon,
-  PanelRightIcon,
-  PanelTopIcon,
-  Trash2Icon,
-  XIcon,
-} from 'lucide-react';
+import { EllipsisIcon, PanelRightIcon, XIcon } from 'lucide-react';
 import { type ReactNode, type RefObject, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useActiveOrgStore } from '@/entities/org-machine';
 import { setActiveThreadId, useThreadStore } from '@/entities/thread';
 import { useAgentsDisplayStore, useDeskStore } from '@/features/desk';
-import {
-  type IdeSplitSide,
-  type IdeTab,
-  pathForIdeTab,
-  useIdeGroup,
-  useIdeStore,
-  useIdeTabs,
-} from '@/features/ide';
+import { type IdeTab, pathForIdeTab, useIdeGroup, useIdeStore, useIdeTabs } from '@/features/ide';
 import { useOrgId } from '@/shared/config/location';
 import { useStudioNavigation } from '@/shared/config/navigation';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/shared/ui/context-menu';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/shared/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { SidebarTrigger } from '@/shared/ui/sidebar';
 import { ideDrag, setIdeDrag, takeIdeDrag } from '../model/ide-dnd';
+import { GroupMenuItems } from './group-menu-items';
 import { TabIcon, useTabLabel } from './tab-meta';
+
 export function IdeGroupTabs({
   groupId,
   leading = false,
@@ -54,8 +35,7 @@ export function IdeGroupTabs({
   const { openDesk } = useStudioNavigation();
   const inspectorOpen = useDeskStore((state) => state.inspectorOpen);
   const activeRef = useRef<HTMLDivElement | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
-  const [barDragOver, setBarDragOver] = useState(false);
+  const [dropAnchor, setDropAnchor] = useState<IdeTabDropAnchor | null>(null);
   const tabs = group
     ? group.tabIds
         .map((id) => ws.tabs.find((t) => t.id === id))
@@ -84,27 +64,17 @@ export function IdeGroupTabs({
   return (
     <div
       role="tablist"
-      className={cn(
-        'flex h-10 shrink-0 items-center gap-1 pr-2 pl-3 transition-colors duration-150',
-        barDragOver && 'bg-muted/60 ring-1 ring-ring ring-inset',
-      )}
+      className="flex h-10 shrink-0 items-center gap-1 pr-2 pl-3"
       data-testid={`ide-group-tabs-${groupId}`}
       onDragOver={(e) => {
-        const drag = ideDrag();
-        if (!drag) {
+        if (!ideDrag()) {
           return;
         }
         e.preventDefault();
-        setBarDragOver(true);
-      }}
-      onDragLeave={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-          setBarDragOver(false);
-        }
       }}
       onDrop={(e) => {
         e.preventDefault();
-        setBarDragOver(false);
+        setDropAnchor(null);
         const drag = takeIdeDrag();
         if (!drag) {
           return;
@@ -122,9 +92,9 @@ export function IdeGroupTabs({
               groupId={groupId}
               isActive={tab.id === activeId}
               scrollRef={activeRef}
-              isDragOver={dragOverId === tab.id}
-              onDragOverTab={setDragOverId}
-              onDragLeaveTab={() => setDragOverId(null)}
+              dropSide={dropAnchor?.tabId === tab.id ? dropAnchor.side : null}
+              onDragOverTab={(tabId, side) => setDropAnchor({ tabId, side })}
+              onDragLeaveTab={() => setDropAnchor(null)}
               onSelect={() => handleSelect(tab)}
               onClose={() => handleCloseTab(tab.id)}
               menu={
@@ -225,80 +195,12 @@ export function IdeGroupTabs({
     }
   }
 }
-function GroupMenuItems({
-  groupId,
-  targetTabId,
-  onCloseTab,
-  onCloseGroup,
-  onCloseAll,
-}: {
-  groupId: string;
-  targetTabId: string | null;
-  onCloseTab: (tabId: string) => void;
-  onCloseGroup: () => void;
-  onCloseAll: () => void;
-}) {
-  const ws = useIdeTabs();
-  const split = (side: IdeSplitSide) => {
-    useIdeStore.getState().splitGroup(groupId, side, targetTabId ?? undefined);
-  };
-  return (
-    <>
-      <DropdownMenuItem
-        data-testid="split-left"
-        disabled={!targetTabId}
-        onClick={() => split('left')}
-      >
-        <PanelLeftIcon /> Split Left
-      </DropdownMenuItem>
-      <DropdownMenuItem
-        data-testid="split-right"
-        disabled={!targetTabId}
-        onClick={() => split('right')}
-      >
-        <PanelRightIcon /> Split Right
-      </DropdownMenuItem>
-      <DropdownMenuItem data-testid="split-up" disabled={!targetTabId} onClick={() => split('up')}>
-        <PanelTopIcon /> Split Up
-      </DropdownMenuItem>
-      <DropdownMenuItem
-        data-testid="split-down"
-        disabled={!targetTabId}
-        onClick={() => split('down')}
-      >
-        <PanelBottomIcon /> Split Down
-      </DropdownMenuItem>
-      <DropdownMenuSeparator />
-      <DropdownMenuItem
-        data-testid="close-tab"
-        disabled={!targetTabId}
-        onClick={() => {
-          if (targetTabId) {
-            onCloseTab(targetTabId);
-          }
-        }}
-      >
-        <XIcon /> Close Tab
-      </DropdownMenuItem>
-      <DropdownMenuItem data-testid="close-group" onClick={onCloseGroup}>
-        <XIcon /> Close Group
-      </DropdownMenuItem>
-      <DropdownMenuItem
-        data-testid="close-all"
-        disabled={ws.tabs.length === 0}
-        onClick={onCloseAll}
-      >
-        <Trash2Icon /> Close All
-      </DropdownMenuItem>
-    </>
-  );
-}
 function IdeTabView({
   tab,
   groupId,
   isActive,
   scrollRef,
-  isDragOver,
+  dropSide,
   onDragOverTab,
   onDragLeaveTab,
   onSelect,
@@ -309,8 +211,8 @@ function IdeTabView({
   groupId: string;
   isActive: boolean;
   scrollRef: RefObject<HTMLDivElement | null>;
-  isDragOver: boolean;
-  onDragOverTab: (tabId: string) => void;
+  dropSide: 'before' | 'after' | null;
+  onDragOverTab: (tabId: string, side: IdeTabDropSide) => void;
   onDragLeaveTab: () => void;
   onSelect: () => void;
   onClose: () => void;
@@ -341,9 +243,14 @@ function IdeTabView({
                 return;
               }
               e.preventDefault();
-              onDragOverTab(tab.id);
+              const rect = e.currentTarget.getBoundingClientRect();
+              onDragOverTab(tab.id, e.clientX > rect.left + rect.width / 2 ? 'after' : 'before');
             }}
-            onDragLeave={onDragLeaveTab}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                onDragLeaveTab();
+              }
+            }}
             onDrop={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -352,21 +259,31 @@ function IdeTabView({
               if (!drag) {
                 return;
               }
+              const after = dropSide === 'after';
               const { moveTab, reorderTab } = useIdeStore.getState();
               if (drag.fromGroupId === groupId) {
-                reorderTab(drag.tabId, tab.id);
+                reorderTab(drag.tabId, tab.id, after);
                 return;
               }
-              moveTab(drag.tabId, groupId, tab.id);
+              moveTab(drag.tabId, groupId, tab.id, after);
             }}
             className={cn(
               'group/tab relative flex max-w-52 shrink-0 animate-tab-enter items-center rounded-md p-0.5 pl-2 text-[0.74rem] transition-colors duration-150',
               selected
                 ? 'bg-muted text-foreground'
                 : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-              isDragOver && 'ring-1 ring-ring',
+              dropSide !== null && 'ring-1 ring-ring',
             )}
           >
+            {dropSide ? (
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'pointer-events-none absolute inset-y-0.5 z-20 w-0.5 rounded-full bg-ring',
+                  dropSide === 'before' ? '-left-1' : '-right-1',
+                )}
+              />
+            ) : null}
             <button
               type="button"
               className="relative flex min-w-0 flex-1 items-center gap-1.5 truncate"

@@ -37,9 +37,19 @@
   transition: none;
 }
 
+/* Dialog drag: the header acts as the title bar; a plain grab cursor signals it. */
+[data-slot="dialog-content"] [data-slot="dialog-header"] {
+  cursor: grab;
+  touch-action: none;
+}
+
+[data-slot="dialog-content"][data-dragging="true"] [data-slot="dialog-header"] {
+  cursor: grabbing;
+}
+
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-none;
   }
   html {
     @apply font-sans;

@@ -17,6 +17,7 @@ export function openBoardColumnRulesDialog(orgId: string, boardId: string, statu
   return dialog.open(BoardColumnRulesDialog, {
     title: status ? `Rules — ${status.label}` : 'Column rules',
     data: { orgId, boardId, statusKey },
+    layoutKey: 'board-column-rules',
     className: 'sm:max-w-2xl',
   });
 }

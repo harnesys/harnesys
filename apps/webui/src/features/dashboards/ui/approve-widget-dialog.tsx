@@ -63,7 +63,11 @@ export function ApproveWidgetDialog({
   const risky = groups.flatMap((group) => group.items).filter((effect) => effect.risk !== null);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg" data-testid="approve-widget-dialog">
+      <DialogContent
+        layoutKey="approve-widget"
+        className="sm:max-w-lg"
+        data-testid="approve-widget-dialog"
+      >
         <DialogHeader>
           <DialogTitle>Approve "{title}"</DialogTitle>
           <DialogDescription>

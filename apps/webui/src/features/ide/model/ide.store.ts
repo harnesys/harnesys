@@ -94,8 +94,8 @@ type IdeStore = IdeState & {
     worktreeId?: string,
   ) => void;
   remapPaths: (projectId: string, moves: ProjectMoveItem[], worktreeId?: string) => void;
-  reorderTab: (fromId: string, toId: string) => void;
-  moveTab: (tabId: string, toGroupId: string, beforeTabId: string | null) => void;
+  reorderTab: (fromId: string, toId: string, after: boolean) => void;
+  moveTab: (tabId: string, toGroupId: string, anchorTabId: string | null, after?: boolean) => void;
   splitGroup: (groupId: string, side: IdeSplitSide, tabId?: string) => void;
   closeGroup: (groupId: string) => void;
   setSplitRatio: (splitId: string, ratio: number) => void;
@@ -244,16 +244,18 @@ export const useIdeStore = create<IdeStore>((set) => ({
       const next = remapProjectPaths(state.workspace, moves, projectId, worktreeId);
       return next ? { workspace: next } : state;
     }),
-  reorderTab: (fromId, toId) =>
+  reorderTab: (fromId, toId, after) =>
     set((state) => {
       const group = groupOfTab(state.workspace, fromId);
       if (!group) {
         return state;
       }
-      return withWs(state, moveTabState(state.workspace, fromId, group.id, toId));
+      return withWs(state, moveTabState(state.workspace, fromId, group.id, toId, after));
     }),
-  moveTab: (tabId, toGroupId, beforeTabId) =>
-    set((state) => withWs(state, moveTabState(state.workspace, tabId, toGroupId, beforeTabId))),
+  moveTab: (tabId, toGroupId, anchorTabId, after) =>
+    set((state) =>
+      withWs(state, moveTabState(state.workspace, tabId, toGroupId, anchorTabId, after)),
+    ),
   splitGroup: (groupId, side, tabId) =>
     set((state) =>
       withWs(state, splitGroupState(state.workspace, groupId, side, randomUUID(), tabId)),

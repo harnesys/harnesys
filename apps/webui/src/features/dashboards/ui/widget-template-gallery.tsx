@@ -23,7 +23,11 @@ export function WidgetTemplateGallery({
 }: WidgetTemplateGalleryProps): React.ReactNode {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl" data-testid="widget-template-gallery">
+      <DialogContent
+        layoutKey="widget-template-gallery"
+        className="sm:max-w-xl"
+        data-testid="widget-template-gallery"
+      >
         <DialogHeader>
           <DialogTitle>Add widget</DialogTitle>
           <DialogDescription>

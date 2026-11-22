@@ -21,6 +21,7 @@ export function openEditModelDialog(
       initial.kind === 'embed'
         ? 'Embedding models need max input tokens and price. Chat-only settings stay hidden.'
         : 'Limits, cost, modalities and features are host fields. Providers often omit them.',
+    layoutKey: 'edit-model',
     className: 'sm:max-w-lg',
     data: {
       modelName,
@@ -39,6 +40,7 @@ export function openAddModelDialog(providerName?: string) {
   return dialog.open(AddModelDialog, {
     title: 'Add model',
     description: 'Set Kind to Embedding for vector models; Chat for agents and completions.',
+    layoutKey: 'add-model',
     className: 'sm:max-w-lg',
     data: { providerName },
   });

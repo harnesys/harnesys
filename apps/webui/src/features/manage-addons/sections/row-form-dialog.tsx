@@ -125,40 +125,42 @@ export function RowFormDialog({
 
   return (
     <Dialog open onOpenChange={(next) => (next ? undefined : onClose())}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        {fields.map((field) => (
-          <SettingsField
-            key={field.key}
-            label={
-              <>
-                {field.label}
-                {field.required ? <RequiredMark /> : null}
-              </>
-            }
-            description={field.help}
-            error={errors[field.key]}
-            htmlFor={fieldControlId(field.key)}
-            testId={`addon-row-form-${field.key}`}
-          >
-            <FieldRenderer
-              field={field}
-              bare
-              value={field.type === 'secret' ? undefined : values[field.key]}
-              secretValue={secrets[field.key]}
-              disabled={pending}
-              values={values}
-              addon={{ orgId, addonId, connections }}
-              onChange={(next) => setValues((current) => ({ ...current, [field.key]: next }))}
-              onSecretChange={(next) =>
-                setSecrets((current) => ({ ...current, [field.key]: next }))
+      <DialogContent layoutKey="addon-row-form" className="flex max-h-[85vh] flex-col sm:max-w-lg">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+          </DialogHeader>
+          {fields.map((field) => (
+            <SettingsField
+              key={field.key}
+              label={
+                <>
+                  {field.label}
+                  {field.required ? <RequiredMark /> : null}
+                </>
               }
-            />
-          </SettingsField>
-        ))}
-        {error ? <SettingsErrorBanner message={error} testId="addon-row-form-error" /> : null}
+              description={field.help}
+              error={errors[field.key]}
+              htmlFor={fieldControlId(field.key)}
+              testId={`addon-row-form-${field.key}`}
+            >
+              <FieldRenderer
+                field={field}
+                bare
+                value={field.type === 'secret' ? undefined : values[field.key]}
+                secretValue={secrets[field.key]}
+                disabled={pending}
+                values={values}
+                addon={{ orgId, addonId, connections }}
+                onChange={(next) => setValues((current) => ({ ...current, [field.key]: next }))}
+                onSecretChange={(next) =>
+                  setSecrets((current) => ({ ...current, [field.key]: next }))
+                }
+              />
+            </SettingsField>
+          ))}
+          {error ? <SettingsErrorBanner message={error} testId="addon-row-form-error" /> : null}
+        </div>
         <DialogFooter>
           <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
             {(action.formActions ?? []).map((dialogAction) => (

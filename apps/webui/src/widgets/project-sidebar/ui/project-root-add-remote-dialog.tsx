@@ -44,7 +44,7 @@ export function AddRemoteDialog({
         }
       }}
     >
-      <DialogContent>
+      <DialogContent layoutKey="project-root-add-remote">
         <DialogHeader>
           <DialogTitle>Add remote origin</DialogTitle>
         </DialogHeader>

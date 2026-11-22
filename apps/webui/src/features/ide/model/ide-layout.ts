@@ -121,7 +121,8 @@ export function moveTabState(
   ws: IdeWorkspaceState,
   tabId: string,
   toGroupId: string,
-  beforeTabId: string | null,
+  anchorTabId: string | null,
+  after = false,
 ): IdeWorkspaceState | null {
   const from = groupOfTab(ws, tabId);
   const to = findGroup(ws, toGroupId);
@@ -129,7 +130,7 @@ export function moveTabState(
     return null;
   }
   if (from.id === to.id) {
-    return reorderInGroup(ws, from, tabId, beforeTabId);
+    return reorderInGroup(ws, from, tabId, anchorTabId, after);
   }
   const fromTabIds = from.tabIds.filter((id) => id !== tabId);
   let groups = ws.groups.map((g) => {
@@ -148,9 +149,10 @@ export function moveTabState(
     }
   }
   const target = groups.find((g) => g.id === to.id) ?? to;
-  const insertAt = beforeTabId ? target.tabIds.indexOf(beforeTabId) : -1;
+  const anchorIdx = anchorTabId ? target.tabIds.indexOf(anchorTabId) : -1;
+  const insertAt = anchorIdx === -1 ? target.tabIds.length : anchorIdx + (after ? 1 : 0);
   const tabIds = [...target.tabIds];
-  tabIds.splice(insertAt === -1 ? tabIds.length : insertAt, 0, tabId);
+  tabIds.splice(insertAt, 0, tabId);
   groups = groups.map((g) => (g.id === to.id ? { ...g, tabIds, activeId: tabId } : g));
   if (groups.length === 0) {
     return createEmptyWorkspace();
@@ -170,19 +172,18 @@ function reorderInGroup(
   ws: IdeWorkspaceState,
   group: IdeGroup,
   tabId: string,
-  beforeTabId: string | null,
+  anchorTabId: string | null,
+  after: boolean,
 ): IdeWorkspaceState | null {
-  const fromIdx = group.tabIds.indexOf(tabId);
-  const toIdx = beforeTabId ? group.tabIds.indexOf(beforeTabId) : group.tabIds.length - 1;
-  if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) {
+  const tabIds = group.tabIds.filter((id) => id !== tabId);
+  const anchorIdx = anchorTabId ? tabIds.indexOf(anchorTabId) : -1;
+  if (anchorTabId && anchorIdx === -1) {
     return null;
   }
-  const tabIds = [...group.tabIds];
-  const [moved] = tabIds.splice(fromIdx, 1);
-  if (!moved) {
+  tabIds.splice(anchorIdx === -1 ? tabIds.length : anchorIdx + (after ? 1 : 0), 0, tabId);
+  if (tabIds.every((id, index) => id === group.tabIds[index])) {
     return null;
   }
-  tabIds.splice(toIdx > fromIdx ? toIdx - 1 : toIdx, 0, moved);
   return {
     ...ws,
     groups: ws.groups.map((g) => (g.id === group.id ? { ...g, tabIds } : g)),

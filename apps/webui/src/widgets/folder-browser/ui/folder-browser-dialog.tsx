@@ -27,7 +27,10 @@ export function FolderBrowserDialog({
   const title = files ? 'Files on' : 'Folders on';
   return (
     <Dialog open>
-      <DialogContent className="flex h-[32rem] flex-col gap-4 sm:max-w-md">
+      <DialogContent
+        layoutKey="folder-browser"
+        className="flex h-[32rem] flex-col gap-4 sm:max-w-md"
+      >
         <DialogHeader className="shrink-0">
           <DialogTitle>
             {title} {nodeLabel ?? 'host'}

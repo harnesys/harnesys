@@ -93,7 +93,10 @@ export function EngineInstallDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent data-testid={`engine-install-dialog-${spec.id}`}>
+      <DialogContent
+        layoutKey="browser-engine-install"
+        data-testid={`engine-install-dialog-${spec.id}`}
+      >
         <DialogHeader>
           <DialogTitle>
             Install {spec.label}

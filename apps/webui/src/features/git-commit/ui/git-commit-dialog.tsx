@@ -104,9 +104,9 @@ export function GitCommitDialog({
     onResolve?.({ ...values, paths: commitPaths, push: true }),
   );
   return (
-    <form className="flex min-h-0 flex-col gap-4" onSubmit={handleCommit}>
-      <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border">
-        <div className="flex h-[56vh] min-h-[340px] flex-col sm:flex-row">
+    <form className="flex min-h-0 flex-1 flex-col gap-4" onSubmit={handleCommit}>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border">
+        <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
           <div className="flex min-h-0 w-full shrink-0 flex-col border-b bg-card sm:w-[320px] sm:border-r sm:border-b-0">
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               <GitCommitFileList

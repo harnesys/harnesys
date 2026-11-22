@@ -86,7 +86,11 @@ export function HostPolicyDialog({ onResolve }: HostPolicyDialogProps) {
 
   return (
     <Dialog open>
-      <DialogContent className="sm:max-w-md" data-testid="host-policy-dialog">
+      <DialogContent
+        layoutKey="addon-host-policy"
+        className="sm:max-w-md"
+        data-testid="host-policy-dialog"
+      >
         <DialogHeader>
           <DialogTitle>Host source policy</DialogTitle>
           <DialogDescription>

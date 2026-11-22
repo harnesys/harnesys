@@ -123,6 +123,7 @@ export function openInviteMemberDialog(orgId: string): Promise<IssuedMemberInvit
     title: 'Invite member',
     description: 'The invite code is shown once and expires in 24 hours.',
     data: { orgId },
+    layoutKey: 'invite-member',
     className: 'sm:max-w-lg',
   });
 }

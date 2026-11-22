@@ -36,7 +36,7 @@ export function GitCommitFileList({
   }
   const allChecked = files.every((file) => checkedPaths.has(file.path));
   return (
-    <ScrollArea className="flex-1">
+    <ScrollArea className="min-h-0 flex-1">
       <div className="p-1">
         <div className="mb-1 flex items-center gap-2 px-2 py-1">
           <Checkbox

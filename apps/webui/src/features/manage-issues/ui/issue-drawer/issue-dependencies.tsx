@@ -60,7 +60,7 @@ export function IssueDependencies({
             <PlusIcon className="size-3.5" />
             Add
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent layoutKey="issue-dependencies" className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Add Dependency</DialogTitle>
             </DialogHeader>

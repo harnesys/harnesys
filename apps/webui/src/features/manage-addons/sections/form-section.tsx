@@ -81,18 +81,23 @@ function ModalFormSection({
         >
           {title}
         </DialogTrigger>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
-          </DialogHeader>
-          <FormSectionBody
-            orgId={orgId}
-            addonId={addonId}
-            detail={detail}
-            section={section}
-            onRefresh={onRefresh}
-            onDone={() => setOpen(false)}
-          />
+        <DialogContent
+          layoutKey="addon-form-section"
+          className="flex max-h-[85vh] flex-col sm:max-w-lg"
+        >
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{title}</DialogTitle>
+            </DialogHeader>
+            <FormSectionBody
+              orgId={orgId}
+              addonId={addonId}
+              detail={detail}
+              section={section}
+              onRefresh={onRefresh}
+              onDone={() => setOpen(false)}
+            />
+          </div>
         </DialogContent>
       </Dialog>
     </div>

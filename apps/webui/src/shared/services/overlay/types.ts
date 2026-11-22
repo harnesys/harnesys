@@ -11,6 +11,7 @@ export interface OverlayOptions<T = unknown> {
   data?: T;
   className?: string;
   testId?: string;
+  layoutKey?: string;
   size?: 'default' | 'sm';
 }
 export type DialogComponentProps<TResult = unknown, TData = unknown> = OverlayComponentProps<

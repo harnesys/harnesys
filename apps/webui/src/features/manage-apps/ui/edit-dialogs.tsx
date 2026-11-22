@@ -52,7 +52,7 @@ export function EditAppDialog({
 
   return (
     <Dialog open onOpenChange={(open) => (open ? undefined : onClose())}>
-      <DialogContent>
+      <DialogContent layoutKey="edit-app">
         <DialogHeader>
           <DialogTitle>Edit {app.label}</DialogTitle>
         </DialogHeader>
@@ -133,7 +133,7 @@ export function EditAccountDialog({
 
   return (
     <Dialog open onOpenChange={(open) => (open ? undefined : onClose())}>
-      <DialogContent>
+      <DialogContent layoutKey="edit-account">
         <DialogHeader>
           <DialogTitle>Edit {account.label}</DialogTitle>
         </DialogHeader>

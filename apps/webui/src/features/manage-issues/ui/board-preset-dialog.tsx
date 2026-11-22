@@ -13,6 +13,7 @@ export function openBoardPresetDialog(orgId: string) {
     title: 'New board',
     description: 'Pick a starting workflow. Next you name the board and set up its columns.',
     data: { orgId },
+    layoutKey: 'board-preset',
     className: 'sm:max-w-xl',
   });
 }

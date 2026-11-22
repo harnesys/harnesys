@@ -1,5 +1,4 @@
 import type { UpdateDashboardBody } from '@harnesys/contracts';
-import { Trash2Icon } from 'lucide-react';
 import { useState } from 'react';
 import {
   useCreateDashboard,
@@ -8,7 +7,7 @@ import {
 } from '@/features/dashboards/dashboards-queries';
 import { DEFAULT_ICON } from '@/features/dashboards/model/icon-options';
 import { useOrgId } from '@/shared/config/location';
-import { type DialogComponentProps, dialog } from '@/shared/services/overlay';
+import { alert, type DialogComponentProps, dialog } from '@/shared/services/overlay';
 import { Button } from '@/shared/ui/button';
 import { ColorSwatches } from '@/shared/ui/color-swatches';
 import { DialogFooter } from '@/shared/ui/dialog';
@@ -69,7 +68,6 @@ export function DashboardSettingsDialog({
   const [name, setName] = useState(data?.initial?.name ?? '');
   const [color, setColor] = useState<string | null>(data?.initial?.color ?? null);
   const [icon, setIcon] = useState(data?.initial?.icon ?? DEFAULT_ICON);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const saving = create.isPending || update.isPending || remove.isPending;
 
   const canSave = name.trim().length > 0 && !saving;
@@ -92,6 +90,22 @@ export function DashboardSettingsDialog({
     update.mutate(body, {
       onSuccess: () => onResolve?.({ action: 'saved' }),
       onError: () => toast.add({ title: 'Failed to save dashboard', type: 'error' }),
+    });
+  };
+
+  const deleteDashboard = async (): Promise<void> => {
+    const confirmed = await alert.confirm({
+      title: 'Delete dashboard?',
+      description: 'This dashboard and all of its widgets are removed. This cannot be undone.',
+      confirmText: 'Delete dashboard',
+      variant: 'destructive',
+      testId: 'dashboard-settings-delete-confirm',
+    });
+    if (!confirmed) {
+      return;
+    }
+    remove.mutate(dashboardId, {
+      onSuccess: () => onResolve?.({ action: 'removed' }),
     });
   };
 
@@ -129,43 +143,21 @@ export function DashboardSettingsDialog({
             />
           </Field>
         </FieldGroup>
-        {!creating ? (
-          <div className="space-y-2 border-t pt-4">
-            {!confirmingDelete ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full gap-2"
-                data-testid="dashboard-settings-delete"
-                onClick={() => setConfirmingDelete(true)}
-              >
-                <Trash2Icon className="size-3.5" /> Delete dashboard
-              </Button>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <p className="text-muted-foreground text-xs">
-                  Delete this dashboard and all of its widgets? This cannot be undone.
-                </p>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="w-full"
-                  data-testid="dashboard-settings-delete-confirm"
-                  disabled={saving}
-                  onClick={() =>
-                    remove.mutate(dashboardId, {
-                      onSuccess: () => onResolve?.({ action: 'removed' }),
-                    })
-                  }
-                >
-                  Confirm delete
-                </Button>
-              </div>
-            )}
-          </div>
-        ) : null}
       </div>
       <DialogFooter>
+        {!creating ? (
+          <Button
+            type="button"
+            variant="ghost"
+            className="mr-auto text-destructive hover:text-destructive"
+            data-testid="dashboard-settings-delete"
+            onClick={() => {
+              void deleteDashboard();
+            }}
+          >
+            Delete dashboard
+          </Button>
+        ) : null}
         <Button type="button" variant="outline" onClick={() => onResolve?.()} disabled={saving}>
           Cancel
         </Button>

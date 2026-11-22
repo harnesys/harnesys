@@ -106,7 +106,10 @@ export function WidgetJsonEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[80vh] flex-col gap-3 sm:max-w-2xl">
+      <DialogContent
+        layoutKey="widget-json-editor"
+        className="flex h-[80vh] flex-col gap-3 sm:max-w-2xl"
+      >
         <DialogHeader>
           <DialogTitle>Custom widget JSON</DialogTitle>
           <DialogDescription>

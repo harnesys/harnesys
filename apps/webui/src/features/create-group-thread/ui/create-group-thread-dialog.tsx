@@ -57,7 +57,7 @@ export function CreateGroupThreadDialog({ onResolve }: DialogComponentProps<stri
   }
 
   return (
-    <DialogContent>
+    <DialogContent layoutKey="create-group-thread">
       <DialogHeader>
         <DialogTitle>New channel</DialogTitle>
         <DialogDescription>

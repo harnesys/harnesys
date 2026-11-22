@@ -70,7 +70,11 @@ export function ConsentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl" data-testid="addon-consent-dialog">
+      <DialogContent
+        layoutKey="addon-consent"
+        className="max-w-xl"
+        data-testid="addon-consent-dialog"
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}

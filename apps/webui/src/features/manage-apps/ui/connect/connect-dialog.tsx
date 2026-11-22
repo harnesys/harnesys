@@ -162,7 +162,7 @@ export function ConnectDialog({ orgId, catalog, kind, reconnect, onClose }: Conn
         }
       }}
     >
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent layoutKey="app-connect" className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
             {reconnect ? `Reconnect ${kind.label}` : `Connect ${kind.label}`}

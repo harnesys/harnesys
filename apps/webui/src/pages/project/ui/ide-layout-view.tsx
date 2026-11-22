@@ -142,17 +142,13 @@ function IdeGroupPane({
 }) {
   const group = useIdeGroup(groupId);
   const ws = useIdeTabs();
-  const [dragOver, setDragOver] = useState(false);
   if (!group) {
     return null;
   }
   const activeTab = ws.tabs.find((t) => t.id === group.activeId) ?? null;
   return (
     <section
-      className={cn(
-        'flex min-h-0 min-w-0 flex-1 flex-col',
-        dragOver && 'ring-1 ring-ring ring-inset',
-      )}
+      className="flex min-h-0 min-w-0 flex-1 flex-col"
       data-testid={`ide-group-${groupId}`}
       aria-label={`IDE group ${groupId}`}
       onDragOver={(e) => {
@@ -161,12 +157,9 @@ function IdeGroupPane({
           return;
         }
         e.preventDefault();
-        setDragOver(true);
       }}
-      onDragLeave={() => setDragOver(false)}
       onDrop={(e) => {
         e.preventDefault();
-        setDragOver(false);
         const drag = takeIdeDrag();
         if (!drag) {
           return;
