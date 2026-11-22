@@ -1,6 +1,6 @@
 [package]
 name = "desktop"
-version = "0.10.18"
+version = "0.10.19"
 description = "Harnesys desktop: Tauri shell around the Harnesys web studio for AI agents"
 authors = ["Mike Stotik"]
 edition = "2021"
