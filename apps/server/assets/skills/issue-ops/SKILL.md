@@ -100,6 +100,10 @@ A board rule with `run_settled` → `wake_agent` resumes parked runs without an 
 already finished; check `fireTrail` or the executor thread to distinguish that from
 "never dispatched".
 
+For keys that are not issue-bound, use the `signals` pack: agree on a key
+(e.g. `deploy:done`), park with `wait({ signal: key })`, and the finishing agent calls
+`signal_fire({ key })`.
+
 ## Common mistakes
 
 | Mistake | Reality |

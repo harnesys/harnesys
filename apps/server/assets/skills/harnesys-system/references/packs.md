@@ -171,8 +171,16 @@ No settings. No permission gate. Adds the `issue-workflow` tail note.
 | `label_create` | Create a dispatch label. |
 | `label_delete` | Delete a label; requires `confirm=true`. |
 
-### manager — org observation
-No settings. No permission gate. Read-only.
+### signals — free-form wake keys
+No settings. No permission gate. Adds the `signals-usage` tail note.
+
+| Tool | Does |
+|---|---|
+| `signal_fire` | Fire a key (`'<kind>:<id>'`, e.g. `deploy:done`): runs parked on it via `wait({ signal: key })` resume immediately; a run that parks later also resumes (fires are sticky per org). |
+
+Waiting side is the core `wait` tool: `wait({ signal: 'deploy:done', timeoutMs: 600000 })`. Unfired keys wait for the timeout.
+
+### manager — org observationNo settings. No permission gate. Read-only.
 
 | Tool | Does |
 |---|---|

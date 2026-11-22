@@ -1,21 +1,58 @@
-# Issue await: park a run until a dispatched issue settles
+# Wait and signals: park a run until a signal settles
 
-`wait` was a wall-clock sleep only, and parking on an issue required a dedicated `issue_await`
-tool plus a hand-configured `control:wait` node in the agent's graph. A coordinator that
-dispatched work through an issue board had to guess a sleep duration; a run that finished in
-2 minutes left the coordinator sleeping for the full timeout. Now the core `wait` tool parks
-the run on a signal (`signal: 'issue:<issueId>'`) and the run resumes as soon as the issue has
-no active execution — no graph edits for any agent, present or future.
+The core `wait` tool parks a run without graph nodes and resumes it into the same loop step:
 
-## Two layers
+- `wait({ delayMs })` — wall-clock sleep.
+- `wait({ signal: 'issue:<issueId>' })` — resumes when the issue has no active execution.
+- `wait({ signal: '<kind>:<id>' })` — any free-form key; the `signals` pack's `signal_fire`
+  wakes it (agent-to-agent coordination).
+
+A signal key is `'<kind>:<id>'`. Two resolution paths decide "settled":
+
+1. **Registered resolvers** — state-derived kinds (`issue:` today). The resolver answers
+   "settled?" from state, so a run that parks after the event still resumes.
+2. **Signals store fallback** — any unregistered prefix looks up the org `signals` table
+   (`key`, `fired_at`). `signal_fire` records the key (sticky) and wakes parked runs directly;
+   a later park resumes on the next reconcile tick.
+
+Unknown prefixes fall through to the store: an unfired key simply waits for the timeout —
+fail-safe, never an error.
+
+## Runtime
+
+- A waiting run persists `wake_key` + `wait_fire_at` on the run row; the wait ticker
+  (`apps/server/src/app/infra/runtime/wait-ticker.ts`, 1 s tick) reconciles: due timers and
+  settled awaits resume through `resumeParkedRun`; `SignalWakePort.wake` →
+  `LocalExecutorPort.wakeRuns` wakes instantly.
+- `signal_fire` = `SignalStorePort.recordFire` + `SignalWakePort.wake` (packs/signals,
+  ports `packages/harnesys/src/ports/signal-{store,wake}.ts`, adapters
+  `infra/org-sqlite/signal-store.adapter.ts`, `infra/runtime/signal-wake.adapter.ts`).
+- Timeout expiry resumes with `{ "timedOut": true }` (`onTimeout: continue`); a wake emits
+  `wait.resumed` with `source: 'signal'`.
+- `SignalToolsDeps` flows to the pack through the holder/provider pair
+  (`packs/signal-tools.{holder,provider}.ts`), mirroring the issues pack.
+
+## Adding a new signal kind
+
+Free-form keys need nothing — fire and wait on any `kind:id`.
+
+A state-derived kind (settled-ness derived from state, e.g. `approval:`) adds one entry in
+`await-signal-resolvers.ts`: a resolver `{ prefix, isSettled(orgId, wakeKey) }` plus a wake
+call in the producer that settles the state. The signals store fallback does not apply to
+registered prefixes, so the state check stays authoritative.
+
+Future direction: a generic event bus bridge could map domain events to wake keys
+(`event → wakeKey`), removing the direct wake call; the resolver would still be required for
+late parks.
+
+## Issue waits (layer detail)
 
 **Layer 1 — run wake (runtime).** A waiting run stores an opaque `wake_key` (`issue:<issueId>`,
-format owned by `harnesys/src/domain/await-key.ts`). The wait ticker
-(`apps/server/src/app/infra/runtime/wait-ticker.ts`, 1 s tick) reconciles every waiting run with
+format owned by `harnesys/src/domain/await-key.ts`). The wait ticker reconciles every waiting run with
 a `wake_key` against the issue's latest execution (`IssueExecutionPort.findLatestByIssue`) and
 resumes it through the same `resumeParkedRun` the timer path uses. The source of truth is state,
-not a log: no signal table, no producer wiring, no park/release race; re-dispatch during a tick
-simply keeps the wait pending.
+not a log: no signal table for state, no producer wiring, no park/release race; re-dispatch
+during a tick simply keeps the wait pending.
 
 **Layer 2 — domain event.** One producer, `releaseIssueExecution`
 (`apps/server/src/app/application/issues/release-issue-execution.ts`), routes all four release
@@ -40,7 +77,7 @@ never grows per-consumer branches.
 - Board rules: trigger `run_settled` and action `wake_agent` (`packages/contracts/src/boards.ts`).
   `assign_agent` is rejected on `run_settled` rules — a settled execution must not re-dispatch
   itself. `RunSettledRulesUseCase` subscribes to the settle event, applies
-  labels/status/notifications, and wakes the named agents through `IssueWakePort` →
+  labels/status/notifications, and wakes the named agents through `SignalWakePort` →
   `LocalExecutorPort.wakeRuns` → `wakeAwaitRuns`.
 
 ## Semantics
@@ -49,11 +86,11 @@ never grows per-consumer branches.
   execution row means dispatch has not reserved yet — not settled; the wait holds until the
   timeout. A deleted issue therefore falls through to the timeout.
 - `needs_input` does not settle: the execution stays active while the worker asks a question.
-- Unknown `wake_key` namespaces resolve to "not settled" (`await-signal-resolvers.ts` is a
-  prefix registry; `approval:`/`job:` land as new registrations later). A new trigger type is
-  one resolver registration plus a signal format — no graph changes anywhere.
-- Latency is bounded by the tick (≤ 1 s). Instant wake can be added later as a subscriber on
-  `issue-execution-settled` without moving the `wake_key` contract.
+- Free-form signal keys resolve through the signals store; registered prefixes stay
+  authoritative for their kinds. A new state-derived trigger type is one resolver registration
+  plus a wake call in its producer — no graph changes anywhere.
+- Latency is bounded by the tick (≤ 1 s); registered kinds with a producer wake call resume
+  instantly.
 
 ## Agent wiring
 

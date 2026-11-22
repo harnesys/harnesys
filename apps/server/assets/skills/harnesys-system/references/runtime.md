@@ -52,6 +52,25 @@ Notes are wrapped as `<tag>…</tag>` under a `Runtime notes (refreshed before t
 - `agents_spawn` children use the child's own budget or the parent's, capped by any per-call `budget` and `permissions` grant; a child can never exceed its parent's gates.
 - Custom graphs with cycles require `maxSteps` or `deadlineMs`, otherwise validation fails with `graph has cycle but no budget.maxSteps/deadlineMs`.
 
+## Waiting and signals
+
+`wait` parks the run without graph nodes; it resumes into the same loop step.
+
+- `wait({ delayMs })` — plain sleep (1 ms–7 d), resumes with "wait elapsed".
+- `wait({ signal: 'issue:<issueId>' })` — resumes when the issue has no active execution
+  (the dispatched run completed, failed or was cancelled). A question the worker asks
+  (`needs_input`) does not resume it; a re-dispatch keeps the wait pending.
+- `wait({ signal: 'deploy:done' })` — any free-form key (`'<kind>:<id>'`) works with the
+  `signals` pack: the finishing agent calls `signal_fire({ key })`.
+- `timeoutMs` bounds every signal wait (default 30 min, max 7 d); on expiry the run resumes
+  with `timedOut: true` and the tool result "wait timed out" — the loop continues, the run
+  does not fail. Report the timeout instead of waiting silently.
+- Fires are sticky per org: if the signal fired before you parked, you still resume on the
+  next reconcile tick (≤ 1 s). A signal cannot be "un-fired"; use a fresh key for the next
+  occurrence (e.g. `deploy:2026-01-07`).
+- Unknown keys are not an error: they simply wait for the timeout. Latency after a wake is
+  at most one reconcile tick; `issue:` signals also wake instantly via the settle event.
+
 ## Sandboxed children
 
 - `agents_spawn` children run sandboxed: `ask` gates become `denied in subagent context: …` instead of a prompt. `agents_handoff` is not a sandboxed child — it hands the thread to another top-level agent with its own grants, and is forbidden inside a sandboxed run.
