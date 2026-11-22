@@ -5,9 +5,9 @@ import {
   type InMemoryRuntimeState,
   type ModelBinding,
   type ModelsPort,
+  type PendingSessionEvent,
   type RunEventStore,
   type RunTarget,
-  rebuildThreadMessages,
   type Snapshot,
   type ToolDefinition,
 } from 'harnesys';
@@ -17,16 +17,9 @@ import {
   ThreadNotFoundException,
   ThreadValidationException,
 } from '../../domain/thread/thread.error.ts';
-import type { ThreadRecord } from '../../domain/thread/thread.ts';
-import { type CompactionBoundary, resolveCompactionCursor } from './compaction-cursor.ts';
 import type { CompactOutcome, CompactProgressSink } from './org-runtime-compact-progress.ts';
 import { closeUnfinishedProgress, createProgressAppender } from './org-runtime-compact-progress.ts';
 import type { RunTargetSelector } from './org-runtime-run-target.ts';
-import {
-  sliceThreadHistory,
-  type ThreadSliceOpts,
-  threadSliceOptsOf,
-} from './thread-history-slice.ts';
 
 export interface CompactThreadDeps {
   models: ModelsPort;
@@ -38,8 +31,6 @@ export interface CompactThreadDeps {
     state: InMemoryRuntimeState,
     selector?: RunTargetSelector,
   ) => Promise<RunTarget | null>;
-  findThread?: (threadId: string) => ThreadRecord | null | undefined;
-  activeRunIdOf?: (threadId: string) => Promise<string | null>;
 }
 
 const CANCELLED: CompactThreadResult = { compacted: false, reason: 'cancelled' };
@@ -62,7 +53,6 @@ export async function compactThread(
   const snapshot = await state.load();
   const mutable = mutableStateOf(snapshot);
   const messageCount = Array.isArray(mutable.messages) ? mutable.messages.length : -1;
-  const sliceOpts = await compactSliceOpts(deps, threadId);
   const runId = await resolveCompactRunId(deps.events, threadId, snapshot?.runId);
   const progress = createProgressAppender(deps, threadId, runId);
   const outcome = await runForcedCompact(deps, {
@@ -86,7 +76,6 @@ export async function compactThread(
     mutable,
     completed,
     messageCount,
-    sliceOpts,
     runId,
   });
   return {
@@ -194,7 +183,6 @@ async function persistCompact(
     mutable: Record<string, unknown>;
     completed: CompactionMessage;
     messageCount: number;
-    sliceOpts: ThreadSliceOpts | null;
     runId: string | undefined;
   },
 ): Promise<void> {
@@ -219,71 +207,51 @@ async function persistCompact(
   if (!runId) {
     return;
   }
-  const boundary = await resolveCompactBoundary(
-    deps.events,
-    input.threadId,
-    input.completed.coveredUntil,
-    input.messageCount,
-    input.sliceOpts ?? undefined,
-  );
   await deps.events.appendForThread(input.threadId, runId, [
-    {
-      type: 'compaction',
-      id: input.completed.id,
-      reason: 'manual',
-      coveredFrom: input.completed.coveredFrom,
-      coveredUntil: input.completed.coveredUntil,
-      tokensBefore: input.completed.stats.tokensBefore,
-      tokensAfter: input.completed.stats.tokensAfter,
-      summary: input.completed.content,
-      coveredTotal: input.messageCount,
-      ...(boundary
-        ? {
-            coveredUntilRunId: boundary.runId,
-            coveredUntilSeq: boundary.seq,
-            coveredUntilThreadSeq: boundary.threadSeq,
-          }
-        : { coveredUntilThreadSeq: null }),
-    },
+    manualAnchorEvent(input.completed, input.messageCount),
   ]);
 }
 
-export async function resolveCompactBoundary(
-  events: RunEventStore,
-  threadId: string,
-  coveredUntil: number,
+export function manualAnchorEvent(
+  completed: CompactionMessage,
   messageCount: number,
-  sliceOpts?: ThreadSliceOpts,
-): Promise<CompactionBoundary | null> {
-  const listed = await events.listByThread(threadId);
-  const sliced = sliceOpts ? sliceThreadHistory(listed, sliceOpts) : listed;
-  const sources: number[] = [];
-  const messages = rebuildThreadMessages(sliced, {
-    messageSources: sources,
-    ...(sliceOpts?.activeRunId ? { activeRunId: sliceOpts.activeRunId } : {}),
-  });
-  return resolveCompactionCursor({
-    rebuiltCount: messages.length,
+): PendingSessionEvent {
+  const boundary =
+    completed.coveredUntilRunId !== undefined && completed.coveredUntilSeq !== undefined
+      ? { runId: completed.coveredUntilRunId, seq: completed.coveredUntilSeq }
+      : null;
+  const cursor: Partial<Extract<PendingSessionEvent, { type: 'compaction' }>> = {};
+  if (completed.durable === false) {
+    cursor.durable = false;
+    if (completed.unresolvedReason !== undefined) {
+      cursor.unresolvedReason = completed.unresolvedReason;
+    }
+  } else if (boundary) {
+    cursor.coveredUntilRunId = boundary.runId;
+    cursor.coveredUntilSeq = boundary.seq;
+    if (completed.coveredKind !== undefined) {
+      cursor.coveredKind = completed.coveredKind;
+    }
+    if (completed.coveredToolCallId !== undefined) {
+      cursor.coveredToolCallId = completed.coveredToolCallId;
+    }
+  } else {
+    cursor.durable = false;
+    cursor.unresolvedReason =
+      completed.coveredUntilEngSeq !== undefined ? 'eng-seq-not-replayable' : 'no-sourced-boundary';
+  }
+  return {
+    type: 'compaction',
+    id: completed.id,
+    reason: 'manual',
+    coveredFrom: completed.coveredFrom,
+    coveredUntil: completed.coveredUntil,
+    tokensBefore: completed.stats.tokensBefore,
+    tokensAfter: completed.stats.tokensAfter,
+    summary: completed.content,
     coveredTotal: messageCount,
-    coveredUntil,
-    sources,
-    sliced,
-  });
-}
-
-async function compactSliceOpts(
-  deps: CompactThreadDeps,
-  threadId: string,
-): Promise<ThreadSliceOpts | null> {
-  if (!deps.findThread || !deps.activeRunIdOf) {
-    return null;
-  }
-  const thread = deps.findThread(threadId);
-  if (!thread) {
-    return null;
-  }
-  const activeRunId = await deps.activeRunIdOf(threadId).catch(() => null);
-  return threadSliceOptsOf(thread, activeRunId);
+    ...cursor,
+  } as PendingSessionEvent;
 }
 
 function mutableStateOf(snapshot: Snapshot | null): Record<string, unknown> {

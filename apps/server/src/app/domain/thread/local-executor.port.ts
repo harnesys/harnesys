@@ -40,7 +40,6 @@ export interface SendLocalRunInput {
 }
 
 export type CompactSkipReason =
-  | 'no-context-window'
   | 'invalid-output-reserve'
   | 'near-threshold'
   | 'empty-history'

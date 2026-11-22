@@ -28,9 +28,6 @@ export const SLASH_COMMANDS: SlashCommand[] = [
         if (result.compacted) {
           return undefined;
         }
-        if (result.reason === 'no-context-window') {
-          return 'Compaction unavailable: model context window is unknown';
-        }
         if (result.reason === 'invalid-output-reserve') {
           return 'Compaction unavailable: output reserve exceeds the context window';
         }

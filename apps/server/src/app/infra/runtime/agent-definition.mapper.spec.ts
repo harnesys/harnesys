@@ -170,4 +170,106 @@ describe('toAgentDefinition compaction', () => {
     });
     expect(def.compaction).toEqual(defaultAgentCompaction());
   });
+
+  test('absolute maxContextTokens and protectTokens pass through', () => {
+    const ref = {
+      name: 'threshold-summary',
+      spec: { maxContextTokens: 200_000, protectTokens: 24_000, auto: true },
+    };
+    const def = toAgentDefinition(recordOf({ compactionJson: ref }), {
+      model: undefined,
+      provider: undefined,
+    });
+    expect(def.compaction).toEqual(ref);
+  });
+
+  test('absolute budget together with a legacy ratio is accepted', () => {
+    const ref = {
+      name: 'threshold-summary',
+      spec: { maxContextTokens: 200_000, thresholdRatio: 0.6, protectRecentRatio: 0.1 },
+    };
+    const def = toAgentDefinition(recordOf({ compactionJson: ref }), {
+      model: undefined,
+      provider: undefined,
+    });
+    expect(def.compaction).toEqual(ref);
+  });
+
+  test('protectTokens at or above maxContextTokens no longer throws: ref passes through with a warning', () => {
+    const ref = {
+      name: 'threshold-summary',
+      spec: { maxContextTokens: 100_000, protectTokens: 100_000 },
+    };
+    const warnings: string[] = [];
+    const def = toAgentDefinition(
+      recordOf({ compactionJson: ref }),
+      { model: undefined, provider: undefined },
+      (reason) => warnings.push(reason),
+    );
+    expect(def.compaction).toEqual(ref);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain('compaction config normalized');
+    expect(warnings[0]).toContain('protectTokens');
+  });
+
+  test('non-positive token budgets no longer throw: ref passes through with a warning', () => {
+    for (const spec of [{ maxContextTokens: 0 }, { protectTokens: -1 }]) {
+      const ref = { name: 'threshold-summary', spec };
+      const warnings: string[] = [];
+      const def = toAgentDefinition(
+        recordOf({ compactionJson: ref }),
+        { model: undefined, provider: undefined },
+        (reason) => warnings.push(reason),
+      );
+      expect(def.compaction).toEqual(ref);
+      expect(warnings).toHaveLength(1);
+    }
+  });
+
+  test('ratios outside their ranges no longer throw: ref passes through with a warning', () => {
+    const normalized = [
+      { thresholdRatio: 0.05 },
+      { thresholdRatio: 1.4 },
+      { protectRecentRatio: 1.2 },
+      { outputReserveRatio: 0.95 },
+      { outputReserveRatio: -0.1 },
+    ];
+    for (const spec of normalized) {
+      const ref = { name: 'threshold-summary', spec };
+      const warnings: string[] = [];
+      const def = toAgentDefinition(
+        recordOf({ compactionJson: ref }),
+        { model: undefined, provider: undefined },
+        (reason) => warnings.push(reason),
+      );
+      expect(def.compaction).toEqual(ref);
+      expect(warnings).toHaveLength(1);
+    }
+  });
+
+  test('legacy out-of-range thresholdRatio assembles without throwing', () => {
+    const ref = { name: 'threshold-summary', spec: { thresholdRatio: 1.5 } };
+    const warnings: string[] = [];
+    const def = toAgentDefinition(
+      recordOf({ compactionJson: ref }),
+      { model: undefined, provider: undefined },
+      (reason) => warnings.push(reason),
+    );
+    expect(def.compaction).toEqual(ref);
+    expect(warnings[0]).toContain('thresholdRatio');
+  });
+
+  test('a valid spec produces no warning', () => {
+    const ref = {
+      name: 'threshold-summary',
+      spec: { maxContextTokens: 200_000, protectTokens: 24_000, thresholdRatio: 0.6 },
+    };
+    const warnings: string[] = [];
+    toAgentDefinition(
+      recordOf({ compactionJson: ref }),
+      { model: undefined, provider: undefined },
+      (reason) => warnings.push(reason),
+    );
+    expect(warnings).toHaveLength(0);
+  });
 });

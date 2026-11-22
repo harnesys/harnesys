@@ -106,6 +106,9 @@ export class InMemoryRunEventStore implements RunEventStore {
   latestSeq(runId: string): Promise<number> {
     return Promise.resolve(this.nextSeq.get(runId) ?? 0);
   }
+  listByRun(runId: string): Promise<SessionEvent[]> {
+    return Promise.resolve((this.events.get(runId) ?? []).map((event) => ({ ...event })));
+  }
   listByThread(threadId: string): Promise<SessionEvent[]> {
     return Promise.resolve(
       this.insertion.filter((e) => e.threadId === threadId).map((e) => e.event),

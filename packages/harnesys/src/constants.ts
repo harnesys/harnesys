@@ -376,5 +376,8 @@ export const PASSTHROUGH_MODEL_EVENTS = new Set([
   'model.throttle',
 ]);
 export const CHARS_PER_TOKEN_ESTIMATE = 4;
+export const CHARS_PER_TOKEN_LATIN = 4;
+export const CHARS_PER_TOKEN_CYRILLIC = 2.5;
+export const CHARS_PER_TOKEN_CJK = 1.2;
 export const RAW_REQUEST_MAX_CHARS = 1_000_000;
 export const RAW_REQUEST_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;

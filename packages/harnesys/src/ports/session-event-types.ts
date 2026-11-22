@@ -43,4 +43,5 @@ export interface SessionEventScope {
   author?: { provider: string; providerUserId: string; displayName: string };
   agentId?: string;
   agentName?: string;
+  engSeq?: number;
 }

@@ -164,6 +164,11 @@ export type SessionEvent = SessionEventScope &
         coveredUntilThreadSeq?: number | null;
         /** Message list length at compaction time; guards cursor resolution. */
         coveredTotal?: number;
+        coveredUntilEngSeq?: number;
+        coveredKind?: 'assistant' | 'user' | 'tool';
+        coveredToolCallId?: string;
+        durable?: boolean;
+        unresolvedReason?: string;
         seq?: number;
         runId?: string;
         clientEventId?: string;

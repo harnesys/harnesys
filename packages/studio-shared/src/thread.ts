@@ -165,7 +165,6 @@ export type CompactThreadResponse =
   | {
       compacted: false;
       reason?:
-        | 'no-context-window'
         | 'invalid-output-reserve'
         | 'empty-history'
         | 'resume-pending'

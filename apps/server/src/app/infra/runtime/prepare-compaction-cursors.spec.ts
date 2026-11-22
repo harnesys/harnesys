@@ -2,7 +2,6 @@ import { Database } from 'bun:sqlite';
 import { describe, expect, test } from 'bun:test';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import type { PendingSessionEvent, SessionEvent } from 'harnesys';
-import type { ThreadRecord } from '../../domain/thread/thread.ts';
 import {
   CREATE_RUN_EVENTS_SQL,
   CREATE_RUNS_SQL,
@@ -10,35 +9,11 @@ import {
 } from '../org-sqlite/org-sql.ts';
 import * as schema from '../org-sqlite/schema/index.ts';
 import { createCompactionCursorPreparer } from './prepare-compaction-cursors.ts';
-import { MemoryThreads } from './prepare-org-target.fakes.ts';
 import { SqliteRunEventStore } from './sqlite-run-events.adapter.ts';
 
 const ORG_ID = 'org-1';
 const THREAD_ID = 'thread-1';
 const RUN_ID = 'run-1';
-
-function threadRecord(): ThreadRecord {
-  const now = new Date().toISOString();
-  return {
-    id: THREAD_ID,
-    orgId: ORG_ID,
-    title: 't',
-    kind: 'chat',
-    autoReplyAgentId: null,
-    policy: { version: 2 },
-    lastThreadSeq: 0,
-    conversationCount: 0,
-    parentThreadId: null,
-    forkAt: null,
-    inheritedEventCount: 0,
-    metadata: {},
-    runProfileId: null,
-    runDirectory: null,
-    createdAt: now,
-    updatedAt: now,
-    lastReadAt: now,
-  };
-}
 
 function storeOf(): SqliteRunEventStore {
   const sqlite = new Database(':memory:');
@@ -59,9 +34,7 @@ function storeOf(): SqliteRunEventStore {
        VALUES (?, ?, 'agent-1', 'Coder', 'running', ?, ?)`,
     )
     .run(RUN_ID, THREAD_ID, at, at);
-  const threads = new MemoryThreads();
-  threads.insert(threadRecord());
-  const prepare = createCompactionCursorPreparer({ orgId: ORG_ID, threads });
+  const prepare = createCompactionCursorPreparer();
   return new SqliteRunEventStore(drizzle(sqlite, { schema }), { prepare });
 }
 
@@ -102,23 +75,44 @@ function anchorOf(events: SessionEvent[]): SessionEvent & { type: 'compaction' }
 }
 
 describe('prepareCompactionCursors', () => {
-  test('stamps the cursor of the covered source event onto an auto anchor', async () => {
-    const events = await appendHistory(storeOf(), anchorEvent({}));
+  test('stamps the thread cursor of the persisted boundary event', async () => {
+    const events = await appendHistory(
+      storeOf(),
+      anchorEvent({ coveredUntilRunId: RUN_ID, coveredUntilSeq: 2 }),
+    );
     const covered = events[1];
     const anchor = anchorOf(events);
     expect(covered?.type).toBe('model.usage');
     expect(anchor.coveredUntilThreadSeq).toBe(covered?.threadSeq);
     expect(anchor.coveredUntilRunId).toBe(RUN_ID);
-    expect(anchor.coveredUntilSeq).toBe(covered?.seq);
+    expect(anchor.coveredUntilSeq).toBe(2);
+    expect(anchor.durable).toBeUndefined();
   });
 
-  test('a replay that diverges from the compacted state is stamped null', async () => {
-    const events = await appendHistory(storeOf(), anchorEvent({ coveredTotal: 5 }));
-    expect(anchorOf(events).coveredUntilThreadSeq).toBeNull();
+  test('a boundary missing from the journal degrades the anchor instead of guessing', async () => {
+    const events = await appendHistory(
+      storeOf(),
+      anchorEvent({ coveredUntilRunId: 'run-9', coveredUntilSeq: 99 }),
+    );
+    const anchor = anchorOf(events);
+    expect(anchor.coveredUntilThreadSeq).toBeUndefined();
+    expect(anchor.durable).toBe(false);
+    expect(anchor.unresolvedReason).toBe('boundary-not-persisted');
   });
 
   test('an already stamped anchor passes through the hook untouched', async () => {
     const events = await appendHistory(storeOf(), anchorEvent({ coveredUntilThreadSeq: 7 }));
     expect(anchorOf(events).coveredUntilThreadSeq).toBe(7);
+  });
+
+  test('a degraded anchor without journal coordinates passes through untouched', async () => {
+    const events = await appendHistory(
+      storeOf(),
+      anchorEvent({ durable: false, unresolvedReason: 'boundary-not-in-ledger' }),
+    );
+    const anchor = anchorOf(events);
+    expect(anchor.durable).toBe(false);
+    expect(anchor.unresolvedReason).toBe('boundary-not-in-ledger');
+    expect(anchor.coveredUntilThreadSeq).toBeUndefined();
   });
 });

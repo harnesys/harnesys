@@ -1,13 +1,55 @@
 import { type GateModelInfo, mediaDeliveryGates } from '../../adapters/ai-llm-provider.ts';
-import { CHARS_PER_TOKEN_ESTIMATE, IMAGE_TOKEN_ESTIMATE } from '../../constants.ts';
+import {
+  CHARS_PER_TOKEN_CJK,
+  CHARS_PER_TOKEN_CYRILLIC,
+  CHARS_PER_TOKEN_ESTIMATE,
+  CHARS_PER_TOKEN_LATIN,
+  IMAGE_TOKEN_ESTIMATE,
+} from '../../constants.ts';
 import { type HistoryMessage, selectMaterializable } from '../tool-message.ts';
 export interface TokenEstimate {
   messages: number;
   tools: number;
   total: number;
 }
-function textLen(value: unknown): number {
-  return typeof value === 'string' ? value.length : 0;
+type ScriptClass = 'latin' | 'cyrillic' | 'cjk';
+function scriptClassOf(code: number): ScriptClass {
+  if (code >= 0x0400 && code <= 0x04ff) {
+    return 'cyrillic';
+  }
+  if ((code >= 0x3040 && code <= 0x30ff) || (code >= 0x4e00 && code <= 0x9fff)) {
+    return 'cjk';
+  }
+  return 'latin';
+}
+function charsPerTokenOf(script: ScriptClass): number {
+  if (script === 'cyrillic') {
+    return CHARS_PER_TOKEN_CYRILLIC;
+  }
+  if (script === 'cjk') {
+    return CHARS_PER_TOKEN_CJK;
+  }
+  return CHARS_PER_TOKEN_LATIN;
+}
+export function textTokensOf(text: string): number {
+  if (text.length === 0) {
+    return 0;
+  }
+  let tokens = 0;
+  let index = 0;
+  while (index < text.length) {
+    const script = scriptClassOf(text.charCodeAt(index));
+    const start = index;
+    index++;
+    while (index < text.length && scriptClassOf(text.charCodeAt(index)) === script) {
+      index++;
+    }
+    tokens += (index - start) / charsPerTokenOf(script);
+  }
+  return tokens;
+}
+function textCharsOf(value: unknown): string {
+  return typeof value === 'string' ? value : '';
 }
 function jsonLen(value: unknown): number {
   if (value === undefined || value === null) {
@@ -24,14 +66,10 @@ export function estimateMessageTokens(message: unknown): number {
     return 0;
   }
   const m = message as Record<string, unknown>;
-  const chars =
-    textLen(m.content) +
-    textLen(m.reasoning) +
-    jsonLen(m.toolCalls) +
-    jsonLen(m.attachments) +
-    jsonLen(m.sources) +
-    jsonLen(m.files);
-  return Math.ceil(chars / CHARS_PER_TOKEN_ESTIMATE);
+  const jsonChars =
+    jsonLen(m.toolCalls) + jsonLen(m.attachments) + jsonLen(m.sources) + jsonLen(m.files);
+  const textTokens = textTokensOf(textCharsOf(m.content)) + textTokensOf(textCharsOf(m.reasoning));
+  return Math.ceil(textTokens + jsonChars / CHARS_PER_TOKEN_ESTIMATE);
 }
 export interface EstimateMediaOptions {
   model?: GateModelInfo;
@@ -43,7 +81,13 @@ export interface UsageAnchor {
 export function usageAnchorOf(messages: readonly unknown[]): UsageAnchor | undefined {
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i] as Record<string, unknown> | null | undefined;
-    if (!m || typeof m !== 'object' || m.role !== 'assistant' || m.kind === 'compaction') {
+    if (!m || typeof m !== 'object') {
+      continue;
+    }
+    if (m.kind === 'compaction') {
+      break;
+    }
+    if (m.role !== 'assistant') {
       continue;
     }
     const usage = m.usage as Record<string, unknown> | null | undefined;

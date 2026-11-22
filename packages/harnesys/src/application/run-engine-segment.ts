@@ -1,6 +1,6 @@
 import { RUN_NON_TERMINAL } from '../constants.ts';
 import { AskUserInterrupt } from '../domain/errors.ts';
-import type { Snapshot } from '../domain/snapshot.ts';
+import type { Event, Snapshot } from '../domain/snapshot.ts';
 import type { Logger } from '../ports/logger.ts';
 import type { PendingSessionEvent, RunEventStore } from '../ports/run-event-store.ts';
 import type { RunLifecycleStore, RunTransitionPatch } from '../ports/run-lifecycle-store.ts';
@@ -8,6 +8,7 @@ import type { RuntimeState } from '../ports/runtime-state.ts';
 import type { SessionEvent } from '../ports/session.ts';
 import type { GraphOpts } from './graph.ts';
 import { startGraph } from './graph.ts';
+import type { MessageSourceKind } from './message-source.ts';
 import { finalProviderMessage, isProviderError } from './provider-error.ts';
 import {
   eventToSessionEvent,
@@ -87,6 +88,105 @@ function lastText(snap: Snapshot | null): string | undefined {
 export function admit(env: SegmentEnv, runId: string, event: PendingSessionEvent): SessionEvent {
   const seq = env.events.next(runId);
   return { ...event, seq, runId } as SessionEvent;
+}
+
+type BoundaryKind = 'assistant' | 'user' | 'tool' | 'other';
+
+interface BoundaryLedgerEntry {
+  admittedSeq: number;
+  kind: BoundaryKind;
+  toolCallId?: string;
+}
+
+type BoundaryLedger = Map<number, BoundaryLedgerEntry>;
+
+function boundaryKindOf(event: SessionEvent): BoundaryKind {
+  if (event.type === 'model.usage' || event.type === 'compaction') {
+    return 'assistant';
+  }
+  if (event.type === 'user') {
+    return 'user';
+  }
+  if (
+    event.type === 'tool' &&
+    (event.phase === 'completed' || event.phase === 'failed' || event.phase === 'skipped')
+  ) {
+    return 'tool';
+  }
+  return 'other';
+}
+
+function boundaryEntryOf(event: SessionEvent): BoundaryLedgerEntry {
+  return {
+    admittedSeq: event.seq ?? 0,
+    kind: boundaryKindOf(event),
+    ...(event.type === 'tool' && event.toolCallId ? { toolCallId: event.toolCallId } : {}),
+  };
+}
+
+export function restoreBoundaryLedger(events: SessionEvent[]): BoundaryLedger {
+  const ledger: BoundaryLedger = new Map();
+  for (const event of events) {
+    if (typeof event.engSeq !== 'number' || typeof event.seq !== 'number') {
+      continue;
+    }
+    ledger.set(event.engSeq, boundaryEntryOf(event));
+  }
+  return ledger;
+}
+
+function boundaryKindMatches(
+  kind: MessageSourceKind | undefined,
+  entry: BoundaryLedgerEntry,
+): boolean {
+  if (kind === undefined) {
+    return false;
+  }
+  if (kind === 'tool') {
+    return entry.kind === 'tool';
+  }
+  return entry.kind === kind;
+}
+
+export function resolveAnchorCursor(
+  anchor: Extract<SessionEvent, { type: 'compaction' }>,
+  ledger: BoundaryLedger,
+  runId: string,
+): void {
+  if (anchor.durable === false) {
+    return;
+  }
+  if (typeof anchor.coveredUntilRunId === 'string' && typeof anchor.coveredUntilSeq === 'number') {
+    return;
+  }
+  const entry =
+    typeof anchor.coveredUntilEngSeq === 'number'
+      ? ledger.get(anchor.coveredUntilEngSeq)
+      : undefined;
+  if (!entry || entry.kind === 'other') {
+    anchor.durable = false;
+    anchor.unresolvedReason = 'boundary-not-in-ledger';
+    return;
+  }
+  if (
+    !boundaryKindMatches(anchor.coveredKind, entry) ||
+    (anchor.coveredKind === 'tool' && entry.toolCallId !== anchor.coveredToolCallId)
+  ) {
+    anchor.durable = false;
+    anchor.unresolvedReason = 'boundary-type-mismatch';
+    return;
+  }
+  anchor.coveredUntilRunId = runId;
+  anchor.coveredUntilSeq = entry.admittedSeq;
+}
+
+function engineSeqOf(event: Event): number | undefined {
+  const value = (event.metadata as Record<string, unknown> | undefined)?.engSeq;
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function withEngSeq(event: SessionEvent, engSeq: number | undefined): SessionEvent {
+  return engSeq === undefined ? event : ({ ...event, engSeq } as SessionEvent);
 }
 export async function flushJournal(env: SegmentEnv, ctx: SegmentCtx): Promise<boolean> {
   if (ctx.pending.length === 0) {
@@ -349,6 +449,7 @@ export async function runSegment(
 ): Promise<void> {
   const ctx: SegmentCtx = { runId, epoch, pending: [] };
   const tail: SegmentTail = {};
+  const ledger = restoreBoundaryLedger(await env.events.listByRun(runId));
   let lastFlushAt = Date.now();
   let ask: {
     event: PendingSessionEvent;
@@ -376,14 +477,21 @@ export async function runSegment(
         }
         continue;
       }
-      if (mapped.type === 'compaction') {
+      const engSeq = engineSeqOf(event);
+      const prepared = withEngSeq(mapped, engSeq);
+      if (prepared.type === 'compaction') {
         // The append hook resolves this anchor's thread cursor from the
         // already-persisted stream, so everything before it must be committed.
         if (!(await flushJournal(env, ctx))) {
           return;
         }
+        resolveAnchorCursor(prepared, ledger, runId);
       }
-      ctx.pending.push(admit(env, runId, mapped));
+      const admitted = admit(env, runId, prepared);
+      if (engSeq !== undefined) {
+        ledger.set(engSeq, boundaryEntryOf(admitted));
+      }
+      ctx.pending.push(admitted);
       if (
         ctx.pending.length >= env.journalBatch ||
         isToolBoundary(mapped) ||

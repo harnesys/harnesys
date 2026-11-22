@@ -256,6 +256,9 @@ export function eventToSessionEvent(ev: Event): SessionEvent | null {
       return null;
     }
     const reason = m?.reason === 'manual' ? ('manual' as const) : ('threshold' as const);
+    const kind = m?.coveredKind;
+    const coveredKind: 'assistant' | 'user' | 'tool' | undefined =
+      kind === 'assistant' || kind === 'user' || kind === 'tool' ? kind : undefined;
     const covered = {
       type: 'compaction' as const,
       id,
@@ -264,6 +267,21 @@ export function eventToSessionEvent(ev: Event): SessionEvent | null {
       coveredUntil: num(m?.coveredUntil) ?? 0,
       tokensBefore: num(m?.tokensBefore) ?? 0,
       tokensAfter: num(m?.tokensAfter) ?? 0,
+      ...(num(m?.coveredUntilEngSeq) !== undefined
+        ? { coveredUntilEngSeq: num(m?.coveredUntilEngSeq) }
+        : {}),
+      ...(coveredKind !== undefined ? { coveredKind } : {}),
+      ...(typeof m?.coveredToolCallId === 'string'
+        ? { coveredToolCallId: m.coveredToolCallId }
+        : {}),
+      ...(typeof m?.coveredUntilRunId === 'string'
+        ? { coveredUntilRunId: m.coveredUntilRunId }
+        : {}),
+      ...(num(m?.coveredUntilSeq) !== undefined
+        ? { coveredUntilSeq: num(m?.coveredUntilSeq) }
+        : {}),
+      ...(m?.durable === false ? { durable: false } : {}),
+      ...(typeof m?.unresolvedReason === 'string' ? { unresolvedReason: m.unresolvedReason } : {}),
     };
     const total = num(m?.messageCount);
     const stamped = total === undefined ? covered : { ...covered, coveredTotal: total };

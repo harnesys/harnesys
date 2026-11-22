@@ -113,14 +113,35 @@ afterEach(() => {
 });
 
 describe('runSummaryPassIfDue threshold evaluation', () => {
-  test('missing context window yields a visible skip instead of silence', async () => {
+  test('unknown model window compacts at the absolute budget instead of skipping', async () => {
+    stubFetch(summarySse);
     const ctx = ctxOf({
-      agent: agentOf({ thresholdRatio: 0.8 }),
+      agent: agentOf({ maxContextTokens: 1000, preCompactNote: false }),
       binding: bindingOf(),
-      messages: [user(3600)],
+      messages: [user(4400), user(2400)],
     });
     const events = await collect(runSummaryPassIfDue(ctx));
-    expect(events).toEqual([{ type: 'skipped', reason: 'no-context-window' }]);
+    expect(events.at(-1)?.type).toBe('completed');
+  });
+
+  test('a known window caps the absolute budget', async () => {
+    stubFetch(summarySse);
+    const ctx = ctxOf({
+      agent: agentOf({ maxContextTokens: 200_000, preCompactNote: false }),
+      binding: bindingOf(1000),
+      messages: [user(4400)],
+    });
+    const events = await collect(runSummaryPassIfDue(ctx));
+    expect(events.at(-1)?.type).toBe('completed');
+  });
+
+  test('the legacy ratio is ignored once an absolute budget is set', async () => {
+    const ctx = ctxOf({
+      agent: agentOf({ maxContextTokens: 200_000, thresholdRatio: 0.1, preCompactNote: false }),
+      binding: bindingOf(1000),
+      messages: [user(3000)],
+    });
+    expect(await collect(runSummaryPassIfDue(ctx))).toEqual([]);
   });
 
   test('spec context window overrides a missing model window', async () => {
@@ -169,19 +190,19 @@ describe('runSummaryPassIfDue threshold evaluation', () => {
           headers: { 'retry-after-ms': '1' },
         }),
     );
-    const reserved = agentOf({ thresholdRatio: 0.8, preCompactNote: false });
+    const reserved = agentOf({ maxContextTokens: 1000, protectTokens: 100, preCompactNote: false });
     reserved.generation = { maxTokens: 400 };
     const aboveThreshold = ctxOf({
       agent: reserved,
       binding: bindingOf(1000),
-      messages: [user(120), user(2800), user(120)],
+      messages: [user(120), user(3600), user(120)],
     });
     expect((await collect(runSummaryPassIfDue(aboveThreshold))).at(-1)?.type).toBe('failed');
-    const plain = agentOf({ thresholdRatio: 0.8, preCompactNote: false });
+    const plain = agentOf({ maxContextTokens: 1000, protectTokens: 100, preCompactNote: false });
     const belowThreshold = ctxOf({
       agent: plain,
       binding: bindingOf(1000),
-      messages: [user(120), user(2800), user(120)],
+      messages: [user(120), user(3600), user(120)],
     });
     expect(await collect(runSummaryPassIfDue(belowThreshold))).toEqual([{ type: 'pressure' }]);
   });
@@ -225,6 +246,21 @@ describe('runSummaryPassIfDue threshold evaluation', () => {
     expect(events).toEqual([{ type: 'skipped', reason: 'near-threshold' }]);
   });
 
+  test('a custom pre-threshold gap moves the near-threshold note', async () => {
+    const narrow = ctxOf({
+      agent: agentOf({ thresholdRatio: 0.8, preThresholdGapRatio: 0.02 }),
+      messages: [user(3000)],
+    });
+    expect(await collect(runSummaryPassIfDue(narrow))).toEqual([]);
+    const wide = ctxOf({
+      agent: agentOf({ thresholdRatio: 0.8, preThresholdGapRatio: 0.2 }),
+      messages: [user(2600)],
+    });
+    expect(await collect(runSummaryPassIfDue(wide))).toEqual([
+      { type: 'skipped', reason: 'near-threshold' },
+    ]);
+  });
+
   test('preCompactNote false leaves the pressure note intact', async () => {
     const ctx = ctxOf({
       agent: agentOf({ thresholdRatio: 0.8, preCompactNote: false }),
@@ -256,6 +292,24 @@ describe('runSummaryPassIfDue threshold evaluation', () => {
     ctx.state.$resume = { answer: 1 };
     const events = await collect(runSummaryPassIfDue(ctx));
     expect(events).toEqual([{ type: 'skipped', reason: 'resume-pending' }]);
+  });
+
+  test('a small window caps the protected tail so the newest messages survive', async () => {
+    stubFetch(summarySse);
+    const messages: unknown[] = [];
+    for (let i = 0; i < 10; i += 1) {
+      messages.push(user(8000));
+    }
+    const total = messages.length;
+    const ctx = ctxOf({
+      agent: agentOf({}),
+      binding: bindingOf(8192),
+      messages,
+    });
+    const events = await collect(runSummaryPassIfDue(ctx));
+    const completed = events.at(-1) as { type: string; message?: { coveredUntil?: number } };
+    expect(completed.type).toBe('completed');
+    expect(completed.message?.coveredUntil).toBeLessThan(total - 1);
   });
 });
 
@@ -323,7 +377,7 @@ describe('runSummaryPassIfDue failure and model choice', () => {
       },
     ];
     const base = {
-      thresholdRatio: 0.8,
+      protectTokens: 10,
       preCompactNote: false,
       summaryModel: { provider: 'other', model: 'sum' },
     };
@@ -335,7 +389,7 @@ describe('runSummaryPassIfDue failure and model choice', () => {
     });
     expect((await collect(runSummaryPassIfDue(capped))).at(-1)?.type).toBe('failed');
     const uncapped = ctxOf({
-      agent: agentOf({ thresholdRatio: 0.8, preCompactNote: false }),
+      agent: agentOf({ protectTokens: 10, preCompactNote: false }),
       binding: bindingOf(1000),
       messages: [user(1000), user(120), user(120)],
     });
@@ -354,14 +408,25 @@ describe('runSummaryPassIfDue failure and model choice', () => {
     }
   });
 
-  test('manual pass without a context window skips with a visible reason', async () => {
+  test('manual pass on an unknown window compacts at the absolute budget', async () => {
+    stubFetch(summarySse);
     const ctx = ctxOf({
-      agent: agentOf({ thresholdRatio: 0.8 }),
+      agent: agentOf({ maxContextTokens: 1000, preCompactNote: false }),
       binding: bindingOf(),
-      messages: [user(3600)],
+      messages: [user(400), user(400)],
     });
     const events = await collect(compactForced(ctx));
-    expect(events).toEqual([{ type: 'skipped', reason: 'no-context-window' }]);
+    expect(events.at(-1)?.type).toBe('completed');
+  });
+
+  test('a protected tail with nothing left to cut skips with no-cut-plan', async () => {
+    const ctx = ctxOf({
+      agent: agentOf({ maxContextTokens: 100_000, protectTokens: 500 }),
+      binding: bindingOf(4096),
+      messages: [user(4000)],
+    });
+    const events = await collect(compactForced(ctx));
+    expect(events).toEqual([{ type: 'skipped', reason: 'no-cut-plan' }]);
   });
 });
 
@@ -428,6 +493,25 @@ describe('forced overflow compaction and circuit breakers', () => {
     expect(await collect(runSummaryPassIfDue(ctx))).toEqual([
       { type: 'skipped', reason: 'rapid-refill' },
     ]);
+  });
+
+  test('a zero rapid-refill limit keeps the guard closed', async () => {
+    stubFetch(summarySse);
+    const guard: CompactionGuard = { consecutiveFailures: 0, completedSteps: [8, 9, 10] };
+    const agent = agentOf({
+      thresholdRatio: 0.8,
+      preCompactNote: false,
+      rapidRefillMaxCompactions: 0,
+    });
+    const ctx = ctxOf({
+      agent,
+      binding: bindingOf(1000),
+      messages: [user(120), user(3400)],
+    });
+    ctx.guard = guard;
+    ctx.step = 11;
+    const events = await collect(runSummaryPassIfDue(ctx));
+    expect(events.at(-1)?.type).toBe('completed');
   });
 
   test('a completed pass resets the failure counter', async () => {

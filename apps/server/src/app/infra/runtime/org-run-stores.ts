@@ -69,10 +69,7 @@ export function createOrgRunStores(
     ...(deps.logger === undefined ? {} : { logger: deps.logger }),
     ...(fileRuntime === undefined ? {} : { fileRuntime }),
   });
-  const prepareCursors = createCompactionCursorPreparer({
-    orgId: deps.orgId,
-    threads: deps.threads,
-  });
+  const prepareCursors = createCompactionCursorPreparer();
   const runEvents = new SqliteRunEventStore(session.db, {
     prepare: (tx, runId, threadId, events) =>
       prepareCursors(tx, runId, threadId, prepareUsageEvents(tx, runId, threadId, events)),

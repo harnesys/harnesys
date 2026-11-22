@@ -1,5 +1,6 @@
 import type { PortRef, ProviderPublic } from '@harnesys/studio-shared';
 import { useQuery } from '@tanstack/react-query';
+import { type CompactionSizingSource, resolveCompactionBudget } from 'harnesys/domain';
 import { useState } from 'react';
 import type { Agent } from '@/entities/agent';
 import { providersQuery } from '@/shared/api';
@@ -137,7 +138,7 @@ export function DraftCompaction({
             label="Threshold, %"
             value={draft.thresholdPercent}
             placeholder="80"
-            description="Auto compaction fires when the context passes this percent of the usable budget: context window minus reply reserve. Clamp 10–100. Default 80."
+            description="Auto compaction fires when the context passes this percent of the model context window. Ignored when Max context tokens is set. Clamp 10–100. Default 80."
             disabled={!draft.auto}
             onChange={(thresholdPercent) => patch({ thresholdPercent })}
           />
@@ -155,7 +156,7 @@ export function DraftCompaction({
             label="Protect recent, %"
             value={draft.protectRecentPercent}
             placeholder="10"
-            description="Recent tail (percent of context) kept out of every compaction, manual included. Clamp 0–90. Default 10."
+            description="Recent tail (percent of the model context window) kept out of every compaction, manual included. Ignored when Protect tail tokens is set. Clamp 0–90. Default 10."
             onChange={(protectRecentPercent) => patch({ protectRecentPercent })}
           />
           <NumberField
@@ -165,6 +166,25 @@ export function DraftCompaction({
             placeholder="0"
             description="Count of trailing user+agent turns kept out of every compaction, manual included. Empty = off."
             onChange={(protectRecentTurns) => patch({ protectRecentTurns })}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <NumberField
+            id="draft-compaction-max-context"
+            label="Max context tokens"
+            value={draft.maxContextTokens}
+            placeholder="derived"
+            description="Absolute token budget that arms compaction across the whole context. Empty = Threshold % of the model context window; setting it overrides Threshold %."
+            disabled={!draft.auto}
+            onChange={(maxContextTokens) => patch({ maxContextTokens })}
+          />
+          <NumberField
+            id="draft-compaction-protect-tokens"
+            label="Protect tail tokens"
+            value={draft.protectTokens}
+            placeholder="derived"
+            description="Absolute tail kept out of every compaction, manual included. Empty = Protect recent % of the window; setting it overrides Protect recent %."
+            onChange={(protectTokens) => patch({ protectTokens })}
           />
         </div>
         <Field
@@ -188,6 +208,15 @@ export function DraftCompaction({
             onCheckedChange={(value) => patch({ preCompactNote: Boolean(value) })}
           />
         </Field>
+        <NumberField
+          id="draft-compaction-pre-note-gap"
+          label="Pre-note gap, %"
+          value={draft.preThresholdGapPercent}
+          placeholder="10"
+          description="Fire the pre-threshold note when the context reaches this percent below the threshold (fraction of the threshold). Clamp 0–90. Default 10."
+          disabled={!draft.auto || !draft.preCompactNote}
+          onChange={(preThresholdGapPercent) => patch({ preThresholdGapPercent })}
+        />
         <CompactionRuntimeControls draft={draft} patch={patch} />
       </FieldGroup>
     </Pane>
@@ -256,18 +285,38 @@ function thresholdPreview(
   }
   const capRatio = parsePercent(draft.reserveCapPercent, 0.1);
   const reserve = Math.min(effectiveReserve(agent, providers), Math.floor(context * capRatio));
-  const thresholdRatio = parsePercent(draft.thresholdPercent, 0.8);
   const parts = [
     `context ${formatNumber(context)}`,
     `reserve ≤${formatNumber(reserve)}`,
     `usable ${formatNumber(context - reserve)}`,
   ];
   if (draft.auto) {
-    parts.push(`auto fires at ~${formatNumber(Math.floor((context - reserve) * thresholdRatio))}`);
+    const budget = resolveCompactionBudget(previewSizingSpec(draft), context, reserve);
+    parts.push(`auto fires at ~${formatNumber(budget.threshold)}`);
+    parts.push(`protect tail ~${formatNumber(budget.protectTokens)}`);
   } else {
     parts.push('manual only');
   }
   return parts.join(' · ');
+}
+function previewSizingSpec(draft: CompactionDraft): CompactionSizingSource {
+  const spec: CompactionSizingSource = {
+    thresholdRatio: parsePercent(draft.thresholdPercent, 0.8),
+    protectRecentRatio: parsePercent(draft.protectRecentPercent, 0.1),
+  };
+  const maxContextTokens = optionalTokenBudget(draft.maxContextTokens);
+  if (maxContextTokens !== undefined) {
+    spec.maxContextTokens = maxContextTokens;
+  }
+  const protectTokens = optionalTokenBudget(draft.protectTokens);
+  if (protectTokens !== undefined) {
+    spec.protectTokens = protectTokens;
+  }
+  return spec;
+}
+function optionalTokenBudget(value: string): number | undefined {
+  const next = Number(value.trim());
+  return Number.isFinite(next) && next >= 1 ? Math.floor(next) : undefined;
 }
 function parsePercent(value: string, fallback: number): number {
   const next = Number(value.trim());

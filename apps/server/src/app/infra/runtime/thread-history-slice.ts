@@ -305,6 +305,7 @@ function newestAnchor(events: SessionEvent[]): SliceAnchor {
     if (
       event &&
       event.type === 'compaction' &&
+      event.durable !== false &&
       typeof event.summary === 'string' &&
       event.summary.length > 0
     ) {

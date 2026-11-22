@@ -1,5 +1,10 @@
 import type { AgentHook } from '@harnesys/contracts';
-import { AgentHookSchema, HookEventNameSchema, parseMemoryPolicy } from '@harnesys/contracts';
+import {
+  AgentHookSchema,
+  CompactionConfigSchema,
+  HookEventNameSchema,
+  parseMemoryPolicy,
+} from '@harnesys/contracts';
 import {
   type AgentMode,
   defaultAgentCompaction,
@@ -59,7 +64,7 @@ const FALLBACK_GRAPH: AgentGraph = {
 export function toAgentDefinition(
   agent: AgentRecord,
   lookup: AgentModelLookup,
-  onHookWarning?: (reason: string) => void,
+  onWarning?: (reason: string) => void,
 ): AgentDefinition {
   const graph = graphFromConfig(agent.config);
   const budget = budgetFromConfig(agent.config);
@@ -81,9 +86,9 @@ export function toAgentDefinition(
     enabledPlugins: Object.keys(agent.enabledPlugins).length ? agent.enabledPlugins : undefined,
     graph,
     budget,
-    compaction: compactionFromConfig(agent.config),
+    compaction: compactionFromConfig(agent.config, onWarning),
     ...(memoryPolicy ? { memoryPolicy } : {}),
-    ...hooksOfAgent(agent, onHookWarning),
+    ...hooksOfAgent(agent, onWarning),
     ...(toolOutput ? { toolOutput } : {}),
     ...(permissions ? { permissions } : {}),
     ...(observability ? { observability } : {}),
@@ -128,12 +133,33 @@ function graphFromConfig(config: Record<string, unknown>): AgentGraph {
   return FALLBACK_GRAPH;
 }
 
-function compactionFromConfig(config: Record<string, unknown>): PortRef {
+function compactionFromConfig(
+  config: Record<string, unknown>,
+  onWarning?: (reason: string) => void,
+): PortRef {
   const raw = config.compactionJson !== undefined ? config.compactionJson : config.compaction;
   if (raw && typeof raw === 'object') {
-    return raw as PortRef;
+    const ref = raw as PortRef;
+    warnOnInvalidCompactionRef(ref, onWarning);
+    return ref;
   }
   return defaultAgentCompaction();
+}
+
+function warnOnInvalidCompactionRef(ref: PortRef, onWarning?: (reason: string) => void): void {
+  if (!onWarning) {
+    return;
+  }
+  const result = CompactionConfigSchema.safeParse(ref);
+  if (result.success) {
+    return;
+  }
+  const issue = result.error.issues[0];
+  if (!issue) {
+    return;
+  }
+  const location = issue.path.length > 0 ? `${issue.path.join('.')}: ` : '';
+  onWarning(`compaction config normalized: ${location}${issue.message}`);
 }
 
 function hooksOfAgent(

@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import type { SessionEvent } from '../ports/session.ts';
+import type { MessageSource } from './message-source.ts';
 import { rebuildThreadMessages } from './replay-thread-history.ts';
 
 function userEvent(text: string, runId: string, seq: number): SessionEvent {
@@ -170,4 +171,71 @@ test('the active run is exempt from cursor coverage', () => {
   });
   expect(messages.length).toBe(5);
   expect(sources).toEqual([1, 1, 2, 3, 4]);
+});
+
+test('messageSrcCoords exposes journal coordinates for each message', () => {
+  const events: SessionEvent[] = [
+    { type: 'user', text: 'hi', runId: 'r1', seq: 1, threadSeq: 1 } as SessionEvent,
+    {
+      type: 'model.usage',
+      text: 'plan',
+      usage: {},
+      runId: 'r1',
+      seq: 2,
+      threadSeq: 2,
+    } as SessionEvent,
+    {
+      type: 'tool',
+      phase: 'completed',
+      name: 'Grep',
+      toolCallId: 'c1',
+      output: 'ok',
+      runId: 'r1',
+      seq: 3,
+      threadSeq: 3,
+    } as SessionEvent,
+    {
+      type: 'model.usage',
+      text: 'done',
+      usage: {},
+      runId: 'r1',
+      seq: 4,
+      threadSeq: 4,
+    } as SessionEvent,
+  ];
+  const coords: MessageSource[] = [];
+  const messages = rebuildThreadMessages(events, { messageSrcCoords: coords });
+  expect(coords.length).toBe(messages.length);
+  expect(coords[0]).toEqual({ runId: 'r1', seq: 1, threadSeq: 1 });
+  expect(coords[1]).toEqual({ runId: 'r1', seq: 2, threadSeq: 2 });
+  expect(coords[2]).toEqual({ runId: 'r1', seq: 3, threadSeq: 3 });
+  expect(coords[3]).toEqual({ runId: 'r1', seq: 3, threadSeq: 3 });
+  expect(coords[4]).toEqual({ runId: 'r1', seq: 4, threadSeq: 4 });
+});
+
+test('the compaction anchor carries the compaction event coordinates', () => {
+  const events = historyWithAnchor(2);
+  const coords: MessageSource[] = [];
+  const messages = rebuildThreadMessages(events, { messageSrcCoords: coords });
+  expect(coords.length).toBe(messages.length);
+  expect(coords[0]).toEqual({ runId: 'r2', seq: 1, threadSeq: 3 });
+});
+
+test('synthetic orphan results inherit the assistant coordinates', () => {
+  const events: SessionEvent[] = [
+    { type: 'user', text: 'hi', runId: 'r1', seq: 1, threadSeq: 1 } as SessionEvent,
+    {
+      type: 'model.usage',
+      text: '',
+      toolCalls: [{ id: 'lost', name: 'Terminal' }],
+      usage: {},
+      runId: 'r1',
+      seq: 2,
+      threadSeq: 2,
+    } as SessionEvent,
+  ];
+  const coords: MessageSource[] = [];
+  const messages = rebuildThreadMessages(events, { messageSrcCoords: coords });
+  expect(messages.length).toBe(coords.length);
+  expect(coords[coords.length - 1]).toEqual({ runId: 'r1', seq: 2, threadSeq: 2 });
 });

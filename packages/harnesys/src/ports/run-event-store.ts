@@ -10,6 +10,7 @@ export interface RunEventStore extends RunSeqAllocator {
   append(runId: string, expectedEpoch: number, events: SessionEvent[]): Promise<SessionEvent[]>;
   tail(runId: string, fromSeq: number): Promise<SessionEvent[]>;
   latestSeq(runId: string): Promise<number>;
+  listByRun(runId: string): Promise<SessionEvent[]>;
   listByThread(threadId: string): Promise<SessionEvent[]>;
   eventAt(threadId: string, threadSeq: number): Promise<SessionEvent | null>;
   hasRun(runId: string): Promise<boolean>;

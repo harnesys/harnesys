@@ -1,10 +1,12 @@
-import type { SessionEvent } from 'harnesys';
+import type { MessageSource, SessionEvent } from 'harnesys';
+import { sourceOfEvent, stampMessageSource } from 'harnesys';
 
 export interface SeedMessage {
   role: 'user' | 'assistant';
   content: string;
   attachments?: unknown[];
   origin?: string;
+  src?: MessageSource | null;
 }
 
 export interface BranchThreadRef {
@@ -47,10 +49,12 @@ export function cutParentEvents(events: SessionEvent[], forkAt: string): Session
 
 export function seedMessagesFromEvents(events: SessionEvent[]): SeedMessage[] {
   const messages: SeedMessage[] = [];
-  let run: { runId: string; text: string } | null = null;
+  let run: { runId: string; text: string; src: MessageSource } | null = null;
   const flushRun = () => {
     if (run && run.text.length > 0) {
-      messages.push({ role: 'assistant', content: run.text });
+      const message: SeedMessage = { role: 'assistant', content: run.text };
+      stampMessageSource(message, run.src);
+      messages.push(message);
     }
     run = null;
   };
@@ -64,6 +68,7 @@ export function seedMessagesFromEvents(events: SessionEvent[]): SeedMessage[] {
       if (event.origin) {
         message.origin = event.origin;
       }
+      stampMessageSource(message, sourceOfEvent(event));
       messages.push(message);
       continue;
     }
@@ -73,7 +78,7 @@ export function seedMessagesFromEvents(events: SessionEvent[]): SeedMessage[] {
     const runId = event.runId ?? '';
     if (!run || run.runId !== runId) {
       flushRun();
-      run = { runId, text: event.text };
+      run = { runId, text: event.text, src: sourceOfEvent(event) };
       continue;
     }
     run.text += event.text;

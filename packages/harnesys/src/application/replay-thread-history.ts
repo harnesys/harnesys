@@ -1,6 +1,8 @@
 import type { ToolCallRecord } from '../adapters/ai-llm-stream-parts.ts';
 import type { CompactionMessage } from '../domain/compaction.ts';
 import type { SessionEvent } from '../ports/session.ts';
+import type { MessageSource } from './message-source.ts';
+import { sourceOfEvent } from './message-source.ts';
 import {
   buildToolMessage,
   SYNTHETIC_TOOL_RESULT_ABANDONED,
@@ -11,6 +13,8 @@ export interface ReplayThreadHistoryOpts {
   activeRunId?: string | null;
 
   messageSources?: number[];
+
+  messageSrcCoords?: MessageSource[];
 
   speakerAttribution?: boolean;
 }
@@ -44,6 +48,7 @@ export function rebuildThreadMessages(
 ): unknown[] {
   const activeRunId = opts?.activeRunId ?? null;
   const externalSources = opts?.messageSources;
+  const externalCoords = opts?.messageSrcCoords;
   const attribution = opts?.speakerAttribution === true;
   const agentNames = new Map<string, string>();
   const out: unknown[] = [];
@@ -143,6 +148,9 @@ export function rebuildThreadMessages(
       continue;
     }
     if (event.type === 'compaction') {
+      if (event.durable === false) {
+        continue;
+      }
       if (!event.summary) {
         continue;
       }
@@ -229,6 +237,14 @@ export function rebuildThreadMessages(
   if (externalSources) {
     externalSources.length = 0;
     externalSources.push(...sources);
+  }
+  if (externalCoords) {
+    externalCoords.length = 0;
+    for (let index = 0; index < out.length; index += 1) {
+      const source = sources[index] ?? -1;
+      const event = source >= 0 ? events[source] : undefined;
+      externalCoords.push(event ? sourceOfEvent(event) : {});
+    }
   }
   return out;
 }

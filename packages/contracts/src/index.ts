@@ -1,5 +1,6 @@
 export * from './addons-platform.ts';
 export * from './apps.ts';
+export * from './compaction.ts';
 export * from './dashboards/index.ts';
 export * from './domains-agents.ts';
 export * from './domains-org.ts';

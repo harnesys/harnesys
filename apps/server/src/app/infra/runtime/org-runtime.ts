@@ -277,7 +277,6 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
           findThreadRecord: (id) => deps.threads.findById(deps.orgId, id),
           seededThreadState: (id) => branchSeed.seededThreadState(id),
           resolveRunTarget,
-          findThread: (id) => deps.threads.findById(deps.orgId, id),
         },
         threadId,
         guardSignal,

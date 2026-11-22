@@ -6,7 +6,7 @@ import type { CompactThreadDeps } from './org-runtime-compact.ts';
 import { compactThread } from './org-runtime-compact.ts';
 
 export function runOrgCompact(
-  deps: Omit<CompactThreadDeps, 'agentId' | 'activeRunIdOf'> & {
+  deps: Omit<CompactThreadDeps, 'agentId'> & {
     lifecycle: RunLifecycleStore;
     threadAgentIds: (threadId: string) => string[];
     findThreadRecord: (threadId: string) => ThreadRecord | undefined;
@@ -23,12 +23,6 @@ export function runOrgCompact(
         thread === undefined ? undefined : primaryAgentIdOf(thread, deps.threadAgentIds(threadId)),
       seededThreadState: deps.seededThreadState,
       resolveRunTarget: deps.resolveRunTarget,
-      findThread: deps.findThread,
-      activeRunIdOf: (id) =>
-        deps.lifecycle
-          .activeByThread(id)
-          .then((record) => record?.runId ?? null)
-          .catch(() => null),
     },
     threadId,
     signal,

@@ -123,6 +123,8 @@ import {
   toolCallSignature,
 } from './loop-guard.ts';
 import { enforceNudge } from './memory/enforce.ts';
+import type { MessageSource, MessageSourceKind } from './message-source.ts';
+import { stampMessageSource } from './message-source.ts';
 import type { PackRunMap } from './packs/pack-run.ts';
 import { printPackDiagnostics, selectPackOutputs } from './packs/pack-run.ts';
 import { executeToolCall, type ToolCallResult } from './tool-call.ts';
@@ -266,6 +268,61 @@ function presentedToolMessage(messages: unknown, toolCallId: string): string | u
   }
   return undefined;
 }
+function sourceOfEvent(event: Event, kind?: MessageSourceKind, toolCallId?: string): MessageSource {
+  return {
+    runId: event.runId,
+    seq: event.sequence,
+    engSeq: typeof event.metadata?.engSeq === 'number' ? event.metadata.engSeq : undefined,
+    ...(kind !== undefined ? { kind } : {}),
+    ...(kind === 'tool' && toolCallId !== undefined ? { toolCallId } : {}),
+  };
+}
+function stampFromEvent(
+  message: unknown,
+  event: Event,
+  kind?: MessageSourceKind,
+  toolCallId?: string,
+): void {
+  stampMessageSource(message, sourceOfEvent(event, kind, toolCallId));
+}
+function stampToolSource(messages: unknown, toolCallId: string, src: MessageSource | null): void {
+  if (!Array.isArray(messages)) {
+    return;
+  }
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const item = messages[i] as Record<string, unknown> | null | undefined;
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      continue;
+    }
+    if (item.role === 'tool' && item.toolCallId === toolCallId) {
+      stampMessageSource(item, src);
+      return;
+    }
+  }
+}
+function toolSourceOf(event: Event): MessageSource {
+  const meta = event.metadata as Record<string, unknown> | undefined;
+  return sourceOfEvent(
+    event,
+    'tool',
+    typeof meta?.toolCallId === 'string' ? meta.toolCallId : undefined,
+  );
+}
+function stampCompactionAnchor(messages: unknown, src: MessageSource): void {
+  if (!Array.isArray(messages)) {
+    return;
+  }
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const item = messages[i] as Record<string, unknown> | null | undefined;
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      continue;
+    }
+    if (item.kind === 'compaction') {
+      stampMessageSource(item, src);
+      return;
+    }
+  }
+}
 function repairDanglingToolCalls(messages: unknown[]): UnansweredToolCall[] {
   const dangling = collectUnansweredToolCalls(messages);
   if (dangling.length === 0) {
@@ -305,7 +362,9 @@ function pushContinuationMessage(
     arr = [];
     state[key] = arr;
   }
-  (arr as unknown[]).push({ role: 'user', content: LENGTH_CUT_NOTE });
+  const note: Record<string, unknown> = { role: 'user', content: LENGTH_CUT_NOTE };
+  stampMessageSource(note, null);
+  (arr as unknown[]).push(note);
 }
 function normalizeInputAttachments(input: unknown): {
   text?: string;
@@ -611,9 +670,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
   ): Promise<Event> => {
     seq += 1;
     const ev: Event = { ...mkEv(ctx(), type), agentId: agent.id };
-    if (metadata) {
-      ev.metadata = { ...(ev.metadata as Record<string, unknown>), ...metadata };
-    }
+    ev.metadata = { ...(ev.metadata as Record<string, unknown>), ...(metadata ?? {}), engSeq: seq };
     await opts.state.commit({ ...mkSnap(ctx(), status), sequence: seq }, [ev], {
       kind,
       sequence: seq,
@@ -705,13 +762,13 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
     }
     const out: Event[] = [];
     for (const dangling of repairDanglingToolCalls(msgs)) {
-      out.push(
-        await commit('running', 'tool.skipped', 'recorded', {
-          toolCallId: dangling.toolCallId,
-          name: dangling.name,
-          output: 'run ended before tool execution; no result recorded',
-        }),
-      );
+      const ev = await commit('running', 'tool.skipped', 'recorded', {
+        toolCallId: dangling.toolCallId,
+        name: dangling.name,
+        output: 'run ended before tool execution; no result recorded',
+      });
+      stampToolSource(st.messages, dangling.toolCallId, toolSourceOf(ev));
+      out.push(ev);
     }
     return out;
   }
@@ -939,6 +996,9 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
             }
             const ue = await commit('running', 'user.message', 'recorded', meta);
             yield ue;
+            stampFromEvent(userMsg, ue, 'user');
+          } else {
+            stampMessageSource(userMsg, null);
           }
         } else if (Array.isArray(inpAny.messages) && !Array.isArray(st[msgKey])) {
           st[msgKey] = [...(inpAny.messages as unknown[])];
@@ -961,10 +1021,14 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
         }
         const upsContext = hookContextText(ups);
         const hookPrefix = upsContext !== undefined ? `[hooks]\n${upsContext}\n\n` : '';
-        arr.push({ role: 'user', content: `${hookPrefix}${input}` });
+        const userMsg: Record<string, unknown> = { role: 'user', content: `${hookPrefix}${input}` };
+        arr.push(userMsg);
         if (!inputRecorded) {
           const ue = await commit('running', 'user.message', 'recorded', { text: input });
           yield ue;
+          stampFromEvent(userMsg, ue, 'user');
+        } else {
+          stampMessageSource(userMsg, null);
         }
       }
       const e = await commit('running', 'node.completed');
@@ -979,6 +1043,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
             output: 'run ended before tool execution; no result recorded',
           });
           yield ev;
+          stampToolSource(st.messages, dangling.toolCallId, toolSourceOf(ev));
         }
       }
       const stopOutcome = await emitHook(hooks, 'Stop', {});
@@ -1009,6 +1074,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
           role: 'user',
           content: `[memory]\n${remindText}`,
         };
+        stampMessageSource(message, null);
         const msgs = st.messages;
         if (Array.isArray(msgs)) {
           msgs.push(message);
@@ -1158,7 +1224,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
                 ? u.totalTokens
                 : (typeof u?.inputTokens === 'number' ? u.inputTokens : 0) +
                   (typeof u?.outputTokens === 'number' ? u.outputTokens : 0);
-            yield await commit('running', 'compaction.completed', 'recorded', {
+            const completed = await commit('running', 'compaction.completed', 'recorded', {
               id: m.id,
               coveredFrom: m.coveredFrom,
               coveredUntil: m.coveredUntil,
@@ -1167,8 +1233,25 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
               tokensBefore: m.stats.tokensBefore,
               tokensAfter: m.stats.tokensAfter,
               summary: m.content,
+              ...(typeof m.coveredUntilEngSeq === 'number'
+                ? { coveredUntilEngSeq: m.coveredUntilEngSeq }
+                : {}),
+              ...(m.coveredKind !== undefined ? { coveredKind: m.coveredKind } : {}),
+              ...(m.coveredToolCallId !== undefined
+                ? { coveredToolCallId: m.coveredToolCallId }
+                : {}),
+              ...(m.coveredUntilRunId !== undefined
+                ? { coveredUntilRunId: m.coveredUntilRunId }
+                : {}),
+              ...(typeof m.coveredUntilSeq === 'number'
+                ? { coveredUntilSeq: m.coveredUntilSeq }
+                : {}),
+              ...(m.durable !== undefined ? { durable: m.durable } : {}),
+              ...(m.unresolvedReason !== undefined ? { unresolvedReason: m.unresolvedReason } : {}),
               ...(m.model ? { model: m.model } : {}),
             });
+            yield completed;
+            stampCompactionAnchor(st.messages, sourceOfEvent(completed));
           } else if (ev.type === 'failed') {
             compactionNote = compactionFailNote(ev.error);
             const id = ev.id ?? startedId;
@@ -1355,6 +1438,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
         });
       }
       output = res;
+      let assistantMsg: Record<string, unknown> | undefined;
       if (lastMsg) {
         const key = stateKeyOf(lastMsg);
         if (key) {
@@ -1367,7 +1451,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
             st[key] = arr;
           }
           const keepReasoning = agent.generation?.stripReasoning === false;
-          arr.push({
+          assistantMsg = {
             role: 'assistant',
             content: res.text ?? '',
             ...(keepReasoning ? { reasoning: res.reasoning } : {}),
@@ -1376,7 +1460,8 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
             sources: res.sources,
             files: res.files,
             usage: res.usage,
-          });
+          };
+          arr.push(assistantMsg);
         }
       }
       if (res.usage && typeof res.usage === 'object') {
@@ -1424,6 +1509,9 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
       completedMeta.finishReason = res.finishReason;
       const e = await commit('running', 'model.completed', 'recorded', completedMeta);
       yield e;
+      if (assistantMsg) {
+        stampFromEvent(assistantMsg, e, 'assistant');
+      }
       if (res.finishReason === 'tool-calls') {
         await commit('running', 'tool.requested');
       }
@@ -1626,6 +1714,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
           meta,
         );
         yield e;
+        stampToolSource(st.messages, r.id, toolSourceOf(e));
       }
       if (res.results.length === 0) {
         const e = await commit('running', 'tool.completed');

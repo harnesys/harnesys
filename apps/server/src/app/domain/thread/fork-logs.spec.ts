@@ -48,9 +48,9 @@ describe('seedMessagesFromEvents', () => {
       user('b', 'r2', 4),
     ];
     expect(seedMessagesFromEvents(events)).toEqual([
-      { role: 'user', content: 'a' },
-      { role: 'assistant', content: 'A1A2' },
-      { role: 'user', content: 'b' },
+      { role: 'user', content: 'a', src: { runId: 'r1', seq: 1 } },
+      { role: 'assistant', content: 'A1A2', src: { runId: 'r1', seq: 2 } },
+      { role: 'user', content: 'b', src: { runId: 'r2', seq: 4 } },
     ]);
   });
 });

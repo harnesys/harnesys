@@ -22,6 +22,18 @@ function isUserTurnMessage(item: unknown): boolean {
   return item !== null && typeof item === 'object' && (item as { role?: unknown }).role === 'user';
 }
 
+function isToolMessage(item: unknown): boolean {
+  return item !== null && typeof item === 'object' && (item as { role?: unknown }).role === 'tool';
+}
+
+export function extendCutToToolResults(messages: readonly unknown[], coveredUntil: number): number {
+  let end = Math.min(coveredUntil, messages.length - 1);
+  while (end + 1 < messages.length && isToolMessage(messages[end + 1])) {
+    end += 1;
+  }
+  return end;
+}
+
 export function isClosedBoundary(messages: readonly unknown[], index: number): boolean {
   const m = messages[index] as Record<string, unknown> | null | undefined;
   if (!m || typeof m !== 'object') {

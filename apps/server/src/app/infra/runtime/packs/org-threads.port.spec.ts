@@ -98,6 +98,10 @@ class FakeEvents implements RunEventStore {
     throw new Error('not used');
   }
 
+  listByRun(): Promise<SessionEvent[]> {
+    throw new Error('not used');
+  }
+
   hasRun(): Promise<boolean> {
     throw new Error('not used');
   }

@@ -83,7 +83,7 @@ export function CompactionRuntimeControls({
           onChange={(microcompactMinGainTokens) => patch({ microcompactMinGainTokens })}
         />
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <NumberField
           id="draft-compaction-fail-limit"
           label="Pause after failures"
@@ -99,6 +99,14 @@ export function CompactionRuntimeControls({
           placeholder="3"
           description="Pause when this many recent steps already ran a compaction. 0 = never pause. Default 3."
           onChange={(compactionRapidRefillSteps) => patch({ compactionRapidRefillSteps })}
+        />
+        <NumberField
+          id="draft-compaction-refill-limit"
+          label="Rapid-refill limit"
+          value={draft.rapidRefillMaxCompactions}
+          placeholder="3"
+          description="Pause compaction when this many compactions ran inside the rapid-refill window above. 0 = never pause. Default 3."
+          onChange={(rapidRefillMaxCompactions) => patch({ rapidRefillMaxCompactions })}
         />
       </div>
       <SwitchRow

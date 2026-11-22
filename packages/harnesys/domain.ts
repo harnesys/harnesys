@@ -5,13 +5,24 @@ export type {
   GraphRoute,
 } from './src/domain/agent-definition.ts';
 export type {
+  CompactionBudget,
   CompactionMessage,
+  CompactionSizing,
+  CompactionSizingSource,
   CompactionSpec,
   ParsedCompactionSpec,
 } from './src/domain/compaction.ts';
 export {
+  DEFAULT_COMPACTION_FAILURE_LIMIT,
+  DEFAULT_COMPACTION_MAX_CONTEXT_TOKENS,
+  DEFAULT_COMPACTION_PRE_THRESHOLD_GAP_RATIO,
+  DEFAULT_COMPACTION_PROTECT_TOKENS,
+  DEFAULT_COMPACTION_RAPID_REFILL_MAX_COMPACTIONS,
+  DEFAULT_COMPACTION_RAPID_REFILL_STEPS,
   isCompactionMessage,
   parseThresholdSpec,
+  resolveCompactionBudget,
+  resolveCompactionSizing,
   THRESHOLD_SUMMARY_NAME,
 } from './src/domain/compaction.ts';
 export type { CapabilityMechanism } from './src/domain/driver-capabilities.ts';

@@ -9,7 +9,6 @@ export interface CompactThreadOptions {
 export interface CompactThreadResult {
   compacted: boolean;
   reason?:
-    | 'no-context-window'
     | 'invalid-output-reserve'
     | 'empty-history'
     | 'resume-pending'

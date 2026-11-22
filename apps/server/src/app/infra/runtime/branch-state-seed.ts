@@ -1,5 +1,5 @@
-import type { RunEventStore, RunLifecycleStore, RuntimeState } from 'harnesys';
-import { InMemoryRuntimeState, rebuildThreadMessages } from 'harnesys';
+import type { MessageSource, RunEventStore, RunLifecycleStore, RuntimeState } from 'harnesys';
+import { InMemoryRuntimeState, rebuildThreadMessages, stampMessageSource } from 'harnesys';
 import { collectInheritedEvents, seedMessagesFromEvents } from '../../domain/thread/fork-logs.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
@@ -103,7 +103,13 @@ export function createBranchSeed(deps: BranchSeedDeps) {
     const events = await deps.events.listByThread(thread.id);
     const opts = { ...threadSliceOptsOf(thread, activeRunId), beforeThreadSeq: before };
     const sliced = sliceThreadHistory(events, opts);
-    const messages = rebuildThreadMessages(sliced, { activeRunId, speakerAttribution: true });
+    const coords: MessageSource[] = [];
+    const messages = rebuildThreadMessages(sliced, {
+      activeRunId,
+      speakerAttribution: true,
+      messageSrcCoords: coords,
+    });
+    stampSeedMessages(messages, coords);
     const initialInput = trigger
       ? {
           text: trigger.text,
@@ -144,11 +150,22 @@ export function createBranchSeed(deps: BranchSeedDeps) {
     const activeRunId = await activeRunIdOf(thread.id);
     const events = await deps.events.listByThread(thread.id);
     const sliced = sliceThreadHistory(events, threadSliceOptsOf(thread, activeRunId));
-    const messages = rebuildThreadMessages(sliced, { activeRunId });
+    const coords: MessageSource[] = [];
+    const messages = rebuildThreadMessages(sliced, {
+      activeRunId,
+      messageSrcCoords: coords,
+    });
+    stampSeedMessages(messages, coords);
     if (messages.length === 0 && runId === null) {
       return;
     }
     await commitSeed(state, messages, runId, null);
+  }
+
+  function stampSeedMessages(messages: unknown[], coords: MessageSource[]): void {
+    for (let index = 0; index < messages.length; index += 1) {
+      stampMessageSource(messages[index], coords[index] ?? null);
+    }
   }
 
   async function commitSeed(

@@ -1,8 +1,41 @@
 import { z } from 'zod';
 import { AgentHooksSchema } from './agent-hooks.ts';
+import { CompactionConfigSchema } from './compaction.ts';
 import { LOCAL_EXECUTION_PROFILE_ID } from './execution-profile.ts';
 import { OrgIdSchema } from './org-machine.ts';
 import { PresetIdSchema } from './preset-id.ts';
+
+const COMPACTION_CONFIG_KEYS = ['compaction', 'compactionJson'] as const;
+
+function validateAgentConfig(config: Record<string, unknown>, ctx: z.RefinementCtx): void {
+  for (const key of COMPACTION_CONFIG_KEYS) {
+    const raw = config[key];
+    if (raw === undefined || raw === null) {
+      continue;
+    }
+    if (typeof raw !== 'object' || Array.isArray(raw)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: [key],
+        message: `${key} must be a compaction port ref object { name, spec }, got ${typeof raw}`,
+      });
+      continue;
+    }
+    const result = CompactionConfigSchema.safeParse(raw);
+    if (result.success) {
+      continue;
+    }
+    for (const issue of result.error.issues) {
+      ctx.addIssue({
+        code: 'custom',
+        path: [key, ...issue.path],
+        message: issue.message,
+      });
+    }
+  }
+}
+
+export const AgentConfigSchema = z.record(z.string(), z.unknown()).superRefine(validateAgentConfig);
 
 export const AgentLevelSchema = z.enum(['top', 'delegate']);
 export type AgentLevel = z.infer<typeof AgentLevelSchema>;
@@ -63,7 +96,7 @@ export const CreateAgentBodySchema = z.object({
   enabledPlugins: z.record(z.string(), z.boolean()).optional(),
   defaultModeId: z.string().nullable().optional(),
   defaultRunDirectory: z.string().nullable().optional(),
-  config: z.record(z.string(), z.unknown()).optional(),
+  config: AgentConfigSchema.optional(),
   hooks: AgentHooksSchema.optional(),
 });
 export type CreateAgentBody = z.infer<typeof CreateAgentBodySchema>;

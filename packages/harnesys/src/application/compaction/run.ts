@@ -1,10 +1,15 @@
 import type { StreamChunk } from '../../adapters/ai-llm-adapter.ts';
 import type { AgentDefinition, AgentModelRef, PortRef } from '../../domain/agent-definition.ts';
 import {
+  type CompactionBudget,
   type CompactionMessage,
+  DEFAULT_COMPACTION_FAILURE_LIMIT,
+  DEFAULT_COMPACTION_RAPID_REFILL_MAX_COMPACTIONS,
+  DEFAULT_COMPACTION_RAPID_REFILL_STEPS,
   isCompactionMessage,
   type ParsedCompactionSpec,
   parseThresholdSpec,
+  resolveCompactionBudget,
   THRESHOLD_SUMMARY_NAME,
 } from '../../domain/compaction.ts';
 import { CONSOLE_LOGGER, type Logger } from '../../ports/logger.ts';
@@ -15,10 +20,11 @@ import type { ToolDefinition } from '../../ports/tools.ts';
 import { findBind, isPort, resolveModelForPort } from '../graph-helpers.ts';
 import { emitHook, type HookEmitCtx, hookBlockedReason } from '../hooks/emit-hook.ts';
 import { projectCompacted, projectedForEstimate } from '../llm.ts';
+import { resolveCoveredBoundary } from './cursor.ts';
 import { estimateTokens, estimateTokensAnchored, type TokenEstimate } from './estimate.ts';
 import { writeCompactionFile } from './file-log.ts';
 import { microcompactToolResults } from './microcompact.ts';
-import { planCut, protectedWindowCount } from './plan-cut.ts';
+import { extendCutToToolResults, planCut, protectedWindowCount } from './plan-cut.ts';
 import { priorSummaryBlock, SUMMARY_SYSTEM_PROMPT, streamSummary } from './summarize.ts';
 
 const microcompactNotified = new WeakSet<object>();
@@ -71,7 +77,6 @@ export type CompactionPassEvent =
       data: unknown;
     };
 export type CompactionSkipReason =
-  | 'no-context-window'
   | 'invalid-output-reserve'
   | 'near-threshold'
   | 'empty-history'
@@ -82,26 +87,25 @@ export type CompactionSkipReason =
   | 'empty-window'
   | 'breaker-open'
   | 'rapid-refill';
-const PRE_THRESHOLD_GAP = 0.1;
-const BREAKER_MAX_CONSECUTIVE_FAILURES = 3;
-const RAPID_REFILL_WINDOW_STEPS = 3;
-const RAPID_REFILL_MAX_COMPACTIONS = 3;
 interface GuardLimits {
   failureLimit: number;
   rapidRefillSteps: number;
+  rapidRefillMaxCompactions: number;
 }
 function guardLimitsOf(spec: ParsedCompactionSpec): GuardLimits {
   return {
     failureLimit: spec.compactionFailureLimit,
     rapidRefillSteps: spec.compactionRapidRefillSteps,
+    rapidRefillMaxCompactions: spec.rapidRefillMaxCompactions,
   };
 }
 export function compactionGuardOpen(
   guard: CompactionGuard | undefined,
   step: number,
   limits: GuardLimits = {
-    failureLimit: BREAKER_MAX_CONSECUTIVE_FAILURES,
-    rapidRefillSteps: RAPID_REFILL_WINDOW_STEPS,
+    failureLimit: DEFAULT_COMPACTION_FAILURE_LIMIT,
+    rapidRefillSteps: DEFAULT_COMPACTION_RAPID_REFILL_STEPS,
+    rapidRefillMaxCompactions: DEFAULT_COMPACTION_RAPID_REFILL_MAX_COMPACTIONS,
   },
 ): CompactionSkipReason | null {
   if (!guard) {
@@ -110,9 +114,9 @@ export function compactionGuardOpen(
   if (limits.failureLimit > 0 && guard.consecutiveFailures >= limits.failureLimit) {
     return 'breaker-open';
   }
-  if (limits.rapidRefillSteps > 0) {
+  if (limits.rapidRefillSteps > 0 && limits.rapidRefillMaxCompactions > 0) {
     const recent = guard.completedSteps.filter((s) => step - s <= limits.rapidRefillSteps).length;
-    if (recent >= RAPID_REFILL_MAX_COMPACTIONS) {
+    if (recent >= limits.rapidRefillMaxCompactions) {
       return 'rapid-refill';
     }
   }
@@ -193,6 +197,19 @@ function effectiveOutputReserve(
   const cap = Math.floor(contextLength * spec.outputReserveRatio);
   return Math.min(reserve, contextLength, cap);
 }
+
+async function compactionBudgetOf(
+  ctx: CompactionPassContext,
+  spec: ParsedCompactionSpec,
+): Promise<CompactionBudget> {
+  const window = await compactionWindowOf(ctx, spec);
+  const reserve = window ? effectiveOutputReserve(ctx, spec, window) : 0;
+  return resolveCompactionBudget(spec, window, reserve);
+}
+
+function nearThresholdFrom(threshold: number, gap: number): number {
+  return Math.floor(threshold * (1 - gap));
+}
 async function resolveSummaryBinding(
   ctx: CompactionPassContext,
   ref: AgentModelRef,
@@ -226,20 +243,15 @@ async function* passIfDue(
   }
   const toolsJson = toolsJsonOf(ctx.toolRegistry);
   const before = estimateOf(ctx, messages, toolsJson);
-  const contextLength = await compactionWindowOf(ctx, spec);
-  if (!contextLength) {
-    yield { type: 'skipped', reason: 'no-context-window' };
-    return;
-  }
+  const budget = await compactionBudgetOf(ctx, spec);
   if (reason === 'threshold') {
-    const available = contextLength - effectiveOutputReserve(ctx, spec, contextLength);
-    if (available <= 0) {
+    if (budget.exhausted) {
       yield { type: 'skipped', reason: 'invalid-output-reserve' };
       return;
     }
-    if (before.total < available * spec.thresholdRatio) {
-      const warnRatio = spec.thresholdRatio - PRE_THRESHOLD_GAP;
-      if (spec.preCompactNote && warnRatio > 0 && before.total >= available * warnRatio) {
+    if (before.total < budget.threshold) {
+      const warnFrom = nearThresholdFrom(budget.threshold, spec.preThresholdGapRatio);
+      if (spec.preCompactNote && warnFrom > 0 && before.total >= warnFrom) {
         yield { type: 'skipped', reason: 'near-threshold' };
       }
       return;
@@ -252,11 +264,10 @@ async function* passIfDue(
     yield { type: 'skipped', reason: 'already-covered' };
     return;
   }
-  const protectTokens = Math.floor(contextLength * spec.protectRecentRatio);
   const protectMessages =
     spec.protectRecentTurns > 0 ? protectedWindowCount(messages, spec.protectRecentTurns) : 0;
   const plan = planCut(messages, {
-    protectTokens,
+    protectTokens: budget.protectTokens,
     ...(protectMessages > 0 ? { protectMessages } : {}),
     afterIndex,
   });
@@ -264,6 +275,7 @@ async function* passIfDue(
     yield { type: 'skipped', reason: 'no-cut-plan' };
     return;
   }
+  plan.coveredUntil = extendCutToToolResults(messages, plan.coveredUntil);
   const pre = await emitHook(ctx.hooks, 'PreCompact', {
     trigger: reason === 'manual' ? 'manual' : 'auto',
   });
@@ -387,6 +399,23 @@ async function* writeCompactionMessage(
     };
     return;
   }
+  const boundary = resolveCoveredBoundary(messages, args.plan.coveredUntil);
+  const boundaryFields: Partial<CompactionMessage> = {};
+  if (boundary) {
+    boundaryFields.coveredKind = boundary.kind;
+    if (boundary.engSeq !== undefined) {
+      boundaryFields.coveredUntilEngSeq = boundary.engSeq;
+    } else if (boundary.runId !== undefined && boundary.seq !== undefined) {
+      boundaryFields.coveredUntilRunId = boundary.runId;
+      boundaryFields.coveredUntilSeq = boundary.seq;
+    }
+    if (boundary.toolCallId !== undefined) {
+      boundaryFields.coveredToolCallId = boundary.toolCallId;
+    }
+  } else {
+    boundaryFields.durable = false;
+    boundaryFields.unresolvedReason = 'no-sourced-boundary';
+  }
   const message: CompactionMessage = {
     role: 'assistant',
     kind: 'compaction',
@@ -396,6 +425,7 @@ async function* writeCompactionMessage(
     coveredUntil: args.plan.coveredUntil,
     messageCount: messages.length,
     reason: args.reason,
+    ...boundaryFields,
     stats: {
       tokensBefore: args.before.total,
       tokensAfter: 0,
@@ -504,44 +534,24 @@ async function* pressureEventIfDue(
   ctx: CompactionPassContext,
   spec: ParsedCompactionSpec,
 ): AsyncGenerator<CompactionPassEvent> {
-  const pressure = await contextPressureOf(ctx, spec);
-  if (!pressure) {
+  const messages = Array.isArray(ctx.state.messages) ? (ctx.state.messages as unknown[]) : null;
+  if (!messages || messages.length === 0 || ctx.state.$resume !== undefined) {
     return;
   }
-  const warnRatio = spec.thresholdRatio - PRE_THRESHOLD_GAP;
-  if (warnRatio <= 0) {
+  const budget = await compactionBudgetOf(ctx, spec);
+  if (budget.exhausted) {
     return;
   }
-  if (pressure.total >= pressure.available * warnRatio) {
+  const warnFrom = nearThresholdFrom(budget.threshold, spec.preThresholdGapRatio);
+  if (warnFrom <= 0) {
+    return;
+  }
+  const before = estimateOf(ctx, messages, toolsJsonOf(ctx.toolRegistry));
+  if (before.total >= warnFrom) {
     yield { type: 'pressure' };
   }
 }
 
-interface ContextPressure {
-  total: number;
-  available: number;
-}
-
-async function contextPressureOf(
-  ctx: CompactionPassContext,
-  spec: ParsedCompactionSpec,
-): Promise<ContextPressure | null> {
-  const messages = Array.isArray(ctx.state.messages) ? (ctx.state.messages as unknown[]) : null;
-  if (!messages || messages.length === 0 || ctx.state.$resume !== undefined) {
-    return null;
-  }
-  const contextLength = await compactionWindowOf(ctx, spec);
-  if (!contextLength) {
-    return null;
-  }
-  const available = contextLength - effectiveOutputReserve(ctx, spec, contextLength);
-  if (available <= 0) {
-    return null;
-  }
-  const toolsJson = toolsJsonOf(ctx.toolRegistry);
-  const before = estimateOf(ctx, messages, toolsJson);
-  return { total: before.total, available };
-}
 export async function* compactForced(
   ctx: CompactionPassContext,
 ): AsyncGenerator<CompactionPassEvent> {

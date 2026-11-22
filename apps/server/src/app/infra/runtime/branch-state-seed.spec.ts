@@ -66,6 +66,9 @@ class StubEvents implements RunEventStore {
   async latestSeq(): Promise<number> {
     return 0;
   }
+  async listByRun(): Promise<SessionEvent[]> {
+    return [];
+  }
   async listByThread(): Promise<SessionEvent[]> {
     return this.byThread;
   }
@@ -169,7 +172,9 @@ describe('branch-state-seed', () => {
     const state = await seedHarness(events).seededRunState(THREAD_ID, 'run-1');
     const snap = await state.load();
     expect(snap?.runId).toBe('run-1');
-    expect(snap?.state.messages).toEqual([{ role: 'user', content: 'hi' }]);
+    expect(snap?.state.messages).toEqual([
+      { role: 'user', content: 'hi', src: { runId: 'run-1', seq: 1 } },
+    ]);
     const row = sqlite.query('SELECT COUNT(*) AS c FROM run_snapshots').get() as { c: number };
     expect(row.c).toBe(0);
   });
@@ -193,7 +198,39 @@ describe('branch-state-seed', () => {
     const state = await seedHarness(events).seededThreadState(THREAD_ID);
     const snap = await state.load();
     expect(snap?.runId).not.toBe('run-3');
-    expect(snap?.state.messages).toEqual([{ role: 'user', content: 'hi' }]);
+    expect(snap?.state.messages).toEqual([
+      { role: 'user', content: 'hi', src: { runId: 'run-3', seq: 1 } },
+    ]);
+  });
+
+  test('seeded messages carry the journal coordinates of their source events', async () => {
+    const events: SessionEvent[] = [
+      { type: 'user', text: 'hi', seq: 1, runId: 'run-5', threadSeq: 10 } as SessionEvent,
+      {
+        type: 'model.usage',
+        text: 'reply',
+        usage: {},
+        seq: 2,
+        runId: 'run-5',
+        threadSeq: 11,
+      } as SessionEvent,
+    ];
+    const state = await seedHarness(events).seededThreadState(THREAD_ID);
+    const snap = await state.load();
+    expect(snap?.state.messages).toEqual([
+      { role: 'user', content: 'hi', src: { runId: 'run-5', seq: 1, threadSeq: 10 } },
+      {
+        role: 'assistant',
+        content: 'reply',
+        reasoning: undefined,
+        toolCalls: undefined,
+        finishReason: undefined,
+        sources: undefined,
+        files: undefined,
+        usage: {},
+        src: { runId: 'run-5', seq: 2, threadSeq: 11 },
+      },
+    ]);
   });
 
   test('a cached empty session is re-seeded once the journal has events', async () => {
@@ -207,6 +244,8 @@ describe('branch-state-seed', () => {
     const second = await seed.seededThreadState(THREAD_ID);
     expect(second).toBe(first);
     const snap = await second.load();
-    expect(snap?.state.messages).toEqual([{ role: 'user', content: 'hi' }]);
+    expect(snap?.state.messages).toEqual([
+      { role: 'user', content: 'hi', src: { runId: 'run-4', seq: 1 } },
+    ]);
   });
 });
