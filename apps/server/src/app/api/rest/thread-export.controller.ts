@@ -10,8 +10,8 @@ export class ThreadExportController {
     @Param('orgId') orgId: string,
     @Param('threadId') threadId: string,
   ): Promise<Response> {
-    const { fileName, bytes } = await this.exportThread.execute({ orgId, threadId });
-    return new Response(bytes, {
+    const { fileName, stream } = await this.exportThread.execute({ orgId, threadId });
+    return new Response(stream, {
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': `attachment; filename="${fileName}"`,

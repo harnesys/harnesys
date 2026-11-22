@@ -3,7 +3,10 @@ import { ApiError, apiUrl } from './client';
 import { authenticatedFetch } from './session';
 import { threadsBase } from './threads';
 
-export async function downloadThreadExport(threadId: string): Promise<void> {
+export async function downloadThreadExport(
+  threadId: string,
+  onProgress?: (receivedBytes: number) => void,
+): Promise<void> {
   const orgId = getActiveOrgId();
   if (!orgId) {
     throw new ApiError(400, 'No active organization');
@@ -18,13 +21,39 @@ export async function downloadThreadExport(threadId: string): Promise<void> {
   const fileName =
     fileNameFromDisposition(response.headers.get('Content-Disposition')) ??
     `harnesys-thread-${threadId}.zip`;
-  const blob = await response.blob();
+  const blob = await zipBlob(response, onProgress);
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = fileName;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+async function zipBlob(
+  response: Response,
+  onProgress?: (receivedBytes: number) => void,
+): Promise<Blob> {
+  const body = response.body;
+  if (!body || !onProgress) {
+    return response.blob();
+  }
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    if (!value) {
+      continue;
+    }
+    chunks.push(value);
+    received += value.byteLength;
+    onProgress(received);
+  }
+  return new Blob(chunks as BlobPart[], { type: 'application/zip' });
 }
 
 function fileNameFromDisposition(value: string | null): string | null {
