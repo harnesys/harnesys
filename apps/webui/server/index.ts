@@ -13,6 +13,7 @@ const app = createApp(config);
 
 Bun.serve<ProxySocketData>({
   port: config.port,
+  idleTimeout: 255,
   fetch(request, srv) {
     if (isWebsocketUpgrade(request) && new URL(request.url).pathname.startsWith('/api/')) {
       const upstreamUrl = upstreamWsUrl(request.url, config.upstreamOrigin);
