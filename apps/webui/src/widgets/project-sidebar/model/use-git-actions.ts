@@ -1,3 +1,4 @@
+import type { GitStatusResponse } from '@harnesys/studio-shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { openNewBranchDialog } from '@/features/git-branch';
 import { openCommitDialog } from '@/features/git-commit';
@@ -87,13 +88,19 @@ export function useGitActions(projectId: string) {
   const commitMutation = useMutation({
     mutationFn: (input: { message: string; paths: string[] }) =>
       commitGit(projectId, input.message, input.paths),
-    onSuccess: () => {
+    onSuccess: (_data, input) => {
       void qc.invalidateQueries({ queryKey: gitStatusQueryKey(projectId) });
       invalidateGitOrgSummary(qc);
       void qc.invalidateQueries({ queryKey: gitFileStatusQueryKey(projectId) });
       void qc.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'file-status'] });
       void qc.invalidateQueries({ queryKey: sourceFilesTreeQueryKey(projectId) });
-      toast.add({ title: 'Committed' });
+      const status = qc.getQueryData<GitStatusResponse>(gitStatusQueryKey(projectId));
+      const branch = status?.isGit ? status.branch : null;
+      const title = input.message.split('\n')[0]?.trim() || 'Committed';
+      toast.add({
+        title,
+        description: branch ? `Committed to ${branch}` : 'Committed',
+      });
     },
     onError: (err: unknown) => {
       const msg = err instanceof Error ? err.message : 'Commit failed';
