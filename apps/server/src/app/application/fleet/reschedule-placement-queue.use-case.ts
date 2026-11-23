@@ -1,4 +1,6 @@
 import { Injectable, Logger } from '@harnesys/brix';
+import type { RunEnvironment } from '@harnesys/contracts';
+import { RunEnvironmentSchema } from '@harnesys/contracts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { ExecutionProfilePort } from '../../domain/execution-profile/execution-profile.port.ts';
 import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
@@ -14,6 +16,7 @@ import {
 import type { PlacementResult } from '../../domain/fleet/placement.ts';
 import { OrgMachineStore } from '../../domain/machine/org-machine-store.port.ts';
 import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
+import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { resolveRunPlacement, toPlacementEvent } from '../threads/resolve-run-placement.ts';
 import { PlacePendingRunUseCase } from './place-pending-run.use-case.ts';
@@ -34,6 +37,7 @@ export class ReschedulePlacementQueueUseCase {
     private readonly agents: AgentRegistryPort,
     private readonly profiles: ExecutionProfilePort,
     private readonly worktrees: RepositoryWorktreePort,
+    private readonly materializations: SourceMaterializationPort,
     private readonly hub: FleetHubPort,
     private readonly claims: EventClaimPort,
     private readonly commands: NodeCommandQueuePort,
@@ -176,17 +180,33 @@ export class ReschedulePlacementQueueUseCase {
         reason: 'agent missing for pending placement',
       };
     }
+    const environment = this.environmentOf(row);
     const worktreeHostId = this.worktreeHostIdOf(orgId, row);
     return resolveRunPlacement({
       orgId,
       runId: row.runId,
       agentProfileId: agent.executionProfileId,
       issueRuleProfileId: row.payload.issueRuleProfileId,
-      worktreeHostId,
+      ...(environment !== undefined ? { environment } : { worktreeHostId }),
       profiles: this.profiles,
       hub: this.hub,
       claims: this.claims,
+      worktrees: this.worktrees,
+      materializations: this.materializations,
     });
+  }
+
+  private environmentOf(row: PendingPlacement): RunEnvironment | undefined {
+    const json = row.environmentJson;
+    if (json === null || json === undefined) {
+      return undefined;
+    }
+    try {
+      const parsed = RunEnvironmentSchema.safeParse(JSON.parse(json));
+      return parsed.success ? parsed.data : undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   private worktreeHostIdOf(orgId: string, row: PendingPlacement): string | null {

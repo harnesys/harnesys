@@ -36,6 +36,10 @@ function patchedAgent(agent: Agent, patch: AgentPatch, name?: string): Agent {
       patch.defaultRunDirectory !== undefined
         ? patch.defaultRunDirectory
         : agent.defaultRunDirectory,
+    defaultWorkspaceRef:
+      patch.defaultWorkspaceRef !== undefined
+        ? patch.defaultWorkspaceRef
+        : agent.defaultWorkspaceRef,
     modes: patch.modes !== undefined ? patch.modes : agent.modes,
     initials: name ? initialsFromName(name) : agent.initials,
   };
@@ -72,6 +76,7 @@ function draftToAgent(orgId: string, draft: AgentDraft, name: string): Agent {
     enabledPlugins: draft.enabledPlugins ?? {},
     defaultModeId: draft.defaultModeId ?? null,
     defaultRunDirectory: draft.defaultRunDirectory ?? null,
+    defaultWorkspaceRef: draft.defaultWorkspaceRef ?? null,
     executionProfileId: draft.executionProfileId ?? null,
     modes: draft.modes ?? [],
     createdAt: now,

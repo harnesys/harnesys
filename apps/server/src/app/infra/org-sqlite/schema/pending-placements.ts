@@ -12,6 +12,7 @@ export const pendingPlacementsTable = sqliteTable('pending_placements', {
   triggerKind: text('trigger_kind').notNull(),
   triggerId: text('trigger_id').notNull(),
   expiresAt: text('expires_at'),
+  environment: text('environment'),
   payloadJson: text('payload_json').notNull(),
   lastCandidatesJson: text('last_candidates_json').notNull().default('[]'),
 });

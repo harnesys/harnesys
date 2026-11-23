@@ -1,3 +1,4 @@
+import type { WorkspaceRef } from '@harnesys/contracts';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Controller, type UseFormReturn, useWatch } from 'react-hook-form';
@@ -17,10 +18,19 @@ import type { AgentFieldsInput, AgentFieldsOutput } from '../model/agent-fields'
 type AgentFieldsForm = UseFormReturn<AgentFieldsInput, unknown, AgentFieldsOutput>;
 
 const CUSTOM_DIRECTORY_VALUE = '__custom__';
+const SANDBOX_VALUE = '__sandbox__';
+const SOURCE_PREFIX = 'source:';
+const FOLDER_PREFIX = 'folder:';
 
 interface AgentExecutionPaneProps {
   form: AgentFieldsForm;
   activeAgent: Agent | null;
+}
+
+interface SourceRootOption {
+  sourceId: string;
+  root: string;
+  label: string;
 }
 
 export function AgentExecutionPane({ form, activeAgent }: AgentExecutionPaneProps) {
@@ -32,9 +42,6 @@ export function AgentExecutionPane({ form, activeAgent }: AgentExecutionPaneProp
   const effectiveProfileId = ownProfileId ?? defaultProfileId;
   const effectiveProfile = profiles?.items.find((item) => item.id === effectiveProfileId);
   const selectedBy = ownProfileId ? 'agent' : 'organization';
-  const [customOpen, setCustomOpen] = useState(false);
-  const [customPath, setCustomPath] = useState('');
-  const runDirectory = useWatch({ control: form.control, name: 'defaultRunDirectory' });
   const sourcesQuery = useQuery({
     queryKey: ['sources', orgId] as const,
     queryFn: () => listSources(orgId),
@@ -49,15 +56,11 @@ export function AgentExecutionPane({ form, activeAgent }: AgentExecutionPaneProp
       staleTime: 600000,
     })),
   });
-  const rootOptions = sources
-    .map((source, index) => ({
-      value: locations[index]?.data?.absoluteRoot ?? null,
-      label: source.name,
-    }))
-    .filter((option): option is { value: string; label: string } => option.value !== null);
-  const runDirectoryLabel = runDirectory
-    ? (rootOptions.find((option) => option.value === runDirectory)?.label ?? runDirectory)
-    : null;
+  const sourceOptions: SourceRootOption[] = sources.map((source, index) => ({
+    sourceId: source.id,
+    root: locations[index]?.data?.absoluteRoot ?? '',
+    label: source.name,
+  }));
 
   return (
     <div className="flex flex-col gap-4">
@@ -109,88 +112,7 @@ export function AgentExecutionPane({ form, activeAgent }: AgentExecutionPaneProp
           that includes it.
         </p>
       )}
-      <Controller
-        control={form.control}
-        name="defaultRunDirectory"
-        render={({ field }) => (
-          <Field>
-            <FieldLabel>Default run directory</FieldLabel>
-            <Select
-              value={field.value ?? ''}
-              onValueChange={(value) => {
-                if (value === CUSTOM_DIRECTORY_VALUE) {
-                  setCustomPath('');
-                  setCustomOpen(true);
-                  return;
-                }
-                setCustomOpen(false);
-                field.onChange(value || null);
-              }}
-            >
-              <SelectTrigger data-testid="agent-default-run-directory">
-                <SelectValue placeholder="Thread sandbox (default)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Thread sandbox (default)</SelectItem>
-                {rootOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-                {field.value && !rootOptions.some((option) => option.value === field.value) ? (
-                  <SelectItem value={field.value}>{field.value}</SelectItem>
-                ) : null}
-                <SelectItem value={CUSTOM_DIRECTORY_VALUE}>Custom path...</SelectItem>
-              </SelectContent>
-            </Select>
-            {runDirectoryLabel ? (
-              <p className="font-mono text-[11px] text-muted-foreground leading-snug">
-                {runDirectoryLabel}
-              </p>
-            ) : (
-              <p className="text-muted-foreground text-xs leading-snug">
-                New threads for this agent start in their private sandbox.
-              </p>
-            )}
-          </Field>
-        )}
-      />
-      {customOpen ? (
-        <Popover open onOpenChange={(open) => (open ? undefined : setCustomOpen(false))}>
-          <PopoverTrigger className="hidden" aria-hidden />
-          <PopoverContent align="start" className="w-96 p-2">
-            <div className="flex flex-col gap-2">
-              <FolderBrowser orgId={orgId || undefined} autoFocus onChange={setCustomPath} />
-              <div className="flex items-center justify-end gap-1.5">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setCustomOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={!customPath.trim().startsWith('/')}
-                  data-testid="agent-default-run-directory-select"
-                  onClick={() => {
-                    const trimmed = customPath.trim();
-                    if (!trimmed.startsWith('/')) {
-                      return;
-                    }
-                    form.setValue('defaultRunDirectory', trimmed, { shouldDirty: true });
-                    setCustomOpen(false);
-                  }}
-                >
-                  Select
-                </Button>
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-      ) : null}
+      <DefaultWorkspaceField form={form} orgId={orgId} sourceOptions={sourceOptions} />
       <Controller
         control={form.control}
         name="streamIdleTimeoutMs"
@@ -223,4 +145,243 @@ export function AgentExecutionPane({ form, activeAgent }: AgentExecutionPaneProp
       />
     </div>
   );
+}
+
+function DefaultWorkspaceField({
+  form,
+  orgId,
+  sourceOptions,
+}: {
+  form: AgentFieldsForm;
+  orgId: string;
+  sourceOptions: SourceRootOption[];
+}) {
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customPath, setCustomPath] = useState('');
+  const [subpathDraft, setSubpathDraft] = useState<string | null>(null);
+  const workspaceRef = useWatch({ control: form.control, name: 'defaultWorkspaceRef' }) ?? null;
+  const legacyRunDirectory =
+    useWatch({ control: form.control, name: 'defaultRunDirectory' }) ?? null;
+  const workspaceValue = workspaceValueOf(workspaceRef);
+  const subpathValue = subpathDraft ?? subpathOf(workspaceRef);
+  const workspaceDetail = workspaceDetailOf(workspaceRef, sourceOptions);
+  const legacyLabel = legacyRunDirectory
+    ? (sourceOptions.find((option) => option.root === legacyRunDirectory)?.label ??
+      legacyRunDirectory)
+    : null;
+  const items = workspaceItems(workspaceRef, sourceOptions);
+  const subpathInvalid = subpathValue.trim().startsWith('/');
+  const saveWorkspace = (ref: WorkspaceRef) => {
+    setSubpathDraft(null);
+    form.setValue('defaultWorkspaceRef', ref, { shouldDirty: true });
+  };
+  const selectWorkspace = (value: string | null) => {
+    if (value === null) {
+      return;
+    }
+    if (value === CUSTOM_DIRECTORY_VALUE) {
+      setCustomPath('');
+      setCustomOpen(true);
+      return;
+    }
+    setCustomOpen(false);
+    form.setValue('defaultRunDirectory', null, { shouldDirty: true });
+    if (value === SANDBOX_VALUE) {
+      saveWorkspace({ kind: 'sandbox' });
+      return;
+    }
+    if (value.startsWith(SOURCE_PREFIX)) {
+      saveWorkspace({ kind: 'source', sourceId: value.slice(SOURCE_PREFIX.length) });
+      return;
+    }
+    if (value.startsWith(FOLDER_PREFIX)) {
+      saveWorkspace({ kind: 'folder', path: value.slice(FOLDER_PREFIX.length) });
+    }
+  };
+  const applySubpath = () => {
+    if (!workspaceRef || !isSubpathRef(workspaceRef)) {
+      return;
+    }
+    const trimmed = subpathValue.trim();
+    if (trimmed.startsWith('/')) {
+      return;
+    }
+    saveWorkspace(
+      trimmed === '' ? withoutSubpath(workspaceRef) : { ...workspaceRef, subpath: trimmed },
+    );
+  };
+  return (
+    <>
+      <Field>
+        <FieldLabel>Default workspace</FieldLabel>
+        <Select items={items} value={workspaceValue} onValueChange={selectWorkspace}>
+          <SelectTrigger data-testid="agent-default-workspace">
+            <SelectValue placeholder="Thread sandbox (default)" />
+          </SelectTrigger>
+          <SelectContent>
+            {items.map((item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {workspaceRef && isSubpathRef(workspaceRef) ? (
+          <div className="flex items-center gap-1.5">
+            <Input
+              className="h-7 font-mono text-xs"
+              placeholder="subfolder (optional)"
+              aria-label="Default workspace subfolder"
+              aria-invalid={subpathInvalid || undefined}
+              value={subpathValue}
+              onChange={(event) => setSubpathDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  applySubpath();
+                }
+              }}
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={subpathInvalid}
+              onClick={applySubpath}
+            >
+              Apply
+            </Button>
+          </div>
+        ) : null}
+        {subpathInvalid ? <FieldError>Subfolder must not start with a slash</FieldError> : null}
+        <WorkspaceHint detail={workspaceDetail} legacyLabel={legacyLabel} />
+      </Field>
+      {customOpen ? (
+        <Popover open onOpenChange={(open) => (open ? undefined : setCustomOpen(false))}>
+          <PopoverTrigger className="hidden" aria-hidden />
+          <PopoverContent align="start" className="w-96 p-2">
+            <div className="flex flex-col gap-2">
+              <FolderBrowser orgId={orgId || undefined} autoFocus onChange={setCustomPath} />
+              <div className="flex items-center justify-end gap-1.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setCustomOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={!customPath.trim().startsWith('/')}
+                  data-testid="agent-default-workspace-select"
+                  onClick={() => {
+                    const trimmed = customPath.trim();
+                    if (!trimmed.startsWith('/')) {
+                      return;
+                    }
+                    form.setValue('defaultRunDirectory', null, { shouldDirty: true });
+                    saveWorkspace({ kind: 'folder', path: trimmed });
+                    setCustomOpen(false);
+                  }}
+                >
+                  Select
+                </Button>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+      ) : null}
+    </>
+  );
+}
+
+function subpathOf(ref: WorkspaceRef | null): string {
+  return ref && isSubpathRef(ref) ? (ref.subpath ?? '') : '';
+}
+
+function isSubpathRef(
+  ref: WorkspaceRef,
+): ref is Extract<WorkspaceRef, { kind: 'source' | 'worktree' }> {
+  return ref.kind === 'source' || ref.kind === 'worktree';
+}
+
+function WorkspaceHint({
+  detail,
+  legacyLabel,
+}: {
+  detail: string | null;
+  legacyLabel: string | null;
+}) {
+  if (detail) {
+    return <p className="font-mono text-[11px] text-muted-foreground leading-snug">{detail}</p>;
+  }
+  if (legacyLabel) {
+    return (
+      <p className="text-muted-foreground text-xs leading-snug">
+        Legacy default run directory: <span className="font-mono">{legacyLabel}</span> (read-only)
+      </p>
+    );
+  }
+  return (
+    <p className="text-muted-foreground text-xs leading-snug">
+      New threads for this agent start in their private sandbox.
+    </p>
+  );
+}
+
+function workspaceValueOf(ref: WorkspaceRef | null): string {
+  if (!ref || ref.kind === 'inherit' || ref.kind === 'sandbox') {
+    return SANDBOX_VALUE;
+  }
+  if (ref.kind === 'folder') {
+    return `${FOLDER_PREFIX}${ref.path}`;
+  }
+  return `${SOURCE_PREFIX}${ref.sourceId}`;
+}
+
+function workspaceItems(ref: WorkspaceRef | null, roots: SourceRootOption[]) {
+  const items = [
+    { value: SANDBOX_VALUE, label: 'Thread sandbox' },
+    ...roots.map((option) => ({
+      value: `${SOURCE_PREFIX}${option.sourceId}`,
+      label: option.label,
+    })),
+  ];
+  if (
+    ref?.kind === 'folder' &&
+    !items.some((item) => item.value === `${FOLDER_PREFIX}${ref.path}`)
+  ) {
+    items.push({ value: `${FOLDER_PREFIX}${ref.path}`, label: ref.path });
+  }
+  if (
+    (ref?.kind === 'source' || ref?.kind === 'worktree') &&
+    !items.some((item) => item.value === `${SOURCE_PREFIX}${ref.sourceId}`)
+  ) {
+    items.push({
+      value: `${SOURCE_PREFIX}${ref.sourceId}`,
+      label: ref.sourceId.slice(0, 8),
+    });
+  }
+  items.push({ value: CUSTOM_DIRECTORY_VALUE, label: 'Custom path...' });
+  return items;
+}
+
+function workspaceDetailOf(ref: WorkspaceRef | null, roots: SourceRootOption[]): string | null {
+  if (!ref || ref.kind === 'inherit' || ref.kind === 'sandbox') {
+    return null;
+  }
+  if (ref.kind === 'folder') {
+    return ref.path;
+  }
+  const label = roots.find((option) => option.sourceId === ref.sourceId)?.label ?? ref.sourceId;
+  return ref.subpath !== undefined ? `${label}/${ref.subpath}` : label;
+}
+
+function withoutSubpath(ref: Extract<WorkspaceRef, { kind: 'source' | 'worktree' }>): WorkspaceRef {
+  if (ref.kind === 'worktree') {
+    return { kind: 'worktree', sourceId: ref.sourceId, worktreeId: ref.worktreeId };
+  }
+  return { kind: 'source', sourceId: ref.sourceId };
 }

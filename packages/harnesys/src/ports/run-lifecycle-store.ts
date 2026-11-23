@@ -33,6 +33,7 @@ export interface RunRecord {
   createdAt: string;
   updatedAt: string;
   attribution?: RunAttribution;
+  environmentJson?: string;
 }
 export interface RunCreateInput {
   runId: string;
@@ -41,6 +42,7 @@ export interface RunCreateInput {
   agentName: string;
   parentRunId?: string;
   attribution?: RunAttribution;
+  environmentJson?: string;
 }
 export interface RunTransitionPatch {
   from: RunLifecycleStatus;

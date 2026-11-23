@@ -1,3 +1,4 @@
+import { type WorkspaceRef, WorkspaceRefSchema } from '@harnesys/contracts';
 import type {
   AgentBudget,
   AgentGenerationSettings,
@@ -70,6 +71,7 @@ export const agentFieldsSchema = z.object({
   budgetSpawnMode: z.enum(['pool', 'inherit']),
   defaultModeId: z.string().nullable(),
   defaultRunDirectory: z.string().nullable(),
+  defaultWorkspaceRef: WorkspaceRefSchema.nullable(),
   executionProfileId: z.string().nullable(),
   modes: agentModesSchema,
   permissions: z
@@ -131,6 +133,7 @@ export function emptyAgentFields(): AgentFieldsInput {
     budgetSpawnMode: 'pool',
     defaultModeId: null,
     defaultRunDirectory: null,
+    defaultWorkspaceRef: null,
     executionProfileId: null,
     modes: [],
     permissions: null,
@@ -150,6 +153,7 @@ export function agentFieldsFrom(agent: {
   budgetUsdDaily?: number | null;
   defaultModeId?: string | null;
   defaultRunDirectory?: string | null;
+  defaultWorkspaceRef?: WorkspaceRef | null;
   executionProfileId?: string | null;
   modes?: AgentMode[];
   permissions?: PermissionMap | null;
@@ -164,6 +168,7 @@ export function agentFieldsFrom(agent: {
     effort: agent.effort ?? null,
     defaultModeId: agent.defaultModeId ?? null,
     defaultRunDirectory: agent.defaultRunDirectory ?? null,
+    defaultWorkspaceRef: agent.defaultWorkspaceRef ?? null,
     executionProfileId: agent.executionProfileId ?? null,
     modes: (agent.modes ?? []).map(modeToFields),
     permissions: agent.permissions ?? null,
@@ -226,6 +231,7 @@ export function toAgentDraft(values: AgentFieldsOutput): {
   budgetUsdDaily: number | null;
   defaultModeId: string | null;
   defaultRunDirectory: string | null;
+  defaultWorkspaceRef: WorkspaceRef | null;
   executionProfileId: string | null;
   modes: AgentMode[];
   permissions: PermissionMap | null;
@@ -267,6 +273,7 @@ export function toAgentDraft(values: AgentFieldsOutput): {
     effort: values.effort,
     defaultModeId: values.defaultModeId,
     defaultRunDirectory: values.defaultRunDirectory,
+    defaultWorkspaceRef: values.defaultWorkspaceRef,
     executionProfileId: values.executionProfileId,
     modes: values.modes.map(fieldsToMode),
     generation,

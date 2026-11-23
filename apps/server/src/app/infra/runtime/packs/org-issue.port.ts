@@ -117,6 +117,9 @@ export class OrgIssuePort implements IssueTrackerPort {
         ...(input.dueDate !== undefined ? { dueDate: input.dueDate } : {}),
         ...(input.dependencies ? { dependencies: input.dependencies } : {}),
         ...(input.sourceId !== undefined ? { sourceId: input.sourceId } : {}),
+        ...(input.workspaceSubpath !== undefined
+          ? { workspaceSubpath: input.workspaceSubpath }
+          : {}),
         ...(input.branch !== undefined ? { branch: input.branch } : {}),
         ...(input.worktreeOnStatus !== undefined
           ? { worktreeOnStatus: input.worktreeOnStatus }
@@ -141,6 +144,9 @@ export class OrgIssuePort implements IssueTrackerPort {
         ...(patch.assigneeAgentId !== undefined ? { assigneeAgentId: patch.assigneeAgentId } : {}),
         ...(patch.dueDate !== undefined ? { dueDate: patch.dueDate } : {}),
         ...(patch.sourceId !== undefined ? { sourceId: patch.sourceId } : {}),
+        ...(patch.workspaceSubpath !== undefined
+          ? { workspaceSubpath: patch.workspaceSubpath }
+          : {}),
         ...(patch.branch !== undefined ? { branch: patch.branch } : {}),
         ...(patch.worktreeOnStatus !== undefined
           ? { worktreeOnStatus: patch.worktreeOnStatus }

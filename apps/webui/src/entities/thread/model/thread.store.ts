@@ -45,6 +45,7 @@ export const useThreadStore = create<ThreadStore>((set, get) => ({
       kind: 'chat',
       updatedAt: new Date().toISOString(),
       unread: false,
+      workspaceRef: null,
     };
     set((state) => ({ items: [...state.items, thread] }));
     return thread;

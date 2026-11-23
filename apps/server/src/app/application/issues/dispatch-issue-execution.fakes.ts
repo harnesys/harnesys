@@ -247,6 +247,7 @@ export function issueRecord(parts: Partial<IssueRecord> = {}): IssueRecord {
     closedAt: null,
     fireTrail: [],
     sourceId: 'src-1',
+    workspaceSubpath: null,
     branch: 'main',
     worktreeOnStatus: null,
     createdAt: NOW,

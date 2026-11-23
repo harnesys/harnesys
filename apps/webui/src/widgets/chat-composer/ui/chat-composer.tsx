@@ -232,7 +232,7 @@ export function ChatComposer({
         ) : null}
       </div>
       <div className="flex items-center justify-between gap-2 px-1 pt-1.5">
-        <ThreadBindingBar orgId={orgId} thread={thread} />
+        <ThreadBindingBar orgId={orgId} thread={thread} agent={agent} />
         <ComposerShortcutsHint newline={!assistant} />
       </div>
     </div>

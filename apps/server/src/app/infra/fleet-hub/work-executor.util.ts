@@ -1,6 +1,6 @@
 import { mkdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import type { TaskEnvelope } from '@harnesys/contracts';
+import type { RunEnvironment, TaskEnvelope } from '@harnesys/contracts';
 import { type InMemoryRunLifecycleStore, type RunEventFeed, type SessionEvent } from 'harnesys';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
@@ -8,8 +8,14 @@ import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import { LEGACY_PROVIDER_SECRET_PREFIX, vaultStorageKey } from '../../domain/secret/vault-keys.ts';
 import { SourceLocationPort } from '../../domain/source/source-location.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+
 import { permissionsFromConfig } from '../runtime/agent-definition.mapper.ts';
 import type { WorkExecutorDeps } from './work-executor.compose.ts';
+import {
+  primaryTargetOf,
+  resolveWorktreeRoot,
+  worktreeSelectionOf,
+} from './work-executor.workspace.ts';
 
 export const RUN_EVENT_COALESCE_MS = 40;
 export const TERMINAL_EVENT_TYPES = new Set([
@@ -53,6 +59,7 @@ export interface WorkerTargetInput {
   sourceId?: string;
   worktreeId?: string;
   directory?: string;
+  environment?: RunEnvironment;
 }
 
 export function prepareWorkerTarget(input: WorkerTargetInput) {
@@ -61,10 +68,13 @@ export function prepareWorkerTarget(input: WorkerTargetInput) {
   mkdirSync(sandboxDir, { recursive: true, mode: 0o700 });
   const attachmentsDir = join(threadDir, 'attachments');
   const localHostId = input.machineConfig.get().id;
-  const worktreeRoot = resolveWorktreeRoot(input, localHostId);
-  const primaryDirectory = input.directory ?? worktreeRoot ?? sandboxDir;
-  if (input.directory && !isDirectory(input.directory)) {
-    throw new Error(`run directory not found on host: ${input.directory}`);
+  const anchor = input.environment?.anchor ?? null;
+  const worktree = worktreeSelectionOf(input, anchor);
+  const worktreeRoot =
+    worktree === null ? undefined : resolveWorktreeRoot(input, localHostId, worktree);
+  const target = primaryTargetOf(input, sandboxDir, worktreeRoot);
+  if (target.requireDirectory && !isDirectory(target.directory)) {
+    throw new Error(`run directory not found on host: ${target.directory}`);
   }
   const sourceRefs = input.agent.sharedSourceIds.map((sourceId) => {
     const source = input.sources.findById(input.orgId, sourceId);
@@ -75,8 +85,8 @@ export function prepareWorkerTarget(input: WorkerTargetInput) {
       orgId: input.orgId,
       sourceId,
       hostId: localHostId,
-      ...(worktreeRoot && sourceId === input.sourceId && input.worktreeId
-        ? { worktreeId: input.worktreeId }
+      ...(worktree !== null && sourceId === worktree.sourceId
+        ? { worktreeId: worktree.worktreeId }
         : {}),
     });
     return {
@@ -88,30 +98,14 @@ export function prepareWorkerTarget(input: WorkerTargetInput) {
   return {
     permissions: permissionsFromConfig(input.agent.config) ?? {},
     paths: {
-      allow: [attachmentsDir, primaryDirectory],
-      write: [primaryDirectory],
-      cwd: primaryDirectory,
+      allow: [attachmentsDir, target.directory],
+      write: [target.directory],
+      cwd: target.directory,
       threadDir,
     },
     sourceRefs,
     threadDir,
   };
-}
-
-function resolveWorktreeRoot(input: WorkerTargetInput, localHostId: string): string | undefined {
-  if (!input.worktreeId || !input.sourceId) {
-    return undefined;
-  }
-  if (!input.agent.sharedSourceIds.includes(input.sourceId)) {
-    throw new Error(`worktree source not shared with agent: ${input.sourceId}`);
-  }
-  const location = input.sourceLocation.resolve({
-    orgId: input.orgId,
-    sourceId: input.sourceId,
-    hostId: localHostId,
-    worktreeId: input.worktreeId,
-  });
-  return location.absoluteRoot;
 }
 
 function isDirectory(path: string): boolean {
@@ -283,8 +277,12 @@ export function prepareWorkerTargetOf(
     orgId,
     threadId: envelope.threadId,
     agent,
-    ...(envelope.directory ? { directory: envelope.directory } : {}),
-    ...(envelope.sourceId ? { sourceId: envelope.sourceId } : {}),
-    ...(envelope.worktreeId ? { worktreeId: envelope.worktreeId } : {}),
+    ...(envelope.environment
+      ? { environment: envelope.environment }
+      : {
+          ...(envelope.directory ? { directory: envelope.directory } : {}),
+          ...(envelope.sourceId ? { sourceId: envelope.sourceId } : {}),
+          ...(envelope.worktreeId ? { worktreeId: envelope.worktreeId } : {}),
+        }),
   });
 }

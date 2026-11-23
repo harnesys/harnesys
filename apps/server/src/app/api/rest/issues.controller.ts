@@ -110,12 +110,12 @@ export class IssuesController {
   }
 
   @Patch(':issueId')
-  update(
+  async update(
     @Param('orgId') orgId: string,
     @Param('issueId') issueId: string,
     @Body(UpdateIssueBodySchema) body: UpdateIssueBody,
-  ): { issue: IssuePublic } {
-    return { issue: this.updateIssue.execute({ orgId, issueId, body }) };
+  ): Promise<{ issue: IssuePublic }> {
+    return { issue: await this.updateIssue.execute({ orgId, issueId, body }) };
   }
 
   @Patch(':issueId/status')

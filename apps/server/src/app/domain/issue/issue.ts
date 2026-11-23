@@ -25,6 +25,7 @@ export interface IssueRecord {
   closedAt: string | null;
   fireTrail: IssueFireTrailEntry[];
   sourceId: string | null;
+  workspaceSubpath: string | null;
   branch: string | null;
   worktreeOnStatus: string | null;
   createdAt: string;
@@ -47,6 +48,7 @@ export interface IssueInsert {
   closedAt: string | null;
   fireTrail: IssueFireTrailEntry[];
   sourceId: string | null;
+  workspaceSubpath: string | null;
   branch: string | null;
   worktreeOnStatus: string | null;
   createdAt: string;
@@ -67,6 +69,7 @@ export type IssuePatch = Partial<{
   closedAt: string | null;
   fireTrail: IssueFireTrailEntry[];
   sourceId: string | null;
+  workspaceSubpath: string | null;
   branch: string | null;
   worktreeOnStatus: string | null;
   updatedAt: string;

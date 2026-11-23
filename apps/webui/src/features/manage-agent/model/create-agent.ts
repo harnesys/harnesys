@@ -32,6 +32,7 @@ export async function createAgent(
     enabledPlugins: draft.enabledPlugins,
     defaultModeId: draft.defaultModeId ?? null,
     defaultRunDirectory: draft.defaultRunDirectory ?? null,
+    defaultWorkspaceRef: draft.defaultWorkspaceRef ?? null,
     sharedSourceIds: draft.sharedSourceIds ?? [],
     sourceLevels: draft.sourceLevels ?? {},
     ...(Object.keys(config).length > 0 ? { config } : {}),

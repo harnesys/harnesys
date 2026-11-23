@@ -1,5 +1,6 @@
-import { mkdirSync, statSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import type { RunEnvironment } from '@harnesys/contracts';
 import { type AgentMode, DEFAULT_MODE_ID } from '@harnesys/studio-shared';
 import type {
   AgentDefinition,
@@ -27,7 +28,6 @@ import { SourceLocationPort } from '../../domain/source/source-location.port.ts'
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import {
   type PrepareTargetOptions,
-  type RunTriggerKind,
   resolveRuntimePrimary,
   sharedSourcesOf,
 } from '../../domain/thread/prepare-runtime-input.ts';
@@ -47,6 +47,7 @@ import {
 } from './agent-definition.mapper.ts';
 import { resolveContextFiles } from './context-files-note.ts';
 import { groupChannelNote } from './group-note.ts';
+import { isDirectory, resolveAgentAndModel } from './prepare-org-target-parts.ts';
 import { type TargetCache, targetCacheKey } from './target-cache.ts';
 
 export interface PrepareOrgTargetDeps {
@@ -75,15 +76,12 @@ export interface PreparedPaths {
 export type { PrepareTargetOptions };
 
 export function runtimeOptionsOf(
-  binding:
-    | { directory?: string; sourceId?: string; worktreeId?: string; triggerKind?: RunTriggerKind }
-    | undefined,
+  environment?: RunEnvironment,
+  mode?: string,
 ): PrepareTargetOptions {
   return {
-    ...(binding?.directory !== undefined ? { directory: binding.directory } : {}),
-    ...(binding?.sourceId !== undefined ? { sourceId: binding.sourceId } : {}),
-    ...(binding?.worktreeId !== undefined ? { worktreeId: binding.worktreeId } : {}),
-    ...(binding?.triggerKind !== undefined ? { triggerKind: binding.triggerKind } : {}),
+    ...(environment !== undefined ? { environment } : {}),
+    ...(mode !== undefined ? { mode } : {}),
   };
 }
 
@@ -117,21 +115,7 @@ export function prepareTarget(
   if (!thread) {
     return null;
   }
-  const agent = deps.agents.findById(deps.orgId, agentId);
-  if (!agent) {
-    throw new ThreadValidationException('agent not found for thread');
-  }
-  if (!agent.modelId) {
-    throw new ThreadValidationException('agent has no model');
-  }
-  const model = deps.models.findById(deps.orgId, agent.modelId);
-  if (!model) {
-    throw new ThreadValidationException('model not found');
-  }
-  const provider = deps.providers.findById(deps.orgId, model.providerId);
-  if (!provider) {
-    throw new ThreadValidationException('provider not found');
-  }
+  const { agent, model, provider } = resolveAgentAndModel(deps, agentId);
 
   const hostId = deps.machineConfig.get().id;
   const primary = resolveRuntimePrimary(
@@ -149,6 +133,12 @@ export function prepareTarget(
       `run directory not found on host ${hostId}: ${primary.primaryDirectory}`,
     );
   }
+  if (
+    options?.environment?.subpath !== undefined &&
+    (primary.primaryKind === 'source' || primary.primaryKind === 'worktree')
+  ) {
+    mkdirSync(primary.primaryDirectory, { recursive: true });
+  }
   mkdirSync(primary.threadSandbox, { recursive: true, mode: 0o700 });
   const threadDir = deps.layout.threadDir(deps.orgId, threadId);
   const attachmentsDir = join(threadDir, 'attachments');
@@ -162,6 +152,7 @@ export function prepareTarget(
     agentId: agent.id,
     pathsAllow: paths.allow,
     cwd: paths.cwd,
+    runtime: options?.environment?.isolation?.mode === 'container' ? 'container' : 'host',
   });
   const scope: CapabilityScope = {
     orgId: deps.orgId,
@@ -223,14 +214,6 @@ function primarySourceRefOf(
     name: record?.name ?? sourceId,
     kind: record?.vcs != null ? 'git' : 'folder',
   };
-}
-
-function isDirectory(path: string): boolean {
-  try {
-    return statSync(path).isDirectory();
-  } catch {
-    return false;
-  }
 }
 
 function runAgentDef(

@@ -6,7 +6,7 @@ import type {
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useThreadFeeds } from '@/entities/session';
-import { useThreadWorktreeStore } from '@/entities/thread';
+import { type ThreadWorktreeBinding, useThreadWorktreeStore } from '@/entities/thread';
 import { useSelectedThread } from '@/features/desk';
 import { openThreadFileTab, useIdeStore } from '@/features/ide';
 import { openProjectFile } from '@/features/open-file';
@@ -220,12 +220,13 @@ function WorkspaceSection({
   onOpenFile: (sourceId: string, path: string) => void;
 }) {
   const binding = useThreadWorktreeStore((state) => state.get(threadId));
-  const ready = Boolean(orgId && binding);
+  const workspaceRef = binding?.workspaceRef;
+  const ready = Boolean(orgId && workspaceRef);
   const treeQuery = useQuery({
-    queryKey: ['workspace-files', orgId, binding?.sourceId, binding?.worktreeId],
+    queryKey: ['workspace-files', orgId, workspaceRef?.sourceId, workspaceRef?.worktreeId],
     queryFn: () =>
-      listContentTree(orgId ?? '', binding?.sourceId ?? '', '', {
-        worktreeId: binding?.worktreeId,
+      listContentTree(orgId ?? '', workspaceRef?.sourceId ?? '', '', {
+        worktreeId: workspaceRef?.worktreeId,
       }),
     enabled: ready,
   });
@@ -239,13 +240,14 @@ function WorkspaceSection({
 
 function workspaceBody(
   orgId: string | undefined,
-  binding: { sourceId: string; worktreeId: string } | undefined,
+  binding: ThreadWorktreeBinding | undefined,
   query: { isPending: boolean; isError: boolean; data?: ContentTreeResponse },
   onOpenFile: (sourceId: string, path: string) => void,
 ) {
   if (!binding) {
     return <PaneHint text="No workspace is bound to this thread." />;
   }
+  const { sourceId, worktreeId } = binding.workspaceRef;
   if (query.isPending) {
     return <PaneHint text="Loading files…" />;
   }
@@ -258,8 +260,8 @@ function workspaceBody(
         <WorkspaceEntry
           key={entry.path}
           orgId={orgId ?? ''}
-          sourceId={binding.sourceId}
-          worktreeId={binding.worktreeId}
+          sourceId={sourceId}
+          worktreeId={worktreeId}
           entry={entry}
           depth={0}
           onOpenFile={onOpenFile}

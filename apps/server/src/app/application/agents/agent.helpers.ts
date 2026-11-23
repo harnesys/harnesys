@@ -29,6 +29,7 @@ export function toAgentPublic(record: AgentRecord): AgentPublic {
     enabledPlugins: record.enabledPlugins,
     defaultModeId: record.defaultModeId,
     defaultRunDirectory: record.defaultRunDirectory,
+    defaultWorkspaceRef: record.defaultWorkspaceRef ?? null,
     hooks: record.hooks,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,

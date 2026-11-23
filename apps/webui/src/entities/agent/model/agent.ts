@@ -1,4 +1,4 @@
-import type { AgentHook, AgentSourceLevel } from '@harnesys/contracts';
+import type { AgentHook, AgentSourceLevel, WorkspaceRef } from '@harnesys/contracts';
 import type {
   AgentBudget,
   AgentGenerationSettings,
@@ -38,6 +38,7 @@ export interface Agent {
   enabledPlugins: Record<string, boolean>;
   defaultModeId: string | null;
   defaultRunDirectory: string | null;
+  defaultWorkspaceRef: WorkspaceRef | null;
   executionProfileId: string | null;
   modes: AgentMode[];
   createdAt: string;
@@ -70,6 +71,7 @@ export interface AgentDraft {
   enabledPlugins?: Record<string, boolean>;
   defaultModeId?: string | null;
   defaultRunDirectory?: string | null;
+  defaultWorkspaceRef?: WorkspaceRef | null;
   executionProfileId?: string | null;
   modes?: AgentMode[];
 }
@@ -94,6 +96,7 @@ export type AgentPatch = Partial<
     | 'enabledPlugins'
     | 'defaultModeId'
     | 'defaultRunDirectory'
+    | 'defaultWorkspaceRef'
     | 'executionProfileId'
     | 'modes'
   >

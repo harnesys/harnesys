@@ -1,5 +1,5 @@
 import { Injectable } from '@harnesys/brix';
-import type { AgentHook, AgentPublic, CreateAgentBody } from '@harnesys/contracts';
+import type { AgentHook, AgentPublic, CreateAgentBody, WorkspaceRef } from '@harnesys/contracts';
 import {
   AgentConflictException,
   AgentValidationException,
@@ -7,7 +7,10 @@ import {
 import type { AgentRecord } from '../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { ExecutionProfilePort } from '../../domain/execution-profile/execution-profile.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { ModePresetRegistryPort } from '../../domain/mode-presets/mode-preset-registry.port.ts';
+import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import {
   assertNonEmptyName,
   stripHookConfig,
@@ -17,6 +20,7 @@ import {
   validateExecutionProfileId,
 } from './agent.helpers.ts';
 import { validateAgentHooks } from './agent-hooks.validation.ts';
+import { validateAgentWorkspaceRef } from './agent-workspace-ref.ts';
 import { buildReactGraph, DEFAULT_REACT_BUDGET } from './react-preset.ts';
 
 export interface CreateAgentRequest {
@@ -30,6 +34,9 @@ export class CreateAgentUseCase {
     private readonly agents: AgentRegistryPort,
     private readonly modePresets: ModePresetRegistryPort,
     private readonly profiles: ExecutionProfilePort,
+    private readonly sources: SourceRegistryPort,
+    private readonly layout: HostFsLayoutPort,
+    private readonly machineConfig: MachineConfigPort,
   ) {}
 
   execute(request: CreateAgentRequest): AgentPublic {
@@ -58,10 +65,29 @@ export class CreateAgentUseCase {
       modelId,
       defaultModeId,
       defaultRunDirectory: validateDefaultRunDirectory(request.body.defaultRunDirectory ?? null),
+      defaultWorkspaceRef: this.workspaceRefOf(request),
       executionProfileId,
       hooks,
     });
     return toAgentPublic(this.agents.insert(record));
+  }
+
+  private workspaceRefOf(request: CreateAgentRequest): WorkspaceRef | null {
+    const body = request.body;
+    if (body.defaultWorkspaceRef !== undefined && body.defaultRunDirectory !== undefined) {
+      throw new AgentValidationException(
+        'defaultRunDirectory and defaultWorkspaceRef are mutually exclusive',
+      );
+    }
+    return validateAgentWorkspaceRef(
+      {
+        orgId: request.orgId,
+        sources: this.sources,
+        layout: this.layout,
+        localHostId: this.machineConfig.get().id,
+      },
+      body.defaultWorkspaceRef ?? null,
+    );
   }
 
   private validateHooks(request: CreateAgentRequest, agentId: string): AgentHook[] {
@@ -88,6 +114,7 @@ interface BuildCreateRecordInput {
   modelId: string;
   defaultModeId: string | null;
   defaultRunDirectory: string | null;
+  defaultWorkspaceRef: WorkspaceRef | null;
   executionProfileId: string | null;
   hooks: AgentHook[];
 }
@@ -115,6 +142,7 @@ function buildCreateRecord(input: BuildCreateRecordInput): AgentRecord {
     enabledPlugins: body.enabledPlugins ?? {},
     defaultModeId: input.defaultModeId,
     defaultRunDirectory: input.defaultRunDirectory,
+    defaultWorkspaceRef: input.defaultWorkspaceRef,
     config: withDefaultReactConfig(stripHookConfig(body.config ?? {})),
     hooks: input.hooks,
     createdAt: now,

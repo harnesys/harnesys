@@ -22,33 +22,6 @@ export function profileOptions(profiles: ExecutionProfile[]): SelectOption[] {
   ];
 }
 
-export function directoryOptions(input: {
-  sources: { id: string; name: string; absoluteRoot: string | null }[];
-  recents: string[];
-  currentDirectory: string | null;
-}): SelectOption[] {
-  const rootOptions: SelectOption[] = [];
-  for (const source of input.sources) {
-    if (source.absoluteRoot) {
-      rootOptions.push({ value: source.absoluteRoot, label: source.name });
-    }
-  }
-  const rootValues = new Set(rootOptions.map((option) => option.value));
-  const recentOptions = input.recents
-    .filter((path) => !rootValues.has(path) && path !== input.currentDirectory)
-    .slice(0, RECENT_DIRECTORIES_LIMIT)
-    .map((path) => ({ value: path, label: path }));
-  const base = [
-    { value: SANDBOX_DIR_VALUE, label: 'Thread sandbox (default)' },
-    ...rootOptions,
-    ...recentOptions,
-  ];
-  if (input.currentDirectory && !base.some((option) => option.value === input.currentDirectory)) {
-    base.push({ value: input.currentDirectory, label: input.currentDirectory });
-  }
-  return [...base, { value: CUSTOM_DIR_VALUE, label: 'Custom path…' }];
-}
-
 export function loadRecentDirectories(orgId: string): string[] {
   try {
     const raw = localStorage.getItem(RECENT_DIRECTORIES_PREFIX + orgId);

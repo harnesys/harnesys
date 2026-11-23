@@ -1,3 +1,4 @@
+import type { RunEnvironment } from '@harnesys/contracts';
 import type {
   RuntimePromptInfo,
   RuntimePromptPrimarySource,
@@ -14,7 +15,6 @@ import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.
 import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import type { PrimarySourceRef } from '../../domain/thread/thread-runtime-context.ts';
-import type { ThreadBinding } from './workspace-target.ts';
 
 interface PreparedPromptTarget {
   agent: { id: string; sharedSourceIds: string[] };
@@ -40,13 +40,13 @@ export interface RuntimePromptDeps {
 export function runRuntimePromptInfo(
   deps: RuntimePromptDeps,
   prepared: PreparedPromptTarget,
-  binding: ThreadBinding | undefined,
+  environment?: RunEnvironment,
 ): RuntimePromptInfo {
   const worktree = worktreeOf(deps, prepared);
-  const primarySource = primarySourceOf(deps, prepared, binding);
+  const primarySource = primarySourceOf(deps, prepared, environment);
   return {
     hostName: deps.machineConfig.get().name,
-    environment: binding?.isolation?.mode === 'container' ? 'container' : 'host',
+    environment: isContainerEnvironment(environment) ? 'container' : 'host',
     primaryDirectory: prepared.runtime.primaryDirectory,
     primaryKind: prepared.runtime.primaryKind,
     threadSandbox: prepared.runtime.threadSandbox,
@@ -56,17 +56,21 @@ export function runRuntimePromptInfo(
   };
 }
 
+export function isContainerEnvironment(environment?: RunEnvironment): boolean {
+  return environment?.isolation?.mode === 'container';
+}
+
 function primarySourceOf(
   deps: RuntimePromptDeps,
   prepared: PreparedPromptTarget,
-  binding: ThreadBinding | undefined,
+  environment: RunEnvironment | undefined,
 ): RuntimePromptPrimarySource | undefined {
   const ref = prepared.runtime.primarySource;
   if (prepared.runtime.primaryKind !== 'source' || !ref) {
     return undefined;
   }
   const record = deps.sources.findById(deps.orgId, ref.sourceId);
-  const branch = binding?.branch?.trim();
+  const branch = environment?.branch?.trim();
   return {
     name: record?.name ?? ref.name,
     kind: ref.kind,

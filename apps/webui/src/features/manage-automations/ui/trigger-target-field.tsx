@@ -1,3 +1,4 @@
+import type { WorkspaceRef } from '@harnesys/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { ThreadBindingSelects, useThreadStore } from '@/entities/thread';
 import { createThreadRecord, listThreads } from '@/shared/api';
@@ -36,7 +37,7 @@ interface TriggerThreadOption {
   agentId: string;
   title: string;
   runProfileId?: string | null;
-  runDirectory?: string | null;
+  workspaceRef?: WorkspaceRef | null;
   bindingLocked?: boolean;
 }
 
@@ -68,7 +69,7 @@ export function TriggerTargetField({
       agentId: thread.agentId,
       title: thread.title,
       runProfileId: thread.runProfileId,
-      runDirectory: thread.runDirectory,
+      workspaceRef: thread.workspaceRef,
       bindingLocked: thread.bindingLocked,
     });
   }
@@ -79,7 +80,7 @@ export function TriggerTargetField({
         agentId: thread.agentId,
         title: thread.title,
         runProfileId: thread.runProfileId,
-        runDirectory: thread.runDirectory,
+        workspaceRef: thread.workspaceRef,
         bindingLocked: thread.bindingLocked,
       });
     }
@@ -136,7 +137,7 @@ export function TriggerTargetField({
             orgId={orgId}
             threadId={linkedThread.id}
             runProfileId={linkedThread.runProfileId ?? null}
-            runDirectory={linkedThread.runDirectory ?? null}
+            workspaceRef={linkedThread.workspaceRef ?? null}
             bindingLocked={linkedThread.bindingLocked ?? false}
           />
         ) : null}{' '}

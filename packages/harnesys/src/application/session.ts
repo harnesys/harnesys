@@ -110,6 +110,12 @@ function sendInputAttribution(input: SendInput): RunAttribution | undefined {
   }
   return input.attribution;
 }
+function sendInputEnvironment(input: SendInput): string | undefined {
+  if (typeof input === 'string') {
+    return undefined;
+  }
+  return input.environmentJson;
+}
 function toolOperationsOf(registry: Map<string, ToolDefinition>): string[] {
   const ops: string[] = [];
   for (const [, toolDef] of registry) {
@@ -181,6 +187,7 @@ export function createSession(
           agentId: def.id,
           agentName: def.name ?? def.id,
           attribution: sendInputAttribution(input),
+          environmentJson: sendInputEnvironment(input),
         },
         sendOpts?.triggerThreadSeq === undefined ? [userEvent] : [],
       );

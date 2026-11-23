@@ -136,6 +136,7 @@ CREATE TABLE IF NOT EXISTS pending_placements (
   trigger_kind TEXT NOT NULL,
   trigger_id TEXT NOT NULL,
   expires_at TEXT,
+  environment TEXT,
   payload_json TEXT NOT NULL,
   last_candidates_json TEXT NOT NULL DEFAULT '[]'
 );

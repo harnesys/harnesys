@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import type { RunEnvironment } from '@harnesys/contracts';
 import { build, currentBaseDir, disposeBaseDir } from './prepare-org-target.fixtures.ts';
 import { prepareTarget } from './prepare-org-target.ts';
 
@@ -8,8 +9,12 @@ afterEach(() => {
   disposeBaseDir();
 });
 
+function environment(partial: Partial<RunEnvironment>): RunEnvironment {
+  return { anchor: null, cwd: 'sandbox', provenance: 'fallback', ...partial };
+}
+
 describe('prepareTarget runtime context', () => {
-  test('derives cwd and primaryKind per trigger and keeps shared sources out of paths.allow', () => {
+  test('derives cwd and primaryKind per environment and keeps shared sources out of paths.allow', () => {
     const chat = build(undefined, undefined, ['src-1']);
     const chatThreadDir = join(currentBaseDir(), 'org-1', 'thread-1');
     const chatSandbox = join(chatThreadDir, 'sandbox');
@@ -32,9 +37,7 @@ describe('prepareTarget runtime context', () => {
       'thread-1',
       'agent-1',
       scheduled.cache,
-      {
-        triggerKind: 'schedule',
-      },
+      { environment: environment({ anchor: null, cwd: 'sandbox', provenance: 'run' }) },
     );
     expect(scheduledPrepared?.runtime.primaryKind).toBe('sandbox');
     expect(scheduledPrepared?.runtime.primaryDirectory).toBe(scheduledSandbox);
@@ -48,7 +51,11 @@ describe('prepareTarget runtime context', () => {
       'agent-1',
       directory.cache,
       {
-        directory: directoryRoot,
+        environment: environment({
+          anchor: { kind: 'folder', path: directoryRoot },
+          cwd: 'anchor',
+          provenance: 'run',
+        }),
       },
     );
     expect(directoryPrepared?.runtime.primaryKind).toBe('directory');
@@ -58,9 +65,11 @@ describe('prepareTarget runtime context', () => {
     const worktree = build('issue', undefined, ['src-1']);
     const worktreeRoot = currentBaseDir();
     const worktreePrepared = prepareTarget(worktree.deps, 'thread-1', 'agent-1', worktree.cache, {
-      triggerKind: 'issue',
-      sourceId: 'src-1',
-      worktreeId: 'wt-1',
+      environment: environment({
+        anchor: { kind: 'source', sourceId: 'src-1', worktreeId: 'wt-1' },
+        cwd: 'anchor',
+        provenance: 'run',
+      }),
     });
     expect(worktreePrepared?.runtime.primaryKind).toBe('worktree');
     expect(worktreePrepared?.runtime.primaryDirectory).toBe(worktreeRoot);
@@ -75,8 +84,11 @@ describe('prepareTarget runtime context', () => {
     const issue = build('issue', undefined, ['src-1']);
     const issueSourceRoot = currentBaseDir();
     const issuePrepared = prepareTarget(issue.deps, 'thread-1', 'agent-1', issue.cache, {
-      triggerKind: 'issue',
-      sourceId: 'src-1',
+      environment: environment({
+        anchor: { kind: 'source', sourceId: 'src-1' },
+        cwd: 'anchor',
+        provenance: 'run',
+      }),
     });
     expect(issuePrepared?.runtime.primaryKind).toBe('source');
     expect(issuePrepared?.runtime.primaryDirectory).toBe(issueSourceRoot);
@@ -108,7 +120,11 @@ describe('prepareTarget runtime context', () => {
     writeFileSync(join(root, 'AGENTS.md'), '# House rules\nAlways run the tests.');
 
     const prepared = prepareTarget(built.deps, 'thread-1', 'agent-1', built.cache, {
-      directory: root,
+      environment: environment({
+        anchor: { kind: 'folder', path: root },
+        cwd: 'anchor',
+        provenance: 'run',
+      }),
     });
 
     expect(prepared?.contextNote).toContain('<file path="AGENTS.md">');
@@ -129,7 +145,11 @@ describe('prepareTarget runtime context', () => {
     }
 
     const prepared = prepareTarget(built.deps, 'thread-1', 'agent-1', built.cache, {
-      directory: root,
+      environment: environment({
+        anchor: { kind: 'folder', path: root },
+        cwd: 'anchor',
+        provenance: 'run',
+      }),
     });
 
     expect(prepared?.contextNote).toBeUndefined();

@@ -35,6 +35,7 @@ function thread(id: string, orgId = 'org-1'): ThreadRecord {
     metadata: {},
     runProfileId: null,
     runDirectory: null,
+    workspaceRef: null,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     lastReadAt: '2026-01-01T00:00:00.000Z',

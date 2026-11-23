@@ -3,6 +3,7 @@ import { Injectable } from '@harnesys/brix';
 import {
   DEFAULT_MODE_ID,
   type RunAcceptedResponse,
+  type RunEnvironment,
   type TaskEnvelope,
   type TaskEnvelopeAttachment,
 } from '@harnesys/contracts';
@@ -13,7 +14,15 @@ import { FleetEventsPort } from '../../domain/fleet/fleet-events.port.ts';
 import { FleetHubPort } from '../../domain/fleet/fleet-hub.port.ts';
 import { NodeCommandQueuePort } from '../../domain/fleet/node-command-queue.port.ts';
 import { NodeSnapshotAckPort } from '../../domain/fleet/node-snapshot-ack.port.ts';
-import type { PlacementResult, RunIsolation } from '../../domain/fleet/placement.ts';
+import {
+  legacyWorkspaceFieldsOf,
+  type PlacementTrigger,
+} from '../../domain/fleet/pending-placement.ts';
+import type {
+  PlacementProfileSource,
+  PlacementResult,
+  RunIsolation,
+} from '../../domain/fleet/placement.ts';
 import { WORK_CLAIM_LEASE_SEC } from '../../domain/fleet/work-claim.constants.ts';
 import { ModePresetRegistryPort } from '../../domain/mode-presets/mode-preset-registry.port.ts';
 import { modeShellSpecOf } from '../../domain/mode-presets/preset-shell-merge.ts';
@@ -23,7 +32,11 @@ import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port
 import { toPlacementEvent } from '../threads/resolve-run-placement.ts';
 import { runModeOf } from '../threads/thread.helpers.ts';
 import { BuildOrgExecutionSnapshotUseCase } from './build-org-execution-snapshot.use-case.ts';
-import { IssueWaitingRunUseCase, toEnvelopeAttachments } from './issue-waiting-run.use-case.ts';
+import {
+  type IssueWaitingRunInput,
+  IssueWaitingRunUseCase,
+  toEnvelopeAttachments,
+} from './issue-waiting-run.use-case.ts';
 
 export interface IssueRemoteRunInput {
   orgId: string;
@@ -42,10 +55,10 @@ export interface IssueRemoteRunInput {
   clientEventId?: string;
   origin?: string;
   correlationId?: string;
-  directory?: string;
-  sourceId?: string;
-  worktreeId?: string;
+  environment?: RunEnvironment;
+  trigger?: PlacementTrigger;
   isolation?: RunIsolation;
+  expiresAt?: string | null;
 }
 
 @Injectable()
@@ -82,6 +95,7 @@ export class IssueRemoteRunUseCase {
         agentId: input.agent.id,
         agentName: input.agent.name,
         attribution: input.attribution,
+        ...(input.environment ? { environmentJson: JSON.stringify(input.environment) } : {}),
       },
       userEvents,
     );
@@ -176,47 +190,79 @@ export class IssueRemoteRunUseCase {
     const reason = online
       ? `syncing org config revision ${configRevision} to node ${input.nodeId}`
       : `node ${input.nodeId} offline; waiting to sync org config revision ${configRevision}`;
-    const runId = input.runId ?? randomUUID();
-    const candidatesJson = JSON.stringify(placement?.candidates ?? []);
-    return await this.issueWaiting.execute({
-      orgId: input.orgId,
-      threadId: input.threadId,
-      runId,
-      profileId,
-      agentId: input.agent.id,
-      agentName: input.agent.name,
-      priority: 3,
-      trigger: { kind: 'chat', id: input.threadId },
-      reason,
-      attribution: input.attribution,
-      candidatesJson,
-      configRevision,
-      placementEvent: toPlacementEvent(
-        placement ?? {
-          kind: 'unavailable',
-          request: {
-            runId,
-            profileId,
-            profileSource,
-            requiredSources: [],
-          },
-          candidates: [],
-          reason,
-        },
-      ),
-      text: input.text,
-      effort: input.effort,
-      mode: input.mode,
-      ...(input.skills ? { skills: input.skills } : {}),
-      ...(input.attachments ? { attachments: input.attachments } : {}),
-      ...(input.attachmentMetas ? { attachmentMetas: input.attachmentMetas } : {}),
-      clientEventId: input.clientEventId,
-      correlationId: input.correlationId,
-      sourceId: input.sourceId,
-      worktreeId: input.worktreeId,
-      profileSource,
-    });
+    return await this.issueWaiting.execute(
+      deferredWaitingInput(input, {
+        profileId,
+        profileSource,
+        reason,
+        configRevision,
+        placement,
+      }),
+    );
   }
+}
+
+function deferredWaitingInput(
+  input: IssueRemoteRunInput,
+  context: {
+    profileId: string;
+    profileSource: PlacementProfileSource;
+    reason: string;
+    configRevision: number;
+    placement: PlacementResult | undefined;
+  },
+): IssueWaitingRunInput {
+  const runId = input.runId ?? randomUUID();
+  return {
+    orgId: input.orgId,
+    threadId: input.threadId,
+    runId,
+    profileId: context.profileId,
+    agentId: input.agent.id,
+    agentName: input.agent.name,
+    priority: 3,
+    ...waitingOriginOf(input),
+    reason: context.reason,
+    attribution: input.attribution,
+    candidatesJson: JSON.stringify(context.placement?.candidates ?? []),
+    configRevision: context.configRevision,
+    placementEvent: toPlacementEvent(
+      context.placement ?? {
+        kind: 'unavailable',
+        request: {
+          runId,
+          profileId: context.profileId,
+          profileSource: context.profileSource,
+          requiredSources: [],
+        },
+        candidates: [],
+        reason: context.reason,
+      },
+    ),
+    text: input.text,
+    effort: input.effort,
+    mode: input.mode,
+    ...(input.skills ? { skills: input.skills } : {}),
+    ...(input.attachments ? { attachments: input.attachments } : {}),
+    ...(input.attachmentMetas ? { attachmentMetas: input.attachmentMetas } : {}),
+    clientEventId: input.clientEventId,
+    correlationId: input.correlationId,
+    ...(input.environment ? { environment: input.environment } : {}),
+    expiresAt: input.expiresAt ?? null,
+    profileSource: context.profileSource,
+  };
+}
+
+interface WaitingOrigin {
+  trigger: PlacementTrigger;
+  environment?: RunEnvironment;
+}
+
+function waitingOriginOf(input: IssueRemoteRunInput): WaitingOrigin {
+  return {
+    trigger: input.trigger ?? { kind: 'chat', id: input.threadId },
+    ...(input.environment ? { environment: input.environment } : {}),
+  };
 }
 
 function remoteUserEvents(
@@ -275,9 +321,9 @@ function buildRemoteEnvelope(args: {
     ...(input.effort ? { effort: input.effort } : {}),
     ...(input.mode ? { mode: input.mode } : {}),
     ...(args.modeShellSpec ? { modeShellSpec: args.modeShellSpec } : {}),
-    ...(input.directory ? { directory: input.directory } : {}),
-    ...(input.sourceId ? { sourceId: input.sourceId } : {}),
-    ...(input.worktreeId ? { worktreeId: input.worktreeId } : {}),
+    ...(input.environment ? { environment: input.environment } : {}),
+    ...legacyWorkspaceFieldsOf(input.environment),
+    ...(input.skills?.length ? { skills: input.skills } : {}),
     ...(input.isolation?.mode === 'container' ? { isolation: input.isolation } : {}),
   };
 }

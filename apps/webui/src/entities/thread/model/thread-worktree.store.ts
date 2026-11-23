@@ -1,8 +1,10 @@
+import type { WorkspaceRef } from '@harnesys/contracts';
 import { create } from 'zustand';
 
+export type WorktreeWorkspaceRef = Extract<WorkspaceRef, { kind: 'worktree' }>;
+
 export interface ThreadWorktreeBinding {
-  sourceId: string;
-  worktreeId: string;
+  workspaceRef: WorktreeWorkspaceRef;
   branch: string;
   hostId: string;
 }

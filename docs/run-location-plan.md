@@ -90,8 +90,11 @@ promptContext }`. Both relay runtime and node call the same domain code; the div
 - **I4 Anchor drives placement**: worktree/folder → host pin (existing `sourceConstraints`
   mechanism); source → `requiredSources: [sourceId]`; `sourcesReady` comes from materializations,
   not a hardcoded `true`.
-- **I5 Access**: source/worktree anchors require `agent.sharedSourceIds`; `folder` paths are
-  subject to file-access rules; roots granted to the run come from the materialized environment.
+- **I5 Access**: assigning a location to a run, a thread, or an agent's default workspace is an
+  explicit grant — the anchor is always reachable by that run, and the org workspace (the managed
+  `Workspace` source) is shared with every agent. `agent.sharedSourceIds` governs *additional*
+  sources an agent may open through tools, not the workspace it was given. `folder` paths are
+  subject to the I6 guard; roots granted to the run come from the materialized environment.
 - **I6 Path guard**: `folder` paths must be outside the orgs data root (`<dataRoot>/orgs`) and
   system roots; anything inside is reachable only through source/worktree anchors. Closes the
   cross-org / `org.db` write hole; no registry entity required (a named-folder registry remains a
@@ -326,3 +329,47 @@ Seam (Phase 1) → zone A → zones B/C/D in parallel (disjoint files; the B/C s
 `environment` column on `runs` and `pending_placements`, `RunCreateInput.environmentJson`).
 Per-agent gates: boot on its own port with its own `DEV_HARNEYSYS_HOME`, `tsc --noEmit`,
 `biome check`, zone specs. Final: one review pass over the whole diff, one consolidated fix pass.
+
+## Implementation notes (rev. 3)
+
+Decisions taken while implementing, all reflected in the code:
+
+- **Isolation is part of the persisted decision.** `RunEnvironment` carries `isolation: { mode,
+  image? }`; it is attached at dispatch from the placement decision and read at claim time. Without
+  it a container-profile run would silently degrade to a host run after a restart or a waiting
+  re-place. The park-approval file runtime reads `runtime` from the same resolved environment.
+- **I8 applies to run-layer source refs.** A `source` ref at the run layer (issue checkout plan)
+  runs with `cwd: 'anchor'` only for issue runs and with `cwd: 'sandbox'` for every other trigger
+  (mount-only). Thread- and agent-layer source refs always run with `cwd: 'anchor'`: they are an
+  explicit "work here" choice, not a checkout plan.
+- **Physical materialization stays claim-time.** Only the logical `RunEnvironment` is persisted; the
+  node derives `cwd`/roots through the shared `materializePrimary` with its own source-location
+  adapter. The former node twin precedence is gone; legacy envelopes still fall back to the old
+  fields for version skew.
+- **Legacy projection never erases.** Dual-write writes `run_directory` / `default_run_directory`
+  only when the ref is representable as a path (source/folder); worktree, sandbox and inherit refs
+  leave the legacy column untouched so a rollback keeps its last value.
+- **The issue location belongs to the issue, not to the agent.** An issue always resolves to a
+  concrete workspace: its explicit `sourceId` (with an optional `branch`, materialized as a worktree
+  when one exists) or, when it has none, the managed organization `Workspace`. The run/thread/agent
+  precedence is unchanged, but the issue's location is passed as the run layer on every fire and on
+  every manual message in its thread, so all agents the issue is handed to work in the same folder
+  and relative links stay valid across handoffs. The issue source picker has no empty state: the
+  managed workspace is shown as the default issue source, and the issue tools describe the rule.
+  `issue.workspace_subpath` scopes the run to a subfolder of that source (any source, including
+  git); the directory is created on the first run on the relay or node, and the issue card offers
+  `issues/<id>` as a one-click suggestion. The subfolder travels in `WorkspaceRef`, so placement,
+  envelopes and the node materializer need no special cases.
+- **Assignment grants access (I5 revised).** A source accepted as the run/thread/agent workspace is
+  always accessible to that run; sharing a source under Access only adds that source to the agent's
+  tool reach. This removes the contradiction where an issue worktree assigned to an agent (directly
+  or by a board workflow) failed dispatch because the source was not in `sharedSourceIds`, and it
+  makes the org `Workspace` (managed, implicitly shared) selectable as any agent's default.
+- **Folder guard protects both roots** (`<home>/orgs` with `org.db` and `<home>/data/orgs`) plus a
+  system-root denylist. Subpath validation is lexical (relative, no `..`), so remote-only sources no
+  longer require a relay-side materialization to validate a dispatch.
+- **`fireAssignee` awaits `dispatchIssueExecution`**, so reservations are synchronous with the
+  patch and failures surface instead of being dropped.
+- **Known deprecated-window gap:** `manage-thread-members/ui/thread-context-files.tsx` still gates
+  on `thread.runDirectory`; for source/worktree pins the legacy column is NULL by design, so that
+  pane degrades until the cleanup release removes the legacy field.

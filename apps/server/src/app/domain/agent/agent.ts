@@ -1,4 +1,10 @@
-import type { AgentHook, AgentLevel, AgentSourceLevel, AgentStatus } from '@harnesys/contracts';
+import type {
+  AgentHook,
+  AgentLevel,
+  AgentSourceLevel,
+  AgentStatus,
+  WorkspaceRef,
+} from '@harnesys/contracts';
 
 export interface AgentRecord {
   id: string;
@@ -20,6 +26,7 @@ export interface AgentRecord {
   enabledPlugins: Record<string, boolean>;
   defaultModeId: string | null;
   defaultRunDirectory: string | null;
+  defaultWorkspaceRef?: WorkspaceRef | null;
   config: Record<string, unknown>;
   hooks: AgentHook[];
   createdAt: string;
@@ -44,6 +51,7 @@ export type AgentPatch = Partial<{
   enabledPlugins: Record<string, boolean>;
   defaultModeId: string | null;
   defaultRunDirectory: string | null;
+  defaultWorkspaceRef: WorkspaceRef | null;
   config: Record<string, unknown>;
   hooks: AgentHook[];
 }>;

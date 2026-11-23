@@ -49,7 +49,7 @@ export function createIssueMetaTools(deps: CreateIssueMetaToolsParams): ToolDefi
     tool('source_list', {
       group: 'issues',
       description:
-        'List sources an issue can bind to for its runs (issue_create/issue_update sourceId). kind git means a git repository (defaultBranch given), folder means a plain directory. isWorkspace marks the managed workspace source used when an issue has no explicit source.',
+        'List sources an issue can bind to for its runs (issue_create/issue_update sourceId). kind git means a git repository (defaultBranch given), folder means a plain directory. isWorkspace marks the managed organization workspace, which is the default issue source when sourceId is omitted; the issue location applies to every agent the issue is handed to.',
       input: { type: 'object' },
       execute: () =>
         runGuard(async () => {

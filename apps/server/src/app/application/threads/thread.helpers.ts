@@ -291,6 +291,7 @@ export function toThreadSummary(input: ThreadSummaryInput): ThreadSummary {
     runMode: runModeOf(thread),
     runProfileId: thread.runProfileId ?? null,
     runDirectory: thread.runDirectory ?? null,
+    workspaceRef: thread.workspaceRef ?? null,
     bindingLocked: bindingLocked ?? false,
     activeRun: activeRunOf(active, waitingForProfileId, names),
     lastError: lastErrorOf(thread),

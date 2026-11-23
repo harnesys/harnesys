@@ -1,3 +1,4 @@
+import type { RunEnvironment, RunEnvironmentAnchor } from '@harnesys/contracts';
 import type { PendingSessionEvent } from 'harnesys';
 import { ExecutionProfilePort } from '../../domain/execution-profile/execution-profile.port.ts';
 import { LOCAL_EXECUTION_PROFILE_ID } from '../../domain/execution-profile/execution-profile.ts';
@@ -11,8 +12,15 @@ import {
   type PlacementLabels,
   type PlacementResult,
 } from '../../domain/fleet/placement.ts';
+import type { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
+import type { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { ThreadValidationException } from '../../domain/thread/thread.error.ts';
 import { resolveEffectiveProfile } from '../execution-profile/resolve-effective-profile.ts';
+
+export interface RequiredSource {
+  sourceId: string;
+  access: 'read' | 'write';
+}
 
 export interface ResolveRunPlacementInput {
   orgId: string;
@@ -20,10 +28,13 @@ export interface ResolveRunPlacementInput {
   threadProfileId?: string | null;
   agentProfileId: string | null;
   issueRuleProfileId?: string | null;
+  environment?: RunEnvironment | null;
   worktreeHostId?: string | null;
   profiles: ExecutionProfilePort;
   hub: FleetHubPort;
   claims: EventClaimPort;
+  worktrees?: RepositoryWorktreePort;
+  materializations?: SourceMaterializationPort;
 }
 
 export function resolveRunPlacement(input: ResolveRunPlacementInput): PlacementResult {
@@ -44,16 +55,20 @@ export function resolveRunPlacement(input: ResolveRunPlacementInput): PlacementR
   const presenceById = new Map(presence.map((node) => [node.id, node]));
   const profileNodeIds = new Set(profile.nodeIds);
   const nodeIds = new Set<string>([...profile.nodeIds, ...presence.map((node) => node.id)]);
+  const anchor = input.environment?.anchor ?? null;
+  const pinnedHostId = pinnedHostIdOf(input, anchor);
+  const requiredSources = requiredSourcesOf(anchor);
+  const readyHosts = readyHostsOf(input, requiredSources);
   const nodes: PlacementEvalNode[] = [...nodeIds].map((nodeId) => {
     const present = presenceById.get(nodeId);
     const inProfile = profileNodeIds.has(nodeId);
-    const affinityOk = !input.worktreeHostId || nodeId === input.worktreeHostId;
+    const affinityOk = !pinnedHostId || nodeId === pinnedHostId;
     return {
       nodeId,
       status: present?.status ?? 'offline',
       inProfile: inProfile && affinityOk,
       activeClaims: input.claims.countActiveByNode(input.orgId, nodeId, nowIso),
-      sourcesReady: true,
+      sourcesReady: readyHosts === null || readyHosts.has(nodeId),
       features: { dockerAvailable: present?.dockerAvailable ?? null },
     };
   });
@@ -71,11 +86,11 @@ export function resolveRunPlacement(input: ResolveRunPlacementInput): PlacementR
       runId: input.runId,
       profileId: effective.profileId,
       profileSource: effective.selectedBy,
-      requiredSources: [],
+      requiredSources,
       ...(isolation ? { isolation } : {}),
     },
     nodes,
-    sourceConstraints: sourceConstraints(input.worktreeHostId),
+    sourceConstraints: sourceConstraints(pinnedHostId),
     labels,
   });
 }
@@ -109,15 +124,57 @@ function isolationOf(profile: { isolation: 'host' | 'container'; dockerImage: st
     : undefined;
 }
 
-function sourceConstraints(worktreeHostId?: string | null) {
-  if (!worktreeHostId) {
+function pinnedHostIdOf(
+  input: ResolveRunPlacementInput,
+  anchor: RunEnvironmentAnchor | null,
+): string | null {
+  if (input.environment === undefined && anchor === null) {
+    return input.worktreeHostId ?? null;
+  }
+  if (anchor === null) {
+    return null;
+  }
+  if (anchor.kind === 'folder') {
+    return anchor.hostId ?? null;
+  }
+  if (anchor.worktreeId === undefined) {
+    return null;
+  }
+  const worktree = input.worktrees?.findById(input.orgId, anchor.worktreeId);
+  return worktree?.hostId ?? input.worktreeHostId ?? null;
+}
+
+function requiredSourcesOf(anchor: RunEnvironmentAnchor | null): RequiredSource[] {
+  if (anchor?.kind !== 'source' || anchor.worktreeId !== undefined) {
+    return [];
+  }
+  return [{ sourceId: anchor.sourceId, access: 'write' }];
+}
+
+function readyHostsOf(
+  input: ResolveRunPlacementInput,
+  requiredSources: RequiredSource[],
+): Set<string> | null {
+  const sourceId = requiredSources[0]?.sourceId;
+  if (sourceId === undefined || input.materializations === undefined) {
+    return null;
+  }
+  const hosts = input.materializations
+    .listForSource(input.orgId, sourceId)
+    .filter((record) => record.state === 'ready')
+    .map((record) => record.hostId);
+  return new Set(hosts);
+}
+
+function sourceConstraints(hostId: string | null) {
+  if (!hostId) {
     return [];
   }
   return [
     {
       sourceId: '__worktree_affinity__' as const,
       distributionKind: 'host-bound',
-      hostId: worktreeHostId,
+      hostId,
     },
   ];
 }

@@ -24,6 +24,7 @@ export function makeThread(): ThreadRecord {
     metadata: {},
     runProfileId: null,
     runDirectory: null,
+    workspaceRef: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     lastReadAt: new Date().toISOString(),

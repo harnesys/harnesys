@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS issues (
   closed_at TEXT,
   fire_trail TEXT NOT NULL DEFAULT '[]',
   source_id TEXT,
+  workspace_subpath TEXT,
   worktree_base_branch TEXT,
   branch TEXT,
   worktree_on_status TEXT,

@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { BOARD_TEMPLATES } from '@harnesys/contracts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { type HostConfig, MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { PresetNotFoundException } from '../../domain/presets/preset.error.ts';
+import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import { TeamValidationException } from '../../domain/teams/team.error.ts';
 import { CreateAgentUseCase } from '../agents/create-agent.use-case.ts';
 import { CreateIssueBoardUseCase } from '../issues/create-issue-board.use-case.ts';
@@ -67,11 +70,42 @@ function buildHarness(options?: {
     agents,
     models,
     boards,
-    new CreateAgentUseCase(agents, new FakeModePresets(), profiles),
+    new CreateAgentUseCase(
+      agents,
+      new FakeModePresets(),
+      profiles,
+      stubSources(),
+      stubLayout(),
+      stubMachineConfig(),
+    ),
     new CreateIssueBoardUseCase(boards, new FakeEvents()),
     new SaveBoardRuleUseCase(boards, new FakeLabels(), agents, profiles, new FakeEvents()),
   );
   return { useCase, agents, boards, catalog };
+}
+
+function stubSources(): SourceRegistryPort {
+  const port: Pick<SourceRegistryPort, 'findById'> = { findById: () => null };
+  return port as SourceRegistryPort;
+}
+
+function stubLayout(): HostFsLayoutPort {
+  const port: Pick<HostFsLayoutPort, 'orgDataDir' | 'orgDir'> = {
+    orgDataDir: (orgId) => `/data/orgs/${orgId}`,
+    orgDir: (orgId) => `/orgs/${orgId}`,
+  };
+  return port as HostFsLayoutPort;
+}
+
+function stubMachineConfig(): MachineConfigPort {
+  return new StubMachineConfig();
+}
+
+class StubMachineConfig extends MachineConfigPort {
+  get(): HostConfig {
+    return { id: 'host-1', name: 'host', listen: '127.0.0.1:0', token: 'token' };
+  }
+  set(_host: HostConfig): void {}
 }
 
 function withTeamBody(catalog: FakePresetCatalog, body: typeof TEAM_BODY): void {

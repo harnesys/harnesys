@@ -42,6 +42,7 @@ export const threadsTable = sqliteTable(
     }),
     runProfileId: text('run_profile_id'),
     runDirectory: text('run_directory'),
+    workspaceRef: text('workspace_ref'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
     lastReadAt: text('last_read_at').notNull(),

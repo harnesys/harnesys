@@ -1,3 +1,4 @@
+import type { RunEnvironment } from '@harnesys/contracts';
 import { CONSOLE_LOGGER, type ProcessJobTarget } from 'harnesys';
 import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
 import type { FileRuleRecord } from '../../domain/file-access/file-access-rule.ts';
@@ -6,16 +7,6 @@ import type { RunIsolation } from '../../domain/fleet/placement.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { WorkspaceContainerPort } from '../../domain/process-runtime/workspace-container.port.ts';
-import type { RunTriggerKind } from '../../domain/thread/prepare-runtime-input.ts';
-
-export interface ThreadBinding {
-  directory?: string;
-  sourceId?: string;
-  worktreeId?: string;
-  isolation?: RunIsolation;
-  triggerKind?: RunTriggerKind;
-  branch?: string;
-}
 
 export interface WorkspaceTargetDeps {
   orgId: string;
@@ -32,9 +23,7 @@ export interface WorkspaceTarget {
 }
 
 export interface WorkspaceTargetOfInput {
-  isolation?: RunIsolation;
-  worktreeId?: string;
-  sourceId?: string;
+  environment?: RunEnvironment;
   hostId: string;
   orgDataDir: string;
   primaryDir?: string;
@@ -58,17 +47,21 @@ export function preparedWorkspacePathsOf(prepared: {
 }
 
 export function workspaceTargetOf(input: WorkspaceTargetOfInput): WorkspaceTarget | undefined {
-  if (input.isolation?.mode !== 'container') {
+  const anchor = input.environment?.anchor;
+  if (!anchor) {
     return undefined;
   }
+  if (anchor.kind === 'folder') {
+    return {
+      workspaceKey: `folder:${input.hostId}:${anchor.path}`,
+      mounts: uniqueMounts([input.orgDataDir, anchor.path]),
+    };
+  }
   const mounts = workspaceMounts(input);
-  if (input.worktreeId) {
-    return { workspaceKey: `worktree:${input.worktreeId}`, mounts };
+  if (anchor.worktreeId !== undefined) {
+    return { workspaceKey: `worktree:${anchor.worktreeId}`, mounts };
   }
-  if (input.sourceId) {
-    return { workspaceKey: `source:${input.sourceId}@${input.hostId}`, mounts };
-  }
-  return undefined;
+  return { workspaceKey: `source:${anchor.sourceId}@${input.hostId}`, mounts };
 }
 
 export function declaredRuleDirsOf(
@@ -93,15 +86,14 @@ export function declaredRuleDirsOf(
 
 export async function resolveProcessTarget(
   deps: WorkspaceTargetDeps,
-  binding: ThreadBinding | undefined,
+  environment: RunEnvironment | undefined,
   prepared: PreparedWorkspacePaths,
+  isolation?: RunIsolation,
 ): Promise<ProcessJobTarget | undefined> {
   const hostId = deps.machineConfig.get().id;
   const orgDataDir = deps.layout.orgDataDir(deps.orgId);
   const workspace = workspaceTargetOf({
-    ...(binding?.isolation ? { isolation: binding.isolation } : {}),
-    ...(binding?.worktreeId ? { worktreeId: binding.worktreeId } : {}),
-    ...(binding?.sourceId ? { sourceId: binding.sourceId } : {}),
+    ...(environment ? { environment } : {}),
     hostId,
     orgDataDir,
     primaryDir: prepared.paths.cwd,
@@ -112,13 +104,13 @@ export async function resolveProcessTarget(
       hostId,
     ),
   });
-  if (!workspace || binding?.isolation?.mode !== 'container') {
+  if (!workspace || isolation?.mode !== 'container') {
     return undefined;
   }
   const ref = await deps.containers.ensure({
     orgId: deps.orgId,
     workspaceKey: workspace.workspaceKey,
-    image: binding.isolation.image,
+    image: isolation.image,
     mounts: workspace.mounts,
   });
   return {
@@ -167,6 +159,10 @@ function workspaceMounts(input: WorkspaceTargetOfInput): string[] {
     }
   }
   return mounts;
+}
+
+function uniqueMounts(mounts: string[]): string[] {
+  return [...new Set(mounts)];
 }
 
 function trimTrailingSlash(path: string): string {

@@ -7,7 +7,10 @@ import {
 import type { AgentPatch } from '../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { ExecutionProfilePort } from '../../domain/execution-profile/execution-profile.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
+import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { ModePresetRegistryPort } from '../../domain/mode-presets/mode-preset-registry.port.ts';
+import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import {
   requireAgent,
   stripHookConfig,
@@ -17,6 +20,7 @@ import {
   validateExecutionProfileId,
 } from './agent.helpers.ts';
 import { validateAgentHooks } from './agent-hooks.validation.ts';
+import { type AgentWorkspaceRefDeps, validateAgentWorkspaceRef } from './agent-workspace-ref.ts';
 
 export interface UpdateAgentRequest {
   orgId: string;
@@ -30,11 +34,25 @@ export class UpdateAgentUseCase {
     private readonly agents: AgentRegistryPort,
     private readonly modePresets: ModePresetRegistryPort,
     private readonly profiles: ExecutionProfilePort,
+    private readonly sources: SourceRegistryPort,
+    private readonly layout: HostFsLayoutPort,
+    private readonly machineConfig: MachineConfigPort,
   ) {}
 
   execute(request: UpdateAgentRequest): AgentPublic {
     const agent = requireAgent(this.agents, request.orgId, request.agentId);
-    const patch = buildUpdatePatch(this.agents, this.modePresets, this.profiles, request);
+    const patch = buildUpdatePatch(
+      this.agents,
+      this.modePresets,
+      this.profiles,
+      {
+        orgId: request.orgId,
+        sources: this.sources,
+        layout: this.layout,
+        localHostId: this.machineConfig.get().id,
+      },
+      request,
+    );
     assignHooksPatch(this.agents, request, agent.mcpServers, patch);
     return toAgentPublic(this.agents.update(request.orgId, request.agentId, patch));
   }
@@ -67,6 +85,7 @@ function buildUpdatePatch(
   agents: AgentRegistryPort,
   modePresets: ModePresetRegistryPort,
   profiles: ExecutionProfilePort,
+  workspace: AgentWorkspaceRefDeps,
   request: UpdateAgentRequest,
 ): AgentPatch {
   const body = request.body;
@@ -89,6 +108,9 @@ function buildUpdatePatch(
   }
   if (body.defaultRunDirectory !== undefined) {
     patch.defaultRunDirectory = validateDefaultRunDirectory(body.defaultRunDirectory);
+  }
+  if (body.defaultWorkspaceRef !== undefined) {
+    patch.defaultWorkspaceRef = validateAgentWorkspaceRef(workspace, body.defaultWorkspaceRef);
   }
   return patch;
 }

@@ -1,3 +1,4 @@
+import type { WorkspaceRef } from '@harnesys/contracts';
 import type {
   Event,
   RequestPlan,
@@ -83,6 +84,7 @@ export interface ThreadRecord {
   runMode?: string;
   runProfileId: string | null;
   runDirectory: string | null;
+  workspaceRef: WorkspaceRef | null;
   bindingLocked: boolean;
   events: SessionEvent[];
   activeRun: ThreadActiveRun | null;
@@ -118,6 +120,7 @@ export type ThreadSummary = Pick<
   | 'runMode'
   | 'runProfileId'
   | 'runDirectory'
+  | 'workspaceRef'
   | 'bindingLocked'
   | 'activeRun'
   | 'lastError'

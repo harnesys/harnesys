@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { WorkspaceRefSchema } from './workspace-ref.ts';
 
 export const RunLifecycleStatusSchema = z.enum([
   'queued',
@@ -50,6 +51,7 @@ export const SendThreadRunBodySchema = z
     correlationId: z.string().optional(),
     sourceId: z.string().uuid().optional(),
     worktreeId: z.string().uuid().optional(),
+    workspaceRef: WorkspaceRefSchema.optional(),
     agentId: z.string().uuid().optional(),
   })
   .refine(
@@ -58,6 +60,9 @@ export const SendThreadRunBodySchema = z
   )
   .refine((b) => (b.worktreeId === undefined) === (b.sourceId === undefined), {
     message: 'sourceId and worktreeId must be provided together',
+  })
+  .refine((b) => b.workspaceRef === undefined || b.sourceId === undefined, {
+    message: 'workspaceRef and sourceId/worktreeId are mutually exclusive',
   });
 export type SendThreadRunBody = z.infer<typeof SendThreadRunBodySchema>;
 

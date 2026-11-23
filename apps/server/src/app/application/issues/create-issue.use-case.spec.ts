@@ -164,21 +164,19 @@ function createBody(partial: Partial<CreateIssueBody>): CreateIssueBody {
 }
 
 describe('CreateIssueUseCase fire binding', () => {
-  test('issue in a work column without a branch fires into the sandbox and never creates a worktree', async () => {
+  test('the issue subfolder reaches the fire request', async () => {
     const fire = new StubIssueFire();
     const executions = new MemoryIssueExecutions();
     const useCase = buildUseCase({ fire, executions, source: sourceRecord() });
 
-    const response = await useCase.execute({ orgId: ORG_ID, body: createBody({}) });
+    await useCase.execute({
+      orgId: ORG_ID,
+      body: createBody({ workspaceSubpath: 'issues/abc12345' }),
+    });
 
-    expect(response.issue.statusKey).toBe('in_progress');
-    expect(response.issue.assigneeAgentId).toBe('agent-1');
     expect(fire.requests).toHaveLength(1);
-    expect(fire.requests[0]?.sourceId).toBeUndefined();
-    expect(fire.requests[0]?.branch).toBeUndefined();
-    expect(fire.requests[0]?.worktreeId).toBeUndefined();
-    expect(executions.single()?.worktreeId).toBeNull();
-    expect(executions.single()?.state).toBe('active');
+    expect(fire.requests[0]?.sourceId).toBe(SOURCE_ID);
+    expect(fire.requests[0]?.workspaceSubpath).toBe('issues/abc12345');
   });
 
   test('issue without source fires unbound and never creates a worktree', async () => {

@@ -11,6 +11,7 @@ export interface IssueFireRequest {
   correlationId?: string;
   issueRuleProfileId?: string | null;
   sourceId?: string;
+  workspaceSubpath?: string;
   worktreeId?: string;
   branch?: string;
 }

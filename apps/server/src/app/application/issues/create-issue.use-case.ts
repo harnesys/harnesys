@@ -31,6 +31,7 @@ import { SourceMaterializationPort } from '../../domain/source/source-materializ
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import { toIssuePublic } from './issue-mappers.ts';
 import { fireIssueRules } from './issue-rule-fire.ts';
+import { validateWorkspaceSubpath } from './issue-subpath.ts';
 import { resolveIssueLabels } from './resolve-issue-labels.ts';
 
 export interface CreateIssueRequest {
@@ -93,6 +94,10 @@ export class CreateIssueUseCase {
       closedAt: closed ? now : null,
       fireTrail: [],
       sourceId: body.sourceId ?? null,
+      workspaceSubpath:
+        body.workspaceSubpath === undefined
+          ? null
+          : validateWorkspaceSubpath(body.workspaceSubpath),
       branch: body.branch ?? null,
       worktreeOnStatus: body.worktreeOnStatus ?? null,
       createdAt: now,

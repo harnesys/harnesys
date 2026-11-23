@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@harnesys/brix';
+import type { WorkspaceRef } from '@harnesys/contracts';
 import { issueTaskText } from '@harnesys/studio-shared';
 import { IssueBoardRepositoryPort } from '../../domain/issue/board-repository.port.ts';
 import type { IssueRecord } from '../../domain/issue/issue.ts';
@@ -17,13 +18,22 @@ import { mechanicalRunStart } from '../threads/run-attribution.ts';
 import { SendThreadRunUseCase } from '../threads/send-thread-run.use-case.ts';
 import { insertAgentThread } from '../threads/thread.helpers.ts';
 
-function workspaceRefs(request: IssueFireRequest): { sourceId?: string; worktreeId?: string } {
+function workspaceRefs(request: IssueFireRequest): { workspaceRef?: WorkspaceRef } {
   if (request.sourceId === undefined) {
     return {};
   }
+  const subpath =
+    request.workspaceSubpath === undefined ? {} : { subpath: request.workspaceSubpath };
   return request.worktreeId === undefined
-    ? { sourceId: request.sourceId }
-    : { sourceId: request.sourceId, worktreeId: request.worktreeId };
+    ? { workspaceRef: { kind: 'source', sourceId: request.sourceId, ...subpath } }
+    : {
+        workspaceRef: {
+          kind: 'worktree',
+          sourceId: request.sourceId,
+          worktreeId: request.worktreeId,
+          ...subpath,
+        },
+      };
 }
 
 @Injectable()
@@ -224,6 +234,7 @@ export class FireIssueUseCase {
         issueId,
         runProfileId: null,
         runDirectory: null,
+        workspaceRef: null,
         createdAt: now,
         updatedAt: now,
         lastReadAt: now,

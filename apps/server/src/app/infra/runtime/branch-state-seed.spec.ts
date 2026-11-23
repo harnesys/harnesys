@@ -111,6 +111,7 @@ function threadRecord(): ThreadRecord {
     metadata: {},
     runProfileId: null,
     runDirectory: null,
+    workspaceRef: null,
     createdAt: now,
     updatedAt: now,
     lastReadAt: now,

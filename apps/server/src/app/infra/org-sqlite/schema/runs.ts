@@ -26,6 +26,7 @@ export const runsTable = sqliteTable(
     startedByUserId: text('started_by_user_id'),
     via: text('via').notNull().default('direct'),
     onNodeId: text('on_node_id'),
+    environment: text('environment'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },

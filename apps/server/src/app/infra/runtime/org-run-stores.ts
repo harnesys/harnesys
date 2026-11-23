@@ -22,7 +22,6 @@ import { requestRunParkApprovals } from './request-approval-for-park.ts';
 import { type RunEventAppendListener, SqliteRunEventStore } from './sqlite-run-events.adapter.ts';
 import { SqliteRunLifecycleStore } from './sqlite-run-lifecycle.adapter.ts';
 import { withWaitGateSignal } from './wait-ticker.ts';
-import type { ThreadBinding } from './workspace-target.ts';
 
 export interface OrgRunStores {
   runEvents: RunEventStore;
@@ -33,7 +32,6 @@ export interface OrgRunStores {
 
 export interface OrgParkRuntimeDeps {
   targetCache: TargetCache;
-  worktreeBindings: Map<string, ThreadBinding>;
 }
 
 export function createOrgRunStores(
@@ -55,10 +53,7 @@ export function createOrgRunStores(
       return {
         host: deps.machineConfig.get().id,
         cwd,
-        runtime:
-          parkRuntime.worktreeBindings.get(threadId)?.isolation?.mode === 'container'
-            ? 'container'
-            : 'host',
+        runtime: cachedTargetOf(parkRuntime.targetCache, threadId)?.runtime ?? 'host',
       };
     });
   const reconcile = createApprovalReconcile({

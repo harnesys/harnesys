@@ -34,6 +34,7 @@ export const issuesTable = sqliteTable(
     closedAt: text('closed_at'),
     fireTrail: text('fire_trail').notNull().default('[]'),
     sourceId: text('source_id'),
+    workspaceSubpath: text('workspace_subpath'),
     worktreeBaseBranch: text('worktree_base_branch'),
     branch: text('branch'),
     worktreeOnStatus: text('worktree_on_status'),

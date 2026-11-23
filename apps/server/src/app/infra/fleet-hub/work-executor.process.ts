@@ -1,6 +1,6 @@
-import type { TaskEnvelope } from '@harnesys/contracts';
+import type { RunEnvironment, TaskEnvelope } from '@harnesys/contracts';
 import { type ProcessJobTarget } from 'harnesys';
-import { resolveProcessTarget, type ThreadBinding } from '../runtime/workspace-target.ts';
+import { resolveProcessTarget } from '../runtime/workspace-target.ts';
 import type { WorkExecutorDeps } from './work-executor.compose.ts';
 
 export async function ensurePlacedProcess(args: {
@@ -13,15 +13,35 @@ export async function ensurePlacedProcess(args: {
   if (!envelope.isolation) {
     return undefined;
   }
-  const binding: ThreadBinding = {
-    sourceId: envelope.sourceId,
-    ...(envelope.directory ? { directory: envelope.directory } : {}),
-    ...(envelope.worktreeId ? { worktreeId: envelope.worktreeId } : {}),
-    isolation: envelope.isolation,
-  };
   return resolveProcessTarget(
     { orgId, layout: deps.layout, machineConfig: deps.machineConfig, containers: deps.containers },
-    binding,
+    environmentOf(envelope),
     prepared,
+    envelope.isolation,
   );
+}
+
+function environmentOf(envelope: TaskEnvelope): RunEnvironment | undefined {
+  if (envelope.environment !== undefined) {
+    return envelope.environment;
+  }
+  if (envelope.directory !== undefined) {
+    return {
+      anchor: { kind: 'folder', path: envelope.directory },
+      cwd: 'anchor',
+      provenance: 'run',
+    };
+  }
+  if (envelope.sourceId === undefined) {
+    return undefined;
+  }
+  return {
+    anchor: {
+      kind: 'source',
+      sourceId: envelope.sourceId,
+      ...(envelope.worktreeId !== undefined ? { worktreeId: envelope.worktreeId } : {}),
+    },
+    cwd: envelope.isolation?.mode === 'container' ? 'sandbox' : 'anchor',
+    provenance: 'run',
+  };
 }

@@ -1,6 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@harnesys/brix';
-import type { TaskEnvelope, TaskEnvelopeAttachment } from '@harnesys/contracts';
+import {
+  type RunEnvironment,
+  RunEnvironmentSchema,
+  type TaskEnvelope,
+  type TaskEnvelopeAttachment,
+} from '@harnesys/contracts';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
@@ -9,7 +14,10 @@ import { FleetHubPort } from '../../domain/fleet/fleet-hub.port.ts';
 import { NodeCommandQueuePort } from '../../domain/fleet/node-command-queue.port.ts';
 import { NodeSnapshotAckPort } from '../../domain/fleet/node-snapshot-ack.port.ts';
 import { PendingPlacementPort } from '../../domain/fleet/pending-placement.port.ts';
-import type { PendingPlacement } from '../../domain/fleet/pending-placement.ts';
+import {
+  legacyWorkspaceFieldsOf,
+  type PendingPlacement,
+} from '../../domain/fleet/pending-placement.ts';
 import type { PlacementResult } from '../../domain/fleet/placement.ts';
 import { WORK_CLAIM_LEASE_SEC } from '../../domain/fleet/work-claim.constants.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
@@ -144,6 +152,10 @@ export class PlacePendingRunUseCase {
       args;
     const attachments: TaskEnvelopeAttachment[] = input.pending.payload.attachmentMetas ?? [];
     const isolation = input.decision.request.isolation;
+    const environment = environmentOf(input.pending.environmentJson);
+    const legacy = legacyWorkspaceFieldsOf(environment);
+    const sourceId = legacy.sourceId ?? input.pending.payload.sourceId;
+    const worktreeId = legacy.worktreeId ?? input.pending.payload.worktreeId;
     const thread = this.threads.findById(input.orgId, input.pending.threadId);
     const modeShellSpec = modeShellSpecOf(
       this.modes,
@@ -166,9 +178,26 @@ export class PlacePendingRunUseCase {
       ...(input.pending.payload.effort ? { effort: input.pending.payload.effort } : {}),
       ...(input.pending.payload.mode ? { mode: input.pending.payload.mode } : {}),
       ...(modeShellSpec ? { modeShellSpec } : {}),
-      ...(input.pending.payload.sourceId ? { sourceId: input.pending.payload.sourceId } : {}),
-      ...(input.pending.payload.worktreeId ? { worktreeId: input.pending.payload.worktreeId } : {}),
+      ...(environment ? { environment } : {}),
+      ...(legacy.directory ? { directory: legacy.directory } : {}),
+      ...(sourceId ? { sourceId } : {}),
+      ...(worktreeId ? { worktreeId } : {}),
+      ...(input.pending.payload.skills?.length ? { skills: input.pending.payload.skills } : {}),
       ...(isolation?.mode === 'container' ? { isolation } : {}),
     };
   }
+}
+
+function environmentOf(json: string | null | undefined): RunEnvironment | undefined {
+  if (!json) {
+    return undefined;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    return undefined;
+  }
+  const result = RunEnvironmentSchema.safeParse(parsed);
+  return result.success ? result.data : undefined;
 }

@@ -1,5 +1,5 @@
 import type { Logger } from '@harnesys/brix';
-import type { RunAcceptedResponse } from '@harnesys/contracts';
+import type { RunAcceptedResponse, RunEnvironment } from '@harnesys/contracts';
 import type {
   Attachment,
   HostEngineEntry,
@@ -79,8 +79,7 @@ export interface OrgRuntime {
     clientEventId?: string;
     origin?: string;
     correlationId?: string;
-    sourceId?: string;
-    worktreeId?: string;
+    environment?: RunEnvironment;
     isolation?: RunIsolation;
     branch?: string;
     attribution?: RunAttribution;

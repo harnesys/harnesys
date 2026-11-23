@@ -1,4 +1,9 @@
-import type { CancelRunResponse, RetryRunResponse, RunAcceptedResponse } from '@harnesys/contracts';
+import type {
+  CancelRunResponse,
+  RetryRunResponse,
+  RunAcceptedResponse,
+  RunEnvironment,
+} from '@harnesys/contracts';
 import type {
   Attachment,
   McpServerInfo,
@@ -10,7 +15,6 @@ import type {
   TruncateThreadResult,
 } from 'harnesys';
 import type { RunIsolation } from '../fleet/placement.ts';
-import type { RunTriggerKind } from './prepare-runtime-input.ts';
 
 export type ThreadQueueDrainResult =
   | { status: 'delivered'; runId: string }
@@ -28,11 +32,8 @@ export interface SendLocalRunInput {
   clientEventId?: string;
   origin?: string;
   correlationId?: string;
-  directory?: string;
-  sourceId?: string;
-  worktreeId?: string;
+  environment?: RunEnvironment;
   isolation?: RunIsolation;
-  triggerKind?: RunTriggerKind;
   branch?: string;
   attribution?: RunAttribution;
   agentId: string;

@@ -12,18 +12,14 @@ import type {
   ThreadPatch,
   ThreadRecord,
 } from '../../domain/thread/thread.ts';
-import { parseThreadPolicy } from '../../domain/thread/thread-policy.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { type OrgSqliteDb, withOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 import { runAttributionOf } from '../org-sqlite/run-attribution.ts';
-import {
-  type RunRow,
-  runsTable,
-  type ThreadRow,
-  threadAgentsTable,
-  threadsTable,
-} from '../org-sqlite/schema';
+import { type RunRow, runsTable, threadAgentsTable, threadsTable } from '../org-sqlite/schema';
+import { sourceRootsOf } from '../org-sqlite/source-roots.query.ts';
+import { projectLegacyRunDirectory } from './legacy-workspace-ref.ts';
 import { threadPatchUpdates } from './thread-patch-updates.ts';
+import { toThread } from './thread-row-mapping.ts';
 
 const ACTIVE_RUN_STATUSES: ThreadActiveRunStatus[] = [
   'queued',
@@ -38,16 +34,17 @@ function applyThreadPatch(
   id: string,
   patch: ThreadPatch,
 ): ThreadRecord {
+  const sourceRoots = sourceRootsOf(db, orgId);
   const row = db
     .update(threadsTable)
-    .set(threadPatchUpdates(patch))
+    .set(threadPatchUpdates(patch, sourceRoots))
     .where(and(eq(threadsTable.orgId, orgId), eq(threadsTable.id, id)))
     .returning()
     .get();
   if (!row) {
     throw new ThreadNotFoundException(id);
   }
-  return toThread(row);
+  return toThread(row, sourceRoots);
 }
 
 @Injectable()
@@ -57,15 +54,16 @@ export class ThreadRepositoryAdapter extends ThreadRepositoryPort {
   }
 
   listByOrg(orgId: string): ThreadRecord[] {
-    return withOrgSqlite(this.layout, orgId, (db) =>
-      db
+    return withOrgSqlite(this.layout, orgId, (db) => {
+      const sourceRoots = sourceRootsOf(db, orgId);
+      return db
         .select()
         .from(threadsTable)
         .where(eq(threadsTable.orgId, orgId))
         .orderBy(threadsTable.updatedAt)
         .all()
-        .map(toThread),
-    );
+        .map((row) => toThread(row, sourceRoots));
+    });
   }
 
   findById(orgId: string, id: string): ThreadRecord | undefined {
@@ -75,13 +73,15 @@ export class ThreadRepositoryAdapter extends ThreadRepositoryPort {
         .from(threadsTable)
         .where(and(eq(threadsTable.orgId, orgId), eq(threadsTable.id, id)))
         .get();
-      return row ? toThread(row) : undefined;
+      return row ? toThread(row, sourceRootsOf(db, orgId)) : undefined;
     });
   }
 
   insert(rec: ThreadInsert): ThreadRecord {
     return withOrgSqlite(this.layout, rec.orgId, (db) => {
       try {
+        const sourceRoots = sourceRootsOf(db, rec.orgId);
+        const workspaceRef = rec.workspaceRef ?? null;
         const row = db
           .insert(threadsTable)
           .values({
@@ -99,14 +99,18 @@ export class ThreadRepositoryAdapter extends ThreadRepositoryPort {
             metadata: JSON.stringify(rec.metadata ?? {}),
             issueId: rec.issueId ?? null,
             runProfileId: rec.runProfileId ?? null,
-            runDirectory: rec.runDirectory ?? null,
+            runDirectory:
+              workspaceRef === null
+                ? (rec.runDirectory ?? null)
+                : projectLegacyRunDirectory(workspaceRef, sourceRoots),
+            workspaceRef: workspaceRef === null ? null : JSON.stringify(workspaceRef),
             createdAt: rec.createdAt,
             updatedAt: rec.updatedAt,
             lastReadAt: rec.lastReadAt,
           })
           .returning()
           .get();
-        return toThread(row);
+        return toThread(row, sourceRoots);
       } catch (err) {
         throw mapThreadSqliteError(err);
       }
@@ -133,7 +137,7 @@ export class ThreadRepositoryAdapter extends ThreadRepositoryPort {
         .where(and(eq(threadsTable.orgId, orgId), eq(threadsTable.id, id)))
         .returning()
         .get();
-      return toThread(next);
+      return toThread(next, sourceRootsOf(db, orgId));
     });
   }
 
@@ -194,14 +198,15 @@ export class ThreadRepositoryAdapter extends ThreadRepositoryPort {
   }
 
   listByIssue(orgId: string, issueId: string): ThreadRecord[] {
-    return withOrgSqlite(this.layout, orgId, (db) =>
-      db
+    return withOrgSqlite(this.layout, orgId, (db) => {
+      const sourceRoots = sourceRootsOf(db, orgId);
+      return db
         .select()
         .from(threadsTable)
         .where(and(eq(threadsTable.orgId, orgId), eq(threadsTable.issueId, issueId)))
         .all()
-        .map(toThread),
-    );
+        .map((row) => toThread(row, sourceRoots));
+    });
   }
 
   findByIssueAndAgent(orgId: string, issueId: string, agentId: string): ThreadRecord | undefined {
@@ -218,7 +223,7 @@ export class ThreadRepositoryAdapter extends ThreadRepositoryPort {
           ),
         )
         .get();
-      return row ? toThread(row.thread) : undefined;
+      return row ? toThread(row.thread, sourceRootsOf(db, orgId)) : undefined;
     });
   }
 
@@ -293,41 +298,6 @@ function toActiveRun(row: RunRow): ThreadActiveRun {
     via: attribution.via,
     onNodeId: attribution.onNodeId ?? null,
   };
-}
-
-function toThread(row: ThreadRow): ThreadRecord {
-  return {
-    id: row.id,
-    orgId: row.orgId,
-    title: row.title,
-    kind: row.kind,
-    autoReplyAgentId: row.autoReplyAgentId ?? null,
-    policy: parseThreadPolicy(row.policy),
-    lastThreadSeq: Number(row.lastThreadSeq ?? 0),
-    conversationCount: Number(row.conversationCount ?? 0),
-    parentThreadId: row.parentThreadId ?? null,
-    forkAt: row.forkAt ?? null,
-    inheritedEventCount: Number(row.inheritedEventCount ?? '0'),
-    metadata: parseMetadata(row.metadata),
-    issueId: row.issueId ?? null,
-    runProfileId: row.runProfileId ?? null,
-    runDirectory: row.runDirectory ?? null,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-    lastReadAt: row.lastReadAt || row.updatedAt,
-  };
-}
-
-function parseMetadata(raw: string): Record<string, unknown> {
-  try {
-    const value = JSON.parse(raw) as unknown;
-    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      return value as Record<string, unknown>;
-    }
-  } catch {
-    // fall through
-  }
-  return {};
 }
 
 function mapThreadSqliteError(err: unknown): Error {

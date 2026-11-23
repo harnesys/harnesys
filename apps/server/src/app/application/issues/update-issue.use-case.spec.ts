@@ -10,9 +10,12 @@ import {
   MemoryIssues,
   MemoryLabels,
   MemorySources,
+  StubProfiles,
 } from './create-issue.use-case.fakes.ts';
 import {
+  createDriver,
   createLayout,
+  createMaterializations,
   createWorktrees,
   MemoryIssueExecutions,
   StubEvents,
@@ -102,6 +105,7 @@ function issueRecord(): IssueRecord {
     closedAt: null,
     fireTrail: [],
     sourceId: null,
+    workspaceSubpath: null,
     branch: null,
     worktreeOnStatus: null,
     createdAt: NOW,
@@ -131,15 +135,18 @@ function buildHarness(labels: MemoryLabels): {
     createWorktrees(),
     new StubMachineConfig(),
     createLayout(),
+    new StubProfiles(),
+    createMaterializations(),
+    createDriver(),
   );
   return { useCase, issues };
 }
 
 describe('UpdateIssueUseCase label resolution', () => {
-  test('label title resolves to the label id on the stored record', () => {
+  test('label title resolves to the label id on the stored record', async () => {
     const { useCase, issues } = buildHarness(new MemoryLabels([labelRecord({})]));
 
-    const issue = useCase.execute({
+    const issue = await useCase.execute({
       orgId: ORG_ID,
       issueId: 'issue-1',
       body: updateBody({ labels: ['backend'] }),
@@ -149,10 +156,10 @@ describe('UpdateIssueUseCase label resolution', () => {
     expect(issues.rows.get('issue-1')?.labels).toEqual(['label-1']);
   });
 
-  test('label id keeps working', () => {
+  test('label id keeps working', async () => {
     const { useCase } = buildHarness(new MemoryLabels([labelRecord({})]));
 
-    const issue = useCase.execute({
+    const issue = await useCase.execute({
       orgId: ORG_ID,
       issueId: 'issue-1',
       body: updateBody({ labels: ['label-1'] }),

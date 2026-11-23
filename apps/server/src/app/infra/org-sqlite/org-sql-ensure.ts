@@ -94,11 +94,14 @@ import {
   type ColumnInfo,
   migrateIssuesBranchColumns,
   migrateModePresetToolColumns,
+  migratePendingPlacementsEnvironmentColumn,
   migrateRunsAttributionColumns,
+  migrateRunsEnvironmentColumn,
   migrateRunsWakeKeyColumn,
   migrateThreadMessageQueueModeColumn,
   migrateThreadsBindingColumns,
   migrateThreadsPolicyContextWindow,
+  migrateThreadsWorkspaceRefColumn,
 } from './org-sql-migrations.ts';
 import { CREATE_PERMISSION_RULES_SQL, migratePermissionRules } from './org-sql-permission-rules.ts';
 
@@ -208,6 +211,7 @@ export function ensureOrgSchema(
   migrateThreadsInheritedEventCount(exec, all);
   if (all) {
     migrateThreadsBindingColumns(exec, all);
+    migrateThreadsWorkspaceRefColumn(exec, all);
   }
   assertThreadsThreadSeq(all);
   exec(CREATE_THREAD_AGENTS_SQL);
@@ -238,6 +242,7 @@ export function ensureOrgSchema(
   assertRunsAgentSnapshot(all);
   if (all) {
     migrateRunsAttributionColumns(exec, all);
+    migrateRunsEnvironmentColumn(exec, all);
   }
   exec(CREATE_RUN_EVENTS_SQL);
   assertRunEventsThreadScoped(all);
@@ -285,6 +290,9 @@ export function ensureOrgSchema(
   exec(CREATE_MODEL_QUOTA_WINDOWS_SQL);
   ensureFleetSchema(exec);
   migratePendingRunEventsAttributionColumns(exec, all);
+  if (all) {
+    migratePendingPlacementsEnvironmentColumn(exec, all);
+  }
   exec(CREATE_DASHBOARDS_SQL);
   migrateDashboardPresentationColumns(exec, all);
   return worktreeBranchDupes;

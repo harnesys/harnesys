@@ -95,6 +95,7 @@ describe('IssueBoardRepositoryAdapter statuses (sqlite)', () => {
       closedAt: null,
       fireTrail: [],
       sourceId: null,
+      workspaceSubpath: null,
       branch: null,
       worktreeOnStatus: null,
       createdAt: now,

@@ -71,6 +71,7 @@ export const IssuePublicSchema = z.object({
   closedAt: z.string().nullable(),
   fireTrail: z.array(IssueFireTrailEntrySchema),
   sourceId: z.string().uuid().nullable(),
+  workspaceSubpath: z.string().min(1).nullable(),
   branch: z.string().trim().min(1).nullable(),
   worktreeOnStatus: z.string().nullable(),
   worktree: IssueWorktreeRefSchema.nullable().default(null),
@@ -164,6 +165,7 @@ export const CreateIssueBodySchema = z.object({
     )
     .optional(),
   sourceId: z.string().uuid().optional(),
+  workspaceSubpath: z.string().trim().min(1).optional(),
   branch: z.string().trim().min(1).optional(),
   worktreeOnStatus: z.string().trim().min(1).optional(),
   deferRules: z.boolean().optional(),
@@ -185,6 +187,7 @@ export const UpdateIssueBodySchema = z.object({
   assigneeAgentId: z.string().uuid().nullable().optional(),
   dueDate: z.string().nullable().optional(),
   sourceId: z.string().uuid().nullable().optional(),
+  workspaceSubpath: z.string().trim().min(1).nullable().optional(),
   branch: z.string().trim().min(1).nullable().optional(),
   worktreeOnStatus: z.string().trim().min(1).nullable().optional(),
 });

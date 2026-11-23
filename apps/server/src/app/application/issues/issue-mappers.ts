@@ -42,6 +42,7 @@ export function toIssuePublic(record: IssueRecord, deps?: IssueWorktreeRefDeps):
     closedAt: record.closedAt,
     fireTrail: record.fireTrail,
     sourceId: record.sourceId,
+    workspaceSubpath: record.workspaceSubpath,
     branch: record.branch,
     worktreeOnStatus: record.worktreeOnStatus,
     worktree: deps ? issueWorktreeRef(record, deps) : null,

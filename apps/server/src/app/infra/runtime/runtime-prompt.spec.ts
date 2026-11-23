@@ -177,43 +177,33 @@ class FakeWorktrees extends RepositoryWorktreePort {
   findByOperationId(): RepositoryWorktree | null {
     throw new Error('not used');
   }
-
   findActiveByBranch(): RepositoryWorktree | null {
     throw new Error('not used');
   }
-
   listCreating(): RepositoryWorktree[] {
     throw new Error('not used');
   }
-
   listForSource(): RepositoryWorktree[] {
     throw new Error('not used');
   }
-
   listForHost(): RepositoryWorktree[] {
     throw new Error('not used');
   }
-
   listForIssue(): RepositoryWorktree[] {
     throw new Error('not used');
   }
-
   upsert(): RepositoryWorktree {
     throw new Error('not used');
   }
-
   setState(): void {
     throw new Error('not used');
   }
-
   setActiveRunId(): void {
     throw new Error('not used');
   }
-
   clearActiveRun(): void {
     throw new Error('not used');
   }
-
   remove(): void {
     throw new Error('not used');
   }
@@ -289,7 +279,7 @@ describe('runRuntimePromptInfo', () => {
     expect(notOnHost.sharedSources).toEqual([]);
   });
 
-  test('container binding yields container environment, host binding yields host', () => {
+  test('container isolation yields container environment, host isolation yields host', () => {
     const deps = {
       orgId: ORG,
       machineConfig: new FakeMachineConfig(),
@@ -297,7 +287,10 @@ describe('runRuntimePromptInfo', () => {
       materializations: new FakeMaterializations(null),
     };
     const container = runRuntimePromptInfo(deps, prepared(HOST_LOCAL), {
-      isolation: { mode: 'container', image: 'img' },
+      anchor: { kind: 'source', sourceId: SRC },
+      cwd: 'sandbox',
+      provenance: 'run',
+      isolation: { mode: 'container', image: 'workspace:latest' },
     });
     expect(container.environment).toBe('container');
     const host = runRuntimePromptInfo(deps, prepared(HOST_LOCAL), undefined);
@@ -334,7 +327,12 @@ describe('runRuntimePromptInfo', () => {
       materializations: new FakeMaterializations(null),
     };
     const gitDeps = { ...base, sources: new FakeSources(REMOTE_VCS) };
-    const git = runRuntimePromptInfo(gitDeps, sourcePrepared('git'), { branch: 'feat/x' });
+    const git = runRuntimePromptInfo(gitDeps, sourcePrepared('git'), {
+      anchor: { kind: 'source', sourceId: SRC },
+      cwd: 'anchor',
+      branch: 'feat/x',
+      provenance: 'run',
+    });
     expect(git.primarySource).toEqual({ name: 'harnesys', kind: 'git', branch: 'feat/x' });
     const unbound = runRuntimePromptInfo(gitDeps, sourcePrepared('git'), undefined);
     expect(unbound.primarySource).toEqual({ name: 'harnesys', kind: 'git' });

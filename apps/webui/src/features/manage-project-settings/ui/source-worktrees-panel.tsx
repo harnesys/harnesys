@@ -172,8 +172,7 @@ export function SourceWorktreesPanel({ orgId, sourceId }: SourceWorktreesPanelPr
                       return;
                     }
                     bind(thread.id, {
-                      sourceId,
-                      worktreeId: row.id,
+                      workspaceRef: { kind: 'worktree', sourceId, worktreeId: row.id },
                       branch: row.branch,
                       hostId: row.hostId,
                     });

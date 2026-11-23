@@ -1,16 +1,15 @@
+import type { WorkspaceRef } from '@harnesys/contracts';
+import { describeEnvironment, resolveEnvironment } from '@harnesys/studio-shared';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import {
-  CheckIcon,
   ChevronDownIcon,
   FolderGit2Icon,
   FolderIcon,
-  FolderSearchIcon,
   GitBranchIcon,
-  HistoryIcon,
-  LockIcon,
   MonitorIcon,
 } from 'lucide-react';
 import { useState } from 'react';
+import type { Agent } from '@/entities/agent';
 import { type Thread, toClientThread, useThreadStore } from '@/entities/thread';
 import {
   isAbsoluteDirectoryPath,
@@ -19,7 +18,7 @@ import {
 } from '@/entities/thread/model/thread-binding';
 import { executionProfilesQuery, updateThreadBinding } from '@/shared/api';
 import { getSourceLocation, sourceLocationQueryKey } from '@/shared/api/source-location';
-import { listSources, type Source, sourceHasGitVcs } from '@/shared/api/sources';
+import { listSources, sourceHasGitVcs } from '@/shared/api/sources';
 import { Button } from '@/shared/ui/button';
 import {
   DropdownMenu,
@@ -28,36 +27,42 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
+import { Input } from '@/shared/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { toast } from '@/shared/ui/toast';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
 import { FolderBrowser } from '@/widgets/folder-browser';
 import { GitRepoMenuItems, useGitStatus } from '@/widgets/project-sidebar/ui/git-menu';
+import {
+  type DirSource,
+  isSubpathRef,
+  LockedBadge,
+  provenanceLabelOf,
+  type SubpathRef,
+  sourceForRef,
+  useIssueWorkspaceRef,
+  WorkspaceOptions,
+  withoutSubpath,
+  workspaceLayers,
+  workspaceValueOf,
+} from './thread-binding-parts';
 
 const CHIP_TRIGGER_CLASS =
   'inline-flex h-7 min-w-0 items-center gap-1.5 rounded-md px-1.5 text-sm outline-none hover:bg-muted disabled:pointer-events-none disabled:opacity-50';
 
-interface DirSource {
-  source: Source;
-  absoluteRoot: string | null;
-}
-
 export function ThreadBindingBar({
   orgId,
   thread,
+  agent,
 }: {
   orgId: string | null;
   thread: Thread | null;
+  agent: Agent | null;
 }) {
   const [directoryOpen, setDirectoryOpen] = useState(false);
-  const [customOpen, setCustomOpen] = useState(false);
-  const [customPath, setCustomPath] = useState('');
-  const [recents, setRecents] = useState<string[]>(() =>
-    orgId ? loadRecentDirectories(orgId) : [],
-  );
-  const runDirectory = thread?.runDirectory ?? null;
   const runProfileId = thread?.runProfileId ?? null;
   const locked = thread?.bindingLocked ?? false;
+  const rawRef = thread?.workspaceRef ?? null;
+  const threadRef = rawRef !== null && rawRef.kind === 'inherit' ? null : rawRef;
   const profilesQuery = useQuery({
     ...executionProfilesQuery(orgId ?? ''),
     enabled: Boolean(orgId),
@@ -80,15 +85,21 @@ export function ThreadBindingBar({
     source,
     absoluteRoot: locations[index]?.data?.absoluteRoot ?? null,
   }));
-  const matched = runDirectory
-    ? dirSources.find((entry) => entry.absoluteRoot === runDirectory)
-    : undefined;
-  const gitSource = matched && sourceHasGitVcs(matched.source) ? matched.source : undefined;
-  const gitStatus = useGitStatus(gitSource?.id ?? '');
+  const { issueWorkspace, issueRef } = useIssueWorkspaceRef(orgId, thread, sources);
+  const sourceNameOf = (sourceId: string) =>
+    sources.find((source) => source.id === sourceId)?.name ?? sourceId.slice(0, 8);
+  const layers = workspaceLayers({ issueWorkspace, issueRef, threadRef, agent });
+  const environment = resolveEnvironment({ layers, issue: issueWorkspace });
+  const resolved = issueWorkspace || threadRef !== null || agent !== null;
+  const chipLabel = resolved ? describeEnvironment(environment, sourceNameOf) : 'Use agent default';
+  const provenanceLabel = provenanceLabelOf(issueWorkspace, resolved, environment);
   const activeProfile = profilesQuery.data?.items.find((profile) => profile.id === runProfileId);
-  const directoryLabel = directoryLabelOf(runDirectory, matched);
+  const refSource = sourceForRef(threadRef, sources, dirSources);
+  const gitSource = refSource && sourceHasGitVcs(refSource) ? refSource : undefined;
+  const gitStatus = useGitStatus(gitSource?.id ?? '');
   const branchLabel = gitStatus?.branch ?? 'branch';
-  const patch = (body: { runProfileId?: string | null; runDirectory?: string | null }) => {
+  const currentValue = workspaceValueOf(threadRef);
+  const patch = (body: { runProfileId?: string | null; workspaceRef?: WorkspaceRef | null }) => {
     if (!thread) {
       return;
     }
@@ -129,68 +140,31 @@ export function ThreadBindingBar({
       </DropdownMenu>
       <Popover open={directoryOpen} onOpenChange={setDirectoryOpen}>
         <PopoverTrigger
-          disabled={locked || !thread}
+          disabled={locked || !thread || issueWorkspace}
           className={CHIP_TRIGGER_CLASS}
-          aria-label="Run directory"
+          aria-label="Workspace"
           data-testid="thread-binding-directory"
         >
-          {matched && sourceHasGitVcs(matched.source) ? (
+          {gitSource ? (
             <FolderGit2Icon className="size-3.5 shrink-0 text-muted-foreground" />
           ) : (
             <FolderIcon className="size-3.5 shrink-0 text-muted-foreground" />
           )}
-          <span className="truncate">{directoryLabel}</span>
+          <span className="truncate">{chipLabel}</span>
+          {provenanceLabel ? (
+            <span className="shrink-0 text-muted-foreground text-xs">{provenanceLabel}</span>
+          ) : null}
           <ChevronDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
         </PopoverTrigger>
         <PopoverContent align="start" className="w-96 p-2">
-          {customOpen ? (
-            <div className="flex flex-col gap-2">
-              <FolderBrowser orgId={orgId ?? undefined} autoFocus onChange={setCustomPath} />
-              <div className="flex items-center justify-end gap-1.5">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setCustomOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={!isAbsoluteDirectoryPath(customPath.trim())}
-                  onClick={() => {
-                    const trimmed = customPath.trim();
-                    if (!isAbsoluteDirectoryPath(trimmed)) {
-                      return;
-                    }
-                    patch({ runDirectory: trimmed });
-                    if (orgId) {
-                      setRecents(rememberRecentDirectory(orgId, trimmed));
-                    }
-                    setCustomOpen(false);
-                    setDirectoryOpen(false);
-                  }}
-                >
-                  Select
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <DirectoryOptions
-              dirSources={dirSources}
-              recents={recents}
-              runDirectory={runDirectory}
-              onPick={(value) => {
-                patch({ runDirectory: value });
-                setDirectoryOpen(false);
-              }}
-              onCustom={() => {
-                setCustomPath('');
-                setCustomOpen(true);
-              }}
-            />
-          )}
+          <WorkspacePopoverBody
+            orgId={orgId}
+            workspaceRef={threadRef}
+            dirSources={dirSources}
+            currentValue={currentValue}
+            onPatch={(workspaceRef) => patch({ workspaceRef })}
+            onClose={() => setDirectoryOpen(false)}
+          />
         </PopoverContent>
       </Popover>
       {gitSource ? (
@@ -215,143 +189,181 @@ export function ThreadBindingBar({
   );
 }
 
-function bindingErrorMessage(error: unknown): string {
-  return error instanceof Error && error.message ? error.message : 'Failed to update binding';
-}
-
-function directoryLabelOf(runDirectory: string | null, matched: DirSource | undefined): string {
-  if (!runDirectory) {
-    return 'Sandbox';
-  }
-  if (matched) {
-    return matched.source.name;
-  }
-  const tail = runDirectory.split('/').filter(Boolean).pop();
-  return tail ?? runDirectory;
-}
-
-function DirectoryOptions({
+function WorkspacePopoverBody({
+  orgId,
+  workspaceRef,
   dirSources,
-  recents,
-  runDirectory,
-  onPick,
-  onCustom,
+  currentValue,
+  onPatch,
+  onClose,
 }: {
+  orgId: string | null;
+  workspaceRef: WorkspaceRef | null;
   dirSources: DirSource[];
-  recents: string[];
-  runDirectory: string | null;
-  onPick: (value: string | null) => void;
-  onCustom: () => void;
+  currentValue: string;
+  onPatch: (ref: WorkspaceRef | null) => void;
+  onClose: () => void;
 }) {
-  const rootValues = new Set(
-    dirSources.filter((entry) => entry.absoluteRoot).map((entry) => entry.absoluteRoot),
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customPath, setCustomPath] = useState('');
+  const [recents, setRecents] = useState<string[]>(() =>
+    orgId ? loadRecentDirectories(orgId) : [],
   );
-  const recentOptions = recents.filter((path) => !rootValues.has(path)).slice(0, 5);
-  return (
-    <div className="flex max-h-80 flex-col overflow-y-auto">
-      <OptionRow
-        icon={<FolderIcon className="size-4" />}
-        label="Sandbox"
-        detail="Private thread directory"
-        selected={runDirectory === null}
-        onClick={() => onPick(null)}
+  const subpathRef = workspaceRef && isSubpathRef(workspaceRef) ? workspaceRef : null;
+  const [subpathDraft, setSubpathDraft] = useState(subpathRef?.subpath ?? '');
+  const subpathInvalid = subpathDraft.trim().startsWith('/');
+  const pickFolder = (path: string) => {
+    onPatch({ kind: 'folder', path });
+    if (orgId) {
+      setRecents(rememberRecentDirectory(orgId, path));
+    }
+    onClose();
+  };
+  const applySubpath = () => {
+    if (!subpathRef) {
+      return;
+    }
+    const trimmed = subpathDraft.trim();
+    if (trimmed.startsWith('/')) {
+      return;
+    }
+    onPatch(trimmed === '' ? withoutSubpath(subpathRef) : { ...subpathRef, subpath: trimmed });
+  };
+  if (customOpen) {
+    return (
+      <CustomFolderPicker
+        orgId={orgId}
+        path={customPath}
+        onChange={setCustomPath}
+        onCancel={() => setCustomOpen(false)}
+        onSelect={(path) => {
+          pickFolder(path);
+          setCustomOpen(false);
+        }}
       />
-      {dirSources.length > 0 ? (
-        <div className="mt-1 px-2 py-1 font-mono text-[10px] text-muted-foreground uppercase tracking-wide">
-          Sources
-        </div>
-      ) : null}
-      {dirSources.map((entry) =>
-        entry.absoluteRoot ? (
-          <OptionRow
-            key={entry.source.id}
-            icon={
-              sourceHasGitVcs(entry.source) ? (
-                <FolderGit2Icon className="size-4" />
-              ) : (
-                <FolderIcon className="size-4" />
-              )
-            }
-            label={entry.source.name}
-            detail={entry.absoluteRoot}
-            selected={runDirectory === entry.absoluteRoot}
-            onClick={() => onPick(entry.absoluteRoot)}
-          />
-        ) : null,
-      )}
-      {recentOptions.length > 0 ? (
-        <div className="mt-1 px-2 py-1 font-mono text-[10px] text-muted-foreground uppercase tracking-wide">
-          Recent
-        </div>
-      ) : null}
-      {recentOptions.map((path) => (
-        <OptionRow
-          key={path}
-          icon={<HistoryIcon className="size-4" />}
-          label={path.split('/').filter(Boolean).pop() ?? path}
-          detail={path}
-          selected={runDirectory === path}
-          onClick={() => onPick(path)}
+    );
+  }
+  return (
+    <div className="flex flex-col">
+      <WorkspaceOptions
+        dirSources={dirSources}
+        recents={recents}
+        currentValue={currentValue}
+        onInherit={() => {
+          onPatch(null);
+          onClose();
+        }}
+        onSandbox={() => {
+          onPatch({ kind: 'sandbox' });
+          onClose();
+        }}
+        onSource={(sourceId) => {
+          onPatch(sourceRefWithSubpath(subpathRef, sourceId));
+          onClose();
+        }}
+        onFolder={pickFolder}
+        onCustom={() => {
+          setCustomPath('');
+          setCustomOpen(true);
+        }}
+      />
+      {subpathRef ? (
+        <SubpathEditor
+          value={subpathDraft}
+          invalid={subpathInvalid}
+          onChange={setSubpathDraft}
+          onApply={applySubpath}
         />
-      ))}
-      <div className="mt-1 border-t pt-1">
-        <OptionRow
-          icon={<FolderSearchIcon className="size-4" />}
-          label="Browse file system…"
-          detail=""
-          selected={false}
-          onClick={onCustom}
-        />
-      </div>
+      ) : null}
     </div>
   );
 }
 
-function OptionRow({
-  icon,
-  label,
-  detail,
-  selected,
-  onClick,
+function bindingErrorMessage(error: unknown): string {
+  return error instanceof Error && error.message ? error.message : 'Failed to update binding';
+}
+
+function sourceRefWithSubpath(subpathRef: SubpathRef | null, sourceId: string): WorkspaceRef {
+  const subpath =
+    subpathRef !== null && subpathRef.sourceId === sourceId ? subpathRef.subpath : undefined;
+  return { kind: 'source', sourceId, ...(subpath ? { subpath } : {}) };
+}
+
+function SubpathEditor({
+  value,
+  invalid,
+  onChange,
+  onApply,
 }: {
-  icon: React.ReactNode;
-  label: string;
-  detail: string;
-  selected: boolean;
-  onClick: () => void;
+  value: string;
+  invalid: boolean;
+  onChange: (value: string) => void;
+  onApply: () => void;
 }) {
   return (
-    <button
-      type="button"
-      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
-      onClick={onClick}
-    >
-      <span className="shrink-0 text-muted-foreground">{icon}</span>
-      <span className="flex min-w-0 flex-col">
-        <span className="truncate">{label}</span>
-        {detail ? (
-          <span className="truncate font-mono text-muted-foreground text-xs">{detail}</span>
-        ) : null}
-      </span>
-      {selected ? <CheckIcon className="ml-auto size-4 shrink-0" /> : null}
-    </button>
+    <div className="mt-1 flex flex-col gap-1 border-t pt-2">
+      <div className="flex items-center gap-1.5">
+        <Input
+          className="h-7 min-w-0 flex-1 font-mono text-xs"
+          placeholder="subfolder"
+          aria-label="Workspace subfolder"
+          aria-invalid={invalid || undefined}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              onApply();
+            }
+          }}
+        />
+        <Button type="button" size="sm" variant="outline" disabled={invalid} onClick={onApply}>
+          Apply
+        </Button>
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        {invalid
+          ? 'Subfolder must not start with a slash'
+          : 'Relative to the workspace root. Leave empty for the root.'}
+      </p>
+    </div>
   );
 }
 
-function LockedBadge() {
+function CustomFolderPicker({
+  orgId,
+  path,
+  onChange,
+  onCancel,
+  onSelect,
+}: {
+  orgId: string | null;
+  path: string;
+  onChange: (value: string) => void;
+  onCancel: () => void;
+  onSelect: (path: string) => void;
+}) {
+  const trimmed = path.trim();
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <span
-            className="inline-flex shrink-0 text-muted-foreground"
-            data-testid="thread-binding-locked"
-          />
-        }
-      >
-        <LockIcon className="size-3.5 opacity-50" />
-      </TooltipTrigger>
-      <TooltipContent>Binding is locked after the first run</TooltipContent>
-    </Tooltip>
+    <div className="flex flex-col gap-2">
+      <FolderBrowser orgId={orgId ?? undefined} autoFocus onChange={onChange} />
+      <div className="flex items-center justify-end gap-1.5">
+        <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          disabled={!isAbsoluteDirectoryPath(trimmed)}
+          onClick={() => {
+            if (isAbsoluteDirectoryPath(trimmed)) {
+              onSelect(trimmed);
+            }
+          }}
+        >
+          Select
+        </Button>
+      </div>
+    </div>
   );
 }

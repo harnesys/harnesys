@@ -108,6 +108,7 @@ export function IssueVcsPanel({
 
       <IssueSourceFields
         orgId={orgId}
+        issueId={issue.id}
         disabled={busy || worktreeRef != null}
         attachedBranch={worktreeRef?.branch ?? null}
         branchNameSeed={issueWorktreeBranchPreview(issue.id, issue.title)}
@@ -115,10 +116,19 @@ export function IssueVcsPanel({
         creating={creating}
         worktree={worktreeRef}
         worktreeOnStatus={issue.worktreeOnStatus}
+        agentDefaultWorkspaceRef={executor?.defaultWorkspaceRef ?? null}
         statuses={statuses}
-        value={{ sourceId: issue.sourceId ?? '', branch: issue.branch }}
+        value={{
+          sourceId: issue.sourceId ?? '',
+          workspaceSubpath: issue.workspaceSubpath,
+          branch: issue.branch,
+        }}
         onChange={(next) => {
-          void patchIssue({ sourceId: next.sourceId || null, branch: next.branch });
+          void patchIssue({
+            sourceId: next.sourceId || null,
+            workspaceSubpath: next.workspaceSubpath,
+            branch: next.branch,
+          });
         }}
         onCreateBranch={(input) => {
           void onCreateBranch(input);

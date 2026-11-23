@@ -36,6 +36,7 @@ export function memoryThread(
     updatedAt: now,
     lastReadAt: now,
     ...overrides,
+    workspaceRef: overrides.workspaceRef ?? null,
   };
 }
 

@@ -1,4 +1,4 @@
-import type { ThreadKind, ThreadPolicy } from '@harnesys/contracts';
+import type { ThreadKind, ThreadPolicy, WorkspaceRef } from '@harnesys/contracts';
 
 export interface ThreadRecord {
   id: string;
@@ -16,6 +16,7 @@ export interface ThreadRecord {
   issueId?: string | null;
   runProfileId: string | null;
   runDirectory: string | null;
+  workspaceRef: WorkspaceRef | null;
   createdAt: string;
   updatedAt: string;
   lastReadAt: string;
@@ -23,10 +24,13 @@ export interface ThreadRecord {
 
 export type ThreadInsert = Omit<
   ThreadRecord,
-  'autoReplyAgentId' | 'policy' | 'lastThreadSeq' | 'conversationCount'
+  'autoReplyAgentId' | 'policy' | 'lastThreadSeq' | 'conversationCount' | 'workspaceRef'
 > &
   Partial<
-    Pick<ThreadRecord, 'autoReplyAgentId' | 'policy' | 'lastThreadSeq' | 'conversationCount'>
+    Pick<
+      ThreadRecord,
+      'autoReplyAgentId' | 'policy' | 'lastThreadSeq' | 'conversationCount' | 'workspaceRef'
+    >
   >;
 
 export function toThreadRecord(rec: ThreadInsert): ThreadRecord {
@@ -36,6 +40,7 @@ export function toThreadRecord(rec: ThreadInsert): ThreadRecord {
     policy: rec.policy ?? { version: 1 },
     lastThreadSeq: rec.lastThreadSeq ?? 0,
     conversationCount: rec.conversationCount ?? 0,
+    workspaceRef: rec.workspaceRef ?? null,
   };
 }
 
@@ -60,6 +65,7 @@ export type ThreadPatch = Partial<{
   issueId: string | null;
   runProfileId: string | null;
   runDirectory: string | null;
+  workspaceRef: WorkspaceRef | null;
   lastReadAt: string;
 }>;
 

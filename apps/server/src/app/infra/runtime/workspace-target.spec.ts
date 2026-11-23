@@ -39,7 +39,7 @@ describe('declaredRuleDirsOf', () => {
 });
 
 describe('workspaceTargetOf', () => {
-  test('without container isolation returns undefined', () => {
+  test('without a run environment returns undefined', () => {
     const target = workspaceTargetOf({
       hostId: HOST,
       orgDataDir: ORG_DATA,
@@ -51,8 +51,11 @@ describe('workspaceTargetOf', () => {
 
   test('container mounts orgDataDir, external primary and declared dirs, skipping orgDataDir internals', () => {
     const target = workspaceTargetOf({
-      isolation: { mode: 'container', image: 'img' },
-      worktreeId: 'wt-1',
+      environment: {
+        anchor: { kind: 'source', sourceId: 'src-1', worktreeId: 'wt-1' },
+        cwd: 'anchor',
+        provenance: 'run',
+      },
       hostId: HOST,
       orgDataDir: ORG_DATA,
       primaryDir: '/worktrees/repo-feat-x',
@@ -66,5 +69,23 @@ describe('workspaceTargetOf', () => {
       '/org/attachments-outside',
       '/shared/declared',
     ]);
+  });
+
+  test('folder anchors mount the org data dir and the folder path', () => {
+    const target = workspaceTargetOf({
+      environment: {
+        anchor: { kind: 'folder', path: '/srv/project' },
+        cwd: 'anchor',
+        provenance: 'run',
+      },
+      hostId: HOST,
+      orgDataDir: ORG_DATA,
+      threadDirs: ['/org/thread'],
+      declaredRuleDirs: [],
+    });
+    expect(target).toEqual({
+      workspaceKey: `folder:${HOST}:/srv/project`,
+      mounts: [ORG_DATA, '/srv/project'],
+    });
   });
 });

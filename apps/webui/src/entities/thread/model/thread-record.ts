@@ -24,6 +24,7 @@ export function toClientThread(record: ThreadSummary | ThreadRecord): Thread {
     runMode: record.runMode,
     runProfileId: record.runProfileId,
     runDirectory: record.runDirectory,
+    workspaceRef: record.workspaceRef ?? null,
     bindingLocked: record.bindingLocked,
     activeRunId: record.activeRun?.runId ?? null,
     activeRun: record.activeRun ?? null,

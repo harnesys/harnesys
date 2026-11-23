@@ -1,17 +1,14 @@
 import { join } from 'node:path';
+import type { RunEnvironment } from '@harnesys/contracts';
 import type { AgentRecord } from '../agent/agent.ts';
 import { HostFsLayoutPort } from '../machine/host-fs-layout.port.ts';
 import { SourceLocationPort } from '../source/source-location.port.ts';
 import { SourceRegistryPort } from '../source/source-registry.port.ts';
+import { materializePrimary } from './run-environment.ts';
 import type { ActiveWorktreeRef, PrimaryKind, SharedSourceRef } from './thread-runtime-context.ts';
 
-export type RunTriggerKind = 'chat' | 'issue' | 'schedule' | 'webhook' | 'connector';
-
 export interface PrepareTargetOptions {
-  worktreeId?: string;
-  sourceId?: string;
-  directory?: string;
-  triggerKind?: RunTriggerKind;
+  environment?: RunEnvironment;
   mode?: string;
 }
 
@@ -36,52 +33,50 @@ export function resolveRuntimePrimary(
   options?: PrepareTargetOptions,
 ): RuntimePrimary {
   const threadSandbox = join(deps.layout.threadDir(deps.orgId, deps.threadId), 'sandbox');
-  if (options?.directory !== undefined) {
-    return {
-      primaryDirectory: options.directory,
-      primaryKind: 'directory',
-      threadSandbox,
-    };
+  const environment = options?.environment;
+  const anchor = environment?.anchor ?? null;
+  if (!environment || environment.cwd === 'sandbox' || anchor === null) {
+    return materializeSandbox(threadSandbox);
   }
-  const worktree = options?.worktreeId;
-  if (worktree !== undefined && options?.sourceId !== undefined) {
-    const sourceId = options.sourceId;
-    const location = deps.sourceLocation.resolve({
-      orgId: deps.orgId,
-      sourceId,
-      hostId: deps.localHostId,
-      worktreeId: worktree,
+  if (anchor.kind === 'folder') {
+    const primary = materializePrimary(environment, {
+      anchorRoot: anchor.path,
+      threadSandbox,
     });
+    return { ...primary, threadSandbox };
+  }
+  const location = deps.sourceLocation.resolve({
+    orgId: deps.orgId,
+    sourceId: anchor.sourceId,
+    hostId: deps.localHostId,
+    ...(anchor.worktreeId !== undefined ? { worktreeId: anchor.worktreeId } : {}),
+  });
+  const primary = materializePrimary(environment, {
+    anchorRoot: location.absoluteRoot,
+    threadSandbox,
+  });
+  if (anchor.worktreeId !== undefined) {
     return {
-      primaryDirectory: location.absoluteRoot,
+      ...primary,
       primaryKind: 'worktree',
       threadSandbox,
       activeWorktree: {
-        worktreeId: worktree,
-        sourceId,
+        worktreeId: anchor.worktreeId,
+        sourceId: anchor.sourceId,
         hostId: deps.localHostId,
         root: location.absoluteRoot,
       },
     };
   }
-  if (
-    options?.triggerKind === 'issue' &&
-    options.sourceId !== undefined &&
-    worktree === undefined
-  ) {
-    const sourceId = options.sourceId;
-    const location = deps.sourceLocation.resolve({
-      orgId: deps.orgId,
-      sourceId,
-      hostId: deps.localHostId,
-    });
-    return {
-      primaryDirectory: location.absoluteRoot,
-      primaryKind: 'source',
-      threadSandbox,
-      primarySourceId: sourceId,
-    };
-  }
+  return {
+    ...primary,
+    primaryKind: 'source',
+    threadSandbox,
+    primarySourceId: anchor.sourceId,
+  };
+}
+
+function materializeSandbox(threadSandbox: string): RuntimePrimary {
   return { primaryDirectory: threadSandbox, primaryKind: 'sandbox', threadSandbox };
 }
 

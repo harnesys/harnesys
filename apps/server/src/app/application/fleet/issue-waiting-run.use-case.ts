@@ -1,10 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@harnesys/brix';
-import type { RunAcceptedResponse, TaskEnvelopeAttachment } from '@harnesys/contracts';
+import type {
+  RunAcceptedResponse,
+  RunEnvironment,
+  TaskEnvelopeAttachment,
+} from '@harnesys/contracts';
 import type { Attachment, RunAttribution } from 'harnesys';
 import { FleetEventsPort } from '../../domain/fleet/fleet-events.port.ts';
 import { OrgConfigRevisionPort } from '../../domain/fleet/org-config-revision.port.ts';
 import { PendingPlacementPort } from '../../domain/fleet/pending-placement.port.ts';
+import { legacyWorkspaceFieldsOf } from '../../domain/fleet/pending-placement.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { toPlacementEvent } from '../threads/resolve-run-placement.ts';
 
@@ -35,6 +40,7 @@ export interface IssueWaitingRunInput {
   sourceId?: string;
   worktreeId?: string;
   worktreeHostId?: string;
+  environment?: RunEnvironment;
   issueRuleProfileId?: string | null;
   profileSource?: 'thread' | 'issue-rule' | 'agent' | 'organization';
 }
@@ -59,6 +65,7 @@ export class IssueWaitingRunUseCase {
         agentId: input.agentId,
         agentName: input.agentName,
         attribution: input.attribution,
+        ...(input.environment ? { environmentJson: JSON.stringify(input.environment) } : {}),
       },
       [waitingUserEvent(input, clientEventId), input.placementEvent],
     );
@@ -89,6 +96,7 @@ export class IssueWaitingRunUseCase {
       priority: input.priority,
       trigger: input.trigger,
       expiresAt: input.expiresAt ?? null,
+      ...(input.environment ? { environmentJson: JSON.stringify(input.environment) } : {}),
       payload: waitingPayload(input, clientEventId, attachmentMetas),
       lastCandidatesJson: input.candidatesJson,
     });
@@ -129,6 +137,9 @@ function waitingPayload(
   clientEventId: string,
   attachmentMetas: TaskEnvelopeAttachment[],
 ) {
+  const legacy = legacyWorkspaceFieldsOf(input.environment);
+  const sourceId = legacy.sourceId ?? input.sourceId;
+  const worktreeId = legacy.worktreeId ?? input.worktreeId;
   return {
     agentId: input.agentId,
     text: input.text ?? '',
@@ -140,8 +151,8 @@ function waitingPayload(
     clientEventId,
     ...(input.origin ? { origin: input.origin } : {}),
     ...(input.correlationId ? { correlationId: input.correlationId } : {}),
-    ...(input.sourceId ? { sourceId: input.sourceId } : {}),
-    ...(input.worktreeId ? { worktreeId: input.worktreeId } : {}),
+    ...(sourceId ? { sourceId } : {}),
+    ...(worktreeId ? { worktreeId } : {}),
     ...(input.worktreeHostId ? { worktreeHostId: input.worktreeHostId } : {}),
     ...(input.issueRuleProfileId ? { issueRuleProfileId: input.issueRuleProfileId } : {}),
     ...(input.profileSource ? { profileSource: input.profileSource } : {}),

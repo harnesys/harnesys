@@ -343,3 +343,4 @@ export {
   type ThreadActiveRun,
   ThreadActiveRunSchema,
 } from './thread-runs.ts';
+export * from './workspace-ref.ts';

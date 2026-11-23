@@ -1,3 +1,4 @@
+import { type RunEnvironment, RunEnvironmentSchema } from '@harnesys/contracts';
 import {
   type AgentDefinition,
   type CapabilityUniverse,
@@ -13,6 +14,7 @@ import {
   THREADS_HISTORY_TOOL,
   type ToolDefinition,
 } from 'harnesys';
+import { DEFAULT_WORKSPACE_IMAGE, type RunIsolation } from '../../domain/fleet/placement.ts';
 import { composeRunSkills } from './compose-run-skills.ts';
 import { runInHostToolScope } from './host-tool-scope.ts';
 import type { OrgPluginWiring } from './org-plugin-wiring.ts';
@@ -28,18 +30,13 @@ import { type SteeringChannel } from './org-runtime-queue.ts';
 import { resolveRunSourceRefs } from './org-runtime-source-refs.ts';
 import { prepareTarget, runtimeOptionsOf, type TargetCache } from './prepare-org-target.ts';
 import { runRuntimePromptInfo } from './runtime-prompt.ts';
-import {
-  preparedWorkspacePathsOf,
-  resolveProcessTarget,
-  type ThreadBinding,
-} from './workspace-target.ts';
+import { preparedWorkspacePathsOf, resolveProcessTarget } from './workspace-target.ts';
 
 export interface RunTargetResolverContext {
   deps: OrgRuntimeDeps;
   plugin: OrgPluginWiring;
   agentsResolve: ReturnType<typeof createAgentsResolve>;
   packRegistrations: PackRegistration[];
-  worktreeBindings: Map<string, ThreadBinding>;
   requestedModes: Map<string, string | undefined>;
   targetCache: TargetCache;
   sessionRequested: Map<string, string[]>;
@@ -61,16 +58,19 @@ export function createRunTargetResolver(ctx: RunTargetResolverContext) {
     selector?: RunTargetSelector,
   ) {
     const { deps, plugin } = ctx;
-    const binding = ctx.worktreeBindings.get(threadId);
     const modeOverride = ctx.requestedModes.get(threadId);
     const agentId = await resolveAgentId(ctx, selector);
     if (agentId === undefined) {
       return null;
     }
-    const prepared = prepareTarget(deps, threadId, agentId, ctx.targetCache, {
-      ...runtimeOptionsOf(binding),
-      ...(modeOverride !== undefined ? { mode: modeOverride } : {}),
-    });
+    const environment = await environmentOf(ctx, selector);
+    const prepared = prepareTarget(
+      deps,
+      threadId,
+      agentId,
+      ctx.targetCache,
+      runtimeOptionsOf(environment, modeOverride),
+    );
     if (!prepared) {
       return null;
     }
@@ -105,7 +105,12 @@ export function createRunTargetResolver(ctx: RunTargetResolverContext) {
     const capabilitySet = runInHostToolScope(prepared.scope, () =>
       resolveCapabilitySet(agentDef, universe),
     );
-    const process = await resolveProcessTarget(deps, binding, preparedWorkspacePathsOf(prepared));
+    const process = await resolveProcessTarget(
+      deps,
+      environment,
+      preparedWorkspacePathsOf(prepared),
+      isolationOf(environment),
+    );
     const target = {
       state,
       agent: agentDef,
@@ -125,7 +130,7 @@ export function createRunTargetResolver(ctx: RunTargetResolverContext) {
       ...(deps.permissionRules !== undefined
         ? { permissionGrants: runTargetPermissionGrants(deps.permissionRules, deps.orgId) }
         : {}),
-      runtime: runRuntimePromptInfo(deps, prepared, binding),
+      runtime: runRuntimePromptInfo(deps, prepared, environment),
       steerMessages: () => ctx.steering.steer(threadId),
       ackSteerMessages: (itemIds: string[]) => ctx.steering.ack(itemIds),
       ...(process ? { process } : {}),
@@ -149,6 +154,36 @@ async function resolveAgentId(
   }
   const run = await ctx.lifecycle.get(selector.runId);
   return run?.agentId;
+}
+
+async function environmentOf(
+  ctx: RunTargetResolverContext,
+  selector: RunTargetSelector | undefined,
+): Promise<RunEnvironment | undefined> {
+  if (selector?.runId === undefined) {
+    return undefined;
+  }
+  const run = await ctx.lifecycle.get(selector.runId);
+  return parseEnvironment(run?.environmentJson);
+}
+
+function parseEnvironment(json: string | undefined): RunEnvironment | undefined {
+  if (json === undefined) {
+    return undefined;
+  }
+  try {
+    const parsed = RunEnvironmentSchema.safeParse(JSON.parse(json));
+    return parsed.success ? parsed.data : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function isolationOf(environment: RunEnvironment | undefined): RunIsolation | undefined {
+  if (environment?.isolation?.mode !== 'container') {
+    return undefined;
+  }
+  return { mode: 'container', image: environment.isolation.image ?? DEFAULT_WORKSPACE_IMAGE };
 }
 
 function withThreadHistory(

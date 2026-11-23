@@ -4,6 +4,7 @@ import { CompactionConfigSchema } from './compaction.ts';
 import { LOCAL_EXECUTION_PROFILE_ID } from './execution-profile.ts';
 import { OrgIdSchema } from './org-machine.ts';
 import { PresetIdSchema } from './preset-id.ts';
+import { WorkspaceRefSchema } from './workspace-ref.ts';
 
 const COMPACTION_CONFIG_KEYS = ['compaction', 'compactionJson'] as const;
 
@@ -66,6 +67,7 @@ export const AgentPublicSchema = z.object({
   enabledPlugins: z.record(z.string(), z.boolean()),
   defaultModeId: z.string().nullable(),
   defaultRunDirectory: z.string().nullable(),
+  defaultWorkspaceRef: WorkspaceRefSchema.nullable(),
   config: z.record(z.string(), z.unknown()).optional(),
   hooks: AgentHooksSchema.default([]),
   createdAt: z.string().min(1),
@@ -96,6 +98,7 @@ export const CreateAgentBodySchema = z.object({
   enabledPlugins: z.record(z.string(), z.boolean()).optional(),
   defaultModeId: z.string().nullable().optional(),
   defaultRunDirectory: z.string().nullable().optional(),
+  defaultWorkspaceRef: WorkspaceRefSchema.nullable().optional(),
   config: AgentConfigSchema.optional(),
   hooks: AgentHooksSchema.optional(),
 });

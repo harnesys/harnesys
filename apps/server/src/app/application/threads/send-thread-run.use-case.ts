@@ -2,10 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { Injectable } from '@harnesys/brix';
 import type {
   AcceptedRunResponse,
-  RunAcceptedResponse,
+  RunEnvironment,
   SendThreadRunBody,
+  WorkspaceRef,
 } from '@harnesys/contracts';
-import type { Attachment } from 'harnesys';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { EventBusPort } from '../../domain/events/event-bus.port.ts';
@@ -15,10 +15,13 @@ import { FleetHubPort } from '../../domain/fleet/fleet-hub.port.ts';
 import { OrgAudit } from '../../domain/fleet/org-audit.port.ts';
 import type { PlacementResult } from '../../domain/fleet/placement.ts';
 import { UserRepository } from '../../domain/identity/user-repository.port.ts';
+import { IssueRepositoryPort } from '../../domain/issue/issue-repository.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
 import { RepositoryWorktreePort } from '../../domain/source/repository-worktree.port.ts';
+import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
+import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import { AttachmentRepositoryPort } from '../../domain/thread/attachment-repository.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import {
@@ -34,7 +37,9 @@ import { IssueWaitingRunUseCase } from '../fleet/issue-waiting-run.use-case.ts';
 import { GetEffectiveSkillsUseCase } from '../skills/get-effective-skills.use-case.ts';
 import { requestedSkillsBlock } from '../skills/requested-skills.ts';
 import { assertDailyBudget } from '../usage/assert-daily-budget.ts';
-import { resolveRunPlacement, toPlacementEvent } from './resolve-run-placement.ts';
+import type { ResolveRunEnvironmentDeps } from './resolve-run-environment.ts';
+import { resolveRunEnvironment } from './resolve-run-environment.ts';
+import { resolveRunPlacement } from './resolve-run-placement.ts';
 import {
   assertRunStart,
   attributedRun,
@@ -42,20 +47,14 @@ import {
   type RunStartAttribution,
 } from './run-attribution.ts';
 import { sendGroupThread } from './send-group-thread.ts';
-import {
-  type AttachmentMeta,
-  attachmentMetasOf,
-  mapSendError,
-  resolveAttachmentsOf,
-} from './send-thread-attachments.ts';
-import { dispatchLocalRun, dispatchRemoteRun, sharedRunFields } from './send-thread-dispatch.ts';
+import { mapSendError, resolveAttachmentsOf } from './send-thread-attachments.ts';
+import { dispatchPlacedRun, explicitWorkspaceRef } from './send-thread-dispatch.ts';
 import { SendThreadMessageUseCase } from './send-thread-message.use-case.ts';
 import {
   assertRequestedSkills,
   chatMentionGateBlocked,
   storeUnaddressedMessage,
 } from './send-thread-run-helpers.ts';
-import { resolveWorktreeBinding, type WorktreeBinding } from './send-thread-worktree.ts';
 import { applyDerivedThreadTitle } from './thread.helpers.ts';
 
 export interface SendThreadRunRequest {
@@ -74,10 +73,13 @@ export interface SendThreadRunRequest {
 export class SendThreadRunUseCase {
   constructor(
     private readonly threads: ThreadRepositoryPort,
+    private readonly issues: IssueRepositoryPort,
     private readonly attachments: AttachmentRepositoryPort,
     readonly _layout: HostFsLayoutPort,
     private readonly agents: AgentRegistryPort,
     private readonly worktrees: RepositoryWorktreePort,
+    private readonly sources: SourceRegistryPort,
+    private readonly materializations: SourceMaterializationPort,
     private readonly profiles: ExecutionProfilePort,
     private readonly machineConfig: MachineConfigPort,
     private readonly hub: FleetHubPort,
@@ -131,25 +133,15 @@ export class SendThreadRunUseCase {
       agent,
       timezone: this.orgSettings.get(request.orgId).timezone,
     });
-    const worktreeBinding = resolveWorktreeBinding({
-      orgId: request.orgId,
-      sourceId: request.body.sourceId,
-      worktreeId: request.body.worktreeId,
-      agentSharedSourceIds: agent.sharedSourceIds,
-      worktrees: this.worktrees,
-    });
-    const runId = randomUUID();
-    const decision = resolveRunPlacement({
-      orgId: request.orgId,
-      runId,
-      threadProfileId: thread.runProfileId,
-      agentProfileId: agent.executionProfileId,
-      issueRuleProfileId: request.issueRuleProfileId,
-      worktreeHostId: worktreeBinding?.hostId ?? null,
-      profiles: this.profiles,
-      hub: this.hub,
-      claims: this.claims,
-    });
+    const explicit = this.workspaceIntent(request, thread);
+    const runEnvironmentDeps = this.runEnvironmentDeps(request.orgId);
+    const { decision, environment } = this.prepareDispatch(
+      request,
+      thread,
+      agent,
+      explicit,
+      runEnvironmentDeps,
+    );
     const resolvedAttachments = resolveAttachmentsOf(
       this.attachments,
       request.orgId,
@@ -171,16 +163,25 @@ export class SendThreadRunUseCase {
         : request.body.text;
 
     try {
-      const accepted = await this.dispatchRun({
-        request,
-        thread,
-        agent,
-        decision,
-        attachments: resolvedAttachments,
-        requestedSkills,
-        runText,
-        worktreeBinding,
-      });
+      const accepted = await dispatchPlacedRun(
+        {
+          attachments: this.attachments,
+          executor: this.executor,
+          issueRemote: this.issueRemote,
+          issueWaiting: this.issueWaiting,
+          machineConfig: this.machineConfig,
+        },
+        {
+          request,
+          thread,
+          agent,
+          decision,
+          attachments: resolvedAttachments,
+          requestedSkills,
+          runText,
+          environment,
+        },
+      );
       auditRunStart(this.audit, {
         orgId: request.orgId,
         runId: accepted.runId,
@@ -190,10 +191,12 @@ export class SendThreadRunUseCase {
         ),
         triggerId: request.trigger?.id ?? request.threadId,
       });
-      if (worktreeBinding) {
+      const worktreeId =
+        environment.anchor?.kind === 'source' ? environment.anchor.worktreeId : undefined;
+      if (worktreeId !== undefined) {
         this.worktrees.setActiveRunId(
           request.orgId,
-          worktreeBinding.worktreeId,
+          worktreeId,
           accepted.runId,
           new Date().toISOString(),
         );
@@ -218,128 +221,95 @@ export class SendThreadRunUseCase {
     }
   }
 
-  private async dispatchRun(input: {
-    request: SendThreadRunRequest;
-    thread: ThreadRecord;
-    agent: AgentRecord;
-    decision: PlacementResult;
-    attachments: Attachment[];
-    requestedSkills: string[];
-    runText: string | undefined;
-    worktreeBinding: WorktreeBinding | null;
-  }): Promise<RunAcceptedResponse> {
-    const { request, thread, agent, decision, attachments, requestedSkills, worktreeBinding } =
-      input;
-    const attachmentMetas = attachmentMetasOf(
-      this.attachments,
-      request.orgId,
-      request.threadId,
-      request.body.attachmentIds,
-    );
-    if (decision.kind === 'unavailable') {
-      return await this.issueUnavailable({
-        request,
-        threadId: thread.id,
-        agentId: agent.id,
-        agentName: agent.name,
-        decision,
-        text: input.runText,
-        attachments,
-        attachmentMetas,
-        requestedSkills,
-        worktreeBinding,
-      });
-    }
-    const sharedFields = sharedRunFields({
-      runDirectory: thread.runDirectory,
-      worktreeBinding,
-      sourceId: request.body.sourceId,
-      isolation: decision.request.isolation,
-    });
-    const localHostId = this.machineConfig.get().id;
-    if (decision.nodeId === localHostId) {
-      return await dispatchLocalRun({
-        executor: this.executor,
-        request,
-        thread,
-        agent,
-        decision,
-        runText: input.runText,
-        attachments,
-        skills: requestedSkills,
-        worktreeBinding,
-        sharedFields,
-      });
-    }
-    return await dispatchRemoteRun({
-      issueRemote: this.issueRemote,
-      request,
-      thread,
-      agent,
-      decision,
-      runText: input.runText,
-      attachments,
-      skills: requestedSkills,
-      attachmentMetas,
-      sharedFields,
-    });
+  private runEnvironmentDeps(orgId: string): ResolveRunEnvironmentDeps {
+    return {
+      orgId,
+      threads: this.threads,
+      agents: this.agents,
+      sources: this.sources,
+      worktrees: this.worktrees,
+      layout: this._layout,
+      localHostId: this.machineConfig.get().id,
+    };
   }
 
-  private async issueUnavailable(input: {
-    request: SendThreadRunRequest;
-    threadId: string;
-    agentId: string;
-    agentName: string;
-    decision: Extract<PlacementResult, { kind: 'unavailable' }>;
-    text?: string;
-    attachments: Attachment[];
-    attachmentMetas: AttachmentMeta[];
-    requestedSkills: string[];
-    worktreeBinding: WorktreeBinding | null;
-  }): Promise<RunAcceptedResponse> {
-    const trigger = input.request.trigger ?? {
-      kind: 'chat' as const,
-      id: input.request.threadId,
-    };
-    const placementExtras = input.worktreeBinding
-      ? {
-          worktreeId: input.worktreeBinding.worktreeId,
-          worktreeHostId: input.worktreeBinding.hostId,
-        }
-      : undefined;
-    return await this.issueWaiting.execute({
-      orgId: input.request.orgId,
-      threadId: input.threadId,
-      runId: input.decision.request.runId,
-      profileId: input.decision.request.profileId,
-      agentId: input.agentId,
-      agentName: input.agentName,
-      priority: input.request.priority ?? 3,
-      trigger,
-      reason: input.decision.reason,
-      attribution: attributedRun(input.request.attribution, null),
-      candidatesJson: JSON.stringify(input.decision.candidates),
-      configRevision: 0,
-      placementEvent: toPlacementEvent(input.decision, placementExtras),
-      text: input.text,
-      effort: input.request.body.effort,
-      mode: input.request.body.mode,
-      ...(input.requestedSkills.length > 0 ? { skills: input.requestedSkills } : {}),
-      ...(input.attachments.length > 0 ? { attachments: input.attachments } : {}),
-      ...(input.attachmentMetas.length > 0 ? { attachmentMetas: input.attachmentMetas } : {}),
-      clientEventId: input.request.body.clientEventId,
-      origin: input.request.body.origin,
-      correlationId: input.request.body.correlationId,
-      expiresAt: input.request.expiresAt ?? null,
-      ...(input.worktreeBinding
-        ? {
-            sourceId: input.worktreeBinding.sourceId,
-            worktreeId: input.worktreeBinding.worktreeId,
-            worktreeHostId: input.worktreeBinding.hostId,
-          }
-        : {}),
-      issueRuleProfileId: input.request.issueRuleProfileId,
-      profileSource: input.decision.request.profileSource,
+  private workspaceIntent(
+    request: SendThreadRunRequest,
+    thread: ThreadRecord,
+  ): WorkspaceRef | undefined {
+    return explicitWorkspaceRef(request.body) ?? this.issueWorkspaceRef(request.orgId, thread);
+  }
+
+  private issueWorkspaceRef(orgId: string, thread: ThreadRecord): WorkspaceRef | undefined {
+    if (thread.kind !== 'issue' || thread.issueId === null || thread.issueId === undefined) {
+      return undefined;
+    }
+    const issue = this.issues.findById(orgId, thread.issueId);
+    if (!issue) {
+      return undefined;
+    }
+    const sourceId = issue.sourceId ?? this.sources.findManagedWorkspace(orgId)?.id ?? null;
+    if (sourceId === null) {
+      return undefined;
+    }
+    const subpath = issue.workspaceSubpath === null ? {} : { subpath: issue.workspaceSubpath };
+    const branch = issue.branch?.trim();
+    if (!branch) {
+      return { kind: 'source', sourceId, ...subpath };
+    }
+    const worktree = this.worktrees.findActiveByBranch(
+      orgId,
+      sourceId,
+      this.machineConfig.get().id,
+      branch,
+    );
+    return worktree
+      ? { kind: 'worktree', sourceId, worktreeId: worktree.id, ...subpath }
+      : { kind: 'source', sourceId, ...subpath };
+  }
+
+  private prepareDispatch(
+    request: SendThreadRunRequest,
+    thread: ThreadRecord,
+    agent: AgentRecord,
+    explicit: WorkspaceRef | undefined,
+    runEnvironmentDeps: ResolveRunEnvironmentDeps,
+  ): { decision: PlacementResult; environment: RunEnvironment } {
+    const issue = request.trigger?.kind === 'issue' || thread.kind === 'issue';
+    const preContainer = resolveRunEnvironment(runEnvironmentDeps, {
+      threadId: thread.id,
+      agentId: agent.id,
+      ...(explicit !== undefined ? { explicit } : {}),
+      issue,
     });
+    const runId = randomUUID();
+    const placementInput = {
+      orgId: request.orgId,
+      runId,
+      threadProfileId: thread.runProfileId,
+      agentProfileId: agent.executionProfileId,
+      issueRuleProfileId: request.issueRuleProfileId,
+      environment: preContainer,
+      profiles: this.profiles,
+      hub: this.hub,
+      claims: this.claims,
+      worktrees: this.worktrees,
+      materializations: this.materializations,
+    };
+    const decision = resolveRunPlacement(placementInput);
+    const resolved = resolveRunEnvironment(runEnvironmentDeps, {
+      threadId: thread.id,
+      agentId: agent.id,
+      ...(explicit !== undefined ? { explicit } : {}),
+      issue,
+      ...(request.branch !== undefined ? { branch: request.branch } : {}),
+    });
+    if (decision.request.isolation?.mode === 'container' && resolved.anchor === null) {
+      throw new ThreadValidationException('container isolation requires a workspace anchor');
+    }
+    const environment = decision.request.isolation
+      ? { ...resolved, isolation: decision.request.isolation }
+      : resolved;
+    return { decision, environment };
   }
 }

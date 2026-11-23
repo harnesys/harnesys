@@ -27,8 +27,9 @@ import { createOrgEventPublisher } from './org-runtime-publish.ts';
 import { createSteeringChannel, createThreadQueueDrainer } from './org-runtime-queue.ts';
 import { createRunTargetResolver } from './org-runtime-run-target.ts';
 import { cancelThreadRun, retryThreadRun, sendThreadMessage } from './org-runtime-runs.ts';
+import { prepareSessionTarget } from './org-runtime-session-target.ts';
 import { orgPackInputs, wireOrgPacks } from './packs/wire-org-packs.ts';
-import { prepareTarget, scopeOf, type TargetCache } from './prepare-org-target.ts';
+import { scopeOf, type TargetCache } from './prepare-org-target.ts';
 import { recoverIssueExecutionsIfPresent } from './recover-issue-executions.ts';
 import { recoverOrphanedRuns } from './recover-orphaned-runs.ts';
 import { recoverStaleWorktrees } from './recover-stale-worktrees.ts';
@@ -40,13 +41,12 @@ import {
   undoThreadCompaction,
 } from './truncate-thread-state.ts';
 import { createWaitTicker, type ThreadSessionRef } from './wait-ticker.ts';
-import { reconcileWorkspaces, type ThreadBinding } from './workspace-target.ts';
+import { reconcileWorkspaces } from './workspace-target.ts';
 
 const WAITING_RUNS_SQL = `SELECT COUNT(*) AS c FROM runs WHERE status = 'waiting' AND wait_fire_at IS NOT NULL`;
 
 export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> {
   const session = openOrgSqlite(deps.layout, deps.orgId);
-  const worktreeBindings = new Map<string, ThreadBinding>();
   const targetCache: TargetCache = new Map();
   const eventBus = createRunEventBus({
     onPublish: createOrgEventPublisher({
@@ -61,7 +61,6 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     session,
     {
       targetCache,
-      worktreeBindings,
     },
     (threadId, runId, events) => eventBus.publish(threadId, runId, events),
   );
@@ -126,7 +125,6 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     plugin,
     agentsResolve,
     packRegistrations,
-    worktreeBindings,
     requestedModes: sessionRequestedModes,
     targetCache,
     sessionRequested,
@@ -212,13 +210,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     if (existing?.handle) {
       return existing.handle;
     }
-    const prepared = prepareTarget(
-      deps,
-      threadId,
-      agentId,
-      targetCache,
-      worktreeBindings.get(threadId),
-    );
+    const prepared = prepareSessionTarget(deps, threadId, agentId, targetCache);
     if (!prepared) {
       throw new ThreadNotFoundException(threadId);
     }
@@ -251,7 +243,6 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     lifecycle: runLifecycle,
     requestedSkills: sessionRequested,
     requestedModes: sessionRequestedModes,
-    worktreeBindings,
     sessionFor,
     kick: () => claimer?.kick(),
   };
@@ -262,7 +253,6 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     sessionFor,
     requestedSkills: sessionRequested,
     requestedModes: sessionRequestedModes,
-    worktreeBindings,
     kick: runControl.kick,
   });
   const compactGuard = createOrgCompactGuard({
@@ -344,6 +334,5 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     targetCache.clear();
     sessionRequested.clear();
     sessionRequestedModes.clear();
-    worktreeBindings.clear();
   }
 }

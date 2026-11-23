@@ -226,6 +226,7 @@ export function buildStack(): Stack {
     metadata: {},
     runProfileId: null,
     runDirectory: null,
+    workspaceRef: null,
     createdAt: now,
     updatedAt: now,
     lastReadAt: now,

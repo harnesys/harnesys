@@ -185,6 +185,7 @@ export function threadRecord(runMode: string | undefined): ThreadRecord {
     metadata: runMode === undefined ? {} : { runMode },
     runProfileId: null,
     runDirectory: null,
+    workspaceRef: null,
     createdAt: now,
     updatedAt: now,
     lastReadAt: now,

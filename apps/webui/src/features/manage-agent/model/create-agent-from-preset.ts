@@ -39,6 +39,7 @@ export function agentDraftFromPreset(preset: AgentPresetRecord): Agent {
     enabledPlugins: {},
     defaultModeId: null,
     defaultRunDirectory: null,
+    defaultWorkspaceRef: null,
     executionProfileId: null,
     modes: [],
     createdAt: '',

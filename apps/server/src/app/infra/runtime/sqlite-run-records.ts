@@ -37,6 +37,7 @@ export function rowToRecord(row: RunRow): RunRecord {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     attribution: runAttributionOf(row),
+    ...(row.environment !== null ? { environmentJson: row.environment } : {}),
   };
 }
 
@@ -122,6 +123,7 @@ function insertQueuedRun(tx: OrgSqliteDb, run: RunCreateInput): void {
         attempt: 1,
         leaseEpoch: 0,
         lastSeq: 0,
+        environment: run.environmentJson ?? null,
         ...runAttributionValues(run.attribution),
         createdAt: now,
         updatedAt: now,

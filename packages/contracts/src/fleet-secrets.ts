@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { RunEnvironmentSchema } from './workspace-ref.ts';
 
 export const ResolveFleetSecretsBodySchema = z
   .object({
@@ -66,6 +67,8 @@ export const TaskEnvelopeSchema = z.object({
   directory: z.string().min(1).optional(),
   sourceId: z.string().uuid().optional(),
   worktreeId: z.string().uuid().optional(),
+  environment: RunEnvironmentSchema.optional(),
+  skills: z.array(z.string()).optional(),
   isolation: TaskEnvelopeIsolationSchema.optional(),
   attribution: TaskEnvelopeAttributionSchema.optional(),
 });

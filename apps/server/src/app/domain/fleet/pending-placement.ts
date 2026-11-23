@@ -1,3 +1,4 @@
+import type { RunEnvironment } from '@harnesys/contracts';
 import type { RunAttribution } from 'harnesys';
 
 export type PlacementTriggerKind = 'chat' | 'issue' | 'schedule' | 'webhook' | 'connector';
@@ -30,6 +31,31 @@ export interface PendingPlacementPayload {
   profileSource?: 'thread' | 'issue-rule' | 'agent' | 'organization';
 }
 
+export interface LegacyWorkspaceFields {
+  directory?: string;
+  sourceId?: string;
+  worktreeId?: string;
+}
+
+export function legacyWorkspaceFieldsOf(
+  environment: RunEnvironment | undefined,
+): LegacyWorkspaceFields {
+  if (environment === undefined) {
+    return {};
+  }
+  const anchor = environment.anchor;
+  if (anchor === null) {
+    return {};
+  }
+  if (anchor.kind === 'folder') {
+    return { directory: anchor.path };
+  }
+  if (anchor.worktreeId !== undefined) {
+    return { sourceId: anchor.sourceId, worktreeId: anchor.worktreeId };
+  }
+  return { sourceId: anchor.sourceId };
+}
+
 export interface PendingPlacement {
   runId: string;
   orgId: string;
@@ -42,6 +68,7 @@ export interface PendingPlacement {
   priority: number;
   trigger: PlacementTrigger;
   expiresAt: string | null;
+  environmentJson?: string | null;
   payload: PendingPlacementPayload;
   lastCandidatesJson: string;
 }
@@ -143,6 +170,7 @@ export function upsertPendingPlacement(
     priority: next.priority,
     trigger: next.trigger,
     expiresAt: next.expiresAt ?? existing.expiresAt,
+    environmentJson: next.environmentJson ?? existing.environmentJson,
     payload: next.payload,
     lastCandidatesJson: next.lastCandidatesJson,
   };

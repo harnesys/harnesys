@@ -12,7 +12,6 @@ import {
 } from '../org-sqlite/thread-message-queue.store.ts';
 import type { SendThreadMessageInput } from './org-runtime-runs.ts';
 import { sendThreadMessage } from './org-runtime-runs.ts';
-import type { ThreadBinding } from './workspace-target.ts';
 
 export interface ThreadQueueDrainerDeps {
   db: OrgSqliteDb;
@@ -26,7 +25,6 @@ export interface ThreadQueueRuntimeDeps {
   sessionFor: (threadId: string, agentId: string) => Promise<SessionHandle>;
   requestedSkills: Map<string, string[]>;
   requestedModes: Map<string, string | undefined>;
-  worktreeBindings: Map<string, ThreadBinding>;
   kick: () => void;
 }
 
@@ -49,7 +47,6 @@ export function createThreadQueueDrainer(
               lifecycle: runtime.lifecycle,
               requestedSkills: runtime.requestedSkills,
               requestedModes: runtime.requestedModes,
-              worktreeBindings: runtime.worktreeBindings,
               sessionFor: runtime.sessionFor,
               kick: runtime.kick,
             },

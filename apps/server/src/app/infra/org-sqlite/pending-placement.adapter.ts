@@ -118,6 +118,7 @@ function toInsert(row: PendingPlacement) {
     triggerKind: row.trigger.kind,
     triggerId: row.trigger.id,
     expiresAt: row.expiresAt,
+    environment: row.environmentJson ?? null,
     payloadJson: JSON.stringify(row.payload),
     lastCandidatesJson: row.lastCandidatesJson,
   };
@@ -142,6 +143,7 @@ function toRecord(
       id: row.triggerId,
     },
     expiresAt: row.expiresAt,
+    environmentJson: row.environment ?? null,
     payload: parsePayload(row.payloadJson),
     lastCandidatesJson: row.lastCandidatesJson,
   };

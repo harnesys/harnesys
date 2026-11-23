@@ -77,6 +77,7 @@ function issueRecord(): IssueRecord {
     closedAt: null,
     fireTrail: [],
     sourceId: null,
+    workspaceSubpath: null,
     branch: null,
     worktreeOnStatus: null,
     createdAt: NOW,

@@ -113,7 +113,8 @@ export async function dispatchIssueExecution(
       input,
       reservedId: reserved.id,
       binding: observation,
-      sourceId: workspace.plan === 'unbound' ? null : workspace.sourceId,
+      sourceId: workspace.sourceId,
+      workspaceSubpath: input.issue.workspaceSubpath,
       branch: workspace.plan === 'checkout' ? workspace.branch : null,
       correlationId,
     });
@@ -210,10 +211,11 @@ async function fireReservedExecution(args: {
   reservedId: string;
   binding: IssueWorktreeBinding | null;
   sourceId: string | null;
+  workspaceSubpath: string | null;
   branch: string | null;
   correlationId: string;
 }): Promise<DispatchIssueExecutionResult> {
-  const { input, reservedId, binding, sourceId, branch, correlationId } = args;
+  const { input, reservedId, binding, sourceId, workspaceSubpath, branch, correlationId } = args;
   if (binding) {
     input.executions.setWorktree(
       input.orgId,
@@ -233,6 +235,7 @@ async function fireReservedExecution(args: {
     correlationId,
     issueRuleProfileId: input.issueRuleProfileId ?? null,
     ...(sourceId !== null ? { sourceId } : {}),
+    ...(workspaceSubpath !== null ? { workspaceSubpath } : {}),
     ...(branch !== null ? { branch } : {}),
     ...(binding ? { worktreeId: binding.worktreeId } : {}),
   });

@@ -53,7 +53,7 @@ export async function sendMessage(options: SendMessageOptions) {
       mode,
       skills,
       clientEventId,
-      ...(binding ? { sourceId: binding.sourceId, worktreeId: binding.worktreeId } : {}),
+      ...(binding ? { workspaceRef: binding.workspaceRef } : {}),
     });
     if (accepted.status === 'stored') {
       useThreadStore.getState().touch(threadId);

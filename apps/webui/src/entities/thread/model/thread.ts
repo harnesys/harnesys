@@ -1,3 +1,4 @@
+import type { WorkspaceRef } from '@harnesys/contracts';
 import type {
   ThreadActiveRun,
   ThreadKind,
@@ -27,6 +28,7 @@ export interface Thread {
   runMode?: string;
   runProfileId?: string | null;
   runDirectory?: string | null;
+  workspaceRef: WorkspaceRef | null;
   bindingLocked?: boolean;
   activeRunId?: string | null;
   activeRun?: ThreadActiveRun | null;

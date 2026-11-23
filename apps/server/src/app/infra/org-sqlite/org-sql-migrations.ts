@@ -20,6 +20,36 @@ export function migrateThreadsBindingColumns(
   }
 }
 
+export function migrateThreadsWorkspaceRefColumn(
+  exec: (sql: string) => void,
+  all: (sql: string) => ColumnInfo[],
+): void {
+  const present = new Set(all('PRAGMA table_info(threads)').map((col) => col.name));
+  if (present.size > 0 && !present.has('workspace_ref')) {
+    exec('ALTER TABLE threads ADD COLUMN workspace_ref TEXT');
+  }
+}
+
+export function migrateRunsEnvironmentColumn(
+  exec: (sql: string) => void,
+  all: (sql: string) => ColumnInfo[],
+): void {
+  const present = new Set(all('PRAGMA table_info(runs)').map((col) => col.name));
+  if (present.size > 0 && !present.has('environment')) {
+    exec('ALTER TABLE runs ADD COLUMN environment TEXT');
+  }
+}
+
+export function migratePendingPlacementsEnvironmentColumn(
+  exec: (sql: string) => void,
+  all: (sql: string) => ColumnInfo[],
+): void {
+  const present = new Set(all('PRAGMA table_info(pending_placements)').map((col) => col.name));
+  if (present.size > 0 && !present.has('environment')) {
+    exec('ALTER TABLE pending_placements ADD COLUMN environment TEXT');
+  }
+}
+
 export function migrateRunsAttributionColumns(
   exec: (sql: string) => void,
   all: (sql: string) => ColumnInfo[],
@@ -83,6 +113,7 @@ export function migrateIssuesBranchColumns(
   }
   const columns = [
     { name: 'branch', ddl: 'TEXT' },
+    { name: 'workspace_subpath', ddl: 'TEXT' },
     { name: 'worktree_on_status', ddl: 'TEXT' },
   ];
   for (const column of columns) {

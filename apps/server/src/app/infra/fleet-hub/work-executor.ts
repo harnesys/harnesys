@@ -35,7 +35,7 @@ import { ensurePlacedProcess } from './work-executor.process.ts';
 import {
   awaitTerminal,
   MemorySecretStore,
-  prepareWorkerTarget,
+  prepareWorkerTargetOf,
   secretValuesFromResolved,
   uniqueNames,
   wipeSecrets,
@@ -160,18 +160,7 @@ async function runPlaced(
     );
     const plugin =
       deps.plugins === undefined ? undefined : await wireOrgPlugins(deps.plugins, orgId);
-    const prepared = prepareWorkerTarget({
-      layout: deps.layout,
-      machineConfig: deps.machineConfig,
-      sources: deps.sources,
-      sourceLocation: deps.sourceLocation,
-      orgId,
-      threadId: envelope.threadId,
-      agent,
-      ...(envelope.directory ? { directory: envelope.directory } : {}),
-      ...(envelope.sourceId ? { sourceId: envelope.sourceId } : {}),
-      ...(envelope.worktreeId ? { worktreeId: envelope.worktreeId } : {}),
-    });
+    const prepared = prepareWorkerTargetOf(deps, orgId, envelope, agent);
     const process = await ensurePlacedProcessHandled({
       deps,
       runInput: input,

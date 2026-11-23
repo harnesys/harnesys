@@ -442,6 +442,7 @@ CREATE TABLE IF NOT EXISTS threads (
   issue_id TEXT REFERENCES issues(id) ON DELETE CASCADE,
   run_profile_id TEXT,
   run_directory TEXT,
+  workspace_ref TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   last_read_at TEXT NOT NULL
@@ -612,6 +613,7 @@ CREATE TABLE IF NOT EXISTS runs (
   started_by_user_id TEXT,
   via TEXT NOT NULL DEFAULT 'direct',
   on_node_id TEXT,
+  environment TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );

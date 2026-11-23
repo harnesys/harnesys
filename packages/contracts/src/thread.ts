@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { ExecutionProfileIdSchema } from './execution-profile.ts';
 import { OrgIdSchema } from './org-machine.ts';
 import { ThreadActiveRunSchema, ThreadLastErrorSchema } from './thread-runs.ts';
+import { WorkspaceRefSchema } from './workspace-ref.ts';
 
 export const ThreadKindSchema = z.enum(['chat', 'group', 'schedule', 'webhook', 'issue']);
 export type ThreadKind = z.infer<typeof ThreadKindSchema>;
@@ -72,6 +73,7 @@ export const ThreadSummarySchema = z.object({
   runMode: z.string().optional(),
   runProfileId: z.string().nullable(),
   runDirectory: z.string().nullable(),
+  workspaceRef: WorkspaceRefSchema.nullable(),
   bindingLocked: z.boolean(),
   activeRun: ThreadActiveRunSchema.nullable(),
   lastError: ThreadLastErrorSchema.nullable(),
@@ -168,9 +170,17 @@ export const UpdateThreadBindingBodySchema = z
       })
       .nullable()
       .optional(),
+    workspaceRef: WorkspaceRefSchema.nullable().optional(),
   })
-  .refine((body) => body.runProfileId !== undefined || body.runDirectory !== undefined, {
-    message: 'at least one of runProfileId or runDirectory is required',
+  .refine(
+    (body) =>
+      body.runProfileId !== undefined ||
+      body.runDirectory !== undefined ||
+      body.workspaceRef !== undefined,
+    { message: 'at least one of runProfileId, runDirectory or workspaceRef is required' },
+  )
+  .refine((body) => !(body.runDirectory != null && body.workspaceRef != null), {
+    message: 'runDirectory and workspaceRef are mutually exclusive',
   });
 export type UpdateThreadBindingBody = z.infer<typeof UpdateThreadBindingBodySchema>;
 

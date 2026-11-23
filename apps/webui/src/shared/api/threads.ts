@@ -4,6 +4,7 @@ import type {
   CreateThreadBody,
   ListThreadsResponse,
   ThreadPublic,
+  WorkspaceRef,
 } from '@harnesys/contracts';
 import type {
   SessionEvent,
@@ -67,6 +68,7 @@ export function toStudioSummary(record: ContractThreadSummary): ThreadSummary {
     runMode: record.runMode,
     runProfileId: record.runProfileId,
     runDirectory: record.runDirectory,
+    workspaceRef: record.workspaceRef ?? null,
     bindingLocked: record.bindingLocked,
     activeRun: record.activeRun,
     lastError: record.lastError ?? null,
@@ -135,14 +137,12 @@ export interface SendThreadRunOptions {
   mode?: string;
   skills?: string[];
   clientEventId?: string;
-  sourceId?: string;
-  worktreeId?: string;
+  workspaceRef?: WorkspaceRef;
 }
 
 export function sendThreadRun(options: SendThreadRunOptions): Promise<ContractAcceptedRun> {
   const orgId = requireOrgId();
-  const { id, text, effort, mode, skills, clientEventId, attachmentIds, sourceId, worktreeId } =
-    options;
+  const { id, text, effort, mode, skills, clientEventId, attachmentIds, workspaceRef } = options;
   return apiJson<ContractAcceptedRun>(`${threadsBase(orgId)}/${encodeURIComponent(id)}/runs`, {
     method: 'POST',
     body: JSON.stringify({
@@ -152,7 +152,7 @@ export function sendThreadRun(options: SendThreadRunOptions): Promise<ContractAc
       clientEventId,
       ...(skills?.length ? { skills } : {}),
       ...(attachmentIds?.length ? { attachmentIds } : {}),
-      ...(sourceId && worktreeId ? { sourceId, worktreeId } : {}),
+      ...(workspaceRef ? { workspaceRef } : {}),
     }),
   }).then((accepted) =>
     accepted.status === 'stored'
@@ -302,6 +302,7 @@ export function setThreadPinned(id: string, pinned: boolean): Promise<ThreadReco
 export interface UpdateThreadBindingInput {
   runProfileId?: string | null;
   runDirectory?: string | null;
+  workspaceRef?: WorkspaceRef | null;
 }
 
 export function updateThreadBinding(

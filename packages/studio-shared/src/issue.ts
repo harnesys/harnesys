@@ -93,6 +93,7 @@ export interface IssueRecord {
   closedAt: string | null;
   fireTrail: IssueFireTrailEntry[];
   sourceId: string | null;
+  workspaceSubpath: string | null;
   branch: string | null;
   worktreeOnStatus: string | null;
   createdAt: string;

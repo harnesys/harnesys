@@ -266,3 +266,4 @@ export type {
   WindowDesk,
   WindowDesksByOrg,
 } from './src/window-desk.ts';
+export * from './src/workspace-ref.ts';

@@ -55,6 +55,7 @@ function threadOf(id: string, overrides: Partial<ThreadRecord> = {}): ThreadReco
     updatedAt: NOW,
     lastReadAt: NOW,
     ...overrides,
+    workspaceRef: overrides.workspaceRef ?? null,
   };
 }
 

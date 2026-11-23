@@ -8,6 +8,7 @@ import type {
   HookTestResponse,
   ListAgentsResponse,
   UpdateAgentBody,
+  WorkspaceRef,
 } from '@harnesys/contracts';
 import type {
   AgentBudget,
@@ -112,6 +113,7 @@ export interface CreateAgentInput {
   enabledPlugins?: Record<string, boolean>;
   defaultModeId?: string | null;
   defaultRunDirectory?: string | null;
+  defaultWorkspaceRef?: WorkspaceRef | null;
   modes?: AgentMode[];
 }
 export interface UpdateAgentInput {
@@ -134,6 +136,7 @@ export interface UpdateAgentInput {
   enabledPlugins?: Record<string, boolean>;
   defaultModeId?: string | null;
   defaultRunDirectory?: string | null;
+  defaultWorkspaceRef?: WorkspaceRef | null;
   modes?: AgentMode[];
 }
 export type AgentPresetCapabilities = Record<string, PackAssignment | null>;

@@ -1,4 +1,4 @@
-import type { RunAcceptedResponse } from '@harnesys/contracts';
+import type { RunAcceptedResponse, RunEnvironment } from '@harnesys/contracts';
 import type {
   Attachment,
   PendingSessionEvent,
@@ -7,12 +7,10 @@ import type {
   SessionHandle,
 } from 'harnesys';
 import type { RunIsolation } from '../../domain/fleet/placement.ts';
-import type { RunTriggerKind } from '../../domain/thread/prepare-runtime-input.ts';
 import {
   RunConflictException,
   ThreadValidationException,
 } from '../../domain/thread/thread.error.ts';
-import type { ThreadBinding } from './workspace-target.ts';
 
 export interface SendThreadMessageInput {
   threadId: string;
@@ -24,11 +22,8 @@ export interface SendThreadMessageInput {
   clientEventId?: string;
   origin?: string;
   correlationId?: string;
-  directory?: string;
-  sourceId?: string;
-  worktreeId?: string;
+  environment?: RunEnvironment;
   isolation?: RunIsolation;
-  triggerKind?: RunTriggerKind;
   branch?: string;
   attribution?: RunAttribution;
   agentId: string;
@@ -39,7 +34,6 @@ export interface RunControlDeps {
   lifecycle: RunLifecycleStore;
   requestedSkills: Map<string, string[]>;
   requestedModes: Map<string, string | undefined>;
-  worktreeBindings: Map<string, ThreadBinding>;
   sessionFor: (threadId: string, agentId: string) => Promise<SessionHandle>;
   kick: () => void;
   abortRun?: (runId: string) => void;
@@ -53,11 +47,11 @@ export async function sendThreadMessage(
   const clientEventId = input.clientEventId ?? crypto.randomUUID();
   deps.requestedSkills.set(input.threadId, input.skills ?? []);
   deps.requestedModes.set(input.threadId, input.mode);
-  syncThreadBinding(deps.worktreeBindings, input);
   const { runId } = await handle.send(
     {
       text: input.text,
       effort: input.effort,
+      ...(input.environment ? { environmentJson: JSON.stringify(input.environment) } : {}),
       ...(input.attachments?.length ? { attachments: input.attachments } : {}),
       ...(input.origin ? { origin: input.origin } : {}),
       ...(input.attribution ? { attribution: input.attribution } : {}),
@@ -69,69 +63,6 @@ export async function sendThreadMessage(
     },
   );
   return { runId, threadId: input.threadId, status: 'queued' as const };
-}
-
-function bindingFor(input: SendThreadMessageInput): ThreadBinding | null {
-  if (input.directory) {
-    return directoryBinding(input);
-  }
-  if (input.sourceId && input.worktreeId) {
-    return worktreeSourceBinding(input);
-  }
-  if (input.sourceId && input.isolation?.mode === 'container') {
-    return containerSourceBinding(input);
-  }
-  if (input.triggerKind) {
-    return triggerSourceBinding(input);
-  }
-  return null;
-}
-
-function directoryBinding(input: SendThreadMessageInput): ThreadBinding {
-  return {
-    directory: input.directory,
-    ...(input.sourceId ? { sourceId: input.sourceId } : {}),
-    ...(input.worktreeId ? { worktreeId: input.worktreeId } : {}),
-    ...(input.isolation ? { isolation: input.isolation } : {}),
-    ...(input.triggerKind ? { triggerKind: input.triggerKind } : {}),
-  };
-}
-
-function worktreeSourceBinding(input: SendThreadMessageInput): ThreadBinding {
-  return {
-    sourceId: input.sourceId,
-    worktreeId: input.worktreeId,
-    ...(input.isolation ? { isolation: input.isolation } : {}),
-    ...(input.triggerKind ? { triggerKind: input.triggerKind } : {}),
-  };
-}
-
-function containerSourceBinding(input: SendThreadMessageInput): ThreadBinding {
-  return {
-    sourceId: input.sourceId,
-    isolation: input.isolation,
-    ...(input.triggerKind ? { triggerKind: input.triggerKind } : {}),
-  };
-}
-
-function triggerSourceBinding(input: SendThreadMessageInput): ThreadBinding {
-  return {
-    ...(input.sourceId ? { sourceId: input.sourceId } : {}),
-    ...(input.branch ? { branch: input.branch } : {}),
-    triggerKind: input.triggerKind,
-  };
-}
-
-function syncThreadBinding(
-  bindings: Map<string, ThreadBinding>,
-  input: SendThreadMessageInput,
-): void {
-  const binding = bindingFor(input);
-  if (binding !== null) {
-    bindings.set(input.threadId, binding);
-  } else {
-    bindings.delete(input.threadId);
-  }
 }
 
 export async function cancelThreadRun(deps: RunControlDeps, runId: string): Promise<void> {

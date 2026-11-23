@@ -41,6 +41,7 @@ export interface IssueRecord {
     at: string;
   }>;
   sourceId: string | null;
+  workspaceSubpath: string | null;
   branch: string | null;
   worktreeOnStatus: string | null;
   createdAt: string;
@@ -114,6 +115,7 @@ export interface IssueCreateInput {
   dueDate?: string | null;
   dependencies?: Array<{ dependsOnIssueId: string; type?: IssueDependencyType }>;
   sourceId?: string;
+  workspaceSubpath?: string;
   branch?: string;
   worktreeOnStatus?: string;
 }
@@ -127,6 +129,7 @@ export interface IssueUpdateInput {
   assigneeAgentId?: string | null;
   dueDate?: string | null;
   sourceId?: string | null;
+  workspaceSubpath?: string | null;
   branch?: string | null;
   worktreeOnStatus?: string | null;
 }

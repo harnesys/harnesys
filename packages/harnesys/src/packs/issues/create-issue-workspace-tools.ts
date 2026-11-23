@@ -25,6 +25,7 @@ interface IssueCreateInput {
   dueDate?: string;
   dependencies?: Array<{ dependsOnIssueId: string; type?: IssueDependencyType }>;
   sourceId?: string;
+  workspaceSubpath?: string;
   branch?: string;
   worktreeOnStatus?: string;
 }
@@ -39,6 +40,7 @@ interface IssueUpdateToolInput {
   assigneeAgentId?: string;
   dueDate?: string;
   sourceId?: string;
+  workspaceSubpath?: string;
   branch?: string;
   worktreeOnStatus?: string;
 }
@@ -60,6 +62,7 @@ function issueUpdatePatch(input: IssueUpdateToolInput): IssueUpdateInput {
       input.assigneeAgentId === 'unassign' ? null : (input.assigneeAgentId ?? undefined),
     dueDate: clearable(input.dueDate),
     sourceId: clearable(input.sourceId),
+    workspaceSubpath: clearable(input.workspaceSubpath),
     branch: clearable(input.branch),
     worktreeOnStatus: clearable(input.worktreeOnStatus),
   };
@@ -69,7 +72,7 @@ export function createIssueWorkspaceTools(deps: CreateIssueWorkspaceToolsParams)
     tool('issue_create', {
       group: 'issues',
       description:
-        'Create an issue on a board (boardId from issue_board_list). Creating in a work column with an assignee fires that agent. dependencies adds blockers at creation. Issues run in the bound source on the given branch. If a worktree exists for the branch the run uses it; if the source checkout is on the branch the run uses the checkout; otherwise the run is held until a worktree exists — create one on the issue card (Create now / auto on status).',
+        'Create an issue on a board (boardId from issue_board_list). Creating in a work column with an assignee fires that agent. dependencies adds blockers at creation. The issue location belongs to the issue, not to the agent: every run on it, by any agent it is handed to, uses the same source. Pass sourceId (source_list) and optional branch; without sourceId the issue runs in the organization Workspace (the isWorkspace entry in source_list). With a branch, a worktree for that branch is used when it exists, otherwise a checkout on that branch, otherwise the run is held until a worktree exists — create one on the issue card (Create now / auto on status).',
       input: {
         type: 'object',
         properties: {
@@ -97,7 +100,13 @@ export function createIssueWorkspaceTools(deps: CreateIssueWorkspaceToolsParams)
           dueDate: { type: 'string' },
           sourceId: {
             type: 'string',
-            description: 'Source id from source_list the issue runs in',
+            description:
+              'Source id from source_list the issue runs in; omitted means the organization Workspace (isWorkspace). All agents the issue is handed to run in this same location',
+          },
+          workspaceSubpath: {
+            type: 'string',
+            description:
+              'Optional subfolder inside the issue source the run works in (relative, no ".."). Created on the first run and shared by every agent',
           },
           branch: {
             type: 'string',
@@ -139,6 +148,7 @@ export function createIssueWorkspaceTools(deps: CreateIssueWorkspaceToolsParams)
             dueDate: input.dueDate ?? null,
             dependencies: input.dependencies,
             sourceId: input.sourceId,
+            workspaceSubpath: input.workspaceSubpath,
             branch: input.branch,
             worktreeOnStatus: input.worktreeOnStatus,
           });
@@ -147,7 +157,7 @@ export function createIssueWorkspaceTools(deps: CreateIssueWorkspaceToolsParams)
     tool('issue_update', {
       group: 'issues',
       description:
-        'Edit an issue without changing its column: title, description, priority (1..4), type, labels, assigneeAgentId (use "unassign" to clear), dueDate (use "clear"), boardId, sourceId/branch for the run workspace (use "clear" to unbind), worktreeOnStatus. Reassigning in a work column fires the new agent.',
+        'Edit an issue without changing its column: title, description, priority (1..4), type, labels, assigneeAgentId (use "unassign" to clear), dueDate (use "clear"), boardId, sourceId/branch for the issue location (use "clear" on sourceId to fall back to the organization Workspace), worktreeOnStatus. The location belongs to the issue: every agent it is handed to runs in the same place. Reassigning in a work column fires the new agent.',
       input: {
         type: 'object',
         properties: {
@@ -167,7 +177,13 @@ export function createIssueWorkspaceTools(deps: CreateIssueWorkspaceToolsParams)
           dueDate: { type: 'string' },
           sourceId: {
             type: 'string',
-            description: 'Source id from source_list; "clear" unbinds',
+            description:
+              'Source id from source_list; "clear" falls back to the organization Workspace. All agents the issue is handed to run in this location',
+          },
+          workspaceSubpath: {
+            type: 'string',
+            description:
+              'Subfolder inside the issue source; "clear" removes it. Changing the source clears it unless passed explicitly',
           },
           branch: {
             type: 'string',

@@ -1,7 +1,5 @@
 import { SQLiteError } from 'bun:sqlite';
 import { Injectable } from '@harnesys/brix';
-import type { AgentHook, AgentLevel, AgentSourceLevel, AgentStatus } from '@harnesys/contracts';
-import { AgentHookSchema, HookEventNameSchema } from '@harnesys/contracts';
 import { and, eq } from 'drizzle-orm';
 import { toAgentPublic } from '../../application/agents/agent.helpers.ts';
 import {
@@ -15,18 +13,10 @@ import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { sources } from '../org-sqlite/org.schema.ts';
 import { type OrgSqliteDb, withOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
-import { type AgentRow, agentsTable } from '../org-sqlite/schema/index.ts';
-
-const CONFIG_SKILLS = 'skills';
-const CONFIG_MCP = 'mcpServers';
-const CONFIG_PLUGINS = 'enabledPlugins';
-const CONFIG_DEFAULT_MODE = 'defaultModeId';
-const CONFIG_DEFAULT_RUN_DIRECTORY = 'defaultRunDirectory';
-const CONFIG_HOOKS = 'hooksJson';
-const CONFIG_HOOKS_LEGACY = 'hooks';
-const CONFIG_SHARED_SOURCES = 'sharedSourceIds';
-const CONFIG_SOURCE_LEVELS = 'sourceLevels';
-const CONFIG_SECRET_NAMES = 'secretNames';
+import { agentsTable } from '../org-sqlite/schema/index.ts';
+import { sourceRootsOf } from '../org-sqlite/source-roots.query.ts';
+import type { SourceRoot } from '../thread/legacy-workspace-ref.ts';
+import { packConfig, toRecord } from './agent-config-pack.ts';
 
 @Injectable()
 export class AgentRegistryAdapter extends AgentRegistryPort {
@@ -38,15 +28,16 @@ export class AgentRegistryAdapter extends AgentRegistryPort {
   }
 
   list(orgId: string): AgentRecord[] {
-    return withOrgSqlite(this.layout, orgId, (db) =>
-      db
+    return withOrgSqlite(this.layout, orgId, (db) => {
+      const sourceRoots = sourceRootsOf(db, orgId);
+      return db
         .select()
         .from(agentsTable)
         .where(eq(agentsTable.orgId, orgId))
         .all()
-        .map(toRecord)
-        .map((record) => pruneUnknownSources(db, orgId, record)),
-    );
+        .map((row) => toRecord(row, sourceRoots))
+        .map((record) => pruneUnknownSources(db, orgId, record));
+    });
   }
 
   findById(orgId: string, id: string): AgentRecord | undefined {
@@ -56,7 +47,9 @@ export class AgentRegistryAdapter extends AgentRegistryPort {
         .from(agentsTable)
         .where(and(eq(agentsTable.orgId, orgId), eq(agentsTable.id, id)))
         .get();
-      return row ? pruneUnknownSources(db, orgId, toRecord(row)) : undefined;
+      return row
+        ? pruneUnknownSources(db, orgId, toRecord(row, sourceRootsOf(db, orgId)))
+        : undefined;
     });
   }
 
@@ -67,15 +60,18 @@ export class AgentRegistryAdapter extends AgentRegistryPort {
         .from(agentsTable)
         .where(and(eq(agentsTable.orgId, orgId), eq(agentsTable.name, name)))
         .get();
-      return row ? pruneUnknownSources(db, orgId, toRecord(row)) : undefined;
+      return row
+        ? pruneUnknownSources(db, orgId, toRecord(row, sourceRootsOf(db, orgId)))
+        : undefined;
     });
   }
 
   insert(rec: AgentRecord): AgentRecord {
     return withOrgSqlite(this.layout, rec.orgId, (db) => {
       try {
-        const row = db.insert(agentsTable).values(toInsert(rec)).returning().get();
-        const record = pruneUnknownSources(db, rec.orgId, toRecord(row));
+        const sourceRoots = sourceRootsOf(db, rec.orgId);
+        const row = db.insert(agentsTable).values(toInsert(rec, sourceRoots)).returning().get();
+        const record = pruneUnknownSources(db, rec.orgId, toRecord(row, sourceRoots));
         this.deskEvents.emit(rec.orgId, { type: 'agent', agent: toAgentPublic(record) });
         return record;
       } catch (err) {
@@ -87,6 +83,7 @@ export class AgentRegistryAdapter extends AgentRegistryPort {
   update(orgId: string, id: string, patch: AgentPatch): AgentRecord {
     return withOrgSqlite(this.layout, orgId, (db) => {
       try {
+        const sourceRoots = sourceRootsOf(db, orgId);
         const existing = db
           .select()
           .from(agentsTable)
@@ -95,17 +92,17 @@ export class AgentRegistryAdapter extends AgentRegistryPort {
         if (!existing) {
           throw new AgentNotFoundException(id);
         }
-        const merged = applyPatch(toRecord(existing), patch);
+        const merged = applyPatch(toRecord(existing, sourceRoots), patch);
         const row = db
           .update(agentsTable)
-          .set(toInsert(merged))
+          .set(toInsert(merged, sourceRoots))
           .where(and(eq(agentsTable.orgId, orgId), eq(agentsTable.id, id)))
           .returning()
           .get();
         if (!row) {
           throw new AgentNotFoundException(id);
         }
-        const record = pruneUnknownSources(db, orgId, toRecord(row));
+        const record = pruneUnknownSources(db, orgId, toRecord(row, sourceRoots));
         this.deskEvents.emit(orgId, { type: 'agent', agent: toAgentPublic(record) });
         return record;
       } catch (err) {
@@ -145,7 +142,7 @@ function pruneUnknownSources(db: OrgSqliteDb, orgId: string, record: AgentRecord
   };
 }
 
-function toInsert(rec: AgentRecord) {
+function toInsert(rec: AgentRecord, sourceRoots: SourceRoot[]) {
   return {
     id: rec.id,
     orgId: rec.orgId,
@@ -153,7 +150,7 @@ function toInsert(rec: AgentRecord) {
     role: rec.role,
     instructions: rec.instructions,
     model: rec.modelId,
-    config: JSON.stringify(packConfig(rec)),
+    config: JSON.stringify(packConfig(rec, sourceRoots)),
     budgetUsdDaily: rec.budgetUsdDaily,
     level: rec.level,
     parentId: rec.parentId,
@@ -165,169 +162,12 @@ function toInsert(rec: AgentRecord) {
   };
 }
 
-function packConfig(rec: AgentRecord): Record<string, unknown> {
-  return {
-    ...rec.config,
-    [CONFIG_SKILLS]: rec.skills,
-    [CONFIG_MCP]: rec.mcpServers,
-    [CONFIG_PLUGINS]: rec.enabledPlugins,
-    [CONFIG_DEFAULT_MODE]: rec.defaultModeId,
-    [CONFIG_DEFAULT_RUN_DIRECTORY]: rec.defaultRunDirectory,
-    [CONFIG_HOOKS]: rec.hooks,
-    [CONFIG_SHARED_SOURCES]: rec.sharedSourceIds,
-    [CONFIG_SOURCE_LEVELS]: rec.sourceLevels,
-    [CONFIG_SECRET_NAMES]: rec.secretNames,
-  };
-}
-
-function toRecord(row: AgentRow): AgentRecord {
-  const packed = parseObject(row.config);
-  const skills = parseStringArray(packed[CONFIG_SKILLS]);
-  const mcpServers = parseStringArray(packed[CONFIG_MCP]);
-  const enabledPlugins = parseBooleanRecord(packed[CONFIG_PLUGINS]);
-  const defaultModeId = parseNullableString(packed[CONFIG_DEFAULT_MODE]);
-  const hooks = parseHooks(packed[CONFIG_HOOKS] ?? packed[CONFIG_HOOKS_LEGACY]);
-  const sharedSourceIds = parseStringArray(packed[CONFIG_SHARED_SOURCES]);
-  const sourceLevels = parseLevelRecord(packed[CONFIG_SOURCE_LEVELS]);
-  const secretNames = parseStringArray(packed[CONFIG_SECRET_NAMES]);
-  const config = omitConfigKeys(packed, [
-    CONFIG_SKILLS,
-    CONFIG_MCP,
-    CONFIG_PLUGINS,
-    CONFIG_DEFAULT_MODE,
-    CONFIG_DEFAULT_RUN_DIRECTORY,
-    CONFIG_HOOKS,
-    CONFIG_HOOKS_LEGACY,
-    CONFIG_SHARED_SOURCES,
-    CONFIG_SOURCE_LEVELS,
-    CONFIG_SECRET_NAMES,
-  ]);
-  return {
-    id: row.id,
-    orgId: row.orgId,
-    name: row.name,
-    role: row.role,
-    instructions: row.instructions,
-    modelId: row.model,
-    budgetUsdDaily: row.budgetUsdDaily ?? null,
-    level: row.level as AgentLevel,
-    parentId: row.parentId,
-    executionProfileId: row.executionProfileId ?? null,
-    status: row.status as AgentStatus,
-    sharedSourceIds,
-    sourceLevels,
-    secretNames,
-    skills,
-    mcpServers,
-    enabledPlugins,
-    defaultModeId,
-    defaultRunDirectory: parseNullableString(packed[CONFIG_DEFAULT_RUN_DIRECTORY]),
-    config,
-    hooks,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
-}
-
-function parseHooks(value: unknown): AgentHook[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  const hooks: AgentHook[] = [];
-  value.forEach((entry, index) => {
-    const parsed = parseHook(entry);
-    if (parsed === undefined) {
-      return;
-    }
-    hooks.push(
-      parsed.id === undefined ? { ...parsed, id: `legacy-${parsed.event}-${index}` } : parsed,
-    );
-  });
-  return hooks;
-}
-
-function parseHook(entry: unknown): AgentHook | undefined {
-  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
-    return undefined;
-  }
-  const row = entry as Record<string, unknown>;
-  const event = typeof row.event === 'string' ? row.event : undefined;
-  if (event === undefined || !HookEventNameSchema.safeParse(event).success) {
-    return undefined;
-  }
-  const result = AgentHookSchema.safeParse({ ...row, event });
-  if (!result.success) {
-    return undefined;
-  }
-  return result.data;
-}
-
 function applyPatch(current: AgentRecord, patch: AgentPatch): AgentRecord {
   return {
     ...current,
     ...patch,
     updatedAt: new Date().toISOString(),
   };
-}
-
-function omitConfigKeys(packed: Record<string, unknown>, keys: string[]): Record<string, unknown> {
-  const out: Record<string, unknown> = { ...packed };
-  for (const key of keys) {
-    delete out[key];
-  }
-  return out;
-}
-
-function parseObject(raw: string): Record<string, unknown> {
-  try {
-    const value: unknown = JSON.parse(raw);
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      return value as Record<string, unknown>;
-    }
-  } catch {
-    // fall through
-  }
-  return {};
-}
-
-function parseStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.filter((item): item is string => typeof item === 'string');
-}
-
-function parseBooleanRecord(value: unknown): Record<string, boolean> {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return {};
-  }
-  const out: Record<string, boolean> = {};
-  for (const [key, entry] of Object.entries(value)) {
-    if (typeof entry === 'boolean') {
-      out[key] = entry;
-    }
-  }
-  return out;
-}
-
-function parseLevelRecord(value: unknown): Record<string, AgentSourceLevel> {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return {};
-  }
-  const out: Record<string, AgentSourceLevel> = {};
-  for (const [key, entry] of Object.entries(value)) {
-    if (entry === 'read' || entry === 'edit') {
-      out[key] = entry;
-    }
-  }
-  return out;
-}
-
-function parseNullableString(value: unknown): string | null {
-  if (typeof value === 'string') {
-    return value;
-  }
-  return null;
 }
 
 function mapAgentSqliteError(err: unknown): never {
