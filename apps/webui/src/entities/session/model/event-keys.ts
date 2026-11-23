@@ -52,9 +52,13 @@ export function fillSeenAt(
   const threadSeen = prev[threadId];
   let next: Record<string, number> | undefined;
   for (const key of keys) {
-    if (threadSeen?.[key] === undefined && next?.[key] === undefined) {
-      next = { ...threadSeen, ...next, [key]: now };
+    if (threadSeen?.[key] !== undefined || next?.[key] !== undefined) {
+      continue;
     }
+    if (next === undefined) {
+      next = { ...threadSeen };
+    }
+    next[key] = now;
   }
   if (next === undefined) {
     return prev;

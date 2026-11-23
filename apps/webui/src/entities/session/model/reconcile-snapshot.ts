@@ -13,6 +13,12 @@ interface SlotOverlap {
   text: string;
 }
 
+interface SlotRow {
+  index: number;
+  seq: number;
+  text: string;
+}
+
 const NO_THREAD_SEQ = Number.MAX_SAFE_INTEGER;
 
 function streamSlotOf(event: SessionEvent): StreamSlot | null {
@@ -46,23 +52,35 @@ function boundaryOf(snapshot: SessionEvent[]): number | undefined {
   return cut;
 }
 
-function overlapOf(snapshot: SessionEvent[], slot: StreamSlot, taken: Set<number>): SlotOverlap {
-  const rows: number[] = [];
-  let text = '';
-  for (const [index, row] of snapshot.entries()) {
-    const candidate = streamSlotOf(row);
-    if (
-      candidate === null ||
-      candidate.identity !== slot.identity ||
-      candidate.seq < slot.seq ||
-      taken.has(index)
-    ) {
+function slotRowsOf(snapshot: SessionEvent[]): Map<string, SlotRow[]> {
+  const rows = new Map<string, SlotRow[]>();
+  for (const [index, event] of snapshot.entries()) {
+    const slot = streamSlotOf(event);
+    if (slot === null) {
       continue;
     }
-    rows.push(index);
-    text += candidate.text;
+    const list = rows.get(slot.identity);
+    const row = { index, seq: slot.seq, text: slot.text };
+    if (list === undefined) {
+      rows.set(slot.identity, [row]);
+    } else {
+      list.push(row);
+    }
   }
-  return { rows, text };
+  return rows;
+}
+
+function overlapOf(rows: readonly SlotRow[], slot: StreamSlot, taken: Set<number>): SlotOverlap {
+  const indexes: number[] = [];
+  let text = '';
+  for (const row of rows) {
+    if (row.seq < slot.seq || taken.has(row.index)) {
+      continue;
+    }
+    indexes.push(row.index);
+    text += row.text;
+  }
+  return { rows: indexes, text };
 }
 
 function persistedKeysOf(snapshot: SessionEvent[]): Set<string> {
@@ -86,6 +104,7 @@ function byThreadSeq(left: SessionEvent, right: SessionEvent): number {
 export function reconcileSnapshot(local: SessionEvent[], snapshot: SessionEvent[]): SessionEvent[] {
   const cut = boundaryOf(snapshot);
   const persisted = persistedKeysOf(snapshot);
+  const slotRows = slotRowsOf(snapshot);
   const taken = new Set<number>();
   const kept: SessionEvent[] = [];
   for (const event of local) {
@@ -104,7 +123,7 @@ export function reconcileSnapshot(local: SessionEvent[], snapshot: SessionEvent[
     if (slot === null || cut === undefined) {
       continue;
     }
-    const overlap = overlapOf(snapshot, slot, taken);
+    const overlap = overlapOf(slotRows.get(slot.identity) ?? [], slot, taken);
     if (!slot.text.startsWith(overlap.text)) {
       continue;
     }
