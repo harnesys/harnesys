@@ -3,6 +3,7 @@ import type {
   DeskEvent,
   EventsWatchApprovalFrame,
   EventsWatchApprovalRecord,
+  EventsWatchAutomationsFrame,
   EventsWatchDeskFrame,
   EventsWatchFleetFrame,
   EventsWatchGitFileStatusFrame,
@@ -22,6 +23,8 @@ import type {
 import type { ApprovalRecord } from '../../domain/approval/approval.ts';
 import type { ApprovalEvent } from '../../domain/approval/approval-events.port.ts';
 import { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
+import type { AutomationChangedEvent } from '../../domain/automations/automation-events.port.ts';
+import { AutomationEventsPort } from '../../domain/automations/automation-events.port.ts';
 import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import { EventsWatchHubPort } from '../../domain/events-watch/events-watch-hub.port.ts';
 import { FleetEventsPort } from '../../domain/fleet/fleet-events.port.ts';
@@ -64,6 +67,7 @@ export class EventsWatchBridge implements ModuleInitHook, ModuleDestroyHook {
     private readonly materializationEvents: MaterializationEventsPort,
     private readonly releaseEvents: ReleaseEventsPort,
     private readonly terminalEvents: TerminalEventsPort,
+    private readonly automationEvents: AutomationEventsPort,
   ) {}
 
   onModuleInit(): void {
@@ -83,6 +87,7 @@ export class EventsWatchBridge implements ModuleInitHook, ModuleDestroyHook {
       this.materializationEvents.subscribe((event) => this.publishMaterialization(event)),
       this.releaseEvents.subscribe((frame) => this.publishRelease(frame)),
       this.terminalEvents.subscribe((orgId, event) => this.publishTerminal(orgId, event)),
+      this.automationEvents.subscribe((frame) => this.publishAutomation(frame)),
     ];
   }
 
@@ -184,6 +189,16 @@ export class EventsWatchBridge implements ModuleInitHook, ModuleDestroyHook {
   private publishFleet(orgId: string): void {
     const frame: EventsWatchFleetFrame = { orgId, type: 'fleet-changed' };
     this.hub.publish(orgId, 'fleet-changed', frame);
+  }
+
+  private publishAutomation(frame: AutomationChangedEvent & { orgId: string }): void {
+    const watchFrame: EventsWatchAutomationsFrame = {
+      orgId: frame.orgId,
+      type: 'automations-changed',
+      kind: frame.kind,
+      action: frame.action,
+    };
+    this.hub.publish(frame.orgId, 'automations-changed', watchFrame);
   }
 
   private publishMaterialization(event: MaterializationChangedEvent): void {

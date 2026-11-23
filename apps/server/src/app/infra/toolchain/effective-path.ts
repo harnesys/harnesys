@@ -33,19 +33,25 @@ export function splitPathEnv(value: string | undefined): string[] {
     .filter((dir) => dir.length > 0);
 }
 
-export function loginShellPath(shell: string | undefined): string | undefined {
+export async function loginShellPath(shell: string | undefined): Promise<string | undefined> {
   if (process.platform === 'win32' || !shell) {
     return undefined;
   }
   try {
-    const result = Bun.spawnSync([shell, '-l', '-c', 'printf %s "$PATH"'], {
+    const proc = Bun.spawn([shell, '-l', '-c', 'printf %s "$PATH"'], {
       stdout: 'pipe',
       stderr: 'pipe',
-      timeout: LOGIN_SHELL_TIMEOUT_MS,
     });
-    const text = result.stdout?.toString().trim();
+    const timedOut = await exitsLaterThan(proc.exited, LOGIN_SHELL_TIMEOUT_MS);
+    if (timedOut) {
+      proc.kill();
+      return undefined;
+    }
+    if (proc.exitCode !== 0) {
+      return undefined;
+    }
+    const text = (await Bun.readableStreamToText(proc.stdout)).trim();
     if (
-      result.exitCode !== 0 ||
       !text ||
       text.includes('\n') ||
       !text.includes(delimiter) ||
@@ -57,4 +63,16 @@ export function loginShellPath(shell: string | undefined): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function exitsLaterThan(exited: Promise<number>, ms: number): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<boolean>((resolve) => {
+    timer = setTimeout(() => resolve(true), ms);
+  });
+  return Promise.race([exited.then(() => false), timeout]).finally(() => {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
+  });
 }

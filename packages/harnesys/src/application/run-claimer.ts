@@ -121,7 +121,11 @@ export function createRunClaimer(deps: {
     }
   }
   const CHILD_REAP_MESSAGE = 'parent run reaped';
-  async function failChildrenOf(parentRunId: string): Promise<void> {
+  const RESUME_EVENT = {
+    type: 'run.resumed',
+    message: 'local executor lost its lease; run requeued',
+  } as const;
+  async function failChildrenOf(parentRunId: string, message: string): Promise<void> {
     const children = await deps.lifecycle.childrenByParent(parentRunId).catch(() => []);
     for (const child of children) {
       if (!RUN_NON_TERMINAL.includes(child.status)) {
@@ -133,10 +137,25 @@ export function createRunClaimer(deps: {
           to: 'failed',
           interruptId: null,
           waitFireAt: null,
-          events: [runFailedEvent(CHILD_REAP_MESSAGE)],
+          events: [runFailedEvent(message)],
         })
         .catch(() => undefined);
     }
+  }
+  async function requeueLocal(rec: RunRecord): Promise<void> {
+    try {
+      await deps.lifecycle.transition(rec.runId, rec.leaseEpoch, {
+        from: 'running',
+        to: 'queued',
+        advanceAttempt: true,
+        interruptId: null,
+        waitFireAt: null,
+        events: [RESUME_EVENT],
+      });
+    } catch {
+      return;
+    }
+    await failChildrenOf(rec.runId, 'parent run resumed');
   }
   async function reapStaleRunning(): Promise<void> {
     const stale = await deps.lifecycle.listStaleRunning({ limit: DEFAULT_CLAIMABLE_LIMIT });
@@ -144,7 +163,14 @@ export function createRunClaimer(deps: {
       if (stopped) {
         return;
       }
+      if (deps.engine.isActive(rec.runId)) {
+        continue;
+      }
       if ((await Promise.resolve(deps.shouldReap?.(rec))) === false) {
+        continue;
+      }
+      if (rec.leaseInstanceId === deps.instanceId) {
+        await requeueLocal(rec);
         continue;
       }
       try {
@@ -154,7 +180,7 @@ export function createRunClaimer(deps: {
           events: [runFailedEvent('orphaned run: lease expired without completion')],
         });
         finishWith(failed);
-        await failChildrenOf(rec.runId);
+        await failChildrenOf(rec.runId, CHILD_REAP_MESSAGE);
       } catch {
         // lost the race with a live executor re-claiming the run — leave it alone
       }

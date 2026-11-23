@@ -44,8 +44,14 @@ export class DeleteThreadEventUseCase {
     if (!truncating && !DELETABLE_ERROR_TYPES.has(target.type)) {
       throw new ThreadValidationException('only user and error events can be deleted');
     }
+    let lastThreadSeq = request.threadSeq;
     if (truncating) {
-      await this.executor.truncateThreadFrom(request.orgId, request.threadId, request.threadSeq);
+      const truncated = await this.executor.truncateThreadFrom(
+        request.orgId,
+        request.threadId,
+        request.threadSeq,
+      );
+      lastThreadSeq = truncated.lastThreadSeq;
     } else {
       await this.executor.removeThreadEvent(request.orgId, request.threadId, request.threadSeq);
     }
@@ -54,7 +60,7 @@ export class DeleteThreadEventUseCase {
       await this.history.syncSlice(request.orgId, request.threadId, request.threadSeq, 1)
     ).serverMax;
     const deletions: ThreadLogDeletion[] = [
-      { from: request.threadSeq, to: truncating ? 0 : request.threadSeq },
+      { from: request.threadSeq, to: truncating ? lastThreadSeq : request.threadSeq },
     ];
     this.threadEvents.emit(request.orgId, {
       type: 'log-changed',

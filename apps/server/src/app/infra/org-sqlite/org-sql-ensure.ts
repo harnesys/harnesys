@@ -53,6 +53,7 @@ import {
   migrateIssueExecutionCorrelationIndex,
   migrateNodesDockerColumn,
   migrateSourcesVcsColumns,
+  migrateThreadLogDeletionsClosedRange,
   migrateThreadPlansTable,
   migrateThreadsInheritedEventCount,
   migrateUsageTable,
@@ -248,6 +249,7 @@ export function ensureOrgSchema(
   exec(CREATE_RUN_EVENTS_SQL);
   assertRunEventsThreadScoped(all);
   exec(CREATE_THREAD_LOG_DELETIONS_SQL);
+  migrateThreadLogDeletionsClosedRange(exec);
   exec(CREATE_RUN_SNAPSHOTS_SQL);
   exec(CREATE_ATTACHMENTS_SQL);
   exec(CREATE_THREAD_MESSAGE_QUEUE_SQL);

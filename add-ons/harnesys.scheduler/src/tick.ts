@@ -7,6 +7,7 @@ import { orgTimezone } from './trigger.ts';
 
 const CATCHUP_WINDOW_SEC = 3600;
 const CATCHUP_BATCH = 50;
+const TICK_GRACE_SEC = 120;
 
 export const tick: JobHandler = async (_params, ctx: AddonContext) => {
   const schedules = (await listSchedules(ctx)).filter(
@@ -25,6 +26,7 @@ export const tick: JobHandler = async (_params, ctx: AddonContext) => {
     onlineOf: () => true,
     missPolicyOf: (row) => row.missPolicy,
     scheduleIdOf: (row) => row.instanceId,
+    graceSec: TICK_GRACE_SEC,
   });
   for (const { row, decision } of planned) {
     await handlePlanned(ctx, row, decision, now, timezone);

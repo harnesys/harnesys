@@ -136,6 +136,13 @@ export class InMemoryRunEventStore implements RunEventStore {
     }
     const cutoff = { ...found.event } as SessionEvent;
     const removedKeys = tailKeys(this.insertion, cutoffIndex, threadId);
+    let lastThreadSeq = 0;
+    for (let index = cutoffIndex; index < this.insertion.length; index += 1) {
+      const entry = this.insertion[index];
+      if (entry && entry.threadId === threadId) {
+        lastThreadSeq = Math.max(lastThreadSeq, threadSeqOf(entry.event));
+      }
+    }
     this.insertion = this.insertion.filter(
       (entry) => entry.threadId !== threadId || !removedKeys.has(eventKey(entry)),
     );
@@ -143,6 +150,7 @@ export class InMemoryRunEventStore implements RunEventStore {
     const removedRunIds = this.dropEmptiedThreadRuns(threadId);
     return Promise.resolve({
       cutoff,
+      lastThreadSeq,
       removedEvents: removedKeys.size,
       removedRunIds,
       remainingUserCount: countThreadUsers(this.insertion, threadId),

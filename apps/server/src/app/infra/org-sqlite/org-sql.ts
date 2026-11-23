@@ -508,6 +508,25 @@ export function backfillThreadsResponderMode(exec: (sql: string) => void): void 
     WHERE json_extract(policy, '$.responderMode') IS NULL`);
 }
 
+// Truncation used to persist open-ended ranges (to_thread_seq = 0), and threadSeq
+// never decreases after a truncation: every later sync then dropped the replayed
+// message together with everything created after it. Close the range at the highest
+// deleted seq, i.e. the seq just below the first surviving row.
+export function migrateThreadLogDeletionsClosedRange(exec: (sql: string) => void): void {
+  exec(`UPDATE thread_log_deletions
+    SET to_thread_seq = MAX(
+      from_thread_seq,
+      COALESCE(
+        (SELECT MIN(e.thread_seq) - 1 FROM run_events e
+          WHERE e.thread_id = thread_log_deletions.thread_id
+            AND e.thread_seq > thread_log_deletions.from_thread_seq),
+        (SELECT t.last_thread_seq FROM threads t WHERE t.id = thread_log_deletions.thread_id),
+        from_thread_seq
+      )
+    )
+    WHERE to_thread_seq = 0`);
+}
+
 export const CREATE_BOARD_STATUSES_SQL = `
 CREATE TABLE IF NOT EXISTS board_statuses (
   id TEXT PRIMARY KEY,

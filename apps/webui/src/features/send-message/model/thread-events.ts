@@ -36,13 +36,13 @@ export async function resyncThreadEvents(orgId: string): Promise<void> {
 
 export async function resyncThreadRange(threadId: string): Promise<void> {
   const window = useSessionStore.getState().history[threadId];
-  if (window === undefined) {
+  if (window === undefined || window.maxThreadSeq <= 0) {
     await reconcileThread(threadId);
     return;
   }
   const expectVersion = window.windowVersion;
   const toThreadSeq = window.maxThreadSeq;
-  let fromThreadSeq = window.minThreadSeq;
+  let fromThreadSeq = Math.max(1, window.minThreadSeq);
   for (;;) {
     const page = await getThreadHistory(threadId, { fromThreadSeq, toThreadSeq });
     syncRunStateFromThread(page.summary.id, page.summary.activeRun ?? null);

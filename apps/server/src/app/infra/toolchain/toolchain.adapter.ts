@@ -1,6 +1,6 @@
 import { homedir } from 'node:os';
 import { delimiter, join } from 'node:path';
-import { Injectable } from '@harnesys/brix';
+import { Injectable, type ModuleInitHook } from '@harnesys/brix';
 import type { ToolchainDiscovery, ToolchainMode, ToolchainNodeVersion } from '@harnesys/contracts';
 import { defaultShell } from 'harnesys';
 import { OrgSettingsPort } from '../../domain/skills/org-settings.port.ts';
@@ -19,11 +19,20 @@ import {
 } from './toolchain-discovery.ts';
 
 @Injectable()
-export class ToolchainAdapter extends ToolchainPort {
+export class ToolchainAdapter extends ToolchainPort implements ModuleInitHook {
   private readonly cache = new Map<string, ToolchainResolution>();
+  private readonly probedPath = new Map<string, string[]>();
+  private readonly probing = new Set<string>();
+  private readonly probeWaiters = new Map<string, Set<string>>();
 
   constructor(private readonly orgSettings: OrgSettingsPort) {
     super();
+  }
+
+  onModuleInit(): void {
+    for (const shellPath of this.shellCandidates()) {
+      void this.probeShell(shellPath, undefined);
+    }
   }
 
   override resolve(orgId: string): ToolchainResolution {
@@ -82,13 +91,42 @@ export class ToolchainAdapter extends ToolchainPort {
     return entry;
   }
 
+  private shellCandidates(): string[] {
+    const envShell = process.env.SHELL;
+    return [
+      ...new Set([
+        ...(envShell !== undefined && envShell.length > 0 ? [envShell] : []),
+        ...detectedShells().map((shell) => shell.path),
+      ]),
+    ];
+  }
+
+  private async probeShell(shellPath: string, orgId: string | undefined): Promise<void> {
+    const waiters = this.probeWaiters.get(shellPath) ?? new Set<string>();
+    if (orgId !== undefined) {
+      waiters.add(orgId);
+    }
+    this.probeWaiters.set(shellPath, waiters);
+    if (this.probing.has(shellPath)) {
+      return;
+    }
+    this.probing.add(shellPath);
+    const probed = await loginShellPath(shellPath).catch(() => undefined);
+    this.probing.delete(shellPath);
+    this.probedPath.set(shellPath, splitPathEnv(probed ?? process.env.PATH));
+    for (const waiter of this.probeWaiters.get(shellPath) ?? []) {
+      this.cache.delete(waiter);
+    }
+    this.probeWaiters.delete(shellPath);
+  }
+
   private compute(orgId: string): ToolchainResolution {
     const settings = this.orgSettings.get(orgId).toolchain;
     const home = homedir();
     const nodeBin = pickNodeBin(scanNodeVersions(home), settings.node);
     const overrides = settings.commandOverrides;
     const dirs = assembleDirs({
-      probed: this.probedDirs(settings, home),
+      probed: this.probedDirs(settings, home, orgId),
       managedDirs: globalBinDirs(home, nodeBin),
       extraDirs: settings.extraPathDirs,
       overrideDirs: overrideDirs(overrides),
@@ -111,15 +149,23 @@ export class ToolchainAdapter extends ToolchainPort {
     return defaultShell();
   }
 
-  private probedDirs(settings: { mode: ToolchainMode; shell: string }, home: string): string[] {
+  private probedDirs(
+    settings: { mode: ToolchainMode; shell: string },
+    home: string,
+    orgId: string,
+  ): string[] {
     if (settings.mode !== 'auto') {
       return [];
     }
     const shellPath = resolveShellPath(settings.shell, home, process.env.SHELL, detectedShells());
-    const probed = loginShellPath(shellPath);
-    if (probed !== undefined) {
-      return splitPathEnv(probed);
+    if (shellPath === undefined) {
+      return splitPathEnv(process.env.PATH);
     }
+    const probed = this.probedPath.get(shellPath);
+    if (probed !== undefined) {
+      return probed;
+    }
+    void this.probeShell(shellPath, orgId);
     return splitPathEnv(process.env.PATH);
   }
 }

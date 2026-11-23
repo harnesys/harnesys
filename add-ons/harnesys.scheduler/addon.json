@@ -24,6 +24,14 @@
       "reason": "Evaluate cron times in the organization timezone"
     },
     {
+      "id": "agents.read",
+      "reason": "Resolve a schedule target agent by name or id"
+    },
+    {
+      "id": "threads.create",
+      "reason": "Create a dedicated thread when a schedule targets another agent"
+    },
+    {
       "id": "approvals.request",
       "reason": "Open approval inbox items when a schedule misses its catch-up window"
     }
@@ -124,7 +132,7 @@
           },
           {
             "name": "set",
-            "description": "Create a cron schedule (omit schedule) or update an existing one (schedule = instance id or name). The cron expression is evaluated in the organization timezone; optional miss_policy controls missed runs (catch-up, skip, escalate). Rebinding with threadId moves the fire target to another thread of the same agent.",
+            "description": "Create a cron schedule (omit schedule) or update an existing one (schedule = instance id or name). The cron expression is evaluated in the organization timezone; optional miss_policy controls missed runs (catch-up, skip, escalate). By default the schedule fires in the calling agent's thread; pass agentId or agent to target another agent, optionally with threadId to bind a specific thread of that agent.",
             "effect": "write",
             "inputSchema": {
               "type": "object",
@@ -157,6 +165,14 @@
                 "threadId": {
                   "type": "string",
                   "description": "Thread to fire; create defaults to the calling thread, update keeps the current binding when omitted"
+                },
+                "agentId": {
+                  "type": "string",
+                  "description": "Target agent id; overrides the calling agent so the schedule fires for another agent"
+                },
+                "agent": {
+                  "type": "string",
+                  "description": "Target agent name, resolved to an agent id; use when the id is unknown"
                 }
               }
             }

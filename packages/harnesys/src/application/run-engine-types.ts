@@ -78,6 +78,7 @@ export interface RunTargetOpts {
 }
 export interface RunEngine {
   execute(runId: string, opts: RunTargetOpts): Promise<void>;
+  isActive(runId: string): boolean;
   abort(runId: string): void;
   stop(): void;
   whenIdle(): Promise<void>;

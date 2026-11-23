@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { AddonException } from '../../../domain/addons/errors.ts';
+import { AutomationEventsPort } from '../../../domain/automations/automation-events.port.ts';
 import { FakeThreadAgents, FakeThreads } from '../../threads/thread.fakes.ts';
 import {
   FakeAudit,
@@ -18,6 +19,16 @@ const THREAD_ID = '11111111-1111-4111-8111-111111111111';
 const AGENT_ID = '22222222-2222-4222-8222-222222222222';
 const STRANGER_AGENT_ID = '33333333-3333-4333-8333-333333333333';
 const OTHER_THREAD_ID = '44444444-4444-4444-8444-444444444444';
+
+class FakeAutomationEvents extends AutomationEventsPort {
+  published: Array<{ orgId: string; kind: string; action: string }> = [];
+  publish(orgId: string, event: { kind: string; action: 'changed' | 'removed' }): void {
+    this.published.push({ orgId, kind: event.kind, action: event.action });
+  }
+  subscribe(): () => void {
+    return () => {};
+  }
+}
 
 function build(enabled = true) {
   const { pkg } = testManifest({
@@ -73,6 +84,7 @@ function build(enabled = true) {
     new FakeAudit(),
     threads,
     threadAgents,
+    new FakeAutomationEvents(),
     new NullLogger(),
   );
   return { useCase, triggers, calls, threads, threadAgents };

@@ -28,6 +28,23 @@ function stubBinary(dir: string, name: string): string {
   return path;
 }
 
+function stubShell(dir: string, body: string): string {
+  mkdirSync(dir, { recursive: true });
+  const path = join(dir, 'login-shell');
+  writeFileSync(path, `#!/bin/sh\n${body}\n`, { mode: 0o755 });
+  return path;
+}
+
+async function waitFor(check: () => boolean, timeoutMs = 3000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!check()) {
+    if (Date.now() > deadline) {
+      throw new Error('condition not met in time');
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+}
+
 class MemoryOrgSettings extends OrgSettingsPort {
   private readonly store = new Map<string, OrgSettings>();
 
@@ -93,5 +110,41 @@ describe('ToolchainAdapter', () => {
     adapter.invalidate(orgId);
     expect(adapter.resolve(orgId).dirs).toContain(extraDir);
     expect(adapter.hasBinary(orgId, 'stub-ls')).toBe(true);
+  });
+
+  test('resolve never probes the login shell synchronously and picks up the probed PATH', async () => {
+    const home = fakeHome();
+    const shell = stubShell(join(home, 'shell'), 'printf %s /probed/bin:/usr/bin');
+    const settings = new MemoryOrgSettings();
+    const orgId = 'org-1';
+    settings.set(orgId, {
+      toolchain: {
+        mode: 'auto',
+        shell,
+        node: 'auto',
+        extraPathDirs: [],
+        commandOverrides: {},
+      },
+    });
+    const adapter = new ToolchainAdapter(settings);
+    const original = Bun.spawnSync;
+    let spawnSyncCalls = 0;
+    Bun.spawnSync = ((...args: Parameters<typeof original>) => {
+      spawnSyncCalls += 1;
+      return original(...args);
+    }) as typeof original;
+    try {
+      const started = Date.now();
+      const immediate = adapter.resolve(orgId);
+      const elapsed = Date.now() - started;
+      expect(elapsed).toBeLessThan(500);
+      expect(spawnSyncCalls).toBe(0);
+      expect(immediate.dirs).not.toContain('/probed/bin');
+      await waitFor(() => adapter.resolve(orgId).dirs.includes('/probed/bin'));
+      expect(adapter.resolve(orgId).shell).toBe(shell);
+      expect(spawnSyncCalls).toBe(0);
+    } finally {
+      Bun.spawnSync = original;
+    }
   });
 });

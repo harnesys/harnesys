@@ -83,6 +83,7 @@ class StubEvents implements RunEventStore {
   }
   async truncateThreadFrom(): Promise<{
     cutoff: SessionEvent;
+    lastThreadSeq: number;
     removedEvents: number;
     removedRunIds: string[];
     remainingUserCount: number;

@@ -25,6 +25,7 @@ export interface RunEventStore extends RunSeqAllocator {
 
 export interface TruncateThreadResult {
   cutoff: SessionEvent;
+  lastThreadSeq: number;
   removedEvents: number;
   removedRunIds: string[];
   remainingUserCount: number;

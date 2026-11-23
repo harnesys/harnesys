@@ -105,12 +105,18 @@ export function createRunEngine(deps: RunEngineDeps): RunEngine {
     const signal = run.abort.signal;
     const env = envWith(() => run.leaseLost, deps.delivery?.() ?? DEFAULT_DELIVERY_SETTINGS);
     run.renewTimer = setInterval(() => {
-      void deps.lifecycle.renewLease(runId, deps.instanceId, leaseTtl).then((ok) => {
-        if (!ok) {
-          run.leaseLost = true;
-          run.abort.abort(codedRunError('lease_stale', 'lease lost'));
-        }
-      });
+      void deps.lifecycle
+        .renewLease(runId, deps.instanceId, leaseTtl)
+        .then((ok) => {
+          if (!ok) {
+            run.leaseLost = true;
+            runLogger.warn('lease lost', { runId, instanceId: deps.instanceId });
+            run.abort.abort(codedRunError('lease_stale', 'lease lost'));
+          }
+        })
+        .catch((err) => {
+          runLogger.warn('lease renewal failed', { runId, error: err });
+        });
     }, renewMs);
     try {
       const ctx: SegmentCtx = {
@@ -221,6 +227,9 @@ export function createRunEngine(deps: RunEngineDeps): RunEngine {
   function abort(runId: string): void {
     byRun.get(runId)?.abort.abort('run cancelled');
   }
+  function isActive(runId: string): boolean {
+    return byRun.has(runId);
+  }
   function whenIdle(): Promise<void> {
     if (active.size === 0) {
       return Promise.resolve();
@@ -229,5 +238,5 @@ export function createRunEngine(deps: RunEngineDeps): RunEngine {
       idleWaiters.add(resolve);
     });
   }
-  return { execute, abort, stop, whenIdle, close: stop };
+  return { execute, isActive, abort, stop, whenIdle, close: stop };
 }

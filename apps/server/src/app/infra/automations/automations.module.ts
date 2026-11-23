@@ -1,8 +1,10 @@
 import { Module } from '@harnesys/brix';
 import { AutomationCatalogPort } from '../../domain/automations/automation-catalog.port.ts';
 import type { AutomationCatalogContributorPort } from '../../domain/automations/automation-catalog-contributor.port.ts';
+import { AutomationEventsPort } from '../../domain/automations/automation-events.port.ts';
 import { AddonTriggerCatalogContributor } from '../addons/families/trigger/trigger.family.ts';
 import { AutomationCatalogContributors } from './automation-catalog-contributors.ts';
+import { AutomationEventsAdapter } from './automation-events.adapter.ts';
 import { CompositeAutomationCatalogAdapter } from './composite-automation-catalog.adapter.ts';
 
 @Module({
@@ -15,7 +17,8 @@ import { CompositeAutomationCatalogAdapter } from './composite-automation-catalo
       inject: [AddonTriggerCatalogContributor],
     },
     { provide: AutomationCatalogPort, useClass: CompositeAutomationCatalogAdapter },
+    { provide: AutomationEventsPort, useClass: AutomationEventsAdapter },
   ],
-  exports: [AutomationCatalogPort],
+  exports: [AutomationCatalogPort, AutomationEventsPort],
 })
 export class AutomationsModule {}

@@ -12,6 +12,7 @@ import type {
   TriggerInstanceRow,
 } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { TriggerInstanceRepositoryPort } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
+import { AutomationEventsPort } from '../../../domain/automations/automation-events.port.ts';
 import { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
 import { occupiedTriggerInstanceThreadId } from '../../threads/trigger-thread-binding.ts';
@@ -48,6 +49,7 @@ export class ManageTriggerInstanceUseCase {
     private readonly audit: AddonAuditPort,
     private readonly threads: ThreadRepositoryPort,
     private readonly threadAgents: ThreadAgentRepositoryPort,
+    private readonly automationEvents: AutomationEventsPort,
     @Inject(Logger) logger: Logger,
   ) {
     this.logger = logger.child('addons-trigger-instances');
@@ -87,6 +89,7 @@ export class ManageTriggerInstanceUseCase {
       outcome: 'ok',
       details: { instanceId: created.id },
     });
+    this.emitChanged(input.orgId, input.addonId, input.triggerId, 'changed');
     return created;
   }
 
@@ -94,18 +97,21 @@ export class ManageTriggerInstanceUseCase {
     const instance = this.require(input.orgId, input.instanceId);
     this.triggers.update(input.orgId, input.instanceId, { enabled: true });
     await this.start({ ...instance, enabled: true });
+    this.emitChanged(input.orgId, instance.addonId, instance.triggerId, 'changed');
   }
 
   async disable(input: TriggerInstanceActionInput): Promise<void> {
     const instance = this.require(input.orgId, input.instanceId);
     await this.stop(instance.id, input.orgId, instance.addonId, 'paused');
     this.triggers.update(input.orgId, input.instanceId, { enabled: false });
+    this.emitChanged(input.orgId, instance.addonId, instance.triggerId, 'changed');
   }
 
   async delete(input: TriggerInstanceActionInput): Promise<void> {
     const instance = this.require(input.orgId, input.instanceId);
     await this.stop(instance.id, input.orgId, instance.addonId, 'removed');
     this.triggers.remove(input.orgId, input.instanceId);
+    this.emitChanged(input.orgId, instance.addonId, instance.triggerId, 'removed');
   }
 
   async patch(orgId: string, instanceId: string, patch: TriggerInstancePatch): Promise<void> {
@@ -127,6 +133,7 @@ export class ManageTriggerInstanceUseCase {
     if (resynced.enabled && (contentChanged || enabling)) {
       await this.start(resynced);
     }
+    this.emitChanged(orgId, current.addonId, current.triggerId, 'changed');
   }
 
   private async start(instance: TriggerInstanceRow): Promise<void> {
@@ -177,6 +184,15 @@ export class ManageTriggerInstanceUseCase {
       throw new AddonException('not_found', 404, `Trigger instance not found: ${instanceId}`);
     }
     return instance;
+  }
+
+  private emitChanged(
+    orgId: string,
+    addonId: string,
+    triggerId: string,
+    action: 'changed' | 'removed',
+  ): void {
+    this.automationEvents.publish(orgId, { kind: `${addonId}.${triggerId}`, action });
   }
 
   private assertTriggerDeclared(manifest: AddonManifestLike, triggerId: string): void {

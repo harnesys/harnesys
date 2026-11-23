@@ -60,6 +60,7 @@ export function truncateThreadEvents(
   }
   const conversational = tail.filter((row) => row.conversational === 1).length;
   bumpConversationCount(tx, threadId, -conversational);
+  const lastThreadSeq = tail.reduce((max, row) => Math.max(max, row.threadSeq), threadSeq);
   const tailRunIds = new Set(
     tail.map((row) => row.runId).filter((runId): runId is string => runId !== null),
   );
@@ -74,11 +75,11 @@ export function truncateThreadEvents(
     .values({
       threadId,
       fromThreadSeq: threadSeq,
-      toThreadSeq: 0,
+      toThreadSeq: lastThreadSeq,
       deletedAt: Date.now(),
     })
     .run();
-  return { cutoff, removedEvents: tail.length, removedRunIds, remainingUserCount };
+  return { cutoff, lastThreadSeq, removedEvents: tail.length, removedRunIds, remainingUserCount };
 }
 
 export function removeThreadEventRow(

@@ -33,16 +33,68 @@ function optionalText(input: Record<string, unknown>, key: string): string | und
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
 
-function resolveTarget(input: Record<string, unknown>, ctx: AddonContext): AddonTriggerTarget {
-  const threadId =
-    typeof input.threadId === 'string' && input.threadId ? input.threadId : ctx.meta.threadId;
-  const agentId = ctx.meta.agentId;
-  if (!threadId || !agentId) {
+async function resolveTargetAgent(
+  input: Record<string, unknown>,
+  ctx: AddonContext,
+): Promise<string> {
+  const explicitId = optionalText(input, 'agentId');
+  const name = optionalText(input, 'agent');
+  if (!explicitId && !name) {
+    const caller = ctx.meta.agentId;
+    if (caller) {
+      return caller;
+    }
     throw new AddonError('invalid_params', {
-      detail: 'threadId is required and the tool call must carry agent context',
+      detail: 'agentId or agent is required when the tool call has no agent context',
     });
   }
+  const agents = await ctx.agents.list();
+  const target = explicitId ?? name ?? '';
+  const byId = explicitId ? agents.find((agent) => agent.id === explicitId) : undefined;
+  if (byId) {
+    return byId.id;
+  }
+  const byName = agents.filter(
+    (agent) => agent.name.trim().toLowerCase() === target.trim().toLowerCase(),
+  );
+  if (byName.length > 1) {
+    throw new AddonError('invalid_params', {
+      detail: `multiple agents match "${target}", pass agentId instead`,
+    });
+  }
+  const single = byName[0];
+  if (single) {
+    return single.id;
+  }
+  throw new AddonError('not_found', { detail: `agent not found: ${target}` });
+}
+
+async function resolveTarget(
+  input: Record<string, unknown>,
+  ctx: AddonContext,
+): Promise<AddonTriggerTarget> {
+  const agentId = await resolveTargetAgent(input, ctx);
+  const providedThreadId = optionalText(input, 'threadId');
+  const threadId = await resolveThreadId(input, ctx, agentId, providedThreadId);
   return { threadId, agentId };
+}
+
+async function resolveThreadId(
+  input: Record<string, unknown>,
+  ctx: AddonContext,
+  agentId: string,
+  providedThreadId: string | undefined,
+): Promise<string> {
+  if (providedThreadId) {
+    return providedThreadId;
+  }
+  const callerThreadId = ctx.meta.threadId;
+  if (agentId === ctx.meta.agentId && callerThreadId) {
+    return callerThreadId;
+  }
+  const title = optionalText(input, 'name') ?? 'Scheduled run';
+  const created = await ctx.threads.create({ agentId, title });
+  return created.threadId;
 }
 
 async function resolveSchedule(
@@ -140,7 +192,7 @@ async function createSchedule(
       ...(name !== undefined ? { name } : {}),
       ...(detail !== undefined ? { detail } : {}),
     },
-    target: resolveTarget(input, ctx),
+    target: await resolveTarget(input, ctx),
   });
   return await readBack(ctx, instanceId);
 }
@@ -154,7 +206,9 @@ async function updateSchedule(
   const missPolicy = optionalMissPolicy(input);
   const name = optionalText(input, 'name');
   const detail = optionalText(input, 'detail');
-  const threadId = optionalText(input, 'threadId');
+  const retarget =
+    input.agentId !== undefined || input.agent !== undefined || input.threadId !== undefined;
+  const target = retarget ? await resolveTarget(input, ctx) : undefined;
   await ctx.triggers.update({
     instanceId: row.instanceId,
     ...(name !== undefined && name !== row.name ? { label: name } : {}),
@@ -164,14 +218,7 @@ async function updateSchedule(
       name: name ?? row.name,
       detail: detail ?? row.detail,
     },
-    ...(threadId !== undefined
-      ? {
-          target: {
-            threadId,
-            agentId: row.target.agentId || ctx.meta.agentId || '',
-          },
-        }
-      : {}),
+    ...(target !== undefined ? { target } : {}),
   });
   return await readBack(ctx, row.instanceId);
 }

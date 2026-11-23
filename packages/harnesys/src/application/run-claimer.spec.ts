@@ -87,14 +87,19 @@ class FakeLifecycle implements RunLifecycleStore {
     return [];
   }
   async listStaleRunning(): Promise<RunRecord[]> {
-    return this.stale;
+    const out = this.stale;
+    this.stale = [];
+    return out;
   }
 }
 
-function engineOf(calls: string[]): RunEngine {
+function engineOf(calls: string[], active: string[] = []): RunEngine {
   return {
     async execute(): Promise<void> {
       calls.push('execute');
+    },
+    isActive(runId: string): boolean {
+      return active.includes(runId);
     },
     stop(): void {},
     abort(): void {},
@@ -171,10 +176,11 @@ describe('run claimer', () => {
     expect(lifecycle.failures).toEqual([]);
   });
 
-  test('reaping a stale root fails its non-terminal children', async () => {
+  test('reaping a stale root owned by another instance fails its non-terminal children', async () => {
     const lifecycle = new FakeLifecycle();
     lifecycle.record = {
       ...runRecord('running'),
+      leaseInstanceId: 'other-instance',
       leaseExpiresAt: Date.now() - 120_000,
       updatedAt: new Date(Date.now() - 120_000).toISOString(),
     };
@@ -194,5 +200,54 @@ describe('run claimer', () => {
     await settle();
     claimer.halt();
     expect(lifecycle.failures).toEqual([RUN_ID, 'child-running']);
+    expect(lifecycle.record.status).toBe('failed');
+  });
+
+  test('a stale lease never reaps a run the local engine is still executing', async () => {
+    const lifecycle = new FakeLifecycle();
+    lifecycle.record = {
+      ...runRecord('running'),
+      leaseInstanceId: 'i1',
+      leaseExpiresAt: Date.now() - 120_000,
+      updatedAt: new Date(Date.now() - 120_000).toISOString(),
+    };
+    lifecycle.stale = [lifecycle.record];
+    lifecycle.children = [{ ...runRecord('running'), runId: 'child-running', parentRunId: RUN_ID }];
+    const claimer = createRunClaimer({
+      lifecycle,
+      targets: { resolve: () => Promise.resolve(null) },
+      engine: engineOf([], [RUN_ID]),
+      instanceId: 'i1',
+      sweepMs: 3_600_000,
+    });
+    claimer.kick();
+    await settle();
+    claimer.halt();
+    expect(lifecycle.failures).toEqual([]);
+    expect(lifecycle.record.status).toBe('running');
+  });
+
+  test('a stale run owned by this instance but no longer executing is requeued', async () => {
+    const lifecycle = new FakeLifecycle();
+    lifecycle.record = {
+      ...runRecord('running'),
+      leaseInstanceId: 'i1',
+      leaseExpiresAt: Date.now() - 120_000,
+      updatedAt: new Date(Date.now() - 120_000).toISOString(),
+    };
+    lifecycle.stale = [lifecycle.record];
+    lifecycle.children = [{ ...runRecord('running'), runId: 'child-running', parentRunId: RUN_ID }];
+    const claimer = createRunClaimer({
+      lifecycle,
+      targets: { resolve: () => Promise.resolve({ state: {} } as RunTarget) },
+      engine: engineOf([], []),
+      instanceId: 'i1',
+      sweepMs: 3_600_000,
+    });
+    claimer.kick();
+    await settle();
+    claimer.halt();
+    expect(lifecycle.failures).toEqual(['child-running']);
+    expect(lifecycle.record.status).toBe('running');
   });
 });

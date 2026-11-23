@@ -15,6 +15,7 @@ export interface DecideDueInput {
   nodeOnline: boolean;
   missPolicy?: MissPolicy;
   scheduleId?: string;
+  graceSec?: number;
 }
 
 export function scheduleFireId(scheduleId: string, scheduledFor: Date): string {
@@ -26,7 +27,8 @@ export function decideDue(input: DecideDueInput): DueDecision {
     return { action: 'wait' };
   }
   const policy = input.missPolicy ?? 'catch-up';
-  const windowSec = policy === 'catch-up' ? input.catchupWindowSec : 0;
+  const graceSec = input.graceSec ?? 0;
+  const windowSec = policy === 'catch-up' ? Math.max(input.catchupWindowSec, graceSec) : graceSec;
   if (input.now.getTime() - input.nextDueAt.getTime() > windowSec * 1000) {
     return {
       action: 'miss_stale',
@@ -64,6 +66,7 @@ export interface PlanDueBatchInput<Row> {
   onlineOf(row: Row): boolean;
   missPolicyOf?(row: Row): MissPolicy;
   scheduleIdOf?(row: Row): string;
+  graceSec?: number;
 }
 
 export interface PlannedBatch<Row> {
@@ -82,6 +85,7 @@ export function planDueBatch<Row>(rows: Row[], input: PlanDueBatchInput<Row>): P
       nodeOnline: input.onlineOf(row),
       missPolicy: input.missPolicyOf?.(row) ?? 'catch-up',
       scheduleId: input.scheduleIdOf?.(row),
+      graceSec: input.graceSec,
     });
     if (decision.action === 'fire') {
       if (fires >= input.catchupBatch) {
