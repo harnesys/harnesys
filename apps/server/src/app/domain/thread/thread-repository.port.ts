@@ -24,4 +24,5 @@ export abstract class ThreadRepositoryPort {
     agentId: string,
   ): ThreadRecord | undefined;
   abstract threadIdsWithRuns(orgId: string): Set<string>;
+  abstract threadHasRuns(orgId: string, threadId: string): boolean;
 }

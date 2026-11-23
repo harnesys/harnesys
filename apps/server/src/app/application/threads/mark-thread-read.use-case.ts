@@ -1,14 +1,9 @@
 import { Injectable } from '@harnesys/brix';
 import type { ThreadPublic } from '@harnesys/contracts';
-import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
-import { NodeRepository } from '../../domain/fleet/node-repository.port.ts';
-import { UserRepository } from '../../domain/identity/user-repository.port.ts';
 import { ThreadNotFoundException } from '../../domain/thread/thread.error.ts';
-import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadParticipantRepositoryPort } from '../../domain/thread/thread-participant-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
-import { runAttributionNamesOf } from './run-attribution.ts';
-import { membersOf, participantsOf, toThreadPublic } from './thread.helpers.ts';
+import { ThreadSummaryAssembler } from './thread-summary.assembler.ts';
 
 export interface MarkThreadReadRequest {
   orgId: string;
@@ -20,11 +15,8 @@ export interface MarkThreadReadRequest {
 export class MarkThreadReadUseCase {
   constructor(
     private readonly threads: ThreadRepositoryPort,
-    private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly participants: ThreadParticipantRepositoryPort,
-    private readonly agents: AgentRegistryPort,
-    private readonly users: UserRepository,
-    private readonly nodes: NodeRepository,
+    private readonly assembler: ThreadSummaryAssembler,
   ) {}
 
   async execute(request: MarkThreadReadRequest): Promise<ThreadPublic> {
@@ -41,22 +33,11 @@ export class MarkThreadReadUseCase {
         new Date().toISOString(),
       );
     }
-    const deps = {
-      threadAgents: this.threadAgents,
-      participants: this.participants,
-      agents: this.agents,
-    };
-    const participants = participantsOf(deps, request.orgId, read.id);
-    return toThreadPublic({
+    const summary = await this.assembler.execute({
+      orgId: request.orgId,
       thread: read,
-      members: membersOf(deps, request.orgId, read.id),
-      participants,
-      active: this.threads.findActiveRun(request.orgId, read.id) ?? null,
-      events: [],
-      inheritedEventCount: 0,
-      waitingForProfileId: undefined,
-      names: runAttributionNamesOf(this.users, this.nodes, request.orgId),
-      userId: request.userId ?? null,
+      ...(request.userId === undefined ? {} : { userId: request.userId }),
     });
+    return { ...summary, events: [], inheritedEventCount: 0 };
   }
 }

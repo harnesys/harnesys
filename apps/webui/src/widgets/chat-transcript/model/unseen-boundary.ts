@@ -1,25 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-
-const VIEWED_PREFIX = 'harnesys.viewed.';
-
-export function loadViewedCount(threadId: string): number | null {
-  try {
-    const raw = localStorage.getItem(VIEWED_PREFIX + threadId);
-    if (raw === null) {
-      return null;
-    }
-    const value = Number.parseInt(raw, 10);
-    return Number.isFinite(value) && value >= 0 ? value : null;
-  } catch {
-    return null;
-  }
-}
-
-export function saveViewedCount(threadId: string, count: number): void {
-  try {
-    localStorage.setItem(VIEWED_PREFIX + threadId, String(count));
-  } catch {}
-}
+import { useEffect, useRef } from 'react';
+import { useSessionStore } from '@/entities/session';
 
 export function useUnseenBoundary(
   threadId: string,
@@ -27,20 +7,22 @@ export function useUnseenBoundary(
   unread: boolean,
   total: number,
 ): number | null {
-  const [boundary, setBoundary] = useState<number | null>(null);
-  const captured = useRef<string | null>(null);
+  const viewedSeq = useSessionStore((state) => (active ? state.viewedSeq[threadId] : undefined));
+  const hydrateViewedSeq = useSessionStore((state) => state.hydrateViewedSeq);
+  const captured = useRef<{ threadId: string; show: boolean } | null>(null);
   useEffect(() => {
     if (!active) {
       captured.current = null;
-      setBoundary(null);
       return;
     }
-    if (total === 0 || captured.current === threadId) {
+    if (total === 0 || captured.current?.threadId === threadId) {
       return;
     }
-    captured.current = threadId;
-    const stored = loadViewedCount(threadId);
-    setBoundary(unread && stored !== null && stored < total ? stored : null);
-  }, [active, threadId, unread, total]);
-  return boundary;
+    hydrateViewedSeq(threadId);
+    captured.current = { threadId, show: unread };
+  }, [active, threadId, unread, total, hydrateViewedSeq]);
+  if (!active || viewedSeq === undefined || !captured.current?.show) {
+    return null;
+  }
+  return captured.current.threadId === threadId ? viewedSeq : null;
 }

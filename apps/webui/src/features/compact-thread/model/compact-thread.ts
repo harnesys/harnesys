@@ -1,7 +1,7 @@
 import type { CompactThreadResponse } from '@harnesys/studio-shared';
-import { useSessionStore } from '@/entities/session';
-import { toClientThread, useThreadStore } from '@/entities/thread';
-import { compactThreadStream, getThread, readSse } from '@/shared/api';
+import { useThreadStore } from '@/entities/thread';
+import { refreshThread } from '@/features/desk/model/refresh-thread';
+import { compactThreadStream, readSse } from '@/shared/api';
 import { useCompactingStore } from './compacting.store';
 export interface CompactThreadOptions {
   threadId: string;
@@ -44,9 +44,7 @@ export async function compactThread(options: CompactThreadOptions): Promise<Comp
     }
     useThreadStore.getState().touch(threadId);
     try {
-      const record = await getThread(threadId);
-      useThreadStore.getState().upsert(toClientThread(record));
-      useSessionStore.getState().reconcileEvents(threadId, record.events);
+      await refreshThread(threadId, { force: true });
     } catch {}
     return result.compacted
       ? { compacted: true }

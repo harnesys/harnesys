@@ -5,6 +5,7 @@ import { useAgentStore } from '@/entities/agent';
 import { useActiveOrgStore, useOrgActivityStore } from '@/entities/org-machine';
 import { permissionRulesQueryKey } from '@/entities/permission-rule/api/permission-rule';
 import { useProjects } from '@/entities/project';
+import { useSessionStore } from '@/entities/session';
 import { toClientThread, useThreadStore } from '@/entities/thread';
 import { syncRunStateFromThread } from '@/features/send-message/model/sync-run-state';
 import {
@@ -18,6 +19,7 @@ import {
   watchSourceChanges,
   watchTerminalEvents,
   watchThreadEvents,
+  watchThreadLogChanged,
 } from '@/shared/api/events';
 import { isLocalFileWrite, sourceFilesTreeQueryKey } from '@/shared/api/files';
 import { rememberProjectNode, rememberSelfNode } from '@/shared/api/fleet';
@@ -111,6 +113,27 @@ export function DeskSync() {
         onOpen: () => {
           void resyncThreadEvents(org.orgId);
         },
+      }),
+    );
+    return () => {
+      for (const cleanup of cleanups) {
+        cleanup();
+      }
+    };
+  }, [orgs]);
+  useEffect(() => {
+    if (orgs.length === 0) {
+      return;
+    }
+    const cleanups = orgs.map((org) =>
+      watchThreadLogChanged(org.orgId, (frame) => {
+        useSessionStore.getState().applyDeletions(frame.threadId, frame.deletions);
+        const session = useSessionStore.getState();
+        if (session.history[frame.threadId] === undefined) {
+          return;
+        }
+        session.setHistoryCursor(frame.threadId, frame.serverMax);
+        void refreshThread(frame.threadId);
       }),
     );
     return () => {

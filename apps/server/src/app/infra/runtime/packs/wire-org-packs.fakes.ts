@@ -135,6 +135,10 @@ export class MemoryThreads extends ThreadRepositoryPort {
   threadIdsWithRuns(): Set<string> {
     return new Set();
   }
+
+  threadHasRuns(_orgId: string, threadId: string): boolean {
+    return this.threadIdsWithRuns().has(threadId);
+  }
   listByIssue(orgId: string, issueId: string): ThreadRecord[] {
     return this.rows.filter((row) => row.orgId === orgId && row.issueId === issueId);
   }

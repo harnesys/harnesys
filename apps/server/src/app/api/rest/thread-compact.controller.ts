@@ -1,4 +1,5 @@
 import { Controller, Param, Post, Req } from '@harnesys/brix';
+import type { UndoCompactResponse } from '@harnesys/contracts';
 import { CompactThreadUseCase } from '../../application/threads/compact-thread.use-case.ts';
 import { UndoThreadCompactUseCase } from '../../application/threads/undo-thread-compact.use-case.ts';
 import { OrgIdHeader } from '../org-id.ts';
@@ -27,7 +28,10 @@ export class ThreadCompactController {
   }
 
   @Post(':threadId/compact/undo')
-  undo(@OrgIdHeader() orgId: string, @Param('threadId') threadId: string): Promise<unknown> {
+  undo(
+    @OrgIdHeader() orgId: string,
+    @Param('threadId') threadId: string,
+  ): Promise<UndoCompactResponse> {
     return this.undoThreadCompact.execute({ orgId, threadId });
   }
 }

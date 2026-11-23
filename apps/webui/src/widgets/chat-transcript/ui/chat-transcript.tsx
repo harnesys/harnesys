@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSessionStore } from '@/entities/session';
 import type { Thread } from '@/entities/thread';
 import {
   useAgentThreads,
   useDeskReady,
+  useDeskStore,
   useSelectedAgent,
   useSelectedThread,
 } from '@/features/desk';
@@ -12,6 +14,9 @@ import { cn } from '@/shared/lib/utils';
 import { ChatSkeleton } from './chat-skeleton';
 import { NoThreads } from './no-threads';
 import { ThreadPanel } from './thread-panel';
+
+const MOUNTED_KEY_SEPARATOR = '\u0000';
+
 export function ChatTranscript() {
   const projectId = studioFocusProjectId(useStudioLocation().focus);
   const deskReady = useDeskReady(projectId);
@@ -20,6 +25,16 @@ export function ChatTranscript() {
   const thread = useSelectedThread();
   const threads = useAgentThreads(agent?.id ?? null);
   const mountedIds = useMountedThreadIds(agent?.id ?? null, thread?.id ?? null, threads);
+  const focusedThreadId = useDeskStore((state) => state.focusedThreadId);
+  const mountedKey = mountedIds.join(MOUNTED_KEY_SEPARATOR);
+  useEffect(() => {
+    useSessionStore
+      .getState()
+      .setMountedThreads(mountedKey === '' ? [] : mountedKey.split(MOUNTED_KEY_SEPARATOR));
+  }, [mountedKey]);
+  useEffect(() => {
+    useSessionStore.getState().setFocusedThread(focusedThreadId ?? thread?.id ?? null);
+  }, [focusedThreadId, thread?.id]);
   if (!agent) {
     return null;
   }

@@ -3,7 +3,7 @@ import { setActiveThreadId, type Thread, useThreadStore } from '@/entities/threa
 import { useDeskStore } from '@/features/desk';
 import { useIdeStore } from '@/features/ide';
 import { confirmDeleteThread, openNewThread } from '@/features/switch-thread';
-import { deleteThreadRecord, setThreadPinned } from '@/shared/api';
+import { deleteThreadRecord } from '@/shared/api';
 import { useStudioNavigation } from '@/shared/config/navigation';
 export function openThreadRecord(thread: Thread, projectId: string): void {
   if (thread.kind === 'schedule' || thread.kind === 'webhook') {
@@ -31,12 +31,7 @@ export function useThreadActions(projectId: string) {
     });
   };
   const togglePin = (thread: Thread) => {
-    const next = thread.pinned !== true;
-    void setThreadPinned(thread.id, next)
-      .catch(() => null)
-      .then((record) => {
-        useThreadStore.getState().setPinned(thread.id, record ? record.pinned : next);
-      });
+    useThreadStore.getState().setPinned(thread.id, thread.pinned !== true);
   };
   const removeThread = (thread: Thread) => {
     if (thread.kind !== 'chat') {

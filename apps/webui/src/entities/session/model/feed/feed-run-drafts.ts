@@ -63,6 +63,8 @@ export interface RunDraft {
   error: string | null;
   terminal: FeedRunTerminal | null;
   firstIndex: number;
+  firstThreadSeq: number | null;
+  lastThreadSeq: number | null;
   events: SessionEvent[];
   segments: SegmentDraft[];
   segmentOrdinal: number;

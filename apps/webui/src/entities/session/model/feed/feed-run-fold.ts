@@ -64,6 +64,7 @@ export function runProcess(fold: RunFold, ev: SessionEvent, index: number): void
   }
   fold.dirty = true;
   run.events.push(ev);
+  trackThreadSeq(run, ev);
   if (!run.id && ev.type === 'tool' && ev.toolCallId) {
     run.id = ev.toolCallId;
   }
@@ -264,6 +265,8 @@ function createRun(index: number): RunDraft {
     error: null,
     terminal: null,
     firstIndex: index,
+    firstThreadSeq: null,
+    lastThreadSeq: null,
     events: [],
     segments: [],
     segmentOrdinal: 0,
@@ -271,6 +274,17 @@ function createRun(index: number): RunDraft {
     hasInFlight: false,
     published: null,
   };
+}
+
+function trackThreadSeq(run: RunDraft, ev: SessionEvent): void {
+  if (ev.threadSeq === undefined) {
+    return;
+  }
+  if (run.firstThreadSeq === null) {
+    run.firstThreadSeq = ev.threadSeq;
+  }
+  run.lastThreadSeq =
+    run.lastThreadSeq === null ? ev.threadSeq : Math.max(run.lastThreadSeq, ev.threadSeq);
 }
 
 function closeRun(fold: RunFold, error: string | null, terminal: FeedRunTerminal): void {

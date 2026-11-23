@@ -121,6 +121,10 @@ function threadStub(threadId: string, _agentId: string): ThreadRepositoryPort {
     threadIdsWithRuns(): Set<string> {
       return new Set();
     }
+
+    threadHasRuns(_orgId: string, threadId: string): boolean {
+      return this.threadIdsWithRuns().has(threadId);
+    }
   }
   return new Stub({
     id: threadId,

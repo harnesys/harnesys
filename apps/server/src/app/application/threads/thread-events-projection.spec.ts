@@ -87,21 +87,4 @@ describe('projectThreadEvents', () => {
     expect(event?.toolCalls).toBeUndefined();
     expect(event?.usage).toBeDefined();
   });
-
-  test('keeps only the last model stats event', () => {
-    const stats = (seq: number) =>
-      ({
-        type: 'model.stats',
-        tools: 1,
-        deferredPending: 0,
-        systemChars: 1,
-        notesChars: 0,
-        notesErrors: [],
-        seq,
-        threadSeq: seq,
-      }) as SessionEvent;
-    const events = projectThreadEvents([stats(1), stats(2), stats(3)]);
-    expect(events).toHaveLength(1);
-    expect((events[0] as { seq: number }).seq).toBe(3);
-  });
 });

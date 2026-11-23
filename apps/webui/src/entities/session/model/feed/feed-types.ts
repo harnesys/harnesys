@@ -221,7 +221,8 @@ export interface FeedRun {
   runId: string | undefined;
   error: string | null;
   terminal: FeedRunTerminal | null;
-  firstIndex: number;
+  firstThreadSeq: number | null;
+  lastThreadSeq: number | null;
   events: SessionEvent[];
   segments: FeedSegment[];
   hasInFlight: boolean;
@@ -231,11 +232,6 @@ export interface ThreadFeed {
   runs: FeedRun[];
   spawns: SpawnInfo[];
   maps: MapInfo[];
-}
-
-export interface ThreadFeeds {
-  inherited: ThreadFeed;
-  own: ThreadFeed;
 }
 
 export interface FeedDecision {

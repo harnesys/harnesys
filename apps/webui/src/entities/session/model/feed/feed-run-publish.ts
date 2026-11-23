@@ -72,7 +72,7 @@ function publishRun(run: RunDraft): FeedRun {
     (first?.type === 'user' && first.clientEventId ? first.clientEventId : undefined) ??
     run.runId ??
     run.id ??
-    `run-${run.firstIndex}`;
+    `run-t${run.firstThreadSeq ?? run.firstIndex}`;
   const eventsSame = prev !== null && prev.events.length === run.events.length;
   if (
     prev !== null &&
@@ -82,6 +82,8 @@ function publishRun(run: RunDraft): FeedRun {
     prev.runId === run.runId &&
     prev.error === run.error &&
     prev.terminal === run.terminal &&
+    prev.firstThreadSeq === run.firstThreadSeq &&
+    prev.lastThreadSeq === run.lastThreadSeq &&
     prev.hasInFlight === run.hasInFlight &&
     sameElements(segments, prev.segments)
   ) {
@@ -93,7 +95,8 @@ function publishRun(run: RunDraft): FeedRun {
     runId: run.runId,
     error: run.error,
     terminal: run.terminal,
-    firstIndex: run.firstIndex,
+    firstThreadSeq: run.firstThreadSeq,
+    lastThreadSeq: run.lastThreadSeq,
     events: eventsSame && prev !== null ? prev.events : run.events.slice(),
     segments,
     hasInFlight: run.hasInFlight,

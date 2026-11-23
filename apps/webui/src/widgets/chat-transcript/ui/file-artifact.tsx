@@ -1,3 +1,4 @@
+import { parseFileArtifact as parseFileToolArtifact } from '@harnesys/studio-shared';
 import { DownloadIcon } from 'lucide-react';
 import type { ToolEventPair } from '@/entities/session';
 import { openThreadFileTab } from '@/features/ide';
@@ -5,7 +6,6 @@ import { loadThreadAttachment } from '@/shared/api';
 import { useAuthedBlobUrl } from '@/shared/api/blob-url';
 import { cn } from '@/shared/lib/utils';
 import { FileTypeIcon } from '@/shared/ui/icons';
-import { asObject, num, parseJson, str } from '../model/tool-json';
 
 export interface FileArtifactInfo {
   attachmentId: string;
@@ -15,22 +15,19 @@ export interface FileArtifactInfo {
 }
 
 export function parseFileArtifact(pair: ToolEventPair): FileArtifactInfo | null {
-  const result = pair.result;
-  if (result?.phase !== 'completed' || pair.call.name !== 'gmail_download_attachment') {
-    return null;
-  }
-  const output = typeof result.output === 'string' ? parseJson(result.output) : result.output;
-  const obj = asObject(output);
-  const attachmentId = str(obj, 'attachmentId');
-  const mediaType = str(obj, 'mediaType');
-  if (!obj || !attachmentId || !mediaType) {
+  const artifact = parseFileToolArtifact({
+    name: pair.call.name,
+    phase: pair.result?.phase,
+    output: pair.result?.output,
+  });
+  if (!artifact) {
     return null;
   }
   return {
-    attachmentId,
-    name: str(obj, 'filename') ?? attachmentId,
-    mediaType,
-    size: num(obj, 'size') ?? 0,
+    attachmentId: artifact.attachmentId,
+    name: artifact.name,
+    mediaType: artifact.mediaType,
+    size: artifact.sizeBytes ?? 0,
   };
 }
 

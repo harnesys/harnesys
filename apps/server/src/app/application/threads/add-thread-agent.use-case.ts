@@ -54,7 +54,7 @@ export class AddThreadAgentUseCase {
       members,
       participants: participantsOf(deps, request.orgId, thread.id),
       active: this.threads.findActiveRun(request.orgId, thread.id) ?? null,
-      bindingLocked: this.threads.threadIdsWithRuns(request.orgId).has(thread.id),
+      bindingLocked: this.threads.threadHasRuns(request.orgId, thread.id),
     });
   }
 }

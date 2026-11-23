@@ -31,6 +31,7 @@ export type {
   BudgetPolicy,
 } from './src/agent.ts';
 export { defaultAgentCompaction } from './src/agent-runtime-defaults.ts';
+export * from './src/artifacts.ts';
 export type { AgentCapabilitiesView, AgentCapabilityRegistryEntry } from './src/capabilities.ts';
 export type {
   CapabilityMechanism,

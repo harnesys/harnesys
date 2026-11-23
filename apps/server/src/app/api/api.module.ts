@@ -145,8 +145,10 @@ import { ThreadAttachmentsController } from './rest/thread-attachments.controlle
 import { ThreadCompactController } from './rest/thread-compact.controller.ts';
 import { ThreadExportController } from './rest/thread-export.controller.ts';
 import { ThreadFilesController } from './rest/thread-files.controller.ts';
+import { ThreadHistoryController } from './rest/thread-history.controller.ts';
 import { ThreadMessageQueueController } from './rest/thread-message-queue.controller.ts';
 import { ThreadRawModelRequestsController } from './rest/thread-raw-model-requests.controller.ts';
+import { ThreadSyncController } from './rest/thread-sync.controller.ts';
 import { ThreadsController } from './rest/threads.controller.ts';
 import { ToolchainController } from './rest/toolchain.controller.ts';
 import { UsageController } from './rest/usage.controller.ts';
@@ -287,6 +289,8 @@ import { VaultController } from './rest/vault.controller.ts';
     AddonViewersController,
     BrowserController,
     ThreadsController,
+    ThreadSyncController,
+    ThreadHistoryController,
     ThreadAttachmentsController,
     ThreadFilesController,
     ThreadCompactController,

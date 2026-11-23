@@ -88,6 +88,116 @@ export const ThreadPublicSchema = ThreadSummarySchema.extend({
 });
 export type ThreadPublic = z.infer<typeof ThreadPublicSchema>;
 
+export const THREAD_SYNC_MAX_EVENTS = 5_000;
+export const THREAD_SYNC_MAX_DELETIONS = 500;
+
+export const ThreadSyncQuerySchema = z.object({
+  afterThreadSeq: z.coerce.number().int().nonnegative(),
+});
+export type ThreadSyncQuery = z.infer<typeof ThreadSyncQuerySchema>;
+
+export const ThreadLogDeletionSchema = z.object({
+  from: z.number().int().positive(),
+  to: z.number().int().nonnegative(), // 0 = open-ended
+});
+export type ThreadLogDeletion = z.infer<typeof ThreadLogDeletionSchema>;
+
+export const ThreadSyncResponseSchema = z.object({
+  summary: ThreadSummarySchema,
+  events: z.array(z.unknown()),
+  cursor: z.number().int().nonnegative(),
+  hasMore: z.boolean(),
+  deletions: z.array(ThreadLogDeletionSchema),
+  reset: z.boolean(),
+});
+export type ThreadSyncResponse = z.infer<typeof ThreadSyncResponseSchema>;
+
+export const DeleteThreadEventResponseSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('truncated'),
+    fromThreadSeq: z.number().int().positive(),
+    summary: ThreadSummarySchema,
+    cursor: z.number().int().nonnegative(),
+  }),
+  z.object({
+    kind: z.literal('removed'),
+    threadSeq: z.number().int().positive(),
+    summary: ThreadSummarySchema,
+    cursor: z.number().int().nonnegative(),
+  }),
+]);
+export type DeleteThreadEventResponse = z.infer<typeof DeleteThreadEventResponseSchema>;
+
+export const UndoCompactResponseSchema = z.object({
+  removedThreadSeq: z.number().int().positive(),
+  summary: ThreadSummarySchema,
+  cursor: z.number().int().nonnegative(),
+});
+export type UndoCompactResponse = z.infer<typeof UndoCompactResponseSchema>;
+
+export const THREAD_HISTORY_PAGE_RUNS = 20;
+export const THREAD_HISTORY_PAGE_MAX_BYTES = 1_500_000;
+export const THREAD_HISTORY_RANGE_MAX_EVENTS = 8_000;
+
+export const ThreadHistoryQuerySchema = z
+  .object({
+    beforeThreadSeq: z.coerce.number().int().positive().optional(),
+    fromThreadSeq: z.coerce.number().int().positive().optional(),
+    toThreadSeq: z.coerce.number().int().positive().optional(),
+    aroundThreadSeq: z.coerce.number().int().positive().optional(),
+    limitRuns: z.coerce.number().int().min(1).max(100).optional(),
+  })
+  .refine((q) => (q.fromThreadSeq === undefined) === (q.toThreadSeq === undefined), {
+    message: 'fromThreadSeq and toThreadSeq must be provided together',
+  })
+  .refine((q) => q.beforeThreadSeq === undefined || q.fromThreadSeq === undefined, {
+    message: 'beforeThreadSeq is mutually exclusive with fromThreadSeq/toThreadSeq',
+  })
+  .refine(
+    (q) =>
+      q.aroundThreadSeq === undefined ||
+      (q.beforeThreadSeq === undefined &&
+        q.fromThreadSeq === undefined &&
+        q.toThreadSeq === undefined),
+    {
+      message:
+        'aroundThreadSeq is mutually exclusive with beforeThreadSeq/fromThreadSeq/toThreadSeq',
+    },
+  );
+export type ThreadHistoryQuery = z.infer<typeof ThreadHistoryQuerySchema>;
+
+export const ThreadHistoryPageSchema = z.object({
+  kind: z.enum(['tail', 'before', 'range']),
+  summary: ThreadSummarySchema,
+  events: z.array(z.unknown()),
+  minThreadSeq: z.number().int().nonnegative(),
+  maxThreadSeq: z.number().int().nonnegative(),
+  hasMoreBefore: z.boolean(),
+  hasMoreAfter: z.boolean(),
+  hiddenRunsBefore: z.number().int().nonnegative().nullable(),
+  firstUserThreadSeq: z.number().int().positive().nullable(),
+});
+export type ThreadHistoryPage = z.infer<typeof ThreadHistoryPageSchema>;
+
+export const RunArtifactSchema = z.object({
+  attachmentId: z.string(),
+  name: z.string(),
+  mediaType: z.string(),
+  sizeBytes: z.number().int().nonnegative().optional(),
+});
+export type RunArtifact = z.infer<typeof RunArtifactSchema>;
+
+export const ThreadSubtreeResponseSchema = z.object({
+  events: z.array(z.unknown()),
+  outputTruncated: z.boolean().optional(),
+});
+export type ThreadSubtreeResponse = z.infer<typeof ThreadSubtreeResponseSchema>;
+
+export const ThreadArtifactsResponseSchema = z.object({
+  items: z.array(RunArtifactSchema),
+});
+export type ThreadArtifactsResponse = z.infer<typeof ThreadArtifactsResponseSchema>;
+
 export const CreateThreadBodySchema = z.object({
   agentId: z.string().uuid(),
   agentIds: z.array(z.string().uuid()).max(8).optional(),

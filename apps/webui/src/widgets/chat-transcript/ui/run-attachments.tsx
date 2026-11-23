@@ -1,4 +1,4 @@
-import type { FeedRun, ThreadFeeds } from '@/entities/session';
+import type { FeedRun } from '@/entities/session';
 import { cn } from '@/shared/lib/utils';
 import type { FileArtifactInfo } from './file-artifact';
 import { FileArtifact, parseFileArtifact } from './file-artifact';
@@ -21,23 +21,6 @@ export function collectRunAttachments(run: FeedRun): RunAttachment[] {
         continue;
       }
       collectChunkAttachments(item.chunks, seen, found);
-    }
-  }
-  return found;
-}
-
-export function collectThreadAttachments(feeds: ThreadFeeds | undefined): RunAttachment[] {
-  if (!feeds) {
-    return [];
-  }
-  const seen = new Set<string>();
-  const found: RunAttachment[] = [];
-  for (const run of [...feeds.inherited.runs, ...feeds.own.runs]) {
-    for (const attachment of collectRunAttachments(run)) {
-      if (!seen.has(attachment.info.attachmentId)) {
-        seen.add(attachment.info.attachmentId);
-        found.push(attachment);
-      }
     }
   }
   return found;

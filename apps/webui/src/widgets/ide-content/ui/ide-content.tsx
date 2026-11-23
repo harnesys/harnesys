@@ -8,7 +8,7 @@ import { BoardSurface } from '@/features/manage-issues';
 import { openFileKind } from '@/features/open-file';
 import { HitlPrompt } from '@/features/send-message';
 import { SourceControlDiffView } from '@/features/source-control';
-import { ApiError, getOrgAgent, getThread } from '@/shared/api';
+import { ApiError, getOrgAgent, getThreadSummary } from '@/shared/api';
 import { useOrgId } from '@/shared/config/location';
 import { useStudioNavigation } from '@/shared/config/navigation';
 import { Spinner } from '@/shared/ui/spinner';
@@ -82,7 +82,7 @@ function ThreadTabContent({
   );
   const threadQuery = useQuery({
     queryKey: ['thread-detail', threadId],
-    queryFn: () => getThread(threadId),
+    queryFn: () => getThreadSummary(threadId),
     enabled: !isHydrating && !thread,
     retry: false,
   });

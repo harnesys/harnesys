@@ -8,7 +8,7 @@ import {
   toClientThread,
   useThreadStore,
 } from '@/entities/thread';
-import { createThreadRecord, deleteThreadRecord, getThread } from '@/shared/api';
+import { createThreadRecord, deleteThreadRecord } from '@/shared/api';
 export function threadById(threads: Thread[], threadId: string): Thread | null {
   return threads.find((thread) => thread.id === threadId) ?? null;
 }
@@ -98,11 +98,6 @@ export async function branchThread(
   useThreadStore.getState().upsert(thread);
   useSessionStore.getState().replaceEvents(record.id, record.events);
   setActiveThreadId(agent.id, thread.id);
-  const full = await getThread(thread.id).catch(() => null);
-  if (full) {
-    useThreadStore.getState().upsert(toClientThread(full));
-    useSessionStore.getState().replaceEvents(full.id, full.events);
-  }
   return thread.id;
 }
 function titleSource(events: SessionEvent[], forkAt: string): string {

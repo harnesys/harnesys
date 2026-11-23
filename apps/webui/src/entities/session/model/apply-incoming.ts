@@ -1,20 +1,78 @@
 import type { SessionEvent } from '@harnesys/studio-shared';
+import { LIVE_TAIL_ANCHORS } from '@/shared/config/constants';
 import { isToolInputStream, mergeDeltaContinuation, mergeIncomingEvent } from './coalesce-events';
 import { eventKey, hasClientEventId, stableEventKey } from './event-keys';
 import type { FeedDecision } from './feed/feed-types';
+import { TERMINAL_EVENT_TYPES } from './session-types';
 export interface ThreadLog {
   events: SessionEvent[];
   seenAt: Record<string, number>;
   seqCeil: Record<string, number>;
+  tailCap?: number;
 }
 export type ApplyIncomingResult = ThreadLog & {
   accepted: number;
   immediateEpoch: boolean;
+  trimmed: boolean;
 };
+interface TrimmedTail {
+  events: SessionEvent[];
+  removed: SessionEvent[];
+}
+const TAIL_ANCHOR_TYPES = new Set([
+  ...TERMINAL_EVENT_TYPES,
+  'ask',
+  'wait.started',
+  'hitl.answer',
+  'wait.resumed',
+]);
 function isCoalescedStream(event: SessionEvent): boolean {
   return (
     event.type === 'text-delta' || event.type === 'reasoning-delta' || isToolInputStream(event)
   );
+}
+function trimTail(events: SessionEvent[], max: number): TrimmedTail {
+  const start = events.length - max;
+  const keep = new Set<number>();
+  for (let index = start; index < events.length; index += 1) {
+    keep.add(index);
+  }
+  let anchors = 0;
+  for (let index = start - 1; index >= 0 && anchors < LIVE_TAIL_ANCHORS; index -= 1) {
+    const event = events[index];
+    if (event === undefined || !TAIL_ANCHOR_TYPES.has(event.type)) {
+      continue;
+    }
+    keep.add(index);
+    anchors += 1;
+  }
+  return {
+    events: events.filter((_, index) => keep.has(index)),
+    removed: events.filter((_, index) => !keep.has(index)),
+  };
+}
+
+function capTail(
+  events: SessionEvent[],
+  seenAt: Record<string, number>,
+  tailCap: number | undefined,
+): TrimmedTail & { seenAt: Record<string, number> } {
+  if (tailCap === undefined || events.length <= tailCap) {
+    return { events, removed: [], seenAt };
+  }
+  const trimmed = trimTail(events, tailCap);
+  let pruned = seenAt;
+  for (const event of trimmed.removed) {
+    const key = stableEventKey(event);
+    if (key === undefined || pruned[key] === undefined) {
+      continue;
+    }
+    if (pruned === seenAt) {
+      pruned = { ...seenAt };
+    }
+    delete pruned[key];
+  }
+  return { ...trimmed, seenAt: pruned };
 }
 export function applyIncomingEvents(
   current: ThreadLog,
@@ -98,7 +156,15 @@ export function applyIncomingEvents(
       return seenCopy;
     });
   }
-  return { events, seenAt, seqCeil, accepted, immediateEpoch };
+  const capped = capTail(events, seenAt, current.tailCap);
+  return {
+    events: capped.events,
+    seenAt: capped.seenAt,
+    seqCeil,
+    accepted,
+    immediateEpoch,
+    trimmed: capped.events !== events,
+  };
 }
 function rememberSeen(event: SessionEvent, now: number, copy: () => Record<string, number>): void {
   const key = stableEventKey(event);

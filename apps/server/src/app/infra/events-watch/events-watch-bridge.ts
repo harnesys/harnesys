@@ -15,6 +15,7 @@ import type {
   EventsWatchTerminalFrame,
   EventsWatchThreadErrorFrame,
   EventsWatchThreadEventsFrame,
+  EventsWatchThreadLogChangedFrame,
   KnowledgeIndexState,
   TerminalWatchEvent,
 } from '@harnesys/studio-shared';
@@ -164,6 +165,16 @@ export class EventsWatchBridge implements ModuleInitHook, ModuleDestroyHook {
         events: event.events,
       };
       this.hub.publish(orgId, 'thread-events', frame);
+      return;
+    }
+    if (event.type === 'log-changed') {
+      const logFrame: EventsWatchThreadLogChangedFrame = {
+        orgId,
+        threadId: event.threadId,
+        deletions: event.deletions,
+        serverMax: event.serverMax,
+      };
+      this.hub.publish(orgId, 'thread-log-changed', logFrame);
       return;
     }
     const frame: EventsWatchThreadErrorFrame = { orgId, event };

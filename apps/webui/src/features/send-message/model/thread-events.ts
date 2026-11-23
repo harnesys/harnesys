@@ -2,9 +2,10 @@ import type { EventsWatchThreadEventsFrame, SessionEvent } from '@harnesys/studi
 import { useAgentStore } from '@/entities/agent';
 import { useActiveOrgStore, useOrgActivityStore } from '@/entities/org-machine';
 import { hasPendingAppend, useSessionStore } from '@/entities/session';
-import { toClientThread, useThreadStore } from '@/entities/thread';
+import { useThreadStore } from '@/entities/thread';
+import { refreshThread } from '@/features/desk/model/refresh-thread';
 import { useThreadQueueStore } from '@/features/message-queue';
-import { getThread } from '@/shared/api';
+import { getThreadHistory } from '@/shared/api';
 import { playNotifySound } from '@/shared/lib/notification-sound';
 import { trace } from '@/shared/lib/trace';
 import { duplicateDelivery } from './delivery';
@@ -26,16 +27,35 @@ export function dispatchThreadEvents(frame: EventsWatchThreadEventsFrame): void 
 
 export async function resyncThreadEvents(orgId: string): Promise<void> {
   const session = useSessionStore.getState();
-  const threads = useThreadStore
+  const threadIds = useThreadStore
     .getState()
-    .items.filter(
-      (thread) =>
-        thread.orgId === orgId &&
-        (session.activeRuns[thread.id] !== undefined ||
-          session.events[thread.id] !== undefined ||
-          thread.activeRunId !== null),
-    );
-  await Promise.all(threads.map((thread) => reconcileThread(thread.id)));
+    .items.filter((thread) => thread.orgId === orgId && session.history[thread.id] !== undefined)
+    .map((thread) => thread.id);
+  await Promise.all(threadIds.map((threadId) => resyncThreadRange(threadId)));
+}
+
+export async function resyncThreadRange(threadId: string): Promise<void> {
+  const window = useSessionStore.getState().history[threadId];
+  if (window === undefined) {
+    await reconcileThread(threadId);
+    return;
+  }
+  const expectVersion = window.windowVersion;
+  const toThreadSeq = window.maxThreadSeq;
+  let fromThreadSeq = window.minThreadSeq;
+  for (;;) {
+    const page = await getThreadHistory(threadId, { fromThreadSeq, toThreadSeq });
+    syncRunStateFromThread(page.summary.id, page.summary.activeRun ?? null);
+    const applied = useSessionStore.getState().applyHistoryPage(threadId, page, {
+      expectVersion,
+      rangeFrom: fromThreadSeq,
+      rangeTo: toThreadSeq,
+    });
+    if (!applied || !page.hasMoreAfter || page.maxThreadSeq <= fromThreadSeq) {
+      return;
+    }
+    fromThreadSeq = page.maxThreadSeq;
+  }
 }
 
 function isDuplicate(threadId: string, event: SessionEvent): boolean {
@@ -135,13 +155,7 @@ function setError(threadId: string, message: string): void {
 
 export async function reconcileThread(threadId: string): Promise<void> {
   try {
-    const record = await getThread(threadId);
-    useThreadStore.getState().upsert(toClientThread(record));
-    syncRunStateFromThread(record.id, record.activeRun ?? null);
-    useSessionStore.getState().reconcileEvents(threadId, record.events);
-    if (record.unread) {
-      useThreadStore.getState().markUnread(threadId);
-    }
+    await refreshThread(threadId);
   } catch (error) {
     trace('thread-events', 'reconcile failed', error instanceof Error ? error.message : error);
   }

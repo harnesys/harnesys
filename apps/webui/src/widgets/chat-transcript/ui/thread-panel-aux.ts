@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { type FeedRun, hasCompactedAnchor, useSessionStore } from '@/entities/session';
+import { type FeedRun, hasCompactedAnchor } from '@/entities/session';
 import type { Thread } from '@/entities/thread';
 import { onRevealMessageRequest } from '@/features/send-message';
 import type { BranchChild } from './branch-point-badge';
@@ -13,19 +12,6 @@ export function registerRevealRequest(
       setRevealState({ threadId, key: messageId });
     }
   });
-}
-
-export function useThreadFeedBoundary(
-  threadId: string,
-  active: boolean,
-  inheritedCount: number,
-): void {
-  useEffect(() => {
-    if (!active) {
-      return;
-    }
-    useSessionStore.getState().setThreadFeedBoundary(threadId, inheritedCount);
-  }, [active, threadId, inheritedCount]);
 }
 
 export function groupBranchChildren(

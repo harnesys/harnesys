@@ -31,6 +31,7 @@ export {
   deskTerminalsKey,
 } from './model/desk-queries';
 export { useDeskReady } from './model/desk-store-sync';
+export { loadEarlier } from './model/load-earlier';
 export { scheduleMarkThreadRead } from './model/mark-thread-read';
 export { resetOrgState } from './model/org-reset';
 export { ensureThreadCached, refreshThread } from './model/refresh-thread';

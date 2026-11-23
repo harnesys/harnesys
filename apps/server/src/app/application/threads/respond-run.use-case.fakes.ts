@@ -157,6 +157,10 @@ class StubThreads extends ThreadRepositoryPort {
   threadIdsWithRuns(): Set<string> {
     return new Set();
   }
+
+  threadHasRuns(_orgId: string, threadId: string): boolean {
+    return this.threadIdsWithRuns().has(threadId);
+  }
 }
 
 export class StubExecutor extends LocalExecutorPort {

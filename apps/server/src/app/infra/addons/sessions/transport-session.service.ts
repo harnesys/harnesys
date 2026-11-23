@@ -121,6 +121,8 @@ export class TransportSessionService {
         case 'cleared':
           this.drafts.dropThread(orgId, event.threadId);
           return;
+        case 'log-changed':
+          return;
       }
     } catch (error) {
       this.logger.warn(

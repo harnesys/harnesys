@@ -5,6 +5,7 @@ import {
   type RunEventRow,
   runEventsTable,
   runsTable,
+  threadLogDeletionsTable,
   threadsTable,
 } from '../org-sqlite/schema/index.ts';
 import { bumpConversationCount } from '../org-sqlite/thread-transcript.store.ts';
@@ -69,6 +70,14 @@ export function truncateThreadEvents(
     .from(runEventsTable)
     .where(and(eq(runEventsTable.threadId, threadId), eq(runEventsTable.type, 'user')))
     .all().length;
+  tx.insert(threadLogDeletionsTable)
+    .values({
+      threadId,
+      fromThreadSeq: threadSeq,
+      toThreadSeq: 0,
+      deletedAt: Date.now(),
+    })
+    .run();
   return { cutoff, removedEvents: tail.length, removedRunIds, remainingUserCount };
 }
 
@@ -97,6 +106,9 @@ export function removeThreadEventRow(
   if (target.type === 'run.failed' || target.type === 'error') {
     clearThreadLastErrorForRuns(tx, threadId, runIds);
   }
+  tx.insert(threadLogDeletionsTable)
+    .values({ threadId, fromThreadSeq: threadSeq, toThreadSeq: threadSeq, deletedAt: Date.now() })
+    .run();
   return { removed, runDeleted: deleted };
 }
 

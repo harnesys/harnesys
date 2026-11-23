@@ -14,6 +14,7 @@ import type {
   EventsWatchThreadErrorEvent,
   EventsWatchThreadErrorFrame,
   EventsWatchThreadEventsFrame,
+  EventsWatchThreadLogChangedFrame,
   KnowledgeIndexState,
   TerminalWatchEvent,
 } from '@harnesys/studio-shared';
@@ -59,6 +60,24 @@ export function watchThreadEvents(
       }
     },
     { orgId, ...(options?.onOpen === undefined ? {} : { onOpen: options.onOpen }) },
+  );
+}
+
+export function watchThreadLogChanged(
+  orgId: string,
+  onFrame: (frame: EventsWatchThreadLogChangedFrame) => void,
+): () => void {
+  return watchEventSource(
+    eventsWatchUrl,
+    'thread-log-changed',
+    (data) => {
+      try {
+        onFrame(JSON.parse(data) as EventsWatchThreadLogChangedFrame);
+      } catch {
+        // ignore malformed frames
+      }
+    },
+    { orgId },
   );
 }
 

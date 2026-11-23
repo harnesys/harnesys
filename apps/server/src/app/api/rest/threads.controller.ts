@@ -5,6 +5,7 @@ import type {
   AddThreadParticipantBody,
   CancelRunResponse,
   CreateThreadBody,
+  DeleteThreadEventResponse,
   ListThreadsResponse,
   RejectRunBody,
   RespondRunBody,
@@ -38,7 +39,6 @@ import { CreateThreadUseCase } from '../../application/threads/create-thread.use
 import { DeleteThreadUseCase } from '../../application/threads/delete-thread.use-case.ts';
 import { DeleteThreadEventUseCase } from '../../application/threads/delete-thread-event.use-case.ts';
 import { DeleteThreadPlanUseCase } from '../../application/threads/delete-thread-plan.use-case.ts';
-import { GetThreadUseCase } from '../../application/threads/get-thread.use-case.ts';
 import type { GetThreadEventResponse } from '../../application/threads/get-thread-event.use-case.ts';
 import { GetThreadEventUseCase } from '../../application/threads/get-thread-event.use-case.ts';
 import { GetThreadPlanUseCase } from '../../application/threads/get-thread-plan.use-case.ts';
@@ -63,7 +63,6 @@ import { streamRunSse } from './thread-run-sse.ts';
 export class ThreadsController {
   constructor(
     private readonly listThreads: ListThreadsUseCase,
-    private readonly getThread: GetThreadUseCase,
     private readonly createThread: CreateThreadUseCase,
     private readonly sendThreadRun: SendThreadRunUseCase,
     private readonly cancelRun: CancelRunUseCase,
@@ -104,19 +103,6 @@ export class ThreadsController {
     @Body(CreateThreadBodySchema) body: CreateThreadBody,
   ): Promise<ThreadPublic> {
     return this.createThread.execute({ orgId, body });
-  }
-
-  @Get(':threadId')
-  get(
-    @Param('orgId') orgId: string,
-    @Param('threadId') threadId: string,
-    @SessionPrincipal() principal: Principal,
-  ): Promise<ThreadPublic> {
-    return this.getThread.execute({
-      orgId,
-      threadId,
-      ...(principal.kind === 'user' ? { userId: principal.userId } : {}),
-    });
   }
 
   @Patch(':threadId/policy')
@@ -229,7 +215,7 @@ export class ThreadsController {
     @Param('threadId') threadId: string,
     @Param('threadSeq') threadSeq: string,
     @SessionPrincipal() principal: Principal,
-  ): Promise<ThreadPublic> {
+  ): Promise<DeleteThreadEventResponse> {
     return this.deleteThreadEvent.execute({
       orgId,
       threadId,

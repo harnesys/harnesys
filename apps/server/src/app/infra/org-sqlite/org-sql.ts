@@ -623,6 +623,19 @@ CREATE INDEX IF NOT EXISTS runs_claim_idx ON runs(status, created_at);
 CREATE INDEX IF NOT EXISTS runs_ask_ttl_idx ON runs(status, updated_at);
 CREATE INDEX IF NOT EXISTS runs_wait_fire_idx ON runs(status, wait_fire_at);
 CREATE INDEX IF NOT EXISTS runs_wake_key_idx ON runs(status, wake_key);
+CREATE INDEX IF NOT EXISTS runs_thread_idx ON runs(thread_id);
+`;
+
+export const CREATE_THREAD_LOG_DELETIONS_SQL = `
+CREATE TABLE IF NOT EXISTS thread_log_deletions (
+  thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+  from_thread_seq INTEGER NOT NULL,
+  to_thread_seq INTEGER NOT NULL,
+  deleted_at INTEGER NOT NULL,
+  PRIMARY KEY (thread_id, from_thread_seq)
+);
+CREATE INDEX IF NOT EXISTS thread_log_deletions_thread_idx
+  ON thread_log_deletions(thread_id);
 `;
 
 export const CREATE_RUN_EVENTS_SQL = `

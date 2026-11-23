@@ -1,20 +1,19 @@
 import type {
+  RunArtifact,
   ThreadAttachment,
   ThreadFileEntry,
   ThreadFilesTreeResponse,
 } from '@harnesys/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { useThreadFeeds } from '@/entities/session';
 import { type ThreadWorktreeBinding, useThreadWorktreeStore } from '@/entities/thread';
 import { useSelectedThread } from '@/features/desk';
 import { openThreadFileTab, useIdeStore } from '@/features/ide';
 import { openProjectFile } from '@/features/open-file';
-import { listThreadAttachments, listThreadFiles } from '@/shared/api';
+import { getThreadArtifacts, listThreadAttachments, listThreadFiles } from '@/shared/api';
 import { type ContentEntry, type ContentTreeResponse, listContentTree } from '@/shared/api/content';
 import { useStudioNavigation } from '@/shared/config/navigation';
 import { FolderTypeIcon } from '@/shared/ui/icons';
-import { collectThreadAttachments, type RunAttachment } from '@/widgets/chat-transcript';
 import { FileCard, fileCardStat } from './file-card';
 import { RowLeading } from './row-leading';
 
@@ -50,7 +49,7 @@ interface ThreadFileRow {
 
 function mergeThreadFiles(
   uploads: ThreadAttachment[] | undefined,
-  artifacts: RunAttachment[],
+  artifacts: RunArtifact[] | undefined,
 ): ThreadFileRow[] {
   const byId = new Map<string, ThreadFileRow>();
   for (const upload of uploads ?? []) {
@@ -61,27 +60,30 @@ function mergeThreadFiles(
       sizeBytes: upload.sizeBytes,
     });
   }
-  for (const artifact of artifacts) {
-    if (byId.has(artifact.info.attachmentId)) {
+  for (const artifact of artifacts ?? []) {
+    if (byId.has(artifact.attachmentId)) {
       continue;
     }
-    byId.set(artifact.info.attachmentId, {
-      attachmentId: artifact.info.attachmentId,
-      name: artifact.info.name,
-      mediaType: 'mediaType' in artifact.info ? artifact.info.mediaType : '',
-      sizeBytes: 'size' in artifact.info ? artifact.info.size : undefined,
+    byId.set(artifact.attachmentId, {
+      attachmentId: artifact.attachmentId,
+      name: artifact.name,
+      mediaType: artifact.mediaType,
+      sizeBytes: artifact.sizeBytes,
     });
   }
   return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function ThreadFilesSection({ threadId }: { threadId: string }) {
-  const feeds = useThreadFeeds(threadId);
   const uploadsQuery = useQuery({
     queryKey: ['thread-attachments', threadId],
     queryFn: () => listThreadAttachments(threadId),
   });
-  const files = mergeThreadFiles(uploadsQuery.data, collectThreadAttachments(feeds));
+  const artifactsQuery = useQuery({
+    queryKey: ['thread-artifacts', threadId],
+    queryFn: () => getThreadArtifacts(threadId),
+  });
+  const files = mergeThreadFiles(uploadsQuery.data, artifactsQuery.data?.items);
   return (
     <section className="flex flex-col gap-2">
       <SectionLabel>Attachments</SectionLabel>

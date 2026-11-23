@@ -67,6 +67,16 @@ export const studioPath = {
   app: (orgId: string, providerId: string) => `/o/${orgId}/settings/apps/${providerId}`,
 };
 
+export const AROUND_THREAD_SEQ_PARAM = 'aroundThreadSeq';
+
+export function parseAroundThreadSeq(raw: string | null): number | undefined {
+  if (raw === null) {
+    return undefined;
+  }
+  const value = Number.parseInt(raw, 10);
+  return Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
 export function parseWindowSettingsCategory(value: string | undefined): WindowSettingsCategory {
   if (value && (WINDOW_SETTINGS_CATEGORIES as readonly string[]).includes(value)) {
     return value as WindowSettingsCategory;

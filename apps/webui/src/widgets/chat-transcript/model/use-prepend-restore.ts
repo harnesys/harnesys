@@ -1,4 +1,4 @@
-import { type MouseEvent, useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 
 interface PrependAnchor {
   el: HTMLElement;
@@ -23,10 +23,8 @@ export function usePrependRestore(windowSize: number) {
       viewport.scrollTop += delta;
     }
   }, [windowSize]);
-  return (event: MouseEvent<HTMLButtonElement>, nextSize: number) => {
-    const anchor = event.currentTarget.closest(
-      '[data-slot="message-scroller-item"]',
-    )?.nextElementSibling;
+  return (target: Element, nextSize: number) => {
+    const anchor = target.closest('[data-slot="message-scroller-item"]')?.nextElementSibling;
     if (anchor instanceof HTMLElement) {
       anchorRef.current = { el: anchor, top: anchor.getBoundingClientRect().top, size: nextSize };
     }

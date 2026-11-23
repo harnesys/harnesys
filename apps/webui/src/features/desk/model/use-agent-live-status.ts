@@ -1,7 +1,7 @@
 import type { SessionEvent } from '@harnesys/studio-shared';
 import { useShallow } from 'zustand/react/shallow';
 import type { AgentStatus } from '@/entities/agent';
-import { useSessionStore } from '@/entities/session';
+import { TERMINAL_EVENT_TYPES, useSessionStore } from '@/entities/session';
 import { useThreadStore } from '@/entities/thread';
 export function useAgentLiveStatus(agentId: string): AgentStatus {
   const threads = useThreadStore(
@@ -35,26 +35,7 @@ export function useThreadWaiting(threadId: string | null): boolean {
     return isWaiting(state.events[threadId] ?? []);
   });
 }
-const TERMINAL_EVENT_TYPES = new Set([
-  'done',
-  'error',
-  'run.completed',
-  'run.failed',
-  'run.cancelled',
-]);
-const waitingCache = new WeakMap<SessionEvent[], boolean>();
-const runningCache = new WeakMap<SessionEvent[], boolean>();
 export function isWaiting(events: SessionEvent[]): boolean {
-  const cached = waitingCache.get(events);
-  if (cached !== undefined) {
-    return cached;
-  }
-  const result = computeWaiting(events);
-  waitingCache.set(events, result);
-  return result;
-}
-
-function computeWaiting(events: SessionEvent[]): boolean {
   for (let i = events.length - 1; i >= 0; i--) {
     const event = events[i];
     if (event.type === 'text-delta' || event.type === 'reasoning-delta') {
@@ -74,11 +55,5 @@ function computeWaiting(events: SessionEvent[]): boolean {
 }
 
 function hasRunningSession(events: SessionEvent[]): boolean {
-  const cached = runningCache.get(events);
-  if (cached !== undefined) {
-    return cached;
-  }
-  const result = events.length > 0 && !events.some((e) => TERMINAL_EVENT_TYPES.has(e.type));
-  runningCache.set(events, result);
-  return result;
+  return events.length > 0 && !events.some((e) => TERMINAL_EVENT_TYPES.has(e.type));
 }

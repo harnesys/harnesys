@@ -1,16 +1,9 @@
-import type { SessionEvent } from '@harnesys/studio-shared';
 import { create } from 'zustand';
-import { coalesceStreamDeltas, isToolInputStream } from './coalesce-events';
-import {
-  ceilFromEvents,
-  eventKey,
-  fillSeenAt,
-  stableEventKey,
-  stableKeys,
-  withThreadSeq,
-} from './event-keys';
-import { feedDrop, feedSetBoundary, feedUpdate } from './feed/feed-engine';
-import type { ThreadFeeds } from './feed/feed-types';
+import { dropDeletedEvents, withoutSentSkills } from './apply-deletions';
+import { isToolInputStream } from './coalesce-events';
+import { eventKey, withThreadSeq } from './event-keys';
+import { feedDrop, feedUpdate } from './feed/feed-engine';
+import { createHistoryActions } from './history-actions';
 import { clearLiveTail, clearLiveTails, ingestLiveDelta, sealLiveTail } from './live-tail';
 import {
   cancelEpochFlush,
@@ -20,53 +13,22 @@ import {
   scheduleEpochFlush,
   takePending,
 } from './pending-appends';
-import { mergeSeqCeil, reconcileSnapshot, sameThreadLog } from './reconcile-snapshot';
-import { applyBatches, EMPTY_EVENTS, isStreamDeltaType } from './session-batches';
+import { applyBatches, isStreamDeltaType } from './session-batches';
+import { EMPTY_EVENTS, type SessionStoreActions, type SessionStoreState } from './session-types';
+import { clearThreadLog, installFullSnapshot } from './thread-log';
 import { withoutThreads } from './without-threads';
-export interface ActiveRun {
-  runId: string;
-  controller: AbortController;
-}
-export interface RunFailure {
-  id: string;
-  threadId: string;
-  text: string;
-}
-export interface SessionStoreState {
-  events: Record<string, SessionEvent[]>;
-  feeds: Record<string, ThreadFeeds>;
-  seenAt: Record<string, Record<string, number>>;
-  seqCeil: Record<string, Record<string, number>>;
-  activeRuns: Record<string, ActiveRun>;
-  failures: RunFailure[];
-  contentEpoch: Record<string, number>;
-  sentSkills: Record<string, string[]>;
-  historyLoaded: Record<string, boolean>;
-}
-interface SessionStoreActions {
-  eventsOf: (threadId: string) => SessionEvent[];
-  replaceEvents: (threadId: string, events: SessionEvent[]) => void;
-  reconcileEvents: (threadId: string, events: SessionEvent[]) => void;
-  appendEvent: (threadId: string, event: SessionEvent) => void;
-  removeEventByClientEventId: (threadId: string, clientEventId: string) => void;
-  setEventThreadSeq: (threadId: string, clientEventId: string, threadSeq: number) => void;
-  setSentSkills: (threadId: string, clientEventId: string, skills: string[]) => void;
-  sentSkillsFor: (clientEventId: string) => string[] | undefined;
-  dismissFailure: (threadId: string, id: string) => void;
-  startRun: (threadId: string, controller: AbortController, runId?: string) => void;
-  finishRun: (threadId: string, runId?: string) => void;
-  abortRun: (threadId: string) => void;
-  setRunId: (threadId: string, runId: string) => void;
-  runIdOf: (threadId: string) => string | undefined;
-  isStreaming: (threadId: string) => boolean;
-  setFailure: (failure: RunFailure) => void;
-  removeForThreads: (threadIds: string[]) => void;
-  copyEvents: (fromThreadId: string, toThreadId: string) => void;
-  refreshThreadFeed: (threadId: string) => void;
-  setThreadFeedBoundary: (threadId: string, count: number) => void;
-}
+
+export type {
+  ActiveRun,
+  HistoryApplyOptions,
+  RunFailure,
+  ThreadHistoryWindow,
+  ThreadLogSnapshot,
+} from './session-types';
+
 const EPOCH_DELTA_MS = 400;
-export const useSessionStore = create<SessionStoreState & SessionStoreActions>((set, get) => {
+
+export const useSessionStore = create<SessionStoreState & SessionStoreActions>((set, get, api) => {
   const flushPending = () => {
     cancelEpochFlush();
     if (!hasPending()) {
@@ -75,62 +37,62 @@ export const useSessionStore = create<SessionStoreState & SessionStoreActions>((
     set((state) => applyBatches(state, takePending()));
   };
   return {
+    ...createHistoryActions(api),
     events: {},
     feeds: {},
+    viewedSeq: {},
     seenAt: {},
     seqCeil: {},
     activeRuns: {},
     failures: [],
     contentEpoch: {},
     sentSkills: {},
-    historyLoaded: {},
+    history: {},
+    touchedAt: {},
+    mountedThreads: [],
+    focusedThreadId: null,
     eventsOf(threadId: string) {
       return get().events[threadId] ?? EMPTY_EVENTS;
     },
     replaceEvents(threadId, events) {
-      clearLiveTail(threadId);
-      const coalesced = coalesceStreamDeltas(events);
-      const now = Date.now();
-      set((state) => {
-        const base = applyBatches(state, takePending());
-        const seenAt = fillSeenAt(base.seenAt, threadId, stableKeys(coalesced), now);
-        return {
-          events: { ...base.events, [threadId]: coalesced },
-          feeds: {
-            ...base.feeds,
-            [threadId]: feedUpdate(threadId, coalesced, seenAt[threadId] ?? {}, null),
-          },
-          seenAt,
-          seqCeil: { ...base.seqCeil, [threadId]: ceilFromEvents(events) },
-          contentEpoch: { ...base.contentEpoch, [threadId]: now },
-          historyLoaded: { ...base.historyLoaded, [threadId]: true },
-        };
-      });
+      get().applyFullSnapshot(threadId, { events });
     },
-    reconcileEvents(threadId, serverEvents) {
+    applyFullSnapshot(threadId, record) {
+      clearLiveTail(threadId);
+      dropPendingThreads([threadId]);
+      set((state) => installFullSnapshot(applyBatches(state, takePending()), threadId, record));
+      get().trimHistoryCache();
+    },
+    applyDeletions(threadId, deletions) {
+      const state = get();
+      const next = dropDeletedEvents(state, threadId, deletions);
+      if (next === state) {
+        return false;
+      }
+      set(next);
+      return true;
+    },
+    dropThreadLog(threadId) {
+      dropPendingThreads([threadId]);
+      clearLiveTail(threadId);
+      feedDrop([threadId]);
+      set((state) => clearThreadLog(state, threadId));
+    },
+    removeEventAt(threadId, threadSeq) {
+      return get().applyDeletions(threadId, [{ from: threadSeq, to: threadSeq }]);
+    },
+    truncateFrom(threadId, threadSeq) {
+      return get().applyDeletions(threadId, [{ from: threadSeq, to: 0 }]);
+    },
+    setHistoryCursor(threadId, cursor) {
       set((state) => {
-        const current = state.events[threadId] ?? EMPTY_EVENTS;
-        const merged = reconcileSnapshot(current, serverEvents);
-        const historyLoaded = { ...state.historyLoaded, [threadId]: true };
-        if (sameThreadLog(current, merged)) {
-          return { ...state, historyLoaded };
+        const window = state.history[threadId];
+        if (window === undefined || window.maxThreadSeq === cursor) {
+          return state;
         }
-        const now = Date.now();
-        const seenAt = fillSeenAt(state.seenAt, threadId, stableKeys(merged), now);
         return {
           ...state,
-          events: { ...state.events, [threadId]: merged },
-          feeds: {
-            ...state.feeds,
-            [threadId]: feedUpdate(threadId, merged, seenAt[threadId] ?? {}, null),
-          },
-          seenAt,
-          seqCeil: {
-            ...state.seqCeil,
-            [threadId]: mergeSeqCeil(state.seqCeil[threadId] ?? {}, serverEvents),
-          },
-          contentEpoch: { ...state.contentEpoch, [threadId]: now },
-          historyLoaded,
+          history: { ...state.history, [threadId]: { ...window, maxThreadSeq: cursor } },
         };
       });
     },
@@ -277,12 +239,7 @@ export const useSessionStore = create<SessionStoreState & SessionStoreActions>((
       feedDrop(threadIds);
       set((state) => {
         const base = applyBatches(state, takePending());
-        const sentSkills = { ...base.sentSkills };
-        for (const id of threadIds) {
-          for (const ev of base.events[id] ?? []) {
-            delete sentSkills[stableEventKey(ev) ?? ''];
-          }
-        }
+        const removed = threadIds.flatMap((id) => base.events[id] ?? []);
         return {
           ...base,
           events: withoutThreads(base.events, threadIds),
@@ -291,36 +248,10 @@ export const useSessionStore = create<SessionStoreState & SessionStoreActions>((
           seqCeil: withoutThreads(base.seqCeil, threadIds),
           activeRuns: withoutThreads(base.activeRuns, threadIds),
           contentEpoch: withoutThreads(base.contentEpoch, threadIds),
-          historyLoaded: withoutThreads(base.historyLoaded, threadIds),
-          sentSkills,
-        };
-      });
-    },
-    copyEvents(fromThreadId, toThreadId) {
-      set((state) => {
-        const base = applyBatches(state, takePending());
-        const source = base.events[fromThreadId];
-        if (!source) {
-          return base;
-        }
-        const sourceSeen = base.seenAt[fromThreadId];
-        const sourceCeil = base.seqCeil[fromThreadId];
-        const seenAt =
-          sourceSeen === undefined
-            ? base.seenAt
-            : { ...base.seenAt, [toThreadId]: { ...sourceSeen } };
-        return {
-          ...base,
-          events: { ...base.events, [toThreadId]: [...source] },
-          feeds: {
-            ...base.feeds,
-            [toThreadId]: feedUpdate(toThreadId, source, seenAt[toThreadId] ?? {}, null),
-          },
-          ...(sourceSeen === undefined ? {} : { seenAt }),
-          ...(sourceCeil === undefined
-            ? {}
-            : { seqCeil: { ...base.seqCeil, [toThreadId]: { ...sourceCeil } } }),
-          contentEpoch: { ...base.contentEpoch, [toThreadId]: Date.now() },
+          history: withoutThreads(base.history, threadIds),
+          viewedSeq: withoutThreads(base.viewedSeq, threadIds),
+          touchedAt: withoutThreads(base.touchedAt, threadIds),
+          sentSkills: withoutSentSkills(base.sentSkills, removed),
         };
       });
     },
@@ -336,11 +267,6 @@ export const useSessionStore = create<SessionStoreState & SessionStoreActions>((
           [threadId]: feedUpdate(threadId, events, current.seenAt[threadId] ?? {}, null),
         },
       }));
-    },
-    setThreadFeedBoundary(threadId, count) {
-      if (feedSetBoundary(threadId, count)) {
-        get().refreshThreadFeed(threadId);
-      }
     },
   };
 });

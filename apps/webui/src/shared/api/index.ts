@@ -225,6 +225,18 @@ export {
   updateThreadPolicy,
 } from './thread-groups';
 export {
+  getRunSubtree,
+  getThreadArtifacts,
+  getThreadHistory,
+  getThreadSummary,
+  type RunSubtreeResult,
+  type ThreadHistoryOptions,
+} from './thread-history';
+export {
+  deleteThreadUserEvent,
+  undoThreadCompact,
+} from './thread-mutations';
+export {
   deleteThreadQueueItem,
   deliverThreadQueueItem,
   listThreadQueue,
@@ -239,9 +251,7 @@ export {
   createThreadRecord,
   deleteThreadPlan,
   deleteThreadRecord,
-  deleteThreadUserEvent,
   getRunEventsStream,
-  getThread,
   getThreadEvent,
   getThreadPlan,
   listThreads,
@@ -252,7 +262,8 @@ export {
   respondToRun,
   retryRun,
   sendThreadRun,
-  setThreadPinned,
+  syncThreadEvents,
+  toStudioSummary,
   type UpdateThreadBindingInput,
   updateThreadBinding,
 } from './threads';

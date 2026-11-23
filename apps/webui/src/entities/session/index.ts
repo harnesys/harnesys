@@ -1,26 +1,28 @@
+export { dropDeletedEvents } from './model/apply-deletions.ts';
 export { coalesceStreamDeltas } from './model/coalesce-events.ts';
 export { eventKey, stableEventKey } from './model/event-keys.ts';
 export {
   type CompactionCoverage,
+  type CompactionCoverageMode,
   compactionCoverage,
+  coveredRunCount,
   firstLiveRunIndex,
   isRunCovered,
 } from './model/feed/compaction-coverage.ts';
 export {
-  feedBoundary,
-  feedSetBoundary,
-} from './model/feed/feed-engine.ts';
-export {
   useFeedMap,
   useFeedSpawn,
   useFeedSpawns,
-  useInheritedFeed,
   useThreadFeed,
-  useThreadFeeds,
 } from './model/feed/feed-hooks.ts';
 export { mapForToolCall, mapLineHint } from './model/feed/feed-map-snapshot.ts';
 export { hasCompactedAnchor, hasRunningCompaction, splitRuns } from './model/feed/feed-run-fold.ts';
-export { spawnSubtreeIds, spawnTaskText } from './model/feed/feed-spawns.ts';
+export {
+  createSpawnFold,
+  spawnProcess,
+  spawnSnapshot,
+  spawnTaskText,
+} from './model/feed/feed-spawns.ts';
 export type {
   CompactionSegmentMeta,
   CompactionStatus,
@@ -41,15 +43,21 @@ export type {
   SpawnToolPhase,
   SpawnToolStat,
   ThreadFeed,
-  ThreadFeeds,
   ToolCallDone,
   ToolCallEvent,
   ToolEventPair,
 } from './model/feed/feed-types.ts';
 export type { LiveTail } from './model/live-tail.ts';
 export { useLiveTail } from './model/live-tail.ts';
+export { normalizeThreadEvents } from './model/normalize-events.ts';
 export { hasPendingAppend } from './model/pending-appends.ts';
-export { type ActiveRun, type RunFailure, useSessionStore } from './model/session.store.ts';
+export {
+  type ActiveRun,
+  type RunFailure,
+  type ThreadHistoryWindow,
+  useSessionStore,
+} from './model/session.store.ts';
+export { TERMINAL_EVENT_TYPES } from './model/session-types.ts';
 export {
   type CacheRatioInput,
   cacheHitRatio,

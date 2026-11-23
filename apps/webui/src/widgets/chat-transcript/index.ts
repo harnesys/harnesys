@@ -8,11 +8,8 @@ export { CompactionPendingCard } from './ui/compaction-card';
 export { FeedNotice, type FeedNoticeTone } from './ui/feed-notice';
 export { FileArtifact, type FileArtifactInfo } from './ui/file-artifact';
 export { ImageArtifact, type ImageArtifactInfo } from './ui/image-artifact';
-export {
-  collectRunAttachments,
-  collectThreadAttachments,
-  type RunAttachment,
-} from './ui/run-attachments';
+export { LoadEarlierButton, type RenderWindow, useRenderWindow } from './ui/load-earlier';
+export { collectRunAttachments, type RunAttachment } from './ui/run-attachments';
 export { RunTurn } from './ui/run-turn';
 export { SpawnView } from './ui/spawn-view';
 export { ThreadEmpty } from './ui/thread-empty';

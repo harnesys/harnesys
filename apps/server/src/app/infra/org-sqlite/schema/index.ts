@@ -262,6 +262,11 @@ export {
   sourceWriteLeasesTable,
 } from './source-write-leases.ts';
 export {
+  type ThreadLogDeletionInsert,
+  type ThreadLogDeletionRow,
+  threadLogDeletionsTable,
+} from './thread-log-deletions.ts';
+export {
   type ThreadMessageQueueInsert,
   type ThreadMessageQueueRow,
   threadMessageQueueTable,

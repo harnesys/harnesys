@@ -183,33 +183,6 @@ export function spawnProcessOwned(
   owner.dirty = true;
 }
 
-export function spawnSubtreeIds(events: SessionEvent[], spawnId: string): Set<string> {
-  const childrenOf = new Map<string, string[]>();
-  for (const ev of events) {
-    if (ev.type !== 'agent.spawned' || ev.runId === undefined) {
-      continue;
-    }
-    const children = childrenOf.get(ev.runId);
-    if (children) {
-      children.push(ev.spawnId);
-    } else {
-      childrenOf.set(ev.runId, [ev.spawnId]);
-    }
-  }
-  const subtree = new Set<string>();
-  const walk = (id: string): void => {
-    for (const child of childrenOf.get(id) ?? []) {
-      if (subtree.has(child)) {
-        continue;
-      }
-      subtree.add(child);
-      walk(child);
-    }
-  };
-  walk(spawnId);
-  return subtree;
-}
-
 export function spawnSnapshot(fold: SpawnFold): SpawnInfo[] {
   let changed = fold.drafts.size !== fold.published.length;
   const out: SpawnInfo[] = [];

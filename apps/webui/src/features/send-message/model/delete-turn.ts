@@ -1,12 +1,12 @@
+import type { DeleteThreadEventResponse } from '@harnesys/contracts';
 import { useSessionStore } from '@/entities/session';
 import { toClientThread, useThreadStore } from '@/entities/thread';
-import { deleteThreadUserEvent } from '@/shared/api';
+import { deleteThreadUserEvent, toStudioSummary } from '@/shared/api';
 
 export async function deleteUserMessage(threadId: string, threadSeq: number): Promise<void> {
   useSessionStore.getState().abortRun(threadId);
-  const record = await deleteThreadUserEvent(threadId, threadSeq);
-  useThreadStore.getState().upsert(toClientThread(record));
-  useSessionStore.getState().replaceEvents(record.id, record.events);
+  const response = await deleteThreadUserEvent(threadId, threadSeq);
+  applyDeleteResponse(threadId, response);
   dismissMatchingFailures(threadId);
 }
 
@@ -15,10 +15,20 @@ export async function deleteErrorEvent(
   threadSeq: number,
   knownText?: string,
 ): Promise<void> {
-  const record = await deleteThreadUserEvent(threadId, threadSeq);
-  useThreadStore.getState().upsert(toClientThread(record));
-  useSessionStore.getState().replaceEvents(record.id, record.events);
+  const response = await deleteThreadUserEvent(threadId, threadSeq);
+  applyDeleteResponse(threadId, response);
   dismissMatchingFailures(threadId, knownText);
+}
+
+function applyDeleteResponse(threadId: string, response: DeleteThreadEventResponse): void {
+  useThreadStore.getState().upsert(toClientThread(toStudioSummary(response.summary)));
+  const session = useSessionStore.getState();
+  session.setHistoryCursor(threadId, response.cursor);
+  if (response.kind === 'truncated') {
+    session.applyDeletions(threadId, [{ from: response.fromThreadSeq, to: 0 }]);
+    return;
+  }
+  session.applyDeletions(threadId, [{ from: response.threadSeq, to: response.threadSeq }]);
 }
 
 export function deleteOptimisticUserMessage(threadId: string, clientEventId: string): void {

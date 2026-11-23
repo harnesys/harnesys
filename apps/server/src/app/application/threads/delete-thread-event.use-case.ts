@@ -1,24 +1,15 @@
 import { Injectable } from '@harnesys/brix';
-import type { ThreadPublic } from '@harnesys/contracts';
-import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
-import { NodeRepository } from '../../domain/fleet/node-repository.port.ts';
-import { UserRepository } from '../../domain/identity/user-repository.port.ts';
-import { collectInheritedEvents } from '../../domain/thread/fork-logs.ts';
+import type { DeleteThreadEventResponse } from '@harnesys/contracts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import {
   ThreadNotFoundException,
   ThreadValidationException,
 } from '../../domain/thread/thread.error.ts';
-import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
-import { ThreadParticipantRepositoryPort } from '../../domain/thread/thread-participant-repository.port.ts';
+import { ThreadEventsPort } from '../../domain/thread/thread-events.port.ts';
+import type { ThreadLogDeletion } from '../../domain/thread/thread-history-page.port.ts';
+import { ThreadHistoryPagePort } from '../../domain/thread/thread-history-page.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
-import { runAttributionNamesOf } from './run-attribution.ts';
-import {
-  membersOf,
-  participantsOf,
-  toThreadPublic,
-  waitingForProfileIdFromEvents,
-} from './thread.helpers.ts';
+import { ThreadSummaryAssembler } from './thread-summary.assembler.ts';
 
 export interface DeleteThreadEventRequest {
   orgId: string;
@@ -33,61 +24,56 @@ const DELETABLE_ERROR_TYPES = new Set(['error', 'run.failed']);
 export class DeleteThreadEventUseCase {
   constructor(
     private readonly threads: ThreadRepositoryPort,
-    private readonly threadAgents: ThreadAgentRepositoryPort,
-    private readonly participants: ThreadParticipantRepositoryPort,
-    private readonly agents: AgentRegistryPort,
+    private readonly history: ThreadHistoryPagePort,
+    private readonly assembler: ThreadSummaryAssembler,
     private readonly executor: LocalExecutorPort,
-    private readonly users: UserRepository,
-    private readonly nodes: NodeRepository,
+    private readonly threadEvents: ThreadEventsPort,
   ) {}
 
-  async execute(request: DeleteThreadEventRequest): Promise<ThreadPublic> {
+  async execute(request: DeleteThreadEventRequest): Promise<DeleteThreadEventResponse> {
     const thread = this.threads.findById(request.orgId, request.threadId);
     if (!thread) {
       throw new ThreadNotFoundException(request.threadId);
     }
     const events = await this.executor.events(request.orgId);
-    const target = (await events.listByThread(request.threadId)).find(
-      (event) => event.threadSeq === request.threadSeq,
-    );
+    const target = await events.eventAt(request.threadId, request.threadSeq);
     if (!target) {
       throw new ThreadNotFoundException(`${request.threadId}:${request.threadSeq}`);
     }
-    if (target.type === 'user') {
+    const truncating = target.type === 'user';
+    if (!truncating && !DELETABLE_ERROR_TYPES.has(target.type)) {
+      throw new ThreadValidationException('only user and error events can be deleted');
+    }
+    if (truncating) {
       await this.executor.truncateThreadFrom(request.orgId, request.threadId, request.threadSeq);
-    } else if (DELETABLE_ERROR_TYPES.has(target.type)) {
-      await this.executor.removeThreadEvent(request.orgId, request.threadId, request.threadSeq);
     } else {
-      throw new ThreadValidationException(`only user and error events can be deleted`);
+      await this.executor.removeThreadEvent(request.orgId, request.threadId, request.threadSeq);
     }
     this.threads.touch(request.orgId, request.threadId);
-    const lifecycle = await this.executor.lifecycle(request.orgId);
-    const [active, ownEvents] = await Promise.all([
-      lifecycle.activeByThread(thread.id),
-      events.listByThread(thread.id),
-    ]);
-    const inherited = await collectInheritedEvents(
-      (threadId) => events.listByThread(threadId),
-      (threadId) => this.threads.findById(request.orgId, threadId),
-      thread,
-    );
-    const sessionEvents = [...inherited, ...ownEvents];
-    const deps = {
-      threadAgents: this.threadAgents,
-      participants: this.participants,
-      agents: this.agents,
-    };
-    return toThreadPublic({
-      thread,
-      members: membersOf(deps, request.orgId, thread.id),
-      participants: participantsOf(deps, request.orgId, thread.id),
-      active,
-      events: sessionEvents,
-      inheritedEventCount: inherited.length,
-      waitingForProfileId: waitingForProfileIdFromEvents(sessionEvents),
-      names: runAttributionNamesOf(this.users, this.nodes, request.orgId),
-      bindingLocked: this.threads.threadIdsWithRuns(request.orgId).has(thread.id),
-      userId: request.userId ?? null,
+    const cursor = (
+      await this.history.syncSlice(request.orgId, request.threadId, request.threadSeq, 1)
+    ).serverMax;
+    const deletions: ThreadLogDeletion[] = [
+      { from: request.threadSeq, to: truncating ? 0 : request.threadSeq },
+    ];
+    this.threadEvents.emit(request.orgId, {
+      type: 'log-changed',
+      threadId: request.threadId,
+      deletions,
+      serverMax: cursor,
     });
+    const waitingForProfileId = await this.history.waitingForProfileId(
+      request.orgId,
+      request.threadId,
+    );
+    const summary = await this.assembler.execute({
+      orgId: request.orgId,
+      thread,
+      waitingForProfileId,
+      ...(request.userId === undefined ? {} : { userId: request.userId }),
+    });
+    return truncating
+      ? { kind: 'truncated', fromThreadSeq: request.threadSeq, summary, cursor }
+      : { kind: 'removed', threadSeq: request.threadSeq, summary, cursor };
   }
 }

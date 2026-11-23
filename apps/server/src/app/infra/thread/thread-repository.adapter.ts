@@ -238,6 +238,19 @@ export class ThreadRepositoryAdapter extends ThreadRepositoryPort {
       return new Set(rows.map((row) => row.threadId));
     });
   }
+  threadHasRuns(orgId: string, threadId: string): boolean {
+    return withOrgSqlite(this.layout, orgId, (db) => {
+      const row = db
+        .select({ runId: runsTable.runId })
+        .from(runsTable)
+        .innerJoin(threadsTable, eq(runsTable.threadId, threadsTable.id))
+        .where(and(eq(threadsTable.orgId, orgId), eq(runsTable.threadId, threadId)))
+        .limit(1)
+        .get();
+      return row !== undefined;
+    });
+  }
+
   listActiveRuns(orgId: string): ThreadActiveRun[] {
     return withOrgSqlite(this.layout, orgId, (db) =>
       db

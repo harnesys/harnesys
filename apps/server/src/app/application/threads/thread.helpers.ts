@@ -308,24 +308,6 @@ export function toThreadPublic(
   };
 }
 
-export function toThreadPublicForAgent(input: {
-  thread: ThreadRecord;
-  agentId: string;
-  agentName: string;
-  active: ActiveRunSource | null;
-  events: unknown[];
-  inheritedEventCount?: number;
-}): ThreadPublic {
-  return toThreadPublic({
-    thread: input.thread,
-    members: [{ id: input.agentId, name: input.agentName }],
-    participants: [],
-    active: input.active,
-    events: input.events,
-    inheritedEventCount: input.inheritedEventCount ?? 0,
-  });
-}
-
 export function waitingForProfileIdFromEvents(events: unknown[]): string | undefined {
   for (let i = events.length - 1; i >= 0; i -= 1) {
     const event = events[i];

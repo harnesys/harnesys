@@ -1,8 +1,6 @@
 import { useSessionStore } from '@/entities/session';
 import { toClientThread, useThreadStore } from '@/entities/thread';
-import { getActiveOrgId } from '@/shared/api/active-org';
-import { ApiError, apiJson } from '@/shared/api/client';
-import { getThread } from '@/shared/api/threads';
+import { toStudioSummary, undoThreadCompact } from '@/shared/api';
 
 export interface UndoCompactOptions {
   threadId: string;
@@ -13,17 +11,14 @@ export interface UndoCompactOptions {
 export async function undoCompact(options: UndoCompactOptions): Promise<void> {
   const { threadId } = options;
   try {
-    const orgId = getActiveOrgId();
-    if (!orgId) {
-      throw new ApiError(400, 'No active organization');
-    }
-    await apiJson<unknown>(`/api/threads/${encodeURIComponent(threadId)}/compact/undo`, {
-      method: 'POST',
-    });
+    const response = await undoThreadCompact(threadId);
     useThreadStore.getState().touch(threadId);
-    const record = await getThread(threadId);
-    useThreadStore.getState().upsert(toClientThread(record));
-    useSessionStore.getState().replaceEvents(threadId, record.events);
+    useThreadStore.getState().upsert(toClientThread(toStudioSummary(response.summary)));
+    const session = useSessionStore.getState();
+    session.setHistoryCursor(threadId, response.cursor);
+    session.applyDeletions(threadId, [
+      { from: response.removedThreadSeq, to: response.removedThreadSeq },
+    ]);
     options.onDone?.();
   } catch (error) {
     options.onError?.(error);

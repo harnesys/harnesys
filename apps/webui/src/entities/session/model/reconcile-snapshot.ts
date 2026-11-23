@@ -2,7 +2,7 @@ import type { SessionEvent } from '@harnesys/studio-shared';
 import { coalesceStreamDeltas, isToolInputStream } from './coalesce-events';
 import { ceilFromEvents, stableEventKey } from './event-keys';
 
-interface StreamSlot {
+export interface StreamSlot {
   identity: string;
   seq: number;
   text: string;
@@ -21,7 +21,7 @@ interface SlotRow {
 
 const NO_THREAD_SEQ = Number.MAX_SAFE_INTEGER;
 
-function streamSlotOf(event: SessionEvent): StreamSlot | null {
+export function streamSlotOf(event: SessionEvent): StreamSlot | null {
   if (event.type === 'text-delta' || event.type === 'reasoning-delta') {
     if (event.runId === undefined || event.id === undefined || event.seq === undefined) {
       return null;
@@ -98,24 +98,73 @@ function byThreadSeq(left: SessionEvent, right: SessionEvent): number {
   return (left.threadSeq ?? NO_THREAD_SEQ) - (right.threadSeq ?? NO_THREAD_SEQ);
 }
 
-// The journal snapshot is a complete prefix ordered by threadSeq; a coalesced local
+export interface ReconcileOptions {
+  windowStart?: number;
+}
+
+function absorbRowsOf(
+  slotRows: Map<string, SlotRow[]>,
+  event: SessionEvent,
+  taken: Set<number>,
+): void {
+  const slot = streamSlotOf(event);
+  if (slot === null) {
+    return;
+  }
+  const rows = slotRows.get(slot.identity);
+  if (rows === undefined || rows.length === 0) {
+    return;
+  }
+  let rowsText = '';
+  for (const row of rows) {
+    rowsText += row.text;
+  }
+  if (rowsText.length > 0 && slot.text.endsWith(rowsText)) {
+    for (const row of rows) {
+      taken.add(row.index);
+    }
+    return;
+  }
+  const prefix = overlapOf(rows, slot, taken);
+  if (prefix.text.length === 0 || !slot.text.startsWith(prefix.text)) {
+    return;
+  }
+  for (const index of prefix.rows) {
+    taken.add(index);
+  }
+}
+
+// The snapshot is a complete prefix ordered by threadSeq; a coalesced local
 // slot can span its boundary, so the rows it already absorbed are removed from the
-// base instead of being concatenated twice.
-export function reconcileSnapshot(local: SessionEvent[], snapshot: SessionEvent[]): SessionEvent[] {
+// base instead of being concatenated twice. With windowStart the snapshot is a delta
+// window above the client cursor, so local rows below it are kept as they are.
+export function reconcileSnapshot(
+  local: SessionEvent[],
+  snapshot: SessionEvent[],
+  options?: ReconcileOptions,
+): SessionEvent[] {
+  const windowStart = options?.windowStart;
   const cut = boundaryOf(snapshot);
   const persisted = persistedKeysOf(snapshot);
   const slotRows = slotRowsOf(snapshot);
   const taken = new Set<number>();
   const kept: SessionEvent[] = [];
   for (const event of local) {
-    if (event.threadSeq === undefined) {
+    const threadSeq = event.threadSeq;
+    if (threadSeq === undefined) {
       const key = stableEventKey(event);
       if (key === undefined || !persisted.has(key)) {
         kept.push(event);
       }
       continue;
     }
-    if (cut !== undefined && event.threadSeq > cut) {
+    if (windowStart !== undefined && threadSeq < windowStart) {
+      absorbRowsOf(slotRows, event, taken);
+      kept.push(event);
+      continue;
+    }
+    const ahead = cut === undefined ? windowStart !== undefined : threadSeq > cut;
+    if (ahead) {
       kept.push(event);
       continue;
     }

@@ -58,8 +58,7 @@ export class UpdateThreadBindingUseCase {
       request.body.workspaceRef !== undefined
         ? this.resolveWorkspaceRef(request.orgId, request.body.workspaceRef)
         : undefined;
-    const ranThreadIds = this.threads.threadIdsWithRuns(request.orgId);
-    const locked = ranThreadIds.has(thread.id);
+    const locked = this.threads.threadHasRuns(request.orgId, thread.id);
     if (locked && bindingChanged(request, thread, workspaceRef)) {
       throw new ThreadValidationException('thread binding is locked after the first run');
     }

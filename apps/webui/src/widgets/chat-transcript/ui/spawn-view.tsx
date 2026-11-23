@@ -1,12 +1,19 @@
 import type { SessionEvent } from '@harnesys/studio-shared';
+import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { agentColorClass, useAgentStore } from '@/entities/agent';
-import type { SpawnStatus } from '@/entities/session';
-import { spawnSubtreeIds, spawnTaskText, splitRuns, useThreadFeeds } from '@/entities/session';
+import {
+  createSpawnFold,
+  type SpawnStatus,
+  spawnProcess,
+  spawnSnapshot,
+  spawnTaskText,
+  splitRuns,
+} from '@/entities/session';
 import { useThreadStore } from '@/entities/thread';
-import { useThreadEvents } from '@/features/desk';
 import type { IdeTab } from '@/features/ide';
 import { useOpenSpawnTab } from '@/features/ide';
+import { getRunSubtree } from '@/shared/api';
 import { cn } from '@/shared/lib/utils';
 import {
   MessageScroller,
@@ -33,6 +40,16 @@ const STATUS_LABEL: Record<SpawnStatus, string> = {
   failed: 'failed',
 };
 const TASK_COLLAPSE_AT = 500;
+const EMPTY_EVENTS: SessionEvent[] = [];
+
+function spawnsOf(events: SessionEvent[]) {
+  const fold = createSpawnFold();
+  for (const event of events) {
+    spawnProcess(fold, event, undefined);
+  }
+  return spawnSnapshot(fold);
+}
+
 export function SpawnView({
   tab,
   threadId,
@@ -42,15 +59,17 @@ export function SpawnView({
   threadId: string;
   spawnId: string;
 }) {
-  const events = useThreadEvents(threadId);
-  const feeds = useThreadFeeds(threadId);
-  const spawns = [...(feeds?.inherited.spawns ?? []), ...(feeds?.own.spawns ?? [])];
-  const synced = useSyncedThread(threadId, tab.projectId);
+  const subtreeQuery = useQuery({
+    queryKey: ['run-subtree', threadId, spawnId],
+    queryFn: () => getRunSubtree(threadId, spawnId),
+  });
+  useSyncedThread(threadId, tab.projectId);
   const openSpawnTab = useOpenSpawnTab();
+  const events = subtreeQuery.data?.events ?? EMPTY_EVENTS;
+  const spawns = spawnsOf(events);
   const spawn = spawns.find((item) => item.spawnId === spawnId);
   const agent = useAgentStore((state) => (spawn ? state.byId(spawn.agentId) : undefined));
   const activeRun = useThreadStore((state) => state.byId(threadId)?.activeRun ?? null);
-  const subtreeIds = spawnSubtreeIds(events, spawnId);
   const spawnedEvent = events.find(
     (
       ev,
@@ -69,7 +88,7 @@ export function SpawnView({
         className="flex flex-1 items-center justify-center text-muted-foreground text-sm"
         data-testid="ide-spawn-loading"
       >
-        {synced ? 'Spawn not found' : 'Loading…'}
+        {subtreeQuery.isPending ? 'Loading…' : 'Spawn not found'}
       </div>
     );
   }
@@ -77,10 +96,7 @@ export function SpawnView({
     const target = spawns.find((item) => item.spawnId === sid);
     openSpawnTab(tab.projectId, target?.agentId ?? '', threadId, sid);
   };
-  const childEvents = events.filter(
-    (ev) => ev.runId !== undefined && (ev.runId === spawnId || subtreeIds.has(ev.runId)),
-  );
-  const runs = splitRuns(childEvents);
+  const runs = splitRuns(events);
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-spawn">
       {spawnedTask ? (

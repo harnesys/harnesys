@@ -92,20 +92,6 @@ function stripUsageDetail(event: ModelUsageEvent): ModelUsageEvent {
   return stripped;
 }
 
-function dropSupersededStats(events: SessionEvent[]): SessionEvent[] {
-  let lastStats = -1;
-  for (let i = events.length - 1; i >= 0; i -= 1) {
-    if (events[i]?.type === 'model.stats') {
-      lastStats = i;
-      break;
-    }
-  }
-  if (lastStats === -1) {
-    return events;
-  }
-  return events.filter((event, index) => event.type !== 'model.stats' || index === lastStats);
-}
-
 export function projectThreadEvents(events: unknown[]): unknown[] {
   const typed = events as SessionEvent[];
   const shaped = typed.map((event) => {
@@ -117,5 +103,5 @@ export function projectThreadEvents(events: unknown[]): unknown[] {
     }
     return event;
   });
-  return dropSupersededStats(coalesce(shaped));
+  return coalesce(shaped);
 }

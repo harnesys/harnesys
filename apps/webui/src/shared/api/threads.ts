@@ -4,6 +4,7 @@ import type {
   CreateThreadBody,
   ListThreadsResponse,
   ThreadPublic,
+  ThreadSyncResponse,
   WorkspaceRef,
 } from '@harnesys/contracts';
 import type {
@@ -33,7 +34,7 @@ export interface CreateThreadInput {
   };
 }
 
-function requireOrgId(): string {
+export function requireOrgId(): string {
   const orgId = getActiveOrgId();
   if (!orgId) {
     throw new ApiError(400, 'No active organization');
@@ -77,7 +78,7 @@ export function toStudioSummary(record: ContractThreadSummary): ThreadSummary {
   };
 }
 
-function toStudioRecord(record: ThreadPublic): ThreadRecord {
+export function toStudioRecord(record: ThreadPublic): ThreadRecord {
   return {
     ...toStudioSummary(record),
     inheritedEventCount: record.inheritedEventCount,
@@ -92,18 +93,18 @@ export function listThreads(orgId: string): Promise<ThreadSummary[]> {
   );
 }
 
-export function getThread(id: string): Promise<ThreadRecord> {
-  const orgId = requireOrgId();
-  return apiJson<ThreadPublic>(`${threadsBase(orgId)}/${encodeURIComponent(id)}`).then(
-    toStudioRecord,
-  );
-}
-
 export function getThreadEvent(id: string, threadSeq: number): Promise<SessionEvent> {
   const orgId = requireOrgId();
   return apiJson<{ event: SessionEvent }>(
     `${threadsBase(orgId)}/${encodeURIComponent(id)}/events/${threadSeq}`,
   ).then((res) => res.event);
+}
+
+export function syncThreadEvents(id: string, afterThreadSeq: number): Promise<ThreadSyncResponse> {
+  const orgId = requireOrgId();
+  return apiJson<ThreadSyncResponse>(
+    `${threadsBase(orgId)}/${encodeURIComponent(id)}/sync?afterThreadSeq=${afterThreadSeq}`,
+  );
 }
 
 export function createThreadRecord(body: CreateThreadInput): Promise<ThreadRecord> {
@@ -295,10 +296,6 @@ export function markThreadRead(id: string): Promise<ThreadRecord> {
   });
 }
 
-export function setThreadPinned(id: string, pinned: boolean): Promise<ThreadRecord> {
-  return getThread(id).then((record) => ({ ...record, pinned }));
-}
-
 export interface UpdateThreadBindingInput {
   runProfileId?: string | null;
   runDirectory?: string | null;
@@ -319,12 +316,4 @@ export function updateThreadBinding(
 export function deleteThreadRecord(id: string): Promise<void> {
   const orgId = requireOrgId();
   return apiJson<void>(`${threadsBase(orgId)}/${encodeURIComponent(id)}`, { method: 'DELETE' });
-}
-
-export function deleteThreadUserEvent(threadId: string, threadSeq: number): Promise<ThreadRecord> {
-  const orgId = requireOrgId();
-  return apiJson<ThreadPublic>(
-    `${threadsBase(orgId)}/${encodeURIComponent(threadId)}/events/${encodeURIComponent(String(threadSeq))}`,
-    { method: 'DELETE' },
-  ).then(toStudioRecord);
 }

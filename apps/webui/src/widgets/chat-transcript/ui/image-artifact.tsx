@@ -1,3 +1,4 @@
+import { parseImageArtifact as parseImageToolArtifact } from '@harnesys/studio-shared';
 import { CheckIcon, CopyIcon, DownloadIcon } from 'lucide-react';
 import { useState } from 'react';
 import type { ToolEventPair } from '@/entities/session';
@@ -5,7 +6,6 @@ import { openThreadFileTab } from '@/features/ide';
 import { loadThreadAttachment } from '@/shared/api';
 import { useAuthedBlobUrl } from '@/shared/api/blob-url';
 import { cn } from '@/shared/lib/utils';
-import { asObject, parseJson, str } from '../model/tool-json';
 
 export interface ImageArtifactInfo {
   attachmentId: string;
@@ -14,18 +14,19 @@ export interface ImageArtifactInfo {
 }
 
 export function parseImageArtifact(pair: ToolEventPair): ImageArtifactInfo | null {
-  const result = pair.result;
-  if (result?.phase !== 'completed' || pair.call.name !== 'image_generate') {
+  const artifact = parseImageToolArtifact({
+    name: pair.call.name,
+    phase: pair.result?.phase,
+    output: pair.result?.output,
+  });
+  if (!artifact) {
     return null;
   }
-  const output = typeof result.output === 'string' ? parseJson(result.output) : result.output;
-  const obj = asObject(output);
-  const attachmentId = str(obj, 'attachmentId');
-  const mediaType = str(obj, 'mediaType');
-  if (!obj || !attachmentId || !mediaType) {
-    return null;
-  }
-  return { attachmentId, name: str(obj, 'name') ?? attachmentId, mediaType };
+  return {
+    attachmentId: artifact.attachmentId,
+    name: artifact.name,
+    mediaType: artifact.mediaType,
+  };
 }
 
 const COPY_FLASH_MS = 1500;

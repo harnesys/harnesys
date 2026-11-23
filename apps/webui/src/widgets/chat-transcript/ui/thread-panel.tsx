@@ -1,25 +1,26 @@
 import type { SessionEvent } from '@harnesys/studio-shared';
-import { ArrowDownIcon, ArrowUpIcon } from 'lucide-react';
-import { Fragment, useEffect, useState, useSyncExternalStore } from 'react';
+import { ArrowDownIcon } from 'lucide-react';
+import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useSearchParams } from 'react-router';
 import type { Agent } from '@/entities/agent';
 import {
   compactionCoverage,
+  coveredRunCount,
   type FeedRun,
   firstLiveRunIndex,
   hasRunningCompaction,
-  isRunCovered,
   type RunFailure,
   useSessionStore,
-  useThreadFeeds,
+  useThreadFeed,
 } from '@/entities/session';
 import { useThreadStore } from '@/entities/thread';
 import { useCompactingStore } from '@/features/compact-thread';
-import { scheduleMarkThreadRead } from '@/features/desk';
+import { refreshThread, scheduleMarkThreadRead } from '@/features/desk';
 import { useOpenSpawnTab } from '@/features/ide';
 import { dismissFailure, onScrollToEndRequest, retryRun } from '@/features/send-message';
 import { subscribeAutoRead } from '@/shared/api/voice-prefs';
+import { AROUND_THREAD_SEQ_PARAM, parseAroundThreadSeq } from '@/shared/config/routes';
 import { prefersReducedMotion } from '@/shared/lib/motion';
-import { Button } from '@/shared/ui/button';
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -30,11 +31,10 @@ import {
   useMessageScroller,
   useMessageScrollerScrollable,
 } from '@/shared/ui/message-scroller';
-import { sliceTail } from '../model/tail-slice';
+import { useLoadEarlierTrigger } from '../model/load-earlier-trigger';
 import { useSyncedThread } from '../model/thread-sync';
-import { saveViewedCount, useUnseenBoundary } from '../model/unseen-boundary';
+import { useUnseenBoundary } from '../model/unseen-boundary';
 import { readAutoReadPref, useAutoRead } from '../model/use-auto-read';
-import { usePrependRestore } from '../model/use-prepend-restore';
 import { useUnseenCount } from '../model/use-unseen-count';
 import { FailedMessageView } from './agent-turn';
 import type { BranchChild } from './branch-point-badge';
@@ -43,21 +43,16 @@ import { CompactionPendingCard } from './compaction-card';
 import { CompactionDividerItem } from './compaction-separator';
 import { ForkSeparator } from './fork-separator';
 import { LiveStatusBar } from './live-status-bar';
+import { LoadEarlierButton, type RenderWindow, useRenderWindow } from './load-earlier';
 import { RunTurn } from './run-turn';
 import { ThreadEmpty } from './thread-empty';
-import {
-  groupBranchChildren,
-  registerRevealRequest,
-  undoableRunKeyOf,
-  useThreadFeedBoundary,
-} from './thread-panel-aux';
+import { groupBranchChildren, registerRevealRequest, undoableRunKeyOf } from './thread-panel-aux';
 import { UnseenSeparator } from './unseen-separator';
 
 const EMPTY_FAILURES: RunFailure[] = [];
 const EMPTY_RUNS: FeedRun[] = [];
 const EMPTY_EVENTS: SessionEvent[] = [];
 const EMPTY_BRANCH_CHILDREN: Record<string, BranchChild[]> = {};
-const TAIL_RUNS = 12;
 
 export function ThreadPanel({
   threadId,
@@ -70,12 +65,9 @@ export function ThreadPanel({
   active: boolean;
   assistant?: boolean;
 }) {
-  const feeds = useThreadFeeds(threadId);
+  const feed = useThreadFeed(threadId);
   const eventsCount = useSessionStore((state) => state.events[threadId]?.length ?? 0);
   const thread = useThreadStore((state) => (active ? state.byId(threadId) : undefined));
-  const inheritedCount = useThreadStore((state) =>
-    active ? (state.byId(threadId)?.inheritedEventCount ?? 0) : 0,
-  );
   const parent = useThreadStore((state) => {
     if (!active) {
       return undefined;
@@ -89,36 +81,25 @@ export function ThreadPanel({
   const allThreads = useThreadStore((state) => state.items);
   const allFailures = useSessionStore((state) => state.failures);
   const compacting = useCompactingStore((state) => active && Boolean(state.byThread[threadId]));
-  const [windowState, setWindowState] = useState<{ threadId: string; size: number }>({
-    threadId,
-    size: TAIL_RUNS,
-  });
   const [revealState, setRevealState] = useState<{ threadId: string; key: string | null }>({
     threadId,
     key: null,
   });
   useEffect(() => {
-    if (windowState.threadId !== threadId) {
-      setWindowState({ threadId, size: TAIL_RUNS });
-    }
-  }, [threadId, windowState.threadId]);
-  useEffect(() => {
     if (revealState.threadId !== threadId) {
       setRevealState({ threadId, key: null });
     }
   }, [threadId, revealState.threadId]);
-  const windowSize = windowState.threadId === threadId ? windowState.size : TAIL_RUNS;
   const revealKey = revealState.threadId === threadId ? revealState.key : null;
-  const captureEarlierAnchor = usePrependRestore(windowSize);
   const synced = useSyncedThread(active ? threadId : null, agent.orgId);
-  const unseenBoundary = useUnseenBoundary(threadId, active, Boolean(thread?.unread), eventsCount);
   const branchChildrenByRun = active
     ? groupBranchChildren(allThreads, threadId)
     : EMPTY_BRANCH_CHILDREN;
   const failures = active
     ? allFailures.filter((item) => item.threadId === threadId)
     : EMPTY_FAILURES;
-  useThreadFeedBoundary(threadId, active, inheritedCount);
+  const unseenSeq = useUnseenBoundary(threadId, active, Boolean(thread?.unread), eventsCount);
+  const onScrollEarlier = useLoadEarlierTrigger(threadId);
   useEffect(() => {
     if (!active) {
       return;
@@ -130,17 +111,19 @@ export function ThreadPanel({
       setRevealState({ threadId, key: null });
     }
   }, [streaming, threadId, revealState.key]);
-  const inheritedRuns = feeds?.inherited.runs ?? EMPTY_RUNS;
-  const ownRuns = feeds?.own.runs ?? EMPTY_RUNS;
-  const undoableRunKey = undoableRunKeyOf(streaming, compacting, ownRuns);
+  const runs = feed?.runs ?? EMPTY_RUNS;
+  const renderWindow = useRenderWindow(threadId, runs);
+  const deepLink = useDeepLinkTarget(runs, renderWindow, active);
+  const undoableRunKey = undoableRunKeyOf(streaming, compacting, runs);
   const threadEvents = useSessionStore((state) => state.events[threadId] ?? EMPTY_EVENTS);
   const coverage = compactionCoverage(threadEvents);
-  const dividerIndex = firstLiveRunIndex(inheritedRuns, ownRuns, coverage.boundaryIndex);
-  const lastOwnRun = ownRuns[ownRuns.length - 1];
+  const coveredCount = coveredRunCount(runs, coverage);
+  const dividerIndex = firstLiveRunIndex(runs, coverage);
+  const lastRun = runs[runs.length - 1];
   const autoReadEnabled = useSyncExternalStore(subscribeAutoRead, readAutoReadPref);
   useAutoRead({
     threadId,
-    text: lastOwnRun ? runAnswerText(lastOwnRun) : '',
+    text: lastRun ? runAnswerText(lastRun) : '',
     streaming,
     enabled: autoReadEnabled,
   });
@@ -155,11 +138,14 @@ export function ThreadPanel({
       </>
     );
   }
-  const compactionLive = ownRuns.some(hasRunningCompaction);
-  const showFork = Boolean(thread?.parentThreadId) && inheritedRuns.length > 0;
+  const compactionLive = runs.some(hasRunningCompaction);
+  const offset = renderWindow.offset;
+  const visible = renderWindow.visible;
   const unseenRunIndex =
-    unseenBoundary === null ? -1 : ownRuns.findIndex((run) => run.firstIndex >= unseenBoundary);
-  const tail = sliceTail(inheritedRuns, ownRuns, windowSize, unseenRunIndex);
+    unseenSeq === null
+      ? -1
+      : runs.findIndex((run) => run.firstThreadSeq === null || run.firstThreadSeq > unseenSeq);
+  const parentThreadId = thread?.parentThreadId ?? null;
   return (
     <MessageScrollerProvider
       autoScroll={true}
@@ -168,68 +154,22 @@ export function ThreadPanel({
       scrollEdgeThreshold={24}
     >
       <MessageScroller>
-        <MessageScrollerViewport>
+        <MessageScrollerViewport onScroll={onScrollEarlier}>
           <MessageScrollerContent className="text-(length:--chat-font-size) mx-auto flex w-full max-w-3xl flex-col gap-7 px-4 py-8 opacity-80">
-            {tail.hiddenCount > 0 ? (
-              <MessageScrollerItem messageId="load-earlier">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mx-auto"
-                  onClick={(event) => {
-                    const nextSize = windowSize + TAIL_RUNS;
-                    captureEarlierAnchor(event, nextSize);
-                    setRevealState({ threadId, key: null });
-                    setWindowState({ threadId, size: nextSize });
-                  }}
-                >
-                  <ArrowUpIcon />
-                  <span>
-                    Load earlier messages
-                    <span className="ms-1.5 text-muted-foreground tabular-nums">
-                      {tail.hiddenCount}
-                    </span>
-                  </span>
-                </Button>
-              </MessageScrollerItem>
-            ) : null}
-            {tail.inherited.map((run, sliceIndex) => {
-              const forkAt = run.runId ?? run.id ?? '';
-              const combined = inheritedRuns.length - tail.inherited.length + sliceIndex;
-              return (
-                <Fragment key={`inherited-${run.key}`}>
-                  {combined === dividerIndex ? <CompactionDividerItem coverage={coverage} /> : null}
-                  <MessageScrollerItem
-                    key={`inherited-${run.key}`}
-                    messageId={`inherited-${run.key}`}
-                  >
-                    <div className="pointer-events-none select-none opacity-60" aria-hidden>
-                      <RunTurn
-                        run={run}
-                        runId={forkAt}
-                        threadId={threadId}
-                        onOpenSpawn={onOpenSpawn}
-                        streaming={false}
-                        inherited
-                        branchChildren={branchChildrenByRun[forkAt]}
-                      />
-                    </div>
-                  </MessageScrollerItem>
-                </Fragment>
-              );
-            })}
-            {showFork && parent ? (
+            <LoadEarlierButton renderWindow={renderWindow} />
+            {parentThreadId ? (
               <MessageScrollerItem messageId="fork-separator">
-                <ForkSeparator parentThreadId={parent.id} parentAgentId={parent.agentId} />
+                <ForkSeparator
+                  parentThreadId={parentThreadId}
+                  parentAgentId={parent?.agentId ?? thread?.agentId ?? ''}
+                />
               </MessageScrollerItem>
             ) : null}
-            {tail.own.map((run, sliceIndex) => {
-              const index = tail.ownCut + sliceIndex;
-              const last = index === ownRuns.length - 1;
+            {visible.map((run, sliceIndex) => {
+              const index = offset + sliceIndex;
+              const last = index === runs.length - 1;
               const runStreaming = (streaming && last && !compacting) || hasRunningCompaction(run);
               const forkAt = run.runId ?? run.id ?? '';
-              const combined = inheritedRuns.length + index;
-              const covered = isRunCovered(run, coverage.boundaryIndex);
               return (
                 <Fragment key={run.key}>
                   {index === unseenRunIndex ? (
@@ -237,12 +177,12 @@ export function ThreadPanel({
                       <UnseenSeparator />
                     </MessageScrollerItem>
                   ) : null}
-                  {combined === dividerIndex ? <CompactionDividerItem coverage={coverage} /> : null}
+                  {index === dividerIndex ? <CompactionDividerItem coverage={coverage} /> : null}
                   <MessageScrollerItem
                     messageId={run.key}
                     scrollAnchor={last && run.key === revealKey}
                   >
-                    <div className={covered ? 'opacity-55' : undefined}>
+                    <div className={index < coveredCount ? 'opacity-55' : undefined}>
                       <RunTurn
                         run={run}
                         runId={forkAt}
@@ -281,19 +221,68 @@ export function ThreadPanel({
         </MessageScrollerViewport>
         {active ? <LiveEdgeControls threadId={threadId} /> : null}
         {active ? <ScrollToEndSync threadId={threadId} /> : null}
-        {active && streaming && ownRuns.length > 0 ? (
-          <LiveStatusBar run={ownRuns[ownRuns.length - 1]} streaming />
+        {active && streaming && runs.length > 0 ? (
+          <LiveStatusBar run={runs[runs.length - 1]} streaming />
         ) : null}
-        {active ? <ThreadReadSync threadId={threadId} /> : null}
+        {active ? <DeepLinkScroll seq={deepLink.seq} targetKey={deepLink.key} /> : null}
+        {active ? (
+          <ThreadReadSync
+            threadId={threadId}
+            onAtEnd={renderWindow.reset}
+            hasDeepLink={deepLink.seq !== undefined}
+          />
+        ) : null}
       </MessageScroller>
     </MessageScrollerProvider>
   );
 }
+function useDeepLinkTarget(
+  runs: FeedRun[],
+  renderWindow: RenderWindow,
+  active: boolean,
+): { seq: number | undefined; key: string | null } {
+  const [searchParams] = useSearchParams();
+  const seq = active ? parseAroundThreadSeq(searchParams.get(AROUND_THREAD_SEQ_PARAM)) : undefined;
+  const index = seq === undefined ? -1 : runIndexForSeq(runs, seq);
+  const key = index >= 0 && index >= renderWindow.offset ? (runs[index]?.key ?? null) : null;
+  useEffect(() => {
+    if (index < 0 || index >= renderWindow.offset) {
+      return;
+    }
+    renderWindow.reveal(index);
+  }, [index, renderWindow]);
+  return { seq, key };
+}
+
 function runAnswerText(run: FeedRun): string {
   return run.segments
     .filter((segment) => segment.kind === 'text' || segment.kind === 'compaction')
     .map((segment) => segment.text)
     .join('\n\n');
+}
+
+function runIndexForSeq(runs: FeedRun[], threadSeq: number): number {
+  let bestIndex = -1;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (let index = 0; index < runs.length; index++) {
+    const run = runs[index];
+    const first = run?.firstThreadSeq;
+    const last = run?.lastThreadSeq;
+    if (first === null || first === undefined || last === null || last === undefined) {
+      continue;
+    }
+    let distance = 0;
+    if (threadSeq < first) {
+      distance = first - threadSeq;
+    } else if (threadSeq > last) {
+      distance = threadSeq - last;
+    }
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = index;
+    }
+  }
+  return bestIndex;
 }
 
 function EmptyThreadReadSync({ threadId }: { threadId: string }) {
@@ -308,8 +297,8 @@ function EmptyThreadReadSync({ threadId }: { threadId: string }) {
 }
 function LiveEdgeControls({ threadId }: { threadId: string }) {
   const { end } = useMessageScrollerScrollable();
-  const total = useSessionStore((state) => state.events[threadId]?.length ?? 0);
-  const unseen = useUnseenCount(total, !end);
+  const events = useSessionStore((state) => state.events[threadId] ?? EMPTY_EVENTS);
+  const unseen = useUnseenCount(events, !end);
   return (
     <MessageScrollerButton behavior={prefersReducedMotion() ? 'auto' : 'smooth'}>
       <ArrowDownIcon />
@@ -337,17 +326,57 @@ function ScrollToEndSync({ threadId }: { threadId: string }) {
   );
   return null;
 }
-function ThreadReadSync({ threadId }: { threadId: string }) {
+function DeepLinkScroll({ seq, targetKey }: { seq: number | undefined; targetKey: string | null }) {
+  const { scrollToMessage } = useMessageScroller();
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (seq === undefined || targetKey === null) {
+      return;
+    }
+    if (!scrollToMessage(targetKey, { align: 'center', behavior: 'auto' })) {
+      return;
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete(AROUND_THREAD_SEQ_PARAM);
+    setSearchParams(next, { replace: true });
+  }, [seq, targetKey, scrollToMessage, searchParams, setSearchParams]);
+  return null;
+}
+function ThreadReadSync({
+  threadId,
+  onAtEnd,
+  hasDeepLink,
+}: {
+  threadId: string;
+  onAtEnd: () => void;
+  hasDeepLink: boolean;
+}) {
   const { end } = useMessageScrollerScrollable();
   const contentEpoch = useSessionStore((state) => state.contentEpoch[threadId] ?? 0);
+  const hasMoreAfter = useSessionStore((state) => state.history[threadId]?.hasMoreAfter ?? false);
   const viewingAtEnd = !end;
+  const wasAtEnd = useRef(hasDeepLink);
   useEffect(() => {
     useThreadStore.getState().setViewingAtEnd(threadId, viewingAtEnd);
     if (viewingAtEnd && contentEpoch >= 0) {
       scheduleMarkThreadRead(threadId);
-      saveViewedCount(threadId, useSessionStore.getState().events[threadId]?.length ?? 0);
+      const maxThreadSeq = useSessionStore.getState().history[threadId]?.maxThreadSeq;
+      if (maxThreadSeq !== undefined) {
+        useSessionStore.getState().markViewed(threadId, maxThreadSeq);
+      }
     }
   }, [threadId, viewingAtEnd, contentEpoch]);
+  useEffect(() => {
+    const returnedToEnd = viewingAtEnd && !wasAtEnd.current;
+    wasAtEnd.current = viewingAtEnd;
+    if (!returnedToEnd) {
+      return;
+    }
+    onAtEnd();
+    if (hasMoreAfter) {
+      void refreshThread(threadId, { force: true, tail: true });
+    }
+  }, [threadId, viewingAtEnd, hasMoreAfter, onAtEnd]);
   useEffect(() => {
     return () => {
       useThreadStore.getState().setViewingAtEnd(threadId, false);

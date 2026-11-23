@@ -130,6 +130,13 @@ export interface EventsWatchThreadEventsFrame {
   events: SessionEvent[];
 }
 
+export interface EventsWatchThreadLogChangedFrame {
+  orgId: OrgId;
+  threadId: string;
+  deletions: Array<{ from: number; to: number }>;
+  serverMax: number;
+}
+
 export type EventsWatchResyncReason = 'gap' | 'ahead' | 'slow';
 
 export interface EventsWatchResyncFrame {

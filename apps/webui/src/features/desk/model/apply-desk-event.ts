@@ -11,6 +11,7 @@ import { playNotifySound } from '@/shared/lib/notification-sound';
 import { toast } from '@/shared/ui/toast';
 import { useAgentsDisplayStore } from './agents-display.store';
 import { useDeskStore } from './desk.store';
+import { refreshThread } from './refresh-thread';
 
 export interface DeskEventNavigation {
   orgId: string;
@@ -29,7 +30,9 @@ export function applyDeskEvent(event: DeskEvent, nav?: DeskEventNavigation): voi
     }
     case 'thread': {
       useThreadStore.getState().upsert(toClientThread(event.thread));
-      useSessionStore.getState().reconcileEvents(event.thread.id, event.thread.events);
+      if (useSessionStore.getState().history[event.thread.id] !== undefined) {
+        void refreshThread(event.thread.id);
+      }
       if (useThreadQueueStore.getState().items[event.thread.id]?.length) {
         void useThreadQueueStore.getState().refresh(event.thread.id);
       }

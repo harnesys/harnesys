@@ -10,11 +10,14 @@ import { DeleteThreadUseCase } from './delete-thread.use-case.ts';
 import { DeleteThreadEventUseCase } from './delete-thread-event.use-case.ts';
 import { DeleteThreadPlanUseCase } from './delete-thread-plan.use-case.ts';
 import { ExportThreadUseCase } from './export-thread.use-case.ts';
-import { GetThreadUseCase } from './get-thread.use-case.ts';
+import { GetRunSubtreeUseCase } from './get-run-subtree.use-case.ts';
 import { GetThreadAttachmentUseCase } from './get-thread-attachment.use-case.ts';
 import { GetThreadEventUseCase } from './get-thread-event.use-case.ts';
+import { GetThreadHistoryUseCase } from './get-thread-history.use-case.ts';
 import { GetThreadPlanUseCase } from './get-thread-plan.use-case.ts';
 import { GetThreadRawModelRequestUseCase } from './get-thread-raw-model-request.use-case.ts';
+import { GetThreadSummaryUseCase } from './get-thread-summary.use-case.ts';
+import { ListRunArtifactsUseCase } from './list-run-artifacts.use-case.ts';
 import { ListThreadAttachmentsUseCase } from './list-thread-attachments.use-case.ts';
 import { ListThreadFilesUseCase } from './list-thread-files.use-case.ts';
 import { ListThreadRawModelRequestsUseCase } from './list-thread-raw-model-requests.use-case.ts';
@@ -29,7 +32,9 @@ import { RetryRunUseCase } from './retry-run.use-case.ts';
 import { SendThreadMessageUseCase } from './send-thread-message.use-case.ts';
 import { SendThreadRunUseCase } from './send-thread-run.use-case.ts';
 import { StreamRunEventsUseCase } from './stream-run-events.use-case.ts';
+import { SyncThreadEventsUseCase } from './sync-thread-events.use-case.ts';
 import { ThreadMessageQueueUseCase } from './thread-message-queue.use-case.ts';
+import { ThreadSummaryAssembler } from './thread-summary.assembler.ts';
 import { TickWaitTimersUseCase } from './tick-wait-timers.use-case.ts';
 import { UndoThreadCompactUseCase } from './undo-thread-compact.use-case.ts';
 import { UpdateThreadBindingUseCase } from './update-thread-binding.use-case.ts';
@@ -40,7 +45,11 @@ import { UploadThreadAttachmentUseCase } from './upload-thread-attachment.use-ca
 const useCases = [
   CreateThreadUseCase,
   ListThreadsUseCase,
-  GetThreadUseCase,
+  GetThreadHistoryUseCase,
+  GetThreadSummaryUseCase,
+  GetRunSubtreeUseCase,
+  ListRunArtifactsUseCase,
+  SyncThreadEventsUseCase,
   GetThreadEventUseCase,
   SendThreadMessageUseCase,
   SendThreadRunUseCase,
@@ -77,7 +86,7 @@ const useCases = [
 
 @Module({
   imports: [FleetUseCaseModule, SkillsUseCaseModule],
-  providers: [...useCases],
+  providers: [...useCases, ThreadSummaryAssembler],
   exports: [...useCases],
 })
 export class ThreadUseCaseModule {}
