@@ -1,6 +1,5 @@
 import { useLiveTail } from '@/entities/session';
 import { liveBlockText } from '../model/live-text';
-import { useStreamText } from '../model/stream-text';
 import { ThreadMarkdown } from '../model/thread-markdown';
 
 export function LiveMarkdown({
@@ -20,6 +19,6 @@ export function LiveMarkdown({
     tail.kind === 'text' &&
     tail.text !== '' &&
     (blockId === undefined || tail.id === blockId);
-  const shown = useStreamText(liveBlockText(text, applies ? tail : null), applies);
+  const shown = liveBlockText(text, applies ? tail : null);
   return <ThreadMarkdown text={shown} threadId={threadId} streaming={live} />;
 }

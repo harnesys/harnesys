@@ -11,7 +11,7 @@ import { useIdeStore } from './ide.store';
 export function useFileLinkComponents(): Components {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const projects = useProjects().data ?? [];
+  const projects = useProjects().data;
   function intercepts(href: string | undefined): boolean {
     return href !== undefined && hostPathOf(href) !== null;
   }
@@ -35,7 +35,7 @@ export function useFileLinkComponents(): Components {
     abs: string,
   ): Promise<{ projectId: string; relPath: string } | null> {
     const located = await Promise.allSettled(
-      projects.map(async (project) => {
+      (projects ?? []).map(async (project) => {
         const location = await queryClient.fetchQuery({
           queryKey: sourceLocationQueryKey(project.id),
           queryFn: () => getSourceLocation(project.id),

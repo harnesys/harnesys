@@ -20,7 +20,6 @@ import { dismissFailure, onScrollToEndRequest, retryRun } from '@/features/send-
 import { subscribeAutoRead } from '@/shared/api/voice-prefs';
 import { prefersReducedMotion } from '@/shared/lib/motion';
 import { Button } from '@/shared/ui/button';
-import { LiveRunScrollGuard } from '@/shared/ui/live-run-scroll-guard';
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -259,7 +258,6 @@ export function ThreadPanel({
                         }
                       />
                     </div>
-                    {last ? <LiveRunScrollGuard active={streaming || compacting} /> : null}
                   </MessageScrollerItem>
                 </Fragment>
               );

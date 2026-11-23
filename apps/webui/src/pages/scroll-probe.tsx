@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { LiveRunScrollGuard } from '@/shared/ui/live-run-scroll-guard';
 import {
   MessageScroller,
   MessageScrollerContent,
@@ -58,7 +57,6 @@ export function ScrollProbePage() {
                       <p key={index}>{line(`a${index}`)}</p>
                     ))}
                   </div>
-                  <LiveRunScrollGuard active={streaming} />
                 </MessageScrollerItem>
               ) : null}
             </MessageScrollerContent>

@@ -22,7 +22,6 @@ import { scheduleMarkThreadRead, useThreadEvents } from '@/features/desk';
 import { dismissFailure, retryRun } from '@/features/send-message';
 import { nudgeIssueRecord } from '@/shared/api';
 import { prefersReducedMotion } from '@/shared/lib/motion';
-import { LiveRunScrollGuard } from '@/shared/ui/live-run-scroll-guard';
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -148,7 +147,6 @@ export function ThreadJournal({ threadId, agent }: ThreadJournalProps) {
                   />
                 </MessageScrollerItem>
               ) : null}
-              <LiveRunScrollGuard active={streaming || compacting} />
             </MessageScrollerContent>
           </MessageScrollerViewport>
           <MessageScrollerButton behavior={prefersReducedMotion() ? 'auto' : 'smooth'} />
