@@ -1,38 +1,127 @@
 import { ArrowLeftIcon } from 'lucide-react';
+import { lazy, Suspense } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { UpdatePane } from '@/features/app-update';
-import { AppearancePane } from '@/features/appearance/appearance-pane';
-import { AccountPane } from '@/features/manage-account';
-import { ManageAddonsPane } from '@/features/manage-addons/manage-addons-pane';
-import { AppsPane } from '@/features/manage-apps/apps-pane';
-import { OrgAuditPane } from '@/features/manage-audit';
-import { ChatSettingsPane } from '@/features/manage-chat-settings/ui/chat-settings-pane';
-import { EditorSettingsPane } from '@/features/manage-editor-settings/ui/editor-settings-pane';
-import { FleetPage } from '@/features/manage-fleet/fleet-page';
-import { ProfilesPane } from '@/features/manage-fleet/profiles-pane';
-import { OrgMembersPane } from '@/features/manage-members';
-import { NotificationSettingsPane } from '@/features/manage-notification-settings/ui/notification-settings-pane';
-import { OrgBrowserPane } from '@/features/manage-org-browser/org-browser-pane';
-import { OrgGeneralPane } from '@/features/manage-org-general/org-general-pane';
-import { OrgLspPane } from '@/features/manage-org-lsp/org-lsp-pane';
-import { OrgMcpPane } from '@/features/manage-org-mcp/org-mcp-pane';
-import { OrgModePresetsPane } from '@/features/manage-org-mode-presets/org-mode-presets-pane';
-import { OrgPackagesPane } from '@/features/manage-org-packages/org-packages-pane';
-import { OrgPluginsPane } from '@/features/manage-org-plugins/org-plugins-pane';
-import { OrgSkillsPane } from '@/features/manage-org-skills/org-skills-pane';
-import { OrgToolchainPane } from '@/features/manage-org-toolchain/org-toolchain-pane';
-import { ModelsPane } from '@/features/manage-project-settings/ui/models-pane';
-import { UsagePane } from '@/features/manage-usage';
-import { VaultPane } from '@/features/manage-vault/vault-pane';
-import { VcsPane } from '@/features/manage-vcs/ui/vcs-pane';
-import { SupportPane } from '@/features/support/ui/support-pane';
 import {
   parseWindowSettingsCategory,
   studioPath,
   type WindowSettingsCategory,
 } from '@/shared/config/routes';
 import { findSettingsItem, WINDOW_SETTINGS_GROUPS } from '@/shared/config/settings-nav';
+import { Spinner } from '@/shared/ui/spinner';
 import { SettingsNav } from '@/widgets/settings-nav/settings-nav';
+
+const AppearancePane = lazy(() =>
+  import('@/features/appearance/appearance-pane').then((module) => ({
+    default: module.AppearancePane,
+  })),
+);
+const VcsPane = lazy(() =>
+  import('@/features/manage-vcs/ui/vcs-pane').then((module) => ({ default: module.VcsPane })),
+);
+const ChatSettingsPane = lazy(() =>
+  import('@/features/manage-chat-settings/ui/chat-settings-pane').then((module) => ({
+    default: module.ChatSettingsPane,
+  })),
+);
+const EditorSettingsPane = lazy(() =>
+  import('@/features/manage-editor-settings/ui/editor-settings-pane').then((module) => ({
+    default: module.EditorSettingsPane,
+  })),
+);
+const NotificationSettingsPane = lazy(() =>
+  import('@/features/manage-notification-settings/ui/notification-settings-pane').then(
+    (module) => ({
+      default: module.NotificationSettingsPane,
+    }),
+  ),
+);
+const OrgGeneralPane = lazy(() =>
+  import('@/features/manage-org-general/org-general-pane').then((module) => ({
+    default: module.OrgGeneralPane,
+  })),
+);
+const OrgMembersPane = lazy(() =>
+  import('@/features/manage-members').then((module) => ({ default: module.OrgMembersPane })),
+);
+const FleetPage = lazy(() =>
+  import('@/features/manage-fleet/fleet-page').then((module) => ({ default: module.FleetPage })),
+);
+const ProfilesPane = lazy(() =>
+  import('@/features/manage-fleet/profiles-pane').then((module) => ({
+    default: module.ProfilesPane,
+  })),
+);
+const OrgBrowserPane = lazy(() =>
+  import('@/features/manage-org-browser/org-browser-pane').then((module) => ({
+    default: module.OrgBrowserPane,
+  })),
+);
+const OrgSkillsPane = lazy(() =>
+  import('@/features/manage-org-skills/org-skills-pane').then((module) => ({
+    default: module.OrgSkillsPane,
+  })),
+);
+const OrgMcpPane = lazy(() =>
+  import('@/features/manage-org-mcp/org-mcp-pane').then((module) => ({
+    default: module.OrgMcpPane,
+  })),
+);
+const OrgModePresetsPane = lazy(() =>
+  import('@/features/manage-org-mode-presets/org-mode-presets-pane').then((module) => ({
+    default: module.OrgModePresetsPane,
+  })),
+);
+const OrgPluginsPane = lazy(() =>
+  import('@/features/manage-org-plugins/org-plugins-pane').then((module) => ({
+    default: module.OrgPluginsPane,
+  })),
+);
+const OrgPackagesPane = lazy(() =>
+  import('@/features/manage-org-packages/org-packages-pane').then((module) => ({
+    default: module.OrgPackagesPane,
+  })),
+);
+const OrgLspPane = lazy(() =>
+  import('@/features/manage-org-lsp/org-lsp-pane').then((module) => ({
+    default: module.OrgLspPane,
+  })),
+);
+const OrgToolchainPane = lazy(() =>
+  import('@/features/manage-org-toolchain/org-toolchain-pane').then((module) => ({
+    default: module.OrgToolchainPane,
+  })),
+);
+const ManageAddonsPane = lazy(() =>
+  import('@/features/manage-addons/manage-addons-pane').then((module) => ({
+    default: module.ManageAddonsPane,
+  })),
+);
+const AppsPane = lazy(() =>
+  import('@/features/manage-apps/apps-pane').then((module) => ({ default: module.AppsPane })),
+);
+const ModelsPane = lazy(() =>
+  import('@/features/manage-project-settings/ui/models-pane').then((module) => ({
+    default: module.ModelsPane,
+  })),
+);
+const VaultPane = lazy(() =>
+  import('@/features/manage-vault/vault-pane').then((module) => ({ default: module.VaultPane })),
+);
+const UsagePane = lazy(() =>
+  import('@/features/manage-usage').then((module) => ({ default: module.UsagePane })),
+);
+const AccountPane = lazy(() =>
+  import('@/features/manage-account').then((module) => ({ default: module.AccountPane })),
+);
+const OrgAuditPane = lazy(() =>
+  import('@/features/manage-audit').then((module) => ({ default: module.OrgAuditPane })),
+);
+const UpdatePane = lazy(() =>
+  import('@/features/app-update').then((module) => ({ default: module.UpdatePane })),
+);
+const SupportPane = lazy(() =>
+  import('@/features/support/ui/support-pane').then((module) => ({ default: module.SupportPane })),
+);
 
 export function SettingsPage() {
   const { orgId, category } = useParams();
@@ -84,7 +173,9 @@ export function SettingsPage() {
             className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-8"
             data-testid={`settings-pane-${active}`}
           >
-            <SettingsPane category={active} orgId={orgId} />
+            <Suspense fallback={<Spinner className="mx-auto my-12 size-5" />}>
+              <SettingsPane category={active} orgId={orgId} />
+            </Suspense>
           </div>
         </div>
       </main>
@@ -135,7 +226,7 @@ function SettingsPane({ category, orgId }: { category: WindowSettingsCategory; o
     case 'providers':
       return <ModelsPane orgId={orgId} />;
     case 'secrets':
-      return <VaultPane orgId={orgId} />;
+      return <VaultPane key={orgId} orgId={orgId} />;
     case 'usage':
       return <UsagePane orgId={orgId} />;
     case 'account':
