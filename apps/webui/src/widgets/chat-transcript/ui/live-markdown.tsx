@@ -1,6 +1,7 @@
 import { useLiveTail } from '@/entities/session';
 import { liveBlockText } from '../model/live-text';
 import { ThreadMarkdown } from '../model/thread-markdown';
+import { useStickToEnd } from '../model/use-stick-to-end';
 
 export function LiveMarkdown({
   text,
@@ -20,5 +21,6 @@ export function LiveMarkdown({
     tail.text !== '' &&
     (blockId === undefined || tail.id === blockId);
   const shown = liveBlockText(text, applies ? tail : null);
+  useStickToEnd(live, shown);
   return <ThreadMarkdown text={shown} threadId={threadId} streaming={live} />;
 }

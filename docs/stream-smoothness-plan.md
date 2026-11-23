@@ -1,78 +1,80 @@
 # Stream scroll smoothness plan
 
-Fixes the thread jitter reported while an agent streams a long markdown answer:
-discrete vertical jumps on every batch and vertical drift of content above the
-growth point.
+Fixes the thread jitter while an agent streams a long markdown answer: the
+newest lines are painted outside the viewport for one frame on every update, so
+the visible bottom jumps and lines appear to stack for a moment.
 
-## Diagnosis
+## Root cause (measured)
 
-Three independent sources, all in the transcript scroll/render path.
+`@shadcn/react/message-scroller` corrects the bottom position **one frame too
+late**:
 
-1. **Two scroll controllers fight each other.**
-   `@shadcn/react/message-scroller` already implements `autoScroll`,
-   `defaultScrollPosition="end"`, its own spacer (`data-message-scroller-spacer`)
-   and the `following-bottom` mode (scrolls to end on every content mutation).
-   `shared/ui/live-run-scroll-guard.tsx` duplicates the same job with a second
-   spacer (`data-slot="live-run-pad"`) and its own
-   `viewport.scrollTo({ top: prevTop })`. The two write `scrollTop` in turn every
-   frame, which is the visible back-and-forth rumble.
+- Its `Content` ResizeObserver defers `handleResize` through
+  `requestAnimationFrame` (`index.js`, ro callback `cancelAnimationFrame(G);
+  G = requestAnimationFrame(L)`), so the `scrollToEnd` write lands in the *next*
+  frame.
+- The synchronous path (`handleContentChange`) listens to `childList` only, so
+  growth of a paragraph (a `characterData` change) never triggers it.
 
-2. **Non-additive markdown reflow.**
-   `shared/ui/markdown.tsx` re-renders the whole accumulated text through
-   `ReactMarkdown` on every delta. Blocks above the caret keep their DOM only by
-   React diffing; any change in the streaming tail's own layout (table column
-   widths with `table-layout: auto`, a heading still being typed) plus the
-   stream-to-final renderer swap (`STREAM_REMARK`/`STREAM_COMPONENTS` vs the full
-   set) moves the layout above the caret.
+Result: the frame that carries the new text is painted before the scroll
+correction; the correction runs in the following frame.
 
-3. **100 ms batching.**
-   `widgets/chat-transcript/model/stream-text.ts` throttles the shown text to one
-   flush per `STREAM_FRAME_MS = 100`. The live-tail store already coalesces
-   deltas to one update per animation frame, so this throttle only turns a smooth
-   per-frame stream into 10 fps steps.
+Measurement on the dev stand (Genie, text-only stream, `frames` sampled in rAF,
+`postLayoutRO` sampled from a ResizeObserver — after layout, before paint):
 
-## Decision
+| | postLayoutRO deliveries | stale (>2px below fold) | max gap |
+|---|---|---|---|
+| before | 85 | 75 | 76px |
+| with fix | 107 | 2 | 69px |
 
-- Keep the markdown output (`md` view is mandatory); the defect is in scroll
-  ownership, render invalidation and cadence.
-- Reuse the scroller primitive as the single scroll owner.
+A post-layout gap means content was up to 76px (about four lines) below the
+viewport at paint time — the reported "lines overlap briefly at the bottom".
+The cadence does not matter: raising the flush interval leaves the per-update
+one-frame lag untouched.
 
 ## Changes
 
-1. Delete `shared/ui/live-run-scroll-guard.tsx` and its usages
-   (`ui/thread-panel.tsx`, `pages/scroll-probe.tsx`). The primitive's own spacer
-   and `following-bottom` mode stay the only thing touching `scrollTop`.
+1. **Pin in the same frame as the mutation.**
+   `widgets/chat-transcript/model/use-stick-to-end.ts` calls the scroller's own
+   `scrollToEnd({ behavior: 'auto' })` from a `useLayoutEffect` (post-commit,
+   pre-paint) when the streamed text changed and the reader is still following
+   the end (`!end`). It reuses the primitive, does not duplicate scroll math and
+   does not fight its later correction (same target). Wired in
+   `ui/live-markdown.tsx`.
 
-2. Freeze the completed prefix. `shared/lib/markdown-blocks.ts` finds the source
-   offset of the last top-level mdast node with `unified` + `remark-parse`
-   (`remark-gfm` for tables, `remark-math` for math) — the real parser, no line
-   heuristics. `shared/ui/markdown.tsx` renders two blocks inside one `.markdown`
-   container: the frozen prefix with the full plugin set and the live tail with
-   the reduced `STREAM_*` set. Both are `memo` blocks keyed by position, so the
-   prefix re-parses only when a block completes and never during a delta.
+2. **One scroll owner.** Deleted `shared/ui/live-run-scroll-guard.tsx` (its pad +
+   `release()` raced the primitive every frame) and its usages in
+   `ui/thread-panel.tsx`, `widgets/thread-journal/ui/thread-journal.tsx`,
+   `pages/scroll-probe.tsx`.
 
-3. Drop the 100 ms throttle. `LiveMarkdown` reads the tail straight from
-   `liveBlockText`; the store already gives one update per frame. Delete
-   `model/stream-text.ts`.
+3. **Frozen markdown prefix.** `shared/lib/markdown-blocks.ts` finds the source
+   offset of the last top-level mdast node with `unified` + `remark-parse`;
+   `shared/ui/markdown.tsx` renders a memoized frozen prefix (full plugin set)
+   plus the live tail (reduced `STREAM_*` set) inside one `.markdown` container,
+   with the same two-block structure streaming and finished, so completing a
+   stream merges by diffing instead of swapping the tree.
 
-4. Always render the same two-block structure (tail empty when not streaming), so
-   finishing a stream merges the tail into the prefix by React diffing instead of
-   swapping the tree.
+4. **No 100 ms batching.** `model/stream-text.ts` throttled the shown text to one
+   flush per 100 ms on top of the live-tail store, which already coalesces to one
+   update per frame. Deleted; `LiveMarkdown` reads the tail directly.
 
-5. `features/ide/model/markdown-file-link.tsx`: keep the `projects` fallback at the
-   use site (`(projects ?? [])`) instead of `useProjects().data ?? []`. The inline
-   `[]` gave `projects` a new identity on every render, which made React Compiler
-   (and therefore the `MarkdownBlock` memo) rebuild the thread markdown
-   `components` object every frame and defeat the frozen prefix.
+5. **Stable memo chain.** `features/ide/model/markdown-file-link.tsx` keeps the
+   `projects` fallback at the use site (`(projects ?? [])`) instead of
+   `useProjects().data ?? []`: the inline `[]` gave `projects` a new identity per
+   render, which made React Compiler rebuild the thread markdown `components`
+   every frame and defeat the frozen prefix.
 
 ## Residual
 
-A table that is still streaming is the tail and re-parses per frame; with
-`table-layout: auto` its earlier rows can rewrap as columns resize. Freezing does
-not cover that case. `shared/lib/scroll-anchor.ts` (`SETTLE_FRAMES`) serves
-`activity-line` and `expandable-scroll`, not the transcript, and is out of scope.
+- A still-streaming table is the tail and re-parses per update; with
+  `table-layout: auto` its earlier rows can rewrap. The pin removes the
+  scroll lag but not the intra-table reflow.
+- Two stale frames remain per stream, at the run start and at the
+  streaming-to-finished transition, both outside steady state.
+- `shared/lib/scroll-anchor.ts` (`SETTLE_FRAMES`) serves `activity-line` and
+  `expandable-scroll`, not the transcript.
 
 ## Gates
 
-`bun test`, `tsc --noEmit`, `biome check`. Manual scroll check by the user in a
-thread with a long structured answer.
+`bun test` (215 pass), `tsc --noEmit`, `biome check`. Live check by the user in a
+Genie thread with a long structured answer.
