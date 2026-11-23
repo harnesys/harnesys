@@ -35,6 +35,13 @@ Query: none
 | `items[].enabledPlugins` | object |
 | `items[].defaultModeId` | string \| null |
 | `items[].defaultRunDirectory` | string \| null |
+| `items[].defaultWorkspaceRef` | object \| null |
+| `items[].defaultWorkspaceRef.kind` | string |
+| `items[].defaultWorkspaceRef.sourceId` | string |
+| `items[].defaultWorkspaceRef.subpath` | string |
+| `items[].defaultWorkspaceRef.worktreeId` | string |
+| `items[].defaultWorkspaceRef.hostId` | string |
+| `items[].defaultWorkspaceRef.path` | string |
 | `items[].config` | object |
 | `items[].hooks` | array of object |
 | `items[].hooks[].id` | string |
@@ -185,6 +192,7 @@ Query:
 | `items[].fireTrail[].error` | string |
 | `items[].fireTrail[].at` | string |
 | `items[].sourceId` | string \| null |
+| `items[].workspaceSubpath` | string \| null |
 | `items[].branch` | string \| null |
 | `items[].worktreeOnStatus` | string \| null |
 | `items[].worktree` | object \| null |
@@ -321,6 +329,13 @@ Query: none
 | `items[].runMode` | string |
 | `items[].runProfileId` | string \| null |
 | `items[].runDirectory` | string \| null |
+| `items[].workspaceRef` | object \| null |
+| `items[].workspaceRef.kind` | string |
+| `items[].workspaceRef.sourceId` | string |
+| `items[].workspaceRef.subpath` | string |
+| `items[].workspaceRef.worktreeId` | string |
+| `items[].workspaceRef.hostId` | string |
+| `items[].workspaceRef.path` | string |
 | `items[].bindingLocked` | boolean |
 | `items[].activeRun` | object \| null |
 | `items[].activeRun.runId` | string |
