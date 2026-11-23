@@ -3,11 +3,11 @@ import { lazy, Suspense, useEffect } from 'react';
 import { toClientAgentFromPublic, useAgentStore } from '@/entities/agent';
 import { toClientThread, useThreadStore } from '@/entities/thread';
 import { useDeskReady } from '@/features/desk';
-import { GitCommitDiffView } from '@/features/git-commit';
 import { type IdeTab, useIdeStore } from '@/features/ide';
 import { BoardSurface } from '@/features/manage-issues';
 import { openFileKind } from '@/features/open-file';
 import { HitlPrompt } from '@/features/send-message';
+import { SourceControlDiffView } from '@/features/source-control';
 import { ApiError, getOrgAgent, getThread } from '@/shared/api';
 import { useOrgId } from '@/shared/config/location';
 import { useStudioNavigation } from '@/shared/config/navigation';
@@ -246,7 +246,7 @@ export function IdeTabContent({ tab, projectId }: { tab: IdeTab; projectId: stri
   if (tab.kind === 'diff' && tab.path) {
     return (
       <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-diff">
-        <GitCommitDiffView projectId={projectId} path={tab.path} />
+        <SourceControlDiffView projectId={projectId} path={tab.path} />
       </div>
     );
   }

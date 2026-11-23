@@ -5,6 +5,7 @@ import { drizzle } from 'drizzle-orm/bun-sqlite';
 import type { RunRecord } from 'harnesys';
 import { InMemoryRunEventStore, InMemoryRunLifecycleStore } from 'harnesys';
 import { CREATE_RUN_SNAPSHOTS_SQL, CREATE_RUNS_SQL } from '../org-sqlite/org-sql.ts';
+import { CREATE_EVENT_CLAIMS_SQL } from '../org-sqlite/org-sql-fleet.ts';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
 import * as schema from '../org-sqlite/schema/index.ts';
 import { runSnapshotsTable, runsTable } from '../org-sqlite/schema/index.ts';
@@ -27,6 +28,7 @@ function setup() {
   const sqlite = new Database(':memory:');
   sqlite.exec(CREATE_RUNS_SQL);
   sqlite.exec(CREATE_RUN_SNAPSHOTS_SQL);
+  sqlite.exec(CREATE_EVENT_CLAIMS_SQL);
   const db = drizzle(sqlite, { schema }) as OrgSqliteDb;
   const lifecycle = new InMemoryRunLifecycleStore(new InMemoryRunEventStore());
   const seed = (rec: RunRecord): void => {

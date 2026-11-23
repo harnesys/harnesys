@@ -1,9 +1,4 @@
 import { Injectable } from '@harnesys/brix';
-import {
-  GitBranchExistsError,
-  GitBranchInvalidError,
-  GitDirtyError,
-} from '../../../../../domain/source/git-vcs.error.ts';
 import type {
   GitIdentity,
   GitMachineInfo,
@@ -12,14 +7,27 @@ import type {
 import { GitVcsPort } from '../../../../../domain/source/git-vcs.port.ts';
 import type {
   GitBranch,
+  GitCommitDetail,
+  GitCommitSummary,
   GitDiffResponse,
   GitFileStatusMap,
+  GitFileStatusResponse,
   GitStatusResponse,
 } from '../../../../../domain/source/git-vcs.types.ts';
 import { getAheadBehind } from './git-ahead-behind.ts';
+import {
+  checkoutBranch,
+  createBranch,
+  listBranches,
+  mergeBranch,
+  validateBranchName,
+} from './git-branches.ts';
+import { commitChanges, discardPaths, stagePaths, unstagePaths } from './git-changes.ts';
 import { getDiff } from './git-diff.ts';
 import { execGit, execGitTrim } from './git-exec.ts';
+import { getLog, getShow, revertCommit } from './git-log.ts';
 import { readMachineInfo, writeGlobalIdentity } from './git-machine.ts';
+import { fetchRemote, pullRemote, pushRemote } from './git-remote.ts';
 import { getFileStatus, getMtimeKey, getStatus } from './git-status.ts';
 
 interface StatusCache {
@@ -66,13 +74,7 @@ export class GitCliAdapter extends GitVcsPort {
     );
   }
 
-  async getFileStatus(
-    cwd: string,
-    subPath?: string,
-  ): Promise<{
-    map: GitFileStatusMap;
-    truncated: boolean;
-  }> {
+  async getFileStatus(cwd: string, subPath?: string): Promise<GitFileStatusResponse> {
     const safeCwd = await this.resolveCwd(cwd);
     return getFileStatus(safeCwd, this.statusCache, (c) => getMtimeKey(c), subPath);
   }
@@ -82,137 +84,65 @@ export class GitCliAdapter extends GitVcsPort {
     recent: GitBranch[];
   }> {
     const safeCwd = await this.resolveCwd(cwd);
-    const current = await execGitTrim(safeCwd, ['branch', '--show-current']).catch(() => '');
-    const raw = await execGitTrim(safeCwd, [
-      'for-each-ref',
-      '--sort=-committerdate',
-      '--format=%(refname:short)',
-      'refs/heads',
-    ]).catch(() => '');
-    let names = raw ? raw.split('\n').filter(Boolean) : [];
-    if (names.length === 0) {
-      const fb = await execGitTrim(safeCwd, ['branch', '--format=%(refname:short)']).catch(
-        () => '',
-      );
-      names = fb ? fb.split('\n').filter(Boolean) : [];
-    }
-    if (names.length === 0 && current) {
-      names = [current];
-    }
-    const local: GitBranch[] = names.map((n) => ({
-      name: n.trim(),
-      current: n.trim() === current,
-    }));
-    return { local, recent: local.slice(0, 5) };
+    return listBranches(safeCwd);
   }
 
   async checkout(cwd: string, branch: string): Promise<void> {
     const safeCwd = await this.resolveCwd(cwd);
-    if (!branch || branch.includes('\0') || branch.includes('\n')) {
-      throw new GitBranchInvalidError('invalid branch name');
-    }
-    const res = await execGit(safeCwd, ['checkout', branch]);
-    if (res.code === 0) {
-      this.statusCache.clear();
-      return;
-    }
-    const err = res.stderr + res.stdout;
-    if (/already exists/i.test(err)) {
-      throw new GitBranchExistsError(err.trim());
-    }
-    if (/would be overwritten|local changes|needs merge|overwritten by checkout/i.test(err)) {
-      throw new GitDirtyError(err.trim());
-    }
-    throw new Error(err.trim() || `git checkout failed (${res.code})`);
+    await checkoutBranch(safeCwd, branch);
+    this.statusCache.clear();
   }
 
   async merge(cwd: string, branch: string): Promise<void> {
     const safeCwd = await this.resolveCwd(cwd);
-    if (!branch || branch.includes('\0') || branch.includes('\n')) {
-      throw new GitBranchInvalidError('invalid branch name');
-    }
-    const res = await execGit(safeCwd, ['merge', branch]);
-    if (res.code === 0) {
-      this.statusCache.clear();
-      return;
-    }
-    const err = (res.stderr + res.stdout).trim();
-    if (/would be overwritten|local changes/i.test(err)) {
-      throw new GitDirtyError(err);
-    }
-    throw new Error(err || `git merge failed (${res.code})`);
+    await mergeBranch(safeCwd, branch);
+    this.statusCache.clear();
   }
 
   async createBranch(cwd: string, name: string, checkout: boolean, from?: string): Promise<void> {
     const safeCwd = await this.resolveCwd(cwd);
-    const ok = await this.validateBranchName(safeCwd, name);
-    if (!ok) {
-      throw new GitBranchInvalidError(`invalid branch name: ${name}`);
-    }
-    const args = checkout ? ['checkout', '-b', name] : ['branch', name];
-    if (from) {
-      args.push(from);
-    }
-    const res = await execGit(safeCwd, args);
-    if (res.code === 0) {
-      this.statusCache.clear();
-      return;
-    }
-    const err = (res.stderr + res.stdout).trim();
-    if (/already exists/i.test(err)) {
-      throw new GitBranchExistsError(err);
-    }
-    throw new Error(err || `git branch failed (${res.code})`);
+    await createBranch(safeCwd, name, checkout, from);
+    this.statusCache.clear();
   }
 
   async stage(cwd: string, paths: string[]): Promise<void> {
     const safeCwd = await this.resolveCwd(cwd);
-    const clean = paths
-      .map((p) => p.trim())
-      .filter((p) => p.length > 0 && !p.includes('\0') && !p.includes('\n'));
-    if (clean.length === 0) {
-      const res = await execGit(safeCwd, ['add', '-A']);
-      if (res.code === 0) {
-        this.statusCache.clear();
-        return;
-      }
-      throw new Error((res.stderr || res.stdout).trim() || `git add failed (${res.code})`);
-    }
-    const res = await execGit(safeCwd, ['add', '--', ...clean]);
-    if (res.code === 0) {
-      this.statusCache.clear();
-      return;
-    }
-    throw new Error((res.stderr || res.stdout).trim() || `git add failed (${res.code})`);
+    await stagePaths(safeCwd, paths);
+    this.statusCache.clear();
   }
 
-  async commit(cwd: string, message: string, paths?: string[]): Promise<void> {
+  async unstage(cwd: string, paths: string[]): Promise<void> {
     const safeCwd = await this.resolveCwd(cwd);
-    const msg = message.trim();
-    if (!msg) {
-      throw new Error('commit message is required');
-    }
-    if (msg.includes('\0')) {
-      throw new Error('invalid commit message');
-    }
-    const clean = (paths ?? [])
-      .map((p) => p.trim())
-      .filter((p) => p.length > 0 && !p.includes('\0') && !p.includes('\n'));
-    if (clean.length === 0) {
-      const addRes = await execGit(safeCwd, ['add', '-A']);
-      if (addRes.code !== 0) {
-        throw new Error(
-          (addRes.stderr || addRes.stdout).trim() || `git add failed (${addRes.code})`,
-        );
-      }
-      await this.runCommit(safeCwd, ['commit', '-m', msg]);
-      return;
-    }
-    const addRes = await execGit(safeCwd, ['add', '--', ...clean]);
-    if (addRes.code !== 0) {
-      throw new Error((addRes.stderr || addRes.stdout).trim() || `git add failed (${addRes.code})`);
-    }
-    await this.runCommit(safeCwd, ['commit', '-m', msg, '--', ...clean]);
+    await unstagePaths(safeCwd, paths);
+    this.statusCache.clear();
+  }
+
+  async discard(cwd: string, paths: string[], untrackedPaths: string[]): Promise<void> {
+    const safeCwd = await this.resolveCwd(cwd);
+    await discardPaths(safeCwd, paths, untrackedPaths);
+    this.statusCache.clear();
+  }
+
+  async commit(cwd: string, message: string, paths?: string[], amend?: boolean): Promise<void> {
+    const safeCwd = await this.resolveCwd(cwd);
+    await commitChanges(safeCwd, message, paths, amend);
+    this.statusCache.clear();
+  }
+
+  async log(cwd: string, limit: number): Promise<GitCommitSummary[]> {
+    const safeCwd = await this.resolveCwd(cwd);
+    return getLog(safeCwd, limit);
+  }
+
+  async show(cwd: string, sha: string): Promise<GitCommitDetail> {
+    const safeCwd = await this.resolveCwd(cwd);
+    return getShow(safeCwd, sha);
+  }
+
+  async revert(cwd: string, sha: string): Promise<void> {
+    const safeCwd = await this.resolveCwd(cwd);
+    await revertCommit(safeCwd, sha);
+    this.statusCache.clear();
   }
 
   async getMachineInfo(): Promise<GitMachineInfo> {
@@ -224,57 +154,22 @@ export class GitCliAdapter extends GitVcsPort {
     return this.getMachineInfo();
   }
 
-  private async runCommit(cwd: string, args: string[]): Promise<void> {
-    const res = await execGit(cwd, args);
-    if (res.code === 0) {
-      this.statusCache.clear();
-      return;
-    }
-    const err = (res.stderr + res.stdout).trim();
-    if (/nothing to commit|no changes added/i.test(err)) {
-      throw new Error('nothing to commit');
-    }
-    throw new Error(err || `git commit failed (${res.code})`);
-  }
-
   async push(cwd: string): Promise<void> {
     const safeCwd = await this.resolveCwd(cwd);
-    const res = await execGit(safeCwd, ['push']);
-    if (res.code === 0) {
-      this.statusCache.clear();
-      return;
-    }
-    const err = (res.stderr + res.stdout).trim();
-    if (/has no upstream|set-upstream|unknown.*upstream/i.test(err)) {
-      const retry = await execGit(safeCwd, ['push', '-u', 'origin', 'HEAD']);
-      if (retry.code === 0) {
-        this.statusCache.clear();
-        return;
-      }
-      const retryErr = (retry.stderr + retry.stdout).trim();
-      throw new Error(retryErr || err || `git push failed (${retry.code})`);
-    }
-    throw new Error(err || `git push failed (${res.code})`);
+    await pushRemote(safeCwd);
+    this.statusCache.clear();
   }
 
   async pull(cwd: string): Promise<void> {
     const safeCwd = await this.resolveCwd(cwd);
-    const res = await execGit(safeCwd, ['pull', '--rebase']);
-    if (res.code === 0) {
-      this.statusCache.clear();
-      return;
-    }
-    const err = (res.stderr + res.stdout).trim();
-    if (/conflict|needs merge|would be overwritten/i.test(err)) {
-      throw new Error(err);
-    }
-    const retry = await execGit(safeCwd, ['pull']);
-    if (retry.code === 0) {
-      this.statusCache.clear();
-      return;
-    }
-    const retryErr = (retry.stderr + retry.stdout).trim();
-    throw new Error(retryErr || err || `git pull failed (${retry.code})`);
+    await pullRemote(safeCwd);
+    this.statusCache.clear();
+  }
+
+  async fetch(cwd: string): Promise<void> {
+    const safeCwd = await this.resolveCwd(cwd);
+    await fetchRemote(safeCwd);
+    this.statusCache.clear();
   }
 
   async init(cwd: string): Promise<void> {
@@ -314,8 +209,7 @@ export class GitCliAdapter extends GitVcsPort {
 
   async validateBranchName(cwd: string, name: string): Promise<boolean> {
     const safeCwd = await this.resolveCwd(cwd);
-    const res = await execGit(safeCwd, ['check-ref-format', '--branch', name]);
-    return res.code === 0;
+    return validateBranchName(safeCwd, name);
   }
 
   private async getVersion(): Promise<string | null> {

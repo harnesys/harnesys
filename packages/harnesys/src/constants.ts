@@ -176,6 +176,7 @@ export const DRIVERS = [
   'xiaomi',
   'qwen',
   'alibaba',
+  'deepseek',
 ] as const;
 export const PLAN_ITEM_STATUSES = [
   'pending',
@@ -278,6 +279,7 @@ export const KIMI_DEFAULT_URL = 'https://api.moonshot.ai/v1';
 export const CEREBRAS_DEFAULT_URL = 'https://api.cerebras.ai/v1';
 export const TOGETHER_DEFAULT_URL = 'https://api.together.xyz/v1';
 export const ALIBABA_DEFAULT_URL = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1';
+export const DEEPSEEK_DEFAULT_URL = 'https://api.deepseek.com';
 export const MISTRAL_DEFAULT_URL = 'https://api.mistral.ai/v1';
 export const MINIMAX_DEFAULT_URL = 'https://api.minimax.io/v1';
 export const OLLAMA_DEFAULT_URL = 'http://localhost:11434';

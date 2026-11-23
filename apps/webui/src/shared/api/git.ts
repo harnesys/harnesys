@@ -1,8 +1,10 @@
 import type {
   EventsWatchGitFileStatusFrame,
   EventsWatchGitSummaryFrame,
+  GitCommitDetail,
+  GitCommitSummary,
   GitDiffResponse,
-  GitFileStatusMap,
+  GitFileStatusResponse,
   GitMachineInfo,
   GitOrgFileStatus,
   GitSourceSummary,
@@ -64,7 +66,7 @@ export function initGit(projectId: string): Promise<{ ok: true }> {
 export async function getGitFileStatus(
   projectId: string,
   subPath = '',
-): Promise<{ map: GitFileStatusMap; truncated: boolean }> {
+): Promise<GitFileStatusResponse> {
   const location = await resolveGitLocation(projectId);
   const q = new URLSearchParams({
     ...location,
@@ -114,11 +116,12 @@ export async function commitGit(
   projectId: string,
   message: string,
   paths: string[] = [],
+  amend = false,
 ): Promise<{ ok: true }> {
   const location = await resolveGitLocation(projectId);
   return apiJson(orgSourceGitPath(projectId, 'commit'), {
     method: 'POST',
-    body: JSON.stringify({ message, paths, ...location }),
+    body: JSON.stringify({ message, paths, ...location, ...(amend ? { amend: true } : {}) }),
   });
 }
 
@@ -171,6 +174,57 @@ export async function stageGit(projectId: string, paths: string[] = []): Promise
     method: 'POST',
     body: JSON.stringify({ paths, ...location }),
   });
+}
+
+export async function unstageGit(projectId: string, paths: string[] = []): Promise<{ ok: true }> {
+  const location = await resolveGitLocation(projectId);
+  return apiJson(orgSourceGitPath(projectId, 'unstage'), {
+    method: 'POST',
+    body: JSON.stringify({ paths, ...location }),
+  });
+}
+
+export async function discardGit(
+  projectId: string,
+  paths: string[] = [],
+  untrackedPaths: string[] = [],
+): Promise<{ ok: true }> {
+  const location = await resolveGitLocation(projectId);
+  return apiJson(orgSourceGitPath(projectId, 'discard'), {
+    method: 'POST',
+    body: JSON.stringify({ paths, untrackedPaths, ...location }),
+  });
+}
+
+export async function fetchGit(projectId: string): Promise<{ ok: true }> {
+  const location = await resolveGitLocation(projectId);
+  return apiJson(orgSourceGitPath(projectId, 'fetch'), {
+    method: 'POST',
+    body: JSON.stringify(location),
+  });
+}
+
+export async function revertGit(projectId: string, sha: string): Promise<{ ok: true }> {
+  const location = await resolveGitLocation(projectId);
+  return apiJson(orgSourceGitPath(projectId, 'revert'), {
+    method: 'POST',
+    body: JSON.stringify({ sha, ...location }),
+  });
+}
+
+export async function getGitLog(
+  projectId: string,
+  limit = 50,
+): Promise<{ commits: GitCommitSummary[] }> {
+  const location = await resolveGitLocation(projectId);
+  const q = new URLSearchParams({ ...location, limit: String(limit) });
+  return apiJson(orgSourceGitPath(projectId, `log?${q.toString()}`));
+}
+
+export async function getGitShow(projectId: string, sha: string): Promise<GitCommitDetail> {
+  const location = await resolveGitLocation(projectId);
+  const q = new URLSearchParams({ ...location, sha });
+  return apiJson(orgSourceGitPath(projectId, `show?${q.toString()}`));
 }
 
 export async function getGitDiff(projectId: string, filePath: string): Promise<GitDiffResponse> {
@@ -226,6 +280,10 @@ export function invalidateGitOrgSummary(qc: QueryClient): void {
 }
 export const gitDiffQueryKey = (projectId: string, filePath: string) =>
   ['sources', projectId, 'git', 'diff', filePath] as const;
+export const gitLogQueryKey = (projectId: string, limit = 50) =>
+  ['sources', projectId, 'git', 'log', limit] as const;
+export const gitShowQueryKey = (projectId: string, sha: string) =>
+  ['sources', projectId, 'git', 'show', sha] as const;
 
 export function setGitRemote(
   sourceId: string,

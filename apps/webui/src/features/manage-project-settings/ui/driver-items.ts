@@ -20,5 +20,6 @@ export const DRIVER_LABELS: Record<Driver, string> = {
   xiaomi: 'Xiaomi MiMo',
   qwen: 'Qwen (Alibaba)',
   alibaba: 'Alibaba',
+  deepseek: 'DeepSeek',
 };
 export const DRIVER_ITEMS = DRIVERS.map((value) => ({ value, label: DRIVER_LABELS[value] }));

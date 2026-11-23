@@ -40,10 +40,10 @@ export class EventsWatchController {
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
         const encoder = new TextEncoder();
-        const terminate = (error: unknown) => {
+        const terminate = () => {
           cleanup();
           try {
-            controller.error(error);
+            controller.close();
           } catch {}
         };
         const write = (frame: EventsWatchFrame) => {
@@ -52,8 +52,8 @@ export class EventsWatchController {
           }
           try {
             controller.enqueue(encoder.encode(serializeFrame(frame)));
-          } catch (error) {
-            terminate(error);
+          } catch {
+            terminate();
           }
         };
         const flush = () => {
@@ -73,8 +73,8 @@ export class EventsWatchController {
           }
           try {
             controller.enqueue(encoder.encode(KEEP_ALIVE_FRAME));
-          } catch (error) {
-            terminate(error);
+          } catch {
+            terminate();
           }
         }, SSE_KEEP_ALIVE_MS);
       },

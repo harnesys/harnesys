@@ -10,6 +10,44 @@ export type GitFileStatus =
 
 export type GitFileStatusMap = Record<string, GitFileStatus>;
 
+export interface GitFileStatusResponse {
+  map: GitFileStatusMap;
+  truncated: boolean;
+  stagedPaths?: string[];
+  unstagedPaths?: string[];
+}
+
+export interface GitCommitAuthor {
+  name: string;
+  email: string;
+}
+
+export interface GitCommitSummary {
+  sha: string;
+  shortSha: string;
+  subject: string;
+  author: GitCommitAuthor;
+  date: string;
+  refs: string[];
+  parents: string[];
+}
+
+export interface GitCommitFileChange {
+  path: string;
+  previousPath?: string;
+  added: number;
+  deleted: number;
+  status: GitFileStatus;
+}
+
+export interface GitCommitDetail {
+  commit: GitCommitSummary;
+  body: string;
+  files: GitCommitFileChange[];
+  patch: string;
+  truncated: boolean;
+}
+
 export interface GitBranch {
   name: string;
   current: boolean;

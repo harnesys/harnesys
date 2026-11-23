@@ -40,6 +40,7 @@ const CONTAINER_DEPTH = 3;
 const SKILL_MD = 'SKILL.md';
 const AGENTS_MD = 'AGENTS.md';
 const HARNESYS_IGNORE = '.harnesysignore';
+const GIT_IGNORE = '.gitignore';
 
 interface RawHit {
   rel: string;
@@ -67,6 +68,10 @@ export async function walkSkills(root: string): Promise<WalkResult> {
     hits: [],
     agentMd: [],
   };
+  const rootGit = await loadIgnoreFile(join(root, GIT_IGNORE));
+  if (rootGit !== undefined) {
+    state.layers.push({ relDir: '', ig: rootGit });
+  }
   await walkDir(state, root, '', 0);
   return finish(state);
 }
@@ -80,33 +85,61 @@ async function walkDir(
   if (state.entries >= MAX_TREE_ENTRIES) {
     return;
   }
-  const hit = await skillHitAt(absDir, rel, depth);
-  if (hit !== undefined && state.hits.length < MAX_SKILL_DIRS) {
-    state.hits.push(hit);
-  }
-  if (depth >= MAX_DEPTH) {
-    return;
-  }
   let dirents: Dirent<string>[];
   try {
     dirents = await readdir(absDir, { withFileTypes: true });
   } catch {
     return;
   }
-  const nestedIg = await loadIgnoreFile(join(absDir, HARNESYS_IGNORE));
-  if (nestedIg !== undefined && rel !== '') {
-    state.layers.push({ relDir: rel, ig: nestedIg });
-  }
-  for (const entry of dirents) {
-    state.entries++;
-    if (state.entries >= MAX_TREE_ENTRIES) {
-      return;
+  if (hasFile(dirents, SKILL_MD) && state.hits.length < MAX_SKILL_DIRS) {
+    const hit = await skillHitAt(absDir, rel, depth);
+    if (hit !== undefined) {
+      state.hits.push(hit);
     }
-    await visitEntry(state, absDir, rel, depth, entry);
   }
-  if (nestedIg !== undefined && rel !== '') {
-    state.layers.pop();
+  if (depth >= MAX_DEPTH) {
+    return;
   }
+  const pushed = await pushIgnoreLayers(state, absDir, rel, dirents);
+  try {
+    for (const entry of dirents) {
+      state.entries++;
+      if (state.entries >= MAX_TREE_ENTRIES) {
+        return;
+      }
+      await visitEntry(state, absDir, rel, depth, entry);
+    }
+  } finally {
+    state.layers.length -= pushed;
+  }
+}
+
+function hasFile(dirents: Dirent<string>[], name: string): boolean {
+  return dirents.some((entry) => entry.name === name && entry.isFile());
+}
+
+async function pushIgnoreLayers(
+  state: WalkState,
+  absDir: string,
+  rel: string,
+  dirents: Dirent<string>[],
+): Promise<number> {
+  let pushed = 0;
+  if (rel !== '' && hasFile(dirents, GIT_IGNORE)) {
+    const ig = await loadIgnoreFile(join(absDir, GIT_IGNORE));
+    if (ig !== undefined) {
+      state.layers.push({ relDir: rel, ig });
+      pushed++;
+    }
+  }
+  if (rel !== '' && hasFile(dirents, HARNESYS_IGNORE)) {
+    const ig = await loadIgnoreFile(join(absDir, HARNESYS_IGNORE));
+    if (ig !== undefined) {
+      state.layers.push({ relDir: rel, ig });
+      pushed++;
+    }
+  }
+  return pushed;
 }
 
 async function visitEntry(
@@ -127,7 +160,7 @@ async function visitEntry(
     gitLayers: state.layers,
     harnesysIg: state.rootIg,
   });
-  if (skip !== undefined) {
+  if (skip !== undefined && !(skip === 'gitignore' && containerRelevant(relEntry))) {
     return;
   }
   if (entry.name === AGENTS_MD && entry.isFile()) {
@@ -200,6 +233,13 @@ function inContainer(rel: string): boolean {
     }
   }
   return false;
+}
+
+function containerRelevant(rel: string): boolean {
+  if (inContainer(rel)) {
+    return true;
+  }
+  return CONTAINER_DIRS.some((base) => base.startsWith(`${rel}/`));
 }
 
 function toCandidate(hit: RawHit): WalkCandidate {

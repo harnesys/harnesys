@@ -1,6 +1,6 @@
 import { Injectable } from '@harnesys/brix';
 import { GitVcsPort } from '../../domain/source/git-vcs.port.ts';
-import type { GitFileStatusMap } from '../../domain/source/git-vcs.types.ts';
+import type { GitFileStatusResponse } from '../../domain/source/git-vcs.types.ts';
 import { SourceNotFoundException } from '../../domain/source/source.error.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import { hasGitVcs } from '../../domain/source/vcs-capability.ts';
@@ -15,11 +15,6 @@ export interface GetGitFileStatusInput {
   path?: string;
 }
 
-export interface GetGitFileStatusResult {
-  map: GitFileStatusMap;
-  truncated: boolean;
-}
-
 @Injectable()
 export class GetGitFileStatusUseCase {
   constructor(
@@ -28,7 +23,7 @@ export class GetGitFileStatusUseCase {
     private readonly git: GitVcsPort,
   ) {}
 
-  async execute(input: GetGitFileStatusInput): Promise<GetGitFileStatusResult> {
+  async execute(input: GetGitFileStatusInput): Promise<GitFileStatusResponse> {
     const record = this.sources.findById(input.orgId, input.sourceId);
     if (!record) {
       throw new SourceNotFoundException(input.sourceId);

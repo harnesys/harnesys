@@ -2,6 +2,7 @@ import { and, inArray, isNull, sql } from 'drizzle-orm';
 import type { RunLifecycleStore, RunRecord } from 'harnesys';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
 import { runsTable } from '../org-sqlite/schema/index.ts';
+import { notWorkerClaimedRun } from './worker-claims.ts';
 
 export interface RecoverOrphanedRunsDeps {
   db: OrgSqliteDb;
@@ -25,7 +26,13 @@ export async function recoverOrphanedRuns(deps: RecoverOrphanedRunsDeps): Promis
   const rows = deps.db
     .select({ runId: runsTable.runId, threadId: runsTable.threadId })
     .from(runsTable)
-    .where(and(isNull(runsTable.parentRunId), inArray(runsTable.status, ORPHAN_STATUSES)))
+    .where(
+      and(
+        isNull(runsTable.parentRunId),
+        inArray(runsTable.status, ORPHAN_STATUSES),
+        notWorkerClaimedRun(),
+      ),
+    )
     .limit(RECOVERY_LIMIT)
     .all();
   let resumed = 0;

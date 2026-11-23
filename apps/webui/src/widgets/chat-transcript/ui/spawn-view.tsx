@@ -1,17 +1,25 @@
 import type { SessionEvent } from '@harnesys/studio-shared';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { agentColorClass, useAgentStore } from '@/entities/agent';
 import type { SpawnStatus } from '@/entities/session';
 import { spawnSubtreeIds, spawnTaskText, splitRuns, useThreadFeeds } from '@/entities/session';
 import { useThreadStore } from '@/entities/thread';
-import { refreshThread, useDeskReady, useThreadEvents } from '@/features/desk';
+import { useThreadEvents } from '@/features/desk';
 import type { IdeTab } from '@/features/ide';
 import { useOpenSpawnTab } from '@/features/ide';
 import { cn } from '@/shared/lib/utils';
+import {
+  MessageScroller,
+  MessageScrollerContent,
+  MessageScrollerItem,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
+} from '@/shared/ui/message-scroller';
 import { RunAttributionBadge } from '@/shared/ui/run-attribution-badge';
 import { StatusDot } from '@/shared/ui/status-dot';
 import { ThreadDock } from '@/widgets/thread-dock';
 import { agentFallbackName } from '../model/agent-label';
+import { useSyncedThread } from '../model/thread-sync';
 import { RunTurn } from './run-turn';
 
 const DOT_TONE: Record<SpawnStatus, 'live' | 'idle' | 'danger'> = {
@@ -37,8 +45,7 @@ export function SpawnView({
   const events = useThreadEvents(threadId);
   const feeds = useThreadFeeds(threadId);
   const spawns = [...(feeds?.inherited.spawns ?? []), ...(feeds?.own.spawns ?? [])];
-  const hasEvents = events.length > 0;
-  const deskReady = useDeskReady(tab.projectId);
+  const synced = useSyncedThread(threadId, tab.projectId);
   const openSpawnTab = useOpenSpawnTab();
   const spawn = spawns.find((item) => item.spawnId === spawnId);
   const agent = useAgentStore((state) => (spawn ? state.byId(spawn.agentId) : undefined));
@@ -55,12 +62,6 @@ export function SpawnView({
   const [taskExpanded, setTaskExpanded] = useState(false);
   const taskCollapsed =
     spawnedTask !== undefined && Array.from(spawnedTask).length > TASK_COLLAPSE_AT && !taskExpanded;
-  useEffect(() => {
-    if (hasEvents || !deskReady) {
-      return;
-    }
-    void refreshThread(threadId).catch(() => {});
-  }, [hasEvents, deskReady, threadId]);
   const running = spawn?.status === 'running';
   if (!spawn) {
     return (
@@ -68,7 +69,7 @@ export function SpawnView({
         className="flex flex-1 items-center justify-center text-muted-foreground text-sm"
         data-testid="ide-spawn-loading"
       >
-        {hasEvents ? 'Spawn not found' : 'Loading…'}
+        {synced ? 'Spawn not found' : 'Loading…'}
       </div>
     );
   }
@@ -103,21 +104,26 @@ export function SpawnView({
           </div>
         </div>
       ) : null}
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-7 px-4 py-8 text-[length:var(--chat-font-size)]">
-          {runs.map((run, index) => (
-            <RunTurn
-              key={run.key}
-              run={run}
-              runId={run.runId ?? spawnId}
-              streaming={Boolean(running) && index === runs.length - 1}
-              threadId={threadId}
-              onOpenSpawn={onOpenSpawn}
-              readOnly
-            />
-          ))}
-        </div>
-      </div>
+      <MessageScrollerProvider autoScroll>
+        <MessageScroller className="min-h-0 flex-1">
+          <MessageScrollerViewport>
+            <MessageScrollerContent className="mx-auto w-full max-w-3xl gap-7 px-4 py-8 text-[length:var(--chat-font-size)]">
+              {runs.map((run, index) => (
+                <MessageScrollerItem key={run.key} messageId={run.key}>
+                  <RunTurn
+                    run={run}
+                    runId={run.runId ?? spawnId}
+                    streaming={Boolean(running) && index === runs.length - 1}
+                    threadId={threadId}
+                    onOpenSpawn={onOpenSpawn}
+                    readOnly
+                  />
+                </MessageScrollerItem>
+              ))}
+            </MessageScrollerContent>
+          </MessageScrollerViewport>
+        </MessageScroller>
+      </MessageScrollerProvider>
       <ThreadDock
         identity={{
           icon: <StatusDot tone={DOT_TONE[spawn.status]} className="size-2" />,

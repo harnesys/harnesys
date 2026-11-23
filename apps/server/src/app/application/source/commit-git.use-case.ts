@@ -11,6 +11,7 @@ export interface CommitGitInput {
   worktreeId: string;
   message: string;
   paths?: string[];
+  amend?: boolean;
 }
 
 export interface CommitGitResult {
@@ -34,7 +35,7 @@ export class CommitGitUseCase {
       worktreeId: input.worktreeId,
     });
     try {
-      await this.git.commit(cwd, message, input.paths);
+      await this.git.commit(cwd, message, input.paths, input.amend);
       return { ok: true };
     } catch (err) {
       return mapGitVcsError(err);

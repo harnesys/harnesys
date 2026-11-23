@@ -3,7 +3,7 @@ import { useSessionStore } from '@/entities/session';
 import { refreshThread, useDeskReady } from '@/features/desk';
 
 export function useSyncedThread(threadId: string | null, orgId: string): boolean {
-  const hasEvents = useSessionStore((state) => (threadId ? threadId in state.events : false));
+  const loaded = useSessionStore((state) => (threadId ? state.historyLoaded[threadId] : false));
   const hydrated = useDeskReady(orgId);
   const [fetched, setFetched] = useState(false);
   useEffect(() => {
@@ -11,7 +11,7 @@ export function useSyncedThread(threadId: string | null, orgId: string): boolean
     if (!threadId) {
       return;
     }
-    if (hasEvents) {
+    if (loaded) {
       return;
     }
     if (!hydrated) {
@@ -33,6 +33,6 @@ export function useSyncedThread(threadId: string | null, orgId: string): boolean
     return () => {
       cancelled = true;
     };
-  }, [threadId, hasEvents, hydrated]);
-  return hasEvents || fetched;
+  }, [threadId, loaded, hydrated]);
+  return loaded || fetched;
 }

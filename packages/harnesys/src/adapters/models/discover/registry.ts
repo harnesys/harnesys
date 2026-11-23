@@ -4,6 +4,7 @@ import { DiscoverError } from '../binding.ts';
 import { listAlibabaModels } from './alibaba.ts';
 import { listAnthropicModels } from './anthropic.ts';
 import { listCerebrasModels } from './cerebras.ts';
+import { listDeepSeekModels } from './deepseek.ts';
 import { listGoogleModels } from './google.ts';
 import { listGroqModels } from './groq.ts';
 import { listKimiModels } from './kimi.ts';
@@ -79,6 +80,7 @@ const drivers: Record<Driver, DriverDiscover> = {
     defaultApiUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
     list: listAlibabaModels,
   },
+  deepseek: { defaultApiUrl: 'https://api.deepseek.com', list: listDeepSeekModels },
 };
 export function discoverAdapter(driver: string): DriverDiscover {
   if (!(DRIVERS as readonly string[]).includes(driver)) {

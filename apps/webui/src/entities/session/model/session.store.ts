@@ -22,6 +22,7 @@ import {
 } from './pending-appends';
 import { mergeSeqCeil, reconcileSnapshot, sameThreadLog } from './reconcile-snapshot';
 import { applyBatches, EMPTY_EVENTS, isStreamDeltaType } from './session-batches';
+import { withoutThreads } from './without-threads';
 export interface ActiveRun {
   runId: string;
   controller: AbortController;
@@ -40,6 +41,7 @@ export interface SessionStoreState {
   failures: RunFailure[];
   contentEpoch: Record<string, number>;
   sentSkills: Record<string, string[]>;
+  historyLoaded: Record<string, boolean>;
 }
 interface SessionStoreActions {
   eventsOf: (threadId: string) => SessionEvent[];
@@ -81,6 +83,7 @@ export const useSessionStore = create<SessionStoreState & SessionStoreActions>((
     failures: [],
     contentEpoch: {},
     sentSkills: {},
+    historyLoaded: {},
     eventsOf(threadId: string) {
       return get().events[threadId] ?? EMPTY_EVENTS;
     },
@@ -100,6 +103,7 @@ export const useSessionStore = create<SessionStoreState & SessionStoreActions>((
           seenAt,
           seqCeil: { ...base.seqCeil, [threadId]: ceilFromEvents(events) },
           contentEpoch: { ...base.contentEpoch, [threadId]: now },
+          historyLoaded: { ...base.historyLoaded, [threadId]: true },
         };
       });
     },
@@ -107,8 +111,9 @@ export const useSessionStore = create<SessionStoreState & SessionStoreActions>((
       set((state) => {
         const current = state.events[threadId] ?? EMPTY_EVENTS;
         const merged = reconcileSnapshot(current, serverEvents);
+        const historyLoaded = { ...state.historyLoaded, [threadId]: true };
         if (sameThreadLog(current, merged)) {
-          return state;
+          return { ...state, historyLoaded };
         }
         const now = Date.now();
         const seenAt = fillSeenAt(state.seenAt, threadId, stableKeys(merged), now);
@@ -125,6 +130,7 @@ export const useSessionStore = create<SessionStoreState & SessionStoreActions>((
             [threadId]: mergeSeqCeil(state.seqCeil[threadId] ?? {}, serverEvents),
           },
           contentEpoch: { ...state.contentEpoch, [threadId]: now },
+          historyLoaded,
         };
       });
     },
@@ -271,25 +277,23 @@ export const useSessionStore = create<SessionStoreState & SessionStoreActions>((
       feedDrop(threadIds);
       set((state) => {
         const base = applyBatches(state, takePending());
-        const events = { ...base.events };
-        const feeds = { ...base.feeds };
-        const seenAt = { ...base.seenAt };
-        const seqCeil = { ...base.seqCeil };
-        const activeRuns = { ...base.activeRuns };
-        const contentEpoch = { ...base.contentEpoch };
         const sentSkills = { ...base.sentSkills };
         for (const id of threadIds) {
-          for (const ev of events[id] ?? []) {
+          for (const ev of base.events[id] ?? []) {
             delete sentSkills[stableEventKey(ev) ?? ''];
           }
-          delete events[id];
-          delete feeds[id];
-          delete seenAt[id];
-          delete seqCeil[id];
-          delete activeRuns[id];
-          delete contentEpoch[id];
         }
-        return { ...base, events, feeds, seenAt, seqCeil, activeRuns, contentEpoch, sentSkills };
+        return {
+          ...base,
+          events: withoutThreads(base.events, threadIds),
+          feeds: withoutThreads(base.feeds, threadIds),
+          seenAt: withoutThreads(base.seenAt, threadIds),
+          seqCeil: withoutThreads(base.seqCeil, threadIds),
+          activeRuns: withoutThreads(base.activeRuns, threadIds),
+          contentEpoch: withoutThreads(base.contentEpoch, threadIds),
+          historyLoaded: withoutThreads(base.historyLoaded, threadIds),
+          sentSkills,
+        };
       });
     },
     copyEvents(fromThreadId, toThreadId) {

@@ -1,5 +1,6 @@
 import { createAlibaba } from '@ai-sdk/alibaba';
 import { createAnthropic } from '@ai-sdk/anthropic';
+import { createDeepSeek } from '@ai-sdk/deepseek';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createMiniMax } from '@ai-sdk/minimax';
 import { createMistral } from '@ai-sdk/mistral';
@@ -136,6 +137,8 @@ export function buildProvider(
     case 'alibaba':
     case 'qwen':
       return (m: string) => createAlibaba(opts as never)(m);
+    case 'deepseek':
+      return (m: string) => createDeepSeek(opts as never)(m);
     case 'moonshot':
     case 'kimi':
       return (m: string) => createMoonshotAI(opts as never)(m);

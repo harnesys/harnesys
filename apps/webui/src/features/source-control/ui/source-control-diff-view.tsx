@@ -11,10 +11,20 @@ import {
   type MonacoInstance,
   type TextModel,
   type UpdateModelsParams,
-} from './git-commit-diff-view-types';
+} from './source-control-diff-view-types';
 
 let monacoPromise: Promise<unknown> | null = null;
-export function GitCommitDiffView({ projectId, path }: { projectId: string; path: string | null }) {
+export function SourceControlDiffView({
+  projectId,
+  path,
+  sideBySide = true,
+  showHeader = true,
+}: {
+  projectId: string;
+  path: string | null;
+  sideBySide?: boolean;
+  showHeader?: boolean;
+}) {
   const { theme } = useTheme();
   const diffQuery = useQuery({
     queryKey: path ? gitDiffQueryKey(projectId, path) : ['git-diff-none'],
@@ -66,12 +76,14 @@ export function GitCommitDiffView({ projectId, path }: { projectId: string; path
   }
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex h-7 shrink-0 items-center gap-2 border-b bg-muted/30 px-3">
-        <span className="truncate font-mono text-xs">{data.path}</span>
-        <span className="ml-auto rounded bg-muted px-1.5 font-mono text-[9px] text-muted-foreground uppercase">
-          {data.status}
-        </span>
-      </div>
+      {showHeader ? (
+        <div className="flex h-7 shrink-0 items-center gap-2 border-b bg-muted/30 px-3">
+          <span className="truncate font-mono text-xs">{data.path}</span>
+          <span className="ml-auto rounded bg-muted px-1.5 font-mono text-[9px] text-muted-foreground uppercase">
+            {data.status}
+          </span>
+        </div>
+      ) : null}
       <div className="min-h-0 flex-1">
         <MonacoDiffEditor
           theme={theme}
@@ -79,6 +91,7 @@ export function GitCommitDiffView({ projectId, path }: { projectId: string; path
           original={original}
           modified={modified}
           path={data.path}
+          sideBySide={sideBySide}
         />
       </div>
     </div>
@@ -90,12 +103,14 @@ function MonacoDiffEditor({
   original,
   modified,
   path,
+  sideBySide,
 }: {
   theme: 'dark' | 'light' | 'system';
   language: string;
   original: string;
   modified: string;
   path: string;
+  sideBySide: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<unknown>(null);
@@ -230,6 +245,13 @@ function MonacoDiffEditor({
       })
       .catch(() => {});
   }, [resolved, ready]);
+  useEffect(() => {
+    if (!ready || !editorRef.current) {
+      return;
+    }
+    const editor = editorRef.current as DiffEditorInstance;
+    editor.updateOptions({ renderSideBySide: sideBySide });
+  }, [ready, sideBySide]);
   useEffect(() => {
     if (!ready || !editorRef.current) {
       return;

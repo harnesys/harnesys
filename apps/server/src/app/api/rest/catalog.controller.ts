@@ -38,6 +38,7 @@ const DEFAULT_URLS: Record<(typeof DRIVERS)[number], string> = {
   xiaomi: 'https://api.xiaomimimo.com/v1',
   qwen: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
   alibaba: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+  deepseek: 'https://api.deepseek.com',
 };
 
 const KIMI_ENDPOINTS: CatalogEndpointResponse[] = [

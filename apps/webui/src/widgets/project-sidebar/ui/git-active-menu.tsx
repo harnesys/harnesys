@@ -106,7 +106,6 @@ export function GitActiveRepoMenuItems({
   const {
     checkoutMutation,
     mergeMutation,
-    commitMutation,
     pushMutation,
     pullMutation,
     stageMutation,
@@ -135,7 +134,7 @@ export function GitActiveRepoMenuItems({
   return (
     <>
       <DropdownMenuGroup>
-        <DropdownMenuItem onClick={handleCommit} disabled={!dirty || commitMutation.isPending}>
+        <DropdownMenuItem onClick={handleCommit} disabled={!dirty}>
           <GitCommitVerticalIcon className="size-3" />
           Commit{commitSuffix}
         </DropdownMenuItem>

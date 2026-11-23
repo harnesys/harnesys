@@ -10,11 +10,15 @@ import { CreateRepositoryWorktreeUseCase } from './create-repository-worktree.us
 import { DeleteGitBranchUseCase } from './delete-git-branch.use-case.ts';
 import { DeleteRepositoryWorktreeUseCase } from './delete-repository-worktree.use-case.ts';
 import { DetachSourceUseCase } from './detach-source.use-case.ts';
+import { DiscardGitUseCase } from './discard-git.use-case.ts';
 import { EnsureWorkspaceUseCase } from './ensure-workspace.use-case.ts';
+import { FetchGitUseCase } from './fetch-git.use-case.ts';
 import { GenerateCommitMessageUseCase } from './generate-commit-message.use-case.ts';
 import { GetGitDiffUseCase } from './get-git-diff.use-case.ts';
 import { GetGitFileStatusUseCase } from './get-git-file-status.use-case.ts';
+import { GetGitLogUseCase } from './get-git-log.use-case.ts';
 import { GetGitMachineInfoUseCase } from './get-git-machine-info.use-case.ts';
+import { GetGitShowUseCase } from './get-git-show.use-case.ts';
 import { GetGitStatusUseCase } from './get-git-status.use-case.ts';
 import { GetOrgGitFileStatusUseCase } from './get-org-git-file-status.use-case.ts';
 import { GetOrgGitSummaryUseCase } from './get-org-git-summary.use-case.ts';
@@ -35,6 +39,7 @@ import { RefreshAllSourceVcsUseCase } from './refresh-all-source-vcs.use-case.ts
 import { RefreshGitSourceUseCase } from './refresh-git-source.use-case.ts';
 import { RefreshSourceVcsUseCase } from './refresh-source-vcs.use-case.ts';
 import { RenameSourceUseCase } from './rename-source.use-case.ts';
+import { RevertGitUseCase } from './revert-git.use-case.ts';
 import { SetGitIdentityUseCase } from './set-git-identity.use-case.ts';
 import { SetGitRemoteUseCase } from './set-git-remote.use-case.ts';
 import { SetSourceAvailabilityUseCase } from './set-source-availability.use-case.ts';
@@ -42,6 +47,7 @@ import { SetSourceVisibilityUseCase } from './set-source-visibility.use-case.ts'
 import { SourcesToolsProvider } from './sources-tools.provider.ts';
 import { StageGitUseCase } from './stage-git.use-case.ts';
 import { SwitchGitBranchUseCase } from './switch-git-branch.use-case.ts';
+import { UnstageGitUseCase } from './unstage-git.use-case.ts';
 
 @Module({
   providers: [
@@ -68,11 +74,17 @@ import { SwitchGitBranchUseCase } from './switch-git-branch.use-case.ts';
     GetOrgGitFileStatusUseCase,
     GetOrgGitSummaryUseCase,
     GetGitDiffUseCase,
+    GetGitLogUseCase,
+    GetGitShowUseCase,
     StageGitUseCase,
+    UnstageGitUseCase,
+    DiscardGitUseCase,
     CommitGitUseCase,
     GenerateCommitMessageUseCase,
     PushGitUseCase,
     PullGitUseCase,
+    FetchGitUseCase,
+    RevertGitUseCase,
     CheckoutGitUseCase,
     MergeGitBranchUseCase,
     CreateGitBranchUseCase,
@@ -113,11 +125,17 @@ import { SwitchGitBranchUseCase } from './switch-git-branch.use-case.ts';
     GetOrgGitFileStatusUseCase,
     GetOrgGitSummaryUseCase,
     GetGitDiffUseCase,
+    GetGitLogUseCase,
+    GetGitShowUseCase,
     StageGitUseCase,
+    UnstageGitUseCase,
+    DiscardGitUseCase,
     CommitGitUseCase,
     GenerateCommitMessageUseCase,
     PushGitUseCase,
     PullGitUseCase,
+    FetchGitUseCase,
+    RevertGitUseCase,
     CheckoutGitUseCase,
     MergeGitBranchUseCase,
     CreateGitBranchUseCase,

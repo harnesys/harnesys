@@ -20,6 +20,7 @@ export interface DiffEditorInstance {
     } | null,
   ) => void;
   getModel: () => unknown | null;
+  updateOptions: (options: { renderSideBySide: boolean }) => void;
   dispose: () => void;
 }
 export interface UpdateModelsParams {

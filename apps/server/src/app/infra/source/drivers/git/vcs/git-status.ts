@@ -4,10 +4,11 @@ import { countGitFileStatuses } from '@harnesys/studio-shared';
 import type {
   GitBranch,
   GitFileStatusMap,
+  GitFileStatusResponse,
   GitStatusResponse,
 } from '../../../../../domain/source/git-vcs.types.ts';
 import { execGit, execGitTrim } from './git-exec.ts';
-import { parsePorcelain } from './git-helpers.ts';
+import { parsePorcelain, parsePorcelainSides } from './git-helpers.ts';
 
 const GIT_SLOW_THRESHOLD_MS = 800;
 
@@ -107,13 +108,10 @@ export async function getFileStatus(
   statusCache: Map<string, StatusCache>,
   getMtimeKey: (cwd: string) => Promise<string>,
   subPath?: string,
-): Promise<{
-  map: GitFileStatusMap;
-  truncated: boolean;
-}> {
+): Promise<GitFileStatusResponse> {
   const inside = await execGitTrim(safeCwd, ['rev-parse', '--is-inside-work-tree']).catch(() => '');
   if (inside !== 'true') {
-    return { map: {}, truncated: false };
+    return { map: {}, truncated: false, stagedPaths: [], unstagedPaths: [] };
   }
   const cacheKey = subPath ? `${safeCwd}::${subPath}` : safeCwd;
   const now = Date.now();
@@ -136,14 +134,15 @@ export async function getFileStatus(
   const elapsed = Date.now() - start;
   const prev = statusCache.get(cacheKey);
   const map = parsePorcelain(raw);
+  const { stagedPaths, unstagedPaths } = parsePorcelainSides(raw);
   if (elapsed > GIT_SLOW_THRESHOLD_MS) {
     const slowCount = (prev?.slowCount ?? 0) + 1;
     const truncated = slowCount >= 2;
     statusCache.set(cacheKey, { map, truncated, mtimeKey, ts: now, slowCount });
-    return { map, truncated };
+    return { map, truncated, stagedPaths, unstagedPaths };
   }
   statusCache.set(cacheKey, { map, truncated: false, mtimeKey, ts: now, slowCount: 0 });
-  return { map, truncated: false };
+  return { map, truncated: false, stagedPaths, unstagedPaths };
 }
 
 export async function getMtimeKey(cwd: string): Promise<string> {

@@ -19,6 +19,7 @@ import {
   maxSeqOf,
   rowToRecord,
 } from './sqlite-run-records.ts';
+import { notWorkerClaimedRun } from './worker-claims.ts';
 
 interface RunIdRow {
   run_id: string;
@@ -171,7 +172,11 @@ export class SqliteRunLifecycleStore implements RunLifecycleStore {
   }
 
   listClaimable(opts?: { limit?: number; before?: string }): Promise<RunRecord[]> {
-    const conditions = [eq(runsTable.status, 'queued'), isNull(runsTable.parentRunId)];
+    const conditions = [
+      eq(runsTable.status, 'queued'),
+      isNull(runsTable.parentRunId),
+      notWorkerClaimedRun(),
+    ];
     if (opts?.before !== undefined) {
       conditions.push(gt(runsTable.createdAt, opts.before));
     }
@@ -238,6 +243,7 @@ export class SqliteRunLifecycleStore implements RunLifecycleStore {
             isNull(runsTable.parentRunId),
             sql`(${runsTable.leaseExpiresAt} IS NULL OR ${runsTable.leaseExpiresAt} < ${now - grace})`,
             lt(runsTable.updatedAt, cutoffIso),
+            notWorkerClaimedRun(),
           ),
         )
         .orderBy(asc(runsTable.updatedAt))
