@@ -1,6 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
 import {
   fetchOrgAgents,
+  fetchOrgDepartments,
   listAutomations,
   listIssueBoards,
   listIssueLabels,
@@ -25,6 +26,14 @@ export function deskAgentsQuery(scopeId: string) {
   return queryOptions({
     queryKey: deskQueryKey('agents', scopeId),
     queryFn: () => fetchOrgAgents(scopeId),
+    enabled: Boolean(scopeId),
+  });
+}
+
+export function deskDepartmentsQuery(scopeId: string) {
+  return queryOptions({
+    queryKey: deskQueryKey('departments', scopeId),
+    queryFn: () => fetchOrgDepartments(scopeId),
     enabled: Boolean(scopeId),
   });
 }

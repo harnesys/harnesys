@@ -13,6 +13,7 @@ function recordOf(config: Record<string, unknown>) {
     budgetUsdDaily: null,
     level: 'delegate' as const,
     parentId: null,
+    departmentId: null,
     executionProfileId: null,
     status: 'active' as const,
     sharedSourceIds: [],

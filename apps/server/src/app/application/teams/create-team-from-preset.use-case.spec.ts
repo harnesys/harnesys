@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { BOARD_TEMPLATES } from '@harnesys/contracts';
+import { DepartmentRegistryPort } from '../../domain/department/department-registry.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { type HostConfig, MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { PresetNotFoundException } from '../../domain/presets/preset.error.ts';
@@ -72,6 +73,7 @@ function buildHarness(options?: {
     boards,
     new CreateAgentUseCase(
       agents,
+      stubDepartments(),
       new FakeModePresets(),
       profiles,
       stubSources(),
@@ -87,6 +89,11 @@ function buildHarness(options?: {
 function stubSources(): SourceRegistryPort {
   const port: Pick<SourceRegistryPort, 'findById'> = { findById: () => null };
   return port as SourceRegistryPort;
+}
+
+function stubDepartments(): DepartmentRegistryPort {
+  const port: Pick<DepartmentRegistryPort, 'findById'> = { findById: () => undefined };
+  return port as DepartmentRegistryPort;
 }
 
 function stubLayout(): HostFsLayoutPort {

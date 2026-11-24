@@ -1,7 +1,9 @@
-import { Fragment, useEffect } from 'react';
+import { useEffect } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import type { Agent } from '@/entities/agent';
+import { useDepartmentStore } from '@/entities/department';
 import { useThreadStore } from '@/entities/thread';
-import { AGENT_THREAD_KINDS, useAgentsDisplayStore } from '@/features/desk';
+import { useAgentsDisplayStore } from '@/features/desk';
 import {
   openAgentConfigDialog,
   updateAgent,
@@ -9,11 +11,9 @@ import {
 } from '@/features/manage-agent';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { toast } from '@/shared/ui/toast';
-import { AgentCard } from '@/widgets/agent-card';
-import { useThreadActions } from '../model/thread-actions';
-import { AgentInlineThreads } from './agent-inline-threads';
-import { AgentThreadsFilterMenu } from './agent-threads-filter';
+import { AgentGroupRow } from './agent-group-row';
 import { useCreateAgentFlow } from './agents-create-button';
+import { AgentMoveMenu, DepartmentGroup } from './department-row';
 import { SidebarEmpty } from './sidebar-empty';
 
 export { AgentsSectionActions } from './agents-section-menu';
@@ -33,6 +33,11 @@ export function AgentsSection({
   const createAgent = useCreateAgentFlow(onSelectDone);
   const expanded = useAgentsDisplayStore((state) => state.expanded);
   const toggleExpanded = useAgentsDisplayStore((state) => state.toggle);
+  const departments = useDepartmentStore(
+    useShallow((state) =>
+      state.items.filter((item) => agents.some((agent) => agent.orgId === item.orgId)),
+    ),
+  );
   const roots = agents.filter((item) => !item.parentId);
   useEffect(() => {
     if (!activeThreadId) {
@@ -79,65 +84,41 @@ export function AgentsSection({
       }
     });
   };
+  const departmentMembers = (departmentId: string, orgId: string) =>
+    roots.filter((agent) => agent.orgId === orgId && agent.departmentId === departmentId);
+  const groupedIds = new Set(
+    departments.flatMap((department) =>
+      departmentMembers(department.id, department.orgId).map((agent) => agent.id),
+    ),
+  );
+  const ungrouped = roots.filter((agent) => !groupedIds.has(agent.id));
+  const renderAgent = (item: Agent) => (
+    <AgentGroupRow
+      key={item.id}
+      agent={item}
+      expanded={Boolean(expanded[item.id])}
+      selected={activeAgentId === item.id}
+      activeThreadId={activeThreadId}
+      onSelectDone={onSelectDone}
+      onToggleExpanded={() => toggleExpanded(item.id)}
+      onSettings={() => openSettings(item)}
+      moveAction={<AgentMoveMenu agent={item} />}
+    />
+  );
   return (
     <div className="flex flex-col group-data-[collapsible=icon]:items-center">
-      {roots.map((item) => (
-        <AgentGroupRow
-          key={item.id}
-          agent={item}
-          expanded={Boolean(expanded[item.id])}
-          selected={activeAgentId === item.id}
+      {departments.map((department) => (
+        <DepartmentGroup
+          key={department.id}
+          department={department}
+          members={departmentMembers(department.id, department.orgId)}
+          activeAgentId={activeAgentId}
           activeThreadId={activeThreadId}
           onSelectDone={onSelectDone}
-          onToggleExpanded={() => toggleExpanded(item.id)}
-          onSettings={() => openSettings(item)}
+          onAgentSettings={openSettings}
         />
       ))}
+      {ungrouped.map(renderAgent)}
     </div>
-  );
-}
-function AgentGroupRow({
-  agent,
-  expanded,
-  selected,
-  activeThreadId,
-  onSelectDone,
-  onToggleExpanded,
-  onSettings,
-}: {
-  agent: Agent;
-  expanded: boolean;
-  selected: boolean;
-  activeThreadId: string | null;
-  onSelectDone: () => void;
-  onToggleExpanded: () => void;
-  onSettings: () => void;
-}) {
-  const actions = useThreadActions(agent.orgId);
-  const kinds = useAgentsDisplayStore(
-    (state) => state.threadKindFilter[agent.id] ?? AGENT_THREAD_KINDS,
-  );
-  const resetKinds = useAgentsDisplayStore((state) => state.resetKinds);
-  return (
-    <Fragment>
-      <AgentCard
-        agent={agent}
-        selected={selected}
-        onSelect={onToggleExpanded}
-        onSettings={onSettings}
-        onNewThread={() => actions.createThread(agent.id)}
-        threadsFilter={<AgentThreadsFilterMenu agentId={agent.id} />}
-      />
-      {expanded ? (
-        <AgentInlineThreads
-          agent={agent}
-          projectId={agent.orgId}
-          activeThreadId={activeThreadId}
-          onDone={onSelectDone}
-          kinds={kinds}
-          onResetKinds={() => resetKinds(agent.id)}
-        />
-      ) : null}
-    </Fragment>
   );
 }

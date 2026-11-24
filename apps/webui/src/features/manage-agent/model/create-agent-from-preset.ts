@@ -17,6 +17,7 @@ export function agentDraftFromPreset(preset: AgentPresetRecord): Agent {
     name: preset.name,
     orgId: '',
     parentId: null,
+    departmentId: null,
     modelId: null,
     role: preset.role,
     instructions: preset.instructions,

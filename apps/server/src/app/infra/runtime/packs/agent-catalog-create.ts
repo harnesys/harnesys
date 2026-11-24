@@ -67,6 +67,7 @@ function createAgentFromCatalog(
     budgetUsdDaily: null,
     level: input.parentId ? 'delegate' : 'top',
     parentId: input.parentId ?? null,
+    departmentId: null,
     executionProfileId: null,
     defaultRunDirectory: null,
     status: 'active',

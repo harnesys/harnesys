@@ -2,6 +2,7 @@ export * from './addons-platform.ts';
 export * from './apps.ts';
 export * from './compaction.ts';
 export * from './dashboards/index.ts';
+export * from './department.ts';
 export * from './domains-agents.ts';
 export * from './domains-org.ts';
 export * from './domains-work.ts';

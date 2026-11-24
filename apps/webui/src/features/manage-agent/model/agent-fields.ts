@@ -69,6 +69,7 @@ export const agentFieldsSchema = z.object({
   budgetCloseOnExhaustion: z.boolean(),
   budgetExtendPercent: optionalPositiveInt,
   budgetSpawnMode: z.enum(['pool', 'inherit']),
+  departmentId: z.string().nullable(),
   defaultModeId: z.string().nullable(),
   defaultRunDirectory: z.string().nullable(),
   defaultWorkspaceRef: WorkspaceRefSchema.nullable(),
@@ -131,6 +132,7 @@ export function emptyAgentFields(): AgentFieldsInput {
     budgetCloseOnExhaustion: false,
     budgetExtendPercent: '',
     budgetSpawnMode: 'pool',
+    departmentId: null,
     defaultModeId: null,
     defaultRunDirectory: null,
     defaultWorkspaceRef: null,
@@ -155,6 +157,7 @@ export function agentFieldsFrom(agent: {
   defaultRunDirectory?: string | null;
   defaultWorkspaceRef?: WorkspaceRef | null;
   executionProfileId?: string | null;
+  departmentId?: string | null;
   modes?: AgentMode[];
   permissions?: PermissionMap | null;
   color?: string | null;
@@ -166,6 +169,7 @@ export function agentFieldsFrom(agent: {
     instructions: agent.instructions,
     modelId: agent.modelId,
     effort: agent.effort ?? null,
+    departmentId: agent.departmentId ?? null,
     defaultModeId: agent.defaultModeId ?? null,
     defaultRunDirectory: agent.defaultRunDirectory ?? null,
     defaultWorkspaceRef: agent.defaultWorkspaceRef ?? null,
@@ -229,6 +233,7 @@ export function toAgentDraft(values: AgentFieldsOutput): {
   toolOutput: ToolOutputSettings | null;
   budget: AgentBudget | null;
   budgetUsdDaily: number | null;
+  departmentId: string | null;
   defaultModeId: string | null;
   defaultRunDirectory: string | null;
   defaultWorkspaceRef: WorkspaceRef | null;
@@ -285,6 +290,7 @@ export function toAgentDraft(values: AgentFieldsOutput): {
     }),
     budget,
     budgetUsdDaily: values.budgetUsdDaily ?? null,
+    departmentId: values.departmentId,
     permissions: values.permissions ?? null,
     color: values.color ?? null,
     memoryPolicy: values.memoryPolicy ?? null,

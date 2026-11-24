@@ -96,6 +96,19 @@ export function migrateAgentsExecutionProfileColumn(
   }
 }
 
+export function migrateAgentsDepartmentColumn(
+  exec: (sql: string) => void,
+  all?: (sql: string) => ColumnInfo[],
+): void {
+  if (!all) {
+    return;
+  }
+  const present = new Set(all('PRAGMA table_info(agents)').map((col) => col.name));
+  if (!present.has('department_id')) {
+    exec(`ALTER TABLE agents ADD COLUMN department_id TEXT`);
+  }
+}
+
 export const CREATE_REPOSITORY_WORKTREES_SQL = `
 CREATE TABLE IF NOT EXISTS repository_worktrees (
   id TEXT PRIMARY KEY NOT NULL,
@@ -232,6 +245,7 @@ CREATE TABLE IF NOT EXISTS agents (
   budget_usd_daily REAL,
   level TEXT NOT NULL DEFAULT 'top',
   parent_id TEXT,
+  department_id TEXT,
   placement TEXT NOT NULL DEFAULT '{"prefer":"any"}',
   execution_profile_id TEXT,
   status TEXT NOT NULL DEFAULT 'active',
@@ -240,6 +254,20 @@ CREATE TABLE IF NOT EXISTS agents (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS agents_org_id_name_unique
   ON agents(org_id, name);
+`;
+
+export const CREATE_DEPARTMENTS_SQL = `
+CREATE TABLE IF NOT EXISTS departments (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  parent_id TEXT,
+  lead_agent_id TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS departments_org_id_name_unique
+  ON departments(org_id, name);
 `;
 
 export const CREATE_MODE_PRESETS_SQL = `

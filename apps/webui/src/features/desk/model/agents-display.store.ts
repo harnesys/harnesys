@@ -13,9 +13,12 @@ export const AGENT_THREAD_KINDS: readonly Exclude<ThreadKind, 'group'>[] = [
 interface AgentsDisplayState {
   expanded: Record<string, boolean>;
   threadKindFilter: Record<string, ThreadKind[]>;
+  departmentExpanded: Record<string, boolean>;
   toggle: (agentId: string) => void;
   expand: (agentId: string) => void;
   forget: (agentId: string) => void;
+  toggleDepartment: (departmentId: string) => void;
+  forgetDepartment: (departmentId: string) => void;
   toggleKind: (agentId: string, kind: ThreadKind) => void;
   resetKinds: (agentId: string) => void;
 }
@@ -24,6 +27,7 @@ export const useAgentsDisplayStore = create<AgentsDisplayState>()(
     (set) => ({
       expanded: {},
       threadKindFilter: {},
+      departmentExpanded: {},
       toggle: (agentId) =>
         set((state) => ({
           expanded: { ...state.expanded, [agentId]: !state.expanded[agentId] },
@@ -34,14 +38,36 @@ export const useAgentsDisplayStore = create<AgentsDisplayState>()(
         ),
       forget: (agentId) =>
         set((state) => {
-          if (!(agentId in state.expanded) && !(agentId in state.threadKindFilter)) {
+          if (
+            !(agentId in state.expanded) &&
+            !(agentId in state.threadKindFilter) &&
+            !(agentId in state.departmentExpanded)
+          ) {
             return state;
           }
           const expanded = { ...state.expanded };
           delete expanded[agentId];
           const threadKindFilter = { ...state.threadKindFilter };
           delete threadKindFilter[agentId];
-          return { expanded, threadKindFilter };
+          const departmentExpanded = { ...state.departmentExpanded };
+          delete departmentExpanded[agentId];
+          return { expanded, threadKindFilter, departmentExpanded };
+        }),
+      toggleDepartment: (departmentId) =>
+        set((state) => ({
+          departmentExpanded: {
+            ...state.departmentExpanded,
+            [departmentId]: !state.departmentExpanded[departmentId],
+          },
+        })),
+      forgetDepartment: (departmentId) =>
+        set((state) => {
+          if (!(departmentId in state.departmentExpanded)) {
+            return state;
+          }
+          const departmentExpanded = { ...state.departmentExpanded };
+          delete departmentExpanded[departmentId];
+          return { departmentExpanded };
         }),
       toggleKind: (agentId, kind) =>
         set((state) => {
@@ -66,10 +92,11 @@ export const useAgentsDisplayStore = create<AgentsDisplayState>()(
     }),
     {
       name: AGENTS_DISPLAY_STORAGE_KEY,
-      version: 3,
+      version: 4,
       partialize: (state) => ({
         expanded: state.expanded,
         threadKindFilter: state.threadKindFilter,
+        departmentExpanded: state.departmentExpanded,
       }),
       migrate: (persisted) => {
         const state = (persisted ?? {}) as Partial<AgentsDisplayState>;
@@ -92,6 +119,14 @@ export const useAgentsDisplayStore = create<AgentsDisplayState>()(
                         : [],
                     ])
                     .filter(([, kinds]) => (kinds as ThreadKind[]).length > 0),
+                )
+              : {},
+          departmentExpanded:
+            state.departmentExpanded && typeof state.departmentExpanded === 'object'
+              ? Object.fromEntries(
+                  Object.entries(state.departmentExpanded).filter(
+                    ([, value]) => typeof value === 'boolean',
+                  ),
                 )
               : {},
         } as AgentsDisplayState;

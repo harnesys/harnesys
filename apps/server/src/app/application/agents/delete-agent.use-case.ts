@@ -1,5 +1,6 @@
 import { Injectable } from '@harnesys/brix';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
+import { DepartmentRegistryPort } from '../../domain/department/department-registry.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
@@ -14,6 +15,7 @@ export interface DeleteAgentRequest {
 export class DeleteAgentUseCase {
   constructor(
     private readonly agents: AgentRegistryPort,
+    private readonly departments: DepartmentRegistryPort,
     private readonly threads: ThreadRepositoryPort,
     private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly executor: LocalExecutorPort,
@@ -48,7 +50,16 @@ export class DeleteAgentUseCase {
       this.threadAgents.remove(request.orgId, threadId, request.agentId);
     }
     this.threads.deleteMany(request.orgId, ownThreadIds);
+    this.clearDepartmentLead(request.orgId, request.agentId);
     this.agents.delete(request.orgId, request.agentId);
+  }
+
+  private clearDepartmentLead(orgId: string, agentId: string): void {
+    for (const department of this.departments.list(orgId)) {
+      if (department.leadAgentId === agentId) {
+        this.departments.update(orgId, department.id, { leadAgentId: null });
+      }
+    }
   }
 
   private async cancelLiveRuns(

@@ -13,6 +13,7 @@ export const agentsTable = sqliteTable(
     budgetUsdDaily: real('budget_usd_daily'),
     level: text('level').notNull().default('top'),
     parentId: text('parent_id'),
+    departmentId: text('department_id'),
     placement: text('placement').notNull().default('{"prefer":"any"}'),
     executionProfileId: text('execution_profile_id'),
     status: text('status').notNull().default('active'),

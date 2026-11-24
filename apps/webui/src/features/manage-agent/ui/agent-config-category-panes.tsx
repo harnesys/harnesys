@@ -78,7 +78,7 @@ export function AgentConfigCategoryPanes({
         label="Identity"
         description="Name, role and system prompt of this agent."
       >
-        <AgentIdentityPane form={form} />
+        <AgentIdentityPane form={form} orgId={orgId} />
       </Pane>
       <Pane
         className={cn(category !== 'model' && 'hidden')}

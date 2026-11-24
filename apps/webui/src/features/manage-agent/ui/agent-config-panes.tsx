@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import type { AgentModelRef, Node } from 'harnesys';
 import { useEffect } from 'react';
 import { Controller, type UseFormReturn, useWatch } from 'react-hook-form';
+import { useShallow } from 'zustand/react/shallow';
+import { useDepartmentStore } from '@/entities/department';
 import { providersQuery } from '@/shared/api';
 import { getActiveOrgId } from '@/shared/api/active-org';
 import { ColorSwatches } from '@/shared/ui/color-swatches';
@@ -15,6 +17,7 @@ import {
   FieldSet,
 } from '@/shared/ui/field';
 import { Input } from '@/shared/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Textarea } from '@/shared/ui/textarea';
 import {
   type AgentFieldsInput,
@@ -30,7 +33,8 @@ import { AgentEffortField, AgentGenerationFields } from './agent-generation-fiel
 import { ModelSelect } from './model-select';
 
 type AgentFieldsForm = UseFormReturn<AgentFieldsInput, unknown, AgentFieldsOutput>;
-export function AgentIdentityPane({ form }: { form: AgentFieldsForm }) {
+export function AgentIdentityPane({ form, orgId }: { form: AgentFieldsForm; orgId: string }) {
+  const departments = useDepartmentStore(useShallow((state) => state.inOrg(orgId)));
   return (
     <FieldGroup className="min-h-0 flex-1 gap-3">
       <div className="grid shrink-0 grid-cols-2 gap-3">
@@ -73,6 +77,37 @@ export function AgentIdentityPane({ form }: { form: AgentFieldsForm }) {
           )}
         />
       </div>
+      <Controller
+        control={form.control}
+        name="departmentId"
+        render={({ field }) => (
+          <Field className="shrink-0">
+            <FieldLabel>Department</FieldLabel>
+            <Select
+              value={field.value ?? ''}
+              items={{
+                '': 'No department',
+                ...Object.fromEntries(
+                  departments.map((department) => [department.id, department.name]),
+                ),
+              }}
+              onValueChange={(next) => field.onChange(next === '' ? null : next)}
+            >
+              <SelectTrigger className="w-full" size="sm">
+                <SelectValue placeholder="No department" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No department</SelectItem>
+                {departments.map((department) => (
+                  <SelectItem key={department.id} value={department.id}>
+                    {department.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        )}
+      />
       <Controller
         control={form.control}
         name="color"

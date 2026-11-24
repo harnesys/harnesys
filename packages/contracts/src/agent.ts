@@ -57,6 +57,7 @@ export const AgentPublicSchema = z.object({
   budgetUsdDaily: z.number().nullable(),
   level: AgentLevelSchema,
   parentId: z.string().uuid().nullable(),
+  departmentId: z.string().uuid().nullable(),
   executionProfileId: z.string().uuid().or(z.literal(LOCAL_EXECUTION_PROFILE_ID)).nullable(),
   status: AgentStatusSchema,
   sharedSourceIds: z.array(z.string()).default([]),
@@ -83,6 +84,7 @@ export const CreateAgentBodySchema = z.object({
   budgetUsdDaily: z.number().nullable().optional(),
   level: AgentLevelSchema.optional(),
   parentId: z.string().uuid().nullable().optional(),
+  departmentId: z.string().uuid().nullable().optional(),
   executionProfileId: z
     .string()
     .uuid()

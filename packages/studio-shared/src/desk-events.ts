@@ -1,4 +1,4 @@
-import type { AgentPublic } from '@harnesys/contracts';
+import type { AgentPublic, DepartmentPublic } from '@harnesys/contracts';
 import type { IssueBoardRecord, IssueLabelRecord, IssueRecord } from './issue.ts';
 import type { ThreadPlanRecord } from './plan-types.ts';
 import type { ThreadRecord } from './thread.ts';
@@ -22,6 +22,14 @@ export type DeskEvent =
   | {
       type: 'thread';
       thread: ThreadRecord;
+    }
+  | {
+      type: 'department';
+      department: DepartmentPublic;
+    }
+  | {
+      type: 'department-deleted';
+      id: string;
     }
   | {
       type: 'plan';

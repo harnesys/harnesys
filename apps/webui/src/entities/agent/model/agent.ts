@@ -15,6 +15,7 @@ export interface Agent {
   id: string;
   orgId: string;
   parentId: string | null;
+  departmentId: string | null;
   name: string;
   modelId: string | null;
   role: string;
@@ -59,6 +60,7 @@ export interface AgentDraft {
   toolOutput?: ToolOutputSettings | null;
   budget?: AgentBudget | null;
   budgetUsdDaily?: number | null;
+  departmentId?: string | null;
   memoryPolicy?: Record<string, unknown> | null;
   compaction?: PortRef;
   capabilities?: Record<string, PackAssignment | null>;
@@ -83,6 +85,7 @@ export type AgentPatch = Partial<
     | 'instructions'
     | 'modelId'
     | 'effort'
+    | 'departmentId'
     | 'generation'
     | 'toolOutput'
     | 'budget'

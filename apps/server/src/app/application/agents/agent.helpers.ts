@@ -20,6 +20,7 @@ export function toAgentPublic(record: AgentRecord): AgentPublic {
     budgetUsdDaily: record.budgetUsdDaily,
     level: record.level,
     parentId: record.parentId,
+    departmentId: record.departmentId,
     executionProfileId: record.executionProfileId,
     status: record.status,
     sharedSourceIds: record.sharedSourceIds,

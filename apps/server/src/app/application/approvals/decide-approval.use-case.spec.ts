@@ -49,6 +49,7 @@ function agentRecord(): AgentRecord {
     budgetUsdDaily: null,
     level: 'top',
     parentId: null,
+    departmentId: null,
     executionProfileId: null,
     status: 'active',
     sharedSourceIds: [],

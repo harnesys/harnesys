@@ -6,6 +6,7 @@ import { AutomationUseCaseModule } from '../application/automations/automation.u
 import { CapabilitiesUseCaseModule } from '../application/capabilities/capabilities.use-case.module.ts';
 import { ContentUseCaseModule } from '../application/content/content.use-case.module.ts';
 import { DashboardsUseCaseModule } from '../application/dashboards/dashboards.use-case.module.ts';
+import { DepartmentUseCaseModule } from '../application/departments/department.use-case.module.ts';
 import { EulaUseCaseModule } from '../application/eula/eula.use-case.module.ts';
 import { ExecutionProfileUseCaseModule } from '../application/execution-profile/execution-profile.use-case.module.ts';
 import { FileAccessUseCaseModule } from '../application/file-access/file-access.use-case.module.ts';
@@ -94,6 +95,7 @@ import { ConnectController } from './rest/connect.controller.ts';
 import { ContentController } from './rest/content.controller.ts';
 import { ContentSearchController } from './rest/content-search.controller.ts';
 import { DashboardsController } from './rest/dashboards.controller.ts';
+import { DepartmentsController } from './rest/departments.controller.ts';
 import { DiscoveryController } from './rest/discovery.controller.ts';
 import { EulaController } from './rest/eula.controller.ts';
 import { EventsWatchController } from './rest/events-watch.controller.ts';
@@ -194,6 +196,7 @@ import { VaultController } from './rest/vault.controller.ts';
     KnowledgeUseCaseModule,
     VaultUseCaseModule,
     AgentUseCaseModule,
+    DepartmentUseCaseModule,
     FileAccessUseCaseModule,
     HookUseCaseModule,
     CapabilitiesUseCaseModule,
@@ -262,6 +265,7 @@ import { VaultController } from './rest/vault.controller.ts';
     KnowledgeOrgController,
     VaultController,
     AgentsController,
+    DepartmentsController,
     FileRulesController,
     PermissionRulesController,
     CapabilitiesController,

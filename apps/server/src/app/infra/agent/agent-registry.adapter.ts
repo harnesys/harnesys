@@ -154,6 +154,7 @@ function toInsert(rec: AgentRecord, sourceRoots: SourceRoot[]) {
     budgetUsdDaily: rec.budgetUsdDaily,
     level: rec.level,
     parentId: rec.parentId,
+    departmentId: rec.departmentId,
     placement: '{}',
     executionProfileId: rec.executionProfileId,
     status: rec.status,

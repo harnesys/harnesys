@@ -14,6 +14,8 @@ interface AgentCardProps {
   onSettings: () => void;
   onNewThread?: () => void;
   threadsFilter?: ReactNode;
+  moveAction?: ReactNode;
+  avatarHighlight?: boolean;
 }
 export function AgentCard({
   agent,
@@ -22,6 +24,8 @@ export function AgentCard({
   onSettings,
   onNewThread,
   threadsFilter,
+  moveAction,
+  avatarHighlight,
 }: AgentCardProps) {
   const status = useAgentLiveStatus(agent.id);
   const hasUnread = useAgentHasUnread(agent.id);
@@ -32,7 +36,13 @@ export function AgentCard({
       className="pl-1"
       data-unread={hasUnread ? 'true' : 'false'}
       leading={
-        <span className="relative inline-flex size-[18px] shrink-0">
+        <span
+          title={avatarHighlight ? 'Department lead' : undefined}
+          className={cn(
+            'relative inline-flex size-[18px] shrink-0 rounded-full',
+            avatarHighlight && 'ring-2 ring-live/40',
+          )}
+        >
           <AgentRecordAvatar agent={agent} className="size-[18px]" />
           {hasUnread ? (
             <span
@@ -68,6 +78,7 @@ export function AgentCard({
             </Button>
           ) : null}
           {threadsFilter}
+          {moveAction}
           <Button
             type="button"
             variant="ghost"

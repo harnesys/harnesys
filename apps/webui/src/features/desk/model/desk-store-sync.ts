@@ -2,6 +2,7 @@ import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { toClientAgentFromPublic, useAgentStore } from '@/entities/agent';
 import { toClientAutomation, useAutomationStore } from '@/entities/automation';
+import { toClientDepartment, useDepartmentStore } from '@/entities/department';
 import { useIssueBoardStore, useIssueLabelStore, useIssueStore } from '@/entities/issue';
 import { toClientThread, useThreadStore } from '@/entities/thread';
 import { watchAutomationsEvents } from '@/shared/api/events';
@@ -16,6 +17,7 @@ import {
   deskAutomationsQuery,
   deskAutomationsQueryKey,
   deskBoardsQuery,
+  deskDepartmentsQuery,
   deskGitFileStatusQuery,
   deskGitSummaryQuery,
   deskIssuesQuery,
@@ -32,6 +34,7 @@ function useDeskSlices(scopeId: string) {
       deskBoardsQuery(scopeId),
       deskLabelsQuery(scopeId),
       deskIssuesQuery(scopeId),
+      deskDepartmentsQuery(scopeId),
     ],
     combine: (results) => ({
       ready: results.every((result) => result.isSuccess),
@@ -40,6 +43,7 @@ function useDeskSlices(scopeId: string) {
       boards: results[2]?.data,
       labels: results[3]?.data,
       issues: results[4]?.data,
+      departments: results[5]?.data,
     }),
   });
 }
@@ -102,7 +106,9 @@ export function useDeskStoreSync(
   options: { orgEntities?: boolean } = {},
 ): boolean {
   const queryClient = useQueryClient();
-  const { ready, agents, threads, boards, labels, issues } = useDeskSlices(scopeId ?? '');
+  const { ready, agents, threads, boards, labels, issues, departments } = useDeskSlices(
+    scopeId ?? '',
+  );
   const automationsQuery = useQuery({
     ...deskAutomationsQuery(scopeId ?? ''),
     enabled: Boolean(scopeId),
@@ -139,6 +145,9 @@ export function useDeskStoreSync(
     if (threads) {
       useThreadStore.getState().replaceOrg(scopeId, threads.map(toClientThread));
     }
+    if (departments) {
+      useDepartmentStore.getState().replaceOrg(scopeId, departments.items.map(toClientDepartment));
+    }
     if (orgEntities) {
       if (boards) {
         useIssueBoardStore.getState().replaceAll(boards);
@@ -150,6 +159,6 @@ export function useDeskStoreSync(
         useIssueStore.getState().replaceAll(issues);
       }
     }
-  }, [scopeId, agents, threads, boards, labels, issues, orgEntities]);
+  }, [scopeId, agents, threads, boards, labels, issues, departments, orgEntities]);
   return ready;
 }

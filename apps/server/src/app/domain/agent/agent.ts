@@ -16,6 +16,7 @@ export interface AgentRecord {
   budgetUsdDaily: number | null;
   level: AgentLevel;
   parentId: string | null;
+  departmentId: string | null;
   executionProfileId: string | null;
   status: AgentStatus;
   sharedSourceIds: string[];
@@ -41,6 +42,7 @@ export type AgentPatch = Partial<{
   budgetUsdDaily: number | null;
   level: AgentLevel;
   parentId: string | null;
+  departmentId: string | null;
   executionProfileId: string | null;
   status: AgentStatus;
   sharedSourceIds: string[];

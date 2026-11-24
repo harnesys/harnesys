@@ -7,6 +7,7 @@ import {
   CREATE_ATTACHMENTS_SQL,
   CREATE_BOARD_RULES_SQL,
   CREATE_BOARD_STATUSES_SQL,
+  CREATE_DEPARTMENTS_SQL,
   CREATE_EXECUTION_PROFILE_NODES_SQL,
   CREATE_EXECUTION_PROFILES_SQL,
   CREATE_ISSUE_ATTACHMENTS_SQL,
@@ -45,6 +46,7 @@ import {
   DROP_LEGACY_TRIGGERS_SQL,
   ensureKnowledgeFts,
   ensureSourcesSchema,
+  migrateAgentsDepartmentColumn,
   migrateAgentsExecutionProfileColumn,
   migrateAgentsPolicyColumns,
   migrateApprovalsResumeStateColumn,
@@ -197,6 +199,8 @@ export function ensureOrgSchema(
   exec(CREATE_HOOK_RUNS_SQL);
   migrateAgentsPolicyColumns(exec, all);
   migrateAgentsExecutionProfileColumn(exec, all);
+  migrateAgentsDepartmentColumn(exec, all);
+  exec(CREATE_DEPARTMENTS_SQL);
   exec(CREATE_MODE_PRESETS_SQL);
   migrateModePresetToolColumns(exec, all);
   exec(CREATE_PLUGINS_SQL);

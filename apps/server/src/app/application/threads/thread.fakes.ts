@@ -227,6 +227,7 @@ export function memoryAgent(
     budgetUsdDaily: null,
     level: 'delegate',
     parentId: null,
+    departmentId: null,
     executionProfileId: null,
     status: 'active',
     sharedSourceIds: [],

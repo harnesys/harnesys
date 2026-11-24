@@ -6,11 +6,13 @@ import {
 } from '../../domain/agent/agent.error.ts';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
+import { DepartmentRegistryPort } from '../../domain/department/department-registry.port.ts';
 import { ExecutionProfilePort } from '../../domain/execution-profile/execution-profile.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { ModePresetRegistryPort } from '../../domain/mode-presets/mode-preset-registry.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+import { requireDepartment } from '../departments/department.helpers.ts';
 import {
   assertNonEmptyName,
   stripHookConfig,
@@ -32,6 +34,7 @@ export interface CreateAgentRequest {
 export class CreateAgentUseCase {
   constructor(
     private readonly agents: AgentRegistryPort,
+    private readonly departments: DepartmentRegistryPort,
     private readonly modePresets: ModePresetRegistryPort,
     private readonly profiles: ExecutionProfilePort,
     private readonly sources: SourceRegistryPort,
@@ -47,6 +50,9 @@ export class CreateAgentUseCase {
     const modelId = request.body.modelId.trim();
     if (!modelId) {
       throw new AgentValidationException('modelId is required');
+    }
+    if (request.body.departmentId) {
+      requireDepartment(this.departments, request.orgId, request.body.departmentId);
     }
     const defaultModeId = request.body.defaultModeId ?? null;
     validateDefaultModeId(this.modePresets, request.orgId, defaultModeId);
@@ -132,6 +138,7 @@ function buildCreateRecord(input: BuildCreateRecordInput): AgentRecord {
     budgetUsdDaily: body.budgetUsdDaily ?? null,
     level: body.level ?? 'top',
     parentId: body.parentId ?? null,
+    departmentId: body.departmentId ?? null,
     executionProfileId: input.executionProfileId,
     status: body.status ?? 'active',
     sharedSourceIds: body.sharedSourceIds ?? [],

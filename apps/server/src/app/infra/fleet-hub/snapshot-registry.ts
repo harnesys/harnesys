@@ -38,6 +38,7 @@ export function agentRecordFromSnapshot(agent: AgentSnapshot): AgentRecord {
     budgetUsdDaily: agent.budgetUsdDaily,
     level: agent.level,
     parentId: agent.parentId,
+    departmentId: null,
     executionProfileId: agent.executionProfileId,
     defaultRunDirectory: agent.defaultRunDirectory,
     defaultWorkspaceRef: agent.defaultWorkspaceRef ?? null,

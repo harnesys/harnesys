@@ -9,6 +9,7 @@ import { AgentsSection, AgentsSectionActions } from './agents-section';
 import { AutomationsSection, AutomationsSectionActions } from './automations-section';
 import { ChannelsSection, ChannelsSectionActions } from './channels-section';
 import { DashboardsSection, DashboardsSectionActions } from './dashboards-section';
+import { DepartmentCreateButton } from './department-create-button';
 import { GitSectionActions, GitTitle } from './git-menu';
 import { GitSection } from './git-section';
 import { InboxSection } from './inbox-section';
@@ -58,7 +59,12 @@ export function sectionParts(id: SidebarSectionId, ctx: SectionPartsContext): Se
         icon: <Icon />,
         title: 'Agents',
         count: ctx.agents.filter((agent) => !agent.parentId).length,
-        actions: <AgentsSectionActions onCreated={onSelectDone} />,
+        actions: (
+          <>
+            <DepartmentCreateButton />
+            <AgentsSectionActions onCreated={onSelectDone} />
+          </>
+        ),
         content: (
           <AgentsSection
             agents={ctx.agents}

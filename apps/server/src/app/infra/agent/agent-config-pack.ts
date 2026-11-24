@@ -81,6 +81,7 @@ export function toRecord(row: AgentRow, sourceRoots: SourceRoot[]): AgentRecord 
     budgetUsdDaily: row.budgetUsdDaily ?? null,
     level: row.level as AgentLevel,
     parentId: row.parentId,
+    departmentId: row.departmentId ?? null,
     executionProfileId: row.executionProfileId ?? null,
     status: row.status as AgentStatus,
     sharedSourceIds,

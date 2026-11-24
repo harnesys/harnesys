@@ -46,6 +46,7 @@ export async function updateAgent(orgId: string, agentId: string, draft: AgentDr
     defaultWorkspaceRef: draft.defaultWorkspaceRef ?? null,
     executionProfileId: draft.executionProfileId ?? null,
     enabledPlugins: draft.enabledPlugins,
+    departmentId: draft.departmentId ?? null,
     ...(draft.budgetUsdDaily !== undefined ? { budgetUsdDaily: draft.budgetUsdDaily } : {}),
     ...(draft.sharedSourceIds !== undefined ? { sharedSourceIds: draft.sharedSourceIds } : {}),
     ...(draft.sourceLevels !== undefined ? { sourceLevels: draft.sourceLevels } : {}),

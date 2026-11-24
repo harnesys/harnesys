@@ -33,6 +33,15 @@ export {
   updateAgentRecord,
 } from './agents';
 export {
+  type CreateDepartmentBody,
+  createDepartmentInOrg,
+  type DepartmentPublic,
+  deleteDepartmentInOrg,
+  fetchOrgDepartments,
+  type UpdateDepartmentBody,
+  updateDepartmentInOrg,
+} from './departments';
+export {
   createModePreset,
   deleteModePreset,
   listModePresets,

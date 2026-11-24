@@ -73,6 +73,11 @@ export {
   dashboardWidgetsTable,
 } from './dashboards.ts';
 export {
+  type DepartmentInsert,
+  type DepartmentRow,
+  departmentsTable,
+} from './departments.ts';
+export {
   type EventClaimInsert,
   type EventClaimRow,
   eventClaimsTable,

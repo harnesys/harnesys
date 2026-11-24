@@ -53,6 +53,7 @@ function agent(id: string): AgentRecord {
     budgetUsdDaily: 10,
     level: 'top',
     parentId: null,
+    departmentId: null,
     executionProfileId: null,
     status: 'active',
     sharedSourceIds: [],

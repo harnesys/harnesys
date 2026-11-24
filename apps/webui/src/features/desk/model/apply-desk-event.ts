@@ -1,5 +1,6 @@
 import type { DeskEvent } from '@harnesys/studio-shared';
 import { toClientAgentFromPublic, useAgentStore } from '@/entities/agent';
+import { toClientDepartment, useDepartmentStore } from '@/entities/department';
 import { useIssueBoardStore, useIssueLabelStore, useIssueStore } from '@/entities/issue';
 import { usePlanStore } from '@/entities/plan';
 import { useSessionStore } from '@/entities/session';
@@ -26,6 +27,14 @@ export function applyDeskEvent(event: DeskEvent, nav?: DeskEventNavigation): voi
     }
     case 'agent-deleted': {
       dropAgent(event.id);
+      return;
+    }
+    case 'department': {
+      useDepartmentStore.getState().upsert(toClientDepartment(event.department));
+      return;
+    }
+    case 'department-deleted': {
+      useDepartmentStore.getState().remove(event.id);
       return;
     }
     case 'thread': {

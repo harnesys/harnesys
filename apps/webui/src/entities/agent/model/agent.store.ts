@@ -24,6 +24,7 @@ function patchedAgent(agent: Agent, patch: AgentPatch, name?: string): Agent {
     budgetUsdDaily:
       patch.budgetUsdDaily !== undefined ? patch.budgetUsdDaily : agent.budgetUsdDaily,
     compaction: patch.compaction !== undefined ? patch.compaction : agent.compaction,
+    departmentId: patch.departmentId !== undefined ? patch.departmentId : agent.departmentId,
     skills: patch.skills !== undefined ? patch.skills : agent.skills,
     mcpServers: patch.mcpServers !== undefined ? patch.mcpServers : agent.mcpServers,
     graph: patch.graph !== undefined ? patch.graph : agent.graph,
@@ -53,6 +54,7 @@ function draftToAgent(orgId: string, draft: AgentDraft, name: string): Agent {
     id: randomUUID(),
     orgId,
     parentId: draft.parentId ?? null,
+    departmentId: null,
     name,
     modelId: draft.modelId,
     role: draft.role.trim() || 'Operator',

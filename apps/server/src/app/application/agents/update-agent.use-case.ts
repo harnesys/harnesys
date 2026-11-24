@@ -6,11 +6,13 @@ import {
 } from '../../domain/agent/agent.error.ts';
 import type { AgentPatch } from '../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
+import { DepartmentRegistryPort } from '../../domain/department/department-registry.port.ts';
 import { ExecutionProfilePort } from '../../domain/execution-profile/execution-profile.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { MachineConfigPort } from '../../domain/machine/machine-config.port.ts';
 import { ModePresetRegistryPort } from '../../domain/mode-presets/mode-preset-registry.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
+import { requireDepartment } from '../departments/department.helpers.ts';
 import {
   requireAgent,
   stripHookConfig,
@@ -32,6 +34,7 @@ export interface UpdateAgentRequest {
 export class UpdateAgentUseCase {
   constructor(
     private readonly agents: AgentRegistryPort,
+    private readonly departments: DepartmentRegistryPort,
     private readonly modePresets: ModePresetRegistryPort,
     private readonly profiles: ExecutionProfilePort,
     private readonly sources: SourceRegistryPort,
@@ -41,6 +44,9 @@ export class UpdateAgentUseCase {
 
   execute(request: UpdateAgentRequest): AgentPublic {
     const agent = requireAgent(this.agents, request.orgId, request.agentId);
+    if (request.body.departmentId !== undefined && request.body.departmentId !== null) {
+      requireDepartment(this.departments, request.orgId, request.body.departmentId);
+    }
     const patch = buildUpdatePatch(
       this.agents,
       this.modePresets,
@@ -158,6 +164,9 @@ function assignPolicyPatch(body: UpdateAgentBody, patch: AgentPatch): void {
   }
   if (body.parentId !== undefined) {
     patch.parentId = body.parentId;
+  }
+  if (body.departmentId !== undefined) {
+    patch.departmentId = body.departmentId;
   }
   if (body.status !== undefined) {
     patch.status = body.status;
