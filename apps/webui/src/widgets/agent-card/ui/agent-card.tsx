@@ -36,13 +36,7 @@ export function AgentCard({
       className="pl-1"
       data-unread={hasUnread ? 'true' : 'false'}
       leading={
-        <span
-          title={avatarHighlight ? 'Department lead' : undefined}
-          className={cn(
-            'relative inline-flex size-[18px] shrink-0 rounded-full',
-            avatarHighlight && 'ring-2 ring-live/40',
-          )}
-        >
+        <span className="relative inline-flex size-[18px] shrink-0 rounded-full">
           <AgentRecordAvatar agent={agent} className="size-[18px]" />
           {hasUnread ? (
             <span
@@ -105,6 +99,14 @@ export function AgentCard({
         )}
       >
         {agent.name}
+        {avatarHighlight ? (
+          <span
+            title="Department lead"
+            className="ml-1 text-[12px] text-sidebar-foreground/40 leading-none"
+          >
+            ★
+          </span>
+        ) : null}
       </SidebarRowTitle>
     </SidebarRow>
   );
