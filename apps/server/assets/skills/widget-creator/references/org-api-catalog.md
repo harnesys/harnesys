@@ -25,6 +25,7 @@ Query: none
 | `items[].budgetUsdDaily` | number \| null |
 | `items[].level` | "top" \| "delegate" |
 | `items[].parentId` | string \| null |
+| `items[].departmentId` | string \| null |
 | `items[].executionProfileId` | string \| null |
 | `items[].status` | "active" \| "archived" |
 | `items[].sharedSourceIds` | array of string |
