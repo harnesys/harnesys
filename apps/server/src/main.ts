@@ -7,6 +7,7 @@ import { InitOwnerUseCase } from './app/application/identity/init-owner.use-case
 import { RefreshAllSourceVcsUseCase } from './app/application/source/refresh-all-source-vcs.use-case.ts';
 import { OwnerAlreadyInitializedException } from './app/domain/identity/identity.error.ts';
 import { HostFsLayoutPort } from './app/domain/machine/host-fs-layout.port.ts';
+import { runCredentialPluginMode } from './app/infra/browser/credential-plugin-mode.ts';
 import { fleetWorkerWebsocket, registerFleetWorkerWs } from './app/infra/fleet-hub/fleet-worker.ws';
 import { importLegacyUserPresets } from './app/infra/presets/legacy-user-presets.ts';
 import { systemPresetsSeed } from './app/infra/presets/system-presets-seed.ts';
@@ -19,6 +20,10 @@ import {
   bundledAssetsRoot,
   EMBEDDED_APP_CONFIG_YML,
 } from './const';
+
+if (await runCredentialPluginMode(process.argv)) {
+  process.exit(0);
+}
 
 const configFile = join(APP_CONFIG_DIR_PATH, 'application.yml');
 const app = Brix.create(AppModule.forRoot(), {

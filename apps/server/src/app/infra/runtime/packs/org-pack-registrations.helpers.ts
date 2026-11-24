@@ -11,6 +11,8 @@ import { StudioEmbeddings } from '../../../domain/knowledge/embeddings.ts';
 import { resolveProviderApiKey } from '../../../domain/secret/provider-api-key.ts';
 import { embedModelIdOf } from '../../memory/org-memory-settings.store.ts';
 import type { OrgSqliteDb } from '../../org-sqlite/org-sqlite-session.ts';
+import { permissionsFromConfig } from '../agent-definition.mapper.ts';
+import { getHostToolScope } from '../host-tool-scope.ts';
 import { OrgEpisodicPort } from './org-episodic.port.ts';
 import { OrgKnowledgePort } from './org-knowledge.port.ts';
 import type { WireOrgPackContext } from './org-pack-registrations.ts';
@@ -20,11 +22,108 @@ import { OrgThreadAttachmentPort } from './org-thread-attachment.port.ts';
 import { OrgThreadsPort } from './org-threads.port.ts';
 import type { WireOrgPacksDeps } from './wire-org-packs.ts';
 
+function auditResultOf(denied: boolean | undefined, ok: boolean): 'ok' | 'denied' | 'failed' {
+  if (denied === true) {
+    return 'denied';
+  }
+  return ok ? 'ok' : 'failed';
+}
+
 export function webRegistration(ctx: WireOrgPackContext) {
   const engines =
     ctx.engineSnapshot !== undefined
       ? (): HostEngineEntry[] => ctx.engineSnapshot ?? []
       : undefined;
+  const browserLogin = ctx.deps.browserLogin;
+  const scope = () => getHostToolScope();
+  const orgIdOf = () => scope()?.orgId ?? ctx.deps.orgId;
+  const agentIdOf = () => scope()?.agentId ?? '_';
+  const hardenedPorts =
+    browserLogin === undefined
+      ? {}
+      : {
+          credentialResolver: (credentialId: string) =>
+            browserLogin.resolve.resolve({
+              orgId: orgIdOf(),
+              agentId: agentIdOf(),
+              credentialId,
+            }),
+          credentialGet: (credentialId: string) =>
+            browserLogin.resolve.get({
+              orgId: orgIdOf(),
+              agentId: agentIdOf(),
+              credentialId,
+            }),
+          credentialStatus: (credentialId: string) =>
+            browserLogin.resolve.status({
+              orgId: orgIdOf(),
+              agentId: agentIdOf(),
+              credentialId,
+            }),
+          credentialList: () =>
+            browserLogin.resolve.listGranted({
+              orgId: orgIdOf(),
+              agentId: agentIdOf(),
+            }),
+          egressProxy: (input: {
+            scopeKey: string;
+            credentialId: string;
+            hosts: readonly string[];
+          }) => browserLogin.egress.start({ orgId: orgIdOf(), ...input }),
+          loginResult: (input: { credentialId: string; ok: boolean; targetOrigin: string }) =>
+            browserLogin.loginResult({
+              orgId: orgIdOf(),
+              credentialId: input.credentialId,
+              ok: input.ok,
+              targetOrigin: input.targetOrigin,
+            }),
+          loginAttempts: {
+            start: (input: { credentialId: string; kind: 'challenge' | 'manual' }) =>
+              browserLogin.attempts.start({
+                orgId: orgIdOf(),
+                credentialId: input.credentialId,
+                kind: input.kind,
+                runId: null,
+                threadId: scope()?.threadId ?? null,
+              }),
+            takeInput: (attemptId: string) => browserLogin.attempts.takeInput(orgIdOf(), attemptId),
+            complete: (attemptId: string) => browserLogin.attempts.complete(orgIdOf(), attemptId),
+          },
+          audit: (entry: {
+            orgId: string;
+            threadId: string;
+            credentialId: string;
+            targetOrigin: string;
+            ok: boolean;
+            denied?: boolean;
+            attemptId?: string;
+          }) => {
+            browserLogin.audit.append(entry.orgId, {
+              id: crypto.randomUUID(),
+              at: new Date().toISOString(),
+              actorKind: 'system',
+              actorId: `browser-login:${entry.credentialId}`,
+              viaNodeId: null,
+              action: 'browser.login',
+              resource: `${entry.credentialId}/${entry.targetOrigin}`,
+              result: auditResultOf(entry.denied, entry.ok),
+            });
+          },
+          processPermission: (): 'allow' | 'deny' | 'ask' => {
+            const agent = ctx.deps.agents.findById(orgIdOf(), agentIdOf());
+            if (!agent) {
+              return 'ask';
+            }
+            const process = permissionsFromConfig(agent.config)?.process;
+            const configured = process === 'allow' || process === 'deny' ? process : 'ask';
+            const granted =
+              ctx.deps.permissionRules?.hasOperation(orgIdOf(), agentIdOf(), 'process') === true;
+            if (granted) {
+              return 'allow';
+            }
+            return configured;
+          },
+        };
   return registerPack(webCapability, {
     ports: {
       ...(engines !== undefined ? { engines } : {}),
@@ -33,6 +132,7 @@ export function webRegistration(ctx: WireOrgPackContext) {
             orgDefaultEngine: () => ctx.deps.orgSettings?.get(ctx.deps.orgId).browser.defaultEngine,
           }
         : {}),
+      ...hardenedPorts,
     },
     resolveScope: ctx.stubScope,
   });

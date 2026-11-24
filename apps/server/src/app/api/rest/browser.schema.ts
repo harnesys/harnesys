@@ -1,4 +1,9 @@
-import { BrowserDefaultEngineSchema } from '@harnesys/contracts';
+import type { PutBrowserCredentialBody, SubmitBrowserLoginAttemptInput } from '@harnesys/contracts';
+import {
+  BrowserDefaultEngineSchema,
+  PutBrowserCredentialBodySchema,
+  SubmitBrowserLoginAttemptInputSchema,
+} from '@harnesys/contracts';
 import { z } from 'zod';
 
 export const BrowserInstallSchema = z.object({
@@ -46,3 +51,14 @@ export const BrowserVersionsQuerySchema = z.object({
   hostId: z.string().min(1),
 });
 export type BrowserVersionsQuery = z.infer<typeof BrowserVersionsQuerySchema>;
+
+export const BrowserWebsiteCredentialSchema = PutBrowserCredentialBodySchema;
+export type BrowserWebsiteCredentialBody = PutBrowserCredentialBody;
+
+export const BrowserCredentialSubmitInputSchema = SubmitBrowserLoginAttemptInputSchema;
+export type BrowserCredentialSubmitInputBody = SubmitBrowserLoginAttemptInput;
+
+export const BrowserAttemptQuerySchema = z.object({
+  threadId: z.string().min(1).optional(),
+});
+export type BrowserAttemptQuery = z.infer<typeof BrowserAttemptQuerySchema>;

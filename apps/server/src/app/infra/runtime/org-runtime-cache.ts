@@ -56,6 +56,18 @@ export function takeRuntime(
   return entry.promise;
 }
 
+export async function releaseRuntime(cache: OrgRuntimeCache, orgId: string): Promise<void> {
+  const pending = takeRuntime(cache, orgId);
+  if (pending === undefined) {
+    return;
+  }
+  try {
+    (await pending).closeWhenIdle();
+  } catch {
+    // runtime may have failed to open; dropping the cache entry is enough
+  }
+}
+
 export function drainRuntimes(cache: OrgRuntimeCache): void {
   for (const entry of cache.values()) {
     void entry.promise.then((runtime) => runtime.close()).catch(() => {});

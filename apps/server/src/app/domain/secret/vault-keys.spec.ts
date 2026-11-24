@@ -31,6 +31,7 @@ describe('vault-keys', () => {
   test('system keys stay out of vault UI', () => {
     expect(isSystemSecretKey('cloud:google:cred')).toBe(true);
     expect(isSystemSecretKey('llm_provider:uuid')).toBe(true);
+    expect(isSystemSecretKey('browser_login:uuid')).toBe(true);
     expect(isSystemSecretKey('secret:OPENAI')).toBe(false);
   });
 });

@@ -12,6 +12,7 @@ import { toast } from '@/shared/ui/toast';
 import { rejectAsk, respondToAsk } from '../model/hitl-actions';
 import { type PendingHitl, pendingHitl } from '../model/pending-hitl';
 import { summarizeToolInput } from '../model/tool-input-summary';
+import { BrowserLoginCard } from './browser-login-card';
 import { HitlPreview } from './hitl-preview';
 import { HitlShell } from './hitl-shell';
 import { FileConfirmCard, isFileToolAsk, ShellConfirmCard } from './hitl-shell-confirm';
@@ -41,7 +42,9 @@ export function HitlPrompt({ threadId: boundThreadId }: { threadId?: string } = 
   }
   const isConfirm = pending.source === 'permission' || pending.source === 'approve';
   let card = <AskCard key={pending.askId} pending={pending} threadId={threadId} />;
-  if (isConfirm && pending.tool?.name === 'shell') {
+  if (pending.tool?.name === 'browser_login' && pending.source === 'ask_user') {
+    card = <BrowserLoginCard key={pending.askId} pending={pending} threadId={threadId} />;
+  } else if (isConfirm && pending.tool?.name === 'shell') {
     card = <ShellConfirmCard key={pending.askId} pending={pending} threadId={threadId} />;
   } else if (isConfirm && isFileToolAsk(pending.tool?.name)) {
     card = <FileConfirmCard key={pending.askId} pending={pending} threadId={threadId} />;

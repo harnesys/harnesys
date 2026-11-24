@@ -1,5 +1,6 @@
 import type { PackConfig } from '@harnesys/studio-shared';
 import { useQuery } from '@tanstack/react-query';
+import { WebsiteLoginAllowlist } from '@/features/manage-agent/ui/web-pack-browser-logins';
 import {
   type EngineSpec,
   type OrgBrowserView,
@@ -146,6 +147,9 @@ export function WebPackSettings({
   const allowPrivateNetwork = spec.allowPrivateNetwork === true;
   const stealth = spec.stealth === true;
   const headed = spec.headed === true;
+  const browserLoginRefs = Array.isArray(spec.browserLoginRefs)
+    ? spec.browserLoginRefs.filter((id): id is string => typeof id === 'string')
+    : [];
   function patchSpec(partial: Record<string, unknown>) {
     const nextSpec = { ...spec, ...partial };
     if (typeof nextSpec.searxngUrl === 'string' && nextSpec.searxngUrl.trim() === '') {
@@ -153,6 +157,9 @@ export function WebPackSettings({
     }
     if (nextSpec.engine === WEB_ENGINE_ORG_DEFAULT) {
       delete nextSpec.engine;
+    }
+    if (Array.isArray(nextSpec.browserLoginRefs) && nextSpec.browserLoginRefs.length === 0) {
+      delete nextSpec.browserLoginRefs;
     }
     onChange({ spec: nextSpec });
   }
@@ -305,6 +312,11 @@ export function WebPackSettings({
           </div>
         </div>
       </Field>
+      <p className="font-medium text-muted-foreground text-xs">Website logins</p>
+      <WebsiteLoginAllowlist
+        value={browserLoginRefs}
+        onChange={(next) => patchSpec({ browserLoginRefs: next })}
+      />
     </FieldGroup>
   );
 }

@@ -33,7 +33,7 @@ import { ExecutionProfileAdapter } from '../../execution-profile/execution-profi
 import type { OrgSqliteDb } from '../../org-sqlite/org-sqlite-session.ts';
 import { requireHostToolScope } from '../host-tool-scope.ts';
 import type { OrgPluginRuntimeSource } from '../org-plugin-wiring.ts';
-import type { OrgRuntimeDeps } from '../org-runtime.types.ts';
+import type { BrowserLoginRuntimeDeps, OrgRuntimeDeps } from '../org-runtime.types.ts';
 import { agentCatalogCreate } from './agent-catalog-create.ts';
 import { OrgAgentsCatalogPort } from './org-agents-catalog.port.ts';
 import type { OrgIssueDeps } from './org-issue.port.ts';
@@ -80,6 +80,7 @@ export interface WireOrgPacksDeps {
   engineSnapshot?: HostEngineEntry[];
   packRegistry?: PackRegistryPort;
   dashboards?: OrgDashboardsDeps;
+  browserLogin?: BrowserLoginRuntimeDeps;
 }
 
 export interface WireOrgPackFilter {
@@ -140,6 +141,7 @@ export function orgPackInputs(
     mcpManage: deps.mcpManage,
     modes: deps.modes,
     ...(deps.packRegistry !== undefined ? { packRegistry: deps.packRegistry } : {}),
+    ...(deps.browserLogin !== undefined ? { browserLogin: deps.browserLogin } : {}),
   };
 }
 

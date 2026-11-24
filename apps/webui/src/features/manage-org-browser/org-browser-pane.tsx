@@ -26,6 +26,7 @@ import {
   putOrgBrowserEngineState,
   putOrgBrowserSettings,
 } from './org-browser-api';
+import { WebsiteLoginsPane } from './website-logins-pane';
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Unknown error';
@@ -229,6 +230,8 @@ export function OrgBrowserPane({ orgId }: { orgId: string }) {
           onInstalled={refresh}
         />
       )}
+
+      <WebsiteLoginsPane orgId={orgId} />
     </div>
   );
 }

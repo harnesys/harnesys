@@ -1,5 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@harnesys/brix';
 import { SSE_KEEP_ALIVE_MS } from '@harnesys/studio-shared';
+import { DeleteBrowserCredentialUseCase } from '../../application/browser-login/delete-browser-credential.use-case.ts';
+import { GetBrowserLoginAttemptUseCase } from '../../application/browser-login/get-browser-login-attempt.use-case.ts';
+import { ListBrowserCredentialsUseCase } from '../../application/browser-login/list-browser-credentials.use-case.ts';
+import { PutBrowserCredentialUseCase } from '../../application/browser-login/put-browser-credential.use-case.ts';
+import { ResetBrowserCredentialStatusUseCase } from '../../application/browser-login/reset-browser-credential-status.use-case.ts';
+import { SubmitBrowserLoginAttemptUseCase } from '../../application/browser-login/submit-browser-login-attempt.use-case.ts';
 import { AddBrowserAllowlistUseCase } from '../../application/use-cases/browser/add-browser-allowlist.use-case.ts';
 import { CheckAgentBrowserUpdateUseCase } from '../../application/use-cases/browser/check-agent-browser-update.use-case.ts';
 import { GetOrgBrowserUseCase } from '../../application/use-cases/browser/get-org-browser.use-case.ts';
@@ -11,6 +17,8 @@ import { RemoveBrowserEngineUseCase } from '../../application/use-cases/browser/
 import { SetBrowserEngineStateUseCase } from '../../application/use-cases/browser/set-browser-engine-state.use-case.ts';
 import type {
   BrowserAllowlistBody,
+  BrowserAttemptQuery,
+  BrowserCredentialSubmitInputBody,
   BrowserEngineRemoveQuery,
   BrowserEngineStateBody,
   BrowserInstallBody,
@@ -18,9 +26,12 @@ import type {
   BrowserToolInstallBody,
   BrowserUpdateCheckBody,
   BrowserVersionsQuery,
+  BrowserWebsiteCredentialBody,
 } from './browser.schema.ts';
 import {
   BrowserAllowlistSchema,
+  BrowserAttemptQuerySchema,
+  BrowserCredentialSubmitInputSchema,
   BrowserEngineRemoveQuerySchema,
   BrowserEngineStateSchema,
   BrowserInstallSchema,
@@ -28,6 +39,7 @@ import {
   BrowserToolInstallSchema,
   BrowserUpdateCheckSchema,
   BrowserVersionsQuerySchema,
+  BrowserWebsiteCredentialSchema,
 } from './browser.schema.ts';
 
 @Controller()
@@ -42,7 +54,83 @@ export class BrowserController {
     private readonly installAgentBrowserTool: InstallAgentBrowserToolUseCase,
     private readonly checkAgentBrowserUpdate: CheckAgentBrowserUpdateUseCase,
     private readonly listEngineVersions: ListBrowserEngineVersionsUseCase,
+    private readonly listCredentials: ListBrowserCredentialsUseCase,
+    private readonly putCredential: PutBrowserCredentialUseCase,
+    private readonly deleteCredential: DeleteBrowserCredentialUseCase,
+    private readonly resetCredentialStatus: ResetBrowserCredentialStatusUseCase,
+    private readonly submitAttemptInput: SubmitBrowserLoginAttemptUseCase,
+    private readonly getLoginAttempt: GetBrowserLoginAttemptUseCase,
   ) {}
+
+  @Get('orgs/:orgId/browser/credentials')
+  listWebsiteCredentials(@Param('orgId') orgId: string): Promise<unknown> {
+    return this.listCredentials.execute(orgId);
+  }
+
+  @Put('orgs/:orgId/browser/credentials/:credentialId')
+  putWebsiteCredential(
+    @Param('orgId') orgId: string,
+    @Param('credentialId') credentialId: string,
+    @Body(BrowserWebsiteCredentialSchema) body: BrowserWebsiteCredentialBody,
+  ): Promise<unknown> {
+    return this.putCredential.execute({ orgId, credentialId, data: body });
+  }
+
+  @Delete('orgs/:orgId/browser/credentials/:credentialId')
+  deleteWebsiteCredential(
+    @Param('orgId') orgId: string,
+    @Param('credentialId') credentialId: string,
+  ): Promise<{ deleted: boolean }> {
+    return this.deleteCredential.execute({ orgId, credentialId });
+  }
+
+  @Post('orgs/:orgId/browser/credentials/:credentialId/reset')
+  resetWebsiteCredential(
+    @Param('orgId') orgId: string,
+    @Param('credentialId') credentialId: string,
+  ): Promise<unknown> {
+    return this.resetCredentialStatus.execute(orgId, credentialId);
+  }
+
+  @Get('orgs/:orgId/browser/credentials/:credentialId/attempt')
+  activeWebsiteCredentialAttempt(
+    @Param('orgId') orgId: string,
+    @Param('credentialId') credentialId: string,
+    @Query(BrowserAttemptQuerySchema) query: BrowserAttemptQuery,
+  ): Promise<unknown> {
+    return this.getLoginAttempt.execute({
+      orgId,
+      credentialId,
+      ...(query.threadId !== undefined ? { threadId: query.threadId } : {}),
+    });
+  }
+
+  @Post('orgs/:orgId/browser/credentials/:credentialId/attempt/:attemptId/input')
+  async submitWebsiteCredentialAttemptInput(
+    @Param('orgId') orgId: string,
+    @Param('credentialId') credentialId: string,
+    @Param('attemptId') attemptId: string,
+    @Body(BrowserCredentialSubmitInputSchema) body: BrowserCredentialSubmitInputBody,
+  ): Promise<Response> {
+    await this.submitAttemptInput.execute({
+      orgId,
+      attemptId,
+      credentialId,
+      input: {
+        code: body.code,
+        username: body.username,
+        password: body.password,
+        cookies: body.cookies,
+      },
+    });
+    return new Response(JSON.stringify({ accepted: true }), {
+      headers: {
+        'content-type': 'application/json',
+        'cache-control': 'no-store',
+        'referrer-policy': 'no-referrer',
+      },
+    });
+  }
 
   @Get('orgs/:orgId/browser')
   orgBrowser(@Param('orgId') orgId: string): Promise<unknown> {

@@ -9,6 +9,7 @@ function capabilities(partial: Partial<EngineCapabilities>): EngineCapabilities 
     markdown: false,
     oneShotFetch: false,
     headed: false,
+    egressProxy: false,
     ...partial,
   };
 }
@@ -31,6 +32,7 @@ export const ENGINE_DEFINITIONS: readonly EngineSpec[] = [
       ssrfGuard: true,
       markdown: true,
       oneShotFetch: true,
+      egressProxy: true,
     }),
     resources: { ramMb: 30, diskMb: 250, coldStartMs: 500 },
     stealthBuild: true,
@@ -65,6 +67,7 @@ export const ENGINE_DEFINITIONS: readonly EngineSpec[] = [
       pdf: true,
       markdown: true,
       headed: true,
+      egressProxy: true,
     }),
     resources: { ramMb: 300, diskMb: 670, coldStartMs: 1000 },
     install: {
@@ -118,7 +121,7 @@ export const ENGINE_DEFINITIONS: readonly EngineSpec[] = [
     label: 'Brave',
     version: BRAVE_VERSION,
     license: 'MPL-2.0',
-    capabilities: capabilities({ screenshots: true, pdf: true, headed: true }),
+    capabilities: capabilities({ screenshots: true, pdf: true, headed: true, egressProxy: true }),
     resources: { ramMb: 320, diskMb: 650, coldStartMs: 1200 },
     install: {
       format: 'zip',
@@ -157,7 +160,7 @@ export const ENGINE_DEFINITIONS: readonly EngineSpec[] = [
     label: 'Chrome',
     version: 'system',
     license: 'Proprietary',
-    capabilities: capabilities({ screenshots: true, pdf: true, headed: true }),
+    capabilities: capabilities({ screenshots: true, pdf: true, headed: true, egressProxy: true }),
     resources: { ramMb: 300, diskMb: 700, coldStartMs: 1000 },
     system: {
       macosApps: ['Google Chrome.app'],
@@ -169,7 +172,7 @@ export const ENGINE_DEFINITIONS: readonly EngineSpec[] = [
     label: 'Edge',
     version: 'system',
     license: 'Proprietary',
-    capabilities: capabilities({ screenshots: true, pdf: true, headed: true }),
+    capabilities: capabilities({ screenshots: true, pdf: true, headed: true, egressProxy: true }),
     resources: { ramMb: 320, diskMb: 700, coldStartMs: 1100 },
     system: {
       macosApps: ['Microsoft Edge.app'],
@@ -181,7 +184,7 @@ export const ENGINE_DEFINITIONS: readonly EngineSpec[] = [
     label: 'Vivaldi',
     version: 'system',
     license: 'Freeware',
-    capabilities: capabilities({ screenshots: true, pdf: true, headed: true }),
+    capabilities: capabilities({ screenshots: true, pdf: true, headed: true, egressProxy: true }),
     resources: { ramMb: 320, diskMb: 700, coldStartMs: 1100 },
     system: {
       macosApps: ['Vivaldi.app'],
@@ -193,7 +196,7 @@ export const ENGINE_DEFINITIONS: readonly EngineSpec[] = [
     label: 'Opera',
     version: 'system',
     license: 'Freeware',
-    capabilities: capabilities({ screenshots: true, pdf: true, headed: true }),
+    capabilities: capabilities({ screenshots: true, pdf: true, headed: true, egressProxy: true }),
     resources: { ramMb: 320, diskMb: 650, coldStartMs: 1100 },
     system: {
       macosApps: ['Opera.app'],

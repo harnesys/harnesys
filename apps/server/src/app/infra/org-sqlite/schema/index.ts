@@ -62,6 +62,16 @@ export {
   attachmentsTable,
 } from './attachments.ts';
 export {
+  type BrowserCredentialInsert,
+  type BrowserCredentialRow,
+  browserCredentialsTable,
+} from './browser-credentials.ts';
+export {
+  type BrowserLoginAttemptInsert,
+  type BrowserLoginAttemptRow,
+  browserLoginAttemptsTable,
+} from './browser-login-attempts.ts';
+export {
   type DashboardInsertRow,
   type DashboardRow,
   type DashboardWidgetInsertRow,

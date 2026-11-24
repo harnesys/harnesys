@@ -779,6 +779,45 @@ CREATE UNIQUE INDEX IF NOT EXISTS approvals_run_interrupt
   WHERE status <> 'superseded';
 CREATE INDEX IF NOT EXISTS approvals_status ON approvals(status);
 `;
+export const CREATE_BROWSER_CREDENTIALS_SQL = `
+CREATE TABLE IF NOT EXISTS browser_credentials (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  login_url TEXT NOT NULL,
+  username TEXT NOT NULL,
+  username_selector TEXT NOT NULL,
+  password_selector TEXT NOT NULL,
+  submit_selector TEXT NOT NULL,
+  success_url_path_prefix TEXT NOT NULL DEFAULT '/',
+  success_cookie_name TEXT,
+  success_selector TEXT,
+  challenge_code_selector TEXT,
+  challenge_submit_selector TEXT,
+  egress_hosts TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'unverified',
+  failure_count INTEGER NOT NULL DEFAULT 0,
+  locked_until TEXT,
+  last_login_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS browser_credentials_org_name
+  ON browser_credentials(org_id, name);
+`;
+
+export const CREATE_BROWSER_LOGIN_ATTEMPTS_SQL = `
+CREATE TABLE IF NOT EXISTS browser_login_attempts (
+  id TEXT PRIMARY KEY,
+  credential_id TEXT NOT NULL,
+  run_id TEXT,
+  thread_id TEXT,
+  status TEXT NOT NULL DEFAULT 'waiting',
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+`;
+
 export const CREATE_USAGE_SQL = `
 CREATE TABLE IF NOT EXISTS usage (
   id TEXT PRIMARY KEY,

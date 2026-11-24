@@ -20,12 +20,16 @@ import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { HookRunStorePort } from '../../domain/agent/hook-run-store.port.ts';
 import { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
 import { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
+import { CredentialResolvePort } from '../../domain/browser/credential-resolve.port.ts';
+import { EgressProxyPort } from '../../domain/browser/egress-proxy.port.ts';
+import { BrowserLoginAttemptPort } from '../../domain/browser/login-attempt.port.ts';
 import { PackRegistryPort } from '../../domain/capabilities/pack-registry.port.ts';
 import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
 import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
 import { NodeCommandQueuePort } from '../../domain/fleet/node-command-queue.port.ts';
 import { NodeRepository } from '../../domain/fleet/node-repository.port.ts';
+import { OrgAudit } from '../../domain/fleet/org-audit.port.ts';
 import type { RunIsolation } from '../../domain/fleet/placement.ts';
 import { IssueEventsPort } from '../../domain/issue/issue-events.port.ts';
 import { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
@@ -151,4 +155,18 @@ export interface OrgRuntimeDeps {
   sourcesPack?: OrgSourcesDeps;
   waitGate?: WaitTickerGatePort;
   modelQuotaFactory?: ModelQuotaFactoryPort;
+  browserLogin?: BrowserLoginRuntimeDeps;
+}
+
+export interface BrowserLoginRuntimeDeps {
+  resolve: CredentialResolvePort;
+  egress: EgressProxyPort;
+  attempts: BrowserLoginAttemptPort;
+  audit: OrgAudit;
+  loginResult: (input: {
+    orgId: string;
+    credentialId: string;
+    ok: boolean;
+    targetOrigin: string;
+  }) => Promise<void>;
 }

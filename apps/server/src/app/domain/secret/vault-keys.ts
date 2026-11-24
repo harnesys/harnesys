@@ -4,6 +4,7 @@ export const VAULT_SECRET_PREFIX = 'secret:';
 export const VAULT_VAR_PREFIX = 'var:';
 export const LEGACY_PROVIDER_SECRET_PREFIX = 'llm_provider:';
 export const SYSTEM_CLOUD_PREFIX = 'cloud:';
+export const BROWSER_LOGIN_PREFIX = 'browser_login:';
 
 const NAME_RE = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
 
@@ -32,7 +33,11 @@ export function parseVaultRef(value: string): { kind: VaultEntryKind; name: stri
 }
 
 export function isSystemSecretKey(key: string): boolean {
-  return key.startsWith(SYSTEM_CLOUD_PREFIX) || key.startsWith(LEGACY_PROVIDER_SECRET_PREFIX);
+  return (
+    key.startsWith(SYSTEM_CLOUD_PREFIX) ||
+    key.startsWith(LEGACY_PROVIDER_SECRET_PREFIX) ||
+    key.startsWith(BROWSER_LOGIN_PREFIX)
+  );
 }
 
 export function legacyProviderSecretKey(providerId: string): string {

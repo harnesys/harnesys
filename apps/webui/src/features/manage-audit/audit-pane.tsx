@@ -1,12 +1,16 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { useOrgTimeZone } from '@/features/switch-org/org-time-zone';
 import { listOrgAudit, type OrgAuditItem, orgAuditQueryKey } from '@/shared/api/org-audit';
 import { formatDayTime } from '@/shared/lib/format-clock';
 import { Button } from '@/shared/ui/button';
 import { Row, RowChip, RowHeader, RowList } from '@/shared/ui/capability-rows';
+import { Input } from '@/shared/ui/input';
 import { RowListSkeleton, SettingsEmpty, SettingsErrorBanner } from '@/shared/ui/settings-kit';
+import { ToggleGroup, ToggleGroupItem } from '@/shared/ui/toggle-group';
 
 type ChipTone = 'neutral' | 'ok' | 'warn' | 'danger';
+type AuditScope = 'all' | 'browser';
 
 const AUDIT_RESULT_TONES: Record<string, ChipTone> = {
   ok: 'ok',
@@ -23,6 +27,20 @@ function actorLabel(row: OrgAuditItem): string {
   return `${row.actorKind}:${shortId}`;
 }
 
+function matchesFilter(row: OrgAuditItem, needle: string, scope: AuditScope): boolean {
+  if (scope === 'browser' && !row.action.startsWith('browser.')) {
+    return false;
+  }
+  if (needle === '') {
+    return true;
+  }
+  return (
+    row.action.toLowerCase().includes(needle) ||
+    row.resource.toLowerCase().includes(needle) ||
+    actorLabel(row).toLowerCase().includes(needle)
+  );
+}
+
 export function OrgAuditPane({ orgId }: { orgId: string }) {
   const query = useInfiniteQuery({
     queryKey: orgAuditQueryKey(orgId),
@@ -37,6 +55,10 @@ export function OrgAuditPane({ orgId }: { orgId: string }) {
   });
   const items = query.data?.pages.flatMap((page) => page.items) ?? [];
   const total = query.data?.pages[0]?.total ?? 0;
+  const [filter, setFilter] = useState('');
+  const [scope, setScope] = useState<AuditScope>('all');
+  const needle = filter.trim().toLowerCase();
+  const shown = items.filter((row) => matchesFilter(row, needle, scope));
 
   return (
     <div className="flex w-full flex-col gap-8" data-testid="audit-pane">
@@ -45,6 +67,34 @@ export function OrgAuditPane({ orgId }: { orgId: string }) {
         count={query.isPending ? undefined : total}
         description="Security and fleet events for this organization, newest first."
       />
+
+      <div className="flex items-center gap-2" data-testid="audit-filter">
+        <Input
+          aria-label="Filter audit events"
+          placeholder="Filter by action, target or actor..."
+          className="max-w-64"
+          value={filter}
+          onChange={(event) => setFilter(event.target.value)}
+        />
+        <ToggleGroup
+          variant="segment"
+          size="sm"
+          value={[scope]}
+          onValueChange={(value) => {
+            const next = value[0];
+            if (next === 'all' || next === 'browser') {
+              setScope(next);
+            }
+          }}
+        >
+          <ToggleGroupItem value="all" className="min-w-[44px] text-[11px]">
+            All
+          </ToggleGroupItem>
+          <ToggleGroupItem value="browser" className="min-w-[44px] text-[11px]">
+            Browser
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
 
       {query.isPending && <RowListSkeleton testId="audit-loading" />}
       {query.isError && (
@@ -63,8 +113,13 @@ export function OrgAuditPane({ orgId }: { orgId: string }) {
           description="Security and fleet events will appear here."
         />
       ) : null}
+      {shown.length === 0 && items.length > 0 && (
+        <p className="py-2 text-muted-foreground text-xs" data-testid="audit-filter-empty">
+          No events match the filter.
+        </p>
+      )}
       <RowList>
-        {items.map((row) => (
+        {shown.map((row) => (
           <AuditRow key={row.id} row={row} />
         ))}
       </RowList>

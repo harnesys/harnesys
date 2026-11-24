@@ -15,10 +15,10 @@ import {
 } from './npm-package.ts';
 
 export const AGENT_BROWSER_PACKAGE = 'agent-browser';
-export const AGENT_BROWSER_VERSION = '0.39.2';
+export const AGENT_BROWSER_VERSION = '0.44.0';
 export const AGENT_BROWSER_TARBALL = `https://registry.npmjs.org/${AGENT_BROWSER_PACKAGE}/-/${AGENT_BROWSER_PACKAGE}-${AGENT_BROWSER_VERSION}.tgz`;
 const AGENT_BROWSER_INTEGRITY_SHA512 =
-  'sha512-8zh5Dj4r/Lo14nDw+8jUViTlmZV5ON3qmrGp1wppmB87NhMqmSXUqVIeNith9xjIJNr/00wHxhCqH/2lATezYQ==';
+  'sha512-OIrY/BlPwdg8XB9rzEbBuDva0S/lQmQBCW735y+B80kDvZ8CDQsuYV8i6hmUr70qIZeTyjd74aymlUzHKbvO4Q==';
 const HELP_SNAPSHOT_FILE = 'help.txt';
 
 export type AgentBrowserInstallPhase = NpmPackagePhase | 'done';

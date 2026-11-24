@@ -1,7 +1,6 @@
 import { Injectable, Logger, type ModuleDestroyHook } from '@harnesys/brix';
 import type { CancelRunResponse, RetryRunResponse, RunAcceptedResponse } from '@harnesys/contracts';
 import type {
-  HostEngineEntry,
   McpServerInfo,
   RunEventStore,
   RunLifecycleStore,
@@ -9,6 +8,7 @@ import type {
   SessionHandle,
   TruncateThreadResult,
 } from 'harnesys';
+import { RecordBrowserLoginResultUseCase } from '../../application/browser-login/record-browser-login-result.use-case.ts';
 import { resolveMcpVaultEntry } from '../../application/mcp/resolve-mcp-vault-placeholders.ts';
 import { TriggerInstanceRepositoryPort } from '../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
@@ -16,12 +16,16 @@ import { HookRunStorePort } from '../../domain/agent/hook-run-store.port.ts';
 import { ApprovalEventsPort } from '../../domain/approval/approval-events.port.ts';
 import { ApprovalStorePort } from '../../domain/approval/approval-store.port.ts';
 import { BrowserHostPort } from '../../domain/browser/browser-host.port.ts';
+import { CredentialResolvePort } from '../../domain/browser/credential-resolve.port.ts';
+import { EgressProxyPort } from '../../domain/browser/egress-proxy.port.ts';
+import { BrowserLoginAttemptPort } from '../../domain/browser/login-attempt.port.ts';
 import { PackRegistryPort } from '../../domain/capabilities/pack-registry.port.ts';
 import { DeskEventsPort } from '../../domain/desk/desk-events.port.ts';
 import { FileAccessRulePort } from '../../domain/file-access/file-access-rule.port.ts';
 import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
 import { NodeCommandQueuePort } from '../../domain/fleet/node-command-queue.port.ts';
 import { NodeRepository } from '../../domain/fleet/node-repository.port.ts';
+import { OrgAudit } from '../../domain/fleet/org-audit.port.ts';
 import { IssueEventsPort } from '../../domain/issue/issue-events.port.ts';
 import { IssueExecutionPort } from '../../domain/issue/issue-execution.port.ts';
 import { KnowledgeSearchPort } from '../../domain/knowledge/knowledge-search.port.ts';
@@ -57,14 +61,15 @@ import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repo
 import { ThreadEventsPort } from '../../domain/thread/thread-events.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { WaitTickerGatePort } from '../../domain/thread/wait-ticker-gate.port.ts';
+import { browserLoginDepsOf, engineSnapshotDepsOf } from './browser-login-runtime.deps.ts';
 import { openOrgRuntime } from './org-runtime.ts';
 import type { OrgRuntime } from './org-runtime.types.ts';
 import {
   cachedRuntimeOf,
   drainRuntimes,
   type OrgRuntimeCache,
+  releaseRuntime,
   storeRuntime,
-  takeRuntime,
 } from './org-runtime-cache.ts';
 import { OrgMcpManagePort } from './packs/org-mcp-manage.port.ts';
 import { packToolsDeps } from './packs/pack-tools-deps.ts';
@@ -117,6 +122,11 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     private readonly browserHost?: BrowserHostPort,
     private readonly lsp?: LspPort,
     private readonly modelQuotaFactory?: ModelQuotaFactoryPort,
+    private readonly browserResolve?: CredentialResolvePort,
+    private readonly browserEgress?: EgressProxyPort,
+    private readonly browserAttempts?: BrowserLoginAttemptPort,
+    private readonly browserAudit?: OrgAudit,
+    private readonly recordLoginResult?: RecordBrowserLoginResultUseCase,
   ) {
     super();
   }
@@ -125,17 +135,20 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     drainRuntimes(this.runtimes);
   }
 
-  private browserEnginesDeps(): { snapshot: () => Promise<HostEngineEntry[]> } | undefined {
-    const host = this.browserHost;
-    return host === undefined ? undefined : { snapshot: () => host.snapshot() };
-  }
-
   private ensure(orgId: string): Promise<OrgRuntime> {
     const revision = this.packRegistry.revision();
     const cached = cachedRuntimeOf(this.runtimes, orgId, revision);
     if (cached !== undefined) {
       return cached;
     }
+    const browserLogin = browserLoginDepsOf({
+      resolve: this.browserResolve,
+      egress: this.browserEgress,
+      attempts: this.browserAttempts,
+      audit: this.browserAudit,
+      recordLoginResult: this.recordLoginResult,
+    });
+    const engineSnapshotDeps = engineSnapshotDepsOf(this.browserHost);
     const pending = openOrgRuntime({
       orgId,
       logger: this.log.child('org-runtime'),
@@ -182,9 +195,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
           await runtime.reloadMcp(serverId, resolved);
         },
       }),
-      ...(this.browserEnginesDeps() !== undefined
-        ? { browserEngines: this.browserEnginesDeps() }
-        : {}),
+      ...(engineSnapshotDeps !== undefined ? { browserEngines: engineSnapshotDeps } : {}),
       approvals: this.approvals,
       approvalEvents: this.approvalEvents,
       claims: this.claims,
@@ -204,6 +215,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       issueEvents: this.issueEvents,
       ...packToolsDeps(),
       ...(this.lsp ? { lsp: this.lsp } : {}),
+      ...(browserLogin !== undefined ? { browserLogin } : {}),
     });
     storeRuntime(this.runtimes, orgId, pending, revision);
     return pending;
@@ -326,15 +338,6 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
   }
 
   async invalidateRuntime(orgId: string): Promise<void> {
-    const pending = takeRuntime(this.runtimes, orgId);
-    if (!pending) {
-      return;
-    }
-    try {
-      const rt = await pending;
-      rt.closeWhenIdle();
-    } catch {
-      // runtime may have failed to open; dropping the cache entry is enough
-    }
+    await releaseRuntime(this.runtimes, orgId);
   }
 }

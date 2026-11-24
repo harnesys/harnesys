@@ -19,6 +19,7 @@ export interface EngineCapabilities {
   markdown: boolean;
   oneShotFetch: boolean;
   headed: boolean;
+  egressProxy: boolean;
 }
 
 export interface EngineResources {

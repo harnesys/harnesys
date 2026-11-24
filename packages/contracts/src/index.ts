@@ -1,5 +1,6 @@
 export * from './addons-platform.ts';
 export * from './apps.ts';
+export * from './browser-credential.ts';
 export * from './compaction.ts';
 export * from './dashboards/index.ts';
 export * from './department.ts';

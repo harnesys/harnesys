@@ -3,6 +3,7 @@ import { AgentUseCaseModule } from '../application/agents/agent.use-case.module.
 import { ApprovalUseCaseModule } from '../application/approvals/approval.use-case.module.ts';
 import { AppsUseCaseModule } from '../application/apps/apps.use-case.module.ts';
 import { AutomationUseCaseModule } from '../application/automations/automation.use-case.module.ts';
+import { BrowserLoginUseCaseModule } from '../application/browser-login/browser-login.use-case.module.ts';
 import { CapabilitiesUseCaseModule } from '../application/capabilities/capabilities.use-case.module.ts';
 import { ContentUseCaseModule } from '../application/content/content.use-case.module.ts';
 import { DashboardsUseCaseModule } from '../application/dashboards/dashboards.use-case.module.ts';
@@ -195,6 +196,7 @@ import { VaultController } from './rest/vault.controller.ts';
     ManagerUseCaseModule,
     KnowledgeUseCaseModule,
     VaultUseCaseModule,
+    BrowserLoginUseCaseModule,
     AgentUseCaseModule,
     DepartmentUseCaseModule,
     FileAccessUseCaseModule,

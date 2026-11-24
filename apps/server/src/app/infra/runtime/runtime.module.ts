@@ -1,5 +1,6 @@
 import { Module } from '@harnesys/brix';
 import { SignalStorePort, SignalWakePort } from 'harnesys';
+import { BrowserLoginUseCaseModule } from '../../application/browser-login/browser-login.use-case.module.ts';
 import { PlanEventsPort } from '../../domain/plan/plan-events.port.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { RunLifecycleReaderPort } from '../../domain/thread/run-lifecycle-reader.port.ts';
@@ -64,6 +65,7 @@ import { WaitTickerGateAdapter } from './wait-ticker-gate.adapter.ts';
     WorkspaceContainerModule,
     FleetHubModule,
     BrowserModule,
+    BrowserLoginUseCaseModule,
   ],
   providers: [
     { provide: WaitTickerGatePort, useClass: WaitTickerGateAdapter },
