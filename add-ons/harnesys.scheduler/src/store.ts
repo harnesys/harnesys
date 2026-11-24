@@ -1,17 +1,14 @@
-import type { AddonContext } from '@harnesys/sdk';
+import type { AddonContext, AddonTriggerTarget } from '@harnesys/sdk';
 import type { MissPolicy } from './planner.ts';
 
-export interface ScheduleTarget {
-  threadId: string;
-  agentId: string;
-  modeId?: string;
-}
+export type ScheduleTarget = AddonTriggerTarget;
 
 export interface ScheduleRow {
   instanceId: string;
   name: string;
   cron: string;
   detail: string;
+  instructions: string;
   missPolicy: MissPolicy;
   status: 'active' | 'paused' | 'failed';
   nextRunAt: string | null;
@@ -55,7 +52,7 @@ function missPolicyOf(config: Record<string, unknown>): MissPolicy {
 
 export async function listSchedules(ctx: AddonContext): Promise<ScheduleRow[]> {
   const instanceRows = await ctx.db.all(
-    'select instance_id as instanceId, label, config, target from instances',
+    'select instance_id as instanceId, label, config, target, instructions from instances',
   );
   const stateById = await stateMap(ctx);
   const rows: ScheduleRow[] = [];
@@ -110,6 +107,7 @@ function scheduleFromRow(
     name: label || configText(config, 'name') || instanceId,
     cron: state?.cron ?? configText(config, 'cron'),
     detail: configText(config, 'detail'),
+    instructions: typeof row.instructions === 'string' ? row.instructions : '',
     missPolicy: missPolicyOf(config),
     status: state?.status ?? 'active',
     nextRunAt: state?.nextRunAt ?? null,
@@ -119,20 +117,23 @@ function scheduleFromRow(
   };
 }
 
-export async function upsertInstance(
-  ctx: AddonContext,
-  instanceId: string,
-  label: string,
-  config: Record<string, unknown>,
-  target: unknown,
-): Promise<void> {
+export interface InstanceRowInput {
+  instanceId: string;
+  label: string;
+  instructions: string;
+  config: Record<string, unknown>;
+  target: unknown;
+}
+
+export async function upsertInstance(ctx: AddonContext, input: InstanceRowInput): Promise<void> {
   await ctx.db.run(
-    'insert into instances (instance_id, label, config, target, started_at) values (?, ?, ?, ?, ?) on conflict(instance_id) do update set label = excluded.label, config = excluded.config, target = excluded.target',
+    'insert into instances (instance_id, label, instructions, config, target, started_at) values (?, ?, ?, ?, ?, ?) on conflict(instance_id) do update set label = excluded.label, instructions = excluded.instructions, config = excluded.config, target = excluded.target',
     [
-      instanceId,
-      label,
-      JSON.stringify(config),
-      JSON.stringify(target ?? {}),
+      input.instanceId,
+      input.label,
+      input.instructions,
+      JSON.stringify(input.config),
+      JSON.stringify(input.target ?? {}),
       new Date().toISOString(),
     ],
   );
@@ -141,6 +142,40 @@ export async function upsertInstance(
 export async function removeInstance(ctx: AddonContext, instanceId: string): Promise<void> {
   await ctx.db.run('delete from instances where instance_id = ?', [instanceId]);
   await ctx.db.run('delete from schedule_state where instance_id = ?', [instanceId]);
+}
+
+export async function migrateLegacyDetail(ctx: AddonContext): Promise<void> {
+  const rows = await ctx.db.all(
+    'select instance_id as instanceId, config, instructions from instances',
+  );
+  for (const row of rows) {
+    const config = parseJson(row.config);
+    const detail = configText(config, 'detail').trim();
+    if (!detail) {
+      continue;
+    }
+    const instanceId = String(row.instanceId);
+    const instructions = typeof row.instructions === 'string' ? row.instructions.trim() : '';
+    const next = { ...config };
+    delete next.detail;
+    await ctx.db.run('update instances set instructions = ?, config = ? where instance_id = ?', [
+      instructions === '' ? detail : instructions,
+      JSON.stringify(next),
+      instanceId,
+    ]);
+    try {
+      await ctx.triggers.update({
+        instanceId,
+        config: next,
+        ...(instructions === '' ? { instructions: detail } : {}),
+      });
+    } catch (error) {
+      await ctx.log.warn('schedule detail migration failed', {
+        instanceId,
+        err: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 }
 
 export async function pauseInstance(ctx: AddonContext, instanceId: string): Promise<void> {

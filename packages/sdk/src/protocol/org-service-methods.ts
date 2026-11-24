@@ -4,6 +4,26 @@ import { TriggerFireOutcomeSchema } from './shared.ts';
 
 const str = z.string().min(1);
 
+const TriggerWorkspaceSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('inherit') }),
+  z.object({ kind: z.literal('sandbox') }),
+  z.object({ kind: z.literal('folder'), path: str, hostId: str.optional() }),
+  z.object({ kind: z.literal('source'), sourceId: str, subpath: str.optional() }),
+  z.object({
+    kind: z.literal('worktree'),
+    sourceId: str,
+    worktreeId: str,
+    subpath: str.optional(),
+  }),
+]);
+
+const TriggerTargetSchema = z.object({
+  threadId: str,
+  agentId: str,
+  modeId: str.optional(),
+  workspace: TriggerWorkspaceSchema.optional(),
+});
+
 /** Read/action methods over org-scoped thread, run, usage and skill state (§6.4). */
 export const orgServiceMethods = {
   'runs.list': addonMethod(
@@ -117,11 +137,7 @@ export const orgServiceMethods = {
       kind: str,
       label: str,
       config: z.record(z.string(), z.unknown()).default({}),
-      target: z.object({
-        threadId: str,
-        agentId: str,
-        modeId: str.optional(),
-      }),
+      target: TriggerTargetSchema,
       instructions: str.optional(),
     }),
     z.object({ instanceId: str }),
@@ -132,13 +148,7 @@ export const orgServiceMethods = {
       instanceId: str,
       label: str.optional(),
       config: z.record(z.string(), z.unknown()).optional(),
-      target: z
-        .object({
-          threadId: str,
-          agentId: str,
-          modeId: str.optional(),
-        })
-        .optional(),
+      target: TriggerTargetSchema.optional(),
       instructions: str.optional(),
       enabled: z.boolean().optional(),
     }),

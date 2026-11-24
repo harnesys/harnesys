@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import type { Agent } from '@/entities/agent';
 import type { ClientAutomation } from '@/entities/automation';
+import { useThreadStore } from '@/entities/thread';
 import {
   type AddonTriggerDescriptor,
   triggerDescriptorsFromDetail,
@@ -20,7 +21,6 @@ import {
   buildValidator,
   FieldsRenderer,
   type FormWidgetProps,
-  initialFieldValues,
   registerFormWidget,
 } from '@/shared/descriptor-forms';
 import { resolveL10n } from '@/shared/lib/l10n';
@@ -35,6 +35,7 @@ import type {
   AddonTriggerDraft,
 } from '../model/addon-trigger';
 import { useAddonTriggerActions } from '../model/addon-trigger';
+import { initialDraft, targetOf } from './addon-trigger-draft';
 import { AddonTriggerFooter } from './addon-trigger-footer';
 import { ConnectionMissingBanner, ModeBlock, NameAgentBlock } from './trigger-standard-blocks';
 import { resolveTriggerThread, TriggerTargetField } from './trigger-target-field';
@@ -49,22 +50,6 @@ function CronField({ value, onChange }: FormWidgetProps) {
 }
 
 registerFormWidget('cron', CronField);
-
-function targetOf(target: unknown): {
-  threadId?: string;
-  agentId?: string;
-  modeId?: string;
-} {
-  if (!target || typeof target !== 'object' || Array.isArray(target)) {
-    return {};
-  }
-  const record = target as Record<string, unknown>;
-  return {
-    ...(typeof record.threadId === 'string' ? { threadId: record.threadId } : {}),
-    ...(typeof record.agentId === 'string' ? { agentId: record.agentId } : {}),
-    ...(typeof record.modeId === 'string' ? { modeId: record.modeId } : {}),
-  };
-}
 
 export function openAddonTriggerConfigDialog(
   data: AddonTriggerDialogData,
@@ -184,11 +169,19 @@ function AddonTriggerForm({
           label: draft.label.trim(),
           config: draft.config,
           instructions: draft.instructions.trim(),
-          target: { threadId, agentId: draft.agentId, modeId: draft.modeId },
+          target: {
+            threadId,
+            agentId: draft.agentId,
+            modeId: draft.modeId,
+            ...(draft.workspace === null ? {} : { workspace: draft.workspace }),
+          },
           enabled: draft.enabled,
         },
         threadId,
       );
+      if (draft.workspace !== null) {
+        useThreadStore.getState().setWorkspaceRef(threadId, draft.workspace);
+      }
       onResolve?.({ deleted: false });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -269,6 +262,8 @@ function AddonTriggerForm({
               value={draft.threadId}
               onChange={(threadId) => update('threadId', threadId)}
               currentThreadId={target.threadId}
+              workspace={draft.workspace}
+              onWorkspace={(ref) => update('workspace', ref)}
             />
           )}
           {standard.mode?.disabled ? null : (
@@ -337,27 +332,4 @@ function AddonTriggerForm({
       />
     </>
   );
-}
-
-function initialDraft(input: {
-  descriptor: AddonTriggerDescriptor;
-  automation: ClientAutomation | null;
-  instance: TriggerInstanceView | null;
-  agents: Agent[];
-  target: { threadId?: string; agentId?: string; modeId?: string };
-}): AddonTriggerDraft {
-  const firstAgent =
-    input.agents.find((agent) => agent.id === input.target.agentId) ?? input.agents[0];
-  return {
-    label: input.automation?.label ?? resolveL10n(input.descriptor.title, 'en'),
-    agentId: firstAgent?.id ?? '',
-    threadId: input.target.threadId ?? '',
-    modeId: input.target.modeId ?? firstAgent?.defaultModeId ?? DEFAULT_MODE_ID,
-    instructions: input.instance?.instructions ?? '',
-    enabled: input.instance?.status !== 'paused',
-    config: initialFieldValues(
-      input.descriptor.configFields ?? [],
-      (input.instance?.config ?? {}) as Record<string, FieldValue>,
-    ),
-  };
 }

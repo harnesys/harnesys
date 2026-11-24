@@ -1,3 +1,4 @@
+import type { WorkspaceRef } from '@harnesys/contracts';
 import { type ThreadLastError, threadsForAgent } from '@harnesys/studio-shared';
 import { create } from 'zustand';
 import { randomUUID } from '@/shared/lib/random-uuid';
@@ -17,6 +18,7 @@ interface ThreadStore {
   markUnread: (threadId: string) => void;
   setLastError: (threadId: string, lastError: ThreadLastError | null) => void;
   setPinned: (threadId: string, pinned: boolean) => void;
+  setWorkspaceRef: (threadId: string, workspaceRef: WorkspaceRef | null) => void;
   setViewingAtEnd: (threadId: string, atEnd: boolean) => void;
   isViewingAtEnd: (threadId: string) => boolean;
   touch: (threadId: string) => void;
@@ -88,6 +90,11 @@ export const useThreadStore = create<ThreadStore>((set, get) => ({
   setPinned: (threadId, pinned) => {
     set((state) => ({
       items: state.items.map((item) => (item.id === threadId ? { ...item, pinned } : item)),
+    }));
+  },
+  setWorkspaceRef: (threadId, workspaceRef) => {
+    set((state) => ({
+      items: state.items.map((item) => (item.id === threadId ? { ...item, workspaceRef } : item)),
     }));
   },
   setViewingAtEnd: (threadId, atEnd) => {

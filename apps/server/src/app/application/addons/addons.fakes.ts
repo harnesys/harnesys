@@ -1,3 +1,4 @@
+import type { WorkspaceRef } from '@harnesys/contracts';
 import type { OwnerKey } from '../../domain/addons/owner.ts';
 import type { AddonRescanResult } from '../../domain/addons/ports/addon-package-catalog.port.ts';
 import {
@@ -29,6 +30,7 @@ import {
   TriggerInstanceRepositoryPort,
   type TriggerInstanceRow,
 } from '../../domain/addons/ports/trigger-instance-repository.port.ts';
+import { TriggerWorkspacePort } from '../../domain/thread/trigger-workspace.port.ts';
 
 export {
   FakeAccounts,
@@ -314,5 +316,13 @@ export class InMemoryBindings extends BindingRepositoryPort {
   }
   removeAddon(orgId: string, addonId: string): void {
     this.rows = this.rows.filter((row) => !(row.orgId === orgId && row.addonId === addonId));
+  }
+}
+
+export class FakeTriggerWorkspace extends TriggerWorkspacePort {
+  applied: Array<{ orgId: string; threadId: string; workspace: WorkspaceRef }> = [];
+  apply(input: { orgId: string; threadId: string; workspace: WorkspaceRef }): boolean {
+    this.applied.push(input);
+    return true;
   }
 }

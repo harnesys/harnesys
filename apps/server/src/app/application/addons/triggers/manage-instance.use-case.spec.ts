@@ -4,6 +4,7 @@ import { AutomationEventsPort } from '../../../domain/automations/automation-eve
 import { FakeThreadAgents, FakeThreads } from '../../threads/thread.fakes.ts';
 import {
   FakeAudit,
+  FakeTriggerWorkspace,
   InMemoryCatalog,
   InMemoryOrgAddons,
   InMemoryTriggers,
@@ -85,6 +86,7 @@ function build(enabled = true) {
     threads,
     threadAgents,
     new FakeAutomationEvents(),
+    new FakeTriggerWorkspace(),
     new NullLogger(),
   );
   return { useCase, triggers, calls, threads, threadAgents };

@@ -50,7 +50,7 @@ A declared contribution with no handler fails instance startup at the handshake 
 
 ## Idempotency (required)
 
-- `trigger.start`/`trigger.stop` and `worker.start`/`worker.stop` are replayed on every process start (recovery). Upsert — never blind `insert`; never re-issue a secret that already exists.
+- `trigger.start`/`trigger.stop` and `worker.start`/`worker.stop` are replayed on every process start (recovery). Upsert — never blind `insert`; never re-issue a secret that already exists. `trigger.start` carries the instance `config`, the host-owned `target` (`{ threadId, agentId, modeId?, workspace? }`, where `workspace` is the target thread's working directory) and `instructions`; read them instead of storing copies.
 - `ctx.triggers.fire` dedups by `(instanceId, runKey)` for 7 days: make `runKey` deterministic when the source event has an id (`${instanceId}:${event.id}`).
 - `lifecycle.upgrade` runs after the SQL migrations are already applied — make it idempotent.
 - `notifications['config.changed']` reloads values; do not cache config across calls in module scope (a long-lived instance can hold a stale snapshot).

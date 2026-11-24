@@ -161,6 +161,7 @@ export interface TriggerInstanceStartInput {
   label?: string;
   config: Record<string, unknown>;
   target?: unknown;
+  instructions?: string;
 }
 
 @Injectable()
@@ -190,7 +191,7 @@ export class TriggerFamilyModule implements FamilyModule<TriggerSchema> {
   }
 
   async startInstance(input: TriggerInstanceStartInput, opts?: AddonCallOptions): Promise<void> {
-    const { orgId, addonId, instanceId, kind, label, config, target } = input;
+    const { orgId, addonId, instanceId, kind, label, config, target, instructions } = input;
     await this.supervisor.ensureRunning(orgId, addonId, `trigger-instance:${instanceId}`);
     await this.calls.triggerStart(
       orgId,
@@ -201,6 +202,7 @@ export class TriggerFamilyModule implements FamilyModule<TriggerSchema> {
         config,
         target,
         ...(label === undefined ? {} : { label }),
+        ...(instructions === undefined ? {} : { instructions }),
       },
       opts ?? { timeoutMs: TRIGGER_CALL_TIMEOUT_MS },
     );

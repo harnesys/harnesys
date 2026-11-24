@@ -4,6 +4,7 @@ import {
   FakeDispatch,
   FakeMetrics,
   FakeRegistry,
+  FakeTriggerWorkspace,
   InMemoryTriggers,
   NullLogger,
 } from '../addons.fakes.ts';
@@ -47,6 +48,7 @@ function build(limits?: Record<string, number>) {
     dispatch,
     tracker,
     new FakeMetrics(),
+    new FakeTriggerWorkspace(),
     new NullLogger(),
   );
   return { useCase, triggers, dispatch, tracker };
@@ -142,6 +144,7 @@ describe('FireTriggerUseCase', () => {
       new FakeDispatch(),
       new FireWindowTracker(),
       new FakeMetrics(),
+      new FakeTriggerWorkspace(),
       new NullLogger(),
     );
     expect((await fire(useCase, 'k1')).outcome).toBe('suppressed');

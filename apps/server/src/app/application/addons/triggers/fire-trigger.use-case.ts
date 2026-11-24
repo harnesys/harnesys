@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@harnesys/brix';
+import type { WorkspaceRef } from '@harnesys/contracts';
 import { TriggerDescriptorSchema } from '@harnesys/sdk';
 import {
   TRIGGER_HUMAN_ORIGIN,
@@ -10,6 +11,7 @@ import { ContributionRegistryPort } from '../../../domain/addons/ports/contribut
 import type { TriggerInstanceRow } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { TriggerInstanceRepositoryPort } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { MetricsPort } from '../../../domain/metrics/metrics.port.ts';
+import { TriggerWorkspacePort } from '../../../domain/thread/trigger-workspace.port.ts';
 import { type RunDispatchOutcome, RunDispatchPort } from '../run-dispatch.port.ts';
 import { FireWindowTracker, type TriggerLimits } from './trigger-limits.ts';
 
@@ -34,6 +36,7 @@ interface FireTarget {
   agentId?: string;
   threadId?: string;
   modeId?: string;
+  workspace?: WorkspaceRef;
 }
 
 const NO_LIMITS: TriggerLimits = {};
@@ -48,6 +51,7 @@ export class FireTriggerUseCase {
     private readonly dispatch: RunDispatchPort,
     private readonly tracker: FireWindowTracker,
     private readonly metrics: MetricsPort,
+    private readonly triggerWorkspace: TriggerWorkspacePort,
     @Inject(Logger) logger: Logger,
   ) {
     this.logger = logger.child('addons-fire-trigger');
@@ -79,6 +83,13 @@ export class FireTriggerUseCase {
     const target = this.targetOf(instance);
     if (!target.threadId) {
       return this.suppressed(input, 'no_target');
+    }
+    if (target.workspace !== undefined) {
+      this.triggerWorkspace.apply({
+        orgId: input.orgId,
+        threadId: target.threadId,
+        workspace: target.workspace,
+      });
     }
     const { outcome, runId } = await this.dispatch.dispatch({
       orgId: input.orgId,

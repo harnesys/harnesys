@@ -63,12 +63,26 @@ Single source in `src/protocol/map.ts`. Every entry: `{ direction, params, resul
 
 - host→addon: `initialize`, `shutdown`, `ping`, `lifecycle.upgrade`, `tools.call`, `route.handle`, `trigger.start`, `trigger.stop`, `job.run`, `worker.start`, `worker.stop`, `transport.send`, `transport.edit`, `transport.typing`, `hook.deliver`
 - host→addon notifications: `initialized`, `config.changed`, `permissions.changed`, `accounts.changed`
-- addon→host: `config.get`, `secrets.get`, `db.exec/all/get/run/batch`, `log.write`, `events.emit`, `http.fetch`, `accounts.list/report/access`, `runs.dispatch`, `threads.create`, `triggers.fire`, `bridge.inbound`, `workers.report`
+- addon→host: `config.get`, `secrets.get`, `db.exec/all/get/run/batch`, `log.write`, `events.emit`, `http.fetch`, `accounts.list/report/access`, `runs.list/dispatch/cancel`, `threads.create/get/patch/compact`, `agents.list`, `skills.list`, `usage.summary`, `org.settings.get`, `approvals.request`, `files.stat/read/write`, `triggers.fire/create/update`, `bridge.inbound`, `workers.report`
 - notifications (both/addon): `$/cancel` (both), `$/progress` (addon)
 
-Permissions: `null` = baseline; otherwise one of `http.fetch`, `accounts.use`, `accounts.credentials`, `runs.dispatch`, `threads.create`, `bridge.inbound`, `trigger`, `worker` (the last two are contribution-derived, see §6.4 "через вклад").
+Permissions: `null` = baseline; otherwise one of `http.fetch`, `accounts.use`,
+`accounts.credentials`, `events.subscribe`, `runs.dispatch`, `runs.read`, `threads.create`,
+`threads.read`, `threads.write`, `threads.compact`, `agents.read`, `skills.read`,
+`usage.read`, `files.read`, `files.write`, `bindings.write`, `approvals.request`,
+`routes.public`, `lifecycle.resident`, `source`, `bridge.inbound`, `trigger`, `worker`
+(the last two are contribution-derived, see §6.4 "через вклад").
 
 ## Families
+
+Trigger instances are host-owned: `trigger.start` receives `config` (declared
+`configFields`), the validated `target` (`threadId`, `agentId`, `modeId?`, `workspace?`)
+and the operator `instructions` that the host appends to every fired run. `target.workspace`
+is the thread's working directory: the host binds it to the target thread, so fired runs and
+manual messages in that thread execute there. Fire with
+`ctx.triggers.fire({ instanceId, runKey, text?, title?, fields?, payload? })`; `text` is
+the event body, `instructions` live on the instance and are edited in the trigger
+settings. One instance per thread is enforced by the core.
 
 `tool-pack`, `trigger`, `job`, `worker`, `route`, `transport`, `hook`, `content`, `config`, `view`, `source-kind`, `mcp`, `lsp` — each with a descriptor interface, Zod schema and schema version (`*_SCHEMA_VERSION = 1`). Tool/route input schemas use the JSON-Schema subset of §6.5 (`src/families/json-schema.ts`): depth ≤ 8, size ≤ 64 KiB, local `$ref` only.
 

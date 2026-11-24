@@ -25,7 +25,6 @@ Skills load from three roots, ascending precedence: system (`~/.harnesys/skills/
 
 ```bash
 agents_list            # top-level agents plus this agent's own delegates
-schedule_list / schedule_peek <id>
 plan_get
 pin_list / memory_list / knowledge_search "topic" / threads_search "query" scope=org
 list_dir <path> ; read_file <workspace>/.harnesys/skills/<name>/SKILL.md
@@ -58,11 +57,13 @@ Verify memory state after any change (`pin_list`, `memory_list`, `knowledge_sear
 
 ## Schedules
 
-- `schedule_set`: fields `targetAgentId`, `threadId` (`"self"` = this chat after the current run is idle, UUID = specific thread, omit = new dedicated thread), `cron`, `mode` (`ask`/`auto`/`dont_ask`/`bypass`), `history` (`none`/`last`/`all`), `historyLast`. `nextRunAt` is the next cron instant, not create time.
-- `schedule_peek`: last fire results (runId, agentId, events, errors)
-- `schedule_pause` / `schedule_delete` by `id`
+Recurring runs are automation trigger instances: the host stores each instance with its agent, thread, permission mode, workspace and instructions, and starts a run whenever the trigger fires. The tools that create and list automations come from installed add-ons, not from the core; use the automation tools this agent actually has.
 
-One schedule per thread. Dedicated schedule threads keep logs isolated from chat threads. For a one-off mid-run delay use `wait(delayMs)`; schedules are for recurring or next-session fires.
+- One trigger instance per thread. Dedicated automation threads keep logs isolated from chat threads.
+- The instance workspace is the target thread's working directory: the fired run and any manual message in that thread execute there.
+- Instructions are appended to every fired run and are edited in the automation settings, not restated in the prompt.
+- The operator creates and edits automations in the Automations screen; an agent without automation tools cannot do it.
+- For a one-off mid-run delay use `wait(delayMs)`; automations are for recurring or next-session fires.
 
 ## Delegate
 
@@ -90,7 +91,7 @@ Track execution with the plan pack: each step names an owner and exit criteria; 
 ## Verify after changes
 
 1. `agents_list` - agents exist with correct capabilities, skills, graph
-2. `schedule_list` / `schedule_peek` - correct cron and target
+2. Automations screen (or the installed automation tools) - correct cron, target thread/agent and instructions
 3. `plan_get` - plan state if the plan pack is in use
 4. `pin_list` / `memory_list` / `knowledge_search` / `threads_search` - memory state
 5. `read_file` / `shell` - file-level check of `.harnesys/` meta

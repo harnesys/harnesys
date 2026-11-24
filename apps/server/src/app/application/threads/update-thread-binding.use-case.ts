@@ -26,6 +26,12 @@ export interface UpdateThreadBindingRequest {
   body: UpdateThreadBindingBody;
 }
 
+export interface ApplyTriggerWorkspaceRequest {
+  orgId: string;
+  threadId: string;
+  workspace: WorkspaceRef;
+}
+
 @Injectable()
 export class UpdateThreadBindingUseCase {
   constructor(
@@ -83,6 +89,19 @@ export class UpdateThreadBindingUseCase {
       active: this.threads.findActiveRun(request.orgId, thread.id) ?? null,
       bindingLocked: locked,
     });
+  }
+
+  applyTriggerWorkspace(request: ApplyTriggerWorkspaceRequest): boolean {
+    const thread = this.threads.findById(request.orgId, request.threadId);
+    if (!thread) {
+      throw new ThreadNotFoundException(request.threadId);
+    }
+    const workspaceRef = this.resolveWorkspaceRef(request.orgId, request.workspace);
+    if (workspaceRef === null || workspaceRefEquals(workspaceRef, thread.workspaceRef)) {
+      return false;
+    }
+    this.threads.patch(request.orgId, thread.id, { workspaceRef });
+    return true;
   }
 
   private assertProfile(orgId: string, profileId: string): void {

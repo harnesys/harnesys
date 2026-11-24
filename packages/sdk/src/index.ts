@@ -20,6 +20,7 @@ export {
   type AddonTriggerField,
   type AddonTriggers,
   type AddonTriggerTarget,
+  type AddonTriggerWorkspace,
   type AddonUsage,
   type AddonWorkers,
   createAddonContext,

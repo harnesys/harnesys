@@ -165,7 +165,9 @@ admin-grade operations — pair it with your own grant tables if you need scopin
 The host restarts your process freely, so handlers must tolerate repeats:
 
 1. `trigger.start` and `worker.start` are replayed after every process start — upsert,
-   never blind-insert.
+   never blind-insert. `trigger.start` also carries the instance `instructions` and the
+   host-owned `target` (`threadId`, `agentId`, `modeId`, `workspace`); read them, do not
+   rewrite them.
 2. `ctx.triggers.fire({ instanceId, runKey, ... })` is deduplicated by `(instanceId,
    runKey)`; make `runKey` deterministic from the source event id.
 3. Handle `config.changed` by re-reading the values instead of caching them for the

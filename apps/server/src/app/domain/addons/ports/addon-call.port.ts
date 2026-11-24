@@ -30,6 +30,7 @@ export interface TriggerStartParams {
   label?: string;
   config: JsonObject;
   target?: unknown;
+  instructions?: string;
 }
 
 export type TriggerStopReason = 'paused' | 'removed';

@@ -57,6 +57,7 @@ export class InstanceReplayHook implements SupervisorReplayHook {
           label: instance.label,
           config,
           target,
+          instructions: instance.instructions,
         });
       } catch (error) {
         this.log.warn(

@@ -56,7 +56,9 @@ Rule: a contribution without a handler fails the handshake (`incompatible_handle
 
 - Global kind `<addonId>.<kind>`; key in `defineAddon.triggers` is the **`kind`**.
 - `configFields` are `FieldSpec[]`; the user creates instances. `connection` links a binding; `standard` relabels/disables the host's standard form blocks (`name`, `agent`, `target`, `mode`, `instructions`).
-- Fire events with `ctx.triggers.fire({ instanceId, runKey, text, payload })`; the host dedups by `(instanceId, runKey)` over 7 days and enforces `perDay`/`throttleSec`/`maxBurst`.
+- `trigger.start` gets `config`, `instructions` (operator text the host appends to every fired run) and the host-owned `target` `{ threadId, agentId, modeId?, workspace? }`; `workspace` is applied to the target thread's workspace binding, so runs and manual messages in that thread execute there. Do not persist or rewrite them, read them.
+- One instance per thread is enforced by the core; the trigger settings dialog edits thread, mode and workspace.
+- Fire events with `ctx.triggers.fire({ instanceId, runKey, text?, title?, fields?, payload? })`; the host dedups by `(instanceId, runKey)` over 7 days and enforces `perDay`/`throttleSec`/`maxBurst`. `text` is the event body, `fields` are labelled chips.
 - `trigger.start` runs at instance enable and again on every process start (replay): make it idempotent (upsert).
 
 ## job

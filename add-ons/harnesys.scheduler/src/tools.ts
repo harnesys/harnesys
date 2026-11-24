@@ -1,4 +1,10 @@
-import type { AddonContext, AddonTriggerTarget, ToolHandler } from '@harnesys/sdk';
+import { isAbsolute } from 'node:path';
+import type {
+  AddonContext,
+  AddonTriggerTarget,
+  AddonTriggerWorkspace,
+  ToolHandler,
+} from '@harnesys/sdk';
 import { AddonError } from '@harnesys/sdk';
 import { isValidCron } from './cron.ts';
 import type { MissPolicy } from './planner.ts';
@@ -31,6 +37,23 @@ function optionalMissPolicy(input: Record<string, unknown>): MissPolicy | undefi
 function optionalText(input: Record<string, unknown>, key: string): string | undefined {
   const value = input[key];
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function optionalWorkspace(input: Record<string, unknown>): AddonTriggerWorkspace | undefined {
+  const path = optionalText(input, 'workspace');
+  if (path === undefined) {
+    return undefined;
+  }
+  if (!isAbsolute(path)) {
+    throw new AddonError('invalid_params', {
+      detail: `workspace must be an absolute folder path: ${path}`,
+    });
+  }
+  return { kind: 'folder', path };
+}
+
+function instructionsOf(input: Record<string, unknown>): string | undefined {
+  return optionalText(input, 'instructions') ?? optionalText(input, 'detail');
 }
 
 async function resolveTargetAgent(
@@ -72,11 +95,12 @@ async function resolveTargetAgent(
 async function resolveTarget(
   input: Record<string, unknown>,
   ctx: AddonContext,
+  workspace: AddonTriggerWorkspace | undefined,
 ): Promise<AddonTriggerTarget> {
   const agentId = await resolveTargetAgent(input, ctx);
   const providedThreadId = optionalText(input, 'threadId');
   const threadId = await resolveThreadId(input, ctx, agentId, providedThreadId);
-  return { threadId, agentId };
+  return { threadId, agentId, ...(workspace === undefined ? {} : { workspace }) };
 }
 
 async function resolveThreadId(
@@ -117,7 +141,7 @@ const list: ToolHandler = async (_input, ctx: AddonContext) => {
     instanceId: row.instanceId,
     name: row.name,
     cron: row.cron,
-    detail: row.detail,
+    instructions: row.instructions || row.detail,
     missPolicy: row.missPolicy,
     status: row.status,
     nextRunAt: row.nextRunAt,
@@ -153,6 +177,7 @@ async function readBack(ctx: AddonContext, instanceId: string): Promise<Record<s
     instanceId: row.instanceId,
     name: row.name,
     cron: row.cron,
+    instructions: row.instructions || row.detail,
     missPolicy: row.missPolicy,
     status: row.status,
     nextRunAt: row.nextRunAt,
@@ -182,7 +207,8 @@ async function createSchedule(
 ): Promise<Record<string, unknown>> {
   const missPolicy = optionalMissPolicy(input);
   const name = optionalText(input, 'name');
-  const detail = optionalText(input, 'detail');
+  const instructions = instructionsOf(input);
+  const target = await resolveTarget(input, ctx, optionalWorkspace(input));
   const { instanceId } = await ctx.triggers.create({
     kind: 'scheduler.cron',
     label: name ?? cron,
@@ -190,9 +216,9 @@ async function createSchedule(
       cron,
       ...(missPolicy !== undefined ? { miss_policy: missPolicy } : {}),
       ...(name !== undefined ? { name } : {}),
-      ...(detail !== undefined ? { detail } : {}),
     },
-    target: await resolveTarget(input, ctx),
+    ...(instructions === undefined ? {} : { instructions }),
+    target,
   });
   return await readBack(ctx, instanceId);
 }
@@ -205,10 +231,11 @@ async function updateSchedule(
   const row = await resolveSchedule(ctx, input);
   const missPolicy = optionalMissPolicy(input);
   const name = optionalText(input, 'name');
-  const detail = optionalText(input, 'detail');
-  const retarget =
+  const instructions = instructionsOf(input);
+  const workspace = optionalWorkspace(input);
+  const rebind =
     input.agentId !== undefined || input.agent !== undefined || input.threadId !== undefined;
-  const target = retarget ? await resolveTarget(input, ctx) : undefined;
+  const target = await resolveRebindTarget(input, ctx, row, workspace, rebind);
   await ctx.triggers.update({
     instanceId: row.instanceId,
     ...(name !== undefined && name !== row.name ? { label: name } : {}),
@@ -216,11 +243,24 @@ async function updateSchedule(
       cron: cron ?? row.cron,
       miss_policy: missPolicy ?? row.missPolicy,
       name: name ?? row.name,
-      detail: detail ?? row.detail,
     },
+    ...(instructions === undefined ? {} : { instructions }),
     ...(target !== undefined ? { target } : {}),
   });
   return await readBack(ctx, row.instanceId);
+}
+
+async function resolveRebindTarget(
+  input: Record<string, unknown>,
+  ctx: AddonContext,
+  row: ScheduleRow,
+  workspace: AddonTriggerWorkspace | undefined,
+  rebind: boolean,
+): Promise<AddonTriggerTarget | undefined> {
+  if (rebind) {
+    return resolveTarget(input, ctx, workspace);
+  }
+  return workspace === undefined ? undefined : { ...row.target, workspace };
 }
 
 export const schedulerTools: Record<string, ToolHandler> = { list, pause, resume, set };

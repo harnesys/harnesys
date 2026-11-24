@@ -22,13 +22,13 @@ export async function orgTimezone(ctx: AddonContext): Promise<string> {
 export const schedulerTrigger: TriggerPair = {
   start: async (params, ctx: AddonContext) => {
     const cron = cronOf(params.config);
-    await upsertInstance(
-      ctx,
-      params.instanceId,
-      typeof params.label === 'string' ? params.label : '',
-      params.config,
-      params.target,
-    );
+    await upsertInstance(ctx, {
+      instanceId: params.instanceId,
+      label: typeof params.label === 'string' ? params.label : '',
+      instructions: params.instructions ?? '',
+      config: params.config,
+      target: params.target,
+    });
     const timezone = await orgTimezone(ctx);
     if (!isValidCron(cron, timezone)) {
       await saveState(ctx, {

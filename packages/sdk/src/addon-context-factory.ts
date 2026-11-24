@@ -41,6 +41,7 @@ export type {
   AddonTriggerField,
   AddonTriggers,
   AddonTriggerTarget,
+  AddonTriggerWorkspace,
   AddonUsage,
   AddonWorkers,
   DbRow,

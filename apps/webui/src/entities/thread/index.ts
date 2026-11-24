@@ -7,3 +7,4 @@ export {
   useThreadWorktreeStore,
 } from './model/thread-worktree.store';
 export { ThreadBindingSelects } from './ui/thread-binding-selects';
+export { WorkspaceRefSelect } from './ui/workspace-ref-select';

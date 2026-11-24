@@ -31,6 +31,7 @@ export function TriggerNotice({ text, threadId }: { text: string; threadId?: str
       </div>
     );
   }
+  const body = view.body || view.instructions;
   return (
     <div className="flex w-full justify-end">
       <div className="w-full max-w-[min(100%,40rem)] overflow-hidden rounded-xl border border-border/70 bg-muted/20">
@@ -49,7 +50,7 @@ export function TriggerNotice({ text, threadId }: { text: string; threadId?: str
               {view.label || view.triggerId}
             </Badge>
           </div>
-          {view.instructions ? <InstructionsBadge text={view.instructions} /> : null}
+          {view.instructions && view.body ? <InstructionsBadge text={view.instructions} /> : null}
         </div>
         <div className="flex flex-col gap-2 px-3 py-2.5">
           <p className="font-medium text-sm leading-snug">{view.title}</p>
@@ -60,9 +61,9 @@ export function TriggerNotice({ text, threadId }: { text: string; threadId?: str
               ))}
             </div>
           ) : null}
-          {view.body ? (
+          {body ? (
             <div className="text-sm leading-relaxed">
-              <ThreadMarkdown text={view.body} threadId={threadId} />
+              <ThreadMarkdown text={body} threadId={threadId} />
             </div>
           ) : null}
         </div>

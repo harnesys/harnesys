@@ -111,17 +111,35 @@ const items: RouteHandler = async (call, ctx) => {
 
 ```ts
 const cron: TriggerPair = {
-  start: async (params, ctx) => { /* params.config, params.target, params.instanceId */ },
-  stop: async (params, ctx) => { /* paused or removed */ },
+  start: async (params, ctx) => {
+    // params.instanceId, params.kind, params.label, params.config,
+    // params.target, params.instructions
+  },
+  stop: async (params, ctx) => { /* params.reason: paused | removed */ },
 };
 ```
 
-- Global kind is `<addonId>.<descriptor.kind>`. `configFields` is a `FieldSpec[]`.
-- `trigger.start` is replayed on every process restart; be idempotent. `trigger.stop`
-  carries the reason (pause vs removal).
-- Fire with `ctx.triggers.fire({ instanceId, runKey, text?, payload? })`; deduplicated by
-  `(instanceId, runKey)`. `limits` (`perDay`, `throttleSec`, `maxBurst`) are enforced by
-  the host.
+- Global kind is `<addonId>.<descriptor.kind>`. `configFields` is a `FieldSpec[]`; the
+  host renders them in the trigger settings dialog.
+- `trigger.start` is replayed on every process restart; be idempotent. It carries the
+  instance `config`, the host-owned `target` and the operator-facing `instructions`. The
+  host appends `instructions` to every fired run, so an add-on normally does not repeat
+  them as `text`. `trigger.stop` carries the reason (pause vs removal).
+- `target` is validated by the host: `{ threadId, agentId, modeId?, workspace? }`.
+  `workspace` is a `WorkspaceRef` (`inherit` | `sandbox` | `folder{path}` |
+  `source{sourceId, subpath?}` | `worktree{sourceId, worktreeId, subpath?}`). The host
+  applies it to the target thread's workspace binding, so the trigger's folder is the
+  thread's working directory: every fired run (`pwd` included) and every manual message in
+  that thread run there. The host re-applies it before each fire, so an edited binding
+  does not drift away. `folder` must be an absolute path that exists on the host and lies
+  outside the org data roots, otherwise the instance is rejected. Operators edit thread,
+  mode and workspace in the trigger settings dialog, which writes the same binding.
+- One trigger instance per thread is enforced by the core; a second instance for the same
+  thread is rejected.
+- Fire with `ctx.triggers.fire({ instanceId, runKey, text?, title?, fields?, payload? })`,
+  deduplicated by `(instanceId, runKey)`. `text` is the event body, `title` the card
+  heading, `fields` are labelled chips. `limits` (`perDay`, `throttleSec`, `maxBurst`) are
+  enforced by the host.
 
 ## job
 

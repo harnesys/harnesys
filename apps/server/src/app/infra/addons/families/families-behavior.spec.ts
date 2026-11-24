@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import type { AddonManifest } from '@harnesys/sdk';
-import { FakeMetrics, FakeRegistry } from '../../../application/addons/addons.fakes.ts';
+import {
+  FakeMetrics,
+  FakeRegistry,
+  FakeTriggerWorkspace,
+} from '../../../application/addons/addons.fakes.ts';
 import { FireTriggerUseCase } from '../../../application/addons/triggers/fire-trigger.use-case.ts';
 import { FireWindowTracker } from '../../../application/addons/triggers/trigger-limits.ts';
 import { AccountHolderBridge } from '../apps-bridge/account-holder.bridge.ts';
@@ -169,17 +173,19 @@ describe('job scheduler', () => {
 });
 
 describe('trigger fire service', () => {
-  function buildFireService(instances: FakeTriggerInstanceRepository, runs: FakeRunDispatchPort) {
-    const useCase = new FireTriggerUseCase(
-      instances,
-      new FakeRegistry(),
-      runs,
-      new FireWindowTracker(),
-      new FakeMetrics(),
+  const buildFireService = (instances: FakeTriggerInstanceRepository, runs: FakeRunDispatchPort) =>
+    new TriggerFireService(
+      new FireTriggerUseCase(
+        instances,
+        new FakeRegistry(),
+        runs,
+        new FireWindowTracker(),
+        new FakeMetrics(),
+        new FakeTriggerWorkspace(),
+        new FakeLogger(),
+      ),
       new FakeLogger(),
     );
-    return new TriggerFireService(useCase, new FakeLogger());
-  }
 
   test('deduplicates by runKey and dispatches to the target', async () => {
     const instances = new FakeTriggerInstanceRepository();
@@ -199,20 +205,16 @@ describe('trigger fire service', () => {
       createdAt: '',
       updatedAt: '',
     });
-    const first = await service.fire({
-      orgId: OWNER.orgId,
-      addonId: OWNER.addonId,
-      instanceId: 'inst-1',
-      runKey: 'rk-1',
-      text: 'hello',
-    });
-    const second = await service.fire({
-      orgId: OWNER.orgId,
-      addonId: OWNER.addonId,
-      instanceId: 'inst-1',
-      runKey: 'rk-1',
-      text: 'hello',
-    });
+    const fire = () =>
+      service.fire({
+        orgId: OWNER.orgId,
+        addonId: OWNER.addonId,
+        instanceId: 'inst-1',
+        runKey: 'rk-1',
+        text: 'hello',
+      });
+    const first = await fire();
+    const second = await fire();
     expect(first.outcome).toBe('fired');
     expect(second.outcome).toBe('suppressed');
     expect(runs.dispatched).toHaveLength(1);

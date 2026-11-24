@@ -190,10 +190,18 @@ export interface AddonSkills {
   }): Promise<Array<{ id: string; name: string; description: string | null; source: string }>>;
 }
 
+export type AddonTriggerWorkspace =
+  | { kind: 'inherit' }
+  | { kind: 'sandbox' }
+  | { kind: 'folder'; path: string; hostId?: string }
+  | { kind: 'source'; sourceId: string; subpath?: string }
+  | { kind: 'worktree'; sourceId: string; worktreeId: string; subpath?: string };
+
 export interface AddonTriggerTarget {
   threadId: string;
   agentId: string;
   modeId?: string;
+  workspace?: AddonTriggerWorkspace;
 }
 
 export interface AddonTriggerField {

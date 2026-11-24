@@ -1,4 +1,5 @@
 import { Injectable } from '@harnesys/brix';
+import type { WorkspaceRef } from '@harnesys/contracts';
 import type { JsonObject } from '@harnesys/sdk';
 import { AddonError } from '@harnesys/sdk';
 import { ManageTriggerInstanceUseCase } from '../../../../application/addons/triggers/manage-instance.use-case.ts';
@@ -15,6 +16,7 @@ interface TriggerTargetParams {
   threadId: string;
   agentId: string;
   modeId?: string;
+  workspace?: WorkspaceRef;
 }
 
 @Injectable()

@@ -2,7 +2,7 @@ import type { AddonContext, JobHandler } from '@harnesys/sdk';
 import { nextCronRunAt } from './cron.ts';
 import { type DueDecision, planDueBatch } from './planner.ts';
 import type { ScheduleTarget } from './store.ts';
-import { listSchedules, markFailed, recordFire, saveState } from './store.ts';
+import { listSchedules, markFailed, migrateLegacyDetail, recordFire, saveState } from './store.ts';
 import { orgTimezone } from './trigger.ts';
 
 const CATCHUP_WINDOW_SEC = 3600;
@@ -14,6 +14,7 @@ export const tick: JobHandler = async (_params, ctx: AddonContext) => {
     (row) => row.status === 'active' && row.nextRunAt !== null,
   );
   if (schedules.length === 0) {
+    await migrateLegacyDetail(ctx);
     return;
   }
   const timezone = await orgTimezone(ctx);
@@ -31,6 +32,7 @@ export const tick: JobHandler = async (_params, ctx: AddonContext) => {
   for (const { row, decision } of planned) {
     await handlePlanned(ctx, row, decision, now, timezone);
   }
+  await migrateLegacyDetail(ctx);
 };
 
 interface PlannedRow {

@@ -1,6 +1,6 @@
 import type { WorkspaceRef } from '@harnesys/contracts';
 import { useQuery } from '@tanstack/react-query';
-import { ThreadBindingSelects, useThreadStore } from '@/entities/thread';
+import { ThreadBindingSelects, useThreadStore, WorkspaceRefSelect } from '@/entities/thread';
 import { createThreadRecord, listThreads } from '@/shared/api';
 import { cn } from '@/shared/lib/utils';
 import { Field, FieldDescription, FieldLabel } from '@/shared/ui/field';
@@ -47,12 +47,16 @@ export function TriggerTargetField({
   value,
   onChange,
   currentThreadId,
+  workspace,
+  onWorkspace,
 }: {
   orgId: string;
   agentId: string;
   value: string;
   onChange: (threadId: string) => void;
   currentThreadId?: string;
+  workspace: WorkspaceRef | null;
+  onWorkspace: (ref: WorkspaceRef) => void;
 }) {
   const storeThreads = useThreadStore((state) => state.items);
   const orgThreads = useQuery({
@@ -103,7 +107,9 @@ export function TriggerTargetField({
       <div
         className={cn(
           'grid items-start gap-1.5',
-          linkedThread && 'sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.5fr)]',
+          linkedThread
+            ? 'sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.5fr)]'
+            : 'sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1.5fr)]',
         )}
       >
         <div className="flex min-w-0 flex-col gap-1">
@@ -139,13 +145,21 @@ export function TriggerTargetField({
             runProfileId={linkedThread.runProfileId ?? null}
             workspaceRef={linkedThread.workspaceRef ?? null}
             bindingLocked={linkedThread.bindingLocked ?? false}
+            showWorkspace={false}
           />
-        ) : null}{' '}
+        ) : null}
+        <WorkspaceRefSelect
+          orgId={orgId}
+          value={workspace ?? linkedThread?.workspaceRef ?? null}
+          onChange={onWorkspace}
+          inheritLabel="Use agent default"
+          testId="trigger-workspace"
+        />{' '}
       </div>
       <FieldDescription>
         {linkedThread
-          ? 'Profile and folder apply to the runs this trigger wakes.'
-          : 'A new dedicated thread is created for this trigger.'}
+          ? 'Profile applies to the thread; the folder applies to the runs this trigger starts.'
+          : 'A new dedicated thread is created for this trigger; runs execute in the selected folder.'}
       </FieldDescription>
     </Field>
   );

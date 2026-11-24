@@ -83,7 +83,7 @@ Call shape: `calls: [{ agentId, input, budget?, permissions? }]`, max 32 calls. 
 A child run is sandboxed:
 
 - No `ask_user`, no approvals, no `ask`-gated tool calls, no `control:interrupt`/`wait`/`map`. Violations return `denied in subagent context: <tool> requires ... no interactive user here; parent must provide, pre-approve, or do it itself`.
-- State shared with the parent is parent-only: `plan_save`, `plan_item_update`, `pin_set`, `pin_remove`, `schedule_set`, `schedule_pause`, `schedule_delete`, `webhook_set`, `webhook_delete` are denied with `... writes state shared with the parent thread or project; the parent must do it itself`.
+- State shared with the parent is parent-only: `plan_save`, `plan_item_update`, `pin_set`, `pin_remove` are denied with `... writes state shared with the parent thread or project; the parent must do it itself`.
 - All `agents` tools are removed from its registry; further spawning is impossible.
 - If a child still ends with `needs_input` you get `sandbox_blocked` (`spawn child ended with status needs_input`): you under-specified the task or under-granted permissions.
 

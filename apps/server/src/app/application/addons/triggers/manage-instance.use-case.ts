@@ -15,8 +15,10 @@ import { TriggerInstanceRepositoryPort } from '../../../domain/addons/ports/trig
 import { AutomationEventsPort } from '../../../domain/automations/automation-events.port.ts';
 import { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
+import { TriggerWorkspacePort } from '../../../domain/thread/trigger-workspace.port.ts';
 import { occupiedTriggerInstanceThreadId } from '../../threads/trigger-thread-binding.ts';
 import { requirePackage } from '../orgs/org-addon.helpers.ts';
+import type { TriggerTarget } from './trigger-target.schema.ts';
 import { TriggerTargetSchema } from './trigger-target.schema.ts';
 
 export interface CreateTriggerInstanceInput {
@@ -50,6 +52,7 @@ export class ManageTriggerInstanceUseCase {
     private readonly threads: ThreadRepositoryPort,
     private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly automationEvents: AutomationEventsPort,
+    private readonly triggerWorkspace: TriggerWorkspacePort,
     @Inject(Logger) logger: Logger,
   ) {
     this.logger = logger.child('addons-trigger-instances');
@@ -62,7 +65,8 @@ export class ManageTriggerInstanceUseCase {
     }
     const pkg = requirePackage(this.catalog, input.addonId, row.version);
     this.assertTriggerDeclared(pkg.manifest, input.triggerId);
-    this.assertTarget(input.orgId, input.target);
+    const target = this.assertTarget(input.orgId, input.target);
+    this.applyTargetWorkspace(input.orgId, target);
     const now = new Date().toISOString();
     const created = this.triggers.create({
       id: randomUUID(),
@@ -116,8 +120,12 @@ export class ManageTriggerInstanceUseCase {
 
   async patch(orgId: string, instanceId: string, patch: TriggerInstancePatch): Promise<void> {
     const current = this.require(orgId, instanceId);
-    if (patch.targetJson !== undefined) {
-      this.assertTarget(orgId, this.parseTarget(patch.targetJson), instanceId);
+    const patchedTarget =
+      patch.targetJson === undefined
+        ? undefined
+        : this.assertTarget(orgId, this.parseTarget(patch.targetJson), instanceId);
+    if (patchedTarget !== undefined) {
+      this.applyTargetWorkspace(orgId, patchedTarget);
     }
     const disabling = patch.enabled === false && current.enabled;
     const enabling = patch.enabled === true && !current.enabled;
@@ -143,6 +151,7 @@ export class ManageTriggerInstanceUseCase {
       label: instance.label,
       config: this.configOf(instance),
       target: this.targetOf(instance),
+      instructions: instance.instructions,
     });
   }
 
@@ -204,13 +213,13 @@ export class ManageTriggerInstanceUseCase {
     }
   }
 
-  private assertTarget(orgId: string, target: unknown, exceptInstanceId?: string): void {
+  private assertTarget(orgId: string, target: unknown, exceptInstanceId?: string): TriggerTarget {
     const parsed = TriggerTargetSchema.safeParse(target);
     if (!parsed.success) {
       throw new AddonException(
         'invalid_params',
         422,
-        'target must be an object with threadId, agentId and optional modeId',
+        'target must be an object with threadId, agentId, optional modeId and workspace',
       );
     }
     const thread = this.threads.findById(orgId, parsed.data.threadId);
@@ -228,6 +237,23 @@ export class ManageTriggerInstanceUseCase {
     );
     if (occupied) {
       throw new AddonException('invalid_params', 422, 'thread already has a trigger');
+    }
+    return parsed.data;
+  }
+
+  private applyTargetWorkspace(orgId: string, target: TriggerTarget): void {
+    if (target.workspace === undefined) {
+      return;
+    }
+    try {
+      this.triggerWorkspace.apply({
+        orgId,
+        threadId: target.threadId,
+        workspace: target.workspace,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new AddonException('invalid_params', 422, `target.workspace rejected: ${message}`);
     }
   }
 
