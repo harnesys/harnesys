@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import type { PermissionGate } from 'harnesys';
 import { useState } from 'react';
 import { projectMcpConfigQuery } from '@/shared/api';
 import { orgCapabilitiesQuery } from '@/shared/api/org-capabilities';
@@ -33,6 +34,7 @@ export function AgentCapabilitiesPane({
   enabledPlugins,
   mcpServers,
   skills,
+  processGate,
   onCapabilitiesChange,
   onPluginsChange,
   onMcpChange,
@@ -45,6 +47,7 @@ export function AgentCapabilitiesPane({
   enabledPlugins: Record<string, boolean>;
   mcpServers: string[];
   skills: string[];
+  processGate: PermissionGate;
   onCapabilitiesChange: (next: PackAssignmentMap) => void;
   onPluginsChange: (next: Record<string, boolean>) => void;
   onMcpChange: (next: string[]) => void;
@@ -83,6 +86,7 @@ export function AgentCapabilitiesPane({
             agentId={agentId}
             isDelegate={isDelegate}
             capabilities={capabilities}
+            processGate={processGate}
             onCapabilitiesChange={onCapabilitiesChange}
           />
         ) : null}

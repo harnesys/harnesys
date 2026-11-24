@@ -1,4 +1,5 @@
 import type { PackConfig } from '@harnesys/studio-shared';
+import type { PermissionGate } from 'harnesys';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/shared/ui/field';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
@@ -29,10 +30,12 @@ export function packHasSettings(name: string, catalogHasSettings: boolean): bool
 export function PackSettingsFields({
   packName,
   config,
+  processGate,
   onChange,
 }: {
   packName: string;
   config: PackConfig;
+  processGate: PermissionGate;
   onChange: (next: PackConfig) => void;
 }) {
   if (packName === 'files') {
@@ -45,7 +48,7 @@ export function PackSettingsFields({
     return <ShellSettings config={config} onChange={onChange} />;
   }
   if (packName === 'web') {
-    return <WebPackSettings config={config} onChange={onChange} />;
+    return <WebPackSettings config={config} processGate={processGate} onChange={onChange} />;
   }
   if (packName === 'image') {
     return <ImagePackSettings config={config} onChange={onChange} />;

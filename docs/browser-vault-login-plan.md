@@ -71,14 +71,18 @@ browser on server deployments, and runtime form guessing.
 
 The engine sidecar exposes an unauthenticated CDP port on `127.0.0.1`. Any same-uid
 process — including an agent's `shell` tool — can read every browser page and cookie.
-This is already true for the existing `browser` pack. It is closed by construction:
+The login tools are available when the agent has at least one granted website credential,
+regardless of the `process` permission, so a shell-capable agent can use them too. That
+combination is explicitly insecure and is surfaced in the UI:
 
-- `browser_login` is registered only when the agent's `process` permission is `deny`
-  (no host shell) — the permission set is available at tool composition time.
-- Or the deployment sets `HARNESYS_BROWSER_ISOLATED=1` and runs the sidecar under a
-  separate uid/namespace; the flag is required to register `browser_login` for agents
-  that hold `process`.
-- Without either, `browser_login` is absent from the tool set (not "present and failing").
+- `browser_login` / `browser_credentials` are registered for any agent with a granted
+  credential on macOS/Linux (no Windows shell wrapper).
+- Agent settings show `insecure · shell allowed` and the Website logins section explains
+  that shell can read the browser profile, vault key, or credential socket.
+- Setting the agent's `process` permission to `deny` switches the badge to
+  `hardened · shell denied`; that is the recommended mode.
+- A deployment that runs the sidecar under a separate uid/namespace can use shell safely
+  without the gate, but Harnesys does not detect or verify that isolation.
 
 ## 4. Threat model → control
 
@@ -452,7 +456,9 @@ round-trip, cookie import round-trip, full WebUI flow.
   wrapper with the 0600 socket path and a single-use 5 min token, because agent-browser
   gives the plugin the daemon env, not the command env.
 - Egress containment: per-session filtering proxy set on the engine.
-- `browser_login` requires `process: deny` or `HARNESYS_BROWSER_ISOLATED=1`.
+- `browser_login` is registered for granted credentials regardless of the `process`
+  permission; shell + login is explicitly insecure and badged as such in the UI, with
+  Shell = Deny as the hardened mode.
 - Hardened profile is macOS/Linux only: the plugin wrapper is a `sh` script.
 
 ## 15. Out of scope — decided, fail with a typed error

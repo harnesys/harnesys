@@ -64,7 +64,6 @@ export interface WebPackSpec extends WebSearchPackSpec {
 export interface WebPackPorts extends BrowserLoginPorts {
   engines?: () => HostEngineEntry[];
   orgDefaultEngine?: () => string | undefined;
-  processPermission?: () => 'allow' | 'deny' | 'ask' | undefined;
   agentBrowserBin?: () => string | null;
 }
 
@@ -161,13 +160,8 @@ export const webCapability = definePack<WebPackPorts, WebPackSpec>({
     const loginRefs = (ctx.spec.browserLoginRefs ?? []).filter((id) => id.length > 0);
     const resolverReady = ctx.ports?.credentialResolver !== undefined;
     const egressReady = ctx.ports?.egressProxy !== undefined;
-    const processAllowed =
-      ctx.ports?.processPermission === undefined ||
-      ctx.ports.processPermission() === 'deny' ||
-      process.env.HARNESYS_BROWSER_ISOLATED === '1';
     const platformReady = process.platform !== 'win32';
-    const hardened =
-      loginRefs.length > 0 && resolverReady && egressReady && processAllowed && platformReady;
+    const hardened = loginRefs.length > 0 && resolverReady && egressReady && platformReady;
     const cliPath = ctx.ports?.agentBrowserBin?.() ?? agentBrowserResolvedPath();
     if (cliPath === null) {
       return { tools };

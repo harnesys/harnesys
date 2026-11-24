@@ -1,5 +1,6 @@
 import type { PackConfig } from '@harnesys/studio-shared';
 import { useQuery } from '@tanstack/react-query';
+import type { PermissionGate } from 'harnesys';
 import { WebsiteLoginAllowlist } from '@/features/manage-agent/ui/web-pack-browser-logins';
 import {
   type EngineSpec,
@@ -99,9 +100,11 @@ function primaryOptionValue(view: OrgBrowserView | undefined, engineId: string):
 
 export function WebPackSettings({
   config,
+  processGate,
   onChange,
 }: {
   config: PackConfig;
+  processGate: PermissionGate;
   onChange: (next: PackConfig) => void;
 }) {
   const orgId = getActiveOrgId() ?? '';
@@ -315,6 +318,7 @@ export function WebPackSettings({
       <p className="font-medium text-muted-foreground text-xs">Website logins</p>
       <WebsiteLoginAllowlist
         value={browserLoginRefs}
+        processGate={processGate}
         onChange={(next) => patchSpec({ browserLoginRefs: next })}
       />
     </FieldGroup>

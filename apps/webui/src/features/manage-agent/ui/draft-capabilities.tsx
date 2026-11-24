@@ -1,5 +1,6 @@
 import type { PluginListItem } from '@harnesys/contracts';
 import { useQuery } from '@tanstack/react-query';
+import type { PermissionGate } from 'harnesys';
 import { packLabels } from '@/entities/tool-catalog';
 import { orgAgentCapabilitiesQuery, orgCapabilitiesQuery } from '@/shared/api/org-capabilities';
 import { orgPluginsQuery } from '@/shared/api/org-plugins';
@@ -23,12 +24,14 @@ export function DraftPacksGrants({
   agentId,
   isDelegate,
   capabilities,
+  processGate,
   onCapabilitiesChange,
 }: {
   orgId: string;
   agentId: string | null;
   isDelegate: boolean;
   capabilities: PackAssignmentMap;
+  processGate: PermissionGate;
   onCapabilitiesChange: (next: PackAssignmentMap) => void;
 }) {
   const packsQuery = useQuery({
@@ -87,6 +90,7 @@ export function DraftPacksGrants({
                   <PackSettingsFields
                     packName={pack.name}
                     config={{ spec: base.spec }}
+                    processGate={processGate}
                     onChange={(next) =>
                       onCapabilitiesChange({
                         ...capabilities,

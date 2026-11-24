@@ -136,6 +136,7 @@ export function AgentConfigCategoryPanes({
           enabledPlugins={capabilities.enabledPlugins ?? {}}
           mcpServers={capabilities.mcpServers ?? []}
           skills={capabilities.skills ?? []}
+          processGate={permissions?.process ?? 'ask'}
           onCapabilitiesChange={(nextCapabilities) => {
             onCapabilitiesPatch({ capabilities: nextCapabilities });
           }}

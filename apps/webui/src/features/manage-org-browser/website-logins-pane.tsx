@@ -101,6 +101,12 @@ export function WebsiteLoginsPane({ orgId }: { orgId: string }) {
         </Button>
       </RowHeader>
 
+      <p className="px-1 text-[11px] text-muted-foreground leading-snug">
+        An agent receives <code>browser_login</code> whenever it is granted a login. Set the
+        agent&#39;s Shell permission to Deny for a hardened session; with shell allowed, the agent
+        can read the browser session and the feature is explicitly insecure.
+      </p>
+
       {query.isPending && <RowListSkeleton testId="website-logins-loading" />}
       {query.isError && (
         <SettingsErrorBanner

@@ -13,7 +13,6 @@ import { StudioEmbeddings } from '../../../domain/knowledge/embeddings.ts';
 import { resolveProviderApiKey } from '../../../domain/secret/provider-api-key.ts';
 import { embedModelIdOf } from '../../memory/org-memory-settings.store.ts';
 import type { OrgSqliteDb } from '../../org-sqlite/org-sqlite-session.ts';
-import { permissionsFromConfig } from '../agent-definition.mapper.ts';
 import { getHostToolScope } from '../host-tool-scope.ts';
 import { OrgEpisodicPort } from './org-episodic.port.ts';
 import { OrgKnowledgePort } from './org-knowledge.port.ts';
@@ -110,20 +109,6 @@ export function webRegistration(ctx: WireOrgPackContext) {
               resource: `${entry.credentialId}/${entry.targetOrigin}`,
               result: auditResultOf(entry.denied, entry.ok),
             });
-          },
-          processPermission: (): 'allow' | 'deny' | 'ask' => {
-            const agent = ctx.deps.agents.findById(orgIdOf(), agentIdOf());
-            if (!agent) {
-              return 'ask';
-            }
-            const process = permissionsFromConfig(agent.config)?.process;
-            const configured = process === 'allow' || process === 'deny' ? process : 'ask';
-            const granted =
-              ctx.deps.permissionRules?.hasOperation(orgIdOf(), agentIdOf(), 'process') === true;
-            if (granted) {
-              return 'allow';
-            }
-            return configured;
           },
         };
   return registerPack(webCapability, {
