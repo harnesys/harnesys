@@ -32,7 +32,20 @@ function downloadCsv(name: string, csv: string): void {
   URL.revokeObjectURL(url);
 }
 
-export async function exportAuditCsv(orgId: string, filters: OrgAuditQuery): Promise<void> {
+export interface AuditExportNotice {
+  title: string;
+}
+
+export interface AuditExportResult {
+  downloaded: boolean;
+  rowCount: number;
+  truncated: boolean;
+}
+
+export async function exportAuditCsv(
+  orgId: string,
+  filters: OrgAuditQuery,
+): Promise<AuditExportResult> {
   const rows: OrgAuditItem[] = [];
   let total = Number.POSITIVE_INFINITY;
   for (let offset = 0; offset < Math.min(total, EXPORT_MAX_ROWS); offset += EXPORT_PAGE_SIZE) {
@@ -43,5 +56,9 @@ export async function exportAuditCsv(orgId: string, filters: OrgAuditQuery): Pro
       break;
     }
   }
+  if (rows.length === 0) {
+    return { downloaded: false, rowCount: 0, truncated: false };
+  }
   downloadCsv(auditCsvFilename(orgId), auditRowsToCsv(rows));
+  return { downloaded: true, rowCount: rows.length, truncated: total > rows.length };
 }

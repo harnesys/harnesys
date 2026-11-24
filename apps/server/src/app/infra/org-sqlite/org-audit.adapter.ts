@@ -10,12 +10,8 @@ import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { withOrgSqlite } from './org-sqlite-session.ts';
 import { orgAuditTable } from './schema/index.ts';
 
-function textFilter(value: string | undefined): string | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  const stripped = value.replaceAll('%', '').replaceAll('_', '');
-  return stripped.length > 0 ? stripped : undefined;
+function escapeLike(value: string): string {
+  return value.replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_');
 }
 
 function auditFilter(query: OrgAuditListQuery): SQL | undefined {
@@ -26,9 +22,10 @@ function auditFilter(query: OrgAuditListQuery): SQL | undefined {
   if (query.to !== undefined) {
     conditions.push(lte(orgAuditTable.at, query.to));
   }
-  const action = textFilter(query.action);
-  if (action !== undefined) {
-    conditions.push(sql`${orgAuditTable.action} like ${`${action}%`}`);
+  if (query.action !== undefined) {
+    conditions.push(
+      sql`${orgAuditTable.action} like ${`${escapeLike(query.action)}%`} escape '\\'`,
+    );
   }
   if (query.actorKind !== undefined) {
     conditions.push(eq(orgAuditTable.actorKind, query.actorKind));
@@ -39,12 +36,11 @@ function auditFilter(query: OrgAuditListQuery): SQL | undefined {
   if (query.actorId !== undefined) {
     conditions.push(eq(orgAuditTable.actorId, query.actorId));
   }
-  const needle = textFilter(query.q);
-  if (needle !== undefined) {
-    const pattern = `%${needle.toLowerCase()}%`;
+  if (query.q !== undefined) {
+    const pattern = `%${escapeLike(query.q.toLowerCase())}%`;
     const match = or(
-      sql`lower(${orgAuditTable.resource}) like ${pattern}`,
-      sql`lower(${orgAuditTable.actorId}) like ${pattern}`,
+      sql`lower(${orgAuditTable.resource}) like ${pattern} escape '\\'`,
+      sql`lower(${orgAuditTable.actorId}) like ${pattern} escape '\\'`,
     );
     if (match !== undefined) {
       conditions.push(match);

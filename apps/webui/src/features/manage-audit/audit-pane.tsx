@@ -1,190 +1,97 @@
 import { useQuery } from '@tanstack/react-query';
+import { RefreshCwIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useDebouncedValue } from '@/features/find-in-files/model/use-debounced-value';
 import { useOrgTimeZone } from '@/features/switch-org/org-time-zone';
 import { AUDIT_PAGE_SIZE, type OrgAuditQuery, orgAuditPageOptions } from '@/shared/api/org-audit';
 import { Button } from '@/shared/ui/button';
-import { Input } from '@/shared/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import {
   RowListSkeleton,
   SettingsEmpty,
   SettingsErrorBanner,
   SettingsSection,
+  SettingsWarnBanner,
 } from '@/shared/ui/settings-kit';
-import { ToggleGroup, ToggleGroupItem } from '@/shared/ui/toggle-group';
 import {
-  AUDIT_ACTOR_KIND_OPTIONS,
-  AUDIT_RANGE_PRESETS,
-  AUDIT_RESULT_OPTIONS,
   AUDIT_SEARCH_DEBOUNCE_MS,
   type AuditFilterState,
   auditQueryFromFilters,
-  auditRangeFromPreset,
+  auditRangeOf,
 } from './model/audit-filters';
-import { exportAuditCsv } from './model/export-audit-csv';
+import {
+  type AuditExportNotice,
+  type AuditExportResult,
+  exportAuditCsv,
+} from './model/export-audit-csv';
+import { AuditPagination } from './ui/audit-pagination';
 import { AuditTable } from './ui/audit-table';
+import { AuditToolbar } from './ui/audit-toolbar';
 
-function AuditFilters({
-  filters,
-  onChange,
-}: {
-  filters: AuditFilterState;
-  onChange: (patch: Partial<AuditFilterState>) => void;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-2" data-testid="audit-filters">
-      <ToggleGroup
-        variant="segment"
-        size="sm"
-        value={[String(filters.preset)]}
-        onValueChange={(next) => {
-          const picked = next[0];
-          const found = AUDIT_RANGE_PRESETS.find((preset) => String(preset) === picked);
-          if (found !== undefined) {
-            onChange({ preset: found });
-          }
-        }}
-        data-testid="audit-range-toggle"
-      >
-        {AUDIT_RANGE_PRESETS.map((preset) => (
-          <ToggleGroupItem key={preset} value={String(preset)}>
-            {preset}d
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-      <Select
-        items={AUDIT_ACTOR_KIND_OPTIONS}
-        value={filters.actorKind}
-        onValueChange={(next) => {
-          if (typeof next === 'string') {
-            onChange({ actorKind: next });
-          }
-        }}
-      >
-        <SelectTrigger size="sm" aria-label="Filter by actor kind" className="w-36">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {AUDIT_ACTOR_KIND_OPTIONS.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select
-        items={AUDIT_RESULT_OPTIONS}
-        value={filters.result}
-        onValueChange={(next) => {
-          if (typeof next === 'string') {
-            onChange({ result: next });
-          }
-        }}
-      >
-        <SelectTrigger size="sm" aria-label="Filter by result" className="w-36">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {AUDIT_RESULT_OPTIONS.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Input
-        aria-label="Search audit events"
-        placeholder="Search resource or actor..."
-        className="max-w-56"
-        value={filters.q}
-        onChange={(event) => {
-          onChange({ q: event.target.value });
-        }}
-      />
-    </div>
-  );
-}
+const DEFAULT_FILTERS: AuditFilterState = {
+  preset: 7,
+  customFrom: '',
+  customTo: '',
+  actorKind: 'all',
+  result: 'all',
+  q: '',
+};
 
-function AuditPagination({
-  offset,
-  total,
-  onOffset,
-}: {
-  offset: number;
-  total: number;
-  onOffset: (offset: number) => void;
-}) {
-  const first = offset + 1;
-  const last = Math.min(offset + AUDIT_PAGE_SIZE, total);
+function filtersDirty(filters: AuditFilterState): boolean {
   return (
-    <div className="flex items-center justify-between" data-testid="audit-pagination">
-      <span className="text-muted-foreground text-xs">
-        {first}–{last} of {total}
-      </span>
-      <div className="flex gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={offset === 0}
-          onClick={() => {
-            onOffset(Math.max(0, offset - AUDIT_PAGE_SIZE));
-          }}
-        >
-          Previous
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={last >= total}
-          onClick={() => {
-            onOffset(offset + AUDIT_PAGE_SIZE);
-          }}
-        >
-          Next
-        </Button>
-      </div>
-    </div>
+    filters.preset !== DEFAULT_FILTERS.preset ||
+    filters.customFrom !== DEFAULT_FILTERS.customFrom ||
+    filters.customTo !== DEFAULT_FILTERS.customTo ||
+    filters.actorKind !== DEFAULT_FILTERS.actorKind ||
+    filters.result !== DEFAULT_FILTERS.result ||
+    filters.q.trim() !== DEFAULT_FILTERS.q
   );
 }
 
 export function OrgAuditPane({ orgId }: { orgId: string }) {
   const timeZone = useOrgTimeZone();
-  const [filters, setFilters] = useState<AuditFilterState>(() => ({
-    preset: 7,
-    range: auditRangeFromPreset(7, timeZone),
-    actorKind: 'all',
-    result: 'all',
-    q: '',
-  }));
+  const [filters, setFilters] = useState<AuditFilterState>(DEFAULT_FILTERS);
   const [offset, setOffset] = useState(0);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [exportNotice, setExportNotice] = useState<AuditExportNotice | null>(null);
   const debouncedQ = useDebouncedValue(filters.q.trim(), AUDIT_SEARCH_DEBOUNCE_MS);
 
   const changeFilters = (patch: Partial<AuditFilterState>) => {
-    if (patch.preset !== undefined && patch.preset !== filters.preset) {
-      patch.range = auditRangeFromPreset(patch.preset, timeZone);
-    }
     setFilters((previous) => ({ ...previous, ...patch }));
     setOffset(0);
   };
 
+  const resetFilters = () => {
+    setFilters(DEFAULT_FILTERS);
+    setOffset(0);
+  };
+
+  const range = auditRangeOf(filters, timeZone);
   const pageQuery: OrgAuditQuery = auditQueryFromFilters(
     { ...filters, q: debouncedQ },
+    range,
     AUDIT_PAGE_SIZE,
     offset,
   );
   const page = useQuery(orgAuditPageOptions(orgId, pageQuery));
   const items = page.data?.items ?? [];
   const total = page.data?.total ?? 0;
+  const dirty = filtersDirty(filters);
 
   const runExport = () => {
     setExporting(true);
     setExportError(null);
-    exportAuditCsv(orgId, auditQueryFromFilters(filters))
+    setExportNotice(null);
+    exportAuditCsv(orgId, auditQueryFromFilters({ ...filters, q: debouncedQ }, range))
+      .then((result: AuditExportResult) => {
+        if (!result.downloaded) {
+          setExportNotice({ title: 'No audit events match the current filters' });
+        } else if (result.truncated) {
+          setExportNotice({
+            title: `Export truncated to the first ${result.rowCount} rows`,
+          });
+        }
+      })
       .catch((error: unknown) => {
         setExportError(error instanceof Error ? error.message : 'Export failed');
       })
@@ -200,21 +107,43 @@ export function OrgAuditPane({ orgId }: { orgId: string }) {
       description="Security and fleet events for this organization, newest first."
       testId="audit-pane"
       actions={
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={exporting}
-          onClick={runExport}
-          data-testid="audit-export"
-        >
-          {exporting ? 'Exporting...' : 'Download CSV'}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            disabled={page.isFetching}
+            onClick={() => {
+              void page.refetch();
+            }}
+            data-testid="audit-refresh"
+          >
+            <RefreshCwIcon className={page.isFetching ? 'animate-spin' : undefined} />
+            Refresh
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={exporting}
+            onClick={runExport}
+            data-testid="audit-export"
+          >
+            {exporting ? 'Exporting...' : 'Download CSV'}
+          </Button>
+        </div>
       }
     >
       <div className="flex flex-col gap-3">
-        <AuditFilters filters={filters} onChange={changeFilters} />
-        {page.isPending ? <RowListSkeleton rows={6} testId="audit-loading" /> : null}
+        <AuditToolbar
+          filters={filters}
+          timeZone={timeZone}
+          dirty={dirty}
+          onChange={changeFilters}
+          onReset={resetFilters}
+        />
+        {page.isPending ? <RowListSkeleton rows={8} testId="audit-loading" /> : null}
         {page.isError ? (
           <SettingsErrorBanner
             testId="audit-error"
@@ -227,11 +156,25 @@ export function OrgAuditPane({ orgId }: { orgId: string }) {
         {exportError !== null ? (
           <SettingsErrorBanner testId="audit-export-error" message={exportError} />
         ) : null}
+        {exportNotice !== null ? (
+          <SettingsWarnBanner testId="audit-export-notice" title={exportNotice.title} />
+        ) : null}
         {!page.isPending && !page.isError && items.length === 0 ? (
           <SettingsEmpty
             testId="audit-empty"
-            title="No audit events match the current filters"
-            description="Security and fleet events will appear here."
+            title={dirty ? 'No events match these filters' : 'No audit events yet'}
+            description={
+              dirty
+                ? 'Try a wider time range, or clear the filters to see every event.'
+                : 'Security and fleet events for this organization will appear here.'
+            }
+            action={
+              dirty ? (
+                <Button type="button" variant="outline" size="sm" onClick={resetFilters}>
+                  Reset filters
+                </Button>
+              ) : undefined
+            }
           />
         ) : null}
         {items.length > 0 ? <AuditTable rows={items} /> : null}
