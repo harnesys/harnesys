@@ -9,6 +9,7 @@ import { useTheme } from '@/shared/ui/theme-provider';
 import { DocumentPreview } from '@/widgets/ide-content/ui/document-preview';
 import { PreviewHint } from '@/widgets/ide-content/ui/preview-hint';
 import { editorThemeName } from '../model/editor-setup';
+import { CsvViewer } from './csv-viewer';
 import { ImageViewer } from './image-viewer';
 import { defineAppThemes } from './monaco-themes';
 
@@ -20,6 +21,7 @@ export type FilePreviewKind =
   | 'docx'
   | 'xlsx'
   | 'dxf'
+  | 'csv'
   | 'text';
 
 export function FilePreview({
@@ -75,6 +77,9 @@ export function FilePreview({
   }
   if (kind === 'dxf') {
     return <DownloadCard name={name} url={url} />;
+  }
+  if (kind === 'csv') {
+    return <CsvViewer url={url} />;
   }
   return <TextBlobPreview url={url} name={name} />;
 }

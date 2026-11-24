@@ -4,7 +4,15 @@ import { useAuthedBlobUrl } from '@/shared/api/blob-url';
 import { PreviewHint } from '@/widgets/ide-content/ui/preview-hint';
 import { FilePreview } from './file-preview';
 
-export type AttachmentPreviewKind = 'image' | 'video' | 'audio' | 'pdf' | 'text' | 'docx' | 'xlsx';
+export type AttachmentPreviewKind =
+  | 'image'
+  | 'video'
+  | 'audio'
+  | 'pdf'
+  | 'text'
+  | 'docx'
+  | 'xlsx'
+  | 'csv';
 
 export function attachmentPreviewKind(name: string, mediaType: string): AttachmentPreviewKind {
   if (mediaType.startsWith('image/')) {
@@ -19,11 +27,20 @@ export function attachmentPreviewKind(name: string, mediaType: string): Attachme
   if (mediaType === 'application/pdf') {
     return 'pdf';
   }
+  if (mediaType === 'text/csv') {
+    return 'csv';
+  }
   if (mediaType.startsWith('text/')) {
     return 'text';
   }
   const byName = openFileKind(name);
-  if (byName === 'image' || byName === 'pdf' || byName === 'docx' || byName === 'xlsx') {
+  if (
+    byName === 'image' ||
+    byName === 'pdf' ||
+    byName === 'docx' ||
+    byName === 'xlsx' ||
+    byName === 'csv'
+  ) {
     return byName;
   }
   return 'text';

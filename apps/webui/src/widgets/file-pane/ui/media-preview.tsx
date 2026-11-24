@@ -11,7 +11,7 @@ export function MediaPreview({
 }: {
   projectId: string;
   path: string;
-  kind: Extract<OpenFileKind, 'image' | 'pdf' | 'docx' | 'xlsx'>;
+  kind: Extract<OpenFileKind, 'image' | 'pdf' | 'docx' | 'xlsx' | 'csv'>;
   worktreeId?: string;
 }) {
   const { url, error } = useAuthedBlobUrl(

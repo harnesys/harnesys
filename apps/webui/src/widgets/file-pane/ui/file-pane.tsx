@@ -40,7 +40,7 @@ export function FilePane() {
       {kind === 'text' ? (
         <TextEditor projectId={projectId} path={active.path} dirty={active.dirty} />
       ) : null}
-      {kind === 'image' || kind === 'pdf' ? (
+      {kind === 'image' || kind === 'pdf' || kind === 'csv' ? (
         <MediaPreview projectId={projectId} path={active.path} kind={kind} />
       ) : null}
       {kind === 'dxf' ? (

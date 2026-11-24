@@ -178,7 +178,11 @@ function FileTabContent({
       {kind === 'text' ? (
         <TextEditor projectId={projectId} path={path} dirty={dirty} worktreeId={worktreeId} />
       ) : null}
-      {kind === 'image' || kind === 'pdf' || kind === 'docx' || kind === 'xlsx' ? (
+      {kind === 'image' ||
+      kind === 'pdf' ||
+      kind === 'docx' ||
+      kind === 'xlsx' ||
+      kind === 'csv' ? (
         <MediaPreview projectId={projectId} path={path} kind={kind} worktreeId={worktreeId} />
       ) : null}
       {kind === 'dxf' ? (

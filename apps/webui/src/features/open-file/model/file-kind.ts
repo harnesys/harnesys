@@ -1,9 +1,10 @@
-export type OpenFileKind = 'text' | 'image' | 'pdf' | 'docx' | 'xlsx' | 'dxf';
+export type OpenFileKind = 'text' | 'image' | 'pdf' | 'docx' | 'xlsx' | 'dxf' | 'csv';
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']);
 const DXF_EXTS = new Set(['dxf']);
 const PDF_EXTS = new Set(['pdf']);
 const DOCX_EXTS = new Set(['docx']);
 const XLSX_EXTS = new Set(['xlsx', 'xls']);
+const CSV_EXTS = new Set(['csv', 'tsv']);
 const MARKDOWN_EXTS = new Set(['md', 'mdx', 'markdown']);
 export function fileBasename(path: string): string {
   return path.replaceAll('\\', '/').split('/').pop() ?? path;
@@ -33,6 +34,9 @@ export function openFileKind(path: string): OpenFileKind {
   }
   if (XLSX_EXTS.has(ext)) {
     return 'xlsx';
+  }
+  if (CSV_EXTS.has(ext)) {
+    return 'csv';
   }
   if (DXF_EXTS.has(ext)) {
     return 'dxf';
