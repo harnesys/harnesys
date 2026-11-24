@@ -258,7 +258,7 @@ async function resolveRebindTarget(
   rebind: boolean,
 ): Promise<AddonTriggerTarget | undefined> {
   if (rebind) {
-    return resolveTarget(input, ctx, workspace);
+    return resolveTarget(input, ctx, workspace ?? row.target.workspace);
   }
   return workspace === undefined ? undefined : { ...row.target, workspace };
 }

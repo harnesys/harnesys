@@ -85,7 +85,7 @@ export const protocolMap = {
         label: str.optional(),
         config: z.record(z.string(), z.unknown()),
         target: z.unknown().optional(),
-        instructions: str.optional(),
+        instructions: z.string().optional(),
       })
       .extend({ _meta: CallMetaSchema }),
     empty,

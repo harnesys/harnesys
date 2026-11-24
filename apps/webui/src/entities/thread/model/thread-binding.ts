@@ -1,8 +1,6 @@
 import type { ExecutionProfile } from '@/shared/api';
 
 export const SANDBOX_DIR_VALUE = 'sandbox';
-export const CUSTOM_DIR_VALUE = '__custom__';
-export const CUSTOM_PATH_ERROR = 'Path must be absolute';
 export const RECENT_DIRECTORIES_LIMIT = 5;
 
 export interface SelectOption {

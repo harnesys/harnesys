@@ -132,7 +132,7 @@
           },
           {
             "name": "set",
-            "description": "Create a cron schedule (omit schedule) or update an existing one (schedule = instance id or name). The cron expression is evaluated in the organization timezone; optional miss_policy controls missed runs (catch-up, skip, escalate). By default the schedule fires in the calling agent's thread; pass agentId or agent to target another agent, optionally with threadId to bind a specific thread of that agent. Pass instructions to tell the agent what to do on every fire; they are shown and editable in the trigger settings. Pass workspace (an absolute folder path) to make that folder the thread's working directory: every fire, and every manual message in that thread, run there.",
+            "description": "Create a cron schedule (omit schedule) or update an existing one (schedule = instance id or name). The cron expression is evaluated in the organization timezone; optional miss_policy controls missed runs (catch-up, skip, escalate). By default the schedule fires in the calling agent's thread; pass agentId or agent to target another agent, optionally with threadId to bind a specific thread of that agent. Pass instructions to tell the agent what to do on every fire; they are shown and editable in the trigger settings. Pass workspace (an absolute folder path) to make that folder the working directory of the schedule thread (chat threads only): every fire, and every manual message in that thread, run there.",
             "effect": "write",
             "inputSchema": {
               "type": "object",

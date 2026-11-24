@@ -191,6 +191,26 @@ describe('envelope and golden fixtures', () => {
     expect(params.agentId).toBe('00000000-0000-1000-8000-000000000001');
   });
 
+  test('trigger.start and triggers.create accept empty instructions', () => {
+    const meta = { correlationId: 'x', deadline: 1, principal: { type: 'system' }, locale: 'en' };
+    const started = protocolMap['trigger.start'].params.safeParse({
+      instanceId: 'i',
+      kind: 'k',
+      config: {},
+      instructions: '',
+      _meta: meta,
+    });
+    expect(started.success).toBe(true);
+    const created = protocolMap['triggers.create'].params.safeParse({
+      kind: 'k',
+      label: 'l',
+      config: {},
+      target: { threadId: 't', agentId: 'a' },
+      instructions: '',
+    });
+    expect(created.success).toBe(true);
+  });
+
   test('initialize result validates', () => {
     const result = InitializeResultSchema.parse({
       addon: { id: 'harnesys.demo', version: '1.0.0' },

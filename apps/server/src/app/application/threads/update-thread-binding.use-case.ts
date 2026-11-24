@@ -100,7 +100,7 @@ export class UpdateThreadBindingUseCase {
     if (workspaceRef === null || workspaceRefEquals(workspaceRef, thread.workspaceRef)) {
       return false;
     }
-    this.threads.patch(request.orgId, thread.id, { workspaceRef });
+    this.threads.setWorkspaceRef(request.orgId, thread.id, workspaceRef);
     return true;
   }
 

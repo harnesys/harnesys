@@ -158,11 +158,6 @@ export async function migrateLegacyDetail(ctx: AddonContext): Promise<void> {
     const instructions = typeof row.instructions === 'string' ? row.instructions.trim() : '';
     const next = { ...config };
     delete next.detail;
-    await ctx.db.run('update instances set instructions = ?, config = ? where instance_id = ?', [
-      instructions === '' ? detail : instructions,
-      JSON.stringify(next),
-      instanceId,
-    ]);
     try {
       await ctx.triggers.update({
         instanceId,
@@ -174,7 +169,13 @@ export async function migrateLegacyDetail(ctx: AddonContext): Promise<void> {
         instanceId,
         err: error instanceof Error ? error.message : String(error),
       });
+      continue;
     }
+    await ctx.db.run('update instances set instructions = ?, config = ? where instance_id = ?', [
+      instructions === '' ? detail : instructions,
+      JSON.stringify(next),
+      instanceId,
+    ]);
   }
 }
 

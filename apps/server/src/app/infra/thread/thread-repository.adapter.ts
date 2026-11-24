@@ -1,4 +1,5 @@
 import { Injectable } from '@harnesys/brix';
+import type { WorkspaceRef } from '@harnesys/contracts';
 import { and, desc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import {
@@ -119,6 +120,30 @@ export class ThreadRepositoryAdapter extends ThreadRepositoryPort {
 
   patch(orgId: string, id: string, patch: ThreadPatch): ThreadRecord {
     return withOrgSqlite(this.layout, orgId, (db) => applyThreadPatch(db, orgId, id, patch));
+  }
+
+  override setWorkspaceRef(
+    orgId: string,
+    id: string,
+    workspaceRef: WorkspaceRef | null,
+  ): ThreadRecord {
+    return withOrgSqlite(this.layout, orgId, (db) => {
+      const sourceRoots = sourceRootsOf(db, orgId);
+      const legacy = projectLegacyRunDirectory(workspaceRef, sourceRoots);
+      const row = db
+        .update(threadsTable)
+        .set({
+          workspaceRef: workspaceRef === null ? null : JSON.stringify(workspaceRef),
+          ...(legacy !== null ? { runDirectory: legacy } : {}),
+        })
+        .where(and(eq(threadsTable.orgId, orgId), eq(threadsTable.id, id)))
+        .returning()
+        .get();
+      if (!row) {
+        throw new ThreadNotFoundException(id);
+      }
+      return toThread(row, sourceRoots);
+    });
   }
 
   markRead(orgId: string, id: string, at: string): ThreadRecord {

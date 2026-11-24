@@ -1,3 +1,4 @@
+import type { WorkspaceRef } from '@harnesys/contracts';
 import type { ThreadActiveRun, ThreadInsert, ThreadPatch, ThreadRecord } from './thread.ts';
 
 export abstract class ThreadRepositoryPort {
@@ -7,6 +8,9 @@ export abstract class ThreadRepositoryPort {
   abstract findById(orgId: string, id: string): ThreadRecord | undefined;
   abstract insert(rec: ThreadInsert): ThreadRecord;
   abstract patch(orgId: string, id: string, patch: ThreadPatch): ThreadRecord;
+  setWorkspaceRef(orgId: string, id: string, workspaceRef: WorkspaceRef | null): ThreadRecord {
+    return this.patch(orgId, id, { workspaceRef });
+  }
   abstract markRead(orgId: string, id: string, at: string): ThreadRecord;
   abstract updateTitle(orgId: string, id: string, title: string): ThreadRecord;
   abstract touch(orgId: string, id: string): void;

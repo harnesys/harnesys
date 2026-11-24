@@ -158,8 +158,8 @@ export function TriggerTargetField({
       </div>
       <FieldDescription>
         {linkedThread
-          ? 'Profile applies to the thread; the folder applies to the runs this trigger starts.'
-          : 'A new dedicated thread is created for this trigger; runs execute in the selected folder.'}
+          ? 'Profile applies to the thread. The folder becomes the thread working directory: trigger runs and your own messages there execute in it. Issue threads keep the issue workspace.'
+          : 'A new dedicated thread is created for this trigger; its runs and your own messages in that thread execute in the selected folder.'}
       </FieldDescription>
     </Field>
   );

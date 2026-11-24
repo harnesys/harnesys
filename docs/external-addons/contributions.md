@@ -130,10 +130,15 @@ const cron: TriggerPair = {
   `source{sourceId, subpath?}` | `worktree{sourceId, worktreeId, subpath?}`). The host
   applies it to the target thread's workspace binding, so the trigger's folder is the
   thread's working directory: every fired run (`pwd` included) and every manual message in
-  that thread run there. The host re-applies it before each fire, so an edited binding
-  does not drift away. `folder` must be an absolute path that exists on the host and lies
-  outside the org data roots, otherwise the instance is rejected. Operators edit thread,
-  mode and workspace in the trigger settings dialog, which writes the same binding.
+  that thread run there. The host re-applies it before each fire, so an edited binding does
+  not drift away; a binding that can no longer be resolved is logged and the fire keeps the
+  current binding. `folder` must be an absolute path that exists on the host and lies
+  outside the org data roots, otherwise the instance is rejected. Folder workspaces are
+  host-bound: the host that applies the binding stamps its id, so a fleet trigger runs on
+  that host. Only chat threads accept `workspace`; issue threads keep the workspace derived
+  from the issue and group threads run without a shared environment, so the host rejects
+  `workspace` for them. Operators edit thread, mode and workspace in the trigger settings
+  dialog, which writes the same binding.
 - One trigger instance per thread is enforced by the core; a second instance for the same
   thread is rejected.
 - Fire with `ctx.triggers.fire({ instanceId, runKey, text?, title?, fields?, payload? })`,

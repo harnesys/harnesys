@@ -85,11 +85,7 @@ export class FireTriggerUseCase {
       return this.suppressed(input, 'no_target');
     }
     if (target.workspace !== undefined) {
-      this.triggerWorkspace.apply({
-        orgId: input.orgId,
-        threadId: target.threadId,
-        workspace: target.workspace,
-      });
+      this.applyWorkspace(input.orgId, target.threadId, target.workspace);
     }
     const { outcome, runId } = await this.dispatch.dispatch({
       orgId: input.orgId,
@@ -134,6 +130,17 @@ export class FireTriggerUseCase {
       'trigger fire suppressed',
     );
     return { outcome: 'suppressed' };
+  }
+
+  private applyWorkspace(orgId: string, threadId: string, workspace: WorkspaceRef): void {
+    try {
+      this.triggerWorkspace.apply({ orgId, threadId, workspace });
+    } catch (error) {
+      this.logger.warn(
+        { orgId, threadId, error: error instanceof Error ? error.message : String(error) },
+        'trigger workspace apply failed, keeping the current thread binding',
+      );
+    }
   }
 
   private limitsOf(orgId: string, instance: TriggerInstanceRow): TriggerLimits {

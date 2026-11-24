@@ -79,7 +79,8 @@ Trigger instances are host-owned: `trigger.start` receives `config` (declared
 `configFields`), the validated `target` (`threadId`, `agentId`, `modeId?`, `workspace?`)
 and the operator `instructions` that the host appends to every fired run. `target.workspace`
 is the thread's working directory: the host binds it to the target thread, so fired runs and
-manual messages in that thread execute there. Fire with
+manual messages in that thread execute there. Only chat threads accept it; issue and group
+threads reject it. `instructions` may be an empty string. Fire with
 `ctx.triggers.fire({ instanceId, runKey, text?, title?, fields?, payload? })`; `text` is
 the event body, `instructions` live on the instance and are edited in the trigger
 settings. One instance per thread is enforced by the core.

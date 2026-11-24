@@ -226,6 +226,16 @@ export class ManageTriggerInstanceUseCase {
     if (!thread || thread.orgId !== orgId) {
       throw new AddonException('invalid_params', 422, 'target.threadId not found');
     }
+    if (
+      parsed.data.workspace !== undefined &&
+      (thread.kind === 'issue' || thread.kind === 'group')
+    ) {
+      throw new AddonException(
+        'invalid_params',
+        422,
+        `target.workspace is not supported for ${thread.kind} threads`,
+      );
+    }
     const members = this.threadAgents.listByThread(orgId, thread.id);
     if (!members.some((member) => member.agentId === parsed.data.agentId)) {
       throw new AddonException('invalid_params', 422, 'target.agentId is not a thread member');
