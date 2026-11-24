@@ -17,21 +17,48 @@ export interface OrgAuditPage {
   total: number;
 }
 
-export const AUDIT_PAGE_SIZE = 50;
-
-export function orgAuditQueryKey(orgId: string) {
-  return ['orgs', orgId, 'audit'] as const;
+export interface OrgAuditQuery {
+  limit?: number;
+  offset?: number;
+  from?: string;
+  to?: string;
+  action?: string;
+  actorKind?: string;
+  result?: string;
+  actorId?: string;
+  q?: string;
 }
 
-export function listOrgAudit(orgId: string, offset: number): Promise<OrgAuditPage> {
-  const params = new URLSearchParams({ limit: String(AUDIT_PAGE_SIZE), offset: String(offset) });
+export const AUDIT_PAGE_SIZE = 50;
+
+export function orgAuditQueryKey(orgId: string, query: OrgAuditQuery) {
+  return ['orgs', orgId, 'audit', query] as const;
+}
+
+function setParam(params: URLSearchParams, key: string, value: string | number | undefined): void {
+  if (value !== undefined && value !== '') {
+    params.set(key, String(value));
+  }
+}
+
+export function listOrgAudit(orgId: string, query: OrgAuditQuery): Promise<OrgAuditPage> {
+  const params = new URLSearchParams();
+  setParam(params, 'limit', query.limit);
+  setParam(params, 'offset', query.offset);
+  setParam(params, 'from', query.from);
+  setParam(params, 'to', query.to);
+  setParam(params, 'action', query.action);
+  setParam(params, 'actorKind', query.actorKind);
+  setParam(params, 'result', query.result);
+  setParam(params, 'actorId', query.actorId);
+  setParam(params, 'q', query.q);
   return apiJson<OrgAuditPage>(`/api/orgs/${encodeURIComponent(orgId)}/audit?${params.toString()}`);
 }
 
-export function orgAuditPageOptions(orgId: string, offset: number) {
+export function orgAuditPageOptions(orgId: string, query: OrgAuditQuery) {
   return queryOptions({
-    queryKey: [...orgAuditQueryKey(orgId), offset],
-    queryFn: () => listOrgAudit(orgId, offset),
+    queryKey: orgAuditQueryKey(orgId, query),
+    queryFn: () => listOrgAudit(orgId, query),
     enabled: Boolean(orgId),
   });
 }

@@ -14,7 +14,19 @@ export interface OrgAuditPage {
   total: number;
 }
 
+export interface OrgAuditListQuery {
+  limit: number;
+  offset: number;
+  from?: string;
+  to?: string;
+  action?: string;
+  actorKind?: string;
+  result?: string;
+  actorId?: string;
+  q?: string;
+}
+
 export abstract class OrgAudit {
   abstract append(orgId: string, row: OrgAuditRow): void;
-  abstract list(orgId: string, limit: number, offset: number): OrgAuditPage;
+  abstract list(orgId: string, query: OrgAuditListQuery): OrgAuditPage;
 }

@@ -20,6 +20,13 @@ export class AuditController {
       orgId,
       limit: query.limit,
       offset: query.offset,
+      from: query.from,
+      to: query.to,
+      action: query.action,
+      actorKind: query.actorKind,
+      result: query.result,
+      actorId: query.actorId,
+      q: query.q,
     });
   }
 }
