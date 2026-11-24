@@ -33,6 +33,8 @@ export async function freePort(): Promise<number> {
   return port;
 }
 
+const ROOT_UID = 0;
+
 function chromiumArgs(input: StartSidecarInput, port: number): string[] {
   const profile =
     input.headed === true
@@ -44,6 +46,8 @@ function chromiumArgs(input: StartSidecarInput, port: number): string[] {
     `--user-data-dir=${profile}`,
     '--no-first-run',
     '--no-default-browser-check',
+    '--disable-dev-shm-usage',
+    ...(process.getuid?.() === ROOT_UID ? ['--no-sandbox'] : []),
   ];
 }
 

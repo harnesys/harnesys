@@ -31,18 +31,30 @@ COPY apps/webui apps/webui
 RUN bun install --frozen-lockfile
 RUN cd apps/webui && bun run build
 
-FROM oven/bun:1-alpine
+FROM oven/bun:1-slim
 WORKDIR /app
 
 ENV NODE_ENV=production
 
+# Debian (glibc), not Alpine: the browser pack installs upstream engine builds
+# (obscura, chrome-for-testing) linked against glibc, and a musl host cannot
+# exec them — the process dies with ENOENT because ld-linux is missing.
 # git + node/npm + curl are required at runtime: plugin/skill install clones
 # repos (git), curated LSP installs run `npm i -g` (see
 # infra/lsp/install-lsp-binary.ts), and the git credential helper fetches tokens
-# with `curl` (infra/source/drivers/git/git-credential-helper.ts). Alpine's git
-# pulls libcurl but not the curl CLI, so curl is installed explicitly.
-# zsh/bash: interactive terminals run the login shell reported by SHELL.
-RUN apk add --no-cache git nodejs npm curl zsh bash
+# with `curl`. zsh/bash: interactive terminals run the login shell reported by
+# SHELL. unzip extracts zip engine archives (chromium, brave); the libnss/
+# libatk/libgbm/… set is chromium's headless runtime dependency list.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates git nodejs npm curl zsh bash unzip \
+        libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 libdrm2 \
+        libgbm1 libasound2t64 libpango-1.0-0 libpangocairo-1.0-0 \
+        libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
+        libxshmfence1 libxcursor1 libxi6 libxtst6 libx11-xcb1 \
+        libdbus-1-3 fonts-liberation \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY package.json bun.lock tsconfig.json ./
 COPY packages/brix/package.json packages/brix/
