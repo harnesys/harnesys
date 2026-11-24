@@ -7,6 +7,7 @@ import { loginActionPolicyPath } from './browser-command-allowlist.ts';
 import type { BrowserEngineRuntime } from './browser-tools.ts';
 import { credentialPluginCommand } from './credential-plugin-command.ts';
 import { CREDENTIAL_PLUGIN_FILE_FLAG } from './credential-plugin-flags.ts';
+import { releaseEngineSidecar } from './engine-sidecar.ts';
 import { BrowserLoginFailedError } from './login-errors.ts';
 import { cookieOriginAllowed, isHttps, matchesSuccessUrl, sameOrigin } from './login-origin.ts';
 
@@ -50,6 +51,46 @@ export async function ensureConnectedWithProxy(
     egressProxyPort: proxyPort,
     onRelease,
   });
+}
+
+const LOGIN_NAVIGATE_TIMEOUT_MS = 60_000;
+
+export async function closeBrowserSession(runtime: BrowserEngineRuntime): Promise<void> {
+  await runAgentBrowser(
+    ['close'],
+    cliSessionName(runtime.scopeKey),
+    undefined,
+    undefined,
+    runtime.cliPath,
+  );
+}
+
+export async function resetLoginBrowser(runtime: BrowserEngineRuntime): Promise<void> {
+  await closeBrowserSession(runtime);
+  await releaseEngineSidecar(runtime.scopeKey);
+}
+
+export async function openLoginPage(
+  runtime: BrowserEngineRuntime,
+  loginUrl: string,
+  credentialId: string,
+): Promise<void> {
+  const opened = await runWithPolicy(['open', loginUrl], runtime, {
+    timeoutMs: LOGIN_NAVIGATE_TIMEOUT_MS,
+  });
+  if (!opened.ok) {
+    throw new BrowserLoginFailedError(
+      credentialId,
+      `could not open the login page${failureDetail(opened.output)}`,
+    );
+  }
+}
+
+export async function clearPassword(
+  runtime: BrowserEngineRuntime,
+  credential: BrowserCredential,
+): Promise<void> {
+  await runWithPolicy(['fill', credential.passwordSelector, ''], runtime).catch(() => {});
 }
 
 export async function assertLoginOrigin(
@@ -124,6 +165,40 @@ export async function checkSuccess(
     }
   }
   return { ok: true, url };
+}
+
+export function failureDetail(output: string): string {
+  const text = output.replaceAll(/\s+/g, ' ').trim();
+  return text === '' ? '' : ` (${text.slice(0, 240)})`;
+}
+
+export function safeUrl(rawUrl: string): string {
+  try {
+    const parsed = new URL(rawUrl);
+    return `${parsed.origin}${parsed.pathname}`;
+  } catch {
+    return rawUrl;
+  }
+}
+
+export async function clickPreLogin(
+  runtime: BrowserEngineRuntime,
+  credential: BrowserCredential,
+): Promise<void> {
+  if (credential.preLoginSelector === null) {
+    return;
+  }
+  const visible = await runWithPolicy(['is', 'visible', credential.preLoginSelector], runtime);
+  if (!visible.ok || !/\btrue\b/i.test(visible.output)) {
+    return;
+  }
+  const clicked = await runWithPolicy(['click', credential.preLoginSelector], runtime);
+  if (!clicked.ok) {
+    throw new BrowserLoginFailedError(
+      credential.id,
+      `pre-login selector "${credential.preLoginSelector}" could not be clicked${failureDetail(clicked.output)}`,
+    );
+  }
 }
 
 export async function fillAndSubmit(

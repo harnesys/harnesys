@@ -9,6 +9,7 @@ export interface CredentialFormState {
   usernameSelector: string;
   passwordSelector: string;
   submitSelector: string;
+  preLoginSelector: string;
   successUrlPathPrefix: string;
   successCookieName: string;
   successSelector: string;
@@ -25,6 +26,7 @@ export const EMPTY_CREDENTIAL_FORM: CredentialFormState = {
   usernameSelector: '',
   passwordSelector: '',
   submitSelector: '',
+  preLoginSelector: '',
   successUrlPathPrefix: '/',
   successCookieName: '',
   successSelector: '',
@@ -113,6 +115,23 @@ export function CredentialFormFields({
           />
         </Field>
       </div>
+      <Field>
+        <FieldLabel htmlFor="credential-pre-login-selector">
+          Pre-login click selector (optional)
+        </FieldLabel>
+        <Input
+          id="credential-pre-login-selector"
+          placeholder='div[role="button"][aria-label="Allow all cookies"]'
+          value={form.preLoginSelector}
+          onChange={(event) => onSet('preLoginSelector', event.target.value)}
+        />
+        <FieldDescription className="text-[11px] leading-snug">
+          Clicked once before credentials are filled, only when visible. Use it for cookie-consent
+          dialogs that cover the form. When a site renders a hidden preload copy of the button
+          first, exclude it:{' '}
+          <code>div[role="button"][aria-label="Allow all cookies"]:not([aria-hidden="true"])</code>
+        </FieldDescription>
+      </Field>
       <div className="grid grid-cols-2 gap-2">
         <Field>
           <FieldLabel htmlFor="credential-success-url">Success URL path prefix</FieldLabel>

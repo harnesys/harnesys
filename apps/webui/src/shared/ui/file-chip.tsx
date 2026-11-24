@@ -41,6 +41,7 @@ export function FileChip({
           {onOpen && href ? (
             <AttachmentAction
               render={<a href={href} download={name} />}
+              nativeButton={false}
               aria-label={`Download ${name}`}
             >
               <DownloadIcon />

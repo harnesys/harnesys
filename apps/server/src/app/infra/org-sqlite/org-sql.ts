@@ -789,6 +789,7 @@ CREATE TABLE IF NOT EXISTS browser_credentials (
   username_selector TEXT NOT NULL,
   password_selector TEXT NOT NULL,
   submit_selector TEXT NOT NULL,
+  pre_login_selector TEXT,
   success_url_path_prefix TEXT NOT NULL DEFAULT '/',
   success_cookie_name TEXT,
   success_selector TEXT,
@@ -805,6 +806,19 @@ CREATE TABLE IF NOT EXISTS browser_credentials (
 CREATE UNIQUE INDEX IF NOT EXISTS browser_credentials_org_name
   ON browser_credentials(org_id, name);
 `;
+
+export function migrateBrowserCredentialPreLoginColumn(
+  exec: (sql: string) => void,
+  all?: (sql: string) => ColumnInfo[],
+): void {
+  if (!all) {
+    return;
+  }
+  const present = new Set(all('PRAGMA table_info(browser_credentials)').map((col) => col.name));
+  if (!present.has('pre_login_selector')) {
+    exec(`ALTER TABLE browser_credentials ADD COLUMN pre_login_selector TEXT`);
+  }
+}
 
 export const CREATE_BROWSER_LOGIN_ATTEMPTS_SQL = `
 CREATE TABLE IF NOT EXISTS browser_login_attempts (

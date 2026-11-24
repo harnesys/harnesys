@@ -11,6 +11,7 @@ export const browserCredentialsTable = sqliteTable(
     usernameSelector: text('username_selector').notNull(),
     passwordSelector: text('password_selector').notNull(),
     submitSelector: text('submit_selector').notNull(),
+    preLoginSelector: text('pre_login_selector'),
     successUrlPathPrefix: text('success_url_path_prefix').notNull().default('/'),
     successCookieName: text('success_cookie_name'),
     successSelector: text('success_selector'),

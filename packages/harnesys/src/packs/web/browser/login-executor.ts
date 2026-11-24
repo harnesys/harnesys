@@ -21,17 +21,22 @@ import type {
 import {
   assertLoginOrigin,
   checkSuccess,
+  clearPassword,
+  clickPreLogin,
   currentUrl,
   ensureConnectedWithProxy,
+  failureDetail,
   fillAndSubmit,
+  openLoginPage,
+  resetLoginBrowser,
   runWithPolicy,
+  safeUrl,
 } from './login-steps.ts';
 
 export { BrowserLoginDeniedError, BrowserLoginFailedError };
 
 const AUTH_LOGIN_TIMEOUT_MS = 120_000;
-const NAVIGATE_TIMEOUT_MS = 60_000;
-const ATTEMPT_TTL_TEXT = '5 minutes';
+const ATTEMPT_TTL_TEXT = '10 minutes';
 
 interface LoginScope {
   orgId: string;
@@ -86,22 +91,6 @@ const LOGIN_TOOL_DESCRIPTION = [
   'browser_login_failed — selectors or success markers did not match; do not retry, tell the user to fix the credential.',
   'A parked run asks the user for a verification code, manual sign-in, or a session import; wait for the run to resume.',
 ].join(' ');
-
-function safeUrl(rawUrl: string): string {
-  try {
-    const parsed = new URL(rawUrl);
-    return `${parsed.origin}${parsed.pathname}`;
-  } catch {
-    return rawUrl;
-  }
-}
-
-async function clearPassword(
-  runtime: BrowserEngineRuntime,
-  credential: BrowserCredential,
-): Promise<void> {
-  await runWithPolicy(['fill', credential.passwordSelector, ''], runtime).catch(() => {});
-}
 
 export function browserLoginTool(
   ports: BrowserLoginPorts,
@@ -214,6 +203,9 @@ async function startLogin(
     credentialId,
     hosts: credential.egressHosts,
   });
+  if (credentialedSessionOf(runtime.scopeKey) === undefined) {
+    await resetLoginBrowser(runtime);
+  }
   await ensureConnectedWithProxy(runtime, proxy.port, async () => {
     releaseCredentialedSession(runtime.scopeKey);
     await proxy.stop();
@@ -223,14 +215,24 @@ async function startLogin(
     proxyPort: proxy.port,
     hosts: credential.egressHosts,
   });
-  await runWithPolicy(['open', credential.loginUrl], runtime, {
-    timeoutMs: NAVIGATE_TIMEOUT_MS,
-  });
-  await assertLoginOrigin(runtime, credential.loginUrl, credentialId);
-  await runWithPolicy(authLoginArgs(credentialId, credential.loginUrl, credential), runtime, {
-    timeoutMs: AUTH_LOGIN_TIMEOUT_MS,
-    env: grant.pluginEnv,
-  });
+  try {
+    await openLoginPage(runtime, credential.loginUrl, credentialId);
+    await assertLoginOrigin(runtime, credential.loginUrl, credentialId);
+    const already = await checkSuccess(runtime, credential);
+    if (already.ok) {
+      await ports.loginResult?.({ credentialId, ok: true, targetOrigin });
+      auditOf(ports, { ...scopeOf(runtime), credentialId, targetOrigin, ok: true });
+      return { ok: true, url: safeUrl(already.url) };
+    }
+    await clickPreLogin(runtime, credential);
+    await runWithPolicy(authLoginArgs(credentialId, credential.loginUrl, credential), runtime, {
+      timeoutMs: AUTH_LOGIN_TIMEOUT_MS,
+      env: grant.pluginEnv,
+    });
+  } catch (error) {
+    await resetLoginBrowser(runtime);
+    throw error;
+  }
   return await finishLogin(ports, runtime, credential, targetOrigin, canAskUser);
 }
 
@@ -268,7 +270,7 @@ async function finishLogin(
       prompt:
         kind === 'challenge'
           ? `Website login for "${credential.name}" is waiting for a verification code. Submit it within ${ATTEMPT_TTL_TEXT}, or type the username and password again.`
-          : `Website login for "${credential.name}" did not complete (wrong password, a captcha, or a multi-step form). Type the username and password within ${ATTEMPT_TTL_TEXT}, or import a browser session from your own device.`,
+          : `Website login for "${credential.name}" did not complete at ${safeUrl(check.url)} (wrong password, a captcha, 2FA, or a multi-step form). Submit a verification code, type the username and password within ${ATTEMPT_TTL_TEXT}, or import a browser session from your own device.`,
       source: 'ask_user',
       tool: {
         name: 'browser_login',
@@ -325,15 +327,17 @@ async function resumeLogin(
     await ports.loginResult?.({ credentialId, ok: false, targetOrigin });
     throw new BrowserLoginFailedError(credentialId, 'challenge input expired or was not provided');
   }
+  await clickPreLogin(runtime, credential);
   const submitted = await fillAndSubmit(runtime, credential, attemptInput);
   await attempts.complete(pending.attemptId).catch(() => {});
   const check = await checkSuccess(runtime, credential);
   if (!check.ok) {
     await clearPassword(runtime, credential);
     await ports.loginResult?.({ credentialId, ok: false, targetOrigin });
+    const outcome = submitted.ok ? 'submitted' : `submit failed${failureDetail(submitted.output)}`;
     throw new BrowserLoginFailedError(
       credentialId,
-      `success markers not reached after human input (${submitted.ok ? 'submitted' : 'submit failed'})`,
+      `success markers not reached after human input (${outcome})`,
     );
   }
   await ports.loginResult?.({ credentialId, ok: true, targetOrigin });

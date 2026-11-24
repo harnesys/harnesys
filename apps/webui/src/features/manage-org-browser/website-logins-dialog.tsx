@@ -105,6 +105,7 @@ export function WebsiteLoginsDialog({
       usernameSelector: credential.usernameSelector,
       passwordSelector: credential.passwordSelector,
       submitSelector: credential.submitSelector,
+      preLoginSelector: credential.preLoginSelector ?? '',
       successUrlPathPrefix: credential.successUrlPathPrefix,
       successCookieName: credential.successCookieName ?? '',
       successSelector: credential.successSelector ?? '',
@@ -146,6 +147,7 @@ export function WebsiteLoginsDialog({
       usernameSelector: form.usernameSelector.trim(),
       passwordSelector: form.passwordSelector.trim(),
       submitSelector: form.submitSelector.trim(),
+      preLoginSelector: optionalOrNull(form.preLoginSelector),
       successUrlPathPrefix:
         form.successUrlPathPrefix.trim() === '' ? '/' : form.successUrlPathPrefix.trim(),
       successCookieName: optionalOrNull(form.successCookieName),

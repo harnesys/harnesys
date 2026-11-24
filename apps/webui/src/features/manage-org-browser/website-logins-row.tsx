@@ -123,6 +123,7 @@ export function WebsiteLoginsRow({
             label="Selectors"
             value={`${credential.usernameSelector} · ${credential.passwordSelector} · ${credential.submitSelector}`}
           />
+          <RowField label="Pre-login click" value={optionalValue(credential.preLoginSelector)} />
           <RowField label="Success URL prefix" value={credential.successUrlPathPrefix} />
           <RowField label="Success cookie" value={optionalValue(credential.successCookieName)} />
           <RowField label="Success selector" value={optionalValue(credential.successSelector)} />

@@ -53,6 +53,7 @@ import {
   migrateAgentsPolicyColumns,
   migrateApprovalsResumeStateColumn,
   migrateApprovalsTable,
+  migrateBrowserCredentialPreLoginColumn,
   migrateExecutionProfileIsolation,
   migrateIssueExecutionCorrelationIndex,
   migrateNodesDockerColumn,
@@ -260,6 +261,7 @@ export function ensureOrgSchema(
   exec(CREATE_ATTACHMENTS_SQL);
   exec(CREATE_THREAD_MESSAGE_QUEUE_SQL);
   exec(CREATE_BROWSER_CREDENTIALS_SQL);
+  migrateBrowserCredentialPreLoginColumn(exec, all);
   exec(CREATE_BROWSER_LOGIN_ATTEMPTS_SQL);
   exec(CREATE_APPROVALS_SQL);
   if (all) {

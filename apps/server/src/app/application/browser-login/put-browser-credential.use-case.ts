@@ -46,6 +46,7 @@ export class PutBrowserCredentialUseCase {
       usernameSelector: data.usernameSelector,
       passwordSelector: data.passwordSelector,
       submitSelector: data.submitSelector,
+      preLoginSelector: data.preLoginSelector ?? null,
       successUrlPathPrefix: data.successUrlPathPrefix,
       successCookieName: data.successCookieName ?? null,
       successSelector: data.successSelector ?? null,

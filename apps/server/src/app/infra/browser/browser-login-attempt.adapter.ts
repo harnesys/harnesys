@@ -15,7 +15,7 @@ import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { withOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 import { browserLoginAttemptsTable } from '../org-sqlite/schema/browser-login-attempts.ts';
 
-const ATTEMPT_TTL_MS = 5 * 60_000;
+const ATTEMPT_TTL_MS = 10 * 60_000;
 
 @Injectable()
 export class BrowserLoginAttemptAdapter extends BrowserLoginAttemptPort {

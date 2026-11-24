@@ -9,6 +9,7 @@ export interface BrowserCredentialUpsert {
   usernameSelector: string;
   passwordSelector: string;
   submitSelector: string;
+  preLoginSelector: string | null;
   successUrlPathPrefix: string;
   successCookieName: string | null;
   successSelector: string | null;

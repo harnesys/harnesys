@@ -149,6 +149,7 @@ username      TEXT              -- not secret
 username_selector TEXT
 password_selector TEXT
 submit_selector   TEXT
+pre_login_selector TEXT NULL     -- clicked once before fill when visible (consent dialogs)
 success_url_path_prefix TEXT
 success_cookie_name     TEXT NULL
 success_selector        TEXT NULL
@@ -219,15 +220,20 @@ the socket, writes `{ protocol, success, credential }` to stdout, never logs.
    a different proxy port is restarted, never silently reused.
 3. `open <loginUrl>`; `get url`; abort unless origin (scheme+host+port) equals
    `loginUrl` and is https.
-4. `auth login <credential> --credential-provider harnesys --item <credentialId>
+4. If `pre_login_selector` is set and visible, click it once (cookie-consent and similar
+   interstitials) before filling credentials. The check reads the first match of the selector,
+   so a site that renders a hidden preload copy of the button needs
+   `:not([aria-hidden="true"])` (Facebook:
+   `div[role="button"][aria-label="Allow all cookies"]:not([aria-hidden="true"])`).
+5. `auth login <credential> --credential-provider harnesys --item <credentialId>
    --no-navigate --url <loginUrl>` with explicit selectors.
-5. If success is not reached: park an attempt (§9) and offer code, manual
+6. If success is not reached: park an attempt (§9) and offer code, manual
    username/password, or cookie import.
-6. Assert success: origin + `success_url_path_prefix` + (`success_cookie_name` present
+7. Assert success: origin + `success_url_path_prefix` + (`success_cookie_name` present
    **or** `success_selector`). On failure: bump `failure_count`, set `status`, no
    auto-retry, return a typed error.
-7. On success: set `status = 'ok'`, `last_login_at`.
-8. `sideEffect: 'credentialed'` and `gate: () => ({ decision: 'ask' })`.
+8. On success: set `status = 'ok'`, `last_login_at`.
+9. `sideEffect: 'credentialed'` and `gate: () => ({ decision: 'ask' })`.
 
 Input schema: `{ credentialId: string }`.
 
@@ -344,7 +350,7 @@ the success URL, and re-checks the markers. The file is deleted immediately afte
 
 Attempt lifecycle:
 
-- attempt record in org SQLite (metadata only, never the secret), TTL 5 min;
+- attempt record in org SQLite (metadata only, never the secret), TTL 10 min;
 - TOTP ~30 s: the UI shows a countdown and a submit after expiry fails with
   `browser_login_failed`;
 - delegated runs cannot park: a login that needs a human fails with
