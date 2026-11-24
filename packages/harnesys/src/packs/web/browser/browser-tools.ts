@@ -1,8 +1,5 @@
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 import type { ToolDefinition } from '../../../ports/tools.ts';
 import { tool } from '../../../ports/tools.ts';
-import { managedAgentBrowserBin } from './agent-browser-tool.ts';
 import {
   browserArtifactsDir,
   ensureArtifactDir,
@@ -11,16 +8,25 @@ import {
   withArtifactPaths,
 } from './browser-artifacts.ts';
 import {
+  CLI_TIMEOUT_MS,
+  cliSessionName,
+  connectAgentBrowser,
+  runAgentBrowser,
+} from './browser-cli.ts';
+import {
   assertBrowserCommandAllowed,
   hardenedActionPolicyPath,
 } from './browser-command-allowlist.ts';
 import { credentialedSessionOf, releaseCredentialedSession } from './browser-session-registry.ts';
 import { type EngineSpec, engineSpecOf } from './engine-catalog.ts';
-import { acquireEngineSidecar, releaseEngineSidecar } from './engine-sidecar.ts';
+import { releaseEngineSidecar } from './engine-sidecar.ts';
+
+export { agentBrowserResolvedPath } from './browser-cli.ts';
 
 export interface BrowserEngineRuntime {
   engineId: string;
   binaryPath: string;
+  cliPath: string;
   spec: EngineSpec;
   stealth: boolean;
   allowPrivateNetwork: boolean;
@@ -51,53 +57,6 @@ export class BrowserEngineMissingError extends Error {
     this.engineId = engineId;
     this.reason = reason;
   }
-}
-
-const CLI_TIMEOUT_MS = 60_000;
-
-export function cliSessionName(scopeKey: string): string {
-  const sanitized = scopeKey.replaceAll(/[^a-zA-Z0-9]+/g, '-').replaceAll(/^-+|-+$/g, '');
-  return sanitized.length > 0 ? sanitized : 'browser';
-}
-
-function resolveAgentBrowser(): string | null {
-  const toolsRoot = join(homedir(), '.harnesys', 'tools');
-  return managedAgentBrowserBin(toolsRoot) ?? Bun.which('agent-browser');
-}
-
-export function agentBrowserResolvedPath(): string | null {
-  return resolveAgentBrowser();
-}
-
-export async function runAgentBrowser(
-  args: string[],
-  session: string,
-  timeoutMs = CLI_TIMEOUT_MS,
-  env?: Record<string, string>,
-) {
-  const cli = resolveAgentBrowser();
-  if (cli === null) {
-    throw new Error('agent-browser CLI is not available on this host');
-  }
-  const proc = Bun.spawn([cli, '--session', session, ...args], {
-    stdout: 'pipe',
-    stderr: 'pipe',
-    stdin: 'ignore',
-    ...(env === undefined ? {} : { env: { ...process.env, ...env } }),
-  });
-  const timer = setTimeout(() => proc.kill(), timeoutMs);
-  const [stdout, stderr, code] = await Promise.all([
-    new Response(proc.stdout as ReadableStream).text(),
-    new Response(proc.stderr as ReadableStream).text(),
-    proc.exited,
-  ]);
-  clearTimeout(timer);
-  const output = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
-  return { ok: code === 0, output };
-}
-
-export function agentBrowserAvailable(): boolean {
-  return resolveAgentBrowser() !== null;
 }
 
 export function shellTokens(line: string): string[] {
@@ -195,6 +154,7 @@ async function ensureConnected(runtime: BrowserEngineRuntime): Promise<void> {
     }
     await connectAgentBrowser(runtime.scopeKey, {
       binaryPath: runtime.binaryPath,
+      cliPath: runtime.cliPath,
       engineId: runtime.engineId,
       stealth: runtime.stealth,
       allowPrivateNetwork: runtime.allowPrivateNetwork,
@@ -208,6 +168,7 @@ async function ensureConnected(runtime: BrowserEngineRuntime): Promise<void> {
   }
   await connectAgentBrowser(runtime.scopeKey, {
     binaryPath: runtime.binaryPath,
+    cliPath: runtime.cliPath,
     engineId: runtime.engineId,
     stealth: runtime.stealth,
     allowPrivateNetwork: runtime.allowPrivateNetwork,
@@ -215,28 +176,16 @@ async function ensureConnected(runtime: BrowserEngineRuntime): Promise<void> {
   });
 }
 
-export interface ConnectSidecarInput {
-  binaryPath: string;
-  engineId: string;
-  stealth?: boolean;
-  allowPrivateNetwork?: boolean;
-  headed?: boolean;
-  egressProxyPort?: number;
-  onRelease?: () => Promise<void> | void;
-}
-
-export async function connectAgentBrowser(
-  scopeKey: string,
-  sidecar: ConnectSidecarInput,
-): Promise<void> {
-  const acquired = await acquireEngineSidecar({ key: scopeKey, ...sidecar });
-  await runAgentBrowser(['connect', String(acquired.port)], cliSessionName(scopeKey));
-}
-
 async function cliRun(args: string[], runtime: BrowserEngineRuntime): Promise<unknown> {
   const policyArgs =
     runtime.hardened === true ? ['--action-policy', await hardenedActionPolicyPath()] : [];
-  const result = await runAgentBrowser([...policyArgs, ...args], cliSessionName(runtime.scopeKey));
+  const result = await runAgentBrowser(
+    [...policyArgs, ...args],
+    cliSessionName(runtime.scopeKey),
+    CLI_TIMEOUT_MS,
+    undefined,
+    runtime.cliPath,
+  );
   if (!result.ok) {
     throw new Error(`agent-browser ${args[0] ?? ''} failed: ${result.output.slice(-500)}`);
   }
@@ -271,14 +220,16 @@ export function browserSessionTools(runtime: BrowserEngineRuntime): ToolDefiniti
       async execute(raw) {
         await ensureConnected(runtime);
         const input = (raw ?? {}) as { command?: string; args?: string[] };
-        const command = String(input.command ?? '').trim();
+        const commandLine = String(input.command ?? '').trim();
+        const tokens = shellTokens(commandLine);
+        const command = tokens[0] ?? '';
         if (command.length === 0 || command.startsWith('-')) {
           throw new Error('browser: command is required');
         }
-        const normalized = normalizeBrowserArgs(
-          command,
-          (input.args ?? []).map((item) => String(item)),
-        );
+        const normalized = normalizeBrowserArgs(command, [
+          ...tokens.slice(1),
+          ...(input.args ?? []).map((item) => String(item)),
+        ]);
         if (runtime.hardened === true) {
           assertBrowserCommandAllowed(command, normalized);
         }
@@ -301,7 +252,13 @@ export function browserSessionTools(runtime: BrowserEngineRuntime): ToolDefiniti
       sideEffect: 'read',
       input: { type: 'object', properties: {} },
       async execute() {
-        await runAgentBrowser(['close'], cliSessionName(runtime.scopeKey)).catch(() => {});
+        await runAgentBrowser(
+          ['close'],
+          cliSessionName(runtime.scopeKey),
+          CLI_TIMEOUT_MS,
+          undefined,
+          runtime.cliPath,
+        ).catch(() => {});
         releaseCredentialedSession(runtime.scopeKey);
         await releaseEngineSidecar(runtime.scopeKey);
         return { closed: true };
@@ -313,6 +270,7 @@ export function browserSessionTools(runtime: BrowserEngineRuntime): ToolDefiniti
 export function browserEngineRuntimeOf(input: {
   engineId: string;
   binaryPath: string;
+  cliPath: string;
   stealth?: boolean;
   allowPrivateNetwork?: boolean;
   headed?: boolean;
@@ -333,6 +291,7 @@ export function browserEngineRuntimeOf(input: {
   return {
     engineId: input.engineId,
     binaryPath: input.binaryPath,
+    cliPath: input.cliPath,
     spec,
     stealth: input.stealth === true && spec.capabilities.stealth,
     allowPrivateNetwork: input.allowPrivateNetwork === true,

@@ -1,7 +1,7 @@
 import { definePack } from '../../domain/pack.ts';
 import { browserFetchTool } from './browser/browser-fetch-tool.ts';
 import {
-  agentBrowserAvailable,
+  agentBrowserResolvedPath,
   BrowserEngineMissingError,
   browserEngineRuntimeOf,
   browserSessionTools,
@@ -65,6 +65,7 @@ export interface WebPackPorts extends BrowserLoginPorts {
   engines?: () => HostEngineEntry[];
   orgDefaultEngine?: () => string | undefined;
   processPermission?: () => 'allow' | 'deny' | 'ask' | undefined;
+  agentBrowserBin?: () => string | null;
 }
 
 const BROWSER_TOOL_META = [
@@ -167,9 +168,14 @@ export const webCapability = definePack<WebPackPorts, WebPackSpec>({
     const platformReady = process.platform !== 'win32';
     const hardened =
       loginRefs.length > 0 && resolverReady && egressReady && processAllowed && platformReady;
+    const cliPath = ctx.ports?.agentBrowserBin?.() ?? agentBrowserResolvedPath();
+    if (cliPath === null) {
+      return { tools };
+    }
     const runtime = browserEngineRuntimeOf({
       engineId: resolution.engineId,
       binaryPath,
+      cliPath,
       stealth: ctx.spec.stealth === true && engineSpecOf(resolution.engineId)?.capabilities.stealth,
       allowPrivateNetwork: ctx.spec.allowPrivateNetwork,
       headed: ctx.spec.headed,
@@ -182,9 +188,6 @@ export const webCapability = definePack<WebPackPorts, WebPackSpec>({
           }
         : {}),
     });
-    if (!agentBrowserAvailable()) {
-      return { tools };
-    }
     if (hardened) {
       return {
         tools: [

@@ -288,6 +288,11 @@ agents without grants keep the current raw browser behaviour.
   CONNECT behavior). Do not pass `--allow-private-network`.
 - **The proxy is set on the engine, never on agent-browser**: agent-browser ignores
   `--proxy` for `--cdp`/connect sessions (0.44.0).
+- **Attach is verified, not assumed**: `connectAgentBrowser` fails closed when
+  `connect <port>` fails or `get cdp-url` reports a different port, so agent-browser can
+  never silently fall back to its own unproxied browser. The CLI binary is resolved
+  through the host layout (`browserToolsRoot(home)`), the same root the Settings page
+  installs into, instead of `~/.harnesys/tools`.
 - Proxy env hygiene: the sidecar child env clears `http_proxy`, `https_proxy`,
   `all_proxy`, `NO_PROXY`, `no_proxy` so only the explicit flag applies.
 - DNS for proxied HTTPS is resolved by the proxy (CONNECT carries the hostname), so no

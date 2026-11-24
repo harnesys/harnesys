@@ -494,6 +494,7 @@ export {
   type AgentBrowserUpdateCheck,
   agentBrowserCliVersion,
   agentBrowserHelpCommands,
+  browserToolsRoot,
   checkAgentBrowserUpdate,
   installAgentBrowserTool,
   installedAgentBrowserVersions,

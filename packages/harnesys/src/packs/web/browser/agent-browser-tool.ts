@@ -25,6 +25,10 @@ export type AgentBrowserInstallPhase = NpmPackagePhase | 'done';
 
 const PLATFORM_PACKAGE_DIR = '.platform-package';
 
+export function browserToolsRoot(home: string): string {
+  return join(home, '.harnesys', 'tools');
+}
+
 export function agentBrowserDir(toolsRoot: string, version: string): string {
   return join(toolsRoot, 'agent-browser', version);
 }

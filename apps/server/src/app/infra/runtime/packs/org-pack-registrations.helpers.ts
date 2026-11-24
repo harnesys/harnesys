@@ -1,6 +1,8 @@
 import type { HostEngineEntry } from 'harnesys';
 import {
+  browserToolsRoot,
   knowledgeMemoryCapability,
+  managedAgentBrowserInstall,
   pinMemoryCapability,
   registerPack,
   semanticMemoryCapability,
@@ -132,6 +134,13 @@ export function webRegistration(ctx: WireOrgPackContext) {
             orgDefaultEngine: () => ctx.deps.orgSettings?.get(ctx.deps.orgId).browser.defaultEngine,
           }
         : {}),
+      agentBrowserBin: () => {
+        const home = ctx.deps.layout?.home();
+        if (home === undefined) {
+          return null;
+        }
+        return managedAgentBrowserInstall(browserToolsRoot(home))?.path ?? null;
+      },
       ...hardenedPorts,
     },
     resolveScope: ctx.stubScope,

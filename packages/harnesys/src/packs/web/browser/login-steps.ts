@@ -2,13 +2,9 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { BrowserCredential } from '@harnesys/contracts';
+import { cliSessionName, connectAgentBrowser, runAgentBrowser } from './browser-cli.ts';
 import { loginActionPolicyPath } from './browser-command-allowlist.ts';
-import {
-  type BrowserEngineRuntime,
-  cliSessionName,
-  connectAgentBrowser,
-  runAgentBrowser,
-} from './browser-tools.ts';
+import type { BrowserEngineRuntime } from './browser-tools.ts';
 import { credentialPluginCommand } from './credential-plugin-command.ts';
 import { CREDENTIAL_PLUGIN_FILE_FLAG } from './credential-plugin-flags.ts';
 import { BrowserLoginFailedError } from './login-errors.ts';
@@ -30,6 +26,7 @@ export async function runWithPolicy(
     cliSessionName(runtime.scopeKey),
     opts?.timeoutMs,
     opts?.env,
+    runtime.cliPath,
   );
 }
 
@@ -45,6 +42,7 @@ export async function ensureConnectedWithProxy(
 ): Promise<void> {
   await connectAgentBrowser(runtime.scopeKey, {
     binaryPath: runtime.binaryPath,
+    cliPath: runtime.cliPath,
     engineId: runtime.engineId,
     stealth: runtime.stealth,
     allowPrivateNetwork: runtime.allowPrivateNetwork,

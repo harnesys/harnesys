@@ -5,6 +5,7 @@ import {
   type AgentBrowserUpdateCheck,
   agentBrowserCliVersion,
   agentBrowserHelpCommands,
+  browserToolsRoot,
   checkAgentBrowserUpdate,
   detectOsArch,
   engineSpecOf,
@@ -51,7 +52,7 @@ export class LocalBrowserHostAdapter extends BrowserHostPort {
   }
 
   private toolsRoot(): string {
-    return join(this.layout.home(), '.harnesys', 'tools');
+    return browserToolsRoot(this.layout.home());
   }
 
   async status(_hostId: string): Promise<HostBrowserStatus> {
