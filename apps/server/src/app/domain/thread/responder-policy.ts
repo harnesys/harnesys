@@ -14,7 +14,9 @@ export interface ResponderInput {
   autoFallback?: boolean;
 }
 
-const MENTION_PATTERN = /@([\p{L}\p{N}._-]{1,64})/gu;
+const MENTION_PATTERN = /(?<![\p{L}\p{N}._-])@([\p{L}\p{N}._-]{1,64})/gu;
+const FENCE_PATTERN = /^\s*(```|~~~)/;
+const CODE_SPAN_PATTERN = /(`+[^`]*`+)/;
 
 export function mentionSlug(name: string): string {
   return name
@@ -39,15 +41,43 @@ function memberAliases(members: ResponderMember[]): Map<string, string> {
 export function mentionedNames(text: string): string[] {
   const names: string[] = [];
   const seen = new Set<string>();
-  for (const match of text.matchAll(MENTION_PATTERN)) {
-    const name = match[1]?.toLowerCase();
-    if (!name || seen.has(name)) {
+  let fenced = false;
+  for (const line of text.split('\n')) {
+    if (FENCE_PATTERN.test(line)) {
+      fenced = !fenced;
       continue;
     }
-    seen.add(name);
-    names.push(name);
+    if (!fenced) {
+      collectMentions(line, names, seen);
+    }
   }
   return names;
+}
+
+function collectMentions(line: string, names: string[], seen: Set<string>): void {
+  const parts = line.split(CODE_SPAN_PATTERN);
+  for (let index = 0; index < parts.length; index += 2) {
+    for (const match of (parts[index] ?? '').matchAll(MENTION_PATTERN)) {
+      const name = match[1]?.toLowerCase();
+      if (!name || seen.has(name)) {
+        continue;
+      }
+      seen.add(name);
+      names.push(name);
+    }
+  }
+}
+
+export function resolveMentionedAgentIds(text: string, members: ResponderMember[]): string[] {
+  const aliases = memberAliases(members);
+  const ids: string[] = [];
+  for (const name of mentionedNames(text)) {
+    const id = aliases.get(name);
+    if (id !== undefined && !ids.includes(id)) {
+      ids.push(id);
+    }
+  }
+  return ids;
 }
 
 export function resolveResponders(input: ResponderInput): string[] {

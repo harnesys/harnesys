@@ -1,3 +1,4 @@
+import type { MessageQuote } from '@harnesys/contracts';
 import { and, eq, sql } from 'drizzle-orm';
 import type { Attachment } from 'harnesys';
 import { ThreadValidationException } from '../../domain/thread/thread.error.ts';
@@ -16,6 +17,7 @@ export interface AppendPeopleMessageInput {
   attachments?: Attachment[] | null;
   origin?: string | null;
   clientEventId?: string | null;
+  quote?: MessageQuote | null;
   author?: ThreadAuthor | null;
 }
 
@@ -76,6 +78,7 @@ export function appendPeopleMessage(
       : {}),
     ...(input.origin ? { origin: input.origin } : {}),
     ...(input.clientEventId ? { clientEventId: input.clientEventId } : {}),
+    ...(input.quote ? { quote: input.quote } : {}),
     ...(input.author ? { author: input.author } : {}),
   };
   tx.insert(runEventsTable)

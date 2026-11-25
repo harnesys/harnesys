@@ -61,6 +61,7 @@ export class ThreadMessageQueueUseCase {
             ...(uploaded.length > 0 ? { attachments: uploaded } : {}),
             ...(request.body.origin ? { origin: request.body.origin } : {}),
             ...(request.body.clientEventId ? { clientEventId: request.body.clientEventId } : {}),
+            ...(request.body.quote ? { quote: request.body.quote } : {}),
           }),
         { behavior: 'immediate' },
       ),

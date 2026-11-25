@@ -59,6 +59,7 @@ import {
 import { RunNotFoundException } from '../../domain/thread/thread.error.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadEventsPort } from '../../domain/thread/thread-events.port.ts';
+import { ThreadParticipantRepositoryPort } from '../../domain/thread/thread-participant-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { WaitTickerGatePort } from '../../domain/thread/wait-ticker-gate.port.ts';
 import { browserLoginDepsOf, engineSnapshotDepsOf } from './browser-login-runtime.deps.ts';
@@ -84,6 +85,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     private readonly machineConfig: MachineConfigPort,
     private readonly threads: ThreadRepositoryPort,
     private readonly threadAgents: ThreadAgentRepositoryPort,
+    private readonly participants: ThreadParticipantRepositoryPort,
     private readonly agents: AgentRegistryPort,
     private readonly modes: ModePresetRegistryPort,
     private readonly sources: SourceRegistryPort,
@@ -159,6 +161,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       nodes: this.nodes,
       threads: this.threads,
       threadAgents: this.threadAgents,
+      participants: this.participants,
       agents: this.agents,
       hookRuns: this.hookRuns,
       modes: this.modes,
@@ -240,6 +243,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       text: input.text,
       effort: input.effort,
       ...(input.mode ? { mode: input.mode } : {}),
+      ...(input.quote ? { quote: input.quote } : {}),
       attachments: input.attachments,
       ...(input.skills?.length ? { skills: input.skills } : {}),
       clientEventId: input.clientEventId,

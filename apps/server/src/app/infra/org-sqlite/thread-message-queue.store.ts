@@ -1,4 +1,5 @@
-import { and, asc, desc, eq, isNull } from 'drizzle-orm';
+import type { MessageQuote } from '@harnesys/contracts';
+import { and, asc, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import type { Attachment } from 'harnesys';
 import type { OrgSqliteDb } from './org-sqlite-session.ts';
 import { runEventsTable, threadMessageQueueTable } from './schema/index.ts';
@@ -15,17 +16,20 @@ export interface QueuedThreadMessage {
   origin: string | null;
   clientEventId: string | null;
   mode: string | null;
+  quote: MessageQuote | null;
   queuedAt: string;
   deliveredAt: string | null;
 }
 
 export interface EnqueueThreadMessageInput {
   threadId: string;
+  threadSeq?: number | null;
   text: string;
   attachments?: Attachment[] | null;
   origin?: string | null;
   clientEventId?: string | null;
   mode?: string | null;
+  quote?: MessageQuote | null;
   author?: { provider: string; providerUserId: string; displayName: string } | null;
   targetAgentIds?: string[];
   threadScoped?: boolean;
@@ -90,11 +94,15 @@ function enqueueSingle(
     .values({
       itemId: crypto.randomUUID(),
       threadId: input.threadId,
+      ...(input.threadSeq !== undefined && input.threadSeq !== null
+        ? { threadSeq: input.threadSeq }
+        : {}),
       text: input.text,
       ...(input.attachments ? { attachments: JSON.stringify(input.attachments) } : {}),
       ...(input.origin ? { origin: input.origin } : {}),
       ...(input.clientEventId ? { clientEventId: input.clientEventId } : {}),
       ...(input.mode ? { mode: input.mode } : {}),
+      ...(input.quote ? { quote: JSON.stringify(input.quote) } : {}),
       ...(input.targetRunId ? { targetRunId: input.targetRunId } : {}),
       ...(input.targetAgentIds?.[0] ? { targetAgentId: input.targetAgentIds[0] } : {}),
       queuedAt: new Date().toISOString(),
@@ -123,6 +131,7 @@ export function enqueueThreadMessage(
     attachments: input.attachments ?? null,
     origin: input.origin ?? null,
     clientEventId: input.clientEventId ?? null,
+    quote: input.quote ?? null,
     author: input.author ?? null,
   });
   if (people.duplicate) {
@@ -225,9 +234,10 @@ export function latestDeliveredThreadMessage(
       and(
         eq(threadMessageQueueTable.threadId, threadId),
         eq(threadMessageQueueTable.targetAgentId, targetAgentId),
+        isNotNull(threadMessageQueueTable.deliveredAt),
       ),
     )
-    .orderBy(desc(threadMessageQueueTable.threadSeq))
+    .orderBy(desc(threadMessageQueueTable.deliveredAt), desc(threadMessageQueueTable.queuedAt))
     .limit(1)
     .get();
   return row ? mapRow(row) : null;
@@ -282,9 +292,32 @@ function mapRow(row: QueueJoinRow): QueuedThreadMessage {
       row.queue.clientEventId ??
       (typeof meta.clientEventId === 'string' ? meta.clientEventId : null),
     mode: row.queue.mode ?? (typeof meta.mode === 'string' ? meta.mode : null),
+    quote: parseQuote(row.queue.quote) ?? parseQuote(meta.quote),
     queuedAt: row.queue.queuedAt,
     deliveredAt: row.queue.deliveredAt ?? null,
   };
+}
+
+function parseQuote(raw: string | unknown | null): MessageQuote | null {
+  let value: unknown = raw;
+  if (typeof raw === 'string') {
+    try {
+      value = JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  const threadSeq = record.threadSeq;
+  const author = record.author;
+  const text = record.text;
+  if (typeof threadSeq !== 'number' || typeof author !== 'string' || typeof text !== 'string') {
+    return null;
+  }
+  return { threadSeq, author, text };
 }
 
 function parseMetadata(raw: string | null): Record<string, unknown> {

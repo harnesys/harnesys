@@ -1,5 +1,5 @@
 import { Injectable } from '@harnesys/brix';
-import type { AcceptedRunResponse } from '@harnesys/contracts';
+import type { AcceptedRunResponse, MessageQuote } from '@harnesys/contracts';
 import type { Attachment, SessionEvent } from 'harnesys';
 import { OrgAudit } from '../../domain/fleet/org-audit.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
@@ -30,6 +30,7 @@ export interface SendThreadMessageRequest {
   origin?: string;
   clientEventId?: string;
   mode?: string;
+  quote?: MessageQuote;
   author?: ThreadAuthor;
   targetAgentIds: string[];
   attribution: RunStartAttribution;
@@ -105,6 +106,7 @@ function enqueueUserMessage(
     ...(request.origin ? { origin: request.origin } : {}),
     ...(request.clientEventId ? { clientEventId: request.clientEventId } : {}),
     ...(request.mode ? { mode: request.mode } : {}),
+    ...(request.quote ? { quote: request.quote } : {}),
     ...(request.author ? { author: request.author } : {}),
     targetAgentIds: request.targetAgentIds,
     threadScoped: true,

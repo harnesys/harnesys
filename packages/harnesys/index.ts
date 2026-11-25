@@ -337,6 +337,7 @@ export type {
   McpToolInfo,
   McpTransport,
 } from './src/domain/mcp.ts';
+export { quoteBlockText } from './src/domain/message-quote.ts';
 export {
   admitQuota,
   bucketWindowStartMs,

@@ -46,6 +46,7 @@ export async function storeUnaddressedMessage(
     ...(request.body.origin ? { origin: request.body.origin } : {}),
     ...(request.body.clientEventId ? { clientEventId: request.body.clientEventId } : {}),
     ...(request.body.mode ? { mode: request.body.mode } : {}),
+    ...(request.body.quote ? { quote: request.body.quote } : {}),
     ...(author ? { author } : {}),
   });
 }

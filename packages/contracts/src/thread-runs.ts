@@ -36,9 +36,20 @@ export const ThreadLastErrorSchema = z.object({
 });
 export type ThreadLastError = z.infer<typeof ThreadLastErrorSchema>;
 
+export const MESSAGE_QUOTE_TEXT_MAX = 2000;
+export const MESSAGE_QUOTE_AUTHOR_MAX = 120;
+
+export const MessageQuoteSchema = z.object({
+  threadSeq: z.number().int().positive(),
+  author: z.string().trim().min(1).max(MESSAGE_QUOTE_AUTHOR_MAX),
+  text: z.string().trim().min(1).max(MESSAGE_QUOTE_TEXT_MAX),
+});
+export type MessageQuote = z.infer<typeof MessageQuoteSchema>;
+
 export const SendThreadRunBodySchema = z
   .object({
     text: z.string().optional(),
+    quote: MessageQuoteSchema.optional(),
     effort: z.string().optional(),
     mode: z.string().optional(),
     skills: z

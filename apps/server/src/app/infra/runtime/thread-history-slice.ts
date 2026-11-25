@@ -1,6 +1,12 @@
 import type { SessionEvent } from 'harnesys';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
 import { historyLastOf, historyModeOf } from '../../domain/thread/thread-policy.ts';
+import {
+  beforeSeqAnchor,
+  droppedByAnchor,
+  segmentIndexFromSeq,
+  withRunScopedSeqAnchor,
+} from './thread-history-seq.ts';
 
 export type ThreadSliceMode = 'full' | 'last' | 'none';
 
@@ -8,6 +14,7 @@ export interface ThreadSliceOpts {
   mode: ThreadSliceMode;
   historyLast?: number;
   historyFromRunId?: string;
+  historyFromSeq?: number;
   activeRunId?: string;
   beforeThreadSeq?: number;
 }
@@ -48,6 +55,9 @@ export function threadSliceOptsOf(
     mode,
     historyLast: historyLastOf(thread.policy),
     ...(thread.policy.historyFromRunId ? { historyFromRunId: thread.policy.historyFromRunId } : {}),
+    ...(thread.policy.historyFromSeq !== undefined
+      ? { historyFromSeq: thread.policy.historyFromSeq }
+      : {}),
     ...(activeRunId ? { activeRunId } : {}),
     ...(thread.kind === 'group' ? { beforeThreadSeq: thread.lastThreadSeq + 1 } : {}),
   };
@@ -60,7 +70,8 @@ export function sliceThreadHistory(events: SessionEvent[], opts: ThreadSliceOpts
   }
   const { excludedRuns, markerEventIndex, markerSegmentIndex } = sliceExclusions(events, segments);
   const anchor = newestAnchor(events);
-  const kept = new Set<number>(baseSegments(events, segments, opts));
+  const sliceOpts = withRunScopedSeqAnchor(events, opts);
+  const kept = new Set<number>(baseSegments(events, segments, sliceOpts));
   for (const index of segmentIndexesOfRun(segments, opts.activeRunId ?? null)) {
     kept.add(index);
   }
@@ -69,11 +80,11 @@ export function sliceThreadHistory(events: SessionEvent[], opts: ThreadSliceOpts
   if (anchor.index >= 0) {
     forced.add(anchor.index);
   }
-  const indexes = segmentEventIndexes(events, segments, kept, anchor, opts);
+  const indexes = segmentEventIndexes(events, segments, kept, anchor, sliceOpts);
   for (const index of forced) {
     indexes.add(index);
   }
-  return eventsAtIndexes(events, indexes, opts.beforeThreadSeq);
+  return eventsAtIndexes(events, indexes, sliceOpts);
 }
 
 interface SliceAnchor {
@@ -106,34 +117,22 @@ function segmentEventIndexes(
   return indexes;
 }
 
-function droppedByAnchor(
-  anchor: SliceAnchor,
-  event: SessionEvent | undefined,
-  index: number,
-): boolean {
-  if (anchor.index < 0 || !event) {
-    return false;
-  }
-  if (anchor.cursor === undefined) {
-    return index < anchor.index;
-  }
-  if (anchor.cursor === null || typeof event.threadSeq !== 'number') {
-    return false;
-  }
-  return event.threadSeq <= anchor.cursor;
-}
-
 function eventsAtIndexes(
   events: SessionEvent[],
   indexes: Set<number>,
-  beforeThreadSeq: number | undefined,
+  opts: ThreadSliceOpts,
 ): SessionEvent[] {
   const out: SessionEvent[] = [];
   for (const index of [...indexes].sort((a, b) => a - b)) {
     const event = events[index];
-    if (event && eventInWindow(event, beforeThreadSeq)) {
-      out.push(event);
+    if (
+      !event ||
+      !eventInWindow(event, opts.beforeThreadSeq) ||
+      beforeSeqAnchor(event, opts.historyFromSeq)
+    ) {
+      continue;
     }
+    out.push(event);
   }
   return out;
 }
@@ -145,6 +144,16 @@ function baseSegments(
 ): number[] {
   const universe = windowSegmentIndexes(events, segments, opts.beforeThreadSeq);
   const visible = new Set(universe);
+  const seqFrom =
+    opts.historyFromSeq !== undefined
+      ? segmentIndexFromSeq(events, segments, opts.historyFromSeq)
+      : undefined;
+  if (seqFrom !== undefined) {
+    const fromSeq = universe.filter((index) => index >= seqFrom);
+    if (fromSeq.length > 0) {
+      return fromSeq;
+    }
+  }
   const hinted = opts.historyFromRunId
     ? segmentIndexesOfRun(segments, opts.historyFromRunId).filter((index) => visible.has(index))
     : [];

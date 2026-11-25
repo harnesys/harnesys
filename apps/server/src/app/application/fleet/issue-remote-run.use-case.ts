@@ -2,12 +2,13 @@ import { randomUUID } from 'node:crypto';
 import { Injectable } from '@harnesys/brix';
 import {
   DEFAULT_MODE_ID,
+  type MessageQuote,
   type RunAcceptedResponse,
   type RunEnvironment,
   type TaskEnvelope,
   type TaskEnvelopeAttachment,
 } from '@harnesys/contracts';
-import type { Attachment, RunAttribution } from 'harnesys';
+import { type Attachment, quoteBlockText, type RunAttribution } from 'harnesys';
 import type { AgentRecord } from '../../domain/agent/agent.ts';
 import { EventClaimPort } from '../../domain/fleet/event-claim.port.ts';
 import { FleetEventsPort } from '../../domain/fleet/fleet-events.port.ts';
@@ -47,6 +48,7 @@ export interface IssueRemoteRunInput {
   attribution: RunAttribution;
   placement?: PlacementResult;
   text?: string;
+  quote?: MessageQuote;
   effort?: string;
   mode?: string;
   attachments?: Attachment[];
@@ -278,6 +280,7 @@ function remoteUserEvents(
       ...(input.origin ? { origin: input.origin } : {}),
       ...(input.correlationId ? { correlationId: input.correlationId } : {}),
       ...(input.effort ? { effort: input.effort } : {}),
+      ...(input.quote ? { quote: input.quote } : {}),
       ...(attachmentMetas.length > 0
         ? {
             attachments: attachmentMetas.map((item) => ({
@@ -313,7 +316,9 @@ function buildRemoteEnvelope(args: {
     varNames: [],
     leaseEpoch: args.leaseEpoch,
     expiresAt: args.expiresAt,
-    inputText: input.text ?? '',
+    inputText: input.quote
+      ? `${quoteBlockText(input.quote)}${input.text ?? ''}`
+      : (input.text ?? ''),
     relayLastSeq: args.relayLastSeq,
     configRevision: args.configRevision,
     attachments: args.attachmentMetas,

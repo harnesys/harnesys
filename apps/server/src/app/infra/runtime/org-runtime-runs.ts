@@ -1,4 +1,4 @@
-import type { RunAcceptedResponse, RunEnvironment } from '@harnesys/contracts';
+import type { MessageQuote, RunAcceptedResponse, RunEnvironment } from '@harnesys/contracts';
 import type {
   Attachment,
   PendingSessionEvent,
@@ -19,6 +19,7 @@ export interface SendThreadMessageInput {
   effort?: string;
   mode?: string;
   attachments?: Attachment[];
+  quote?: MessageQuote;
   skills?: string[];
   clientEventId?: string;
   origin?: string;
@@ -54,6 +55,7 @@ export async function sendThreadMessage(
       effort: input.effort,
       ...(input.environment ? { environmentJson: JSON.stringify(input.environment) } : {}),
       ...(input.attachments?.length ? { attachments: input.attachments } : {}),
+      ...(input.quote ? { quote: input.quote } : {}),
       ...(input.origin ? { origin: input.origin } : {}),
       ...(input.attribution ? { attribution: input.attribution } : {}),
     },

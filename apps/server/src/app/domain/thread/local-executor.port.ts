@@ -1,5 +1,6 @@
 import type {
   CancelRunResponse,
+  MessageQuote,
   RetryRunResponse,
   RunAcceptedResponse,
   RunEnvironment,
@@ -29,6 +30,7 @@ export interface SendLocalRunInput {
   mode?: string;
   attachments?: Attachment[];
   skills?: string[];
+  quote?: MessageQuote;
   clientEventId?: string;
   origin?: string;
   correlationId?: string;

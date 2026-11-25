@@ -115,6 +115,7 @@ async function deliverQueuedThreadMessage(
       ...(item.origin ? { origin: item.origin } : {}),
       ...(item.clientEventId ? { clientEventId: item.clientEventId } : {}),
       ...(item.mode ? { mode: item.mode } : {}),
+      ...(item.quote ? { quote: item.quote } : {}),
       ...(item.threadSeq !== null ? { triggerThreadSeq: item.threadSeq } : {}),
     });
     return accepted.runId;
@@ -162,6 +163,7 @@ function steerMessageOf(item: QueuedThreadMessage): SteerMessage {
     itemId: item.itemId,
     text: item.text,
     ...(item.attachments && item.attachments.length > 0 ? { attachments: item.attachments } : {}),
+    ...(item.quote ? { quote: item.quote } : {}),
     ...(item.origin ? { origin: item.origin } : {}),
     ...(item.clientEventId ? { clientEventId: item.clientEventId } : {}),
   };

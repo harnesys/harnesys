@@ -1,3 +1,4 @@
+import type { MessageQuote } from '@harnesys/contracts';
 import Ajv from 'ajv';
 import type { AgentDefinition } from '../domain/agent-definition.ts';
 import type { Attachment, AttachmentKind, SendFile } from '../domain/attachment.ts';
@@ -63,6 +64,7 @@ function normalizeSendInput(input: SendInput): {
   attachments?: Attachment[];
   origin?: string;
   effort?: string;
+  quote?: MessageQuote;
 } {
   if (typeof input === 'string') {
     return { text: input };
@@ -102,6 +104,7 @@ function normalizeSendInput(input: SendInput): {
     attachments: attachments.length > 0 ? attachments : undefined,
     origin: input.origin,
     effort: effort || undefined,
+    quote: input.quote,
   };
 }
 function sendInputAttribution(input: SendInput): RunAttribution | undefined {
@@ -177,6 +180,7 @@ export function createSession(
         attachments: normalized.attachments,
         origin: normalized.origin,
         effort: normalized.effort,
+        quote: normalized.quote,
         clientEventId: sendOpts?.clientEventId,
         correlationId: sendOpts?.correlationId,
       } as PendingSessionEvent;

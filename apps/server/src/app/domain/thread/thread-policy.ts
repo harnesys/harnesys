@@ -14,6 +14,12 @@ export const EMPTY_THREAD_POLICY: ThreadPolicy = { version: 2 };
 
 export const DEFAULT_HISTORY_LAST = 10;
 
+/** How much of a group thread's conversation the seeded run context carries. */
+export interface GroupHistoryCoverage {
+  visible: number;
+  complete: boolean;
+}
+
 export const MAX_CONTEXT_FILES = 20;
 
 /**

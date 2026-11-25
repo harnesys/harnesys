@@ -8,6 +8,7 @@ import { joinedRows, rowsToEvents } from '../runtime/run-events-append.ts';
 const WAITING_SCAN_LIMIT = 50;
 const WAITING_EVENT_TYPES = ['placement.decided', 'wait.started'];
 const PAGE_BOUNDARY_MAX = 20;
+const LOOSE_PAGE_MAX = 200;
 
 export interface ThreadEventRow {
   event: typeof runEventsTable.$inferSelect;
@@ -139,11 +140,14 @@ export function subtreeRunIdsOf(db: OrgSqliteDb, rootIds: readonly string[]): st
   return rows.map((row) => row.run_id);
 }
 
-export function boundaryUserSeqsOf(db: OrgSqliteDb, threadId: string, pageStart: number): number[] {
+export function boundaryLooseSeqsOf(
+  db: OrgSqliteDb,
+  threadId: string,
+  pageStart: number,
+): number[] {
   const rows = db
     .select({
       threadSeq: runEventsTable.threadSeq,
-      type: runEventsTable.type,
       runId: runEventsTable.runId,
     })
     .from(runEventsTable)
@@ -151,17 +155,92 @@ export function boundaryUserSeqsOf(db: OrgSqliteDb, threadId: string, pageStart:
     .orderBy(desc(runEventsTable.threadSeq))
     .limit(PAGE_BOUNDARY_MAX)
     .all();
-  const userSeqs: number[] = [];
+  const seqs: number[] = [];
   for (const row of rows) {
     if (row.runId !== null) {
       break;
     }
-    userSeqs.push(row.threadSeq);
-    if (row.type === 'user') {
-      break;
-    }
+    seqs.push(row.threadSeq);
   }
-  return userSeqs;
+  return seqs;
+}
+
+export function looseSeqsInRangeOf(
+  db: OrgSqliteDb,
+  threadId: string,
+  fromThreadSeq: number,
+  toThreadSeq: number,
+): number[] {
+  const rows = db
+    .select({ threadSeq: runEventsTable.threadSeq })
+    .from(runEventsTable)
+    .where(
+      and(
+        eq(runEventsTable.threadId, threadId),
+        sql`${runEventsTable.runId} IS NULL`,
+        sql`${runEventsTable.threadSeq} >= ${fromThreadSeq}`,
+        sql`${runEventsTable.threadSeq} <= ${toThreadSeq}`,
+      ),
+    )
+    .orderBy(runEventsTable.threadSeq)
+    .all();
+  return rows.map((row) => row.threadSeq);
+}
+
+export function looseSeqsAfterOf(
+  db: OrgSqliteDb,
+  threadId: string,
+  afterThreadSeq: number,
+): number[] {
+  const rows = db
+    .select({ threadSeq: runEventsTable.threadSeq })
+    .from(runEventsTable)
+    .where(
+      and(
+        eq(runEventsTable.threadId, threadId),
+        sql`${runEventsTable.runId} IS NULL`,
+        sql`${runEventsTable.threadSeq} > ${afterThreadSeq}`,
+      ),
+    )
+    .orderBy(runEventsTable.threadSeq)
+    .all();
+  return rows.map((row) => row.threadSeq);
+}
+
+export function loosePageOf(
+  db: OrgSqliteDb,
+  threadId: string,
+  beforeThreadSeq?: number | null,
+): { seqs: number[]; hasMore: boolean } {
+  const rows = db
+    .select({ threadSeq: runEventsTable.threadSeq })
+    .from(runEventsTable)
+    .where(
+      and(
+        eq(runEventsTable.threadId, threadId),
+        sql`${runEventsTable.runId} IS NULL`,
+        beforeThreadSeq != null ? sql`${runEventsTable.threadSeq} < ${beforeThreadSeq}` : undefined,
+      ),
+    )
+    .orderBy(desc(runEventsTable.threadSeq))
+    .limit(LOOSE_PAGE_MAX + 1)
+    .all();
+  const seqs = rows.slice(0, LOOSE_PAGE_MAX).map((row) => row.threadSeq);
+  const truncated = rows.length > LOOSE_PAGE_MAX;
+  const minSeq = seqs.length > 0 ? (seqs[seqs.length - 1] as number) : 0;
+  const hasMore = truncated || (seqs.length > 0 && hasEventsBeforeOf(db, threadId, minSeq));
+  return { seqs, hasMore };
+}
+
+export function hasEventsBeforeOf(db: OrgSqliteDb, threadId: string, threadSeq: number): boolean {
+  const row = db
+    .select({ threadSeq: runEventsTable.threadSeq })
+    .from(runEventsTable)
+    .where(and(eq(runEventsTable.threadId, threadId), lt(runEventsTable.threadSeq, threadSeq)))
+    .orderBy(desc(runEventsTable.threadSeq))
+    .limit(1)
+    .all();
+  return row.length > 0;
 }
 
 export function pageRowsOf(

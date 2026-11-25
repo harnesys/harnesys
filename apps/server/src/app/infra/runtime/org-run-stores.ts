@@ -12,6 +12,7 @@ import { resolveProviderApiKey } from '../../domain/secret/provider-api-key.ts';
 import { decisionModelIdOf, embedModelIdOf } from '../memory/org-memory-settings.store.ts';
 import type { OrgSqliteDb, OrgSqliteSession } from '../org-sqlite/org-sqlite-session.ts';
 import { createApprovalReconcile } from './approval-reconcile.ts';
+import { handleAgentMentions } from './group-mentions.ts';
 import { observeRunTerminal } from './observe-run-terminal.ts';
 import type { OrgRuntimeDeps } from './org-runtime.types.ts';
 import { OrgEpisodicPort } from './packs/org-episodic.port.ts';
@@ -97,6 +98,35 @@ export function createOrgRunStores(
         );
       }
       if (events.some((event) => event.type === 'run.completed')) {
+        queueMicrotask(() => {
+          try {
+            const queued = handleAgentMentions(
+              {
+                orgId: deps.orgId,
+                db: session.db,
+                threads: deps.threads,
+                threadAgents: deps.threadAgents,
+                agents: deps.agents,
+              },
+              { runId, threadId },
+              events,
+            );
+            if (queued) {
+              deps.logger
+                ?.child('agent-mentions')
+                .info({ threadId, runId }, 'agent mention queued a follow-up run');
+            }
+          } catch (error) {
+            deps.logger?.child('agent-mentions').warn(
+              {
+                threadId,
+                runId,
+                reason: error instanceof Error ? error.message : String(error),
+              },
+              'agent mention handling failed',
+            );
+          }
+        });
         consolidate ??= buildConsolidationUseCase(deps, session, modelsPort, runEvents);
         enqueueConsolidation(consolidationQueues, threadId, () => {
           const run = consolidate?.execute(deps.orgId, threadId, runId) ?? Promise.resolve();

@@ -5,11 +5,20 @@ import { HostFsLayoutPort } from '../machine/host-fs-layout.port.ts';
 import { SourceLocationPort } from '../source/source-location.port.ts';
 import { SourceRegistryPort } from '../source/source-registry.port.ts';
 import { materializePrimary } from './run-environment.ts';
+import type { GroupHistoryCoverage } from './thread-policy.ts';
 import type { ActiveWorktreeRef, PrimaryKind, SharedSourceRef } from './thread-runtime-context.ts';
+
+export interface GroupChannelMember {
+  name: string;
+  handle: string;
+  isSelf: boolean;
+}
 
 export interface PrepareTargetOptions {
   environment?: RunEnvironment;
   mode?: string;
+  groupHistory?: GroupHistoryCoverage;
+  groupMembers?: GroupChannelMember[];
 }
 
 export interface RuntimePrimary {

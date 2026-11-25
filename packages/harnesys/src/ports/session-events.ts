@@ -1,13 +1,12 @@
+import type { MessageQuote } from '@harnesys/contracts';
 import type { Attachment } from '../domain/attachment.ts';
 import type { JsonSchema } from '../domain/json-schema.ts';
 import type { AskBudget, ToolAskSubject } from '../domain/tool-subject.ts';
 import type { RequestPlan } from './llm-plan.ts';
 import type { ModelUsage } from './model-usage.ts';
-
-export type { ModelUsage } from './model-usage.ts';
-
 import type { SessionEventScope } from './session-event-types.ts';
 
+export type { ModelUsage } from './model-usage.ts';
 export type { SessionEventScope, SessionEventType } from './session-event-types.ts';
 
 export type SessionEvent = SessionEventScope &
@@ -18,6 +17,7 @@ export type SessionEvent = SessionEventScope &
         attachments?: Attachment[];
         origin?: string;
         effort?: string;
+        quote?: MessageQuote;
         clientEventId?: string;
         correlationId?: string;
         seq?: number;

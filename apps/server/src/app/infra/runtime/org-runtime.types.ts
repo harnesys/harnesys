@@ -58,6 +58,7 @@ import type {
 } from '../../domain/thread/local-executor.port.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadEventsPort } from '../../domain/thread/thread-events.port.ts';
+import { ThreadParticipantRepositoryPort } from '../../domain/thread/thread-participant-repository.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { WaitTickerGatePort } from '../../domain/thread/wait-ticker-gate.port.ts';
 import type { OrgIssueDeps } from './packs/org-issue.port.ts';
@@ -116,6 +117,7 @@ export interface OrgRuntimeDeps {
   nodes?: NodeRepository;
   threads: ThreadRepositoryPort;
   threadAgents: ThreadAgentRepositoryPort;
+  participants: ThreadParticipantRepositoryPort;
   agents: AgentRegistryPort;
   hookRuns?: HookRunStorePort;
   modes: ModePresetRegistryPort;

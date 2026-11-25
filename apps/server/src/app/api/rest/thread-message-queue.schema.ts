@@ -1,3 +1,4 @@
+import { MessageQuoteSchema } from '@harnesys/contracts';
 import { z } from 'zod';
 
 export const ThreadQueueAttachmentSchema = z.object({
@@ -14,5 +15,6 @@ export const ThreadQueueEnqueueBodySchema = z.object({
   attachments: z.array(ThreadQueueAttachmentSchema).optional(),
   origin: z.string().min(1).optional(),
   clientEventId: z.string().min(1).optional(),
+  quote: MessageQuoteSchema.optional(),
 });
 export type ThreadQueueEnqueueBody = z.infer<typeof ThreadQueueEnqueueBodySchema>;

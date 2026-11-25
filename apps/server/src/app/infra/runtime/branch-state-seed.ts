@@ -1,13 +1,29 @@
-import type { MessageSource, RunEventStore, RunLifecycleStore, RuntimeState } from 'harnesys';
+import type {
+  MessageSource,
+  RunEventStore,
+  RunLifecycleStore,
+  RuntimeState,
+  SessionEvent,
+} from 'harnesys';
 import { InMemoryRuntimeState, rebuildThreadMessages, stampMessageSource } from 'harnesys';
 import { collectInheritedEvents, seedMessagesFromEvents } from '../../domain/thread/fork-logs.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
+import type { GroupHistoryCoverage } from '../../domain/thread/thread-policy.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
-import { latestDeliveredThreadMessage } from '../org-sqlite/thread-message-queue.store.ts';
+import {
+  latestDeliveredThreadMessage,
+  type QueuedThreadMessage,
+} from '../org-sqlite/thread-message-queue.store.ts';
 import { sliceThreadHistory, threadSliceOptsOf } from './thread-history-slice.ts';
 import { threadSessionKey } from './thread-session-key.ts';
 import type { ThreadSessionRef } from './wait-ticker.ts';
+
+const groupHistory = new WeakMap<RuntimeState, GroupHistoryCoverage>();
+
+export function groupHistoryCoverageOf(state: RuntimeState): GroupHistoryCoverage | undefined {
+  return groupHistory.get(state);
+}
 
 export interface BranchSeedDeps {
   orgId: string;
@@ -103,6 +119,7 @@ export function createBranchSeed(deps: BranchSeedDeps) {
     const events = await deps.events.listByThread(thread.id);
     const opts = { ...threadSliceOptsOf(thread, activeRunId), beforeThreadSeq: before };
     const sliced = sliceThreadHistory(events, opts);
+    recordGroupHistory(state, events, sliced, { before, hasTrigger: trigger !== null });
     const coords: MessageSource[] = [];
     const messages = rebuildThreadMessages(sliced, {
       activeRunId,
@@ -110,14 +127,7 @@ export function createBranchSeed(deps: BranchSeedDeps) {
       messageSrcCoords: coords,
     });
     stampSeedMessages(messages, coords);
-    const initialInput = trigger
-      ? {
-          text: trigger.text,
-          ...(trigger.attachments && trigger.attachments.length > 0
-            ? { attachments: trigger.attachments }
-            : {}),
-        }
-      : null;
+    const initialInput = trigger ? triggerInputOf(trigger) : null;
     if (messages.length === 0 && initialInput === null) {
       return;
     }
@@ -191,4 +201,44 @@ export function createBranchSeed(deps: BranchSeedDeps) {
       { kind: 'recorded', sequence: 0 },
     );
   }
+}
+
+interface GroupHistorySeed {
+  before: number;
+  hasTrigger: boolean;
+}
+
+function triggerInputOf(trigger: QueuedThreadMessage) {
+  return {
+    text: trigger.text,
+    ...(trigger.attachments && trigger.attachments.length > 0
+      ? { attachments: trigger.attachments }
+      : {}),
+    ...(trigger.quote ? { quote: trigger.quote } : {}),
+  };
+}
+
+function recordGroupHistory(
+  state: RuntimeState,
+  events: readonly SessionEvent[],
+  sliced: readonly SessionEvent[],
+  seed: GroupHistorySeed,
+): void {
+  const visible = conversationalCount(sliced) + (seed.hasTrigger ? 1 : 0);
+  const complete = conversationalCount(sliced) === conversationalCount(events, seed.before);
+  groupHistory.set(state, { visible, complete });
+}
+
+function conversationalCount(events: readonly SessionEvent[], untilSeq?: number): number {
+  let count = 0;
+  for (const event of events) {
+    if (event.conversational !== true) {
+      continue;
+    }
+    if (untilSeq !== undefined && !(event.threadSeq !== undefined && event.threadSeq < untilSeq)) {
+      continue;
+    }
+    count += 1;
+  }
+  return count;
 }

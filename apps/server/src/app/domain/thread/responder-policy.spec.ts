@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { resolveResponders } from './responder-policy.ts';
+import { resolveMentionedAgentIds, resolveResponders } from './responder-policy.ts';
 
 const members = [
   { id: 'a1', name: 'Atlas' },
@@ -73,5 +73,30 @@ describe('resolveResponders', () => {
         autoFallback: false,
       }),
     ).toEqual(['a1']);
+  });
+
+  it('ignores mentions inside fenced and inline code', () => {
+    const text = [
+      'Look at this:',
+      '```ts',
+      'const ping = "@Beacon";',
+      '```',
+      '`@Atlas` is an example, not a ping.',
+      'Real ping: @Beacon',
+    ].join('\n');
+    expect(resolveResponders({ text, members })).toEqual(['a2']);
+  });
+});
+
+describe('resolveMentionedAgentIds', () => {
+  it('returns member ids in mention order without duplicates', () => {
+    expect(resolveMentionedAgentIds('@Beacon then @Atlas and @beacon', members)).toEqual([
+      'a2',
+      'a1',
+    ]);
+  });
+
+  it('returns nothing for unknown or code-only mentions', () => {
+    expect(resolveMentionedAgentIds('`@Atlas` @Nobody', members)).toEqual([]);
   });
 });

@@ -295,6 +295,8 @@ export {
   AcceptedRunResponseSchema,
   type CancelRunResponse,
   CancelRunResponseSchema,
+  type MessageQuote,
+  MessageQuoteSchema,
   type RejectRunBody,
   RejectRunBodySchema,
   type RespondRunBody,

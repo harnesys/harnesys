@@ -16,7 +16,9 @@ import {
   type ToolDefinition,
 } from 'harnesys';
 import { DEFAULT_WORKSPACE_IMAGE, type RunIsolation } from '../../domain/fleet/placement.ts';
+import { groupHistoryCoverageOf } from './branch-state-seed.ts';
 import { composeRunSkills } from './compose-run-skills.ts';
+import { groupMembersOf } from './group-members.ts';
 import { runInHostToolScope } from './host-tool-scope.ts';
 import type { OrgPluginWiring } from './org-plugin-wiring.ts';
 import type { OrgRuntimeDeps } from './org-runtime.types.ts';
@@ -66,12 +68,13 @@ export function createRunTargetResolver(ctx: RunTargetResolverContext) {
       return null;
     }
     const environment = await environmentOf(ctx, selector);
+    const groupMembers = groupMembersOf(deps, threadId, agentId);
     const prepared = prepareTarget(
       deps,
       threadId,
       agentId,
       ctx.targetCache,
-      runtimeOptionsOf(environment, modeOverride),
+      runtimeOptionsOf(environment, modeOverride, groupHistoryCoverageOf(state), groupMembers),
     );
     if (!prepared) {
       return null;
@@ -139,6 +142,7 @@ export function createRunTargetResolver(ctx: RunTargetResolverContext) {
       runControl: ctx.runControl,
       ...(process ? { process } : {}),
       ...(prepared.channelNote ? { channelNote: prepared.channelNote } : {}),
+      ...(prepared.channelFacts ? { channelFacts: prepared.channelFacts } : {}),
       ...(prepared.contextNote ? { contextNote: prepared.contextNote } : {}),
       contextEntries: prepared.contextEntries,
     };

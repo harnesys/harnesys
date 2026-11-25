@@ -22,6 +22,7 @@ export interface ThreadPolicy {
   historyMode?: ThreadHistoryMode;
   historyLast?: number;
   historyFromRunId?: string;
+  historyFromSeq?: number;
   mentionGating?: boolean;
   responderMode?: 'auto' | 'mention';
   contextFiles?: ThreadContextFile[];

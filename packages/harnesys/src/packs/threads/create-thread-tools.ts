@@ -55,7 +55,7 @@ export function createThreadTools(deps: CreateThreadToolsParams): ToolDefinition
     tool('threads_history', {
       group: 'thread',
       description:
-        'Read older conversational messages of a thread before the current window. Defaults to this thread; pass threadId to read another thread in this project. People messages and final answers are returned in thread order; pass beforeSeq to page further back. Use threads_search to find a specific phrase.',
+        'Read older conversational messages of a thread before the current window. Defaults to this thread; pass threadId to read another thread in this project. People messages and final answers are returned in thread order; pass beforeSeq to page further back. If the channel note says the whole conversation is already in your context, there is nothing older to read. Use threads_search to find a specific phrase.',
       operations: ['read'],
       sideEffect: 'read',
       input: {

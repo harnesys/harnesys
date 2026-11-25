@@ -190,6 +190,16 @@ export function migrateThreadMessageQueueTargetRunColumn(
   }
 }
 
+export function migrateThreadMessageQueueQuoteColumn(
+  exec: (sql: string) => void,
+  all: (sql: string) => ColumnInfo[],
+): void {
+  const present = new Set(all('PRAGMA table_info(thread_message_queue)').map((col) => col.name));
+  if (present.size > 0 && !present.has('quote')) {
+    exec(`ALTER TABLE thread_message_queue ADD COLUMN quote TEXT`);
+  }
+}
+
 function policyWithoutContextWindow(rawPolicy: string): string | null {
   const parsed = parsePolicyObject(rawPolicy);
   if (!parsed || typeof parsed.contextWindow !== 'number') {

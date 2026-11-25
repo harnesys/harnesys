@@ -1,3 +1,5 @@
+import type { MessageQuote } from '@harnesys/contracts';
+import { quoteBlockText } from '../domain/message-quote.ts';
 import type { Event } from '../domain/snapshot.ts';
 
 export interface SteerMessage {
@@ -5,6 +7,7 @@ export interface SteerMessage {
   text: string;
   attachments?: unknown;
   origin?: string;
+  quote?: MessageQuote;
   clientEventId?: string;
 }
 
@@ -42,11 +45,12 @@ export async function* applySteerMessages(args: SteerApplyArgs): AsyncGenerator<
   }
   for (const msg of incoming) {
     const attachments = Array.isArray(msg.attachments) ? msg.attachments : undefined;
-    arr.push(userMessageOf(msg.text, attachments, msg.origin));
+    arr.push(userMessageOf(msg.text, attachments, msg.origin, msg.quote));
     yield await args.commit('running', 'user.message', 'recorded', {
       text: msg.text,
       ...(attachments ? { attachments } : {}),
       ...(msg.origin ? { origin: msg.origin } : {}),
+      ...(msg.quote ? { quote: msg.quote } : {}),
       ...(msg.clientEventId ? { clientEventId: msg.clientEventId } : {}),
     });
   }
@@ -62,8 +66,10 @@ function userMessageOf(
   text: string,
   attachments: unknown[] | undefined,
   origin: string | undefined,
+  quote: MessageQuote | undefined,
 ): Record<string, unknown> {
-  const message: Record<string, unknown> = { role: 'user', content: text };
+  const content = `${quote ? quoteBlockText(quote) : ''}${text}`;
+  const message: Record<string, unknown> = { role: 'user', content };
   if (attachments && attachments.length > 0) {
     message.attachments = attachments;
   }

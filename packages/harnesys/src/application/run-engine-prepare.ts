@@ -1,3 +1,4 @@
+import type { MessageQuote } from '@harnesys/contracts';
 import type { AgentDefinition } from '../domain/agent-definition.ts';
 import type { Attachment } from '../domain/attachment.ts';
 import type { Event } from '../domain/snapshot.ts';
@@ -48,6 +49,7 @@ interface UserInput {
   attachments?: Attachment[];
   origin?: string;
   effort?: string;
+  quote?: MessageQuote;
 }
 async function findLastAnswer(deps: RunEngineDeps, runId: string): Promise<HitlAnswer | null> {
   const history = await deps.events.tail(runId, 0);
@@ -73,6 +75,7 @@ async function findFirstUser(deps: RunEngineDeps, runId: string): Promise<UserIn
         attachments: event.attachments,
         origin: event.origin,
         effort: event.effort,
+        quote: event.quote,
       };
     }
   }
@@ -194,6 +197,7 @@ export async function prepareExecuteGraphOpts(
     ...(deps.childRunner ? { childRunner: deps.childRunner } : {}),
     logger: runLogger,
     ...(opts.channelNote ? { channelNote: opts.channelNote } : {}),
+    ...(opts.channelFacts ? { channelFacts: opts.channelFacts } : {}),
     ...(opts.contextNote ? { contextNote: opts.contextNote } : {}),
     ...(opts.contextEntries ? { contextEntries: opts.contextEntries } : {}),
   };

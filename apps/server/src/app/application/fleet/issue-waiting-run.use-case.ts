@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@harnesys/brix';
 import type {
+  MessageQuote,
   RunAcceptedResponse,
   RunEnvironment,
   TaskEnvelopeAttachment,
@@ -28,6 +29,7 @@ export interface IssueWaitingRunInput {
   configRevision: number;
   placementEvent: ReturnType<typeof toPlacementEvent>;
   text?: string;
+  quote?: MessageQuote;
   effort?: string;
   mode?: string;
   skills?: string[];
@@ -128,6 +130,7 @@ function waitingUserEvent(input: IssueWaitingRunInput, clientEventId: string) {
     ...(input.origin ? { origin: input.origin } : {}),
     ...(input.correlationId ? { correlationId: input.correlationId } : {}),
     ...(input.effort ? { effort: input.effort } : {}),
+    ...(input.quote ? { quote: input.quote } : {}),
     ...(input.attachments?.length ? { attachments: input.attachments } : {}),
   };
 }
@@ -145,6 +148,7 @@ function waitingPayload(
     text: input.text ?? '',
     attribution: input.attribution,
     ...(input.effort ? { effort: input.effort } : {}),
+    ...(input.quote ? { quote: input.quote } : {}),
     ...(input.mode ? { mode: input.mode } : {}),
     ...(input.skills?.length ? { skills: input.skills } : {}),
     ...(attachmentMetas.length > 0 ? { attachmentMetas } : {}),

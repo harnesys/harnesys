@@ -27,12 +27,15 @@ import { LlmModelPort, LlmProviderPort } from '../../domain/provider/llm-provide
 import { SourceLocationPort } from '../../domain/source/source-location.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import {
+  type GroupChannelMember,
   type PrepareTargetOptions,
   resolveRuntimePrimary,
   sharedSourcesOf,
 } from '../../domain/thread/prepare-runtime-input.ts';
 import { ThreadValidationException } from '../../domain/thread/thread.error.ts';
-import { historyLastOf, historyModeOf } from '../../domain/thread/thread-policy.ts';
+import type { ThreadRecord } from '../../domain/thread/thread.ts';
+import type { GroupHistoryCoverage } from '../../domain/thread/thread-policy.ts';
+import { allowsMentions, historyLastOf, historyModeOf } from '../../domain/thread/thread-policy.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import {
   type PrimarySourceRef,
@@ -46,7 +49,7 @@ import {
   toAgentDefinition,
 } from './agent-definition.mapper.ts';
 import { resolveContextFiles } from './context-files-note.ts';
-import { groupChannelNote } from './group-note.ts';
+import { groupChannelFacts, groupChannelPrompt } from './group-note.ts';
 import { isDirectory, resolveAgentAndModel } from './prepare-org-target-parts.ts';
 import { type TargetCache, targetCacheKey } from './target-cache.ts';
 
@@ -78,11 +81,10 @@ export type { PrepareTargetOptions };
 export function runtimeOptionsOf(
   environment?: RunEnvironment,
   mode?: string,
+  groupHistory?: GroupHistoryCoverage,
+  groupMembers?: GroupChannelMember[],
 ): PrepareTargetOptions {
-  return {
-    ...(environment !== undefined ? { environment } : {}),
-    ...(mode !== undefined ? { mode } : {}),
-  };
+  return { environment, mode, groupHistory, groupMembers };
 }
 
 export function definitionOf(deps: PrepareOrgTargetDeps, agent: AgentRecord) {
@@ -174,17 +176,8 @@ export function prepareTarget(
     ...(primarySource !== undefined ? { primarySource } : {}),
     sharedSources: sharedSourcesOf({ orgId: deps.orgId, sources: deps.sources }, agent),
   });
-  const notes: string[] = [];
-  if (thread.kind === 'group') {
-    notes.push(
-      groupChannelNote({
-        mode: historyModeOf(thread.policy, thread.kind),
-        historyLast: historyLastOf(thread.policy),
-        total: thread.conversationCount,
-      }),
-    );
-  }
-  const channelNote = notes.length > 0 ? notes.join('\n\n') : undefined;
+  const channelNote = channelNoteOf(thread, options?.groupMembers);
+  const channelFacts = channelFactsOf(thread, options?.groupHistory);
   const context = resolveContextFiles(thread.policy, primary.primaryDirectory);
   const modeId = options?.mode ?? runModeOf(thread);
   return {
@@ -197,9 +190,36 @@ export function prepareTarget(
     scope,
     runtime,
     channelNote,
+    channelFacts,
     ...(context.note ? { contextNote: context.note } : {}),
     contextEntries: context.entries,
   };
+}
+
+function channelNoteOf(
+  thread: ThreadRecord,
+  groupMembers: GroupChannelMember[] | undefined,
+): string | undefined {
+  if (thread.kind !== 'group') {
+    return undefined;
+  }
+  const allowMentions = allowsMentions(thread.policy);
+  return groupChannelPrompt({ members: groupMembers ?? [], allowMentions });
+}
+
+function channelFactsOf(
+  thread: ThreadRecord,
+  groupHistory: GroupHistoryCoverage | undefined,
+): string | undefined {
+  if (thread.kind !== 'group') {
+    return undefined;
+  }
+  return groupChannelFacts({
+    mode: historyModeOf(thread.policy, thread.kind),
+    historyLast: historyLastOf(thread.policy),
+    total: thread.conversationCount,
+    ...(groupHistory !== undefined ? { coverage: groupHistory } : {}),
+  });
 }
 
 function primarySourceRefOf(

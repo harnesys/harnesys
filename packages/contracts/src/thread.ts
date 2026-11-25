@@ -26,6 +26,7 @@ export const ThreadPolicySchema = z.object({
   historyMode: ThreadHistoryModeSchema.optional(),
   historyLast: z.number().int().min(0).max(100).optional(),
   historyFromRunId: z.string().uuid().optional(),
+  historyFromSeq: z.number().int().min(1).optional(),
   mentionGating: z.boolean().optional(),
   responderMode: ThreadResponderModeSchema.optional(),
   contextFiles: ThreadContextFilesSchema.optional(),
@@ -247,9 +248,7 @@ export const AddThreadAgentBodySchema = z.object({
 });
 export type AddThreadAgentBody = z.infer<typeof AddThreadAgentBodySchema>;
 
-export const AddThreadParticipantBodySchema = z.object({
-  userId: z.string().uuid(),
-});
+export const AddThreadParticipantBodySchema = z.object({ userId: z.string().uuid() });
 export type AddThreadParticipantBody = z.infer<typeof AddThreadParticipantBodySchema>;
 
 export const UpdateThreadPolicyBodySchema = z.object({
@@ -259,6 +258,7 @@ export const UpdateThreadPolicyBodySchema = z.object({
   historyMode: ThreadHistoryModeSchema.optional(),
   historyLast: z.number().int().min(0).max(100).nullable().optional(),
   historyFromRunId: z.string().uuid().nullable().optional(),
+  historyFromSeq: z.number().int().min(1).nullable().optional(),
   contextFiles: ThreadContextFilesSchema.nullable().optional(),
 });
 export type UpdateThreadPolicyBody = z.infer<typeof UpdateThreadPolicyBodySchema>;

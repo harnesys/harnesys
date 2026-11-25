@@ -15,7 +15,7 @@ const MAX_LIMIT = 50;
 export function createThreadsHistoryTool(deps: ThreadsHistoryToolDeps): ToolDefinition {
   return tool(THREADS_HISTORY_TOOL, {
     description:
-      'Read older conversational messages of this thread before the current window. People messages and final answers are returned in thread order; pass beforeSeq to page further back. Use threads_search to find a specific phrase.',
+      'Read older conversational messages of this thread before the current window. People messages and final answers are returned in thread order; pass beforeSeq to page further back. If the channel note says the whole conversation is already in your context, there is nothing older to read. Use threads_search to find a specific phrase.',
     group: 'thread',
     operations: ['read'],
     sideEffect: 'read',

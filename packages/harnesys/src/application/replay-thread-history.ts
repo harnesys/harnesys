@@ -1,5 +1,6 @@
 import type { ToolCallRecord } from '../adapters/ai-llm-stream-parts.ts';
 import type { CompactionMessage } from '../domain/compaction.ts';
+import { quoteBlockText } from '../domain/message-quote.ts';
 import type { SessionEvent } from '../ports/session.ts';
 import type { MessageSource } from './message-source.ts';
 import { sourceOfEvent } from './message-source.ts';
@@ -272,6 +273,9 @@ function toUserMessage(
   const message: Record<string, unknown> = { role: 'user', content: event.text ?? '' };
   if (attribution && event.author?.displayName) {
     message.content = `${event.author.displayName}: ${message.content}`;
+  }
+  if (event.quote) {
+    message.content = `${quoteBlockText(event.quote)}${message.content}`;
   }
   if (event.attachments && event.attachments.length > 0) {
     message.attachments = event.attachments;

@@ -15,6 +15,7 @@ import {
 import type { ThreadParticipantInsert } from '../../domain/thread/thread.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadParticipantRepositoryPort } from '../../domain/thread/thread-participant-repository.port.ts';
+import { DEFAULT_HISTORY_LAST } from '../../domain/thread/thread-policy.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import {
   DEFAULT_THREAD_TITLE,
@@ -60,6 +61,9 @@ export class CreateThreadUseCase {
       autoReplyAgentId: agent.id,
       policy: {
         version: 2,
+        ...(kind === 'group'
+          ? { historyMode: 'last' as const, historyLast: DEFAULT_HISTORY_LAST }
+          : {}),
         ...request.body.policy,
         // Stored explicitly so the legacy-row backfill never flips new rows.
         responderMode:

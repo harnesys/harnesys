@@ -178,6 +178,15 @@ describe('thread-history-slice', () => {
     expect(texts(fallback)).toEqual(['three']);
   });
 
+  test('historyFromSeq starts history at that message, cutting inside a run', () => {
+    const events = withThreadSeq([
+      ...runEvents('run-1', [user('one'), delta('d1')]),
+      ...runEvents('run-2', [user('two'), delta('d2'), user('three'), delta('d3')]),
+    ]);
+    const sliced = sliceThreadHistory(events, { mode: 'none', historyFromSeq: 5 });
+    expect(texts(sliced)).toEqual(['three', 'd3']);
+  });
+
   test('full mode folds everything before the newest anchor into it', () => {
     const events = [
       ...runEvents('run-1', [user('old')]),

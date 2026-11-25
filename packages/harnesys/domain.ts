@@ -54,6 +54,7 @@ export {
   hookRequiredPermission,
   resolveHookBindings,
 } from './src/domain/hook-gate.ts';
+export { quoteBlockText } from './src/domain/message-quote.ts';
 export type { PlanItemStatus, PlanStatus, SubagentRole } from './src/domain/plan.ts';
 export { PLAN_ITEM_STATUSES, PLAN_STATUSES, SUBAGENT_ROLES } from './src/domain/plan.ts';
 export type { PermissionMode } from './src/domain/schedule.ts';

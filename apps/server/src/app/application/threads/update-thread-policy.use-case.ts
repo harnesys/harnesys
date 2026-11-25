@@ -63,6 +63,13 @@ function applyPolicyUpdate(current: ThreadPolicy, body: UpdateThreadPolicyBody):
       policy.historyFromRunId = body.historyFromRunId;
     }
   }
+  if (body.historyFromSeq !== undefined) {
+    if (body.historyFromSeq === null) {
+      delete policy.historyFromSeq;
+    } else {
+      policy.historyFromSeq = body.historyFromSeq;
+    }
+  }
   applyContextFiles(policy, body.contextFiles);
   return policy;
 }

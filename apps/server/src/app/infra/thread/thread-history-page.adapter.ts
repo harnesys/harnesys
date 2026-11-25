@@ -10,15 +10,20 @@ import {
   type ThreadLogDeletion,
   type ThreadSyncSlice,
 } from '../../domain/thread/thread-history-page.port.ts';
+import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
 import { withOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 import { runEventsTable, threadLogDeletionsTable } from '../org-sqlite/schema/index.ts';
 import { joinedRows, rowsToEvents } from '../runtime/run-events-append.ts';
 import {
-  boundaryUserSeqsOf,
+  boundaryLooseSeqsOf,
   emptySlice,
   firstUserThreadSeqOf,
+  hasEventsBeforeOf,
   hasRootStartAfterOf,
   hiddenRunsBeforeOf,
+  loosePageOf,
+  looseSeqsAfterOf,
+  looseSeqsInRangeOf,
   maxThreadSeqOf,
   minMaxThreadSeqOf,
   pageRowsOf,
@@ -100,7 +105,7 @@ export class ThreadHistoryPageAdapter extends ThreadHistoryPagePort {
           LIMIT ${limit + 1}
         `);
         if (roots.length === 0) {
-          return emptySlice(db, threadId);
+          return loosePageSlice(db, threadId, before);
         }
         const pageRoots = roots.slice(0, limit);
         const pageStart = pageRoots.reduce((min, root) => Math.min(min, root.start_seq), Infinity);
@@ -108,13 +113,21 @@ export class ThreadHistoryPageAdapter extends ThreadHistoryPagePort {
           db,
           pageRoots.map((root) => root.run_id),
         );
-        const rows = pageRowsOf(db, threadId, runIds, boundaryUserSeqsOf(db, threadId, pageStart));
+        const boundary = boundaryLooseSeqsOf(db, threadId, pageStart);
+        const baseRows = pageRowsOf(db, threadId, runIds, boundary);
+        const { minThreadSeq: baseMin, maxThreadSeq: baseMax } = minMaxThreadSeqOf(baseRows);
+        const loose = [
+          ...boundary,
+          ...looseSeqsInRangeOf(db, threadId, baseMin, baseMax),
+          ...(before === null ? looseSeqsAfterOf(db, threadId, baseMax) : []),
+        ];
+        const rows = loose.length > 0 ? pageRowsOf(db, threadId, runIds, dedupe(loose)) : baseRows;
         const { minThreadSeq, maxThreadSeq } = minMaxThreadSeqOf(rows);
         return {
           events: rowsToEvents(rows),
           minThreadSeq,
           maxThreadSeq,
-          hasMoreBefore: roots.length > limit,
+          hasMoreBefore: roots.length > limit || hasEventsBeforeOf(db, threadId, minThreadSeq),
           hasMoreAfter: false,
           hiddenRunsBefore: hiddenRunsBeforeOf(db, threadId, minThreadSeq),
           firstUserThreadSeq: firstUserThreadSeqOf(db, threadId),
@@ -188,7 +201,7 @@ export class ThreadHistoryPageAdapter extends ThreadHistoryPagePort {
           return emptySlice(db, threadId);
         }
         const runIds = subtreeRunIdsOf(db, [rootRunId]);
-        const rows = pageRowsOf(db, threadId, runIds, boundaryUserSeqsOf(db, threadId, rootStart));
+        const rows = pageRowsOf(db, threadId, runIds, boundaryLooseSeqsOf(db, threadId, rootStart));
         const { minThreadSeq, maxThreadSeq } = minMaxThreadSeqOf(rows);
         const hiddenRunsBefore = hiddenRunsBeforeOf(db, threadId, minThreadSeq);
         return {
@@ -256,4 +269,32 @@ export class ThreadHistoryPageAdapter extends ThreadHistoryPagePort {
       }),
     );
   }
+}
+
+function dedupe(values: readonly number[]): number[] {
+  return [...new Set(values)];
+}
+
+function loosePageSlice(
+  db: OrgSqliteDb,
+  threadId: string,
+  beforeThreadSeq: number | null,
+): ThreadHistorySlice {
+  const { seqs, hasMore } = loosePageOf(db, threadId, beforeThreadSeq);
+  if (seqs.length === 0) {
+    return emptySlice(db, threadId);
+  }
+  const rows = pageRowsOf(db, threadId, [], seqs);
+  const { minThreadSeq, maxThreadSeq } = minMaxThreadSeqOf(rows);
+  return {
+    events: rowsToEvents(rows),
+    minThreadSeq,
+    maxThreadSeq,
+    hasMoreBefore: hasMore,
+    hasMoreAfter: false,
+    hiddenRunsBefore: 0,
+    firstUserThreadSeq: firstUserThreadSeqOf(db, threadId),
+    waitingForProfileId: waitingForProfileIdOf(db, threadId),
+    complete: true,
+  };
 }

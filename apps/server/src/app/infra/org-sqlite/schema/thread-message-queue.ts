@@ -28,6 +28,7 @@ export const threadMessageQueueTable = sqliteTable(
     origin: text('origin'),
     clientEventId: text('client_event_id'),
     mode: text('mode'),
+    quote: text('quote'),
     targetRunId: text('target_run_id'),
     queuedAt: text('queued_at').notNull(),
     deliveredAt: text('delivered_at'),

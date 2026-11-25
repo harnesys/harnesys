@@ -1,4 +1,4 @@
-import { DEFAULT_MEMORY_POLICY } from '@harnesys/contracts';
+import { DEFAULT_MEMORY_POLICY, type MessageQuote } from '@harnesys/contracts';
 import { callModel } from '../adapters/ai-llm-adapter.ts';
 import {
   EVENT_TYPES,
@@ -18,6 +18,7 @@ import type {
 import type { Attachment, AttachmentKind } from '../domain/attachment.ts';
 import { AskUserInterrupt, DelegatedPermissionAsk, WaitInterrupt } from '../domain/errors.ts';
 import type { JsonSchema } from '../domain/json-schema.ts';
+import { quoteBlockText } from '../domain/message-quote.ts';
 import type { ProcessJobTarget } from '../domain/process-job.ts';
 import type { Event } from '../domain/snapshot.ts';
 import type { AgentsResolve } from '../ports/create-runtime.ts';
@@ -373,6 +374,7 @@ function normalizeInputAttachments(input: unknown): {
   text?: string;
   attachments?: Attachment[];
   origin?: string;
+  quote?: MessageQuote;
 } {
   if (typeof input === 'string') {
     return input ? { text: input } : {};
@@ -383,6 +385,7 @@ function normalizeInputAttachments(input: unknown): {
   const rec = input as Record<string, unknown>;
   const text = typeof rec.text === 'string' ? rec.text : undefined;
   const origin = typeof rec.origin === 'string' ? rec.origin : undefined;
+  const quote = rec.quote as MessageQuote | undefined;
   const atts: Attachment[] = [];
   const seenPaths = new Set<string>();
   if (Array.isArray(rec.attachments)) {
@@ -430,6 +433,7 @@ function normalizeInputAttachments(input: unknown): {
     text: text || undefined,
     attachments: atts.length > 0 ? atts : undefined,
     origin: origin || undefined,
+    quote,
   };
 }
 export interface GraphOpts {
@@ -482,6 +486,7 @@ export interface GraphOpts {
   };
   logger?: Logger;
   channelNote?: string;
+  channelFacts?: string;
   contextNote?: string;
   contextEntries?: ContextFileRunEntry[];
   process?: ProcessJobTarget;
@@ -968,7 +973,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
             arr = Array.isArray(m) ? [...(m as unknown[])] : [];
             st[msgKey] = arr;
           }
-          const content = normalized.text ?? '';
+          const content = `${normalized.quote ? quoteBlockText(normalized.quote) : ''}${normalized.text ?? ''}`;
           const ups = await emitHook(hooks, 'UserPromptSubmit', { message: content });
           if (ups?.blocked) {
             const e = await commit('failed', 'run.failed', 'recorded', {
@@ -1001,6 +1006,9 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
             }
             if (normalized.origin) {
               meta.origin = normalized.origin;
+            }
+            if (normalized.quote) {
+              meta.quote = normalized.quote;
             }
             const ue = await commit('running', 'user.message', 'recorded', meta);
             yield ue;
@@ -1307,6 +1315,9 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
           usedModelId = currentBinding.model.id ?? '';
           startedAt = Date.now();
           const notes: LlmNote[] = [];
+          if (opts.channelFacts) {
+            notes.push({ tag: 'channel', text: opts.channelFacts });
+          }
           const wrap = wrapDue();
           const left = budgetLeftForPrompt();
           if (left) {

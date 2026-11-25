@@ -1,3 +1,4 @@
+import type { MessageQuote } from '@harnesys/contracts';
 import type { Attachment, SendFile } from '../domain/attachment.ts';
 import type { PathsConfig } from './paths.ts';
 import type { PermissionMap } from './permissions.ts';
@@ -14,6 +15,7 @@ export type SendInput =
       files?: SendFile[];
       attachments?: Attachment[];
       origin?: string;
+      quote?: MessageQuote;
       attribution?: RunAttribution;
       environmentJson?: string;
     };

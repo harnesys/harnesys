@@ -1,3 +1,4 @@
+import type { MessageQuote } from '@harnesys/contracts';
 import { InMemoryRunEventStore } from '../adapters/in-memory-run-event-store.ts';
 import { InMemoryRunLifecycleStore } from '../adapters/in-memory-run-lifecycle-store.ts';
 import type { Attachment } from '../domain/attachment.ts';
@@ -20,6 +21,7 @@ function inputToUserEvent(input: unknown): PendingSessionEvent {
     attachments: Array.isArray(rec.attachments) ? (rec.attachments as Attachment[]) : undefined,
     origin: typeof rec.origin === 'string' ? rec.origin : undefined,
     effort: typeof rec.effort === 'string' ? rec.effort : undefined,
+    quote: rec.quote as MessageQuote | undefined,
   } as PendingSessionEvent;
 }
 export async function runGraph(opts: GraphOpts): Promise<RunResult> {

@@ -28,6 +28,7 @@ export interface RunTarget {
   binDirs?: string[];
   scope?: unknown;
   channelNote?: string;
+  channelFacts?: string;
   contextNote?: string;
   contextEntries?: ContextFileRunEntry[];
   fileAccess?: FileAccessPolicy;

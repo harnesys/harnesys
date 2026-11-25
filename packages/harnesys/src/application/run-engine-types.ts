@@ -67,6 +67,7 @@ export interface RunTargetOpts {
   hookReport?: (report: HookRunReport) => void;
   binDirs?: string[];
   channelNote?: string;
+  channelFacts?: string;
   contextNote?: string;
   contextEntries?: ContextFileRunEntry[];
   process?: ProcessJobTarget;
