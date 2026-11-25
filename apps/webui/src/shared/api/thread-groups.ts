@@ -11,6 +11,7 @@ export interface UpdateThreadPolicyInput {
   historyMode?: ThreadHistoryMode;
   historyLast?: number | null;
   historyFromRunId?: string | null;
+  historyFromSeq?: number | null;
   contextFiles?: ThreadContextFile[] | null;
 }
 

@@ -4,6 +4,7 @@ import type { Components } from 'react-markdown';
 import { AgentAvatar, AgentRecordAvatar, initialsFromName, useAgentStore } from '@/entities/agent';
 import { type Thread, useThreadStore } from '@/entities/thread';
 import { useFileLinkComponents } from '@/features/ide';
+import { useUserColor } from '@/shared/api/members';
 import { markMentions, mentionHandle, mentionSlugOf } from '@/shared/lib/markdown-mentions';
 import { cn } from '@/shared/lib/utils';
 import { Markdown } from '@/shared/ui/markdown';
@@ -30,7 +31,7 @@ function membersOf(thread: Thread | undefined): MentionMember[] {
   const users = (thread.participants ?? []).map((participant) => ({
     handle: mentionHandle(participant.username ?? participant.displayName),
     name: participant.displayName,
-    userId: participant.id,
+    userId: participant.provider === 'app' ? participant.providerUserId : undefined,
     seed: participant.providerUserId,
   }));
   return [...agents, ...users];
@@ -77,19 +78,7 @@ export function useThreadMarkdownComponents(threadId?: string): Components {
         );
       }
       if (member) {
-        return (
-          <MentionBadge
-            label={member.name}
-            avatar={
-              <UserAvatar
-                name={member.name}
-                seed={member.seed}
-                size="xs"
-                className="size-3.5 text-[7px]"
-              />
-            }
-          />
-        );
+        return <MentionBadge label={member.name} avatar={<MentionUserAvatar member={member} />} />;
       }
       return <MentionBadge label={slug} />;
     },
@@ -114,6 +103,19 @@ export function ThreadMarkdown({
       text={group ? markMentions(text) : text}
       streaming={streaming}
       components={components}
+    />
+  );
+}
+
+function MentionUserAvatar({ member }: { member: MentionMember }) {
+  const color = useUserColor(member.userId);
+  return (
+    <UserAvatar
+      name={member.name}
+      seed={member.seed}
+      color={color}
+      size="xs"
+      className="size-3.5 text-[7px]"
     />
   );
 }

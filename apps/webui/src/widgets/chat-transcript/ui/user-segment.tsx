@@ -1,3 +1,4 @@
+import type { MessageQuote } from '@harnesys/contracts';
 import type { SessionEvent } from '@harnesys/studio-shared';
 import {
   isIssueHumanText,
@@ -8,23 +9,15 @@ import {
 } from '@harnesys/studio-shared';
 import { CalendarClockIcon } from 'lucide-react';
 import { useState } from 'react';
-import { saveAgentBullet } from '@/entities/agent';
 import { useSessionStore } from '@/entities/session';
-import { useDeskStore, useSelectedAgent, useSelectedThread } from '@/features/desk';
-import {
-  deleteOptimisticUserMessage,
-  deleteUserMessage,
-  editUserMessage,
-  reloadUserMessage,
-  rerunIssueTask,
-  sendMessage,
-} from '@/features/send-message';
-import { branchThread } from '@/features/switch-thread';
-import { studioFocusProjectId, useOrgId, useStudioLocation } from '@/shared/config/location';
-import { useStudioNavigation } from '@/shared/config/navigation';
+import { jumpHandlerOf, QuoteBlock, quoteOfEvent, replyHandlerOf } from '@/features/message-quote';
+import { editUserMessage, rerunIssueTask } from '@/features/send-message';
+import { useOrgId } from '@/shared/config/location';
+import { cn } from '@/shared/lib/utils';
 import { toast } from '@/shared/ui/toast';
 import { splitDirectiveTags } from '../model/directive-tag';
-import { ThreadMarkdown } from '../model/thread-markdown';
+import type { MessageSide } from '../model/use-user-message-side';
+import { useUserMessageSide } from '../model/use-user-message-side';
 import { FeedNotice } from './feed-notice';
 import { IssueWakeBanner } from './issue-wake-message';
 import { MessageActions } from './message-actions';
@@ -32,13 +25,37 @@ import { ModeTagBadges } from './mode-tag-badge';
 import { originNoticeOf } from './origin-notice';
 import { AttachmentPreview, uniqueAttachments } from './user-attachments';
 import { AuthorLabel } from './user-author-label';
-import { buildSendInput, type SendInput, UserMessageEditor } from './user-message-edit';
+import { UserMessageBubble } from './user-message-bubble';
+import { buildSendInput, UserMessageEditor } from './user-message-edit';
+import { UserSegmentActions } from './user-segment-actions';
+
+const ATTACHMENT_JUSTIFY: Record<MessageSide, string> = {
+  start: 'justify-start',
+  end: 'justify-end',
+};
+const ROW_ALIGN: Record<MessageSide, string> = {
+  start: 'items-start',
+  end: 'items-end',
+};
+
+function isAnchorSeq(anchorSeq: number | undefined, seq: number | undefined): boolean {
+  return anchorSeq !== undefined && anchorSeq === seq;
+}
+
+function toggleHandlerOf(
+  onToggleAnchor: ((threadSeq: number) => void) | undefined,
+  seq: number | undefined,
+): (() => void) | undefined {
+  return onToggleAnchor && seq !== undefined ? () => onToggleAnchor(seq) : undefined;
+}
 
 export function UserSegment({
   event,
   segmentKey,
   threadId,
   runId,
+  anchorSeq,
+  onToggleAnchor,
   inherited = false,
   readOnly = false,
 }: {
@@ -46,6 +63,8 @@ export function UserSegment({
   segmentKey: string;
   threadId?: string;
   runId?: string;
+  anchorSeq?: number;
+  onToggleAnchor?: (threadSeq: number) => void;
   inherited?: boolean;
   streaming?: boolean;
   readOnly?: boolean;
@@ -54,6 +73,10 @@ export function UserSegment({
   const wake = isScheduleWakeEvent(event);
   const issueWake = !wake && isIssueWakeEvent(event);
   const rawText = event.text ?? '';
+  const side = useUserMessageSide(event, threadId);
+  const seq = event.threadSeq;
+  const anchored = isAnchorSeq(anchorSeq, seq);
+  const toggleAnchor = toggleHandlerOf(onToggleAnchor, seq);
   const { text: visibleText, badges } = splitDirectiveTags(rawText);
   const clientEventId = event.clientEventId;
   const sidecarSkills =
@@ -65,7 +88,8 @@ export function UserSegment({
   if (originNotice !== null) {
     return <>{originNotice}</>;
   }
-  const sendInput = buildSendInput(atts, sidecarSkills);
+  const sendInput = buildSendInput(atts, sidecarSkills, event.quote);
+  const onReply = replyHandlerOf(threadId, quoteOfEvent(event));
   const editable = Boolean(
     !inherited &&
       !readOnly &&
@@ -121,13 +145,17 @@ export function UserSegment({
       ) : (
         <>
           <AuthorLabel event={event} threadId={threadId} />
+          <QuotedReply quote={event.quote} threadId={threadId} />
           {visibleText ? (
-            <div className="max-w-[80%] rounded-2xl rounded-br-md bg-secondary px-3.5 py-1.5 text-secondary-foreground shadow-xs">
-              <ThreadMarkdown text={visibleText} threadId={threadId} />
-            </div>
+            <UserMessageBubble
+              text={visibleText}
+              threadId={threadId}
+              side={side}
+              anchored={anchored}
+            />
           ) : null}
           {atts?.length ? (
-            <div className="flex max-w-[80%] flex-wrap justify-end gap-2">
+            <div className={cn('flex max-w-[80%] flex-wrap gap-2', ATTACHMENT_JUSTIFY[side])}>
               {uniqueAttachments(atts).map((item) => (
                 <AttachmentPreview key={item.id} threadId={threadId ?? ''} item={item} />
               ))}
@@ -139,11 +167,14 @@ export function UserSegment({
                 event.clientEventId ??
                 (runId && event.seq !== undefined ? `${runId}:${event.seq}` : segmentKey)
               }
-              align="end"
+              align={side}
               rawText={rawText}
               bulletText={visibleText}
               threadId={threadId}
               runId={runId}
+              anchored={anchored}
+              onToggleAnchor={toggleAnchor}
+              onReply={onReply}
               threadSeq={event.threadSeq}
               sendInput={sendInput}
               clientEventId={event.clientEventId}
@@ -154,103 +185,21 @@ export function UserSegment({
       )}
     </>
   );
-  return <div className="group/message flex flex-col items-end gap-2">{content}</div>;
+  return (
+    <div data-thread-seq={seq} className={cn('group/message flex flex-col gap-2', ROW_ALIGN[side])}>
+      {content}
+    </div>
+  );
 }
 
-function UserSegmentActions({
-  entryId,
-  align,
-  rawText,
-  bulletText,
-  threadId,
-  runId,
-  threadSeq,
-  sendInput,
-  clientEventId,
-  onEdit,
-}: {
-  entryId: string;
-  align: 'start' | 'end';
-  rawText: string;
-  bulletText: string;
-  threadId: string;
-  runId?: string;
-  threadSeq?: number;
-  sendInput: SendInput;
-  clientEventId?: string;
-  onEdit?: () => void;
-}) {
-  const agent = useSelectedAgent();
-  const thread = useSelectedThread();
-  const projectId = studioFocusProjectId(useStudioLocation().focus);
-  const { openThread } = useStudioNavigation();
+function QuotedReply({ quote, threadId }: { quote?: MessageQuote; threadId?: string }) {
+  if (!quote) {
+    return null;
+  }
   return (
-    <MessageActions
-      entryId={entryId}
-      align={align}
-      onEdit={onEdit}
-      onCopy={() => {
-        void navigator.clipboard.writeText(rawText);
-        toast.add({ title: 'Copied.' });
-      }}
-      onSaveAsBullet={
-        agent && bulletText.trim().length > 0
-          ? () => {
-              saveAgentBullet(agent, bulletText);
-              toast.add({ title: 'Saved as bullet.' });
-            }
-          : undefined
-      }
-      onRetry={() => {
-        if (threadSeq !== undefined) {
-          void reloadUserMessage({
-            threadId,
-            threadSeq,
-            text: rawText,
-            ...sendInput,
-          }).catch((error) => {
-            toast.add({
-              title: 'Could not reload',
-              description: error instanceof Error ? error.message : 'Reload failed',
-            });
-          });
-          return;
-        }
-        if (clientEventId) {
-          deleteOptimisticUserMessage(threadId, clientEventId);
-          void sendMessage({ threadId, content: rawText, ...sendInput });
-        }
-      }}
-      onBranch={
-        !runId
-          ? undefined
-          : () => {
-              if (!agent || !thread || !projectId) {
-                return;
-              }
-              void branchThread(runId, agent.id, thread.id, projectId).then((nextId) => {
-                if (nextId) {
-                  useDeskStore.getState().setFocusedThreadId(nextId);
-                  openThread(projectId, nextId);
-                }
-              });
-            }
-      }
-      onDelete={() => {
-        if (threadSeq !== undefined) {
-          void deleteUserMessage(threadId, threadSeq).catch((error) => {
-            toast.add({
-              title: 'Could not delete',
-              description: error instanceof Error ? error.message : 'Delete failed',
-            });
-          });
-          return;
-        }
-        if (clientEventId) {
-          deleteOptimisticUserMessage(threadId, clientEventId);
-        }
-      }}
-    />
+    <div className="max-w-[80%]">
+      <QuoteBlock quote={quote} onJump={jumpHandlerOf(threadId, quote)} />
+    </div>
   );
 }
 

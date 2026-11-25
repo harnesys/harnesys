@@ -11,7 +11,7 @@ import {
   removeThreadParticipant,
 } from '@/shared/api';
 import { getActiveOrgId } from '@/shared/api/active-org';
-import { membersQuery } from '@/shared/api/members';
+import { membersQuery, useUserColor } from '@/shared/api/members';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,10 +40,12 @@ function AgentMemberAvatar({ member }: { member: ThreadMemberRef }) {
 }
 
 function ParticipantAvatar({ participant }: { participant: ThreadParticipantRef }) {
+  const color = useUserColor(participant.provider === 'app' ? participant.providerUserId : null);
   return (
     <UserAvatar
       name={participant.displayName}
       seed={participant.providerUserId}
+      color={color}
       title={`${participant.displayName} · ${participant.provider}`}
       size="sm"
     />
@@ -132,7 +134,7 @@ function AddMemberChip({ thread }: { thread: Thread }) {
                   void mutateThread(() => addThreadParticipant(thread.id, user.userId))
                 }
               >
-                <UserAvatar name={user.name || user.login} size="xs" />
+                <UserAvatar name={user.name || user.login} color={user.color} size="xs" />
                 {user.name || user.login}
               </DropdownMenuItem>
             ))}

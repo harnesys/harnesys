@@ -1,3 +1,4 @@
+import type { MessageQuote } from '@harnesys/contracts';
 import type { ThreadAttachment } from '@harnesys/studio-shared';
 import { apiJson } from './client';
 
@@ -7,6 +8,7 @@ export interface ThreadQueueItem {
   attachments?: ThreadAttachment[];
   origin?: string;
   clientEventId?: string;
+  quote?: MessageQuote;
   queuedAt: string;
   deliveredAt?: string | null;
 }
@@ -16,6 +18,7 @@ export interface QueueThreadMessageInput {
   attachments?: ThreadAttachment[];
   origin?: string;
   clientEventId?: string;
+  quote?: MessageQuote;
 }
 
 interface ThreadQueueResponse {
@@ -41,6 +44,7 @@ export function queueThreadMessage(
       clientEventId: body.clientEventId,
       ...(body.attachments?.length ? { attachments: body.attachments } : {}),
       ...(body.origin ? { origin: body.origin } : {}),
+      ...(body.quote ? { quote: body.quote } : {}),
     }),
   }).then((res) => res.items);
 }

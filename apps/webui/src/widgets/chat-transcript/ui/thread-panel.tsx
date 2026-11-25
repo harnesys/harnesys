@@ -32,9 +32,11 @@ import {
   useMessageScrollerScrollable,
 } from '@/shared/ui/message-scroller';
 import { useLoadEarlierTrigger } from '../model/load-earlier-trigger';
+import { runIndexForSeq } from '../model/run-index-for-seq';
 import { useSyncedThread } from '../model/thread-sync';
 import { useUnseenBoundary } from '../model/unseen-boundary';
 import { readAutoReadPref, useAutoRead } from '../model/use-auto-read';
+import { useMessageJump } from '../model/use-message-jump';
 import { useUnseenCount } from '../model/use-unseen-count';
 import { FailedMessageView } from './agent-turn';
 import type { BranchChild } from './branch-point-badge';
@@ -114,6 +116,8 @@ export function ThreadPanel({
   }, [streaming, threadId, revealState.key]);
   const runs = feed?.runs ?? EMPTY_RUNS;
   const renderWindow = useRenderWindow(threadId, runs);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useMessageJump(threadId, active, runs, renderWindow, panelRef);
   const deepLink = useDeepLinkTarget(runs, renderWindow, active);
   const undoableRunKey = undoableRunKeyOf(streaming, compacting, runs);
   const threadEvents = useSessionStore((state) => state.events[threadId] ?? EMPTY_EVENTS);
@@ -148,93 +152,96 @@ export function ThreadPanel({
       : runs.findIndex((run) => run.firstThreadSeq === null || run.firstThreadSeq > unseenSeq);
   const parentThreadId = thread?.parentThreadId ?? null;
   return (
-    <MessageScrollerProvider
-      autoScroll={true}
-      defaultScrollPosition="end"
-      scrollPreviousItemPeek={48}
-      scrollEdgeThreshold={24}
-    >
-      <MessageScroller>
-        <MessageScrollerViewport onScroll={onScrollEarlier}>
-          <MessageScrollerContent className="text-(length:--chat-font-size) mx-auto flex w-full max-w-3xl flex-col gap-7 px-4 py-8 opacity-80">
-            <LoadEarlierButton renderWindow={renderWindow} />
-            {parentThreadId ? (
-              <MessageScrollerItem messageId="fork-separator">
-                <ForkSeparator
-                  parentThreadId={parentThreadId}
-                  parentAgentId={parent?.agentId ?? thread?.agentId ?? ''}
-                />
-              </MessageScrollerItem>
-            ) : null}
-            {visible.map((run, sliceIndex) => {
-              const index = offset + sliceIndex;
-              const last = index === runs.length - 1;
-              const runStreaming = (streaming && last && !compacting) || hasRunningCompaction(run);
-              const forkAt = run.runId ?? run.id ?? '';
-              return (
-                <Fragment key={run.key}>
-                  {index === unseenRunIndex ? (
-                    <MessageScrollerItem messageId="unseen-separator">
-                      <UnseenSeparator />
+    <div ref={panelRef} className="h-full min-h-0">
+      <MessageScrollerProvider
+        autoScroll={true}
+        defaultScrollPosition="end"
+        scrollPreviousItemPeek={48}
+        scrollEdgeThreshold={24}
+      >
+        <MessageScroller>
+          <MessageScrollerViewport onScroll={onScrollEarlier}>
+            <MessageScrollerContent className="text-(length:--chat-font-size) mx-auto flex w-full max-w-3xl flex-col gap-7 px-4 py-8 opacity-80">
+              <LoadEarlierButton renderWindow={renderWindow} />
+              {parentThreadId ? (
+                <MessageScrollerItem messageId="fork-separator">
+                  <ForkSeparator
+                    parentThreadId={parentThreadId}
+                    parentAgentId={parent?.agentId ?? thread?.agentId ?? ''}
+                  />
+                </MessageScrollerItem>
+              ) : null}
+              {visible.map((run, sliceIndex) => {
+                const index = offset + sliceIndex;
+                const last = index === runs.length - 1;
+                const runStreaming =
+                  (streaming && last && !compacting) || hasRunningCompaction(run);
+                const forkAt = run.runId ?? run.id ?? '';
+                return (
+                  <Fragment key={run.key}>
+                    {index === unseenRunIndex ? (
+                      <MessageScrollerItem messageId="unseen-separator">
+                        <UnseenSeparator />
+                      </MessageScrollerItem>
+                    ) : null}
+                    {index === dividerIndex ? <CompactionDividerItem coverage={coverage} /> : null}
+                    <MessageScrollerItem
+                      messageId={run.key}
+                      scrollAnchor={last && run.key === revealKey}
+                    >
+                      <div className={index < coveredCount ? 'opacity-55' : undefined}>
+                        <RunTurn
+                          run={run}
+                          runId={forkAt}
+                          threadId={threadId}
+                          onOpenSpawn={onOpenSpawn}
+                          streaming={runStreaming}
+                          branchChildren={branchChildrenByRun[forkAt]}
+                          undoable={undoableRunKey === run.key}
+                          onRetry={
+                            run.runId && last && !streaming && !compacting
+                              ? () => void retryRun(threadId, run.runId ?? '').catch(() => {})
+                              : undefined
+                          }
+                        />
+                      </div>
                     </MessageScrollerItem>
-                  ) : null}
-                  {index === dividerIndex ? <CompactionDividerItem coverage={coverage} /> : null}
-                  <MessageScrollerItem
-                    messageId={run.key}
-                    scrollAnchor={last && run.key === revealKey}
-                  >
-                    <div className={index < coveredCount ? 'opacity-55' : undefined}>
-                      <RunTurn
-                        run={run}
-                        runId={forkAt}
-                        threadId={threadId}
-                        onOpenSpawn={onOpenSpawn}
-                        streaming={runStreaming}
-                        branchChildren={branchChildrenByRun[forkAt]}
-                        undoable={undoableRunKey === run.key}
-                        onRetry={
-                          run.runId && last && !streaming && !compacting
-                            ? () => void retryRun(threadId, run.runId ?? '').catch(() => {})
-                            : undefined
-                        }
-                      />
-                    </div>
-                  </MessageScrollerItem>
-                </Fragment>
-              );
-            })}
-            {failures.map((failure) => (
-              <MessageScrollerItem key={failure.id} messageId={failure.id}>
-                <FailedMessageView
-                  text={failure.text}
-                  onDelete={() => dismissFailure(threadId, failure.id)}
-                />
-              </MessageScrollerItem>
-            ))}
-            {compacting && !compactionLive ? (
-              <MessageScrollerItem key="compaction-pending" messageId="compaction-pending">
-                <CompactionPendingCard
-                  onCancel={() => useCompactingStore.getState().abort(threadId)}
-                />
-              </MessageScrollerItem>
-            ) : null}
-          </MessageScrollerContent>
-        </MessageScrollerViewport>
-        {active ? <LiveEdgeControls threadId={threadId} /> : null}
-        {active ? <ScrollToEndSync threadId={threadId} /> : null}
-        {active && streaming && runs.length > 0 ? (
-          <LiveStatusBar run={runs[runs.length - 1]} streaming />
-        ) : null}
-        {active ? <DeepLinkScroll seq={deepLink.seq} targetKey={deepLink.key} /> : null}
-        {active ? (
-          <ThreadReadSync
-            threadId={threadId}
-            onAtEnd={renderWindow.reset}
-            hasDeepLink={deepLink.seq !== undefined}
-          />
-        ) : null}
-      </MessageScroller>
-    </MessageScrollerProvider>
+                  </Fragment>
+                );
+              })}
+              {failures.map((failure) => (
+                <MessageScrollerItem key={failure.id} messageId={failure.id}>
+                  <FailedMessageView
+                    text={failure.text}
+                    onDelete={() => dismissFailure(threadId, failure.id)}
+                  />
+                </MessageScrollerItem>
+              ))}
+              {compacting && !compactionLive ? (
+                <MessageScrollerItem key="compaction-pending" messageId="compaction-pending">
+                  <CompactionPendingCard
+                    onCancel={() => useCompactingStore.getState().abort(threadId)}
+                  />
+                </MessageScrollerItem>
+              ) : null}
+            </MessageScrollerContent>
+          </MessageScrollerViewport>
+          {active ? <LiveEdgeControls threadId={threadId} /> : null}
+          {active ? <ScrollToEndSync threadId={threadId} /> : null}
+          {active && streaming && runs.length > 0 ? (
+            <LiveStatusBar run={runs[runs.length - 1]} streaming />
+          ) : null}
+          {active ? <DeepLinkScroll seq={deepLink.seq} targetKey={deepLink.key} /> : null}
+          {active ? (
+            <ThreadReadSync
+              threadId={threadId}
+              onAtEnd={renderWindow.reset}
+              hasDeepLink={deepLink.seq !== undefined}
+            />
+          ) : null}
+        </MessageScroller>
+      </MessageScrollerProvider>
+    </div>
   );
 }
 function useDeepLinkTarget(
@@ -260,30 +267,6 @@ function runAnswerText(run: FeedRun): string {
     .filter((segment) => segment.kind === 'text' || segment.kind === 'compaction')
     .map((segment) => segment.text)
     .join('\n\n');
-}
-
-function runIndexForSeq(runs: FeedRun[], threadSeq: number): number {
-  let bestIndex = -1;
-  let bestDistance = Number.POSITIVE_INFINITY;
-  for (let index = 0; index < runs.length; index++) {
-    const run = runs[index];
-    const first = run?.firstThreadSeq;
-    const last = run?.lastThreadSeq;
-    if (first === null || first === undefined || last === null || last === undefined) {
-      continue;
-    }
-    let distance = 0;
-    if (threadSeq < first) {
-      distance = first - threadSeq;
-    } else if (threadSeq > last) {
-      distance = threadSeq - last;
-    }
-    if (distance < bestDistance) {
-      bestDistance = distance;
-      bestIndex = index;
-    }
-  }
-  return bestIndex;
 }
 
 function EmptyThreadReadSync({ threadId }: { threadId: string }) {

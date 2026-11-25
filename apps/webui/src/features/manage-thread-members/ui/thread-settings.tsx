@@ -56,8 +56,8 @@ export function ThreadSettings({ thread, className }: { thread: Thread; classNam
         {isGroup ? <AppearanceField thread={thread} /> : null}
         <ThreadContextFiles thread={thread} />
         <HistoryModeField thread={thread} />
-        <ResponderModeField thread={thread} />
         <HistoryAnchorField thread={thread} />
+        <ResponderModeField thread={thread} />
         {isGroup ? <AutoReplyAgentField thread={thread} /> : null}
         {isGroup ? <MentionGatingField thread={thread} /> : null}
         <DownloadThreadDiagnostics thread={thread} />

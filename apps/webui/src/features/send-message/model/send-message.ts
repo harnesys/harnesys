@@ -1,3 +1,4 @@
+import type { MessageQuote } from '@harnesys/contracts';
 import type { ThreadAttachment } from '@harnesys/studio-shared';
 import { useSessionStore } from '@/entities/session';
 import { useThreadStore, useThreadWorktreeStore } from '@/entities/thread';
@@ -10,10 +11,12 @@ import { requestRevealMessage, requestScrollToEnd } from './scroll-requests';
 export interface SendMessageOptions {
   threadId: string;
   content: string;
+  quote?: MessageQuote;
   effort?: string;
   attachments?: ThreadAttachment[];
   mode?: string;
   skills?: string[];
+  onFailure?: () => void;
 }
 interface RunConflictBody {
   code?: string;
@@ -21,7 +24,7 @@ interface RunConflictBody {
   pendingAskId?: string;
 }
 export async function sendMessage(options: SendMessageOptions) {
-  const { threadId, content, effort, attachments, mode, skills } = options;
+  const { threadId, content, quote, effort, attachments, mode, skills, onFailure } = options;
   const trimmed = content.trim();
   if (!trimmed && !attachments?.length) {
     return;
@@ -29,7 +32,7 @@ export async function sendMessage(options: SendMessageOptions) {
   trace('client', 'send start', { threadId, text: preview(trimmed) });
   const clientEventId = randomUUID();
   if (useSessionStore.getState().activeRuns[threadId]) {
-    await queueWhileBusy(threadId, trimmed, attachments, clientEventId);
+    await queueWhileBusy({ threadId, text: trimmed, attachments, clientEventId, quote }, onFailure);
     return;
   }
   if (skills?.length) {
@@ -41,13 +44,14 @@ export async function sendMessage(options: SendMessageOptions) {
     useSessionStore.getState().startRun(threadId, optimisticController);
   }
   dismissThreadFailures(threadId);
-  appendUserEvent(threadId, trimmed, attachments, clientEventId);
+  appendUserEvent({ threadId, text: trimmed, attachments, clientEventId, quote });
   requestRevealMessage(threadId, clientEventId);
   try {
     const binding = useThreadWorktreeStore.getState().get(threadId);
     const accepted = await sendThreadRun({
       id: threadId,
       text: trimmed,
+      ...(quote ? { quote } : {}),
       effort,
       attachmentIds: attachments?.map((item) => item.id),
       mode,
@@ -79,11 +83,12 @@ export async function sendMessage(options: SendMessageOptions) {
       if (handleConflict(threadId, clientEventId, body, startedHere)) {
         return;
       }
-      if (await queueAsFallback(threadId, trimmed, attachments, clientEventId, startedHere)) {
+      const queued = { threadId, text: trimmed, attachments, clientEventId, quote };
+      if (await queueAsFallback(queued, startedHere)) {
         return;
       }
     }
-    reportSendFailure(threadId, startedHere, error);
+    reportSendFailure(threadId, startedHere, error, onFailure);
   }
 }
 
@@ -94,15 +99,12 @@ function dismissThreadFailures(threadId: string): void {
   }
 }
 
-function appendUserEvent(
-  threadId: string,
-  text: string,
-  attachments: ThreadAttachment[] | undefined,
-  clientEventId: string,
-): void {
+function appendUserEvent(queued: QueuedSend): void {
+  const { threadId, text, attachments, clientEventId, quote } = queued;
   useSessionStore.getState().appendEvent(threadId, {
     type: 'user',
     text,
+    ...(quote ? { quote } : {}),
     attachments: attachments?.length
       ? attachments.map((item) => ({
           id: item.id,
@@ -142,20 +144,31 @@ function handleConflict(
   return false;
 }
 
-async function queueWhileBusy(
-  threadId: string,
-  text: string,
-  attachments: ThreadAttachment[] | undefined,
-  clientEventId: string,
-): Promise<void> {
+interface QueuedSend {
+  threadId: string;
+  text: string;
+  attachments?: ThreadAttachment[];
+  clientEventId: string;
+  quote?: MessageQuote;
+}
+
+function addToQueue(queued: QueuedSend): Promise<unknown> {
+  const { threadId, text, attachments, clientEventId, quote } = queued;
+  return useThreadQueueStore.getState().add(threadId, {
+    text,
+    clientEventId,
+    ...(attachments?.length ? { attachments } : {}),
+    ...(quote ? { quote } : {}),
+  });
+}
+
+async function queueWhileBusy(queued: QueuedSend, onFailure?: () => void): Promise<void> {
+  const { threadId } = queued;
   try {
-    await useThreadQueueStore.getState().add(threadId, {
-      text,
-      clientEventId,
-      ...(attachments?.length ? { attachments } : {}),
-    });
+    await addToQueue(queued);
     requestScrollToEnd(threadId);
   } catch (error) {
+    onFailure?.();
     useSessionStore.getState().appendEvent(threadId, {
       type: 'error',
       code: 'send_failed',
@@ -164,19 +177,10 @@ async function queueWhileBusy(
   }
 }
 
-async function queueAsFallback(
-  threadId: string,
-  text: string,
-  attachments: ThreadAttachment[] | undefined,
-  clientEventId: string,
-  startedHere: boolean,
-): Promise<boolean> {
+async function queueAsFallback(queued: QueuedSend, startedHere: boolean): Promise<boolean> {
+  const { threadId, clientEventId } = queued;
   try {
-    await useThreadQueueStore.getState().add(threadId, {
-      text,
-      clientEventId,
-      ...(attachments?.length ? { attachments } : {}),
-    });
+    await addToQueue(queued);
     requestScrollToEnd(threadId);
   } catch {
     return false;
@@ -189,8 +193,14 @@ async function queueAsFallback(
   return true;
 }
 
-function reportSendFailure(threadId: string, startedHere: boolean, error: unknown): void {
+function reportSendFailure(
+  threadId: string,
+  startedHere: boolean,
+  error: unknown,
+  onFailure?: () => void,
+): void {
   trace('client', 'send failed', error instanceof Error ? error.message : error);
+  onFailure?.();
   if (startedHere) {
     useSessionStore.getState().finishRun(threadId);
   }

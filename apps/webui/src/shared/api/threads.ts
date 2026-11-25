@@ -3,6 +3,7 @@ import type {
   ThreadSummary as ContractThreadSummary,
   CreateThreadBody,
   ListThreadsResponse,
+  MessageQuote,
   ThreadPublic,
   ThreadSyncResponse,
   WorkspaceRef,
@@ -133,6 +134,7 @@ export function createThreadRecord(body: CreateThreadInput): Promise<ThreadRecor
 export interface SendThreadRunOptions {
   id: string;
   text: string;
+  quote?: MessageQuote;
   effort?: string;
   attachmentIds?: string[];
   mode?: string;
@@ -143,11 +145,13 @@ export interface SendThreadRunOptions {
 
 export function sendThreadRun(options: SendThreadRunOptions): Promise<ContractAcceptedRun> {
   const orgId = requireOrgId();
-  const { id, text, effort, mode, skills, clientEventId, attachmentIds, workspaceRef } = options;
+  const { id, text, quote, effort, mode, skills, clientEventId, attachmentIds, workspaceRef } =
+    options;
   return apiJson<ContractAcceptedRun>(`${threadsBase(orgId)}/${encodeURIComponent(id)}/runs`, {
     method: 'POST',
     body: JSON.stringify({
       text,
+      ...(quote ? { quote } : {}),
       effort,
       mode,
       clientEventId,

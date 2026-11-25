@@ -1,3 +1,4 @@
+import type { MessageQuote } from '@harnesys/contracts';
 import { ApiError } from '@/shared/api';
 import { toast } from '@/shared/ui/toast';
 import type { ComposerPayload } from './composer-doc';
@@ -9,12 +10,15 @@ export interface ComposerSubmitOptions {
   payload: ComposerPayload;
   pending: File[];
   threadId: string;
+  quote?: MessageQuote;
   effort: string | undefined;
   mode: ComposerMode;
   disabled: boolean;
   setSending(value: boolean): void;
   clear(): void;
   setPending(update: File[] | ((list: File[]) => File[])): void;
+  clearQuote?: () => void;
+  restoreQuote?: () => void;
 }
 export function submitComposer(options: ComposerSubmitOptions): void {
   const content = options.payload.text;
@@ -25,9 +29,11 @@ export function submitComposer(options: ComposerSubmitOptions): void {
   options.setSending(true);
   options.clear();
   options.setPending([]);
+  options.clearQuote?.();
   void uploadAndSend({
     threadId: options.threadId,
     content,
+    ...(options.quote ? { quote: options.quote } : {}),
     effort: options.effort,
     files,
     mode: options.mode,
@@ -37,6 +43,7 @@ export function submitComposer(options: ComposerSubmitOptions): void {
       const message = error instanceof ApiError ? error.message : 'Send failed';
       toast.add({ title: 'Could not send', description: message });
       options.setPending((list) => (list.length === 0 ? files : list));
+      options.restoreQuote?.();
     })
     .finally(() => {
       options.setSending(false);

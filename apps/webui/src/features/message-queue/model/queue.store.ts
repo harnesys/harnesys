@@ -1,3 +1,4 @@
+import type { MessageQuote } from '@harnesys/contracts';
 import { create } from 'zustand';
 import { listThreadQueue, queueThreadMessage, type ThreadQueueItem } from '@/shared/api';
 
@@ -7,7 +8,7 @@ interface ThreadQueueState {
   refresh: (threadId: string) => Promise<void>;
   add: (
     threadId: string,
-    body: { text: string; clientEventId?: string },
+    body: { text: string; clientEventId?: string; quote?: MessageQuote },
   ) => Promise<ThreadQueueItem[]>;
   discardDelivered: (threadId: string, clientEventId: string) => void;
   clear: (threadId: string) => void;

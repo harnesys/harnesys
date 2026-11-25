@@ -3,20 +3,17 @@ import type { Agent } from '@/entities/agent';
 import { AgentAvatar, AgentRecordAvatar, initialsFromName, useAgentStore } from '@/entities/agent';
 import type { FeedRun, FeedSegment } from '@/entities/session';
 import { useThreadStore } from '@/entities/thread';
-import { useDeskStore, useSelectedAgent, useSelectedThread } from '@/features/desk';
-import { branchThread } from '@/features/switch-thread';
-import { studioFocusProjectId, useStudioLocation } from '@/shared/config/location';
-import { useStudioNavigation } from '@/shared/config/navigation';
-import { toast } from '@/shared/ui/toast';
+import { quoteOfRunAnswer, replyHandlerOf } from '@/features/message-quote';
+import { useThreadHistoryAnchor } from '../model/use-thread-history-anchor';
 import { ActivityItems } from './activity-items';
 import { ActivityRail } from './activity-rail';
+import { TurnMessageActions } from './agent-turn-actions';
 import { BranchPointBadge } from './branch-point-badge';
 import { CompactionMessageCard } from './compaction-card';
 import { FeedNotice } from './feed-notice';
 import { HandoffLine } from './handoff-line';
 import { LiveMarkdown } from './live-markdown';
 import { MemoryLine } from './memory-line';
-import { MessageActions } from './message-actions';
 import { RunAttachments } from './run-attachments';
 import { ThinkingLine } from './thinking-line';
 import { UserSegment } from './user-segment';
@@ -104,6 +101,9 @@ export function AssistantMessageView({
   const group = useThreadStore((state) =>
     threadId ? state.byId(threadId)?.kind === 'group' : false,
   );
+  const { anchorSeq, toggle } = useThreadHistoryAnchor(threadId);
+  const anchorId = run.runId;
+  const onToggleAnchor = anchorId ? (threadSeq: number) => toggle(anchorId, threadSeq) : undefined;
   const runAgentId = agentIdOfRun(run);
   const runAgentName = agentNameOfRun(run);
   const agent = useAgentStore((state) => (runAgentId ? state.byId(runAgentId) : undefined));
@@ -122,6 +122,10 @@ export function AssistantMessageView({
     .join('\n\n');
   const blocks = segmentBlocks(segments);
   const lastAssistantKey = lastAssistantBlockKey(blocks);
+  const onReply = replyHandlerOf(
+    threadId,
+    quoteOfRunAnswer(run.lastThreadSeq, runAgentName, answerText),
+  );
   const footer = (
     <>
       <RunAttachments run={run} threadId={threadId} className="mt-3" />
@@ -130,7 +134,12 @@ export function AssistantMessageView({
           <BranchPointBadge runId={runId} branches={branchChildren} />
         ) : null}
         {answerText && !readOnly ? (
-          <TurnMessageActions runId={runId} answerText={answerText} inherited={inherited} />
+          <TurnMessageActions
+            runId={runId}
+            answerText={answerText}
+            inherited={inherited}
+            onReply={onReply}
+          />
         ) : null}
       </div>
     </>
@@ -140,6 +149,7 @@ export function AssistantMessageView({
       {blocks.map((block) => (
         <div
           key={block.key}
+          data-thread-seq={blockThreadSeq(block, lastAssistantKey, run)}
           className={block.kind === 'assistant' ? 'group/message flex flex-col' : undefined}
         >
           {block.items.map((item) => {
@@ -155,6 +165,8 @@ export function AssistantMessageView({
                   }
                   threadId={threadId}
                   runId={runId}
+                  anchorSeq={anchorSeq}
+                  onToggleAnchor={onToggleAnchor}
                   inherited={inherited}
                   streaming={streaming}
                   readOnly={readOnly}
@@ -221,6 +233,17 @@ function lastAssistantBlockKey(blocks: SegmentBlock[]): string | undefined {
   return undefined;
 }
 
+function blockThreadSeq(
+  block: SegmentBlock,
+  lastAssistantKey: string | undefined,
+  run: FeedRun,
+): number | undefined {
+  if (block.kind !== 'assistant' || block.key !== lastAssistantKey) {
+    return undefined;
+  }
+  return run.lastThreadSeq ?? undefined;
+}
+
 function agentIdOfRun(run: FeedRun): string | undefined {
   for (const event of run.events) {
     if (event.agentId) {
@@ -273,49 +296,14 @@ function segmentSpacing(prev: FeedSegment | undefined, curr: FeedSegment): strin
   return 'mt-3';
 }
 
-function TurnMessageActions({
-  runId,
-  answerText,
-  inherited,
-}: {
-  runId: string;
-  answerText: string;
-  inherited: boolean;
-}) {
-  const agent = useSelectedAgent();
-  const thread = useSelectedThread();
-  const projectId = studioFocusProjectId(useStudioLocation().focus);
-  const { openThread } = useStudioNavigation();
-  return (
-    <MessageActions
-      entryId={runId}
-      inherited={inherited}
-      speakText={answerText}
-      onCopy={() => {
-        void navigator.clipboard.writeText(answerText);
-        toast.add({ title: 'Copied.' });
-      }}
-      onBranch={() => {
-        if (!agent || !thread || !projectId) {
-          return;
-        }
-        void branchThread(runId, agent.id, thread.id, projectId).then((nextId) => {
-          if (nextId) {
-            useDeskStore.getState().setFocusedThreadId(nextId);
-            openThread(projectId, nextId);
-          }
-        });
-      }}
-    />
-  );
-}
-
 function TurnSegmentView({
   segment,
   live,
   pending = false,
   threadId,
   runId,
+  anchorSeq,
+  onToggleAnchor,
   inherited = false,
   streaming = false,
   readOnly = false,
@@ -327,6 +315,8 @@ function TurnSegmentView({
   pending?: boolean;
   threadId?: string;
   runId?: string;
+  anchorSeq?: number;
+  onToggleAnchor?: (threadSeq: number) => void;
   inherited?: boolean;
   streaming?: boolean;
   readOnly?: boolean;
@@ -340,6 +330,8 @@ function TurnSegmentView({
         segmentKey={segment.key}
         threadId={threadId}
         runId={runId}
+        anchorSeq={anchorSeq}
+        onToggleAnchor={onToggleAnchor}
         inherited={inherited}
         streaming={streaming}
         readOnly={readOnly}

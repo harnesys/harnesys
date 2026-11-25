@@ -43,6 +43,7 @@ import { threadMentionOptions } from '../model/mention-source';
 import { modelContextWindow } from '../model/model-context';
 import { allowedAttachKinds, modelInputModalities } from '../model/model-input';
 import type { SlashCommand } from '../model/slash-commands';
+import { useReplyQuote } from '../model/use-reply-quote';
 import { AttachDraft } from './attach-draft';
 import { AutoReadButton } from './auto-read-button';
 import { BackgroundAgentsStrip } from './background-agents-strip';
@@ -56,6 +57,7 @@ import {
   WorktreeBindingBanner,
 } from './composer-chrome';
 import { ComposerEditor, type ComposerEditorHandle } from './composer-editor';
+import { ComposerReplyPreview } from './composer-reply-preview';
 import { ComposerStartControls } from './composer-start-controls';
 import { ComposerTrailingControls } from './composer-trailing-controls';
 import { ComposerDropOverlay } from './drop-overlay';
@@ -114,6 +116,7 @@ export function ChatComposer({
   const isGroupThread = thread?.kind === 'group';
   const agents = useAgentStore((state) => state.items);
   const mentionOptions = threadMentionOptions(thread, agents);
+  const { options: replyOptions } = useReplyQuote(thread);
   const placeholder = composerPlaceholder({
     hitl,
     streaming,
@@ -155,6 +158,7 @@ export function ChatComposer({
           onUnbind={() => unbindWorktree(thread.id)}
         />
       ) : null}
+      <ComposerReplyPreview thread={thread} />
       <div className="relative">
         <InputGroup
           className="h-auto rounded-2xl shadow-black/10 shadow-sm transition-shadow duration-150 focus-within:shadow-md dark:shadow-black/50 dark:focus-within:shadow-black/60"
@@ -340,6 +344,7 @@ export function ChatComposer({
       setSending,
       clear: () => editorRef.current?.clear(),
       setPending,
+      ...replyOptions,
     });
   }
   function runSlashCommand(command: SlashCommand) {

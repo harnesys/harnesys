@@ -1,3 +1,4 @@
+import type { MessageQuote } from '@harnesys/contracts';
 import type { ThreadAttachment } from '@harnesys/studio-shared';
 import { useState } from 'react';
 import { Button } from '@/shared/ui/button';
@@ -12,11 +13,13 @@ export interface SendInput {
     path: string;
   }[];
   skills?: string[];
+  quote?: MessageQuote;
 }
 
 export function buildSendInput(
   atts: ThreadAttachment[] | undefined,
   skills: string[] | undefined,
+  quote?: MessageQuote,
 ): SendInput {
   const attachments = atts?.length
     ? {
@@ -30,7 +33,8 @@ export function buildSendInput(
       }
     : {};
   const attachedSkills = skills?.length ? { skills } : {};
-  return { ...attachments, ...attachedSkills };
+  const quoted = quote ? { quote } : {};
+  return { ...attachments, ...attachedSkills, ...quoted };
 }
 
 export function UserMessageEditor({

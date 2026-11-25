@@ -1,8 +1,10 @@
 import {
+  AnchorIcon,
   BookmarkPlusIcon,
   CopyIcon,
   GitBranchIcon,
   PencilIcon,
+  ReplyIcon,
   RotateCcwIcon,
   Trash2Icon,
 } from 'lucide-react';
@@ -15,7 +17,10 @@ interface MessageActionsProps {
   align?: 'start' | 'end';
   inherited?: boolean;
   speakText?: string;
+  anchored?: boolean;
+  onToggleAnchor?: () => void;
   onCopy: () => void;
+  onReply?: () => void;
   onSaveAsBullet?: () => void;
   onEdit?: () => void;
   onBranch?: () => void;
@@ -27,7 +32,10 @@ export function MessageActions({
   align = 'start',
   inherited = false,
   speakText,
+  anchored = false,
+  onToggleAnchor,
   onCopy,
+  onReply,
   onSaveAsBullet,
   onEdit,
   onBranch,
@@ -55,6 +63,33 @@ export function MessageActions({
       >
         <CopyIcon />
       </Button>
+      {onReply ? (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          className="text-muted-foreground hover:bg-transparent hover:text-foreground"
+          onClick={onReply}
+          aria-label="Reply"
+          title="Reply with quote"
+        >
+          <ReplyIcon />
+        </Button>
+      ) : null}
+      {onToggleAnchor ? (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          className={cn(
+            'text-muted-foreground hover:bg-transparent hover:text-foreground',
+            anchored && 'text-live hover:text-live',
+          )}
+          onClick={onToggleAnchor}
+          aria-label={anchored ? 'Remove history anchor' : 'Set history anchor'}
+          title={anchored ? 'Remove history anchor' : 'Set history anchor'}
+        >
+          <AnchorIcon />
+        </Button>
+      ) : null}
       {onSaveAsBullet ? (
         <Button
           variant="ghost"

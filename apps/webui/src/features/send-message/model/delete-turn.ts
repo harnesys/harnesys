@@ -1,11 +1,13 @@
 import type { DeleteThreadEventResponse } from '@harnesys/contracts';
 import { useSessionStore } from '@/entities/session';
 import { toClientThread, useThreadStore } from '@/entities/thread';
+import { useReplyTargetStore } from '@/features/message-quote';
 import { deleteThreadUserEvent, toStudioSummary } from '@/shared/api';
 
 export async function deleteUserMessage(threadId: string, threadSeq: number): Promise<void> {
   useSessionStore.getState().abortRun(threadId);
   const response = await deleteThreadUserEvent(threadId, threadSeq);
+  useReplyTargetStore.getState().clear(threadId);
   applyDeleteResponse(threadId, response);
   dismissMatchingFailures(threadId);
 }

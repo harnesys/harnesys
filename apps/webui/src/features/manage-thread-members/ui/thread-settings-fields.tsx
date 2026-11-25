@@ -1,12 +1,14 @@
 import type { ThreadHistoryMode } from '@harnesys/studio-shared';
+import { AnchorIcon, XIcon } from 'lucide-react';
 import { useId, useState } from 'react';
 import type { Thread } from '@/entities/thread';
 import { updateThreadPolicy } from '@/shared/api';
+import { Button } from '@/shared/ui/button';
 import { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from '@/shared/ui/field';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Switch } from '@/shared/ui/switch';
-import { mutateThread } from '../model/thread-members-mutation';
+import { mutateThread, setThreadHistoryAnchor } from '../model/thread-members-mutation';
 
 const NONE = '__none__';
 const HISTORY_LAST_PLACEHOLDER = 10;
@@ -32,6 +34,7 @@ const RESPONDER_MODE_ITEMS: { value: 'auto' | 'mention'; label: string }[] = [
 
 export function HistoryModeField({ thread }: { thread: Thread }) {
   const policy = thread.policy;
+  const anchored = Boolean(policy?.historyFromSeq ?? policy?.historyFromRunId);
   const [historyLast, setHistoryLast] = useState(
     policy?.historyLast === undefined ? '' : String(policy.historyLast),
   );
@@ -54,6 +57,7 @@ export function HistoryModeField({ thread }: { thread: Thread }) {
         <Select
           items={HISTORY_MODE_ITEMS}
           value={historyMode}
+          disabled={anchored}
           onValueChange={(value) =>
             void mutateThread(() =>
               updateThreadPolicy(thread.id, { historyMode: value as ThreadHistoryMode }),
@@ -76,9 +80,10 @@ export function HistoryModeField({ thread }: { thread: Thread }) {
             type="text"
             inputMode="numeric"
             aria-label="Runs included"
-            className="h-7 w-12 px-1.5 text-center text-xs"
+            className="h-7 w-12 px-1.5 text-center text-xs disabled:opacity-50"
             value={historyLast}
             placeholder={String(HISTORY_LAST_PLACEHOLDER)}
+            disabled={anchored}
             onChange={(event) => setHistoryLast(event.target.value.replace(/\D/g, ''))}
             onBlur={saveHistoryLast}
             onKeyDown={(event) => {
@@ -90,8 +95,9 @@ export function HistoryModeField({ thread }: { thread: Thread }) {
         ) : null}
       </div>
       <FieldDescription>
-        Prior history seeded into each run. With Last N runs, the input sets how many recent runs
-        carry forward (default {HISTORY_LAST_PLACEHOLDER}).
+        {anchored
+          ? 'Disabled while a history anchor is set. Clear the anchor to use these settings.'
+          : `Prior history seeded into each run. With Last N runs, the input sets how many recent runs carry forward (default ${HISTORY_LAST_PLACEHOLDER}).`}
       </FieldDescription>
     </Field>
   );
@@ -130,33 +136,37 @@ export function ResponderModeField({ thread }: { thread: Thread }) {
 }
 
 export function HistoryAnchorField({ thread }: { thread: Thread }) {
-  const anchorFieldId = useId();
-  const [anchor, setAnchor] = useState(thread.policy?.historyFromRunId ?? '');
-  const saveAnchor = () => {
-    const value = anchor.trim();
-    void mutateThread(() =>
-      updateThreadPolicy(thread.id, { historyFromRunId: value === '' ? null : value }),
-    );
-  };
+  const anchored = Boolean(thread.policy?.historyFromSeq ?? thread.policy?.historyFromRunId);
   return (
     <Field>
-      <FieldLabel htmlFor={anchorFieldId}>History anchor</FieldLabel>
-      <Input
-        id={anchorFieldId}
-        type="text"
-        className="h-7 text-xs"
-        value={anchor}
-        placeholder="Run ID to start history from"
-        onChange={(event) => setAnchor(event.target.value)}
-        onBlur={saveAnchor}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') {
-            event.currentTarget.blur();
-          }
-        }}
-      />
+      <FieldTitle>History anchor</FieldTitle>
+      {anchored ? (
+        <div className="flex items-center justify-between gap-2 rounded-md border border-live/35 bg-live/5 px-2 py-1.5">
+          <span className="flex min-w-0 items-center gap-1.5 font-medium text-live text-xs">
+            <AnchorIcon className="size-3.5 shrink-0" />
+            <span className="truncate">Starts at an anchored message in the feed</span>
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            className="text-muted-foreground hover:bg-transparent hover:text-foreground"
+            aria-label="Clear history anchor"
+            title="Clear history anchor"
+            onClick={() => setThreadHistoryAnchor(thread.id, null)}
+          >
+            <XIcon />
+          </Button>
+        </div>
+      ) : (
+        <p className="text-muted-foreground text-xs">
+          Pin a message in the feed to start history from that run.
+        </p>
+      )}
       <FieldDescription>
-        Optional. Starts history at a specific run; falls back to the default if the run is gone.
+        {anchored
+          ? 'History is seeded from this message onwards. The History mode above is ignored while an anchor is set.'
+          : 'Optional. The anchor overrides the History mode and lasts until you clear it.'}
       </FieldDescription>
     </Field>
   );
