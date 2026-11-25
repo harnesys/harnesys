@@ -88,7 +88,7 @@ export function DepartmentGroup({
         <SidebarRowTitle className="ml-0.5">{department.name}</SidebarRowTitle>
       </SidebarRow>
       {expanded ? (
-        <div className="ml-4 border-border/50 border-l pl-1">
+        <div className="ml-3 border-border/50 border-l pl-1">
           {members.map((agent) => (
             <DepartmentMemberRow
               key={agent.id}
