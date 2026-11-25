@@ -74,7 +74,6 @@ export function DeskSync() {
       rememberSelfNode(meta.nodeId);
       if (firstKnown) {
         void queryClient.invalidateQueries({ queryKey: ['sources'] });
-        void queryClient.invalidateQueries({ queryKey: projectQueryKey });
       }
     }
     if (projectQuery.data) {

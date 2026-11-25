@@ -1,13 +1,14 @@
 import type { AgentPublic } from '@harnesys/contracts';
+import type { QueryClient } from '@tanstack/react-query';
+import { deskAgentsQuery, deskBoardsQuery } from '@/features/desk/model/desk-queries';
 import {
   createIssueBoard,
   createIssueRecord,
-  fetchOrgAgents,
-  listIssueBoards,
+  type IssueBoardRecord,
   listIssues,
   saveBoardRule,
 } from '@/shared/api';
-import { getOrgSettings, patchOrgSettings } from '@/shared/api/org-skills';
+import { orgSettingsQuery, orgSettingsQueryKey, patchOrgSettings } from '@/shared/api/org-skills';
 import { loadOnboardingState, patchOnboardingState } from './onboarding-storage';
 
 export const STARTER_BOARD_NAME = 'Getting started';
@@ -27,6 +28,7 @@ export interface StarterBoardTask {
 export interface StarterBoardResult {
   boardId: string;
   created: boolean;
+  changed: boolean;
 }
 
 export const STARTER_BOARD_TASKS: readonly StarterBoardTask[] = [
@@ -74,76 +76,83 @@ export const STARTER_BOARD_TASKS: readonly StarterBoardTask[] = [
 
 let seeding: Promise<StarterBoardResult | null> | null = null;
 
-export function ensureStarterBoard(orgId: string): Promise<StarterBoardResult | null> {
+export function ensureStarterBoard(
+  orgId: string,
+  queryClient: QueryClient,
+): Promise<StarterBoardResult | null> {
   if (!seeding) {
-    seeding = seedStarterBoard(orgId).finally(() => {
+    seeding = seedStarterBoard(orgId, queryClient).finally(() => {
       seeding = null;
     });
   }
   return seeding;
 }
 
-async function seedStarterBoard(orgId: string): Promise<StarterBoardResult | null> {
+async function seedStarterBoard(
+  orgId: string,
+  queryClient: QueryClient,
+): Promise<StarterBoardResult | null> {
   const stored = loadOnboardingState();
-  const settings = await getOrgSettings(orgId);
-  const seeded = settings.onboarding.starterBoardSeeded || Boolean(stored.starterBoardSeededAt);
-  let boardId = stored.starterBoardId;
-  let created = false;
-  if (!seeded) {
-    const known = await listIssueBoards(orgId);
-    const existing =
-      known.find((board) => board.id === stored.starterBoardId) ??
-      known.find((board) => board.name === STARTER_BOARD_NAME) ??
-      null;
-    const board =
-      existing ??
-      (await createIssueBoard(orgId, {
-        name: STARTER_BOARD_NAME,
-        template: 'dev',
-        color: '#6366f1',
-        icon: 'square-kanban',
-      }));
-    created = existing === null;
-    boardId = board.id;
-    patchOnboardingState({ starterBoardId: board.id });
-    const titles = new Set((await listIssues(orgId, board.id)).map((issue) => issue.title));
-    for (const task of STARTER_BOARD_TASKS) {
-      if (titles.has(task.title)) {
-        continue;
-      }
-      await createIssueRecord(orgId, {
-        boardId: board.id,
-        title: task.title,
-        description: task.description,
-        statusKey: STARTER_ENTRY_STATUS,
-      });
-    }
-    patchOnboardingState({
-      starterBoardId: board.id,
-      starterBoardSeededAt: new Date().toISOString(),
-    });
-    await patchOrgSettings(orgId, { onboarding: { starterBoardSeeded: true } });
+  const settings = await queryClient.fetchQuery(orgSettingsQuery(orgId));
+  if (settings.onboarding.starterBoardSeeded || stored.starterBoardSeededAt !== null) {
+    await ensureStarterRule(orgId, queryClient, null, stored.starterBoardId);
+    return null;
   }
-  await ensureStarterRule(orgId);
-  return boardId ? { boardId, created } : null;
+  const known = await queryClient.fetchQuery(deskBoardsQuery(orgId));
+  const existing = pickStarterBoard(known, stored.starterBoardId);
+  const board =
+    existing ??
+    (await createIssueBoard(orgId, {
+      name: STARTER_BOARD_NAME,
+      template: 'dev',
+      color: '#6366f1',
+      icon: 'square-kanban',
+    }));
+  const created = existing === null;
+  patchOnboardingState({ starterBoardId: board.id });
+  const titles = new Set((await listIssues(orgId, board.id)).map((issue) => issue.title));
+  let tasksAdded = false;
+  for (const task of STARTER_BOARD_TASKS) {
+    if (titles.has(task.title)) {
+      continue;
+    }
+    await createIssueRecord(orgId, {
+      boardId: board.id,
+      title: task.title,
+      description: task.description,
+      statusKey: STARTER_ENTRY_STATUS,
+    });
+    tasksAdded = true;
+  }
+  patchOnboardingState({
+    starterBoardId: board.id,
+    starterBoardSeededAt: new Date().toISOString(),
+  });
+  const nextSettings = await patchOrgSettings(orgId, { onboarding: { starterBoardSeeded: true } });
+  queryClient.setQueryData(orgSettingsQueryKey(orgId), nextSettings);
+  const ruleAdded = await ensureStarterRule(orgId, queryClient, board, board.id);
+  return { boardId: board.id, created, changed: created || tasksAdded || ruleAdded };
 }
 
-async function ensureStarterRule(orgId: string): Promise<void> {
+async function ensureStarterRule(
+  orgId: string,
+  queryClient: QueryClient,
+  knownBoard: IssueBoardRecord | null,
+  storedBoardId: string | null,
+): Promise<boolean> {
   if (loadOnboardingState().starterRuleSeededAt !== null) {
-    return;
+    return false;
   }
-  const agents = (await fetchOrgAgents(orgId)).items;
+  const agents = (await queryClient.fetchQuery(deskAgentsQuery(orgId))).items;
   const agent = pickDefaultAgent(agents);
   if (!agent) {
-    return;
+    return false;
   }
-  const stored = loadOnboardingState();
-  const boards = await listIssueBoards(orgId);
   const board =
-    boards.find((candidate) => candidate.id === stored.starterBoardId) ??
-    boards.find((candidate) => candidate.name === STARTER_BOARD_NAME) ??
-    null;
-  if (board && board.rules.length === 0) {
+    knownBoard ??
+    pickStarterBoard(await queryClient.fetchQuery(deskBoardsQuery(orgId)), storedBoardId);
+  const ruleAdded = board !== null && board.rules.length === 0;
+  if (board && ruleAdded) {
     await saveBoardRule(orgId, board.id, {
       trigger: { type: 'status_entered', statusKey: STARTER_RULE_STATUS },
       conditions: [],
@@ -153,6 +162,18 @@ async function ensureStarterRule(orgId: string): Promise<void> {
     });
   }
   patchOnboardingState({ starterRuleSeededAt: new Date().toISOString() });
+  return ruleAdded;
+}
+
+function pickStarterBoard(
+  boards: readonly IssueBoardRecord[],
+  storedBoardId: string | null,
+): IssueBoardRecord | null {
+  return (
+    boards.find((board) => board.id === storedBoardId) ??
+    boards.find((board) => board.name === STARTER_BOARD_NAME) ??
+    null
+  );
 }
 
 function pickDefaultAgent(agents: readonly AgentPublic[]): AgentPublic | null {

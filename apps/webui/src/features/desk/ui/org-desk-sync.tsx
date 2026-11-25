@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useIdeStore } from '@/features/ide/model/ide.store';
 import { workspaceFromPersisted } from '@/features/ide/model/ide-persist';
 import { useOrgId } from '@/shared/config/location';
@@ -7,21 +7,21 @@ import { hydrateDeskChrome } from '../model/desk-chrome';
 import { useDeskStoreSync } from '../model/desk-store-sync';
 import { resetOrgState } from '../model/org-reset';
 
+let syncedOrgId: string | null = null;
+
 export function OrgDeskSync() {
   const orgId = useOrgId();
   const queryClient = useQueryClient();
-  const lastOrgRef = useRef<string | null>(null);
   useDeskStoreSync(orgId, { orgEntities: true });
   useEffect(() => {
     if (!orgId) {
       return;
     }
-    // Wipe stores only when the org actually changes; re-entering the same
-    // org (remount after onboarding, layout remount) must keep hydrated data.
-    if (lastOrgRef.current !== orgId) {
+    const switched = syncedOrgId !== null && syncedOrgId !== orgId;
+    syncedOrgId = orgId;
+    if (switched) {
       resetOrgState(orgId, queryClient);
       useIdeStore.setState({ workspace: workspaceFromPersisted(null) });
-      lastOrgRef.current = orgId;
     }
     void hydrateDeskChrome(orgId);
   }, [orgId, queryClient]);

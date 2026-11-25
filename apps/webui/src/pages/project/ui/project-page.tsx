@@ -103,12 +103,14 @@ function ProjectShell({
       return;
     }
     seededOrg.current = orgId;
-    void ensureStarterBoard(orgId)
+    void ensureStarterBoard(orgId, queryClient)
       .then((result) => {
         if (!result) {
           return;
         }
-        void queryClient.invalidateQueries({ queryKey: DESK_QUERY_KEY });
+        if (result.changed) {
+          void queryClient.invalidateQueries({ queryKey: DESK_QUERY_KEY });
+        }
         if (result.created) {
           openBoard(result.boardId);
         }
