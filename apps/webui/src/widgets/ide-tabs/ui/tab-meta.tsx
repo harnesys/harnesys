@@ -119,6 +119,11 @@ export function useTabLabel(tab: IdeTab): string {
   const agent = useAgentStore((state) =>
     tab.kind === 'spawn' && tab.agentId ? (state.byId(tab.agentId) ?? undefined) : undefined,
   );
+  const spawnAgent = useAgentStore((state) =>
+    tab.kind === 'spawn' && tab.spawnAgentId
+      ? (state.byId(tab.spawnAgentId) ?? undefined)
+      : undefined,
+  );
   const terminals = useOrgTerminals();
   if (tab.kind === 'file' && tab.path) {
     return tab.worktreeBranch
@@ -144,7 +149,12 @@ export function useTabLabel(tab: IdeTab): string {
     return dashboardName ?? 'Dashboard';
   }
   if (tab.kind === 'spawn') {
-    return agent?.name ?? 'Spawn';
+    const parentName = agent?.name;
+    const spawnName = spawnAgent?.name;
+    if (spawnName && parentName && parentName !== spawnName) {
+      return `${parentName} - ${spawnName}`;
+    }
+    return spawnName ?? parentName ?? 'Spawn';
   }
   if (tab.kind === 'terminal') {
     const session = terminals.find((item) => item.id === tab.terminalSessionId);

@@ -94,7 +94,7 @@ export function AssistantMessageView({
   runId: string;
   streaming?: boolean;
   threadId?: string;
-  onOpenSpawn?: (spawnId: string) => void;
+  onOpenSpawn?: (spawnId: string, agentId: string) => void;
   readOnly?: boolean;
   inherited?: boolean;
   branchChildren?: { id: string; agentId: string; title: string }[];
@@ -115,6 +115,7 @@ export function AssistantMessageView({
     run.terminal === null &&
     !run.hasInFlight &&
     (!lastSegment || lastSegment.kind === 'user' || lastIsEmptyActivity);
+  const pendingInline = pendingReply && lastIsEmptyActivity;
   const answerText = segments
     .filter((segment) => segment.kind === 'text' || segment.kind === 'compaction')
     .map((segment) => segment.text)
@@ -143,11 +144,15 @@ export function AssistantMessageView({
         >
           {block.items.map((item) => {
             const { segment, index } = item;
+            const isLast = index === segments.length - 1;
             const segmentNode = (
               <div className={segmentSpacing(segments[index - 1], segment)}>
                 <TurnSegmentView
                   segment={segment}
-                  live={streaming && index === segments.length - 1 && !pendingReply}
+                  live={streaming && isLast && (!pendingReply || pendingInline)}
+                  pending={
+                    streaming && isLast && segment.kind === 'activity' && segment.items.length === 0
+                  }
                   threadId={threadId}
                   runId={runId}
                   inherited={inherited}
@@ -164,14 +169,7 @@ export function AssistantMessageView({
             return (
               <div key={segment.key} className="min-w-0">
                 {index === firstAssistantIndex ? (
-                  <div className="mb-1 flex items-center gap-1.5">
-                    <AgentTurnAvatar agent={agent} name={runAgentName} />
-                    {runAgentName ? (
-                      <span className="truncate font-medium text-muted-foreground text-xs">
-                        {runAgentName}
-                      </span>
-                    ) : null}
-                  </div>
+                  <AgentTurnHeading agent={agent} name={runAgentName} />
                 ) : null}
                 {segmentNode}
               </div>
@@ -181,8 +179,9 @@ export function AssistantMessageView({
         </div>
       ))}
       {lastAssistantKey === undefined ? <div className="flex flex-col">{footer}</div> : null}
-      {pendingReply ? (
-        <div className={segments.length > 0 ? 'mt-3' : undefined}>
+      {pendingReply && !pendingInline ? (
+        <div className={lastSegment?.kind === 'user' ? 'mt-5 min-w-0' : 'min-w-0'}>
+          {group ? <AgentTurnHeading agent={agent} name={runAgentName} /> : null}
           <ActivityRail live={true}>
             <ThinkingLine text="" live={true} threadId={threadId} />
           </ActivityRail>
@@ -238,6 +237,17 @@ function agentNameOfRun(run: FeedRun): string | undefined {
     }
   }
   return undefined;
+}
+
+function AgentTurnHeading({ agent, name }: { agent: Agent | undefined; name: string | undefined }) {
+  return (
+    <div className="mb-1 flex items-center gap-1.5">
+      <AgentTurnAvatar agent={agent} name={name} />
+      {name ? (
+        <span className="truncate font-medium text-muted-foreground text-xs">{name}</span>
+      ) : null}
+    </div>
+  );
 }
 
 function AgentTurnAvatar({ agent, name }: { agent: Agent | undefined; name: string | undefined }) {
@@ -303,6 +313,7 @@ function TurnMessageActions({
 function TurnSegmentView({
   segment,
   live,
+  pending = false,
   threadId,
   runId,
   inherited = false,
@@ -313,12 +324,13 @@ function TurnSegmentView({
 }: {
   segment: FeedSegment;
   live: boolean;
+  pending?: boolean;
   threadId?: string;
   runId?: string;
   inherited?: boolean;
   streaming?: boolean;
   readOnly?: boolean;
-  onOpenSpawn?: (spawnId: string) => void;
+  onOpenSpawn?: (spawnId: string, agentId: string) => void;
   undoable?: boolean;
 }) {
   if (segment.kind === 'user') {
@@ -339,6 +351,7 @@ function TurnSegmentView({
       <ActivityItems
         items={segment.items}
         live={live}
+        pending={pending}
         threadId={threadId}
         onOpenSpawn={onOpenSpawn}
       />

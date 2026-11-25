@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { Agent } from '@/entities/agent';
@@ -9,6 +10,7 @@ import {
   updateAgent,
   updateAgentCapabilities,
 } from '@/features/manage-agent';
+import { orgAgentCapabilitiesQueryKey } from '@/shared/api/org-capabilities';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { toast } from '@/shared/ui/toast';
 import { AgentGroupRow } from './agent-group-row';
@@ -31,6 +33,7 @@ export function AgentsSection({
   loading?: boolean;
 }) {
   const createAgent = useCreateAgentFlow(onSelectDone);
+  const queryClient = useQueryClient();
   const expanded = useAgentsDisplayStore((state) => state.expanded);
   const toggleExpanded = useAgentsDisplayStore((state) => state.toggle);
   const departments = useDepartmentStore(
@@ -77,6 +80,9 @@ export function AgentsSection({
       try {
         await updateAgent(item.orgId, item.id, result.fields);
         await updateAgentCapabilities(item.orgId, item.id, result.capabilities);
+        await queryClient.invalidateQueries({
+          queryKey: orgAgentCapabilitiesQueryKey(item.orgId, item.id),
+        });
       } catch (error) {
         toast.add({
           title: error instanceof Error ? error.message : 'Could not save agent',

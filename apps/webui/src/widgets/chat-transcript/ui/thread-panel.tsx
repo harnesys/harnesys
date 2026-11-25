@@ -76,7 +76,8 @@ export function ThreadPanel({
     return current?.parentThreadId ? state.byId(current.parentThreadId) : undefined;
   });
   const openSpawnTab = useOpenSpawnTab();
-  const onOpenSpawn = (spawnId: string) => openSpawnTab(agent.orgId, agent.id, threadId, spawnId);
+  const onOpenSpawn = (spawnId: string, spawnAgentId?: string) =>
+    openSpawnTab(agent.orgId, agent.id, threadId, spawnId, spawnAgentId);
   const streaming = useSessionStore((state) => active && Boolean(state.activeRuns[threadId]));
   const allThreads = useThreadStore((state) => state.items);
   const allFailures = useSessionStore((state) => state.failures);

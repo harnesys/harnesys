@@ -41,6 +41,7 @@ export interface IdeTab {
   kind: IdeTabKind;
   projectId: string;
   agentId?: string;
+  spawnAgentId?: string;
   threadId?: string;
   spawnId?: string;
   terminalSessionId?: string;
@@ -68,7 +69,13 @@ interface IdeState {
 }
 type IdeStore = IdeState & {
   openThread: (projectId: string, agentId: string, threadId: string) => void;
-  openSpawn: (projectId: string, agentId: string, threadId: string, spawnId: string) => void;
+  openSpawn: (
+    projectId: string,
+    agentId: string,
+    threadId: string,
+    spawnId: string,
+    spawnAgentId?: string,
+  ) => void;
   openFile: (projectId: string, path: string, worktreeId?: string, worktreeBranch?: string) => void;
   openDiff: (projectId: string, path: string) => void;
   openBoard: (projectId: string, boardId: string) => void;
@@ -114,10 +121,18 @@ export const useIdeStore = create<IdeStore>((set) => ({
       const tab: IdeTab = { id, kind: 'thread', projectId, agentId, threadId };
       return withWs(state, upsertTabState(state.workspace, tab));
     }),
-  openSpawn: (projectId, agentId, threadId, spawnId) =>
+  openSpawn: (projectId, agentId, threadId, spawnId, spawnAgentId) =>
     set((state) => {
       const id = tabIdFor('spawn', projectId, `${threadId}:${spawnId}`);
-      const tab: IdeTab = { id, kind: 'spawn', projectId, agentId, threadId, spawnId };
+      const tab: IdeTab = {
+        id,
+        kind: 'spawn',
+        projectId,
+        agentId,
+        spawnAgentId,
+        threadId,
+        spawnId,
+      };
       return withWs(state, upsertTabState(state.workspace, tab));
     }),
   openFile: (projectId, path, worktreeId, worktreeBranch) =>

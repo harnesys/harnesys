@@ -20,7 +20,7 @@ export function RunTurn({
   runId: string;
   streaming?: boolean;
   threadId?: string;
-  onOpenSpawn?: (spawnId: string) => void;
+  onOpenSpawn?: (spawnId: string, agentId: string) => void;
   onRetry?: () => void;
   readOnly?: boolean;
   inherited?: boolean;

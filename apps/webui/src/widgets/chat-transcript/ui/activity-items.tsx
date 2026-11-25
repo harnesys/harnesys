@@ -9,16 +9,21 @@ import { ToolGroup } from './tool-group';
 export function ActivityItems({
   items,
   live,
+  pending = false,
   threadId,
   onOpenSpawn,
 }: {
   items: FeedItem[];
   live: boolean;
+  pending?: boolean;
   threadId?: string;
-  onOpenSpawn?: (id: string) => void;
+  onOpenSpawn?: (spawnId: string, agentId: string) => void;
 }) {
   return (
     <ActivityRail live={live}>
+      {items.length === 0 && pending ? (
+        <ThinkingLine text="" live={live} threadId={threadId} />
+      ) : null}
       {items.map((item, index) => {
         const itemLive = live && index === items.length - 1;
         if (item.type === 'group') {

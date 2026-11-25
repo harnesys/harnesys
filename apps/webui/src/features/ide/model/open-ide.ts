@@ -80,8 +80,14 @@ export function useOpenThreadTab() {
 export function useOpenSpawnTab() {
   const { openSpawn } = useStudioNavigation();
   return useCallback(
-    (projectId: string, agentId: string, threadId: string, spawnId: string) => {
-      useIdeStore.getState().openSpawn(projectId, agentId, threadId, spawnId);
+    (
+      projectId: string,
+      agentId: string,
+      threadId: string,
+      spawnId: string,
+      spawnAgentId?: string,
+    ) => {
+      useIdeStore.getState().openSpawn(projectId, agentId, threadId, spawnId, spawnAgentId);
       useDeskStore.getState().setFocusedThreadId(threadId);
       openSpawn(projectId, threadId, spawnId);
     },

@@ -42,11 +42,16 @@ export function setSourceGrant(
   map: PackAssignmentMap,
   name: string,
   granted: boolean,
+  saved?: PackAssignmentMap,
 ): PackAssignmentMap {
   const next = asStoredMap(map);
   if (granted) {
     const current = map[name];
-    next[name] = typeof current === 'object' && current !== null ? current : {};
+    if (typeof current === 'object' && current !== null) {
+      next[name] = current;
+      return next;
+    }
+    next[name] = overrideOfAssignment(saved?.[name]);
     return next;
   }
   next[name] = null;
@@ -129,10 +134,22 @@ export interface SourceToolRowsOptions {
    * override reason renders togglable instead of frozen. Modes pane omits it.
    */
   ownsDisabledTools?: boolean;
+  /**
+   * True when the draft grants this pack even though the saved explain still marks
+   * it ungranted: the owning pane then drives `pack not granted` rows from the draft.
+   */
+  draftGranted?: boolean;
 }
-function lockedOutsideDraft(entry: ExplainEntry, ownsDisabledTools: boolean): boolean {
-  if (entry.status === 'dropped-by-mode' || entry.status === 'denied-by-universe') {
+function lockedOutsideDraft(
+  entry: ExplainEntry,
+  ownsDisabledTools: boolean,
+  draftGranted: boolean,
+): boolean {
+  if (entry.status === 'dropped-by-mode') {
     return true;
+  }
+  if (entry.status === 'denied-by-universe') {
+    return !(ownsDisabledTools && draftGranted && entry.reason === 'pack not granted');
   }
   if (!ownsDisabledTools) {
     return isTerminal(entry);
@@ -164,7 +181,13 @@ export function sourceToolRows(
     rows.push({
       name: entry.item,
       exposure: draftExposure ?? registryOf(view, entry.item)?.exposure ?? 'direct',
-      disabled: draftDisabled || lockedOutsideDraft(entry, options.ownsDisabledTools === true),
+      disabled:
+        draftDisabled ||
+        lockedOutsideDraft(
+          entry,
+          options.ownsDisabledTools === true,
+          options.draftGranted === true,
+        ),
       overridden: draftDisabled || draftExposure !== undefined,
       provenance: entry.source,
       status: entry.status,

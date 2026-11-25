@@ -1,3 +1,4 @@
+import { useSessionStore } from '@/entities/session';
 import { setActiveThreadId, useThreadStore } from '@/entities/thread';
 import { ensureThreadCached, useDeskStore } from '@/features/desk';
 import type { StudioFocus, StudioFocusKind } from '@/shared/config/routes';
@@ -69,7 +70,10 @@ function syncSpawnFocus({ focus, projectId }: FocusSyncArgs): void {
     return;
   }
   const ide = useIdeStore.getState();
-  ide.openSpawn(projectId, thread.agentId, focus.threadId, focus.spawnId);
+  const spawnAgentId = useSessionStore
+    .getState()
+    .feeds[focus.threadId]?.spawns.find((spawn) => spawn.spawnId === focus.spawnId)?.agentId;
+  ide.openSpawn(projectId, thread.agentId, focus.threadId, focus.spawnId, spawnAgentId);
   useDeskStore.getState().setFocusedThreadId(focus.threadId);
   ide.setActive(tabIdFor('spawn', projectId, `${focus.threadId}:${focus.spawnId}`));
 }

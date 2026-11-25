@@ -1,6 +1,7 @@
 import type { PluginListItem } from '@harnesys/contracts';
 import { useQuery } from '@tanstack/react-query';
 import type { PermissionGate } from 'harnesys';
+import { useAgentStore } from '@/entities/agent';
 import { packLabels } from '@/entities/tool-catalog';
 import { orgAgentCapabilitiesQuery, orgCapabilitiesQuery } from '@/shared/api/org-capabilities';
 import { orgPluginsQuery } from '@/shared/api/org-plugins';
@@ -40,6 +41,8 @@ export function DraftPacksGrants({
   });
   const explainQuery = useQuery(orgAgentCapabilitiesQuery(orgId, agentId));
   const view = explainQuery.data;
+  const savedCapabilities =
+    useAgentStore((state) => (agentId ? state.byId(agentId) : null))?.capabilities ?? {};
   const catalog = (packsQuery.data?.capabilities ?? []).filter(
     (pack) => !(isDelegate && pack.name === 'agents'),
   );
@@ -68,7 +71,10 @@ export function DraftPacksGrants({
               lockLabel={isCore ? 'Required' : undefined}
               tools={
                 agentId
-                  ? sourceToolRows(view, `pack:${pack.name}`, base, { ownsDisabledTools: true })
+                  ? sourceToolRows(view, `pack:${pack.name}`, base, {
+                      ownsDisabledTools: true,
+                      draftGranted: granted,
+                    })
                   : catalogToolRows(pack.tools, base)
               }
               toolsHint={
@@ -77,7 +83,9 @@ export function DraftPacksGrants({
                   : 'Save the agent to tune per-tool overrides.'
               }
               onToggleGrant={(next) =>
-                onCapabilitiesChange(setSourceGrant(capabilities, pack.name, next))
+                onCapabilitiesChange(
+                  setSourceGrant(capabilities, pack.name, next, savedCapabilities),
+                )
               }
               onToggleTool={(tool, disable) =>
                 onCapabilitiesChange(toggleDisabledTool(capabilities, pack.name, tool, disable))

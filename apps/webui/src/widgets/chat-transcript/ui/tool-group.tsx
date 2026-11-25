@@ -34,7 +34,7 @@ export function ToolGroup({
   live: boolean;
   runLive?: boolean;
   threadId?: string;
-  onOpenSpawn?: (spawnId: string) => void;
+  onOpenSpawn?: (spawnId: string, agentId: string) => void;
 }) {
   const feedDetail = useChatPreferences((state) => state.feedDetail);
   const collapse =
@@ -78,13 +78,13 @@ function CollapsedGroup({
   chunks: GroupFeedChunk[];
   threadId?: string;
   runLive: boolean;
-  onOpenSpawn?: (spawnId: string) => void;
+  onOpenSpawn?: (spawnId: string, agentId: string) => void;
   renderChunk: (args: {
     chunk: GroupFeedChunk;
     live: boolean;
     runLive?: boolean;
     threadId?: string;
-    onOpenSpawn?: (spawnId: string) => void;
+    onOpenSpawn?: (spawnId: string, agentId: string) => void;
   }) => ReactNode;
 }) {
   const spawns = useFeedSpawns(threadId ?? null);
@@ -127,7 +127,7 @@ function renderChunk({
   live: boolean;
   runLive?: boolean;
   threadId?: string;
-  onOpenSpawn?: (spawnId: string) => void;
+  onOpenSpawn?: (spawnId: string, agentId: string) => void;
 }): ReactNode {
   if (chunk.type === 'reasoning') {
     const text = chunk.events.map((e) => e.text).join('');

@@ -21,7 +21,7 @@ export function SpawnLine({
   threadId: string;
   spawnId: string;
   live: boolean;
-  onOpen?: (spawnId: string) => void;
+  onOpen?: (spawnId: string, agentId: string) => void;
 }) {
   const spawn = useFeedSpawn(threadId, spawnId);
   const running = spawn?.status === 'running';
@@ -80,7 +80,7 @@ export function SpawnLine({
             title="Open agent tab"
             onClick={(event) => {
               event.stopPropagation();
-              onOpen(spawnId);
+              onOpen(spawnId, spawn.agentId);
             }}
           >
             <span>open</span>

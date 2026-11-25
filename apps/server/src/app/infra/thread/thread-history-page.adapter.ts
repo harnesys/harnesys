@@ -217,15 +217,19 @@ export class ThreadHistoryPageAdapter extends ThreadHistoryPagePort {
           SELECT parent_run_id FROM runs WHERE run_id = ${runId}
         `)[0];
         const parentRunId = parent?.parent_run_id ?? null;
+        const selfSpawnFilter =
+          parentRunId === null
+            ? undefined
+            : and(
+                eq(runEventsTable.type, 'agent.spawned'),
+                sql`json_extract(${runEventsTable.metadata}, '$.spawnId') = ${runId}`,
+              );
         const scope =
           parentRunId === null
             ? inArray(runEventsTable.runId, subtree)
             : or(
                 inArray(runEventsTable.runId, subtree),
-                and(
-                  eq(runEventsTable.runId, parentRunId),
-                  eq(runEventsTable.type, 'agent.spawned'),
-                ),
+                and(eq(runEventsTable.runId, parentRunId), selfSpawnFilter),
               );
         const rows = joinedRows(db)
           .where(and(eq(runEventsTable.threadId, threadId), scope))

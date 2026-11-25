@@ -69,6 +69,7 @@ export function SpawnView({
   const spawns = spawnsOf(events);
   const spawn = spawns.find((item) => item.spawnId === spawnId);
   const agent = useAgentStore((state) => (spawn ? state.byId(spawn.agentId) : undefined));
+  const thread = useThreadStore((state) => state.byId(threadId));
   const activeRun = useThreadStore((state) => state.byId(threadId)?.activeRun ?? null);
   const spawnedEvent = events.find(
     (
@@ -92,11 +93,19 @@ export function SpawnView({
       </div>
     );
   }
-  const onOpenSpawn = (sid: string) => {
-    const target = spawns.find((item) => item.spawnId === sid);
-    openSpawnTab(tab.projectId, target?.agentId ?? '', threadId, sid);
+  const onOpenSpawn = (sid: string, spawnAgentId?: string) => {
+    openSpawnTab(
+      tab.projectId,
+      thread?.agentId ?? tab.agentId ?? '',
+      threadId,
+      sid,
+      spawnAgentId ?? spawns.find((item) => item.spawnId === sid)?.agentId,
+    );
   };
-  const runs = splitRuns(events);
+  const timelineEvents = events.filter(
+    (ev) => !(ev.type === 'agent.spawned' && ev.spawnId === spawnId),
+  );
+  const runs = splitRuns(timelineEvents);
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-spawn">
       {spawnedTask ? (
