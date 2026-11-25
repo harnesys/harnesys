@@ -7,6 +7,7 @@ import { resolveAgentIdentity } from './agent-identity.ts';
 import { compileOrThrow } from './compile.ts';
 import type { GraphOpts } from './graph.ts';
 import { abandonForeignSnapshot, decisionTextOf } from './graph-snap.ts';
+import type { ChildAbortRegistry } from './graph-spawn.ts';
 import { createHookBus } from './hooks/bus.ts';
 import type { HookEmitCtx } from './hooks/emit-hook.ts';
 import { createHookRuntimeCtx } from './hooks/runtime-ctx.ts';
@@ -90,11 +91,12 @@ export interface PrepareExecuteGraphOptsArgs {
   hookCache: Map<string, HookEmitCtx>;
   runLogger: Logger;
   childJournal: (spawnId: string, ev: Event) => void;
+  childAborts?: ChildAbortRegistry;
 }
 export async function prepareExecuteGraphOpts(
   args: PrepareExecuteGraphOptsArgs,
 ): Promise<GraphOpts> {
-  const { deps, opts, runId, signal, hookCache, runLogger, childJournal } = args;
+  const { deps, opts, runId, signal, hookCache, runLogger, childJournal, childAborts } = args;
   const answer = await findLastAnswer(deps, runId);
   if (answer === null) {
     const snap = await opts.state.load();
@@ -165,6 +167,7 @@ export async function prepareExecuteGraphOpts(
     ...(opts.permissionGrants !== undefined ? { permissionGrants: opts.permissionGrants } : {}),
     ...(answer?.note !== undefined ? { resumeNote: answer.note } : {}),
     childJournal,
+    ...(childAborts !== undefined ? { childAborts } : {}),
     ...(deps.modelQuota ? { modelQuota: deps.modelQuota } : {}),
     ...(deps.childRunner ? { childRunner: deps.childRunner } : {}),
     logger: runLogger,

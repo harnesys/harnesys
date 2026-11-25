@@ -107,6 +107,11 @@ export interface PreparedSpawn {
   onTimeout: 'partial' | 'fail';
 }
 export type ChildRunner = (opts: GraphOpts) => AsyncIterable<Event>;
+export interface ChildAbortRegistry {
+  register(spawnId: string, controller: AbortController): void;
+  release(spawnId: string): void;
+  abort(spawnId: string, reason?: unknown): boolean;
+}
 function resolveConcurrency(
   c: Expr | 'parallel' | 'sequential',
   slots: SpawnSlots,
@@ -722,12 +727,21 @@ export async function executeSpawn(
       return;
     }
     let item: SpawnResultItem | undefined;
+    const childAc = new AbortController();
+    const relayAbort = (): void => childAc.abort(ac.signal.reason);
+    if (ac.signal.aborted) {
+      relayAbort();
+    } else {
+      ac.signal.addEventListener('abort', relayAbort, { once: true });
+    }
+    const childAborts = parent.childAborts;
+    childAborts?.register(t.spawnId, childAc);
     try {
       item = await runOneChild({
         parent,
         target: t,
         runChild,
-        signal: ac.signal,
+        signal: childAc.signal,
         abort,
         ...(childResume ? { childResume } : {}),
       });
@@ -738,6 +752,9 @@ export async function executeSpawn(
         return;
       }
       throw err;
+    } finally {
+      childAborts?.release(t.spawnId);
+      ac.signal.removeEventListener('abort', relayAbort);
     }
     if (item === undefined) {
       return;

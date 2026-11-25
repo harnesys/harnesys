@@ -2,7 +2,7 @@ import type { PermissionMap } from './ports/permissions.ts';
 import type { RunLifecycleStatus } from './ports/run-lifecycle-store.ts';
 export const PROJECT_META_DIR = '.harnesys';
 export const DEFAULT_MAX_READ_CHARS = 64000;
-export const DEFAULT_SHELL_TIMEOUT_MS = 30000;
+export const DEFAULT_SHELL_TIMEOUT_MS = 120000;
 export const MAX_SHELL_TIMEOUT_MS = 600000;
 export const DEFAULT_LIST_DIR_LIMIT = 500;
 export const DEFAULT_GREP_MAX_RESULTS = 100;
@@ -308,7 +308,10 @@ export const SUMMARY_SYSTEM_PROMPT = `Output exactly the Markdown structure show
 - [one or two brief sentences describing what the user is trying to accomplish]
 
 ## Important Details
-- [constraints/preferences, decisions and why, important facts/assumptions, exact context needed to continue, or "(none)"]
+- [constraints/preferences, important facts/assumptions, exact context needed to continue, or "(none)"]
+
+## Decisions
+- [decisions made and why, with alternatives rejected if relevant; otherwise "(none)"]
 
 ## Work State
 ### Completed

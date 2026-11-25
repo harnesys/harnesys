@@ -55,6 +55,13 @@ export interface ShellWaitTimeoutResult {
   outputSoFar: string;
   timedOutWaiting: true;
 }
+export interface ShellHandoffResult {
+  kind: 'handoff';
+  jobId: string;
+  mode: ProcessJobMode;
+  outputSoFar: string;
+  hint: string;
+}
 export interface ShellBlockingArgs {
   command: string;
   timeoutMs: number;
@@ -204,9 +211,11 @@ function waitForJobExit(
     signal?.addEventListener('abort', onAbort, { once: true });
   });
 }
-async function runBlocking(args: ShellBlockingArgs): Promise<ShellBlockingResult> {
+async function runBlocking(
+  args: ShellBlockingArgs,
+): Promise<ShellBlockingResult | ShellHandoffResult> {
   const { command, timeoutMs, ctx, ports, mode, target } = args;
-  if (mode === 'pipes' && target === undefined) {
+  if (mode === 'pipes' && target === undefined && ports.jobs === undefined) {
     return runOnHost(command, timeoutMs, ctx.cwd, {
       signal: ctx.signal,
       env: ctx.env,
@@ -234,8 +243,13 @@ async function runBlocking(args: ShellBlockingArgs): Promise<ShellBlockingResult
   }
   const final = registry.get(record.id);
   if (!final || final.status === 'running') {
-    registry.kill(record.id);
-    throw new Error(`shell timed out after ${timeoutMs}ms`);
+    return {
+      kind: 'handoff',
+      jobId: record.id,
+      mode: record.mode,
+      outputSoFar: registry.read(record.id)?.text ?? '',
+      hint: `Command still running after ${timeoutMs}ms timeout; moved to background. Read output later with terminal_read(session: "${record.id}"). Do not start a duplicate.`,
+    };
   }
   return {
     exitCode: final.exitCode,

@@ -5,6 +5,7 @@ import { CONSOLE_LOGGER } from '../ports/logger.ts';
 import type { RunLifecycleStatus } from '../ports/run-lifecycle-store.ts';
 import type { SessionEvent } from '../ports/session.ts';
 import type { GraphOpts } from './graph.ts';
+import type { ChildAbortRegistry } from './graph-spawn.ts';
 import { emitHook, type HookEmitCtx } from './hooks/emit-hook.ts';
 import { eventToSessionEvent, runFailedEvent, runStartedEvent } from './run-engine-events.ts';
 import { prepareExecuteGraphOpts } from './run-engine-prepare.ts';
@@ -41,11 +42,31 @@ interface ChildRunJournal {
   epoch: number;
   closed: boolean;
 }
+function createChildAbortRegistry(): ChildAbortRegistry {
+  const bySpawnId = new Map<string, AbortController>();
+  return {
+    register: (spawnId, controller) => {
+      bySpawnId.set(spawnId, controller);
+    },
+    release: (spawnId) => {
+      bySpawnId.delete(spawnId);
+    },
+    abort: (spawnId, reason) => {
+      const controller = bySpawnId.get(spawnId);
+      if (controller === undefined) {
+        return false;
+      }
+      controller.abort(reason);
+      return true;
+    },
+  };
+}
 export function createRunEngine(deps: RunEngineDeps): RunEngine {
   const leaseTtl = deps.leaseTtlMs ?? DEFAULT_LEASE_TTL_MS;
   const renewMs = deps.renewMs ?? DEFAULT_LEASE_RENEW_MS;
   const active: Set<RunRuntime> = new Set();
   const byRun = new Map<string, RunRuntime>();
+  const childAborts = createChildAbortRegistry();
   const runLogger = deps.logger ?? CONSOLE_LOGGER;
   const hookCache = new Map<string, HookEmitCtx>();
   function envWith(leaseLost: () => boolean, delivery: DeliverySettings): SegmentEnv {
@@ -188,6 +209,7 @@ export function createRunEngine(deps: RunEngineDeps): RunEngine {
           hookCache,
           runLogger,
           childJournal,
+          childAborts,
         });
       } catch (err) {
         if (
@@ -225,7 +247,12 @@ export function createRunEngine(deps: RunEngineDeps): RunEngine {
     }
   }
   function abort(runId: string): void {
-    byRun.get(runId)?.abort.abort('run cancelled');
+    const run = byRun.get(runId);
+    if (run !== undefined) {
+      run.abort.abort('run cancelled');
+      return;
+    }
+    childAborts.abort(runId, 'run cancelled');
   }
   function isActive(runId: string): boolean {
     return byRun.has(runId);

@@ -89,6 +89,7 @@ import {
 } from './graph-route.ts';
 import { mkEv, mkSnap, type SnapCtx } from './graph-snap.ts';
 import {
+  type ChildAbortRegistry,
   type ChildRunner,
   type DelegatedAskResume,
   executeSpawn,
@@ -466,6 +467,7 @@ export interface GraphOpts {
   agents: AgentsResolve;
   childJournal?: (spawnId: string, ev: Event) => void;
   childRunner?: ChildRunner;
+  childAborts?: ChildAbortRegistry;
   placement?: NodePlacement;
   sandbox?: boolean;
   mapContext?: {

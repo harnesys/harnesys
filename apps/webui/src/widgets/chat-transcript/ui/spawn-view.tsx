@@ -1,5 +1,6 @@
 import type { SessionEvent } from '@harnesys/studio-shared';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { SquareIcon } from 'lucide-react';
 import { useState } from 'react';
 import { agentColorClass, useAgentStore } from '@/entities/agent';
 import {
@@ -13,8 +14,9 @@ import {
 import { useThreadStore } from '@/entities/thread';
 import type { IdeTab } from '@/features/ide';
 import { useOpenSpawnTab } from '@/features/ide';
-import { getRunSubtree } from '@/shared/api';
+import { cancelRun, getRunSubtree } from '@/shared/api';
 import { cn } from '@/shared/lib/utils';
+import { Button } from '@/shared/ui/button';
 import {
   MessageScroller,
   MessageScrollerContent,
@@ -24,6 +26,7 @@ import {
 } from '@/shared/ui/message-scroller';
 import { RunAttributionBadge } from '@/shared/ui/run-attribution-badge';
 import { StatusDot } from '@/shared/ui/status-dot';
+import { toast } from '@/shared/ui/toast';
 import { ThreadDock } from '@/widgets/thread-dock';
 import { agentFallbackName } from '../model/agent-label';
 import { useSyncedThread } from '../model/thread-sync';
@@ -83,6 +86,21 @@ export function SpawnView({
   const taskCollapsed =
     spawnedTask !== undefined && Array.from(spawnedTask).length > TASK_COLLAPSE_AT && !taskExpanded;
   const running = spawn?.status === 'running';
+  const queryClient = useQueryClient();
+  const [stopping, setStopping] = useState(false);
+  const onStop = () => {
+    setStopping(true);
+    cancelRun(threadId, spawnId)
+      .then(() => queryClient.invalidateQueries({ queryKey: ['run-subtree', threadId, spawnId] }))
+      .catch((error) => {
+        toast.add({
+          title: 'Stop failed',
+          description: error instanceof Error ? error.message : 'Could not stop the subagent',
+          type: 'error',
+        });
+      })
+      .finally(() => setStopping(false));
+  };
   if (!spawn) {
     return (
       <div
@@ -170,6 +188,20 @@ export function SpawnView({
               {running ? <RunAttributionBadge run={activeRun} /> : null}
             </>
           ),
+          actions: running ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              disabled={stopping}
+              className="shrink-0 gap-1.5 text-muted-foreground hover:text-destructive"
+              onClick={onStop}
+              data-testid="ide-spawn-stop"
+            >
+              <SquareIcon className="size-3 fill-current" />
+              Stop
+            </Button>
+          ) : null,
         }}
       />
     </div>
