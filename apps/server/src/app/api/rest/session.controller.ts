@@ -207,7 +207,7 @@ export class SessionController {
 
   @Public()
   @Post('logout')
-  @HttpCode(200)
+  @HttpCode(204)
   async logout(@Ctx() ctx: BrixContext): Promise<void> {
     const token = presentedRefreshToken(ctx);
     if (token !== undefined) {
@@ -231,7 +231,7 @@ export class SessionController {
   }
 
   @Post('change-password')
-  @HttpCode(200)
+  @HttpCode(204)
   async changePassword(
     @SessionPrincipal() principal: Principal,
     @Body(SessionChangePasswordBodySchema) body: SessionChangePasswordBody,
@@ -277,7 +277,7 @@ export class SessionController {
   }
 
   @Post('revoke')
-  @HttpCode(200)
+  @HttpCode(204)
   revoke(
     @SessionPrincipal() principal: Principal,
     @Body(SessionRevokeBodySchema) body: SessionRevokeBody,
@@ -286,7 +286,7 @@ export class SessionController {
   }
 
   @Post('revoke-all')
-  @HttpCode(200)
+  @HttpCode(204)
   revokeAll(@SessionPrincipal() principal: Principal): void {
     this.sessionRevokeAll.execute({ principal });
   }
