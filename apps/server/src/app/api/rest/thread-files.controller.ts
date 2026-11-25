@@ -1,5 +1,8 @@
-import { Controller, Get, Param, Query } from '@harnesys/brix';
+import { Body, Controller, Get, Param, Put, Query } from '@harnesys/brix';
 import {
+  type ContentWriteBody,
+  ContentWriteBodySchema,
+  type ContentWriteResponse,
   type ThreadFilePathQuery,
   ThreadFilePathQuerySchema,
   type ThreadFilesQuery,
@@ -8,12 +11,14 @@ import {
 } from '@harnesys/contracts';
 import { ListThreadFilesUseCase } from '../../application/threads/list-thread-files.use-case.ts';
 import { ReadThreadFileUseCase } from '../../application/threads/read-thread-file.use-case.ts';
+import { WriteThreadFileUseCase } from '../../application/threads/write-thread-file.use-case.ts';
 
 @Controller('orgs/:orgId/threads/:threadId/files')
 export class ThreadFilesController {
   constructor(
     private readonly list: ListThreadFilesUseCase,
     private readonly read: ReadThreadFileUseCase,
+    private readonly write: WriteThreadFileUseCase,
   ) {}
 
   @Get()
@@ -41,6 +46,22 @@ export class ThreadFilesController {
         'Content-Type': mediaType,
         'Content-Disposition': `inline; filename="${encodeURIComponent(fileName)}"`,
       },
+    });
+  }
+
+  @Put('content')
+  writeContent(
+    @Param('orgId') orgId: string,
+    @Param('threadId') threadId: string,
+    @Query(ThreadFilePathQuerySchema) query: ThreadFilePathQuery,
+    @Body(ContentWriteBodySchema) body: ContentWriteBody,
+  ): Promise<ContentWriteResponse> {
+    return this.write.execute({
+      orgId,
+      threadId,
+      path: query.path,
+      content: body.content,
+      encoding: body.encoding,
     });
   }
 }

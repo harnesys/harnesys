@@ -2,7 +2,7 @@ import { parseImageArtifact as parseImageToolArtifact } from '@harnesys/studio-s
 import { CheckIcon, CopyIcon, DownloadIcon } from 'lucide-react';
 import { useState } from 'react';
 import type { ToolEventPair } from '@/entities/session';
-import { openThreadFileTab } from '@/features/ide';
+import { openFile } from '@/features/ide';
 import { loadThreadAttachment } from '@/shared/api';
 import { useAuthedBlobUrl } from '@/shared/api/blob-url';
 import { cn } from '@/shared/lib/utils';
@@ -100,7 +100,9 @@ export function ImageArtifact({
         type="button"
         aria-label={`Open ${name}`}
         className="cursor-zoom-in"
-        onClick={() => openThreadFileTab(threadId, name, attachmentId, mediaType)}
+        onClick={() =>
+          openFile({ source: 'thread-attachment', threadId, attachmentId, name, mediaType })
+        }
       >
         <img src={url} alt={name} className="max-h-80 max-w-sm rounded-lg border" />
       </button>

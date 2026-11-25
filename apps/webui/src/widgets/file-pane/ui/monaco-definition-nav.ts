@@ -1,7 +1,6 @@
 import type * as monacoNs from 'monaco-editor';
-import { useIdeStore } from '@/features/ide';
+import { openFile } from '@/features/ide';
 import { toOpenableLocations } from '@/features/lsp-bridge';
-import { openProjectFile } from '@/features/open-file';
 import { setPendingReveal } from '../model/definition-reveal';
 import { findHtmlPathMatches, resolveHtmlPathToProjectPath } from './resolve-html-path';
 
@@ -20,7 +19,7 @@ interface EditorResource {
 const contextRef: {
   current: DefinitionNavContext | null;
 } = { current: null };
-export function setMonacoDefinitionNavContext(ctx: DefinitionNavContext) {
+export function setMonacoDefinitionNavContext(ctx: DefinitionNavContext | null) {
   contextRef.current = ctx;
 }
 function projectPathFromResource(resource: EditorResource): string | null {
@@ -70,8 +69,7 @@ export function bindMonacoDefinitionOpener(monaco: Monaco): () => void {
               };
         setPendingReveal({ path: target, ...reveal });
       }
-      openProjectFile(ctx.projectId, target);
-      useIdeStore.getState().openFile(ctx.projectId, target);
+      openFile({ source: 'project', projectId: ctx.projectId, path: target });
       return true;
     },
   });

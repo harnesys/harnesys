@@ -1,8 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2Icon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useIdeStore } from '@/features/ide';
 import { isHostRequestAllowed } from '@/features/manage-addons/frame-bridge';
-import { markProjectFileDirty } from '@/features/open-file';
 import type { AddonViewerView } from '@/shared/api/addon-viewers';
 import { fetchAddonRoute, orgAddonRouteUrl } from '@/shared/api/addons';
 import { apiUrl } from '@/shared/api/client';
@@ -169,14 +169,16 @@ export function AddonViewerFrame({
         return;
       }
       if (data.type === 'viewer.dirty') {
-        markProjectFileDirty(projectId, path, data.dirty === true);
+        useIdeStore
+          .getState()
+          .setFileDirty({ source: 'project', projectId, path }, data.dirty === true);
         return;
       }
       if (data.type === 'viewer.save' && typeof data.content === 'string') {
         void writeProjectFileContent(projectId, { path, content: data.content })
           .then(() => {
             queryClient.setQueryData(sourceFileContentQueryKey(projectId, path), data.content);
-            markProjectFileDirty(projectId, path, false);
+            useIdeStore.getState().setFileDirty({ source: 'project', projectId, path }, false);
             sendToFrame({ type: 'viewer.saved', ok: true });
           })
           .catch((error: unknown) => {

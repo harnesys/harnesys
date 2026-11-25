@@ -1,100 +1,73 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef } from 'react';
 import { useIdeStore } from '@/features/ide';
-import { markProjectFileDirty } from '@/features/open-file';
-import { sourceFileContentQueryKey, writeProjectFileContent } from '@/shared/api/files';
-
-export function scopedKey(path: string, worktreeId?: string): string {
-  return worktreeId ? `${worktreeId}:${path}` : path;
-}
-
-export interface TextTarget {
-  path: string;
-  worktreeId?: string;
-}
+import { type FileRef, textContentBackend } from '@/features/open-file';
 
 export function useTextPersistence(input: {
-  projectId: string;
   setDrafts: (updater: (prev: Record<string, string>) => Record<string, string>) => void;
   draftsRef: { current: Record<string, string> };
 }) {
-  const { projectId, setDrafts, draftsRef } = input;
+  const { setDrafts, draftsRef } = input;
   const qc = useQueryClient();
   const savingRef = useRef<Set<string>>(new Set());
 
   const saveMutation = useMutation({
-    mutationFn: (saveInput: { path: string; content: string; worktreeId?: string }) =>
-      writeProjectFileContent(projectId, saveInput),
-    onSuccess: (_, saveInput) => {
-      const target: TextTarget = {
-        path: saveInput.path,
-        ...(saveInput.worktreeId ? { worktreeId: saveInput.worktreeId } : {}),
-      };
-      qc.setQueryData(
-        sourceFileContentQueryKey(projectId, target.path, target.worktreeId),
-        saveInput.content,
-      );
-      setDrafts((prev) => ({
-        ...prev,
-        [scopedKey(target.path, target.worktreeId)]: saveInput.content,
-      }));
-      if (!target.worktreeId) {
-        markProjectFileDirty(projectId, target.path, false);
+    mutationFn: async (saveInput: { target: FileRef; content: string }) => {
+      const backend = textContentBackend(saveInput.target);
+      if (!backend) {
+        throw new Error(`file ref is not writable: ${saveInput.target.source}`);
       }
-      useIdeStore.getState().setFileDirty(projectId, target.path, false, target.worktreeId);
+      await backend.write(saveInput.content);
+      return { target: saveInput.target, backend, content: saveInput.content };
+    },
+    onSuccess: ({ target, backend, content }) => {
+      qc.setQueryData(backend.queryKey, content);
+      setDrafts((prev) => ({ ...prev, [backend.key]: content }));
+      useIdeStore.getState().setFileDirty(target, false);
     },
   });
   const saveMutationRef = useRef(saveMutation);
   saveMutationRef.current = saveMutation;
 
   const flushIfDirty = useCallback(
-    async (target: TextTarget) => {
+    async (target: FileRef) => {
       const mutation = saveMutationRef.current;
-      const targetScope = scopedKey(target.path, target.worktreeId);
-      if (savingRef.current.has(targetScope) || mutation.isPending) {
+      const backend = textContentBackend(target);
+      if (!backend || savingRef.current.has(backend.key) || mutation.isPending) {
         return;
       }
-      const draft = draftsRef.current[targetScope];
+      const draft = draftsRef.current[backend.key];
       if (draft === undefined) {
         return;
       }
-      const serverText =
-        qc.getQueryData<string>(
-          sourceFileContentQueryKey(projectId, target.path, target.worktreeId),
-        ) ?? '';
+      const serverText = qc.getQueryData<string>(backend.queryKey) ?? '';
       if (draft === serverText) {
         return;
       }
-      savingRef.current.add(targetScope);
+      savingRef.current.add(backend.key);
       try {
-        await mutation.mutateAsync({
-          path: target.path,
-          content: draft,
-          ...(target.worktreeId ? { worktreeId: target.worktreeId } : {}),
-        });
+        await mutation.mutateAsync({ target, content: draft });
       } catch {
       } finally {
-        savingRef.current.delete(targetScope);
+        savingRef.current.delete(backend.key);
       }
     },
-    [projectId, qc, draftsRef],
+    [qc, draftsRef],
   );
 
   const requestSave = useCallback(
-    (target: TextTarget & { draft: string | undefined; dirty: boolean }) => {
+    (saveInput: { target: FileRef; draft: string | undefined; dirty: boolean }) => {
+      const backend = textContentBackend(saveInput.target);
       if (
-        target.draft === undefined ||
-        !target.dirty ||
+        !backend ||
+        saveInput.draft === undefined ||
+        !saveInput.dirty ||
         saveMutation.isPending ||
-        savingRef.current.has(scopedKey(target.path, target.worktreeId))
+        savingRef.current.has(backend.key)
       ) {
         return;
       }
-      saveMutation.mutate({
-        path: target.path,
-        content: target.draft,
-        ...(target.worktreeId ? { worktreeId: target.worktreeId } : {}),
-      });
+      saveMutation.mutate({ target: saveInput.target, content: saveInput.draft });
     },
     [saveMutation],
   );

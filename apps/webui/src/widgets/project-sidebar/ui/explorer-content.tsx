@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { startTransition, useEffect, useRef, useState } from 'react';
 import { useProjects } from '@/entities/project';
-import { useIdeStore } from '@/features/ide';
+import { useIdeStore, useOpenFile } from '@/features/ide';
 import {
   buildMoveItems,
   buildRenameItem,
@@ -9,7 +9,6 @@ import {
   isValidFileName,
   useMoveProjectFiles,
 } from '@/features/move-project-files';
-import { openProjectFile } from '@/features/open-file';
 import { watchMaterializationChanged } from '@/shared/api';
 import { getActiveOrgId } from '@/shared/api/active-org';
 import {
@@ -21,7 +20,6 @@ import {
 } from '@/shared/api/files';
 import { getGitFileStatus, gitFileStatusQueryKey } from '@/shared/api/git';
 import { sourceHostStatusQuery, sourceHostStatusQueryKey } from '@/shared/api/sources';
-import { useStudioNavigation } from '@/shared/config/navigation';
 import { SIDEBAR_ROW_HEIGHT, SIDEBAR_ROW_INDENT } from '@/shared/ui/sidebar-row';
 import { Spinner } from '@/shared/ui/spinner';
 import { toast } from '@/shared/ui/toast';
@@ -51,7 +49,7 @@ export function ExplorerContent({
   projectId: string;
   depthOffset?: number;
 }) {
-  const { openFile } = useStudioNavigation();
+  const openFile = useOpenFile();
   const qc = useQueryClient();
   const projects = useProjects().data ?? [];
   const project = projects.find((row) => row.id === projectId);
@@ -208,8 +206,7 @@ export function ExplorerContent({
       void createMutation
         .mutateAsync({ path: relPath, kind: 'file', template: createDraft.template })
         .then(() => {
-          openProjectFile(projectId, relPath);
-          useIdeStore.getState().openFile(projectId, relPath);
+          openFile({ source: 'project', projectId, path: relPath });
         })
         .catch((error: unknown) => {
           toast.add({
@@ -222,8 +219,7 @@ export function ExplorerContent({
     }
     createMutation.mutate({ path: relPath, kind: createDraft.kind });
     if (createDraft.kind === 'file') {
-      openProjectFile(projectId, relPath);
-      useIdeStore.getState().openFile(projectId, relPath);
+      openFile({ source: 'project', projectId, path: relPath });
     }
     if (createDraft.kind === 'dir') {
       ensureDirOpen(createDraft.parentPath);
@@ -279,9 +275,7 @@ export function ExplorerContent({
   };
   const handleOpen = (path: string) => {
     activateProject();
-    openProjectFile(projectId, path);
-    useIdeStore.getState().openFile(projectId, path);
-    openFile(projectId, path);
+    openFile({ source: 'project', projectId, path });
   };
   useFilesHotkey(selectionProjectId === projectId ? projectId : '');
   useFilesCopyPaste(projectId, qc);

@@ -214,7 +214,11 @@ export {
   listThreadFiles,
   loadThreadAttachment,
   loadThreadFileContent,
+  readThreadFileText,
+  threadAttachmentQueryKey,
+  threadFileQueryKey,
   uploadThreadAttachment,
+  writeThreadFileContent,
 } from './thread-files';
 export {
   addThreadAgent,

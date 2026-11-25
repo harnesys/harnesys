@@ -264,6 +264,7 @@ export type {
   HostNetworkResponse,
   HostNodeStatus,
   IdeTabKind,
+  PersistedFileRef,
   PersistedIdeGroup,
   PersistedIdeTab,
   PersistedIdeWorkspace,

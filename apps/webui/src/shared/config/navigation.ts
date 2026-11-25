@@ -23,9 +23,6 @@ export function useStudioNavigation() {
     openThread(projectId: string, threadId: string) {
       void navigate(studioPath.thread(orgId, projectId, threadId));
     },
-    openFile(projectId: string, path: string) {
-      void navigate(studioPath.file(orgId, projectId, path));
-    },
     openDiff(projectId: string, path: string) {
       void navigate(studioPath.diff(orgId, projectId, path));
     },

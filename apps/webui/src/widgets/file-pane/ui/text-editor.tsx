@@ -1,12 +1,11 @@
 import type { OnMount } from '@monaco-editor/react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Loader2Icon } from 'lucide-react';
 import type { editor } from 'monaco-editor';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { remappedPathAfterMove, useIdeStore } from '@/features/ide';
-import { markProjectFileDirty } from '@/features/open-file';
+import { type FileRef, fileRefKey, fileRefPath, textContentBackend } from '@/features/open-file';
 import { ApiError } from '@/shared/api';
-import { readProjectFileText, sourceFileContentQueryKey } from '@/shared/api/files';
 import { useEditorPreferences } from '@/shared/lib/editor-preferences';
 import { detectLanguage } from '@/shared/lib/tool-code';
 import { useTheme } from '@/shared/ui/theme-provider';
@@ -16,10 +15,10 @@ import {
   loadEditorLanguages,
   saveEditorLanguages,
 } from '../model/editor-languages';
-import { createEditorOptions, editorThemeName, toModelPath } from '../model/editor-setup';
+import { createEditorOptions, editorThemeName } from '../model/editor-setup';
 import { useEditorLspBridge } from '../model/use-editor-lsp-bridge';
 import { useMarkdownEditorMode } from '../model/use-markdown-editor-mode';
-import { scopedKey, useTextPersistence } from '../model/use-text-persistence';
+import { useTextPersistence } from '../model/use-text-persistence';
 import { bindMonacoDefinitionOpener, setMonacoDefinitionNavContext } from './monaco-definition-nav';
 import {
   bindMonacoImportLinkOpener,
@@ -30,28 +29,34 @@ import { ensureJsxTagSemanticTokens } from './monaco-jsx-tags';
 import { defineAppThemes } from './monaco-themes';
 import { TextEditorView } from './text-editor-view';
 
-type FileContent = string;
-
 function isBinaryContentError(error: unknown): boolean {
   return error instanceof ApiError && error.status === 415;
 }
 
-export function TextEditor({
-  projectId,
-  path,
-  dirty,
-  worktreeId,
-}: {
-  projectId: string;
-  path: string;
-  dirty: boolean;
-  worktreeId?: string;
-}) {
+function editorModelPath(target: FileRef): string {
+  if (target.source === 'project') {
+    return `file:///${target.path.replace(/^\/+/, '')}`;
+  }
+  if (target.source === 'thread-sandbox') {
+    return `file:///_threads/${target.threadId}/${target.path.replace(/^\/+/, '')}`;
+  }
+  return `file:///_attachments/${fileRefKey(target)}`;
+}
+
+export function TextEditor({ target, dirty }: { target: FileRef; dirty: boolean }) {
+  const backend = textContentBackend(target);
+  if (!backend) {
+    throw new Error(`file ref is not editable: ${target.source}`);
+  }
+  const path = fileRefPath(target);
+  const project = target.source === 'project' ? target : null;
+  const projectId = project?.projectId ?? '';
+  const worktreeId = project?.worktreeId;
+  const scopeSource = project ? project.projectId : fileRefKey(target);
   const { theme } = useTheme();
   const prefs = useEditorPreferences();
   const autoSaveModeRef = useRef(prefs.autoSaveMode);
   autoSaveModeRef.current = prefs.autoSaveMode;
-  const qc = useQueryClient();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const draftsRef = useRef(drafts);
   draftsRef.current = drafts;
@@ -60,16 +65,11 @@ export function TextEditor({
     loadEditorLanguages(),
   );
   const resolved = editorThemeName(theme);
-  const scopeKey = scopedKey(path, worktreeId);
-  const contentKey = sourceFileContentQueryKey(projectId, path, worktreeId);
-  const { flushIfDirty, requestSave } = useTextPersistence({
-    projectId,
-    setDrafts,
-    draftsRef,
-  });
+  const scopeKey = backend.key;
+  const { flushIfDirty, requestSave } = useTextPersistence({ setDrafts, draftsRef });
   const contentQuery = useQuery({
-    queryKey: contentKey,
-    queryFn: () => readProjectFileText(projectId, path, worktreeId),
+    queryKey: backend.queryKey,
+    queryFn: backend.read,
     retry: (_failureCount, error) => !isBinaryContentError(error),
   });
   useEffect(() => {
@@ -100,22 +100,27 @@ export function TextEditor({
       setDrafts((prev) => ({ ...prev, [scopeKey]: data }));
     }
   }, [contentQuery.data, scopeKey]);
-  const lastActiveRef = useRef<{ path: string; worktreeId?: string } | null>(null);
+  const lastActiveRef = useRef<{ target: FileRef; scopeKey: string } | null>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   useEffect(() => {
     const prev = lastActiveRef.current;
-    lastActiveRef.current = { path, worktreeId };
-    const prevScope = prev ? scopedKey(prev.path, prev.worktreeId) : null;
-    if (!prev || prevScope === scopeKey) {
+    lastActiveRef.current = { target, scopeKey };
+    if (!prev || prev.scopeKey === scopeKey) {
       return;
     }
     setCursor({ line: 1, column: 1 });
-    if (!prev.worktreeId && !worktreeId && remappedPathAfterMove(projectId, prev.path) === path) {
+    const prevProject = prev.target.source === 'project' ? prev.target : null;
+    if (
+      prevProject &&
+      !prevProject.worktreeId &&
+      !worktreeId &&
+      remappedPathAfterMove(projectId, prevProject.path) === path
+    ) {
       setDrafts((prevDrafts) => {
-        if (!Object.hasOwn(prevDrafts, prev.path)) {
+        if (!Object.hasOwn(prevDrafts, prevProject.path)) {
           return prevDrafts;
         }
-        const { [prev.path]: text, ...rest } = prevDrafts;
+        const { [prevProject.path]: text, ...rest } = prevDrafts;
         if (Object.hasOwn(rest, path)) {
           return rest;
         }
@@ -124,9 +129,9 @@ export function TextEditor({
       return;
     }
     if (autoSaveModeRef.current === 'onFocusChange') {
-      void flushIfDirty(prev);
+      void flushIfDirty(prev.target);
     }
-  }, [path, scopeKey, projectId, worktreeId, flushIfDirty]);
+  }, [path, scopeKey, projectId, worktreeId, flushIfDirty, target]);
   const flushRef = useRef(flushIfDirty);
   flushRef.current = flushIfDirty;
   useEffect(() => {
@@ -136,7 +141,7 @@ export function TextEditor({
       }
       const active = lastActiveRef.current;
       if (active) {
-        void flushRef.current(active);
+        void flushRef.current(active.target);
       }
     };
     const onVisibility = () => {
@@ -155,38 +160,33 @@ export function TextEditor({
     return () => {
       const active = lastActiveRef.current;
       if (active) {
-        void flushIfDirty(active);
+        void flushIfDirty(active.target);
       }
     };
   }, [flushIfDirty]);
   const activePath = viewPath;
   const value = activePath ? (drafts[activePath] ?? '') : '';
-  const serverText =
-    activePath === scopeKey
-      ? (contentQuery.data ?? '')
-      : (qc.getQueryData<FileContent>(
-          sourceFileContentQueryKey(projectId, activePath ?? '', worktreeId),
-        ) ?? '');
+  const serverText = contentQuery.data ?? '';
   useEffect(() => {
     if (prefs.autoSaveMode !== 'afterDelay' || !activePath || value === serverText) {
       return;
     }
     const timer = setTimeout(() => {
-      void flushRef.current({ path, worktreeId });
+      void flushRef.current(target);
     }, prefs.autoSaveDelayMs);
     return () => {
       clearTimeout(timer);
     };
-  }, [prefs.autoSaveMode, prefs.autoSaveDelayMs, activePath, value, serverText, path, worktreeId]);
+  }, [prefs.autoSaveMode, prefs.autoSaveDelayMs, activePath, value, serverText, target]);
   const save = useCallback(() => {
     if (!activePath || activePath !== scopeKey) {
       return;
     }
-    requestSave({ path, worktreeId, draft: drafts[scopeKey], dirty });
-  }, [activePath, scopeKey, path, worktreeId, drafts, dirty, requestSave]);
+    requestSave({ target, draft: drafts[scopeKey], dirty });
+  }, [activePath, scopeKey, target, drafts, dirty, requestSave]);
   const selectLanguage = useCallback(
     (targetPath: string, language: string | null) => {
-      const key = editorLanguageKey(projectId, targetPath);
+      const key = editorLanguageKey(scopeSource, targetPath);
       const next = { ...langOverrides };
       if (language === null) {
         delete next[key];
@@ -196,7 +196,7 @@ export function TextEditor({
       setLangOverrides(next);
       saveEditorLanguages(next);
     },
-    [projectId, langOverrides],
+    [scopeSource, langOverrides],
   );
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -213,7 +213,7 @@ export function TextEditor({
   const [cursor, setCursor] = useState({ line: 1, column: 1 });
   const detectedLanguage = activePath ? (detectLanguage(activePath) ?? 'plaintext') : 'plaintext';
   const languageOverride = activePath
-    ? (langOverrides[editorLanguageKey(projectId, activePath)] ?? null)
+    ? (langOverrides[editorLanguageKey(scopeSource, activePath)] ?? null)
     : null;
   const language = languageOverride ?? detectedLanguage;
   const { showMarkdownMode, markdownMode, selectMarkdownMode } = useMarkdownEditorMode(activePath);
@@ -224,17 +224,22 @@ export function TextEditor({
     installing: lspInstalling,
     restartFileServer,
     installFileServer,
-  } = useEditorLspBridge(projectId, worktreeId ? null : activePath, language);
+  } = useEditorLspBridge(projectId, project && !worktreeId ? activePath : null, language);
   useLayoutEffect(() => {
+    if (!project) {
+      setMonacoImportLinkContext(null);
+      setMonacoDefinitionNavContext(null);
+      return;
+    }
     setMonacoImportLinkContext({
-      projectId,
+      projectId: project.projectId,
       filePath: viewPath ?? path,
     });
     setMonacoDefinitionNavContext({
-      projectId,
+      projectId: project.projectId,
       filePath: viewPath ?? path,
     });
-  }, [projectId, viewPath, path]);
+  }, [project, viewPath, path]);
   useEffect(() => {
     if (!activePath) {
       return;
@@ -270,7 +275,7 @@ export function TextEditor({
       }
       const active = lastActiveRef.current;
       if (active) {
-        void flushRef.current(active);
+        void flushRef.current(active.target);
       }
     };
     editorSubsDisposeRef.current?.();
@@ -315,8 +320,9 @@ export function TextEditor({
   }
   return (
     <TextEditorView
-      projectId={projectId}
+      projectId={scopeSource}
       path={activePath}
+      modelPath={editorModelPath(target)}
       value={value}
       language={language}
       detectedLanguage={detectedLanguage}
@@ -336,17 +342,12 @@ export function TextEditor({
       onChange={(text) => {
         draftsRef.current = { ...draftsRef.current, [activePath]: text };
         setDrafts((prev) => ({ ...prev, [activePath]: text }));
-        const nextDirty = text !== serverText;
-        if (!worktreeId) {
-          markProjectFileDirty(projectId, activePath, nextDirty);
-        }
-        useIdeStore.getState().setFileDirty(projectId, path, nextDirty, worktreeId);
+        useIdeStore.getState().setFileDirty(target, text !== serverText);
       }}
       onSelectLanguage={(next) => selectLanguage(activePath, next)}
       onSelectMarkdownMode={(mode) => selectMarkdownMode(activePath, mode)}
       onRestartFileServer={restartFileServer}
       onInstallFileServer={installFileServer}
-      toModelPath={toModelPath}
     />
   );
 }

@@ -10,6 +10,7 @@ type Monaco = Parameters<OnMount>[1];
 interface TextEditorViewProps {
   projectId: string;
   path: string;
+  modelPath: string;
   value: string;
   language: string;
   detectedLanguage: string;
@@ -31,11 +32,11 @@ interface TextEditorViewProps {
   onSelectMarkdownMode: (mode: MarkdownEditorMode) => void;
   onRestartFileServer: () => void;
   onInstallFileServer: () => void;
-  toModelPath: (path: string) => string;
 }
 export function TextEditorView({
   projectId,
   path,
+  modelPath,
   value,
   language,
   detectedLanguage,
@@ -57,7 +58,6 @@ export function TextEditorView({
   onSelectMarkdownMode,
   onRestartFileServer,
   onInstallFileServer,
-  toModelPath,
 }: TextEditorViewProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background" data-testid="text-editor">
@@ -68,7 +68,7 @@ export function TextEditorView({
           <MonacoBoundary>
             <Editor
               height="100%"
-              path={toModelPath(path)}
+              path={modelPath}
               language={language}
               theme={theme}
               value={value}

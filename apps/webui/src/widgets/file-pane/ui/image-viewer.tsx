@@ -1,7 +1,7 @@
 import type { CSSProperties, RefObject } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { TransformComponent, TransformWrapper, useControls } from 'react-zoom-pan-pinch';
-import { markProjectFileDirty } from '@/features/open-file';
+import { useIdeStore } from '@/features/ide';
 import { writeProjectFileBytes } from '@/shared/api/files';
 import { cn } from '@/shared/lib/utils';
 import type { ImageEdits, ImageSize } from '../model/image-edit';
@@ -179,8 +179,13 @@ export function ImageViewer({
     if (!projectId) {
       return;
     }
-    markProjectFileDirty(projectId, path, !sameEdits(edits, savedEdits));
-  }, [projectId, path, edits, savedEdits]);
+    useIdeStore
+      .getState()
+      .setFileDirty(
+        { source: 'project', projectId, path, ...(worktreeId ? { worktreeId } : {}) },
+        !sameEdits(edits, savedEdits),
+      );
+  }, [projectId, path, worktreeId, edits, savedEdits]);
 
   async function handleSave(): Promise<void> {
     if (state.status !== 'ready' || !projectId || saving) {

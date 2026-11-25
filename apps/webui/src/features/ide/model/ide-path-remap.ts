@@ -2,7 +2,7 @@ import type { ProjectMoveItem } from '@harnesys/studio-shared';
 import { normalizeProjectPath, remapProjectPath } from '@/shared/lib/project-path.ts';
 import type { IdeTab } from './ide.store';
 import type { IdeWorkspaceState } from './ide-layout';
-import { fileTabKey, tabIdFor } from './ide-persist';
+import { fileTabKey, tabIdFor } from './ide-tab-id';
 export interface IdePathRemap {
   tabs: IdeTab[];
   idByOldId: Map<string, string>;
@@ -28,7 +28,9 @@ export function remapTabPaths(
     }
     const id = tabIdFor(tab.kind, tab.projectId, fileTabKey(nextPath, tab.worktreeId));
     idByOldId.set(tab.id, id);
-    return { ...tab, id, path: nextPath };
+    const target =
+      tab.target?.source === 'project' ? { ...tab.target, path: nextPath } : tab.target;
+    return { ...tab, id, path: nextPath, ...(target ? { target } : {}) };
   });
   return { tabs: next, idByOldId };
 }

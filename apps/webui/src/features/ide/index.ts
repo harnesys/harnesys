@@ -14,13 +14,15 @@ export {
   useIdeStore,
   useIdeTabs,
 } from './model/ide.store';
+export { fileTabFromTarget, fileTabId } from './model/ide-file-tab';
 export { workspaceFromPersisted } from './model/ide-persist';
 export { afterProjectRemoved, useIdeSync } from './model/ide-sync';
 export { useFileLinkComponents } from './model/markdown-file-link';
 export {
-  openThreadFileTab,
+  openFile,
+  pathForFileRef,
   pathForIdeTab,
-  useOpenAttachmentTab,
+  useOpenFile,
   useOpenIdeTab,
   useOpenNewTerminal,
   useOpenSpawnTab,

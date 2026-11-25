@@ -1,5 +1,16 @@
-export type OpenFileKind = 'text' | 'image' | 'pdf' | 'docx' | 'xlsx' | 'dxf' | 'csv';
+export type OpenFileKind =
+  | 'text'
+  | 'image'
+  | 'video'
+  | 'audio'
+  | 'pdf'
+  | 'docx'
+  | 'xlsx'
+  | 'dxf'
+  | 'csv';
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']);
+const VIDEO_EXTS = new Set(['mp4', 'webm', 'mov', 'm4v']);
+const AUDIO_EXTS = new Set(['mp3', 'wav', 'ogg', 'm4a', 'flac']);
 const DXF_EXTS = new Set(['dxf']);
 const PDF_EXTS = new Set(['pdf']);
 const DOCX_EXTS = new Set(['docx']);
@@ -25,6 +36,12 @@ export function openFileKind(path: string): OpenFileKind {
   const ext = fileExtension(path);
   if (IMAGE_EXTS.has(ext)) {
     return 'image';
+  }
+  if (VIDEO_EXTS.has(ext)) {
+    return 'video';
+  }
+  if (AUDIO_EXTS.has(ext)) {
+    return 'audio';
   }
   if (PDF_EXTS.has(ext)) {
     return 'pdf';

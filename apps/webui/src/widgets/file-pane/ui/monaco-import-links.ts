@@ -1,6 +1,5 @@
 import type { OnMount } from '@monaco-editor/react';
-import { useIdeStore } from '@/features/ide';
-import { openProjectFile } from '@/features/open-file';
+import { openFile } from '@/features/ide';
 import { findRelativeImportSpecs, resolveImportToProjectPath } from './resolve-import-path';
 
 type Monaco = Parameters<OnMount>[1];
@@ -27,7 +26,7 @@ const contextRef: {
   current: ImportLinkContext | null;
 } = { current: null };
 let providersRegistered = false;
-export function setMonacoImportLinkContext(ctx: ImportLinkContext) {
+export function setMonacoImportLinkContext(ctx: ImportLinkContext | null) {
   contextRef.current = ctx;
 }
 async function openImportSpec(spec: string): Promise<boolean> {
@@ -39,8 +38,7 @@ async function openImportSpec(spec: string): Promise<boolean> {
   if (!target) {
     return false;
   }
-  openProjectFile(ctx.projectId, target);
-  useIdeStore.getState().openFile(ctx.projectId, target);
+  openFile({ source: 'project', projectId: ctx.projectId, path: target });
   return true;
 }
 function relativeSpecFromFileUri(resource: LinkResource): string | null {

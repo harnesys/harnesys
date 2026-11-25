@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { startTransition, useEffect, useRef, useState } from 'react';
-import { useIdeStore } from '@/features/ide';
+import { useIdeStore, useOpenFile } from '@/features/ide';
 import {
   buildMoveItems,
   buildRenameItem,
@@ -47,6 +47,7 @@ export function WorktreeSection({
   worktree: RepositoryWorktree;
   depthOffset: number;
 }) {
+  const openFile = useOpenFile();
   const qc = useQueryClient();
   const showHidden = useExplorerHiddenStore((store) => store.showHidden);
   const branchKey = worktreeBranchKey(worktree.id);
@@ -126,7 +127,13 @@ export function WorktreeSection({
   };
 
   const handleOpen = (path: string) => {
-    useIdeStore.getState().openFile(projectId, path, worktree.id, worktree.branch);
+    openFile({
+      source: 'project',
+      projectId,
+      path,
+      worktreeId: worktree.id,
+      worktreeBranch: worktree.branch,
+    });
   };
 
   const finishCreate = (name: string) => {
@@ -138,7 +145,13 @@ export function WorktreeSection({
     createProjectFile(projectId, { path: relPath, kind: draft.kind, worktreeId: worktree.id })
       .then(() => {
         if (draft.kind === 'file') {
-          useIdeStore.getState().openFile(projectId, relPath, worktree.id, worktree.branch);
+          openFile({
+            source: 'project',
+            projectId,
+            path: relPath,
+            worktreeId: worktree.id,
+            worktreeBranch: worktree.branch,
+          });
         }
         invalidateTree();
       })

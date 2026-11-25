@@ -6,7 +6,7 @@ import { getActiveOrgId } from '@/shared/api/active-org';
 import { getSourceLocation, sourceLocationQueryKey } from '@/shared/api/source-location';
 import { studioPath } from '@/shared/config/routes';
 import { toast } from '@/shared/ui/toast';
-import { useIdeStore } from './ide.store';
+import { openFile } from './open-ide';
 
 export function useFileLinkComponents(): Components {
   const navigate = useNavigate();
@@ -27,7 +27,7 @@ export function useFileLinkComponents(): Components {
       toast.add({ title: 'File is outside connected sources' });
       return;
     }
-    useIdeStore.getState().openFile(match.projectId, match.relPath);
+    openFile({ source: 'project', projectId: match.projectId, path: match.relPath });
     void navigate(studioPath.file(orgId, match.projectId, match.relPath));
   }
 

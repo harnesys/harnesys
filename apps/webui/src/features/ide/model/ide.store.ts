@@ -1,7 +1,10 @@
 import type { ProjectMoveItem } from '@harnesys/studio-shared';
 import { create } from 'zustand';
 import { setDeskWorkspaceReader, setDeskWorkspaceWriter } from '@/features/desk/model/desk-chrome';
+import type { FileRef } from '@/features/open-file';
+import { getActiveOrgId } from '@/shared/api/active-org';
 import { randomUUID } from '@/shared/lib/random-uuid';
+import { fileTabFromTarget, fileTabId } from './ide-file-tab';
 import {
   closeGroupState,
   closeTabState,
@@ -16,26 +19,11 @@ import {
   withActiveTabState,
 } from './ide-layout';
 import { remapProjectPaths } from './ide-path-remap';
-import {
-  fileTabKey,
-  loadPersisted,
-  normalizeIdeFilePath,
-  persist,
-  tabIdFor,
-  workspaceFromPersisted,
-} from './ide-persist';
+import { loadPersisted, persist, workspaceFromPersisted } from './ide-persist';
+import { normalizeIdeFilePath, tabIdFor } from './ide-tab-id';
 
 export { firstGroupOfLayout, type IdeSplitNode, lastGroupOfLayout } from './ide-tree';
-export type IdeTabKind =
-  | 'thread'
-  | 'file'
-  | 'spawn'
-  | 'diff'
-  | 'terminal'
-  | 'board'
-  | 'dashboard'
-  | 'attachment'
-  | 'thread-file';
+export type IdeTabKind = 'thread' | 'file' | 'spawn' | 'diff' | 'terminal' | 'board' | 'dashboard';
 export interface IdeTab {
   id: string;
   kind: IdeTabKind;
@@ -47,9 +35,7 @@ export interface IdeTab {
   terminalSessionId?: string;
   boardId?: string;
   dashboardId?: string;
-  issueId?: string;
-  attachmentId?: string;
-  mediaType?: string;
+  target?: FileRef;
   path?: string;
   worktreeId?: string;
   worktreeBranch?: string;
@@ -76,24 +62,16 @@ type IdeStore = IdeState & {
     spawnId: string,
     spawnAgentId?: string,
   ) => void;
-  openFile: (projectId: string, path: string, worktreeId?: string, worktreeBranch?: string) => void;
+  openFile: (target: FileRef) => void;
   openDiff: (projectId: string, path: string) => void;
   openBoard: (projectId: string, boardId: string) => void;
   openDashboard: (projectId: string, dashboardId: string) => void;
-  openAttachment: (projectId: string, input: OpenAttachmentInput) => void;
-  openThreadFile: (
-    projectId: string,
-    threadId: string,
-    path: string,
-    attachmentId?: string,
-    mediaType?: string,
-  ) => void;
   openTerminal: (projectId: string, sessionId: string) => void;
   closeTab: (tabId: string) => void;
   closeAll: () => void;
   closeProjectTabs: (projectId: string) => void;
   setActive: (tabId: string) => void;
-  setFileDirty: (projectId: string, path: string, dirty: boolean, worktreeId?: string) => void;
+  setFileDirty: (target: FileRef, dirty: boolean) => void;
   closeByEntity: (
     projectId: string,
     kind: IdeTabKind,
@@ -135,21 +113,13 @@ export const useIdeStore = create<IdeStore>((set) => ({
       };
       return withWs(state, upsertTabState(state.workspace, tab));
     }),
-  openFile: (projectId, path, worktreeId, worktreeBranch) =>
-    set((state) => {
-      const key = fileTabKey(path, worktreeId);
-      const id = tabIdFor('file', projectId, key);
-      const tab: IdeTab = {
-        id,
-        kind: 'file',
-        projectId,
-        path: normalizeIdeFilePath(path),
-        ...(worktreeId ? { worktreeId } : {}),
-        ...(worktreeBranch ? { worktreeBranch } : {}),
-        dirty: false,
-      };
-      return withWs(state, upsertTabState(state.workspace, tab));
-    }),
+  openFile: (target) =>
+    set((state) =>
+      withWs(
+        state,
+        upsertTabState(state.workspace, fileTabFromTarget(target, getActiveOrgId() ?? '', false)),
+      ),
+    ),
   openDiff: (projectId, path) =>
     set((state) => {
       const normalized = normalizeIdeFilePath(path);
@@ -169,20 +139,6 @@ export const useIdeStore = create<IdeStore>((set) => ({
       const tab: IdeTab = { id, kind: 'dashboard', projectId, dashboardId };
       return withWs(state, upsertTabState(state.workspace, tab));
     }),
-  openAttachment: (projectId, input) =>
-    set((state) => {
-      const id = tabIdFor('attachment', projectId, input.attachmentId);
-      const tab: IdeTab = {
-        id,
-        kind: 'attachment',
-        projectId,
-        issueId: input.issueId,
-        attachmentId: input.attachmentId,
-        mediaType: input.mediaType,
-        path: input.name,
-      };
-      return withWs(state, upsertTabState(state.workspace, tab));
-    }),
   openTerminal: (projectId, sessionId) =>
     set((state) => {
       const id = tabIdFor('terminal', projectId, sessionId);
@@ -191,23 +147,6 @@ export const useIdeStore = create<IdeStore>((set) => ({
         kind: 'terminal',
         projectId,
         terminalSessionId: sessionId,
-      };
-      return withWs(state, upsertTabState(state.workspace, tab));
-    }),
-  openThreadFile: (projectId, threadId, path, attachmentId, mediaType) =>
-    set((state) => {
-      const key = attachmentId
-        ? `${threadId}:att:${attachmentId}`
-        : `${threadId}:${normalizeIdeFilePath(path)}`;
-      const id = tabIdFor('thread-file', projectId, key);
-      const tab: IdeTab = {
-        id,
-        kind: 'thread-file',
-        projectId,
-        threadId,
-        path,
-        ...(attachmentId ? { attachmentId } : {}),
-        ...(mediaType ? { mediaType } : {}),
       };
       return withWs(state, upsertTabState(state.workspace, tab));
     }),
@@ -225,9 +164,9 @@ export const useIdeStore = create<IdeStore>((set) => ({
       return { workspace: ws };
     }),
   setActive: (tabId) => set((state) => withWs(state, withActiveTabState(state.workspace, tabId))),
-  setFileDirty: (projectId, path, dirty, worktreeId) =>
+  setFileDirty: (target, dirty) =>
     set((state) => {
-      const id = tabIdFor('file', projectId, fileTabKey(path, worktreeId));
+      const id = fileTabId(target, getActiveOrgId() ?? '');
       const idx = state.workspace.tabs.findIndex((t) => t.id === id);
       if (idx === -1 || state.workspace.tabs[idx]?.dirty === dirty) {
         return state;
@@ -246,7 +185,15 @@ export const useIdeStore = create<IdeStore>((set) => ({
         closeTabState(
           state.workspace,
           kind === 'file'
-            ? tabIdFor(kind, projectId, fileTabKey(entityId, worktreeId))
+            ? fileTabId(
+                {
+                  source: 'project',
+                  projectId,
+                  path: entityId,
+                  ...(worktreeId ? { worktreeId } : {}),
+                },
+                projectId,
+              )
             : tabIdFor(kind, projectId, entityId),
         ),
       ),

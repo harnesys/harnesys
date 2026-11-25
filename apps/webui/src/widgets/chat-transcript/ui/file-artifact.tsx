@@ -1,7 +1,7 @@
 import { parseFileArtifact as parseFileToolArtifact } from '@harnesys/studio-shared';
 import { DownloadIcon } from 'lucide-react';
 import type { ToolEventPair } from '@/entities/session';
-import { openThreadFileTab } from '@/features/ide';
+import { openFile } from '@/features/ide';
 import { loadThreadAttachment } from '@/shared/api';
 import { useAuthedBlobUrl } from '@/shared/api/blob-url';
 import { cn } from '@/shared/lib/utils';
@@ -69,7 +69,9 @@ export function FileArtifact({
       <button
         type="button"
         title={`${mediaType} · ${formatBytes(size)}`}
-        onClick={() => openThreadFileTab(threadId, name, attachmentId, mediaType)}
+        onClick={() =>
+          openFile({ source: 'thread-attachment', threadId, attachmentId, name, mediaType })
+        }
         className={cn(
           'inline-flex h-9 max-w-md items-center gap-2 rounded-lg border px-2.5',
           'bg-muted/30 text-foreground transition-colors hover:bg-muted/60',

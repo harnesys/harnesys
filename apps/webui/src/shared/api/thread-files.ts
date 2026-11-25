@@ -56,6 +56,45 @@ export async function loadThreadFileContent(
   return response.blob();
 }
 
+export function threadFileQueryKey(
+  threadId: string,
+  path: string,
+): readonly ['thread-file-content', string, string] {
+  return ['thread-file-content', threadId, path];
+}
+
+export async function readThreadFileText(threadId: string, path: string): Promise<string> {
+  const blob = await loadThreadFileContent(threadId, path);
+  return blob.text();
+}
+
+export function writeThreadFileContent(
+  threadId: string,
+  path: string,
+  content: string,
+): Promise<{ path: string; etag: string }> {
+  const orgId = getActiveOrgId();
+  if (!orgId) {
+    throw new Error('active org required');
+  }
+  const qs = new URLSearchParams({ path });
+  return apiJson<{ path: string; etag: string }>(
+    `${threadsBase(orgId)}/${encodeURIComponent(threadId)}/files/content?${qs.toString()}`,
+    {
+      method: 'PUT',
+      headers: { 'X-Org-Id': orgId },
+      body: JSON.stringify({ content, encoding: 'utf-8' }),
+    },
+  );
+}
+
+export function threadAttachmentQueryKey(
+  threadId: string,
+  attachmentId: string,
+): readonly ['thread-attachment-blob', string, string] {
+  return ['thread-attachment-blob', threadId, attachmentId];
+}
+
 export function uploadThreadAttachment(threadId: string, file: File): Promise<ThreadAttachment> {
   const body = new FormData();
   body.append('file', file);

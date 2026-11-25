@@ -5,7 +5,7 @@ import { toClientThread, useThreadStore } from '@/entities/thread';
 import { useDeskReady } from '@/features/desk';
 import { type IdeTab, useIdeStore } from '@/features/ide';
 import { BoardSurface } from '@/features/manage-issues';
-import { openFileKind } from '@/features/open-file';
+import { type FileRef, fileRefKey, fileRefKind, isEditableFileRef } from '@/features/open-file';
 import { HitlPrompt } from '@/features/send-message';
 import { SourceControlDiffView } from '@/features/source-control';
 import { ApiError, getOrgAgent, getThreadSummary } from '@/shared/api';
@@ -14,25 +14,14 @@ import { useStudioNavigation } from '@/shared/config/navigation';
 import { Spinner } from '@/shared/ui/spinner';
 import { ChatComposer } from '@/widgets/chat-composer';
 import { SpawnView, ThreadPanel } from '@/widgets/chat-transcript';
-import {
-  AddonViewerFrame,
-  AttachmentPreview,
-  attachmentPreviewKind,
-  MediaPreview,
-  TextEditor,
-  useAddonViewer,
-} from '@/widgets/file-pane';
+import { AddonViewerFrame, FileRefPreview, TextEditor, useAddonViewer } from '@/widgets/file-pane';
 import { ThreadDock } from '@/widgets/thread-dock';
 import { JournalComposer, ThreadJournal } from '@/widgets/thread-journal';
-import { ThreadFileTabContent } from './thread-file-tab';
 
 const DashboardSurface = lazy(() =>
   import('@/features/dashboards/ui/dashboard-surface').then((module) => ({
     default: module.DashboardSurface,
   })),
-);
-const DxfPreview = lazy(() =>
-  import('@/widgets/file-pane/ui/dxf-preview').then((module) => ({ default: module.DxfPreview })),
 );
 const TerminalView = lazy(() =>
   import('@/widgets/terminal-pane').then((module) => ({ default: module.TerminalView })),
@@ -146,50 +135,31 @@ function ThreadTabContent({
   );
 }
 
-function FileTabContent({
-  projectId,
-  path,
-  dirty,
-  worktreeId,
-}: {
-  projectId: string;
-  path: string;
-  dirty: boolean;
-  worktreeId?: string;
-}) {
+function FileTabContent({ target, dirty }: { target: FileRef; dirty: boolean }) {
   const orgId = useOrgId();
-  const viewer = useAddonViewer(orgId, path);
-  const kind = openFileKind(path);
-  if (orgId && viewer) {
+  const project = target.source === 'project' ? target : null;
+  const viewer = useAddonViewer(orgId, project?.path ?? '');
+  if (orgId && project && viewer) {
     return (
       <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-file">
         <AddonViewerFrame
-          key={path}
+          key={project.path}
           orgId={orgId}
-          projectId={projectId}
-          path={path}
+          projectId={project.projectId}
+          path={project.path}
           viewer={viewer}
         />
       </div>
     );
   }
+  const kind = fileRefKind(target);
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-file">
-      {kind === 'text' ? (
-        <TextEditor projectId={projectId} path={path} dirty={dirty} worktreeId={worktreeId} />
-      ) : null}
-      {kind === 'image' ||
-      kind === 'pdf' ||
-      kind === 'docx' ||
-      kind === 'xlsx' ||
-      kind === 'csv' ? (
-        <MediaPreview projectId={projectId} path={path} kind={kind} worktreeId={worktreeId} />
-      ) : null}
-      {kind === 'dxf' ? (
-        <Suspense fallback={<SurfaceFallback />}>
-          <DxfPreview projectId={projectId} path={path} worktreeId={worktreeId} />
-        </Suspense>
-      ) : null}
+      {kind === 'text' && isEditableFileRef(target) ? (
+        <TextEditor key={fileRefKey(target)} target={target} dirty={dirty} />
+      ) : (
+        <FileRefPreview target={target} kind={kind} />
+      )}
     </div>
   );
 }
@@ -214,38 +184,8 @@ export function IdeTabContent({ tab, projectId }: { tab: IdeTab; projectId: stri
   if (tab.kind === 'spawn' && tab.threadId && tab.spawnId) {
     return <SpawnView tab={tab} threadId={tab.threadId} spawnId={tab.spawnId} />;
   }
-  if (tab.kind === 'file' && tab.path) {
-    return (
-      <FileTabContent
-        projectId={projectId}
-        path={tab.path}
-        dirty={Boolean(tab.dirty)}
-        worktreeId={tab.worktreeId}
-      />
-    );
-  }
-  if (tab.kind === 'attachment' && tab.issueId && tab.attachmentId && tab.path) {
-    return (
-      <div className="flex min-h-0 flex-1 flex-col" data-testid="ide-attachment">
-        <AttachmentPreview
-          orgId={orgId}
-          issueId={tab.issueId}
-          attachmentId={tab.attachmentId}
-          name={tab.path}
-          kind={attachmentPreviewKind(tab.path, tab.mediaType ?? '')}
-        />
-      </div>
-    );
-  }
-  if (tab.kind === 'thread-file' && tab.threadId && tab.path) {
-    return (
-      <ThreadFileTabContent
-        threadId={tab.threadId}
-        path={tab.path}
-        attachmentId={tab.attachmentId}
-        mediaType={tab.mediaType}
-      />
-    );
+  if (tab.kind === 'file' && tab.target) {
+    return <FileTabContent target={tab.target} dirty={Boolean(tab.dirty)} />;
   }
   if (tab.kind === 'diff' && tab.path) {
     return (

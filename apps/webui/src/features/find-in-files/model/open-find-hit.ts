@@ -1,15 +1,11 @@
-import { useIdeStore } from '@/features/ide';
-import { openProjectFile } from '@/features/open-file';
-import { useStudioNavigation } from '@/shared/config/navigation';
+import { useOpenFile } from '@/features/ide';
 import { setPendingReveal } from '@/widgets/file-pane';
 import type { FindHit } from './find-in-files-search';
 
 export function useOpenFindHit() {
-  const { openFile } = useStudioNavigation();
+  const openFile = useOpenFile();
   return (hit: FindHit) => {
     setPendingReveal({ path: hit.path, lineNumber: hit.match.line, column: hit.match.column });
-    openProjectFile(hit.sourceId, hit.path);
-    useIdeStore.getState().openFile(hit.sourceId, hit.path);
-    openFile(hit.sourceId, hit.path);
+    openFile({ source: 'project', projectId: hit.sourceId, path: hit.path });
   };
 }

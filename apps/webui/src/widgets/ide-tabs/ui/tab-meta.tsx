@@ -6,7 +6,6 @@ import {
   FileIcon,
   LayoutDashboardIcon,
   MessageSquareIcon,
-  PaperclipIcon,
   SquareTerminalIcon,
   WorkflowIcon,
 } from 'lucide-react';
@@ -53,12 +52,6 @@ export function TabIcon({ tab }: { tab: IdeTab }) {
   }
   if (tab.kind === 'terminal') {
     return <SquareTerminalIcon className="size-3.5 shrink-0 opacity-70" />;
-  }
-  if (tab.kind === 'attachment') {
-    return <PaperclipIcon className="size-3.5 shrink-0 opacity-70" />;
-  }
-  if (tab.kind === 'thread-file' && tab.path) {
-    return <FileTypeIcon name={tab.path} size="xs" />;
   }
   return <FileIcon className="size-3.5 shrink-0 opacity-70" />;
 }
@@ -131,12 +124,6 @@ export function useTabLabel(tab: IdeTab): string {
       : fileBaseName(tab.path);
   }
   if (tab.kind === 'diff' && tab.path) {
-    return fileBaseName(tab.path);
-  }
-  if (tab.kind === 'attachment' && tab.path) {
-    return fileBaseName(tab.path);
-  }
-  if (tab.kind === 'thread-file' && tab.path) {
     return fileBaseName(tab.path);
   }
   if (tab.kind === 'thread') {

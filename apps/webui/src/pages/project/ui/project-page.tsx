@@ -91,7 +91,7 @@ function ProjectShell({
   const activeTab = workspace.activeId
     ? (workspace.tabs.find((tab) => tab.id === workspace.activeId) ?? null)
     : null;
-  const isFileTab = activeTab?.kind === 'file';
+  const isFileTab = activeTab?.kind === 'file' && activeTab.target?.source === 'project';
   const inspectorOpen = useDeskStore((state) => state.inspectorOpen);
   const { width: inspectorWidth, dragging, shellRef, onResizeStart } = useInspectorWidth();
   useIdeSync();

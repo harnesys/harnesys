@@ -1,14 +1,10 @@
 import type { IssueAttachmentRecord } from '@harnesys/studio-shared';
 import { FilePlus2Icon, PaperclipIcon, TrashIcon, UploadIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router';
-import type { OpenAttachmentInput } from '@/features/ide';
-import { useIdeStore, useOpenAttachmentTab } from '@/features/ide';
-import { openProjectFile } from '@/features/open-file';
+import { useOpenFile } from '@/features/ide';
 import { loadIssueAttachment } from '@/shared/api';
 import { useAuthedBlobUrl } from '@/shared/api/blob-url';
 import { studioFocusProjectId, useStudioLocation } from '@/shared/config/location';
-import { studioPath } from '@/shared/config/routes';
 import { cn } from '@/shared/lib/utils';
 import {
   Attachment,
@@ -172,9 +168,8 @@ function AttachmentCard({
   attachment: IssueAttachmentRecord;
   onRemoved: () => void;
 }) {
-  const navigate = useNavigate();
   const { focus } = useStudioLocation();
-  const openAttachmentTab = useOpenAttachmentTab(orgId);
+  const openFile = useOpenFile();
   const { url } = useAuthedBlobUrl(
     attachment.kind === 'file' ? () => loadIssueAttachment(orgId, issueId, attachment.id) : null,
     attachment.id,
@@ -185,19 +180,22 @@ function AttachmentCard({
       : attachment.kind === 'file';
   const openInIde = () => {
     if (attachment.kind === 'source' && attachment.sourceId && attachment.sourcePath) {
-      openProjectFile(attachment.sourceId, attachment.sourcePath);
-      useIdeStore.getState().openFile(attachment.sourceId, attachment.sourcePath);
-      void navigate(studioPath.file(orgId, attachment.sourceId, attachment.sourcePath));
+      openFile({
+        source: 'project',
+        projectId: attachment.sourceId,
+        path: attachment.sourcePath,
+      });
       return;
     }
     if (attachment.kind === 'file') {
-      const input: OpenAttachmentInput = {
+      openFile({
+        source: 'issue-attachment',
+        projectId: studioFocusProjectId(focus) ?? orgId,
         issueId,
         attachmentId: attachment.id,
         name: attachment.name,
         mediaType: attachment.mediaType,
-      };
-      openAttachmentTab(studioFocusProjectId(focus) ?? orgId, input);
+      });
     }
   };
   return (

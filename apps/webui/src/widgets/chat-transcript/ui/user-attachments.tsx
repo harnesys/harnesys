@@ -1,4 +1,4 @@
-import { openThreadFileTab } from '@/features/ide';
+import { openFile } from '@/features/ide';
 import { loadThreadAttachment } from '@/shared/api';
 import { useAuthedBlobUrl } from '@/shared/api/blob-url';
 import { FileChip } from '@/shared/ui/file-chip';
@@ -57,7 +57,14 @@ export function AttachmentPreview({
       href={url ?? undefined}
       onOpen={
         threadId
-          ? () => openThreadFileTab(threadId, item.name, item.id, item.mediaType ?? '')
+          ? () =>
+              openFile({
+                source: 'thread-attachment',
+                threadId,
+                attachmentId: item.id,
+                name: item.name,
+                mediaType: item.mediaType ?? '',
+              })
           : undefined
       }
     />

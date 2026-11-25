@@ -1,6 +1,12 @@
-import type { PersistedIdeWorkspace } from '@harnesys/studio-shared';
+import type {
+  PersistedFileRef,
+  PersistedIdeTab,
+  PersistedIdeWorkspace,
+} from '@harnesys/studio-shared';
 import { schedulePersistDeskChrome } from '@/features/desk/model/desk-chrome';
-import type { IdeTab, IdeTabKind } from './ide.store';
+import { type FileRef } from '@/features/open-file';
+import type { IdeTab } from './ide.store';
+import { fileTabFromTarget } from './ide-file-tab';
 import {
   collapseLayout,
   createEmptyWorkspace,
@@ -8,33 +14,115 @@ import {
   type IdeSplitNode,
   type IdeWorkspaceState,
 } from './ide-layout';
-export function tabIdFor(kind: IdeTabKind, projectId: string, key: string): string {
-  return `${kind}:${projectId}:${key}`;
-}
+import { normalizeIdeFilePath } from './ide-tab-id';
 
-export function fileTabKey(path: string, worktreeId?: string | null): string {
-  const normalized = normalizeIdeFilePath(path);
-  return worktreeId ? `wt:${worktreeId}:${normalized}` : normalized;
-}
-export function normalizeIdeFilePath(path: string): string {
-  return path.replace(/^\/+/, '');
-}
-function normalizeIdeFileTab(tab: IdeTab): IdeTab {
-  if (tab.kind !== 'file' || !tab.path) {
-    return tab;
+function targetFromPersisted(tab: PersistedIdeTab): FileRef | null {
+  const stored = validStoredTarget(tab.target);
+  if (stored) {
+    return stored;
   }
-  const path = normalizeIdeFilePath(tab.path);
-  return { ...tab, path, id: tabIdFor('file', tab.projectId, fileTabKey(path, tab.worktreeId)) };
+  if (tab.kind === 'file') {
+    if (!tab.path) {
+      return null;
+    }
+    return {
+      source: 'project',
+      projectId: tab.projectId,
+      path: normalizeIdeFilePath(tab.path),
+      ...(tab.worktreeId ? { worktreeId: tab.worktreeId } : {}),
+      ...(tab.worktreeBranch ? { worktreeBranch: tab.worktreeBranch } : {}),
+    };
+  }
+  if (tab.kind === 'attachment' && tab.issueId && tab.attachmentId) {
+    return {
+      source: 'issue-attachment',
+      issueId: tab.issueId,
+      attachmentId: tab.attachmentId,
+      name: tab.path ?? tab.attachmentId,
+      mediaType: tab.mediaType ?? '',
+    };
+  }
+  if (tab.kind === 'thread-file' && tab.threadId && tab.path) {
+    if (tab.attachmentId) {
+      return {
+        source: 'thread-attachment',
+        threadId: tab.threadId,
+        attachmentId: tab.attachmentId,
+        name: tab.path,
+        mediaType: tab.mediaType ?? '',
+      };
+    }
+    return {
+      source: 'thread-sandbox',
+      threadId: tab.threadId,
+      path: normalizeIdeFilePath(tab.path),
+    };
+  }
+  return null;
+}
+function validStoredTarget(target: PersistedFileRef | undefined): FileRef | null {
+  if (!target) {
+    return null;
+  }
+  if (target.source === 'project' && typeof target.projectId === 'string' && target.path) {
+    return {
+      source: 'project',
+      projectId: target.projectId,
+      path: normalizeIdeFilePath(target.path),
+      ...(target.worktreeId ? { worktreeId: target.worktreeId } : {}),
+      ...(target.worktreeBranch ? { worktreeBranch: target.worktreeBranch } : {}),
+    };
+  }
+  if (target.source === 'thread-sandbox' && target.threadId && target.path) {
+    return {
+      source: 'thread-sandbox',
+      threadId: target.threadId,
+      path: normalizeIdeFilePath(target.path),
+    };
+  }
+  if (target.source === 'thread-attachment' && target.threadId && target.attachmentId) {
+    return {
+      source: 'thread-attachment',
+      threadId: target.threadId,
+      attachmentId: target.attachmentId,
+      name: target.name ?? target.path ?? target.attachmentId,
+      mediaType: target.mediaType ?? '',
+    };
+  }
+  if (target.source === 'issue-attachment' && target.issueId && target.attachmentId) {
+    return {
+      source: 'issue-attachment',
+      issueId: target.issueId,
+      attachmentId: target.attachmentId,
+      name: target.name ?? target.path ?? target.attachmentId,
+      mediaType: target.mediaType ?? '',
+      ...(target.projectId ? { projectId: target.projectId } : {}),
+    };
+  }
+  return null;
+}
+function migrateTab(tab: PersistedIdeTab): IdeTab | null {
+  const target = targetFromPersisted(tab);
+  if (target) {
+    return fileTabFromTarget(target, tab.projectId, tab.dirty === true);
+  }
+  if (tab.kind === 'attachment' || tab.kind === 'thread-file' || tab.kind === 'file') {
+    return null;
+  }
+  return { ...tab, dirty: tab.dirty === true } as IdeTab;
 }
 export function sanitizeWorkspace(ws: IdeWorkspaceState): IdeWorkspaceState | null {
   const remapped = new Map<string, string>();
   const tabs = dedupeTabs(
     ws.tabs.map((tab) => {
-      const normalized = normalizeIdeFileTab(tab);
-      if (normalized.id !== tab.id) {
-        remapped.set(tab.id, normalized.id);
+      const migrated = migrateTab(tab);
+      if (!migrated) {
+        return tab;
       }
-      return normalized;
+      if (migrated.id !== tab.id) {
+        remapped.set(tab.id, migrated.id);
+      }
+      return migrated;
     }),
   );
   const remapId = (id: string): string => remapped.get(id) ?? id;
@@ -50,20 +138,7 @@ export function sanitizeWorkspace(ws: IdeWorkspaceState): IdeWorkspaceState | nu
     activeId: ws.activeId ? remapId(ws.activeId) : null,
   };
   const alive = new Set(
-    tabs
-      .filter(
-        (t) =>
-          t.kind === 'thread' ||
-          t.kind === 'file' ||
-          t.kind === 'spawn' ||
-          t.kind === 'diff' ||
-          t.kind === 'terminal' ||
-          t.kind === 'board' ||
-          t.kind === 'dashboard' ||
-          t.kind === 'attachment' ||
-          t.kind === 'thread-file',
-      )
-      .map((t) => t.id),
+    tabs.filter((t) => t.kind !== 'file' || Boolean(t.target)).map((t) => t.id),
   );
   if (alive.size === tabs.length && groups.every((g) => g.tabIds.every((id) => alive.has(id)))) {
     return normalized;

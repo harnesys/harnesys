@@ -41,6 +41,7 @@ import { UpdateThreadBindingUseCase } from './update-thread-binding.use-case.ts'
 import { UpdateThreadMetaUseCase } from './update-thread-meta.use-case.ts';
 import { UpdateThreadPolicyUseCase } from './update-thread-policy.use-case.ts';
 import { UploadThreadAttachmentUseCase } from './upload-thread-attachment.use-case.ts';
+import { WriteThreadFileUseCase } from './write-thread-file.use-case.ts';
 
 const useCases = [
   CreateThreadUseCase,
@@ -77,6 +78,7 @@ const useCases = [
   ListThreadAttachmentsUseCase,
   ListThreadFilesUseCase,
   ReadThreadFileUseCase,
+  WriteThreadFileUseCase,
   ListThreadRawModelRequestsUseCase,
   ListThreadRunsUseCase,
   GetThreadRawModelRequestUseCase,

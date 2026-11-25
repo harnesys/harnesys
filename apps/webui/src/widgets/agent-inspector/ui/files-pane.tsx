@@ -8,18 +8,17 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { type ThreadWorktreeBinding, useThreadWorktreeStore } from '@/entities/thread';
 import { useSelectedThread } from '@/features/desk';
-import { openThreadFileTab, useIdeStore } from '@/features/ide';
-import { openProjectFile } from '@/features/open-file';
+import { useOpenFile } from '@/features/ide';
+import type { FileRef } from '@/features/open-file';
 import { getThreadArtifacts, listThreadAttachments, listThreadFiles } from '@/shared/api';
 import { type ContentEntry, type ContentTreeResponse, listContentTree } from '@/shared/api/content';
-import { useStudioNavigation } from '@/shared/config/navigation';
 import { FolderTypeIcon } from '@/shared/ui/icons';
 import { FileCard, fileCardStat } from './file-card';
 import { RowLeading } from './row-leading';
 
 export function FilesPane() {
   const thread = useSelectedThread();
-  const { openFile } = useStudioNavigation();
+  const openFile = useOpenFile();
   if (!thread) {
     return <PaneHint text="Select a thread to see its files and workspace." />;
   }
@@ -27,15 +26,7 @@ export function FilesPane() {
     <div className="flex flex-col gap-5">
       <ThreadFilesSection threadId={thread.id} />
       <ThreadSandboxSection orgId={thread.orgId} threadId={thread.id} />
-      <WorkspaceSection
-        orgId={thread.orgId}
-        threadId={thread.id}
-        onOpenFile={(sourceId, path) => {
-          openProjectFile(sourceId, path);
-          useIdeStore.getState().openFile(sourceId, path);
-          openFile(sourceId, path);
-        }}
-      />
+      <WorkspaceSection orgId={thread.orgId} threadId={thread.id} onOpenFile={openFile} />
     </div>
   );
 }
@@ -75,6 +66,7 @@ function mergeThreadFiles(
 }
 
 function ThreadFilesSection({ threadId }: { threadId: string }) {
+  const openFile = useOpenFile();
   const uploadsQuery = useQuery({
     queryKey: ['thread-attachments', threadId],
     queryFn: () => listThreadAttachments(threadId),
@@ -106,7 +98,13 @@ function ThreadFilesSection({ threadId }: { threadId: string }) {
                 />
               }
               onClick={() =>
-                openThreadFileTab(threadId, file.name, file.attachmentId, file.mediaType)
+                openFile({
+                  source: 'thread-attachment',
+                  threadId,
+                  attachmentId: file.attachmentId,
+                  name: file.name,
+                  mediaType: file.mediaType,
+                })
               }
             />
           ))}
@@ -173,6 +171,7 @@ function ThreadSandboxEntry({
   entry: ThreadFileEntry;
   depth: number;
 }) {
+  const openFile = useOpenFile();
   const [open, setOpen] = useState(false);
   const isDir = entry.type === 'dir';
   const childrenQuery = useQuery({
@@ -194,7 +193,9 @@ function ThreadSandboxEntry({
           )
         }
         onClick={() =>
-          isDir ? setOpen((value) => !value) : openThreadFileTab(threadId, entry.path)
+          isDir
+            ? setOpen((value) => !value)
+            : openFile({ source: 'thread-sandbox', threadId, path: entry.path })
         }
       />
       {isDir && open
@@ -219,7 +220,7 @@ function WorkspaceSection({
 }: {
   orgId?: string;
   threadId: string;
-  onOpenFile: (sourceId: string, path: string) => void;
+  onOpenFile: (target: FileRef) => void;
 }) {
   const binding = useThreadWorktreeStore((state) => state.get(threadId));
   const workspaceRef = binding?.workspaceRef;
@@ -244,7 +245,7 @@ function workspaceBody(
   orgId: string | undefined,
   binding: ThreadWorktreeBinding | undefined,
   query: { isPending: boolean; isError: boolean; data?: ContentTreeResponse },
-  onOpenFile: (sourceId: string, path: string) => void,
+  onOpenFile: (target: FileRef) => void,
 ) {
   if (!binding) {
     return <PaneHint text="No workspace is bound to this thread." />;
@@ -286,7 +287,7 @@ function WorkspaceEntry({
   worktreeId: string;
   entry: ContentEntry;
   depth: number;
-  onOpenFile: (sourceId: string, path: string) => void;
+  onOpenFile: (target: FileRef) => void;
 }) {
   const [open, setOpen] = useState(false);
   const isDir = entry.type === 'dir';
@@ -314,7 +315,16 @@ function WorkspaceEntry({
             />
           )
         }
-        onClick={() => (isDir ? setOpen((value) => !value) : onOpenFile(sourceId, entry.path))}
+        onClick={() =>
+          isDir
+            ? setOpen((value) => !value)
+            : onOpenFile({
+                source: 'project',
+                projectId: sourceId,
+                path: entry.path,
+                worktreeId,
+              })
+        }
       />
       {isDir && open
         ? (childrenQuery.data?.entries ?? []).map((child) => (

@@ -1,4 +1,12 @@
 export {
+  type BlobContentBackend,
+  blobContentBackend,
+  fileRefKind,
+  isEditableFileRef,
+  type TextContentBackend,
+  textContentBackend,
+} from './model/file-content';
+export {
   fileBasename,
   fileExtension,
   isMarkdownPath,
@@ -6,10 +14,14 @@ export {
   openFileKind,
 } from './model/file-kind';
 export {
-  closeProjectFile,
-  markProjectFileDirty,
-  openProjectFile,
-  selectProjectFile,
-  useAgentOpenFiles,
-  useProjectOpenFiles,
-} from './model/open-file';
+  type FileRef,
+  fileRefKey,
+  fileRefPath,
+  fileRefProjectId,
+  type IssueAttachmentFileRef,
+  isProjectFileRef,
+  isWritableFileRef,
+  type ProjectFileRef,
+  type ThreadAttachmentFileRef,
+  type ThreadSandboxFileRef,
+} from './model/file-ref';

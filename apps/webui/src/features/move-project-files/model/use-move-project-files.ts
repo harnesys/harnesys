@@ -1,7 +1,6 @@
 import type { ProjectMoveItem } from '@harnesys/studio-shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router';
-import { useDeskStore } from '@/features/desk';
 import { rememberProjectMoves, useIdeStore } from '@/features/ide';
 import { moveProjectFiles, sourceFilesTreeQueryKey } from '@/shared/api/files';
 import { gitFileStatusQueryKey, gitStatusQueryKey } from '@/shared/api/git';
@@ -82,7 +81,6 @@ export function useMoveProjectFiles(projectId: string, worktreeId?: string) {
         rememberProjectMoves(projectId, moved);
       }
       useIdeStore.getState().remapPaths(projectId, moved, worktreeId);
-      useDeskStore.getState().remapProjectFiles(projectId, moved);
       migrateFileContentQueries(qc, projectId, moved, worktreeId);
       if (!worktreeId) {
         navigateIfFocusMoved({

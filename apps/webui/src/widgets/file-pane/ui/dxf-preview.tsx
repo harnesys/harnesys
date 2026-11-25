@@ -1,25 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
 import { Helper } from 'dxf';
-import { loadProjectFileBlob } from '@/shared/api/files';
+import { blobContentBackend, type FileRef } from '@/features/open-file';
 
 function renderDxfSvg(contents: string): string {
   const svg = new Helper(contents).toSVG();
   return svg.replace(/<\?xml[^>]*\?>\s*/, '');
 }
 
-export function DxfPreview({
-  projectId,
-  path,
-  worktreeId,
-}: {
-  projectId: string;
-  path: string;
-  worktreeId?: string;
-}) {
+export function DxfPreview({ target }: { target: FileRef }) {
+  const backend = blobContentBackend(target);
   const query = useQuery({
-    queryKey: ['dxf-preview', projectId, path, worktreeId ?? ''],
-    queryFn: async () =>
-      renderDxfSvg(await (await loadProjectFileBlob(projectId, path, worktreeId)).text()),
+    queryKey: ['dxf-preview', backend.key],
+    queryFn: async () => renderDxfSvg(await (await backend.load()).text()),
     retry: false,
   });
   if (query.isError) {
@@ -43,8 +35,8 @@ export function DxfPreview({
   return (
     <div
       className="h-full w-full overflow-auto bg-background p-4 [&_svg]:h-full [&_svg]:w-full [&_svg]:hue-rotate-180 [&_svg]:invert"
-      dangerouslySetInnerHTML={{ __html: query.data }}
       data-testid="dxf-preview"
+      dangerouslySetInnerHTML={{ __html: query.data }}
     />
   );
 }

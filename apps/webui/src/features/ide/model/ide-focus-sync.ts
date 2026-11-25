@@ -4,7 +4,8 @@ import { ensureThreadCached, useDeskStore } from '@/features/desk';
 import type { StudioFocus, StudioFocusKind } from '@/shared/config/routes';
 import { studioPath } from '@/shared/config/routes';
 import { useIdeStore } from './ide.store';
-import { normalizeIdeFilePath, tabIdFor } from './ide-persist';
+import { fileTabId } from './ide-file-tab';
+import { normalizeIdeFilePath, tabIdFor } from './ide-tab-id';
 import { remappedPathAfterMove } from './recent-path-moves';
 
 type Navigate = (to: string, options?: { replace: boolean }) => void;
@@ -38,12 +39,14 @@ function syncFileFocus({ focus, projectId, org, navigate }: FocusSyncArgs): void
   const ide = useIdeStore.getState();
   if (remapped) {
     void navigate(studioPath.file(org, projectId, remapped), { replace: true });
-    ide.openFile(projectId, remapped);
-    ide.setActive(tabIdFor('file', projectId, remapped));
+    const target = { source: 'project' as const, projectId, path: remapped };
+    ide.openFile(target);
+    ide.setActive(fileTabId(target, projectId));
     return;
   }
-  ide.openFile(projectId, normalized);
-  ide.setActive(tabIdFor('file', projectId, normalized));
+  const target = { source: 'project' as const, projectId, path: normalized };
+  ide.openFile(target);
+  ide.setActive(fileTabId(target, projectId));
 }
 function syncDiffFocus({ focus, projectId, org, navigate }: FocusSyncArgs): void {
   if (focus.kind !== 'diff') {

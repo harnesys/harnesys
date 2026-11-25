@@ -9,14 +9,7 @@ export {
   setApprovalChimeMuted,
   setApprovalChimeScheme,
 } from './model/approval-chime';
-export {
-  type AgentFileTab,
-  type AgentOpenFiles,
-  type InspectorTab,
-  type ProjectFileTab,
-  type ProjectOpenFiles,
-  useDeskStore,
-} from './model/desk.store';
+export { type InspectorTab, useDeskStore } from './model/desk.store';
 export {
   flushPersistDeskChrome,
   hydrateDeskChrome,

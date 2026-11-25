@@ -34,10 +34,23 @@ export type IdeTabKind =
   | 'dashboard'
   | 'attachment'
   | 'thread-file';
+export interface PersistedFileRef {
+  source: 'project' | 'thread-sandbox' | 'thread-attachment' | 'issue-attachment';
+  projectId?: string;
+  path?: string;
+  worktreeId?: string;
+  worktreeBranch?: string;
+  threadId?: string;
+  issueId?: string;
+  attachmentId?: string;
+  name?: string;
+  mediaType?: string;
+}
 export interface PersistedIdeTab {
   id: string;
   kind: IdeTabKind;
   projectId: string;
+  target?: PersistedFileRef;
   agentId?: string;
   threadId?: string;
   spawnId?: string;
