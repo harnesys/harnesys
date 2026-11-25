@@ -1,4 +1,4 @@
-import { ChevronRightIcon } from 'lucide-react';
+import { ChevronRightIcon, FolderPlusIcon, HardDriveIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useProjects } from '@/entities/project';
 import { openAddSourceDialog } from '@/features/attach-source';
@@ -223,6 +223,9 @@ export function ProjectsTrees({ projectIds }: { projectIds: string[] }) {
     return (
       <SidebarEmpty
         title="No sources yet"
+        hint="Connect a repository to browse and edit its files."
+        icon={HardDriveIcon}
+        actionLabel="Add source"
         onAction={() => {
           void openAddSourceDialog();
         }}
@@ -234,6 +237,9 @@ export function ProjectsTrees({ projectIds }: { projectIds: string[] }) {
     return (
       <SidebarEmpty
         title="All sources are hidden"
+        hint="Sources stay connected, only the list is filtered."
+        icon={FolderPlusIcon}
+        actionLabel="Show all"
         onAction={() => {
           showAll(orgId);
         }}

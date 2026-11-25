@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { CpuIcon } from 'lucide-react';
 import { useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { Agent } from '@/entities/agent';
@@ -66,7 +67,16 @@ export function AgentsSection({
         </div>
       );
     }
-    return <SidebarEmpty title="No agents yet" onAction={createAgent} testId="agents-empty" />;
+    return (
+      <SidebarEmpty
+        title="No agents yet"
+        hint="Create an agent to take on the work."
+        icon={CpuIcon}
+        actionLabel="New agent"
+        onAction={createAgent}
+        testId="agents-empty"
+      />
+    );
   }
   const openSettings = (item: Agent) => {
     void openAgentConfigDialog(item, item.orgId).then(async (result) => {

@@ -1,5 +1,12 @@
 import type { ThreadKind } from '@harnesys/studio-shared';
-import { GitBranchIcon, PinIcon, PinOffIcon, Trash2Icon } from 'lucide-react';
+import {
+  FilterIcon,
+  GitBranchIcon,
+  MessageSquareIcon,
+  PinIcon,
+  PinOffIcon,
+  Trash2Icon,
+} from 'lucide-react';
 import { Fragment, type ReactNode, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { Agent } from '@/entities/agent';
@@ -19,6 +26,7 @@ import {
   subtreeHas,
   type ThreadTreeNode,
 } from '../model/thread-tree';
+import { SidebarEmpty } from './sidebar-empty';
 import { ThreadKindIcon } from './thread-kind-icon';
 
 const VISIBLE_ROOT_LIMIT = 3;
@@ -60,14 +68,23 @@ export function AgentInlineThreads({
   }
   const hiddenCount = Math.max(0, total - used);
   let emptyHint: ReactNode = (
-    <p className="px-1.5 py-1 text-[11px] text-muted-foreground group-data-[collapsible=icon]:hidden">
-      No threads yet.
-    </p>
+    <SidebarEmpty
+      variant="inline"
+      hint="Start a chat with this agent."
+      icon={MessageSquareIcon}
+      title="No threads yet"
+    />
   );
   if (filtered) {
     emptyHint = (
       <div className="flex items-center justify-between gap-1 px-1.5 py-1 group-data-[collapsible=icon]:hidden">
-        <p className="text-[11px] text-muted-foreground">No threads match filter.</p>
+        <SidebarEmpty
+          variant="inline"
+          className="p-0"
+          hint="Nothing matches the current kind filter."
+          icon={FilterIcon}
+          title="No matching threads"
+        />
         {onResetKinds ? (
           <button
             type="button"

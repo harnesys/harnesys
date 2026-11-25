@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { CogIcon, PlusIcon } from 'lucide-react';
+import { CogIcon, LayoutDashboardIcon, PlusIcon } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { dashboardsListQuery } from '@/features/dashboards/dashboards-queries';
 import { resolveIcon } from '@/features/dashboards/model/icon-options';
@@ -57,7 +57,14 @@ export function DashboardsSection({ onSelectDone }: { onSelectDone: () => void }
   }
   if (listQuery.data.length === 0) {
     return (
-      <SidebarEmpty title="No dashboards yet" onAction={startCreation} testId="dashboards-empty" />
+      <SidebarEmpty
+        title="No dashboards yet"
+        hint="Collect charts and live metrics on a board."
+        icon={LayoutDashboardIcon}
+        actionLabel="New dashboard"
+        onAction={startCreation}
+        testId="dashboards-empty"
+      />
     );
   }
   return (

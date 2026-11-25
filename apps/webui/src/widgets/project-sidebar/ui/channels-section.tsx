@@ -12,6 +12,7 @@ import { IconRef } from '@/shared/ui/icon';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { runStatus, threadTime } from '../model/row-status';
 import { openThreadRecord } from '../model/thread-actions';
+import { SidebarEmpty } from './sidebar-empty';
 
 export function ChannelsSection({
   channels,
@@ -33,7 +34,16 @@ export function ChannelsSection({
     );
   }
   if (channels.length === 0) {
-    return <p className="px-1.5 py-1 text-[11px] text-muted-foreground">No channels yet.</p>;
+    return (
+      <SidebarEmpty
+        title="No channels yet"
+        hint="Channels keep a conversation with your team and agents."
+        icon={HashIcon}
+        actionLabel="New channel"
+        onAction={() => void openCreateGroupThreadDialog()}
+        testId="channels-empty"
+      />
+    );
   }
   return (
     <div className="flex flex-col gap-0.5 pb-1" data-testid="channels-section">

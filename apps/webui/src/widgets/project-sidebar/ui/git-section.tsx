@@ -1,4 +1,4 @@
-import { ChevronRightIcon } from 'lucide-react';
+import { ChevronRightIcon, GitBranchIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useIdeStore } from '@/features/ide';
 import { useStudioNavigation } from '@/shared/config/navigation';
@@ -15,7 +15,14 @@ export function GitSection() {
   const changes = useGitChanges();
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   if (changes.length === 0) {
-    return <SidebarEmpty title="No changes" testId="git-empty" />;
+    return (
+      <SidebarEmpty
+        title="No changes"
+        hint="Your working tree is clean."
+        icon={GitBranchIcon}
+        testId="git-empty"
+      />
+    );
   }
   const showFolders = changes.length > 1;
   const toggleExpanded = (projectId: string) => {

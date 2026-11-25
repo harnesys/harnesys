@@ -1,3 +1,4 @@
+import { InboxIcon } from 'lucide-react';
 import type { Agent } from '@/entities/agent';
 import { useAgentStore } from '@/entities/agent';
 import type { Thread } from '@/entities/thread';
@@ -30,7 +31,14 @@ export function InboxSection({
     })
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   if (sorted.length === 0) {
-    return <SidebarEmpty title="No waiting items" testId="inbox-empty" />;
+    return (
+      <SidebarEmpty
+        title="All caught up"
+        hint="Threads waiting for your reply land here."
+        icon={InboxIcon}
+        testId="inbox-empty"
+      />
+    );
   }
   const agentName = (thread: Thread): string => {
     const agent: Agent | undefined = agents.find((item) => item.id === thread.agentId);

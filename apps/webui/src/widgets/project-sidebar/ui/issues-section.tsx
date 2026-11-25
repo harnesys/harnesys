@@ -1,4 +1,4 @@
-import { CogIcon, PlusIcon } from 'lucide-react';
+import { CogIcon, PlusIcon, SquareKanbanIcon } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { useIssueBoardStore, useIssueStore } from '@/entities/issue';
 import { useSessionStore } from '@/entities/session';
@@ -187,7 +187,16 @@ function BoardsEmptyState({ loading, onCreate }: { loading: boolean; onCreate: (
       </div>
     );
   }
-  return <SidebarEmpty title="No boards yet" onAction={onCreate} testId="issue-board-empty" />;
+  return (
+    <SidebarEmpty
+      title="No boards yet"
+      hint="Group issues into a board and track them."
+      icon={SquareKanbanIcon}
+      actionLabel="New board"
+      onAction={onCreate}
+      testId="issue-board-empty"
+    />
+  );
 }
 
 export function IssuesSectionActions() {

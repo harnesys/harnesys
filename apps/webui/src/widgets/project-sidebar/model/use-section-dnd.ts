@@ -5,7 +5,7 @@ interface DropHint {
   id: string;
   before: boolean;
 }
-interface SectionDragProps {
+export interface SectionDragProps {
   draggable: boolean;
   onDragStart: (event: React.DragEvent<HTMLButtonElement>) => void;
   onDragOver: (event: React.DragEvent<HTMLButtonElement>) => void;

@@ -4,6 +4,7 @@ export {
   type SectionSignals,
   useSectionSignals,
 } from './model/section-signals';
+export { type SectionDragProps, useSectionDnd } from './model/use-section-dnd';
 export { ProjectSidebar } from './ui/project-sidebar.tsx';
 export { type SectionPartsContext, sectionParts } from './ui/section-parts';
 export type { SectionParts } from './ui/section-rail';

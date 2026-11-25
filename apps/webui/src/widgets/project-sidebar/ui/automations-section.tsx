@@ -32,6 +32,9 @@ export function AutomationsSection({ agents, onSelectDone }: AutomationsSectionP
     return (
       <SidebarEmpty
         title="No automations yet"
+        hint="Schedule recurring work and let an agent run it."
+        icon={ZapIcon}
+        actionLabel="New automation"
         onAction={createAutomation}
         testId="automations-empty"
       />

@@ -181,7 +181,16 @@ export function TerminalSection({
     return (
       <TerminalCreateMenu
         onCreated={onSelectDone}
-        trigger={<SidebarEmpty title="No terminals" interactive testId="terminals-empty" />}
+        trigger={
+          <SidebarEmpty
+            title="No terminals"
+            hint="Open a shell in one of your sources."
+            icon={SquareTerminalIcon}
+            actionLabel="New terminal"
+            interactive
+            testId="terminals-empty"
+          />
+        }
       />
     );
   }

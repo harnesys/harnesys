@@ -7,6 +7,7 @@ import {
   type SectionParts,
   type SidebarSectionId,
   useAccordionStore,
+  useSectionDnd,
   useSectionSignals,
 } from '@/widgets/project-sidebar';
 import { isRailSectionId, loadRailSection, saveRailSection } from '../model/rail-selection';
@@ -28,6 +29,7 @@ export function ProjectRail({
   const order = useAccordionStore((state) => state.order);
   const hidden = useAccordionStore((state) => state.hidden);
   const signals = useSectionSignals();
+  const { draggingId, dropHintFor, headerProps } = useSectionDnd();
   const [selected, setSelected] = useState<SidebarSectionId | null>(loadRailSection);
   const { open, setOpen } = useSidebar();
 
@@ -67,6 +69,7 @@ export function ProjectRail({
         >
           {visible.map((id) => {
             const parts = partsFor(id);
+            const reorderable = id !== 'inbox' && visible.length > 1;
             return (
               <RailNavButton
                 key={id}
@@ -75,6 +78,9 @@ export function ProjectRail({
                 signal={signals[id]}
                 active={id === activeId}
                 onSelect={() => select(id)}
+                dragProps={reorderable ? headerProps(id) : undefined}
+                dragging={draggingId === id}
+                dropHint={reorderable ? dropHintFor(id) : null}
               />
             );
           })}
