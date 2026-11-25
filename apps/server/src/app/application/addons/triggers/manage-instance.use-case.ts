@@ -219,15 +219,13 @@ export class ManageTriggerInstanceUseCase {
   private assertTarget(orgId: string, target: unknown, exceptInstanceId?: string): TriggerTarget {
     const parsed = TriggerTargetSchema.safeParse(target);
     if (!parsed.success) {
-      const acknowledgement = parsed.error.issues.some(
-        (issue) => issue.path.join('.') === 'scripts.acknowledged',
-      );
+      const scriptIssue = parsed.error.issues.find((issue) => issue.path[0] === 'scripts');
       throw new AddonException(
         'invalid_params',
         422,
-        acknowledgement
-          ? 'trigger scripts must be acknowledged before saving'
-          : 'target must be an object with threadId, agentId, optional modeId, workspace and scripts',
+        scriptIssue === undefined
+          ? 'target must be an object with threadId, agentId, optional modeId, workspace and scripts'
+          : `${scriptIssue.path.join('.')}: ${scriptIssue.message}`,
       );
     }
     const thread = this.threads.findById(orgId, parsed.data.threadId);
