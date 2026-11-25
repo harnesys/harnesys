@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/shared/ui/hover-card';
-import type { SectionAttention } from '../model/section-attention';
+import type { SectionSignal, SectionSignals } from '../model/section-signals';
+import { SectionLiveDot, SectionSignalBadge } from './section-signal';
 import { SECTION_META, type SidebarSectionId } from './sections-meta';
 
 export interface SectionParts {
   icon: ReactNode;
   title: ReactNode;
-  count?: number;
   badge?: ReactNode;
   actions?: ReactNode;
   horizontalScroll?: boolean;
@@ -16,11 +16,11 @@ export interface SectionParts {
 export function SectionRail({
   ids,
   parts,
-  attention,
+  signals,
 }: {
   ids: SidebarSectionId[];
   parts: (id: SidebarSectionId) => SectionParts;
-  attention: SectionAttention;
+  signals: SectionSignals;
 }) {
   return (
     <div className="flex flex-col items-center gap-1 px-1 pb-2" data-testid="section-rail">
@@ -34,8 +34,7 @@ export function SectionRail({
             content={spec.content}
             actions={spec.actions}
             headerBadge={spec.badge}
-            count={spec.count}
-            attention={attention[id]}
+            signal={signals[id]}
           />
         );
       })}
@@ -49,16 +48,14 @@ function SectionRailButton({
   content,
   actions,
   headerBadge,
-  count,
-  attention,
+  signal,
 }: {
   id: SidebarSectionId;
   icon: ReactNode;
   content: ReactNode;
   actions?: ReactNode;
   headerBadge?: ReactNode;
-  count?: number;
-  attention?: boolean;
+  signal?: SectionSignal;
 }) {
   const label = SECTION_META[id].label;
   return (
@@ -74,14 +71,12 @@ function SectionRailButton({
         }
       >
         <span className="flex items-center justify-center [&>svg]:size-4">{icon}</span>
-        {count !== undefined && count > 0 ? (
-          <span className="absolute -right-0.5 -bottom-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-sidebar-accent px-0.5 font-medium text-[9px] text-sidebar-accent-foreground tabular-nums leading-none ring-2 ring-sidebar">
-            {count > 99 ? '99+' : count}
+        {signal?.attention ? (
+          <span className="absolute -right-0.5 -bottom-0.5 flex">
+            <SectionSignalBadge signal={signal} />
           </span>
         ) : null}
-        {attention ? (
-          <span className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-live ring-2 ring-sidebar" />
-        ) : null}
+        {signal?.live ? <SectionLiveDot /> : null}
       </HoverCardTrigger>
       <HoverCardContent
         side="right"

@@ -2,17 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { Fragment, type MouseEvent as ReactMouseEvent, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
-import { useIssueBoardStore } from '@/entities/issue';
 import { useProjects } from '@/entities/project';
 import { useThreadStore } from '@/entities/thread';
 import { isDesktop, useAppUpdateStore } from '@/features/app-update';
 import { isNewerVersion, releasesQuery } from '@/features/app-update/model/server-update';
 import {
   useAgentsInProjects,
-  useAutomationsInProjects,
   useDeskReady,
   useErroredThreads,
-  useOrgTerminals,
   useWaitingThreads,
 } from '@/features/desk';
 import { useIdeTabs } from '@/features/ide';
@@ -37,7 +34,7 @@ import {
 import { AssistantChatToggle } from '@/widgets/assistant-chat';
 import { InboxBell } from '@/widgets/inbox-bell';
 import { normalizeShares, useAccordionStore } from '../model/accordion.store';
-import { useSectionAttention } from '../model/section-attention';
+import { useSectionSignals } from '../model/section-signals';
 import { useFindInFilesHotkey } from '../model/use-find-in-files-hotkey';
 import { useSectionDnd } from '../model/use-section-dnd';
 import { AccordionSection } from './accordion-section';
@@ -123,7 +120,6 @@ export function ProjectSidebar({
   const projectQuery = useProjects();
   const projectIds = (projectQuery.data ?? []).map((project) => project.id);
   const agentScopeIds = orgId ? [...projectIds, orgId] : projectIds;
-  const automationScopeIds = orgId ? [orgId] : projectIds;
   const inboxThreads = useWaitingThreads(agentScopeIds);
   const errorThreads = useErroredThreads(agentScopeIds);
   const channels = useThreadStore(
@@ -132,9 +128,6 @@ export function ProjectSidebar({
     ),
   );
   const agents = useAgentsInProjects(agentScopeIds);
-  const automations = useAutomationsInProjects(automationScopeIds);
-  const boards = useIssueBoardStore((state) => state.boards);
-  const terminals = useOrgTerminals();
   const deskPending = !useDeskReady(orgId);
   const { setOpenMobile, state, isMobile } = useSidebar();
   const iconMode = isIconMode(state, isMobile);
@@ -152,7 +145,7 @@ export function ProjectSidebar({
   const containerRef = useRef<HTMLDivElement>(null);
   const [dragPair, setDragPair] = useState<string | null>(null);
   const { draggingId, dropHintFor, headerProps } = useSectionDnd();
-  const attention = useSectionAttention();
+  const signals = useSectionSignals();
   const visibleSections = order.filter((id): id is OrderedSectionId => !hidden[id]);
   const expanded = visibleSections.filter((id) => !(collapsed[id] ?? false));
   const inboxVisible = !hidden.inbox;
@@ -200,9 +193,6 @@ export function ProjectSidebar({
   const onSelectDone = () => setOpenMobile(false);
   const partsContext = {
     agents,
-    automations,
-    boards,
-    terminals,
     inboxThreads,
     errorThreads,
     channels,
@@ -233,7 +223,7 @@ export function ProjectSidebar({
           <SectionRail
             ids={railSectionIds(visibleSections, inboxVisible)}
             parts={partsFor}
-            attention={attention}
+            signals={signals}
           />
         ) : (
           <div ref={containerRef} className="flex min-h-0 flex-auto flex-col gap-1 px-2 pb-2">
@@ -243,7 +233,7 @@ export function ProjectSidebar({
                 resizer={null}
                 icon={partsFor('inbox').icon}
                 title={partsFor('inbox').title}
-                count={partsFor('inbox').count}
+                signal={signals.inbox}
                 badge={partsFor('inbox').badge}
                 size={shares.inbox ?? 1}
               >
@@ -259,7 +249,7 @@ export function ProjectSidebar({
                     resizer={resizeNode(id)}
                     icon={parts.icon}
                     title={parts.title}
-                    count={parts.count}
+                    signal={signals[id]}
                     badge={parts.badge}
                     actions={parts.actions}
                     horizontalScroll={parts.horizontalScroll}

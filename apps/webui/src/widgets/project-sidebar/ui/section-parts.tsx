@@ -1,8 +1,6 @@
-import type { IssueBoardRecord, TerminalSessionRecord } from '@harnesys/studio-shared';
 import { InboxIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { Agent } from '@/entities/agent';
-import type { ClientAutomation } from '@/entities/automation';
 import type { Thread } from '@/entities/thread';
 import { Badge } from '@/shared/ui/badge';
 import { AgentsSection, AgentsSectionActions } from './agents-section';
@@ -21,9 +19,6 @@ import { TerminalSection, TerminalSectionActions } from './terminal-section';
 
 export interface SectionPartsContext {
   agents: Agent[];
-  automations: ClientAutomation[];
-  boards: IssueBoardRecord[];
-  terminals: TerminalSessionRecord[];
   inboxThreads: Thread[];
   errorThreads: Thread[];
   channels: Thread[];
@@ -44,7 +39,6 @@ export function sectionParts(id: SidebarSectionId, ctx: SectionPartsContext): Se
       return {
         icon: <InboxIcon />,
         title: 'Inbox',
-        count: ctx.inboxThreads.length + ctx.errorThreads.length,
         badge: inboxCountBadge(ctx.errorThreads.length, ctx.inboxThreads.length),
         content: (
           <InboxSection
@@ -58,7 +52,6 @@ export function sectionParts(id: SidebarSectionId, ctx: SectionPartsContext): Se
       return {
         icon: <Icon />,
         title: 'Agents',
-        count: ctx.agents.filter((agent) => !agent.parentId).length,
         actions: (
           <>
             <DepartmentCreateButton />
@@ -79,7 +72,6 @@ export function sectionParts(id: SidebarSectionId, ctx: SectionPartsContext): Se
       return {
         icon: <Icon />,
         title: 'Channels',
-        count: ctx.channels.length,
         actions: <ChannelsSectionActions />,
         content: (
           <ChannelsSection
@@ -109,7 +101,6 @@ export function sectionParts(id: SidebarSectionId, ctx: SectionPartsContext): Se
       return {
         icon: <Icon />,
         title: 'Issues',
-        count: ctx.boards.length,
         actions: <IssuesSectionActions />,
         content: (
           <IssuesSection
@@ -123,7 +114,6 @@ export function sectionParts(id: SidebarSectionId, ctx: SectionPartsContext): Se
       return {
         icon: <Icon />,
         title: 'Automations',
-        count: ctx.automations.length,
         actions: <AutomationsSectionActions agents={ctx.agents} onDone={onSelectDone} />,
         content: <AutomationsSection agents={ctx.agents} onSelectDone={onSelectDone} />,
       };
@@ -138,7 +128,6 @@ export function sectionParts(id: SidebarSectionId, ctx: SectionPartsContext): Se
       return {
         icon: <Icon />,
         title: 'Terminal',
-        count: ctx.terminals.length,
         actions: <TerminalSectionActions onCreated={onSelectDone} />,
         content: (
           <TerminalSection

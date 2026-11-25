@@ -7,7 +7,7 @@ import {
   type SectionParts,
   type SidebarSectionId,
   useAccordionStore,
-  useSectionAttention,
+  useSectionSignals,
 } from '@/widgets/project-sidebar';
 import { isRailSectionId, loadRailSection, saveRailSection } from '../model/rail-selection';
 import { useRailParts } from '../model/use-rail-parts';
@@ -27,7 +27,7 @@ export function ProjectRail({
   const partsFor = useRailParts();
   const order = useAccordionStore((state) => state.order);
   const hidden = useAccordionStore((state) => state.hidden);
-  const attention = useSectionAttention();
+  const signals = useSectionSignals();
   const [selected, setSelected] = useState<SidebarSectionId | null>(loadRailSection);
   const { open, setOpen } = useSidebar();
 
@@ -72,8 +72,7 @@ export function ProjectRail({
                 key={id}
                 id={id}
                 icon={parts.icon}
-                count={parts.count}
-                attention={attention[id]}
+                signal={signals[id]}
                 active={id === activeId}
                 onSelect={() => select(id)}
               />

@@ -3,7 +3,13 @@ import type { ReactNode } from 'react';
 import { entityColorTintClass } from '@/shared/lib/entity-colors';
 import { cn } from '@/shared/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
-import { SECTION_META, type SidebarSectionId } from '@/widgets/project-sidebar';
+import {
+  SECTION_META,
+  SectionLiveDot,
+  type SectionSignal,
+  SectionSignalBadge,
+  type SidebarSectionId,
+} from '@/widgets/project-sidebar';
 
 const SECTION_TINTS: Record<SidebarSectionId, EntityColorName> = {
   inbox: 'orange',
@@ -20,26 +26,32 @@ const SECTION_TINTS: Record<SidebarSectionId, EntityColorName> = {
 export function RailNavButton({
   id,
   icon,
-  count,
-  attention,
+  signal,
   active,
   onSelect,
 }: {
   id: SidebarSectionId;
   icon: ReactNode;
-  count?: number;
-  attention?: boolean;
+  signal?: SectionSignal;
   active: boolean;
   onSelect: () => void;
 }) {
   const label = SECTION_META[id].label;
+  const status = signal
+    ? [
+        signal.live ? 'working now' : null,
+        signal.attention > 0 ? `${signal.attention} pending` : null,
+      ]
+        .filter(Boolean)
+        .join(', ')
+    : '';
   return (
     <Tooltip>
       <TooltipTrigger
         render={
           <button
             type="button"
-            aria-label={label}
+            aria-label={status ? `${label}, ${status}` : label}
             aria-pressed={active}
             data-testid={`rail-section-${id}`}
             onClick={onSelect}
@@ -53,17 +65,20 @@ export function RailNavButton({
         }
       >
         <span className="flex items-center justify-center [&>svg]:size-4">{icon}</span>
-        {count !== undefined && count > 0 ? (
-          <span className="absolute -right-0.5 -bottom-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-sidebar-accent px-0.5 font-medium text-[9px] text-sidebar-accent-foreground tabular-nums leading-none ring-2 ring-sidebar">
-            {count > 99 ? '99+' : count}
+        {signal?.attention ? (
+          <span className="absolute -right-0.5 -bottom-0.5 flex">
+            <SectionSignalBadge signal={signal} />
           </span>
         ) : null}
-        {attention ? (
-          <span className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-live ring-2 ring-sidebar" />
-        ) : null}
+        {signal?.live ? <SectionLiveDot /> : null}
       </TooltipTrigger>
       <TooltipContent side="right" sideOffset={10}>
-        {label}
+        <span className="flex flex-col">
+          <span>{label}</span>
+          {status ? (
+            <span className="text-[10px] text-muted-foreground leading-tight">{status}</span>
+          ) : null}
+        </span>
       </TooltipContent>
     </Tooltip>
   );

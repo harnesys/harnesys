@@ -10,16 +10,16 @@ import {
 } from '@/shared/ui/dropdown-menu';
 import { SidebarMenuButton } from '@/shared/ui/sidebar';
 import { useAccordionStore } from '../model/accordion.store';
-import { hasHiddenAttention, useSectionAttention } from '../model/section-attention';
+import { hasHiddenSignal, useSectionSignals } from '../model/section-signals';
 import { SECTION_META, type SidebarSectionId } from './sections-meta';
 
 export function SidebarSectionsVisibility({ className }: { className?: string }) {
   const order = useAccordionStore((state) => state.order);
   const hidden = useAccordionStore((state) => state.hidden);
   const setVisibility = useAccordionStore((state) => state.setVisibility);
-  const attention = useSectionAttention();
+  const signals = useSectionSignals();
   const sections = ['inbox', ...order] as SidebarSectionId[];
-  const showAttention = hasHiddenAttention(sections, hidden, attention);
+  const showAttention = hasHiddenSignal(sections, hidden, signals);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger

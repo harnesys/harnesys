@@ -23,11 +23,6 @@ export function RailSectionPanel({
           {parts.icon}
         </span>
         <span className="min-w-0 truncate font-medium text-[13px]">{parts.title}</span>
-        {parts.count !== undefined && parts.count > 0 ? (
-          <span className="shrink-0 text-sidebar-foreground/50 text-xs tabular-nums">
-            {parts.count}
-          </span>
-        ) : null}
         {parts.badge ? (
           <span className="flex shrink-0 items-center gap-1">{parts.badge}</span>
         ) : null}

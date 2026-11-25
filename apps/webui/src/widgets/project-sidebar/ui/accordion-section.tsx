@@ -1,14 +1,15 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/shared/lib/utils';
-import { Badge } from '@/shared/ui/badge';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { useAccordionStore } from '../model/accordion.store';
+import type { SectionSignal } from '../model/section-signals';
+import { SectionSignalBadge } from './section-signal';
 
 interface AccordionSectionProps {
   id: string;
   icon: ReactNode;
   title: ReactNode;
-  count?: number;
+  signal?: SectionSignal;
   badge?: ReactNode;
   actions?: ReactNode;
   size: number;
@@ -23,7 +24,7 @@ export function AccordionSection({
   id,
   icon,
   title,
-  count,
+  signal,
   badge,
   actions,
   size,
@@ -37,7 +38,10 @@ export function AccordionSection({
   const collapsed = useAccordionStore((state) => state.collapsed[id] ?? false);
   const toggle = useAccordionStore((state) => state.toggle);
   const shown = !collapsed;
-  const hasTrailing = count !== undefined || Boolean(badge) || Boolean(actions);
+  const signalBadge = signal ? <SectionSignalBadge signal={signal} /> : null;
+  const indicator = badge ?? signalBadge;
+  const hasIndicator = Boolean(indicator);
+  const hasTrailing = hasIndicator || Boolean(actions);
   return (
     <div className="group/section contents">
       <div
@@ -69,27 +73,18 @@ export function AccordionSection({
             className={cn(
               'relative ml-auto flex h-7 shrink-0 items-center justify-end',
               actions &&
-                'group-hover/head:[&_[data-section-count]]:opacity-0 has-data-open:[&_[data-section-count]]:opacity-0',
+                hasIndicator &&
+                'group-hover/head:[&>[data-section-indicator]]:opacity-0 has-data-open:[&>[data-section-indicator]]:opacity-0',
             )}
           >
-            {badge ??
-              (count !== undefined && count > 0 ? (
-                <Badge
-                  data-section-count=""
-                  variant="secondary"
-                  className="h-4 px-1.5 font-normal text-[10px] tabular-nums leading-none transition-opacity"
-                >
-                  {count}
-                </Badge>
-              ) : null)}
+            {indicator ? <span data-section-indicator="">{indicator}</span> : null}
             {actions ? (
               <span
                 className={cn(
                   'pointer-events-none flex items-center opacity-0 transition-opacity',
                   'group-hover/head:pointer-events-auto group-hover/head:opacity-100',
                   'has-data-open:pointer-events-auto has-data-open:opacity-100',
-                  count !== undefined && 'absolute inset-y-0 right-0',
-                  badge && 'absolute inset-y-0 right-0',
+                  hasIndicator && 'absolute inset-y-0 right-0',
                 )}
               >
                 {actions}
