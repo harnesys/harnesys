@@ -307,6 +307,7 @@ Query: none
 | `items[].policy.historyMode` | "full" \| "none" \| "last" |
 | `items[].policy.historyLast` | integer |
 | `items[].policy.historyFromRunId` | string |
+| `items[].policy.historyFromSeq` | integer |
 | `items[].policy.mentionGating` | boolean |
 | `items[].policy.responderMode` | "auto" \| "mention" |
 | `items[].policy.contextFiles` | array of object |
