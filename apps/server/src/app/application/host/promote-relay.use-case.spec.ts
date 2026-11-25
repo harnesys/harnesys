@@ -36,6 +36,7 @@ class FakeUsers extends UserRepository {
     return this.rows.find((row) => row.id === id) ?? null;
   }
   updatePasswordHash(): void {}
+  updateProfile(): void {}
   count(): number {
     return this.rows.length;
   }
@@ -208,6 +209,7 @@ function userRecord(id: string, updatedAt: string): UserRecord {
     id,
     login: `${id}@login`,
     name: id,
+    avatar: null,
     passwordHash: `hash-${id}`,
     createdAt: '2026-10-01T00:00:00.000Z',
     updatedAt,

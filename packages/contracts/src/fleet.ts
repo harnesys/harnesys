@@ -175,6 +175,7 @@ export const PromoteIdentitySliceResponseSchema = z.object({
       id: z.string(),
       login: z.string(),
       name: z.string(),
+      avatar: z.string().nullable().default(null),
       passwordHash: z.string(),
       createdAt: z.string(),
       updatedAt: z.string(),

@@ -36,7 +36,7 @@ class FakeUsers extends UserRepository {
   readonly rows: UserRecord[] = [];
 
   insert(user: InsertUserInput): void {
-    this.rows.push({ ...user, updatedAt: user.createdAt });
+    this.rows.push({ ...user, avatar: null, updatedAt: user.createdAt });
   }
 
   findByLogin(login: string): UserRecord | null {
@@ -54,6 +54,8 @@ class FakeUsers extends UserRepository {
       user.updatedAt = updatedAt;
     }
   }
+
+  updateProfile(): void {}
 
   count(): number {
     return this.rows.length;

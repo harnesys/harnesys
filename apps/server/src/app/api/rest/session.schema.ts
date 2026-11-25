@@ -1,4 +1,9 @@
 import { z } from 'zod';
+import {
+  AVATAR_DATA_URL_PATTERN,
+  AVATAR_MAX_CHARS,
+  PROFILE_NAME_MAX_LENGTH,
+} from '../../domain/identity/profile-rules.ts';
 
 export const SessionLoginBodySchema = z.object({
   login: z.string().min(1),
@@ -29,3 +34,9 @@ export const SessionRevokeBodySchema = z.object({
   familyId: z.string().min(1),
 });
 export type SessionRevokeBody = z.infer<typeof SessionRevokeBodySchema>;
+
+export const SessionUpdateProfileBodySchema = z.object({
+  name: z.string().trim().min(1).max(PROFILE_NAME_MAX_LENGTH),
+  avatar: z.string().max(AVATAR_MAX_CHARS).regex(AVATAR_DATA_URL_PATTERN).nullable(),
+});
+export type SessionUpdateProfileBody = z.infer<typeof SessionUpdateProfileBodySchema>;

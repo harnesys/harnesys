@@ -4,6 +4,7 @@ import {
   type InsertUserInput,
   type LoginAttemptRow,
   LoginAttemptStore,
+  type UpdateUserProfileInput,
   type UserRecord,
   UserRepository,
 } from '../../domain/identity/user-repository.port.ts';
@@ -65,6 +66,19 @@ export class UserRepositoryAdapter extends UserRepository {
     }
   }
 
+  updateProfile(input: UpdateUserProfileInput): void {
+    const sqlite = openIdentitySqlite(this.layout);
+    try {
+      sqlite.db
+        .update(users)
+        .set({ name: input.name, avatar: input.avatar, updatedAt: input.updatedAt })
+        .where(eq(users.id, input.id))
+        .run();
+    } finally {
+      sqlite.sqlite.close();
+    }
+  }
+
   count(): number {
     const sqlite = openIdentitySqlite(this.layout);
     try {
@@ -88,6 +102,7 @@ export class UserRepositoryAdapter extends UserRepository {
           .set({
             login: user.login,
             name: user.name,
+            avatar: user.avatar,
             passwordHash: user.passwordHash,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt,
@@ -102,6 +117,7 @@ export class UserRepositoryAdapter extends UserRepository {
           id: user.id,
           login: user.login,
           name: user.name,
+          avatar: user.avatar,
           passwordHash: user.passwordHash,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
@@ -157,6 +173,7 @@ function mapUser(row: {
   id: string;
   login: string;
   name: string;
+  avatar: string | null;
   passwordHash: string;
   createdAt: string;
   updatedAt: string;
@@ -165,6 +182,7 @@ function mapUser(row: {
     id: row.id,
     login: row.login,
     name: row.name,
+    avatar: row.avatar,
     passwordHash: row.passwordHash,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

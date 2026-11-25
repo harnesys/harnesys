@@ -16,6 +16,7 @@ class FakeUsers extends UserRepository {
     return null;
   }
   updatePasswordHash(): void {}
+  updateProfile(): void {}
   count(): number {
     return 0;
   }

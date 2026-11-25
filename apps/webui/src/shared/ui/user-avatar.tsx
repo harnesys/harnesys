@@ -41,12 +41,14 @@ function tintOf(seed: string): string {
 export function UserAvatar({
   name,
   seed,
+  src,
   title,
   size = 'sm',
   className,
 }: {
   name: string;
   seed?: string;
+  src?: string | null;
   title?: string;
   size?: UserAvatarSize;
   className?: string;
@@ -55,13 +57,13 @@ export function UserAvatar({
     <span
       title={title ?? name}
       className={cn(
-        'flex shrink-0 items-center justify-center rounded-full font-medium',
+        'flex shrink-0 items-center justify-center overflow-hidden rounded-full font-medium',
         AVATAR_SIZES[size],
-        tintOf(seed ?? name),
+        src ? null : tintOf(seed ?? name),
         className,
       )}
     >
-      {initialsOfUser(name)}
+      {src ? <img src={src} alt={name} className="size-full object-cover" /> : initialsOfUser(name)}
     </span>
   );
 }

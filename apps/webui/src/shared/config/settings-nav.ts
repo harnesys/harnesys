@@ -118,7 +118,7 @@ export const WINDOW_SETTINGS_GROUPS: SettingsNavGroup[] = [
       {
         id: 'account',
         label: 'Account',
-        description: 'Password and sessions for this user on this host.',
+        description: 'Profile, password and sessions for this user on this host.',
         icon: CircleUserIcon,
       },
     ],
@@ -238,7 +238,7 @@ export const WINDOW_SETTINGS_GROUPS: SettingsNavGroup[] = [
       {
         id: 'members',
         label: 'Members',
-        description: 'People in this organization and invite codes for new members.',
+        description: 'People with access to this organization and their roles.',
         icon: UsersIcon,
       },
       {

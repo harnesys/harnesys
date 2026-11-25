@@ -10,15 +10,24 @@ export interface MySessionView {
   absoluteExpiresAt: string;
 }
 
+export type AccountRole = 'owner' | 'admin' | 'operator' | 'viewer' | 'custom';
+
 export interface CurrentUserView {
   userId: string;
   login: string;
   name: string;
+  avatar: string | null;
+  role: AccountRole;
 }
 
 export interface ChangePasswordInput {
   currentPassword: string;
   newPassword: string;
+}
+
+export interface UpdateProfileInput {
+  name: string;
+  avatar: string | null;
 }
 
 export function currentUserQueryKey(): readonly [string, string] {
@@ -52,6 +61,13 @@ export function mySessionsQuery() {
 export function changePassword(input: ChangePasswordInput): Promise<void> {
   return apiJson<void>('/api/session/change-password', {
     method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateProfile(input: UpdateProfileInput): Promise<CurrentUserView> {
+  return apiJson<CurrentUserView>('/api/session/me', {
+    method: 'PATCH',
     body: JSON.stringify(input),
   });
 }

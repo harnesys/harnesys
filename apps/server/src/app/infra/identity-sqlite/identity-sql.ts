@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY NOT NULL,
   login TEXT NOT NULL,
   name TEXT NOT NULL,
+  avatar TEXT,
   password_hash TEXT NOT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
@@ -99,6 +100,16 @@ CREATE UNIQUE INDEX IF NOT EXISTS identity_links_identity_unique
   ON identity_links(provider, provider_user_id);
 `;
 
+export function migrateUserAvatarColumn(
+  exec: (sql: string) => void,
+  all: (sql: string) => Array<{ name: string }>,
+): void {
+  const present = new Set(all('PRAGMA table_info(users)').map((column) => column.name));
+  if (!present.has('avatar')) {
+    exec('ALTER TABLE users ADD COLUMN avatar TEXT');
+  }
+}
+
 export function migrateIdentityLinkProfileColumns(
   exec: (sql: string) => void,
   all: (sql: string) => Array<{ name: string }>,
@@ -136,6 +147,7 @@ export function ensureIdentitySchema(
   exec(CREATE_IDENTITY_AUDIT_SQL);
   exec(CREATE_IDENTITY_LINKS_SQL);
   if (all) {
+    migrateUserAvatarColumn(exec, all);
     migrateIdentityLinkProfileColumns(exec, all);
   }
   exec(CREATE_IDENTITY_LINK_CODES_SQL);

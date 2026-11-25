@@ -73,3 +73,18 @@ export const ROLE_PRESETS: Record<OrgRole, Capability[]> = {
   operator: OPERATOR,
   viewer: VIEWER,
 };
+
+export type AccountRole = OrgRole | 'custom';
+
+const ROLE_ORDER: readonly OrgRole[] = ['owner', 'admin', 'operator', 'viewer'];
+
+export function roleFromCapabilities(capabilities: string[]): AccountRole {
+  const present = new Set(capabilities);
+  for (const role of ROLE_ORDER) {
+    const preset = ROLE_PRESETS[role];
+    if (preset.length === present.size && preset.every((capability) => present.has(capability))) {
+      return role;
+    }
+  }
+  return 'custom';
+}

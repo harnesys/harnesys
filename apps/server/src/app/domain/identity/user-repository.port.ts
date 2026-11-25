@@ -2,6 +2,7 @@ export interface UserRecord {
   id: string;
   login: string;
   name: string;
+  avatar: string | null;
   passwordHash: string;
   createdAt: string;
   updatedAt: string;
@@ -22,11 +23,19 @@ export interface UpsertMembershipInput {
   updatedAt: string;
 }
 
+export interface UpdateUserProfileInput {
+  id: string;
+  name: string;
+  avatar: string | null;
+  updatedAt: string;
+}
+
 export abstract class UserRepository {
   abstract insert(user: InsertUserInput): void;
   abstract findByLogin(login: string): UserRecord | null;
   abstract findById(id: string): UserRecord | null;
   abstract updatePasswordHash(id: string, passwordHash: string, updatedAt: string): void;
+  abstract updateProfile(input: UpdateUserProfileInput): void;
   abstract count(): number;
   abstract upsertSync(user: UserRecord): void;
 }

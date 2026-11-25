@@ -23,10 +23,12 @@ import {
   SettingsSave,
 } from '@/shared/ui/settings-kit';
 import { toast } from '@/shared/ui/toast';
+import { ProfileSection } from './profile-section';
 
 export function AccountPane() {
   return (
     <div className="flex w-full flex-col gap-8" data-testid="account-pane">
+      <ProfileSection />
       <PasswordSection />
       <SessionsSection />
     </div>

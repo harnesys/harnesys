@@ -6,6 +6,7 @@ import {
   ForbiddenException,
   Get,
   HttpCode,
+  Patch,
   Post,
   Public,
   UnauthorizedException,
@@ -42,6 +43,7 @@ import { RefreshSessionUseCase } from '../../application/identity/refresh-sessio
 import { RevokeAllSessionsUseCase } from '../../application/identity/revoke-all-sessions.use-case.ts';
 import { RevokeSessionUseCase } from '../../application/identity/revoke-session.use-case.ts';
 import type { SessionTokens } from '../../application/identity/session-tokens.ts';
+import { UpdateProfileUseCase } from '../../application/identity/update-profile.use-case.ts';
 import {
   SessionExpiredException,
   SessionReuseException,
@@ -60,6 +62,8 @@ import {
   SessionRevokeBodySchema,
   type SessionTicketBody,
   SessionTicketBodySchema,
+  type SessionUpdateProfileBody,
+  SessionUpdateProfileBodySchema,
 } from './session.schema.ts';
 
 const REFRESH_COOKIE = 'harnesys.refresh';
@@ -154,6 +158,7 @@ export class SessionController {
     private readonly sessionRevoke: RevokeSessionUseCase,
     private readonly sessionRevokeAll: RevokeAllSessionsUseCase,
     private readonly sessionCurrentUser: GetCurrentUserUseCase,
+    private readonly sessionUpdateProfile: UpdateProfileUseCase,
   ) {}
 
   @Public()
@@ -244,6 +249,19 @@ export class SessionController {
   @Get('me')
   me(@SessionPrincipal() principal: Principal): CurrentUserView {
     return this.sessionCurrentUser.execute({ principal });
+  }
+
+  @Patch('me')
+  @HttpCode(200)
+  updateProfile(
+    @SessionPrincipal() principal: Principal,
+    @Body(SessionUpdateProfileBodySchema) body: SessionUpdateProfileBody,
+  ): CurrentUserView {
+    return this.sessionUpdateProfile.execute({
+      principal,
+      name: body.name,
+      avatar: body.avatar,
+    });
   }
 
   @Get('sessions')

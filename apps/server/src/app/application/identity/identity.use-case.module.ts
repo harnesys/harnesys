@@ -21,6 +21,7 @@ import { RevokeAllSessionsUseCase } from './revoke-all-sessions.use-case.ts';
 import { RevokeSessionUseCase } from './revoke-session.use-case.ts';
 import { UnlinkIdentityUseCase } from './unlink-identity.use-case.ts';
 import { UpdateMembershipUseCase } from './update-membership.use-case.ts';
+import { UpdateProfileUseCase } from './update-profile.use-case.ts';
 
 const IDENTITY_USE_CASES = [
   LoginUseCase,
@@ -37,6 +38,7 @@ const IDENTITY_USE_CASES = [
   ListMembersUseCase,
   ListOrgAuditUseCase,
   UpdateMembershipUseCase,
+  UpdateProfileUseCase,
   RemoveMembershipUseCase,
   ResetMemberPasswordUseCase,
   IssueNodeTicketUseCase,
