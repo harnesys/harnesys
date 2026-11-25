@@ -8,11 +8,20 @@ interface ContextRingProps {
   last: MessageUsage | null;
   run: UsageRollup | null;
   thread: UsageRollup | null;
+  subagents?: UsageRollup | null;
   stats?: ModelToolStats | null;
   window?: number;
   disabled?: boolean;
 }
-export function ContextRing({ last, run, thread, stats, window = 0, disabled }: ContextRingProps) {
+export function ContextRing({
+  last,
+  run,
+  thread,
+  subagents,
+  stats,
+  window = 0,
+  disabled,
+}: ContextRingProps) {
   const ratio = last ? contextUsedRatio(last) : 0;
   const size = 16;
   const stroke = 2;
@@ -20,7 +29,11 @@ export function ContextRing({ last, run, thread, stats, window = 0, disabled }: 
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - ratio);
   const hasStats = Boolean(
-    last || window > 0 || (thread && thread.calls > 0) || (run && run.calls > 0),
+    last ||
+      window > 0 ||
+      (thread && thread.calls > 0) ||
+      (run && run.calls > 0) ||
+      (subagents && subagents.calls > 0),
   );
   const ring = (
     <span className="relative inline-flex size-4 items-center justify-center">
@@ -79,7 +92,14 @@ export function ContextRing({ last, run, thread, stats, window = 0, disabled }: 
         {ring}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" side="top" className="w-72 min-w-72 p-3">
-        <UsageCard last={last} run={run} thread={thread} stats={stats} window={window} />
+        <UsageCard
+          last={last}
+          run={run}
+          thread={thread}
+          subagents={subagents}
+          stats={stats}
+          window={window}
+        />
       </DropdownMenuContent>
     </DropdownMenu>
   );

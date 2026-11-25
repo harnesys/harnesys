@@ -71,6 +71,7 @@ export function ComposerTrailingControls({
         last={usage.last}
         run={usage.run}
         thread={usage.thread}
+        subagents={usage.subagents}
         stats={usage.stats}
         window={contextWindow}
         disabled={!agentReady}

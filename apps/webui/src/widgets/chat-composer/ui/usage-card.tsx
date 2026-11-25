@@ -15,10 +15,18 @@ interface UsageCardProps {
   last: MessageUsage | null;
   run: UsageRollup | null;
   thread: UsageRollup | null;
+  subagents?: UsageRollup | null;
   stats?: ModelToolStats | null;
   window?: number;
 }
-export function UsageCard({ last, run, thread, stats, window: windowProp = 0 }: UsageCardProps) {
+export function UsageCard({
+  last,
+  run,
+  thread,
+  subagents,
+  stats,
+  window: windowProp = 0,
+}: UsageCardProps) {
   const window = last?.contextTokens || windowProp;
   const used = last ? tokensUsed(last) : 0;
   let left = 0;
@@ -95,6 +103,22 @@ export function UsageCard({ last, run, thread, stats, window: windowProp = 0 }: 
         </div>
       ) : null}
 
+      <RollupSections run={run} thread={thread} subagents={subagents} />
+    </div>
+  );
+}
+
+function RollupSections({
+  run,
+  thread,
+  subagents,
+}: {
+  run: UsageRollup | null;
+  thread: UsageRollup | null;
+  subagents: UsageRollup | null | undefined;
+}) {
+  return (
+    <>
       {run && run.calls > 0 ? (
         <div className="border-t pt-2">
           <p className="mb-1.5 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.12em]">
@@ -112,7 +136,16 @@ export function UsageCard({ last, run, thread, stats, window: windowProp = 0 }: 
           <RollupRows rollup={thread} />
         </div>
       ) : null}
-    </div>
+
+      {subagents && subagents.calls > 0 ? (
+        <div className="border-t pt-2">
+          <p className="mb-1.5 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.12em]">
+            Subagents
+          </p>
+          <RollupRows rollup={subagents} />
+        </div>
+      ) : null}
+    </>
   );
 }
 function LastStepRows({ usage }: { usage: MessageUsage }) {
