@@ -6,6 +6,7 @@ import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
 import {
   clearThreadMessageDelivered,
   headQueuedThreadMessage,
+  listUndeliveredRunMessages,
   listUndeliveredThreadMessages,
   markThreadMessageDelivered,
   type QueuedThreadMessage,
@@ -58,6 +59,20 @@ export function createThreadQueueDrainer(
     inflight.set(threadId, pending);
     return pending;
   };
+}
+
+export function drainThreadQueueSoon(
+  drain: (threadId: string) => Promise<ThreadQueueDrainResult>,
+  kick: () => void,
+  threadId: string,
+): void {
+  void drain(threadId)
+    .then((result) => {
+      if (result.status === 'busy') {
+        kick();
+      }
+    })
+    .catch(() => {});
 }
 
 export async function drainThreadMessageQueue(
@@ -118,6 +133,7 @@ function isThreadBusyError(error: unknown): boolean {
 
 export interface SteeringChannel {
   steer: (threadId: string) => Promise<SteerMessage[]>;
+  steerRun: (threadId: string, runId: string) => Promise<SteerMessage[]>;
   ack: (itemIds: string[]) => Promise<void>;
 }
 
@@ -125,6 +141,10 @@ export function createSteeringChannel(db: OrgSqliteDb): SteeringChannel {
   return {
     steer: (threadId) => {
       const items = listUndeliveredThreadMessages(db, threadId);
+      return Promise.resolve(items.map(steerMessageOf));
+    },
+    steerRun: (threadId, runId) => {
+      const items = listUndeliveredRunMessages(db, threadId, runId);
       return Promise.resolve(items.map(steerMessageOf));
     },
     ack: (itemIds) => {

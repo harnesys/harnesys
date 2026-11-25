@@ -3,6 +3,7 @@ import type { AgentsCatalogPort } from '../../ports/agents-catalog.ts';
 import { createAgentLifecycleTools } from './create-agent-lifecycle-tools.ts';
 import { createAgentsHandoffTool } from './create-agents-handoff-tool.ts';
 import { createAgentsTools } from './create-agents-tools.ts';
+import { createAgentsRunControlTools } from './run-control-tools.ts';
 export interface AgentsCapabilityPorts {
   agents: AgentsCatalogPort;
 }
@@ -46,7 +47,26 @@ export const agentsCapability = definePack<AgentsCapabilityPorts, AgentsPackSpec
       {
         name: 'agents_spawn',
         description:
-          'Queue one-shot subcontracts: the graph then runs control:spawn. calls is [{ agentId, input, budget?, permissions? }]. input is usually { messages: [{ role: "user", content: "<task>" }] }. Children cannot ask questions back (permission/approval/input tools are denied in child context); pre-approve gates with per-call permissions, or provide everything upfront. agentId accepts an exact id, a unique id prefix (8+ chars), or a name — unknown/ambiguous targets fail here with the agent list. Prefer agents_list (reuse) before agents_create. This is not the tool name control:spawn.',
+          'Queue one-shot subcontracts: the graph then runs control:spawn. calls is [{ agentId, input, budget?, permissions?, background? }]. input is usually { messages: [{ role: "user", content: "<task>" }] }. Children cannot ask questions back (permission/approval/input tools are denied in child context); pre-approve gates with per-call permissions, or provide everything upfront. background: true starts the child fire-and-forget — the call returns immediately and the child keeps running after this run ends; its report arrives as a message in this thread when it settles. Track with agents_status, wait with agents_wait, steer with agents_send, stop with agents_stop. agentId accepts an exact id, a unique id prefix (8+ chars), or a name — unknown/ambiguous targets fail here with the agent list. Prefer agents_list (reuse) before agents_create. This is not the tool name control:spawn.',
+      },
+      {
+        name: 'agents_wait',
+        description:
+          'Wait for background subagents of this thread (started with agents_spawn background: true) to settle and collect their statuses and outputs.',
+      },
+      {
+        name: 'agents_status',
+        description:
+          'Inspect background subagents of this thread: status, idle time, recent activity tail, final output.',
+      },
+      {
+        name: 'agents_send',
+        description:
+          'Steer a running background subagent with a text message applied at its next safe point.',
+      },
+      {
+        name: 'agents_stop',
+        description: 'Stop a running background subagent.',
       },
       {
         name: 'agents_handoff',
@@ -78,6 +98,7 @@ export const agentsCapability = definePack<AgentsCapabilityPorts, AgentsPackSpec
         ...createAgentsTools(params),
         createAgentsHandoffTool(params),
         ...createAgentLifecycleTools(params),
+        ...createAgentsRunControlTools(),
       ];
     })(),
     notes: () => [

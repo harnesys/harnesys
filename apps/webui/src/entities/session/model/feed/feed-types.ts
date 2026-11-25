@@ -15,6 +15,7 @@ export type SpawnSeenAt = Record<string, number>;
 export interface SpawnInfo {
   spawnId: string;
   agentId: string;
+  agentName?: string;
   status: SpawnStatus;
   lastActivity: string;
   taskText?: string;

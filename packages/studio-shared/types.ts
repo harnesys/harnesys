@@ -32,6 +32,7 @@ export type {
 } from './src/agent.ts';
 export { defaultAgentCompaction } from './src/agent-runtime-defaults.ts';
 export * from './src/artifacts.ts';
+export { BACKGROUND_AGENT_ORIGIN } from './src/background-report.ts';
 export type { AgentCapabilitiesView, AgentCapabilityRegistryEntry } from './src/capabilities.ts';
 export type {
   CapabilityMechanism,

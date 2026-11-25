@@ -34,6 +34,7 @@ export interface QueuedSpawnCall {
   input: unknown;
   budget?: unknown;
   permissions?: unknown;
+  background?: boolean;
   spawnId: string;
 }
 function asRecord(v: unknown): Record<string, unknown> | null {
@@ -64,6 +65,7 @@ function spawnCallsOf(result: unknown): QueuedSpawnCall[] {
       input: spawnInputOf(row.input),
       ...(row.budget !== undefined ? { budget: row.budget } : {}),
       ...(row.permissions !== undefined ? { permissions: row.permissions } : {}),
+      ...(row.background === true ? { background: true } : {}),
       spawnId: crypto.randomUUID(),
     });
   }

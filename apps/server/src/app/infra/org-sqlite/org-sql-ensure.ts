@@ -106,6 +106,7 @@ import {
   migrateRunsEnvironmentColumn,
   migrateRunsWakeKeyColumn,
   migrateThreadMessageQueueModeColumn,
+  migrateThreadMessageQueueTargetRunColumn,
   migrateThreadsBindingColumns,
   migrateThreadsPolicyContextWindow,
   migrateThreadsWorkspaceRefColumn,
@@ -276,6 +277,7 @@ export function ensureOrgSchema(
   if (all) {
     migrateThreadsPolicyContextWindow(exec, all);
     migrateThreadMessageQueueModeColumn(exec, all);
+    migrateThreadMessageQueueTargetRunColumn(exec, all);
   }
   exec(CREATE_THREAD_PLANS_SQL);
   if (all) {

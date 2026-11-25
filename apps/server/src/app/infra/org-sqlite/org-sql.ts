@@ -730,6 +730,7 @@ CREATE TABLE IF NOT EXISTS thread_message_queue (
   origin TEXT,
   client_event_id TEXT,
   mode TEXT,
+  target_run_id TEXT,
   queued_at TEXT NOT NULL,
   delivered_at TEXT,
   FOREIGN KEY (thread_id, thread_seq)

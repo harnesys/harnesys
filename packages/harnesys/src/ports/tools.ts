@@ -10,6 +10,28 @@ export type SideEffect =
   | 'financial'
   | 'communication'
   | 'credentialed';
+export interface BackgroundToolStatus {
+  runId: string;
+  threadId: string;
+  spawnId: string;
+  agentId: string;
+  agentName?: string;
+  status: 'running' | 'done' | 'failed';
+  output?: unknown;
+  error?: { code: string; message: string };
+  tail?: string;
+  idleMs?: number;
+}
+export interface RunToolControl {
+  waitBackground(threadId: string, timeoutMs?: number): Promise<BackgroundToolStatus[]>;
+  status(threadId: string, spawnId?: string): Promise<BackgroundToolStatus[]>;
+  send(
+    threadId: string,
+    spawnId: string,
+    text: string,
+  ): Promise<{ ok: true } | { ok: false; error: string }>;
+  stop(threadId: string, spawnId: string): Promise<{ ok: true } | { ok: false; error: string }>;
+}
 export interface ToolContext {
   cwd: string;
   paths: {
@@ -23,6 +45,8 @@ export interface ToolContext {
   env?: Record<string, string>;
   agentId?: string;
   threadId?: string;
+  runId?: string;
+  runControl?: RunToolControl;
   process?: ProcessJobTarget;
   fileAccess?: FileAccessPolicy;
 }

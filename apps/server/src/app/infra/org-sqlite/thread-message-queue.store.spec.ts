@@ -180,6 +180,34 @@ describe('thread message queue', () => {
     expect(listQueuedThreadMessages(h.db, 'thread-1')[0]?.deliveredAt).toBeNull();
   });
 
+  test('run-targeted messages reach only their run', async () => {
+    const h = setup();
+    const thread = enqueueThreadMessage(h.db, { threadId: 'thread-1', text: 'user hello' });
+    expect(thread.itemIds.length).toBeGreaterThan(0);
+    const runScoped = enqueueThreadMessage(h.db, {
+      threadId: 'thread-1',
+      text: 'nudge for child',
+      targetRunId: 'child-run-1',
+      origin: 'agent',
+    });
+    expect(runScoped.itemIds.length).toBeGreaterThan(0);
+    enqueueThreadMessage(h.db, {
+      threadId: 'thread-1',
+      text: '[background agent X finished] report',
+      origin: 'agent',
+    });
+    const channel = createSteeringChannel(h.db);
+    const rootItems = await channel.steer('thread-1');
+    expect(rootItems.map((m) => m.text)).toEqual([
+      'user hello',
+      '[background agent X finished] report',
+    ]);
+    const childItems = await channel.steerRun('thread-1', 'child-run-1');
+    expect(childItems.map((m) => m.text)).toEqual(['nudge for child']);
+    const otherChild = await channel.steerRun('thread-1', 'child-run-2');
+    expect(otherChild).toEqual([]);
+  });
+
   test('drain reports pending_ask reason when the active run needs input', async () => {
     const h = setup();
     h.busy = true;

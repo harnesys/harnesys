@@ -17,9 +17,9 @@ import type { RunLifecycleStore } from '../ports/run-lifecycle-store.ts';
 import type { RuntimePromptInfo } from '../ports/runtime-prompt.ts';
 import type { RuntimeState } from '../ports/runtime-state.ts';
 import type { SkillRegistry } from '../ports/skills.ts';
-import type { ToolDefinition } from '../ports/tools.ts';
+import type { RunToolControl, ToolDefinition } from '../ports/tools.ts';
 import type { CapabilitySet, CapabilityUniverse } from './capability-set.ts';
-import type { ChildRunner } from './graph-spawn.ts';
+import type { BackgroundReportInput, BackgroundSpawnHandle, ChildRunner } from './graph-spawn.ts';
 import type { SteerMessage } from './graph-steer.ts';
 import type { HookRunReport } from './hooks/bus.ts';
 import type { HookEmitCtx } from './hooks/emit-hook.ts';
@@ -49,6 +49,7 @@ export interface RunEngineDeps {
   agents: AgentsResolve;
   hooks?: HookBinding[];
   childRunner?: ChildRunner;
+  backgroundReport?: (input: BackgroundReportInput) => void;
   logger?: Logger;
 }
 export interface RunTargetOpts {
@@ -74,7 +75,9 @@ export interface RunTargetOpts {
   permissionGrants?: PermissionGrantsPort;
   runtime?: RuntimePromptInfo;
   steerMessages?: () => Promise<SteerMessage[]>;
+  steerFor?: (runId: string) => Promise<SteerMessage[]>;
   ackSteerMessages?: (itemIds: string[]) => Promise<void>;
+  runControl?: RunToolControl;
 }
 export interface RunEngine {
   execute(runId: string, opts: RunTargetOpts): Promise<void>;
@@ -83,4 +86,6 @@ export interface RunEngine {
   stop(): void;
   whenIdle(): Promise<void>;
   close(): void;
+  backgroundListByThread(threadId: string): BackgroundSpawnHandle[];
+  awaitBackgroundByThread(threadId: string, timeoutMs?: number): Promise<BackgroundSpawnHandle[]>;
 }

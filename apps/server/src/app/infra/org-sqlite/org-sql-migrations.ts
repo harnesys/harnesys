@@ -180,6 +180,16 @@ export function migrateThreadMessageQueueModeColumn(
   }
 }
 
+export function migrateThreadMessageQueueTargetRunColumn(
+  exec: (sql: string) => void,
+  all: (sql: string) => ColumnInfo[],
+): void {
+  const present = new Set(all('PRAGMA table_info(thread_message_queue)').map((col) => col.name));
+  if (present.size > 0 && !present.has('target_run_id')) {
+    exec(`ALTER TABLE thread_message_queue ADD COLUMN target_run_id TEXT`);
+  }
+}
+
 function policyWithoutContextWindow(rawPolicy: string): string | null {
   const parsed = parsePolicyObject(rawPolicy);
   if (!parsed || typeof parsed.contextWindow !== 'number') {

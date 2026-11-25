@@ -9,6 +9,7 @@ export interface QueuedThreadMessage {
   threadId: string;
   threadSeq: number | null;
   targetAgentId: string | null;
+  targetRunId: string | null;
   text: string;
   attachments: Attachment[] | null;
   origin: string | null;
@@ -28,6 +29,7 @@ export interface EnqueueThreadMessageInput {
   author?: { provider: string; providerUserId: string; displayName: string } | null;
   targetAgentIds?: string[];
   threadScoped?: boolean;
+  targetRunId?: string | null;
 }
 
 export interface EnqueueThreadMessageResult {
@@ -93,6 +95,7 @@ function enqueueSingle(
       ...(input.origin ? { origin: input.origin } : {}),
       ...(input.clientEventId ? { clientEventId: input.clientEventId } : {}),
       ...(input.mode ? { mode: input.mode } : {}),
+      ...(input.targetRunId ? { targetRunId: input.targetRunId } : {}),
       ...(input.targetAgentIds?.[0] ? { targetAgentId: input.targetAgentIds[0] } : {}),
       queuedAt: new Date().toISOString(),
     })
@@ -167,7 +170,15 @@ export function listUndeliveredThreadMessages(
   db: OrgSqliteDb,
   threadId: string,
 ): QueuedThreadMessage[] {
-  return listQueuedThreadMessages(db, threadId);
+  return listQueuedThreadMessages(db, threadId).filter((item) => item.targetRunId === null);
+}
+
+export function listUndeliveredRunMessages(
+  db: OrgSqliteDb,
+  threadId: string,
+  runId: string,
+): QueuedThreadMessage[] {
+  return listQueuedThreadMessages(db, threadId).filter((item) => item.targetRunId === runId);
 }
 
 export function headQueuedThreadMessage(
@@ -263,6 +274,7 @@ function mapRow(row: QueueJoinRow): QueuedThreadMessage {
     threadId: row.queue.threadId,
     threadSeq: row.queue.threadSeq ?? null,
     targetAgentId: row.queue.targetAgentId ?? null,
+    targetRunId: row.queue.targetRunId ?? null,
     text: row.queue.text ?? (typeof meta.text === 'string' ? meta.text : ''),
     attachments: parseAttachments(attachments),
     origin: row.queue.origin ?? (typeof meta.origin === 'string' ? meta.origin : null),

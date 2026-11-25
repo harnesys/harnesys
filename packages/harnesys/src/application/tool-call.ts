@@ -8,7 +8,7 @@ import type { FileAccessPolicy } from '../ports/file-access.ts';
 import type { PathsConfig } from '../ports/paths.ts';
 import type { PermissionGrantsPort } from '../ports/permission-grants-port.ts';
 import type { PermissionMap } from '../ports/permissions.ts';
-import type { ToolDefinition } from '../ports/tools.ts';
+import type { RunToolControl, ToolDefinition } from '../ports/tools.ts';
 import { presentCallOutput } from './clip-tool-output.ts';
 import { evalExpr } from './expr-eval.ts';
 import { stateKeyOf } from './graph-helpers.ts';
@@ -62,6 +62,7 @@ export interface ToolCallContext {
   process?: ProcessJobTarget;
   fileAccess?: FileAccessPolicy;
   permissionGrants?: PermissionGrantsPort;
+  runControl?: RunToolControl;
 }
 function codeError(code: string, message: string): never {
   throw Object.assign(new Error(message), { code });

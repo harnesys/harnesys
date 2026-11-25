@@ -45,6 +45,7 @@ import { allowedAttachKinds, modelInputModalities } from '../model/model-input';
 import type { SlashCommand } from '../model/slash-commands';
 import { AttachDraft } from './attach-draft';
 import { AutoReadButton } from './auto-read-button';
+import { BackgroundAgentsStrip } from './background-agents-strip';
 import {
   ComposerShortcutsHint,
   ComposerStreamHint,
@@ -168,6 +169,11 @@ export function ChatComposer({
           <AttachDraft
             files={pending}
             onRemove={(index) => setPending((list) => list.filter((_, i) => i !== index))}
+          />
+          <BackgroundAgentsStrip
+            threadId={thread.id}
+            projectId={agent.orgId}
+            parentAgentId={agent.id}
           />
           <ComposerEditor
             ref={editorRef}

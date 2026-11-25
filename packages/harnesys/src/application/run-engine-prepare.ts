@@ -7,7 +7,11 @@ import { resolveAgentIdentity } from './agent-identity.ts';
 import { compileOrThrow } from './compile.ts';
 import type { GraphOpts } from './graph.ts';
 import { abandonForeignSnapshot, decisionTextOf } from './graph-snap.ts';
-import type { ChildAbortRegistry } from './graph-spawn.ts';
+import type {
+  BackgroundReportInput,
+  BackgroundSpawnRegistry,
+  ChildAbortRegistry,
+} from './graph-spawn.ts';
 import { createHookBus } from './hooks/bus.ts';
 import type { HookEmitCtx } from './hooks/emit-hook.ts';
 import { createHookRuntimeCtx } from './hooks/runtime-ctx.ts';
@@ -92,11 +96,24 @@ export interface PrepareExecuteGraphOptsArgs {
   runLogger: Logger;
   childJournal: (spawnId: string, ev: Event) => void;
   childAborts?: ChildAbortRegistry;
+  backgroundSpawns?: BackgroundSpawnRegistry;
+  backgroundReport?: (input: BackgroundReportInput) => void;
 }
 export async function prepareExecuteGraphOpts(
   args: PrepareExecuteGraphOptsArgs,
 ): Promise<GraphOpts> {
-  const { deps, opts, runId, signal, hookCache, runLogger, childJournal, childAborts } = args;
+  const {
+    deps,
+    opts,
+    runId,
+    signal,
+    hookCache,
+    runLogger,
+    childJournal,
+    childAborts,
+    backgroundSpawns,
+    backgroundReport,
+  } = args;
   const answer = await findLastAnswer(deps, runId);
   if (answer === null) {
     const snap = await opts.state.load();
@@ -136,6 +153,7 @@ export async function prepareExecuteGraphOpts(
   const runEnv = composeRunEnv(opts.binDirs);
   const graphOpts: GraphOpts = {
     agent,
+    runId,
     input: answer === null ? (user ?? snap?.initialInput ?? null) : null,
     inputRecorded: answer === null && user !== null,
     state: opts.state,
@@ -168,6 +186,10 @@ export async function prepareExecuteGraphOpts(
     ...(answer?.note !== undefined ? { resumeNote: answer.note } : {}),
     childJournal,
     ...(childAborts !== undefined ? { childAborts } : {}),
+    ...(backgroundSpawns !== undefined ? { backgroundSpawns } : {}),
+    ...(backgroundReport !== undefined ? { backgroundReport } : {}),
+    ...(opts.steerFor ? { steerFor: opts.steerFor } : {}),
+    ...(opts.runControl ? { runControl: opts.runControl } : {}),
     ...(deps.modelQuota ? { modelQuota: deps.modelQuota } : {}),
     ...(deps.childRunner ? { childRunner: deps.childRunner } : {}),
     logger: runLogger,

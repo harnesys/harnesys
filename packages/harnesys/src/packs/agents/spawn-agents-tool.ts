@@ -108,13 +108,13 @@ export function spawnAgentTool(deps: CreateAgentsToolsParams): ToolDefinition {
     group: 'agents',
     sideEffect: 'write',
     description:
-      'Queue one-shot subcontracts: the graph then runs control:spawn. calls is [{ agentId, input, budget?, permissions? }] — budget {maxSteps?, maxTokens?, deadlineMs?} caps this child only; omit to inherit your own budget. input is required: { messages: [{ role: "user", content: "<task>" }] } or a plain string (one user message). Children cannot ask questions back — `ask`-gated calls, approvals and `ask_user` are denied in child context (pre-approve a delegate by passing permissions per call, e.g. {"fs.write":"allow"}; a grant may lift your own ask gate but never a gate you hold as deny — otherwise provide everything upfront). On budget exhaustion a child never fails: it closes with a report and the result carries budget { kind, limit, used, closingStep: true } (used may exceed limit by that closing report step). agentId accepts an exact id, a unique id prefix (8+ chars), or a name — unknown/ambiguous targets fail here with the agent list. Prefer agents_list (reuse) before agents_create. This is not the tool name control:spawn. Children run with bounded concurrency, and a spawn timeout aborts the rest and returns a partial result: aborted children come back as errors, so read every entry.',
+      'Queue one-shot subcontracts: the graph then runs control:spawn. calls is [{ agentId, input, budget?, permissions?, background? }] — budget {maxSteps?, maxTokens?, deadlineMs?} caps this child only; omit to inherit your own budget. input is required: { messages: [{ role: "user", content: "<task>" }] } or a plain string (one user message). Children cannot ask questions back — `ask`-gated calls, approvals and `ask_user` are denied in child context (pre-approve a delegate by passing permissions per call, e.g. {"fs.write":"allow"}; a grant may lift your own ask gate but never a gate you hold as deny — otherwise provide everything upfront). On budget exhaustion a child never fails: it closes with a report and the result carries budget { kind, limit, used, closingStep: true } (used may exceed limit by that closing report step). agentId accepts an exact id, a unique id prefix (8+ chars), or a name — unknown/ambiguous targets fail here with the agent list. Prefer agents_list (reuse) before agents_create. This is not the tool name control:spawn. Blocking children run with bounded concurrency; a spawn timeout aborts the remaining blocking calls and returns a partial result, so read every entry.',
     input: {
       type: 'object',
       properties: {
         calls: {
           type: 'array',
-          description: `Child runs to start. Parent waits for all. Max ${SPAWN_ITEM_LIMIT} calls per spawn.`,
+          description: `Child runs to start. Parent waits for all non-background calls; background: true calls return immediately. Max ${SPAWN_ITEM_LIMIT} calls per spawn.`,
           maxItems: SPAWN_ITEM_LIMIT,
           items: {
             type: 'object',
@@ -174,6 +174,11 @@ export function spawnAgentTool(deps: CreateAgentsToolsParams): ToolDefinition {
                 type: 'object',
                 description:
                   'Optional permission grants for this child run: op -> allow|ask|deny (fs.read, fs.write, process, network, mcp). A grant may lift your own ask gate for the child, but never a gate you have deny. In the sandboxed child ask behaves as deny, so grant allow for anything the child must actually do.',
+              },
+              background: {
+                type: 'boolean',
+                description:
+                  'Start this child fire-and-forget: agents_spawn returns immediately and the child keeps running even after this run completes. When the child settles, its report is delivered to you as a thread message. Track with agents_status, wait with agents_wait, steer with agents_send, kill with agents_stop.',
               },
             },
             required: ['agentId'],

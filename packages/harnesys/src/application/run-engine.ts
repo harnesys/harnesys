@@ -5,7 +5,11 @@ import { CONSOLE_LOGGER } from '../ports/logger.ts';
 import type { RunLifecycleStatus } from '../ports/run-lifecycle-store.ts';
 import type { SessionEvent } from '../ports/session.ts';
 import type { GraphOpts } from './graph.ts';
-import type { ChildAbortRegistry } from './graph-spawn.ts';
+import type {
+  BackgroundSpawnHandle,
+  BackgroundSpawnRegistry,
+  ChildAbortRegistry,
+} from './graph-spawn.ts';
 import { emitHook, type HookEmitCtx } from './hooks/emit-hook.ts';
 import { eventToSessionEvent, runFailedEvent, runStartedEvent } from './run-engine-events.ts';
 import { prepareExecuteGraphOpts } from './run-engine-prepare.ts';
@@ -61,12 +65,144 @@ function createChildAbortRegistry(): ChildAbortRegistry {
     },
   };
 }
+interface BackgroundSpawnEntry {
+  handle: BackgroundSpawnHandle;
+  controller: AbortController;
+  promise: Promise<BackgroundSpawnHandle>;
+}
+export function createBackgroundSpawnRegistry(): BackgroundSpawnRegistry {
+  const byRun = new Map<string, Map<string, BackgroundSpawnEntry>>();
+  const runMap = (runId: string): Map<string, BackgroundSpawnEntry> => {
+    let map = byRun.get(runId);
+    if (map === undefined) {
+      map = new Map();
+      byRun.set(runId, map);
+    }
+    return map;
+  };
+  const allEntries = (): BackgroundSpawnEntry[] => {
+    const entries: BackgroundSpawnEntry[] = [];
+    for (const map of byRun.values()) {
+      entries.push(...map.values());
+    }
+    return entries;
+  };
+  const waitEntries = (
+    entries: BackgroundSpawnEntry[],
+    timeoutMs?: number,
+  ): Promise<BackgroundSpawnHandle[]> => {
+    if (entries.length > 0 && timeoutMs === undefined) {
+      return Promise.allSettled(entries.map((entry) => entry.promise)).then(() =>
+        entries.map((entry) => entry.handle),
+      );
+    }
+    if (entries.length > 0) {
+      return Promise.race([
+        Promise.allSettled(entries.map((entry) => entry.promise)).then(() =>
+          entries.map((entry) => entry.handle),
+        ),
+        new Promise<BackgroundSpawnHandle[]>((resolve) =>
+          setTimeout(() => resolve(entries.map((entry) => entry.handle)), timeoutMs),
+        ),
+      ]);
+    }
+    return Promise.resolve([]);
+  };
+  return {
+    track: ({ runId, threadId, spawnId, agentId, agentName, controller, run }) => {
+      const handle: BackgroundSpawnHandle = {
+        runId,
+        threadId,
+        spawnId,
+        agentId,
+        ...(agentName !== undefined ? { agentName } : {}),
+        status: 'running',
+        lastActivityAt: Date.now(),
+      };
+      const entry: BackgroundSpawnEntry = {
+        handle,
+        controller,
+        promise: run(controller.signal)
+          .then((item) => {
+            handle.status = item?.error ? 'failed' : 'done';
+            if (item?.output !== undefined) {
+              handle.output = item.output;
+            }
+            if (item?.error !== undefined) {
+              handle.error = item.error;
+            }
+            handle.lastActivityAt = Date.now();
+            return handle;
+          })
+          .catch((err) => {
+            handle.status = 'failed';
+            handle.error = {
+              code: 'spawn_error',
+              message: err instanceof Error ? err.message : String(err),
+            };
+            handle.lastActivityAt = Date.now();
+            return handle;
+          }),
+      };
+      runMap(runId).set(spawnId, entry);
+      return entry.promise;
+    },
+    isTracked: (runId, spawnId) => byRun.get(runId)?.has(spawnId) ?? false,
+    list: (runId) => [...(byRun.get(runId)?.values() ?? [])].map((entry) => entry.handle),
+    listByThread: (threadId) =>
+      allEntries()
+        .filter((entry) => entry.handle.threadId === threadId)
+        .map((entry) => entry.handle),
+    pendingCount: (runId) => {
+      let count = 0;
+      for (const entry of byRun.get(runId)?.values() ?? []) {
+        if (entry.handle.status === 'running') {
+          count += 1;
+        }
+      }
+      return count;
+    },
+    awaitAll: async (runId, timeoutMs) => {
+      const entries = [...(byRun.get(runId)?.values() ?? [])];
+      return waitEntries(entries, timeoutMs);
+    },
+    awaitByThread: async (threadId, timeoutMs) => {
+      const entries = allEntries().filter((entry) => entry.handle.threadId === threadId);
+      return waitEntries(entries, timeoutMs);
+    },
+    abortRun: (runId, reason) => {
+      for (const entry of byRun.get(runId)?.values() ?? []) {
+        if (entry.handle.status === 'running') {
+          entry.controller.abort(reason);
+        }
+      }
+    },
+    abortSpawn: (spawnId, reason) => {
+      let hit = false;
+      for (const entry of allEntries()) {
+        if (entry.handle.spawnId === spawnId && entry.handle.status === 'running') {
+          entry.controller.abort(reason);
+          hit = true;
+        }
+      }
+      return hit;
+    },
+    abortAll: (reason) => {
+      for (const entry of allEntries()) {
+        if (entry.handle.status === 'running') {
+          entry.controller.abort(reason);
+        }
+      }
+    },
+  };
+}
 export function createRunEngine(deps: RunEngineDeps): RunEngine {
   const leaseTtl = deps.leaseTtlMs ?? DEFAULT_LEASE_TTL_MS;
   const renewMs = deps.renewMs ?? DEFAULT_LEASE_RENEW_MS;
   const active: Set<RunRuntime> = new Set();
   const byRun = new Map<string, RunRuntime>();
   const childAborts = createChildAbortRegistry();
+  const backgroundSpawns = createBackgroundSpawnRegistry();
   const runLogger = deps.logger ?? CONSOLE_LOGGER;
   const hookCache = new Map<string, HookEmitCtx>();
   function envWith(leaseLost: () => boolean, delivery: DeliverySettings): SegmentEnv {
@@ -105,6 +241,7 @@ export function createRunEngine(deps: RunEngineDeps): RunEngine {
       haltRun(run);
     }
     byRun.clear();
+    backgroundSpawns.abortAll('engine stopped');
     for (const hooks of hookCache.values()) {
       void hooks.bus.close();
     }
@@ -210,6 +347,8 @@ export function createRunEngine(deps: RunEngineDeps): RunEngine {
           runLogger,
           childJournal,
           childAborts,
+          backgroundSpawns,
+          backgroundReport: deps.backgroundReport,
         });
       } catch (err) {
         if (
@@ -250,12 +389,25 @@ export function createRunEngine(deps: RunEngineDeps): RunEngine {
     const run = byRun.get(runId);
     if (run !== undefined) {
       run.abort.abort('run cancelled');
+      backgroundSpawns.abortRun(runId, 'run cancelled');
+      return;
+    }
+    if (backgroundSpawns.abortSpawn(runId, 'run cancelled')) {
       return;
     }
     childAborts.abort(runId, 'run cancelled');
   }
   function isActive(runId: string): boolean {
     return byRun.has(runId);
+  }
+  function backgroundListByThread(threadId: string): BackgroundSpawnHandle[] {
+    return backgroundSpawns.listByThread(threadId);
+  }
+  function awaitBackgroundByThread(
+    threadId: string,
+    timeoutMs?: number,
+  ): Promise<BackgroundSpawnHandle[]> {
+    return backgroundSpawns.awaitByThread(threadId, timeoutMs);
   }
   function whenIdle(): Promise<void> {
     if (active.size === 0) {
@@ -265,5 +417,14 @@ export function createRunEngine(deps: RunEngineDeps): RunEngine {
       idleWaiters.add(resolve);
     });
   }
-  return { execute, isActive, abort, stop, whenIdle, close: stop };
+  return {
+    execute,
+    isActive,
+    abort,
+    stop,
+    whenIdle,
+    close: stop,
+    backgroundListByThread,
+    awaitBackgroundByThread,
+  };
 }

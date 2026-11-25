@@ -1,11 +1,12 @@
 import type { SessionEvent } from '@harnesys/studio-shared';
 import { stableEventKey } from '../event-keys';
-import type {
-  SpawnInfo,
-  SpawnSeenAt,
-  SpawnToolChip,
-  SpawnToolPhase,
-  SpawnToolStat,
+import {
+  RUN_TERMINAL_EVENT_TYPES,
+  type SpawnInfo,
+  type SpawnSeenAt,
+  type SpawnToolChip,
+  type SpawnToolPhase,
+  type SpawnToolStat,
 } from './feed-types';
 
 const LAST_ACTIVITY_MAX = 60;
@@ -102,6 +103,7 @@ export function spawnProcess(
       info: {
         spawnId: ev.spawnId,
         agentId: ev.agentId,
+        ...(ev.agentName !== undefined ? { agentName: ev.agentName } : {}),
         status: 'running',
         lastActivity: '',
         ...(taskText !== undefined ? { taskText } : {}),
@@ -127,6 +129,59 @@ export function spawnProcess(
       draft.info.lastSeenAt = seenOr(draft.info.lastSeenAt, seenAt, ev);
       draft.dirty = true;
     }
+    return;
+  }
+  const childRunId = typeof ev.runId === 'string' ? ev.runId : undefined;
+  if (childRunId !== undefined) {
+    settleSpawn(fold, childRunId, ev, seenAt);
+  }
+}
+
+function settleSpawn(
+  fold: SpawnFold,
+  runId: string,
+  ev: SessionEvent,
+  seenAt: SpawnSeenAt | undefined,
+): boolean {
+  if (!RUN_TERMINAL_EVENT_TYPES.has(ev.type)) {
+    return false;
+  }
+  const draft = fold.drafts.get(runId);
+  if (draft && draft.info.status === 'running') {
+    draft.info.status = ev.type === 'done' || ev.type === 'run.completed' ? 'done' : 'failed';
+    draft.info.lastSeenAt = seenOr(draft.info.lastSeenAt, seenAt, ev);
+    draft.dirty = true;
+  }
+  return true;
+}
+
+function applyToolEvent(
+  owner: SpawnDraft,
+  ev: SessionEvent & {
+    type: 'tool';
+    name: string;
+    phase: string;
+  },
+): void {
+  owner.deltaId = undefined;
+  owner.deltaText = '';
+  owner.info.lastActivity = ev.name;
+  if (!isToolPhase(ev.phase)) {
+    return;
+  }
+  const stat = owner.info.toolStats[ev.name] ?? emptyToolStat();
+  if (ev.phase === 'requested') {
+    owner.info.toolStats[ev.name] = { ...stat, requested: stat.requested + 1 };
+  } else if (ev.phase === 'completed') {
+    owner.info.toolStats[ev.name] = { ...stat, completed: stat.completed + 1 };
+  } else {
+    owner.info.toolStats[ev.name] = { ...stat, failed: stat.failed + 1 };
+  }
+  owner.info.recentTools = [...owner.info.recentTools, { name: ev.name, phase: ev.phase }].slice(
+    -RECENT_TOOLS_MAX,
+  );
+  if (ev.phase === 'requested') {
+    owner.info.steps += 1;
   }
 }
 
@@ -138,6 +193,9 @@ export function spawnProcessOwned(
 ): void {
   const owner = fold.drafts.get(ownerRunId);
   if (!owner) {
+    return;
+  }
+  if (settleSpawn(fold, ownerRunId, ev, seenAt)) {
     return;
   }
   owner.info.lastSeenAt = seenOr(owner.info.lastSeenAt, seenAt, ev);
@@ -157,26 +215,7 @@ export function spawnProcessOwned(
     owner.reasoningId = ev.id;
     owner.info.preview = owner.reasoningText;
   } else if (ev.type === 'tool') {
-    owner.deltaId = undefined;
-    owner.deltaText = '';
-    owner.info.lastActivity = ev.name;
-    if (isToolPhase(ev.phase)) {
-      const stat = owner.info.toolStats[ev.name] ?? emptyToolStat();
-      if (ev.phase === 'requested') {
-        owner.info.toolStats[ev.name] = { ...stat, requested: stat.requested + 1 };
-      } else if (ev.phase === 'completed') {
-        owner.info.toolStats[ev.name] = { ...stat, completed: stat.completed + 1 };
-      } else {
-        owner.info.toolStats[ev.name] = { ...stat, failed: stat.failed + 1 };
-      }
-      owner.info.recentTools = [
-        ...owner.info.recentTools,
-        { name: ev.name, phase: ev.phase },
-      ].slice(-RECENT_TOOLS_MAX);
-      if (ev.phase === 'requested') {
-        owner.info.steps += 1;
-      }
-    }
+    applyToolEvent(owner, ev);
   } else if (ev.type === 'model.usage') {
     owner.info.tokens += ev.usage.promptTokens + ev.usage.generatedTokens;
   }

@@ -32,7 +32,7 @@ import type { PermissionMap } from '../ports/permissions.ts';
 import type { RuntimePromptInfo } from '../ports/runtime-prompt.ts';
 import type { RuntimeState } from '../ports/runtime-state.ts';
 import type { SkillRegistry } from '../ports/skills.ts';
-import type { ToolDefinition } from '../ports/tools.ts';
+import type { RunToolControl, ToolDefinition } from '../ports/tools.ts';
 import {
   type BudgetLeft,
   type BudgetOver,
@@ -89,6 +89,8 @@ import {
 } from './graph-route.ts';
 import { mkEv, mkSnap, type SnapCtx } from './graph-snap.ts';
 import {
+  type BackgroundReportInput,
+  type BackgroundSpawnRegistry,
   type ChildAbortRegistry,
   type ChildRunner,
   type DelegatedAskResume,
@@ -468,6 +470,10 @@ export interface GraphOpts {
   childJournal?: (spawnId: string, ev: Event) => void;
   childRunner?: ChildRunner;
   childAborts?: ChildAbortRegistry;
+  backgroundSpawns?: BackgroundSpawnRegistry;
+  backgroundReport?: (input: BackgroundReportInput) => void;
+  runControl?: RunToolControl;
+  steerFor?: (runId: string) => Promise<SteerMessage[]>;
   placement?: NodePlacement;
   sandbox?: boolean;
   mapContext?: {
@@ -1152,8 +1158,11 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
             };
         output?: unknown;
       };
+      const runScopedSteer: (() => Promise<SteerMessage[]>) | undefined = opts.steerFor
+        ? () => opts.steerFor?.(runId) ?? Promise.resolve([])
+        : undefined;
       yield* applySteerMessages({
-        steer: opts.steerMessages,
+        steer: opts.steerMessages ?? runScopedSteer,
         ack: opts.ackSteerMessages,
         st,
         commit,
@@ -1602,6 +1611,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
           process: opts.process,
           fileAccess: opts.fileAccess,
           permissionGrants: opts.permissionGrants,
+          runControl: opts.runControl,
         });
       } catch (e) {
         if (e instanceof WaitInterrupt) {
@@ -2090,14 +2100,30 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
         yield e;
         throw Object.assign(new Error(message), { code });
       }
-      output = [...prepared.denied, ...spawnOutcome.carried, ...spawnOutcome.results];
-      await appendSpawnResultsMessage(st, lastMsg, output, {
-        headChars: agent.generation?.context?.spawnResultHeadChars,
-        tailChars: agent.generation?.context?.spawnResultTailChars,
-        sessionId: opts.state.sessionId,
-        paths: opts.paths,
-        redactSecrets: agent.toolOutput?.redactSecrets === true,
-      });
+      const spawnOutput = [...prepared.denied, ...spawnOutcome.carried, ...spawnOutcome.results];
+      output = spawnOutput;
+      if (spawnOutput.length > 0) {
+        await appendSpawnResultsMessage(st, lastMsg, spawnOutput, {
+          headChars: agent.generation?.context?.spawnResultHeadChars,
+          tailChars: agent.generation?.context?.spawnResultTailChars,
+          sessionId: opts.state.sessionId,
+          paths: opts.paths,
+          redactSecrets: agent.toolOutput?.redactSecrets === true,
+        });
+      }
+      if (spawnOutcome.background.length > 0) {
+        const started = spawnOutcome.background.map((h) => ({
+          spawnId: h.spawnId,
+          agentId: h.agentId,
+          ...(h.agentName !== undefined ? { agentName: h.agentName } : {}),
+          status: h.status,
+        }));
+        appendAssistantNote(
+          st,
+          lastMsg,
+          `Background spawns started (they keep running independently; each one reports back here when it settles):\n${JSON.stringify(started)}`,
+        );
+      }
       clearQueuedSpawns(st);
       delete st[STATE_SPAWN_RESULTS_KEY];
       delete st[STATE_SPAWN_STARTED_KEY];

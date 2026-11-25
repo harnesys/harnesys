@@ -4,10 +4,35 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   appendSpawnResultsMessage,
+  applyAgentControlToolResults,
   clampSpawnResultText,
   SPAWN_RESULT_HEAD_CHARS,
   SPAWN_RESULT_TAIL_CHARS,
 } from './graph-agent-controls.ts';
+
+describe('applyAgentControlToolResults', () => {
+  test('keeps background: true on queued spawn calls', () => {
+    const state: Record<string, unknown> = {};
+    applyAgentControlToolResults(
+      [
+        {
+          name: 'agents_spawn',
+          result: {
+            calls: [
+              { agentId: 'child-1', input: 'go', background: true },
+              { agentId: 'child-1', input: 'later' },
+            ],
+          },
+        },
+      ],
+      state,
+    );
+    const queued = state.spawns as { background?: boolean }[];
+    expect(queued).toHaveLength(2);
+    expect(queued[0]?.background).toBe(true);
+    expect(queued[1]?.background).toBeUndefined();
+  });
+});
 
 describe('clampSpawnResultText', () => {
   test('keeps short text untouched', () => {

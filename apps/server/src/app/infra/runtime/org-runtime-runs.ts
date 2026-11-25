@@ -6,6 +6,7 @@ import type {
   RunLifecycleStore,
   SessionHandle,
 } from 'harnesys';
+import { RUN_NON_TERMINAL } from 'harnesys';
 import type { RunIsolation } from '../../domain/fleet/placement.ts';
 import {
   RunConflictException,
@@ -69,6 +70,9 @@ export async function cancelThreadRun(deps: RunControlDeps, runId: string): Prom
   const rec = await deps.lifecycle.get(runId);
   if (!rec) {
     throw new ThreadValidationException(`run not found: ${runId}`);
+  }
+  if (!RUN_NON_TERMINAL.includes(rec.status)) {
+    return;
   }
   deps.abortRun?.(runId);
   const cancelled = {

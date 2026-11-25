@@ -244,6 +244,9 @@ export async function runSingleToolCall(
       sandbox: ctx.sandbox,
       env: ctx.env,
       agentId: ctx.agentId,
+      threadId: ctx.sessionId,
+      runId: ctx.runId,
+      runControl: ctx.runControl,
       process: ctx.process,
       fileAccess: ctx.fileAccess,
     };

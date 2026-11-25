@@ -61,7 +61,12 @@ export {
 export type { GraphOpts } from './src/application/graph.ts';
 export { startGraph } from './src/application/graph.ts';
 export { runGraph } from './src/application/graph-run.ts';
-export type { ChildRunner } from './src/application/graph-spawn.ts';
+export type {
+  BackgroundReportInput,
+  BackgroundSpawnHandle,
+  BackgroundSpawnRegistry,
+  ChildRunner,
+} from './src/application/graph-spawn.ts';
 export { WORK_RESULT_EVENT } from './src/application/graph-spawn.ts';
 export type { SteerMessage } from './src/application/graph-steer.ts';
 export type {
@@ -213,6 +218,7 @@ export {
   MEMORY_REFLECT_RUBRIC,
   OLLAMA_CLOUD_DEFAULT_URL,
   OLLAMA_DEFAULT_URL,
+  RUN_NON_TERMINAL,
 } from './src/constants.ts';
 export type {
   AgentBudget,
@@ -836,7 +842,9 @@ export type {
   ThreadsPort,
 } from './src/ports/threads.ts';
 export type {
+  BackgroundToolStatus,
   CustomNodeImpl,
+  RunToolControl,
   SideEffect,
   ToolCallGate,
   ToolCatalogEntry,

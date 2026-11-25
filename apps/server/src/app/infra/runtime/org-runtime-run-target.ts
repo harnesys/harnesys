@@ -1,4 +1,5 @@
 import { type RunEnvironment, RunEnvironmentSchema } from '@harnesys/contracts';
+import type { RunToolControl } from 'harnesys';
 import {
   type AgentDefinition,
   type CapabilityUniverse,
@@ -44,6 +45,7 @@ export interface RunTargetResolverContext {
   lifecycle: RunLifecycleStore;
   feed: ReturnType<typeof createRunEventFeed>;
   steering: SteeringChannel;
+  runControl: RunToolControl;
 }
 
 export interface RunTargetSelector {
@@ -132,7 +134,9 @@ export function createRunTargetResolver(ctx: RunTargetResolverContext) {
         : {}),
       runtime: runRuntimePromptInfo(deps, prepared, environment),
       steerMessages: () => ctx.steering.steer(threadId),
+      steerFor: (spawnId: string) => ctx.steering.steerRun(threadId, spawnId),
       ackSteerMessages: (itemIds: string[]) => ctx.steering.ack(itemIds),
+      runControl: ctx.runControl,
       ...(process ? { process } : {}),
       ...(prepared.channelNote ? { channelNote: prepared.channelNote } : {}),
       ...(prepared.contextNote ? { contextNote: prepared.contextNote } : {}),

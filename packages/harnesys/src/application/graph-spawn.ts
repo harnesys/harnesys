@@ -34,6 +34,7 @@ export interface SpawnCall {
   budget?: AgentBudget;
   permissions?: PermissionMap;
   placement?: NodePlacement;
+  background?: boolean;
 }
 export const WORK_RESULT_EVENT = 'work.completed';
 export interface SpawnBudgetHit {
@@ -89,6 +90,7 @@ export interface SpawnSlots {
 export interface SpawnNodeOutcome {
   results: SpawnResultItem[];
   carried: SpawnResultItem[];
+  background: BackgroundSpawnHandle[];
   timedOut: boolean;
 }
 export interface SpawnTarget {
@@ -96,6 +98,7 @@ export interface SpawnTarget {
   def: AgentDefinition;
   spawnId: string;
   quota?: AgentBudget;
+  background?: boolean;
 }
 export interface PreparedSpawn {
   targets: SpawnTarget[];
@@ -111,6 +114,47 @@ export interface ChildAbortRegistry {
   register(spawnId: string, controller: AbortController): void;
   release(spawnId: string): void;
   abort(spawnId: string, reason?: unknown): boolean;
+}
+export interface BackgroundSpawnHandle {
+  runId: string;
+  threadId: string;
+  spawnId: string;
+  agentId: string;
+  agentName?: string;
+  status: 'running' | 'done' | 'failed';
+  output?: unknown;
+  error?: SpawnCallError;
+  lastActivityAt: number;
+}
+export interface BackgroundSpawnRegistry {
+  track(input: {
+    runId: string;
+    threadId: string;
+    spawnId: string;
+    agentId: string;
+    agentName?: string;
+    controller: AbortController;
+    run: (signal: AbortSignal) => Promise<SpawnResultItem | null>;
+  }): Promise<BackgroundSpawnHandle>;
+  isTracked(runId: string, spawnId: string): boolean;
+  list(runId: string): BackgroundSpawnHandle[];
+  listByThread(threadId: string): BackgroundSpawnHandle[];
+  pendingCount(runId: string): number;
+  awaitAll(runId: string, timeoutMs?: number): Promise<BackgroundSpawnHandle[]>;
+  awaitByThread(threadId: string, timeoutMs?: number): Promise<BackgroundSpawnHandle[]>;
+  abortRun(runId: string, reason?: unknown): void;
+  abortSpawn(spawnId: string, reason?: unknown): boolean;
+  abortAll(reason?: unknown): void;
+}
+export interface BackgroundReportInput {
+  runId: string;
+  threadId: string;
+  spawnId: string;
+  agentId: string;
+  parentAgentId: string;
+  agentName?: string;
+  output?: unknown;
+  error?: SpawnCallError;
 }
 function resolveConcurrency(
   c: Expr | 'parallel' | 'sequential',
@@ -271,6 +315,7 @@ function parseCalls(raw: unknown): SpawnCall[] {
         ? { permissions: parsedPermissions.permissions }
         : {}),
       ...(placement !== undefined ? { placement } : {}),
+      ...(rec.background === true ? { background: true } : {}),
     };
   });
 }
@@ -319,7 +364,7 @@ function resolveTargets(
       continue;
     }
     const spawnId = call.spawnId ?? crypto.randomUUID();
-    targets.push({ call, def, spawnId });
+    targets.push({ call, def, spawnId, ...(call.background === true ? { background: true } : {}) });
   }
   return { targets, denied };
 }
@@ -487,6 +532,8 @@ async function runOneChild(input: {
     agents: parent.agents,
     stream: parent.stream,
     childJournal: parent.childJournal,
+    ...(parent.steerFor ? { steerFor: parent.steerFor } : {}),
+    ...(parent.ackSteerMessages ? { ackSteerMessages: parent.ackSteerMessages } : {}),
     placement: target.call.placement,
     logger: parent.logger,
     sandbox: true,
@@ -711,6 +758,33 @@ export async function executeSpawn(
       ac.abort('spawn_timeout');
     }, timeoutMs);
   }
+  const runOneChildTask = async (
+    t: SpawnTarget,
+    signal: AbortSignal,
+  ): Promise<SpawnResultItem | undefined> => {
+    const childAc = new AbortController();
+    const relayAbort = (): void => childAc.abort(signal.reason);
+    if (signal.aborted) {
+      relayAbort();
+    } else {
+      signal.addEventListener('abort', relayAbort, { once: true });
+    }
+    const childAborts = parent.childAborts;
+    childAborts?.register(t.spawnId, childAc);
+    try {
+      return await runOneChild({
+        parent,
+        target: t,
+        runChild,
+        signal: childAc.signal,
+        abort,
+        ...(childResume ? { childResume } : {}),
+      });
+    } finally {
+      childAborts?.release(t.spawnId);
+      signal.removeEventListener('abort', relayAbort);
+    }
+  };
   const settleOne = async (i: number, t: SpawnTarget): Promise<void> => {
     if (ac.signal.aborted) {
       if (delegatedAsk !== undefined) {
@@ -727,24 +801,8 @@ export async function executeSpawn(
       return;
     }
     let item: SpawnResultItem | undefined;
-    const childAc = new AbortController();
-    const relayAbort = (): void => childAc.abort(ac.signal.reason);
-    if (ac.signal.aborted) {
-      relayAbort();
-    } else {
-      ac.signal.addEventListener('abort', relayAbort, { once: true });
-    }
-    const childAborts = parent.childAborts;
-    childAborts?.register(t.spawnId, childAc);
     try {
-      item = await runOneChild({
-        parent,
-        target: t,
-        runChild,
-        signal: childAc.signal,
-        abort,
-        ...(childResume ? { childResume } : {}),
-      });
+      item = await runOneChildTask(t, ac.signal);
     } catch (err) {
       if (err instanceof DelegatedPermissionAsk) {
         delegatedAsk ??= err;
@@ -752,9 +810,6 @@ export async function executeSpawn(
         return;
       }
       throw err;
-    } finally {
-      childAborts?.release(t.spawnId);
-      ac.signal.removeEventListener('abort', relayAbort);
     }
     if (item === undefined) {
       return;
@@ -762,10 +817,75 @@ export async function executeSpawn(
     results[i] = item;
     await onChildDone?.(item);
   };
-  const width = concurrency === 'sequential' ? 1 : Math.min(maxConcurrency, targets.length);
+  const backgroundSpawns = parent.backgroundSpawns;
+  const backgroundTargets =
+    backgroundSpawns === undefined ? [] : targets.filter((t) => t.background === true);
+  const blockingIndexes = targets
+    .map((t, i) => (backgroundSpawns !== undefined && t.background === true ? -1 : i))
+    .filter((i) => i >= 0);
+  const startBackground = (t: SpawnTarget): void => {
+    const runId = parent.runId ?? '';
+    if (!backgroundSpawns || backgroundSpawns.isTracked(runId, t.spawnId)) {
+      return;
+    }
+    const controller = new AbortController();
+    const settled = backgroundSpawns.track({
+      runId,
+      threadId: parent.state.sessionId,
+      spawnId: t.spawnId,
+      agentId: t.call.agentId,
+      agentName: t.def.name,
+      controller,
+      run: (signal: AbortSignal) => {
+        return (async (): Promise<SpawnResultItem | null> => {
+          try {
+            return (await runOneChildTask(t, signal)) ?? null;
+          } catch (err) {
+            if (err instanceof DelegatedPermissionAsk) {
+              return {
+                agentId: t.call.agentId,
+                spawnId: t.spawnId,
+                output: null,
+                error: {
+                  code: 'delegated_ask',
+                  message:
+                    'background child requested a permission ask; grant permissions upfront via the spawn call',
+                },
+              };
+            }
+            throw err;
+          }
+        })();
+      },
+    });
+    void settled
+      .then((handle) => {
+        parent.backgroundReport?.({
+          runId,
+          threadId: handle.threadId,
+          spawnId: handle.spawnId,
+          agentId: handle.agentId,
+          parentAgentId: parent.agent.id,
+          ...(handle.agentName !== undefined ? { agentName: handle.agentName } : {}),
+          ...(handle.output !== undefined ? { output: handle.output } : {}),
+          ...(handle.error !== undefined ? { error: handle.error } : {}),
+        });
+      })
+      .catch(() => {});
+  };
+  for (const t of backgroundTargets) {
+    startBackground(t);
+  }
+  const startedBackground =
+    backgroundSpawns !== undefined && backgroundTargets.length > 0
+      ? backgroundSpawns
+          .list(parent.runId ?? '')
+          .filter((h) => backgroundTargets.some((t) => t.spawnId === h.spawnId))
+      : [];
+  const width = concurrency === 'sequential' ? 1 : Math.min(maxConcurrency, blockingIndexes.length);
   try {
     await runBatchWorkerPool({
-      indexes: targets.map((_, i) => i),
+      indexes: blockingIndexes,
       width,
       run: (i) => {
         const t = targets[i];
@@ -790,6 +910,7 @@ export async function executeSpawn(
   return {
     results: results.filter((r): r is SpawnResultItem => r !== undefined),
     carried,
+    background: startedBackground,
     timedOut: abort.timedOut,
   };
 }

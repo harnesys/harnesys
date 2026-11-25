@@ -549,6 +549,7 @@ export function eventToSessionEvent(ev: Event): SessionEvent | null {
       return {
         type: 'agent.spawned',
         agentId,
+        ...(typeof m?.agentName === 'string' ? { agentName: m.agentName } : {}),
         spawnId,
         ...(m?.taskInput !== undefined ? { taskInput: m.taskInput } : {}),
       };

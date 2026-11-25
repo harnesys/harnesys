@@ -24,7 +24,12 @@ import { createAgentsResolve } from './org-runtime-agents.ts';
 import { runOrgCompact } from './org-runtime-compact-deps.ts';
 import { createOrgCompactGuard } from './org-runtime-compact-guard.ts';
 import { createOrgEventPublisher } from './org-runtime-publish.ts';
-import { createSteeringChannel, createThreadQueueDrainer } from './org-runtime-queue.ts';
+import {
+  createSteeringChannel,
+  createThreadQueueDrainer,
+  drainThreadQueueSoon,
+} from './org-runtime-queue.ts';
+import { createBackgroundReportFn, createOrgRunControl } from './org-runtime-run-control.ts';
 import { createRunTargetResolver } from './org-runtime-run-target.ts';
 import { cancelThreadRun, retryThreadRun, sendThreadMessage } from './org-runtime-runs.ts';
 import { prepareSessionTarget } from './org-runtime-session-target.ts';
@@ -117,6 +122,15 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     packRegistrations,
     ...(deps.modelQuotaFactory ? { modelQuota: deps.modelQuotaFactory.forOrg(deps.orgId) } : {}),
     logger: CONSOLE_LOGGER,
+    backgroundReport: createBackgroundReportFn(session.db, (threadId) =>
+      drainThreadQueueSoon(drainMessageQueue, () => claimer?.kick(), threadId),
+    ),
+  });
+
+  const agentRunControl = createOrgRunControl({
+    engine,
+    events: runEvents,
+    db: session.db,
   });
 
   const steering = createSteeringChannel(session.db);
@@ -132,6 +146,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     lifecycle: runLifecycle,
     feed,
     steering,
+    runControl: agentRunControl,
   });
 
   const branchSeed = createBranchSeed({
@@ -169,13 +184,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
           .then((state) => resolveRunTarget(threadId, state, { runId })),
     },
     onComplete: (record) =>
-      void drainMessageQueue(record.threadId)
-        .then((result) => {
-          if (result.status === 'busy') {
-            claimer?.kick();
-          }
-        })
-        .catch(() => {}),
+      drainThreadQueueSoon(drainMessageQueue, () => claimer?.kick(), record.threadId),
     onSweep: () => {
       void reconcileApprovals();
       void resumeSweep?.sweep();
