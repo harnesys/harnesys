@@ -14,7 +14,6 @@ export function AgentGroupRow({
   onSelectDone,
   onToggleExpanded,
   onSettings,
-  moveAction,
   avatarHighlight,
 }: {
   agent: Agent;
@@ -24,7 +23,6 @@ export function AgentGroupRow({
   onSelectDone: () => void;
   onToggleExpanded: () => void;
   onSettings: () => void;
-  moveAction?: React.ReactNode;
   avatarHighlight?: boolean;
 }) {
   const actions = useThreadActions(agent.orgId);
@@ -41,7 +39,6 @@ export function AgentGroupRow({
         onSettings={onSettings}
         onNewThread={() => actions.createThread(agent.id)}
         threadsFilter={<AgentThreadsFilterMenu agentId={agent.id} />}
-        moveAction={moveAction}
         avatarHighlight={avatarHighlight}
       />
       {expanded ? (

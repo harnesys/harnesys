@@ -17,6 +17,10 @@ import {
   ChangePasswordUseCase,
 } from '../../application/identity/change-password.use-case.ts';
 import {
+  type CurrentUserView,
+  GetCurrentUserUseCase,
+} from '../../application/identity/get-current-user.use-case.ts';
+import {
   type InitOwnerResult,
   InitOwnerUseCase,
 } from '../../application/identity/init-owner.use-case.ts';
@@ -149,6 +153,7 @@ export class SessionController {
     private readonly sessionList: ListSessionsUseCase,
     private readonly sessionRevoke: RevokeSessionUseCase,
     private readonly sessionRevokeAll: RevokeAllSessionsUseCase,
+    private readonly sessionCurrentUser: GetCurrentUserUseCase,
   ) {}
 
   @Public()
@@ -234,6 +239,11 @@ export class SessionController {
       currentAccessToken: bearerOfContext(ctx),
     };
     await this.sessionChangePassword.execute(input);
+  }
+
+  @Get('me')
+  me(@SessionPrincipal() principal: Principal): CurrentUserView {
+    return this.sessionCurrentUser.execute({ principal });
   }
 
   @Get('sessions')

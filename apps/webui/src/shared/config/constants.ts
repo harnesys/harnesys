@@ -5,6 +5,7 @@ export const FILE_PANE_RATIO_STORAGE_KEY = 'harnesys.file-pane-ratio';
 export const INSPECTOR_WIDTH_STORAGE_KEY = 'harnesys.inspector-width';
 export const EDITOR_LANGUAGES_STORAGE_KEY = 'harnesys.editor-languages';
 export const SIDEBAR_ACCORDION_STORAGE_KEY = 'harnesys.sidebar-accordion';
+export const SIDEBAR_RAIL_SECTION_STORAGE_KEY = 'harnesys.sidebar-rail-section';
 export const SIDEBAR_WIDTH_STORAGE_KEY = 'harnesys.sidebar-width';
 export const SIDEBAR_DEFAULT_WIDTH = 240;
 export const SIDEBAR_MIN_WIDTH = 192;

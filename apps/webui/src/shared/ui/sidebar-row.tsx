@@ -45,7 +45,7 @@ export function SidebarRow({
       <button
         type="button"
         className={cn(
-          'flex min-w-0 flex-1 items-center gap-1.5 pr-1 pl-1.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
+          'flex min-w-0 flex-1 items-center gap-1.5 pr-1 pl-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
           variant === 'line' ? 'h-7' : 'items-start py-1.5',
         )}
         style={depth > 0 ? { paddingLeft: depth * SIDEBAR_ROW_INDENT + 6 } : undefined}

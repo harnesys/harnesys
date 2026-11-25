@@ -85,10 +85,10 @@ function InboxRow({
             />
           }
         >
-          <span className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center text-muted-foreground group-data-[collapsible=icon]:mt-0">
+          <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center text-muted-foreground group-data-[collapsible=icon]:mt-0">
             <ThreadKindIcon
               kind={thread.kind}
-              className="size-3.5"
+              className="size-4"
               icon={thread.icon}
               color={thread.color}
             />

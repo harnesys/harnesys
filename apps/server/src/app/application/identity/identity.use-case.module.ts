@@ -3,6 +3,7 @@ import { AcceptUserInviteUseCase } from './accept-user-invite.use-case.ts';
 import { ChangePasswordUseCase } from './change-password.use-case.ts';
 import { ConfirmIdentityLinkUseCase } from './confirm-identity-link.use-case.ts';
 import { CreateIdentityLinkCodeUseCase } from './create-identity-link-code.use-case.ts';
+import { GetCurrentUserUseCase } from './get-current-user.use-case.ts';
 import { InitOwnerUseCase } from './init-owner.use-case.ts';
 import { IssueNodeTicketUseCase } from './issue-node-ticket.use-case.ts';
 import { IssueUserInviteUseCase } from './issue-user-invite.use-case.ts';
@@ -43,6 +44,7 @@ const IDENTITY_USE_CASES = [
   ConfirmIdentityLinkUseCase,
   ListIdentityLinksUseCase,
   UnlinkIdentityUseCase,
+  GetCurrentUserUseCase,
 ];
 
 @Module({

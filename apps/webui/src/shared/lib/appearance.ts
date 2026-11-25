@@ -34,16 +34,26 @@ export const UI_THEMES = ['system', 'light', 'dark'] as const;
 export type UiTheme = (typeof UI_THEMES)[number];
 export const DEFAULT_UI_THEME: UiTheme = 'dark';
 
+export const UI_SIDEBAR_LAYOUTS = ['rail', 'classic'] as const;
+export type UiSidebarLayout = (typeof UI_SIDEBAR_LAYOUTS)[number];
+export const DEFAULT_UI_SIDEBAR_LAYOUT: UiSidebarLayout = 'rail';
+export const UI_SIDEBAR_LAYOUT_LABELS: Record<UiSidebarLayout, string> = {
+  classic: 'Classic',
+  rail: 'Rail',
+};
+
 export interface AppearanceSettings {
   theme: UiTheme;
   scale: UiScale;
   accent: UiAccent;
+  sidebarLayout: UiSidebarLayout;
 }
 
 export const DEFAULT_APPEARANCE: AppearanceSettings = {
   theme: DEFAULT_UI_THEME,
   scale: DEFAULT_UI_SCALE,
   accent: DEFAULT_UI_ACCENT,
+  sidebarLayout: DEFAULT_UI_SIDEBAR_LAYOUT,
 };
 
 export function isUiScale(value: string | null | undefined): value is UiScale {
@@ -56,6 +66,14 @@ export function isUiAccent(value: string | null | undefined): value is UiAccent 
 
 export function isUiTheme(value: string | null | undefined): value is UiTheme {
   return value !== null && value !== undefined && (UI_THEMES as readonly string[]).includes(value);
+}
+
+export function isUiSidebarLayout(value: string | null | undefined): value is UiSidebarLayout {
+  return (
+    value !== null &&
+    value !== undefined &&
+    (UI_SIDEBAR_LAYOUTS as readonly string[]).includes(value)
+  );
 }
 
 export function loadAppearance(): AppearanceSettings {
@@ -72,10 +90,12 @@ export function loadAppearance(): AppearanceSettings {
     const theme = typeof record.theme === 'string' ? record.theme : null;
     const scale = typeof record.scale === 'string' ? record.scale : null;
     const accent = typeof record.accent === 'string' ? record.accent : null;
+    const sidebarLayout = typeof record.sidebarLayout === 'string' ? record.sidebarLayout : null;
     return {
       theme: isUiTheme(theme) ? theme : DEFAULT_UI_THEME,
       scale: isUiScale(scale) ? scale : DEFAULT_UI_SCALE,
       accent: isUiAccent(accent) ? accent : DEFAULT_UI_ACCENT,
+      sidebarLayout: isUiSidebarLayout(sidebarLayout) ? sidebarLayout : DEFAULT_UI_SIDEBAR_LAYOUT,
     };
   } catch {
     return { ...DEFAULT_APPEARANCE };

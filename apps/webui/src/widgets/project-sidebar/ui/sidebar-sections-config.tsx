@@ -1,8 +1,9 @@
 import { CogIcon } from 'lucide-react';
 import { useStudioNavigation } from '@/shared/config/navigation';
+import { cn } from '@/shared/lib/utils';
 import { SidebarMenuButton, useSidebar } from '@/shared/ui/sidebar';
 
-export function SidebarSectionsConfig() {
+export function SidebarSectionsConfig({ className }: { className?: string }) {
   const { openSettings } = useStudioNavigation();
   const { setOpenMobile } = useSidebar();
   return (
@@ -10,7 +11,7 @@ export function SidebarSectionsConfig() {
       tooltip="Settings"
       aria-label="Open settings"
       data-testid="nav-sections"
-      className="w-auto text-muted-foreground"
+      className={cn('w-auto text-muted-foreground', className)}
       onClick={() => {
         openSettings();
         setOpenMobile(false);

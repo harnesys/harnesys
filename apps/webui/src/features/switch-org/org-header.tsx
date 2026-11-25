@@ -38,7 +38,15 @@ function OrgDot({ orgId }: { orgId: string }) {
   );
 }
 
-export function OrgHeader() {
+export function OrgHeader({
+  className,
+  avatarClassName,
+  compact = false,
+}: {
+  className?: string;
+  avatarClassName?: string;
+  compact?: boolean;
+}) {
   const navigate = useNavigate();
   const { orgId: urlOrgId } = useParams();
   const { orgs, activeOrgId, setActiveOrgId } = useOrgStore();
@@ -53,7 +61,11 @@ export function OrgHeader() {
 
   return (
     <div
-      className="group flex min-w-0 items-center rounded-md px-1 py-1.5 outline-none group-data-[collapsible=icon]:px-0"
+      className={cn(
+        'group flex min-w-0 items-center rounded-md px-1 py-1.5 outline-none group-data-[collapsible=icon]:px-0',
+        compact && 'px-0 py-0',
+        className,
+      )}
       data-open={menuOpen ? '' : undefined}
       data-testid="org-header"
     >
@@ -63,7 +75,10 @@ export function OrgHeader() {
             <button
               type="button"
               aria-label={`Organization: ${active.name}`}
-              className="group/org flex min-w-0 cursor-pointer appearance-none items-center gap-2 rounded-md border-0 bg-transparent p-0 text-left text-inherit outline-none group-data-[collapsible=icon]:justify-center"
+              className={cn(
+                'group/org flex min-w-0 cursor-pointer appearance-none items-center gap-2 rounded-md border-0 bg-transparent p-0 text-left text-inherit outline-none group-data-[collapsible=icon]:justify-center',
+                compact && 'justify-center',
+              )}
             />
           }
         >
@@ -72,16 +87,25 @@ export function OrgHeader() {
             className={cn(
               'flex size-6 shrink-0 items-center justify-center rounded-md font-semibold text-[11px] leading-none ring-1 ring-sidebar-foreground/10 ring-inset',
               entityColorTintClass(orgDot(active.orgId)),
+              avatarClassName,
             )}
           >
             {(active.name.trim()[0] ?? '#').toUpperCase()}
           </span>
-          <span className="min-w-0 truncate font-semibold text-sidebar-foreground text-sm leading-none tracking-tight group-data-[collapsible=icon]:hidden">
+          <span
+            className={cn(
+              'min-w-0 truncate font-semibold text-sidebar-foreground text-sm leading-none tracking-tight group-data-[collapsible=icon]:hidden',
+              compact && 'hidden',
+            )}
+          >
             {active.name}
           </span>
           <ChevronDownIcon
             aria-hidden
-            className="size-3 shrink-0 text-sidebar-foreground/50 opacity-50 transition-[opacity,transform] group-hover/org:opacity-100 group-data-[collapsible=icon]:hidden group-data-open:rotate-180"
+            className={cn(
+              'size-3 shrink-0 text-sidebar-foreground/50 opacity-50 transition-[opacity,transform] group-hover/org:opacity-100 group-data-[collapsible=icon]:hidden group-data-open:rotate-180',
+              compact && 'hidden',
+            )}
           />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={8} className="min-w-64">

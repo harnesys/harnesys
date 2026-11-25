@@ -1,4 +1,4 @@
-import { type MouseEvent as ReactMouseEvent, useEffect, useRef, useState } from 'react';
+import { type MouseEvent as ReactMouseEvent, useEffect, useState } from 'react';
 import {
   SIDEBAR_DEFAULT_WIDTH,
   SIDEBAR_MAX_WIDTH,
@@ -8,7 +8,6 @@ import {
 export function useSidebarWidth() {
   const [width, setWidth] = useState(readStoredWidth);
   const [dragging, setDragging] = useState(false);
-  const anchorX = useRef(0);
   useEffect(() => {
     try {
       localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(width));
@@ -17,9 +16,15 @@ export function useSidebarWidth() {
   const onResizeStart = (event: ReactMouseEvent) => {
     event.preventDefault();
     setDragging(true);
-    anchorX.current = event.clientX;
+    const startX = event.clientX;
+    const startWidth = width;
     const onMove = (move: MouseEvent) => {
-      setWidth(Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, move.clientX)));
+      setWidth(
+        Math.min(
+          SIDEBAR_MAX_WIDTH,
+          Math.max(SIDEBAR_MIN_WIDTH, startWidth + move.clientX - startX),
+        ),
+      );
     };
     const onUp = () => {
       setDragging(false);

@@ -15,13 +15,16 @@ import { ensureStarterBoard } from '@/features/onboarding/model/starter-board';
 import { useStudioLocation } from '@/shared/config/location';
 import { useStudioNavigation } from '@/shared/config/navigation';
 import { studioPath } from '@/shared/config/routes';
+import { useIsMobile } from '@/shared/lib/use-mobile';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Resizer } from '@/shared/ui/resizer';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/shared/ui/sidebar';
+import { useTheme } from '@/shared/ui/theme-provider';
 import { AgentInspector } from '@/widgets/agent-inspector';
 import { FileInspector } from '@/widgets/file-inspector';
 import { IdeHome } from '@/widgets/ide-home';
+import { ProjectRail } from '@/widgets/project-rail';
 import { ProjectSidebar } from '@/widgets/project-sidebar';
 import { useInspectorWidth } from '../model/inspector-width';
 import { useSidebarWidth } from '../model/sidebar-width';
@@ -34,13 +37,21 @@ const DashboardInspector = lazy(() =>
 );
 export function ProjectPage() {
   const { width: sidebarWidth, dragging: sidebarDragging, onResizeStart } = useSidebarWidth();
+  const { sidebarLayout } = useTheme();
+  const isMobile = useIsMobile();
+  const railMode = sidebarLayout === 'rail' && !isMobile;
   return (
     <SidebarProvider
       style={{ '--sidebar-width': `${sidebarWidth}px` } as CSSProperties}
       data-sidebar-resizing={sidebarDragging}
       className="h-svh overflow-hidden"
     >
-      <ProjectShell onSidebarResizeStart={onResizeStart} />
+      <ProjectShell
+        onSidebarResizeStart={onResizeStart}
+        sidebarWidth={sidebarWidth}
+        sidebarDragging={sidebarDragging}
+        railMode={railMode}
+      />
     </SidebarProvider>
   );
 }
@@ -65,8 +76,14 @@ function InspectorFallback({
 
 function ProjectShell({
   onSidebarResizeStart,
+  sidebarWidth,
+  sidebarDragging,
+  railMode,
 }: {
   onSidebarResizeStart: (event: ReactMouseEvent) => void;
+  sidebarWidth: number;
+  sidebarDragging: boolean;
+  railMode: boolean;
 }) {
   const params = useParams();
   const { orgId, focus } = useStudioLocation();
@@ -110,7 +127,15 @@ function ProjectShell({
   }
   return (
     <div ref={shellRef} className="flex min-h-svh w-full" data-testid="project-shell">
-      <ProjectSidebar onResizeStart={onSidebarResizeStart} />
+      {railMode ? (
+        <ProjectRail
+          width={sidebarWidth}
+          dragging={sidebarDragging}
+          onResizeStart={onSidebarResizeStart}
+        />
+      ) : (
+        <ProjectSidebar onResizeStart={onSidebarResizeStart} />
+      )}
       <SidebarInset className="min-w-0 bg-background">
         {hasTabs ? (
           <div className="flex min-h-0 min-w-0 flex-1">
@@ -118,26 +143,28 @@ function ProjectShell({
           </div>
         ) : (
           <>
-            <div className="flex h-11 shrink-0 items-center gap-2 px-3">
-              <SidebarTrigger />
-              <div className="ml-auto flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  data-testid="toggle-inspector"
-                  title={inspectorOpen ? 'Hide inspector' : 'Show inspector'}
-                  aria-pressed={inspectorOpen}
-                  disabled
-                  className={cn(inspectorOpen && 'bg-muted text-foreground')}
-                  onClick={() => useDeskStore.getState().toggleInspector()}
-                >
-                  <PanelRightIcon />
-                  <span className="sr-only">
-                    {inspectorOpen ? 'Hide inspector' : 'Show inspector'}
-                  </span>
-                </Button>
+            {railMode ? null : (
+              <div className="flex h-11 shrink-0 items-center gap-2 px-3">
+                <SidebarTrigger />
+                <div className="ml-auto flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    data-testid="toggle-inspector"
+                    title={inspectorOpen ? 'Hide inspector' : 'Show inspector'}
+                    aria-pressed={inspectorOpen}
+                    disabled
+                    className={cn(inspectorOpen && 'bg-muted text-foreground')}
+                    onClick={() => useDeskStore.getState().toggleInspector()}
+                  >
+                    <PanelRightIcon />
+                    <span className="sr-only">
+                      {inspectorOpen ? 'Hide inspector' : 'Show inspector'}
+                    </span>
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
             <div className="flex min-h-0 flex-1 flex-col" data-testid="empty-desk">
               <IdeHome />
             </div>

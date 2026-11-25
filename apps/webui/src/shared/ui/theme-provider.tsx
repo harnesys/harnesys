@@ -15,6 +15,7 @@ import {
   saveAppearance,
   type UiAccent,
   type UiScale,
+  type UiSidebarLayout,
   type UiTheme,
 } from '@/shared/lib/appearance';
 
@@ -27,6 +28,8 @@ interface ThemeProviderState {
   setScale: (scale: UiScale) => void;
   accent: UiAccent;
   setAccent: (accent: UiAccent) => void;
+  sidebarLayout: UiSidebarLayout;
+  setSidebarLayout: (layout: UiSidebarLayout) => void;
 }
 
 const COLOR_SCHEME_QUERY = '(prefers-color-scheme: dark)';
@@ -102,6 +105,10 @@ export function ThemeProvider({
   const setTheme = useCallback((theme: UiTheme) => patch({ theme }), [patch]);
   const setScale = useCallback((scale: UiScale) => patch({ scale }), [patch]);
   const setAccent = useCallback((accent: UiAccent) => patch({ accent }), [patch]);
+  const setSidebarLayout = useCallback(
+    (sidebarLayout: UiSidebarLayout) => patch({ sidebarLayout }),
+    [patch],
+  );
 
   const applyTheme = useCallback(
     (nextTheme: UiTheme) => {
@@ -192,8 +199,19 @@ export function ThemeProvider({
       setScale,
       accent: settings.accent,
       setAccent,
+      sidebarLayout: settings.sidebarLayout,
+      setSidebarLayout,
     }),
-    [settings.theme, settings.scale, settings.accent, setTheme, setScale, setAccent],
+    [
+      settings.theme,
+      settings.scale,
+      settings.accent,
+      settings.sidebarLayout,
+      setTheme,
+      setScale,
+      setAccent,
+      setSidebarLayout,
+    ],
   );
 
   return <ThemeProviderContext.Provider value={value}>{children}</ThemeProviderContext.Provider>;

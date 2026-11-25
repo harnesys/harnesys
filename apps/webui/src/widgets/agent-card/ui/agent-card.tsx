@@ -14,7 +14,6 @@ interface AgentCardProps {
   onSettings: () => void;
   onNewThread?: () => void;
   threadsFilter?: ReactNode;
-  moveAction?: ReactNode;
   avatarHighlight?: boolean;
 }
 export function AgentCard({
@@ -24,7 +23,6 @@ export function AgentCard({
   onSettings,
   onNewThread,
   threadsFilter,
-  moveAction,
   avatarHighlight,
 }: AgentCardProps) {
   const status = useAgentLiveStatus(agent.id);
@@ -72,7 +70,6 @@ export function AgentCard({
             </Button>
           ) : null}
           {threadsFilter}
-          {moveAction}
           <Button
             type="button"
             variant="ghost"

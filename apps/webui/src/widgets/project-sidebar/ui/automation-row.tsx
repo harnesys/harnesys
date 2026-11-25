@@ -31,8 +31,8 @@ export function AutomationRow({
         className="flex min-w-0 flex-1 items-start gap-2 px-2 py-2 text-left"
         onClick={onSelect}
       >
-        <span className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center">
-          <Icon className="size-3.5 text-muted-foreground" />
+        <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center">
+          <Icon className="size-4 text-muted-foreground" />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm leading-4">{automation.label}</span>

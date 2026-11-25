@@ -13,6 +13,7 @@ import { ColorSwatches, type ColorSwatchItem } from '@/shared/ui/color-swatches'
 import { SettingsField, SettingsOptionGrid, SettingsSection } from '@/shared/ui/settings-kit';
 import { useTheme } from '@/shared/ui/theme-provider';
 import { ToggleGroup, ToggleGroupItem } from '@/shared/ui/toggle-group';
+import { SidebarLayoutPicker } from './sidebar-layout-picker';
 
 const THEME_CHOICES: {
   value: UiTheme;
@@ -68,6 +69,14 @@ export function AppearancePane() {
             );
           })}
         </SettingsOptionGrid>
+      </SettingsSection>
+
+      <SettingsSection
+        label="Sidebar"
+        description="How navigation is arranged while you work."
+        testId="sidebar-layout-select"
+      >
+        <SidebarLayoutPicker />
       </SettingsSection>
 
       <SettingsSection

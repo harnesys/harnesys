@@ -1,4 +1,5 @@
 import { GalleryVertical } from 'lucide-react';
+import { cn } from '@/shared/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +13,7 @@ import { useAccordionStore } from '../model/accordion.store';
 import { hasHiddenAttention, useSectionAttention } from '../model/section-attention';
 import { SECTION_META, type SidebarSectionId } from './sections-meta';
 
-export function SidebarSectionsVisibility() {
+export function SidebarSectionsVisibility({ className }: { className?: string }) {
   const order = useAccordionStore((state) => state.order);
   const hidden = useAccordionStore((state) => state.hidden);
   const setVisibility = useAccordionStore((state) => state.setVisibility);
@@ -28,7 +29,7 @@ export function SidebarSectionsVisibility() {
             tooltip="Sections visibility"
             aria-label="Toggle sections visibility"
             data-testid="nav-sections-visibility"
-            className="w-auto"
+            className={cn('w-auto', className)}
           />
         }
       >

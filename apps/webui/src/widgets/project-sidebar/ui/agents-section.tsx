@@ -15,7 +15,7 @@ import { Skeleton } from '@/shared/ui/skeleton';
 import { toast } from '@/shared/ui/toast';
 import { AgentGroupRow } from './agent-group-row';
 import { useCreateAgentFlow } from './agents-create-button';
-import { AgentMoveMenu, DepartmentGroup } from './department-row';
+import { DepartmentGroup } from './department-row';
 import { SidebarEmpty } from './sidebar-empty';
 
 export { AgentsSectionActions } from './agents-section-menu';
@@ -108,7 +108,6 @@ export function AgentsSection({
       onSelectDone={onSelectDone}
       onToggleExpanded={() => toggleExpanded(item.id)}
       onSettings={() => openSettings(item)}
-      moveAction={<AgentMoveMenu agent={item} />}
     />
   );
   return (

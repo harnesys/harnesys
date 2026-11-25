@@ -148,12 +148,12 @@ function DashboardRow({
       >
         <span
           className={cn(
-            'relative mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-md',
+            'relative inline-flex size-6 shrink-0 items-center justify-center rounded-md',
             entityColorTintClass(color),
           )}
           style={entityColorTintStyle(color)}
         >
-          <DashboardIcon className="size-3.5" />
+          <DashboardIcon className="size-4" />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm leading-4">{name}</span>

@@ -135,12 +135,12 @@ function IssueBoardRow({
       >
         <span
           className={cn(
-            'relative mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-md',
+            'relative inline-flex size-6 shrink-0 items-center justify-center rounded-md',
             entityColorTintClass(color),
           )}
           style={entityColorTintStyle(color)}
         >
-          <BoardIcon className="size-3.5" />
+          <BoardIcon className="size-4" />
           {active ? (
             <span
               title="Issues running"

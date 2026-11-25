@@ -10,9 +10,27 @@ export interface MySessionView {
   absoluteExpiresAt: string;
 }
 
+export interface CurrentUserView {
+  userId: string;
+  login: string;
+  name: string;
+}
+
 export interface ChangePasswordInput {
   currentPassword: string;
   newPassword: string;
+}
+
+export function currentUserQueryKey(): readonly [string, string] {
+  return ['session', 'me'] as const;
+}
+
+export function currentUserQuery() {
+  return queryOptions({
+    queryKey: currentUserQueryKey(),
+    queryFn: () => apiJson<CurrentUserView>('/api/session/me'),
+    staleTime: 5 * 60_000,
+  });
 }
 
 export function mySessionsQueryKey(): readonly [string, string] {
