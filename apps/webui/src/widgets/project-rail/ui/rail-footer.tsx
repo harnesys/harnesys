@@ -10,7 +10,7 @@ const FOOTER_ICON_CLASS = 'size-7 justify-center p-0';
 
 export function RailFooter() {
   return (
-    <div className="flex shrink-0 flex-col items-center gap-1 p-2" data-testid="rail-footer">
+    <div className="flex shrink-0 flex-col items-center gap-1.5 p-2" data-testid="rail-footer">
       <AssistantChatToggle />
       <SidebarSectionsVisibility className={FOOTER_ICON_CLASS} />
       <SidebarSectionsConfig className={FOOTER_ICON_CLASS} />
