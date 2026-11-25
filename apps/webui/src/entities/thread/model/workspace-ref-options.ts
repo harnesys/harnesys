@@ -19,7 +19,7 @@ export function workspaceValueOf(ref: WorkspaceRef | null): string {
     return SANDBOX_DIR_VALUE;
   }
   if (ref.kind === 'folder') {
-    return `${WORKSPACE_FOLDER_PREFIX}${ref.path}`;
+    return WORKSPACE_BROWSE_VALUE;
   }
   return `${WORKSPACE_SOURCE_PREFIX}${ref.sourceId}`;
 }
@@ -56,16 +56,11 @@ export function workspaceOptions(input: {
       value: `${WORKSPACE_SOURCE_PREFIX}${source.id}`,
       label: sourceLabel(source, input.workspaceRef),
     })),
+    { value: WORKSPACE_BROWSE_VALUE, label: 'Other folder…' },
   ];
   const current = workspaceValueOf(input.workspaceRef);
   if (current !== WORKSPACE_INHERIT_VALUE && !options.some((option) => option.value === current)) {
-    options.push({
-      value: current,
-      label: current.startsWith(WORKSPACE_FOLDER_PREFIX)
-        ? current.slice(WORKSPACE_FOLDER_PREFIX.length)
-        : current,
-    });
+    options.push({ value: current, label: current });
   }
-  options.push({ value: WORKSPACE_BROWSE_VALUE, label: 'Browse file system...' });
   return options;
 }

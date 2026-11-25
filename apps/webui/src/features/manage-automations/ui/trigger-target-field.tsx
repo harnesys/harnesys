@@ -154,7 +154,7 @@ export function TriggerTargetField({
           onChange={onWorkspace}
           inheritLabel="Use agent default"
           testId="trigger-workspace"
-        />{' '}
+        />
       </div>
       <FieldDescription>
         {linkedThread

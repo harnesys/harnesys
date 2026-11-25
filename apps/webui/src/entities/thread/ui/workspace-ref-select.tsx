@@ -1,11 +1,11 @@
 import type { WorkspaceRef } from '@harnesys/contracts';
-import { useQueries, useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FolderSearchIcon } from 'lucide-react';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
+import { browseDirs } from '@/shared/api/host-fs';
 import { getSourceLocation, sourceLocationQueryKey } from '@/shared/api/source-location';
 import { listSources } from '@/shared/api/sources';
 import { Button } from '@/shared/ui/button';
-import { FieldDescription } from '@/shared/ui/field';
 import { Input } from '@/shared/ui/input';
 import {
   Select,
@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/select';
+import { toast } from '@/shared/ui/toast';
 import { FolderBrowserDialog } from '@/widgets/folder-browser';
 import {
   WORKSPACE_BROWSE_VALUE,
@@ -29,12 +30,13 @@ export interface WorkspaceRefSelectProps {
   onChange: (ref: WorkspaceRef) => void;
   inheritLabel: string;
   label?: string;
-  help?: string;
   disabled?: boolean;
   testId?: string;
 }
 
-type BrowseTarget = { mode: 'folder' } | { mode: 'source'; sourceId: string; root: string };
+type BrowseTarget =
+  | { mode: 'folder'; root: string; initialPath: string }
+  | { mode: 'source'; sourceId: string; root: string; initialPath: string };
 
 export function WorkspaceRefSelect({
   orgId,
@@ -42,11 +44,12 @@ export function WorkspaceRefSelect({
   onChange,
   inheritLabel,
   label = 'Workspace',
-  help,
   disabled = false,
   testId = 'workspace-ref-select',
 }: WorkspaceRefSelectProps) {
   const [browse, setBrowse] = useState<BrowseTarget | null>(null);
+  const [locating, setLocating] = useState(false);
+  const queryClient = useQueryClient();
   const sourcesQuery = useQuery({
     queryKey: ['sources', orgId] as const,
     queryFn: () => listSources(orgId),
@@ -71,7 +74,40 @@ export function WorkspaceRefSelect({
     inheritLabel,
   });
   const sourceRef = value !== null && value.kind === 'source' ? value : null;
+  const folderRef = value !== null && value.kind === 'folder' ? value : null;
   const sourceRoot = sourceRef === null ? null : rootOf(sourceRef.sourceId);
+  const hostHome = async (): Promise<string | null> => {
+    try {
+      const listing = await queryClient.fetchQuery({
+        queryKey: ['host-home', orgId] as const,
+        queryFn: () => browseDirs(orgId, {}),
+        staleTime: Number.POSITIVE_INFINITY,
+      });
+      return listing.path;
+    } catch (error) {
+      toast.add({
+        title: error instanceof Error ? error.message : 'Could not read the home folder',
+      });
+      return null;
+    }
+  };
+  const chooseFolderMode = async () => {
+    setLocating(true);
+    const home = await hostHome();
+    setLocating(false);
+    if (home !== null) {
+      onChange({ kind: 'folder', path: home });
+    }
+  };
+  const openFolderPicker = async () => {
+    setLocating(true);
+    const home = await hostHome();
+    setLocating(false);
+    if (home === null) {
+      return;
+    }
+    setBrowse({ mode: 'folder', root: home, initialPath: folderRef?.path ?? home });
+  };
   const resolveBrowse = (target: BrowseTarget, path: string): void => {
     if (target.mode === 'folder') {
       onChange({ kind: 'folder', path });
@@ -88,65 +124,110 @@ export function WorkspaceRefSelect({
         : { kind: 'source', sourceId: target.sourceId, subpath: relative },
     );
   };
+  const browseNodeLabel =
+    browse?.mode === 'source'
+      ? sources.find((source) => source.id === browse.sourceId)?.name
+      : undefined;
+  const locked = disabled || locating;
   return (
-    <div className="flex min-w-0 flex-col gap-1">
-      <span className="text-[11px] text-muted-foreground">{label}</span>
-      <Select
-        items={items}
-        value={workspaceValueOf(value)}
-        disabled={disabled}
-        onValueChange={(next) => {
-          if (next === WORKSPACE_BROWSE_VALUE) {
-            setBrowse({ mode: 'folder' });
-            return;
-          }
-          if (typeof next !== 'string') {
-            return;
-          }
-          onChange(workspaceRefFrom(next));
-        }}
-      >
-        <SelectTrigger className="w-full" aria-label={label} data-testid={testId}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent className="max-w-80">
-          <SelectGroup>
-            {items.map((item) => (
-              <SelectItem key={item.value} value={item.value}>
-                <span className="block max-w-72 truncate" title={item.label}>
-                  {item.label}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-      {sourceRef ? (
-        <SourceSubpathRow
-          key={`${sourceRef.sourceId}:${sourceRef.subpath ?? ''}`}
-          sourceId={sourceRef.sourceId}
-          subpath={sourceRef.subpath ?? ''}
-          canBrowse={sourceRoot !== null}
-          disabled={disabled}
-          onChange={(subpath) =>
-            onChange(
-              subpath === ''
-                ? { kind: 'source', sourceId: sourceRef.sourceId }
-                : { kind: 'source', sourceId: sourceRef.sourceId, subpath },
-            )
-          }
-          onBrowse={() => {
-            if (sourceRoot !== null) {
-              setBrowse({ mode: 'source', sourceId: sourceRef.sourceId, root: sourceRoot });
+    <div className="contents">
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="text-[11px] text-muted-foreground">{label}</span>
+        <Select
+          items={items}
+          value={workspaceValueOf(value)}
+          disabled={locked}
+          onValueChange={(next) => {
+            if (next === WORKSPACE_BROWSE_VALUE) {
+              if (folderRef === null) {
+                void chooseFolderMode();
+              }
+              return;
             }
+            if (typeof next !== 'string') {
+              return;
+            }
+            onChange(workspaceRefFrom(next));
           }}
-        />
+        >
+          <SelectTrigger className="w-full" aria-label={label} data-testid={testId}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="max-w-80">
+            <SelectGroup>
+              {items.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  <span className="block max-w-72 truncate" title={item.label}>
+                    {item.label}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </div>
+      {sourceRef !== null ? (
+        <FolderField>
+          <SourceSubpathRow
+            key={`${sourceRef.sourceId}:${sourceRef.subpath ?? ''}`}
+            subpath={sourceRef.subpath ?? ''}
+            canBrowse={sourceRoot !== null}
+            disabled={locked}
+            onChange={(subpath) =>
+              onChange(
+                subpath === ''
+                  ? { kind: 'source', sourceId: sourceRef.sourceId }
+                  : { kind: 'source', sourceId: sourceRef.sourceId, subpath },
+              )
+            }
+            onBrowse={() => {
+              if (sourceRoot !== null) {
+                setBrowse({
+                  mode: 'source',
+                  sourceId: sourceRef.sourceId,
+                  root: sourceRoot,
+                  initialPath:
+                    sourceRef.subpath === undefined || sourceRef.subpath === ''
+                      ? sourceRoot
+                      : `${sourceRoot}/${sourceRef.subpath}`,
+                });
+              }
+            }}
+          />
+        </FolderField>
       ) : null}
-      {help ? <FieldDescription>{help}</FieldDescription> : null}
+      {folderRef !== null ? (
+        <FolderField>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <Input
+              className="min-w-0 flex-1 cursor-pointer font-mono text-xs"
+              value={folderRef.path}
+              title={folderRef.path}
+              aria-label="Folder path"
+              readOnly
+              disabled={locked}
+              onClick={() => void openFolderPicker()}
+            />
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="outline"
+              title="Browse folders on this host"
+              aria-label="Browse folders on this host"
+              disabled={locked}
+              onClick={() => void openFolderPicker()}
+            >
+              <FolderSearchIcon className="size-3.5" />
+            </Button>
+          </div>
+        </FolderField>
+      ) : null}
       {browse ? (
         <FolderBrowserDialog
           orgId={orgId}
-          initialPath={browse.mode === 'folder' ? folderStart(value) : browse.root}
+          nodeLabel={browseNodeLabel}
+          initialPath={browse.initialPath}
+          rootPath={browse.root}
           onResolve={(path) => {
             const target = browse;
             setBrowse(null);
@@ -160,8 +241,13 @@ export function WorkspaceRefSelect({
   );
 }
 
-function folderStart(value: WorkspaceRef | null): string | undefined {
-  return value !== null && value.kind === 'folder' ? value.path : undefined;
+function FolderField({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1 sm:col-span-full">
+      <span className="text-[11px] text-muted-foreground">Folder</span>
+      {children}
+    </div>
+  );
 }
 
 function SourceSubpathRow({
@@ -171,7 +257,6 @@ function SourceSubpathRow({
   onChange,
   onBrowse,
 }: {
-  sourceId: string;
   subpath: string;
   canBrowse: boolean;
   disabled: boolean;
@@ -179,23 +264,25 @@ function SourceSubpathRow({
   onBrowse: () => void;
 }) {
   const [draft, setDraft] = useState(subpath);
+  const trimmed = draft.trim().replace(/^\/+|\/+$/g, '');
   const invalid = draft.trim().startsWith('/') || draft.trim().split('/').includes('..');
   const apply = () => {
-    if (!invalid) {
-      onChange(draft.trim().replace(/^\/+|\/+$/g, ''));
+    if (!invalid && trimmed !== subpath) {
+      onChange(trimmed);
     }
   };
   return (
     <div className="flex flex-col gap-1">
       <div className="flex min-w-0 items-center gap-1.5">
         <Input
-          className="h-7 min-w-0 flex-1 font-mono text-xs"
+          className="min-w-0 flex-1 font-mono text-xs"
           placeholder="subfolder (optional)"
           aria-label="Source subfolder"
           aria-invalid={invalid || undefined}
           disabled={disabled}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
+          onBlur={apply}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
               event.preventDefault();
@@ -216,21 +303,10 @@ function SourceSubpathRow({
             <FolderSearchIcon className="size-3.5" />
           </Button>
         ) : null}
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={disabled || invalid}
-          onClick={apply}
-        >
-          Apply
-        </Button>
       </div>
-      <FieldDescription>
-        {invalid
-          ? 'Subfolder must stay inside the source'
-          : 'Subfolder of the source; leave empty for the source root.'}
-      </FieldDescription>
+      {invalid ? (
+        <p className="text-destructive text-xs">Subfolder must stay inside the source</p>
+      ) : null}
     </div>
   );
 }
