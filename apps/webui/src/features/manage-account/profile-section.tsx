@@ -1,3 +1,4 @@
+import type { EntityColorName } from '@harnesys/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import {
@@ -6,8 +7,10 @@ import {
   currentUserQueryKey,
   updateProfile,
 } from '@/shared/api/sessions';
+import { isEntityColorName } from '@/shared/lib/entity-colors';
 import { Button } from '@/shared/ui/button';
 import { RowHeader } from '@/shared/ui/capability-rows';
+import { ColorSwatches } from '@/shared/ui/color-swatches';
 import { Input } from '@/shared/ui/input';
 import { RowListSkeleton, SettingsField, SettingsSave } from '@/shared/ui/settings-kit';
 import { toast } from '@/shared/ui/toast';
@@ -40,23 +43,26 @@ function ProfileEditor({ me }: { me: CurrentUserView }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(me.name);
   const [avatar, setAvatar] = useState<string | null>(me.avatar);
+  const [color, setColor] = useState<EntityColorName | null>(me.color);
   const [uploading, setUploading] = useState(false);
 
   const trimmedName = name.trim();
   const nameInvalid = trimmedName.length === 0 || trimmedName.length > 100;
-  const dirty = name !== me.name || avatar !== me.avatar;
+  const dirty = name !== me.name || avatar !== me.avatar || color !== me.color;
 
   const reset = () => {
     setName(me.name);
     setAvatar(me.avatar);
+    setColor(me.color);
   };
 
   const save = useMutation({
-    mutationFn: () => updateProfile({ name: trimmedName, avatar }),
+    mutationFn: () => updateProfile({ name: trimmedName, avatar, color }),
     onSuccess: (view) => {
       queryClient.setQueryData(currentUserQueryKey(), view);
       setName(view.name);
       setAvatar(view.avatar);
+      setColor(view.color);
       toast.add({ title: 'Profile saved' });
     },
     onError: (err: Error) => {
@@ -88,7 +94,13 @@ function ProfileEditor({ me }: { me: CurrentUserView }) {
         className="border-t"
       >
         <div className="flex items-center gap-2">
-          <UserAvatar name={trimmedName || me.login} seed={me.userId} src={avatar} size="lg" />
+          <UserAvatar
+            name={trimmedName || me.login}
+            seed={me.userId}
+            src={avatar}
+            color={color}
+            size="lg"
+          />
           <input
             ref={fileRef}
             type="file"
@@ -127,6 +139,18 @@ function ProfileEditor({ me }: { me: CurrentUserView }) {
             </Button>
           ) : null}
         </div>
+      </SettingsField>
+      <SettingsField
+        label="Color"
+        description="Used for your initials avatar when no picture is uploaded."
+      >
+        <ColorSwatches
+          value={color}
+          onChange={(next) => {
+            setColor(next && isEntityColorName(next) ? next : null);
+          }}
+          testIdPrefix="account-color"
+        />
       </SettingsField>
       <SettingsField
         label="Name"

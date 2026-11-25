@@ -1,3 +1,4 @@
+import { entityColorTintClass } from '@/shared/lib/entity-colors';
 import { cn } from '@/shared/lib/utils';
 
 const USER_TINTS = [
@@ -38,10 +39,31 @@ function tintOf(seed: string): string {
   return USER_TINTS[Math.abs(hash) % USER_TINTS.length] ?? USER_TINTS[0];
 }
 
+function avatarTintClass({
+  name,
+  seed,
+  color,
+  src,
+}: {
+  name: string;
+  seed?: string;
+  color?: string | null;
+  src?: string | null;
+}): string | null {
+  if (src) {
+    return null;
+  }
+  if (color) {
+    return entityColorTintClass(color);
+  }
+  return tintOf(seed ?? name);
+}
+
 export function UserAvatar({
   name,
   seed,
   src,
+  color,
   title,
   size = 'sm',
   className,
@@ -49,6 +71,7 @@ export function UserAvatar({
   name: string;
   seed?: string;
   src?: string | null;
+  color?: string | null;
   title?: string;
   size?: UserAvatarSize;
   className?: string;
@@ -59,7 +82,7 @@ export function UserAvatar({
       className={cn(
         'flex shrink-0 items-center justify-center overflow-hidden rounded-full font-medium',
         AVATAR_SIZES[size],
-        src ? null : tintOf(seed ?? name),
+        avatarTintClass({ name, seed, color, src }),
         className,
       )}
     >

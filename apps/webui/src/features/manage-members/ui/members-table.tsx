@@ -101,7 +101,7 @@ function MemberRow({
   const displayName = member.name.trim() || member.login;
   const identity = (
     <>
-      <UserAvatar name={displayName} seed={member.userId} size="md" />
+      <UserAvatar name={displayName} seed={member.userId} color={member.color} size="md" />
       <span className="flex min-w-0 flex-col leading-tight">
         <span className="flex min-w-0 items-center gap-1.5">
           <span className="truncate font-medium text-sm">{displayName}</span>

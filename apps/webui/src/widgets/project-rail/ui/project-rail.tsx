@@ -55,7 +55,7 @@ export function ProjectRail({
         data-testid="project-rail-bar"
       >
         <div className="flex h-10 shrink-0 items-center justify-center">
-          <OrgHeader compact avatarClassName="size-7 text-xs" />
+          <OrgHeader compact avatarClassName="size-6.5 text-xs" />
         </div>
         <div className="flex shrink-0 items-center justify-center">
           <InboxBell />

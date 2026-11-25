@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
   ValidationException,
 } from '@harnesys/brix';
+import { ENTITY_COLOR_NAMES, type EntityColorName, EntityColorSchema } from '@harnesys/contracts';
 import { IdentityAudit } from '../../domain/identity/identity-audit.port.ts';
 import { type Principal } from '../../domain/identity/principal.ts';
 import {
@@ -19,6 +20,7 @@ export interface UpdateProfileInput {
   principal: Principal;
   name: string;
   avatar: string | null;
+  color: EntityColorName | null;
   now?: string;
 }
 
@@ -43,6 +45,9 @@ export class UpdateProfileUseCase {
     ) {
       throw new ValidationException('avatar must be a base64 data URL png, jpeg or webp image');
     }
+    if (input.color !== null && !EntityColorSchema.safeParse(input.color).success) {
+      throw new ValidationException(`color must be one of ${ENTITY_COLOR_NAMES.join(', ')}`);
+    }
     const user = this.users.findById(input.principal.userId);
     if (!user) {
       throw new UnauthorizedException('The session user no longer exists');
@@ -52,6 +57,7 @@ export class UpdateProfileUseCase {
       id: user.id,
       name,
       avatar: input.avatar,
+      color: input.color,
       updatedAt: now,
     });
     this.audit.append(
@@ -64,7 +70,7 @@ export class UpdateProfileUseCase {
       }),
     );
     return currentUserViewOf(
-      { ...user, name, avatar: input.avatar, updatedAt: now },
+      { ...user, name, avatar: input.avatar, color: input.color, updatedAt: now },
       input.principal.capabilities,
     );
   }

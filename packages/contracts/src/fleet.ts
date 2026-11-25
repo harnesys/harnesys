@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { EntityColorSchema } from './entity-colors.ts';
 import { OrgIdSchema } from './org-machine.ts';
 
 export const INVITE_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -176,6 +177,7 @@ export const PromoteIdentitySliceResponseSchema = z.object({
       login: z.string(),
       name: z.string(),
       avatar: z.string().nullable().default(null),
+      color: EntityColorSchema.nullable().default(null),
       passwordHash: z.string(),
       createdAt: z.string(),
       updatedAt: z.string(),

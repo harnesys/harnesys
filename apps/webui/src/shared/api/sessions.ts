@@ -1,3 +1,4 @@
+import type { EntityColorName } from '@harnesys/contracts';
 import { queryOptions } from '@tanstack/react-query';
 import { apiJson } from './client';
 
@@ -17,6 +18,7 @@ export interface CurrentUserView {
   login: string;
   name: string;
   avatar: string | null;
+  color: EntityColorName | null;
   role: AccountRole;
   capabilities: string[];
 }
@@ -29,6 +31,7 @@ export interface ChangePasswordInput {
 export interface UpdateProfileInput {
   name: string;
   avatar: string | null;
+  color: EntityColorName | null;
 }
 
 export function currentUserQueryKey(): readonly [string, string] {

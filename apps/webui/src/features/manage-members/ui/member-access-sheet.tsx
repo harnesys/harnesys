@@ -94,7 +94,7 @@ function MemberAccessEditor({
     <>
       <SheetHeader className="border-b px-5 py-4 pr-12">
         <div className="flex min-w-0 items-center gap-3">
-          <UserAvatar name={displayName} seed={member.userId} size="lg" />
+          <UserAvatar name={displayName} seed={member.userId} color={member.color} size="lg" />
           <div className="flex min-w-0 flex-col gap-0.5">
             <SheetTitle className="truncate">{displayName}</SheetTitle>
             <SheetDescription className="flex min-w-0 flex-wrap items-center gap-1.5">

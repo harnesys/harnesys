@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable } from '@harnesys/brix';
+import type { EntityColorName } from '@harnesys/contracts';
 import { authorize } from '../../domain/identity/authorize.ts';
 import { MembershipRepository } from '../../domain/identity/membership-repository.port.ts';
 import { type Principal } from '../../domain/identity/principal.ts';
@@ -8,6 +9,7 @@ export interface MemberView {
   userId: string;
   login: string;
   name: string;
+  color: EntityColorName | null;
   capabilities: string[];
   updatedAt: string;
 }
@@ -38,6 +40,7 @@ export class ListMembersUseCase {
         userId: user.id,
         login: user.login,
         name: user.name,
+        color: user.color,
         capabilities: membership.capabilities,
         updatedAt: membership.updatedAt,
       });

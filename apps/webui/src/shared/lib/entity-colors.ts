@@ -1,6 +1,11 @@
+import { ENTITY_COLOR_NAMES, type EntityColorName } from '@harnesys/contracts';
 import type { CSSProperties } from 'react';
 
-export { ENTITY_COLOR_NAMES } from '@harnesys/contracts';
+export { ENTITY_COLOR_NAMES };
+
+export function isEntityColorName(value: string): value is EntityColorName {
+  return ENTITY_COLOR_NAMES.some((name) => name === value);
+}
 
 export const ENTITY_COLOR_CLASSES: Record<string, string> = {
   red: 'bg-red-500',

@@ -1,8 +1,11 @@
+import type { EntityColorName } from '@harnesys/contracts';
+
 export interface UserRecord {
   id: string;
   login: string;
   name: string;
   avatar: string | null;
+  color: EntityColorName | null;
   passwordHash: string;
   createdAt: string;
   updatedAt: string;
@@ -27,6 +30,7 @@ export interface UpdateUserProfileInput {
   id: string;
   name: string;
   avatar: string | null;
+  color: EntityColorName | null;
   updatedAt: string;
 }
 

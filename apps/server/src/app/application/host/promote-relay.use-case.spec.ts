@@ -210,6 +210,7 @@ function userRecord(id: string, updatedAt: string): UserRecord {
     login: `${id}@login`,
     name: id,
     avatar: null,
+    color: null,
     passwordHash: `hash-${id}`,
     createdAt: '2026-10-01T00:00:00.000Z',
     updatedAt,

@@ -1,4 +1,5 @@
 import { Injectable } from '@harnesys/brix';
+import { type EntityColorName, EntityColorSchema } from '@harnesys/contracts';
 import { and, asc, eq, gt } from 'drizzle-orm';
 import {
   type InsertUserInput,
@@ -71,7 +72,12 @@ export class UserRepositoryAdapter extends UserRepository {
     try {
       sqlite.db
         .update(users)
-        .set({ name: input.name, avatar: input.avatar, updatedAt: input.updatedAt })
+        .set({
+          name: input.name,
+          avatar: input.avatar,
+          color: input.color,
+          updatedAt: input.updatedAt,
+        })
         .where(eq(users.id, input.id))
         .run();
     } finally {
@@ -103,6 +109,7 @@ export class UserRepositoryAdapter extends UserRepository {
             login: user.login,
             name: user.name,
             avatar: user.avatar,
+            color: user.color,
             passwordHash: user.passwordHash,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt,
@@ -118,6 +125,7 @@ export class UserRepositoryAdapter extends UserRepository {
           login: user.login,
           name: user.name,
           avatar: user.avatar,
+          color: user.color,
           passwordHash: user.passwordHash,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
@@ -174,6 +182,7 @@ function mapUser(row: {
   login: string;
   name: string;
   avatar: string | null;
+  color: string | null;
   passwordHash: string;
   createdAt: string;
   updatedAt: string;
@@ -183,8 +192,14 @@ function mapUser(row: {
     login: row.login,
     name: row.name,
     avatar: row.avatar,
+    color: userColorOf(row.color),
     passwordHash: row.passwordHash,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
+}
+
+function userColorOf(value: string | null): EntityColorName | null {
+  const parsed = EntityColorSchema.nullable().safeParse(value);
+  return parsed.success ? parsed.data : null;
 }

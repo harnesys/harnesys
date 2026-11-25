@@ -1,10 +1,14 @@
-import { queryOptions } from '@tanstack/react-query';
+import type { EntityColorName } from '@harnesys/contracts';
+import { queryOptions, useQuery } from '@tanstack/react-query';
+import { getActiveOrgId } from './active-org';
 import { apiJson } from './client';
+import { currentUserQuery } from './sessions';
 
 export interface MemberView {
   userId: string;
   login: string;
   name: string;
+  color: EntityColorName | null;
   capabilities: string[];
   updatedAt: string;
 }
@@ -112,6 +116,23 @@ export function membersQuery(orgId: string) {
     enabled: Boolean(orgId),
     staleTime: 5000,
   });
+}
+
+export function useMyColor(): EntityColorName | null {
+  return useQuery(currentUserQuery()).data?.color ?? null;
+}
+
+export function useUserColor(userId: string | null | undefined): EntityColorName | null {
+  const me = useQuery(currentUserQuery());
+  const orgId = getActiveOrgId();
+  const members = useQuery({ ...membersQuery(orgId ?? ''), enabled: Boolean(orgId && userId) });
+  if (!userId) {
+    return null;
+  }
+  if (userId === me.data?.userId) {
+    return me.data?.color ?? null;
+  }
+  return members.data?.find((member) => member.userId === userId)?.color ?? null;
 }
 
 export function memberInvitesQueryKey(orgId: string): readonly [string, string, string] {

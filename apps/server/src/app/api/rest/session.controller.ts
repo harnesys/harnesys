@@ -261,6 +261,7 @@ export class SessionController {
       principal,
       name: body.name,
       avatar: body.avatar,
+      color: body.color,
     });
   }
 

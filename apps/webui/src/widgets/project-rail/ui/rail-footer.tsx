@@ -33,7 +33,14 @@ function AccountAvatarButton() {
       className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
     >
       {me ? (
-        <UserAvatar name={me.name} seed={me.userId} src={me.avatar} size="md" className="size-7" />
+        <UserAvatar
+          name={me.name}
+          seed={me.userId}
+          src={me.avatar}
+          color={me.color}
+          size="md"
+          className="size-7"
+        />
       ) : (
         <UserRoundIcon className="size-4" />
       )}

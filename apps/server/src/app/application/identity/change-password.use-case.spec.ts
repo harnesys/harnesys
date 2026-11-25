@@ -25,7 +25,7 @@ class FakeUsers extends UserRepository {
   readonly rows: UserRecord[] = [];
 
   insert(user: InsertUserInput): void {
-    this.rows.push({ ...user, avatar: null, updatedAt: user.createdAt });
+    this.rows.push({ ...user, avatar: null, color: null, updatedAt: user.createdAt });
   }
 
   findByLogin(login: string): UserRecord | null {

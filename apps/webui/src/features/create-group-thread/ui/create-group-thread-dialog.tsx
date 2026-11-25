@@ -111,6 +111,7 @@ export function CreateGroupThreadDialog({ onResolve }: DialogComponentProps<stri
                   <UserAvatar
                     name={user.name || user.login}
                     seed={user.userId}
+                    color={user.color}
                     size="xs"
                     title={user.name || user.login}
                   />

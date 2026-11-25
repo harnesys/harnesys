@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable, UnauthorizedException } from '@harnesys/brix';
+import type { EntityColorName } from '@harnesys/contracts';
 import { type Principal } from '../../domain/identity/principal.ts';
 import { type AccountRole, roleFromCapabilities } from '../../domain/identity/role-presets.ts';
 import { type UserRecord, UserRepository } from '../../domain/identity/user-repository.port.ts';
@@ -8,6 +9,7 @@ export interface CurrentUserView {
   login: string;
   name: string;
   avatar: string | null;
+  color: EntityColorName | null;
   role: AccountRole;
   capabilities: string[];
 }
@@ -22,6 +24,7 @@ export function currentUserViewOf(user: UserRecord, capabilities: string[]): Cur
     login: user.login,
     name: user.name,
     avatar: user.avatar,
+    color: user.color,
     role: roleFromCapabilities(capabilities),
     capabilities: [...capabilities],
   };
