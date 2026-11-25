@@ -1,24 +1,13 @@
-import path from 'node:path';
-import type {
-  HookCommandShell,
-  HookEventName,
-  HookHandler,
-  HookPayload,
-} from '../../domain/hook.ts';
+import type { HookEventName, HookHandler, HookPayload } from '../../domain/hook.ts';
 import type { ConfigError, UserConfigContentOptions } from '../plugins/user-config.ts';
 import { substituteUserConfig } from '../plugins/user-config.ts';
 import type { HookRuntimeCtx } from './bus.ts';
 import { appendCapturedOutput, mapCommandExit, truncateHookString } from './claude-output.ts';
-import type {
-  HookHandlerResult,
-  HookHandlerVars,
-  HookKillSource,
-  HookProcessEntry,
-} from './executors.ts';
+import type { HookHandlerResult, HookHandlerVars } from './executors.ts';
+import { runShellProcess } from './shell-process.ts';
 
 const DEFAULT_TIMEOUT_S_USER_PROMPT = 30;
 const DEFAULT_TIMEOUT_S = 600;
-const BASH_FAMILY = new Set(['bash', 'zsh', 'sh']);
 const COMMAND_PLACEHOLDERS = [
   '${' + 'CLAUDE_PLUGIN_ROOT}',
   '${' + 'CLAUDE_PLUGIN_DATA}',
@@ -50,93 +39,70 @@ export async function runCommand(
     };
   }
   const timeoutS = h.timeoutS ?? defaultTimeoutS(payload.event, 'command');
-  const spawnOptions: HookSpawnOptions = {
+  const command = expandCommandPlaceholders(resolved.handler.command, vars);
+  const shellForm = resolved.handler.args === undefined ? resolved.handler.shell : undefined;
+  let argv: string[] | undefined;
+  if (shellForm === undefined) {
+    argv = buildCommandArgv(resolved.handler, vars);
+    if (argv === undefined) {
+      return {
+        effects: [],
+        diagnostics: [
+          {
+            level: 'warning',
+            code: 'invalid_command_form',
+            message: `команда не разбирается без шелла: ${h.command} — укажите shell: bash или упростите команду`,
+          },
+        ],
+      };
+    }
+  }
+  const result = await runShellProcess({
+    command,
+    ...(argv !== undefined ? { argv } : {}),
+    ...(shellForm !== undefined ? { shell: shellForm } : {}),
     cwd: vars.pluginRoot,
     env: hookProcessEnv(ctx, vars, resolved.handler.env),
-  };
-  let proc: Bun.Subprocess<'pipe', 'pipe', 'pipe'>;
-  try {
-    const shellForm = resolved.handler.args === undefined ? resolved.handler.shell : undefined;
-    if (shellForm !== undefined) {
-      proc = spawnHookShell(
-        shellForm,
-        expandCommandPlaceholders(resolved.handler.command, vars),
-        spawnOptions,
-      );
-    } else {
-      const argv = buildCommandArgv(resolved.handler, vars);
-      if (argv === undefined) {
-        return {
-          effects: [],
-          diagnostics: [
-            {
-              level: 'warning',
-              code: 'invalid_command_form',
-              message: `команда не разбирается без шелла: ${h.command} — укажите shell: bash или упростите команду`,
-            },
-          ],
-        };
-      }
-      proc = spawnHookCommand(argv, spawnOptions);
-    }
-  } catch (error) {
+    stdin: JSON.stringify(toStdinPayload(payload)),
+    timeoutS,
+    ...(vars.signal !== undefined ? { signal: vars.signal } : {}),
+    ...(vars.registry !== undefined ? { registry: vars.registry } : {}),
+  });
+  if (result.spawnError !== undefined) {
     return {
       effects: [],
       diagnostics: [
         {
           level: 'warning',
           code: 'hook_failed',
-          message: `spawn хука не удался: ${errorMessage(error)}`,
+          message: `spawn хука не удался: ${result.spawnError}`,
         },
       ],
     };
   }
-  let killSource: HookKillSource | undefined;
-  const kill = (source: HookKillSource): void => {
-    killSource = source;
-    killProcessGroup(proc.pid);
-  };
-  const entry: HookProcessEntry = { pid: proc.pid, kill, done: proc.exited };
-  vars.registry?.add(entry);
-  const onAbort = (): void => kill('abort');
-  vars.signal?.addEventListener('abort', onAbort, { once: true });
-  const timer = setTimeout(() => kill('timeout'), timeoutS * 1000);
-  try {
-    const [stdout, stderr, exitCode] = await Promise.all([
-      new Response(proc.stdout).text(),
-      new Response(proc.stderr).text(),
-      writeStdinAndAwaitExit(proc, JSON.stringify(toStdinPayload(payload))),
-    ]);
-    if (killSource === 'timeout') {
-      const message = appendCapturedOutput(`hook timed out after ${timeoutS}s`, stdout, stderr);
-      return {
-        effects: [],
-        diagnostics: [{ level: 'warning', code: 'hook_timeout', message }],
-      };
-    }
-    if (killSource === 'abort' || killSource === 'close') {
-      return { effects: [], diagnostics: [] };
-    }
+  if (result.timedOut) {
+    const message = appendCapturedOutput(
+      `hook timed out after ${timeoutS}s`,
+      result.stdout,
+      result.stderr,
+    );
     return {
-      ...mapCommandExit({ event: payload.event, exitCode, stdout, stderr }),
-      output: truncateHookString(stdout),
+      effects: [],
+      diagnostics: [{ level: 'warning', code: 'hook_timeout', message }],
     };
-  } finally {
-    clearTimeout(timer);
-    vars.signal?.removeEventListener('abort', onAbort);
-    vars.registry?.remove(entry);
-    await proc.exited;
   }
-}
-async function writeStdinAndAwaitExit(
-  proc: Bun.Subprocess<'pipe', 'pipe', 'pipe'>,
-  stdinJson: string,
-): Promise<number | null> {
-  try {
-    proc.stdin.write(stdinJson);
-    await proc.stdin.end();
-  } catch {}
-  return await proc.exited;
+  if (result.aborted) {
+    return { effects: [], diagnostics: [] };
+  }
+  return {
+    ...mapCommandExit({
+      event: payload.event,
+      exitCode: result.exitCode,
+      stdout: result.stdout,
+      stderr: result.stderr,
+    }),
+    output: truncateHookString(result.stdout),
+  };
 }
 function buildCommandArgv(
   h: Extract<
@@ -279,72 +245,6 @@ function tokenizeCommand(command: string): string[] | undefined {
   }
   return tokens;
 }
-interface HookSpawnOptions {
-  cwd: string;
-  env: Record<string, string>;
-}
-function spawnBase(options: HookSpawnOptions) {
-  return {
-    ...options,
-    stdout: 'pipe' as const,
-    stderr: 'pipe' as const,
-    stdin: 'pipe' as const,
-    detached: true,
-  };
-}
-function spawnHookShell(
-  shell: HookCommandShell,
-  command: string,
-  options: HookSpawnOptions,
-): Bun.Subprocess<'pipe', 'pipe', 'pipe'> {
-  const base = spawnBase(options);
-  if (shell === 'powershell') {
-    return Bun.spawn(['pwsh', '-NoProfile', '-Command', command], base);
-  }
-  return Bun.spawn([resolveBashBin(), '-c', command], base);
-}
-function resolveBashBin(): string {
-  const shell = process.env.SHELL;
-  if (shell !== undefined && shell.length > 0) {
-    const base = path.basename(shell);
-    if (BASH_FAMILY.has(base)) {
-      return shell;
-    }
-  }
-  return 'bash';
-}
-function spawnHookCommand(
-  argv: string[],
-  options: HookSpawnOptions,
-): Bun.Subprocess<'pipe', 'pipe', 'pipe'> {
-  const base = spawnBase(options);
-  try {
-    return Bun.spawn(argv, base);
-  } catch (error) {
-    if (!isExecFormatError(error)) {
-      throw error;
-    }
-    return Bun.spawn([resolveBashBin(), ...argv], base);
-  }
-}
-function isExecFormatError(error: unknown): boolean {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-  const code = (error as NodeJS.ErrnoException).code;
-  return code === 'ENOEXEC' || code === 'EACCES' || error.message.startsWith('ENOEXEC');
-}
-function killProcessGroup(pid: number): void {
-  try {
-    process.kill(-pid, 'SIGKILL');
-  } catch {
-    try {
-      process.kill(pid, 'SIGKILL');
-    } catch {
-      return;
-    }
-  }
-}
 function hookProcessEnv(
   ctx: HookRuntimeCtx,
   vars: HookHandlerVars,
@@ -433,7 +333,4 @@ export function defaultTimeoutS(
     return 120;
   }
   return event === 'UserPromptSubmit' ? DEFAULT_TIMEOUT_S_USER_PROMPT : DEFAULT_TIMEOUT_S;
-}
-function errorMessage(error: unknown): string {
-  return error instanceof Error && error.message.length > 0 ? error.message : String(error);
 }

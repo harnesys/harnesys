@@ -12,12 +12,12 @@ import type {
   OrgAddonListResponse,
   TriggerInstanceUpsertBody,
   TriggerInstanceView,
+  TriggerScripts,
 } from '@harnesys/contracts';
 import { AddonEventSchema, LogLineViewSchema, type WorkspaceRef } from '@harnesys/contracts';
 import { queryOptions } from '@tanstack/react-query';
 import { apiJson } from './client';
 import { watchEventSource } from './sse';
-
 export function addonsQueryKey(orgId: string) {
   return ['addons', orgId] as const;
 }
@@ -125,7 +125,13 @@ export function putOrgAddonBindings(
 }
 
 export type AddonTriggerUpsertBody = Omit<TriggerInstanceUpsertBody, 'target'> & {
-  target: { threadId: string; agentId: string; modeId?: string; workspace?: WorkspaceRef };
+  target: {
+    threadId: string;
+    agentId: string;
+    modeId?: string;
+    workspace?: WorkspaceRef;
+    scripts?: TriggerScripts;
+  };
 };
 
 export function orgAddonTriggersQuery(orgId: string, addonId: string) {

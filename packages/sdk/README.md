@@ -85,6 +85,12 @@ threads reject it. `instructions` may be an empty string. Fire with
 the event body, `instructions` live on the instance and are edited in the trigger
 settings. One instance per thread is enforced by the core.
 
+`target.scripts` (pre/post shell commands with an optional gate) is host-owned and never
+appears in `params.target`. It is configured by the operator in the trigger dialog;
+`ctx.triggers.create` strips it and `ctx.triggers.update` preserves the stored value, so an
+add-on can neither read nor arm shell commands. `standard.scripts` can relabel or disable the
+host-owned Scripts block. See `docs/external-addons/trigger-scripts.md`.
+
 `tool-pack`, `trigger`, `job`, `worker`, `route`, `transport`, `hook`, `content`, `config`, `view`, `source-kind`, `mcp`, `lsp` — each with a descriptor interface, Zod schema and schema version (`*_SCHEMA_VERSION = 1`). Tool/route input schemas use the JSON-Schema subset of §6.5 (`src/families/json-schema.ts`): depth ≤ 8, size ≤ 64 KiB, local `$ref` only.
 
 ## Deviations from the plan

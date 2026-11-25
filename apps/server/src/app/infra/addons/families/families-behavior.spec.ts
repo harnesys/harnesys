@@ -5,6 +5,7 @@ import {
   FakeRegistry,
   FakeTriggerWorkspace,
 } from '../../../application/addons/addons.fakes.ts';
+import { buildTriggerScripts } from '../../../application/addons/trigger-script.fakes.ts';
 import { FireTriggerUseCase } from '../../../application/addons/triggers/fire-trigger.use-case.ts';
 import { FireWindowTracker } from '../../../application/addons/triggers/trigger-limits.ts';
 import { AccountHolderBridge } from '../apps-bridge/account-holder.bridge.ts';
@@ -38,7 +39,6 @@ describe('route pattern matcher', () => {
     expect(matchRoutePattern('/a/:/b', '/a/1/b')).toBeNull();
   });
 });
-
 describe('hook queue drop-oldest', () => {
   test('drops oldest entries beyond the limit and counts them', () => {
     const queue = new HookQueue(3);
@@ -171,7 +171,6 @@ describe('job scheduler', () => {
     expect(bundle.jobState.find(OWNER.orgId, OWNER.addonId, 'sync')?.lastStatus).toBe('boom');
   });
 });
-
 describe('trigger fire service', () => {
   const buildFireService = (instances: FakeTriggerInstanceRepository, runs: FakeRunDispatchPort) =>
     new TriggerFireService(
@@ -182,6 +181,7 @@ describe('trigger fire service', () => {
         new FireWindowTracker(),
         new FakeMetrics(),
         new FakeTriggerWorkspace(),
+        buildTriggerScripts(instances).useCase,
         new FakeLogger(),
       ),
       new FakeLogger(),

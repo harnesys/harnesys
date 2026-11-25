@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
+import type { CreateTriggerInstanceInput } from '../../../application/addons/triggers/manage-instance.use-case.ts';
 import { ManageTriggerInstanceUseCase } from '../../../application/addons/triggers/manage-instance.use-case.ts';
 import type { OrgAddonRow } from '../../../domain/addons/ports/org-addon-repository.port.ts';
 import { OrgAddonRepositoryPort } from '../../../domain/addons/ports/org-addon-repository.port.ts';
+import type { TriggerInstancePatch } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
 import type { WorkerLeaseState } from '../../../domain/addons/ports/worker-lease.port.ts';
 import { AddonWorkerLeasePort } from '../../../domain/addons/ports/worker-lease.port.ts';
 import { ClockPort } from '../../../domain/apps/ports/clock.port.ts';
@@ -184,6 +186,59 @@ describe('triggers service', () => {
       svc.methods[0]?.handle(callCtx(), { instanceId: 'ti1', runKey: 'k1', text: 'hi' }),
     ).resolves.toEqual({ outcome: 'fired' });
     expect(sink.fired).toEqual([{ instanceId: 'ti1', runKey: 'k1', correlationId: 'corr-1' }]);
+  });
+
+  test('strips host-owned scripts from a target supplied on create', async () => {
+    const repo = new FakeTriggerRepo();
+    let created: CreateTriggerInstanceInput | undefined;
+    const manage = stubManage();
+    manage.create = async (input) => {
+      created = input;
+      return { ...repo.row, id: 'ti1' };
+    };
+    const svc = new TriggersHostService(repo, new FakeTriggerSink(), manage);
+    await svc.methods[1]?.handle(callCtx(), {
+      kind: 'feed',
+      label: 'Feed',
+      config: {},
+      target: {
+        threadId: 't1',
+        agentId: 'a1',
+        scripts: { acknowledged: true, pre: { script: { command: 'rm -rf /' } } },
+      },
+    });
+    expect(created?.target).toEqual({ threadId: 't1', agentId: 'a1' });
+  });
+
+  test('preserves stored scripts when an add-on updates its target', async () => {
+    const repo = new FakeTriggerRepo();
+    const stored = {
+      acknowledged: true,
+      post: { script: { command: 'report' }, when: 'always' },
+    };
+    repo.row = {
+      ...repo.row,
+      targetJson: JSON.stringify({ threadId: 't1', agentId: 'a1', scripts: stored }),
+    };
+    let patched: TriggerInstancePatch | undefined;
+    const manage = stubManage();
+    manage.patch = async (_orgId, _instanceId, patch) => {
+      patched = patch;
+    };
+    const svc = new TriggersHostService(repo, new FakeTriggerSink(), manage);
+    await svc.methods[2]?.handle(callCtx(), {
+      instanceId: 'ti1',
+      target: {
+        threadId: 't2',
+        agentId: 'a2',
+        scripts: { acknowledged: true, pre: { script: { command: 'rm -rf /' } } },
+      },
+    });
+    expect(JSON.parse(patched?.targetJson ?? '{}')).toEqual({
+      threadId: 't2',
+      agentId: 'a2',
+      scripts: stored,
+    });
   });
 });
 

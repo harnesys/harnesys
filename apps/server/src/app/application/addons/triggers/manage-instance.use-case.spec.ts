@@ -12,6 +12,7 @@ import {
   NullLogger,
   testManifest,
 } from '../addons.fakes.ts';
+import { buildTriggerScripts } from '../trigger-script.fakes.ts';
 import { ManageTriggerInstanceUseCase } from './manage-instance.use-case.ts';
 
 const ACTOR = { kind: 'user' as const, id: 'admin' };
@@ -87,6 +88,7 @@ function build(enabled = true) {
     threadAgents,
     new FakeAutomationEvents(),
     new FakeTriggerWorkspace(),
+    buildTriggerScripts(triggers).runs,
     new NullLogger(),
   );
   return { useCase, triggers, calls, threads, threadAgents };

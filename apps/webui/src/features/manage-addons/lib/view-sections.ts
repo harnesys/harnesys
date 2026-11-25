@@ -102,6 +102,7 @@ export interface TriggerStandardOverrides {
   target?: StandardBlockOverride;
   mode?: StandardBlockOverride;
   instructions?: StandardBlockOverride;
+  scripts?: StandardBlockOverride;
 }
 
 export interface AddonTriggerDescriptor {

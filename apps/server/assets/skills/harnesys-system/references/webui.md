@@ -38,7 +38,7 @@ Desk tabs are addressed under the desk route: `thread/<threadId>`, `board/<board
 | Issues | Boards, sorted by last update. | `+` creates a board from a template; gear opens board settings. |
 | Sources | Attached folders and git repositories with file trees and index state. | `+` attaches a folder or remote git source; visibility/index controls. |
 | Dashboards | Org dashboards. | `+` creates a dashboard; gear edits name/icon/color or deletes. |
-| Automations | Installed add-on trigger automations with status and label. | `+` opens the trigger picker (only kinds whose add-on is connected); gear configures. |
+| Automations | Installed add-on trigger automations with status and label. | `+` opens the trigger picker (only kinds whose add-on is connected); gear configures thread/mode/workspace and the host-owned **Scripts** block (pre/post commands, gate, Test, recent runs). |
 | Git | Changed files per source. | Commit, Push, Update, Add all/selected, New Branch, branch checkout/delete, initialize repo, refresh. Clicking a file opens its diff tab. |
 | Terminal | Terminal sessions (host, ssh, REPL). | `+` opens a new terminal tab. |
 

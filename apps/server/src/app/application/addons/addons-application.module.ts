@@ -33,8 +33,12 @@ import { ListAddonCloudSourcesUseCase } from './sources/list-addon-cloud-sources
 import { PrepareAddonCloudSourceUseCase } from './sources/prepare-addon-cloud-source.use-case.ts';
 import { RefreshAddonCloudSourceUseCase } from './sources/refresh-addon-cloud-source.use-case.ts';
 import { FireTriggerUseCase } from './triggers/fire-trigger.use-case.ts';
+import { ListTriggerScriptRunsUseCase } from './triggers/list-trigger-script-runs.use-case.ts';
 import { ManageTriggerInstanceUseCase } from './triggers/manage-instance.use-case.ts';
+import { RunTriggerScriptsUseCase } from './triggers/run-trigger-scripts.use-case.ts';
+import { TestTriggerScriptUseCase } from './triggers/test-trigger-script.use-case.ts';
 import { FireWindowTracker } from './triggers/trigger-limits.ts';
+import { TriggerPostScriptsService } from './triggers/trigger-post-scripts.service.ts';
 
 const useCases = [
   PlanInstallUseCase,
@@ -53,6 +57,10 @@ const useCases = [
   SetBindingsUseCase,
   ManageTriggerInstanceUseCase,
   FireTriggerUseCase,
+  RunTriggerScriptsUseCase,
+  TriggerPostScriptsService,
+  TestTriggerScriptUseCase,
+  ListTriggerScriptRunsUseCase,
   RunJobUseCase,
   NeutralBridgeInboundUseCase,
   AttachAddonSourceUseCase,

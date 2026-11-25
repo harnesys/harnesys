@@ -86,6 +86,12 @@ export type {
 } from './src/application/hooks/executors.ts';
 export { runHookHandler } from './src/application/hooks/executors.ts';
 export { matchesBinding } from './src/application/hooks/matchers.ts';
+export type {
+  ShellProcessInput,
+  ShellProcessResult,
+  ShellProcessShell,
+} from './src/application/hooks/shell-process.ts';
+export { runShellProcess } from './src/application/hooks/shell-process.ts';
 export {
   type CompactedProjection,
   projectCompacted,

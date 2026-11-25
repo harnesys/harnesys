@@ -1,5 +1,10 @@
-import type { FieldValue, TriggerInstanceView, WorkspaceRef } from '@harnesys/contracts';
-import { WorkspaceRefSchema } from '@harnesys/contracts';
+import type {
+  FieldValue,
+  TriggerInstanceView,
+  TriggerScripts,
+  WorkspaceRef,
+} from '@harnesys/contracts';
+import { TriggerScriptsSchema, WorkspaceRefSchema } from '@harnesys/contracts';
 import { DEFAULT_MODE_ID } from '@harnesys/studio-shared';
 import type { Agent } from '@/entities/agent';
 import type { ClientAutomation } from '@/entities/automation';
@@ -13,6 +18,7 @@ export interface TriggerTargetDraft {
   agentId?: string;
   modeId?: string;
   workspace?: WorkspaceRef;
+  scripts?: TriggerScripts;
 }
 
 export function targetOf(target: unknown): TriggerTargetDraft {
@@ -21,11 +27,13 @@ export function targetOf(target: unknown): TriggerTargetDraft {
   }
   const record = target as Record<string, unknown>;
   const workspace = WorkspaceRefSchema.safeParse(record.workspace);
+  const scripts = TriggerScriptsSchema.safeParse(record.scripts);
   return {
     ...(typeof record.threadId === 'string' ? { threadId: record.threadId } : {}),
     ...(typeof record.agentId === 'string' ? { agentId: record.agentId } : {}),
     ...(typeof record.modeId === 'string' ? { modeId: record.modeId } : {}),
     ...(workspace.success ? { workspace: workspace.data } : {}),
+    ...(scripts.success ? { scripts: scripts.data } : {}),
   };
 }
 
@@ -44,6 +52,7 @@ export function initialDraft(input: {
     threadId: input.target.threadId ?? '',
     modeId: input.target.modeId ?? firstAgent?.defaultModeId ?? DEFAULT_MODE_ID,
     workspace: input.target.workspace ?? null,
+    scripts: input.target.scripts ?? { acknowledged: false },
     instructions: input.instance?.instructions ?? '',
     enabled: input.instance?.status !== 'paused',
     config: initialFieldValues(

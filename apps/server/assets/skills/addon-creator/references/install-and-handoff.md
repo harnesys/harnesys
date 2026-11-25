@@ -76,8 +76,8 @@ After the package builds and passes checks, tell the user exactly this (fill in 
 2. Put the package in place: in the monorepo, the directory `add-ons/<id>/` is enough; otherwise copy it to `~/.harnesys/add-ons/<id>/<version>/` (dev stand: `~/.harnesys-dev/add-ons/...`).
 3. Open **Settings → Add-ons** (`/o/<orgId>/settings/addons`) and press **Reload**; the add-on appears in the list. For a package from a path or `.zip`, use **Install package** instead (review the plan, then confirm).
 4. Open the add-on card (`/o/<orgId>/settings/addons/<addonId>`), flip the toggle, and approve the consent dialog if it lists permissions.
-5. On the same card: **Connect** the required accounts, fill the **Config** fields, and create any **Automations** (triggers).
-6. Confirm it works: the card shows health `running`; check the **logs** panel; test a route or a job **Run now**; grant the pack to an agent and try a tool.
+5. On the same card: **Connect** the required accounts, fill the **Config** fields, and create any **Automations** (triggers). If the trigger needs a preflight check, generate step, gate or cleanup, open the automation gear -> **Scripts**, configure the pre/post command, tick the consent box and press **Test**.
+6. Confirm it works: the card shows health `running`; check the **logs** panel; test a route or a job **Run now**; grant the pack to an agent and try a tool. For a gated trigger, set a deliberately failing condition once and confirm the run is suppressed and appears under **Recent script runs**.
 
 ## Pre-handoff checklist
 
@@ -87,5 +87,6 @@ After the package builds and passes checks, tell the user exactly this (fill in 
 - `version` was bumped for the shipped change.
 - No secret value appears in `ctx.config`, code, or `ctx.log` lines.
 - `trigger.start`/`worker.start`/`lifecycle.upgrade` are idempotent; `runKey` is deterministic.
+- If the trigger has a preflight/gate/cleanup need, the handoff names the **Scripts** block (pre/post, gate, failure policy, Test) instead of claiming the add-on handles it.
 - `grep` the package for `console` and `: any` / `as any` / `!` — none remain.
 - You told the user the exact path in the WebUI and how to verify enablement (`GET /api/orgs/:orgId/addons/:id`, logs, a route/job/tool).

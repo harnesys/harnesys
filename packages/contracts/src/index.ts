@@ -40,4 +40,5 @@ export {
   type UpdateThreadPolicyBody,
   UpdateThreadPolicyBodySchema,
 } from './thread.ts';
+export * from './trigger-scripts.ts';
 export * from './usage.ts';

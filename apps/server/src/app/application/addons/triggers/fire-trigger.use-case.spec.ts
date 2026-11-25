@@ -8,6 +8,7 @@ import {
   InMemoryTriggers,
   NullLogger,
 } from '../addons.fakes.ts';
+import { buildTriggerScripts } from '../trigger-script.fakes.ts';
 import { FireTriggerUseCase } from './fire-trigger.use-case.ts';
 import { FireWindowTracker } from './trigger-limits.ts';
 
@@ -49,6 +50,7 @@ function build(limits?: Record<string, number>) {
     tracker,
     new FakeMetrics(),
     new FakeTriggerWorkspace(),
+    buildTriggerScripts(triggers).useCase,
     new NullLogger(),
   );
   return { useCase, triggers, dispatch, tracker };
@@ -145,6 +147,7 @@ describe('FireTriggerUseCase', () => {
       new FireWindowTracker(),
       new FakeMetrics(),
       new FakeTriggerWorkspace(),
+      buildTriggerScripts(triggers).useCase,
       new NullLogger(),
     );
     expect((await fire(useCase, 'k1')).outcome).toBe('suppressed');

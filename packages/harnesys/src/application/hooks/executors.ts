@@ -4,16 +4,13 @@ import type { UserConfigContentOptions } from '../plugins/user-config.ts';
 import type { HookRuntimeCtx } from './bus.ts';
 import { mapClaudeJsonFields, parseClaudeJsonObject, truncateHookString } from './claude-output.ts';
 import { defaultTimeoutS, runCommand, toStdinPayload } from './command-run.ts';
-export type HookKillSource = 'timeout' | 'abort' | 'close';
-export interface HookProcessEntry {
-  pid: number;
-  kill(source: HookKillSource): void;
-  done: Promise<unknown>;
-}
-export interface HookProcessRegistry {
-  add(entry: HookProcessEntry): void;
-  remove(entry: HookProcessEntry): void;
-}
+import type { HookProcessRegistry } from './shell-process.ts';
+
+export type {
+  HookKillSource,
+  HookProcessEntry,
+  HookProcessRegistry,
+} from './shell-process.ts';
 export interface HookHandlerVars {
   pluginRoot: string;
   pluginData: string;

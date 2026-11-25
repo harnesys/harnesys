@@ -197,6 +197,11 @@ export type AddonTriggerWorkspace =
   | { kind: 'source'; sourceId: string; subpath?: string }
   | { kind: 'worktree'; sourceId: string; worktreeId: string; subpath?: string };
 
+/**
+ * The host-owned target of a trigger instance. `scripts` (pre/post commands with
+ * a gate) is deliberately absent: it is operator-configured, stripped on create
+ * and preserved on update, so an add-on can neither read nor arm it.
+ */
 export interface AddonTriggerTarget {
   threadId: string;
   agentId: string;

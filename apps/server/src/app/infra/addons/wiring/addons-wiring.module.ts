@@ -28,7 +28,11 @@ import { ListAddonCloudSourcesUseCase } from '../../../application/addons/source
 import { PrepareAddonCloudSourceUseCase } from '../../../application/addons/sources/prepare-addon-cloud-source.use-case.ts';
 import { RefreshAddonCloudSourceUseCase } from '../../../application/addons/sources/refresh-addon-cloud-source.use-case.ts';
 import { FireTriggerUseCase } from '../../../application/addons/triggers/fire-trigger.use-case.ts';
+import { ListTriggerScriptRunsUseCase } from '../../../application/addons/triggers/list-trigger-script-runs.use-case.ts';
 import { ManageTriggerInstanceUseCase } from '../../../application/addons/triggers/manage-instance.use-case.ts';
+import { RunTriggerScriptsUseCase } from '../../../application/addons/triggers/run-trigger-scripts.use-case.ts';
+import { TestTriggerScriptUseCase } from '../../../application/addons/triggers/test-trigger-script.use-case.ts';
+import { TriggerScriptProcessPort } from '../../../application/addons/triggers/trigger-script-process.port.ts';
 import { AccountsFacadePort } from '../../../application/apps/accounts-facade.port.ts';
 import { AppsUseCaseModule } from '../../../application/apps/apps.use-case.module.ts';
 import { ThreadUseCaseModule } from '../../../application/threads/thread.use-case.module.ts';
@@ -53,6 +57,7 @@ import { PermissionDefinitionsPort } from '../../../domain/addons/ports/permissi
 import { AddonRouteTablePort } from '../../../domain/addons/ports/route-table.port.ts';
 import { AddonTransportBindingRepositoryPort } from '../../../domain/addons/ports/transport-binding-repository.port.ts';
 import { TriggerInstanceRepositoryPort } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
+import { TriggerScriptRunRepositoryPort } from '../../../domain/addons/ports/trigger-script-run-repository.port.ts';
 import { AddonViewerTablePort } from '../../../domain/addons/ports/viewer-table.port.ts';
 import { ClockPort } from '../../../domain/apps/ports/clock.port.ts';
 import { InboundEventPort } from '../../../domain/apps/ports/inbound-event.port.ts';
@@ -99,6 +104,7 @@ import { AddonSecretService } from '../storage/addon-secret.service.ts';
 import { AddonStorageModule } from '../storage/storage.module.ts';
 import { AddonSupervisorModule } from '../supervisor/supervisor.module.ts';
 import { SupervisorHooks } from '../supervisor/supervisor-deps.ts';
+import { TriggerScriptsModule } from '../triggers/trigger-scripts.module.ts';
 import { OrgAuditAddonAdapter } from './addon-audit.adapter.ts';
 import { AddonDbAccessAdapter } from './addon-db-access.adapter.ts';
 import { AddonEventForwarder } from './addon-event-forwarder.ts';
@@ -156,6 +162,7 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     SecretModule,
     AppsUseCaseModule,
     FleetHubModule,
+    TriggerScriptsModule,
   ],
   providers: [
     { provide: GrantPolicyPort, useClass: FileGrantPolicyAdapter },
@@ -321,9 +328,14 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     AddonCloudMaterializer,
     ManageTriggerInstanceUseCase,
     FireTriggerUseCase,
+    RunTriggerScriptsUseCase,
+    TestTriggerScriptUseCase,
+    ListTriggerScriptRunsUseCase,
     RunJobUseCase,
     AddonReconciler,
     AddonJobScheduler,
+    TriggerScriptProcessPort,
+    TriggerScriptRunRepositoryPort,
   ],
 })
 export class AddonWiringModule {}

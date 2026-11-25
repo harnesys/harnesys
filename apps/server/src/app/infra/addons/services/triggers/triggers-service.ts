@@ -8,6 +8,7 @@ import type {
   HostMethodSpec,
   HostServiceModule,
 } from '../../../../domain/addons/host-service.ts';
+import type { TriggerInstanceRow } from '../../../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { TriggerInstanceRepositoryPort } from '../../../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { serviceMethod } from '../method.ts';
 import { TriggerFireSink } from '../sinks.ts';
@@ -83,7 +84,7 @@ export class TriggersHostService implements HostServiceModule {
       label: params.label,
       config: params.config as JsonObject,
       ...(params.instructions !== undefined ? { instructions: params.instructions } : {}),
-      target: params.target,
+      target: this.targetOf(params.target),
       enabled: true,
       actor: { kind: 'host', id: ctx.addonId },
       actorUserId: null,
@@ -109,10 +110,45 @@ export class TriggersHostService implements HostServiceModule {
     await this.manage.patch(ctx.orgId, params.instanceId, {
       ...(params.label !== undefined ? { label: params.label } : {}),
       ...(params.config !== undefined ? { configJson: JSON.stringify(params.config) } : {}),
-      ...(params.target !== undefined ? { targetJson: JSON.stringify(params.target) } : {}),
+      ...(params.target !== undefined
+        ? { targetJson: JSON.stringify(this.mergedTarget(row, params.target)) }
+        : {}),
       ...(params.instructions !== undefined ? { instructions: params.instructions } : {}),
       ...(params.enabled !== undefined ? { enabled: params.enabled } : {}),
     });
     return { instanceId: params.instanceId };
+  }
+
+  private targetOf(target: TriggerTargetParams): TriggerTargetParams {
+    return {
+      threadId: target.threadId,
+      agentId: target.agentId,
+      ...(target.modeId === undefined ? {} : { modeId: target.modeId }),
+      ...(target.workspace === undefined ? {} : { workspace: target.workspace }),
+    };
+  }
+
+  private mergedTarget(
+    row: TriggerInstanceRow,
+    target: TriggerTargetParams,
+  ): Record<string, unknown> {
+    const merged: Record<string, unknown> = { ...this.targetOf(target) };
+    const scripts = hostScriptsOf(row.targetJson);
+    if (scripts !== undefined) {
+      merged.scripts = scripts;
+    }
+    return merged;
+  }
+}
+
+function hostScriptsOf(targetJson: string): unknown {
+  try {
+    const parsed: unknown = JSON.parse(targetJson);
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return undefined;
+    }
+    return (parsed as Record<string, unknown>).scripts;
+  } catch {
+    return undefined;
   }
 }

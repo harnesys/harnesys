@@ -1,8 +1,21 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@harnesys/brix';
-import type { TriggerInstanceView } from '@harnesys/contracts';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@harnesys/brix';
+import type { TriggerInstanceView, TriggerScriptRunList } from '@harnesys/contracts';
+import { TriggerScriptTestRequestSchema } from '@harnesys/contracts';
 import type { JsonObject } from '@harnesys/sdk';
 import { z } from 'zod';
+import { ListTriggerScriptRunsUseCase } from '../../application/addons/triggers/list-trigger-script-runs.use-case.ts';
 import { ManageTriggerInstanceUseCase } from '../../application/addons/triggers/manage-instance.use-case.ts';
+import { TestTriggerScriptUseCase } from '../../application/addons/triggers/test-trigger-script.use-case.ts';
 import { TriggerTargetSchema } from '../../application/addons/triggers/trigger-target.schema.ts';
 import { principalUserId } from '../../application/threads/run-attribution.ts';
 import { AddonException } from '../../domain/addons/errors.ts';
@@ -29,6 +42,9 @@ const PatchBodySchema = z.object({
   target: TriggerTargetSchema.optional(),
   enabled: z.boolean().optional(),
 });
+const ScriptRunsQuerySchema = z.object({
+  limit: z.coerce.number().int().positive().max(100).default(20),
+});
 
 @UseGuards(OrgAccessGuard)
 @Controller('orgs/:orgId/addons/:addonId/triggers')
@@ -37,8 +53,9 @@ export class AddonsOrgTriggersController {
     private readonly manage: ManageTriggerInstanceUseCase,
     private readonly instances: TriggerInstanceRepositoryPort,
     private readonly orgAddons: OrgAddonRepositoryPort,
+    private readonly scriptRunList: ListTriggerScriptRunsUseCase,
+    private readonly testScript: TestTriggerScriptUseCase,
   ) {}
-
   @Get()
   list(
     @Param('orgId') orgId: string,
@@ -119,6 +136,30 @@ export class AddonsOrgTriggersController {
   @Post(':tid/disable')
   async disable(@Param('orgId') orgId: string, @Param('tid') tid: string): Promise<void> {
     await this.manage.disable({ orgId, instanceId: tid });
+  }
+
+  @UseGuards(AddonOrgAdminGuard)
+  @Get(':tid/script-runs')
+  scriptRuns(
+    @Param('orgId') orgId: string,
+    @Param('addonId') addonId: string,
+    @Param('tid') tid: string,
+    @Query(ScriptRunsQuerySchema) query: z.infer<typeof ScriptRunsQuerySchema>,
+  ): TriggerScriptRunList {
+    this.assertRow(orgId, addonId);
+    return this.scriptRunList.execute({ orgId, addonId, instanceId: tid, limit: query.limit });
+  }
+
+  @UseGuards(AddonOrgAdminGuard)
+  @Post(':tid/scripts/test')
+  testScriptRoute(
+    @Param('orgId') orgId: string,
+    @Param('addonId') addonId: string,
+    @Param('tid') tid: string,
+    @Body(TriggerScriptTestRequestSchema) body: z.infer<typeof TriggerScriptTestRequestSchema>,
+  ) {
+    this.assertRow(orgId, addonId);
+    return this.testScript.execute({ orgId, addonId, instanceId: tid, body });
   }
 
   private assertRow(orgId: string, addonId: string): void {

@@ -2,6 +2,7 @@ import { Module } from '@harnesys/brix';
 import { ThreadUseCaseModule } from '../../application/threads/thread.use-case.module.ts';
 import { AttachmentRepositoryPort } from '../../domain/thread/attachment-repository.port.ts';
 import { AttachmentStoragePort } from '../../domain/thread/attachment-storage.port.ts';
+import { RunCwdResolverPort } from '../../domain/thread/run-cwd.port.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadEventsPort } from '../../domain/thread/thread-events.port.ts';
 import { ThreadExportReaderPort } from '../../domain/thread/thread-export-reader.port.ts';
@@ -12,6 +13,7 @@ import { TriggerWorkspacePort } from '../../domain/thread/trigger-workspace.port
 import { MachineHomeModule } from '../machine-home/machine-home.module.ts';
 import { AttachmentRepositoryAdapter } from './attachment-repository.adapter.ts';
 import { AttachmentStorageAdapter } from './attachment-storage.adapter.ts';
+import { RunCwdResolverAdapter } from './run-cwd.adapter.ts';
 import { ThreadAgentRepositoryAdapter } from './thread-agent-repository.adapter.ts';
 import { ThreadEventsAdapter } from './thread-events.adapter.ts';
 import { ThreadExportReaderAdapter } from './thread-export-reader.adapter.ts';
@@ -33,6 +35,7 @@ import { TriggerWorkspaceAdapter } from './trigger-workspace.adapter.ts';
     { provide: ThreadExportReaderPort, useClass: ThreadExportReaderAdapter },
     { provide: ThreadHistoryPagePort, useClass: ThreadHistoryPageAdapter },
     { provide: TriggerWorkspacePort, useClass: TriggerWorkspaceAdapter },
+    { provide: RunCwdResolverPort, useClass: RunCwdResolverAdapter },
   ],
   exports: [
     ThreadRepositoryPort,
@@ -44,6 +47,7 @@ import { TriggerWorkspaceAdapter } from './trigger-workspace.adapter.ts';
     ThreadExportReaderPort,
     ThreadHistoryPagePort,
     TriggerWorkspacePort,
+    RunCwdResolverPort,
   ],
 })
 export class ThreadModule {}

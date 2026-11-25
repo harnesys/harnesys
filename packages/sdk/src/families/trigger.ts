@@ -31,6 +31,8 @@ export interface TriggerStandardBlocks {
   target?: StandardFieldOverride;
   mode?: StandardFieldOverride;
   instructions?: StandardFieldOverride;
+  /** Host-owned pre/post script block. Shown by default; scripts stay operator-configured. */
+  scripts?: StandardFieldOverride;
 }
 
 export const StandardFieldOverrideSchema = z.object({
@@ -76,6 +78,7 @@ export const TriggerDescriptorSchema = z.object({
       target: StandardFieldOverrideSchema.optional(),
       mode: StandardFieldOverrideSchema.optional(),
       instructions: StandardFieldOverrideSchema.optional(),
+      scripts: StandardFieldOverrideSchema.optional(),
     })
     .optional(),
 });

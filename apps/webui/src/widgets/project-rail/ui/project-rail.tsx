@@ -62,7 +62,7 @@ export function ProjectRail({
         <div className="flex shrink-0 items-center justify-center">
           <InboxBell />
         </div>
-        <div aria-hidden className="mx-auto my-1.5 h-px w-8 shrink-0 bg-sidebar-border" />
+        <div aria-hidden className="mx-auto my-2 h-px w-6 shrink-0 bg-sidebar-border" />
         <nav
           aria-label="Sections"
           className="no-scrollbar flex min-h-0 flex-1 flex-col items-center gap-1.5 overflow-y-auto px-1 pb-2"

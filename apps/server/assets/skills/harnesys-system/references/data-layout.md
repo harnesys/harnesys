@@ -19,7 +19,7 @@ The host root is `~/.harnesys/` unless `harnesys.home` overrides it. Paths below
     addons.lock.json           # install lock
     .staging/  .extract/       # install scratch dirs
   orgs/<orgId>/                # one directory per organization (state)
-    org.db                     # agents, threads, boards, issues, dashboards, plans, automations, memory, knowledge index, usage
+    org.db                     # agents, threads, boards, issues, dashboards, plans, automations, trigger script runs, memory, knowledge index, usage
     settings.json              # org settings (e.g. skillsSourceAutoLoad)
     mcp.json                   # org MCP server config
     lsp.json                   # org language-server defaults

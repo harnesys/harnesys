@@ -11,6 +11,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/select';
+import { Textarea } from '@/shared/ui/textarea';
+
+export function InstructionsBlock({
+  standard,
+  value,
+  onChange,
+}: {
+  standard: TriggerStandardOverrides;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <Field>
+      <FieldLabel htmlFor="addon-trigger-instructions">
+        {standard.instructions?.label ?? 'Instructions'}
+        {standard.instructions?.required ? <span className="text-destructive"> *</span> : null}
+      </FieldLabel>
+      <Textarea
+        id="addon-trigger-instructions"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="What the agent should do with the trigger data"
+        className="min-h-20"
+        data-testid="addon-trigger-instructions"
+      />
+      <FieldDescription>
+        {standard.instructions?.help ??
+          'Sent to the agent with every fired trigger, on top of the event data.'}
+      </FieldDescription>
+    </Field>
+  );
+}
 
 export function NameAgentBlock({
   standard,

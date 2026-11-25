@@ -56,6 +56,43 @@ CREATE TABLE IF NOT EXISTS addon_trigger_fires (
 );
 `;
 
+export const CREATE_ADDON_TRIGGER_SCRIPT_RUNS_SQL = `
+CREATE TABLE IF NOT EXISTS addon_trigger_script_runs (
+  id            TEXT PRIMARY KEY NOT NULL,
+  org_id        TEXT NOT NULL,
+  instance_id   TEXT NOT NULL,
+  addon_id      TEXT NOT NULL,
+  stage         TEXT NOT NULL,
+  run_id        TEXT,
+  status        TEXT NOT NULL,
+  exit_code     INTEGER,
+  duration_ms   INTEGER NOT NULL DEFAULT 0,
+  cwd           TEXT NOT NULL DEFAULT '',
+  gate_verdict  TEXT,
+  summary       TEXT,
+  stdout_tail   TEXT NOT NULL DEFAULT '',
+  stderr_tail   TEXT NOT NULL DEFAULT '',
+  created_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS addon_trigger_script_runs_instance
+  ON addon_trigger_script_runs (org_id, instance_id, created_at);
+`;
+
+export const CREATE_ADDON_TRIGGER_PENDING_POSTS_SQL = `
+CREATE TABLE IF NOT EXISTS addon_trigger_pending_posts (
+  run_id       TEXT PRIMARY KEY NOT NULL,
+  org_id       TEXT NOT NULL,
+  instance_id  TEXT NOT NULL,
+  addon_id     TEXT NOT NULL,
+  cwd          TEXT NOT NULL,
+  post_json    TEXT NOT NULL,
+  context_json TEXT NOT NULL DEFAULT '{}',
+  created_at   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS addon_trigger_pending_posts_instance
+  ON addon_trigger_pending_posts (org_id, instance_id);
+`;
+
 export const CREATE_ADDON_JOB_STATE_SQL = `
 CREATE TABLE IF NOT EXISTS addon_job_state (
   org_id      TEXT NOT NULL,
@@ -152,6 +189,8 @@ export function ensureAddonsPlatformSchema(exec: (sql: string) => void): void {
   exec(CREATE_ADDON_BINDINGS_SQL);
   exec(CREATE_ADDON_TRIGGER_INSTANCES_SQL);
   exec(CREATE_ADDON_TRIGGER_FIRES_SQL);
+  exec(CREATE_ADDON_TRIGGER_SCRIPT_RUNS_SQL);
+  exec(CREATE_ADDON_TRIGGER_PENDING_POSTS_SQL);
   exec(CREATE_ADDON_JOB_STATE_SQL);
   exec(CREATE_ADDON_TRANSPORT_BINDINGS_SQL);
   exec(CREATE_ADDON_TRANSPORT_SESSIONS_SQL);

@@ -1,4 +1,4 @@
-import type { FieldValue, WorkspaceRef } from '@harnesys/contracts';
+import type { FieldValue, TriggerScripts, WorkspaceRef } from '@harnesys/contracts';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Agent } from '@/entities/agent';
 import type { ClientAutomation } from '@/entities/automation';
@@ -26,6 +26,7 @@ export interface AddonTriggerDraft {
   threadId: string;
   modeId: string;
   workspace: WorkspaceRef | null;
+  scripts: TriggerScripts;
   instructions: string;
   enabled: boolean;
   config: Record<string, FieldValue>;
@@ -41,6 +42,7 @@ export interface AddonTriggerBody {
     agentId: string;
     modeId: string;
     workspace?: WorkspaceRef;
+    scripts?: TriggerScripts;
   };
   enabled: boolean;
 }

@@ -29,6 +29,7 @@ One server process (`apps/server`, Bun + Hono) hosts many organizations. Each or
 
 - **Desk** (`/o/<orgId>/`): the shell. Left sidebar holds Inbox, Agents, Channels, Issues, Sources, Dashboards, Automations, Git, Terminal; the center opens tabs (threads, boards, dashboards, files, diffs, terminals); the right inspector shows the agent or plan or memory, or a dashboard widget constructor.
 - **Boards and issues**: shared multi-agent tracking. A board has statuses with categories (`backlog`, `started`, `finished`, `cancelled`), an entry status, and automation rules that can assign an agent when an issue enters a status.
+- **Automations**: add-on trigger instances. Each instance stores the agent, thread, mode, workspace and instructions; the trigger dialog also owns the **Scripts** block (pre/post commands, gate, failure policy, Test, recent runs). Scripts run on the host in the instance workspace and cannot be read or set by the add-on.
 - **Dashboards**: org-level canvases of widgets. Agents with the `dashboards` pack author widgets as JSON docs; agent-authored widgets land as drafts until a human approves them in the UI.
 - **Assistant panel**: a floating chat (sparkles button in the sidebar header) that talks to an org agent, Genie by default. It can switch agent and thread and keeps its own history per agent.
 - **First run**: `/onboarding/*` wizard (organization → provider → models → agents), then a setup checklist next to the inbox bell and a seeded "Getting started" board on the first desk visit.

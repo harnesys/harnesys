@@ -1,4 +1,5 @@
 import type { FieldValue, OrgAddonDetail, TriggerInstanceView } from '@harnesys/contracts';
+import { hasTriggerScripts } from '@harnesys/contracts';
 import { type AgentMode, DEFAULT_MODE, DEFAULT_MODE_ID } from '@harnesys/studio-shared';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -26,9 +27,8 @@ import {
 import { resolveL10n } from '@/shared/lib/l10n';
 import { type DialogComponentProps, dialog } from '@/shared/services/overlay';
 import { Badge } from '@/shared/ui/badge';
-import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/shared/ui/field';
+import { FieldGroup } from '@/shared/ui/field';
 import { RowListSkeleton, SettingsErrorBanner } from '@/shared/ui/settings-kit';
-import { Textarea } from '@/shared/ui/textarea';
 import type {
   AddonTriggerDialogData,
   AddonTriggerDialogResult,
@@ -37,7 +37,14 @@ import type {
 import { useAddonTriggerActions } from '../model/addon-trigger';
 import { initialDraft, targetOf } from './addon-trigger-draft';
 import { AddonTriggerFooter } from './addon-trigger-footer';
-import { ConnectionMissingBanner, ModeBlock, NameAgentBlock } from './trigger-standard-blocks';
+import { TriggerScriptRunsList } from './trigger-script-runs';
+import { TriggerScriptsField, validateTriggerScripts } from './trigger-scripts-field';
+import {
+  ConnectionMissingBanner,
+  InstructionsBlock,
+  ModeBlock,
+  NameAgentBlock,
+} from './trigger-standard-blocks';
 import { resolveTriggerThread, TriggerTargetField } from './trigger-target-field';
 
 function CronField({ value, onChange }: FormWidgetProps) {
@@ -145,6 +152,7 @@ function AddonTriggerForm({
     : undefined;
   const missingConnection = connection ? connection.accountIds.length === 0 : false;
   const validation = buildValidator(fields)(draft.config, {});
+  const scriptsError = validateTriggerScripts(draft.scripts);
   const instructionsMissing =
     standard.instructions?.required === true && draft.instructions.trim().length === 0;
   const canSave =
@@ -152,6 +160,7 @@ function AddonTriggerForm({
     draft.agentId.length > 0 &&
     !missingConnection &&
     !instructionsMissing &&
+    scriptsError === null &&
     Object.keys(validation).length === 0;
 
   const actions = useAddonTriggerActions(orgId, addonId, automation);
@@ -174,6 +183,7 @@ function AddonTriggerForm({
             agentId: draft.agentId,
             modeId: draft.modeId,
             ...(draft.workspace === null ? {} : { workspace: draft.workspace }),
+            ...(hasTriggerScripts(draft.scripts) ? { scripts: draft.scripts } : {}),
           },
           enabled: draft.enabled,
         },
@@ -294,26 +304,30 @@ function AddonTriggerForm({
             </div>
           ) : null}{' '}
           {standard.instructions?.disabled ? null : (
-            <Field>
-              <FieldLabel htmlFor="addon-trigger-instructions">
-                {standard.instructions?.label ?? 'Instructions'}
-                {standard.instructions?.required ? (
-                  <span className="text-destructive"> *</span>
-                ) : null}
-              </FieldLabel>
-              <Textarea
-                id="addon-trigger-instructions"
-                value={draft.instructions}
-                onChange={(event) => update('instructions', event.target.value)}
-                placeholder="What the agent should do with the trigger data"
-                className="min-h-20"
-                data-testid="addon-trigger-instructions"
-              />
-              <FieldDescription>
-                {standard.instructions?.help ??
-                  'Sent to the agent with every fired trigger, on top of the event data.'}
-              </FieldDescription>
-            </Field>
+            <InstructionsBlock
+              standard={standard}
+              value={draft.instructions}
+              onChange={(value) => update('instructions', value)}
+            />
+          )}
+          {standard.scripts?.disabled ? null : (
+            <TriggerScriptsField
+              orgId={orgId}
+              addonId={addonId}
+              instanceId={automation?.id}
+              scripts={draft.scripts}
+              {...(standard.scripts?.label === undefined ? {} : { title: standard.scripts.label })}
+              {...(standard.scripts?.help === undefined
+                ? {}
+                : { description: standard.scripts.help })}
+              onChange={(scripts) => update('scripts', scripts)}
+            />
+          )}
+          {automation === null ? null : (
+            <TriggerScriptRunsList orgId={orgId} addonId={addonId} instanceId={automation.id} />
+          )}
+          {scriptsError === null ? null : (
+            <p className="text-destructive text-xs">{scriptsError}</p>
           )}
           {Object.keys(validation).length > 0 ? (
             <p className="text-destructive text-xs">Fill the required settings before saving.</p>

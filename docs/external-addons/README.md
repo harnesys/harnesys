@@ -19,6 +19,7 @@ contributions is actually used.
 | 4 | [Build and package](build-and-package.md) | The bundle, what goes into the package, versioning, migrations, limits |
 | 5 | [Install on a host](install-on-a-host.md) | Manual install, **Install package**, enabling in an organization, logs and health, quarantine — plus the exact handoff an agent gives the owner |
 | 6 | [Troubleshooting](troubleshooting.md) | The common failures and what to check for each |
+| 7 | [Trigger scripts](trigger-scripts.md) | Host-owned pre/post commands on trigger instances: gate, failure policy, cwd, audit, add-on contract |
 
 ## The template
 

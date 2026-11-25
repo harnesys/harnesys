@@ -12,6 +12,7 @@ import type {
   TriggerInstanceRow,
 } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { TriggerInstanceRepositoryPort } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
+import { TriggerScriptRunRepositoryPort } from '../../../domain/addons/ports/trigger-script-run-repository.port.ts';
 import { AutomationEventsPort } from '../../../domain/automations/automation-events.port.ts';
 import { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
@@ -53,6 +54,7 @@ export class ManageTriggerInstanceUseCase {
     private readonly threadAgents: ThreadAgentRepositoryPort,
     private readonly automationEvents: AutomationEventsPort,
     private readonly triggerWorkspace: TriggerWorkspacePort,
+    private readonly scriptRuns: TriggerScriptRunRepositoryPort,
     @Inject(Logger) logger: Logger,
   ) {
     this.logger = logger.child('addons-trigger-instances');
@@ -115,6 +117,7 @@ export class ManageTriggerInstanceUseCase {
     const instance = this.require(input.orgId, input.instanceId);
     await this.stop(instance.id, input.orgId, instance.addonId, 'removed');
     this.triggers.remove(input.orgId, input.instanceId);
+    this.scriptRuns.removePendingForInstance(input.orgId, input.instanceId);
     this.emitChanged(input.orgId, instance.addonId, instance.triggerId, 'removed');
   }
 
@@ -216,10 +219,15 @@ export class ManageTriggerInstanceUseCase {
   private assertTarget(orgId: string, target: unknown, exceptInstanceId?: string): TriggerTarget {
     const parsed = TriggerTargetSchema.safeParse(target);
     if (!parsed.success) {
+      const acknowledgement = parsed.error.issues.some(
+        (issue) => issue.path.join('.') === 'scripts.acknowledged',
+      );
       throw new AddonException(
         'invalid_params',
         422,
-        'target must be an object with threadId, agentId, optional modeId and workspace',
+        acknowledgement
+          ? 'trigger scripts must be acknowledged before saving'
+          : 'target must be an object with threadId, agentId, optional modeId, workspace and scripts',
       );
     }
     const thread = this.threads.findById(orgId, parsed.data.threadId);

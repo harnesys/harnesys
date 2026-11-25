@@ -125,7 +125,10 @@ const cron: TriggerPair = {
   instance `config`, the host-owned `target` and the operator-facing `instructions`. The
   host appends `instructions` to every fired run, so an add-on normally does not repeat
   them as `text`. `trigger.stop` carries the reason (pause vs removal).
-- `target` is validated by the host: `{ threadId, agentId, modeId?, workspace? }`.
+- `target` is validated by the host: `{ threadId, agentId, modeId?, workspace?, scripts? }`.
+  `scripts` (pre/post shell commands with an optional gate) is host-owned and never visible
+  to the add-on: `params.target` carries only thread, agent, mode and workspace. See
+  `docs/external-addons/trigger-scripts.md`.
   `workspace` is a `WorkspaceRef` (`inherit` | `sandbox` | `folder{path}` |
   `source{sourceId, subpath?}` | `worktree{sourceId, worktreeId, subpath?}`). The host
   applies it to the target thread's workspace binding, so the trigger's folder is the
@@ -145,6 +148,13 @@ const cron: TriggerPair = {
   deduplicated by `(instanceId, runKey)`. `text` is the event body, `title` the card
   heading, `fields` are labelled chips. `limits` (`perDay`, `throttleSec`, `maxBurst`) are
   enforced by the host.
+- `target.scripts` adds host-owned pre/post shell commands with an optional gate. The add-on
+  never sees them: `trigger.start` and `params.target` exclude `scripts`, `ctx.triggers.create`
+  strips any supplied value, and `ctx.triggers.update` preserves the stored one. The pre
+  script runs before the fire limits and may suppress the run (`exit 2`, a failed gate, a
+  failed command under `onError: skip-run`); the post script runs after the run reaches a
+  terminal status. Operators configure and test scripts in the trigger dialog. `standard.scripts`
+  relabels or disables that block. Semantics: `docs/external-addons/trigger-scripts.md`.
 
 ## job
 

@@ -30,3 +30,22 @@ Start with `references/workflow.md` - it is the end-to-end path from scaffold to
 - Keep secrets out of `ctx.log` and out of `ctx.config`; use the `secret` field type and `ctx.secrets`.
 - No `console` (use `ctx.log`), no polling timers, no `any` / `!`, kebab-case files, `interface` for object shapes.
 - English only for all user-visible text in the package.
+
+## Trigger scripts (host-owned)
+
+Every trigger instance has a host-owned **Scripts** block in its settings: pre/post shell
+commands with an optional gate and a per-trigger consent checkbox. The add-on neither sees
+nor sets it.
+
+- `trigger.start` and `params.target` carry only `threadId`, `agentId`, `modeId?`,
+  `workspace?`. `scripts` is never included; `ctx.triggers.create` strips it and
+  `ctx.triggers.update` preserves the stored value.
+- A pre script runs before the fire limits: `exit 2`, an unmatched gate, or a failed command
+  under `onError: skip-run` suppresses the run without creating one. A post script runs after
+  the run reaches a terminal status (`always | success | failure`).
+- The script's `pwd` is the instance workspace, the same directory the fired run uses, not the
+  add-on process cwd.
+- A "fire only when something changed" need is a pre-script gate, not new polling machinery in
+  the add-on. `standard.scripts` can relabel or disable the block; mention it in the handoff.
+- Operator reference: `docs/external-addons/trigger-scripts.md`. UI path: Automations -> gear -> Scripts; the
+  Test button runs the command in the current workspace without waiting for a fire.
