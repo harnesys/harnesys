@@ -132,7 +132,6 @@ function DepartmentMemberRow({
       onSelectDone={onSelectDone}
       onToggleExpanded={() => toggle(agent.id)}
       onSettings={() => onAgentSettings(agent)}
-      moveAction={<AgentMoveMenu agent={agent} />}
       avatarHighlight={isLead}
     />
   );
