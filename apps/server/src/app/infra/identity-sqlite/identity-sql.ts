@@ -63,8 +63,10 @@ export const CREATE_USER_INVITES_SQL = `
 CREATE TABLE IF NOT EXISTS user_invites (
   id TEXT PRIMARY KEY NOT NULL,
   org_id TEXT NOT NULL,
+  code TEXT,
   code_hash TEXT NOT NULL,
   capabilities_json TEXT NOT NULL,
+  created_at TEXT,
   expires_at TEXT NOT NULL,
   used_at TEXT,
   created_by TEXT NOT NULL
@@ -110,6 +112,19 @@ export function migrateUserAvatarColumn(
   }
 }
 
+export function migrateUserInviteColumns(
+  exec: (sql: string) => void,
+  all: (sql: string) => Array<{ name: string }>,
+): void {
+  const present = new Set(all('PRAGMA table_info(user_invites)').map((column) => column.name));
+  if (!present.has('code')) {
+    exec('ALTER TABLE user_invites ADD COLUMN code TEXT');
+  }
+  if (!present.has('created_at')) {
+    exec('ALTER TABLE user_invites ADD COLUMN created_at TEXT');
+  }
+}
+
 export function migrateIdentityLinkProfileColumns(
   exec: (sql: string) => void,
   all: (sql: string) => Array<{ name: string }>,
@@ -148,6 +163,7 @@ export function ensureIdentitySchema(
   exec(CREATE_IDENTITY_LINKS_SQL);
   if (all) {
     migrateUserAvatarColumn(exec, all);
+    migrateUserInviteColumns(exec, all);
     migrateIdentityLinkProfileColumns(exec, all);
   }
   exec(CREATE_IDENTITY_LINK_CODES_SQL);

@@ -11,6 +11,8 @@ import {
 
 type GateState = 'checking' | 'login' | 'signup' | 'ready';
 
+const PUBLIC_PATHS = new Set(['/accept']);
+
 export function SessionGate({ children }: { children: ReactNode }) {
   const [state, setState] = useState<GateState>(() => (getAccess() ? 'ready' : 'checking'));
 
@@ -56,6 +58,9 @@ export function SessionGate({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
+    if (PUBLIC_PATHS.has(appRouter.state.location.pathname)) {
+      return;
+    }
     if (state === 'login') {
       if (appRouter.state.location.pathname !== '/login') {
         void appRouter.navigate('/login', { replace: true });

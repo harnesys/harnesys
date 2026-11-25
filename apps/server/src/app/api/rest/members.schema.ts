@@ -16,3 +16,8 @@ export const InviteAcceptBodySchema = z.object({
   password: z.string().min(1),
 });
 export type InviteAcceptBody = z.infer<typeof InviteAcceptBodySchema>;
+
+export const InvitePreviewBodySchema = z.object({
+  code: z.string().min(1),
+});
+export type InvitePreviewBody = z.infer<typeof InvitePreviewBodySchema>;

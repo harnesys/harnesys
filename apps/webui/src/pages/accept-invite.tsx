@@ -1,17 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { OnboardingShell } from '@/features/onboarding';
 import { OnboardingField } from '@/features/onboarding/ui/onboarding-field';
 import { ApiError } from '@/shared/api/client';
-import { type AcceptedMemberInvite, acceptMemberInvite } from '@/shared/api/members';
+import {
+  type AcceptedMemberInvite,
+  acceptMemberInvite,
+  previewMemberInvite,
+} from '@/shared/api/members';
 import { sessionLogin } from '@/shared/api/session';
 import { studioPath } from '@/shared/config/routes';
 import { Button } from '@/shared/ui/button';
+import { Spinner } from '@/shared/ui/spinner';
 
 function describeFailure(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.status === 410) {
-      return 'Invite is unknown, expired, or already used';
+      return 'This invite link is invalid, expired, or already used. Ask the organization admin for a new invite link.';
     }
     if (err.status === 401) {
       return 'This login already exists with a different password';
@@ -24,11 +29,40 @@ function describeFailure(err: unknown): string {
 export function AcceptInvitePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [code, setCode] = useState(searchParams.get('code') ?? '');
+  const initialCode = (searchParams.get('code') ?? '').trim();
+  const [code, setCode] = useState(initialCode);
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(initialCode.length > 0);
+  const [invalid, setInvalid] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!initialCode) {
+      return;
+    }
+    let cancelled = false;
+    previewMemberInvite(initialCode)
+      .then(() => {
+        if (!cancelled) {
+          setChecking(false);
+        }
+      })
+      .catch((err: unknown) => {
+        if (cancelled) {
+          return;
+        }
+        setChecking(false);
+        if (err instanceof ApiError && err.status === 410) {
+          setInvalid(true);
+          setError(describeFailure(err));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialCode]);
 
   const submit = async () => {
     if (!code.trim() || !login.trim() || !password) {
@@ -52,14 +86,47 @@ export function AcceptInvitePage() {
     }
   };
 
+  if (checking) {
+    return (
+      <OnboardingShell testId="invite-accept">
+        <div className="mx-auto flex w-full max-w-lg items-center gap-3">
+          <Spinner className="size-5" />
+          <p className="text-muted-foreground text-sm">Checking the invite link…</p>
+        </div>
+      </OnboardingShell>
+    );
+  }
+
+  if (invalid) {
+    return (
+      <OnboardingShell testId="invite-accept">
+        <div className="mx-auto w-full max-w-lg" data-testid="invite-accept-invalid">
+          <h1 className="font-semibold text-2xl tracking-[-0.03em] sm:text-3xl">
+            Invite unavailable
+          </h1>
+          <p className="mt-3 text-muted-foreground text-sm leading-relaxed">
+            {error ??
+              'This invite link is invalid, expired, or already used. Ask the organization admin for a new invite link.'}
+          </p>
+          <p className="mt-6 text-muted-foreground text-sm">
+            Already a member?{' '}
+            <Link to="/login" className="text-foreground underline-offset-4 hover:underline">
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </OnboardingShell>
+    );
+  }
+
   return (
     <OnboardingShell testId="invite-accept">
       <div className="mx-auto w-full max-w-lg">
         <h1 className="font-semibold text-2xl tracking-[-0.03em] sm:text-3xl">Accept an invite</h1>
         <p className="mt-3 text-muted-foreground text-sm leading-relaxed">
-          Paste the invite code from your organization owner, pick a login and password. Existing
-          accounts keep their login — just confirm the current password. The code works once and
-          expires 24 hours after it was created.
+          The invite code is prefilled from your link. Pick a login and password. Existing accounts
+          keep their login — just confirm the current password. The code works once and expires 24
+          hours after it was created.
         </p>
         <form
           className="mt-8 flex flex-col gap-4"

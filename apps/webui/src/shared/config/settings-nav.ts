@@ -238,7 +238,7 @@ export const WINDOW_SETTINGS_GROUPS: SettingsNavGroup[] = [
       {
         id: 'members',
         label: 'Members',
-        description: 'People with access to this organization and their roles.',
+        description: 'People with access to this organization, their roles and invite links.',
         icon: UsersIcon,
       },
       {

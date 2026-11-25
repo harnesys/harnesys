@@ -18,6 +18,7 @@ export interface CurrentUserView {
   name: string;
   avatar: string | null;
   role: AccountRole;
+  capabilities: string[];
 }
 
 export interface ChangePasswordInput {

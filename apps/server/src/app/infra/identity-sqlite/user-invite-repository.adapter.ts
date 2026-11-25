@@ -1,5 +1,5 @@
 import { Injectable } from '@harnesys/brix';
-import { eq } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 import {
   type InsertUserInviteInput,
   type UserInviteRecord,
@@ -23,8 +23,10 @@ export class UserInviteRepositoryAdapter extends UserInviteStore {
         .values({
           id: invite.id,
           orgId: invite.orgId,
+          code: invite.code,
           codeHash: invite.codeHash,
           capabilitiesJson: JSON.stringify(invite.capabilities),
+          createdAt: invite.createdAt,
           expiresAt: invite.expiresAt,
           usedAt: null,
           createdBy: invite.createdBy,
@@ -57,13 +59,50 @@ export class UserInviteRepositoryAdapter extends UserInviteStore {
       sqlite.sqlite.close();
     }
   }
+
+  listByOrg(orgId: string): UserInviteRecord[] {
+    const sqlite = openIdentitySqlite(this.layout);
+    try {
+      const rows = sqlite.db
+        .select()
+        .from(userInvites)
+        .where(eq(userInvites.orgId, orgId))
+        .orderBy(desc(userInvites.createdAt))
+        .all();
+      return rows.map(mapInvite);
+    } finally {
+      sqlite.sqlite.close();
+    }
+  }
+
+  remove(orgId: string, inviteId: string): boolean {
+    const sqlite = openIdentitySqlite(this.layout);
+    try {
+      const removed = sqlite.db
+        .delete(userInvites)
+        .where(
+          and(
+            eq(userInvites.id, inviteId),
+            eq(userInvites.orgId, orgId),
+            isNull(userInvites.usedAt),
+          ),
+        )
+        .returning({ id: userInvites.id })
+        .all();
+      return removed.length > 0;
+    } finally {
+      sqlite.sqlite.close();
+    }
+  }
 }
 
 interface UserInviteRow {
   id: string;
   orgId: string;
+  code: string | null;
   codeHash: string;
   capabilitiesJson: string;
+  createdAt: string | null;
   expiresAt: string;
   usedAt: string | null;
   createdBy: string;
@@ -73,8 +112,10 @@ function mapInvite(row: UserInviteRow): UserInviteRecord {
   return {
     id: row.id,
     orgId: row.orgId,
+    code: row.code,
     codeHash: row.codeHash,
     capabilities: parseCapabilities(row.capabilitiesJson),
+    createdAt: row.createdAt,
     expiresAt: row.expiresAt,
     usedAt: row.usedAt,
     createdBy: row.createdBy,

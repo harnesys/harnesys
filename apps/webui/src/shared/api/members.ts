@@ -14,6 +14,19 @@ export interface IssuedMemberInvite {
   code: string;
 }
 
+export type MemberInviteStatus = 'active' | 'expired' | 'accepted';
+
+export interface MemberInviteView {
+  inviteId: string;
+  code: string | null;
+  capabilities: string[];
+  createdAt: string | null;
+  expiresAt: string;
+  usedAt: string | null;
+  createdBy: string;
+  status: MemberInviteStatus;
+}
+
 export interface MemberPatchResult {
   userId: string;
   orgId: string;
@@ -41,6 +54,7 @@ export const MEMBER_CAPABILITIES = [
   'secret.read',
   'secret.write',
   'terminal.open',
+  'terminal.open:ro',
   'agent.manage',
   'schedule.manage',
 ] as const;
@@ -75,7 +89,12 @@ function isOperatorCapability(capability: MemberCapability): boolean {
 }
 
 function isViewerCapability(capability: MemberCapability): boolean {
-  return capability === 'org.read' || capability === 'desk.read' || capability === 'source.read';
+  return (
+    capability === 'org.read' ||
+    capability === 'desk.read' ||
+    capability === 'source.read' ||
+    capability === 'terminal.open:ro'
+  );
 }
 
 export function membersQueryKey(orgId: string): readonly [string, string, string] {
@@ -90,6 +109,30 @@ export function membersQuery(orgId: string) {
   return queryOptions({
     queryKey: membersQueryKey(orgId),
     queryFn: () => listMembers(orgId),
+    enabled: Boolean(orgId),
+    staleTime: 5000,
+  });
+}
+
+export function memberInvitesQueryKey(orgId: string): readonly [string, string, string] {
+  return ['orgs', orgId, 'member-invites'] as const;
+}
+
+export function listMemberInvites(orgId: string): Promise<MemberInviteView[]> {
+  return apiJson<MemberInviteView[]>(`/api/orgs/${encodeURIComponent(orgId)}/members/invites`);
+}
+
+export function revokeMemberInvite(orgId: string, inviteId: string): Promise<void> {
+  return apiJson<void>(
+    `/api/orgs/${encodeURIComponent(orgId)}/members/invites/${encodeURIComponent(inviteId)}`,
+    { method: 'DELETE' },
+  );
+}
+
+export function memberInvitesQuery(orgId: string) {
+  return queryOptions({
+    queryKey: memberInvitesQueryKey(orgId),
+    queryFn: () => listMemberInvites(orgId),
     enabled: Boolean(orgId),
     staleTime: 5000,
   });
@@ -141,6 +184,19 @@ export function resetMemberPassword(
 export interface AcceptedMemberInvite {
   userId: string;
   orgId: string;
+}
+
+export interface MemberInvitePreview {
+  orgId: string;
+  capabilities: string[];
+  expiresAt: string;
+}
+
+export function previewMemberInvite(code: string): Promise<MemberInvitePreview> {
+  return apiJson<MemberInvitePreview>('/api/invites/preview', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
 }
 
 export function acceptMemberInvite(input: {

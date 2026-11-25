@@ -71,8 +71,10 @@ export const userInvites = sqliteTable(
   {
     id: text('id').primaryKey(),
     orgId: text('org_id').notNull(),
+    code: text('code'),
     codeHash: text('code_hash').notNull(),
     capabilitiesJson: text('capabilities_json').notNull(),
+    createdAt: text('created_at'),
     expiresAt: text('expires_at').notNull(),
     usedAt: text('used_at'),
     createdBy: text('created_by').notNull(),

@@ -43,8 +43,10 @@ export class IssueUserInviteUseCase {
     this.invites.insert({
       id: inviteId,
       orgId: input.orgId,
+      code,
       codeHash: await hashToken(code),
       capabilities: input.capabilities,
+      createdAt: now,
       expiresAt: new Date(Date.parse(now) + USER_INVITE_TTL_MS).toISOString(),
       createdBy: input.principal.kind === 'user' ? input.principal.userId : input.principal.nodeId,
     });

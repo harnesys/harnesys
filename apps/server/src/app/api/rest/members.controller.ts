@@ -18,14 +18,23 @@ import {
   IssueUserInviteUseCase,
 } from '../../application/identity/issue-user-invite.use-case.ts';
 import {
+  ListMemberInvitesUseCase,
+  type MemberInviteView,
+} from '../../application/identity/list-member-invites.use-case.ts';
+import {
   ListMembersUseCase,
   type MemberView,
 } from '../../application/identity/list-members.use-case.ts';
+import {
+  PreviewUserInviteUseCase,
+  type UserInvitePreview,
+} from '../../application/identity/preview-user-invite.use-case.ts';
 import { RemoveMembershipUseCase } from '../../application/identity/remove-membership.use-case.ts';
 import {
   type ResetMemberPasswordResult,
   ResetMemberPasswordUseCase,
 } from '../../application/identity/reset-member-password.use-case.ts';
+import { RevokeMemberInviteUseCase } from '../../application/identity/revoke-member-invite.use-case.ts';
 import { UpdateMembershipUseCase } from '../../application/identity/update-membership.use-case.ts';
 import type { MembershipRecord } from '../../domain/identity/membership-repository.port.ts';
 import { type Principal } from '../../domain/identity/principal.ts';
@@ -33,6 +42,8 @@ import { SessionPrincipal } from '../guards/session.guard.ts';
 import {
   type InviteAcceptBody,
   InviteAcceptBodySchema,
+  type InvitePreviewBody,
+  InvitePreviewBodySchema,
   type MemberInviteBody,
   MemberInviteBodySchema,
   type MemberUpdateBody,
@@ -48,6 +59,8 @@ export class MembersController {
     private readonly membersUpdate: UpdateMembershipUseCase,
     private readonly membersRemove: RemoveMembershipUseCase,
     private readonly membersInvite: IssueUserInviteUseCase,
+    private readonly membersInvitesList: ListMemberInvitesUseCase,
+    private readonly membersInvitesRevoke: RevokeMemberInviteUseCase,
     private readonly membersResetPassword: ResetMemberPasswordUseCase,
   ) {}
 
@@ -70,6 +83,14 @@ export class MembersController {
     });
   }
 
+  @Get('invites')
+  invites(
+    @Param('orgId') orgId: string,
+    @SessionPrincipal() principal: Principal,
+  ): MemberInviteView[] {
+    return this.membersInvitesList.execute({ principal, orgId });
+  }
+
   @Patch(':userId')
   update(
     @Param('orgId') orgId: string,
@@ -83,6 +104,16 @@ export class MembersController {
       userId,
       capabilities: body.capabilities,
     });
+  }
+
+  @Delete('invites/:inviteId')
+  @HttpCode(204)
+  revokeInvite(
+    @Param('orgId') orgId: string,
+    @Param('inviteId') inviteId: string,
+    @SessionPrincipal() principal: Principal,
+  ): void {
+    this.membersInvitesRevoke.execute({ principal, orgId, inviteId });
   }
 
   @Delete(':userId')
@@ -108,7 +139,19 @@ export class MembersController {
 
 @Controller('invites')
 export class InvitesController {
-  constructor(private readonly invitesAccept: AcceptUserInviteUseCase) {}
+  constructor(
+    private readonly invitesPreview: PreviewUserInviteUseCase,
+    private readonly invitesAccept: AcceptUserInviteUseCase,
+  ) {}
+
+  @Public()
+  @Post('preview')
+  @HttpCode(200)
+  async preview(
+    @Body(InvitePreviewBodySchema) body: InvitePreviewBody,
+  ): Promise<UserInvitePreview> {
+    return await this.invitesPreview.execute({ code: body.code });
+  }
 
   @Public()
   @Post('accept')

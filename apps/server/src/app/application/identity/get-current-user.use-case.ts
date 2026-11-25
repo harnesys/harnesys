@@ -9,6 +9,7 @@ export interface CurrentUserView {
   name: string;
   avatar: string | null;
   role: AccountRole;
+  capabilities: string[];
 }
 
 export interface GetCurrentUserInput {
@@ -22,6 +23,7 @@ export function currentUserViewOf(user: UserRecord, capabilities: string[]): Cur
     name: user.name,
     avatar: user.avatar,
     role: roleFromCapabilities(capabilities),
+    capabilities: [...capabilities],
   };
 }
 
