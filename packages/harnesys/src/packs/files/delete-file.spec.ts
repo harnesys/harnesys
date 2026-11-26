@@ -49,6 +49,15 @@ describe('delete_file path mode', () => {
     expect(existsSync(join(root, 'folder'))).toBe(false);
   });
 
+  test('dry_run true on a path reports without deleting', async () => {
+    const target = seed('preview.txt');
+    const def = deleteFileTool();
+    await expect(def.execute({ path: 'preview.txt', dry_run: true }, ctx())).resolves.toMatchObject(
+      { kind: 'file', deleted: 0, dry_run: true },
+    );
+    expect(existsSync(target)).toBe(true);
+  });
+
   test('blocked path is refused', async () => {
     seed('.env');
     const def = deleteFileTool();

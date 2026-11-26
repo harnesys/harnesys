@@ -70,11 +70,15 @@ async function deletePath(
     const info = await lstat(absolute).catch(() => {
       throw new Error(`Path not found: ${target}`);
     });
+    const kind = info.isDirectory() ? 'dir' : 'file';
+    if (parsed.dry_run === true) {
+      return { path: target, kind, deleted: 0, dry_run: true };
+    }
     if (info.isDirectory() && parsed.recursive !== true) {
       throw new Error(`Is a directory: ${target}; pass recursive: true to delete it with contents`);
     }
     await rm(absolute, { recursive: parsed.recursive === true });
-    return { path: target, kind: info.isDirectory() ? 'dir' : 'file', deleted: 1, dry_run: false };
+    return { path: target, kind, deleted: 1, dry_run: false };
   });
 }
 
