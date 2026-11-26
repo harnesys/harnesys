@@ -113,6 +113,16 @@ describe('mergeTriggerConfig', () => {
     ).toThrow(/payload\.textPath: required/);
   });
 
+  test('a null value clears a stored field', () => {
+    expect(
+      mergeTriggerConfig(
+        descriptor,
+        { query: 'q', mode: 'a', payload: { textPath: 'old' } },
+        { textPath: null },
+      ),
+    ).toEqual({ query: 'q', mode: 'a', auth: 'none' });
+  });
+
   test('merges into the current config on update', () => {
     expect(mergeTriggerConfig(descriptor, { query: 'old', mode: 'a' }, { query: 'new' })).toEqual({
       query: 'new',

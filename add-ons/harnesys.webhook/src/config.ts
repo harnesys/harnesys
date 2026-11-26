@@ -38,6 +38,14 @@ function numberValue(raw: Record<string, unknown>, key: string, fallback: number
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
+export const TEXT_KB_MIN = 0.01;
+export const TEXT_KB_MAX = 512;
+
+function textKb(raw: Record<string, unknown>, key: string, fallback: number): number {
+  const value = numberValue(raw, key, fallback);
+  return Math.min(TEXT_KB_MAX, Math.max(TEXT_KB_MIN, value));
+}
+
 function clamped(
   raw: Record<string, unknown>,
   key: string,
@@ -83,7 +91,7 @@ export function parseHookConfig(raw: Record<string, unknown>): HookConfig {
     textPath: textValue(raw, 'textPath', ''),
     textTemplate: textValue(raw, 'textTemplate', ''),
     detail: textValue(raw, 'detail', ''),
-    maxTextKb: clamped(raw, 'maxTextKb', 8, 1, 512),
+    maxTextKb: textKb(raw, 'maxTextKb', 8),
     dedupeWindowSec: clamped(raw, 'dedupeWindowSec', 0, 0, 86400),
     throttleSec: clamped(raw, 'throttleSec', 0, 0, 3600),
     honorIdempotencyKey: booleanValue(raw, 'honorIdempotencyKey', true),

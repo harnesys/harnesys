@@ -4,7 +4,7 @@ import { deliveries, instances, rotateSecret, rotateUrl, testHook } from './org-
 import { webhookTrigger } from './trigger.ts';
 
 const ADDON_ID = 'harnesys.webhook';
-const ADDON_VERSION = '2.2.1';
+const ADDON_VERSION = '2.2.2';
 
 export const addon = defineAddon({
   triggers: { 'webhook.http': webhookTrigger },

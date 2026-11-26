@@ -8,7 +8,7 @@ curl -X POST -H 'Content-Type: application/json' \
   https://<host>/api/addons/public/<orgId>/harnesys.webhook/r/<token>
 ```
 
-The fast path reads the top-level `.text` field; use the text path or template fields for other payloads. `GET` fires only when the instance is enabled, with the task text in `?text=...`.
+The task text resolves in this order: `textTemplate` (`{{text}}`, `{{payload}}`), a top-level `.text` field (or `?text=` on GET), the dotted `textPath`, then the whole JSON body; `detail` is the fallback. `maxTextKb` truncates the result and fractional values are honoured. `GET` fires only when the instance is enabled.
 
 **Signature (HMAC)**
 

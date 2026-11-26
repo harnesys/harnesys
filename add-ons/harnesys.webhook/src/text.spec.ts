@@ -44,6 +44,13 @@ describe('text extraction', () => {
         query: {},
       }),
     ).toBe('fast path');
+    expect(
+      extractText(config({ textPath: 'issue.title' }), {
+        rawBody: '{"text":"TEXT-WINS","issue":{"title":"PATH-LOSES"}}',
+        body: { text: 'TEXT-WINS', issue: { title: 'PATH-LOSES' } },
+        query: {},
+      }),
+    ).toBe('TEXT-WINS');
     const long = 'x'.repeat(3000);
     const truncated = extractText(config({ maxTextKb: 1 }), {
       rawBody: long,
@@ -54,6 +61,13 @@ describe('text extraction', () => {
     expect(extractText(base, { rawBody: '', body: undefined, query: { text: 'from query' } })).toBe(
       'from query',
     );
+    const fractional = extractText(config({ maxTextKb: 0.1 }), {
+      rawBody: 'z',
+      body: 'z'.repeat(200),
+      query: {},
+    });
+    expect(fractional.length).toBe(102);
+    expect(fractional.endsWith('…')).toBe(true);
     expect(canonicalQuery({ b: '2', a: '1' })).toBe('{"a":"1","b":"2"}');
   });
 });

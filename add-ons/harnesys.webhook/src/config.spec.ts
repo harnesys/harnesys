@@ -49,7 +49,7 @@ describe('hook config parsing', () => {
     expect(parsed.signatureHeader).toBe('x-goog-signature');
     expect(parsed.signatureAlgo).toBe('sha512');
     expect(parsed.signatureEncoding).toBe('base64');
-    expect(parsed.maxTextKb).toBe(2);
+    expect(parsed.maxTextKb).toBe(2.7);
     expect(parsed.allowGet).toBe(true);
     expect(parsed.respondMode).toBe('custom');
     expect(parsed.responseStatus).toBe(201);

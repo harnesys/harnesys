@@ -12,6 +12,9 @@ export function mergeTriggerConfig(
     ...flattenConfig(descriptor.configFields, current).values,
     ...flat.values,
   };
+  for (const key of flat.cleared) {
+    delete config[key];
+  }
   const issues = configIssues(descriptor.configFields, config, flat.groups);
   if (issues.length > 0) {
     throw new AddonException('invalid_params', 422, `config rejected: ${issues.join('; ')}`);
@@ -59,25 +62,55 @@ export function assertScriptsAllowed(
 interface FlatConfig {
   values: Record<string, unknown>;
   groups: Set<string>;
+  cleared: Set<string>;
 }
 
 function flattenConfig(fields: FieldSpec[], provided: Record<string, unknown>): FlatConfig {
-  const values: Record<string, unknown> = {};
-  const groups = new Set<string>();
+  const flat: FlatConfig = { values: {}, groups: new Set(), cleared: new Set() };
   for (const [key, value] of Object.entries(provided)) {
-    const field = fields.find((entry) => entry.key === key);
-    if (field?.type === 'group' && isPlainObject(value)) {
-      const nested = flattenConfig(field.fields ?? [], value);
-      groups.add(key);
-      for (const group of nested.groups) {
-        groups.add(group);
-      }
-      Object.assign(values, nested.values);
-      continue;
-    }
-    values[key] = value;
+    applyConfigEntry(
+      flat,
+      fields.find((entry) => entry.key === key),
+      key,
+      value,
+    );
   }
-  return { values, groups };
+  return flat;
+}
+
+function applyConfigEntry(
+  flat: FlatConfig,
+  field: FieldSpec | undefined,
+  key: string,
+  value: unknown,
+): void {
+  if (field?.type === 'group' && isPlainObject(value)) {
+    const nested = flattenConfig(field.fields ?? [], value);
+    flat.groups.add(key);
+    for (const group of nested.groups) {
+      flat.groups.add(group);
+    }
+    for (const child of nested.cleared) {
+      flat.cleared.add(child);
+    }
+    Object.assign(flat.values, nested.values);
+    return;
+  }
+  if (value !== null) {
+    flat.values[key] = value;
+    return;
+  }
+  for (const clearedKey of field?.type === 'group' ? childKeys(field) : [key]) {
+    flat.cleared.add(clearedKey);
+  }
+}
+
+function childKeys(field: FieldSpec, out: string[] = []): string[] {
+  for (const child of field.fields ?? []) {
+    out.push(child.key);
+    childKeys(child, out);
+  }
+  return out;
 }
 
 function configIssues(

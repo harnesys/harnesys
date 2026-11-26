@@ -45,8 +45,11 @@ it when a cursor is stuck or points at a deleted item, not to backfill history.
 
 ## Webhook ingress
 
-The parsed request body is sent as the fire payload, so pre/post scripts receive it on
-stdin. The public URL from `status.endpointPath` is served by the host's public add-on
+The task text resolves in this order: `textTemplate` (with `{{text}}` and `{{payload}}`),
+then a `text` field of the body or query, then `textPath` (dotted), then the whole JSON body;
+`detail` is the fallback when all of them are empty. `maxTextKb` truncates the result (fractional
+values are honoured, `0.1` means 102 bytes). The parsed request body is sent as the fire
+payload, so pre/post scripts receive it on stdin. The public URL from `status.endpointPath` is served by the host's public add-on
 route. `test` uses origin `test` and skips signature checks, dedupe and throttle —
 use it to prove the fire path, and a real signed POST to prove ingress. Dedupe
 (`dedupeWindowSec`), throttle (`throttleSec`) and `Idempotency-Key` handling apply

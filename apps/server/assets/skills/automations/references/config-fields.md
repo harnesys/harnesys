@@ -47,7 +47,8 @@
 
 `automation_update` merges `config` over the stored config, so pass only the
 fields you change. Defaults not present in either stay as declared. A hidden
-field keeps its stored value but stops being validated.
+field keeps its stored value but stops being validated. Send `null` for a field
+to remove it (for a group, `{"payload": null}` clears every child).
 
 ## Limits and connection
 

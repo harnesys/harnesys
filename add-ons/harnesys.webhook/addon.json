@@ -1,6 +1,6 @@
 {
   "id": "harnesys.webhook",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "platform": 1,
   "title": "Webhook",
   "description": "HTTP webhook triggers for agent threads. Every webhook.http instance gets its own public endpoint with a generated token, optional HMAC or API key verification, payload-to-task text shaping (path, template, fallback), dedupe, idempotency replay, throttling, custom success responses and a delivery log.",

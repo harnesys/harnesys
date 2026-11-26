@@ -7,8 +7,11 @@ export interface TextSource {
 }
 
 export function truncateToKb(value: string, kb: number): string {
-  const max = Math.max(1, Math.floor(kb)) * 1024;
-  return value.length <= max ? value : value.slice(0, max);
+  const max = Math.max(1, Math.round(kb * 1024));
+  if (value.length <= max) {
+    return value;
+  }
+  return max > 1 ? `${value.slice(0, max - 1)}…` : value.slice(0, max);
 }
 
 export function readDottedPath(source: unknown, path: string): unknown {
@@ -77,14 +80,14 @@ export function extractText(config: HookConfig, source: TextSource): string {
       config.maxTextKb,
     );
   }
+  if (fast) {
+    return truncateToKb(fast, config.maxTextKb);
+  }
   if (config.textPath && source.body !== null && typeof source.body === 'object') {
     const fromPath = pathText(source.body, config.textPath);
     if (fromPath) {
       return truncateToKb(fromPath, config.maxTextKb);
     }
-  }
-  if (fast) {
-    return truncateToKb(fast, config.maxTextKb);
   }
   const payload = payloadJson(source);
   if (payload && payload !== fast) {
