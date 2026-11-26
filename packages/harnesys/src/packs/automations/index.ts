@@ -80,7 +80,8 @@ export const automationsCapability = definePack<
           'A trigger kind carries its own config fields; automation_kind_list returns them with type, required, options and help, so build config from that schema instead of guessing. ' +
           'Kind-specific operations (status, test, deliveries, rotate_secret, and any other) are declared as actions: discover them in automation_kind_list or automation_get and invoke them with automation_action. ' +
           'Pre/post scripts are part of the target: pass scripts to automation_create/automation_update, or update only the scripts by passing scripts to automation_update. ' +
-          'A pre script with a gate is the way to build "fire only when there is work": the script runs before the fire limits and an unmatched gate or exit 2 suppresses the run. Debug with automation_script_runs and automation_script_test. ' +
+          'A pre script with a gate is the way to build "fire only when there is work": the script runs before the fire limits and an unmatched gate or exit 2 suppresses the run. ' +
+          'When the agent is not needed at all, set scripts.agent to "never" (the pre script is the whole job, the fire returns script-only) or "conditional" with an escalate rule (the agent starts only when the script fails or its gate passes, carrying the script diagnostics) so a healthy run costs no tokens. Debug with automation_script_runs and automation_script_test. ' +
           'Client-side polling is not a substitute for a trigger: arm a trigger and let the host fire it. ' +
           'When the automations skill is enabled for you, load_skill { name: "automations" } carries the config field types, the gate matrix and the action table.',
       },

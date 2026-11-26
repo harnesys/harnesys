@@ -1,5 +1,6 @@
 import {
   hasTriggerScripts,
+  type TriggerAgentMode,
   type TriggerPostWhen,
   type TriggerPreOnError,
   type TriggerScripts,
@@ -32,8 +33,21 @@ const POST_WHEN: Array<{ value: TriggerPostWhen; label: string }> = [
   { value: 'failure', label: 'After a failed run' },
 ];
 
+const AGENT_MODES: Array<{ value: TriggerAgentMode; label: string }> = [
+  { value: 'always', label: 'On every fire' },
+  { value: 'conditional', label: 'Only when the script signals' },
+  { value: 'never', label: 'Never (scripts only)' },
+];
+
+const MODE_HELP: Record<TriggerAgentMode, string> = {
+  always: 'Every fire starts an agent run; the scripts below wrap it.',
+  conditional:
+    'The before-run script is the job. The agent starts only when an escalation rule matches.',
+  never: 'The before-run script is the whole job. No agent run starts.',
+};
+
 export function validateTriggerScripts(scripts: TriggerScripts): string | null {
-  if (!hasTriggerScripts(scripts)) {
+  if (!hasTriggerScripts(scripts) && scripts.agent === 'always') {
     return null;
   }
   if (!scripts.acknowledged) {
@@ -51,8 +65,27 @@ export function validateTriggerScripts(scripts: TriggerScripts): string | null {
   if (scripts.pre?.gate?.on === 'json' && scripts.pre.gate.path.trim().length === 0) {
     return 'The pre-run condition needs a JSON path.';
   }
+  if (scripts.agent !== 'always' && scripts.pre === undefined) {
+    return 'A script is required when the agent does not run on every fire.';
+  }
+  if (scripts.agent === 'conditional' && !hasEscalation(scripts)) {
+    return 'Choose when the agent should start.';
+  }
+  if (scripts.escalate?.gate?.on === 'stdout' && scripts.escalate.gate.value.trim().length === 0) {
+    return 'The escalation condition needs a value.';
+  }
+  if (scripts.escalate?.gate?.on === 'json' && scripts.escalate.gate.path.trim().length === 0) {
+    return 'The escalation condition needs a JSON path.';
+  }
   const parsed = TriggerScriptsSchema.safeParse(scripts);
   return parsed.success ? null : (parsed.error.issues[0]?.message ?? 'The scripts are invalid.');
+}
+
+function hasEscalation(scripts: TriggerScripts): boolean {
+  return (
+    scripts.escalate !== undefined &&
+    (scripts.escalate.onFailure || scripts.escalate.gate !== undefined)
+  );
 }
 
 export function TriggerScriptsField({
@@ -74,6 +107,23 @@ export function TriggerScriptsField({
 }) {
   const pre = scripts.pre;
   const post = scripts.post;
+  const mode = scripts.agent;
+  const setMode = (next: TriggerAgentMode) => {
+    const draft: TriggerScripts = {
+      ...scripts,
+      agent: next,
+      escalate: next === 'conditional' ? (scripts.escalate ?? { onFailure: true }) : undefined,
+    };
+    if (next !== 'always' && draft.pre === undefined) {
+      draft.pre = {
+        script: defaultScript(),
+        onError: 'skip-run',
+        injectStdout: false,
+        onWorkspaceMissing: 'skip-run',
+      };
+    }
+    onChange(draft);
+  };
   return (
     <div className="flex flex-col gap-3 border-border/40 border-t pt-3">
       <div className="flex flex-col gap-0.5">
@@ -85,9 +135,38 @@ export function TriggerScriptsField({
             'Shell commands around the run. They execute on this host (not inside the run container) with the folder selected above as their working directory.'}
         </p>
       </div>
+      <Field>
+        <FieldLabel htmlFor="trigger-script-agent-mode">Run the agent</FieldLabel>
+        <Select
+          value={mode}
+          onValueChange={(next) => {
+            if (typeof next === 'string') {
+              setMode(next as TriggerAgentMode);
+            }
+          }}
+        >
+          <SelectTrigger id="trigger-script-agent-mode" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {AGENT_MODES.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <FieldDescription>{MODE_HELP[mode]}</FieldDescription>
+      </Field>
       <StageShell
-        title="Before the run"
-        description="Prepare the workspace, or decide whether the run should start at all."
+        title={mode === 'always' ? 'Before the run' : 'The job script'}
+        description={
+          mode === 'always'
+            ? 'Prepare the workspace, or decide whether the run should start at all.'
+            : 'Runs on every fire. Its exit code and output decide what happens next.'
+        }
         checked={pre !== undefined}
         onToggle={(next) =>
           onChange({
@@ -110,58 +189,116 @@ export function TriggerScriptsField({
               script={pre.script}
               onChange={(script) => onChange({ ...scripts, pre: { ...pre, script } })}
             />
-            <Field>
-              <FieldLabel htmlFor="trigger-script-pre-on-error">If it fails</FieldLabel>
-              <Select
-                value={pre.onError}
-                onValueChange={(next) => {
-                  if (typeof next === 'string') {
-                    onChange({
-                      ...scripts,
-                      pre: { ...pre, onError: next as TriggerPreOnError },
-                    });
-                  }
-                }}
-              >
-                <SelectTrigger id="trigger-script-pre-on-error" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {PRE_ERRORS.map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </Field>
-            <GateEditor
-              gate={pre.gate}
-              onChange={(gate) => onChange({ ...scripts, pre: { ...pre, gate } })}
-            />
-            <div className="flex items-start gap-2 text-xs">
-              <Checkbox
-                className="mt-0.5"
-                aria-label="Add the command output to the agent prompt"
-                checked={pre.injectStdout}
-                onCheckedChange={(next) =>
-                  onChange({ ...scripts, pre: { ...pre, injectStdout: Boolean(next) } })
-                }
+            {mode !== 'always' ? null : (
+              <>
+                <Field>
+                  <FieldLabel htmlFor="trigger-script-pre-on-error">If it fails</FieldLabel>
+                  <Select
+                    value={pre.onError}
+                    onValueChange={(next) => {
+                      if (typeof next === 'string') {
+                        onChange({
+                          ...scripts,
+                          pre: { ...pre, onError: next as TriggerPreOnError },
+                        });
+                      }
+                    }}
+                  >
+                    <SelectTrigger id="trigger-script-pre-on-error" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {PRE_ERRORS.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <GateEditor
+                  gate={pre.gate}
+                  onChange={(gate) => onChange({ ...scripts, pre: { ...pre, gate } })}
+                />
+                <div className="flex items-start gap-2 text-xs">
+                  <Checkbox
+                    className="mt-0.5"
+                    aria-label="Add the command output to the agent prompt"
+                    checked={pre.injectStdout}
+                    onCheckedChange={(next) =>
+                      onChange({ ...scripts, pre: { ...pre, injectStdout: Boolean(next) } })
+                    }
+                  />
+                  <span>Add the command output to the agent prompt.</span>
+                </div>
+                <ScriptTestRow
+                  orgId={orgId}
+                  addonId={addonId}
+                  instanceId={instanceId}
+                  script={pre.script}
+                  gate={pre.gate}
+                />
+              </>
+            )}
+            {mode === 'never' ? (
+              <ScriptTestRow
+                orgId={orgId}
+                addonId={addonId}
+                instanceId={instanceId}
+                script={pre.script}
               />
-              <span>Add the command output to the agent prompt.</span>
-            </div>
-            <ScriptTestRow
-              orgId={orgId}
-              addonId={addonId}
-              instanceId={instanceId}
-              script={pre.script}
-              gate={pre.gate}
-            />
+            ) : null}
           </>
         )}
       </StageShell>
+      {mode !== 'conditional' ? null : (
+        <div className="flex flex-col gap-3 rounded-lg border border-border/60 p-3">
+          <div className="flex flex-col gap-0.5">
+            <p className="font-medium text-sm">Start the agent when</p>
+            <p className="text-muted-foreground text-xs leading-4">
+              The agent run receives the script output together with the instructions of this
+              trigger.
+            </p>
+          </div>
+          <div className="flex items-start gap-2 text-xs">
+            <Checkbox
+              className="mt-0.5"
+              aria-label="Start the agent when the script fails"
+              checked={scripts.escalate?.onFailure ?? true}
+              onCheckedChange={(next) =>
+                onChange({
+                  ...scripts,
+                  escalate: {
+                    ...(scripts.escalate ?? { onFailure: false, gate: undefined }),
+                    onFailure: Boolean(next),
+                  },
+                })
+              }
+            />
+            <span>The script fails or times out.</span>
+          </div>
+          <GateEditor
+            label="Escalation condition"
+            emptyLabel="No extra condition"
+            gate={scripts.escalate?.gate}
+            onChange={(gate) =>
+              onChange({
+                ...scripts,
+                escalate: { ...(scripts.escalate ?? { onFailure: true }), gate },
+              })
+            }
+          />
+          <ScriptTestRow
+            orgId={orgId}
+            addonId={addonId}
+            instanceId={instanceId}
+            script={pre?.script ?? defaultScript()}
+            gate={scripts.escalate?.gate}
+          />
+        </div>
+      )}
       <StageShell
         title="After the run"
         description="React to the result: notify, clean up, write a report."

@@ -152,49 +152,90 @@ export async function executeDelivery(
   const latencyMs = Date.now() - fireStartedAt;
   const runId = typeof result.runId === 'string' ? result.runId : null;
 
-  let statusText = '';
-  let outcome = '';
-  let status = 0;
-  let body: unknown = null;
-  let error = '';
-  if (result.outcome === 'failed') {
-    await markFailed(ctx, webhook.instanceId, 'dispatch failed');
-    statusText = 'failed';
-    outcome = 'failed';
-    status = 500;
-    body = { error: 'webhook fire failed' };
-    error = 'dispatch failed';
-  } else if (result.outcome === 'busy') {
-    statusText = 'queued-behind-active-run';
-    outcome = 'queued';
-    status = 202;
-    body = { status: statusText };
-  } else if (result.outcome === 'suppressed') {
-    statusText = 'paused';
-    outcome = 'suppressed';
-    status = 202;
-    body = { status: statusText };
-  } else {
+  const reply = replyOf(result.outcome, config, runId);
+  if (reply.markFired) {
     await markFired(ctx, webhook.instanceId);
-    const response = firedResponse(config, runId);
-    statusText = 'fired';
-    outcome = 'fired';
-    status = response.status;
-    body = response.body;
+  } else if (result.outcome === 'failed') {
+    await markFailed(ctx, webhook.instanceId, 'dispatch failed');
   }
   if (origin === 'hook') {
-    await writeDedupe(ctx, keys, webhook.instanceId, statusText);
+    await writeDedupe(ctx, keys, webhook.instanceId, reply.statusText);
   }
   return deliver(ctx, webhook, source, {
     origin,
-    outcome,
-    status,
-    body,
+    outcome: reply.outcome,
+    status: reply.status,
+    body: reply.body,
     summary: text.slice(0, 160),
-    error,
+    error: reply.error,
     runId,
     latencyMs,
   });
+}
+
+interface FireReply {
+  statusText: string;
+  outcome: string;
+  status: number;
+  body: unknown;
+  error: string;
+  markFired: boolean;
+}
+
+function replyOf(
+  outcome: 'fired' | 'suppressed' | 'busy' | 'failed' | 'script-only',
+  config: HookConfig,
+  runId: string | null,
+): FireReply {
+  if (outcome === 'failed') {
+    return {
+      statusText: 'failed',
+      outcome: 'failed',
+      status: 500,
+      body: { error: 'webhook fire failed' },
+      error: 'dispatch failed',
+      markFired: false,
+    };
+  }
+  if (outcome === 'busy') {
+    return {
+      statusText: 'queued-behind-active-run',
+      outcome: 'queued',
+      status: 202,
+      body: { status: 'queued-behind-active-run' },
+      error: '',
+      markFired: false,
+    };
+  }
+  if (outcome === 'suppressed') {
+    return {
+      statusText: 'paused',
+      outcome: 'suppressed',
+      status: 202,
+      body: { status: 'paused' },
+      error: '',
+      markFired: false,
+    };
+  }
+  if (outcome === 'script-only') {
+    return {
+      statusText: 'script-only',
+      outcome: 'script-only',
+      status: 202,
+      body: { status: 'script-only' },
+      error: '',
+      markFired: true,
+    };
+  }
+  const response = firedResponse(config, runId);
+  return {
+    statusText: 'fired',
+    outcome: 'fired',
+    status: response.status,
+    body: response.body,
+    error: '',
+    markFired: true,
+  };
 }
 
 async function handleHook(request: RouteRequest, ctx: AddonContext): Promise<HookResult> {

@@ -330,7 +330,7 @@ async function fireEvent(
       status: event.status,
     },
   });
-  if (result.outcome !== 'fired') {
+  if (result.outcome !== 'fired' && result.outcome !== 'script-only') {
     await releaseRun(ctx, runKey);
   }
 }

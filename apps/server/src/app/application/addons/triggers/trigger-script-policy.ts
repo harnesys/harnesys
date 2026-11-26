@@ -1,5 +1,7 @@
 import type {
   HookRunStatus,
+  TriggerAgentMode,
+  TriggerEscalate,
   TriggerGate,
   TriggerGateVerdict,
   TriggerPostWhen,
@@ -20,6 +22,10 @@ export type PreScriptSkipReason =
 export type TriggerScriptOutcome =
   | { kind: 'run'; note?: string }
   | { kind: 'skip'; reason: PreScriptSkipReason; status: HookRunStatus };
+
+export type AgentlessDecision =
+  | { kind: 'escalate'; note?: string }
+  | { kind: 'quiet'; runStatus: 'completed' | 'failed' | 'cancelled' };
 
 export interface ScriptResultFacts {
   exitCode: number | null;
@@ -137,6 +143,31 @@ export function workspaceMissingOutcome(pre: TriggerPre): TriggerScriptOutcome {
   };
 }
 
+export function decideAgentless(input: {
+  mode: Exclude<TriggerAgentMode, 'always'>;
+  escalate?: TriggerEscalate;
+  result: ScriptResultFacts;
+}): AgentlessDecision {
+  const gate = input.mode === 'conditional' ? input.escalate?.gate : undefined;
+  const gatePassed = gate !== undefined && evaluateGate(gate, input.result) === 'passed';
+  const status = scriptStatusOf(input.result);
+  if (gatePassed) {
+    const note =
+      status === 'ok' ? gateEscalationNote(input.result.stdout) : preFailureNote(input.result);
+    return note === undefined ? { kind: 'escalate' } : { kind: 'escalate', note };
+  }
+  if (status === 'ok') {
+    return { kind: 'quiet', runStatus: 'completed' };
+  }
+  if (status === 'blocked' || status === 'skipped') {
+    return { kind: 'quiet', runStatus: 'cancelled' };
+  }
+  if (input.mode === 'conditional' && input.escalate?.onFailure !== false) {
+    return { kind: 'escalate', note: preFailureNote(input.result) };
+  }
+  return { kind: 'quiet', runStatus: 'failed' };
+}
+
 export function postScriptApplies(
   when: TriggerPostWhen,
   status: 'completed' | 'failed' | 'cancelled',
@@ -147,9 +178,15 @@ export function postScriptApplies(
   return when === 'success' ? status === 'completed' : status !== 'completed';
 }
 
+export function failureExitOf(result: ScriptResultFacts): string {
+  if (result.spawnError !== undefined) {
+    return `spawn error: ${result.spawnError}`;
+  }
+  return result.exitCode === null ? 'signal' : `exit ${result.exitCode}`;
+}
+
 export function preFailureNote(result: ScriptResultFacts): string {
-  const exit = result.exitCode === null ? 'signal' : String(result.exitCode);
-  const lines = [`Pre-run script failed (exit ${exit}).`];
+  const lines = [`Pre-run script failed (${failureExitOf(result)}).`];
   const stderr = result.stderr.trim();
   const stdout = result.stdout.trim();
   if (stderr.length > 0) {
@@ -168,6 +205,18 @@ export function preOutputNote(stdout: string): string | undefined {
     return undefined;
   }
   return `<pre-run-output>\n${clip(text)}\n</pre-run-output>`;
+}
+
+export function gateEscalationNote(stdout: string): string | undefined {
+  const text = stdout.trim();
+  if (text.length === 0) {
+    return undefined;
+  }
+  const lines = [
+    'The script finished successfully and matched the escalation condition.',
+    `output:\n${clip(text)}`,
+  ];
+  return `<escalation-condition>\n${lines.join('\n')}\n</escalation-condition>`;
 }
 
 function passed(pre: TriggerPre, result: ScriptResultFacts): TriggerScriptOutcome {

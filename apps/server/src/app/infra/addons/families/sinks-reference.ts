@@ -3,7 +3,7 @@ import type { BridgeInboundOutcome } from '../../../application/addons/bridge/br
 import type { ResolvedInboundAttachment } from '../bridge/inbound-attachment.resolver.ts';
 
 export interface TriggerFireOutcome {
-  outcome: 'fired' | 'suppressed' | 'busy' | 'failed';
+  outcome: 'fired' | 'suppressed' | 'busy' | 'failed' | 'script-only';
   runId?: string | null;
 }
 

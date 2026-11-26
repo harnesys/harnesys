@@ -170,6 +170,7 @@ const BADGE_TONES: Record<string, 'ok' | 'warn' | 'danger' | 'neutral'> = {
   ok: 'ok',
   on: 'ok',
   secure: 'ok',
+  'script-only': 'ok',
   success: 'ok',
   true: 'ok',
   deduped: 'warn',

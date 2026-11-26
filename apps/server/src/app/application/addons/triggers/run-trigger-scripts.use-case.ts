@@ -1,21 +1,23 @@
 import { Inject, Injectable, Logger } from '@harnesys/brix';
-import {
-  type HookRunStatus,
-  type TriggerGateVerdict,
-  type TriggerPost,
-  TriggerPostSchema,
-  type TriggerPre,
-} from '@harnesys/contracts';
+import { type HookRunStatus, type TriggerGateVerdict, type TriggerPost } from '@harnesys/contracts';
 import { TriggerInstanceRepositoryPort } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
-import type { TriggerScriptPendingPost } from '../../../domain/addons/ports/trigger-script-run-repository.port.ts';
 import { TriggerScriptRunRepositoryPort } from '../../../domain/addons/ports/trigger-script-run-repository.port.ts';
 import { RunCwdResolverPort } from '../../../domain/thread/run-cwd.port.ts';
 import {
+  harnessEnv,
+  type PostContext,
+  parseContext,
+  parsePost,
+  stdinDoc,
+  summaryOf,
+  type TriggerRunStatus,
+  tailOf,
+} from './trigger-script-harness.ts';
+import {
+  decideAgentless,
   decidePreScript,
   evaluateGate,
-  type PreScriptSkipReason,
   postScriptApplies,
-  type ScriptResultFacts,
   scriptStatusOf,
   workspaceMissingOutcome,
 } from './trigger-script-policy.ts';
@@ -23,61 +25,29 @@ import {
   TriggerScriptProcessPort,
   type TriggerScriptProcessResult,
 } from './trigger-script-process.port.ts';
+import {
+  type JobScriptRunOutcome,
+  type PostIdentity,
+  type PreScriptRunOutcome,
+  type RegisterPostScriptInput,
+  type RunBase,
+  type RunJobScriptInput,
+  type RunPostNowInput,
+  type RunPostScriptInput,
+  type RunPreScriptInput,
+} from './trigger-script-types.ts';
 
-const TAIL_MAX = 2000;
-
-export type TriggerRunStatus = 'completed' | 'failed' | 'cancelled';
-
-export interface TriggerScriptContext {
-  orgId: string;
-  addonId: string;
-  instanceId: string;
-  triggerId: string;
-  threadId: string;
-  agentId: string;
-  payload?: unknown;
-  firedAt: string;
-}
-
-export interface RunPreScriptInput extends TriggerScriptContext {
-  pre: TriggerPre;
-}
-
-export interface PreScriptRunOutcome {
-  proceed: boolean;
-  cwd: string | null;
-  reason?: PreScriptSkipReason;
-  note?: string;
-}
-
-export interface RegisterPostScriptInput {
-  context: TriggerScriptContext;
-  post: TriggerPost;
-  runId: string;
-  cwd: string | null;
-}
-
-export interface RunPostScriptInput {
-  pending: TriggerScriptPendingPost;
-  runStatus: TriggerRunStatus;
-}
-
-interface RunBase {
-  orgId: string;
-  instanceId: string;
-  addonId: string;
-  stage: 'pre' | 'post';
-  runId: string | null;
-  cwd: string;
-}
-
-interface PostContext {
-  triggerId?: string;
-  threadId?: string;
-  agentId?: string;
-  payload?: unknown;
-  firedAt?: string;
-}
+export type { TriggerRunStatus } from './trigger-script-harness.ts';
+export type {
+  JobScriptRunOutcome,
+  PreScriptRunOutcome,
+  RegisterPostScriptInput,
+  RunJobScriptInput,
+  RunPostNowInput,
+  RunPostScriptInput,
+  RunPreScriptInput,
+  TriggerScriptContext,
+} from './trigger-script-types.ts';
 
 @Injectable()
 export class RunTriggerScriptsUseCase {
@@ -118,8 +88,8 @@ export class RunTriggerScriptsUseCase {
     const result = await this.process.run({
       script: input.pre.script,
       cwd,
-      stdin: this.stdin('pre', input, cwd),
-      env: this.harnessEnv('pre', input, cwd),
+      stdin: stdinDoc('pre', input, cwd),
+      env: harnessEnv('pre', input, cwd),
     });
     const gateVerdict = input.pre.gate ? evaluateGate(input.pre.gate, result) : 'not-applied';
     const decision = decidePreScript({ pre: input.pre, result, gateVerdict });
@@ -143,6 +113,51 @@ export class RunTriggerScriptsUseCase {
     }
     this.recordRun(base, result, gateVerdict, decision.status, decision.reason);
     return { proceed: false, cwd, reason: decision.reason };
+  }
+
+  async runJob(input: RunJobScriptInput): Promise<JobScriptRunOutcome> {
+    const cwd = this.cwdResolver.resolve({ orgId: input.orgId, threadId: input.threadId });
+    const base: RunBase = {
+      orgId: input.orgId,
+      instanceId: input.instanceId,
+      addonId: input.addonId,
+      stage: 'pre',
+      runId: null,
+      cwd: cwd ?? '',
+    };
+    if (cwd === null) {
+      this.recordUnavailable(base, 'failed', 'job script skipped: workspace unavailable');
+      return {
+        decision: decideAgentless({
+          mode: input.mode,
+          ...(input.escalate === undefined ? {} : { escalate: input.escalate }),
+          result: {
+            exitCode: null,
+            stdout: '',
+            stderr: '',
+            timedOut: false,
+            aborted: false,
+            spawnError: 'workspace unavailable',
+          },
+        }),
+        cwd: null,
+      };
+    }
+    const result = await this.process.run({
+      script: input.pre.script,
+      cwd,
+      stdin: stdinDoc('pre', input, cwd),
+      env: harnessEnv('pre', input, cwd),
+    });
+    const gate = input.mode === 'conditional' ? input.escalate?.gate : undefined;
+    const gateVerdict = gate === undefined ? 'not-applied' : evaluateGate(gate, result);
+    const decision = decideAgentless({
+      mode: input.mode,
+      ...(input.escalate === undefined ? {} : { escalate: input.escalate }),
+      result,
+    });
+    this.recordRun(base, result, gateVerdict, scriptStatusOf(result));
+    return { decision, cwd };
   }
 
   registerPost(input: RegisterPostScriptInput): void {
@@ -176,6 +191,52 @@ export class RunTriggerScriptsUseCase {
     });
   }
 
+  runPostNow(input: RunPostNowInput): void {
+    const { context, post, runStatus } = input;
+    const identity: PostIdentity = {
+      orgId: context.orgId,
+      instanceId: context.instanceId,
+      addonId: context.addonId,
+    };
+    if (input.cwd === null) {
+      this.recordUnavailable(
+        { ...identity, stage: 'post', runId: null, cwd: '' },
+        'skipped',
+        'post skipped: workspace unavailable',
+      );
+      return;
+    }
+    if (!postScriptApplies(post.when, runStatus)) {
+      return;
+    }
+    if (this.triggers.find(context.orgId, context.instanceId) === null) {
+      return;
+    }
+    void this.executePost(
+      {
+        ...identity,
+        triggerId: context.triggerId,
+        threadId: context.threadId,
+        agentId: context.agentId,
+        ...(context.payload === undefined ? {} : { payload: context.payload }),
+        firedAt: context.firedAt,
+      },
+      post,
+      input.cwd,
+      null,
+      runStatus,
+    ).catch((error: unknown) => {
+      this.logger.warn(
+        {
+          orgId: identity.orgId,
+          instanceId: identity.instanceId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        'post trigger script crashed',
+      );
+    });
+  }
+
   async runPost(input: RunPostScriptInput): Promise<void> {
     const pending = input.pending;
     const post = parsePost(pending.postJson);
@@ -185,25 +246,45 @@ export class RunTriggerScriptsUseCase {
     if (this.triggers.find(pending.orgId, pending.instanceId) === null) {
       return;
     }
-    const context = parseContext(pending.contextJson);
-    const result = await this.process.run({
-      script: post.script,
-      cwd: pending.cwd,
-      stdin: this.stdin('post', context, pending.cwd, {
-        id: pending.runId,
-        status: input.runStatus,
-      }),
-      env: this.harnessEnv('post', context, pending.cwd, pending.runId),
-    });
-    const status = scriptStatusOf(result);
-    this.recordRun(
+    await this.executePost(
       {
         orgId: pending.orgId,
         instanceId: pending.instanceId,
         addonId: pending.addonId,
+        ...parseContext(pending.contextJson),
+      },
+      post,
+      pending.cwd,
+      pending.runId,
+      input.runStatus,
+    );
+  }
+
+  private async executePost(
+    context: PostContext & PostIdentity,
+    post: TriggerPost,
+    cwd: string,
+    runId: string | null,
+    runStatus: TriggerRunStatus,
+  ): Promise<void> {
+    const result = await this.process.run({
+      script: post.script,
+      cwd,
+      stdin: stdinDoc('post', context, cwd, {
+        ...(runId === null ? {} : { id: runId }),
+        status: runStatus,
+      }),
+      env: harnessEnv('post', context, cwd, runId ?? undefined),
+    });
+    const status = scriptStatusOf(result);
+    this.recordRun(
+      {
+        orgId: context.orgId,
+        instanceId: context.instanceId,
+        addonId: context.addonId,
         stage: 'post',
-        runId: pending.runId,
-        cwd: pending.cwd,
+        runId,
+        cwd,
       },
       result,
       'not-applied',
@@ -212,9 +293,9 @@ export class RunTriggerScriptsUseCase {
     if (status !== 'ok') {
       this.logger.warn(
         {
-          orgId: pending.orgId,
-          instanceId: pending.instanceId,
-          runId: pending.runId,
+          orgId: context.orgId,
+          instanceId: context.instanceId,
+          runId,
           status,
           exitCode: result.exitCode,
         },
@@ -223,47 +304,9 @@ export class RunTriggerScriptsUseCase {
       return;
     }
     this.logger.debug(
-      { orgId: pending.orgId, instanceId: pending.instanceId, runId: pending.runId },
+      { orgId: context.orgId, instanceId: context.instanceId, runId },
       'post trigger script finished',
     );
-  }
-
-  private harnessEnv(
-    stage: 'pre' | 'post',
-    context: TriggerScriptContext | PostContext,
-    cwd: string,
-    runId?: string,
-  ): Record<string, string> {
-    return {
-      HARNESYS_STAGE: stage,
-      HARNESYS_WORKSPACE: cwd,
-      ...(context.triggerId === undefined ? {} : { HARNESYS_TRIGGER_ID: context.triggerId }),
-      ...(runId === undefined ? {} : { HARNESYS_RUN_ID: runId }),
-    };
-  }
-
-  private stdin(
-    stage: 'pre' | 'post',
-    context: TriggerScriptContext | PostContext,
-    cwd: string,
-    run?: { id: string; status: TriggerRunStatus },
-  ): string {
-    const doc: Record<string, unknown> = {
-      kind: 'trigger-script',
-      stage,
-      workspace: cwd,
-      triggerId: context.triggerId,
-      threadId: context.threadId,
-      agentId: context.agentId,
-      firedAt: context.firedAt,
-      ...(context.payload === undefined ? {} : { payload: context.payload }),
-      ...(run === undefined ? {} : { run }),
-    };
-    try {
-      return JSON.stringify(doc);
-    } catch {
-      return JSON.stringify({ ...doc, payload: null });
-    }
   }
 
   private recordRun(
@@ -298,51 +341,5 @@ export class RunTriggerScriptsUseCase {
       stderr: '',
       createdAt: new Date().toISOString(),
     });
-  }
-}
-
-function summaryOf(
-  stage: 'pre' | 'post',
-  status: HookRunStatus,
-  result: ScriptResultFacts,
-  detail?: string,
-): string {
-  if (result.spawnError !== undefined) {
-    return `${stage} failed to start: ${result.spawnError}`;
-  }
-  if (result.timedOut) {
-    return `${stage} timed out`;
-  }
-  if (detail !== undefined) {
-    return `${stage} ${status}: ${detail}`;
-  }
-  if (status === 'ok') {
-    return `${stage} passed`;
-  }
-  const exit = result.exitCode === null ? 'signal' : String(result.exitCode);
-  return `${stage} ${status} (exit ${exit})`;
-}
-
-function tailOf(value: string): string {
-  return value.length <= TAIL_MAX ? value : value.slice(value.length - TAIL_MAX);
-}
-
-function parsePost(json: string): TriggerPost | undefined {
-  try {
-    const parsed = TriggerPostSchema.safeParse(JSON.parse(json));
-    return parsed.success ? parsed.data : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function parseContext(json: string): PostContext {
-  try {
-    const parsed: unknown = JSON.parse(json);
-    return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)
-      ? (parsed as PostContext)
-      : {};
-  } catch {
-    return {};
   }
 }

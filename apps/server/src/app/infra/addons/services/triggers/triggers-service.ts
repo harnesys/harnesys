@@ -59,7 +59,7 @@ export class TriggersHostService implements HostServiceModule {
       fields?: Array<{ label: string; value: string; href?: string }>;
       payload?: unknown;
     },
-  ): Promise<{ outcome: 'fired' | 'suppressed' | 'busy' | 'failed' }> {
+  ): Promise<{ outcome: 'fired' | 'suppressed' | 'busy' | 'failed' | 'script-only' }> {
     const row = this.instances.find(ctx.orgId, params.instanceId);
     if (!row || row.addonId !== ctx.addonId) {
       throw new AddonError('not_found', { detail: 'trigger instance not found for this add-on' });

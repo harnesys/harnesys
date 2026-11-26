@@ -239,7 +239,10 @@ export interface AddonTriggers {
     title?: string;
     fields?: AddonTriggerField[];
     payload?: unknown;
-  }): Promise<{ outcome: 'fired' | 'suppressed' | 'busy' | 'failed'; runId?: string | null }>;
+  }): Promise<{
+    outcome: 'fired' | 'suppressed' | 'busy' | 'failed' | 'script-only';
+    runId?: string | null;
+  }>;
   get(params: { instanceId: string }): Promise<AddonTriggerInstanceView>;
   create(params: {
     kind: string;

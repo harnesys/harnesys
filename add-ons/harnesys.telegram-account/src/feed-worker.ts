@@ -162,7 +162,7 @@ async function fireInstances(ctx: AddonContext, input: FireInput): Promise<void>
         publishedAt: post.publishedAt,
       },
     });
-    if (result.outcome === 'fired') {
+    if (isAcceptedFire(result.outcome)) {
       await ctx.db.run('update posts set fires = fires + 1 where peer = ? and post_id = ?', [
         peer,
         post.postId,
@@ -171,6 +171,12 @@ async function fireInstances(ctx: AddonContext, input: FireInput): Promise<void>
     }
     await ctx.db.run('delete from fired where run_key = ?', [runKey]);
   }
+}
+
+function isAcceptedFire(
+  outcome: 'fired' | 'suppressed' | 'busy' | 'failed' | 'script-only',
+): boolean {
+  return outcome === 'fired' || outcome === 'script-only';
 }
 
 async function resolvePeer(

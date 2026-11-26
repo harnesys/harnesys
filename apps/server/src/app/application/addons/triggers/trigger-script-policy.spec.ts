@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import { TriggerGateSchema, TriggerPostSchema, TriggerPreSchema } from '@harnesys/contracts';
-import { decidePreScript, evaluateGate, postScriptApplies } from './trigger-script-policy.ts';
+import {
+  decideAgentless,
+  decidePreScript,
+  evaluateGate,
+  postScriptApplies,
+} from './trigger-script-policy.ts';
 
 const CLEAN = { exitCode: 0, stdout: '', stderr: '', timedOut: false, aborted: false };
 
@@ -88,5 +93,101 @@ describe('postScriptApplies', () => {
     expect(postScriptApplies(post.when, 'failed')).toBe(true);
     expect(postScriptApplies(post.when, 'cancelled')).toBe(true);
     expect(postScriptApplies(post.when, 'completed')).toBe(false);
+  });
+});
+
+describe('decideAgentless', () => {
+  const failing = { ...CLEAN, exitCode: 1, stderr: 'boom' };
+
+  test('a successful script stays quiet without a gate', () => {
+    expect(
+      decideAgentless({ mode: 'conditional', escalate: { onFailure: true }, result: CLEAN }),
+    ).toEqual({ kind: 'quiet', runStatus: 'completed' });
+    expect(decideAgentless({ mode: 'never', result: CLEAN })).toEqual({
+      kind: 'quiet',
+      runStatus: 'completed',
+    });
+  });
+
+  test('a failing script escalates only when the policy allows it', () => {
+    const escalated = decideAgentless({
+      mode: 'conditional',
+      escalate: { onFailure: true },
+      result: failing,
+    });
+    expect(escalated.kind).toBe('escalate');
+    expect(escalated.kind === 'escalate' ? escalated.note?.includes('boom') : false).toBe(true);
+
+    expect(
+      decideAgentless({ mode: 'conditional', escalate: { onFailure: false }, result: failing }),
+    ).toEqual({ kind: 'quiet', runStatus: 'failed' });
+    expect(decideAgentless({ mode: 'never', result: failing })).toEqual({
+      kind: 'quiet',
+      runStatus: 'failed',
+    });
+  });
+
+  test('exit 2 is a deliberate no-op, never an escalation', () => {
+    expect(
+      decideAgentless({
+        mode: 'conditional',
+        escalate: { onFailure: true },
+        result: { ...CLEAN, exitCode: 2 },
+      }),
+    ).toEqual({ kind: 'quiet', runStatus: 'cancelled' });
+  });
+
+  test('a matching escalation gate wakes the agent on success', () => {
+    const gate = TriggerGateSchema.parse({ on: 'json', path: 'need', op: 'truthy' });
+    const matched = decideAgentless({
+      mode: 'conditional',
+      escalate: { onFailure: false, gate },
+      result: { ...CLEAN, stdout: '{"need":true}' },
+    });
+    expect(matched.kind).toBe('escalate');
+    expect(matched.kind === 'escalate' ? matched.note?.includes('need') : false).toBe(true);
+
+    expect(
+      decideAgentless({
+        mode: 'conditional',
+        escalate: { onFailure: false, gate },
+        result: { ...CLEAN, stdout: '{"need":false}' },
+      }),
+    ).toEqual({ kind: 'quiet', runStatus: 'completed' });
+  });
+
+  test('a timeout follows the failure rule', () => {
+    const timedOut = { ...CLEAN, timedOut: true };
+    expect(
+      decideAgentless({ mode: 'conditional', escalate: { onFailure: true }, result: timedOut })
+        .kind,
+    ).toBe('escalate');
+    expect(decideAgentless({ mode: 'never', result: timedOut })).toEqual({
+      kind: 'quiet',
+      runStatus: 'failed',
+    });
+  });
+
+  test('an exit-code escalation gate matches a failing script', () => {
+    const gate = TriggerGateSchema.parse({ on: 'exit-code', pass: [3] });
+    const decision = decideAgentless({
+      mode: 'conditional',
+      escalate: { onFailure: false, gate },
+      result: { ...CLEAN, exitCode: 3 },
+    });
+    expect(decision.kind).toBe('escalate');
+    expect(decision.kind === 'escalate' ? decision.note?.includes('exit 3') : false).toBe(true);
+  });
+
+  test('an unspawnable script escalates with the spawn reason', () => {
+    const decision = decideAgentless({
+      mode: 'conditional',
+      escalate: { onFailure: true },
+      result: { ...CLEAN, spawnError: 'workspace unavailable' },
+    });
+    expect(decision.kind).toBe('escalate');
+    expect(
+      decision.kind === 'escalate' ? decision.note?.includes('workspace unavailable') : false,
+    ).toBe(true);
   });
 });

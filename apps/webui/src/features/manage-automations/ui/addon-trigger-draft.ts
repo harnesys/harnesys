@@ -52,7 +52,7 @@ export function initialDraft(input: {
     threadId: input.target.threadId ?? '',
     modeId: input.target.modeId ?? firstAgent?.defaultModeId ?? DEFAULT_MODE_ID,
     workspace: input.target.workspace ?? null,
-    scripts: input.target.scripts ?? { acknowledged: false },
+    scripts: input.target.scripts ?? { acknowledged: false, agent: 'always' },
     instructions: input.instance?.instructions ?? '',
     enabled: input.instance?.status !== 'paused',
     config: initialFieldValues(

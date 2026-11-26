@@ -183,7 +183,9 @@ function AddonTriggerForm({
             agentId: draft.agentId,
             modeId: draft.modeId,
             ...(draft.workspace === null ? {} : { workspace: draft.workspace }),
-            ...(hasTriggerScripts(draft.scripts) ? { scripts: draft.scripts } : {}),
+            ...(hasTriggerScripts(draft.scripts) || draft.scripts.agent !== 'always'
+              ? { scripts: draft.scripts }
+              : {}),
           },
           enabled: draft.enabled,
         },

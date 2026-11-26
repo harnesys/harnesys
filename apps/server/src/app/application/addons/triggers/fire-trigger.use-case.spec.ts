@@ -29,9 +29,12 @@ function instanceRow(id: string, triggerId = 'feed') {
   };
 }
 
-function build(limits?: Record<string, number>) {
+function build(limits?: Record<string, number>, target?: Record<string, unknown>) {
   const triggers = new InMemoryTriggers();
-  triggers.create(instanceRow('inst1'));
+  triggers.create({
+    ...instanceRow('inst1'),
+    ...(target === undefined ? {} : { targetJson: JSON.stringify(target) }),
+  });
   const registry = new FakeRegistry();
   registry.contributionsByOrg.set('org1', [
     {
@@ -43,6 +46,7 @@ function build(limits?: Record<string, number>) {
   ]);
   const dispatch = new FakeDispatch();
   const tracker = new FireWindowTracker();
+  const scripts = buildTriggerScripts(triggers);
   const useCase = new FireTriggerUseCase(
     triggers,
     registry,
@@ -50,10 +54,10 @@ function build(limits?: Record<string, number>) {
     tracker,
     new FakeMetrics(),
     new FakeTriggerWorkspace(),
-    buildTriggerScripts(triggers).useCase,
+    scripts.useCase,
     new NullLogger(),
   );
-  return { useCase, triggers, dispatch, tracker };
+  return { useCase, triggers, dispatch, tracker, scripts };
 }
 
 function fire(useCase: FireTriggerUseCase, runKey: string) {
@@ -151,5 +155,84 @@ describe('FireTriggerUseCase', () => {
       new NullLogger(),
     );
     expect((await fire(useCase, 'k1')).outcome).toBe('suppressed');
+  });
+});
+
+describe('FireTriggerUseCase agentless modes', () => {
+  const scriptedTarget = (scripts: Record<string, unknown>) => ({
+    threadId: 'th1',
+    agentId: 'ag1',
+    scripts,
+  });
+
+  test('never mode runs the script without dispatching', async () => {
+    const { useCase, dispatch, scripts } = build(
+      undefined,
+      scriptedTarget({ acknowledged: true, agent: 'never', pre: { script: { command: 'do' } } }),
+    );
+    const result = await fire(useCase, 'k1');
+    expect(result.outcome).toBe('script-only');
+    expect(dispatch.calls).toHaveLength(0);
+    expect(scripts.process.calls).toHaveLength(1);
+    expect(scripts.runs.recorded[0]).toMatchObject({ stage: 'pre', runId: null, status: 'ok' });
+  });
+
+  test('conditional mode escalates a failing script to an agent run with diagnostics', async () => {
+    const { useCase, dispatch, scripts } = build(
+      undefined,
+      scriptedTarget({
+        acknowledged: true,
+        agent: 'conditional',
+        escalate: { onFailure: true },
+        pre: { script: { command: 'do' } },
+      }),
+    );
+    scripts.process.results.push({
+      exitCode: 1,
+      stdout: '',
+      stderr: 'boom',
+      durationMs: 1,
+      timedOut: false,
+      aborted: false,
+    });
+    const result = await fire(useCase, 'k1');
+    expect(result.outcome).toBe('fired');
+    expect(dispatch.calls[0]?.text).toContain('Pre-run script failed');
+    expect(dispatch.calls[0]?.text).toContain('boom');
+  });
+
+  test('conditional quiet path runs the post script against the job result', async () => {
+    const { useCase, dispatch, scripts } = build(
+      undefined,
+      scriptedTarget({
+        acknowledged: true,
+        agent: 'conditional',
+        escalate: { onFailure: false, gate: { on: 'json', path: 'need', op: 'truthy' } },
+        pre: { script: { command: 'do' } },
+        post: { script: { command: 'report' }, when: 'always' },
+      }),
+    );
+    scripts.process.results.push({
+      exitCode: 0,
+      stdout: '{"need":false}',
+      stderr: '',
+      durationMs: 1,
+      timedOut: false,
+      aborted: false,
+    });
+    const result = await fire(useCase, 'k1');
+    expect(result.outcome).toBe('script-only');
+    expect(dispatch.calls).toHaveLength(0);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(scripts.runs.recorded.some((row) => row.stage === 'post')).toBe(true);
+  });
+
+  test('agentless config without a pre script fails the schema and falls back to the classic fire', async () => {
+    const { useCase, dispatch } = build(
+      undefined,
+      scriptedTarget({ acknowledged: true, agent: 'never' }),
+    );
+    expect((await fire(useCase, 'k1')).outcome).toBe('fired');
+    expect(dispatch.calls).toHaveLength(1);
   });
 });

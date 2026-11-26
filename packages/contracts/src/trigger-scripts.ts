@@ -72,17 +72,68 @@ export type TriggerPre = z.infer<typeof TriggerPreSchema>;
 export const TriggerPostWhenSchema = z.enum(['always', 'success', 'failure']);
 export type TriggerPostWhen = z.infer<typeof TriggerPostWhenSchema>;
 
+export const TriggerAgentModeSchema = z.enum(['always', 'conditional', 'never']);
+export type TriggerAgentMode = z.infer<typeof TriggerAgentModeSchema>;
+
+export const TriggerEscalateSchema = z.object({
+  onFailure: z.boolean().default(true),
+  gate: TriggerGateSchema.optional(),
+});
+export type TriggerEscalate = z.infer<typeof TriggerEscalateSchema>;
+
 export const TriggerPostSchema = z.object({
   script: TriggerScriptSchema,
   when: TriggerPostWhenSchema.default('always'),
 });
 export type TriggerPost = z.infer<typeof TriggerPostSchema>;
 
-export const TriggerScriptsSchema = z.object({
-  acknowledged: z.boolean().default(false),
-  pre: TriggerPreSchema.optional(),
-  post: TriggerPostSchema.optional(),
-});
+export const TriggerScriptsSchema = z
+  .object({
+    acknowledged: z.boolean().default(false),
+    pre: TriggerPreSchema.optional(),
+    post: TriggerPostSchema.optional(),
+    /**
+     * Whether a fire starts an agent run: always (the classic flow), never
+     * (the pre script is the whole job), or conditionally on the script outcome.
+     */
+    agent: TriggerAgentModeSchema.default('always'),
+    escalate: TriggerEscalateSchema.optional(),
+  })
+  .superRefine((scripts, ctx) => {
+    if (scripts.agent !== 'always' && scripts.pre === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['pre'],
+        message: 'a script is required when the agent does not run on every fire',
+      });
+    }
+    if (scripts.agent === 'conditional' && scripts.escalate === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['escalate'],
+        message: 'conditional agent mode needs an escalation rule',
+      });
+    }
+    if (
+      scripts.agent === 'conditional' &&
+      scripts.escalate !== undefined &&
+      !scripts.escalate.onFailure &&
+      scripts.escalate.gate === undefined
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['escalate'],
+        message: 'conditional agent mode needs at least one escalation rule',
+      });
+    }
+    if (scripts.agent !== 'conditional' && scripts.escalate !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['escalate'],
+        message: 'escalation rules apply only to conditional agent mode',
+      });
+    }
+  });
 export type TriggerScripts = z.infer<typeof TriggerScriptsSchema>;
 
 export function hasTriggerScripts(scripts: TriggerScripts | undefined): boolean {

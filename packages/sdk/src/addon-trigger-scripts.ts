@@ -30,4 +30,6 @@ export interface AddonTriggerScripts {
   acknowledged?: boolean;
   pre?: AddonTriggerPre;
   post?: AddonTriggerPost;
+  agent?: 'always' | 'conditional' | 'never';
+  escalate?: { onFailure?: boolean; gate?: AddonTriggerGate };
 }

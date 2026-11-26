@@ -57,6 +57,13 @@ const TriggerScriptsSchema = z.object({
   acknowledged: z.boolean().optional(),
   pre: TriggerPreSchema.optional(),
   post: TriggerPostSchema.optional(),
+  agent: z.enum(['always', 'conditional', 'never']).optional(),
+  escalate: z
+    .object({
+      onFailure: z.boolean().optional(),
+      gate: TriggerGateSchema.optional(),
+    })
+    .optional(),
 });
 
 const TriggerTargetSchema = z.object({

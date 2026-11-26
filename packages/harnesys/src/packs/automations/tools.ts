@@ -14,11 +14,13 @@ export interface AutomationToolsDeps {
 const SCRIPTS_SCHEMA: JsonSchema = {
   type: 'object',
   description:
-    'Pre/post scripts with an optional gate. Shape: { pre?: { script, gate?, onError?: skip-run|run-with-note|ignore, injectStdout?, onWorkspaceMissing?: skip-run|fail }, post?: { script, when?: always|success|failure } }. A pre script runs before the fire limits and can suppress the run (exit 2, unmatched gate, or a failed command under skip-run). A post script runs after the run reaches a terminal status. acknowledged is set to true automatically.',
+    'Pre/post scripts with an optional gate. Shape: { pre?: { script, gate?, onError?: skip-run|run-with-note|ignore, injectStdout?, onWorkspaceMissing?: skip-run|fail }, post?: { script, when?: always|success|failure }, agent?: always|conditional|never, escalate?: { onFailure?, gate? } }. A pre script runs before the fire limits and can suppress the run (exit 2, unmatched gate, or a failed command under skip-run). A post script runs after the run reaches a terminal status. With agent=never the pre script is the whole job and no agent run starts (post still runs on the script result); with agent=conditional an agent run starts only when escalate matches (onFailure on a failed/timed-out script, or gate passed on the output). acknowledged is set to true automatically.',
   properties: {
     acknowledged: { type: 'boolean' },
     pre: { type: 'object' },
     post: { type: 'object' },
+    agent: { type: 'string' },
+    escalate: { type: 'object' },
   },
 };
 

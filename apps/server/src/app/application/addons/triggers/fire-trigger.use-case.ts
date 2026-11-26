@@ -1,5 +1,10 @@
 import { Inject, Injectable, Logger } from '@harnesys/brix';
-import { type TriggerScripts, TriggerScriptsSchema, type WorkspaceRef } from '@harnesys/contracts';
+import {
+  type TriggerAgentMode,
+  type TriggerScripts,
+  TriggerScriptsSchema,
+  type WorkspaceRef,
+} from '@harnesys/contracts';
 import { TriggerDescriptorSchema } from '@harnesys/sdk';
 import {
   TRIGGER_HUMAN_ORIGIN,
@@ -10,10 +15,15 @@ import { AddonException } from '../../../domain/addons/errors.ts';
 import { ContributionRegistryPort } from '../../../domain/addons/ports/contribution-registry.port.ts';
 import type { TriggerInstanceRow } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { TriggerInstanceRepositoryPort } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
+import type { TriggerFireOutcomeCode } from '../../../domain/addons/run-dispatch.ts';
 import { MetricsPort } from '../../../domain/metrics/metrics.port.ts';
 import { TriggerWorkspacePort } from '../../../domain/thread/trigger-workspace.port.ts';
-import { type RunDispatchOutcome, RunDispatchPort } from '../run-dispatch.port.ts';
-import { RunTriggerScriptsUseCase } from './run-trigger-scripts.use-case.ts';
+import type { RunDispatchOutcome } from '../run-dispatch.port.ts';
+import { RunDispatchPort } from '../run-dispatch.port.ts';
+import {
+  RunTriggerScriptsUseCase,
+  type TriggerScriptContext,
+} from './run-trigger-scripts.use-case.ts';
 import { FireWindowTracker, type TriggerLimits } from './trigger-limits.ts';
 
 export interface FireTriggerInput {
@@ -29,7 +39,7 @@ export interface FireTriggerInput {
 }
 
 export interface FireTriggerResult {
-  outcome: RunDispatchOutcome;
+  outcome: TriggerFireOutcomeCode;
   runId?: string | null;
 }
 
@@ -48,6 +58,7 @@ interface FireScriptContext {
   threadId: string;
   scripts: TriggerScripts | undefined;
   firedAt: string;
+  now: number;
 }
 
 const NO_LIMITS: TriggerLimits = {};
@@ -96,29 +107,99 @@ export class FireTriggerUseCase {
       this.applyWorkspace(input.orgId, target.threadId, target.workspace);
     }
     const scripts = this.scriptsOf(target.scripts);
-    const firedAt = new Date(now).toISOString();
-    const scriptContext: FireScriptContext = {
+    const context: FireScriptContext = {
       input,
       instance,
       target,
       threadId: target.threadId,
       scripts,
-      firedAt,
+      firedAt: new Date(now).toISOString(),
+      now,
     };
-    const pre = await this.runPreScript(scriptContext);
+    const mode = scripts?.agent ?? 'always';
+    if (mode === 'always') {
+      return await this.fireWithAgent(context);
+    }
+    return await this.fireScriptRun(context, mode);
+  }
+
+  private async fireWithAgent(context: FireScriptContext): Promise<FireTriggerResult> {
+    const { input } = context;
+    const pre = await this.runPreScript(context);
     if (pre.blocked !== undefined) {
       return this.suppressed(input, pre.blocked);
     }
+    const limits = this.limitsOf(input.orgId, context.instance);
+    if (!this.tracker.allow(input.instanceId, limits, context.now)) {
+      return this.suppressed(input, 'limits');
+    }
+    const text = this.textOf(input, context.instance);
+    const { outcome, runId } = await this.dispatchAgent(
+      context,
+      pre.note === undefined ? text : `${text}\n\n${pre.note}`,
+    );
+    this.schedulePost(context, runId, pre.cwd);
+    return this.finish(input, outcome, runId);
+  }
+
+  private async fireScriptRun(
+    context: FireScriptContext,
+    mode: Exclude<TriggerAgentMode, 'always'>,
+  ): Promise<FireTriggerResult> {
+    const { input, instance, target, scripts } = context;
+    if (scripts?.pre === undefined) {
+      return this.suppressed(input, 'no-scripts');
+    }
+    const scriptContext: TriggerScriptContext = {
+      orgId: input.orgId,
+      addonId: input.addonId,
+      instanceId: input.instanceId,
+      triggerId: instance.triggerId,
+      threadId: context.threadId,
+      agentId: target.agentId ?? '',
+      ...(input.payload === undefined ? {} : { payload: input.payload }),
+      firedAt: context.firedAt,
+    };
+    const job = await this.scripts.runJob({
+      ...scriptContext,
+      pre: scripts.pre,
+      mode,
+      ...(scripts.escalate === undefined ? {} : { escalate: scripts.escalate }),
+    });
+    if (job.decision.kind === 'quiet') {
+      if (scripts.post !== undefined) {
+        this.scripts.runPostNow({
+          context: scriptContext,
+          post: scripts.post,
+          cwd: job.cwd,
+          runStatus: job.decision.runStatus,
+        });
+      }
+      return this.finish(input, 'script-only');
+    }
     const limits = this.limitsOf(input.orgId, instance);
-    if (!this.tracker.allow(input.instanceId, limits, now)) {
+    if (!this.tracker.allow(input.instanceId, limits, context.now)) {
       return this.suppressed(input, 'limits');
     }
     const text = this.textOf(input, instance);
-    const { outcome, runId } = await this.dispatch.dispatch({
+    const { outcome, runId } = await this.dispatchAgent(
+      context,
+      job.decision.note === undefined ? text : `${text}\n\n${job.decision.note}`,
+    );
+    this.schedulePost(context, runId, job.cwd);
+    return this.finish(input, outcome, runId);
+  }
+
+  private async dispatchAgent(
+    context: FireScriptContext,
+    text: string,
+  ): Promise<{ outcome: RunDispatchOutcome; runId: string | null }> {
+    const { input, instance, target } = context;
+    return this.dispatch.dispatch({
       orgId: input.orgId,
-      threadId: target.threadId,
+      threadId: context.threadId,
       agentId: target.agentId ?? '',
-      text: pre.note === undefined ? text : `${text}\n\n${pre.note}`,
+      text,
       origin: TRIGGER_HUMAN_ORIGIN,
       runKey: input.runKey,
       correlationId: input.correlationId,
@@ -126,7 +207,13 @@ export class FireTriggerUseCase {
       ...(input.payload === undefined ? {} : { payload: input.payload }),
       actorUserId: instance.createdByUserId,
     });
-    this.schedulePost(scriptContext, runId, pre.cwd);
+  }
+
+  private finish(
+    input: FireTriggerInput,
+    outcome: TriggerFireOutcomeCode,
+    runId?: string | null,
+  ): FireTriggerResult {
     this.metrics.increment('addon.trigger.fire', {
       orgId: input.orgId,
       addonId: input.addonId,

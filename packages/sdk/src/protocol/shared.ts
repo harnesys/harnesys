@@ -239,7 +239,7 @@ export const AppCredentialsSchema = z.object({
 });
 
 export const TriggerFireOutcomeSchema = z.object({
-  outcome: z.enum(['fired', 'suppressed', 'busy', 'failed']),
+  outcome: z.enum(['fired', 'suppressed', 'busy', 'failed', 'script-only']),
   runId: z.string().nullable().optional(),
 });
 

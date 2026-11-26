@@ -93,14 +93,18 @@ export function ScriptEditor({
 export function GateEditor({
   gate,
   onChange,
+  label = 'Run condition',
+  emptyLabel = 'Always run',
 }: {
   gate: TriggerGate | undefined;
   onChange: (gate: TriggerGate | undefined) => void;
+  label?: string;
+  emptyLabel?: string;
 }) {
   const kind = gateKindOf(gate);
   return (
     <Field>
-      <FieldLabel htmlFor="trigger-script-gate">Run condition</FieldLabel>
+      <FieldLabel htmlFor="trigger-script-gate">{label}</FieldLabel>
       <Select
         value={kind}
         onValueChange={(next) => {
@@ -116,7 +120,7 @@ export function GateEditor({
           <SelectGroup>
             {GATES.map((item) => (
               <SelectItem key={item.value} value={item.value}>
-                {item.label}
+                {item.value === 'none' ? emptyLabel : item.label}
               </SelectItem>
             ))}
           </SelectGroup>

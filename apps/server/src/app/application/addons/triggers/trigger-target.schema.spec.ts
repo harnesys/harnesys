@@ -41,3 +41,80 @@ describe('TriggerTargetSchema scripts', () => {
     expect(parsed.success).toBe(true);
   });
 });
+
+describe('TriggerTargetSchema agent mode', () => {
+  test('conditional requires an escalation rule', () => {
+    expect(
+      TriggerTargetSchema.safeParse({
+        ...BASE,
+        scripts: { acknowledged: true, pre: PRE, agent: 'conditional' },
+      }).success,
+    ).toBe(false);
+    expect(
+      TriggerTargetSchema.safeParse({
+        ...BASE,
+        scripts: {
+          acknowledged: true,
+          pre: PRE,
+          agent: 'conditional',
+          escalate: { onFailure: true },
+        },
+      }).success,
+    ).toBe(true);
+  });
+
+  test('escalation rules outside conditional mode are rejected', () => {
+    expect(
+      TriggerTargetSchema.safeParse({
+        ...BASE,
+        scripts: {
+          acknowledged: true,
+          pre: PRE,
+          agent: 'never',
+          escalate: { onFailure: true },
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  test('legacy scripts default to the always agent mode', () => {
+    const parsed = TriggerTargetSchema.safeParse({
+      ...BASE,
+      scripts: { acknowledged: true, pre: PRE },
+    });
+    expect(parsed.success && parsed.data.scripts?.agent).toBe('always');
+  });
+
+  test('a non-always agent mode requires a pre script', () => {
+    expect(
+      TriggerTargetSchema.safeParse({ ...BASE, scripts: { acknowledged: true, agent: 'never' } })
+        .success,
+    ).toBe(false);
+    expect(
+      TriggerTargetSchema.safeParse({
+        ...BASE,
+        scripts: { acknowledged: true, agent: 'never', post: { script: { command: 'report' } } },
+      }).success,
+    ).toBe(false);
+    expect(
+      TriggerTargetSchema.safeParse({
+        ...BASE,
+        scripts: { acknowledged: true, agent: 'never', pre: PRE },
+      }).success,
+    ).toBe(true);
+  });
+
+  test('a conditional without a live rule is rejected', () => {
+    expect(
+      TriggerTargetSchema.safeParse({
+        ...BASE,
+        scripts: {
+          acknowledged: true,
+          pre: PRE,
+          agent: 'conditional',
+          escalate: { onFailure: false },
+        },
+      }).success,
+    ).toBe(false);
+  });
+});

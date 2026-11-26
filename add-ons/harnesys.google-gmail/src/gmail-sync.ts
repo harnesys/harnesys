@@ -176,7 +176,7 @@ async function fireMessage(
       url: `${MAIL_URL_BASE}/${snapshot.messageId}`,
     },
   });
-  if (result.outcome === 'fired') {
+  if (result.outcome === 'fired' || result.outcome === 'script-only') {
     return true;
   }
   await ctx.db.run('delete from fired where run_key = ?', [runKey]);

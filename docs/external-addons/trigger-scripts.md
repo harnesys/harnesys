@@ -89,6 +89,30 @@ returns, so the post script never re-resolves a workspace that may have been reb
 - v1 subscribes in-process. A server restart loses a pending post; an outbox drained on boot
   is the follow-up (same shape as `recover-orphaned-runs`).
 
+## Agent mode
+
+`scripts.agent` decides whether a fire starts an agent run at all. Absent means `always`
+(the classic flow: pre script, then an agent run, post script on run termination).
+
+- `never`: the pre script is the whole job. No agent run is dispatched and the fire returns
+  `outcome: "script-only"`; the post script runs against the job result
+  (`ok` -> `completed`, exit 2 -> `cancelled`, failure/timeout -> `failed`).
+- `conditional`: an agent run starts only when `escalate` matches — `onFailure` (default true)
+  on a failed, timed-out or unspawnable script, or `gate` (the same `TriggerGate` shape) passing
+  against the script result; a passed gate escalates even on a non-zero exit, which lets a
+  dedicated exit code mean "wake the agent". stdout/JSON gates keep requiring exit 0. Without
+  escalation the fire behaves like `never`. The escalated run receives the trigger instructions
+  plus a diagnostic note (`escalation-condition` for a passed gate, `pre-run-failure` for a
+  failed script).
+- A non-`always` mode requires a `pre` script; `escalate` must have at least one live rule.
+- In both modes `pre.gate` and `pre.onError` do not apply: the script is the job, not a filter.
+- `escalate` is valid only with `agent: conditional`; conditional requires it.
+
+Compatibility: `script-only` is a new value of the `ctx.triggers.fire` result. Add-ons built
+against `@harnesys/sdk` 1.3.1 and earlier reject it in the response schema, so an external
+add-on must be rebuilt against an SDK containing this outcome before its trigger instances
+are switched to a non-`always` agent mode.
+
 ## Working directory
 
 Both stages run with `cwd` equal to the directory the run itself will use, produced by the
