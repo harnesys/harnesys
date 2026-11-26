@@ -9,7 +9,7 @@ import {
   parseFiles,
 } from './multipart.ts';
 import type { NormalizedParam, OperationSpec } from './openapi/types.ts';
-import { responsePayload } from './truncate.ts';
+import { parseResponseShape, shapeResponse } from './shape.ts';
 import type { HttpResponse, ProjectRecord } from './types.ts';
 import { buildUrl, withQuery } from './url.ts';
 
@@ -157,20 +157,14 @@ export async function executeCall(
     });
     throw error;
   }
-  const maxBytes = 256 * 1024;
-  const payload = responsePayload(response.body, contentTypeOf(response), maxBytes);
+  const shape = parseResponseShape(input);
   await ctx.log.info('api call completed', {
     project: project.name,
     operation: operation.operationId,
     status: response.status,
     durationMs: Date.now() - startedAt,
   });
-  return {
-    status: response.status,
-    contentType: contentTypeOf(response) ?? null,
-    responseHeaders: selectHeaders(response.headers),
-    ...(payload.json !== undefined ? { body: payload.json } : { body: payload.text }),
-  };
+  return shapeResponse(ctx, operation.operationId, response, shape, 256 * 1024);
 }
 
 interface BodyPayload {
@@ -319,27 +313,6 @@ function recordOrEmpty(value: unknown): Record<string, unknown> {
     return {};
   }
   return value as Record<string, unknown>;
-}
-
-function contentTypeOf(response: { headers: Record<string, string> }): string | undefined {
-  const direct = response.headers['content-type'] ?? response.headers['Content-Type'];
-  return direct;
-}
-
-function selectHeaders(headers: Record<string, string>): Record<string, string> {
-  const selected: Record<string, string> = {};
-  for (const [key, value] of Object.entries(headers)) {
-    const lower = key.toLowerCase();
-    if (
-      lower === 'content-type' ||
-      lower.startsWith('x-request-id') ||
-      lower.startsWith('x-ratelimit') ||
-      lower === 'retry-after'
-    ) {
-      selected[key] = value;
-    }
-  }
-  return selected;
 }
 
 function messageOf(error: unknown): string {

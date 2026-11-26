@@ -61,9 +61,25 @@ describing what is injected for the project.
 - `not_found` / `unsupported` — the operation is not imported or is disabled; re-check
   `api_list`.
 
+## Response shaping
+
+Large directory reads should not go through your context. Every verb tool accepts:
+
+- `fields: ["id","slug","name"]` — projects the objects inside arrays of the JSON
+  response to only these keys; envelope keys (`total`, `page`, nesting) stay intact.
+  The inline `body` comes back already projected.
+- `saveToFile: true` — writes the full raw response body to
+  `thread:tool-outputs/<operation>-<timestamp>.json` and returns
+  `{savedTo, bytes, records, recordsAt, preview}` instead of the body: `preview` holds
+  the first `previewLimit` records (default 3, max 10). `read_file`/`grep` the saved
+  file afterwards when you need more. Requires a thread session.
+- Both together: the file keeps the full raw body, `preview` is projected — this is the
+  cheap pattern for building id/slug maps over hundreds of records.
+
 ## Limits
 
-- Response bodies larger than 256 KB are truncated (a marker at the end says so); use
-  query parameters to narrow results instead of reading huge lists.
+- Inline response bodies larger than 256 KB are truncated (a marker at the end says
+  so); prefer `saveToFile` or narrow with query parameters and `fields` instead of
+  reading huge lists.
 - `api_delete` is destructive and may require user approval — state the consequence
   before calling it.

@@ -1,6 +1,6 @@
 {
   "id": "harnesys.openapi",
-  "version": "1.0.21",
+  "version": "1.1.0",
   "platform": 1,
   "title": "OpenAPI Gateway",
   "description": "Call external HTTP APIs from agents through OpenAPI specifications. Import a spec, pick the operations to expose, store per-project credentials, and grant agents access project by project and operation by operation.",
@@ -24,7 +24,11 @@
     },
     {
       "id": "files.read",
-      "reason": "Read file content by absolute host path or thread-scoped path for the files parameter of multipart api_* calls (uploads to project APIs); stat/read only, no write"
+      "reason": "Read file content by absolute host path or thread-scoped path for the files parameter of multipart api_* calls (uploads to project APIs)"
+    },
+    {
+      "id": "files.write",
+      "reason": "Write full api_* response bodies to thread:tool-outputs/ when callers pass saveToFile; thread-scoped output files only"
     }
   ],
   "data": {
@@ -89,7 +93,7 @@
           },
           {
             "name": "get",
-            "description": "Execute a granted GET operation. params is one flat object with path, query and header parameters as named in api_docs; the addon routes them to the right place.",
+            "description": "Execute a granted GET operation. params is one flat object with path, query and header parameters as named in api_docs; the addon routes them to the right place. Response shaping: fields projects array records to the listed keys; saveToFile stores the full body in thread:tool-outputs/ and returns path + counters + a preview of the first records instead of the raw body.",
             "effect": "read",
             "idempotent": true,
             "inputSchema": {
@@ -107,6 +111,26 @@
                   "type": "object",
                   "additionalProperties": true,
                   "description": "Flat object of path/query/header parameters"
+                },
+                "fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1,
+                  "maxItems": 32,
+                  "description": "Project response records: objects inside arrays keep only these keys (e.g. [\"id\",\"slug\",\"name\"]); envelope keys (total, page) stay intact"
+                },
+                "saveToFile": {
+                  "type": "boolean",
+                  "description": "Write the full raw response body to thread:tool-outputs/<operation>-<timestamp>.json and return savedTo path + bytes + record counters + preview instead of the inline body"
+                },
+                "previewLimit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10,
+                  "description": "How many records per array to include in the preview when saveToFile is true (default 3)"
                 }
               },
               "required": [
@@ -117,7 +141,7 @@
           },
           {
             "name": "post",
-            "description": "Execute a granted POST operation. params carries path/query/header parameters; body is the JSON request body when the operation declares one.",
+            "description": "Execute a granted POST operation. params carries path/query/header parameters; body is the JSON request body when the operation declares one. Response shaping: fields projects array records to the listed keys; saveToFile stores the full body in thread:tool-outputs/ and returns path + counters + a preview of the first records instead of the raw body.",
             "effect": "write",
             "inputSchema": {
               "type": "object",
@@ -173,6 +197,26 @@
                       "name"
                     ]
                   }
+                },
+                "fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1,
+                  "maxItems": 32,
+                  "description": "Project response records: objects inside arrays keep only these keys (e.g. [\"id\",\"slug\",\"name\"]); envelope keys (total, page) stay intact"
+                },
+                "saveToFile": {
+                  "type": "boolean",
+                  "description": "Write the full raw response body to thread:tool-outputs/<operation>-<timestamp>.json and return savedTo path + bytes + record counters + preview instead of the inline body"
+                },
+                "previewLimit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10,
+                  "description": "How many records per array to include in the preview when saveToFile is true (default 3)"
                 }
               },
               "required": [
@@ -183,7 +227,7 @@
           },
           {
             "name": "put",
-            "description": "Execute a granted PUT operation. params carries path/query/header parameters; body is the JSON request body when the operation declares one.",
+            "description": "Execute a granted PUT operation. params carries path/query/header parameters; body is the JSON request body when the operation declares one. Response shaping: fields projects array records to the listed keys; saveToFile stores the full body in thread:tool-outputs/ and returns path + counters + a preview of the first records instead of the raw body.",
             "effect": "write",
             "idempotent": true,
             "inputSchema": {
@@ -240,6 +284,26 @@
                       "name"
                     ]
                   }
+                },
+                "fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1,
+                  "maxItems": 32,
+                  "description": "Project response records: objects inside arrays keep only these keys (e.g. [\"id\",\"slug\",\"name\"]); envelope keys (total, page) stay intact"
+                },
+                "saveToFile": {
+                  "type": "boolean",
+                  "description": "Write the full raw response body to thread:tool-outputs/<operation>-<timestamp>.json and return savedTo path + bytes + record counters + preview instead of the inline body"
+                },
+                "previewLimit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10,
+                  "description": "How many records per array to include in the preview when saveToFile is true (default 3)"
                 }
               },
               "required": [
@@ -250,7 +314,7 @@
           },
           {
             "name": "patch",
-            "description": "Execute a granted PATCH operation. params carries path/query/header parameters; body is the JSON request body when the operation declares one.",
+            "description": "Execute a granted PATCH operation. params carries path/query/header parameters; body is the JSON request body when the operation declares one. Response shaping: fields projects array records to the listed keys; saveToFile stores the full body in thread:tool-outputs/ and returns path + counters + a preview of the first records instead of the raw body.",
             "effect": "write",
             "inputSchema": {
               "type": "object",
@@ -306,6 +370,26 @@
                       "name"
                     ]
                   }
+                },
+                "fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1,
+                  "maxItems": 32,
+                  "description": "Project response records: objects inside arrays keep only these keys (e.g. [\"id\",\"slug\",\"name\"]); envelope keys (total, page) stay intact"
+                },
+                "saveToFile": {
+                  "type": "boolean",
+                  "description": "Write the full raw response body to thread:tool-outputs/<operation>-<timestamp>.json and return savedTo path + bytes + record counters + preview instead of the inline body"
+                },
+                "previewLimit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10,
+                  "description": "How many records per array to include in the preview when saveToFile is true (default 3)"
                 }
               },
               "required": [
@@ -316,7 +400,7 @@
           },
           {
             "name": "delete",
-            "description": "Execute a granted DELETE operation. This is a destructive call and may be subject to host approval.",
+            "description": "Execute a granted DELETE operation. This is a destructive call and may be subject to host approval. Response shaping: fields projects array records to the listed keys; saveToFile stores the full body in thread:tool-outputs/ and returns path + counters + a preview of the first records instead of the raw body.",
             "effect": "destructive",
             "inputSchema": {
               "type": "object",
@@ -333,6 +417,26 @@
                   "type": "object",
                   "additionalProperties": true,
                   "description": "Flat object of path/query/header parameters"
+                },
+                "fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1,
+                  "maxItems": 32,
+                  "description": "Project response records: objects inside arrays keep only these keys (e.g. [\"id\",\"slug\",\"name\"]); envelope keys (total, page) stay intact"
+                },
+                "saveToFile": {
+                  "type": "boolean",
+                  "description": "Write the full raw response body to thread:tool-outputs/<operation>-<timestamp>.json and return savedTo path + bytes + record counters + preview instead of the inline body"
+                },
+                "previewLimit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10,
+                  "description": "How many records per array to include in the preview when saveToFile is true (default 3)"
                 }
               },
               "required": [
@@ -489,7 +593,7 @@
                     "label": "Base URL",
                     "type": "url",
                     "required": false,
-                    "help": "Leave empty to use the first server URL from the spec; http:// URLs are allowed for local or internal APIs but are insecure \u2014 prefer https"
+                    "help": "Leave empty to use the first server URL from the spec; http:// URLs are allowed for local or internal APIs but are insecure — prefer https"
                   },
                   {
                     "key": "authKind",
