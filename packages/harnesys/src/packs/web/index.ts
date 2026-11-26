@@ -70,7 +70,8 @@ export interface WebPackPorts extends BrowserLoginPorts {
 const BROWSER_TOOL_META = [
   {
     name: 'browser_fetch',
-    description: 'One-shot page scrape to markdown without a browser session.',
+    description:
+      'One-shot page scrape to markdown without a browser session; reports bytes and an empty-body note on unreadable pages.',
   },
   {
     name: 'browser',
@@ -105,7 +106,7 @@ export const webCapability = definePack<WebPackPorts, WebPackSpec>({
       {
         name: 'web_search',
         description:
-          'Search the web for current information. Use for facts that may be missing or outdated in the knowledge base.',
+          'Search the web for current information; single query or a batch of up to 5, with searxng refinements (language, time_range, categories, pageno, engines).',
       },
       {
         name: 'fetch',

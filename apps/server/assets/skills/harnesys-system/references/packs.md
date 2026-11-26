@@ -89,9 +89,9 @@ Pack skill: `browser` (bypasses the agent's `skills` allowlist).
 
 | Tool | Does |
 |---|---|
-| `web_search` | Web search for current information. |
+| `web_search` | Web search for current information. Single `query` or batched `queries` (up to 5, answers in request order); searxng adds `language`, `time_range`, `categories`, `pageno`, `engines` and returns `engines_used` / `unresponsive_engines` / `infoboxes`. |
 | `fetch` | HTTP request (GET/POST/PUT/PATCH/DELETE/HEAD) for http/https URLs. |
-| `browser_fetch` | One-shot page scrape to Markdown without a browser session. |
+| `browser_fetch` | One-shot page scrape to Markdown without a browser session; returns `bytes` and an `empty body` note when a page is unreadable. |
 | `browser` | Full agent-browser CLI surface in a thread session; load the `browser` skill for commands. |
 | `browser_close` | Close the browser session and stop the engine. |
 

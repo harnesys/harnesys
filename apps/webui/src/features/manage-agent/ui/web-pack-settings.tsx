@@ -15,7 +15,7 @@ import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/shared/ui/toggle-group';
 
-const DEFAULT_WEB_SEARCH_MAX_RESULTS = 5;
+const DEFAULT_WEB_SEARCH_MAX_RESULTS = 8;
 const MAX_WEB_SEARCH_RESULTS = 20;
 const DEFAULT_SEARXNG_URL = 'http://localhost:8888';
 const WEB_ENGINE_ORG_DEFAULT = 'org-default';
@@ -229,7 +229,7 @@ export function WebPackSettings({
           }}
         />
         <FieldDescription className="text-[11px] leading-snug">
-          Result cap when the tool call omits `max_results`. Range 1–20. Default 5.
+          Result cap when the tool call omits `max_results`. Range 1–20. Default 8.
         </FieldDescription>
       </Field>
       <p className="font-medium text-muted-foreground text-xs">Browser</p>

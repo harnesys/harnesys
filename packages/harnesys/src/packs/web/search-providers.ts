@@ -3,10 +3,33 @@ export interface SearchResult {
   url: string;
   snippet: string;
 }
-export interface SearchProvider {
-  search: (query: string) => Promise<SearchResult[]>;
+export type SearchTimeRange = 'day' | 'week' | 'month' | 'year';
+export interface SearchOptions {
+  language?: string;
+  timeRange?: SearchTimeRange;
+  categories?: string;
+  pageno?: number;
+  engines?: readonly string[];
 }
-const MAX_RESULTS = 5;
+export interface SearchInfobox {
+  title: string;
+  url?: string;
+  content?: string;
+}
+export interface SearchMeta {
+  numberOfResults?: number;
+  enginesUsed?: string[];
+  unresponsiveEngines?: string[];
+  answers?: string[];
+  infoboxes?: SearchInfobox[];
+}
+export interface SearchResponse {
+  results: SearchResult[];
+  meta?: SearchMeta;
+}
+export interface SearchProvider {
+  search: (query: string, options: SearchOptions) => Promise<SearchResponse>;
+}
 const DUCKDUCKGO_MIN_DELAY_MS = 2000;
 const SEARXNG_MIN_DELAY_MS = 1000;
 const SEARXNG_TIMEOUT_MS = 10000;
@@ -56,7 +79,7 @@ export function duckduckgoSearch(): SearchProvider {
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
           }
-          return parseDuckduckgoHtml(await response.text());
+          return { results: parseDuckduckgoHtml(await response.text()) };
         } catch (error) {
           throw describeFailure('duckduckgo', error);
         }
@@ -86,7 +109,7 @@ function parseDuckduckgoHtml(body: string): SearchResult[] {
     }
   }
   const results: SearchResult[] = [];
-  for (let i = 0; i < Math.min(links.length, MAX_RESULTS); i += 1) {
+  for (let i = 0; i < links.length; i += 1) {
     const link = links[i];
     if (link === undefined) {
       continue;
@@ -116,15 +139,10 @@ export function searxngSearch(options: SearxngOptions): SearchProvider {
   const limiter = createLimiter(SEARXNG_MIN_DELAY_MS);
   const base = options.url.replace(/\/+$/, '');
   return {
-    search: (query) =>
+    search: (query, searchOptions) =>
       limiter(async () => {
         try {
-          const params = new URLSearchParams({
-            q: query,
-            format: 'json',
-            categories: 'general',
-            language: 'en',
-          });
+          const params = buildSearxngParams(query, searchOptions);
           const response = await fetch(`${base}/search?${params.toString()}`, {
             headers: { accept: 'application/json' },
             signal: AbortSignal.timeout(SEARXNG_TIMEOUT_MS),
@@ -132,22 +150,107 @@ export function searxngSearch(options: SearxngOptions): SearchProvider {
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
           }
-          const data = (await response.json()) as SearxngResponse;
-          return (data.results ?? []).slice(0, MAX_RESULTS).map((item) => ({
-            title: item.title ?? '',
-            url: item.url ?? '',
-            snippet: item.content ?? '',
-          }));
+          return parseSearxngResponse((await response.json()) as SearxngResponse);
         } catch (error) {
           throw describeFailure('searxng', error);
         }
       }),
   };
 }
-interface SearxngResponse {
+export function buildSearxngParams(query: string, options: SearchOptions): URLSearchParams {
+  const params = new URLSearchParams({
+    q: query,
+    format: 'json',
+    categories: options.categories ?? 'general',
+    language: options.language ?? 'all',
+  });
+  if (options.timeRange !== undefined) {
+    params.set('time_range', options.timeRange);
+  }
+  if (options.pageno !== undefined) {
+    params.set('pageno', String(options.pageno));
+  }
+  if (options.engines !== undefined && options.engines.length > 0) {
+    params.set('engines', options.engines.join(','));
+  }
+  return params;
+}
+export function parseSearxngResponse(data: SearxngResponse): SearchResponse {
+  const results: SearchResult[] = (data.results ?? []).map((item) => ({
+    title: item.title ?? '',
+    url: item.url ?? '',
+    snippet: item.content ?? '',
+  }));
+  const meta: SearchMeta = {};
+  if (typeof data.number_of_results === 'number') {
+    meta.numberOfResults = data.number_of_results;
+  }
+  const enginesUsed = distinctStrings((data.results ?? []).map((item) => item.engine));
+  if (enginesUsed.length > 0) {
+    meta.enginesUsed = enginesUsed;
+  }
+  const unresponsive = describeUnresponsiveEngines(data.unresponsive_engines);
+  if (unresponsive.length > 0) {
+    meta.unresponsiveEngines = unresponsive;
+  }
+  if (Array.isArray(data.answers) && data.answers.length > 0) {
+    meta.answers = data.answers.map((answer) => String(answer));
+  }
+  const infoboxes = parseSearxngInfoboxes(data.infoboxes);
+  if (infoboxes.length > 0) {
+    meta.infoboxes = infoboxes;
+  }
+  return { results, ...(Object.keys(meta).length > 0 ? { meta } : {}) };
+}
+function describeUnresponsiveEngines(raw: SearxngUnresponsiveEngines | undefined): string[] {
+  if (Array.isArray(raw)) {
+    return raw.map((entry) =>
+      Array.isArray(entry) ? `${String(entry[0])}: ${String(entry[1])}` : String(entry),
+    );
+  }
+  if (raw !== undefined && typeof raw === 'object') {
+    return Object.entries(raw).map(([name, reason]) => `${name}: ${reason}`);
+  }
+  return [];
+}
+type SearxngUnresponsiveEngines = Array<readonly [string, string]> | Record<string, string>;
+interface SearxngInfobox {
+  infobox?: string;
+  title?: string;
+  url?: string;
+  content?: string;
+}
+function parseSearxngInfoboxes(raw: SearxngInfobox[] | undefined): SearchInfobox[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw
+    .filter((box) => typeof box === 'object' && box !== null)
+    .map((box) => ({
+      title: String(box.infobox ?? box.title ?? ''),
+      ...(typeof box.url === 'string' && box.url !== '' ? { url: box.url } : {}),
+      ...(typeof box.content === 'string' && box.content !== '' ? { content: box.content } : {}),
+    }))
+    .filter((box) => box.title !== '' || box.content !== undefined);
+}
+function distinctStrings(values: Array<string | undefined>): string[] {
+  const seen = new Set<string>();
+  for (const value of values) {
+    if (typeof value === 'string' && value !== '') {
+      seen.add(value);
+    }
+  }
+  return [...seen];
+}
+export interface SearxngResponse {
   results?: Array<{
     title?: string;
     url?: string;
     content?: string;
+    engine?: string;
   }>;
+  number_of_results?: number;
+  unresponsive_engines?: SearxngUnresponsiveEngines;
+  answers?: unknown[];
+  infoboxes?: SearxngInfobox[];
 }
