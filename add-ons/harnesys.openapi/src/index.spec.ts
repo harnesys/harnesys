@@ -23,7 +23,10 @@ describe('harnesys.openapi manifest', () => {
       inputSchema: { properties: Record<string, unknown> };
     }
     const pack = rawManifest.contributions.find((c) => c.id === 'api');
-    const tools = (pack?.descriptor as { tools: ToolEntry[] }).tools;
+    if (pack === undefined) {
+      throw new Error('api pack missing in the manifest');
+    }
+    const tools = (pack.descriptor as { tools: ToolEntry[] }).tools;
     const names = tools.map((tool) => tool.name);
     expect(names).toContain('grants_list');
     expect(names).toContain('grants_grant');
