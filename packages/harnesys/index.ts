@@ -564,8 +564,8 @@ export type {
   AgentsCatalogPort,
 } from './src/ports/agents-catalog.ts';
 export {
-  AutomationAdminPort,
   type AutomationActionDescriptor,
+  AutomationAdminPort,
   type AutomationCreateInput,
   type AutomationInstance,
   type AutomationScriptTestInput,
