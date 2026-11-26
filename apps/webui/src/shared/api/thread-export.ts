@@ -35,6 +35,14 @@ async function zipBlob(
   response: Response,
   onProgress?: (receivedBytes: number) => void,
 ): Promise<Blob> {
+  return streamBlobWithProgress(response, onProgress, 'application/zip');
+}
+
+export async function streamBlobWithProgress(
+  response: Response,
+  onProgress?: (receivedBytes: number) => void,
+  blobType?: string,
+): Promise<Blob> {
   const body = response.body;
   if (!body || !onProgress) {
     return response.blob();
@@ -54,7 +62,7 @@ async function zipBlob(
     received += value.byteLength;
     onProgress(received);
   }
-  return new Blob(chunks as BlobPart[], { type: 'application/zip' });
+  return new Blob(chunks as BlobPart[], { type: blobType ?? '' });
 }
 
 async function assertCompleteZip(blob: Blob): Promise<void> {

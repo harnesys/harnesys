@@ -73,13 +73,13 @@ export class ExportOrgBackupUseCase {
   }
 }
 
-function scheduleCleanup(workDir: string): void {
+export function scheduleCleanup(workDir: string): void {
   setTimeout(() => {
     rmSync(workDir, { recursive: true, force: true });
   }, ARCHIVE_TEMP_LIFETIME_MS).unref();
 }
 
-function orgNameSlug(name: string): string {
+export function orgNameSlug(name: string): string {
   return (
     name
       .toLowerCase()
@@ -89,7 +89,7 @@ function orgNameSlug(name: string): string {
   );
 }
 
-function archiveStamp(): string {
+export function archiveStamp(): string {
   const now = new Date();
   const pad = (value: number): string => String(value).padStart(2, '0');
   return (

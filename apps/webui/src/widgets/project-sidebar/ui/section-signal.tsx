@@ -3,7 +3,7 @@ import type { SectionSignal } from '../model/section-signals';
 
 export function SectionLiveDot({ className }: { className?: string }) {
   return (
-    <span className={cn('absolute -top-0.5 -right-0.5 flex size-1.5', className)}>
+    <span className={cn('absolute -top-0.5 -left-0.5 flex size-1.5', className)}>
       <span className="live-dot size-1.5 rounded-full bg-live ring-2 ring-sidebar" />
     </span>
   );

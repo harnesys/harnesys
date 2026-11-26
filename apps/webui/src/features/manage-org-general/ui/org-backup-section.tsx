@@ -1,7 +1,13 @@
 import { useMutation } from '@tanstack/react-query';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useOrgStore } from '@/features/switch-org/org-context';
-import { downloadOrgBackup, listOrgs, restoreOrgBackup } from '@/shared/api/orgs';
+import {
+  downloadOrgBackup,
+  downloadOrgDatabase,
+  listOrgs,
+  restoreOrgBackup,
+} from '@/shared/api/orgs';
+import { formatBytes } from '@/shared/lib/file-meta';
 import { alert } from '@/shared/services/overlay';
 import { Button } from '@/shared/ui/button';
 import { SettingsSection } from '@/shared/ui/settings-kit';
@@ -10,6 +16,7 @@ import { toast } from '@/shared/ui/toast';
 export function OrgBackupSection({ orgId, orgName }: { orgId: string; orgName: string }) {
   const { upsertOrg, setOrgs } = useOrgStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dbReceivedBytes, setDbReceivedBytes] = useState<number | null>(null);
 
   const downloadMutation = useMutation({
     mutationFn: () => downloadOrgBackup(orgId),
@@ -22,6 +29,20 @@ export function OrgBackupSection({ orgId, orgName }: { orgId: string; orgName: s
       });
     },
   });
+
+  const downloadDatabase = () => {
+    setDbReceivedBytes(0);
+    void downloadOrgDatabase(orgId, (bytes) => setDbReceivedBytes(bytes))
+      .then(() => {
+        toast.add({ title: 'Database downloaded' });
+      })
+      .catch((error: unknown) => {
+        toast.add({
+          title: error instanceof Error ? error.message : 'Could not download database',
+        });
+      })
+      .finally(() => setDbReceivedBytes(null));
+  };
 
   const restoreMutation = useMutation({
     mutationFn: (file: File) => restoreOrgBackup(file),
@@ -69,7 +90,7 @@ export function OrgBackupSection({ orgId, orgName }: { orgId: string; orgName: s
   return (
     <SettingsSection
       label="Backup & restore"
-      description="Download a full archive of this organization's database and files. Restoring creates a new local copy; secrets stay encrypted with this machine's master key, so restoring on another machine requires the same master.key."
+      description="Download a full archive of this organization's database and files, or just the SQLite database file. Restoring creates a new local copy; secrets stay encrypted with this machine's master key, so restoring on another machine requires the same master.key."
       testId="org-general-backup"
     >
       <div className="flex flex-wrap items-center gap-2">
@@ -81,6 +102,18 @@ export function OrgBackupSection({ orgId, orgName }: { orgId: string; orgName: s
           onClick={() => downloadMutation.mutate()}
         >
           {downloading ? 'Preparing...' : 'Download backup'}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={dbReceivedBytes !== null}
+          aria-busy={dbReceivedBytes !== null}
+          data-testid="org-general-database-download"
+          onClick={downloadDatabase}
+        >
+          {dbReceivedBytes === null
+            ? 'Download database'
+            : `Downloading… ${formatBytes(dbReceivedBytes)}`}
         </Button>
         <Button
           variant="outline"

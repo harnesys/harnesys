@@ -1,6 +1,7 @@
 import type { MachineOrgEntry } from '@harnesys/studio-shared';
 import { ApiError, apiJson, apiUrl } from './client';
 import { authenticatedFetch } from './session';
+import { streamBlobWithProgress } from './thread-export';
 
 export type { MachineOrgEntry };
 
@@ -60,6 +61,28 @@ export async function downloadOrgBackup(orgId: string): Promise<void> {
     fileNameFromDisposition(response.headers.get('Content-Disposition')) ??
     `harnesys-org-${orgId}.tar.gz`;
   const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function downloadOrgDatabase(
+  orgId: string,
+  onProgress?: (receivedBytes: number) => void,
+): Promise<void> {
+  const response = await authenticatedFetch(
+    apiUrl(`/api/orgs/${encodeURIComponent(orgId)}/database`),
+  );
+  if (!response.ok) {
+    throw new ApiError(response.status, 'Organization database download failed');
+  }
+  const fileName =
+    fileNameFromDisposition(response.headers.get('Content-Disposition')) ??
+    `harnesys-org-${orgId}.db`;
+  const blob = await streamBlobWithProgress(response, onProgress, 'application/x-sqlite3');
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;

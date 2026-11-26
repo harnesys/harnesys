@@ -2,6 +2,7 @@ import { Controller, Ctx, Get, HttpCode, Param, Post, ValidationException } from
 import type { MachineOrgEntry } from '@harnesys/contracts';
 import type { Context } from 'hono';
 import { ExportOrgBackupUseCase } from '../../application/org-machine/export-org-backup.use-case.ts';
+import { ExportOrgDbUseCase } from '../../application/org-machine/export-org-db.use-case.ts';
 import { ImportOrgBackupUseCase } from '../../application/org-machine/import-org-backup.use-case.ts';
 import type { UserPrincipal } from '../../domain/identity/principal.ts';
 import { SessionPrincipal } from '../guards/session.guard.ts';
@@ -10,6 +11,7 @@ import { SessionPrincipal } from '../guards/session.guard.ts';
 export class OrgBackupController {
   constructor(
     private readonly exportBackup: ExportOrgBackupUseCase,
+    private readonly exportDb: ExportOrgDbUseCase,
     private readonly importBackup: ImportOrgBackupUseCase,
   ) {}
 
@@ -20,6 +22,18 @@ export class OrgBackupController {
     return new Response(file, {
       headers: {
         'Content-Type': 'application/gzip',
+        'Content-Disposition': `attachment; filename="${fileName}"`,
+      },
+    });
+  }
+
+  @Get(':orgId/database')
+  async database(@Param('orgId') orgId: string): Promise<Response> {
+    const { filePath, fileName } = await this.exportDb.execute({ orgId });
+    const file = Bun.file(filePath);
+    return new Response(file, {
+      headers: {
+        'Content-Type': 'application/x-sqlite3',
         'Content-Disposition': `attachment; filename="${fileName}"`,
       },
     });

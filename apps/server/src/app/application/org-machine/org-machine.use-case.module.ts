@@ -7,6 +7,7 @@ import { ActivateOrgUseCase } from './activate-org.use-case.ts';
 import { CreateRelayOrgUseCase } from './create-relay-org.use-case.ts';
 import { DeleteOrgUseCase } from './delete-org.use-case.ts';
 import { ExportOrgBackupUseCase } from './export-org-backup.use-case.ts';
+import { ExportOrgDbUseCase } from './export-org-db.use-case.ts';
 import { GetOrgSettingsUseCase } from './get-org-settings.use-case.ts';
 import { ImportOrgBackupUseCase } from './import-org-backup.use-case.ts';
 import { ListOrgsUseCase } from './list-orgs.use-case.ts';
@@ -24,6 +25,7 @@ import { UpdateOrgUseCase } from './update-org.use-case.ts';
     GetOrgSettingsUseCase,
     SetOrgSettingsUseCase,
     ExportOrgBackupUseCase,
+    ExportOrgDbUseCase,
     ImportOrgBackupUseCase,
   ],
   exports: [
@@ -35,6 +37,7 @@ import { UpdateOrgUseCase } from './update-org.use-case.ts';
     GetOrgSettingsUseCase,
     SetOrgSettingsUseCase,
     ExportOrgBackupUseCase,
+    ExportOrgDbUseCase,
     ImportOrgBackupUseCase,
     MachineConfigPort,
     OrgSettingsPort,
