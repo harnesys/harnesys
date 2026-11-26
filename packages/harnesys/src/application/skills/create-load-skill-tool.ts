@@ -2,7 +2,16 @@ import type { SkillDocument } from '../../domain/skill.ts';
 import type { SkillRegistry } from '../../ports/skills.ts';
 import type { ToolDefinition } from '../../ports/tools.ts';
 import { tool } from '../../ports/tools.ts';
-export function createLoadSkillTool(registry: SkillRegistry): ToolDefinition {
+
+export interface LoadSkillToolOptions {
+  /** Full installed registry, used to explain a skill that exists but is not enabled for the agent. */
+  installed?: SkillRegistry;
+}
+
+export function createLoadSkillTool(
+  registry: SkillRegistry,
+  options?: LoadSkillToolOptions,
+): ToolDefinition {
   return tool('load_skill', {
     group: 'skills',
     description:
@@ -23,6 +32,14 @@ export function createLoadSkillTool(registry: SkillRegistry): ToolDefinition {
       try {
         doc = (await registry.load(name)) as SkillDocument;
       } catch (error) {
+        const installed = options?.installed;
+        if (installed !== undefined && (await existsIn(installed, name))) {
+          return {
+            error: true,
+            code: 'SKILL_NOT_ENABLED',
+            message: `skill "${name}" is installed but not enabled for this agent; add it to the agent skills list`,
+          };
+        }
         return {
           error: true,
           code: 'UNKNOWN_SKILL',
@@ -44,4 +61,13 @@ export function createLoadSkillTool(registry: SkillRegistry): ToolDefinition {
       }
     },
   });
+}
+
+async function existsIn(registry: SkillRegistry, name: string): Promise<boolean> {
+  try {
+    await registry.load(name);
+    return true;
+  } catch {
+    return false;
+  }
 }

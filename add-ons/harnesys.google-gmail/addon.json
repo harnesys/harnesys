@@ -1,6 +1,6 @@
 {
   "id": "harnesys.google-gmail",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "platform": 1,
   "title": "Gmail",
   "description": "Search and read Gmail messages and threads, send mail, save attachments into the organization workspace, and fire the gmail.message trigger when new mail matching the filters arrives. The add-on calls the Gmail API; the token is injected by the host and never enters the add-on process.",
@@ -101,6 +101,33 @@
           "perDay": 200,
           "throttleSec": 5
         },
+        "actions": [
+          {
+            "id": "status",
+            "title": "Instance status",
+            "description": "Filters, per-account Gmail history watermark, pending messages and fire counters",
+            "inputSchema": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            }
+          },
+          {
+            "id": "reset_watermark",
+            "title": "Reset watermark",
+            "description": "Drop the Gmail history watermark so the next poll re-baselines to the current historyId without replaying messages",
+            "inputSchema": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "accountId": {
+                  "type": "string",
+                  "description": "Bound Google account to reset; omit to reset every bound account"
+                }
+              }
+            }
+          }
+        ],
         "icon": "mail",
         "color": "#ea4335"
       }

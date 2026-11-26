@@ -67,11 +67,12 @@ function gateStdout(
   if (result.exitCode !== 0) {
     return 'unmatched';
   }
+  const stdout = result.stdout.trim();
   if (gate.match === 'contains') {
-    return result.stdout.includes(gate.value) ? 'passed' : 'unmatched';
+    return stdout.includes(gate.value) ? 'passed' : 'unmatched';
   }
   try {
-    return new RegExp(gate.value).test(result.stdout) ? 'passed' : 'unmatched';
+    return new RegExp(gate.value).test(stdout) ? 'passed' : 'unmatched';
   } catch {
     return 'unmatched';
   }

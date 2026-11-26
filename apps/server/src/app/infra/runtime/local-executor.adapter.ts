@@ -8,6 +8,7 @@ import type {
   SessionHandle,
   TruncateThreadResult,
 } from 'harnesys';
+import { AutomationAdminPort } from 'harnesys';
 import { RecordBrowserLoginResultUseCase } from '../../application/browser-login/record-browser-login-result.use-case.ts';
 import { resolveMcpVaultEntry } from '../../application/mcp/resolve-mcp-vault-placeholders.ts';
 import { TriggerInstanceRepositoryPort } from '../../domain/addons/ports/trigger-instance-repository.port.ts';
@@ -106,6 +107,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     private readonly deskEvents: DeskEventsPort,
     private readonly terminalSessions: TerminalSessionsPort,
     private readonly triggerInstances: TriggerInstanceRepositoryPort,
+    private readonly automations: AutomationAdminPort,
     private readonly knowledgeSearch: KnowledgeSearchPort,
     private readonly knowledgeStore: KnowledgeStorePort,
     private readonly waitGate: WaitTickerGatePort,
@@ -208,6 +210,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       deskEvents: this.deskEvents,
       terminalSessions: this.terminalSessions,
       triggerInstances: this.triggerInstances,
+      automations: this.automations,
       knowledge: {
         search: this.knowledgeSearch,
         store: this.knowledgeStore,

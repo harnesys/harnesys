@@ -147,6 +147,7 @@ export async function executeDelivery(
       { label: 'Method', value: source.method },
       { label: 'Source', value: origin === 'hook' ? 'Webhook' : 'Test call' },
     ],
+    ...(source.body === undefined ? {} : { payload: source.body }),
   });
   const latencyMs = Date.now() - fireStartedAt;
   const runId = typeof result.runId === 'string' ? result.runId : null;

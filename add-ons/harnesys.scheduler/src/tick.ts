@@ -2,7 +2,14 @@ import type { AddonContext, JobHandler } from '@harnesys/sdk';
 import { nextCronRunAt } from './cron.ts';
 import { type DueDecision, planDueBatch } from './planner.ts';
 import type { ScheduleTarget } from './store.ts';
-import { listSchedules, markFailed, migrateLegacyDetail, recordFire, saveState } from './store.ts';
+import {
+  advanceActive,
+  isScheduleActive,
+  listSchedules,
+  markFailed,
+  migrateLegacyDetail,
+  recordFire,
+} from './store.ts';
 import { orgTimezone } from './trigger.ts';
 
 const CATCHUP_WINDOW_SEC = 3600;
@@ -61,6 +68,9 @@ async function handlePlanned(
     await advance(ctx, row, now, timezone);
     return;
   }
+  if (!(await isScheduleActive(ctx, row.instanceId))) {
+    return;
+  }
   const scheduledFor = new Date(row.nextRunAt ?? now.toISOString());
   const result = await ctx.triggers.fire({
     instanceId: row.instanceId,
@@ -102,13 +112,16 @@ async function advance(
 ): Promise<void> {
   try {
     const nextRunAt = nextCronRunAt(row.cron, now, timezone);
-    await saveState(ctx, {
+    const advanced = await advanceActive(ctx, {
       instanceId: row.instanceId,
       cron: row.cron,
-      status: 'active',
       nextRunAt,
-      error: null,
     });
+    if (!advanced) {
+      await ctx.log.info('schedule paused while firing, not re-armed', {
+        instanceId: row.instanceId,
+      });
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'cron computation failed';
     await markFailed(ctx, row.instanceId, message);

@@ -56,6 +56,22 @@ describe('addon runtime', () => {
     expect(output.output.echo.a).toBe(1);
   });
 
+  test('dispatches trigger.action to the trigger pair', async () => {
+    const runtime = runtimeWithNow(() => 1_000);
+    const output = await runtime.handleRequest(
+      'trigger.action',
+      {
+        instanceId: 'i1',
+        kind: 'telegram.feed',
+        action: 'status',
+        input: { limit: 2 },
+        _meta: meta(),
+      },
+      new AbortController().signal,
+    );
+    expect(output).toEqual({ action: 'status', input: { limit: 2 } });
+  });
+
   test('dispatches source calls to the named source backend', async () => {
     const runtime = runtimeWithNow(() => 1_000);
     const listed = (await runtime.handleRequest(

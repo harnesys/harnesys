@@ -55,16 +55,17 @@ Capability packs: a pack is a bundle of tools; value shapes are `{}` (enabled wi
 
 Verify memory state after any change (`pin_list`, `memory_list`, `knowledge_search`, `threads_search`).
 
-## Schedules
+## Automations
 
-Recurring runs are automation trigger instances: the host stores each instance with its agent, thread, permission mode, workspace and instructions, and starts a run whenever the trigger fires. The tools that create and list automations come from installed add-ons, not from the core; use the automation tools this agent actually has.
+Recurring and event-driven runs are trigger instances of installed add-ons: the host stores each instance with its agent, thread, permission mode, workspace, instructions, add-on config and pre/post scripts. The `automations` pack manages every kind without per-add-on tools.
 
-- One trigger instance per thread. Dedicated automation threads keep logs isolated from chat threads.
-- The instance workspace is the target thread's working directory: the fired run and any manual message in that thread execute there.
-- Instructions are appended to every fired run and are edited in the automation settings, not restated in the prompt.
-- An instance can carry host-owned **pre/post scripts** with a gate (automation gear -> Scripts). The pre script runs before the fire limits and can suppress the run (`exit 2`, unmatched gate, or a failed command under `skip-run`); the post script runs after the run reaches a terminal status (`always | success | failure`). Their `pwd` is the instance workspace.
-- Scripts cannot be set through trigger tool calls (`ctx.triggers.create/update` strips/preserves them); if a user wants a conditional "fire only when X changed" automation, point them to a pre-script gate instead of asking the add-on for a change.
-- The operator creates and edits automations in the Automations screen; an agent without automation tools cannot do it.
+- `automation_kind_list` returns each kind with its `configFields` (type, required, options, help, visibility). Build `config` from that schema; the host rejects missing required fields and values outside the options.
+- `automation_list` and `automation_get` show instances and their target. `automation_create` defaults threadId/agentId to this thread and agent; one instance per thread is allowed, so create a dedicated thread first when needed.
+- `automation_update` patches label/config/instructions/enabled/target. Passing `scripts` alone updates only the scripts; `scripts: {}` clears them.
+- `automation_set_enabled` pauses or resumes; `automation_delete` requires `confirm=true`.
+- An instance can carry **pre/post scripts** with a gate. The pre script runs before the fire limits and can suppress the run (`exit 2`, unmatched gate, or a failed command under `skip-run`); the post script runs after the run reaches a terminal status (`always | success | failure`). Their `pwd` is the instance workspace. Debug with `automation_script_runs` and `automation_script_test`.
+- Instances created by an add-on from its own config (repo events, mail, chat feeds) are listed by `automation_list`; edit their scripts and config with `automation_update`.
+- Kind-specific operations (`status`, `test`, `deliveries`, `rotate_secret` and similar) are actions declared by the trigger kind: discover them with `automation_kind_list`/`automation_get` and invoke them with `automation_action`. Do not expect add-on-specific trigger tools; the `automations` pack is the single surface.
 - For a one-off mid-run delay use `wait(delayMs)`; automations are for recurring or next-session fires.
 
 ## Delegate

@@ -101,6 +101,8 @@ export function createAddonRuntime(options: AddonRuntimeOptions): AddonRuntime {
         activeTriggerKinds.delete(instanceId);
         return pairTarget(definition.triggers, kind, 'stop', params, ctx);
       }
+      case 'trigger.action':
+        return pairTarget(definition.triggers, str(params.kind), 'action', params, ctx);
       case 'worker.start':
         return pairTarget(definition.workers, str(params.workerId), 'start', params, ctx);
       case 'worker.stop':
@@ -269,9 +271,9 @@ function fallbackMeta(correlationId: string, deadline: number): CallMeta {
 }
 
 function pairTarget(
-  table: Record<string, { start?: unknown; stop?: unknown }> | undefined,
+  table: Record<string, { start?: unknown; stop?: unknown; action?: unknown }> | undefined,
   key: string,
-  phase: 'start' | 'stop',
+  phase: 'start' | 'stop' | 'action',
   params: Record<string, unknown>,
   ctx: AddonContext,
 ): Target {

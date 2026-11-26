@@ -13,7 +13,7 @@ A contribution is `{ id, family, v?, optional?, descriptor }`. The `id` matches
 |---|---|---|---|
 | `tool-pack` | `tools` | `tools.call` | — |
 | `route` | `routes` | `route.handle` | `routes.public` for public routes |
-| `trigger` | `triggers` | `trigger.start` / `trigger.stop` + `ctx.triggers.fire` | `trigger` |
+| `trigger` | `triggers` | `trigger.start` / `trigger.stop` + `ctx.triggers.fire/get/create/update` | `trigger` |
 | `job` | `jobs` | `job.run` | — |
 | `worker` | `workers` | `worker.start` / `worker.stop` | `worker` |
 | `hook` | `hooks` | `hook.deliver` | `events.subscribe` / `accounts.use` |
@@ -126,8 +126,8 @@ const cron: TriggerPair = {
   host appends `instructions` to every fired run, so an add-on normally does not repeat
   them as `text`. `trigger.stop` carries the reason (pause vs removal).
 - `target` is validated by the host: `{ threadId, agentId, modeId?, workspace?, scripts? }`.
-  `scripts` (pre/post shell commands with an optional gate) is host-owned and never visible
-  to the add-on: `params.target` carries only thread, agent, mode and workspace. See
+  `scripts` (pre/post shell commands with an optional gate) can be set by the add-on through
+  `ctx.triggers.create/update`; read it back with `ctx.triggers.get`. See
   `docs/external-addons/trigger-scripts.md`.
   `workspace` is a `WorkspaceRef` (`inherit` | `sandbox` | `folder{path}` |
   `source{sourceId, subpath?}` | `worktree{sourceId, worktreeId, subpath?}`). The host
@@ -148,13 +148,25 @@ const cron: TriggerPair = {
   deduplicated by `(instanceId, runKey)`. `text` is the event body, `title` the card
   heading, `fields` are labelled chips. `limits` (`perDay`, `throttleSec`, `maxBurst`) are
   enforced by the host.
-- `target.scripts` adds host-owned pre/post shell commands with an optional gate. The add-on
-  never sees them: `trigger.start` and `params.target` exclude `scripts`, `ctx.triggers.create`
-  strips any supplied value, and `ctx.triggers.update` preserves the stored one. The pre
-  script runs before the fire limits and may suppress the run (`exit 2`, a failed gate, a
-  failed command under `onError: skip-run`); the post script runs after the run reaches a
-  terminal status. Operators configure and test scripts in the trigger dialog. `standard.scripts`
-  relabels or disables that block. Semantics: `docs/external-addons/trigger-scripts.md`.
+- `target.scripts` adds pre/post shell commands with an optional gate. The add-on owns them
+  like the rest of the target: pass them to `ctx.triggers.create/update`, read them with
+  `ctx.triggers.get`. An update that omits `scripts` keeps the stored ones. The pre script
+  runs before the fire limits and may suppress the run (`exit 2`, a failed gate, a failed
+  command under `onError: skip-run`); the post script runs after the run reaches a terminal
+  status. Operators and agents configure them the same way; the dialog offers Test and recent
+  runs. `standard.scripts` relabels or disables the dialog block. Semantics:
+  `docs/external-addons/trigger-scripts.md`.
+- Trigger instances of every declared kind are manageable by agents through the core
+  `automations` pack: it lists kinds with their `configFields`, validates config against them,
+  and writes label/config/instructions/target/scripts. An add-on does not need trigger CRUD
+  tools or a trigger-specific tool pack; instance operations go through actions. The `automations` system
+  skill covers config, gate and action semantics.
+- `descriptor.actions` declares instance operations the add-on owns: `{ id, title,
+  description?, inputSchema? }`. Implement `action({ instanceId, kind, action, input }, ctx)` in
+  the trigger pair; the host calls `trigger.action` and agents invoke it through
+  `automation_action`. The pack validates `input` against `inputSchema` before the call. Use
+  actions for status, test, delivery listings, secret rotation and any other runtime operation
+  instead of shipping trigger tools.
 
 ## job
 

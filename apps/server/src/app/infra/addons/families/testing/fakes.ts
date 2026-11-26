@@ -10,6 +10,7 @@ import {
   type SourceRequestMethod,
   type ToolCallParams,
   type ToolCallResult,
+  type TriggerActionParams,
   type TriggerStartParams,
   type TriggerStopParams,
 } from '../../../../domain/addons/ports/addon-call.port.ts';
@@ -129,6 +130,16 @@ export class FakeAddonCallPort extends AddonCallPort {
     opts?: AddonCallOptions,
   ): Promise<void> {
     this.record('trigger.stop', params, opts);
+  }
+
+  override async triggerAction(
+    _orgId: string,
+    _addonId: string,
+    params: TriggerActionParams,
+    opts?: AddonCallOptions,
+  ): Promise<unknown> {
+    this.record('trigger.action', params, opts);
+    return { ok: true };
   }
 
   override async jobRun(

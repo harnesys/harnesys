@@ -230,3 +230,22 @@ export async function recordFire(
     [firedAt, new Date().toISOString(), instanceId],
   );
 }
+
+export async function isScheduleActive(ctx: AddonContext, instanceId: string): Promise<boolean> {
+  const row = await ctx.db.get(
+    "select status from schedule_state where instance_id = ? and status = 'active'",
+    [instanceId],
+  );
+  return row !== null && row !== undefined;
+}
+
+export async function advanceActive(
+  ctx: AddonContext,
+  params: { instanceId: string; cron: string; nextRunAt: string },
+): Promise<boolean> {
+  const result = await ctx.db.run(
+    "update schedule_state set cron = ?, next_run_at = ?, error = null, updated_at = ? where instance_id = ? and status = 'active'",
+    [params.cron, params.nextRunAt, new Date().toISOString(), params.instanceId],
+  );
+  return result.changes > 0;
+}

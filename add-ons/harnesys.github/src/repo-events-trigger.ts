@@ -1,4 +1,5 @@
-import type { AddonContext, TriggerPair } from '@harnesys/sdk';
+import { type AddonContext, AddonError, type TriggerPair } from '@harnesys/sdk';
+import { clearCursors, cursorsOf, firedOf } from './repo-events-state.ts';
 
 export interface StoredInstance {
   instanceId: string;
@@ -63,4 +64,62 @@ export const repoEventsTrigger: TriggerPair = {
     await ctx.db.run('delete from fired where instance_id = ?', [params.instanceId]);
     await ctx.log.info('github repo-events instance stopped', { instanceId: params.instanceId });
   },
+  action: async (params, ctx: AddonContext) => {
+    const instance = (await listInstances(ctx)).find(
+      (entry) => entry.instanceId === params.instanceId,
+    );
+    if (instance === undefined) {
+      throw new AddonError('not_found', {
+        detail: `github trigger not found: ${params.instanceId}`,
+      });
+    }
+    switch (params.action) {
+      case 'status':
+        return await statusOf(instance, ctx);
+      case 'reset_watermark':
+        return await resetWatermark(instance, inputOf(params.input), ctx);
+      default:
+        throw new AddonError('invalid_params', {
+          detail: `unknown action: ${params.action}`,
+        });
+    }
+  },
 };
+
+async function statusOf(instance: StoredInstance, ctx: AddonContext): Promise<unknown> {
+  const fired = await firedOf(ctx, instance.instanceId);
+  return {
+    instanceId: instance.instanceId,
+    repo: instance.repo,
+    events: instance.events,
+    branch: instance.branch,
+    labels: instance.labels,
+    accountId: instance.accountId,
+    startedAt: instance.startedAt,
+    cursors: await cursorsOf(ctx, instance.instanceId),
+    fires: fired.fires,
+    lastFiredAt: fired.lastFiredAt,
+  };
+}
+
+async function resetWatermark(
+  instance: StoredInstance,
+  input: Record<string, unknown>,
+  ctx: AddonContext,
+): Promise<unknown> {
+  const stream = typeof input.stream === 'string' && input.stream !== '' ? input.stream : undefined;
+  const cleared = await clearCursors(ctx, instance.instanceId, stream);
+  await ctx.log.info('github trigger watermark reset', {
+    instanceId: instance.instanceId,
+    cleared,
+  });
+  return {
+    instanceId: instance.instanceId,
+    cleared,
+    note: 'the next poll re-baselines the cursor without replaying earlier events',
+  };
+}
+
+function inputOf(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+}

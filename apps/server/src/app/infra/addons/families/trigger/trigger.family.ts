@@ -26,6 +26,7 @@ const HANDLERS: readonly HandlerSpec[] = [
   handlerSpec('trigger.start'),
   handlerSpec('trigger.stop'),
 ];
+const ACTION_HANDLER = handlerSpec('trigger.action');
 
 interface KindEntry {
   owner: OwnerKey;
@@ -170,6 +171,12 @@ export class TriggerFamilyModule implements FamilyModule<TriggerSchema> {
   readonly versions = [1] as const;
   readonly handlers = HANDLERS;
   readonly permissions: readonly string[] = [];
+
+  handlersFor(descriptor: TriggerSchema): readonly HandlerSpec[] {
+    return descriptor.actions !== undefined && descriptor.actions.length > 0
+      ? [...HANDLERS, ACTION_HANDLER]
+      : HANDLERS;
+  }
 
   constructor(
     readonly contributor: AddonTriggerCatalogContributor,

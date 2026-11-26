@@ -15,6 +15,7 @@ import {
   type SourceRequestMethod,
   type ToolCallParams,
   type ToolCallResult,
+  type TriggerActionParams,
   type TriggerStartParams,
   type TriggerStopParams,
 } from '../../../domain/addons/ports/addon-call.port.ts';
@@ -75,6 +76,15 @@ export class AddonCallService extends AddonCallPort {
     opts?: AddonCallOptions,
   ): Promise<void> {
     await this.request(orgId, addonId, 'trigger.stop', params, opts);
+  }
+
+  async triggerAction(
+    orgId: string,
+    addonId: string,
+    params: TriggerActionParams,
+    opts?: AddonCallOptions,
+  ): Promise<unknown> {
+    return await this.request(orgId, addonId, 'trigger.action', params, opts);
   }
 
   async jobRun(
@@ -233,13 +243,14 @@ export class AddonCallService extends AddonCallPort {
   }
 
   private assertRunning(snapshot: InstanceSnapshot): void {
-    if (snapshot.state !== 'running') {
-      throw new AddonException(
-        'unavailable',
-        503,
-        `Addon instance is not running (${snapshot.state}): ${snapshot.lastError ?? 'no error'}`,
-        { retryable: true },
-      );
+    if (snapshot.state === 'running') {
+      return;
     }
+    const detail = snapshot.lastError ? `: ${snapshot.lastError}` : '';
+    const message =
+      snapshot.state === 'starting'
+        ? `Addon instance is starting${detail}; retry in a moment`
+        : `Addon instance is not running (${snapshot.state})${detail}`;
+    throw new AddonException('unavailable', 503, message, { retryable: true });
   }
 }

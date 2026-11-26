@@ -1,6 +1,7 @@
 import Editor, { type OnMount } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import type { LspBridgeStatus, LspGap } from '@/features/lsp-bridge';
+import { monacoLanguageId } from '@/shared/lib/monaco';
 import { MonacoBoundary } from '@/shared/ui/monaco-boundary';
 import type { MarkdownEditorMode } from '../model/use-markdown-editor-mode';
 import { type EditorCursor, EditorStatusBar } from './editor-status-bar';
@@ -69,7 +70,7 @@ export function TextEditorView({
             <Editor
               height="100%"
               path={modelPath}
-              language={language}
+              language={monacoLanguageId(language)}
               theme={theme}
               value={value}
               loading={null}

@@ -1,6 +1,6 @@
 {
   "id": "harnesys.webhook",
-  "version": "2.1.0",
+  "version": "2.2.1",
   "platform": 1,
   "title": "Webhook",
   "description": "HTTP webhook triggers for agent threads. Every webhook.http instance gets its own public endpoint with a generated token, optional HMAC or API key verification, payload-to-task text shaping (path, template, fallback), dedupe, idempotency replay, throttling, custom success responses and a delivery log.",
@@ -277,7 +277,54 @@
           "maxBurst": 20
         },
         "icon": "webhook",
-        "color": "#38bdf8"
+        "color": "#38bdf8",
+        "actions": [
+          {
+            "id": "status",
+            "title": "Webhook status",
+            "description": "Read the webhook URL, auth mode, delivery status, fire count and last error."
+          },
+          {
+            "id": "deliveries",
+            "title": "Recent deliveries",
+            "description": "List recent deliveries of this webhook.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 200
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          {
+            "id": "rotate_url",
+            "title": "Rotate URL",
+            "description": "Generate a new public token and return the new endpoint path. The old URL stops working."
+          },
+          {
+            "id": "rotate_secret",
+            "title": "Rotate signing secret",
+            "description": "Generate a new HMAC/API-key secret for this webhook and return it once."
+          },
+          {
+            "id": "test",
+            "title": "Send test delivery",
+            "description": "Deliver a sample payload to the bound thread without an external request.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "body": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        ]
       }
     },
     {
@@ -350,264 +397,6 @@
         "method": "POST",
         "path": "/test/:token",
         "role": "admin"
-      }
-    },
-    {
-      "id": "pack",
-      "family": "tool-pack",
-      "descriptor": {
-        "name": "webhook",
-        "title": "Webhook tools",
-        "description": "Inspect and manage this addon's webhooks: list endpoints and deliveries, pause or resume, rotate URL or secret, send a test fire",
-        "tools": [
-          {
-            "name": "list",
-            "description": "List this addon's webhooks: name, public endpoint path, auth mode, status, last fire time, fire count and last error.",
-            "effect": "read",
-            "idempotent": true,
-            "inputSchema": {
-              "type": "object"
-            }
-          },
-          {
-            "name": "deliveries",
-            "description": "Read recent deliveries across webhooks, newest first: time, webhook, outcome, method, summary, error and run id. limit defaults to 40, max 200.",
-            "effect": "read",
-            "idempotent": true,
-            "inputSchema": {
-              "type": "object",
-              "properties": {
-                "limit": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 200,
-                  "description": "How many deliveries to return"
-                }
-              }
-            }
-          },
-          {
-            "name": "create",
-            "description": "Create a webhook trigger instance bound to a thread (defaults to the calling thread) and return its instance id, token and public endpoint path. Optional auth (none, hmac, apiKey) and payload shaping fields.",
-            "effect": "write",
-            "inputSchema": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "description": "Webhook name"
-                },
-                "threadId": {
-                  "type": "string",
-                  "description": "Thread to fire; defaults to the calling thread"
-                },
-                "auth": {
-                  "type": "string",
-                  "enum": [
-                    "none",
-                    "hmac",
-                    "apiKey"
-                  ],
-                  "description": "Verification mode, default none"
-                },
-                "detail": {
-                  "type": "string",
-                  "description": "Fallback task text sent when the request carries no text"
-                },
-                "textPath": {
-                  "type": "string",
-                  "description": "Dot path into the JSON payload used as the task text"
-                },
-                "textTemplate": {
-                  "type": "string",
-                  "description": "Task text template with {{text}} and {{payload}} placeholders"
-                },
-                "samplePayload": {
-                  "type": "string",
-                  "description": "Body used by the Send test action"
-                },
-                "maxTextKb": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 512,
-                  "description": "Task text truncation size in KB, default 8"
-                },
-                "throttleSec": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 3600,
-                  "description": "Minimum seconds between fired requests, 0 disables"
-                },
-                "dedupeWindowSec": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 86400,
-                  "description": "Replay window for identical payloads, 0 disables"
-                },
-                "allowGet": {
-                  "type": "boolean",
-                  "description": "Also fire on GET requests, default false"
-                }
-              },
-              "required": [
-                "name"
-              ]
-            }
-          },
-          {
-            "name": "configure",
-            "description": "Update an existing webhook's config: auth mode, payload shaping (textPath, textTemplate, detail, samplePayload, maxTextKb) or noise control (dedupeWindowSec, throttleSec, allowGet). Unlisted fields keep their current values.",
-            "effect": "write",
-            "inputSchema": {
-              "type": "object",
-              "properties": {
-                "webhook": {
-                  "type": "string",
-                  "description": "Webhook token or instance id"
-                },
-                "auth": {
-                  "type": "string",
-                  "enum": [
-                    "none",
-                    "hmac",
-                    "apiKey"
-                  ],
-                  "description": "Verification mode"
-                },
-                "detail": {
-                  "type": "string",
-                  "description": "Fallback task text sent when the request carries no text"
-                },
-                "textPath": {
-                  "type": "string",
-                  "description": "Dot path into the JSON payload used as the task text"
-                },
-                "textTemplate": {
-                  "type": "string",
-                  "description": "Task text template with {{text}} and {{payload}} placeholders"
-                },
-                "samplePayload": {
-                  "type": "string",
-                  "description": "Body used by the Send test action"
-                },
-                "maxTextKb": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 512,
-                  "description": "Task text truncation size in KB"
-                },
-                "throttleSec": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 3600,
-                  "description": "Minimum seconds between fired requests, 0 disables"
-                },
-                "dedupeWindowSec": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 86400,
-                  "description": "Replay window for identical payloads, 0 disables"
-                },
-                "allowGet": {
-                  "type": "boolean",
-                  "description": "Also fire on GET requests"
-                }
-              },
-              "required": [
-                "webhook"
-              ]
-            }
-          },
-          {
-            "name": "pause",
-            "description": "Pause a webhook: its public endpoint answers 202 {status: paused} and nothing fires until resumed.",
-            "effect": "write",
-            "inputSchema": {
-              "type": "object",
-              "properties": {
-                "webhook": {
-                  "type": "string",
-                  "description": "Webhook token or instance id"
-                }
-              },
-              "required": [
-                "webhook"
-              ]
-            }
-          },
-          {
-            "name": "resume",
-            "description": "Resume a paused webhook so its public endpoint fires the bound thread again.",
-            "effect": "write",
-            "inputSchema": {
-              "type": "object",
-              "properties": {
-                "webhook": {
-                  "type": "string",
-                  "description": "Webhook token or instance id"
-                }
-              },
-              "required": [
-                "webhook"
-              ]
-            }
-          },
-          {
-            "name": "rotate_url",
-            "description": "Rotate a webhook's public URL token. The old URL stops working immediately; the response carries the new endpoint path.",
-            "effect": "write",
-            "inputSchema": {
-              "type": "object",
-              "properties": {
-                "webhook": {
-                  "type": "string",
-                  "description": "Webhook token or instance id"
-                }
-              },
-              "required": [
-                "webhook"
-              ]
-            }
-          },
-          {
-            "name": "rotate_secret",
-            "description": "Rotate a webhook's HMAC or API-key secret. The new secret is returned once in the response; senders must switch to it.",
-            "effect": "write",
-            "inputSchema": {
-              "type": "object",
-              "properties": {
-                "webhook": {
-                  "type": "string",
-                  "description": "Webhook token or instance id"
-                }
-              },
-              "required": [
-                "webhook"
-              ]
-            }
-          },
-          {
-            "name": "test",
-            "description": "Fire a webhook once with its configured test payload (or an explicit body) and report the outcome: fired, queued, paused or failed.",
-            "effect": "write",
-            "inputSchema": {
-              "type": "object",
-              "properties": {
-                "webhook": {
-                  "type": "string",
-                  "description": "Webhook token or instance id"
-                },
-                "body": {
-                  "type": "string",
-                  "description": "Optional test payload overriding the configured test payload"
-                }
-              },
-              "required": [
-                "webhook"
-              ]
-            }
-          }
-        ]
       }
     },
     {

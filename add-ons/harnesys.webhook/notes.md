@@ -21,3 +21,10 @@ The sender signs the exact raw body and sends the signature header, for example 
 - Requests inside the throttle window get `429`.
 - A busy thread reports `queued-behind-active-run`; a paused instance reports `paused`.
 - Every request is recorded in recent deliveries.
+
+**Agent operations**
+
+The trigger kind publishes actions, invoked through the core `automations` pack with
+`automation_action`: `status` (URL, auth, fire count, last error), `deliveries` (recent
+deliveries for this instance), `rotate_url`, `rotate_secret`, `test` (deliver a sample payload
+into the bound thread).

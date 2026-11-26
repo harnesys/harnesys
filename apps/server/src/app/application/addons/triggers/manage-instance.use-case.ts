@@ -78,7 +78,7 @@ export class ManageTriggerInstanceUseCase {
       label: input.label,
       configJson: JSON.stringify(input.config),
       instructions: input.instructions ?? '',
-      targetJson: JSON.stringify(input.target ?? null),
+      targetJson: JSON.stringify(target),
       enabled: input.enabled ?? true,
       createdByUserId: input.actorUserId ?? null,
       createdAt: now,
@@ -127,7 +127,10 @@ export class ManageTriggerInstanceUseCase {
       patch.targetJson === undefined
         ? undefined
         : this.assertTarget(orgId, this.parseTarget(patch.targetJson), instanceId);
-    if (patchedTarget !== undefined) {
+    if (
+      patchedTarget !== undefined &&
+      !sameWorkspace(workspaceOf(current.targetJson), patchedTarget.workspace)
+    ) {
       this.applyTargetWorkspace(orgId, patchedTarget);
     }
     const disabling = patch.enabled === false && current.enabled;
@@ -135,7 +138,9 @@ export class ManageTriggerInstanceUseCase {
     if (disabling) {
       await this.stop(instanceId, orgId, current.addonId, 'paused');
     }
-    this.triggers.update(orgId, instanceId, patch);
+    const nextPatch =
+      patchedTarget === undefined ? patch : { ...patch, targetJson: JSON.stringify(patchedTarget) };
+    this.triggers.update(orgId, instanceId, nextPatch);
     const resynced = this.require(orgId, instanceId);
     const contentChanged =
       patch.label !== undefined ||
@@ -280,6 +285,21 @@ export class ManageTriggerInstanceUseCase {
       return null;
     }
   }
+}
+
+function workspaceOf(targetJson: string): unknown {
+  try {
+    const parsed: unknown = JSON.parse(targetJson);
+    return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>).workspace
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function sameWorkspace(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
 }
 
 interface AddonManifestLike {

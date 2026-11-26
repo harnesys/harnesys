@@ -20,7 +20,7 @@ import { startGraph } from './graph.ts';
 import { runGraph } from './graph-run.ts';
 import { createHookBus } from './hooks/bus.ts';
 import { emitHook, type HookEmitCtx } from './hooks/emit-hook.ts';
-import { fallbackScope } from './packs/pack-run.ts';
+import { effectiveSkillRegistry, fallbackScope } from './packs/pack-run.ts';
 import { packCatalog } from './packs/tool-names.ts';
 import { createProcessJobRegistry } from './process-jobs/process-job-registry.ts';
 import { createRunEventFeed } from './run-event-feed.ts';
@@ -113,13 +113,13 @@ export async function createRuntime(options: CreateRuntimeOptions): Promise<Runt
       fsSkills: options.skills,
       makeLoadTools: (registry: RunRegistry) => createLoadToolsTool(flatRegistry(registry)),
     };
-    if (options.skills !== undefined) {
-      const skills = options.skills;
-      universe.makeLoadSkill = () => {
-        const loadSkill = createLoadSkillTool(skills);
-        return [loadSkill, aliasTool(loadSkill, 'Skill')];
-      };
-    }
+    const fsSkills = options.skills;
+    universe.makeLoadSkill = (packOutputs) => {
+      const loadSkill = createLoadSkillTool(effectiveSkillRegistry(def, fsSkills, packOutputs), {
+        ...(fsSkills === undefined ? {} : { installed: fsSkills }),
+      });
+      return [loadSkill, aliasTool(loadSkill, 'Skill')];
+    };
     return universe;
   };
   const assembleOneshot = (def: AgentDefinition) => {

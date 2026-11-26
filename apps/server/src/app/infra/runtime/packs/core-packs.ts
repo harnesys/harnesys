@@ -1,5 +1,6 @@
 import {
   agentsCapability,
+  automationsCapability,
   coreCapability,
   dashboardsCapability,
   filesCapability,
@@ -49,6 +50,7 @@ export const CORE_PACKS: readonly CorePackEntry[] = [
   { name: 'web', register: () => stubRegistration(webCapability) },
   { name: 'lsp', register: () => stubRegistration(lspCapability) },
   { name: 'agents', register: () => stubRegistration(agentsCapability) },
+  { name: 'automations', register: () => stubRegistration(automationsCapability) },
   { name: 'mcp', register: () => stubRegistration(mcpCapability) },
   { name: 'plan', register: () => stubRegistration(planCapability) },
   { name: 'threads', register: () => stubRegistration(threadsCapability) },

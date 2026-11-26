@@ -1,9 +1,10 @@
-import type { ComponentProps, ReactNode } from 'react';
+import type { ComponentProps, CSSProperties, ReactNode } from 'react';
 import { cn } from '@/shared/lib/utils';
 
 const ICON_SLOT = 'flex size-4 shrink-0 items-center justify-center [&>svg]:size-3.5';
 
 export const SIDEBAR_ROW_HEIGHT = 28;
+export const SIDEBAR_FILE_ROW_HEIGHT = 26;
 export const SIDEBAR_ROW_INDENT = 16;
 
 interface SidebarRowProps extends Omit<ComponentProps<'button'>, 'className' | 'children'> {
@@ -12,6 +13,7 @@ interface SidebarRowProps extends Omit<ComponentProps<'button'>, 'className' | '
   actions?: ReactNode;
   selected?: boolean;
   variant?: 'line' | 'card';
+  height?: number;
   depth?: number;
   testId?: string;
   className?: string;
@@ -24,12 +26,16 @@ export function SidebarRow({
   actions,
   selected = false,
   variant = 'line',
+  height = SIDEBAR_ROW_HEIGHT,
   depth = 0,
   testId,
   className,
   children,
   ...buttonProps
 }: SidebarRowProps) {
+  const sizeStyle: CSSProperties = variant === 'line' ? { height } : {};
+  const indentStyle: CSSProperties =
+    depth > 0 ? { paddingLeft: depth * SIDEBAR_ROW_INDENT + 6 } : {};
   return (
     <div
       className={cn(
@@ -46,9 +52,9 @@ export function SidebarRow({
         type="button"
         className={cn(
           'flex min-w-0 flex-1 items-center gap-1.5 pr-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
-          variant === 'line' ? 'h-7' : 'items-start py-1.5',
+          variant === 'card' && 'items-start py-1.5',
         )}
-        style={depth > 0 ? { paddingLeft: depth * SIDEBAR_ROW_INDENT + 6 } : undefined}
+        style={{ ...sizeStyle, ...indentStyle }}
         {...buttonProps}
       >
         {leading ? <span className={ICON_SLOT}>{leading}</span> : null}

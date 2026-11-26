@@ -40,6 +40,13 @@ export interface TriggerStopParams {
   reason?: TriggerStopReason;
 }
 
+export interface TriggerActionParams {
+  instanceId: string;
+  kind: string;
+  action: string;
+  input?: unknown;
+}
+
 export interface HookDeliverParams {
   hookId: string;
   event: JsonObject;
@@ -82,6 +89,13 @@ export abstract class AddonCallPort {
     params: TriggerStopParams,
     opts?: AddonCallOptions,
   ): Promise<void>;
+
+  abstract triggerAction(
+    orgId: string,
+    addonId: string,
+    params: TriggerActionParams,
+    opts?: AddonCallOptions,
+  ): Promise<unknown>;
 
   abstract jobRun(
     orgId: string,

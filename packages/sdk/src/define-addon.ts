@@ -24,6 +24,10 @@ export type RouteHandler = (
 export interface TriggerPair {
   start(params: HostMethodParams<'trigger.start'>, ctx: AddonContext): Promise<void> | void;
   stop(params: HostMethodParams<'trigger.stop'>, ctx: AddonContext): Promise<void> | void;
+  action?(
+    params: HostMethodParams<'trigger.action'>,
+    ctx: AddonContext,
+  ): Promise<unknown> | unknown;
 }
 
 export type JobHandler = (
@@ -129,6 +133,9 @@ export function deriveHandlers(definition: AddonDefinition): string[] {
   }
   if (hasKeys(definition.triggers)) {
     handlers.push('trigger.start', 'trigger.stop');
+    if (Object.values(definition.triggers ?? {}).some((pair) => pair.action !== undefined)) {
+      handlers.push('trigger.action');
+    }
   }
   if (hasKeys(definition.jobs)) {
     handlers.push('job.run');

@@ -6,6 +6,7 @@ import type {
   ThreadPublic,
   ThreadSummary,
 } from '@harnesys/contracts';
+import { parseTriggerTaskText } from '@harnesys/studio-shared';
 import type { RunAttribution, RunVia } from 'harnesys';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { ThreadInvariantException } from '../../domain/thread/thread.error.ts';
@@ -108,11 +109,19 @@ export function applyDerivedThreadTitle(input: {
   if (input.thread.kind !== 'chat' || input.thread.title !== DEFAULT_THREAD_TITLE) {
     return;
   }
-  const next = deriveThreadTitle(input.text ?? '');
+  const next = deriveThreadTitle(titleSourceOf(input.text ?? ''));
   if (!next) {
     return;
   }
   input.threads.updateTitle(input.orgId, input.thread.id, next);
+}
+
+function titleSourceOf(text: string): string {
+  const trigger = parseTriggerTaskText(text);
+  if (trigger === null) {
+    return text;
+  }
+  return trigger.title || trigger.label || text;
 }
 
 export function isThreadUnread(updatedAt: string, lastReadAt: string): boolean {

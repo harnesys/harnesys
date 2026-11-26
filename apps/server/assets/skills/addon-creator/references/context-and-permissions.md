@@ -37,8 +37,9 @@
 Notes: `ctx.db` is a per-org SQLite file (`orgDataDir/<org>/addons/<addonId>/data.db`) with prepared statements only, SQL guard (`ATTACH`, `load_extension`, write pragmas blocked), operator ≤5s, result ≤8 MiB, `batch` ≤100. `ctx.secrets` cannot see other add-ons' secrets. `ctx.http.fetch` supports `auth` injection (`scheme: bearer | basic | header | path`) so the token never enters your process; only `https`, private addresses blocked. Full semantics: `docs/add-ons/context.md`.
 
 `ctx.triggers.create/update` deal with the trigger instance target (`threadId`, `agentId`,
-`modeId?`, `workspace?`). Host-owned `target.scripts` (pre/post shell commands with a gate)
-is stripped on create and preserved on update; the add-on cannot read or arm scripts.
+`modeId?`, `workspace?`, `scripts?`). `target.scripts` (pre/post shell commands with a gate)
+is writable: pass it on create or update, and read it back with `ctx.triggers.get`. The host
+validates the script config and runs it; non-empty scripts need `acknowledged: true`.
 
 Two ways to authenticate `ctx.http.fetch`:
 

@@ -31,15 +31,15 @@ Start with `references/workflow.md` - it is the end-to-end path from scaffold to
 - No `console` (use `ctx.log`), no polling timers, no `any` / `!`, kebab-case files, `interface` for object shapes.
 - English only for all user-visible text in the package.
 
-## Trigger scripts (host-owned)
+## Trigger scripts (agent-armed)
 
-Every trigger instance has a host-owned **Scripts** block in its settings: pre/post shell
-commands with an optional gate and a per-trigger consent checkbox. The add-on neither sees
-nor sets it.
+Every trigger instance can carry a **Scripts** block: pre/post shell commands with an optional
+gate. An agent sets them through the add-on's own tools (scheduler `set`, webhook `create` /
+`configure`) or any add-on calling `ctx.triggers.create/update`; the human UI edits the same
+values. Non-empty scripts need `scripts.acknowledged: true`; the built-in tools set it.
 
-- `trigger.start` and `params.target` carry only `threadId`, `agentId`, `modeId?`,
-  `workspace?`. `scripts` is never included; `ctx.triggers.create` strips it and
-  `ctx.triggers.update` preserves the stored value.
+- `AddonTriggerTarget` carries `scripts`; `ctx.triggers.get` returns the stored target, so an
+  add-on can inspect and edit its own instances. An update that omits `scripts` keeps them.
 - A pre script runs before the fire limits: `exit 2`, an unmatched gate, or a failed command
   under `onError: skip-run` suppresses the run without creating one. A post script runs after
   the run reaches a terminal status (`always | success | failure`).
@@ -47,5 +47,16 @@ nor sets it.
   add-on process cwd.
 - A "fire only when something changed" need is a pre-script gate, not new polling machinery in
   the add-on. `standard.scripts` can relabel or disable the block; mention it in the handoff.
-- Operator reference: `docs/external-addons/trigger-scripts.md`. UI path: Automations -> gear -> Scripts; the
-  Test button runs the command in the current workspace without waiting for a fire.
+- Reference: `docs/external-addons/trigger-scripts.md`. UI path: Automations -> gear -> Scripts;
+  the Test button runs the command in the current workspace without waiting for a fire.
+
+Agents manage instances of your trigger through the core `automations` pack, so
+`configFields` is the schema the pack validates (`required`, `type`, `options`, `pattern`,
+`visibleWhen`, nested groups). Declare it accurately, including defaults and help. Do not ship
+trigger CRUD tools in the add-on.
+
+Add-on-specific operations are `descriptor.actions`: declare `{ id, title, description?,
+inputSchema? }` and implement `action({ instanceId, kind, action, input }, ctx)` in the trigger
+pair. The host routes them through `trigger.action`, the pack exposes them as
+`automation_action`, and `input` is validated against `inputSchema` before the call. That is
+where status, test deliveries, secret rotation and next-run state belong, not in a tool pack.

@@ -45,7 +45,7 @@ export function FolderTypeIcon({
           <feGaussianBlur stdDeviation="0.55" />
         </filter>
       </defs>
-      <g transform="translate(-2.495 -2.614) scale(1.1881)">
+      <g transform="translate(-0.744 -1.358) scale(1.062 1.086)">
         <path d={BACK_TAB} fill={`url(#${backId})`} />
         {open ? (
           <>

@@ -46,7 +46,7 @@ export interface CapabilityUniverse {
   makeLoadTools: (registry: RunRegistry) => ToolDefinition;
 
   discoverTool?: (name: string) => ToolDefinition | undefined;
-  makeLoadSkill?: () => ToolDefinition[];
+  makeLoadSkill?: (packOutputs: PackRunOutput[]) => ToolDefinition[];
   mode?: ModeCapabilityFields;
   sandbox?: boolean;
 }
@@ -91,7 +91,7 @@ export function resolveCapabilitySet(
   subtractDisallowed(asm, def);
   applyMode(asm, def, universe.mode);
   applySandbox(asm, universe);
-  grantCoreServices(asm, def, universe);
+  grantCoreServices(asm, def, universe, layer.enabled);
   const collected = collectPackOutputs(asm.ex, def, layer.enabled);
   const mcpServers = [...new Set(def.mcpServers ?? [])];
   explainMcpGrants(asm.ex, mcpServers);
@@ -282,14 +282,15 @@ function grantCoreServices(
   asm: Assembly,
   def: AgentDefinition,
   universe: CapabilityUniverse,
+  packOutputs: PackRunOutput[],
 ): void {
   if (!isOn(def.packs?.[CORE_PACK])) {
     return;
   }
   const source: CapabilitySource = `${PACK_PREFIX}${CORE_PACK}`;
   const services = [universe.makeLoadTools(asm.registry)];
-  if (universe.fsSkills !== undefined && universe.makeLoadSkill !== undefined) {
-    services.push(...universe.makeLoadSkill());
+  if (universe.makeLoadSkill !== undefined) {
+    services.push(...universe.makeLoadSkill(packOutputs));
   }
   for (const service of services) {
     asm.registry.set(service.name, {

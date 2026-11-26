@@ -214,6 +214,14 @@ export class NoopCalls extends AddonCallPort {
   ): Promise<void> {
     this.calls.push(`trigger.stop:${params.instanceId}`);
   }
+  async triggerAction(
+    _orgId: string,
+    _addonId: string,
+    params: { instanceId: string; action: string },
+  ): Promise<unknown> {
+    this.calls.push(`trigger.action:${params.instanceId}:${params.action}`);
+    return {};
+  }
   async jobRun(): Promise<void> {}
   async workerStart(): Promise<void> {}
   async workerStop(): Promise<void> {}

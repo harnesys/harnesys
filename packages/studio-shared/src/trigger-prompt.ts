@@ -16,6 +16,11 @@ export interface TriggerTaskInput {
   instructions?: string;
 }
 
+export interface TriggerTaskNote {
+  kind: 'output' | 'failure';
+  text: string;
+}
+
 export interface TriggerTaskView {
   addonId: string;
   triggerId: string;
@@ -24,11 +29,13 @@ export interface TriggerTaskView {
   body: string;
   fields: TriggerTaskField[];
   instructions: string;
+  notes: TriggerTaskNote[];
 }
 
-const TRIGGER_BLOCK = /^\s*<trigger\b([^>]*)>([\s\S]*)<\/trigger>\s*$/;
+const TRIGGER_BLOCK = /^\s*<trigger\b([^>]*)>([\s\S]*?)<\/trigger>([\s\S]*)$/;
 const ATTR_RE = /([a-z][a-z0-9-]*)="([^"]*)"/gi;
 const FIELD_RE = /<field\b([^>]*)>([\s\S]*?)<\/field>/g;
+const NOTE_RE = /<(pre-run-output|pre-run-failure)>([\s\S]*?)<\/\1>/g;
 
 export function triggerTaskText(input: TriggerTaskInput): string {
   const attrs = [
@@ -77,7 +84,20 @@ export function parseTriggerTaskText(text: string): TriggerTaskView | null {
     body: innerTag(inner, 'body'),
     fields: fieldsOf(inner),
     instructions: innerTag(inner, 'instructions'),
+    notes: notesOf(block[3] ?? ''),
   };
+}
+
+function notesOf(rest: string): TriggerTaskNote[] {
+  const notes: TriggerTaskNote[] = [];
+  for (const match of rest.matchAll(NOTE_RE)) {
+    const text = unescapeXml(match[2] ?? '').trim();
+    if (text.length === 0) {
+      continue;
+    }
+    notes.push({ kind: match[1] === 'pre-run-failure' ? 'failure' : 'output', text });
+  }
+  return notes;
 }
 
 function fieldsOf(inner: string): TriggerTaskField[] {

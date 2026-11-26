@@ -83,6 +83,36 @@ describe('priceUsage', () => {
     expect(cost).toBeCloseTo(3.25, 10);
   });
 
+  test('cached prompt tokens are billed once, at the cache rate', () => {
+    const resolution = resolvePricing({
+      catalogPricing: {
+        prompt: '0.0000025',
+        completion: '0.00001',
+        input_cache_read: '0.00000025',
+      },
+    });
+    const cost = costUsd(resolution, {
+      inputTokens: 1_000_000,
+      outputTokens: 0,
+      cacheReadTokens: 600_000,
+      cacheWriteTokens: null,
+    });
+    expect(cost).toBeCloseTo(400_000 * 0.0000025 + 600_000 * 0.00000025, 10);
+  });
+
+  test('cached tokens without a cache rate fall back to the input rate', () => {
+    const resolution = resolvePricing({
+      catalogPricing: { prompt: '0.0000025', completion: '0.00001' },
+    });
+    const cost = costUsd(resolution, {
+      inputTokens: 1_000_000,
+      outputTokens: 0,
+      cacheReadTokens: 600_000,
+      cacheWriteTokens: 200_000,
+    });
+    expect(cost).toBeCloseTo(1_000_000 * 0.0000025, 10);
+  });
+
   test('image price is charged per image without token conversion', () => {
     const priced = priceUsage({
       usage: normalizeUsage({ promptTokens: 1000, generatedTokens: 500, images: 3 }),

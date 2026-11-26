@@ -50,7 +50,7 @@ describe('harnesys.telegram-account manifest', () => {
   test('keeps identity, feed surface and tool-pack in sync', () => {
     const manifest = parseAddonManifest(raw);
     expect(manifest.id).toBe('harnesys.telegram-account');
-    expect(manifest.version).toBe('1.1.0');
+    expect(manifest.version).toBe('1.2.0');
     expect(validateManifest(raw).violations).toEqual([]);
 
     const permissionIds = manifest.permissions.map((permission) => permission.id);

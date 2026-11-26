@@ -17,11 +17,54 @@ const TriggerWorkspaceSchema = z.discriminatedUnion('kind', [
   }),
 ]);
 
+const TriggerScriptSchema = z.object({
+  command: str,
+  args: z.array(z.string()).optional(),
+  shell: z.enum(['bash', 'zsh', 'sh', 'powershell']).optional(),
+  timeoutS: z.number().int().optional(),
+  env: z.record(z.string(), z.string()).optional(),
+});
+
+const TriggerGateSchema = z.discriminatedUnion('on', [
+  z.object({ on: z.literal('exit-code'), pass: z.array(z.number().int()).optional() }),
+  z.object({
+    on: z.literal('stdout'),
+    match: z.enum(['contains', 'regex']),
+    value: str,
+  }),
+  z.object({
+    on: z.literal('json'),
+    path: str,
+    op: z.enum(['truthy', 'exists', 'equals']),
+    value: z.unknown().optional(),
+  }),
+]);
+
+const TriggerPreSchema = z.object({
+  script: TriggerScriptSchema,
+  gate: TriggerGateSchema.optional(),
+  onError: z.enum(['skip-run', 'run-with-note', 'ignore']).optional(),
+  injectStdout: z.boolean().optional(),
+  onWorkspaceMissing: z.enum(['skip-run', 'fail']).optional(),
+});
+
+const TriggerPostSchema = z.object({
+  script: TriggerScriptSchema,
+  when: z.enum(['always', 'success', 'failure']).optional(),
+});
+
+const TriggerScriptsSchema = z.object({
+  acknowledged: z.boolean().optional(),
+  pre: TriggerPreSchema.optional(),
+  post: TriggerPostSchema.optional(),
+});
+
 const TriggerTargetSchema = z.object({
   threadId: str,
   agentId: str,
   modeId: str.optional(),
   workspace: TriggerWorkspaceSchema.optional(),
+  scripts: TriggerScriptsSchema.optional(),
 });
 
 /** Read/action methods over org-scoped thread, run, usage and skill state (§6.4). */
@@ -130,6 +173,19 @@ export const orgServiceMethods = {
       payload: z.unknown().optional(),
     }),
     TriggerFireOutcomeSchema,
+    'trigger',
+  ),
+  'triggers.get': addonMethod(
+    z.object({ instanceId: str }),
+    z.object({
+      instanceId: str,
+      kind: str,
+      label: z.string(),
+      config: z.record(z.string(), z.unknown()),
+      target: TriggerTargetSchema.nullable(),
+      instructions: z.string(),
+      enabled: z.boolean(),
+    }),
     'trigger',
   ),
   'triggers.create': addonMethod(

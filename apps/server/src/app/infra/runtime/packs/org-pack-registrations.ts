@@ -1,6 +1,7 @@
 import type { CapabilityScope, HostEngineEntry, ProcessJobRegistry } from 'harnesys';
 import {
   agentsCapability,
+  automationsCapability,
   coreCapability,
   dashboardsCapability,
   filesCapability,
@@ -83,6 +84,8 @@ export function registrationForPack(packName: string, ctx: WireOrgPackContext) {
       return issuesRegistration(ctx);
     case 'signals':
       return signalsRegistration(ctx);
+    case 'automations':
+      return automationsRegistration(ctx);
     case 'manager':
       return managerRegistration(ctx);
     case 'dashboards':
@@ -175,6 +178,17 @@ function signalsRegistration(ctx: WireOrgPackContext) {
   }
   return registerPack(signalsCapability, {
     ports: { signals: tools.store, wake: tools.wake },
+    resolveScope: ctx.liveScope,
+  });
+}
+
+function automationsRegistration(ctx: WireOrgPackContext) {
+  const automations = ctx.deps.automations;
+  if (!automations) {
+    return undefined;
+  }
+  return registerPack(automationsCapability, {
+    ports: { automations },
     resolveScope: ctx.liveScope,
   });
 }

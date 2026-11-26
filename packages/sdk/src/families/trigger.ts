@@ -4,6 +4,8 @@ import type { L10n } from '../manifest/l10n.ts';
 import { L10nSchema } from '../manifest/l10n.ts';
 import type { FieldSpec } from './field-spec.ts';
 import { FieldSpecSchema } from './field-spec.ts';
+import type { JsonSchemaSubset } from './json-schema.ts';
+import { JsonSchemaSubsetSchema } from './json-schema.ts';
 
 export const TRIGGER_SCHEMA_VERSION = 1;
 
@@ -31,7 +33,7 @@ export interface TriggerStandardBlocks {
   target?: StandardFieldOverride;
   mode?: StandardFieldOverride;
   instructions?: StandardFieldOverride;
-  /** Host-owned pre/post script block. Shown by default; scripts stay operator-configured. */
+  /** Pre/post script block. Shown by default; the same values are writable through the target. */
   scripts?: StandardFieldOverride;
 }
 
@@ -40,6 +42,25 @@ export const StandardFieldOverrideSchema = z.object({
   label: z.string().optional(),
   help: z.string().optional(),
   required: z.boolean().optional(),
+});
+
+export interface TriggerActionDescriptor {
+  /** Lowercase action id, e.g. `status`, `test`, `rotate_secret`. */
+  id: string;
+  title: L10n;
+  description?: L10n;
+  /** JSON Schema subset for the action input; the host validates before the call. */
+  inputSchema?: JsonSchemaSubset;
+}
+
+export const TriggerActionDescriptorSchema = z.object({
+  id: z
+    .string()
+    .regex(/^[a-z][a-z0-9_]*$/, 'action id must match ^[a-z][a-z0-9_]*$')
+    .max(64),
+  title: L10nSchema,
+  description: L10nSchema.optional(),
+  inputSchema: JsonSchemaSubsetSchema.optional(),
 });
 
 export interface TriggerDescriptor {
@@ -54,6 +75,8 @@ export interface TriggerDescriptor {
   connection?: string;
   limits?: TriggerLimits;
   standard?: TriggerStandardBlocks;
+  /** Add-on operations exposed to agents through the generic automations pack. */
+  actions?: TriggerActionDescriptor[];
 }
 
 export const TriggerDescriptorSchema = z.object({
@@ -81,6 +104,7 @@ export const TriggerDescriptorSchema = z.object({
       scripts: StandardFieldOverrideSchema.optional(),
     })
     .optional(),
+  actions: z.array(TriggerActionDescriptorSchema).optional(),
 });
 
 export const triggerFamily = {

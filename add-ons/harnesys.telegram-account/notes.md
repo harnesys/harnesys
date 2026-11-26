@@ -93,3 +93,5 @@ For monitoring scenarios keep `read_only` on: reading dialogs and history has no
 ## Not implemented in this pass
 
 Sticker and emoji-pack management, story posting, folders, chat and profile administration (titles, avatars, invites, bans), polls, contact and location messages, streaming uploads for large videos, schedulable media (`scheduleAt` exists for text only), editing the media of an existing message, message threads and comments, and global-search pagination beyond one page.
+
+Agents manage the `telegram.feed` trigger through the core `automations` pack. Its actions: `status` returns the filters, per-channel watermark and stored post counts plus fire counters; `reset_watermark` drops a channel watermark (all configured channels or one) so the next poll treats it as first sight — silently rebaselined unless the add-on `backfill` setting is above zero.

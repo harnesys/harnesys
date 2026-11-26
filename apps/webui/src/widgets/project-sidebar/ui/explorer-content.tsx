@@ -20,7 +20,7 @@ import {
 } from '@/shared/api/files';
 import { getGitFileStatus, gitFileStatusQueryKey } from '@/shared/api/git';
 import { sourceHostStatusQuery, sourceHostStatusQueryKey } from '@/shared/api/sources';
-import { SIDEBAR_ROW_HEIGHT, SIDEBAR_ROW_INDENT } from '@/shared/ui/sidebar-row';
+import { SIDEBAR_FILE_ROW_HEIGHT, SIDEBAR_ROW_INDENT } from '@/shared/ui/sidebar-row';
 import { Spinner } from '@/shared/ui/spinner';
 import { toast } from '@/shared/ui/toast';
 import type { ViewerCreateTemplate } from '../model/explorer-draft.store';
@@ -314,8 +314,11 @@ export function ExplorerContent({
       ) : null}
       {treeQuery.isPending ? (
         <div
-          className="flex h-7 items-center gap-1.5 text-muted-foreground"
-          style={{ paddingLeft: `${depthOffset * SIDEBAR_ROW_INDENT + 22}px` }}
+          className="flex items-center gap-1.5 text-muted-foreground"
+          style={{
+            paddingLeft: `${depthOffset * SIDEBAR_ROW_INDENT + 22}px`,
+            height: SIDEBAR_FILE_ROW_HEIGHT,
+          }}
         >
           <Spinner className="size-4" />
           <span className="text-[11px]">Loading tree…</span>
@@ -326,7 +329,7 @@ export function ExplorerContent({
       ) : null}
       <FileTreeWindow
         rows={rows}
-        rowHeight={SIDEBAR_ROW_HEIGHT}
+        rowHeight={SIDEBAR_FILE_ROW_HEIGHT}
         renderRow={renderRow}
         testId={`explorer-rows-${projectId}`}
       />

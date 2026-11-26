@@ -1,6 +1,6 @@
 {
   "id": "harnesys.scheduler",
-  "version": "1.3.0",
+  "version": "1.4.1",
   "platform": 1,
   "title": "Scheduler",
   "description": "Cron schedules for agent threads. Every scheduler.cron trigger instance is bound to a thread and fires it when its cron expression is due, evaluated in the organization timezone. Missed runs follow the selected policy: catch up within an hour, skip, or skip and open an approval inbox item.",
@@ -86,7 +86,32 @@
           }
         ],
         "icon": "calendar-clock",
-        "color": "#f59e0b"
+        "color": "#f59e0b",
+        "actions": [
+          {
+            "id": "status",
+            "title": "Schedule status",
+            "description": "Read the schedule runtime state: status, next run, last fire and error."
+          },
+          {
+            "id": "check_cron",
+            "title": "Check cron expression",
+            "description": "Validate a cron expression in the organization timezone and compute the next run.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "cron": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "cron"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
       }
     },
     {
@@ -111,111 +136,6 @@
         "method": "GET",
         "path": "/schedules",
         "role": "member"
-      }
-    },
-    {
-      "id": "pack",
-      "family": "tool-pack",
-      "descriptor": {
-        "name": "scheduler",
-        "title": "Scheduler tools",
-        "description": "Inspect and manage this addon's cron schedules: list, pause and resume",
-        "tools": [
-          {
-            "name": "list",
-            "description": "List this addon's cron schedules: name, cron expression, miss policy, status, next run, last fire, target thread, target agent and instructions.",
-            "effect": "read",
-            "idempotent": true,
-            "inputSchema": {
-              "type": "object"
-            }
-          },
-          {
-            "name": "set",
-            "description": "Create a cron schedule (omit schedule) or update an existing one (schedule = instance id or name). The cron expression is evaluated in the organization timezone; optional miss_policy controls missed runs (catch-up, skip, escalate). By default the schedule fires in the calling agent's thread; pass agentId or agent to target another agent, optionally with threadId to bind a specific thread of that agent. Pass instructions to tell the agent what to do on every fire; they are shown and editable in the trigger settings. Pass workspace (an absolute folder path) to make that folder the working directory of the schedule thread (chat threads only): every fire, and every manual message in that thread, run there.",
-            "effect": "write",
-            "inputSchema": {
-              "type": "object",
-              "properties": {
-                "schedule": {
-                  "type": "string",
-                  "description": "Schedule instance id or name to update; omit to create"
-                },
-                "cron": {
-                  "type": "string",
-                  "description": "Cron expression, required on create"
-                },
-                "name": {
-                  "type": "string",
-                  "description": "Schedule name"
-                },
-                "instructions": {
-                  "type": "string",
-                  "description": "What the agent should do on every fire; shown and editable in the trigger settings"
-                },
-                "miss_policy": {
-                  "type": "string",
-                  "enum": [
-                    "catch-up",
-                    "skip",
-                    "escalate"
-                  ],
-                  "description": "Missed-run policy, default catch-up"
-                },
-                "threadId": {
-                  "type": "string",
-                  "description": "Thread to fire; create defaults to the calling thread, update keeps the current binding when omitted"
-                },
-                "agentId": {
-                  "type": "string",
-                  "description": "Target agent id; overrides the calling agent so the schedule fires for another agent"
-                },
-                "agent": {
-                  "type": "string",
-                  "description": "Target agent name, resolved to an agent id; use when the id is unknown"
-                },
-                "workspace": {
-                  "type": "string",
-                  "description": "Absolute folder path the target thread runs in (schedule fires and manual messages)"
-                }
-              }
-            }
-          },
-          {
-            "name": "pause",
-            "description": "Pause a schedule by instance id or name: the planner stops firing it until it is resumed.",
-            "effect": "write",
-            "inputSchema": {
-              "type": "object",
-              "properties": {
-                "schedule": {
-                  "type": "string",
-                  "description": "Schedule instance id or name"
-                }
-              },
-              "required": [
-                "schedule"
-              ]
-            }
-          },
-          {
-            "name": "resume",
-            "description": "Resume a paused schedule by instance id or name: the next run is recomputed from the cron expression in the organization timezone.",
-            "effect": "write",
-            "inputSchema": {
-              "type": "object",
-              "properties": {
-                "schedule": {
-                  "type": "string",
-                  "description": "Schedule instance id or name"
-                }
-              },
-              "required": [
-                "schedule"
-              ]
-            }
-          }
-        ]
       }
     },
     {

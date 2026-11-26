@@ -1,4 +1,5 @@
 import { Module } from '@harnesys/brix';
+import { AutomationAdminPort } from 'harnesys';
 import { AddonDataPort } from '../../../application/addons/addon-data.port.ts';
 import { AddonRpcPort } from '../../../application/addons/addon-rpc.port.ts';
 import { AddonsApplicationModule } from '../../../application/addons/addons-application.module.ts';
@@ -131,6 +132,7 @@ import {
 import { CompositeAddonSourceAdapter } from './addon-source-composite.adapter.ts';
 import { AddonSecretsAdapter, BindingsReaderAdapter } from './addon-storage-sinks.adapter.ts';
 import { AddonsLifecycleService } from './addons-lifecycle.service.ts';
+import { AutomationAdminAdapter } from './automation-admin.adapter.ts';
 import { FileGrantPolicyAdapter } from './grant-policy.adapter.ts';
 import { ContributionHandlersValidator } from './supervisor-hooks/contribution-handlers-validator.ts';
 import { DispatcherRequestHandler } from './supervisor-hooks/dispatcher-request-handler.ts';
@@ -188,6 +190,7 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     AddonLogSinkAdapter,
     { provide: BindingsReader, useClass: BindingsReaderAdapter },
     { provide: TriggerFireSink, useClass: TriggerFireSinkAdapter },
+    { provide: AutomationAdminPort, useClass: AutomationAdminAdapter },
     InboundAttachmentResolver,
     { provide: BridgeInboundSink, useClass: BridgeInboundSinkAdapter },
     { provide: WorkerReportSink, useClass: WorkerReportSinkAdapter },
@@ -278,6 +281,7 @@ import { WiredSupervisorHooks } from './supervisor-hooks/wired-supervisor-hooks.
     ClockPort,
     MetricsPort,
     AccountsFacadePort,
+    AutomationAdminPort,
     AddonPackageCatalogPort,
     OrgAddonRepositoryPort,
     BindingRepositoryPort,

@@ -39,6 +39,10 @@ export type {
   AddonSkills,
   AddonThreads,
   AddonTriggerField,
+  AddonTriggerInstanceView,
+  AddonTriggerScript,
+  AddonTriggerScriptShell,
+  AddonTriggerScripts,
   AddonTriggers,
   AddonTriggerTarget,
   AddonTriggerWorkspace,
@@ -206,6 +210,7 @@ export function createAddonContext(
     },
     triggers: {
       fire: async (params) => client['triggers.fire'](params, { signal }),
+      get: async (params) => client['triggers.get'](params, { signal }),
       create: async (params) => client['triggers.create'](params, { signal }),
       update: async (params) => client['triggers.update'](params, { signal }),
     },

@@ -2,6 +2,7 @@ import type { Logger } from '@harnesys/brix';
 import type { RunAcceptedResponse, RunEnvironment } from '@harnesys/contracts';
 import type {
   Attachment,
+  AutomationAdminPort,
   HostEngineEntry,
   McpManagePort,
   McpServerInfo,
@@ -147,6 +148,7 @@ export interface OrgRuntimeDeps {
   deskEvents?: DeskEventsPort;
   terminalSessions?: TerminalSessionsPort;
   triggerInstances?: TriggerInstanceRepositoryPort;
+  automations?: AutomationAdminPort;
   knowledge?: OrgKnowledgeDeps;
   issues?: OrgIssueDeps;
   issueExecutions?: IssueExecutionPort;

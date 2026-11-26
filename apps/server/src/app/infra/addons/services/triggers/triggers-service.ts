@@ -1,8 +1,14 @@
 import { Injectable } from '@harnesys/brix';
 import type { WorkspaceRef } from '@harnesys/contracts';
-import type { JsonObject } from '@harnesys/sdk';
+import type {
+  AddonTriggerScripts,
+  AddonTriggerTarget,
+  HostServiceResult,
+  JsonObject,
+} from '@harnesys/sdk';
 import { AddonError } from '@harnesys/sdk';
 import { ManageTriggerInstanceUseCase } from '../../../../application/addons/triggers/manage-instance.use-case.ts';
+import { TriggerTargetSchema } from '../../../../application/addons/triggers/trigger-target.schema.ts';
 import type {
   HostCallContext,
   HostMethodSpec,
@@ -18,6 +24,7 @@ interface TriggerTargetParams {
   agentId: string;
   modeId?: string;
   workspace?: WorkspaceRef;
+  scripts?: AddonTriggerScripts;
 }
 
 @Injectable()
@@ -32,6 +39,7 @@ export class TriggersHostService implements HostServiceModule {
   ) {
     this.methods = [
       serviceMethod('triggers.fire', { timeoutMs: 10000 }, (ctx, params) => this.fire(ctx, params)),
+      serviceMethod('triggers.get', { timeoutMs: 10000 }, (ctx, params) => this.get(ctx, params)),
       serviceMethod('triggers.create', { timeoutMs: 30000 }, (ctx, params) =>
         this.create(ctx, params),
       ),
@@ -65,6 +73,22 @@ export class TriggersHostService implements HostServiceModule {
       ...(params.payload === undefined ? {} : { payload: params.payload }),
     });
     return result;
+  }
+
+  private async get(
+    ctx: HostCallContext,
+    params: { instanceId: string },
+  ): Promise<HostServiceResult<'triggers.get'>> {
+    const row = this.owned(ctx, params.instanceId);
+    return {
+      instanceId: row.id,
+      kind: row.triggerId,
+      label: row.label,
+      config: parseJsonObject(row.configJson),
+      target: this.storedTarget(row.targetJson),
+      instructions: row.instructions,
+      enabled: row.enabled,
+    };
   }
 
   private async create(
@@ -119,12 +143,18 @@ export class TriggersHostService implements HostServiceModule {
     return { instanceId: params.instanceId };
   }
 
+  private storedTarget(targetJson: string): AddonTriggerTarget | null {
+    const parsed = TriggerTargetSchema.safeParse(parseJson(targetJson));
+    return parsed.success ? parsed.data : null;
+  }
+
   private targetOf(target: TriggerTargetParams): TriggerTargetParams {
     return {
       threadId: target.threadId,
       agentId: target.agentId,
       ...(target.modeId === undefined ? {} : { modeId: target.modeId }),
       ...(target.workspace === undefined ? {} : { workspace: target.workspace }),
+      ...(target.scripts === undefined ? {} : { scripts: target.scripts }),
     };
   }
 
@@ -133,22 +163,43 @@ export class TriggersHostService implements HostServiceModule {
     target: TriggerTargetParams,
   ): Record<string, unknown> {
     const merged: Record<string, unknown> = { ...this.targetOf(target) };
-    const scripts = hostScriptsOf(row.targetJson);
-    if (scripts !== undefined) {
-      merged.scripts = scripts;
+    if (merged.scripts === undefined) {
+      const stored = storedScriptsOf(row.targetJson);
+      if (stored !== undefined) {
+        merged.scripts = stored;
+      }
     }
     return merged;
   }
+
+  private owned(ctx: HostCallContext, instanceId: string): TriggerInstanceRow {
+    const row = this.instances.find(ctx.orgId, instanceId);
+    if (!row || row.addonId !== ctx.addonId) {
+      throw new AddonError('not_found', { detail: 'trigger instance not found for this add-on' });
+    }
+    return row;
+  }
 }
 
-function hostScriptsOf(targetJson: string): unknown {
-  try {
-    const parsed: unknown = JSON.parse(targetJson);
-    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return undefined;
-    }
-    return (parsed as Record<string, unknown>).scripts;
-  } catch {
+function storedScriptsOf(targetJson: string): unknown {
+  const target = parseJson(targetJson);
+  if (target === null || typeof target !== 'object' || Array.isArray(target)) {
     return undefined;
   }
+  return (target as Record<string, unknown>).scripts;
+}
+
+function parseJson(json: string): unknown {
+  try {
+    return JSON.parse(json) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function parseJsonObject(json: string): Record<string, unknown> {
+  const parsed = parseJson(json);
+  return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)
+    ? (parsed as Record<string, unknown>)
+    : {};
 }

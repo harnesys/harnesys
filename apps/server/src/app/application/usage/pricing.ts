@@ -109,11 +109,13 @@ export function costUsd(
     images?: number | null;
   },
 ): number {
+  const cachedInput = (usage.cacheReadTokens ?? 0) + (usage.cacheWriteTokens ?? 0);
+  const uncachedInput = Math.max(usage.inputTokens - cachedInput, 0);
   let total = 0;
-  total += term(usage.inputTokens, resolution.inputPer1M);
+  total += term(uncachedInput, resolution.inputPer1M);
   total += term(usage.outputTokens, resolution.outputPer1M);
-  total += term(usage.cacheReadTokens, resolution.cacheReadPer1M);
-  total += term(usage.cacheWriteTokens, resolution.cacheWritePer1M);
+  total += term(usage.cacheReadTokens, resolution.cacheReadPer1M ?? resolution.inputPer1M);
+  total += term(usage.cacheWriteTokens, resolution.cacheWritePer1M ?? resolution.inputPer1M);
   total += imageTerm(usage.images ?? null, resolution.perImageUsd);
   total += resolution.perRequestUsd ?? 0;
   return total;

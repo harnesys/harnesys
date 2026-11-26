@@ -10,7 +10,7 @@ import { prTools } from './tools-prs.ts';
 import { repoTools } from './tools-repos.ts';
 
 const ADDON_ID = 'harnesys.github';
-const ADDON_VERSION = '1.1.0';
+const ADDON_VERSION = '1.2.0';
 
 const repos: RouteHandler = async (_request, ctx: AddonContext) => {
   const wire = await githubJson<{ repositories: unknown[] }>(ctx, {

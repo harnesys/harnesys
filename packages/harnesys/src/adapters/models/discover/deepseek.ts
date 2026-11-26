@@ -1,10 +1,34 @@
 import { DEEPSEEK_DEFAULT_URL } from '../../../constants.ts';
-import type { DiscoveredModel, DiscoverInput, ModelArchitecture } from '../../../ports/models.ts';
+import type {
+  DiscoveredModel,
+  DiscoverInput,
+  ModelArchitecture,
+  ModelPricing,
+} from '../../../ports/models.ts';
 import { fetchListedModels } from './fetch-list.ts';
-import { asNumber, asRecord, asString, itemsOf, topProviderOf } from './parse.ts';
+import { asNumber, asRecord, asString, itemsOf, pricingOf, topProviderOf } from './parse.ts';
 import { bearerHeaders, modelsUrl } from './request.ts';
 
 export { DEEPSEEK_DEFAULT_URL };
+
+const FLASH_PRICING: ModelPricing = {
+  prompt: '0.0000003',
+  completion: '0.0000012',
+  input_cache_read: '0.000000006',
+};
+
+const PRO_PRICING: ModelPricing = {
+  prompt: '0.00000132',
+  completion: '0.00000396',
+  input_cache_read: '0.000000044',
+};
+
+const PRICING_BY_MODEL: Record<string, ModelPricing> = {
+  'deepseek-flash': FLASH_PRICING,
+  'deepseek-v4-flash': FLASH_PRICING,
+  'deepseek-v4-flash-vision-exp': FLASH_PRICING,
+  'deepseek-v4-pro': PRO_PRICING,
+};
 export function listDeepSeekModels(input: DiscoverInput): Promise<DiscoveredModel[]> {
   return fetchListedModels({
     url: modelsUrl(input, DEEPSEEK_DEFAULT_URL),
@@ -38,6 +62,7 @@ function mapDeepSeekModel(item: unknown): DiscoveredModel | undefined {
     kind,
     context_length: contextLength,
     architecture: chatArchitecture(kind, name),
+    pricing: pricingOf(PRICING_BY_MODEL[name] ?? {}),
     top_provider: topProviderOf(contextLength, maxOutput),
     effort: hasReasoning ? ['none', 'low', 'high', 'max'] : undefined,
     raw: item,

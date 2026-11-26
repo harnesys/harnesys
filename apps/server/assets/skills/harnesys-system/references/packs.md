@@ -115,6 +115,24 @@ Forbidden on subagents.
 | `agents_update` | Patch name/role/instructions/budget; graph, packs and permissions stay owner-only. |
 | `agents_delete` | Remove a delegate that is not running anywhere. |
 
+### automations — trigger management
+No settings. No permission gate. Manages trigger instances of every installed add-on without per-add-on tools. Trigger kinds are read from installed manifests; config is validated against the kind's `configFields` (required, type, select options, pattern, `visibleWhen`, groups). Kind-specific operations are declared as actions and invoked with `automation_action`.
+
+| Tool | Does |
+|---|---|
+| `automation_kind_list` | List installed trigger kinds with `configFields`, `connection`, `limits` and `actions`; optional `addonId` filter. |
+| `automation_list` | List instances with addonId, kind, label, enabled, config and target. |
+| `automation_get` | Read one instance including the full target and pre/post scripts. |
+| `automation_create` | Create an instance for any kind; threadId/agentId default to the caller; config must satisfy the kind's fields. |
+| `automation_update` | Patch label/config/instructions/enabled or target fields; target fields merge into the stored target, so `scripts` alone updates only scripts. |
+| `automation_action` | Invoke a kind-declared action (`status`, `test`, `deliveries`, `rotate_secret`, ...) with input validated against the action `inputSchema`. |
+| `automation_set_enabled` | Pause or resume an instance. |
+| `automation_delete` | Delete an instance permanently; requires `confirm=true`. |
+| `automation_script_runs` | Recent pre/post script runs with status, exit code, gate verdict and output tails. |
+| `automation_script_test` | Run a pre script and gate in the workspace without firing. |
+
+The system skill `automations` (`apps/server/assets/skills/automations`) documents config field types, the gate matrix and the action table with three references; list it in the agent's `skills` to make `load_skill("automations")` work.
+
 ### mcp — MCP server management
 No settings. Gate: `mcp_manage`.
 

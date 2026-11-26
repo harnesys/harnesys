@@ -43,6 +43,16 @@ describe('trigger task prompt', () => {
     expect(view?.instructions).toBe('');
   });
 
+  test('parses pre-run notes appended after the trigger block', () => {
+    const text = `${triggerTaskText({
+      addonId: 'harnesys.webhook',
+      triggerId: 'webhook.http',
+      label: 'QA automations',
+    })}\n\n<pre-run-failure>\nPre-run script failed (exit 3).\n</pre-run-failure>`;
+    const view = parseTriggerTaskText(text);
+    expect(view?.notes).toEqual([{ kind: 'failure', text: 'Pre-run script failed (exit 3).' }]);
+  });
+
   test('rejects plain text', () => {
     expect(parseTriggerTaskText('[gmail] New mail from Alice: hello')).toBeNull();
   });

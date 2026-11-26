@@ -1,6 +1,13 @@
 import type { AddonContext, TriggerPair } from '@harnesys/sdk';
+import { AddonError } from '@harnesys/sdk';
 import { isValidCron, nextCronRunAt } from './cron.ts';
-import { pauseInstance, removeInstance, saveState, upsertInstance } from './store.ts';
+import {
+  listSchedules,
+  pauseInstance,
+  removeInstance,
+  saveState,
+  upsertInstance,
+} from './store.ts';
 
 function cronOf(config: Record<string, unknown>): string {
   const value = config.cron;
@@ -78,4 +85,63 @@ export const schedulerTrigger: TriggerPair = {
     await pauseInstance(ctx, params.instanceId);
     await ctx.log.info('scheduler instance paused', { instanceId: params.instanceId });
   },
+  action: async (params, ctx: AddonContext) => {
+    switch (params.action) {
+      case 'status':
+        return await statusOf(params.instanceId, ctx);
+      case 'check_cron':
+        return await checkCron(inputOf(params.input), ctx);
+      default:
+        throw new AddonError('invalid_params', {
+          detail: `unknown action: ${params.action}`,
+        });
+    }
+  },
 };
+
+async function statusOf(instanceId: string, ctx: AddonContext): Promise<Record<string, unknown>> {
+  const row = (await listSchedules(ctx)).find((entry) => entry.instanceId === instanceId);
+  if (!row) {
+    throw new AddonError('not_found', { detail: `schedule not found: ${instanceId}` });
+  }
+  return {
+    instanceId: row.instanceId,
+    name: row.name,
+    cron: row.cron,
+    missPolicy: row.missPolicy,
+    status: row.status,
+    nextRunAt: row.nextRunAt,
+    lastFiredAt: row.lastFiredAt,
+    error: row.error,
+    threadId: row.target.threadId,
+    agentId: row.target.agentId,
+  };
+}
+
+async function checkCron(
+  input: Record<string, unknown>,
+  ctx: AddonContext,
+): Promise<Record<string, unknown>> {
+  const cron = cronOf(input);
+  const timezone = await orgTimezone(ctx);
+  if (!cron) {
+    return { cron, timezone, valid: false, error: 'cron is required' };
+  }
+  if (!isValidCron(cron, timezone)) {
+    return { cron, timezone, valid: false, error: `invalid cron: ${cron}` };
+  }
+  try {
+    return { cron, timezone, valid: true, nextRunAt: nextCronRunAt(cron, new Date(), timezone) };
+  } catch (error) {
+    return {
+      cron,
+      timezone,
+      valid: false,
+      error: error instanceof Error ? error.message : 'cron computation failed',
+    };
+  }
+}
+
+function inputOf(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+}

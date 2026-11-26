@@ -188,7 +188,7 @@ describe('triggers service', () => {
     expect(sink.fired).toEqual([{ instanceId: 'ti1', runKey: 'k1', correlationId: 'corr-1' }]);
   });
 
-  test('strips host-owned scripts from a target supplied on create', async () => {
+  test('passes agent-supplied scripts through on create', async () => {
     const repo = new FakeTriggerRepo();
     let created: CreateTriggerInstanceInput | undefined;
     const manage = stubManage();
@@ -197,20 +197,17 @@ describe('triggers service', () => {
       return { ...repo.row, id: 'ti1' };
     };
     const svc = new TriggersHostService(repo, new FakeTriggerSink(), manage);
-    await svc.methods[1]?.handle(callCtx(), {
+    const scripts = { acknowledged: true, pre: { script: { command: 'check.sh' } } };
+    await createMethod(svc).handle(callCtx(), {
       kind: 'feed',
       label: 'Feed',
       config: {},
-      target: {
-        threadId: 't1',
-        agentId: 'a1',
-        scripts: { acknowledged: true, pre: { script: { command: 'rm -rf /' } } },
-      },
+      target: { threadId: 't1', agentId: 'a1', scripts },
     });
-    expect(created?.target).toEqual({ threadId: 't1', agentId: 'a1' });
+    expect(created?.target).toEqual({ threadId: 't1', agentId: 'a1', scripts });
   });
 
-  test('preserves stored scripts when an add-on updates its target', async () => {
+  test('replaces scripts when an add-on updates the target', async () => {
     const repo = new FakeTriggerRepo();
     const stored = {
       acknowledged: true,
@@ -226,13 +223,34 @@ describe('triggers service', () => {
       patched = patch;
     };
     const svc = new TriggersHostService(repo, new FakeTriggerSink(), manage);
-    await svc.methods[2]?.handle(callCtx(), {
+    const scripts = { acknowledged: true, pre: { script: { command: 'check.sh' } } };
+    await updateMethod(svc).handle(callCtx(), {
       instanceId: 'ti1',
-      target: {
-        threadId: 't2',
-        agentId: 'a2',
-        scripts: { acknowledged: true, pre: { script: { command: 'rm -rf /' } } },
-      },
+      target: { threadId: 't2', agentId: 'a2', scripts },
+    });
+    expect(JSON.parse(patched?.targetJson ?? '{}')).toEqual({
+      threadId: 't2',
+      agentId: 'a2',
+      scripts,
+    });
+  });
+
+  test('preserves stored scripts when an update omits them', async () => {
+    const repo = new FakeTriggerRepo();
+    const stored = { acknowledged: true, post: { script: { command: 'report' } } };
+    repo.row = {
+      ...repo.row,
+      targetJson: JSON.stringify({ threadId: 't1', agentId: 'a1', scripts: stored }),
+    };
+    let patched: TriggerInstancePatch | undefined;
+    const manage = stubManage();
+    manage.patch = async (_orgId, _instanceId, patch) => {
+      patched = patch;
+    };
+    const svc = new TriggersHostService(repo, new FakeTriggerSink(), manage);
+    await updateMethod(svc).handle(callCtx(), {
+      instanceId: 'ti1',
+      target: { threadId: 't2', agentId: 'a2' },
     });
     expect(JSON.parse(patched?.targetJson ?? '{}')).toEqual({
       threadId: 't2',
@@ -240,7 +258,52 @@ describe('triggers service', () => {
       scripts: stored,
     });
   });
+
+  test('returns the owned instance with its stored target on get', async () => {
+    const repo = new FakeTriggerRepo();
+    const threadId = '11111111-1111-4111-8111-111111111111';
+    const agentId = '22222222-2222-4222-8222-222222222222';
+    repo.row = {
+      ...repo.row,
+      configJson: JSON.stringify({ cron: '* * * * *' }),
+      targetJson: JSON.stringify({ threadId, agentId }),
+    };
+    const svc = new TriggersHostService(repo, new FakeTriggerSink(), stubManage());
+    await expect(getMethod(svc).handle(callCtx(), { instanceId: 'ti1' })).resolves.toEqual({
+      instanceId: 'ti1',
+      kind: 'feed',
+      label: '',
+      config: { cron: '* * * * *' },
+      target: { threadId, agentId },
+      instructions: '',
+      enabled: true,
+    });
+  });
 });
+
+function getMethod(svc: TriggersHostService) {
+  const method = svc.methods.find((entry) => entry.name === 'triggers.get');
+  if (!method) {
+    throw new Error('triggers.get method is missing');
+  }
+  return method;
+}
+
+function createMethod(svc: TriggersHostService) {
+  const method = svc.methods.find((entry) => entry.name === 'triggers.create');
+  if (!method) {
+    throw new Error('triggers.create method is missing');
+  }
+  return method;
+}
+
+function updateMethod(svc: TriggersHostService) {
+  const method = svc.methods.find((entry) => entry.name === 'triggers.update');
+  if (!method) {
+    throw new Error('triggers.update method is missing');
+  }
+  return method;
+}
 
 function stubManage(): ManageTriggerInstanceUseCase {
   const stub = Object.create(

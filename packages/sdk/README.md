@@ -61,9 +61,9 @@ await host.callTool('github', 'github.list_repos', {});
 
 Single source in `src/protocol/map.ts`. Every entry: `{ direction, params, result, permission }` on Zod; client/dispatcher/handler types are derived from the map (`HostServiceClient`, `AddonDispatcher`, `AddonHandlerOf`) — a mismatch is a compile error.
 
-- host→addon: `initialize`, `shutdown`, `ping`, `lifecycle.upgrade`, `tools.call`, `route.handle`, `trigger.start`, `trigger.stop`, `job.run`, `worker.start`, `worker.stop`, `transport.send`, `transport.edit`, `transport.typing`, `hook.deliver`
+- host→addon: `initialize`, `shutdown`, `ping`, `lifecycle.upgrade`, `tools.call`, `route.handle`, `trigger.start`, `trigger.stop`, `trigger.action`, `job.run`, `worker.start`, `worker.stop`, `transport.send`, `transport.edit`, `transport.typing`, `hook.deliver`
 - host→addon notifications: `initialized`, `config.changed`, `permissions.changed`, `accounts.changed`
-- addon→host: `config.get`, `secrets.get`, `db.exec/all/get/run/batch`, `log.write`, `events.emit`, `http.fetch`, `accounts.list/report/access`, `runs.list/dispatch/cancel`, `threads.create/get/patch/compact`, `agents.list`, `skills.list`, `usage.summary`, `org.settings.get`, `approvals.request`, `files.stat/read/write`, `triggers.fire/create/update`, `bridge.inbound`, `workers.report`
+- addon→host: `config.get`, `secrets.get`, `db.exec/all/get/run/batch`, `log.write`, `events.emit`, `http.fetch`, `accounts.list/report/access`, `runs.list/dispatch/cancel`, `threads.create/get/patch/compact`, `agents.list`, `skills.list`, `usage.summary`, `org.settings.get`, `approvals.request`, `files.stat/read/write`, `triggers.fire/get/create/update`, `bridge.inbound`, `workers.report`
 - notifications (both/addon): `$/cancel` (both), `$/progress` (addon)
 
 Permissions: `null` = baseline; otherwise one of `http.fetch`, `accounts.use`,
@@ -85,11 +85,18 @@ threads reject it. `instructions` may be an empty string. Fire with
 the event body, `instructions` live on the instance and are edited in the trigger
 settings. One instance per thread is enforced by the core.
 
-`target.scripts` (pre/post shell commands with an optional gate) is host-owned and never
-appears in `params.target`. It is configured by the operator in the trigger dialog;
-`ctx.triggers.create` strips it and `ctx.triggers.update` preserves the stored value, so an
-add-on can neither read nor arm shell commands. `standard.scripts` can relabel or disable the
-host-owned Scripts block. See `docs/external-addons/trigger-scripts.md`.
+`target.scripts` (pre/post shell commands with an optional gate) is part of the target: an
+add-on sets it through `ctx.triggers.create/update` and reads it with `ctx.triggers.get`. An
+update that omits `scripts` keeps the stored ones. Non-empty scripts need
+`acknowledged: true`; the core `automations` pack sets it automatically. The host
+validates and executes them. `standard.scripts` can relabel or disable the dialog block. See
+`docs/external-addons/trigger-scripts.md`.
+
+Instance operations are `descriptor.actions` plus `triggers[kind].action(params, ctx)`.
+`params` is `{ instanceId, kind, action, input? }`; the host routes it as `trigger.action` and
+the core `automations` pack exposes it as `automation_action`, validating `input` against the
+action's `inputSchema`. This is the single agent surface for status, test, deliveries, secret
+rotation and similar operations.
 
 `tool-pack`, `trigger`, `job`, `worker`, `route`, `transport`, `hook`, `content`, `config`, `view`, `source-kind`, `mcp`, `lsp` — each with a descriptor interface, Zod schema and schema version (`*_SCHEMA_VERSION = 1`). Tool/route input schemas use the JSON-Schema subset of §6.5 (`src/families/json-schema.ts`): depth ≤ 8, size ≤ 64 KiB, local `$ref` only.
 

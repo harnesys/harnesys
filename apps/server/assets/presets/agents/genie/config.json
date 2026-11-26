@@ -8,7 +8,8 @@
     "find-skills",
     "harnesys-system",
     "addon-creator",
-    "widget-creator"
+    "widget-creator",
+    "automations"
   ],
   "budget": {
     "maxSteps": 400,
@@ -41,12 +42,11 @@
     "plan": {},
     "agents": {},
     "threads": {},
-    "scheduler": {},
-    "webhook": {},
     "semantic-memory": {},
     "knowledge-memory": {},
     "pin-memory": {},
-    "core": {}
+    "core": {},
+    "automations": {}
   },
   "permissions": {
     "fs.write": "ask",

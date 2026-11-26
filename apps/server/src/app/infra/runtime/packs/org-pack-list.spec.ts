@@ -19,6 +19,7 @@ describe('org pack single source', () => {
         .sort(),
     ).toEqual([
       'agents',
+      'automations',
       'core',
       'dashboards',
       'files',

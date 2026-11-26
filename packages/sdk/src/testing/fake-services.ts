@@ -4,6 +4,7 @@ import { AddonError } from '../protocol/error.ts';
 import type { FakeDb } from './fake-db.ts';
 import { executeFilesService } from './fake-files.ts';
 import type { FakeAccount, FakeHostOptions } from './fake-host.ts';
+import { createFakeTriggerServices } from './fake-trigger-services.ts';
 
 export interface FakeServiceSinks {
   logs: Array<{ level: string; message: string; fields?: Record<string, unknown> }>;
@@ -37,6 +38,7 @@ export function createFakeServices(context: FakeServiceContext): {
   const grants: Array<{ id: string; scope?: Record<string, unknown> }> =
     context.options.grants ??
     context.manifest.permissions.map((p) => ({ id: p.id, scope: p.scope }));
+  const triggers = createFakeTriggerServices(context);
 
   function granted(
     permission: string,
@@ -85,11 +87,13 @@ export function createFakeServices(context: FakeServiceContext): {
           writes: context.sinks.fileWrites,
         });
       case 'triggers.fire':
-        return fireTrigger(params);
+        return triggers.fire(params);
       case 'triggers.create':
-        return createTriggerInstance(params);
+        return triggers.create(params);
+      case 'triggers.get':
+        return triggers.get(params);
       case 'triggers.update':
-        return updateTriggerInstance(params);
+        return triggers.update(params);
       default:
         return executeRecord(method, params);
     }
@@ -179,56 +183,6 @@ export function createFakeServices(context: FakeServiceContext): {
       headers: response.headers ?? {},
       body: response.body ?? null,
     };
-  }
-
-  function fireTrigger(params: ServiceParams): unknown {
-    const instanceId = params.instanceId as string;
-    const runKey = params.runKey as string;
-    if (!context.startedTriggers.has(instanceId)) {
-      throw new AddonError('not_found', {
-        detail: `trigger instance '${instanceId}' was not started`,
-      });
-    }
-    const key = `${instanceId}:${runKey}`;
-    if (context.firedKeys.has(key)) {
-      return { outcome: 'suppressed' };
-    }
-    context.firedKeys.add(key);
-    return { outcome: 'fired' };
-  }
-
-  function createTriggerInstance(params: ServiceParams): unknown {
-    const kind = params.kind as string;
-    const declared = context.manifest.contributions.some(
-      (c) => c.family === 'trigger' && (c.descriptor as { kind?: string }).kind === kind,
-    );
-    if (!declared) {
-      throw new AddonError('invalid_params', {
-        detail: `trigger kind is not declared: ${kind}`,
-      });
-    }
-    const instanceId = `trigger-instance-${context.sinks.createdTriggerInstances.length + 1}`;
-    context.sinks.createdTriggerInstances.push({ ...params, instanceId });
-    context.startedTriggers.add(instanceId);
-    return { instanceId };
-  }
-
-  function updateTriggerInstance(params: ServiceParams): unknown {
-    const instanceId = params.instanceId as string;
-    const stored = context.sinks.createdTriggerInstances.find(
-      (row) => row.instanceId === instanceId,
-    );
-    if (!stored) {
-      throw new AddonError('not_found', {
-        detail: `trigger instance not found: ${instanceId}`,
-      });
-    }
-    for (const key of ['label', 'config', 'target', 'instructions'] as const) {
-      if (params[key] !== undefined) {
-        stored[key] = params[key];
-      }
-    }
-    return { instanceId };
   }
 
   function executeRecord(method: string, params: ServiceParams): unknown {

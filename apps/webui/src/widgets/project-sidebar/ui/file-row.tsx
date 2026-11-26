@@ -8,7 +8,7 @@ import { cn } from '@/shared/lib/utils';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/shared/ui/context-menu';
 import { IconRef } from '@/shared/ui/icon';
 import { FileTypeIcon, FolderTypeIcon } from '@/shared/ui/icons';
-import { SidebarRow } from '@/shared/ui/sidebar-row';
+import { SIDEBAR_FILE_ROW_HEIGHT, SidebarRow } from '@/shared/ui/sidebar-row';
 import { useAddonFileIcon } from '../model/addon-file-icon';
 import { useEntryActions } from '../model/use-entry-actions';
 import type { FileRowMenuProps } from './file-row-actions';
@@ -286,6 +286,7 @@ export function FileRow({
           <SidebarRow
             selected={selected}
             depth={depth}
+            height={SIDEBAR_FILE_ROW_HEIGHT}
             testId={`file-${fullPath}`}
             className={cn(
               dropState === 'valid' && 'bg-live/15 ring-1 ring-live ring-inset',

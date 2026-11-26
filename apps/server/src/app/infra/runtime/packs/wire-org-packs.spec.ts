@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { OrgSettings } from '@harnesys/contracts';
 import { OrgSettingsSchema } from '@harnesys/contracts';
-import type { McpManagePort } from 'harnesys';
+import type { AutomationAdminPort, McpManagePort } from 'harnesys';
 import { SignalStorePort, SignalWakePort } from 'harnesys';
 import type { OrgDashboardsDeps } from '../../../application/dashboards/dashboard-tools.holder.ts';
 import { LspPort } from '../../../domain/lsp/lsp.port.ts';
@@ -66,6 +66,7 @@ function fullDeps(): WireOrgPacksDeps {
       })(),
     },
     mcpManage: {} as McpManagePort,
+    automations: {} as AutomationAdminPort,
     lsp: {} as LspPort,
     secrets: {} as SecretStorePort,
     layout: {} as HostFsLayoutPort,

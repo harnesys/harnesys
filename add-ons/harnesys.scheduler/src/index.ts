@@ -2,11 +2,10 @@ import type { AddonContext, RouteHandler } from '@harnesys/sdk';
 import { defineAddon, startAddonProcess } from '@harnesys/sdk';
 import { listSchedules } from './store.ts';
 import { tick } from './tick.ts';
-import { schedulerTools } from './tools.ts';
 import { schedulerTrigger } from './trigger.ts';
 
 const ADDON_ID = 'harnesys.scheduler';
-const ADDON_VERSION = '1.3.0';
+const ADDON_VERSION = '1.4.1';
 
 const schedules: RouteHandler = async (_request, ctx: AddonContext) => {
   const rows = await listSchedules(ctx);
@@ -28,7 +27,6 @@ const schedules: RouteHandler = async (_request, ctx: AddonContext) => {
 };
 
 export const addon = defineAddon({
-  tools: schedulerTools,
   triggers: { 'scheduler.cron': schedulerTrigger },
   jobs: { tick },
   routes: { schedules },

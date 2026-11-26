@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Loader2Icon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getGitDiff, gitDiffQueryKey } from '@/shared/api/git';
-import { ensureMonaco } from '@/shared/lib/monaco';
+import { ensureMonaco, monacoLanguageId } from '@/shared/lib/monaco';
 import { detectLanguage } from '@/shared/lib/tool-code';
 import { useTheme } from '@/shared/ui/theme-provider';
 import {
@@ -87,7 +87,7 @@ export function SourceControlDiffView({
       <div className="min-h-0 flex-1">
         <MonacoDiffEditor
           theme={theme}
-          language={detectLanguage(data.path) ?? 'plaintext'}
+          language={monacoLanguageId(detectLanguage(data.path) ?? 'plaintext')}
           original={original}
           modified={modified}
           path={data.path}

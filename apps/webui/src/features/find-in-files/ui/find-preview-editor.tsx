@@ -3,6 +3,7 @@ import type { editor } from 'monaco-editor';
 import { useEffect, useRef } from 'react';
 import type { ContentSearchFile, ContentSearchMatch } from '@/shared/api/content-search';
 import { useEditorPreferences } from '@/shared/lib/editor-preferences';
+import { monacoLanguageId } from '@/shared/lib/monaco';
 import { detectLanguage } from '@/shared/lib/tool-code';
 import { MonacoBoundary } from '@/shared/ui/monaco-boundary';
 import { useTheme } from '@/shared/ui/theme-provider';
@@ -50,7 +51,7 @@ export function FindPreviewEditor({ file, match, content }: FindPreviewEditorPro
       <Editor
         key={`${file.sourceId}:${file.path}`}
         height="100%"
-        language={language}
+        language={monacoLanguageId(language)}
         theme={editorThemeName(theme)}
         value={content}
         loading={null}

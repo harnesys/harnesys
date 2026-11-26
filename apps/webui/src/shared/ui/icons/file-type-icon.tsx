@@ -4,8 +4,8 @@ import { cn } from '@/shared/lib/utils';
 import { ICON_SIZE_CLASSES, type IconSize } from './sizes';
 
 const BODY_PATH =
-  'M7.5 2.6 H12.9 L18.8 8.5 V19.3 C18.8 20.46 17.86 21.4 16.7 21.4 H7.5 C6.34 21.4 5.4 20.46 5.4 19.3 V4.7 C5.4 3.54 6.34 2.6 7.5 2.6 Z';
-const FOLD_PATH = 'M12.9 2.6 V6.3 C12.9 7.51 13.88 8.5 15.1 8.5 H18.8 Z';
+  'M6.7 2.6 H13.7 L19.6 8.5 V19.3 C19.6 20.46 18.66 21.4 17.5 21.4 H6.7 C5.54 21.4 4.6 20.46 4.6 19.3 V4.7 C4.6 3.54 5.54 2.6 6.7 2.6 Z';
+const FOLD_PATH = 'M13.7 2.6 V6.3 C13.7 7.51 14.68 8.5 15.9 8.5 H19.6 Z';
 
 export function FileTypeIcon({
   name,
@@ -46,11 +46,11 @@ export function FileTypeIcon({
           <feGaussianBlur stdDeviation="0.45" />
         </filter>
       </defs>
-      <g transform="translate(-3.447 -3.319) scale(1.2766)">
+      <g transform="translate(-2.417 -2.298) scale(1.19149)">
         <path d={BODY_PATH} fill={`url(#${paperId})`} />
         <path d={BODY_PATH} fill={`url(#${paperShadeId})`} />
         <path
-          d="M12.9 3.2 V6.3 C12.9 7.51 13.88 8.5 15.1 8.5 H18.2 Z"
+          d="M13.7 3.2 V6.3 C13.7 7.51 14.68 8.5 15.9 8.5 H19.0 Z"
           fill="#0a0a0c"
           opacity="0.35"
           filter={`url(#${blurId})`}
@@ -74,9 +74,9 @@ export function FileTypeIcon({
         ) : null}
         {style.glyph === 'doc' ? (
           <g fill={glyphColor} fillOpacity="0.92">
-            <rect x="8.3" y="11.4" width="7.6" height="1.35" rx="0.67" />
-            <rect x="8.3" y="13.7" width="7.6" height="1.35" rx="0.67" />
-            <rect x="8.3" y="16" width="4.9" height="1.35" rx="0.67" />
+            <rect x="8" y="11.4" width="8.2" height="1.35" rx="0.67" />
+            <rect x="8" y="13.7" width="8.2" height="1.35" rx="0.67" />
+            <rect x="8" y="16" width="5.3" height="1.35" rx="0.67" />
           </g>
         ) : null}
         {style.glyph === 'image' ? (
@@ -88,12 +88,12 @@ export function FileTypeIcon({
             strokeLinejoin="round"
             strokeLinecap="round"
           >
-            <rect x="8" y="11" width="8.2" height="6.4" rx="1" />
-            <path d="M8.9 16.6 L11.5 14.1 L13.3 15.9 L14.8 14.4 L16.2 15.8" />
+            <rect x="7.7" y="11" width="8.8" height="6.4" rx="1" />
+            <path d="M8.5 16.6 L11.4 14.1 L13.3 15.9 L15 14.4 L16.5 15.8" />
           </g>
         ) : null}
         {style.glyph === 'image' ? (
-          <circle cx="13.7" cy="12.9" r="0.85" fill={glyphColor} fillOpacity="0.92" />
+          <circle cx="13.9" cy="12.9" r="0.85" fill={glyphColor} fillOpacity="0.92" />
         ) : null}
       </g>
     </svg>

@@ -33,6 +33,12 @@ describe('evaluateGate', () => {
       false,
     );
   });
+
+  test('regex gate matches trimmed stdout', () => {
+    const gate = TriggerGateSchema.parse({ on: 'stdout', match: 'regex', value: '^CHANGES$' });
+    expect(evaluateGate(gate, { ...CLEAN, stdout: 'CHANGES\n' })).toBe('passed');
+    expect(evaluateGate(gate, { ...CLEAN, stdout: 'NO_CHANGES\n' })).toBe('unmatched');
+  });
 });
 
 describe('decidePreScript', () => {

@@ -15,6 +15,7 @@ describe('defineAddon handlers derivation', () => {
       'route.handle',
       'trigger.start',
       'trigger.stop',
+      'trigger.action',
       'job.run',
       'transport.typing',
       'hook.deliver',
@@ -49,6 +50,19 @@ describe('defineAddon handlers derivation', () => {
       'transport.typing',
       'lifecycle.upgrade',
     ]);
+  });
+
+  test('trigger action derives the action handler', () => {
+    const resolved = defineAddon({
+      triggers: {
+        feed: {
+          start: async () => undefined,
+          stop: async () => undefined,
+          action: async () => ({}),
+        },
+      },
+    });
+    expect(resolved.handlers).toContain('trigger.action');
   });
 
   test('defineAddon returns a resolved definition with handlers', () => {

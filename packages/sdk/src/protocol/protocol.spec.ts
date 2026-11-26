@@ -38,6 +38,7 @@ describe('protocol method map conformance', () => {
       'route.handle',
       'trigger.start',
       'trigger.stop',
+      'trigger.action',
       'job.run',
       'worker.start',
       'worker.stop',
@@ -86,6 +87,7 @@ describe('protocol method map conformance', () => {
       'usage.summary',
       'skills.list',
       'triggers.fire',
+      'triggers.get',
       'triggers.create',
       'triggers.update',
       'bridge.inbound',
@@ -110,6 +112,7 @@ describe('protocol method map conformance', () => {
     expect(protocolMap['agents.list'].permission).toBe('agents.read');
     expect(protocolMap['bridge.inbound'].permission).toBe('bridge.inbound');
     expect(protocolMap['triggers.fire'].permission).toBe('trigger');
+    expect(protocolMap['triggers.get'].permission).toBe('trigger');
     expect(protocolMap['triggers.create'].permission).toBe('trigger');
     expect(protocolMap['triggers.update'].permission).toBe('trigger');
     expect(protocolMap['workers.report'].permission).toBe('worker');

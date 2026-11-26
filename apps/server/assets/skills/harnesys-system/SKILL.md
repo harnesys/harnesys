@@ -1,6 +1,6 @@
 ---
 name: harnesys-system
-description: Reference manual for the Harnesys platform itself - runtime anatomy, the 17 capability packs and their tools, skills system, bundled presets, data layout, and a full WebUI navigation map covering desk, inbox, agents, boards and issues, dashboards, channels, sources, automations, git, terminal, settings, onboarding, and the assistant panel. Use when you need to answer "how does Harnesys work", "where do I configure X", "what does this screen do", or before authoring agents, packs, presets, boards, or dashboards.
+description: Reference manual for the Harnesys platform itself - runtime anatomy, the 20 capability packs and their tools, skills system, bundled presets, data layout, and a full WebUI navigation map covering desk, inbox, agents, boards and issues, dashboards, channels, sources, automations, git, terminal, settings, onboarding, and the assistant panel. Use when you need to answer "how does Harnesys work", "where do I configure X", "what does this screen do", or before authoring agents, packs, presets, boards, or dashboards.
 when_to_use: "Whenever a question touches the platform itself: what tools or packs exist, how the runtime drives you, how boards, issues, dashboards, or automations work, where a feature lives in the app, what the first-run onboarding does, how skills or presets work, where data lives. Load before creating or editing agents, and before telling the owner to click something."
 ---
 

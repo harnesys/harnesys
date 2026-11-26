@@ -67,10 +67,13 @@ not burn the add-on's `perDay` while its condition is false.
 
 A suppressed pre script creates no run row. `run-with-note` starts the run and appends a
 `<pre-run-failure>` block to the task text, so the agent can repair the checkout.
-`injectStdout` appends `<pre-run-output>` on a successful pre script.
+`injectStdout` appends `<pre-run-output>` on a successful pre script. When `run-with-note`
+or `ignore` lets a failed pre script through, the audit row keeps the real outcome
+(`failed`/`timeout`) with `summary: pre failed: onError=<policy>`, never `ok`.
 
 The gate parser lives in `trigger-script-policy.ts` and is unit-tested; JSON paths are
-dotted (`result.items.0.ready`), with `exists`, `truthy` and `equals` operators.
+dotted (`result.items.0.ready`), with `exists`, `truthy` and `equals` operators. Stdout is
+trimmed before `contains` and `regex` matching, so `^CHANGES$` matches `echo CHANGES`.
 
 ## Post script
 
@@ -126,6 +129,8 @@ Process execution is shared with agent hooks: `runShellProcess`
 (`packages/harnesys/src/application/hooks/shell-process.ts`) owns shell selection, stdin,
 stdout/stderr capture, the timeout and the process-group kill. `runCommand` in
 `command-run.ts` now delegates to it, so hooks and trigger scripts do not fork the executor.
+`shell` is honoured as declared: `bash` resolves a bash binary from `PATH` (falling back to
+`/bin/bash`), never the interactive `$SHELL`.
 
 ## Audit
 
@@ -134,7 +139,9 @@ stdout/stderr capture, the timeout and the process-group kill. `runCommand` in
 - Read: `GET /orgs/:orgId/addons/:addonId/triggers/:tid/script-runs`.
 - Test: `POST /orgs/:orgId/addons/:addonId/triggers/:tid/scripts/test` runs the given
   script in the trigger's current workspace and returns status, exit code, duration and the
-  gate verdict. It is available for saved triggers only.
+  gate verdict. It is available for saved triggers only. With a missing workspace it returns
+  the `onWorkspaceMissing` verdict of the stored pre script (`skipped` or `failed`) instead of
+  an error.
 
 ## Safety
 
@@ -148,16 +155,21 @@ stdout/stderr capture, the timeout and the process-group kill. `runCommand` in
 
 ## Add-on contract
 
-Scripts are not part of the add-on API:
+Scripts are part of the trigger target, so an add-on (and therefore an agent using its tools)
+can arm them without a human:
 
-- `trigger.start` receives `{ threadId, agentId, modeId?, workspace? }`. `scripts` is absent,
-  and `AddonTriggerTarget` in `@harnesys/sdk` does not declare it.
-- `ctx.triggers.create` rebuilds the target from the four known fields, so an add-on cannot
-  arm shell commands by smuggling extra JSON.
-- `ctx.triggers.update` merges the stored `scripts` back into the new target, so an add-on
-  re-applying its target on restart does not silently delete operator scripts.
+- `AddonTriggerTarget` in `@harnesys/sdk` declares `scripts` (`pre`/`post`, gate, failure
+  policy). `ctx.triggers.create` and `ctx.triggers.update` accept it; `ctx.triggers.get`
+  returns the stored instance with its target, so an add-on can inspect and edit what it has.
+- The host validates the full target on every write: non-empty command, compilable regex,
+  timeout range, env key mask, enum values. Non-empty scripts require
+  `scripts.acknowledged: true`; the core `automations` pack sets it automatically.
+- `ctx.triggers.update` replaces `scripts` when the target carries them and keeps the stored
+  ones when the target omits them, so a re-applied target does not wipe existing scripts.
+- `trigger.start` keeps receiving only `threadId`, `agentId`, `modeId?`, `workspace?`: the
+  scripts are executed by the host engine and are not needed by the add-on runtime.
 - `TriggerDescriptor.standard.scripts` (`{ disabled?, label?, help? }`) relabels or hides the
-  Scripts block; the scripts themselves remain operator-owned.
+  Scripts block in the trigger dialog; the same values stay editable through the API.
 
 When designing a trigger, do not duplicate a preflight check inside the add-on if the host
 can express it as a pre script: a "poll every minute, fire only when something changed"
@@ -174,6 +186,23 @@ POST /api/orgs/:orgId/addons/:addonId/triggers/:tid/scripts/test
 The test body is `{ script, gate? }` and runs in the trigger's current workspace; the response
 is `{ status, exitCode, durationMs, cwd, gateVerdict, stdout, stderr }`. Both routes require an
 org admin session.
+
+## Agent access
+
+The core `automations` pack exposes trigger management to agents without per-add-on tools:
+`automation_kind_list` returns each installed kind with `configFields`, `connection` and
+`standard`; `automation_create/update` write the instance config (validated against
+`configFields`: required, type, select options, pattern, `visibleWhen`, nested groups), target
+and scripts; `automation_list/get/set_enabled/delete` cover the rest; `automation_script_runs`
+and `automation_script_test` read the audit and run a probe without firing. The pack rejects
+`scripts` when `standard.scripts.disabled` is true.
+
+The `automations` system skill (config fields, gate matrix, action table) is enabled per
+agent in its `skills` list. Config fields are the add-on's own schema. An agent builds `config` from
+`automation_kind_list` instead of guessing, which is why a trigger kind does not need custom
+CRUD tools. Kind-specific operations are declared as `descriptor.actions` and invoked through
+`automation_action` (status, test, deliveries, rotate, next-run state), so there is one agent
+surface for both management and runtime operations.
 
 ## Relationship to notifications
 

@@ -101,6 +101,13 @@ export const protocolMap = {
     empty,
     'trigger',
   ),
+  'trigger.action': hostMethod(
+    z
+      .object({ instanceId: str, kind: str, action: str, input: z.unknown().optional() })
+      .extend({ _meta: CallMetaSchema }),
+    z.unknown(),
+    'trigger',
+  ),
   'job.run': hostMethod(z.object({ jobId: str }).extend({ _meta: CallMetaSchema }), empty),
   'worker.start': hostMethod(z.object({ workerId: str }).extend({ _meta: CallMetaSchema }), empty),
   'worker.stop': hostMethod(z.object({ workerId: str }).extend({ _meta: CallMetaSchema }), empty),

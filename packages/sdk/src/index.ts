@@ -18,6 +18,10 @@ export {
   type AddonSkills,
   type AddonThreads,
   type AddonTriggerField,
+  type AddonTriggerInstanceView,
+  type AddonTriggerScript,
+  type AddonTriggerScriptShell,
+  type AddonTriggerScripts,
   type AddonTriggers,
   type AddonTriggerTarget,
   type AddonTriggerWorkspace,
@@ -150,9 +154,9 @@ export {
 } from './families/transport.ts';
 export {
   TRIGGER_SCHEMA_VERSION,
+  type TriggerActionDescriptor,
   type TriggerDescriptor,
   TriggerDescriptorSchema,
-  type TriggerLimits,
   triggerFamily,
 } from './families/trigger.ts';
 export {

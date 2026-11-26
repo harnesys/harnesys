@@ -39,7 +39,20 @@ export class TestTriggerScriptUseCase {
     }
     const cwd = this.scripts.resolveCwd({ orgId: input.orgId, threadId });
     if (cwd === null) {
-      throw new AddonException('invalid_params', 422, 'trigger workspace is not available');
+      const status = workspacePolicyOf(instance.targetJson) === 'fail' ? 'failed' : 'skipped';
+      this.logger.debug(
+        { orgId: input.orgId, instanceId: input.instanceId, status },
+        'trigger script test skipped: workspace unavailable',
+      );
+      return {
+        status,
+        exitCode: null,
+        durationMs: 0,
+        cwd: '',
+        gateVerdict: 'not-applied',
+        stdout: '',
+        stderr: 'trigger workspace is not available',
+      };
     }
     const firedAt = new Date().toISOString();
     const result = await this.process.run({
@@ -88,5 +101,25 @@ function threadIdOf(targetJson: string): string | null {
     return typeof threadId === 'string' && threadId.length > 0 ? threadId : null;
   } catch {
     return null;
+  }
+}
+
+function workspacePolicyOf(targetJson: string): 'skip-run' | 'fail' {
+  try {
+    const parsed: unknown = JSON.parse(targetJson);
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return 'skip-run';
+    }
+    const scripts = (parsed as Record<string, unknown>).scripts;
+    if (scripts === null || typeof scripts !== 'object' || Array.isArray(scripts)) {
+      return 'skip-run';
+    }
+    const pre = (scripts as Record<string, unknown>).pre;
+    if (pre === null || typeof pre !== 'object' || Array.isArray(pre)) {
+      return 'skip-run';
+    }
+    return (pre as Record<string, unknown>).onWorkspaceMissing === 'fail' ? 'fail' : 'skip-run';
+  } catch {
+    return 'skip-run';
   }
 }

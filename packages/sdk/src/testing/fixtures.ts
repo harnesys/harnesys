@@ -80,6 +80,7 @@ export function demoDefinition(): ResolvedAddonDefinition {
       'telegram.feed': {
         start: async () => undefined,
         stop: async () => undefined,
+        action: async (params) => ({ action: params.action, input: params.input ?? null }),
       },
     },
     jobs: {

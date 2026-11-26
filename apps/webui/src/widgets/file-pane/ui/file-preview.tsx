@@ -1,6 +1,7 @@
 import { Editor } from '@monaco-editor/react';
 import { DownloadIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { monacoLanguageId } from '@/shared/lib/monaco';
 import { detectLanguage } from '@/shared/lib/tool-code';
 import { FileTypeIcon } from '@/shared/ui/icons';
 import { MonacoBoundary } from '@/shared/ui/monaco-boundary';
@@ -128,7 +129,7 @@ function TextBlobPreview({ url, name }: { url: string; name: string }) {
       <Editor
         height="100%"
         value={text}
-        language={detectLanguage(name) ?? 'plaintext'}
+        language={monacoLanguageId(detectLanguage(name) ?? 'plaintext')}
         theme={editorThemeName(theme)}
         options={{ readOnly: true, minimap: { enabled: false } }}
         loading={<Spinner className="size-5 text-muted-foreground" />}

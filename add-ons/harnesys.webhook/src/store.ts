@@ -67,7 +67,7 @@ function mapWebhook(row: DbRow): WebhookRecord {
 }
 
 export function secretKeyFor(instanceId: string): string {
-  return `secret:${instanceId.replace(/[^A-Za-z0-9_.-]/g, '_')}`;
+  return `secret_${instanceId.replace(/[^A-Za-z0-9_.-]/g, '_')}`;
 }
 
 export async function startWebhook(
@@ -175,10 +175,13 @@ export async function recordDelivery(ctx: AddonContext, delivery: DeliveryRecord
 export async function listDeliveries(
   ctx: AddonContext,
   limit: number,
+  instanceId?: string,
 ): Promise<Record<string, unknown>[]> {
+  const filter = instanceId === undefined ? '' : ' where d.instance_id = ?';
+  const params = instanceId === undefined ? [limit] : [instanceId, limit];
   const rows = await ctx.db.all(
-    "select d.id as id, d.received_at as receivedAt, coalesce(nullif(w.label, ''), json_extract(w.config, '$.name'), '') as webhook, d.method as method, d.outcome as outcome, d.summary as summary, d.error as error, d.run_id as runId from deliveries d left join webhooks w on w.instance_id = d.instance_id order by d.received_at desc limit ?",
-    [limit],
+    `select d.id as id, d.received_at as receivedAt, coalesce(nullif(w.label, ''), json_extract(w.config, '$.name'), '') as webhook, d.method as method, d.outcome as outcome, d.summary as summary, d.error as error, d.run_id as runId from deliveries d left join webhooks w on w.instance_id = d.instance_id${filter} order by d.received_at desc limit ?`,
+    params,
   );
   return rows.map((row) => ({
     id: String(row.id ?? ''),

@@ -3,6 +3,17 @@ import type * as monacoNs from 'monaco-editor';
 
 export type Monaco = typeof monacoNs;
 
+const MONACO_LANGUAGE_IDS: Record<string, string> = {
+  bash: 'shell',
+  sh: 'shell',
+  zsh: 'shell',
+  shellscript: 'shell',
+};
+
+export function monacoLanguageId(language: string): string {
+  return MONACO_LANGUAGE_IDS[language] ?? language;
+}
+
 let pending: Promise<Monaco> | null = null;
 
 export function ensureMonaco(): Promise<Monaco> {

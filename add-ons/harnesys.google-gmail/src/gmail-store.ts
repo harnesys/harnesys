@@ -78,3 +78,31 @@ export async function pendingResolve(
     messageId,
   ]);
 }
+
+export async function pendingCountOf(ctx: AddonContext, instanceId: string): Promise<number> {
+  const row = await ctx.db.get('select count(*) as count from pending where instance_id = ?', [
+    instanceId,
+  ]);
+  return Number(row?.count ?? 0);
+}
+
+export async function firedOf(
+  ctx: AddonContext,
+  instanceId: string,
+): Promise<{ fires: number; lastFiredAt: string | null }> {
+  const row = await ctx.db.get(
+    'select count(*) as fires, max(at) as lastFiredAt from fired where instance_id = ?',
+    [instanceId],
+  );
+  return {
+    fires: Number(row?.fires ?? 0),
+    lastFiredAt: typeof row?.lastFiredAt === 'string' ? row.lastFiredAt : null,
+  };
+}
+
+export async function clearWatermark(ctx: AddonContext, accountId: string): Promise<boolean> {
+  const result = await ctx.db.run('delete from history_watermark where account_id = ?', [
+    accountId,
+  ]);
+  return result.changes > 0;
+}

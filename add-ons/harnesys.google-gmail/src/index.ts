@@ -4,7 +4,7 @@ import { gmailTools } from './gmail-tools.ts';
 import { gmailTrigger } from './gmail-trigger.ts';
 
 const ADDON_ID = 'harnesys.google-gmail';
-const ADDON_VERSION = '1.1.0';
+const ADDON_VERSION = '1.2.0';
 
 export const addon = defineAddon({
   tools: gmailTools,

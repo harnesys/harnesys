@@ -120,9 +120,13 @@ function spawnShell(
     return Bun.spawn(['pwsh', '-NoProfile', '-Command', command], options);
   }
   if (shell === 'bash') {
-    return Bun.spawn([resolveBashBin(), '-c', command], options);
+    return Bun.spawn([bashBin(), '-c', command], options);
   }
   return Bun.spawn([shell, '-c', command], options);
+}
+
+export function bashBin(): string {
+  return Bun.which('bash') ?? '/bin/bash';
 }
 
 export function resolveBashBin(): string {

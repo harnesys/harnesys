@@ -59,6 +59,9 @@ class FakeSourceCalls extends AddonCallPort {
   }
   override async triggerStart(): Promise<void> {}
   override async triggerStop(): Promise<void> {}
+  override async triggerAction(): Promise<unknown> {
+    return {};
+  }
   override async jobRun(): Promise<void> {}
   override async workerStart(): Promise<void> {}
   override async workerStop(): Promise<void> {}

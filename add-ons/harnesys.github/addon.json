@@ -1,6 +1,6 @@
 {
   "id": "harnesys.github",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "platform": 1,
   "title": "GitHub",
   "description": "GitHub repositories, issues, pull requests and CI workflow runs for every connected GitHub App installation, plus a github.repo-events trigger that polls repos for new issues, pull requests and workflow runs. Installation tokens are issued by the host and never enter the add-on process.",
@@ -841,6 +841,38 @@
           "perDay": 500,
           "throttleSec": 5
         },
+        "actions": [
+          {
+            "id": "status",
+            "title": "Instance status",
+            "description": "Repo, event filters, per-stream cursor (watermark, etag) and fire counters",
+            "inputSchema": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            }
+          },
+          {
+            "id": "reset_watermark",
+            "title": "Reset cursor",
+            "description": "Drop the poll cursor and etag so the next poll re-baselines without replaying earlier events",
+            "inputSchema": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "stream": {
+                  "type": "string",
+                  "enum": [
+                    "issues",
+                    "pull_requests",
+                    "workflow_runs"
+                  ],
+                  "description": "Stream to reset; omit to reset every stream"
+                }
+              }
+            }
+          }
+        ],
         "icon": "git-branch",
         "color": "#a78bfa"
       }

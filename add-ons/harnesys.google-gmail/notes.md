@@ -5,3 +5,5 @@ The poller syncs new mail with the Gmail history API using a `historyId` waterma
 Trigger instances match messages with the Gmail search query and required labels server-side; exclude terms are checked in the add-on.
 
 Add-on settings control the shared mail poller: `poll_sec` sets the interval between checks (30–3600 seconds, default 60), and `poll_disabled` pauses polling without removing triggers. The historyId watermark is kept while paused, so mail is picked up from the last seen point after resuming.
+
+Agents manage the trigger through the core `automations` pack. Its actions: `status` returns the filters, per-account `historyId` watermark, pending messages and fire counters; `reset_watermark` drops the history watermark (all bound accounts or one) so the next poll re-baselines to the current historyId without replaying mail.

@@ -1,5 +1,6 @@
 import type {
   AgentCatalogCreateInput,
+  AutomationAdminPort,
   CapabilityScope,
   HostEngineEntry,
   IssueTrackerPort,
@@ -57,6 +58,7 @@ export interface WireOrgPacksDeps {
   events?: RunEventStore;
   deskEvents?: DeskEventsPort;
   triggerInstances?: TriggerInstanceRepositoryPort;
+  automations?: AutomationAdminPort;
   issues?: OrgIssueDeps;
   issueTracker?: IssueTrackerPort;
   signals?: SignalToolsDeps;
@@ -86,6 +88,7 @@ export interface WireOrgPacksDeps {
 export interface WireOrgPackFilter {
   threads?: ThreadRepositoryPort;
   threadAgents?: ThreadAgentRepositoryPort;
+  automations?: AutomationAdminPort;
   lsp?: LspPort;
   deskEvents?: DeskEventsPort;
   issues?: OrgIssueDeps;
@@ -150,6 +153,7 @@ function optionalInputs(deps: OrgRuntimeDeps): Partial<WireOrgPacksDeps> {
     ...(deps.permissionRules !== undefined ? { permissionRules: deps.permissionRules } : {}),
     ...(deps.terminalSessions !== undefined ? { terminalSessions: deps.terminalSessions } : {}),
     ...(deps.triggerInstances ? { triggerInstances: deps.triggerInstances } : {}),
+    ...(deps.automations ? { automations: deps.automations } : {}),
     ...(deps.deskEvents ? { deskEvents: deps.deskEvents } : {}),
     ...(deps.secrets ? { secrets: deps.secrets } : {}),
     ...(deps.knowledge ? { knowledge: deps.knowledge } : {}),

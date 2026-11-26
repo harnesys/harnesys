@@ -6,6 +6,7 @@ import type { ToolDefinition } from '../ports/tools.ts';
 import type { CapabilityUniverse, RunRegistry } from './capability-set.ts';
 import { resolveCapabilitySet } from './capability-set.ts';
 import type { PackRunMap } from './packs/pack-run.ts';
+import { effectiveSkillRegistry } from './packs/pack-run.ts';
 import { createLoadSkillTool } from './skills/create-load-skill-tool.ts';
 import { createLoadToolsTool } from './tools/create-load-tools-tool.ts';
 import { aliasTool } from './tools/tool-alias.ts';
@@ -30,13 +31,13 @@ export function resolveAgentIdentity(
     fsSkills: ctx.fsSkills,
     makeLoadTools: (registry: RunRegistry) => createLoadToolsTool(flatRegistry(registry)),
   };
-  if (ctx.fsSkills !== undefined) {
-    const skills = ctx.fsSkills;
-    universe.makeLoadSkill = () => {
-      const loadSkill = createLoadSkillTool(skills);
-      return [loadSkill, aliasTool(loadSkill, 'Skill')];
-    };
-  }
+  const fsSkills = ctx.fsSkills;
+  universe.makeLoadSkill = (packOutputs) => {
+    const loadSkill = createLoadSkillTool(effectiveSkillRegistry(def, fsSkills, packOutputs), {
+      ...(fsSkills === undefined ? {} : { installed: fsSkills }),
+    });
+    return [loadSkill, aliasTool(loadSkill, 'Skill')];
+  };
   const set = resolveCapabilitySet(def, universe);
   if (set.fatal.length > 0) {
     ctx.logger?.warn(`[capabilities] ${set.fatal.join('; ')}`);

@@ -1,5 +1,15 @@
+import type { AddonTriggerScripts } from './addon-trigger-scripts.ts';
 import type { CallMeta } from './protocol/meta.ts';
 import type { AppCredentials, BridgeInboundOutcome } from './protocol/shared.ts';
+
+export type {
+  AddonTriggerGate,
+  AddonTriggerPost,
+  AddonTriggerPre,
+  AddonTriggerScript,
+  AddonTriggerScriptShell,
+  AddonTriggerScripts,
+} from './addon-trigger-scripts.ts';
 
 export type DbRow = Record<string, unknown>;
 export type SqlParam = string | number | boolean | null;
@@ -197,16 +207,22 @@ export type AddonTriggerWorkspace =
   | { kind: 'source'; sourceId: string; subpath?: string }
   | { kind: 'worktree'; sourceId: string; worktreeId: string; subpath?: string };
 
-/**
- * The host-owned target of a trigger instance. `scripts` (pre/post commands with
- * a gate) is deliberately absent: it is operator-configured, stripped on create
- * and preserved on update, so an add-on can neither read nor arm it.
- */
 export interface AddonTriggerTarget {
   threadId: string;
   agentId: string;
   modeId?: string;
   workspace?: AddonTriggerWorkspace;
+  scripts?: AddonTriggerScripts;
+}
+
+export interface AddonTriggerInstanceView {
+  instanceId: string;
+  kind: string;
+  label: string;
+  config: Record<string, unknown>;
+  target: AddonTriggerTarget | null;
+  instructions: string;
+  enabled: boolean;
 }
 
 export interface AddonTriggerField {
@@ -224,6 +240,7 @@ export interface AddonTriggers {
     fields?: AddonTriggerField[];
     payload?: unknown;
   }): Promise<{ outcome: 'fired' | 'suppressed' | 'busy' | 'failed'; runId?: string | null }>;
+  get(params: { instanceId: string }): Promise<AddonTriggerInstanceView>;
   create(params: {
     kind: string;
     label: string;

@@ -129,7 +129,7 @@ Handler keys are matched to contributions exactly:
 |---|---|---|---|
 | `tools` (tool name) | `tool-pack` | `tools.call` | — |
 | `routes` (contribution id) | `route` | `route.handle` | `routes.public` for `exposure: 'public'` |
-| `triggers` (`descriptor.kind`) | `trigger` | `trigger.start` / `trigger.stop` | `trigger` |
+| `triggers` (`descriptor.kind`) | `trigger` | `trigger.start` / `trigger.stop` / `trigger.action` | `trigger` |
 | `jobs` (`descriptor.id`) | `job` | `job.run` | — |
 | `workers` (`descriptor.id`) | `worker` | `worker.start` / `worker.stop` | `worker` |
 | `hooks` (`descriptor.id`) | `hook` | `hook.deliver` | `events.subscribe` / `accounts.use` |
@@ -139,7 +139,7 @@ Handler keys are matched to contributions exactly:
 | `notifications` | — | `config.changed` etc. | baseline |
 
 `defineAddon` computes `handlers` (the methods declared in the handshake): always `ping`
-and `shutdown`, then `tools.call`, `route.handle`, `trigger.start`/`trigger.stop`,
+and `shutdown`, then `tools.call`, `route.handle`, `trigger.start`/`trigger.stop`/`trigger.action`,
 `job.run`, `worker.start`/`worker.stop`, `hook.deliver`, the transport methods you
 defined, the source methods you implemented, and `lifecycle.upgrade`. An undeclared
 handler is dead code; the host never calls it. A declaration without a handler fails the
@@ -166,8 +166,8 @@ The host restarts your process freely, so handlers must tolerate repeats:
 
 1. `trigger.start` and `worker.start` are replayed after every process start — upsert,
    never blind-insert. `trigger.start` also carries the instance `instructions` and the
-   host-owned `target` (`threadId`, `agentId`, `modeId`, `workspace`); read them, do not
-   rewrite them.
+   instance `target` (`threadId`, `agentId`, `modeId`, `workspace`); read them, do not
+   rewrite them. `scripts` are not delivered to the add-on because the host executes them.
 2. `ctx.triggers.fire({ instanceId, runKey, ... })` is deduplicated by `(instanceId,
    runKey)`; make `runKey` deterministic from the source event id.
 3. Handle `config.changed` by re-reading the values instead of caching them for the

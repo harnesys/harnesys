@@ -132,7 +132,9 @@ export class RunTriggerScriptsUseCase {
       cwd,
     };
     if (decision.kind === 'run') {
-      this.recordRun(base, result, gateVerdict, 'ok');
+      const actual = scriptStatusOf(result);
+      const detail = actual === 'ok' ? undefined : `onError=${input.pre.onError}`;
+      this.recordRun(base, result, gateVerdict, actual, detail);
       return {
         proceed: true,
         cwd,

@@ -1,5 +1,7 @@
 export type { AgentsCapabilityPorts } from './agents/index.ts';
 export { agentsCapability } from './agents/index.ts';
+export type { AutomationsCapabilityPorts } from './automations/index.ts';
+export { automationsCapability } from './automations/index.ts';
 export { filesCapability, shellCapability } from './base.ts';
 export { coreCapability } from './core/index.ts';
 export type { ImageCapabilityPorts } from './image/index.ts';

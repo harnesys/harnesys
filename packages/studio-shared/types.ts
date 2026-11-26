@@ -251,6 +251,7 @@ export { toTranscript } from './src/transcript.ts';
 export type {
   TriggerTaskField,
   TriggerTaskInput,
+  TriggerTaskNote,
   TriggerTaskView,
 } from './src/trigger-prompt.ts';
 export {

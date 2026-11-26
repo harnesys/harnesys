@@ -61,3 +61,48 @@ export async function pruneFeedPosts(ctx: AddonContext): Promise<void> {
   }
   await ctx.db.run('delete from fired where at < ?', [cutoff]);
 }
+
+export interface SourceState {
+  peer: string;
+  title: string | null;
+  lastPostId: number | null;
+  posts: number;
+}
+
+export async function sourceStatesOf(ctx: AddonContext, peers: string[]): Promise<SourceState[]> {
+  const states: SourceState[] = [];
+  for (const peer of peers) {
+    const row = await ctx.db.get(
+      'select s.title as title, w.last_post_id as lastPostId from sources s left join source_watermark w on w.peer = s.peer where s.peer = ?',
+      [peer],
+    );
+    const counts = await ctx.db.get('select count(*) as posts from posts where peer = ?', [peer]);
+    states.push({
+      peer,
+      title: typeof row?.title === 'string' ? row.title : null,
+      lastPostId:
+        row?.lastPostId === null || row?.lastPostId === undefined ? null : Number(row.lastPostId),
+      posts: Number(counts?.posts ?? 0),
+    });
+  }
+  return states;
+}
+
+export async function clearSourceWatermark(ctx: AddonContext, peer: string): Promise<boolean> {
+  const result = await ctx.db.run('delete from source_watermark where peer = ?', [peer]);
+  return result.changes > 0;
+}
+
+export async function firedOf(
+  ctx: AddonContext,
+  instanceId: string,
+): Promise<{ fires: number; lastFiredAt: string | null }> {
+  const row = await ctx.db.get(
+    'select count(*) as fires, max(at) as lastFiredAt from fired where instance_id = ?',
+    [instanceId],
+  );
+  return {
+    fires: Number(row?.fires ?? 0),
+    lastFiredAt: typeof row?.lastFiredAt === 'string' ? row.lastFiredAt : null,
+  };
+}

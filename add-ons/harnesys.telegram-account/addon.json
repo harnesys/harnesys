@@ -1,6 +1,6 @@
 {
   "id": "harnesys.telegram-account",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "platform": 1,
   "title": "Telegram account",
   "description": "Acts as a connected Telegram user account over MTProto. Watches channels and groups, stores new posts, filters them by keywords and fires a telegram.feed trigger; and exposes a tool-pack so an agent can read dialogs, history, chats and participants, send text, media and albums, forward and copy messages, edit, delete, pin, react, join and leave chats and download attachments as the same account. The session comes from the bound telegram-user account; independent of the bot add-on: an organization can run only the feed, only the tools, or both.",
@@ -912,6 +912,33 @@
           "perDay": 200,
           "throttleSec": 5
         },
+        "actions": [
+          {
+            "id": "status",
+            "title": "Instance status",
+            "description": "Filters, per-channel feed watermark and stored post counts, fire counters",
+            "inputSchema": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            }
+          },
+          {
+            "id": "reset_watermark",
+            "title": "Reset cursor",
+            "description": "Drop the channel feed watermark so the next poll treats it as first sight: it baselines silently unless add-on backfill is above zero",
+            "inputSchema": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "peer": {
+                  "type": "string",
+                  "description": "Configured channel to reset; omit to reset every configured channel"
+                }
+              }
+            }
+          }
+        ],
         "icon": "rss",
         "color": "#229ED9"
       }

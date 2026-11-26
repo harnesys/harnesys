@@ -1,7 +1,7 @@
 import type { KeyboardEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { FileTypeIcon, FolderTypeIcon } from '@/shared/ui/icons';
-import { SIDEBAR_ROW_INDENT } from '@/shared/ui/sidebar-row';
+import { SIDEBAR_FILE_ROW_HEIGHT, SIDEBAR_ROW_INDENT } from '@/shared/ui/sidebar-row';
 export function InlineCreateInput({
   kind,
   onFinish,
@@ -28,8 +28,11 @@ export function InlineCreateInput({
   };
   return (
     <div
-      className="flex h-7 items-center gap-1.5 rounded-md pr-1.5"
-      style={{ paddingLeft: `${depth * SIDEBAR_ROW_INDENT + 6}px` }}
+      className="flex items-center gap-1.5 rounded-md pr-1.5"
+      style={{
+        paddingLeft: `${depth * SIDEBAR_ROW_INDENT + 6}px`,
+        height: SIDEBAR_FILE_ROW_HEIGHT,
+      }}
     >
       <span className="flex size-4 shrink-0 items-center justify-center" />
       <span className="flex size-4 shrink-0 items-center justify-center">

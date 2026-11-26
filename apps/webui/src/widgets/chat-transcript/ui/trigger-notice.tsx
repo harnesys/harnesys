@@ -4,6 +4,7 @@ import { MessageSquareTextIcon, ZapIcon } from 'lucide-react';
 import { AddonMark } from '@/features/manage-addons/addon-mark';
 import { getActiveOrgId } from '@/shared/api/active-org';
 import { orgAddonsQuery } from '@/shared/api/addons';
+import { cn } from '@/shared/lib/utils';
 import { Badge } from '@/shared/ui/badge';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/shared/ui/hover-card';
 import { ThreadMarkdown } from '../model/thread-markdown';
@@ -31,7 +32,7 @@ export function TriggerNotice({ text, threadId }: { text: string; threadId?: str
       </div>
     );
   }
-  const body = view.body || view.instructions;
+  const body = view.body;
   return (
     <div className="flex w-full justify-end">
       <div className="w-full max-w-[min(100%,40rem)] overflow-hidden rounded-xl border border-border/70 bg-muted/20">
@@ -50,7 +51,7 @@ export function TriggerNotice({ text, threadId }: { text: string; threadId?: str
               {view.label || view.triggerId}
             </Badge>
           </div>
-          {view.instructions && view.body ? <InstructionsBadge text={view.instructions} /> : null}
+          {view.instructions ? <InstructionsBadge text={view.instructions} /> : null}
         </div>
         <div className="flex flex-col gap-2 px-3 py-2.5">
           <p className="font-medium text-sm leading-snug">{view.title}</p>
@@ -66,6 +67,24 @@ export function TriggerNotice({ text, threadId }: { text: string; threadId?: str
               <ThreadMarkdown text={body} threadId={threadId} />
             </div>
           ) : null}
+          {view.notes.map((note, index) => (
+            <div
+              key={`${note.kind}:${index}`}
+              className={cn(
+                'rounded-md border px-2 py-1.5',
+                note.kind === 'failure'
+                  ? 'border-destructive/40 bg-destructive/10'
+                  : 'border-border/60 bg-muted/40',
+              )}
+            >
+              <p className="mb-1 text-[10px] text-muted-foreground uppercase">
+                {note.kind === 'failure' ? 'Pre-run failure' : 'Pre-run output'}
+              </p>
+              <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-4">
+                {note.text}
+              </pre>
+            </div>
+          ))}
         </div>
       </div>
     </div>

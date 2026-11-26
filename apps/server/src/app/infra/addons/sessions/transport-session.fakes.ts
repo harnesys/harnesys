@@ -19,6 +19,9 @@ export class SlowCalls extends AddonCallPort {
   override triggerStop(): Promise<never> {
     return Promise.reject(new Error('not used'));
   }
+  override triggerAction(): Promise<never> {
+    return Promise.reject(new Error('not used'));
+  }
   override jobRun(): Promise<never> {
     return Promise.reject(new Error('not used'));
   }

@@ -5,6 +5,8 @@ import { definePack, registerPack } from '../domain/pack.ts';
 import type { ToolDefinition } from '../ports/tools.ts';
 import type { CapabilityUniverse, ModeCapabilityFields } from './capability-set.ts';
 import { resolveCapabilitySet } from './capability-set.ts';
+import { effectiveSkillRegistry } from './packs/pack-run.ts';
+import { createLoadSkillTool } from './skills/create-load-skill-tool.ts';
 
 function toolOf(name: string): ToolDefinition {
   return {
@@ -96,5 +98,60 @@ describe('resolveCapabilitySet mode exposure', () => {
     );
     expect(set.registry.has('alpha_b')).toBe(false);
     expect(set.registry.get('beta_a')?.exposure).toBe('deferred');
+  });
+});
+
+describe('resolveCapabilitySet pack skills', () => {
+  test('load_skill resolves a skill carried by an enabled pack', async () => {
+    const carrier = registerPack(
+      definePack<Record<string, unknown>, Record<string, unknown>>({
+        name: 'carrier',
+        version: '1.0.0',
+        description: 'carrier pack',
+        meta: { tools: [], skills: ['carrier-guide'], hasSettings: false },
+        create: () => ({
+          skills: [{ name: 'carrier-guide', description: 'guide', body: 'CARRIER BODY' }],
+        }),
+      }),
+    );
+    const universe: CapabilityUniverse = {
+      registrations: [carrier],
+      baseRegistry: new Map(),
+      roster: [],
+      makeLoadTools: () => toolOf('load_tools'),
+      makeLoadSkill: (packOutputs) => [
+        createLoadSkillTool(
+          effectiveSkillRegistry(defWith({ carrier: true }), undefined, packOutputs),
+        ),
+      ],
+    };
+    const set = resolveCapabilitySet(defWith({ carrier: true, core: true }), universe);
+    const load = set.registry.get('load_skill');
+    expect(load).toBeDefined();
+    const result = await load?.def.execute(
+      { name: 'carrier-guide' },
+      { cwd: '/', paths: { allow: [] } },
+    );
+    expect(result).toEqual({ instructions: 'CARRIER BODY', files: [] });
+  });
+
+  test('without the pack the skill registry stays empty', async () => {
+    const set = resolveCapabilitySet(defWith({ core: true }), {
+      registrations: [],
+      baseRegistry: new Map(),
+      roster: [],
+      makeLoadTools: () => toolOf('load_tools'),
+      makeLoadSkill: (packOutputs) => [
+        createLoadSkillTool(
+          effectiveSkillRegistry(defWith({ carrier: true }), undefined, packOutputs),
+        ),
+      ],
+    });
+    const load = set.registry.get('load_skill');
+    const result = await load?.def.execute(
+      { name: 'carrier-guide' },
+      { cwd: '/', paths: { allow: [] } },
+    );
+    expect(result).toMatchObject({ error: true, code: 'UNKNOWN_SKILL' });
   });
 });

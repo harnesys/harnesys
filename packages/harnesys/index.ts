@@ -434,6 +434,8 @@ export {
 } from './src/domain/tool-output.ts';
 export type { AgentsCapabilityPorts } from './src/packs/agents/index.ts';
 export { agentsCapability } from './src/packs/agents/index.ts';
+export type { AutomationsCapabilityPorts } from './src/packs/automations/index.ts';
+export { automationsCapability } from './src/packs/automations/index.ts';
 export { filesCapability, shellCapability } from './src/packs/base.ts';
 export { coreCapability } from './src/packs/core/index.ts';
 export { type DashboardsPackPorts, dashboardsCapability } from './src/packs/dashboards/index.ts';
@@ -561,6 +563,15 @@ export type {
   AgentCatalogSummary,
   AgentsCatalogPort,
 } from './src/ports/agents-catalog.ts';
+export {
+  AutomationAdminPort,
+  type AutomationActionDescriptor,
+  type AutomationCreateInput,
+  type AutomationInstance,
+  type AutomationScriptTestInput,
+  type AutomationTriggerKind,
+  type AutomationUpdateInput,
+} from './src/ports/automation-admin.ts';
 export type {
   AgentRosterEntry,
   AgentsResolve,

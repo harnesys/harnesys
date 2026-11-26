@@ -18,7 +18,7 @@ import {
 } from '@/shared/api/repository-worktrees';
 import { cn } from '@/shared/lib/utils';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/shared/ui/context-menu';
-import { SIDEBAR_ROW_HEIGHT, SIDEBAR_ROW_INDENT, SidebarRow } from '@/shared/ui/sidebar-row';
+import { SIDEBAR_FILE_ROW_HEIGHT, SIDEBAR_ROW_INDENT, SidebarRow } from '@/shared/ui/sidebar-row';
 import { Spinner } from '@/shared/ui/spinner';
 import { toast } from '@/shared/ui/toast';
 import { useExplorerExpandStore } from '../model/explorer-expand.store';
@@ -311,8 +311,11 @@ export function WorktreeSection({
         <div className="flex min-h-full flex-col gap-0.5">
           {treeQuery.isPending ? (
             <div
-              className="flex h-7 items-center gap-1.5 text-muted-foreground"
-              style={{ paddingLeft: `${(depthOffset + 1) * SIDEBAR_ROW_INDENT + 22}px` }}
+              className="flex items-center gap-1.5 text-muted-foreground"
+              style={{
+                paddingLeft: `${(depthOffset + 1) * SIDEBAR_ROW_INDENT + 22}px`,
+                height: SIDEBAR_FILE_ROW_HEIGHT,
+              }}
             >
               <Spinner className="size-4" />
               <span className="text-[11px]">Loading tree…</span>
@@ -323,14 +326,17 @@ export function WorktreeSection({
           ) : null}
           <FileTreeWindow
             rows={rows}
-            rowHeight={SIDEBAR_ROW_HEIGHT}
+            rowHeight={SIDEBAR_FILE_ROW_HEIGHT}
             renderRow={renderRow}
             testId={`explorer-rows-${worktree.id}`}
           />
           {!treeQuery.isPending && rows.length === 0 ? (
             <p
-              className="flex h-7 items-center text-[11px] text-muted-foreground"
-              style={{ paddingLeft: `${(depthOffset + 1) * SIDEBAR_ROW_INDENT + 6}px` }}
+              className="flex items-center text-[11px] text-muted-foreground"
+              style={{
+                paddingLeft: `${(depthOffset + 1) * SIDEBAR_ROW_INDENT + 6}px`,
+                height: SIDEBAR_FILE_ROW_HEIGHT,
+              }}
             >
               Empty worktree.
             </p>

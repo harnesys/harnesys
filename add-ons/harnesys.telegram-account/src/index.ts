@@ -6,7 +6,7 @@ import { syncSourcesIfStale } from './source-sync.ts';
 import { telegramAccountTools } from './tools.ts';
 
 const ADDON_ID = 'harnesys.telegram-account';
-const ADDON_VERSION = '1.1.0';
+const ADDON_VERSION = '1.2.0';
 
 const sources: RouteHandler = async (_request, ctx: AddonContext) => {
   await syncSourcesIfStale(ctx);
