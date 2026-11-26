@@ -47,7 +47,7 @@ export const filesCapability = definePack<Record<string, unknown>, FilesPackSpec
   name: 'files',
   version: '1.0.0',
   description:
-    'Project files: read_file / file_read_image / write_file / edit_file / list_dir / glob / grep',
+    'Project files: read_file / file_read_image / write_file / edit_file / delete_file / move_file / list_dir / glob / grep',
   icon: 'files',
   specSchema: {
     type: 'object',
@@ -86,6 +86,15 @@ export const filesCapability = definePack<Record<string, unknown>, FilesPackSpec
           'Create a Word document (.docx) from blocks: headings, paragraphs, bullets, tables, page breaks.',
       },
       { name: 'edit_file', description: 'Exact string replace in a file. Returns a unified diff.' },
+      {
+        name: 'delete_file',
+        description:
+          'Delete a file by path, or files matching a glob pattern. Pattern deletes are dry-run unless dry_run is false; directories need recursive: true.',
+      },
+      {
+        name: 'move_file',
+        description: 'Move or rename a file. Creates the target parent directory.',
+      },
       { name: 'list_dir', description: 'List directory entries under the workdir.' },
       { name: 'glob', description: 'Find files by glob pattern under the workdir.' },
       { name: 'grep', description: 'Search file contents with a regular expression.' },

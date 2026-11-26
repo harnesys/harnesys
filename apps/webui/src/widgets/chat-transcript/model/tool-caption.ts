@@ -24,6 +24,8 @@ const CAPTION_SPECS: Record<string, CaptionSpec> = {
   read_file: { kind: 'file', title: 'Read File', fields: ['path'], transform: 'basename' },
   write_file: { kind: 'pencil', title: 'Write File', fields: ['path'], transform: 'basename' },
   edit_file: { kind: 'pencil', title: 'Edit File', fields: ['path'], transform: 'basename' },
+  delete_file: { kind: 'pencil', title: 'Delete File', fields: ['path', 'pattern'] },
+  move_file: { kind: 'pencil', title: 'Move File', fields: ['from', 'to'] },
   list_dir: { kind: 'file', title: 'List Dir', fields: ['path'] },
   glob: { kind: 'search', title: 'Glob', fields: ['pattern'] },
   grep: { kind: 'search', title: 'Grep', fields: ['pattern'] },

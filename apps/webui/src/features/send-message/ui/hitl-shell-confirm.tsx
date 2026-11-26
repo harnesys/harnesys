@@ -91,6 +91,8 @@ const FILE_TOOL_NAMES = new Set([
   'grep',
   'write_file',
   'edit_file',
+  'delete_file',
+  'move_file',
 ]);
 
 export function isFileToolAsk(name: string | undefined): boolean {
@@ -107,7 +109,10 @@ export function FileConfirmCard({ pending, threadId }: { pending: PendingHitl; t
   const selected = canonical ? defaultFileScope(canonical, toolName) : null;
   const isEdit = subject
     ? subject.action === 'edit'
-    : toolName === 'write_file' || toolName === 'edit_file';
+    : toolName === 'write_file' ||
+      toolName === 'edit_file' ||
+      toolName === 'delete_file' ||
+      toolName === 'move_file';
   const scoped = pending.source === 'permission';
   const send = async (payload: Record<string, unknown>, title: string) => {
     if (busy) {
@@ -177,10 +182,12 @@ export function FileConfirmCard({ pending, threadId }: { pending: PendingHitl; t
 }
 
 function requestedPathOf(input: unknown): string | null {
-  if (input !== null && typeof input === 'object' && 'path' in input) {
-    const path = (input as { path?: unknown }).path;
-    if (typeof path === 'string' && path.length > 0) {
-      return path;
+  if (input !== null && typeof input === 'object') {
+    for (const key of ['path', 'from']) {
+      const value = (input as Record<string, unknown>)[key];
+      if (typeof value === 'string' && value.length > 0) {
+        return value;
+      }
     }
   }
   return null;

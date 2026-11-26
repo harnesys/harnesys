@@ -1,8 +1,10 @@
+import { deleteFileTool } from '../../packs/files/delete-file.ts';
 import { editFileTool } from '../../packs/files/edit-file.ts';
 import { extractFileTextTool } from '../../packs/files/extract-file-text.ts';
 import { globTool } from '../../packs/files/glob.ts';
 import { grepTool } from '../../packs/files/grep.ts';
 import { listDirTool } from '../../packs/files/list-dir.ts';
+import { moveFileTool } from '../../packs/files/move-file.ts';
 import { readFileTool } from '../../packs/files/read-file.ts';
 import { readImageTool } from '../../packs/files/read-image.ts';
 import { writeDocxTool } from '../../packs/files/write-docx.ts';
@@ -19,6 +21,8 @@ export function files(options: FilesOptions = {}): ToolDefinition[] {
     writeXlsxTool(options),
     writeDocxTool(options),
     editFileTool(options),
+    deleteFileTool(options),
+    moveFileTool(options),
     listDirTool(options),
     globTool(options),
     grepTool(options),

@@ -47,6 +47,8 @@ type SummaryBuilder = (title: string, fields: Record<string, unknown>) => ToolIn
 const SUMMARY_BUILDERS: Record<string, SummaryBuilder> = {
   write_file: writeSummary,
   edit_file: editSummary,
+  delete_file: linesSummary(['path', 'pattern', 'recursive', 'dry_run']),
+  move_file: linesSummary(['from', 'to', 'overwrite']),
   read_file: linesSummary(['path', 'offset', 'limit']),
   list_dir: linesSummary(['path', 'depth']),
   glob: linesSummary(['pattern', 'path']),
@@ -205,6 +207,10 @@ function toolTitle(name: string): string {
       return 'Write File';
     case 'edit_file':
       return 'Edit File';
+    case 'delete_file':
+      return 'Delete File';
+    case 'move_file':
+      return 'Move File';
     case 'read_file':
       return 'Read File';
     case 'list_dir':

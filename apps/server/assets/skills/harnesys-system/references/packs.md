@@ -54,6 +54,8 @@ Settings: `root` (string), `blocklist` (string[]). Gates: `fs.read` for reads, `
 | `write_xlsx` | Create a multi-sheet Excel workbook with bold headers and column widths. |
 | `write_docx` | Create a Word document from blocks: headings, paragraphs, bullets, tables, page breaks. |
 | `edit_file` | Exact string replace; returns a unified diff. |
+| `delete_file` | Delete a file by path, or files by glob pattern (`pattern` defaults to dry-run, `dry_run: false` executes; directories need `recursive: true`). |
+| `move_file` | Move or rename a file; creates the target parent directory. |
 | `list_dir` | List directory entries under the workdir. |
 | `glob` | Find files by glob pattern. |
 | `grep` | Search file contents with a regular expression. |

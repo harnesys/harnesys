@@ -45,6 +45,8 @@ const FILE_TOOL_ACTIONS: Readonly<Record<string, FileAction>> = {
   grep: 'read',
   write_file: 'edit',
   edit_file: 'edit',
+  delete_file: 'edit',
+  move_file: 'edit',
 };
 
 export function observeParks(
@@ -163,10 +165,12 @@ function fileContextOf(
 }
 
 function requestedPathOf(input: unknown): string {
-  if (input !== null && typeof input === 'object' && 'path' in input) {
-    const path = (input as { path?: unknown }).path;
-    if (typeof path === 'string' && path.length > 0) {
-      return path;
+  if (input !== null && typeof input === 'object') {
+    for (const key of ['path', 'from']) {
+      const value = (input as Record<string, unknown>)[key];
+      if (typeof value === 'string' && value.length > 0) {
+        return value;
+      }
     }
   }
   return DEFAULT_REQUESTED_PATH;
