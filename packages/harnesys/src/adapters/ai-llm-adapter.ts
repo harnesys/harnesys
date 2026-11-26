@@ -44,29 +44,56 @@ export interface CallModelOptions {
 function positiveModelNumber(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined;
 }
+interface SamplingCaps {
+  penalties: boolean;
+  seed: boolean;
+  thinkingDisablesSampling: boolean;
+}
+const DEFAULT_SAMPLING_CAPS: SamplingCaps = {
+  penalties: true,
+  seed: true,
+  thinkingDisablesSampling: false,
+};
+const DRIVER_SAMPLING_CAPS: Record<string, SamplingCaps> = {
+  deepseek: { penalties: false, seed: false, thinkingDisablesSampling: true },
+};
+const LEGACY_DEEPSEEK_MODEL = /(^|[/.])deepseek-(?:chat|reasoner|v[1-3](?:\.\d+)?)(?=[-/:.]|$)/;
+function samplingCapsOf(driver: string): SamplingCaps {
+  return DRIVER_SAMPLING_CAPS[driver] ?? DEFAULT_SAMPLING_CAPS;
+}
+function deepseekThinkingEnabled(binding: ModelBinding, effort: string | undefined): boolean {
+  return effort !== 'none' && !LEGACY_DEEPSEEK_MODEL.test(binding.model.name);
+}
+interface GenerationContext {
+  binding: ModelBinding;
+  effort?: string;
+  modelMaxOutputTokens?: number;
+}
 function applyGeneration(
   streamConfig: Record<string, unknown>,
   generation: AgentGenerationSettings | undefined,
-  modelMaxOutputTokens: number | undefined,
+  context: GenerationContext,
 ): void {
-  streamConfig.maxOutputTokens = generation?.maxTokens ?? modelMaxOutputTokens;
+  streamConfig.maxOutputTokens = generation?.maxTokens ?? context.modelMaxOutputTokens;
   if (!generation) {
     return;
   }
-
-  if (generation.temperature !== undefined) {
+  const caps = samplingCapsOf(context.binding.driver as string);
+  const thinkingEnabled =
+    caps.thinkingDisablesSampling && deepseekThinkingEnabled(context.binding, context.effort);
+  if (!thinkingEnabled && generation.temperature !== undefined) {
     streamConfig.temperature = generation.temperature;
   }
-  if (generation.topP !== undefined) {
+  if (!thinkingEnabled && generation.topP !== undefined) {
     streamConfig.topP = generation.topP;
   }
-  if (generation.frequencyPenalty !== undefined) {
+  if (caps.penalties && generation.frequencyPenalty !== undefined) {
     streamConfig.frequencyPenalty = generation.frequencyPenalty;
   }
-  if (generation.presencePenalty !== undefined) {
+  if (caps.penalties && generation.presencePenalty !== undefined) {
     streamConfig.presencePenalty = generation.presencePenalty;
   }
-  if (generation.seed !== undefined) {
+  if (caps.seed && generation.seed !== undefined) {
     streamConfig.seed = generation.seed;
   }
 }
@@ -146,11 +173,13 @@ function buildStreamConfig(
   if (effortOptions.providerOptions !== undefined) {
     streamConfig.providerOptions = effortOptions.providerOptions;
   }
-  applyGeneration(
-    streamConfig,
-    options.settings?.generation,
-    positiveModelNumber(options.binding.model.top_provider?.max_completion_tokens),
-  );
+  applyGeneration(streamConfig, options.settings?.generation, {
+    binding: options.binding,
+    effort: options.settings?.effort,
+    modelMaxOutputTokens: positiveModelNumber(
+      options.binding.model.top_provider?.max_completion_tokens,
+    ),
+  });
   if (options.outputSchema) {
     streamConfig.response_format = {
       type: 'json_schema',
