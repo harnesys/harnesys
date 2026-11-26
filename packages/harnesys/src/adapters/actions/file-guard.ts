@@ -29,7 +29,7 @@ export function fileAccessGate(
 
 export function fileAccessGateAll(
   action: FileAction,
-  pathsOf: Array<(input: unknown) => string | undefined>,
+  pathsOf: Array<(input: unknown) => string | string[] | undefined>,
 ): ToolGate {
   return (input, ctx) => {
     if (!ctx.fileAccess || ctx.cwd.length === 0) {
@@ -37,8 +37,8 @@ export function fileAccessGateAll(
     }
     const decisions: ToolCallGate[] = [];
     for (const pathOf of pathsOf) {
-      const target = pathOf(input);
-      if (target !== undefined) {
+      const targets = pathOf(input);
+      for (const target of typeof targets === 'string' ? [targets] : (targets ?? [])) {
         decisions.push(ctx.fileAccess({ path: anchorTarget(ctx, target), action }));
       }
     }

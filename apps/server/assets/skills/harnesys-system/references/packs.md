@@ -50,15 +50,17 @@ Settings: `root` (string), `blocklist` (string[]). Gates: `fs.read` for reads, `
 | `read_file` | Read a text file with numbered lines; offset/limit, 2000-line cap, `truncated` flag. |
 | `file_read_image` | Read png/jpeg/webp and show it to the model next turn; oversized files are downscaled. |
 | `extract_file_text` | Extract text from PDF (text layer), DOCX, XLSX/XLS (sheets as Markdown) and CSV. |
-| `write_file` | Write or create a text file under the workdir. |
+| `write_file` | Write or create a text file, or a `files` batch; replaces an existing file unless `overwrite: false` (per entry or call-wide). |
 | `write_xlsx` | Create a multi-sheet Excel workbook with bold headers and column widths. |
 | `write_docx` | Create a Word document from blocks: headings, paragraphs, bullets, tables, page breaks. |
-| `edit_file` | Exact string replace; returns a unified diff. |
-| `delete_file` | Delete a file by path, or files by glob pattern (`pattern` defaults to dry-run, `dry_run: false` executes; directories need `recursive: true`). |
-| `move_file` | Move or rename a file; creates the target parent directory, refuses an existing target unless `overwrite: true`. |
+| `edit_file` | Exact string replace; unified diff for a single edit, counts for an `edits` batch. |
+| `delete_file` | Delete a file by path, a `paths` batch, or files by glob pattern (`pattern` defaults to dry-run, `dry_run: false` executes; directories need `recursive: true`). |
+| `move_file` | Move or rename a file or a `moves` batch; creates the target parent directory, refuses an existing target unless `overwrite: true`. |
 | `list_dir` | List directory entries under the workdir. |
 | `glob` | Find files by glob pattern. |
 | `grep` | Search file contents with a regular expression. |
+
+Batches (`write_file` `files`, `edit_file` `edits`, `delete_file` `paths`, `move_file` `moves`): business errors (missing source, blocked path, `old_string` miss, target collision) land in `failed[]` while valid entries still apply; an access-policy denial on any path aborts the whole call before anything executes. Overwrite defaults differ on purpose: `write_file` replaces unless `overwrite: false`, `move_file` refuses unless `overwrite: true`.
 
 ### shell — thread shell, terminals, SSH
 Settings: `timeout` (1–600000 ms), `allowlist`, `blocklist` (string[]). Gate: `process` on every tool.

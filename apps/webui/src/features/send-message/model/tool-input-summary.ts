@@ -1,30 +1,22 @@
-import { type DiffDetail, detectLanguage, diffFromEdit } from '@/shared/lib/tool-code';
-export type ToolInputPreview =
-  | {
-      kind: 'code';
-      language?: string;
-      text: string;
-    }
-  | {
-      kind: 'markdown';
-      text: string;
-    }
-  | {
-      kind: 'diff';
-      detail: DiffDetail;
-    }
-  | {
-      kind: 'text';
-      text: string;
-    };
-export interface ToolInputSummary {
-  title: string;
-  lines: Array<{
-    label: string;
-    value: string;
-  }>;
-  preview?: ToolInputPreview;
-}
+import { detectLanguage, diffFromEdit } from '@/shared/lib/tool-code';
+import {
+  asRecord,
+  linePairs,
+  linesSummary,
+  looksJson,
+  optField,
+  prettyJson,
+  type SummaryBuilder,
+  shellModeLines,
+  strField,
+  stringifyValue,
+  type ToolInputPreview,
+  type ToolInputSummary,
+  truncate,
+} from './tool-input-fields';
+
+export type { ToolInputPreview, ToolInputSummary } from './tool-input-fields';
+
 export function summarizeToolInput(name: string, raw: string | undefined): ToolInputSummary {
   const title = toolTitle(name);
   const fields = parseFields(raw);
@@ -42,13 +34,11 @@ export function summarizeToolInput(name: string, raw: string | undefined): ToolI
   return defaultSummary(title, fields);
 }
 
-type SummaryBuilder = (title: string, fields: Record<string, unknown>) => ToolInputSummary;
-
 const SUMMARY_BUILDERS: Record<string, SummaryBuilder> = {
   write_file: writeSummary,
   edit_file: editSummary,
-  delete_file: linesSummary(['path', 'pattern', 'recursive', 'dry_run']),
-  move_file: linesSummary(['from', 'to', 'overwrite']),
+  delete_file: deleteSummary,
+  move_file: moveSummary,
   read_file: linesSummary(['path', 'offset', 'limit']),
   list_dir: linesSummary(['path', 'depth']),
   glob: linesSummary(['pattern', 'path']),
@@ -65,21 +55,11 @@ const SUMMARY_BUILDERS: Record<string, SummaryBuilder> = {
   agents_spawn: spawnSummary,
 };
 
-function strField(fields: Record<string, unknown>, key: string): string {
-  const value = fields[key];
-  return typeof value === 'string' ? value : '';
-}
-
-function optField(fields: Record<string, unknown>, key: string): string | undefined {
-  const value = fields[key];
-  return typeof value === 'string' ? value : undefined;
-}
-
-function linesSummary(keys: string[]): SummaryBuilder {
-  return (title, fields) => ({ title, lines: linePairs(fields, keys) });
-}
-
 function writeSummary(title: string, fields: Record<string, unknown>): ToolInputSummary {
+  const batch = batchText(fields.files, pathText);
+  if (batch !== undefined) {
+    return { title, lines: [{ label: 'files', value: batch }] };
+  }
   return {
     title,
     lines: linePairs(fields, ['path']),
@@ -88,6 +68,10 @@ function writeSummary(title: string, fields: Record<string, unknown>): ToolInput
 }
 
 function editSummary(title: string, fields: Record<string, unknown>): ToolInputSummary {
+  const batch = batchText(fields.edits, pathText);
+  if (batch !== undefined) {
+    return { title, lines: [{ label: 'edits', value: batch }] };
+  }
   const path = strField(fields, 'path');
   const oldText = strField(fields, 'old_string');
   const newText = strField(fields, 'new_string');
@@ -104,6 +88,40 @@ function editSummary(title: string, fields: Record<string, unknown>): ToolInputS
     lines: linePairs(fields, ['path']),
     preview: content ? contentPreview(path, content) : undefined,
   };
+}
+
+function deleteSummary(title: string, fields: Record<string, unknown>): ToolInputSummary {
+  const lines = linePairs(fields, ['path', 'pattern', 'recursive', 'dry_run']);
+  const batch = batchText(fields.paths, (entry) => String(entry));
+  if (batch !== undefined) {
+    lines.unshift({ label: 'paths', value: batch });
+  }
+  return { title, lines };
+}
+
+function moveSummary(title: string, fields: Record<string, unknown>): ToolInputSummary {
+  const lines = linePairs(fields, ['from', 'to', 'overwrite']);
+  const batch = batchText(fields.moves, pairText);
+  if (batch !== undefined) {
+    lines.unshift({ label: 'moves', value: batch });
+  }
+  return { title, lines };
+}
+
+function pathText(entry: unknown): string {
+  return strField(asRecord(entry), 'path');
+}
+
+function pairText(entry: unknown): string {
+  const rec = asRecord(entry);
+  return `${strField(rec, 'from')} → ${strField(rec, 'to')}`;
+}
+
+function batchText(list: unknown, textOf: (entry: unknown) => string): string | undefined {
+  if (!Array.isArray(list)) {
+    return undefined;
+  }
+  return truncate(list.map(textOf).join(', '), 160);
 }
 
 function shellSummary(title: string, fields: Record<string, unknown>): ToolInputSummary {
@@ -138,7 +156,7 @@ function spawnSummary(title: string, fields: Record<string, unknown>): ToolInput
   const lines: Array<{ label: string; value: string }> = [];
   const tasks: string[] = [];
   for (const call of calls) {
-    const rec = call !== null && typeof call === 'object' ? (call as Record<string, unknown>) : {};
+    const rec = asRecord(call);
     if (typeof rec.agentId === 'string' && rec.agentId) {
       lines.push({ label: 'agent', value: rec.agentId });
     }
@@ -167,8 +185,7 @@ function spawnTaskOf(value: unknown): string {
     return '';
   }
   for (const message of messages) {
-    const rec =
-      message !== null && typeof message === 'object' ? (message as Record<string, unknown>) : {};
+    const rec = asRecord(message);
     if (typeof rec.content === 'string' && rec.content.trim()) {
       return rec.content.trim();
     }
@@ -255,70 +272,4 @@ function parseFields(raw: string | undefined): Record<string, unknown> | undefin
   } catch {
     return undefined;
   }
-}
-function linePairs(
-  fields: Record<string, unknown>,
-  keys: string[],
-): Array<{
-  label: string;
-  value: string;
-}> {
-  const lines: Array<{
-    label: string;
-    value: string;
-  }> = [];
-  for (const key of keys) {
-    const value = fields[key];
-    if (value === undefined || value === null || value === '') {
-      continue;
-    }
-    lines.push({ label: key, value: truncate(stringifyValue(value), 160) });
-  }
-  return lines;
-}
-function shellModeLines(fields: Record<string, unknown>): Array<{
-  label: string;
-  value: string;
-}> {
-  const lines: Array<{
-    label: string;
-    value: string;
-  }> = [];
-  if (fields.run_in_background === true || fields.block_until_ms === 0) {
-    lines.push({ label: 'background', value: 'true' });
-  }
-  if (fields.open_in_terminal === true) {
-    lines.push({ label: 'terminal', value: 'true' });
-  }
-  return lines;
-}
-function looksJson(text: string): boolean {
-  const trimmed = text.trim();
-  return trimmed.startsWith('{') || trimmed.startsWith('[');
-}
-function prettyJson(text: string): string | undefined {
-  try {
-    return JSON.stringify(JSON.parse(text), null, 2);
-  } catch {
-    return undefined;
-  }
-}
-function stringifyValue(value: unknown): string {
-  if (typeof value === 'string') {
-    return value;
-  }
-  if (typeof value === 'number' || typeof value === 'boolean') {
-    return String(value);
-  }
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
-}
-function truncate(text: string, max: number): string {
-  if (text.length <= max) {
-    return text;
-  }
-  return `${text.slice(0, Math.max(0, max - 1))}…`;
 }

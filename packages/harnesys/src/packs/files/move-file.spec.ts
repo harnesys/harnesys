@@ -69,4 +69,42 @@ describe('move_file', () => {
     );
     expect(gate?.decision).toBe('ask');
   });
+
+  test('moves batch applies each pair and reports per-pair failures', async () => {
+    writeFileSync(join(root, 'r1.txt'), '1\n');
+    writeFileSync(join(root, 'r2.txt'), '2\n');
+    writeFileSync(join(root, 'taken.txt'), 'x\n');
+    const def = moveFileTool();
+    const result = (await def.execute(
+      {
+        moves: [
+          { from: 'r1.txt', to: 'nest/one.txt' },
+          { from: 'missing.txt', to: 'nest/gone.txt' },
+          { from: 'r2.txt', to: 'taken.txt' },
+        ],
+      },
+      ctx(),
+    )) as { moved: number; failed: Array<{ from: string; error: string }> };
+    expect(result.moved).toBe(1);
+    expect(result.failed.map((f) => f.from)).toEqual(['missing.txt', 'r2.txt']);
+    expect(readFileSync(join(root, 'nest/one.txt'), 'utf8')).toBe('1\n');
+    expect(existsSync(join(root, 'r1.txt'))).toBe(false);
+    expect(readFileSync(join(root, 'taken.txt'), 'utf8')).toBe('x\n');
+  });
+
+  test('moves batch gate denies if any pair path is denied', () => {
+    const denyVault: FileAccessPolicy = ({ path }) =>
+      path.includes('vault') ? { decision: 'deny', reason: 'test rule' } : { decision: 'allow' };
+    const def = moveFileTool();
+    const gate = def.gate?.(
+      {
+        moves: [
+          { from: 'a.txt', to: 'b.txt' },
+          { from: 'c.txt', to: 'vault/c.txt' },
+        ],
+      },
+      { cwd: root, paths: {}, fileAccess: denyVault },
+    );
+    expect(gate?.decision).toBe('deny');
+  });
 });

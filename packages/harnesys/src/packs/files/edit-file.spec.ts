@@ -19,6 +19,35 @@ function ctx(): ToolContext {
   return { cwd: root, paths: { allow: [] } };
 }
 
+describe('edit_file batch', () => {
+  test('edits batch applies entries and reports per-item failures', async () => {
+    writeFileSync(join(root, 'ea.txt'), 'alpha\n');
+    writeFileSync(join(root, 'eb.txt'), 'beta\n');
+    const def = editFileTool();
+    const result = (await def.execute(
+      {
+        edits: [
+          { path: 'ea.txt', old_string: 'alpha', new_string: 'ALPHA' },
+          { path: 'eb.txt', old_string: 'missing', new_string: 'x' },
+          { path: 'ec.txt', old_string: 'a', new_string: 'b' },
+        ],
+      },
+      ctx(),
+    )) as { applied: number; failed: Array<{ path: string; error: string }> };
+    expect(result.applied).toBe(1);
+    expect(result.failed.map((f) => f.path)).toEqual(['eb.txt', 'ec.txt']);
+    expect(readFileSync(join(root, 'ea.txt'), 'utf8')).toBe('ALPHA\n');
+    expect(readFileSync(join(root, 'eb.txt'), 'utf8')).toBe('beta\n');
+  });
+
+  test('mixing single fields and edits is rejected', async () => {
+    const def = editFileTool();
+    await expect(
+      def.execute({ path: 'ea.txt', old_string: 'a', new_string: 'b', edits: [] }, ctx()),
+    ).rejects.toThrow('Provide either path/old_string/new_string or edits, not both');
+  });
+});
+
 describe('edit_file matching fallbacks', () => {
   test('CRLF file keeps CRLF endings after replacement', async () => {
     const file = join(root, 'crlf.md');

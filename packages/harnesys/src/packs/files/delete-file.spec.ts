@@ -77,6 +77,42 @@ describe('delete_file path mode', () => {
     );
     expect(existsSync(target)).toBe(true);
   });
+  test('paths batch deletes and reports failures per item', async () => {
+    seed('batch/one.txt');
+    seed('batch/two.txt');
+    seed('batch/three.txt');
+    const denyTwo: FileAccessPolicy = ({ path }) =>
+      path.endsWith('two.txt') ? { decision: 'deny', reason: 'test rule' } : { decision: 'allow' };
+    const def = deleteFileTool();
+    const result = (await def.execute(
+      { paths: ['batch/one.txt', 'batch/two.txt', 'batch/three.txt', 'batch/gone.txt'] },
+      ctx(denyTwo),
+    )) as { deleted: number; failed: Array<{ path: string; error: string }>; dry_run: boolean };
+    expect(result.dry_run).toBe(false);
+    expect(result.deleted).toBe(2);
+    expect(result.failed.map((f) => f.path)).toEqual(['batch/two.txt', 'batch/gone.txt']);
+    expect(existsSync(join(root, 'batch/one.txt'))).toBe(false);
+    expect(existsSync(join(root, 'batch/two.txt'))).toBe(true);
+    expect(existsSync(join(root, 'batch/three.txt'))).toBe(false);
+  });
+
+  test('gate covers every path in a paths batch', () => {
+    const askTwo: FileAccessPolicy = ({ path }) =>
+      path.endsWith('two.txt') ? { decision: 'ask' } : { decision: 'allow' };
+    const def = deleteFileTool();
+    const gate = def.gate?.(
+      { paths: ['one.txt', 'two.txt'] },
+      { cwd: root, paths: {}, fileAccess: askTwo },
+    );
+    expect(gate?.decision).toBe('ask');
+  });
+
+  test('mixing path and pattern is rejected', async () => {
+    const def = deleteFileTool();
+    await expect(def.execute({ path: 'x.txt', pattern: '*.x' }, ctx())).rejects.toThrow(
+      'Provide exactly one of path, paths, or pattern',
+    );
+  });
 });
 
 describe('delete_file pattern mode', () => {

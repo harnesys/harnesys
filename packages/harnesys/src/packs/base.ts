@@ -74,7 +74,11 @@ export const filesCapability = definePack<Record<string, unknown>, FilesPackSpec
         description:
           'Extract text from PDF (text layer), DOCX, XLSX/XLS (sheets as Markdown tables) and CSV documents. Clear error for scanned PDFs and unsupported formats.',
       },
-      { name: 'write_file', description: 'Write or create a text file under the workdir.' },
+      {
+        name: 'write_file',
+        description:
+          'Write or create text files: one path/content pair or a files batch (per-entry overwrite).',
+      },
       {
         name: 'write_xlsx',
         description:
@@ -85,16 +89,20 @@ export const filesCapability = definePack<Record<string, unknown>, FilesPackSpec
         description:
           'Create a Word document (.docx) from blocks: headings, paragraphs, bullets, tables, page breaks.',
       },
-      { name: 'edit_file', description: 'Exact string replace in a file. Returns a unified diff.' },
+      {
+        name: 'edit_file',
+        description:
+          'Exact string replace in a file (unified diff) or an edits batch (per-file counts).',
+      },
       {
         name: 'delete_file',
         description:
-          'Delete a file by path, or files matching a glob pattern. Pattern deletes are dry-run unless dry_run is false; directories need recursive: true.',
+          'Delete a file by path, a paths batch, or files matching a glob pattern. Pattern deletes are dry-run unless dry_run is false; directories need recursive: true.',
       },
       {
         name: 'move_file',
         description:
-          'Move or rename a file. Creates the target parent directory; refuses an existing target unless overwrite: true.',
+          'Move or rename a file or a moves batch. Creates the target parent directory; refuses an existing target unless overwrite: true.',
       },
       { name: 'list_dir', description: 'List directory entries under the workdir.' },
       { name: 'glob', description: 'Find files by glob pattern under the workdir.' },
