@@ -32,17 +32,17 @@ describe('move_file', () => {
     expect(readFileSync(join(root, 'src/moved.txt'), 'utf8')).toBe('payload\n');
   });
 
-  test('existing target with overwrite false is refused', async () => {
+  test('existing target is refused without explicit overwrite: true', async () => {
     writeFileSync(join(root, 'a.txt'), 'a\n');
     writeFileSync(join(root, 'b.txt'), 'b\n');
     const def = moveFileTool();
-    await expect(
-      def.execute({ from: 'a.txt', to: 'b.txt', overwrite: false }, ctx()),
-    ).rejects.toThrow('Target exists and overwrite is false');
+    await expect(def.execute({ from: 'a.txt', to: 'b.txt' }, ctx())).rejects.toThrow(
+      'Target exists; pass overwrite: true',
+    );
     expect(readFileSync(join(root, 'b.txt'), 'utf8')).toBe('b\n');
-    await expect(def.execute({ from: 'a.txt', to: 'b.txt' }, ctx())).resolves.toMatchObject({
-      moved: 1,
-    });
+    await expect(
+      def.execute({ from: 'a.txt', to: 'b.txt', overwrite: true }, ctx()),
+    ).resolves.toMatchObject({ moved: 1 });
     expect(readFileSync(join(root, 'b.txt'), 'utf8')).toBe('a\n');
   });
 

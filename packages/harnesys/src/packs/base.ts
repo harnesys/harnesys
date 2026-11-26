@@ -93,7 +93,8 @@ export const filesCapability = definePack<Record<string, unknown>, FilesPackSpec
       },
       {
         name: 'move_file',
-        description: 'Move or rename a file. Creates the target parent directory.',
+        description:
+          'Move or rename a file. Creates the target parent directory; refuses an existing target unless overwrite: true.',
       },
       { name: 'list_dir', description: 'List directory entries under the workdir.' },
       { name: 'glob', description: 'Find files by glob pattern under the workdir.' },

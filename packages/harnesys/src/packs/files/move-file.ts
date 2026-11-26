@@ -20,7 +20,7 @@ export function moveFileTool(options: FilesOptions = {}): ToolDefinition {
   return tool('move_file', {
     group: 'files',
     description:
-      'Move or rename a file inside a source granted Write access. Creates the target parent directory.',
+      'Move or rename a file inside a source granted Write access. Creates the target parent directory; refuses an existing target unless overwrite is true.',
     operations: ['fs.write'],
     sideEffect: 'write',
     input: {
@@ -63,8 +63,8 @@ async function applyMove(
   }
   const target = await lstat(toAbs).catch(() => undefined);
   if (target) {
-    if (parsed.overwrite === false) {
-      throw new Error(`Target exists and overwrite is false: ${parsed.to}`);
+    if (parsed.overwrite !== true) {
+      throw new Error(`Target exists; pass overwrite: true to replace: ${parsed.to}`);
     }
     if (target.isDirectory() !== info.isDirectory()) {
       throw new Error(
