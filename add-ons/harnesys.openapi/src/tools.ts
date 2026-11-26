@@ -74,7 +74,7 @@ function matchesFilter(
   return filter === undefined || projectName === filter || projectId === filter;
 }
 
-async function requireProject(
+export async function requireProject(
   ctx: AddonContext,
   input: Record<string, unknown>,
 ): Promise<ProjectRow> {
@@ -90,7 +90,7 @@ async function requireProject(
   return project;
 }
 
-async function requireOperation(
+export async function requireOperation(
   ctx: AddonContext,
   project: ProjectRow,
   input: Record<string, unknown>,
@@ -124,7 +124,7 @@ async function assertGrant(
   });
 }
 
-function requiredText(input: Record<string, unknown>, key: string): string {
+export function requiredText(input: Record<string, unknown>, key: string): string {
   const value = input[key];
   if (typeof value !== 'string' || value.length === 0) {
     throw new AddonError('invalid_params', { detail: `${key} is required` });
@@ -132,12 +132,12 @@ function requiredText(input: Record<string, unknown>, key: string): string {
   return value;
 }
 
-function optionalText(input: Record<string, unknown>, key: string): string | undefined {
+export function optionalText(input: Record<string, unknown>, key: string): string | undefined {
   const value = input[key];
   return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
 
-function optionalLimit(raw: unknown, fallback: number, max: number): number {
+export function optionalLimit(raw: unknown, fallback: number, max: number): number {
   if (typeof raw !== 'number' || !Number.isFinite(raw)) {
     return fallback;
   }

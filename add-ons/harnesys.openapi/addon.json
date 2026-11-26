@@ -444,6 +444,87 @@
                 "operation"
               ]
             }
+          },
+          {
+            "name": "grants_list",
+            "description": "List API operation grants across agents (admin view): who can call what. Filter by project and/or agent (id or name).",
+            "effect": "read",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "Project name or id"
+                },
+                "agent": {
+                  "type": "string",
+                  "description": "Target agent id or exact name; omit to list all agents"
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 500,
+                  "description": "How many grant rows to return (default 100)"
+                }
+              }
+            }
+          },
+          {
+            "name": "grants_grant",
+            "description": "Grant one agent access to one imported API operation (project + operation from api_list). Destructive access change: requires user approval and is recorded in the addon grant audit log.",
+            "effect": "destructive",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "agent": {
+                  "type": "string",
+                  "description": "Target agent id or exact name"
+                },
+                "project": {
+                  "type": "string",
+                  "description": "Project name or id"
+                },
+                "operation": {
+                  "type": "string",
+                  "description": "Operation id from api_list"
+                }
+              },
+              "required": [
+                "agent",
+                "project",
+                "operation"
+              ]
+            }
+          },
+          {
+            "name": "grants_revoke",
+            "description": "Revoke one agent's access to one API operation. Destructive access change: requires user approval and is recorded in the addon grant audit log.",
+            "effect": "destructive",
+            "idempotent": true,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "agent": {
+                  "type": "string",
+                  "description": "Target agent id or exact name"
+                },
+                "project": {
+                  "type": "string",
+                  "description": "Project name or id"
+                },
+                "operation": {
+                  "type": "string",
+                  "description": "Operation id from api_list"
+                }
+              },
+              "required": [
+                "agent",
+                "project",
+                "operation"
+              ]
+            }
           }
         ]
       }

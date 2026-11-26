@@ -8,6 +8,7 @@ import {
   projectTest,
 } from './routes-projects.ts';
 import { apiCall, apiDocs, apiList } from './tools.ts';
+import { grantsGrant, grantsList, grantsRevoke } from './tools-grants.ts';
 import { safe } from './validate.ts';
 
 const ADDON_ID = 'harnesys.openapi';
@@ -22,6 +23,9 @@ export const addon = defineAddon({
     put: apiCall,
     patch: apiCall,
     delete: apiCall,
+    grants_list: grantsList,
+    grants_grant: grantsGrant,
+    grants_revoke: grantsRevoke,
   },
   routes: {
     agents: safe(agents),

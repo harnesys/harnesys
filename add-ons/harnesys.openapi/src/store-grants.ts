@@ -103,3 +103,73 @@ export async function revokeAgentGrants(
         ]);
   return result.changes;
 }
+
+export interface GrantRow {
+  agentId: string;
+  project: string;
+  operationId: string;
+  method: string;
+  pathTemplate: string;
+  summary: string;
+  grantedAt: string;
+}
+
+export async function listGrants(
+  ctx: AddonContext,
+  filter: { projectKey?: string; agentId?: string },
+): Promise<GrantRow[]> {
+  const conditions: string[] = [];
+  const params: string[] = [];
+  if (filter.projectKey !== undefined) {
+    conditions.push('(p.id = ? or p.name = ?)');
+    params.push(filter.projectKey, filter.projectKey);
+  }
+  if (filter.agentId !== undefined) {
+    conditions.push('g.agent_id = ?');
+    params.push(filter.agentId);
+  }
+  const where = conditions.length === 0 ? '' : ` where ${conditions.join(' and ')}`;
+  const rows = await ctx.db.all(
+    `select g.agent_id as agentId, p.name as project, o.operation_id as operationId,
+            o.method, o.path_template as pathTemplate, o.summary, g.created_at as grantedAt
+     from grants g
+     join operations o on o.project_id = g.project_id and o.operation_id = g.operation_id
+     join projects p on p.id = g.project_id${where}
+     order by p.name, o.path_template, o.method, g.agent_id`,
+    params,
+  );
+  return rows.map((row) => ({
+    agentId: String(row.agentId ?? ''),
+    project: String(row.project ?? ''),
+    operationId: String(row.operationId ?? ''),
+    method: String(row.method ?? 'GET'),
+    pathTemplate: String(row.pathTemplate ?? ''),
+    summary: String(row.summary ?? ''),
+    grantedAt: String(row.grantedAt ?? ''),
+  }));
+}
+
+export interface GrantAuditEntry {
+  actorAgentId: string;
+  action: 'grant' | 'revoke';
+  agentId: string;
+  projectId: string;
+  operationId: string;
+  result: string;
+}
+
+export async function appendGrantAudit(ctx: AddonContext, entry: GrantAuditEntry): Promise<void> {
+  await ctx.db.run(
+    `insert into grant_audit (at, actor_agent_id, action, agent_id, project_id, operation_id, result)
+     values (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      new Date().toISOString(),
+      entry.actorAgentId,
+      entry.action,
+      entry.agentId,
+      entry.projectId,
+      entry.operationId,
+      entry.result,
+    ],
+  );
+}

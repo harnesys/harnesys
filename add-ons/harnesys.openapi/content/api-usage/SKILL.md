@@ -76,6 +76,21 @@ Large directory reads should not go through your context. Every verb tool accept
 - Both together: the file keeps the full raw body, `preview` is projected — this is the
   cheap pattern for building id/slug maps over hundreds of records.
 
+## Missing grants (escalation)
+
+`permission_denied` means the operation is not granted to that agent. Admins manage grants on
+the addon page, but the pack also exposes self-service tools for orchestrators — each mutation
+surfaces a user approval card and is written to the addon grant audit log:
+
+- `api_grants_list {project?, agent?}` — who currently can call what.
+- `api_grants_grant {agent, project, operation}` — grant one operation to one agent
+  (agent: id or exact name). Idempotent: re-granting returns `already: true`.
+- `api_grants_revoke {agent, project, operation}` — remove the grant.
+
+Typical wave pattern: a researcher hits `permission_denied`, reports the missing
+`project + operation`; the orchestrator calls `api_grants_grant`, the user approves, the
+researcher retries the same call.
+
 ## Limits
 
 - Inline response bodies larger than 256 KB are truncated (a marker at the end says
