@@ -6,6 +6,7 @@ import type {
 } from '../domain/agent-definition.ts';
 import type { CapabilityScope, PackConfig } from '../domain/pack.ts';
 import type { PermissionMap } from './permissions.ts';
+
 export interface AgentCatalogSummary {
   id: string;
   name: string;
@@ -48,6 +49,7 @@ export interface AgentCatalogPatch {
   enabledPlugins?: Record<string, boolean>;
   hooks?: unknown[];
   config?: Record<string, unknown>;
+  permissions?: PermissionMap;
 }
 export interface AgentCatalogCreated {
   id: string;

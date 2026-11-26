@@ -25,12 +25,11 @@ import type { OrgPluginRuntimeSource } from '../org-plugin-wiring.ts';
 
 const PERMISSIONS_CONFIG_KEYS = ['permissionsJson', 'permissions'] as const;
 
-function stripAgentPermissions(config: Record<string, unknown>): Record<string, unknown> {
-  const out = { ...config };
-  for (const key of PERMISSIONS_CONFIG_KEYS) {
-    delete out[key];
+function assertNoPermissionsInConfig(config: Record<string, unknown>): void {
+  const offender = PERMISSIONS_CONFIG_KEYS.find((key) => config[key] !== undefined);
+  if (offender !== undefined) {
+    throw new Error(`permissions must be set via the permissions field, not config.${offender}`);
   }
-  return out;
 }
 
 export interface OrgAgentsCatalogDeps {
@@ -177,10 +176,14 @@ export class OrgAgentsCatalogPort implements AgentsCatalogPort {
     if (patch.budget !== undefined) {
       config = { ...agent.config, budgetJson: patch.budget };
     }
+    if (patch.permissions !== undefined) {
+      config = { ...(config ?? agent.config), permissionsJson: patch.permissions };
+    }
     if (patch.config !== undefined) {
+      assertNoPermissionsInConfig(patch.config);
       config = {
         ...(config ?? agent.config),
-        ...stripAgentPermissions(stripHookConfig(patch.config)),
+        ...stripHookConfig(patch.config),
       };
     }
     return config;

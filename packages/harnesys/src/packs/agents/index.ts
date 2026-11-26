@@ -76,7 +76,7 @@ export const agentsCapability = definePack<AgentsCapabilityPorts, AgentsPackSpec
       {
         name: 'agents_update',
         description:
-          'Patch name/role/instructions/budget of an agent (scope: whole org by default, own delegates only with pack spec ownDelegatesOnly); graph and packs are owner-only (tools removed; use sources). budget replaces the stored budget (omitted fields drop out): maxSteps/maxTokens/deadlineMs (integers >= 1) and policy ask|error, same shape as agents_create, at least one field required. Returns { agentId }. agentId accepts an exact id, a unique id prefix (8+ chars), or a name.',
+          'Patch name/role/instructions/budget/permissions of an agent (scope: whole org by default, own delegates only with pack spec ownDelegatesOnly); graph and packs are owner-only (tools removed; use sources). permissions replaces the stored op → allow|ask|deny map and always asks the user for approval; passing it inside config fails. budget replaces the stored budget (omitted fields drop out): maxSteps/maxTokens/deadlineMs (integers >= 1) and policy ask|error, same shape as agents_create, at least one field required. Returns { agentId }. agentId accepts an exact id, a unique id prefix (8+ chars), or a name.',
       },
       {
         name: 'agents_delete',

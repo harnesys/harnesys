@@ -7,6 +7,7 @@ import type {
 } from '../../ports/agents-catalog.ts';
 import { type ToolDefinition, tool } from '../../ports/tools.ts';
 import { parseAgentColor } from './agent-color.ts';
+import { permissionsAskGate } from './agent-permissions.ts';
 import { runGuard } from './run-guard.ts';
 import { scopeFor } from './scope-for.ts';
 import { spawnAgentTool } from './spawn-agents-tool.ts';
@@ -124,7 +125,7 @@ export function createAgentsTools(deps: CreateAgentsToolsParams): ToolDefinition
     tool('agents_list', {
       group: 'agents',
       description:
-        'List agents in this project with their full configuration: id, name, role, instructions, packs, skills, mcpServers, disallowedTools, enabledPlugins, budget, permissions, model, color, level top|delegate|plugin, parent?. Optional role/name filters; role is not unique. packs/skills/mcpServers list enabled sources per agent; tool availability derives from those sources. permissions are read-only here (UI-managed). Prefer reuse via agents_list before agents_create. Spawned children are one-shot with no interactive user: judge fit by packs/model before agents_spawn.',
+        'List agents in this project with their full configuration: id, name, role, instructions, packs, skills, mcpServers, disallowedTools, enabledPlugins, budget, permissions, model, color, level top|delegate|plugin, parent?. Optional role/name filters; role is not unique. packs/skills/mcpServers list enabled sources per agent; tool availability derives from those sources. permissions are shown read-only here; patch them via agents_update (requires user approval) or the project UI. Prefer reuse via agents_list before agents_create. Spawned children are one-shot with no interactive user: judge fit by packs/model before agents_spawn.',
       input: {
         type: 'object',
         properties: {
@@ -151,7 +152,7 @@ export function createAgentsTools(deps: CreateAgentsToolsParams): ToolDefinition
       group: 'agents',
       operations: ['agents'],
       description:
-        'Create a standalone top-level agent in this project (visible to the user in the sidebar, own threads). For a delegate under you use agents_create_subagent. Returns the full row: { id, name, role, instructions, parentId, packs, model?, budget?, permissions? }. Before creating, load_skill("agent-creator") for graphs, packs, budget, and HITL. Omit graph to let the host build a default ReAct graph; when budget is omitted the host stores { maxSteps: 50, policy: "ask" }. budget.policy is ask|error. skills/mcpServers/packs/enabledPlugins: sources, not tool names; omitted or [] means none; list every source explicitly. Call agents_list first to reuse an existing agent when possible.',
+        'Create a standalone top-level agent in this project (visible to the user in the sidebar, own threads). For a delegate under you use agents_create_subagent. Returns the full row: { id, name, role, instructions, parentId, packs, model?, budget?, permissions? }. Before creating, load_skill("agent-creator") for graphs, packs, budget, and HITL. Omit graph to let the host build a default ReAct graph; when budget is omitted the host stores { maxSteps: 50, policy: "ask" }. budget.policy is ask|error. skills/mcpServers/packs/enabledPlugins: sources, not tool names; omitted or [] means none; list every source explicitly. Passing permissions requires user approval. Call agents_list first to reuse an existing agent when possible.',
       input: {
         type: 'object',
         properties: {
@@ -199,9 +200,16 @@ export function createAgentsTools(deps: CreateAgentsToolsParams): ToolDefinition
             type: 'object',
             description: 'Optional model ref (provider, model, effort, generation)',
           },
+          permissions: {
+            type: 'object',
+            description:
+              'Permission map op → allow|ask|deny (fs.read, fs.write, process, network, mcp, agents); requires user approval',
+            additionalProperties: { type: 'string', enum: ['allow', 'ask', 'deny'] },
+          },
         },
         required: ['name', 'role', 'instructions'],
       },
+      gate: permissionsAskGate,
       execute: async (raw, execCtx) =>
         runGuard(async () => {
           const scope = scopeFor(deps, execCtx);

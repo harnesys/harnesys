@@ -97,6 +97,34 @@ describe('agents_update tool', () => {
     expect(out).toEqual({ error: 'nothing to update' });
     expect(calls).toEqual([]);
   });
+
+  test('permissions flow into the patch and force the approval ask', async () => {
+    const calls: Array<{ id: string; patch: AgentCatalogPatch }> = [];
+    const row = updateTool(depsWith([summary({})], calls));
+    const out = await row.execute(
+      { agentId: 'LeadIntake', permissions: { 'fs.write': 'allow' } },
+      ctx,
+    );
+    expect(out).toEqual({ agentId: 'agent-1' });
+    expect(calls[0]?.patch.permissions).toEqual({ 'fs.write': 'allow' });
+    expect(row.gate?.({ agentId: 'x', permissions: {} }, { cwd: '' })).toEqual({ decision: 'ask' });
+  });
+
+  test('gate stays silent when permissions are untouched', () => {
+    const calls: Array<{ id: string; patch: AgentCatalogPatch }> = [];
+    const row = updateTool(depsWith([summary({})], calls));
+    expect(row.gate?.({ agentId: 'x', instructions: 'y' }, { cwd: '' })).toBeUndefined();
+  });
+
+  test('non-object permissions fails without a patch call', async () => {
+    const calls: Array<{ id: string; patch: AgentCatalogPatch }> = [];
+    const row = updateTool(depsWith([summary({})], calls));
+    const out = await row.execute({ agentId: 'LeadIntake', permissions: 'fs.write=allow' }, ctx);
+    expect(out).toEqual({
+      error: 'permissions must be an object mapping operation to allow|ask|deny',
+    });
+    expect(calls).toEqual([]);
+  });
 });
 
 describe('agents_update ownDelegatesOnly', () => {

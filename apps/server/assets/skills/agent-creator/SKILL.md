@@ -24,7 +24,7 @@ Hard rules:
 - Call `agents_list` before creating. Creating a duplicate name fails (`agent name taken in org: X`).
 - Delegates (children) can never enable the `agents` pack: `packs.agents is forbidden for subagents (nesting ban)`. Children cannot spawn (a nested `agents_spawn` fails with `spawn is not allowed in a sandboxed run`).
 - `agents_handoff` only accepts top-level agents; handing off to a delegate is rejected.
-- `agents_update` / `agents_delete` work only on your own delegates; top-level agents are managed in the project UI. `agents_update` patches name/role/instructions/budget only (graph and packs are owner-only); budget replaces the stored value, omitted fields drop out.
+- `agents_update` / `agents_delete` work only on your own delegates; top-level agents are managed in the project UI. `agents_update` patches name/role/instructions/budget/permissions (graph and packs are owner-only); budget replaces the stored value, omitted fields drop out. A permissions change always asks the user for approval; pass rights via `permissions`, not via `config`.
 
 ## 2. Anatomy of a created agent
 

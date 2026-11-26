@@ -137,7 +137,30 @@ describe('OrgAgentsCatalogPort.patch', () => {
     expect(updated).toHaveLength(0);
   });
 
-  test('permissions keys in config patch are stripped (no self-grant)', async () => {
+  test('permissions patch replaces config.permissionsJson and keeps the rest', async () => {
+    const updated: AgentRecord[] = [];
+    const rows = [
+      agentRecord({ config: { graphJson: { nodes: [] }, permissionsJson: { mcp: 'deny' } } }),
+    ];
+    const reg = registry(rows, updated);
+    const port = new OrgAgentsCatalogPort({
+      orgId: 'org-1',
+      agents: reg,
+      providers: providers(),
+      models: models(),
+      createAgent: () => Promise.reject(new Error('not used')),
+    });
+    await port.patch(scope(), 'agent-top', {
+      permissions: { 'fs.write': 'allow', agents: 'ask' },
+      budget: { maxSteps: 7 },
+    });
+    expect(updated).toHaveLength(1);
+    expect(updated[0]?.config.permissionsJson).toEqual({ 'fs.write': 'allow', agents: 'ask' });
+    expect(updated[0]?.config.budgetJson).toEqual({ maxSteps: 7 });
+    expect(updated[0]?.config.graphJson).toEqual({ nodes: [] });
+  });
+
+  test('permissions keys inside a config patch fail with an explicit error', async () => {
     const updated: AgentRecord[] = [];
     const rows = [agentRecord({})];
     const reg = registry(rows, updated);
@@ -148,16 +171,13 @@ describe('OrgAgentsCatalogPort.patch', () => {
       models: models(),
       createAgent: () => Promise.reject(new Error('not used')),
     });
-    await port.patch(scope(), 'agent-top', {
-      config: {
-        permissionsJson: { agents: 'allow' },
-        permissions: { process: 'allow' },
-        color: '#fff',
-      },
-    });
-    expect(updated[0]?.config.color).toBe('#fff');
-    expect(updated[0]?.config.permissionsJson).toBeUndefined();
-    expect(updated[0]?.config.permissions).toBeUndefined();
-    expect(updated[0]?.config.graphJson).toEqual({ nodes: [] });
+    await expect(
+      port.patch(scope(), 'agent-top', {
+        config: { permissionsJson: { agents: 'allow' }, color: '#fff' },
+      }),
+    ).rejects.toThrow(
+      'permissions must be set via the permissions field, not config.permissionsJson',
+    );
+    expect(updated).toHaveLength(0);
   });
 });

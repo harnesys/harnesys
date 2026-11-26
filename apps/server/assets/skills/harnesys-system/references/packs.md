@@ -104,7 +104,7 @@ No settings. Gate: `fs.read`.
 | `lsp_hover` | Hover / type info. |
 
 ### agents — fleet management
-Settings: `ownDelegatesOnly` (boolean, limits `agents_update` to the caller's own delegates; delete is always own-delegates only). Gate: `agents` on create, spawn, handoff, update, delete.
+Settings: `ownDelegatesOnly` (boolean, limits `agents_update` to the caller's own delegates; delete is always own-delegates only). Gate: `agents` on create, spawn, handoff, update, delete; a permissions change on create/update asks the user even when `agents` is allowed.
 Forbidden on subagents.
 
 | Tool | Does |
@@ -114,7 +114,7 @@ Forbidden on subagents.
 | `agents_create_subagent` | Create a one-shot delegate under the caller (no user, no `agents` pack). |
 | `agents_spawn` | Queue one-shot subcontracts for the graph `control:spawn` node; per-call `budget` and `permissions`. |
 | `agents_handoff` | Transfer this thread to another top-level agent (`control:handoff`). |
-| `agents_update` | Patch name/role/instructions/budget; graph, packs and permissions stay owner-only. |
+| `agents_update` | Patch name/role/instructions/budget/permissions; setting `permissions` always parks an approval ask (also under `agents: allow`); `permissionsJson`/`permissions` inside `config` fails with an error; graph and packs stay owner-only. |
 | `agents_delete` | Remove a delegate that is not running anywhere. |
 
 ### automations — trigger management
