@@ -53,6 +53,24 @@ export function cacheHitRatio(input: CacheRatioInput): number {
   const read = Math.min(input.promptTokens, Math.max(0, input.cacheReadTokens ?? 0));
   return read / input.promptTokens;
 }
+export interface CacheSplitInput {
+  promptTokens: number;
+  cacheReadTokens?: number | null;
+  cacheWriteTokens?: number | null;
+}
+export interface OutputSplitInput {
+  generatedTokens: number;
+  reasoningTokens?: number | null;
+}
+export function cacheMissTokens(input: CacheSplitInput): number {
+  return Math.max(
+    0,
+    input.promptTokens - (input.cacheReadTokens ?? 0) - (input.cacheWriteTokens ?? 0),
+  );
+}
+export function textOutputTokens(input: OutputSplitInput): number {
+  return Math.max(0, input.generatedTokens - (input.reasoningTokens ?? 0));
+}
 export function formatTokenCount(value: number): string {
   if (value >= 1000000) {
     return `${(value / 1000000).toFixed(value % 1000000 === 0 ? 0 : 2)}M`;

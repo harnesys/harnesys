@@ -1,17 +1,23 @@
-import { cacheHitRatio, formatTokenCount } from '@/entities/session';
+import { cacheHitRatio, cacheMissTokens, formatTokenCount } from '@/entities/session';
 
 interface CacheEfficiencyProps {
   cacheReadTokens: number;
+  cacheWriteTokens?: number;
   promptTokens: number;
   scope: string;
 }
 
-export function CacheEfficiency({ cacheReadTokens, promptTokens, scope }: CacheEfficiencyProps) {
+export function CacheEfficiency({
+  cacheReadTokens,
+  cacheWriteTokens,
+  promptTokens,
+  scope,
+}: CacheEfficiencyProps) {
   if (promptTokens <= 0) {
     return null;
   }
   const percent = Math.round(cacheHitRatio({ promptTokens, cacheReadTokens }) * 100);
-  const missTokens = Math.max(0, promptTokens - cacheReadTokens);
+  const missTokens = cacheMissTokens({ promptTokens, cacheReadTokens, cacheWriteTokens });
   return (
     <span
       className="inline-flex shrink-0 items-center gap-1.5"

@@ -1,4 +1,10 @@
-import { formatDuration, formatTokenCount, type MessageUsage } from '@/entities/session';
+import {
+  cacheMissTokens,
+  formatDuration,
+  formatTokenCount,
+  type MessageUsage,
+  textOutputTokens,
+} from '@/entities/session';
 export function StepStats({ usage }: { usage: MessageUsage }) {
   return (
     <p
@@ -36,10 +42,10 @@ function formatUsageParts(usage: MessageUsage): string {
 function tokenParts(usage: MessageUsage): string[] {
   const cacheRead = usage.cacheReadTokens ?? 0;
   const cacheWrite = usage.cacheWriteTokens ?? 0;
-  const cacheMiss = Math.max(0, usage.promptTokens - cacheRead);
+  const cacheMiss = cacheMissTokens(usage);
   const parts = [
     `${formatTokenCount(usage.promptTokens)} in`,
-    `${formatTokenCount(usage.generatedTokens)} out`,
+    `${formatTokenCount(textOutputTokens(usage))} out`,
   ];
   if (cacheRead > 0 || cacheWrite > 0) {
     parts.push(`${formatTokenCount(cacheRead)} hit`);

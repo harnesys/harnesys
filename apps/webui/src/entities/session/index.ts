@@ -60,14 +60,18 @@ export {
 export { TERMINAL_EVENT_TYPES } from './model/session-types.ts';
 export {
   type CacheRatioInput,
+  type CacheSplitInput,
   cacheHitRatio,
+  cacheMissTokens,
   contextUsedRatio,
   estimateTokens,
   formatDuration,
   formatTokenCount,
   type MessageUsage,
+  type OutputSplitInput,
   rollupUsage,
   type ToolRunStat,
+  textOutputTokens,
   tokensLeft,
   tokensUsed,
   type UsageRollup,

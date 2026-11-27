@@ -1,7 +1,9 @@
 import {
+  cacheMissTokens,
   formatDuration,
   formatTokenCount,
   type MessageUsage,
+  textOutputTokens,
   tokensLeft,
   tokensUsed,
   type UsageRollup,
@@ -48,6 +50,7 @@ export function UsageCard({
           </p>
           <CacheEfficiency
             cacheReadTokens={last?.cacheReadTokens ?? 0}
+            cacheWriteTokens={last?.cacheWriteTokens ?? 0}
             promptTokens={used}
             scope="last request"
           />
@@ -151,7 +154,8 @@ function RollupSections({
 function LastStepRows({ usage }: { usage: MessageUsage }) {
   const cacheRead = usage.cacheReadTokens ?? 0;
   const cacheWrite = usage.cacheWriteTokens ?? 0;
-  const cacheMiss = Math.max(0, usage.promptTokens - cacheRead);
+  const reasoning = usage.reasoningTokens ?? 0;
+  const cacheMiss = cacheMissTokens(usage);
   return (
     <>
       <StatRow label="Input (Cache Miss)" value={`${formatTokenCount(cacheMiss)} tok`} />
@@ -159,24 +163,28 @@ function LastStepRows({ usage }: { usage: MessageUsage }) {
       {cacheWrite > 0 ? (
         <StatRow label="Cache Write" value={`${formatTokenCount(cacheWrite)} tok`} />
       ) : null}
-      <StatRow label="Output" value={`${formatTokenCount(usage.generatedTokens)} tok`} />
+      <StatRow label="Output (Text)" value={`${formatTokenCount(textOutputTokens(usage))} tok`} />
+      {reasoning > 0 ? (
+        <StatRow label="Reasoning" value={`${formatTokenCount(reasoning)} tok`} />
+      ) : null}
     </>
   );
 }
 function RollupRows({ rollup }: { rollup: UsageRollup }) {
-  const cacheMiss = Math.max(0, rollup.promptTokens - rollup.cacheReadTokens);
+  const cacheMiss = cacheMissTokens(rollup);
   return (
     <>
+      {rollup.steps > 1 ? <StatRow label="Steps" value={String(rollup.steps)} /> : null}
       <StatRow label="Input (Cache Miss)" value={`${formatTokenCount(cacheMiss)} tok`} />
       {rollup.cacheReadTokens > 0 ? (
         <StatRow label="Cache Hit" value={`${formatTokenCount(rollup.cacheReadTokens)} tok`} />
       ) : null}
-      <StatRow label="Output" value={`${formatTokenCount(rollup.generatedTokens)} tok`} />
-      {rollup.reasoningTokens > 0 ? (
-        <StatRow label="Reasoning" value={`${formatTokenCount(rollup.reasoningTokens)} tok`} />
-      ) : null}
       {rollup.cacheWriteTokens > 0 ? (
         <StatRow label="Cache Write" value={`${formatTokenCount(rollup.cacheWriteTokens)} tok`} />
+      ) : null}
+      <StatRow label="Output (Text)" value={`${formatTokenCount(textOutputTokens(rollup))} tok`} />
+      {rollup.reasoningTokens > 0 ? (
+        <StatRow label="Reasoning" value={`${formatTokenCount(rollup.reasoningTokens)} tok`} />
       ) : null}
       <StatRow label="Model time" value={formatDuration(rollup.durationMs)} />
       <StatRow label="Cost" value={rollup.priced > 0 ? `$${rollup.costUsd.toFixed(4)}` : '—'} />
