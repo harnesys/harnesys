@@ -128,4 +128,6 @@ export interface KnowledgePort {
   search(input: KnowledgeSearchInput): Promise<KnowledgeHit[]>;
   read?(input: KnowledgeReadInput): Promise<KnowledgeReadResult>;
   reindex?(input: KnowledgeReindexInput): Promise<void>;
+  /** Subset of sourceIds that currently have a non-empty indexed corpus. */
+  indexedSources(sourceIds: readonly string[]): Promise<readonly string[]>;
 }

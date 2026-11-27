@@ -123,7 +123,7 @@ describe('createImageTools', () => {
     const port = new FakeImageGenerationPort();
     const tool = createImageTools({ image: port, resolveScope: () => scope })[0];
     expect(tool?.input.properties?.size?.description).toBe(
-      'Optional size as WIDTHxHEIGHT, e.g. 1024x1024 (provider-dependent; the error lists supported values)',
+      'Optional size as WIDTHxHEIGHT, e.g. 1024x1024 (provider-dependent; an unsupported size fails with the provider error — omit it to use the model default)',
     );
   });
 });

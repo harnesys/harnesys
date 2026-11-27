@@ -10,10 +10,13 @@ const scope: CapabilityScope = {
   threadId: 'thread-1',
 };
 
-function fakePort(): KnowledgePort & { calls: { sourceId?: string }[] } {
+function fakePort(
+  indexed: readonly string[] = [],
+): KnowledgePort & { calls: { sourceId?: string }[] } {
   const calls: { sourceId?: string }[] = [];
   return {
     calls,
+    indexedSources: (sourceIds) => Promise.resolve(sourceIds.filter((id) => indexed.includes(id))),
     search: (input) => {
       calls.push({ sourceId: input.sourceId });
       return Promise.resolve([]);
@@ -24,45 +27,90 @@ function fakePort(): KnowledgePort & { calls: { sourceId?: string }[] } {
 const ctx = { cwd: '/tmp', paths: { allow: [] }, agentId: 'agent-1' };
 
 describe('knowledge tools source scope', () => {
-  test('explicit source outside scope is not configured', async () => {
-    const port = fakePort();
+  test('explicit source outside scope is reported as not shared', async () => {
+    const port = fakePort(['src-shared', 'src-other']);
     const tools = createKnowledgeTools({ port, resolveScope: () => scope });
     const search = tools.find((tool) => tool.name === 'knowledge_search');
-    const result = await search?.execute({ query: 'q', sourceId: 'src-external' }, ctx);
-    expect(result).toEqual({
-      error: true,
-      code: 'KNOWLEDGE_NOT_CONFIGURED',
-      message: 'knowledge sourceIds not configured on capability scope',
-    });
+    const result = (await search?.execute({ query: 'q', sourceId: 'src-external' }, ctx)) as {
+      code?: string;
+      message?: string;
+    };
+    expect(result.code).toBe('KNOWLEDGE_SOURCE_NOT_SHARED');
+    expect(result.message).toContain('share it: Sources page');
     expect(port.calls).toEqual([]);
   });
 
-  test('empty scope without explicit source is not configured', async () => {
+  test('empty scope answers with setup steps, never an empty list', async () => {
     const port = fakePort();
     const tools = createKnowledgeTools({ port, resolveScope: () => ({ ...scope, sourceIds: [] }) });
     const search = tools.find((tool) => tool.name === 'knowledge_search');
-    const result = await search?.execute({ query: 'q' }, ctx);
-    expect(result).toEqual({
-      error: true,
-      code: 'KNOWLEDGE_NOT_CONFIGURED',
-      message: 'knowledge sourceIds not configured on capability scope',
-    });
+    const result = (await search?.execute({ query: 'q' }, ctx)) as {
+      code?: string;
+      message?: string;
+    };
+    expect(result.code).toBe('KNOWLEDGE_NOT_CONFIGURED');
+    expect(result.message).toContain('Sources page');
     expect(port.calls).toEqual([]);
   });
 
-  test('explicit source inside scope passes through', async () => {
+  test('explicit source cannot bypass an empty scope', async () => {
     const port = fakePort();
+    const tools = createKnowledgeTools({ port, resolveScope: () => ({ ...scope, sourceIds: [] }) });
+    const search = tools.find((tool) => tool.name === 'knowledge_search');
+    const result = (await search?.execute({ query: 'q', sourceId: 'src-any' }, ctx)) as {
+      code?: string;
+    };
+    expect(result.code).toBe('KNOWLEDGE_NOT_CONFIGURED');
+    expect(port.calls).toEqual([]);
+  });
+
+  test('shared but not indexed answers with reindex steps instead of []', async () => {
+    const port = fakePort([]);
+    const tools = createKnowledgeTools({ port, resolveScope: () => scope });
+    const search = tools.find((tool) => tool.name === 'knowledge_search');
+    const result = (await search?.execute({ query: 'q' }, ctx)) as {
+      code?: string;
+      message?: string;
+    };
+    expect(result.code).toBe('KNOWLEDGE_SOURCE_NOT_INDEXED');
+    expect(result.message).toContain('reindex');
+    expect(port.calls).toEqual([]);
+  });
+
+  test('explicit shared source without an index names that source', async () => {
+    const port = fakePort(['src-other']);
+    const tools = createKnowledgeTools({ port, resolveScope: () => scope });
+    const search = tools.find((tool) => tool.name === 'knowledge_search');
+    const result = (await search?.execute({ query: 'q', sourceId: 'src-shared' }, ctx)) as {
+      code?: string;
+      message?: string;
+    };
+    expect(result.code).toBe('KNOWLEDGE_SOURCE_NOT_INDEXED');
+    expect(result.message).toContain('"src-shared"');
+    expect(port.calls).toEqual([]);
+  });
+
+  test('indexed hits path: explicit source inside scope passes through', async () => {
+    const port = fakePort(['src-shared', 'src-other']);
     const tools = createKnowledgeTools({ port, resolveScope: () => scope });
     const search = tools.find((tool) => tool.name === 'knowledge_search');
     await search?.execute({ query: 'q', sourceId: 'src-shared' }, ctx);
     expect(port.calls).toEqual([{ sourceId: 'src-shared' }]);
   });
 
-  test('fallback uses first shared source', async () => {
-    const port = fakePort();
+  test('fallback uses the first indexed shared source', async () => {
+    const port = fakePort(['src-other']);
     const tools = createKnowledgeTools({ port, resolveScope: () => scope });
     const search = tools.find((tool) => tool.name === 'knowledge_search');
     await search?.execute({ query: 'q' }, ctx);
-    expect(port.calls).toEqual([{ sourceId: 'src-shared' }]);
+    expect(port.calls).toEqual([{ sourceId: 'src-other' }]);
+  });
+
+  test('indexed source with no matches still returns an empty list', async () => {
+    const port = fakePort(['src-shared', 'src-other']);
+    const tools = createKnowledgeTools({ port, resolveScope: () => scope });
+    const search = tools.find((tool) => tool.name === 'knowledge_search');
+    const result = await search?.execute({ query: 'no-such-topic' }, ctx);
+    expect(result).toEqual([]);
   });
 });

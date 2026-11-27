@@ -70,7 +70,7 @@ Gotchas that bite most often:
 
 ## 4. Budget
 
-Fields: `maxSteps` (node executions), `maxTokens`, `deadlineMs`, `policy` (`ask` | `error`), plus tuning: `warnAtSteps` (default 3), `closeOnExhaustion`, `extendDefaultPct` (default 25).
+Fields: `maxSteps` (node executions; the start node counts and the last allowed step is reserved as the toolless closing call — below 3 a child never gets a tool turn, 3 buys exactly one), `maxTokens`, `deadlineMs`, `policy` (`ask` | `error`), plus tuning: `warnAtSteps` (default 3), `closeOnExhaustion`, `extendDefaultPct` (default 25).
 
 - Any cycle in the graph requires `maxSteps` or `deadlineMs` (`graph has cycle but no budget.maxSteps/deadlineMs`). The default ReAct loop is cyclic.
 - `policy: "ask"` means: when the budget runs out, the run pauses and asks the user to extend. Correct for top-level agents. A delegate has no user, so `ask` is unreachable for it; give delegates `policy: "error"` (or rely on closing reports, below).

@@ -25,28 +25,40 @@ export const knowledgeMemoryCapability = definePack<KnowledgeMemoryPorts, Record
   },
   meta: {
     tools: [
-      { name: 'knowledge_search', description: 'Search the knowledge corpus (docs / wiki)' },
+      {
+        name: 'knowledge_search',
+        description: 'Search the knowledge corpus (docs / wiki) among sources shared with this run',
+      },
       { name: 'knowledge_read', description: 'Read a knowledge document by id from search hits' },
     ],
     skills: [],
     hasSettings: true,
   },
-  create: (ctx) => ({
-    tools: createKnowledgeTools({
-      port: ctx.ports.knowledge,
-      resolveScope: () => ctx.scope,
-      topK: topKOf(ctx.spec),
-    }),
-    notes: () => {
-      if (ctx.scope.sourceIds.length === 0) {
-        return [];
-      }
-      return [
-        {
-          tag: 'knowledge-memory',
-          text: 'Use knowledge_search to locate indexed documents, then knowledge_read for the matching document contents. Cite document identifiers when reporting findings.',
-        },
-      ];
-    },
-  }),
+  create: (ctx) => {
+    const hasCorpus = ctx.scope.sourceIds.length > 0;
+    return {
+      tools: hasCorpus
+        ? createKnowledgeTools({
+            port: ctx.ports.knowledge,
+            resolveScope: () => ctx.scope,
+            topK: topKOf(ctx.spec),
+          })
+        : [],
+      notes: async () => {
+        if (!hasCorpus) {
+          return [];
+        }
+        const indexed = await ctx.ports.knowledge.indexedSources(ctx.scope.sourceIds);
+        if (indexed.length === 0) {
+          return [];
+        }
+        return [
+          {
+            tag: 'knowledge-memory',
+            text: 'Use knowledge_search to locate indexed documents, then knowledge_read for the matching document contents. Cite document identifiers when reporting findings.',
+          },
+        ];
+      },
+    };
+  },
 });

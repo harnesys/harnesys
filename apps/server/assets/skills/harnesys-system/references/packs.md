@@ -252,12 +252,12 @@ Adds the `semantic-memory` guidance note and, when projection is on, a `memory-s
 | `memory_delete` | Delete a fact by id. |
 
 ### knowledge-memory — indexed corpus
-Settings: `store` (`knowledge`), `topK`. No permission gate. Adds the `knowledge-memory` guidance note.
+Settings: `store` (`knowledge`), `topK`. No permission gate. The tools and the `knowledge-memory` guidance note are exposed only when the run has at least one shared knowledge source; a run without shared sources sees neither (an explicit `sourceId` cannot bypass this — it must be among the shared sources).
 
 | Tool | Does |
 |---|---|
-| `knowledge_search` | Search the indexed knowledge corpus. |
-| `knowledge_read` | Read a document by id from search hits. |
+| `knowledge_search` | Search the indexed knowledge corpus. Unconfigured or unindexed setup answers with an actionable error and the exact user-facing setup steps (Sources → share → index paths/entire → reindex), never a silent empty list; `[]` means "indexed, no matches". |
+| `knowledge_read` | Read a document by id from search hits; same actionable setup errors as `knowledge_search`. |
 
 ### skills — org skill management
 No settings. Gates: `fs.write` for create/install, `network` for install and search.

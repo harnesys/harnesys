@@ -28,6 +28,12 @@ export interface OrgKnowledgePortDeps extends OrgKnowledgeDeps {
 export class OrgKnowledgePort implements KnowledgePort {
   constructor(private readonly deps: OrgKnowledgePortDeps) {}
 
+  async indexedSources(sourceIds: readonly string[]): Promise<readonly string[]> {
+    return sourceIds.filter(
+      (sourceId) => this.deps.store.countChunks(this.deps.orgId, sourceId) > 0,
+    );
+  }
+
   search(input: KnowledgeSearchInput): Promise<KnowledgeHit[]> {
     const sourceId = this.requireSource(input.sourceId);
     return this.deps.search.search(this.deps.orgId, sourceId, input.query, input.limit);

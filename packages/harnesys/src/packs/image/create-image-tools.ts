@@ -53,7 +53,7 @@ export function createImageTools(deps: CreateImageToolsParams): ToolDefinition[]
   );
   const sizeDescription =
     supportedSizes === undefined || supportedSizes.length === 0
-      ? 'Optional size as WIDTHxHEIGHT, e.g. 1024x1024 (provider-dependent; the error lists supported values)'
+      ? 'Optional size as WIDTHxHEIGHT, e.g. 1024x1024 (provider-dependent; an unsupported size fails with the provider error — omit it to use the model default)'
       : `Optional size, one of: ${supportedSizes.join(' | ')}`;
   return [
     tool('image_generate', {

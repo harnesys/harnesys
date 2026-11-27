@@ -157,6 +157,9 @@ export class SqliteKnowledgePort implements KnowledgePort {
       .get();
     return row?.value ?? 0;
   }
+  async indexedSources(sourceIds: readonly string[]): Promise<readonly string[]> {
+    return sourceIds.filter((sourceId) => this.countChunks(sourceId) > 0);
+  }
   search(input: KnowledgeSearchInput): Promise<KnowledgeHit[]> {
     const limit = input.limit ?? this.topK;
     const backend = this.applyProjectBackend(input.sourceId);
