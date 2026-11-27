@@ -1,5 +1,6 @@
 import { definePack } from '../../domain/pack.ts';
 import type { IssueTrackerPort } from '../../ports/issue-tracker.ts';
+import { createIssueLinkTools } from './create-issue-link-tools.ts';
 import { createIssueMetaTools } from './create-issue-meta-tools.ts';
 import { createIssueTools } from './create-issue-tools.ts';
 import { createIssueWorkspaceTools } from './create-issue-workspace-tools.ts';
@@ -49,21 +50,22 @@ export const issuesCapability = definePack<IssuesCapabilityPorts, Record<string,
       {
         name: 'issue_create',
         description:
-          'Create an issue on a board (created in the board entry status unless statusKey is given). Board rules for the entered status fire on creation. Optional sourceId/branch bind the run workspace.',
+          'Create issues on a board (created in the board entry status unless statusKey is given); accepts an issues batch. Board rules for the entered status fire on creation. Optional sourceId/branch bind the run workspace.',
       },
       {
         name: 'issue_move',
         description:
-          'Move an issue to any status of its board (transitions are free). Optional assignee override fires the new agent in a started status; optional comment.',
+          'Move issues to any status of their board (transitions are free); accepts a moves batch. Optional assignee override fires the new agent in a started status; optional comment.',
       },
       {
         name: 'issue_update',
         description:
-          'Edit issue fields, labels, assignee ("unassign" clears), dueDate ("clear"), or move between boards.',
+          'Edit issue fields, labels, assignee ("unassign" clears), dueDate ("clear"), or move between boards; accepts an updates batch.',
       },
       {
         name: 'issue_nudge',
-        description: 'Re-fire the assigned agent on an issue in a started status (after edits).',
+        description:
+          'Re-fire the assigned agent on issues in a started status (after edits); accepts an issueIds batch.',
       },
       {
         name: 'issue_get',
@@ -74,19 +76,29 @@ export const issuesCapability = definePack<IssuesCapabilityPorts, Record<string,
         name: 'issue_list',
         description: 'List issues filtered by board/status/assignee/label/priority/type.',
       },
-      { name: 'issue_comment', description: 'Add a comment to an issue as this agent.' },
+      {
+        name: 'issue_comment',
+        description: 'Add comments to issues as this agent; accepts a comments batch.',
+      },
       {
         name: 'issue_dependency',
-        description: 'Add or remove an issue dependency (blocks/relates/duplicate).',
+        description:
+          'Add or remove issue dependencies (blocks/relates/duplicate); accepts a links batch.',
       },
       {
         name: 'issue_attachment_add',
         description:
-          'Attach a file to an issue: source-root paths stay live pointers, run-root files are copied as snapshots.',
+          'Attach files to issues: source-root paths stay live pointers, run-root files are copied as snapshots; accepts an attachments batch.',
       },
       { name: 'label_list', description: 'List dispatch labels.' },
-      { name: 'label_create', description: 'Create a dispatch label.' },
-      { name: 'label_delete', description: 'Delete a dispatch label. Requires confirm=true.' },
+      {
+        name: 'label_create',
+        description: 'Create dispatch labels; accepts a labels batch.',
+      },
+      {
+        name: 'label_delete',
+        description: 'Delete dispatch labels. Requires confirm=true. Accepts a labelIds batch.',
+      },
     ],
     skills: [],
     hasSettings: false,
@@ -94,6 +106,7 @@ export const issuesCapability = definePack<IssuesCapabilityPorts, Record<string,
   create: (ctx) => ({
     tools: [
       ...createIssueTools({ issues: ctx.ports.issues, resolveScope: () => ctx.scope }),
+      ...createIssueLinkTools({ issues: ctx.ports.issues, resolveScope: () => ctx.scope }),
       ...createIssueWorkspaceTools({ issues: ctx.ports.issues, resolveScope: () => ctx.scope }),
       ...createIssueMetaTools({ issues: ctx.ports.issues, resolveScope: () => ctx.scope }),
     ],
@@ -103,6 +116,7 @@ export const issuesCapability = definePack<IssuesCapabilityPorts, Record<string,
         text:
           'When planning work for issue boards, dispatching agents through issues, or setting up board automation, load_skill("issue-ops") for the dispatch cycle and workflow recipes (available when the skill is enabled for this agent). ' +
           'Wire columns with board_rule_save so issues fire the right agent on entry; verify rules with issue_board_list. ' +
+          'For bulk board edits use batch inputs instead of repeated single calls: issue_move moves, issue_comment comments, issue_update updates, issue_create issues, issue_dependency links, issue_nudge issueIds, issue_attachment_add attachments, label_create labels, label_delete labelIds; batch results report per-entry failures. ' +
           "To park this run until a dispatched issue settles, call wait with signal: 'issue:<issueId>' (optional timeoutMs bounds the wait, default 30 min); the run resumes when the issue's latest execution is no longer active, otherwise it continues until timeoutMs expires.",
       },
     ],

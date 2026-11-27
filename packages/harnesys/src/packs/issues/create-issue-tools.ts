@@ -6,6 +6,7 @@ import type {
   IssueType,
 } from '../../ports/issue-tracker.ts';
 import { type ToolDefinition, tool } from '../../ports/tools.ts';
+import { runBatch } from './batch.ts';
 import { runGuard } from './run-guard.ts';
 export const ISSUE_TYPES: IssueType[] = [
   'task',
@@ -20,14 +21,21 @@ export interface CreateIssueToolsParams {
   issues: IssueTrackerPort;
   resolveScope: () => CapabilityScope;
 }
-interface IssueMoveToolInput {
+interface IssueMoveEntry {
   issueId: string;
   to: string;
   assigneeAgentId?: string;
   comment?: string;
 }
+interface IssueMoveToolInput extends Partial<IssueMoveEntry> {
+  moves?: IssueMoveEntry[];
+}
 interface IssueGetInput {
   issueId: string;
+}
+interface IssueNudgeToolInput {
+  issueId?: string;
+  issueIds?: string[];
 }
 interface IssueListToolInput {
   boardId?: string;
@@ -38,64 +46,104 @@ interface IssueListToolInput {
   type?: IssueType;
   limit?: number;
 }
-interface IssueCommentInput {
+interface IssueCommentEntry {
   issueId: string;
   body: string;
 }
-interface IssueDependencyInput {
-  issueId: string;
-  action: 'add' | 'remove';
-  dependsOnIssueId: string;
-  type?: IssueDependencyType;
+interface IssueCommentToolInput {
+  issueId?: string;
+  body?: string;
+  comments?: IssueCommentEntry[];
 }
-interface IssueAttachmentAddInput {
-  issueId: string;
-  sourceId: string;
-  sourcePath: string;
-  name?: string;
-}
+const issueMoveProperties = {
+  issueId: { type: 'string' },
+  to: { type: 'string', description: 'Target board status key (free transition)' },
+  assigneeAgentId: { type: 'string' },
+  comment: { type: 'string' },
+};
+const issueCommentProperties = {
+  issueId: { type: 'string' },
+  body: { type: 'string' },
+};
 export function createIssueTools(deps: CreateIssueToolsParams): ToolDefinition[] {
+  const moveEntry = (scope: CapabilityScope, entry: IssueMoveEntry) =>
+    deps.issues.move(scope, entry.issueId, {
+      to: entry.to,
+      ...(entry.assigneeAgentId !== undefined ? { assigneeAgentId: entry.assigneeAgentId } : {}),
+      comment: entry.comment,
+    });
   return [
     tool('issue_move', {
       group: 'issues',
       description:
-        'Move an issue to another column by status key (transitions are free within the board). Optional assignee override (fires the new agent in a started column; omit to keep the current assignee) and optional comment.',
+        'Move issues to another column by status key (transitions are free within the board): one issueId/to or a moves batch. Optional assignee override per entry (fires the new agent in a started column; omit to keep the current assignee) and optional comment per entry. A batch applies entries one by one and reports { moved, failed }.',
       input: {
         type: 'object',
         properties: {
-          issueId: { type: 'string' },
-          to: { type: 'string', description: 'Target board status key (free transition)' },
-          assigneeAgentId: { type: 'string' },
-          comment: { type: 'string' },
+          ...issueMoveProperties,
+          moves: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: issueMoveProperties,
+              required: ['issueId', 'to'],
+            },
+          },
         },
-        required: ['issueId', 'to'],
       },
       execute: async (raw) =>
         runGuard(async () => {
           const scope = deps.resolveScope();
           const input = raw as IssueMoveToolInput;
-          return await deps.issues.move(scope, input.issueId, {
-            to: input.to,
-            ...(input.assigneeAgentId !== undefined
-              ? { assigneeAgentId: input.assigneeAgentId }
-              : {}),
-            comment: input.comment,
-          });
+          if (input.moves !== undefined) {
+            if (input.issueId !== undefined || input.to !== undefined) {
+              throw new Error('Provide either issueId/to or moves, not both');
+            }
+            const outcome = await runBatch(
+              input.moves,
+              'moves',
+              (entry) => moveEntry(scope, entry),
+              (entry, error) => ({ issueId: entry.issueId, to: entry.to, error }),
+            );
+            return { moved: outcome.done, failed: outcome.failed };
+          }
+          if (input.issueId === undefined || input.to === undefined) {
+            throw new Error('Provide issueId and to, or a moves array');
+          }
+          return await moveEntry(scope, { ...input, issueId: input.issueId, to: input.to });
         }),
     }),
     tool('issue_nudge', {
       group: 'issues',
       description:
-        'Re-fire the assigned agent on a work-column issue (falls back to the column rule agent). Use after editing description/title so the agent sees fresh content. Resets the last-fired guard.',
+        'Re-fire the assigned agent on work-column issues (falls back to the column rule agent): one issueId or an issueIds batch. Use after editing description/title so the agent sees fresh content. Resets the last-fired guard. A batch applies one by one and reports { nudged, failed }.',
       input: {
         type: 'object',
-        properties: { issueId: { type: 'string' } },
-        required: ['issueId'],
+        properties: {
+          issueId: { type: 'string' },
+          issueIds: { type: 'array', items: { type: 'string' } },
+        },
       },
       execute: async (raw) =>
         runGuard(async () => {
           const scope = deps.resolveScope();
-          return await deps.issues.nudge(scope, (raw as { issueId: string }).issueId);
+          const input = raw as IssueNudgeToolInput;
+          if (input.issueIds !== undefined) {
+            if (input.issueId !== undefined) {
+              throw new Error('Provide either issueId or issueIds, not both');
+            }
+            const outcome = await runBatch(
+              input.issueIds,
+              'issueIds',
+              (issueId) => deps.issues.nudge(scope, issueId),
+              (issueId, error) => ({ issueId, error }),
+            );
+            return { nudged: outcome.done, failed: outcome.failed };
+          }
+          if (input.issueId === undefined) {
+            throw new Error('Provide issueId or an issueIds array');
+          }
+          return await deps.issues.nudge(scope, input.issueId);
         }),
     }),
     tool('issue_get', {
@@ -150,78 +198,42 @@ export function createIssueTools(deps: CreateIssueToolsParams): ToolDefinition[]
     }),
     tool('issue_comment', {
       group: 'issues',
-      description: 'Add a comment to an issue on behalf of this agent.',
-      input: {
-        type: 'object',
-        properties: { issueId: { type: 'string' }, body: { type: 'string' } },
-        required: ['issueId', 'body'],
-      },
-      execute: async (raw) =>
-        runGuard(async () => {
-          const scope = deps.resolveScope();
-          const input = raw as IssueCommentInput;
-          return await deps.issues.comment(scope, input.issueId, input.body);
-        }),
-    }),
-    tool('issue_dependency', {
-      group: 'issues',
       description:
-        'Link issues: action=add|remove a dependency of this issue on another (type blocks|relates|duplicate, default blocks). blocks dependencies gate moving into work columns.',
+        'Add comments to issues on behalf of this agent: one issueId/body or a comments batch. A batch applies one by one and reports { commented, failed }.',
       input: {
         type: 'object',
         properties: {
-          issueId: { type: 'string' },
-          action: { type: 'string', enum: ['add', 'remove'] },
-          dependsOnIssueId: { type: 'string' },
-          type: { type: 'string', enum: DEPENDENCY_TYPES },
+          ...issueCommentProperties,
+          comments: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: issueCommentProperties,
+              required: ['issueId', 'body'],
+            },
+          },
         },
-        required: ['issueId', 'action', 'dependsOnIssueId'],
       },
       execute: async (raw) =>
         runGuard(async () => {
           const scope = deps.resolveScope();
-          const input = raw as IssueDependencyInput;
-          if (input.action === 'remove') {
-            await deps.issues.removeDependency(scope, input.issueId, input.dependsOnIssueId);
-            return {
-              ok: true,
-              action: 'remove',
-              issueId: input.issueId,
-              dependsOnIssueId: input.dependsOnIssueId,
-            };
+          const input = raw as IssueCommentToolInput;
+          if (input.comments !== undefined) {
+            if (input.issueId !== undefined || input.body !== undefined) {
+              throw new Error('Provide either issueId/body or comments, not both');
+            }
+            const outcome = await runBatch(
+              input.comments,
+              'comments',
+              (entry) => deps.issues.comment(scope, entry.issueId, entry.body),
+              (entry, error) => ({ issueId: entry.issueId, error }),
+            );
+            return { commented: outcome.done, failed: outcome.failed };
           }
-          await deps.issues.addDependency(scope, input.issueId, input.dependsOnIssueId, input.type);
-          return {
-            ok: true,
-            action: 'add',
-            issueId: input.issueId,
-            dependsOnIssueId: input.dependsOnIssueId,
-          };
-        }),
-    }),
-    tool('issue_attachment_add', {
-      group: 'issues',
-      description:
-        'Attach a file to an issue: sourceId + sourcePath. sourcePath resolves against the source root first (find files with grep/glob from the files pack) and stays a live pointer there; a path inside the current run root, the thread directory your file tools write to (relative, e.g. report.md), is attached as a copied snapshot that outlives the run. Use issue_get to list attachments.',
-      input: {
-        type: 'object',
-        properties: {
-          issueId: { type: 'string' },
-          sourceId: { type: 'string' },
-          sourcePath: { type: 'string' },
-          name: { type: 'string' },
-        },
-        required: ['issueId', 'sourceId', 'sourcePath'],
-      },
-      execute: async (raw) =>
-        runGuard(async () => {
-          const scope = deps.resolveScope();
-          const input = raw as IssueAttachmentAddInput;
-          return await deps.issues.addSourceAttachment(scope, input.issueId, {
-            sourceId: input.sourceId,
-            sourcePath: input.sourcePath,
-            name: input.name,
-          });
+          if (input.issueId === undefined || input.body === undefined) {
+            throw new Error('Provide issueId and body, or a comments array');
+          }
+          return await deps.issues.comment(scope, input.issueId, input.body);
         }),
     }),
   ];

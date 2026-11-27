@@ -10,14 +10,23 @@ import type {
   RuleTrigger,
 } from '../../ports/issue-tracker.ts';
 import { type ToolDefinition, tool } from '../../ports/tools.ts';
+import { runBatch } from './batch.ts';
 import { runGuard } from './run-guard.ts';
 export interface CreateIssueMetaToolsParams {
   issues: IssueTrackerPort;
   resolveScope: () => CapabilityScope;
 }
-interface LabelCreateInput {
+interface LabelCreateEntry {
   title: string;
   color?: string;
+}
+interface LabelCreateToolInput extends Partial<LabelCreateEntry> {
+  labels?: LabelCreateEntry[];
+}
+interface LabelDeleteToolInput {
+  labelId?: string;
+  labelIds?: string[];
+  confirm: boolean;
 }
 interface BoardRuleSaveInput {
   boardId: string;
@@ -70,7 +79,8 @@ export function createIssueMetaTools(deps: CreateIssueMetaToolsParams): ToolDefi
     }),
     tool('label_create', {
       group: 'issues',
-      description: 'Create an issue label (unique title, optional color) for dispatch rules.',
+      description:
+        'Create issue labels (unique title, optional color) for dispatch rules: one title or a labels batch. A batch applies one by one and reports { created, labels, failed }.',
       input: {
         type: 'object',
         properties: {
@@ -79,14 +89,42 @@ export function createIssueMetaTools(deps: CreateIssueMetaToolsParams): ToolDefi
             type: 'string',
             description: `Optional: hex #RRGGBB or a palette name (${ENTITY_COLOR_NAMES.join(', ')}). Default gray.`,
           },
+          labels: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                title: { type: 'string' },
+                color: { type: 'string' },
+              },
+              required: ['title'],
+            },
+          },
         },
-        required: ['title'],
       },
       execute: async (raw) =>
         runGuard(async () => {
           const scope = deps.resolveScope();
-          const input = raw as LabelCreateInput;
-          return await deps.issues.createLabel(scope, { title: input.title, color: input.color });
+          const input = raw as LabelCreateToolInput;
+          if (input.labels !== undefined) {
+            if (input.title !== undefined) {
+              throw new Error('Provide either title or labels, not both');
+            }
+            const outcome = await runBatch(
+              input.labels,
+              'labels',
+              (entry) => deps.issues.createLabel(scope, { title: entry.title, color: entry.color }),
+              (entry, error) => ({ title: entry.title, error }),
+            );
+            return { created: outcome.done, labels: outcome.items, failed: outcome.failed };
+          }
+          if (input.title === undefined) {
+            throw new Error('Provide title or a labels array');
+          }
+          return await deps.issues.createLabel(scope, {
+            title: input.title,
+            color: input.color,
+          });
         }),
     }),
     tool('board_create', {
@@ -146,18 +184,40 @@ export function createIssueMetaTools(deps: CreateIssueMetaToolsParams): ToolDefi
     tool('label_delete', {
       group: 'issues',
       description:
-        'Delete a dispatch label. It is removed from all issues and column rules. This is irreversible: pass confirm=true.',
+        'Delete dispatch labels. Each is removed from all issues and column rules. This is irreversible: pass confirm=true. One labelId or a labelIds batch; a batch reports { deleted, failed }.',
       input: {
         type: 'object',
-        properties: { labelId: { type: 'string' }, confirm: { type: 'boolean' } },
-        required: ['labelId', 'confirm'],
+        properties: {
+          labelId: { type: 'string' },
+          labelIds: { type: 'array', items: { type: 'string' } },
+          confirm: { type: 'boolean' },
+        },
+        required: ['confirm'],
       },
       execute: async (raw) =>
         runGuard(async () => {
           const scope = deps.resolveScope();
-          const input = raw as { labelId: string; confirm: boolean };
+          const input = raw as LabelDeleteToolInput;
           if (!input.confirm) {
             throw new Error('label_delete requires confirm=true');
+          }
+          if (input.labelIds !== undefined) {
+            if (input.labelId !== undefined) {
+              throw new Error('Provide either labelId or labelIds, not both');
+            }
+            const outcome = await runBatch(
+              input.labelIds,
+              'labelIds',
+              async (labelId) => {
+                await deps.issues.deleteLabel(scope, labelId);
+                return { deleted: true };
+              },
+              (labelId, error) => ({ labelId, error }),
+            );
+            return { deleted: outcome.done, failed: outcome.failed };
+          }
+          if (input.labelId === undefined) {
+            throw new Error('Provide labelId or a labelIds array');
           }
           await deps.issues.deleteLabel(scope, input.labelId);
           return { deleted: true };
