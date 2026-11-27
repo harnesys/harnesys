@@ -203,10 +203,13 @@ export function ToolLine({
   const [expanded, setExpanded] = useState(false);
   const map = useFeedMap(threadId ?? null, pair.call.toolCallId);
   const truncatedSeq = truncatedEventSeq(pair);
-  const hasImageArtifact =
-    parseImageArtifact(pair, threadId) !== null || parseLinkImageArtifact(pair) !== null;
+  const hasArtifact =
+    parseImageArtifact(pair, threadId) !== null ||
+    parseFileArtifact(pair, threadId) !== null ||
+    parseLinkImageArtifact(pair) !== null ||
+    parseLinkFileArtifact(pair) !== null;
   const autoOpen =
-    isAutoOpen(feedDetail, live) || (feedDetail !== 'manual' && Boolean(map)) || hasImageArtifact;
+    isAutoOpen(feedDetail, live) || (feedDetail !== 'manual' && Boolean(map)) || hasArtifact;
   const fullEvent = useQuery({
     queryKey: ['thread-event', threadId, truncatedSeq],
     queryFn: () => loadFullThreadEvent(threadId, truncatedSeq),

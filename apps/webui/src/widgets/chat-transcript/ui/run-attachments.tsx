@@ -92,9 +92,7 @@ export function RunAttachments({
   live?: boolean;
   className?: string;
 }) {
-  const attachments = collectRunAttachments(run, threadId).filter(
-    (attachment) => !(live && attachment.kind === 'image'),
-  );
+  const attachments = live ? [] : collectRunAttachments(run, threadId);
   if (attachments.length === 0) {
     return null;
   }
