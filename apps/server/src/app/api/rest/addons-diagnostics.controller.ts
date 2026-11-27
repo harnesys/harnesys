@@ -56,14 +56,19 @@ export class AddonsDiagnosticsController {
     const stream = new ReadableStream<Uint8Array>({
       start: (controller) => {
         const encoder = new TextEncoder();
+        let terminated = false;
         const push = (payload: string) => {
           try {
             controller.enqueue(encoder.encode(payload));
           } catch {
+            terminated = true;
             cleanup();
           }
         };
         push(`retry: 3000\n\n`);
+        if (terminated) {
+          return;
+        }
         interval = setInterval(() => {
           for (const line of this.logs.tail(orgId, addonId, cursor)) {
             cursor = line.seq;

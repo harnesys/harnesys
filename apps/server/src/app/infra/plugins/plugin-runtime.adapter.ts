@@ -126,7 +126,7 @@ export class PluginRuntimeAdapter extends PluginRuntimePort {
     );
     return {
       entries,
-      skills: composeSkills(this.layout.skillsDir(orgId), entries, this.tiers),
+      skills: await composeSkills(this.layout.skillsDir(orgId), entries, this.tiers),
       mcpJson,
       agents: composeAgents(orgId, entries, onDiagnostic, this.providers, this.models),
       lspServers: collectLspServers(entries, disabled),
@@ -156,15 +156,18 @@ function readSkillFile(file: string): string {
   return readFileSync(file, 'utf8');
 }
 
-function composeSkills(
+async function composeSkills(
   orgRoot: string,
   entries: LoadedOrgPlugin[],
   tiers: SkillsTierCache,
-): SkillRegistry {
+): Promise<SkillRegistry> {
+  const bound = await Promise.all(
+    entries.map((entry) => bindSkillComponents(entry.ir, readSkillFile, entry.userConfig)),
+  );
   return composeSkillRegistries([
     ...tiers.registries(),
     new FsSkillRegistry({ roots: [orgRoot] }),
-    ...entries.map((entry) => bindSkillComponents(entry.ir, readSkillFile, entry.userConfig)),
+    ...bound,
   ]);
 }
 

@@ -26,7 +26,9 @@ export class AddonsEventsController {
     let writer: ((payload: string) => void) | null = null;
     let flusher: ReturnType<typeof setInterval> | undefined;
     let keepAlive: ReturnType<typeof setInterval> | undefined;
+    let terminated = false;
     const cleanup = () => {
+      terminated = true;
       subscription?.close();
       if (flusher !== undefined) {
         clearInterval(flusher);
@@ -52,6 +54,9 @@ export class AddonsEventsController {
           }
         };
         writer('retry: 3000\n\n');
+        if (terminated) {
+          return;
+        }
         flusher = setInterval(() => {
           while (queue.length > 0 && writer !== null) {
             const event = queue.shift();

@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { Brix, Logger, parseConfigYaml } from '@harnesys/brix';
+import { Brix, isClientAbortError, Logger, parseConfigYaml } from '@harnesys/brix';
 import { AppModule } from './app/app.module';
 import { InitOwnerUseCase } from './app/application/identity/init-owner.use-case.ts';
 import { RefreshAllSourceVcsUseCase } from './app/application/source/refresh-all-source-vcs.use-case.ts';
@@ -36,6 +36,15 @@ const app = Brix.create(AppModule.forRoot(), {
 });
 
 await app.init();
+
+const boundaryLogger = app.container.resolve<Logger>(Logger).child('process-boundary');
+process.on('unhandledRejection', (reason) => {
+  if (isClientAbortError(reason)) {
+    boundaryLogger.debug({ reason: String(reason) }, 'unhandled client-abort rejection');
+    return;
+  }
+  boundaryLogger.error({ err: reason }, 'unhandled promise rejection');
+});
 
 const seedLogger = app.container.resolve<Logger>(Logger).child('skills-seed');
 try {

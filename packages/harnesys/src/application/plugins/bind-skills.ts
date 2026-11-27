@@ -9,11 +9,11 @@ import { prefixSkillRegistry } from './prefixed-skill-registry.ts';
 import type { UserConfigContentOptions } from './user-config.ts';
 import { substituteUserConfigContent } from './user-config.ts';
 export type SkillFileReader = (file: string) => string;
-export function bindSkillComponents(
+export async function bindSkillComponents(
   ir: PluginIr,
   readSkillFile: SkillFileReader,
   userConfig?: UserConfigContentOptions,
-): SkillRegistry {
+): Promise<SkillRegistry> {
   const roots = new Set<string>();
   const commands: CommandSpec[] = [];
   for (const component of ir.components) {
@@ -32,7 +32,12 @@ export function bindSkillComponents(
   if (commands.length === 0) {
     return prefixSkillRegistry(fsRegistry, ir.identity.name);
   }
-  const commandRegistry = buildCommandRegistry(commands, skillNames(fs), readSkillFile, userConfig);
+  const commandRegistry = buildCommandRegistry(
+    commands,
+    await skillNames(fs),
+    readSkillFile,
+    userConfig,
+  );
   return prefixSkillRegistry(
     composeSkillRegistries([fsRegistry, commandRegistry]),
     ir.identity.name,
@@ -70,8 +75,8 @@ function substituteSkillDocument(value: unknown, uc: UserConfigContentOptions): 
   }
   return doc;
 }
-function skillNames(registry: FsSkillRegistry): Set<string> {
-  return new Set(registry.list().map((summary) => summary.name));
+async function skillNames(registry: FsSkillRegistry): Promise<Set<string>> {
+  return new Set((await registry.list()).map((summary) => summary.name));
 }
 function buildCommandRegistry(
   commands: CommandSpec[],

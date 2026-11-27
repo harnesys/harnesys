@@ -1,3 +1,5 @@
+import type { Logger } from '@harnesys/brix';
+import { isClientAbortError } from '@harnesys/brix';
 import { SSE_KEEP_ALIVE_MS } from '@harnesys/studio-shared';
 import type { RunLifecycleStore, SessionEvent } from 'harnesys';
 
@@ -54,6 +56,7 @@ export function streamRunSse(
   runId: string,
   events: AsyncIterable<SessionEvent>,
   lifecycle: RunLifecycleStore,
+  log: Logger,
 ): Response {
   let keepAlive: ReturnType<typeof setInterval> | undefined;
   const stream = new ReadableStream<Uint8Array>({
@@ -69,6 +72,12 @@ export function streamRunSse(
       void (async () => {
         try {
           await pumpRunEvents(controller, encoder, runId, events, lifecycle);
+        } catch (error) {
+          if (isClientAbortError(error)) {
+            log.debug({ runId }, 'run event stream aborted by client disconnect');
+          } else {
+            log.error({ err: error, runId }, 'run event stream failed');
+          }
         } finally {
           if (keepAlive) {
             clearInterval(keepAlive);

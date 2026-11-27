@@ -213,16 +213,44 @@ export class BrowserController {
     const encoder = new TextEncoder();
     const install = this.installEngine;
     let keepAlive: ReturnType<typeof setInterval> | undefined;
+    let closed = false;
+    const cleanup = () => {
+      if (closed) {
+        return;
+      }
+      closed = true;
+      if (keepAlive) {
+        clearInterval(keepAlive);
+      }
+    };
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
+        const terminate = () => {
+          cleanup();
+          try {
+            controller.close();
+          } catch {}
+        };
         const write = (event: string, data: unknown) => {
-          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+          if (closed) {
+            return;
+          }
+          try {
+            controller.enqueue(
+              encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
+            );
+          } catch {
+            terminate();
+          }
         };
         keepAlive = setInterval(() => {
+          if (closed) {
+            return;
+          }
           try {
             controller.enqueue(encoder.encode(': keep-alive\n\n'));
           } catch {
-            clearInterval(keepAlive);
+            terminate();
           }
         }, SSE_KEEP_ALIVE_MS);
         void install
@@ -242,10 +270,10 @@ export class BrowserController {
           .catch((error: unknown) => {
             write('error', { message: error instanceof Error ? error.message : 'install failed' });
           })
-          .finally(() => {
-            clearInterval(keepAlive);
-            controller.close();
-          });
+          .finally(terminate);
+      },
+      cancel() {
+        cleanup();
       },
     });
     return new Response(stream, {

@@ -107,6 +107,7 @@ export class ConnectController {
               encoder.encode(`event: session\ndata: ${JSON.stringify(event)}\n\n`),
             );
           } catch {
+            close();
             return;
           }
           if (event.status !== 'pending') {
@@ -122,7 +123,7 @@ export class ConnectController {
           try {
             controller.enqueue(encoder.encode(':\n\n'));
           } catch {
-            return;
+            close();
           }
         }, HEARTBEAT_MS);
       },

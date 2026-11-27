@@ -159,27 +159,56 @@ export class LspController {
     const encoder = new TextEncoder();
     let keepAlive: ReturnType<typeof setInterval> | undefined;
     let unsubscribe: (() => void) | undefined;
+    let closed = false;
+    const cleanup = () => {
+      if (closed) {
+        return;
+      }
+      closed = true;
+      if (keepAlive) {
+        clearInterval(keepAlive);
+      }
+      unsubscribe?.();
+    };
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
+        const terminate = () => {
+          cleanup();
+          try {
+            controller.close();
+          } catch {}
+        };
         const write = (data: string) => {
-          controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+          if (closed) {
+            return;
+          }
+          try {
+            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+          } catch {
+            terminate();
+          }
         };
         unsubscribe = lsp.onDiagnostics(orgId, (frame) => {
           if (frame.cwd === sourceRoot) {
             write(JSON.stringify(frame));
           }
         });
+        if (closed) {
+          return;
+        }
         keepAlive = setInterval(() => {
+          if (closed) {
+            return;
+          }
           try {
             controller.enqueue(encoder.encode(': keep-alive\n\n'));
           } catch {
-            clearInterval(keepAlive);
+            terminate();
           }
         }, SSE_KEEP_ALIVE_MS);
       },
       cancel() {
-        clearInterval(keepAlive);
-        unsubscribe?.();
+        cleanup();
       },
     });
     return new Response(stream, {

@@ -2,6 +2,7 @@ import { ZodError } from 'zod';
 import { Inject } from '../di/inject';
 import { Injectable } from '../di/injectable';
 import { Logger } from '../logging/logger';
+import { CLIENT_ABORTED_STATUS, isClientAbortError } from './client-abort';
 import { DomainException } from './domain-exception';
 import { HttpException } from './http-exception';
 
@@ -90,7 +91,12 @@ function toResponse(
 }
 
 function isMappedError(err: unknown): boolean {
-  return err instanceof HttpException || err instanceof DomainException || err instanceof ZodError;
+  return (
+    err instanceof HttpException ||
+    err instanceof DomainException ||
+    err instanceof ZodError ||
+    isClientAbortError(err)
+  );
 }
 
 export function mapToErrorResponse(
@@ -126,6 +132,16 @@ export function mapToErrorResponse(
         errorCode: 'VALIDATION_ERROR',
         message: 'Validation failed',
         details: { issues: err.issues },
+      },
+      args,
+    );
+  }
+  if (isClientAbortError(err)) {
+    return toResponse(
+      {
+        statusCode: CLIENT_ABORTED_STATUS,
+        errorCode: 'CLIENT_ABORTED',
+        message: 'Client closed the connection',
       },
       args,
     );

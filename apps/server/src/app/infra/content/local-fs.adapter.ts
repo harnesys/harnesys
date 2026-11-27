@@ -43,16 +43,14 @@ export class LocalFsContentAdapter extends OrgContentPort {
     super();
   }
 
-  listTree(
+  async listTree(
     orgId: string,
     sourceId: string,
     relPath: string,
     worktreeId?: string,
     options?: { includeIgnored?: boolean; depth?: number },
   ): Promise<ContentTreeResult> {
-    return Promise.resolve(
-      listTreeAt(this.contentRoot(orgId, sourceId, worktreeId), relPath, options),
-    );
+    return await listTreeAt(this.contentRoot(orgId, sourceId, worktreeId), relPath, options);
   }
 
   read(

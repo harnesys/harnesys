@@ -17,8 +17,8 @@ export class SkillsTierCache extends SkillsTierCachePort {
   }
 
   async entries(): Promise<TierEntry[]> {
-    this.entriesCache ??= this.collectEntries();
-    return await this.entriesCache;
+    const cached = this.entriesCache ?? this.startCollect();
+    return await cached;
   }
 
   registries(): SkillRegistry[] {
@@ -26,6 +26,17 @@ export class SkillsTierCache extends SkillsTierCachePort {
       this.registryFor(this.layout.systemSkillsDir()),
       this.registryFor(this.layout.hostAgentSkillsDir()),
     ];
+  }
+
+  private startCollect(): Promise<TierEntry[]> {
+    const pending = this.collectEntries().catch((cause: unknown) => {
+      if (this.entriesCache === pending) {
+        this.entriesCache = undefined;
+      }
+      throw cause;
+    });
+    this.entriesCache = pending;
+    return pending;
   }
 
   invalidate(): void {

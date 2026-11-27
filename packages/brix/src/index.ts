@@ -14,6 +14,7 @@ export * from './di/lifecycle';
 export * from './di/module';
 export * from './di/module-graph';
 export * from './di/reflector';
+export * from './errors/client-abort';
 export * from './errors/domain-exception';
 export * from './errors/error-filter';
 export * from './errors/http-exception';

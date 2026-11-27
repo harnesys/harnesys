@@ -1,35 +1,39 @@
-import { existsSync, readdirSync, readFileSync, type Stats, statSync } from 'node:fs';
+import type { Stats } from 'node:fs';
+import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ContentEntry, ContentTreeResult } from '@harnesys/contracts';
 import { MAX_TREE_ENTRIES } from '@harnesys/contracts';
-import ignore from 'ignore';
 import { SAFETY_NAMES } from '../../../const.ts';
 import {
   ContentNotFoundException,
   ContentPathEscapeException,
 } from '../../domain/content/content.error.ts';
-import { type GitIgnoreLayer, ignoredByLayers } from '../knowledge/knowledge-walk-ignore.ts';
+import {
+  type GitIgnoreLayer,
+  ignoredByLayers,
+  loadIgnoreFile,
+} from '../knowledge/knowledge-walk-ignore.ts';
 import { safe, toRel } from './fs-content-ops.ts';
 
-export function listTreeAt(
+export async function listTreeAt(
   root: string,
   relPath: string,
   options?: { includeIgnored?: boolean; depth?: number },
-): ContentTreeResult {
+): Promise<ContentTreeResult> {
   const abs = safe(root, relPath);
-  if (!existsSync(abs)) {
+  const st = await stat(abs).catch(() => undefined);
+  if (st === undefined) {
     throw new ContentNotFoundException(relPath);
   }
-  const st = statSync(abs);
   if (!st.isDirectory()) {
     throw new ContentPathEscapeException('tree path is not a directory');
   }
   const entries: ContentEntry[] = [];
-  const truncated = walk(
+  const truncated = await walk(
     {
       root,
       out: entries,
-      layers: gitLayersForRoot(root, relPath),
+      layers: await gitLayersForRoot(root, relPath),
       includeIgnored: options?.includeIgnored === true,
       maxDepth: options?.depth,
     },
@@ -40,17 +44,17 @@ export function listTreeAt(
   return { entries, truncated };
 }
 
-function loadIgnoreLayer(absDir: string, relDir: string): GitIgnoreLayer | undefined {
-  const file = join(absDir, '.gitignore');
-  if (!existsSync(file)) {
-    return undefined;
-  }
-  return { relDir, ig: ignore().add(readFileSync(file, 'utf8')) };
+async function loadIgnoreLayer(
+  absDir: string,
+  relDir: string,
+): Promise<GitIgnoreLayer | undefined> {
+  const ig = await loadIgnoreFile(join(absDir, '.gitignore'));
+  return ig === undefined ? undefined : { relDir, ig };
 }
 
-function gitLayersForRoot(root: string, relPath: string): GitIgnoreLayer[] {
+async function gitLayersForRoot(root: string, relPath: string): Promise<GitIgnoreLayer[]> {
   const layers: GitIgnoreLayer[] = [];
-  const rootLayer = loadIgnoreLayer(root, '');
+  const rootLayer = await loadIgnoreLayer(root, '');
   if (rootLayer) {
     layers.push(rootLayer);
   }
@@ -63,7 +67,7 @@ function gitLayersForRoot(root: string, relPath: string): GitIgnoreLayer[] {
   for (const part of parts) {
     accAbs = join(accAbs, part);
     acc = acc ? `${acc}/${part}` : part;
-    const layer = loadIgnoreLayer(accAbs, acc);
+    const layer = await loadIgnoreLayer(accAbs, acc);
     if (layer) {
       layers.push(layer);
     }
@@ -79,29 +83,42 @@ interface WalkContext {
   maxDepth?: number;
 }
 
-function walk(ctx: WalkContext, dir: string, relDir: string, level: number): boolean {
-  for (const name of readdirSync(dir)) {
+async function walk(
+  ctx: WalkContext,
+  dir: string,
+  relDir: string,
+  level: number,
+): Promise<boolean> {
+  for (const name of await readdir(dir)) {
     if (ctx.out.length >= MAX_TREE_ENTRIES) {
       return true;
     }
-    if (walkEntry(ctx, dir, name, relDir, level)) {
+    if (await walkEntry(ctx, dir, name, relDir, level)) {
       return true;
     }
   }
   return false;
 }
 
-function walkEntry(
+async function walkEntry(
   ctx: WalkContext,
   dir: string,
   name: string,
   relDir: string,
   level: number,
-): boolean {
+): Promise<boolean> {
   const abs = join(dir, name);
-  const st = statSync(abs, { throwIfNoEntry: false });
-  // A missing stat means a broken symlink or an entry that vanished mid-walk.
-  return st !== undefined && walkStatEntry({ ...ctx, dir: abs, name }, st, relDir, level);
+  const st = await stat(abs).catch((cause: unknown) => {
+    if (isMissingEntry(cause)) {
+      return undefined;
+    }
+    throw cause;
+  });
+  return st !== undefined && (await walkStatEntry({ ...ctx, dir: abs, name }, st, relDir, level));
+}
+
+function isMissingEntry(cause: unknown): boolean {
+  return typeof cause === 'object' && cause !== null && 'code' in cause && cause.code === 'ENOENT';
 }
 
 interface WalkEntry {
@@ -109,12 +126,12 @@ interface WalkEntry {
   name: string;
 }
 
-function walkStatEntry(
+async function walkStatEntry(
   ctx: WalkEntry & WalkContext,
   st: Stats,
   relDir: string,
   level: number,
-): boolean {
+): Promise<boolean> {
   const abs = ctx.dir;
   const name = ctx.name;
   const isDir = st.isDirectory();
@@ -157,8 +174,8 @@ function walkStatEntry(
   if (ctx.maxDepth !== undefined && level >= ctx.maxDepth) {
     return false;
   }
-  const nested = loadIgnoreLayer(abs, path);
-  return walk(
+  const nested = await loadIgnoreLayer(abs, path);
+  return await walk(
     { root: ctx.root, out: ctx.out, layers: nested ? [...ctx.layers, nested] : ctx.layers },
     abs,
     path,

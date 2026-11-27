@@ -6,6 +6,7 @@ import { type Container, type Provider, resolveMultiProviders } from '../di/cont
 import type { UnknownClass } from '../di/injectable';
 import type { DynamicModule } from '../di/module';
 import { buildModuleGraph, describeToken } from '../di/module-graph';
+import { isClientAbortError } from '../errors/client-abort';
 import { ForbiddenException, UnauthorizedException } from '../errors/domain-exception';
 import {
   APP_FILTER,
@@ -62,7 +63,10 @@ type Handler = (...args: unknown[]) => unknown;
 async function readBody(c: BrixContext): Promise<unknown> {
   try {
     return await c.req.json();
-  } catch {
+  } catch (error) {
+    if (isClientAbortError(error)) {
+      throw error;
+    }
     throw new BadRequestException('Invalid JSON body', { issues: [] });
   }
 }

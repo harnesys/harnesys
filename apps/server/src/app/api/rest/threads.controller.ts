@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@harnesys/brix';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Logger,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@harnesys/brix';
 import type {
   AcceptedRunResponse,
   AddThreadAgentBody,
@@ -83,6 +94,7 @@ export class ThreadsController {
     private readonly addThreadParticipant: AddThreadParticipantUseCase,
     private readonly removeThreadParticipant: RemoveThreadParticipantUseCase,
     private readonly executor: LocalExecutorPort,
+    private readonly logger: Logger,
   ) {}
 
   @Get()
@@ -326,6 +338,6 @@ export class ThreadsController {
       fromSeq: query.fromSeq,
     });
     const lifecycle = await this.executor.lifecycle(orgId);
-    return streamRunSse(runId, iterable, lifecycle);
+    return streamRunSse(runId, iterable, lifecycle, this.logger);
   }
 }

@@ -122,7 +122,7 @@ async function executeOp(orgId: string, req: WorkerRequest, deps: ContentOpDeps)
         }).absoluteRoot;
   switch (req.op) {
     case 'tree':
-      return listTreeAt(root, req.relPath, {
+      return await listTreeAt(root, req.relPath, {
         includeIgnored: req.includeIgnored === true,
         ...(req.depth !== undefined ? { depth: req.depth } : {}),
       });
