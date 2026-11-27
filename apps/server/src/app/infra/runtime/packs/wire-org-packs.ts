@@ -8,6 +8,7 @@ import type {
   PackRegistration,
   ProcessJobRegistry,
   RunEventStore,
+  ToolDefinition,
 } from 'harnesys';
 import { createProcessJobRegistry } from 'harnesys';
 import type { OrgDashboardsDeps } from '../../../application/dashboards/dashboard-tools.holder.ts';
@@ -79,6 +80,7 @@ export interface WireOrgPacksDeps {
   sourcesPack?: OrgSourcesDeps;
   createAgent?: (input: AgentCatalogCreateInput, scope: CapabilityScope) => Promise<AgentRecord>;
   plugins?: OrgPluginRuntimeSource;
+  baseRegistry?: () => Map<string, ToolDefinition>;
   engineSnapshot?: HostEngineEntry[];
   packRegistry?: PackRegistryPort;
   dashboards?: OrgDashboardsDeps;
@@ -167,6 +169,7 @@ function optionalInputs(deps: OrgRuntimeDeps): Partial<WireOrgPacksDeps> {
 
 export function wireOrgPacks(deps: WireOrgPacksDeps): WiredOrgPacks {
   const jobs = deps.jobs ?? deps.terminalSessions?.jobRegistry() ?? createProcessJobRegistry();
+  const packRegistryBox: { registrations: PackRegistration[] } = { registrations: [] };
   const stubScope = (): CapabilityScope => ({
     orgId: deps.orgId,
     agentId: '_',
@@ -198,6 +201,8 @@ export function wireOrgPacks(deps: WireOrgPacksDeps): WiredOrgPacks {
     ...(deps.plugins !== undefined ? { plugins: deps.plugins } : {}),
     ...(deps.modes !== undefined ? { modes: deps.modes } : {}),
     ...(deps.layout !== undefined ? { profiles: new ExecutionProfileAdapter(deps.layout) } : {}),
+    packRegistrations: () => packRegistryBox.registrations,
+    ...(deps.baseRegistry !== undefined ? { baseRegistry: deps.baseRegistry } : {}),
   });
 
   const ctx = {
@@ -214,7 +219,9 @@ export function wireOrgPacks(deps: WireOrgPacksDeps): WiredOrgPacks {
     return registration ? [registration] : [];
   }) as PackRegistration[];
 
-  return { registrations: mergePackRegistry(registrations, deps.packRegistry), jobs };
+  const merged = mergePackRegistry(registrations, deps.packRegistry);
+  packRegistryBox.registrations = merged;
+  return { registrations: merged, jobs };
 }
 
 /**

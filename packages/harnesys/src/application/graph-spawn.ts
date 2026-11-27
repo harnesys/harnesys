@@ -12,12 +12,13 @@ import {
   MUTATING_SIDE_EFFECTS,
   type SpawnEffectEntry,
   type SpawnEffectsJournal,
+  type SpawnToolUse,
   type ToolDefinition,
 } from '../ports/tools.ts';
 import { formatAgentTargets, resolveAgentTarget } from './agent-target-resolve.ts';
 import { capabilityDigest, createCapabilityLinesProvider } from './capability-digest.ts';
 import { deniedOpReason, INTERACTIVE_HIDDEN_REASON } from './capability-explain.ts';
-import { resolveCapabilitySet, sandboxUniverse } from './capability-set.ts';
+import { CORE_SERVICE_TOOLS, resolveCapabilitySet, sandboxUniverse } from './capability-set.ts';
 import { compileOrThrow, type Plan } from './compile.ts';
 import { evalExpr } from './expr-eval.ts';
 import type { GraphOpts } from './graph.ts';
@@ -65,6 +66,7 @@ export interface SpawnResultItem {
   usage?: SpawnUsage;
   effects?: SpawnEffectsJournal;
   caps?: string[];
+  toolUse?: SpawnToolUse;
 }
 export interface SpawnUsage {
   steps: number;
@@ -136,6 +138,7 @@ export interface BackgroundSpawnHandle {
   error?: SpawnCallError;
   effects?: SpawnEffectsJournal;
   caps?: string[];
+  toolUse?: SpawnToolUse;
   lastActivityAt: number;
 }
 export interface BackgroundSpawnRegistry {
@@ -445,6 +448,7 @@ function effectNoteOf(output: unknown): string | undefined {
 }
 function createEffectCollector() {
   const entries: SpawnEffectEntry[] = [];
+  const used = new Set<string>();
   let total = 0;
   return {
     add(ev: Event): void {
@@ -452,6 +456,10 @@ function createEffectCollector() {
         return;
       }
       const meta = ev.metadata as Record<string, unknown> | undefined;
+      const name = typeof meta?.name === 'string' ? meta.name : '';
+      if (name !== '') {
+        used.add(name);
+      }
       const sideEffect = meta?.sideEffect;
       if (!isSideEffect(sideEffect) || !MUTATING_SIDE_EFFECTS.includes(sideEffect)) {
         return;
@@ -460,11 +468,14 @@ function createEffectCollector() {
       if (entries.length < EFFECTS_MAX_ENTRIES) {
         const note = effectNoteOf(meta?.output);
         entries.push({
-          tool: String(meta?.name ?? ''),
+          tool: name,
           ok: ev.type === EVENT_TYPES.TOOL_COMPLETED,
           ...(note !== undefined ? { note } : {}),
         });
       }
+    },
+    usedTools(): string[] {
+      return [...used];
     },
     journal(): SpawnEffectsJournal | undefined {
       if (total === 0) {
@@ -651,6 +662,21 @@ async function runOneChild(input: {
   const capsProp = (): {
     caps?: string[];
   } => (childCaps.length > 0 ? { caps: childCaps } : {});
+  const toolUseProp = (): {
+    toolUse?: SpawnToolUse;
+  } => {
+    const offered = [...runRegistry.keys()].filter((n) => !CORE_SERVICE_TOOLS.includes(n));
+    const offeredSet = new Set(offered);
+    const used = effects.usedTools().filter((n) => offeredSet.has(n));
+    const usedSet = new Set(used);
+    return {
+      toolUse: {
+        total: offered.length,
+        used,
+        unused: offered.filter((n) => !usedSet.has(n)),
+      },
+    };
+  };
   parent.childJournal?.(target.spawnId, {
     eventId: crypto.randomUUID(),
     type: 'child.prepared',
@@ -688,6 +714,7 @@ async function runOneChild(input: {
       ...blockedProp(),
       ...effectsProp(),
       ...capsProp(),
+      ...toolUseProp(),
     };
   }
   if (remoteOutput !== undefined) {
@@ -700,6 +727,7 @@ async function runOneChild(input: {
       output: remoteOutput.output,
       ...blockedProp(),
       ...capsProp(),
+      ...toolUseProp(),
     };
   }
   const snap = await childState.load();
@@ -721,6 +749,7 @@ async function runOneChild(input: {
         ...blockedProp(),
         ...effectsProp(),
         ...capsProp(),
+        ...toolUseProp(),
       };
     }
     const over = spawnBudgetHit(snap, childBudget);
@@ -733,6 +762,7 @@ async function runOneChild(input: {
       usage: usageOf(snap),
       ...blockedProp(),
       ...capsProp(),
+      ...toolUseProp(),
     };
   }
   if (status === 'needs_input') {
@@ -769,6 +799,7 @@ async function runOneChild(input: {
       ...blockedProp(),
       ...effectsProp(),
       ...capsProp(),
+      ...toolUseProp(),
     };
   }
   await stopEvent();
@@ -785,6 +816,7 @@ async function runOneChild(input: {
       ...blockedProp(),
       ...effectsProp(),
       ...capsProp(),
+      ...toolUseProp(),
     };
   }
   return {
@@ -799,6 +831,7 @@ async function runOneChild(input: {
     ...blockedProp(),
     ...effectsProp(),
     ...capsProp(),
+    ...toolUseProp(),
   };
 }
 export function prepareSpawn(

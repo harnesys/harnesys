@@ -85,6 +85,13 @@ const CHILD_WAITER: ToolDefinition = {
   interactive: true,
   execute: async () => 'never',
 };
+const CHILD_EXTRA: ToolDefinition = {
+  name: 'extra',
+  description: 'never used',
+  input: { type: 'object', properties: {} },
+  sideEffect: 'read',
+  execute: async () => 'unused',
+};
 const CHILD_WRITING: AgentDefinition = {
   id: 'child',
   prompts: {},
@@ -254,6 +261,7 @@ describe('background spawn calls', () => {
         [CHILD_UPLOAD.name, CHILD_UPLOAD],
         [CHILD_HOLD.name, CHILD_HOLD],
         [CHILD_WAITER.name, CHILD_WAITER],
+        [CHILD_EXTRA.name, CHILD_EXTRA],
       ]),
       agents: { resolve: (id) => (id === 'child' ? CHILD_WRITING : undefined) },
       childJournal: (_spawnId, ev) => {
@@ -278,6 +286,9 @@ describe('background spawn calls', () => {
     ]);
     expect(handles[0]?.effects?.omitted).toBe(0);
     expect(handles[0]?.caps?.some((line) => line.startsWith('waiter —'))).toBe(true);
+    expect(handles[0]?.toolUse?.used).toContain('upload');
+    expect(handles[0]?.toolUse?.unused).toContain('extra');
+    expect(handles[0]?.toolUse?.total).toBe(3);
     await waitUntil(() => reports.length > 0);
     expect(reports[0]?.effects?.entries).toHaveLength(1);
     expect((reports[0]?.caps ?? []).some((line) => line.startsWith('waiter —'))).toBe(true);

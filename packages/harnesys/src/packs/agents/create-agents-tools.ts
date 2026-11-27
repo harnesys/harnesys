@@ -8,6 +8,7 @@ import type {
 import { type ToolDefinition, tool } from '../../ports/tools.ts';
 import { parseAgentColor } from './agent-color.ts';
 import { permissionsAskGate } from './agent-permissions.ts';
+import { createPacksToolsTool } from './packs-tools-tool.ts';
 import { runGuard } from './run-guard.ts';
 import { scopeFor } from './scope-for.ts';
 import { spawnAgentTool } from './spawn-agents-tool.ts';
@@ -122,10 +123,11 @@ async function agentListEntry(
 }
 export function createAgentsTools(deps: CreateAgentsToolsParams): ToolDefinition[] {
   return [
+    createPacksToolsTool(deps),
     tool('agents_list', {
       group: 'agents',
       description:
-        'List agents in this project with their full configuration: id, name, role, instructions, packs, skills, mcpServers, disallowedTools, enabledPlugins, budget, permissions, model, color, level top|delegate|plugin, parent?. Optional role/name filters; role is not unique. packs/skills/mcpServers list enabled sources per agent; tool availability derives from those sources. permissions are shown read-only here; patch them via agents_update (requires user approval) or the project UI. Prefer reuse via agents_list before agents_create. Spawned children are one-shot with no interactive user: judge fit by packs/model before agents_spawn.',
+        'List agents in this project with their full configuration: id, name, role, instructions, packs, skills, mcpServers, disallowedTools, enabledPlugins, budget, permissions, model, color, level top|delegate|plugin, parent?. Optional role/name filters; role is not unique. packs/skills/mcpServers list enabled sources per agent; tool availability derives from those sources. permissions are shown read-only here; patch them via agents_update (requires user approval) or the project UI. Prefer reuse via agents_list before agents_create. Spawned children are one-shot with no interactive user: judge fit by packs/model before agents_spawn. Call packs_tools to see the concrete tools a pack would grant before assigning it.',
       input: {
         type: 'object',
         properties: {
@@ -152,7 +154,7 @@ export function createAgentsTools(deps: CreateAgentsToolsParams): ToolDefinition
       group: 'agents',
       operations: ['agents'],
       description:
-        'Create a standalone top-level agent in this project (visible to the user in the sidebar, own threads). For a delegate under you use agents_create_subagent. Returns the full row: { id, name, role, instructions, parentId, packs, model?, budget?, permissions? }. Before creating, load_skill("agent-creator") for graphs, packs, budget, and HITL. Omit graph to let the host build a default ReAct graph; when budget is omitted the host stores { maxSteps: 50, policy: "ask" }. budget.policy is ask|error. skills/mcpServers/packs/enabledPlugins: sources, not tool names; omitted or [] means none; list every source explicitly. Passing permissions requires user approval. Call agents_list first to reuse an existing agent when possible.',
+        'Create a standalone top-level agent in this project (visible to the user in the sidebar, own threads). For a delegate under you use agents_create_subagent. Returns the full row: { id, name, role, instructions, parentId, packs, packsConfig?, model?, budget?, permissions? }; packsConfig echoes the exact assignment per pack (true or the { spec?, disabledTools?, exposure? } map) — verify your trim landed there before spawning. Before creating, load_skill("agent-creator") for graphs, packs, budget, and HITL. Compose the toolset per role, not by habit: check packs_tools for what a pack actually carries, grant the minimal packs, and trim with object assignments like packs: { files: { disabledTools: ["write_file", "edit_file"] } } for a read-only reviewer — unused tools cost tokens every step and invite wrong calls. Omit graph to let the host build a default ReAct graph; when budget is omitted the host stores { maxSteps: 50, policy: "ask" }. budget.policy is ask|error. skills/mcpServers/packs/enabledPlugins: sources, not tool names; omitted or [] means none; list every source explicitly. Passing permissions requires user approval. Call agents_list first to reuse an existing agent when possible.',
       input: {
         type: 'object',
         properties: {
@@ -182,7 +184,8 @@ export function createAgentsTools(deps: CreateAgentsToolsParams): ToolDefinition
           },
           packs: {
             type: 'object',
-            description: 'Optional pack map (name → true | config | null); sources, not tool names',
+            description:
+              'Pack map (name → true | { spec?, disabledTools?, exposure? } | null); sources, not tool names. Use { disabledTools: [...] } to drop individual tools a pack carries and { exposure: { tool: "deferred" } } to hide tools from the system prompt until load_tools; check contents with packs_tools.',
           },
           capabilities: {
             type: 'object',
@@ -235,8 +238,11 @@ export function createAgentsTools(deps: CreateAgentsToolsParams): ToolDefinition
       operations: ['agents'],
       description:
         'Create a subagent delegate under YOU (the calling agent). ' +
-        'Returns the full row: { id, name, role, instructions, parentId, packs, model?, budget?, permissions? }. ' +
+        'Returns the full row: { id, name, role, instructions, parentId, packs, packsConfig?, model?, budget?, permissions? }; packsConfig echoes the exact assignment per pack (true or the { spec?, disabledTools?, exposure? } map) — verify your trim landed there before spawning. ' +
         'skills/mcpServers/packs/enabledPlugins: sources, not tool names; omitted or [] means none; list every source explicitly. ' +
+        'Compose the toolset per task, not per habit: check packs_tools for what a pack carries, enable the minimal set, ' +
+        'and trim with object assignments like packs: { files: { disabledTools: ["delete_file"] } } — ' +
+        'unused tools still cost tokens every step and invite wrong calls. ' +
         'Delegates are one-shot spawn targets: they cannot ask the user questions, their permissions ' +
         'never exceed yours, and the "agents" pack is forbidden for them. Spawn them with agents_spawn. ' +
         'Use agents_create instead for a standalone project agent visible to the user.',
@@ -253,7 +259,8 @@ export function createAgentsTools(deps: CreateAgentsToolsParams): ToolDefinition
           },
           packs: {
             type: 'object',
-            description: 'Optional pack map (name → true | config | null); "agents" is rejected',
+            description:
+              'Pack map (name → true | { spec?, disabledTools?, exposure? } | null); "agents" is rejected. disabledTools drops individual tools a pack would grant; exposure "deferred" hides a tool until load_tools. See packs_tools.',
           },
           budget: {
             type: 'object',

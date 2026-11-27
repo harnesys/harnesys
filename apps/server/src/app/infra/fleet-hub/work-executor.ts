@@ -155,11 +155,12 @@ async function runPlaced(
 
   const orgSession = openOrgSqlite(deps.layout, orgId);
   try {
-    const { registrations: packRegistrations } = wireOrgPacks(
-      placedWireDeps(deps, orgId, orgSession.db),
-    );
     const plugin =
       deps.plugins === undefined ? undefined : await wireOrgPlugins(deps.plugins, orgId);
+    const { registrations: packRegistrations } = wireOrgPacks({
+      ...placedWireDeps(deps, orgId, orgSession.db),
+      ...(plugin !== undefined ? { baseRegistry: () => plugin.makeRegistry() } : {}),
+    });
     const prepared = prepareWorkerTargetOf(deps, orgId, envelope, agent);
     const process = await ensurePlacedProcessHandled({
       deps,

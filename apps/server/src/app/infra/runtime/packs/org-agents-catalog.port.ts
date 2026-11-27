@@ -7,6 +7,9 @@ import type {
   AgentDefinition,
   AgentsCatalogPort,
   CapabilityScope,
+  PackInventoryGroup,
+  PackRegistration,
+  ToolDefinition,
 } from 'harnesys';
 import {
   stripHookConfig,
@@ -22,6 +25,7 @@ import type { PluginAgentEntry } from '../../../domain/plugin/plugin-runtime.por
 import { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-provider.port.ts';
 import { toAgentDefinition } from '../agent-definition.mapper.ts';
 import type { OrgPluginRuntimeSource } from '../org-plugin-wiring.ts';
+import { packInventoryOf } from './pack-inventory.ts';
 
 const PERMISSIONS_CONFIG_KEYS = ['permissionsJson', 'permissions'] as const;
 
@@ -41,6 +45,8 @@ export interface OrgAgentsCatalogDeps {
   plugins?: OrgPluginRuntimeSource;
   modes?: ModePresetRegistryPort;
   profiles?: ExecutionProfilePort;
+  packRegistrations?: () => PackRegistration[];
+  baseRegistry?: () => Map<string, ToolDefinition>;
 }
 
 export class OrgAgentsCatalogPort implements AgentsCatalogPort {
@@ -92,6 +98,9 @@ export class OrgAgentsCatalogPort implements AgentsCatalogPort {
   ): Promise<AgentCatalogCreated> {
     const created = await this.deps.createAgent(input, scope);
     const def = definitionOf(this.deps, created);
+    const packsConfig = Object.fromEntries(
+      Object.entries(def.packs ?? {}).filter(([, value]) => value !== false && value !== null),
+    );
     return {
       id: created.id,
       name: created.name,
@@ -99,10 +108,15 @@ export class OrgAgentsCatalogPort implements AgentsCatalogPort {
       instructions: created.instructions,
       parentId: created.parentId,
       packs: Object.keys(def.packs ?? {}).filter((name) => def.packs?.[name]),
+      ...(Object.keys(packsConfig).length > 0 ? { packsConfig } : {}),
       ...(def.model ? { model: `${def.model.provider}/${def.model.model}` } : {}),
       ...(def.budget ? { budget: def.budget } : {}),
       ...(def.permissions ? { permissions: def.permissions } : {}),
     };
+  }
+
+  async packInventory(): Promise<PackInventoryGroup[]> {
+    return packInventoryOf(this.deps);
   }
 
   async patch(scope: CapabilityScope, id: string, patch: AgentCatalogPatch): Promise<void> {

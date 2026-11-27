@@ -226,8 +226,11 @@ async function prepareResumedTarget(
   agent: { sharedSourceIds: string[]; config: Record<string, unknown> },
   db: OrgSqliteDb,
 ): Promise<ResumedTargetEnv> {
-  const { registrations: packRegistrations } = wireOrgPacks(placedWireDeps(deps, orgId, db));
   const plugin = deps.plugins === undefined ? undefined : await wireOrgPlugins(deps.plugins, orgId);
+  const { registrations: packRegistrations } = wireOrgPacks({
+    ...placedWireDeps(deps, orgId, db),
+    ...(plugin !== undefined ? { baseRegistry: () => plugin.makeRegistry() } : {}),
+  });
   const prepared = prepareWorkerTargetOf(deps, orgId, envelope, agent);
   const process = await ensurePlacedProcessSafe(deps, orgId, envelope, prepared);
   const skills = await runSkillsOf(deps, plugin, orgId, prepared);

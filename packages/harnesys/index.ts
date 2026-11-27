@@ -563,6 +563,8 @@ export type {
   AgentCatalogPatch,
   AgentCatalogSummary,
   AgentsCatalogPort,
+  PackInventoryGroup,
+  PackToolInfo,
 } from './src/ports/agents-catalog.ts';
 export {
   type AutomationActionDescriptor,

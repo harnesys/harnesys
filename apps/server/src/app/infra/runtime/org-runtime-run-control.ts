@@ -155,6 +155,7 @@ function statusOfHandle(
     ...(handle.error !== undefined ? { error: handle.error } : {}),
     ...(handle.effects !== undefined ? { effects: handle.effects } : {}),
     ...(handle.caps !== undefined ? { caps: handle.caps } : {}),
+    ...(handle.toolUse !== undefined ? { toolUse: handle.toolUse } : {}),
     ...(handle.status === 'running'
       ? { idleMs: Math.max(0, Date.now() - handle.lastActivityAt) }
       : {}),

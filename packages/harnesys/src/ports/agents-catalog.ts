@@ -4,8 +4,9 @@ import type {
   AgentGraph,
   AgentModelRef,
 } from '../domain/agent-definition.ts';
-import type { CapabilityScope, PackConfig } from '../domain/pack.ts';
+import type { CapabilityScope, PackAssignment, PackConfig } from '../domain/pack.ts';
 import type { PermissionMap } from './permissions.ts';
+import type { SideEffect } from './tools.ts';
 
 export interface AgentCatalogSummary {
   id: string;
@@ -58,9 +59,21 @@ export interface AgentCatalogCreated {
   instructions: string;
   parentId?: string | null;
   packs: string[];
+  packsConfig?: Record<string, PackAssignment>;
   model?: string;
   budget?: AgentBudget;
   permissions?: PermissionMap;
+}
+export interface PackToolInfo {
+  name: string;
+  description: string;
+  sideEffect?: SideEffect;
+  operations?: string[];
+  interactive?: boolean;
+}
+export interface PackInventoryGroup {
+  source: string;
+  tools: PackToolInfo[];
 }
 export interface AgentsCatalogPort {
   list(
@@ -73,6 +86,7 @@ export interface AgentsCatalogPort {
   get(scope: CapabilityScope, id: string): Promise<AgentDefinition | null>;
   create(scope: CapabilityScope, input: AgentCatalogCreateInput): Promise<AgentCatalogCreated>;
   patch?(scope: CapabilityScope, id: string, patch: AgentCatalogPatch): Promise<void>;
+  packInventory?(): Promise<PackInventoryGroup[]>;
   remove?(
     scope: CapabilityScope,
     id: string,

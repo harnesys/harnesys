@@ -30,6 +30,11 @@ export interface SpawnEffectsJournal {
   entries: SpawnEffectEntry[];
   omitted: number;
 }
+export interface SpawnToolUse {
+  total: number;
+  used: string[];
+  unused: string[];
+}
 export interface BackgroundToolStatus {
   runId: string;
   threadId: string;
@@ -41,6 +46,7 @@ export interface BackgroundToolStatus {
   error?: { code: string; message: string };
   effects?: SpawnEffectsJournal;
   caps?: string[];
+  toolUse?: SpawnToolUse;
   tail?: string;
   idleMs?: number;
 }

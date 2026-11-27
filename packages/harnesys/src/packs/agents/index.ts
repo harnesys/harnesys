@@ -30,6 +30,11 @@ export const agentsCapability = definePack<AgentsCapabilityPorts, AgentsPackSpec
   meta: {
     tools: [
       {
+        name: 'packs_tools',
+        description:
+          'Per-source tool inventory (pack/host/mcp) with sideEffect and operations, for composing minimal pack sets; pack assignments support { spec?, disabledTools?, exposure? }.',
+      },
+      {
         name: 'agents_list',
         description:
           'List agents in this project (id, name, role, instructions, packs, model). Optional role/name filters; role is not unique. packs lists enabled source assignments per agent; tool availability derives from those sources, not from a stored tool-name list. Prefer reuse via agents_list before agents_create. Spawned children are one-shot with no interactive user: judge fit by packs/model before agents_spawn.',

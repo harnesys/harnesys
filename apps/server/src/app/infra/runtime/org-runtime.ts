@@ -98,11 +98,11 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
   const sessionRequestedModes = new Map<string, string | undefined>();
   const engineSnapshot =
     deps.browserEngines !== undefined ? await deps.browserEngines.snapshot() : undefined;
-  const { registrations: packRegistrations } = wireOrgPacks(
-    orgPackInputs(deps, session.db, engineSnapshot, runEvents),
-  );
-
   const plugin = await wireOrgPlugins(deps.plugins, deps.orgId);
+  const { registrations: packRegistrations } = wireOrgPacks({
+    ...orgPackInputs(deps, session.db, engineSnapshot, runEvents),
+    baseRegistry: () => plugin.makeRegistry(),
+  });
   const agentsResolve = createAgentsResolve(deps, plugin);
 
   let claimer: RunClaimer | undefined;
