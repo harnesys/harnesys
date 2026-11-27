@@ -27,7 +27,7 @@ const SCRIPTS_SCHEMA: JsonSchema = {
 const WORKSPACE_SCHEMA: JsonSchema = {
   type: 'object',
   description:
-    'Workspace binding: { kind: inherit | sandbox | folder { path } | source { sourceId, subpath? } | worktree { sourceId, worktreeId, subpath? } }. Applies to the target thread.',
+    'Workspace binding: { kind: inherit | thread | folder { path } | source { sourceId, subpath? } | worktree { sourceId, worktreeId, subpath? } }. Applies to the target thread.',
 };
 
 interface TargetFields {

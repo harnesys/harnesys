@@ -1,4 +1,4 @@
-export type PrimaryKind = 'sandbox' | 'directory' | 'worktree' | 'source';
+export type PrimaryKind = 'thread' | 'directory' | 'worktree' | 'source';
 
 export interface SharedSourceRef {
   id: string;
@@ -86,7 +86,7 @@ export function threadRuntimeContextOf(
     hostId: material.hostId,
     runtime: material.runtime,
     primaryDirectory: material.threadDir,
-    primaryKind: 'sandbox',
+    primaryKind: 'thread',
     threadDir: material.threadDir,
     sharedSources: material.sharedSources,
   };

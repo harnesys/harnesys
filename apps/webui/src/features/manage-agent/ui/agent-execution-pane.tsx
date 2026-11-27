@@ -18,7 +18,7 @@ import type { AgentFieldsInput, AgentFieldsOutput } from '../model/agent-fields'
 type AgentFieldsForm = UseFormReturn<AgentFieldsInput, unknown, AgentFieldsOutput>;
 
 const CUSTOM_DIRECTORY_VALUE = '__custom__';
-const SANDBOX_VALUE = '__sandbox__';
+const THREAD_MODE_VALUE = '__thread__';
 const SOURCE_PREFIX = 'source:';
 const FOLDER_PREFIX = 'folder:';
 
@@ -186,8 +186,8 @@ function DefaultWorkspaceField({
     }
     setCustomOpen(false);
     form.setValue('defaultRunDirectory', null, { shouldDirty: true });
-    if (value === SANDBOX_VALUE) {
-      saveWorkspace({ kind: 'sandbox' });
+    if (value === THREAD_MODE_VALUE) {
+      saveWorkspace({ kind: 'thread' });
       return;
     }
     if (value.startsWith(SOURCE_PREFIX)) {
@@ -332,8 +332,8 @@ function WorkspaceHint({
 }
 
 function workspaceValueOf(ref: WorkspaceRef | null): string {
-  if (!ref || ref.kind === 'inherit' || ref.kind === 'sandbox') {
-    return SANDBOX_VALUE;
+  if (!ref || ref.kind === 'inherit' || ref.kind === 'thread') {
+    return THREAD_MODE_VALUE;
   }
   if (ref.kind === 'folder') {
     return `${FOLDER_PREFIX}${ref.path}`;
@@ -343,7 +343,7 @@ function workspaceValueOf(ref: WorkspaceRef | null): string {
 
 function workspaceItems(ref: WorkspaceRef | null, roots: SourceRootOption[]) {
   const items = [
-    { value: SANDBOX_VALUE, label: 'Thread directory' },
+    { value: THREAD_MODE_VALUE, label: 'Thread directory' },
     ...roots.map((option) => ({
       value: `${SOURCE_PREFIX}${option.sourceId}`,
       label: option.label,
@@ -369,7 +369,7 @@ function workspaceItems(ref: WorkspaceRef | null, roots: SourceRootOption[]) {
 }
 
 function workspaceDetailOf(ref: WorkspaceRef | null, roots: SourceRootOption[]): string | null {
-  if (!ref || ref.kind === 'inherit' || ref.kind === 'sandbox') {
+  if (!ref || ref.kind === 'inherit' || ref.kind === 'thread') {
     return null;
   }
   if (ref.kind === 'folder') {

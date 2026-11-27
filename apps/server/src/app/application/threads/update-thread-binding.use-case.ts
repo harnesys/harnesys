@@ -111,7 +111,7 @@ export class UpdateThreadBindingUseCase {
   }
 
   private resolveWorkspaceRef(orgId: string, ref: WorkspaceRef | null): WorkspaceRef | null {
-    if (ref === null || ref.kind === 'inherit' || ref.kind === 'sandbox') {
+    if (ref === null || ref.kind === 'inherit' || ref.kind === 'thread') {
       return ref;
     }
     if (ref.kind === 'folder') {

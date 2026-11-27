@@ -5,8 +5,8 @@ export interface ProjectFileRef {
   worktreeId?: string;
   worktreeBranch?: string;
 }
-export interface ThreadSandboxFileRef {
-  source: 'thread-sandbox';
+export interface ThreadDirFileRef {
+  source: 'thread';
   threadId: string;
   path: string;
 }
@@ -27,12 +27,12 @@ export interface IssueAttachmentFileRef {
 }
 export type FileRef =
   | ProjectFileRef
-  | ThreadSandboxFileRef
+  | ThreadDirFileRef
   | ThreadAttachmentFileRef
   | IssueAttachmentFileRef;
 
 export function fileRefPath(ref: FileRef): string {
-  return ref.source === 'project' || ref.source === 'thread-sandbox' ? ref.path : ref.name;
+  return ref.source === 'project' || ref.source === 'thread' ? ref.path : ref.name;
 }
 
 export function fileRefKey(ref: FileRef): string {
@@ -40,7 +40,7 @@ export function fileRefKey(ref: FileRef): string {
     const path = ref.path.replace(/^\/+/, '');
     return ref.worktreeId ? `wt:${ref.worktreeId}:${path}` : path;
   }
-  if (ref.source === 'thread-sandbox') {
+  if (ref.source === 'thread') {
     return `thread:${ref.threadId}:${ref.path.replace(/^\/+/, '')}`;
   }
   if (ref.source === 'thread-attachment') {
@@ -60,7 +60,7 @@ export function fileRefProjectId(ref: FileRef, fallback: string): string {
 }
 
 export function isWritableFileRef(ref: FileRef): boolean {
-  return ref.source === 'project' || ref.source === 'thread-sandbox';
+  return ref.source === 'project' || ref.source === 'thread';
 }
 
 export function isProjectFileRef(ref: FileRef): ref is ProjectFileRef {

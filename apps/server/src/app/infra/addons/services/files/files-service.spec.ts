@@ -156,6 +156,6 @@ describe('files service anchors', () => {
       .flatMap((event) => (event.type === 'files-changed' ? [event] : []));
     expect(changed).toHaveLength(1);
     expect(changed[0]?.threadId).toBe(threadId);
-    expect(changed[0]?.roots).toEqual(['sandbox']);
+    expect(changed[0]?.roots).toEqual(['thread']);
   });
 });

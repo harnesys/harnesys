@@ -51,7 +51,7 @@ export function SidebarRow({
       <button
         type="button"
         className={cn(
-          'flex min-w-0 flex-1 items-center gap-1.5 pr-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
+          'flex min-w-0 flex-1 items-center gap-1.5 pr-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
           variant === 'card' && 'items-start py-1.5',
         )}
         style={{ ...sizeStyle, ...indentStyle }}
@@ -73,7 +73,12 @@ export function SidebarRow({
         ) : null}
       </button>
       {actions ? (
-        <div className="absolute inset-y-0 right-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/row:opacity-100 has-[:focus-visible]:opacity-100">
+        <div
+          className={cn(
+            'absolute inset-y-0 right-2 flex gap-0.5 opacity-0 transition-opacity group-hover/row:opacity-100 has-[:focus-visible]:opacity-100',
+            variant === 'card' ? 'items-start pt-1.5' : 'items-center',
+          )}
+        >
           {actions}
         </div>
       ) : null}

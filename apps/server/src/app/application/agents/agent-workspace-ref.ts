@@ -17,7 +17,7 @@ export function validateAgentWorkspaceRef(
   deps: AgentWorkspaceRefDeps,
   ref: WorkspaceRef | null,
 ): WorkspaceRef | null {
-  if (ref === null || ref.kind === 'sandbox') {
+  if (ref === null || ref.kind === 'thread') {
     return ref;
   }
   if (ref.kind === 'inherit') {

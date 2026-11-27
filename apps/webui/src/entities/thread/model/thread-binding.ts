@@ -1,6 +1,6 @@
 import type { ExecutionProfile } from '@/shared/api';
 
-export const SANDBOX_DIR_VALUE = 'sandbox';
+export const THREAD_DIR_VALUE = 'thread';
 export const RECENT_DIRECTORIES_LIMIT = 5;
 
 export interface SelectOption {

@@ -38,15 +38,15 @@ export function resolveEnvironment(input: ResolveEnvironmentInput): RunEnvironme
   const winner = layers.find((layer) => isConcrete(layer.ref));
   const branch = input.branch !== undefined ? { branch: input.branch } : {};
   if (winner === undefined) {
-    return { anchor: null, cwd: 'sandbox', provenance: 'fallback', ...branch };
+    return { anchor: null, cwd: 'thread', provenance: 'fallback', ...branch };
   }
   const ref = winner.ref;
   if (ref === null || ref.kind === 'inherit') {
-    return { anchor: null, cwd: 'sandbox', provenance: 'fallback', ...branch };
+    return { anchor: null, cwd: 'thread', provenance: 'fallback', ...branch };
   }
   const provenance = winner.origin;
-  if (ref.kind === 'sandbox') {
-    return { anchor: null, cwd: 'sandbox', provenance, ...branch };
+  if (ref.kind === 'thread') {
+    return { anchor: null, cwd: 'thread', provenance, ...branch };
   }
   if (ref.kind === 'folder') {
     return { anchor: folderAnchorOf(ref), cwd: 'anchor', provenance, ...branch };
@@ -120,9 +120,9 @@ function composedSubpath(
   return undefined;
 }
 
-function sourceCwdOf(origin: WorkspaceLayerOrigin, issue: boolean): 'sandbox' | 'anchor' {
+function sourceCwdOf(origin: WorkspaceLayerOrigin, issue: boolean): 'thread' | 'anchor' {
   if (origin === 'run') {
-    return issue ? 'anchor' : 'sandbox';
+    return issue ? 'anchor' : 'thread';
   }
   return 'anchor';
 }

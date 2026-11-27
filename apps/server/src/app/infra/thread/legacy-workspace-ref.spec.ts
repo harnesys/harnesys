@@ -78,8 +78,8 @@ describe('projectLegacyRunDirectory', () => {
     ).toBe('/home/dev/scratch');
   });
 
-  test('returns null for sandbox, inherit, worktree, and unknown sources', () => {
-    expect(projectLegacyRunDirectory({ kind: 'sandbox' }, sourceRoots)).toBeNull();
+  test('returns null for thread, inherit, worktree, and unknown sources', () => {
+    expect(projectLegacyRunDirectory({ kind: 'thread' }, sourceRoots)).toBeNull();
     expect(projectLegacyRunDirectory({ kind: 'inherit' }, sourceRoots)).toBeNull();
     expect(
       projectLegacyRunDirectory(
@@ -96,7 +96,8 @@ describe('projectLegacyRunDirectory', () => {
 
 describe('parseWorkspaceRef', () => {
   test('parses valid stored json and rejects garbage', () => {
-    expect(parseWorkspaceRef('{"kind":"sandbox"}')).toEqual({ kind: 'sandbox' });
+    expect(parseWorkspaceRef('{"kind":"thread"}')).toEqual({ kind: 'thread' });
+    expect(parseWorkspaceRef('{"kind":"sandbox"}')).toBeNull();
     expect(parseWorkspaceRef('not json')).toBeNull();
     expect(parseWorkspaceRef('{"kind":"unknown"}')).toBeNull();
     expect(parseWorkspaceRef(null)).toBeNull();
@@ -115,14 +116,14 @@ describe('threadPatchUpdates dual-write', () => {
     expect(updates.runDirectory).toBe('/srv/sources/api/apps');
   });
 
-  test('leaves the legacy column untouched for worktree and sandbox refs', () => {
+  test('leaves the legacy column untouched for worktree and thread refs', () => {
     const worktree = threadPatchUpdates(
       { workspaceRef: { kind: 'worktree', sourceId: 'src-api', worktreeId: 'wt-1' } },
       sourceRoots,
     );
     expect(worktree.runDirectory).toBeUndefined();
-    const sandbox = threadPatchUpdates({ workspaceRef: { kind: 'sandbox' } }, sourceRoots);
-    expect(sandbox.runDirectory).toBeUndefined();
+    const threadMode = threadPatchUpdates({ workspaceRef: { kind: 'thread' } }, sourceRoots);
+    expect(threadMode.runDirectory).toBeUndefined();
   });
 
   test('projects a folder ref to its path', () => {

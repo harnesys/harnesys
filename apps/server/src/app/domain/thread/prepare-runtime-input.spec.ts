@@ -36,7 +36,7 @@ function deps() {
 }
 
 function environment(partial: Partial<RunEnvironment>): RunEnvironment {
-  return { anchor: null, cwd: 'sandbox', provenance: 'fallback', ...partial };
+  return { anchor: null, cwd: 'thread', provenance: 'fallback', ...partial };
 }
 
 const THREAD = join(ROOT, 'org-1', 'thread-1');
@@ -57,13 +57,13 @@ describe('resolveRuntimePrimary', () => {
   test('empty environment falls back to the thread dir', () => {
     expect(resolveRuntimePrimary(deps())).toEqual({
       primaryDirectory: THREAD,
-      primaryKind: 'sandbox',
+      primaryKind: 'thread',
     });
     expect(
       resolveRuntimePrimary(deps(), {
-        environment: environment({ anchor: null, cwd: 'sandbox', provenance: 'agent' }),
+        environment: environment({ anchor: null, cwd: 'thread', provenance: 'agent' }),
       }),
-    ).toEqual({ primaryDirectory: THREAD, primaryKind: 'sandbox' });
+    ).toEqual({ primaryDirectory: THREAD, primaryKind: 'thread' });
   });
 
   test('issue worktree environment runs in the worktree root', () => {
@@ -100,24 +100,24 @@ describe('resolveRuntimePrimary', () => {
     expect(primary.activeWorktree).toBeUndefined();
   });
 
-  test('container source environment keeps the sandbox primary with an anchor present', () => {
+  test('container source environment keeps the thread primary with an anchor present', () => {
     const primary = resolveRuntimePrimary(deps(), {
       environment: environment({
         anchor: { kind: 'source', sourceId: 'src-1' },
-        cwd: 'sandbox',
+        cwd: 'thread',
         provenance: 'run',
       }),
     });
-    expect(primary.primaryKind).toBe('sandbox');
+    expect(primary.primaryKind).toBe('thread');
     expect(primary.primaryDirectory).toBe(THREAD);
     expect(primary.primarySourceId).toBeUndefined();
   });
 
-  test('schedule sandbox environment runs inside the thread dir', () => {
+  test('schedule thread environment runs inside the thread dir', () => {
     const primary = resolveRuntimePrimary(deps(), {
-      environment: environment({ anchor: null, cwd: 'sandbox', provenance: 'run' }),
+      environment: environment({ anchor: null, cwd: 'thread', provenance: 'run' }),
     });
-    expect(primary.primaryKind).toBe('sandbox');
+    expect(primary.primaryKind).toBe('thread');
     expect(primary.primaryDirectory).toBe(THREAD);
   });
 

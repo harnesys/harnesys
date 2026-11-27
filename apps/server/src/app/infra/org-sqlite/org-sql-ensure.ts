@@ -111,6 +111,7 @@ import {
   migrateThreadsBindingColumns,
   migrateThreadsPolicyContextWindow,
   migrateThreadsWorkspaceRefColumn,
+  migrateWorkspaceModeSandboxToThread,
 } from './org-sql-migrations.ts';
 import { CREATE_PERMISSION_RULES_SQL, migratePermissionRules } from './org-sql-permission-rules.ts';
 
@@ -310,6 +311,7 @@ export function ensureOrgSchema(
   migratePendingRunEventsAttributionColumns(exec, all);
   if (all) {
     migratePendingPlacementsEnvironmentColumn(exec, all);
+    migrateWorkspaceModeSandboxToThread(exec, all);
   }
   exec(CREATE_DASHBOARDS_SQL);
   migrateDashboardPresentationColumns(exec, all);

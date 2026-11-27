@@ -61,7 +61,7 @@ export class WriteThreadFileUseCase {
     this.events.emit(input.orgId, {
       type: 'files-changed',
       threadId: input.threadId,
-      roots: ['sandbox'],
+      roots: ['thread'],
     });
     return { path: input.path, etag: makeEtag(info.mtimeMs, info.size) };
   }

@@ -15,9 +15,9 @@ function toolEvent(partial: Record<string, unknown>): SessionEvent {
 }
 
 describe('threadFileRootsFromEvents', () => {
-  test('relative sandbox path on a completed write tool maps to the sandbox root', () => {
+  test('relative sandbox path on a completed write tool maps to the thread root', () => {
     const events = [toolEvent({ sideEffect: 'write', input: { path: 'sandbox/notes.md' } })];
-    expect(threadFileRootsFromEvents(events, THREAD_DIR)).toEqual(['sandbox']);
+    expect(threadFileRootsFromEvents(events, THREAD_DIR)).toEqual(['thread']);
   });
 
   test('batch inputs and move pairs union their roots, sorted and deduplicated', () => {
@@ -33,12 +33,12 @@ describe('threadFileRootsFromEvents', () => {
         input: { moves: [{ from: 'sandbox/a.md', to: 'tool-outputs/a.md' }] },
       }),
     ];
-    expect(threadFileRootsFromEvents(events, THREAD_DIR)).toEqual(['sandbox', 'tool-outputs']);
+    expect(threadFileRootsFromEvents(events, THREAD_DIR)).toEqual(['thread', 'tool-outputs']);
   });
 
-  test('a mutating tool without path fields marks the sandbox dirty', () => {
+  test('a mutating tool without path fields marks the thread root dirty', () => {
     const events = [toolEvent({ name: 'shell', sideEffect: 'write', input: { command: 'ls' } })];
-    expect(threadFileRootsFromEvents(events, THREAD_DIR)).toEqual(['sandbox']);
+    expect(threadFileRootsFromEvents(events, THREAD_DIR)).toEqual(['thread']);
   });
 
   test('root-level and legacy folder writes map to the writable root', () => {
@@ -46,7 +46,7 @@ describe('threadFileRootsFromEvents', () => {
       toolEvent({ sideEffect: 'write', input: { path: 'root-check.md' } }),
       toolEvent({ sideEffect: 'write', input: { path: 'notes/todo.md' } }),
     ];
-    expect(threadFileRootsFromEvents(events, THREAD_DIR)).toEqual(['sandbox']);
+    expect(threadFileRootsFromEvents(events, THREAD_DIR)).toEqual(['thread']);
   });
 
   test('paths outside the thread dir and dot segments produce no roots', () => {
@@ -63,7 +63,7 @@ describe('threadFileRootsFromEvents', () => {
     const events = [
       toolEvent({ sideEffect: 'destructive', input: { paths: [`${THREAD_DIR}/sandbox/a.md`] } }),
     ];
-    expect(threadFileRootsFromEvents(events, THREAD_DIR)).toEqual(['sandbox']);
+    expect(threadFileRootsFromEvents(events, THREAD_DIR)).toEqual(['thread']);
   });
 
   test('a completed tool output with an attachment id marks attachments dirty', () => {
@@ -80,11 +80,11 @@ describe('threadFileRootsFromEvents', () => {
     });
     expect(threadFileRootsFromEvents([objectOutput], THREAD_DIR)).toEqual([
       'attachments',
-      'sandbox',
+      'thread',
     ]);
     expect(threadFileRootsFromEvents([stringOutput], THREAD_DIR)).toEqual([
       'attachments',
-      'sandbox',
+      'thread',
     ]);
   });
 

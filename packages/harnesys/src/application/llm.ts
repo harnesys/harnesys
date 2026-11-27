@@ -99,7 +99,7 @@ export function formatRuntimeSection(runtime: RuntimePromptInfo | undefined): st
 }
 
 function threadFilesLine(runtime: RuntimePromptInfo): string {
-  if (runtime.primaryKind === 'sandbox') {
+  if (runtime.primaryKind === 'thread') {
     return (
       "- This is this thread's directory: everything in it is yours, except " +
       '`attachments/` and `tool-outputs/` (read-only).'

@@ -36,14 +36,14 @@ describe('resolveEnvironment', () => {
     expect(environment.subpath).toBe('api');
   });
 
-  test('explicit sandbox on the thread wins over the agent default', () => {
+  test('explicit thread ref on the thread wins over the agent default', () => {
     const environment = resolveEnvironment({
-      layers: [layer('thread', { kind: 'sandbox' }), layer('agent', SOURCE_API)],
+      layers: [layer('thread', { kind: 'thread' }), layer('agent', SOURCE_API)],
       issue: false,
     });
     expect(environment.provenance).toBe('thread');
     expect(environment.anchor).toBeNull();
-    expect(environment.cwd).toBe('sandbox');
+    expect(environment.cwd).toBe('thread');
   });
 
   test('agent subpath composes onto an issue worktree of the same source', () => {
@@ -77,7 +77,7 @@ describe('resolveEnvironment', () => {
     expect(issue.cwd).toBe('anchor');
     expect(issue.anchor).toEqual({ kind: 'source', sourceId: 'src-1' });
     const chat = resolveEnvironment({ layers: [layer('run', SOURCE)], issue: false });
-    expect(chat.cwd).toBe('sandbox');
+    expect(chat.cwd).toBe('thread');
   });
 
   test('thread-layer source keeps anchor cwd for every run kind', () => {
@@ -88,10 +88,10 @@ describe('resolveEnvironment', () => {
     expect(environment.cwd).toBe('anchor');
   });
 
-  test('empty layers fall back to the thread sandbox', () => {
+  test('empty layers fall back to the thread directory', () => {
     const environment = resolveEnvironment({ layers: [layer('thread', null)], issue: false });
     expect(environment.anchor).toBeNull();
-    expect(environment.cwd).toBe('sandbox');
+    expect(environment.cwd).toBe('thread');
     expect(environment.provenance).toBe('fallback');
   });
 

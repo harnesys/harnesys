@@ -10,7 +10,7 @@ Order of parts in one model call's system prompt:
 2. **Context note** — files attached to the thread, when the thread has any.
 3. **Channel note** — for group threads, the framing the runtime adds: conversation mode, history window and message count. Direct threads have no channel note.
 4. **Available skills catalog** — one line per granted skill: `- name: description (when: when_to_use)`. Catalog lines are cheap; bodies load on demand with `load_skill`.
-5. **Runtime section** — host name, environment (Host or Container), run root and its kind (`sandbox`, `directory`, `worktree`, `source`), scratch dir, shared sources with index state, and the path rules: file references in messages render relative to the run root when the file is inside it and stay absolute otherwise; plain relative paths resolve against the run root ([docs/PATHS.md](../../../../../../docs/PATHS.md)).
+5. **Runtime section** — host name, environment (Host or Container), run root and its kind (`thread`, `directory`, `worktree`, `source`), scratch dir, shared sources with index state, and the path rules: file references in messages render relative to the run root when the file is inside it and stay absolute otherwise; plain relative paths resolve against the run root ([docs/PATHS.md](../../../../../../docs/PATHS.md)).
 6. **Tools section** — `Capabilities available in this model call:` grouped by tool group, listing exactly the direct tools the run has.
 
 ## Tail notes, refreshed every step

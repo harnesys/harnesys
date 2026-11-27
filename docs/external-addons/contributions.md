@@ -129,7 +129,7 @@ const cron: TriggerPair = {
   `scripts` (pre/post shell commands with an optional gate) can be set by the add-on through
   `ctx.triggers.create/update`; read it back with `ctx.triggers.get`. See
   `docs/external-addons/trigger-scripts.md`.
-  `workspace` is a `WorkspaceRef` (`inherit` | `sandbox` | `folder{path}` |
+  `workspace` is a `WorkspaceRef` (`inherit` | `thread` | `folder{path}` |
   `source{sourceId, subpath?}` | `worktree{sourceId, worktreeId, subpath?}`). The host
   applies it to the target thread's workspace binding, so the trigger's folder is the
   thread's working directory: every fired run (`pwd` included) and every manual message in

@@ -9,14 +9,14 @@ describe('threadFilesInvalidations', () => {
     ]);
   });
 
-  test('sandbox and tool-outputs roots invalidate the thread files tree prefix', () => {
-    expect(threadFilesInvalidations('org-1', 'th-1', ['sandbox', 'tool-outputs'])).toEqual([
+  test('thread and tool-outputs roots invalidate the thread files tree prefix', () => {
+    expect(threadFilesInvalidations('org-1', 'th-1', ['thread', 'tool-outputs'])).toEqual([
       ['thread-files', 'org-1', 'th-1'],
     ]);
   });
 
   test('mixed roots invalidate both groups once', () => {
-    expect(threadFilesInvalidations('org-1', 'th-1', ['sandbox', 'attachments'])).toEqual([
+    expect(threadFilesInvalidations('org-1', 'th-1', ['thread', 'attachments'])).toEqual([
       ['thread-attachments', 'th-1'],
       ['thread-artifacts', 'th-1'],
       ['thread-files', 'org-1', 'th-1'],

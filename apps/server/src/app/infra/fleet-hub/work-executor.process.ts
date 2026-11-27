@@ -41,7 +41,7 @@ function environmentOf(envelope: TaskEnvelope): RunEnvironment | undefined {
       sourceId: envelope.sourceId,
       ...(envelope.worktreeId !== undefined ? { worktreeId: envelope.worktreeId } : {}),
     },
-    cwd: envelope.isolation?.mode === 'container' ? 'sandbox' : 'anchor',
+    cwd: envelope.isolation?.mode === 'container' ? 'thread' : 'anchor',
     provenance: 'run',
   };
 }

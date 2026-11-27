@@ -21,7 +21,7 @@ interface PreparedPromptTarget {
   runtime: {
     hostId: string;
     primaryDirectory: string;
-    primaryKind: 'sandbox' | 'directory' | 'worktree' | 'source';
+    primaryKind: 'thread' | 'directory' | 'worktree' | 'source';
     threadDir: string;
     activeWorktree?: { worktreeId: string; sourceId: string; root: string };
     primarySource?: PrimarySourceRef;

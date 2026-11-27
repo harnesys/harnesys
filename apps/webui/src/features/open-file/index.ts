@@ -23,5 +23,5 @@ export {
   isWritableFileRef,
   type ProjectFileRef,
   type ThreadAttachmentFileRef,
-  type ThreadSandboxFileRef,
+  type ThreadDirFileRef,
 } from './model/file-ref';

@@ -248,7 +248,7 @@ interface PlacementOverrides {
 }
 
 function environmentOf(anchor: RunEnvironmentAnchor | null): RunEnvironment {
-  return { anchor, cwd: anchor === null ? 'sandbox' : 'anchor', provenance: 'run' };
+  return { anchor, cwd: anchor === null ? 'thread' : 'anchor', provenance: 'run' };
 }
 
 function placement(overrides?: PlacementOverrides) {
@@ -325,7 +325,7 @@ describe('resolveRunPlacement', () => {
     expect(nowhere.kind).toBe('unavailable');
   });
 
-  test('sandbox placement does not gate on sources', () => {
+  test('thread placement does not gate on sources', () => {
     const decision = placement({ environment: environmentOf(null) });
     expect(decision.request.requiredSources).toEqual([]);
     expect(decision.kind).toBe('selected');

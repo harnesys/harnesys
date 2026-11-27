@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const WorkspaceRefSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('inherit') }),
-  z.object({ kind: z.literal('sandbox') }),
+  z.object({ kind: z.literal('thread') }),
   z.object({
     kind: z.literal('source'),
     sourceId: z.string().min(1),
@@ -49,7 +49,7 @@ export const RunEnvironmentSchema = z.object({
   anchor: RunEnvironmentAnchorSchema.nullable(),
   subpath: z.string().min(1).optional(),
   branch: z.string().min(1).optional(),
-  cwd: z.enum(['sandbox', 'anchor']),
+  cwd: z.enum(['thread', 'anchor']),
   provenance: RunEnvironmentProvenanceSchema,
   isolation: RunEnvironmentIsolationSchema.optional(),
 });

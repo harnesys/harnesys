@@ -13,7 +13,7 @@ export function threadFilesInvalidations(
   if (roots.includes('attachments')) {
     keys.push(['thread-attachments', threadId], ['thread-artifacts', threadId]);
   }
-  if (roots.includes('sandbox') || roots.includes('tool-outputs')) {
+  if (roots.includes('thread') || roots.includes('tool-outputs')) {
     keys.push(['thread-files', orgId, threadId]);
   }
   return keys;

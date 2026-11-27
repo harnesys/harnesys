@@ -101,7 +101,7 @@ function ThreadTreeEntry({
         onClick={() =>
           isDir
             ? setOpen((value) => !value)
-            : openFile({ source: 'thread-sandbox', threadId, path: entry.path })
+            : openFile({ source: 'thread', threadId, path: entry.path })
         }
       />
       {isDir && open

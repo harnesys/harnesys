@@ -26,7 +26,7 @@ The host root is `~/.harnesys/` unless `harnesys.home` overrides it. Paths below
     skills/                    # ORG skill root (SKILL.md per directory)
     plugins/                   # installed org plugins
     plugins-data/              # plugin private data
-    threads/<threadId>/        # per-thread attachments, sandbox, tool outputs, logs
+    threads/<threadId>/        # per-thread working dir, attachments, tool outputs, logs
   data/orgs/<orgId>/           # org data dir (workspace-bound artifacts)
     workspace/                 # managed workspace when no folder is chosen
     sources/<sourceId>/        # materialized source checkout or folder

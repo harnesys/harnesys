@@ -1,5 +1,5 @@
 import type { WorkspaceRef } from '@harnesys/contracts';
-import { SANDBOX_DIR_VALUE, type SelectOption } from './thread-binding';
+import { type SelectOption, THREAD_DIR_VALUE } from './thread-binding';
 
 export const WORKSPACE_INHERIT_VALUE = '__inherit__';
 export const WORKSPACE_SOURCE_PREFIX = 'source:';
@@ -15,8 +15,8 @@ export function workspaceValueOf(ref: WorkspaceRef | null): string {
   if (ref === null || ref.kind === 'inherit') {
     return WORKSPACE_INHERIT_VALUE;
   }
-  if (ref.kind === 'sandbox') {
-    return SANDBOX_DIR_VALUE;
+  if (ref.kind === 'thread') {
+    return THREAD_DIR_VALUE;
   }
   if (ref.kind === 'folder') {
     return WORKSPACE_BROWSE_VALUE;
@@ -28,8 +28,8 @@ export function workspaceRefFrom(value: string): WorkspaceRef {
   if (value === WORKSPACE_INHERIT_VALUE) {
     return { kind: 'inherit' };
   }
-  if (value === SANDBOX_DIR_VALUE) {
-    return { kind: 'sandbox' };
+  if (value === THREAD_DIR_VALUE) {
+    return { kind: 'thread' };
   }
   if (value.startsWith(WORKSPACE_SOURCE_PREFIX)) {
     return { kind: 'source', sourceId: value.slice(WORKSPACE_SOURCE_PREFIX.length) };
@@ -51,7 +51,7 @@ export function workspaceOptions(input: {
 }): SelectOption[] {
   const options: SelectOption[] = [
     { value: WORKSPACE_INHERIT_VALUE, label: input.inheritLabel },
-    { value: SANDBOX_DIR_VALUE, label: 'Thread directory' },
+    { value: THREAD_DIR_VALUE, label: 'Thread directory' },
     ...input.sources.map((source) => ({
       value: `${WORKSPACE_SOURCE_PREFIX}${source.id}`,
       label: sourceLabel(source, input.workspaceRef),

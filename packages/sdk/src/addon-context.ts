@@ -205,7 +205,7 @@ export interface AddonSkills {
 
 export type AddonTriggerWorkspace =
   | { kind: 'inherit' }
-  | { kind: 'sandbox' }
+  | { kind: 'thread' }
   | { kind: 'folder'; path: string; hostId?: string }
   | { kind: 'source'; sourceId: string; subpath?: string }
   | { kind: 'worktree'; sourceId: string; worktreeId: string; subpath?: string };

@@ -225,7 +225,7 @@ function prepared(
     runtime: {
       hostId: preparedHost,
       primaryDirectory: '/org/thread',
-      primaryKind: 'sandbox' as const,
+      primaryKind: 'thread' as const,
       threadDir: '/org/thread',
       ...(activeWorktree ? { activeWorktree } : {}),
     },
@@ -288,7 +288,7 @@ describe('runRuntimePromptInfo', () => {
     };
     const container = runRuntimePromptInfo(deps, prepared(HOST_LOCAL), {
       anchor: { kind: 'source', sourceId: SRC },
-      cwd: 'sandbox',
+      cwd: 'thread',
       provenance: 'run',
       isolation: { mode: 'container', image: 'workspace:latest' },
     });

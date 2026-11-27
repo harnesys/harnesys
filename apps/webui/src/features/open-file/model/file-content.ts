@@ -44,7 +44,7 @@ export function textContentBackend(ref: FileRef): TextContentBackend | null {
       },
     };
   }
-  if (ref.source === 'thread-sandbox') {
+  if (ref.source === 'thread') {
     return {
       key: `thread:${ref.threadId}:${ref.path}`,
       queryKey: threadFileQueryKey(ref.threadId, ref.path),
@@ -64,7 +64,7 @@ export function blobContentBackend(ref: FileRef): BlobContentBackend {
       load: () => loadProjectFileBlob(ref.projectId, ref.path, ref.worktreeId),
     };
   }
-  if (ref.source === 'thread-sandbox') {
+  if (ref.source === 'thread') {
     return {
       key: threadFileQueryKey(ref.threadId, ref.path).join(':'),
       load: () => loadThreadFileContent(ref.threadId, ref.path),

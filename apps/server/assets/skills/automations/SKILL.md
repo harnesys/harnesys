@@ -47,7 +47,7 @@ See `references/config-fields.md` for every field type, `visibleWhen` and limits
 `threadId` + `agentId` are the run destination; `modeId` optionally pins an agent
 mode. `workspace` binds the thread's working directory for fired runs:
 `inherit` keeps the thread default, `folder { path }` points at an existing
-directory (protected system roots are refused), `sandbox`/`source`/`worktree`
+directory (protected system roots are refused), `thread`/`source`/`worktree`
 pick the matching thread workspace. Only chat threads accept a workspace.
 
 `instructions` are appended to every fired run; the trigger's text is the event

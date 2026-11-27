@@ -23,7 +23,7 @@ export interface RuntimePromptInfo {
   hostName: string;
   environment: 'host' | 'container';
   primaryDirectory: string;
-  primaryKind: 'sandbox' | 'directory' | 'worktree' | 'source';
+  primaryKind: 'thread' | 'directory' | 'worktree' | 'source';
   threadDir: string;
   sharedSources: RuntimePromptSource[];
   worktree?: RuntimePromptWorktree;

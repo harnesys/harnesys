@@ -53,7 +53,7 @@ function targetFromPersisted(tab: PersistedIdeTab): FileRef | null {
       };
     }
     return {
-      source: 'thread-sandbox',
+      source: 'thread',
       threadId: tab.threadId,
       path: normalizeIdeFilePath(tab.path),
     };
@@ -73,9 +73,9 @@ function validStoredTarget(target: PersistedFileRef | undefined): FileRef | null
       ...(target.worktreeBranch ? { worktreeBranch: target.worktreeBranch } : {}),
     };
   }
-  if (target.source === 'thread-sandbox' && target.threadId && target.path) {
+  if (target.source === 'thread' && target.threadId && target.path) {
     return {
-      source: 'thread-sandbox',
+      source: 'thread',
       threadId: target.threadId,
       path: normalizeIdeFilePath(target.path),
     };

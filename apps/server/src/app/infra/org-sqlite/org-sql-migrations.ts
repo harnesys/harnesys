@@ -200,6 +200,102 @@ export function migrateThreadMessageQueueQuoteColumn(
   }
 }
 
+interface WorkspaceModeJsonColumn {
+  table: string;
+  primaryKey: string;
+  column: string;
+}
+
+const WORKSPACE_MODE_JSON_COLUMNS: readonly WorkspaceModeJsonColumn[] = [
+  { table: 'threads', primaryKey: 'id', column: 'workspace_ref' },
+  { table: 'agents', primaryKey: 'id', column: 'config' },
+  { table: 'runs', primaryKey: 'run_id', column: 'environment' },
+  { table: 'pending_placements', primaryKey: 'run_id', column: 'environment' },
+  { table: 'addon_trigger_instances', primaryKey: 'id', column: 'target_json' },
+  { table: 'org_execution_replica', primaryKey: 'org_id', column: 'payload_json' },
+];
+
+export function migrateWorkspaceModeSandboxToThread(
+  exec: (sql: string) => void,
+  all: (sql: string) => ColumnInfo[],
+): void {
+  for (const site of WORKSPACE_MODE_JSON_COLUMNS) {
+    rewriteSandboxModeColumn(exec, all, site);
+  }
+}
+
+function rewriteSandboxModeColumn(
+  exec: (sql: string) => void,
+  all: (sql: string) => ColumnInfo[],
+  site: WorkspaceModeJsonColumn,
+): void {
+  const present = new Set(all(`PRAGMA table_info(${site.table})`).map((col) => col.name));
+  if (!present.has(site.column) || !present.has(site.primaryKey)) {
+    return;
+  }
+  const rows = all(
+    `SELECT ${site.primaryKey} AS record_key, ${site.column} AS record_value FROM ${site.table}`,
+  ) as Array<{ record_key?: unknown; record_value?: unknown }>;
+  for (const row of rows) {
+    const key = typeof row.record_key === 'string' ? row.record_key : undefined;
+    const value = typeof row.record_value === 'string' ? row.record_value : undefined;
+    if (!key || !value) {
+      continue;
+    }
+    const next = rewriteSandboxModeJson(value);
+    if (next === null) {
+      continue;
+    }
+    exec(
+      `UPDATE ${site.table} SET ${site.column} = '${escapeSql(next)}' WHERE ${site.primaryKey} = '${escapeSql(key)}'`,
+    );
+  }
+}
+
+export function rewriteSandboxModeJson(raw: string): string | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  const result = renameSandboxModeNode(parsed);
+  return result.changed ? JSON.stringify(result.value) : null;
+}
+
+interface RenameResult {
+  value: unknown;
+  changed: boolean;
+}
+
+function renameSandboxModeNode(value: unknown): RenameResult {
+  if (Array.isArray(value)) {
+    let changed = false;
+    const items = value.map((item) => {
+      const nested = renameSandboxModeNode(item);
+      changed = changed || nested.changed;
+      return nested.value;
+    });
+    return { value: items, changed };
+  }
+  if (value !== null && typeof value === 'object') {
+    let changed = false;
+    const out: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+      if ((key === 'kind' || key === 'cwd') && item === 'sandbox') {
+        out[key] = 'thread';
+        changed = true;
+        continue;
+      }
+      const nested = renameSandboxModeNode(item);
+      out[key] = nested.value;
+      changed = changed || nested.changed;
+    }
+    return { value: out, changed };
+  }
+  return { value, changed: false };
+}
+
 function policyWithoutContextWindow(rawPolicy: string): string | null {
   const parsed = parsePolicyObject(rawPolicy);
   if (!parsed || typeof parsed.contextWindow !== 'number') {

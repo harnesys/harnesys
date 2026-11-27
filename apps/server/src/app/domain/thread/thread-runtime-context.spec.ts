@@ -8,16 +8,16 @@ describe('threadRuntimeContextOf', () => {
       { id: 'src-2', name: 'docs', description: null },
     ];
 
-    const sandbox = threadRuntimeContextOf({
+    const threadDirRun = threadRuntimeContextOf({
       hostId: 'host-1',
       runtime: 'host',
       threadDir: '/tmp/threads/t1',
       sharedSources,
     });
-    expect(sandbox.primaryDirectory).toBe('/tmp/threads/t1');
-    expect(sandbox.primaryKind).toBe('sandbox');
-    expect(sandbox.activeWorktree).toBeUndefined();
-    expect(sandbox.sharedSources).toBe(sharedSources);
+    expect(threadDirRun.primaryDirectory).toBe('/tmp/threads/t1');
+    expect(threadDirRun.primaryKind).toBe('thread');
+    expect(threadDirRun.activeWorktree).toBeUndefined();
+    expect(threadDirRun.sharedSources).toBe(sharedSources);
     expect(sharedSources[0]?.description).toBe('main repository');
     expect(sharedSources[1]?.description).toBeNull();
 
@@ -56,7 +56,7 @@ describe('threadRuntimeContextOf', () => {
       threadDir: '/tmp/threads/t1',
       sharedSources: [],
     });
-    expect(fallback.primaryKind).toBe('sandbox');
+    expect(fallback.primaryKind).toBe('thread');
     expect(fallback.primaryDirectory).toBe('/tmp/threads/t1');
   });
 

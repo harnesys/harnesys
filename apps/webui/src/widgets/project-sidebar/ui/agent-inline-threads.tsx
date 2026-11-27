@@ -15,10 +15,11 @@ import type { Thread } from '@/entities/thread';
 import { useAgentThreads, useThreadWaiting } from '@/features/desk';
 import { AGENT_THREAD_KINDS } from '@/features/desk/model/agents-display.store';
 import { useOrgTimeZone } from '@/features/switch-org/org-time-zone';
+import { formatDayTime } from '@/shared/lib/format-clock';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
-import { SidebarRow, SidebarRowTitle } from '@/shared/ui/sidebar-row';
-import { rowRight, runStatus, threadTime } from '../model/row-status';
+import { SidebarRow } from '@/shared/ui/sidebar-row';
+import { rowStatusDot, runStatus } from '../model/row-status';
 import { useThreadActions } from '../model/thread-actions';
 import {
   buildThreadTree,
@@ -185,9 +186,11 @@ function InlineThreadRow({
   const waiting = useThreadWaiting(thread.id);
   const status = runStatus(running, waiting);
   const hasMenu = Boolean(onPinToggle || onDelete);
-  const right = rowRight(status, thread.unread, threadTime(thread.updatedAt, timeZone));
+  const dot = rowStatusDot(status, thread.unread);
   return (
     <SidebarRow
+      variant="card"
+      className="pl-2"
       testId={`agent-thread-${thread.id}`}
       selected={selected}
       leading={
@@ -198,7 +201,6 @@ function InlineThreadRow({
           color={thread.color}
         />
       }
-      trailing={right}
       actions={
         hasMenu ? (
           <>
@@ -246,9 +248,20 @@ function InlineThreadRow({
         {thread.parentThreadId ? (
           <GitBranchIcon className="size-2.5 shrink-0 text-muted-foreground" aria-hidden />
         ) : null}
-        <SidebarRowTitle className={cn(thread.unread && 'font-medium')}>
+        <span
+          className={cn(
+            'block truncate font-medium text-[11px] leading-tight',
+            selected || thread.unread ? 'text-sidebar-foreground' : 'text-muted-foreground',
+          )}
+        >
           {thread.title}
-        </SidebarRowTitle>
+        </span>
+      </span>
+      <span className="mt-px flex items-center justify-between gap-2">
+        <span className="block truncate font-mono text-[10px] text-muted-foreground/60 leading-snug">
+          {formatDayTime(thread.updatedAt, timeZone)}
+        </span>
+        {dot}
       </span>
     </SidebarRow>
   );

@@ -48,7 +48,7 @@ export function resolveRuntimePrimary(
   const threadDir = deps.layout.threadDir(deps.orgId, deps.threadId);
   const environment = options?.environment;
   if (!isAnchoredEnvironment(environment)) {
-    return { primaryDirectory: threadDir, primaryKind: 'sandbox' };
+    return { primaryDirectory: threadDir, primaryKind: 'thread' };
   }
   const anchor = environment.anchor;
   if (anchor.kind === 'folder') {

@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 function environment(partial: Partial<RunEnvironment>): RunEnvironment {
-  return { anchor: null, cwd: 'sandbox', provenance: 'fallback', ...partial };
+  return { anchor: null, cwd: 'thread', provenance: 'fallback', ...partial };
 }
 
 describe('prepareTarget runtime context', () => {
@@ -18,7 +18,7 @@ describe('prepareTarget runtime context', () => {
     const chat = build(undefined, undefined, ['src-1']);
     const chatThreadDir = join(currentBaseDir(), 'org-1', 'thread-1');
     const chatPrepared = prepareTarget(chat.deps, 'thread-1', 'agent-1', chat.cache);
-    expect(chatPrepared?.runtime.primaryKind).toBe('sandbox');
+    expect(chatPrepared?.runtime.primaryKind).toBe('thread');
     expect(chatPrepared?.runtime.primaryDirectory).toBe(chatThreadDir);
     expect(chatPrepared?.paths.cwd).toBe(chatThreadDir);
     expect(chatPrepared?.paths.threadDir).toBe(chatThreadDir);
@@ -35,9 +35,9 @@ describe('prepareTarget runtime context', () => {
       'thread-1',
       'agent-1',
       scheduled.cache,
-      { environment: environment({ anchor: null, cwd: 'sandbox', provenance: 'run' }) },
+      { environment: environment({ anchor: null, cwd: 'thread', provenance: 'run' }) },
     );
-    expect(scheduledPrepared?.runtime.primaryKind).toBe('sandbox');
+    expect(scheduledPrepared?.runtime.primaryKind).toBe('thread');
     expect(scheduledPrepared?.runtime.primaryDirectory).toBe(scheduledThreadDir);
     expect(scheduledPrepared?.paths.cwd).toBe(scheduledThreadDir);
 

@@ -253,8 +253,8 @@ function WorkspacePopoverBody({
           onPatch(null);
           onClose();
         }}
-        onSandbox={() => {
-          onPatch({ kind: 'sandbox' });
+        onThreadMode={() => {
+          onPatch({ kind: 'thread' });
           onClose();
         }}
         onSource={(sourceId) => {

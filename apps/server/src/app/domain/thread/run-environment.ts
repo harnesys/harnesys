@@ -9,7 +9,7 @@ export interface MaterializePrimaryInput {
 
 export interface MaterializedPrimary {
   primaryDirectory: string;
-  primaryKind: 'sandbox' | 'directory' | 'worktree' | 'source';
+  primaryKind: 'thread' | 'directory' | 'worktree' | 'source';
 }
 
 const SYSTEM_ROOTS = [
@@ -56,8 +56,8 @@ export function materializePrimary(
   input: MaterializePrimaryInput,
 ): MaterializedPrimary {
   const anchor = environment.anchor;
-  if (environment.cwd === 'sandbox' || anchor === null) {
-    return { primaryDirectory: input.threadDir, primaryKind: 'sandbox' };
+  if (environment.cwd === 'thread' || anchor === null) {
+    return { primaryDirectory: input.threadDir, primaryKind: 'thread' };
   }
   const anchorRoot = input.anchorRoot;
   if (anchorRoot === null) {

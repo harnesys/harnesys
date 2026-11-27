@@ -6,7 +6,7 @@ const chatSandbox: RuntimePromptInfo = {
   hostName: 'local',
   environment: 'host',
   primaryDirectory: '/org/thread',
-  primaryKind: 'sandbox',
+  primaryKind: 'thread',
   threadDir: '/org/thread',
   sharedSources: [
     {
@@ -52,11 +52,11 @@ const sourceBase: RuntimePromptInfo = {
 };
 
 describe('formatRuntimeSection', () => {
-  test('chat sandbox renders sources with description and index state, omitting empty description', () => {
+  test('chat thread run renders sources with description and index state, omitting empty description', () => {
     const text = formatRuntimeSection(chatSandbox);
     expect(text).toContain('Host: local');
     expect(text).toContain('Environment: Host');
-    expect(text).toContain('- You are working inside `/org/thread` (sandbox).');
+    expect(text).toContain('- You are working inside `/org/thread` (thread).');
     expect(text).toContain(
       '- Prefer relative paths for files inside the run root; absolute paths only for files outside it. Access outside the run root requires user approval.',
     );

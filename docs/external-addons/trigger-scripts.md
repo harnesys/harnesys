@@ -118,7 +118,7 @@ are switched to a non-`always` agent mode.
 Both stages run with `cwd` equal to the directory the run itself will use, produced by the
 same code: `resolveRunEnvironment` + `resolveRuntimePrimary`
 (`apps/server/src/app/infra/thread/run-cwd.adapter.ts`). Folder -> exact path, source ->
-root + subpath, sandbox -> `<threadDir>/sandbox`. The resolved path is pinned on the pending
+root + subpath, thread -> the thread dir itself. The resolved path is pinned on the pending
 row; `pwd` inside the script is that directory. It never falls back to `$HOME` or to the
 server working directory.
 

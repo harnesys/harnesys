@@ -35,7 +35,7 @@ export type IdeTabKind =
   | 'attachment'
   | 'thread-file';
 export interface PersistedFileRef {
-  source: 'project' | 'thread-sandbox' | 'thread-attachment' | 'issue-attachment';
+  source: 'project' | 'thread' | 'thread-attachment' | 'issue-attachment';
   projectId?: string;
   path?: string;
   worktreeId?: string;

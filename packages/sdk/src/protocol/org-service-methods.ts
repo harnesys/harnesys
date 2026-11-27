@@ -6,7 +6,7 @@ const str = z.string().min(1);
 
 const TriggerWorkspaceSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('inherit') }),
-  z.object({ kind: z.literal('sandbox') }),
+  z.object({ kind: z.literal('thread') }),
   z.object({ kind: z.literal('folder'), path: str, hostId: str.optional() }),
   z.object({ kind: z.literal('source'), sourceId: str, subpath: str.optional() }),
   z.object({

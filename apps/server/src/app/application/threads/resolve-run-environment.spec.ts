@@ -166,14 +166,14 @@ describe('resolveRunEnvironment', () => {
   });
 
   test('passes provenance through from the thread layer', () => {
-    const environment = resolveRunEnvironment(deps(thread({ kind: 'sandbox' }), agent()), {
+    const environment = resolveRunEnvironment(deps(thread({ kind: 'thread' }), agent()), {
       threadId: 'thread-1',
       agentId: 'agent-1',
       issue: false,
     });
     expect(environment.provenance).toBe('thread');
     expect(environment.anchor).toBeNull();
-    expect(environment.cwd).toBe('sandbox');
+    expect(environment.cwd).toBe('thread');
   });
 
   test('an issue thread without a ref falls back to the agent default', () => {

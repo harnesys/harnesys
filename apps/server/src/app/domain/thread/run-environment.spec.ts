@@ -11,7 +11,7 @@ const ROOT = '/data/orgs/org-1/sources/src-1';
 const THREAD_DIR = '/data/orgs/org-1/threads/thread-1';
 
 function environment(partial: Partial<RunEnvironment>): RunEnvironment {
-  return { anchor: null, cwd: 'sandbox', provenance: 'fallback', ...partial };
+  return { anchor: null, cwd: 'thread', provenance: 'fallback', ...partial };
 }
 
 describe('assertRelativeSubpath', () => {
@@ -58,12 +58,12 @@ describe('assertFolderAllowed', () => {
 });
 
 describe('materializePrimary', () => {
-  test('sandbox cwd runs inside the thread dir', () => {
-    const primary = materializePrimary(environment({ cwd: 'sandbox' }), {
+  test('thread cwd runs inside the thread dir', () => {
+    const primary = materializePrimary(environment({ cwd: 'thread' }), {
       anchorRoot: null,
       threadDir: THREAD_DIR,
     });
-    expect(primary).toEqual({ primaryDirectory: THREAD_DIR, primaryKind: 'sandbox' });
+    expect(primary).toEqual({ primaryDirectory: THREAD_DIR, primaryKind: 'thread' });
   });
 
   test('folder anchor maps to a directory primary', () => {
@@ -103,15 +103,15 @@ describe('materializePrimary', () => {
     expect(primary).toEqual({ primaryDirectory: ROOT, primaryKind: 'worktree' });
   });
 
-  test('container source anchor with sandbox cwd runs inside the thread dir', () => {
+  test('container source anchor with thread cwd runs inside the thread dir', () => {
     const primary = materializePrimary(
       environment({
         anchor: { kind: 'source', sourceId: 'src-1' },
-        cwd: 'sandbox',
+        cwd: 'thread',
         provenance: 'run',
       }),
       { anchorRoot: ROOT, threadDir: THREAD_DIR },
     );
-    expect(primary).toEqual({ primaryDirectory: THREAD_DIR, primaryKind: 'sandbox' });
+    expect(primary).toEqual({ primaryDirectory: THREAD_DIR, primaryKind: 'thread' });
   });
 });

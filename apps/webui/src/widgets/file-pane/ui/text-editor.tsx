@@ -37,7 +37,7 @@ function editorModelPath(target: FileRef): string {
   if (target.source === 'project') {
     return `file:///${target.path.replace(/^\/+/, '')}`;
   }
-  if (target.source === 'thread-sandbox') {
+  if (target.source === 'thread') {
     return `file:///_threads/${target.threadId}/${target.path.replace(/^\/+/, '')}`;
   }
   return `file:///_attachments/${fileRefKey(target)}`;

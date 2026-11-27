@@ -23,7 +23,7 @@ export function threadFileRootOfPath(raw: string, threadDir: string): ThreadFile
   if (root === 'attachments' || root === 'tool-outputs') {
     return root;
   }
-  return 'sandbox';
+  return 'thread';
 }
 
 export function threadFileRootsFromEvents(
@@ -47,7 +47,7 @@ function addToolEventRoots(
   if (event.sideEffect === 'write' || event.sideEffect === 'destructive') {
     const paths = inputPathsOf(event.input);
     if (paths.length === 0) {
-      roots.add('sandbox');
+      roots.add('thread');
     }
     for (const candidate of paths) {
       const root = threadFileRootOfPath(candidate, threadDir);

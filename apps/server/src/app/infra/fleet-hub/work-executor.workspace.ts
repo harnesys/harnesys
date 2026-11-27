@@ -26,7 +26,7 @@ export function primaryTargetOf(
     return { directory: worktreeRoot ?? threadDir, requireDirectory: false };
   }
   const anchor = environment.anchor;
-  if (anchor === null || environment.cwd === 'sandbox') {
+  if (anchor === null || environment.cwd === 'thread') {
     return { directory: threadDir, requireDirectory: false };
   }
   if (anchor.kind === 'folder') {

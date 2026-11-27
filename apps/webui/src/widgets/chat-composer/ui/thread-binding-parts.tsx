@@ -21,7 +21,7 @@ import { sourceHasGitVcs } from '@/shared/api/sources';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
 
 export const INHERIT_VALUE = '__inherit__';
-export const SANDBOX_VALUE = '__sandbox__';
+export const THREAD_MODE_VALUE = '__thread__';
 export const SOURCE_PREFIX = 'source:';
 export const FOLDER_PREFIX = 'folder:';
 
@@ -47,8 +47,8 @@ export function workspaceValueOf(ref: WorkspaceRef | null): string {
   if (ref === null || ref.kind === 'inherit') {
     return INHERIT_VALUE;
   }
-  if (ref.kind === 'sandbox') {
-    return SANDBOX_VALUE;
+  if (ref.kind === 'thread') {
+    return THREAD_MODE_VALUE;
   }
   if (ref.kind === 'folder') {
     return `${FOLDER_PREFIX}${ref.path}`;
@@ -78,7 +78,7 @@ export function WorkspaceOptions({
   recents,
   currentValue,
   onInherit,
-  onSandbox,
+  onThreadMode,
   onSource,
   onFolder,
   onCustom,
@@ -87,7 +87,7 @@ export function WorkspaceOptions({
   recents: string[];
   currentValue: string;
   onInherit: () => void;
-  onSandbox: () => void;
+  onThreadMode: () => void;
   onSource: (sourceId: string) => void;
   onFolder: (path: string) => void;
   onCustom: () => void;
@@ -109,8 +109,8 @@ export function WorkspaceOptions({
         icon={<FolderIcon className="size-4" />}
         label="Thread directory"
         detail="Private to this thread"
-        selected={currentValue === SANDBOX_VALUE}
-        onClick={onSandbox}
+        selected={currentValue === THREAD_MODE_VALUE}
+        onClick={onThreadMode}
       />
       {dirSources.length > 0 ? (
         <div className="mt-1 px-2 py-1 font-mono text-[10px] text-muted-foreground uppercase tracking-wide">

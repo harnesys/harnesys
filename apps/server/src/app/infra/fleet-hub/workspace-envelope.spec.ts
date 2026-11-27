@@ -159,10 +159,10 @@ describe('workspace envelope roundtrip', () => {
     expect(primaryCwd({ ...legacyWorkspaceFieldsOf(environment) })).toBe(THREAD);
   });
 
-  test('sandbox anchor materializes in the thread dir for either envelope shape', () => {
+  test('thread environment materializes in the thread dir for either envelope shape', () => {
     const environment: RunEnvironment = {
       anchor: null,
-      cwd: 'sandbox',
+      cwd: 'thread',
       provenance: 'fallback',
     };
     expect(primaryCwd({ environment })).toBe(THREAD);
