@@ -1,34 +1,102 @@
-import { parseFileArtifact as parseFileToolArtifact } from '@harnesys/studio-shared';
+import {
+  parseFileArtifact as parseAttachmentToolArtifact,
+  parseLinkArtifact as parseLinkToolArtifact,
+} from '@harnesys/studio-shared';
 import { DownloadIcon } from 'lucide-react';
 import type { ToolEventPair } from '@/entities/session';
 import { openFile } from '@/features/ide';
-import { loadThreadAttachment } from '@/shared/api';
+import { blobContentBackend, type FileRef, fileRefKey } from '@/features/open-file';
 import { useAuthedBlobUrl } from '@/shared/api/blob-url';
 import { cn } from '@/shared/lib/utils';
 import { FileTypeIcon } from '@/shared/ui/icons';
+import type { ImageArtifactInfo } from './image-artifact';
 
 export interface FileArtifactInfo {
-  attachmentId: string;
+  key: string;
+  ref: FileRef;
   name: string;
   mediaType: string;
   size: number;
 }
 
-export function parseFileArtifact(pair: ToolEventPair): FileArtifactInfo | null {
-  const artifact = parseFileToolArtifact({
-    name: pair.call.name,
-    phase: pair.result?.phase,
-    output: pair.result?.output,
-  });
-  if (!artifact) {
-    return null;
-  }
-  return {
+function attachmentInfo(
+  artifact: { attachmentId: string; name: string; mediaType: string; sizeBytes?: number },
+  threadId: string,
+): FileArtifactInfo {
+  const ref: FileRef = {
+    source: 'thread-attachment',
+    threadId,
     attachmentId: artifact.attachmentId,
+    name: artifact.name,
+    mediaType: artifact.mediaType,
+  };
+  return {
+    key: fileRefKey(ref),
+    ref,
     name: artifact.name,
     mediaType: artifact.mediaType,
     size: artifact.sizeBytes ?? 0,
   };
+}
+
+export function parseFileArtifact(pair: ToolEventPair, threadId?: string): FileArtifactInfo | null {
+  const artifact = parseAttachmentToolArtifact({
+    phase: pair.result?.phase,
+    output: pair.result?.output,
+  });
+  if (!artifact || !threadId) {
+    return null;
+  }
+  return attachmentInfo(artifact, threadId);
+}
+
+export function parseLinkFileArtifact(pair: ToolEventPair): FileArtifactInfo | null {
+  const artifact = parseLinkToolArtifact({
+    phase: pair.result?.phase,
+    output: pair.result?.output,
+  });
+  if (!artifact || artifact.mediaType.startsWith('image/')) {
+    return null;
+  }
+  return linkInfo(artifact);
+}
+
+function linkInfo(artifact: ReturnType<typeof parseLinkToolArtifact>): FileArtifactInfo | null {
+  if (!artifact) {
+    return null;
+  }
+  const target = artifact.target;
+  if (target.source === 'thread' ? !target.threadId : !target.projectId) {
+    return null;
+  }
+  const ref: FileRef =
+    target.source === 'thread'
+      ? { source: 'thread', threadId: target.threadId ?? '', path: target.path }
+      : {
+          source: 'project',
+          projectId: target.projectId ?? '',
+          path: target.path,
+          ...(target.worktreeId !== undefined ? { worktreeId: target.worktreeId } : {}),
+        };
+  return {
+    key: fileRefKey(ref),
+    ref,
+    name: artifact.name,
+    mediaType: artifact.mediaType,
+    size: artifact.sizeBytes ?? 0,
+  };
+}
+
+export function parseLinkImageArtifact(pair: ToolEventPair): ImageArtifactInfo | null {
+  const artifact = parseLinkToolArtifact({
+    phase: pair.result?.phase,
+    output: pair.result?.output,
+  });
+  if (!artifact?.mediaType.startsWith('image/')) {
+    return null;
+  }
+  const info = linkInfo(artifact);
+  return info === null ? null : { key: info.key, ref: info.ref, name: info.name };
 }
 
 function formatBytes(size: number): string {
@@ -42,22 +110,18 @@ function formatBytes(size: number): string {
 }
 
 export function FileArtifact({
-  threadId,
-  attachmentId,
+  fileRef,
   name,
   mediaType,
   size,
 }: {
-  threadId: string;
-  attachmentId: string;
+  fileRef: FileRef;
   name: string;
   mediaType: string;
   size: number;
 }) {
-  const { url, error } = useAuthedBlobUrl(
-    () => loadThreadAttachment(threadId, attachmentId),
-    `${threadId}:${attachmentId}`,
-  );
+  const backend = blobContentBackend(fileRef);
+  const { url, error } = useAuthedBlobUrl(backend.load, backend.key);
   if (error) {
     return <div className="text-muted-foreground text-xs">Failed to load file</div>;
   }
@@ -69,9 +133,7 @@ export function FileArtifact({
       <button
         type="button"
         title={`${mediaType} · ${formatBytes(size)}`}
-        onClick={() =>
-          openFile({ source: 'thread-attachment', threadId, attachmentId, name, mediaType })
-        }
+        onClick={() => openFile(fileRef)}
         className={cn(
           'inline-flex h-9 max-w-md items-center gap-2 rounded-lg border px-2.5',
           'bg-muted/30 text-foreground transition-colors hover:bg-muted/60',

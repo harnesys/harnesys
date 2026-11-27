@@ -12,6 +12,7 @@ export interface ThreadAttachmentRecord {
   name: string;
   mediaType: string;
   kind: AttachmentKind;
+  sizeBytes: number;
 
   path: string;
 }

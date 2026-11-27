@@ -126,6 +126,7 @@ export interface FileToolPayload {
   kind: AttachmentKind;
   attachmentId?: string;
   name?: string;
+  sizeBytes?: number;
 }
 export type FileToolResult = { ok: true } & FileToolPayload;
 export type MaterializationReason =
@@ -145,14 +146,8 @@ export interface ToolMedia {
   inserts: MediaInsert[];
   stats: { materialized: number; failed: number };
 }
-export const FILE_TOOL_SOURCE_NAMES: ReadonlySet<string> = new Set([
-  'file_read',
-  'file_read_image',
-  'image_generate',
-  'gmail_download_attachment',
-]);
-export function parseFileToolResult(toolName: string, content: string): FileToolResult | undefined {
-  if (!FILE_TOOL_SOURCE_NAMES.has(toolName) || !content.startsWith('{')) {
+export function parseFileToolResult(content: string): FileToolResult | undefined {
+  if (!content.startsWith('{')) {
     return undefined;
   }
   try {
@@ -333,7 +328,7 @@ function groupToolMessages(messages: HistoryMessage[]): ToolGroup[] {
       current = undefined;
       continue;
     }
-    const payload = parseFileToolResult(message.name ?? '', message.content);
+    const payload = parseFileToolResult(message.content);
     if (!payload || !VISION_IMAGE_TYPES.includes(payload.mediaType)) {
       current = undefined;
       continue;

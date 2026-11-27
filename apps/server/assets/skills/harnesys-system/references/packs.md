@@ -59,6 +59,7 @@ Settings: `root` (string), `blocklist` (string[]). Gates: `fs.read` for reads, `
 | `list_dir` | List directory entries under the workdir. |
 | `glob` | Find files by glob pattern. |
 | `grep` | Search file contents with a regular expression. |
+| `attach_file` | Attach a file to the agent reply for the user: `mode: 'copy'` (default) snapshots bytes as a thread attachment (generated deliverables), `mode: 'link'` references an existing thread-dir or connected-source file in place. Read-gated; `name` overrides the display name. |
 
 Batches (`write_file` `files`, `edit_file` `edits`, `delete_file` `paths`, `move_file` `moves`): business errors (missing source, blocked path, `old_string` miss, target collision) land in `failed[]` while valid entries still apply; an access-policy denial on any path aborts the whole call before anything executes. Overwrite defaults differ on purpose: `write_file` replaces unless `overwrite: false`, `move_file` refuses unless `overwrite: true`.
 

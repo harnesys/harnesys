@@ -20,6 +20,7 @@ import type { WireOrgPackContext } from './org-pack-registrations.ts';
 import { OrgPinPort } from './org-pin.port.ts';
 import { OrgSemanticPort } from './org-semantic.port.ts';
 import { OrgThreadAttachmentPort } from './org-thread-attachment.port.ts';
+import { OrgThreadFileLinkPort } from './org-thread-file-link.port.ts';
 import { OrgThreadsPort } from './org-threads.port.ts';
 import type { WireOrgPacksDeps } from './wire-org-packs.ts';
 
@@ -224,4 +225,12 @@ export function threadAttachmentPortOf(
     return undefined;
   }
   return new OrgThreadAttachmentPort({ threads, layout });
+}
+
+export function threadFileLinkPortOf(ctx: WireOrgPackContext): OrgThreadFileLinkPort | undefined {
+  const { threads, layout, sources, sourceLocation, machineConfig } = ctx.deps;
+  if (!threads || !layout || !sources || !sourceLocation || !machineConfig) {
+    return undefined;
+  }
+  return new OrgThreadFileLinkPort({ threads, layout, sources, sourceLocation, machineConfig });
 }

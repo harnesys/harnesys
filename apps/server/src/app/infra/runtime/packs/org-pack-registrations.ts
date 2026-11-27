@@ -30,6 +30,7 @@ import {
   knowledgeRegistration,
   memoryRegistration,
   threadAttachmentPortOf,
+  threadFileLinkPortOf,
   threadsRegistration,
   webRegistration,
 } from './org-pack-registrations.helpers.ts';
@@ -57,7 +58,7 @@ export function registrationForPack(packName: string, ctx: WireOrgPackContext) {
     case 'core':
       return registerPack(coreCapability, { resolveScope: ctx.stubScope });
     case 'files':
-      return registerPack(filesCapability, { resolveScope: ctx.stubScope });
+      return filesRegistration(ctx);
     case 'image':
       return imageRegistration(ctx);
     case 'shell':
@@ -99,6 +100,18 @@ export function registrationForPack(packName: string, ctx: WireOrgPackContext) {
     default:
       return undefined;
   }
+}
+
+function filesRegistration(ctx: WireOrgPackContext) {
+  const attachments = threadAttachmentPortOf(ctx);
+  const links = threadFileLinkPortOf(ctx);
+  if (!attachments || !links) {
+    return registerPack(filesCapability, { resolveScope: ctx.stubScope });
+  }
+  return registerPack(filesCapability, {
+    ports: { attachments, links, resolveScope: ctx.liveScope },
+    resolveScope: ctx.stubScope,
+  });
 }
 
 function imageRegistration(ctx: WireOrgPackContext) {

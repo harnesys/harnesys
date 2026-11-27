@@ -79,9 +79,12 @@ export async function createRuntime(options: CreateRuntimeOptions): Promise<Runt
   }
   const processJobs = createProcessJobRegistry();
   const baseRegistrations = [
-    ...[filesCapability, webCapability]
-      .filter((pack) => !suppliedNames.has(pack.name))
-      .map((pack) => registerPack(pack, { resolveScope: stubScope })),
+    ...(suppliedNames.has(filesCapability.name)
+      ? []
+      : [registerPack(filesCapability, { ports: {}, resolveScope: stubScope })]),
+    ...(suppliedNames.has(webCapability.name)
+      ? []
+      : [registerPack(webCapability, { ports: {}, resolveScope: stubScope })]),
     ...(suppliedNames.has(shellCapability.name)
       ? []
       : [

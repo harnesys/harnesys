@@ -23,7 +23,7 @@ function toolRecordOf(message: unknown): ToolRecord | undefined {
   return { message: m, content: m.content, isError: m.isError, name: m.name };
 }
 function isMediaPayload(record: ToolRecord): boolean {
-  const payload = parseFileToolResult(String(record.name ?? ''), record.content);
+  const payload = parseFileToolResult(record.content);
   return payload !== undefined && VISION_IMAGE_TYPES.includes(payload.mediaType);
 }
 function isAssistantRound(message: unknown): boolean {

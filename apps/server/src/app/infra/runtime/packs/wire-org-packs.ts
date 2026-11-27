@@ -20,6 +20,7 @@ import { PackRegistryPort } from '../../../domain/capabilities/pack-registry.por
 import { DeskEventsPort } from '../../../domain/desk/desk-events.port.ts';
 import { LspPort } from '../../../domain/lsp/lsp.port.ts';
 import { HostFsLayoutPort } from '../../../domain/machine/host-fs-layout.port.ts';
+import { MachineConfigPort } from '../../../domain/machine/machine-config.port.ts';
 import { ModePresetRegistryPort } from '../../../domain/mode-presets/mode-preset-registry.port.ts';
 import { PermissionRuleStorePort } from '../../../domain/permissions/permission-rule-store.port.ts';
 import { PlanEventsPort } from '../../../domain/plan/plan-events.port.ts';
@@ -27,6 +28,7 @@ import { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-prov
 import { isHostWired, orgPackNames } from '../../../domain/runtime/org-pack-list.ts';
 import { SecretStorePort } from '../../../domain/secret/secret-store.port.ts';
 import { OrgSettingsPort } from '../../../domain/skills/org-settings.port.ts';
+import { SourceLocationPort } from '../../../domain/source/source-location.port.ts';
 import { SourceRegistryPort } from '../../../domain/source/source-registry.port.ts';
 import { TerminalSessionsPort } from '../../../domain/terminal/terminal-session.port.ts';
 import { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
@@ -66,6 +68,8 @@ export interface WireOrgPacksDeps {
   manager?: OrgManagerDeps;
   knowledge?: OrgKnowledgeDeps;
   sources?: SourceRegistryPort;
+  sourceLocation?: SourceLocationPort;
+  machineConfig?: MachineConfigPort;
   planDb?: OrgSqliteDb;
   planEvents?: PlanEventsPort;
   memoryDb?: OrgSqliteDb;
@@ -131,6 +135,8 @@ export function orgPackInputs(
     providers: deps.providers,
     models: deps.models,
     sources: deps.sources,
+    sourceLocation: deps.sourceLocation,
+    machineConfig: deps.machineConfig,
     planDb: db,
     planEvents: deps.planEvents,
     memoryDb: db,

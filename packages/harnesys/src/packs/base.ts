@@ -1,13 +1,22 @@
 import { files, shell } from '../adapters/actions';
 import type { FilesOptions } from '../adapters/actions/files-options.ts';
+import type { CapabilityScope } from '../domain/pack.ts';
 import { definePack } from '../domain/pack.ts';
 import type { ProcessJobRecord, ProcessJobRegistry } from '../domain/process-job.ts';
+import type { ThreadAttachmentPort } from '../ports/thread-attachments.ts';
+import type { ThreadFileLinkPort } from '../ports/thread-file-links.ts';
+import { attachFileTool } from './files/attach-file.ts';
 import type { ShellOptions } from './shell/shell.ts';
 import { type TerminalSessionPorts } from './shell/terminal-targets.ts';
 import { terminalTools } from './shell/terminal-tools.ts';
 export interface FilesPackSpec {
   root?: string;
   blocklist?: string[];
+}
+export interface FilesPackPorts {
+  attachments?: ThreadAttachmentPort;
+  links?: ThreadFileLinkPort;
+  resolveScope?: () => CapabilityScope;
 }
 export interface ShellPackSpec {
   timeout?: number;
@@ -43,11 +52,11 @@ function stringList(value: unknown): string[] | undefined {
   );
   return list.length > 0 ? list : undefined;
 }
-export const filesCapability = definePack<Record<string, unknown>, FilesPackSpec>({
+export const filesCapability = definePack<FilesPackPorts, FilesPackSpec>({
   name: 'files',
   version: '1.0.0',
   description:
-    'Project files: read_file / file_read_image / write_file / edit_file / delete_file / move_file / list_dir / glob / grep',
+    'Project files: read_file / file_read_image / write_file / edit_file / delete_file / move_file / list_dir / glob / grep / attach_file',
   icon: 'files',
   specSchema: {
     type: 'object',
@@ -107,11 +116,32 @@ export const filesCapability = definePack<Record<string, unknown>, FilesPackSpec
       { name: 'list_dir', description: 'List directory entries under the workdir.' },
       { name: 'glob', description: 'Find files by glob pattern under the workdir.' },
       { name: 'grep', description: 'Search file contents with a regular expression.' },
+      {
+        name: 'attach_file',
+        description:
+          'Attach a file to the agent reply for the user to open from the chat: mode "copy" snapshots it as a thread attachment (generated deliverables), mode "link" references an existing thread-dir or source file in place.',
+      },
     ],
     skills: [],
     hasSettings: true,
   },
-  create: (ctx) => ({ tools: files(filesOptionsFromSpec(ctx.spec)) }),
+  create: (ctx) => {
+    const options = filesOptionsFromSpec(ctx.spec);
+    const { attachments, links, resolveScope } = ctx.ports;
+    return {
+      tools: [
+        ...files(options),
+        ...(attachments !== undefined && links !== undefined
+          ? [
+              attachFileTool(
+                { attachments, links, resolveScope: resolveScope ?? (() => ctx.scope) },
+                options,
+              ),
+            ]
+          : []),
+      ],
+    };
+  },
 });
 export interface ShellPackPorts extends TerminalSessionPorts {
   jobs: ProcessJobRegistry;

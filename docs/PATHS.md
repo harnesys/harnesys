@@ -25,6 +25,7 @@ A relative path never changes meaning based on which files exist on disk.
 | REST thread-files (`/orgs/:orgId/threads/:threadId/files`, WebUI) | thread dir; any dot-free path under it (default `subPath` = root) | rejected |
 | Source content REST (`/orgs/:orgId/sources/:sourceId/content`) | source root | rejected (path-jail) |
 | DB storage columns (`attachments.path`, `issue_attachments.path`) | thread/issue dir, internal only — never handed to the model verbatim | n/a |
+| Tool-result `link` refs (`attach_file` mode `link`) | anchor is part of the structure, not the string: `{source:'thread', threadId, path}` is thread-dir-relative, `{source:'project', projectId, path, worktreeId?}` is source-root-relative | sibling `path` field stays absolute (§4) |
 
 ## 3. Thread mode: the thread dir is the run root
 

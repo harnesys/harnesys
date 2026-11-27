@@ -23,7 +23,12 @@ import { toolDetail, toolMeta } from '../model/tool-output';
 import type { ActivityBadge, ActivityBadgeTone } from './activity-line';
 import { ActivityLine } from './activity-line';
 import type { FileArtifactInfo } from './file-artifact';
-import { FileArtifact, parseFileArtifact } from './file-artifact';
+import {
+  FileArtifact,
+  parseFileArtifact,
+  parseLinkFileArtifact,
+  parseLinkImageArtifact,
+} from './file-artifact';
 import type { ImageArtifactInfo } from './image-artifact';
 import { ImageArtifact, parseImageArtifact } from './image-artifact';
 import { MapItems } from './map-items';
@@ -64,29 +69,43 @@ function confirmBadge(awaiting: boolean): ActivityBadge {
 function artifactBodyOf(
   image: ImageArtifactInfo | null,
   file: FileArtifactInfo | null,
-  threadId: string | undefined,
+  linkImage: ImageArtifactInfo | null,
+  linkFile: FileArtifactInfo | null,
 ): ReactNode {
-  if (image && threadId) {
+  if (image) {
     return (
       <div className="pb-1">
-        <ImageArtifact
-          threadId={threadId}
-          attachmentId={image.attachmentId}
-          name={image.name}
-          mediaType={image.mediaType}
+        <ImageArtifact fileRef={image.ref} name={image.name} />
+      </div>
+    );
+  }
+  if (file) {
+    return (
+      <div className="pb-1">
+        <FileArtifact
+          fileRef={file.ref}
+          name={file.name}
+          mediaType={file.mediaType}
+          size={file.size}
         />
       </div>
     );
   }
-  if (file && threadId) {
+  if (linkImage) {
+    return (
+      <div className="pb-1">
+        <ImageArtifact fileRef={linkImage.ref} name={linkImage.name} />
+      </div>
+    );
+  }
+  if (linkFile) {
     return (
       <div className="pb-1">
         <FileArtifact
-          threadId={threadId}
-          attachmentId={file.attachmentId}
-          name={file.name}
-          mediaType={file.mediaType}
-          size={file.size}
+          fileRef={linkFile.ref}
+          name={linkFile.name}
+          mediaType={linkFile.mediaType}
+          size={linkFile.size}
         />
       </div>
     );
@@ -184,7 +203,8 @@ export function ToolLine({
   const [expanded, setExpanded] = useState(false);
   const map = useFeedMap(threadId ?? null, pair.call.toolCallId);
   const truncatedSeq = truncatedEventSeq(pair);
-  const hasImageArtifact = parseImageArtifact(pair) !== null;
+  const hasImageArtifact =
+    parseImageArtifact(pair, threadId) !== null || parseLinkImageArtifact(pair) !== null;
   const autoOpen =
     isAutoOpen(feedDetail, live) || (feedDetail !== 'manual' && Boolean(map)) || hasImageArtifact;
   const fullEvent = useQuery({
@@ -208,8 +228,10 @@ export function ToolLine({
   const failed = pair.result?.phase === 'failed' || map?.status === 'failed';
   const rawInput = toolInput(view);
   const hasInput = Boolean(rawInput.trim().length > 0);
-  const image = parseImageArtifact(view);
-  const file = parseFileArtifact(view);
+  const image = parseImageArtifact(view, threadId);
+  const file = parseFileArtifact(view, threadId);
+  const linkImage = parseLinkImageArtifact(view);
+  const linkFile = parseLinkFileArtifact(view);
   const exitFailed =
     detail.type === 'terminal' && detail.exitCode !== undefined && detail.exitCode !== 0;
   const httpFailed = detail.type === 'http' && (!detail.ok || detail.status >= 400);
@@ -270,7 +292,9 @@ export function ToolLine({
             <MapItems map={map} />
           </div>
         ) : null}
-        {artifactBodyOf(image, file, threadId) ?? <ToolDetailView detail={detail} />}{' '}
+        {artifactBodyOf(image, file, linkImage, linkFile) ?? (
+          <ToolDetailView detail={detail} />
+        )}{' '}
       </ActivityLine>
 
       {hasInput ? (

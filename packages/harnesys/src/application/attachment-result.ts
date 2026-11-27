@@ -15,5 +15,6 @@ export function attachmentToolResultOf(
     name: record.name,
     mediaType: record.mediaType,
     kind: record.kind,
+    sizeBytes: record.sizeBytes,
   };
 }

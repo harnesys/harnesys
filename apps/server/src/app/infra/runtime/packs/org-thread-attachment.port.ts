@@ -43,6 +43,7 @@ export class OrgThreadAttachmentPort extends ThreadAttachmentPort {
       name: record.name,
       mediaType: record.mediaType,
       kind: record.kind,
+      sizeBytes: record.sizeBytes,
       path: record.path,
     };
   }

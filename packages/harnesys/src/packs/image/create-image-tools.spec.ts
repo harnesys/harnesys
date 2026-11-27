@@ -39,6 +39,7 @@ class FakeImageGenerationPort extends ImageGenerationPort {
       name: 'cat.png',
       mediaType: 'image/png',
       kind: 'image',
+      sizeBytes: 1234,
       path: 'attachments/att-1/cat.png',
     };
   }
@@ -60,6 +61,7 @@ describe('createImageTools', () => {
       name: 'cat.png',
       mediaType: 'image/png',
       kind: 'image',
+      sizeBytes: 1234,
     });
     expect(port.calls).toHaveLength(1);
     expect(port.calls[0]?.scope).toEqual(scope);

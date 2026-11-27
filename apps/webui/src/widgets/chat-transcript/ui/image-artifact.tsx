@@ -3,30 +3,35 @@ import { CheckIcon, CopyIcon, DownloadIcon } from 'lucide-react';
 import { useState } from 'react';
 import type { ToolEventPair } from '@/entities/session';
 import { openFile } from '@/features/ide';
-import { loadThreadAttachment } from '@/shared/api';
+import { blobContentBackend, type FileRef, fileRefKey } from '@/features/open-file';
 import { useAuthedBlobUrl } from '@/shared/api/blob-url';
 import { cn } from '@/shared/lib/utils';
 
 export interface ImageArtifactInfo {
-  attachmentId: string;
+  key: string;
+  ref: FileRef;
   name: string;
-  mediaType: string;
 }
 
-export function parseImageArtifact(pair: ToolEventPair): ImageArtifactInfo | null {
+export function parseImageArtifact(
+  pair: ToolEventPair,
+  threadId?: string,
+): ImageArtifactInfo | null {
   const artifact = parseImageToolArtifact({
-    name: pair.call.name,
     phase: pair.result?.phase,
     output: pair.result?.output,
   });
-  if (!artifact) {
+  if (!artifact || !threadId) {
     return null;
   }
-  return {
+  const ref: FileRef = {
+    source: 'thread-attachment',
+    threadId,
     attachmentId: artifact.attachmentId,
     name: artifact.name,
     mediaType: artifact.mediaType,
   };
+  return { key: fileRefKey(ref), ref, name: artifact.name };
 }
 
 const COPY_FLASH_MS = 1500;
@@ -55,21 +60,9 @@ async function pngBlobOf(source: Blob): Promise<Blob> {
   });
 }
 
-export function ImageArtifact({
-  threadId,
-  attachmentId,
-  name,
-  mediaType,
-}: {
-  threadId: string;
-  attachmentId: string;
-  name: string;
-  mediaType: string;
-}) {
-  const { url, error } = useAuthedBlobUrl(
-    () => loadThreadAttachment(threadId, attachmentId),
-    `${threadId}:${attachmentId}`,
-  );
+export function ImageArtifact({ fileRef, name }: { fileRef: FileRef; name: string }) {
+  const backend = blobContentBackend(fileRef);
+  const { url, error } = useAuthedBlobUrl(backend.load, backend.key);
   const [copied, setCopied] = useState(false);
   const [imageCopied, setImageCopied] = useState(false);
   if (error) {
@@ -100,9 +93,7 @@ export function ImageArtifact({
         type="button"
         aria-label={`Open ${name}`}
         className="cursor-zoom-in"
-        onClick={() =>
-          openFile({ source: 'thread-attachment', threadId, attachmentId, name, mediaType })
-        }
+        onClick={() => openFile(fileRef)}
       >
         <img src={url} alt={name} className="max-h-80 max-w-sm rounded-lg border" />
       </button>

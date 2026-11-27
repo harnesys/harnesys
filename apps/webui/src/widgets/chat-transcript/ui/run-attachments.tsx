@@ -1,7 +1,12 @@
 import type { FeedRun } from '@/entities/session';
 import { cn } from '@/shared/lib/utils';
 import type { FileArtifactInfo } from './file-artifact';
-import { FileArtifact, parseFileArtifact } from './file-artifact';
+import {
+  FileArtifact,
+  parseFileArtifact,
+  parseLinkFileArtifact,
+  parseLinkImageArtifact,
+} from './file-artifact';
 import type { ImageArtifactInfo } from './image-artifact';
 import { ImageArtifact, parseImageArtifact } from './image-artifact';
 
@@ -9,7 +14,25 @@ export type RunAttachment =
   | { kind: 'image'; info: ImageArtifactInfo }
   | { kind: 'file'; info: FileArtifactInfo };
 
-export function collectRunAttachments(run: FeedRun): RunAttachment[] {
+function pushImage(
+  info: ImageArtifactInfo | null,
+  seen: Set<string>,
+  found: RunAttachment[],
+): void {
+  if (info !== null && !seen.has(info.key)) {
+    seen.add(info.key);
+    found.push({ kind: 'image', info });
+  }
+}
+
+function pushFile(info: FileArtifactInfo | null, seen: Set<string>, found: RunAttachment[]): void {
+  if (info !== null && !seen.has(info.key)) {
+    seen.add(info.key);
+    found.push({ kind: 'file', info });
+  }
+}
+
+export function collectRunAttachments(run: FeedRun, threadId?: string): RunAttachment[] {
   const seen = new Set<string>();
   const found: RunAttachment[] = [];
   for (const segment of run.segments) {
@@ -20,60 +43,37 @@ export function collectRunAttachments(run: FeedRun): RunAttachment[] {
       if (item.type !== 'group') {
         continue;
       }
-      collectChunkAttachments(item.chunks, seen, found);
+      for (const chunk of item.chunks) {
+        if (chunk.type !== 'tools' || !Array.isArray(chunk.pairs)) {
+          continue;
+        }
+        for (const pair of chunk.pairs) {
+          const view = pair as Parameters<typeof parseImageArtifact>[0];
+          pushImage(parseImageArtifact(view, threadId), seen, found);
+          pushFile(parseFileArtifact(view, threadId), seen, found);
+          pushImage(parseLinkImageArtifact(view), seen, found);
+          pushFile(parseLinkFileArtifact(view), seen, found);
+        }
+      }
     }
   }
   return found;
 }
 
-function collectChunkAttachments(
-  chunks: { type: string; pairs?: unknown }[],
-  seen: Set<string>,
-  found: RunAttachment[],
-): void {
-  for (const chunk of chunks) {
-    if (chunk.type !== 'tools' || !Array.isArray(chunk.pairs)) {
-      continue;
-    }
-    for (const pair of chunk.pairs) {
-      pushPairAttachment(pair, seen, found);
-    }
-  }
-}
-
-function pushPairAttachment(pair: unknown, seen: Set<string>, found: RunAttachment[]): void {
-  const image = parseImageArtifact(pair as Parameters<typeof parseImageArtifact>[0]);
-  if (image) {
-    if (!seen.has(image.attachmentId)) {
-      seen.add(image.attachmentId);
-      found.push({ kind: 'image', info: image });
-    }
-    return;
-  }
-  const file = parseFileArtifact(pair as Parameters<typeof parseFileArtifact>[0]);
-  if (file && !seen.has(file.attachmentId)) {
-    seen.add(file.attachmentId);
-    found.push({ kind: 'file', info: file });
-  }
-}
-
-function renderAttachment(attachment: RunAttachment, threadId: string) {
+function renderAttachment(attachment: RunAttachment) {
   if (attachment.kind === 'image') {
     return (
       <ImageArtifact
-        key={attachment.info.attachmentId}
-        threadId={threadId}
-        attachmentId={attachment.info.attachmentId}
+        key={attachment.info.key}
+        fileRef={attachment.info.ref}
         name={attachment.info.name}
-        mediaType={attachment.info.mediaType}
       />
     );
   }
   return (
     <FileArtifact
-      key={attachment.info.attachmentId}
-      threadId={threadId}
-      attachmentId={attachment.info.attachmentId}
+      key={attachment.info.key}
+      fileRef={attachment.info.ref}
       name={attachment.info.name}
       mediaType={attachment.info.mediaType}
       size={attachment.info.size}
@@ -92,10 +92,7 @@ export function RunAttachments({
   live?: boolean;
   className?: string;
 }) {
-  if (!threadId) {
-    return null;
-  }
-  const attachments = collectRunAttachments(run).filter(
+  const attachments = collectRunAttachments(run, threadId).filter(
     (attachment) => !(live && attachment.kind === 'image'),
   );
   if (attachments.length === 0) {
@@ -103,7 +100,7 @@ export function RunAttachments({
   }
   return (
     <div className={cn('flex flex-wrap items-start gap-2', className)}>
-      {attachments.map((attachment) => renderAttachment(attachment, threadId))}
+      {attachments.map(renderAttachment)}
     </div>
   );
 }

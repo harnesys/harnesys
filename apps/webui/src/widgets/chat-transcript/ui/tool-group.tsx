@@ -7,19 +7,23 @@ import { useChatPreferences } from '@/shared/lib/chat-preferences';
 import { summarizeActivity } from '../model/tool-run-summary';
 import type { ActivityBadge } from './activity-line';
 import { ActivityLine } from './activity-line';
-import { parseFileArtifact } from './file-artifact';
+import { parseFileArtifact, parseLinkFileArtifact, parseLinkImageArtifact } from './file-artifact';
 import { parseImageArtifact } from './image-artifact';
 import { SpawnLine } from './spawn-line';
 import { ThinkingLine } from './thinking-line';
 import { ToolLine } from './tool-line';
 
 const HINT_PARTS = 3;
-function hasVisibleArtifact(chunks: GroupFeedChunk[]): boolean {
+function hasVisibleArtifact(chunks: GroupFeedChunk[], threadId?: string): boolean {
   return chunks.some(
     (chunk) =>
       chunk.type === 'tools' &&
       chunk.pairs.some(
-        (pair) => parseImageArtifact(pair) !== null || parseFileArtifact(pair) !== null,
+        (pair) =>
+          parseImageArtifact(pair, threadId) !== null ||
+          parseFileArtifact(pair, threadId) !== null ||
+          parseLinkImageArtifact(pair) !== null ||
+          parseLinkFileArtifact(pair) !== null,
       ),
   );
 }
@@ -38,7 +42,7 @@ export function ToolGroup({
 }) {
   const feedDetail = useChatPreferences((state) => state.feedDetail);
   const collapse =
-    !hasVisibleArtifact(chunks) &&
+    !hasVisibleArtifact(chunks, threadId) &&
     feedDetail !== 'full' &&
     !runLive &&
     chunks.length >= ACTIVITY_COLLAPSE_MIN;

@@ -856,6 +856,14 @@ export type {
 } from './src/ports/thread-attachments.ts';
 export { ThreadAttachmentPort } from './src/ports/thread-attachments.ts';
 export type {
+  ProjectLinkTarget,
+  ThreadDirLinkTarget,
+  ThreadFileLinkInput,
+  ThreadFileLinkRecord,
+  ThreadFileLinkTarget,
+} from './src/ports/thread-file-links.ts';
+export { ThreadFileLinkPort } from './src/ports/thread-file-links.ts';
+export type {
   ThreadHistoryMessage,
   ThreadHistoryPage,
   ThreadHistoryQuery,
