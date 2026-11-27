@@ -84,16 +84,20 @@ function renderAttachment(attachment: RunAttachment, threadId: string) {
 export function RunAttachments({
   run,
   threadId,
+  live = false,
   className,
 }: {
   run: FeedRun;
   threadId?: string;
+  live?: boolean;
   className?: string;
 }) {
   if (!threadId) {
     return null;
   }
-  const attachments = collectRunAttachments(run);
+  const attachments = collectRunAttachments(run).filter(
+    (attachment) => !(live && attachment.kind === 'image'),
+  );
   if (attachments.length === 0) {
     return null;
   }

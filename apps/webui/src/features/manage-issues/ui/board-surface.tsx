@@ -1,4 +1,4 @@
-import { KanbanIcon, ListIcon, PlusIcon } from 'lucide-react';
+import { DownloadIcon, KanbanIcon, ListIcon, PlusIcon } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAgentStore } from '@/entities/agent';
 import { useIssueBoardStore, useIssueLabelStore, useIssueStore } from '@/entities/issue';
@@ -9,6 +9,7 @@ import { PageHeader, PageHeaderIcon } from '@/shared/ui/page-header';
 import { toast } from '@/shared/ui/toast';
 import { ToggleGroup, ToggleGroupItem } from '@/shared/ui/toggle-group';
 import { resolveBoardIcon } from '../model/board-icons';
+import { exportBoardIssuesJson } from '../model/export-issues-json';
 import { applyIssueFilters, sortIssues } from '../model/issue-filters';
 import type { IssueViewMode } from '../model/issue-view.store';
 import { useBoardViewSettings, useIssueViewStore } from '../model/issue-view.store';
@@ -100,6 +101,17 @@ export function BoardSurface({ projectId, boardId }: { projectId: string; boardI
               agents={agents}
               onPatch={(patch) => useIssueViewStore.getState().setFilters(boardId, patch)}
             />
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              data-testid="issue-export-json"
+              title="Download all board issues as a JSON file"
+              onClick={() => exportBoardIssuesJson(board, boardIssues)}
+            >
+              <DownloadIcon className="size-3.5" />
+              JSON
+            </Button>
             {!archived ? (
               <Button
                 size="sm"

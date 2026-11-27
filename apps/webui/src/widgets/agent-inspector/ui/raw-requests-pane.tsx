@@ -11,6 +11,7 @@ import {
   type RawRequestCallPayload,
   type RawRequestCallSummary,
 } from '@/shared/api/raw-model-requests';
+import { downloadJson } from '@/shared/lib/download-json';
 import { formatClockSeconds } from '@/shared/lib/format-clock';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -18,7 +19,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/shared/ui
 import { Skeleton } from '@/shared/ui/skeleton';
 import { CopyIconButton } from './copy-icon-button';
 import { RawRequestDetail } from './raw-request-detail';
-import { copyJson, downloadJson, requestTimestamp } from './raw-request-format';
+import { copyJson, requestTimestamp } from './raw-request-format';
 import { Section, SectionEmpty } from './section';
 
 const payloadOptions = (threadId: string, name: string) =>

@@ -128,7 +128,12 @@ export function AssistantMessageView({
   );
   const footer = (
     <>
-      <RunAttachments run={run} threadId={threadId} className="mt-3" />
+      <RunAttachments
+        run={run}
+        threadId={threadId}
+        live={streaming && run.terminal === null}
+        className="mt-3"
+      />
       <div className="mt-3 flex items-center gap-1">
         {branchChildren && branchChildren.length > 0 ? (
           <BranchPointBadge runId={runId} branches={branchChildren} />

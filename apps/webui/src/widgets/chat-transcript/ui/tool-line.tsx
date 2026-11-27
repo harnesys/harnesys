@@ -184,7 +184,9 @@ export function ToolLine({
   const [expanded, setExpanded] = useState(false);
   const map = useFeedMap(threadId ?? null, pair.call.toolCallId);
   const truncatedSeq = truncatedEventSeq(pair);
-  const autoOpen = isAutoOpen(feedDetail, live) || (feedDetail !== 'manual' && Boolean(map));
+  const hasImageArtifact = parseImageArtifact(pair) !== null;
+  const autoOpen =
+    isAutoOpen(feedDetail, live) || (feedDetail !== 'manual' && Boolean(map)) || hasImageArtifact;
   const fullEvent = useQuery({
     queryKey: ['thread-event', threadId, truncatedSeq],
     queryFn: () => loadFullThreadEvent(threadId, truncatedSeq),

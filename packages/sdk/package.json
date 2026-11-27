@@ -1,6 +1,6 @@
 {
   "name": "@harnesys/sdk",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Add-on SDK for Harnesys: manifest, contributions, JSON-RPC protocol, permissions, defineAddon, host client and a testing fake host.",
   "license": "MIT",
   "type": "module",

@@ -1,9 +1,10 @@
 import { ChevronRightIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { stringifyJson } from '@/shared/lib/download-json';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/shared/ui/collapsible';
 import { CopyIconButton } from './copy-icon-button';
 import { FactRow } from './fact-row';
-import { copyText, stringifyJson } from './raw-request-format';
+import { copyText } from './raw-request-format';
 
 interface RawRequestSetting {
   label: string;
