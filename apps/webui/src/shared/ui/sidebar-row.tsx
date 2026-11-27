@@ -76,7 +76,7 @@ export function SidebarRow({
         <div
           className={cn(
             'absolute inset-y-0 right-1 flex gap-0.5 opacity-0 transition-opacity group-hover/row:opacity-100 has-[:focus-visible]:opacity-100',
-            variant === 'card' ? 'items-start pt-1.5' : 'items-center',
+            variant === 'card' ? 'items-start pt-1' : 'items-center',
           )}
         >
           {actions}

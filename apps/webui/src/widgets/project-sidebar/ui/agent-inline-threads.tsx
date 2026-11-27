@@ -257,7 +257,7 @@ function InlineThreadRow({
           {thread.title}
         </span>
       </span>
-      <span className="mt-px flex items-center justify-between gap-2">
+      <span className="mt-1.5 flex items-center justify-between gap-2">
         <span className="block truncate font-mono text-[10px] text-muted-foreground/60 leading-snug">
           {formatDayTime(thread.updatedAt, timeZone)}
         </span>
