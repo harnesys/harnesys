@@ -78,6 +78,13 @@ const CHILD_HOLD: ToolDefinition = {
     return 'held';
   },
 };
+const CHILD_WAITER: ToolDefinition = {
+  name: 'waiter',
+  description: 'interactive wait',
+  input: { type: 'object', properties: {} },
+  interactive: true,
+  execute: async () => 'never',
+};
 const CHILD_WRITING: AgentDefinition = {
   id: 'child',
   prompts: {},
@@ -236,6 +243,7 @@ describe('background spawn calls', () => {
   test('an aborted background child reports the write effects it already performed', async () => {
     openGate();
     let uploadJournaled = false;
+    let preparedCaps: unknown;
     const registry: BackgroundSpawnRegistry = createBackgroundSpawnRegistry();
     const reports: BackgroundReportInput[] = [];
     const state = new InMemoryRuntimeState('session-bg-effects');
@@ -245,6 +253,7 @@ describe('background spawn calls', () => {
       toolRegistry: new Map([
         [CHILD_UPLOAD.name, CHILD_UPLOAD],
         [CHILD_HOLD.name, CHILD_HOLD],
+        [CHILD_WAITER.name, CHILD_WAITER],
       ]),
       agents: { resolve: (id) => (id === 'child' ? CHILD_WRITING : undefined) },
       childJournal: (_spawnId, ev) => {
@@ -252,9 +261,14 @@ describe('background spawn calls', () => {
         if (ev.type === 'tool.completed' && meta?.name === 'upload') {
           uploadJournaled = true;
         }
+        if (ev.type === 'child.prepared') {
+          preparedCaps = meta?.caps;
+        }
       },
     });
     await waitUntil(() => uploadJournaled);
+    expect(preparedCaps).toBeArray();
+    expect((preparedCaps as string[]).some((line) => line.startsWith('waiter —'))).toBe(true);
     expect(registry.abortSpawn('spawn-bg-effects', 'run cancelled')).toBe(true);
     closeGate();
     const handles = await registry.awaitByThread('session-bg-effects');
@@ -263,8 +277,10 @@ describe('background spawn calls', () => {
       { tool: 'upload', ok: true, note: '201 Created id=42' },
     ]);
     expect(handles[0]?.effects?.omitted).toBe(0);
+    expect(handles[0]?.caps?.some((line) => line.startsWith('waiter —'))).toBe(true);
     await waitUntil(() => reports.length > 0);
     expect(reports[0]?.effects?.entries).toHaveLength(1);
+    expect((reports[0]?.caps ?? []).some((line) => line.startsWith('waiter —'))).toBe(true);
   });
 
   test('blocking child keeps waiting for the node as before', async () => {

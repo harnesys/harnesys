@@ -95,6 +95,7 @@ function childDetailOf(agent: BackgroundToolStatus, withOutput: boolean): Record
     ...(agent.tail !== undefined ? { tail: agent.tail } : {}),
     ...(agent.error !== undefined ? { error: agent.error } : {}),
     ...(agent.effects !== undefined ? { effects: agent.effects } : {}),
+    ...(agent.caps !== undefined ? { caps: agent.caps } : {}),
     ...(withOutput && agent.output !== undefined ? { output: agent.output } : {}),
   };
 }

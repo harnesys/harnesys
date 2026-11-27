@@ -40,6 +40,7 @@ export interface BackgroundToolStatus {
   output?: unknown;
   error?: { code: string; message: string };
   effects?: SpawnEffectsJournal;
+  caps?: string[];
   tail?: string;
   idleMs?: number;
 }
@@ -99,6 +100,7 @@ export interface ToolDefinition {
   input: JsonSchema;
   execute: ToolExecute;
   sideEffect?: SideEffect;
+  interactive?: boolean;
   exposure?: ToolExposure;
   revealsTools?: boolean;
   gate?: ToolGate;
@@ -120,6 +122,7 @@ export function tool(
     input: JsonSchema;
     execute: ToolExecute;
     sideEffect?: SideEffect;
+    interactive?: boolean;
     exposure?: ToolExposure;
     revealsTools?: boolean;
     gate?: ToolGate;
@@ -139,6 +142,7 @@ export function tool(
     input: spec.input,
     execute: spec.execute,
     sideEffect: spec.sideEffect,
+    interactive: spec.interactive,
     exposure: spec.exposure,
     revealsTools: spec.revealsTools,
     gate: spec.gate,

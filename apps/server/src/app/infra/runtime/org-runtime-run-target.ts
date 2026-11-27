@@ -95,6 +95,7 @@ export function createRunTargetResolver(ctx: RunTargetResolverContext) {
       roster: ctx.agentsResolve.list(agentDef),
       fsSkills: skills,
       mode: prepared.mode,
+      permissions: prepared.permissions,
       makeLoadSkill: () => plugin.makeLoadSkill(skills),
       makeLoadTools: (registry: RunRegistry) =>
         createLoadToolsTool(

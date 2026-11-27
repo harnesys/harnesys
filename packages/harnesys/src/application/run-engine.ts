@@ -139,6 +139,9 @@ export function createBackgroundSpawnRegistry(): BackgroundSpawnRegistry {
             if (item?.effects !== undefined) {
               handle.effects = item.effects;
             }
+            if (item?.caps !== undefined) {
+              handle.caps = item.caps;
+            }
             handle.lastActivityAt = Date.now();
             return handle;
           })

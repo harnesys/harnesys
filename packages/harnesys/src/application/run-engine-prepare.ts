@@ -5,6 +5,8 @@ import type { Event } from '../domain/snapshot.ts';
 import type { Logger } from '../ports/logger.ts';
 import type { ToolDefinition } from '../ports/tools.ts';
 import { resolveAgentIdentity } from './agent-identity.ts';
+import { createCapabilityNoteProvider } from './capability-digest.ts';
+import type { ExplainEntry } from './capability-explain.ts';
 import { compileOrThrow } from './compile.ts';
 import type { GraphOpts } from './graph.ts';
 import { abandonForeignSnapshot, decisionTextOf } from './graph-snap.ts';
@@ -132,12 +134,14 @@ export async function prepareExecuteGraphOpts(
   const startNodeId = answer === null ? undefined : snap?.cursor.interrupt?.nodeId;
   let runRegistry: Map<string, ToolDefinition>;
   let packOutputs: PackRunMap;
+  let capabilityExplain: ExplainEntry[];
   if (opts.capabilitySet !== undefined) {
     runRegistry = new Map();
     for (const [name, entry] of opts.capabilitySet.registry) {
       runRegistry.set(name, { ...entry.def, exposure: entry.exposure });
     }
     packOutputs = opts.capabilitySet.packOutputs;
+    capabilityExplain = opts.capabilitySet.explain;
     const discover = opts.universe?.discoverTool;
     if (discover !== undefined) {
       runRegistry.set(LOAD_TOOLS_NAME, createLoadToolsTool(runRegistry, { discover }));
@@ -147,10 +151,12 @@ export async function prepareExecuteGraphOpts(
       baseRegistry: deps.toolRegistry,
       registrations: opts.packs ?? deps.packRegistrations ?? [],
       fsSkills: opts.skills ?? deps.skills,
+      ...(opts.permissions !== undefined ? { permissions: opts.permissions } : {}),
       logger: runLogger,
     });
     runRegistry = identity.toolRegistry;
     packOutputs = identity.packOutputs;
+    capabilityExplain = identity.explain;
   }
   const cwd = opts.paths?.cwd ?? '';
   const runEnv = composeRunEnv(opts.binDirs);
@@ -169,7 +175,10 @@ export async function prepareExecuteGraphOpts(
     mergeState: deps.mergeState,
     signal,
     startNodeId,
-    notes: opts.notes,
+    notes: [
+      ...(opts.notes ?? []),
+      createCapabilityNoteProvider(capabilityExplain, new Set(runRegistry.keys())),
+    ],
     skills: opts.skills ?? deps.skills,
     packOutputs,
     universe: opts.universe,

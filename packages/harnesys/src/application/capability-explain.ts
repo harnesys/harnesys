@@ -37,6 +37,7 @@ export interface ExplainLog {
   disabled: NoteFn;
   droppedByMode: NoteFn;
   deniedByUniverse: NoteFn;
+  deniedByPermission: NoteFn;
   overrodeHost: NoteFn;
 }
 export function createExplainLog(): ExplainLog {
@@ -53,6 +54,7 @@ export function createExplainLog(): ExplainLog {
     disabled: note('disabled'),
     droppedByMode: note('dropped-by-mode'),
     deniedByUniverse: note('denied-by-universe'),
+    deniedByPermission: note('denied-by-permission'),
     overrodeHost: note('overrode-host'),
   };
 }
@@ -67,4 +69,9 @@ export function overrideOf(assignment: PackAssignment | undefined): PackOverride
 }
 export function packNameOf(source: CapabilitySource): string | undefined {
   return source.startsWith(PACK_PREFIX) ? source.slice(PACK_PREFIX.length) : undefined;
+}
+export const INTERACTIVE_HIDDEN_REASON =
+  'interactive tool: this run has no user to answer; the parent must provide the input or do it itself';
+export function deniedOpReason(op: string): string {
+  return `operation "${op}" is denied for this run; a spawn grant cannot lift a deny, the parent/user config must change`;
 }

@@ -154,6 +154,7 @@ function statusOfHandle(
     ...(handle.output !== undefined ? { output: handle.output } : {}),
     ...(handle.error !== undefined ? { error: handle.error } : {}),
     ...(handle.effects !== undefined ? { effects: handle.effects } : {}),
+    ...(handle.caps !== undefined ? { caps: handle.caps } : {}),
     ...(handle.status === 'running'
       ? { idleMs: Math.max(0, Date.now() - handle.lastActivityAt) }
       : {}),
@@ -243,6 +244,19 @@ function effectsTextOf(journal: SpawnEffectsJournal | undefined): string | null 
   return `Write effects performed (${total}):\n${lines.join('\n')}`;
 }
 
+function capsTextOf(caps: string[] | undefined): string | null {
+  if (caps === undefined || caps.length === 0) {
+    return null;
+  }
+  const shown = caps.slice(0, REPORT_EFFECTS_MAX_LINES);
+  const lines = shown.map((line) => `- ${line}`);
+  const hidden = caps.length - shown.length;
+  if (hidden > 0) {
+    lines.push(`… +${hidden} more`);
+  }
+  return `Capabilities absent for this agent:\n${lines.join('\n')}`;
+}
+
 interface BackgroundReportEnqueueInput {
   threadId: string;
   parentAgentId: string;
@@ -252,6 +266,7 @@ interface BackgroundReportEnqueueInput {
   output?: unknown;
   error?: { code: string; message: string };
   effects?: SpawnEffectsJournal;
+  caps?: string[];
 }
 
 export function createBackgroundReportFn(
@@ -276,16 +291,19 @@ export function backgroundReportTextOf(input: {
   output?: unknown;
   error?: { code: string; message: string };
   effects?: SpawnEffectsJournal;
+  caps?: string[];
 }): string {
   const label = `**${input.agentName ?? input.agentId}** (\`${input.spawnId}\`)`;
   if (input.error !== undefined) {
-    const effects = effectsTextOf(input.effects);
+    const extras = [effectsTextOf(input.effects), capsTextOf(input.caps)]
+      .filter((part): part is string => part !== null)
+      .join('\n\n');
     if (input.error.code === 'spawn_aborted') {
       const base = `Background agent ${label} was stopped.`;
-      return effects === null ? base : `${base}\n\n${effects}`;
+      return extras === '' ? base : `${base}\n\n${extras}`;
     }
     const base = `Background agent ${label} failed.\n\n\`${input.error.code}\`: ${input.error.message}`;
-    return effects === null ? base : `${base}\n\n${effects}`;
+    return extras === '' ? base : `${base}\n\n${extras}`;
   }
   const text = outputTextOf(input.output);
   const trimmed =

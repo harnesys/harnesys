@@ -35,6 +35,7 @@ function formatResumeResult(
 export function askUser(): ToolDefinition {
   return tool(ASK_USER_TOOL, {
     group: 'core',
+    interactive: true,
     description:
       'Ask the human a question and wait for their reply. Use for clarifications, choices, or missing information before continuing.',
     input: {

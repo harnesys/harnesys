@@ -15,6 +15,8 @@ import {
   type ToolDefinition,
 } from '../ports/tools.ts';
 import { formatAgentTargets, resolveAgentTarget } from './agent-target-resolve.ts';
+import { capabilityDigest, createCapabilityLinesProvider } from './capability-digest.ts';
+import { deniedOpReason, INTERACTIVE_HIDDEN_REASON } from './capability-explain.ts';
 import { resolveCapabilitySet, sandboxUniverse } from './capability-set.ts';
 import { compileOrThrow, type Plan } from './compile.ts';
 import { evalExpr } from './expr-eval.ts';
@@ -62,6 +64,7 @@ export interface SpawnResultItem {
   quota?: AgentBudget;
   usage?: SpawnUsage;
   effects?: SpawnEffectsJournal;
+  caps?: string[];
 }
 export interface SpawnUsage {
   steps: number;
@@ -132,6 +135,7 @@ export interface BackgroundSpawnHandle {
   output?: unknown;
   error?: SpawnCallError;
   effects?: SpawnEffectsJournal;
+  caps?: string[];
   lastActivityAt: number;
 }
 export interface BackgroundSpawnRegistry {
@@ -164,6 +168,7 @@ export interface BackgroundReportInput {
   output?: unknown;
   error?: SpawnCallError;
   effects?: SpawnEffectsJournal;
+  caps?: string[];
 }
 function resolveConcurrency(
   c: Expr | 'parallel' | 'sequential',
@@ -532,9 +537,15 @@ async function runOneChild(input: {
     };
   }
   let childPackOutputs = parent.packOutputs;
+  const childPerms = childPermissions({
+    grant: target.call.permissions,
+    childDef: target.def.permissions,
+    parent: parent.permissions,
+  });
+  const childCaps: string[] = [];
   let runRegistry: Map<string, ToolDefinition>;
   if (parent.universe !== undefined) {
-    const childSet = resolveCapabilitySet(childDef, sandboxUniverse(parent.universe));
+    const childSet = resolveCapabilitySet(childDef, sandboxUniverse(parent.universe, childPerms));
     if (childSet.fatal.length > 0) {
       parent.logger?.warn(
         `[capabilities] spawn ${target.call.agentId}: ${childSet.fatal.join('; ')}`,
@@ -546,12 +557,24 @@ async function runOneChild(input: {
         { ...entry.def, exposure: entry.exposure },
       ]),
     );
+    childCaps.push(...capabilityDigest(childSet.explain, new Set(childSet.registry.keys())));
     childPackOutputs = childSet.packOutputs;
   } else {
     runRegistry = subtractDeniedTools(parent.toolRegistry, childDef);
     for (const [name, def] of runRegistry) {
       if (def.group === 'agents') {
         runRegistry.delete(name);
+        continue;
+      }
+      if (def.interactive === true) {
+        runRegistry.delete(name);
+        childCaps.push(`${name} — ${INTERACTIVE_HIDDEN_REASON}`);
+        continue;
+      }
+      const deniedOp = (def.operations ?? []).find((op) => childPerms[op] === 'deny');
+      if (deniedOp !== undefined) {
+        runRegistry.delete(name);
+        childCaps.push(`${name} — ${deniedOpReason(deniedOp)}`);
       }
     }
     runRegistry.set(LOAD_TOOLS_NAME, createLoadToolsTool(runRegistry));
@@ -568,11 +591,7 @@ async function runOneChild(input: {
     input: childInput,
     state: childState,
     runId: target.spawnId,
-    permissions: childPermissions({
-      grant: target.call.permissions,
-      childDef: target.def.permissions,
-      parent: parent.permissions,
-    }),
+    permissions: childPerms,
     paths: parent.paths,
     process: parent.process,
     ...(parent.permissionGrants !== undefined ? { permissionGrants: parent.permissionGrants } : {}),
@@ -583,7 +602,7 @@ async function runOneChild(input: {
     toolMessages: parent.toolMessages,
     mergeState: parent.mergeState,
     signal,
-    notes: parent.notes,
+    notes: [...(parent.notes ?? []), createCapabilityLinesProvider(childCaps)],
     packOutputs: childPackOutputs,
     universe: parent.universe,
     skills: parent.skills,
@@ -629,6 +648,9 @@ async function runOneChild(input: {
     const journal = effects.journal();
     return journal === undefined ? {} : { effects: journal };
   };
+  const capsProp = (): {
+    caps?: string[];
+  } => (childCaps.length > 0 ? { caps: childCaps } : {});
   parent.childJournal?.(target.spawnId, {
     eventId: crypto.randomUUID(),
     type: 'child.prepared',
@@ -637,6 +659,7 @@ async function runOneChild(input: {
     runId: target.spawnId,
     agentId: target.def.id,
     sequence: 0,
+    ...(childCaps.length > 0 ? { metadata: { caps: childCaps } } : {}),
   });
   try {
     for await (const ev of runChild(childOpts)) {
@@ -664,6 +687,7 @@ async function runOneChild(input: {
       error: signal.aborted ? abortError(abort) : { code, message },
       ...blockedProp(),
       ...effectsProp(),
+      ...capsProp(),
     };
   }
   if (remoteOutput !== undefined) {
@@ -675,6 +699,7 @@ async function runOneChild(input: {
       ...quotaProp(target),
       output: remoteOutput.output,
       ...blockedProp(),
+      ...capsProp(),
     };
   }
   const snap = await childState.load();
@@ -695,6 +720,7 @@ async function runOneChild(input: {
         },
         ...blockedProp(),
         ...effectsProp(),
+        ...capsProp(),
       };
     }
     const over = spawnBudgetHit(snap, childBudget);
@@ -706,6 +732,7 @@ async function runOneChild(input: {
       ...(over !== undefined ? { budget: over } : {}),
       usage: usageOf(snap),
       ...blockedProp(),
+      ...capsProp(),
     };
   }
   if (status === 'needs_input') {
@@ -741,6 +768,7 @@ async function runOneChild(input: {
       },
       ...blockedProp(),
       ...effectsProp(),
+      ...capsProp(),
     };
   }
   await stopEvent();
@@ -756,6 +784,7 @@ async function runOneChild(input: {
       error: abortError(abort),
       ...blockedProp(),
       ...effectsProp(),
+      ...capsProp(),
     };
   }
   return {
@@ -769,6 +798,7 @@ async function runOneChild(input: {
     },
     ...blockedProp(),
     ...effectsProp(),
+    ...capsProp(),
   };
 }
 export function prepareSpawn(
@@ -945,6 +975,7 @@ export async function executeSpawn(
           ...(handle.output !== undefined ? { output: handle.output } : {}),
           ...(handle.error !== undefined ? { error: handle.error } : {}),
           ...(handle.effects !== undefined ? { effects: handle.effects } : {}),
+          ...(handle.caps !== undefined ? { caps: handle.caps } : {}),
         });
       })
       .catch(() => {});

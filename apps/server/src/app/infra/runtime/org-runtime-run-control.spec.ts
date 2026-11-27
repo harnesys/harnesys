@@ -77,4 +77,15 @@ describe('backgroundReportTextOf', () => {
       }),
     ).toBe('Background agent **agent-1** (`spn-9`) was stopped.');
   });
+
+  test('appends absent capabilities to the stop report', () => {
+    const text = backgroundReportTextOf({
+      spawnId: 'spn-3',
+      agentId: 'coder',
+      error: { code: 'spawn_aborted', message: 'spawn aborted before the child finished' },
+      caps: ['wait — interactive tool: this run has no user to answer'],
+    });
+    expect(text).toContain('Capabilities absent for this agent:');
+    expect(text).toContain('- wait — interactive tool');
+  });
 });

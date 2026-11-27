@@ -2,6 +2,7 @@ import type { AgentDefinition } from '../domain/agent-definition.ts';
 import type { PackAssignment, PackOverride, PackRegistration } from '../domain/pack.ts';
 import type { PathEntrySpec } from '../domain/plugin-ir.ts';
 import type { AgentRosterEntry } from '../ports/create-runtime.ts';
+import type { PermissionMap } from '../ports/permissions.ts';
 import type { SkillRegistry } from '../ports/skills.ts';
 import type { ToolDefinition, ToolExposure } from '../ports/tools.ts';
 import type {
@@ -12,6 +13,8 @@ import type {
 } from './capability-explain.ts';
 import {
   createExplainLog,
+  deniedOpReason,
+  INTERACTIVE_HIDDEN_REASON,
   isOn,
   overrideOf,
   PACK_PREFIX,
@@ -49,6 +52,7 @@ export interface CapabilityUniverse {
   makeLoadSkill?: (packOutputs: PackRunOutput[]) => ToolDefinition[];
   mode?: ModeCapabilityFields;
   sandbox?: boolean;
+  permissions?: PermissionMap;
 }
 export interface CapabilitySet {
   registry: RunRegistry;
@@ -62,8 +66,15 @@ export interface CapabilitySet {
   fatal: string[];
 }
 export const CORE_SERVICE_TOOLS = ['load_tools', 'load_skill', 'Skill'];
-export function sandboxUniverse(universe: CapabilityUniverse): CapabilityUniverse {
-  return { ...universe, sandbox: true };
+export function sandboxUniverse(
+  universe: CapabilityUniverse,
+  permissions?: PermissionMap,
+): CapabilityUniverse {
+  return {
+    ...universe,
+    sandbox: true,
+    ...(permissions !== undefined ? { permissions } : {}),
+  };
 }
 const CORE_PACK = 'core';
 interface Assembly {
@@ -91,6 +102,7 @@ export function resolveCapabilitySet(
   subtractDisallowed(asm, def);
   applyMode(asm, def, universe.mode);
   applySandbox(asm, universe);
+  applyDeniedOps(asm, universe);
   grantCoreServices(asm, def, universe, layer.enabled);
   const collected = collectPackOutputs(asm.ex, def, layer.enabled);
   const mcpServers = [...new Set(def.mcpServers ?? [])];
@@ -271,11 +283,29 @@ function applySandbox(asm: Assembly, universe: CapabilityUniverse): void {
     return;
   }
   for (const [name, entry] of asm.registry) {
-    if (entry.def.group !== 'agents') {
+    if (entry.def.group === 'agents') {
+      asm.registry.delete(name);
+      asm.ex.deniedByUniverse(name, 'tool', entry.source, 'spawn sandbox');
+      continue;
+    }
+    if (entry.def.interactive === true) {
+      asm.registry.delete(name);
+      asm.ex.deniedByUniverse(name, 'tool', entry.source, INTERACTIVE_HIDDEN_REASON);
+    }
+  }
+}
+function applyDeniedOps(asm: Assembly, universe: CapabilityUniverse): void {
+  const permissions = universe.permissions;
+  if (permissions === undefined) {
+    return;
+  }
+  for (const [name, entry] of asm.registry) {
+    const denied = (entry.def.operations ?? []).find((op) => permissions[op] === 'deny');
+    if (denied === undefined) {
       continue;
     }
     asm.registry.delete(name);
-    asm.ex.deniedByUniverse(name, 'tool', entry.source, 'spawn sandbox');
+    asm.ex.deniedByPermission(name, 'tool', entry.source, deniedOpReason(denied));
   }
 }
 function grantCoreServices(
