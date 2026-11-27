@@ -31,14 +31,6 @@ export function InspectorPane({ agent }: { agent: Agent }) {
       <SkillsInspector agent={agent} />
       <McpInspector agent={agent} />
 
-      {agent.instructions.trim() ? (
-        <Section label="Instructions">
-          <p className="line-clamp-6 whitespace-pre-wrap text-[12px] text-foreground/90 leading-relaxed">
-            {agent.instructions}
-          </p>
-        </Section>
-      ) : null}
-
       {project ? (
         <Section label="Project">
           <div className="flex flex-col gap-0.5">
