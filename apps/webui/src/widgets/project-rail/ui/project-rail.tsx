@@ -53,7 +53,7 @@ export function ProjectRail({
   return (
     <div className="flex h-full min-h-0 shrink-0" data-testid="project-rail">
       <aside
-        className="flex w-12 shrink-0 flex-col border-sidebar-border border-r bg-sidebar text-sidebar-foreground"
+        className="flex w-12 shrink-0 flex-col border-sidebar-border/70 border-r bg-sidebar text-sidebar-foreground"
         data-testid="project-rail-bar"
       >
         <div className="flex h-10 shrink-0 items-center justify-center">
