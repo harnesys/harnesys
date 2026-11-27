@@ -33,7 +33,7 @@ export function attachFileTool(ports: AttachFilePorts, options: FilesOptions = {
   return tool('attach_file', {
     group: 'files',
     description:
-      'Attach a file to your reply so the user opens it straight from the chat. Any path relative to the run root or absolute, gated by file-read access. mode "copy" (default) snapshots the bytes as a thread attachment — use it for generated deliverables (reports, images, exports). mode "link" references an existing file in place without copying (thread dir or a connected source/worktree); it stays live for the thread lifetime, files elsewhere are not linkable — copy them. Optional name overrides the displayed file name.',
+      'Attach a file to your reply so the user opens it straight from the chat. Any path relative to the run root or absolute, gated by file-read access. mode "copy" (default) snapshots the bytes as a thread attachment — use it for generated deliverables (reports, images, exports). mode "link" references an existing file in place without copying (thread dir or a connected source/worktree): the chip follows the file, so if it is later moved or deleted the link no longer opens — copy anything that must survive. Files elsewhere are not linkable. Optional name overrides the displayed file name.',
     operations: ['fs.read'],
     sideEffect: 'write',
     input: {

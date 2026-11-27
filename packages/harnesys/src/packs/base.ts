@@ -119,7 +119,7 @@ export const filesCapability = definePack<FilesPackPorts, FilesPackSpec>({
       {
         name: 'attach_file',
         description:
-          'Attach a file to the agent reply for the user to open from the chat: mode "copy" snapshots it as a thread attachment (generated deliverables), mode "link" references an existing thread-dir or source file in place.',
+          'Attach a file to the agent reply for the user to open from the chat: mode "copy" snapshots it as a thread attachment (generated deliverables), mode "link" references an existing thread-dir or source file in place and follows it — if the file moves or is deleted the link no longer opens.',
       },
     ],
     skills: [],
