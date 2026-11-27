@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import type { Attachment, AttachmentKind } from 'harnesys';
 import { AttachmentRepositoryPort } from '../../domain/thread/attachment-repository.port.ts';
 import {
@@ -44,6 +45,7 @@ export function resolveAttachmentsOf(
   orgId: string,
   threadId: string,
   ids: string[] | undefined,
+  threadDir: string,
 ): Attachment[] {
   if (!ids?.length) {
     return [];
@@ -59,7 +61,7 @@ export function resolveAttachmentsOf(
       kind: row.kind,
       name: row.name,
       mediaType: row.mediaType,
-      path: row.path,
+      path: join(threadDir, row.path),
     });
   }
   return out;

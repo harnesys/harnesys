@@ -27,7 +27,12 @@ export class GetThreadRawModelRequestUseCase {
     if (!isThreadRawModelRequestName(name)) {
       throw new ThreadNotFoundException(name);
     }
-    const path = join(this.layout.threadDir(orgId, threadId), 'raw-model-requests', name);
+    const path = join(
+      this.layout.threadDir(orgId, threadId),
+      '.runtime',
+      'raw-model-requests',
+      name,
+    );
     const raw = await readFile(path, 'utf8');
     const envelope = JSON.parse(raw) as ThreadRawModelRequest;
     return { name, meta: envelope.meta, plan: envelope.plan, request: envelope.request };

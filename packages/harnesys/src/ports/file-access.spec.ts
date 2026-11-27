@@ -81,6 +81,53 @@ test('primary auto-allow, deny precedence and host scoping', () => {
   });
 });
 
+test('deny rules win inside the primary directory', () => {
+  const threadDir = '/org/threads/t1';
+  const rules: FileRuleInput[] = [
+    {
+      agentId: AGENT_A,
+      hostId: null,
+      pathPattern: `${threadDir}/attachments/**`,
+      action: 'read',
+      effect: 'allow',
+    },
+    {
+      agentId: AGENT_A,
+      hostId: null,
+      pathPattern: `${threadDir}/attachments/**`,
+      action: 'edit',
+      effect: 'deny',
+    },
+    {
+      agentId: AGENT_A,
+      hostId: null,
+      pathPattern: `${threadDir}/tool-outputs/**`,
+      action: 'edit',
+      effect: 'deny',
+    },
+  ];
+  const resolveInThread = (canonicalPath: string, action: 'read' | 'edit') =>
+    resolveFileAccess({
+      canonicalPath,
+      action,
+      primaryDirectory: threadDir,
+      hostId: HOST_A,
+      agentId: AGENT_A,
+      rules,
+    });
+
+  expect(resolveInThread(`${threadDir}/attachments/a/x.txt`, 'read')).toEqual({
+    decision: 'allow',
+  });
+  expect(resolveInThread(`${threadDir}/attachments/a/x.txt`, 'edit')).toMatchObject({
+    decision: 'deny',
+  });
+  expect(resolveInThread(`${threadDir}/tool-outputs/out.txt`, 'edit')).toMatchObject({
+    decision: 'deny',
+  });
+  expect(resolveInThread(`${threadDir}/sandbox/work.md`, 'edit')).toEqual({ decision: 'allow' });
+});
+
 test('asks without rules and read rules do not grant edit', () => {
   expect(resolve([], '/v/file.txt')).toEqual({
     decision: 'ask',

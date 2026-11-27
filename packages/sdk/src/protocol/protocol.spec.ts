@@ -70,6 +70,7 @@ describe('protocol method map conformance', () => {
       'files.stat',
       'files.read',
       'files.write',
+      'files.locate',
       'bindings.channels',
       'bindings.bind',
       'bindings.unbind',
@@ -123,6 +124,7 @@ describe('protocol method map conformance', () => {
     expect(protocolMap['source.upload'].permission).toBe('source');
     expect(protocolMap['files.read'].permission).toBe('files.read');
     expect(protocolMap['files.write'].permission).toBe('files.write');
+    expect(protocolMap['files.locate'].permission).toBe('files.locate');
     expect(protocolMap['bindings.channels'].permission).toBeNull();
     expect(protocolMap['bindings.bind'].permission).toBe('bindings.write');
     expect(protocolMap['bindings.unbind'].permission).toBe('bindings.write');

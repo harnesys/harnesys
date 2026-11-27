@@ -21,9 +21,15 @@ function fakeCtx(threadId?: string): { ctx: ShapingContext; writes: WriteCall[] 
   const ctx: ShapingContext = {
     meta: { threadId },
     files: {
+      locate: async ({ scope }: { scope: 'thread' | 'workspace' }) => {
+        if (scope !== 'thread' || threadId === undefined) {
+          throw new Error('locate thread scope requires a thread context');
+        }
+        return { path: '/host/threads/t1' };
+      },
       write: async (params: WriteCall) => {
         writes.push(params);
-        return { path: params.path.replace('thread:', ''), size: params.data.length };
+        return { path: params.path, size: params.data.length };
       },
     },
   };
@@ -116,12 +122,13 @@ describe('saveBodyToFile', () => {
     await expect(saveBodyToFile(ctx, 'findAll', '{"a":1}')).rejects.toThrow(AddonError);
   });
 
-  test('writes base64 chunks under thread:tool-outputs', async () => {
+  test('writes base64 chunks under the thread tool-outputs directory and returns an absolute locator', async () => {
     const { ctx, writes } = fakeCtx('t1');
     const locator = await saveBodyToFile(ctx, 'findAll units', '{"a":1}');
-    expect(locator).toMatch(/^thread:tool-outputs\/findAll-units-\d+\.json$/);
+    expect(locator).toMatch(/^\/host\/threads\/t1\/tool-outputs\/findAll-units-\d+\.json$/);
     expect(writes).toHaveLength(1);
     const first = writes[0];
+    expect(first?.path).toBe(locator);
     expect(Buffer.from(first?.data ?? '', 'base64').toString('utf8')).toBe('{"a":1}');
   });
 });
@@ -156,7 +163,7 @@ describe('shapeResponse', () => {
       256 * 1024,
     )) as Record<string, unknown>;
     expect(result.body).toBeUndefined();
-    expect(result.savedTo).toMatch(/^thread:tool-outputs\/findAll-\d+\.json$/);
+    expect(result.savedTo).toMatch(/^\/host\/threads\/t1\/tool-outputs\/findAll-\d+\.json$/);
     expect(result.records).toBe(3);
     expect(result.recordsAt).toBe('data');
     expect(result.preview).toEqual([{ id: 1 }, { id: 2 }, { id: 3 }]);

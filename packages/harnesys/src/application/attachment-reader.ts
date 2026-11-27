@@ -1,4 +1,4 @@
-import { readFileSync, realpathSync, statSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { MIME_MAP } from '../constants.ts';
 import type { FileAccessPolicy } from '../ports/file-access.ts';
@@ -22,8 +22,6 @@ interface AttachmentError extends Error {
   reason: AttachmentReadReason;
 }
 
-const LEGACY_THREAD_PREFIXES = ['attachments/', 'sandbox/'];
-
 function readError(reason: AttachmentReadReason, message: string): AttachmentError {
   const error = new Error(message) as AttachmentError;
   error.reason = reason;
@@ -34,29 +32,9 @@ function baseOf(paths: PathsConfig | undefined): string {
   return paths?.cwd ?? process.cwd();
 }
 
-function exists(candidate: string): boolean {
-  try {
-    statSync(candidate);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export function resolveThreadPath(locator: string, paths: PathsConfig | undefined): string {
-  if (locator.startsWith('thread:')) {
-    const relative = locator.slice('thread:'.length);
-    return path.join(paths?.threadDir ?? baseOf(paths), relative);
-  }
   if (path.isAbsolute(locator)) {
     return path.resolve(locator);
-  }
-  const normalized = locator.replaceAll('\\', '/');
-  if (paths?.threadDir && LEGACY_THREAD_PREFIXES.some((prefix) => normalized.startsWith(prefix))) {
-    const candidate = path.join(paths.threadDir, locator);
-    if (exists(candidate)) {
-      return candidate;
-    }
   }
   return path.join(baseOf(paths), locator);
 }

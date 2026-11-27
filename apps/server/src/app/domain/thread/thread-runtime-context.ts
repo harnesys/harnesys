@@ -24,6 +24,7 @@ export interface ThreadRuntimeContext {
   runtime: 'host' | 'container';
   primaryDirectory: string;
   primaryKind: PrimaryKind;
+  threadDir: string;
   threadSandbox: string;
   activeWorktree?: ActiveWorktreeRef;
   primarySource?: PrimarySourceRef;
@@ -33,6 +34,7 @@ export interface ThreadRuntimeContext {
 export interface ThreadRuntimeContextMaterial {
   hostId: string;
   runtime: 'host' | 'container';
+  threadDir: string;
   threadSandbox: string;
   primary?: { directory: string; kind: PrimaryKind };
   worktree?: ActiveWorktreeRef;
@@ -50,6 +52,7 @@ export function threadRuntimeContextOf(
       runtime: material.runtime,
       primaryDirectory: worktree.root,
       primaryKind: 'worktree',
+      threadDir: material.threadDir,
       threadSandbox: material.threadSandbox,
       activeWorktree: worktree,
       sharedSources: material.sharedSources,
@@ -62,6 +65,7 @@ export function threadRuntimeContextOf(
       runtime: material.runtime,
       primaryDirectory: primarySource.root,
       primaryKind: 'source',
+      threadDir: material.threadDir,
       threadSandbox: material.threadSandbox,
       primarySource: {
         sourceId: primarySource.sourceId,
@@ -78,6 +82,7 @@ export function threadRuntimeContextOf(
       runtime: material.runtime,
       primaryDirectory: primary.directory,
       primaryKind: primary.kind,
+      threadDir: material.threadDir,
       threadSandbox: material.threadSandbox,
       sharedSources: material.sharedSources,
     };
@@ -85,8 +90,9 @@ export function threadRuntimeContextOf(
   return {
     hostId: material.hostId,
     runtime: material.runtime,
-    primaryDirectory: material.threadSandbox,
+    primaryDirectory: material.threadDir,
     primaryKind: 'sandbox',
+    threadDir: material.threadDir,
     threadSandbox: material.threadSandbox,
     sharedSources: material.sharedSources,
   };

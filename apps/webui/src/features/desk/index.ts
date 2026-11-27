@@ -28,6 +28,7 @@ export { loadEarlier } from './model/load-earlier';
 export { scheduleMarkThreadRead } from './model/mark-thread-read';
 export { resetOrgState } from './model/org-reset';
 export { ensureThreadCached, refreshThread } from './model/refresh-thread';
+export { syncThreadFiles } from './model/thread-files-sync';
 export {
   useAgentHasUnread,
   useAgentLiveStatus,

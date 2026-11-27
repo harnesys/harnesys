@@ -20,7 +20,7 @@ export function readFileTool(options: FilesOptions = {}): ToolDefinition {
   return tool('read_file', {
     group: 'files',
     description:
-      'Read a text file with numbered lines. Omitting offset/limit returns the whole file when it fits, otherwise the first 2000 lines. offset is the 1-based start line; limit is the max lines (capped at 2000). If truncated is true, more lines remain. Paths starting with `thread:` resolve inside the thread file directory, e.g. `thread:attachments/report.pdf` for a file uploaded to this thread.',
+      'Read a text file with numbered lines. Omitting offset/limit returns the whole file when it fits, otherwise the first 2000 lines. offset is the 1-based start line; limit is the max lines (capped at 2000). If truncated is true, more lines remain. Pass a path relative to the run root or absolute.',
     operations: ['fs.read'],
     sideEffect: 'read',
     input: {

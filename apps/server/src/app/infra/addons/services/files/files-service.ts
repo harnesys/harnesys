@@ -2,7 +2,9 @@ import { appendFile, mkdir, open, stat as statFile, writeFile } from 'node:fs/pr
 import { basename, dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { Injectable } from '@harnesys/brix';
 import { AddonError } from '@harnesys/sdk';
+import { DEFAULT_PATH_BLOCKLIST, isPathBlocked } from 'harnesys';
 import { resolveWorkspaceFilePath } from 'harnesys/file-access';
+import { threadFileRootOfPath } from '../../../../application/threads/thread-files-changed.ts';
 import type {
   HostCallContext,
   HostMethodLimits,
@@ -10,10 +12,10 @@ import type {
   HostServiceModule,
 } from '../../../../domain/addons/host-service.ts';
 import { HostFsLayoutPort } from '../../../../domain/machine/host-fs-layout.port.ts';
+import { ThreadEventsPort } from '../../../../domain/thread/thread-events.port.ts';
 import { serviceMethod } from '../method.ts';
 
 const MAX_CHUNK_BYTES = 4 * 1024 * 1024;
-const THREAD_SCOPE_PREFIX = 'thread:';
 const STAT_LIMITS: HostMethodLimits = { timeoutMs: 15_000 };
 const READ_LIMITS: HostMethodLimits = {
   timeoutMs: 15_000,
@@ -24,7 +26,7 @@ const WRITE_LIMITS: HostMethodLimits = { timeoutMs: 30_000, rate: { perSec: 50, 
 
 interface ResolvedTarget {
   absolute: string;
-  relative: string;
+  echo: string;
 }
 
 @Injectable()
@@ -32,12 +34,31 @@ export class FilesHostService implements HostServiceModule {
   readonly namespace = 'files';
   readonly methods: readonly HostMethodSpec[];
 
-  constructor(private readonly layout: HostFsLayoutPort) {
+  constructor(
+    private readonly layout: HostFsLayoutPort,
+    private readonly events: ThreadEventsPort,
+  ) {
     this.methods = [
       serviceMethod('files.stat', STAT_LIMITS, (ctx, params) => this.stat(ctx, params)),
+      serviceMethod('files.locate', STAT_LIMITS, (ctx, params) => this.locate(ctx, params)),
       serviceMethod('files.read', READ_LIMITS, (ctx, params) => this.read(ctx, params)),
       serviceMethod('files.write', WRITE_LIMITS, (ctx, params) => this.write(ctx, params)),
     ];
+  }
+
+  private async locate(
+    ctx: HostCallContext,
+    params: { scope: 'thread' | 'workspace' },
+  ): Promise<{ path: string }> {
+    if (params.scope === 'thread') {
+      if (ctx.threadId === undefined) {
+        throw new AddonError('invalid_params', {
+          detail: 'thread scope requires a thread context (tool calls inside a thread run only)',
+        });
+      }
+      return { path: this.layout.ensureThreadDir(ctx.orgId, ctx.threadId) };
+    }
+    return { path: this.layout.ensureOrgWorkspace(ctx.orgId) };
   }
 
   private async stat(
@@ -53,7 +74,7 @@ export class FilesHostService implements HostServiceModule {
     const target = this.resolve(ctx, params.path);
     const info = await fileInfo(target.absolute, params.path);
     return {
-      path: target.relative,
+      path: target.echo,
       name: basename(target.absolute),
       size: info.size,
       mediaType: mediaTypeOf(target.absolute),
@@ -104,43 +125,46 @@ export class FilesHostService implements HostServiceModule {
       await writeFile(target.absolute, bytes);
     }
     const info = await statFile(target.absolute);
-    return { path: target.relative, size: info.size };
+    this.emitThreadFilesChanged(ctx, target.absolute);
+    return { path: target.echo, size: info.size };
+  }
+
+  private emitThreadFilesChanged(ctx: HostCallContext, absolute: string): void {
+    if (ctx.threadId === undefined) {
+      return;
+    }
+    const root = threadFileRootOfPath(absolute, this.layout.threadDir(ctx.orgId, ctx.threadId));
+    if (root !== null) {
+      this.events.emit(ctx.orgId, {
+        type: 'files-changed',
+        threadId: ctx.threadId,
+        roots: [root],
+      });
+    }
   }
 
   private resolve(ctx: HostCallContext, rawPath: string): ResolvedTarget {
-    if (rawPath.startsWith(THREAD_SCOPE_PREFIX)) {
-      return this.resolveThreadPath(ctx, rawPath.slice(THREAD_SCOPE_PREFIX.length));
+    if (rawPath.includes('\0')) {
+      throw new AddonError('invalid_params', { detail: `invalid file path: ${rawPath}` });
     }
     if (isAbsolute(rawPath)) {
-      return { absolute: resolve(rawPath), relative: rawPath };
+      const absolute = resolve(rawPath);
+      if (isPathBlocked(absolute, DEFAULT_PATH_BLOCKLIST)) {
+        throw new AddonError('invalid_params', { detail: `path is blocked: ${rawPath}` });
+      }
+      return { absolute, echo: absolute };
     }
     const root = this.layout.ensureOrgWorkspace(ctx.orgId);
     let absolute: string;
+    let base: string;
     try {
+      base = resolveWorkspaceFilePath(root, '.');
       absolute = resolveWorkspaceFilePath(root, rawPath);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       throw new AddonError('invalid_params', { detail });
     }
-    return { absolute, relative: relative(root, absolute).split(sep).join('/') };
-  }
-
-  private resolveThreadPath(ctx: HostCallContext, rawPath: string): ResolvedTarget {
-    if (ctx.threadId === undefined) {
-      throw new AddonError('invalid_params', {
-        detail:
-          'thread-scoped path requires a thread context (tool calls inside a thread run only)',
-      });
-    }
-    const root = this.layout.ensureThreadDir(ctx.orgId, ctx.threadId);
-    let absolute: string;
-    try {
-      absolute = resolveWorkspaceFilePath(root, rawPath);
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      throw new AddonError('invalid_params', { detail });
-    }
-    return { absolute, relative: relative(root, absolute).split(sep).join('/') };
+    return { absolute, echo: relative(base, absolute).split(sep).join('/') };
   }
 }
 

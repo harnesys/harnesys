@@ -4,7 +4,7 @@ import type { JsonSchema } from '../domain/json-schema.ts';
 import type { Snapshot } from '../domain/snapshot.ts';
 import { RUNTIME_VERSION } from '../domain/snapshot.ts';
 import { abandonForeignSnapshot, decisionTextOf } from './graph-snap.ts';
-import { SYNTHETIC_TOOL_RESULT_ABANDONED } from './tool-message.ts';
+import { SYNTHETIC_TOOL_RESULT_ABANDONED, type ToolMessage } from './tool-message.ts';
 
 function snapOf(runId: string, status: string, messages: unknown[]): Snapshot {
   return {
@@ -68,8 +68,9 @@ describe('abandonForeignSnapshot', () => {
     const snap = await state.load();
     expect(snap?.status).toBe('completed');
     const messages = (snap?.state.messages ?? []) as unknown[];
-    expect(messages.at(-1)?.role).toBe('tool');
-    expect(messages.at(-1)?.content).toBe('denied by user: wrong file');
+    const last = messages.at(-1) as ToolMessage;
+    expect(last.role).toBe('tool');
+    expect(last.content).toBe('denied by user: wrong file');
   });
 
   test('without a decision falls back to the abandoned marker', async () => {
@@ -86,7 +87,8 @@ describe('abandonForeignSnapshot', () => {
     await abandonForeignSnapshot(state, 'run-2');
     const snap = await state.load();
     const messages = (snap?.state.messages ?? []) as unknown[];
-    expect(messages.at(-1)?.content).toBe(SYNTHETIC_TOOL_RESULT_ABANDONED);
+    const last = messages.at(-1) as ToolMessage;
+    expect(last.content).toBe(SYNTHETIC_TOOL_RESULT_ABANDONED);
   });
 
   test('interrupt context lands in the abandoned stub', async () => {

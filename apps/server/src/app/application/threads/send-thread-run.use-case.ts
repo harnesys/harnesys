@@ -110,6 +110,7 @@ export class SendThreadRunUseCase {
           agents: this.agents,
           attachments: this.attachments,
           users: this.users,
+          layout: this._layout,
           sendMessage: this.sendMessage,
         },
         request,
@@ -147,6 +148,7 @@ export class SendThreadRunUseCase {
       request.orgId,
       request.threadId,
       request.body.attachmentIds,
+      this._layout.threadDir(request.orgId, request.threadId),
     );
     if (chatMentionGateBlocked(thread, agent, request.body)) {
       return await storeUnaddressedMessage(

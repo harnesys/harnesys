@@ -15,7 +15,7 @@ export interface PrimaryTarget {
 
 export function primaryTargetOf(
   input: WorkerTargetInput,
-  sandboxDir: string,
+  threadDir: string,
   worktreeRoot: string | undefined,
 ): PrimaryTarget {
   const environment = input.environment;
@@ -23,11 +23,11 @@ export function primaryTargetOf(
     if (input.directory !== undefined) {
       return { directory: input.directory, requireDirectory: true };
     }
-    return { directory: worktreeRoot ?? sandboxDir, requireDirectory: false };
+    return { directory: worktreeRoot ?? threadDir, requireDirectory: false };
   }
   const anchor = environment.anchor;
   if (anchor === null || environment.cwd === 'sandbox') {
-    return { directory: sandboxDir, requireDirectory: false };
+    return { directory: threadDir, requireDirectory: false };
   }
   if (anchor.kind === 'folder') {
     return { directory: anchor.path, requireDirectory: true };
@@ -41,7 +41,7 @@ export function primaryTargetOf(
     }).absoluteRoot;
   const primary = materializePrimary(environment, {
     anchorRoot: root,
-    threadSandbox: sandboxDir,
+    threadDir,
   });
   if (environment.subpath !== undefined) {
     mkdirSync(primary.primaryDirectory, { recursive: true });

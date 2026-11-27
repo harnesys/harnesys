@@ -550,7 +550,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
   printPackDiagnostics(caps.diagnostics, opts.logger);
   const loaded = await opts.state.load();
   const runId = loaded?.runId ?? opts.runId ?? crypto.randomUUID();
-  const excludedMediaRelPaths = new Map<string, { reason: string; untilTurn: number }>();
+  const excludedMediaPaths = new Map<string, { reason: string; untilTurn: number }>();
   let seq = loaded?.sequence ?? 0;
   const st: Record<string, unknown> = loaded
     ? { ...(loaded.state as Record<string, unknown>) }
@@ -1399,7 +1399,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
               contextEntries: opts.contextEntries,
               runtime: opts.runtime,
               fileAccess: opts.fileAccess,
-              excludedMediaRelPaths,
+              excludedMediaPaths,
               modelQuota: opts.modelQuota,
             },
           );

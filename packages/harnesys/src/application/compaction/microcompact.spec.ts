@@ -88,7 +88,7 @@ describe('microcompactToolResults', () => {
         name: 'file_read_image',
         content: JSON.stringify({
           ok: true,
-          relPath: 'thread:attachments/pic.png',
+          path: '/data/threads/t1/attachments/a1/pic.png',
           mediaType: 'image/png',
           kind: 'image',
         }),

@@ -81,7 +81,7 @@ Settings: `provider`, `model`. No permission gate.
 
 | Tool | Does |
 |---|---|
-| `image_generate` | Generate an image from a detailed English prompt; returns a `thread:` locator and attaches the image to the chat. |
+| `image_generate` | Generate an image from a detailed English prompt; returns the image's absolute path and attaches the image to the chat. |
 
 ### web — search, HTTP, browser
 Settings: `provider` (`duckduckgo` \| `searxng`), `searxngUrl`, `maxResults` (1–20), `engine`, `allowPrivateNetwork`, `stealth`, `headed`. Gate: `network`.

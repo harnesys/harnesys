@@ -4,7 +4,7 @@ import { ThreadValidationException } from './thread.error.ts';
 
 export interface MaterializePrimaryInput {
   anchorRoot: string | null;
-  threadSandbox: string;
+  threadDir: string;
 }
 
 export interface MaterializedPrimary {
@@ -57,7 +57,7 @@ export function materializePrimary(
 ): MaterializedPrimary {
   const anchor = environment.anchor;
   if (environment.cwd === 'sandbox' || anchor === null) {
-    return { primaryDirectory: input.threadSandbox, primaryKind: 'sandbox' };
+    return { primaryDirectory: input.threadDir, primaryKind: 'sandbox' };
   }
   const anchorRoot = input.anchorRoot;
   if (anchorRoot === null) {

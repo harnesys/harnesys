@@ -45,7 +45,7 @@ export class ExportThreadUseCase {
       this.reader.readRuns(request.orgId, request.threadId),
       this.reader.readSnapshots(request.orgId, request.threadId),
       this.reader.readPlan(request.orgId, request.threadId),
-      readSources(join(threadDir, 'raw-model-requests'), isThreadRawModelRequestName),
+      readSources(join(threadDir, '.runtime', 'raw-model-requests'), isThreadRawModelRequestName),
       readSources(join(threadDir, 'tool-outputs'), acceptAll),
     ]);
     const deps = {

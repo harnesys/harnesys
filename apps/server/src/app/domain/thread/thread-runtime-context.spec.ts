@@ -11,10 +11,11 @@ describe('threadRuntimeContextOf', () => {
     const sandbox = threadRuntimeContextOf({
       hostId: 'host-1',
       runtime: 'host',
+      threadDir: '/tmp/threads/t1',
       threadSandbox: '/tmp/threads/t1/sandbox',
       sharedSources,
     });
-    expect(sandbox.primaryDirectory).toBe('/tmp/threads/t1/sandbox');
+    expect(sandbox.primaryDirectory).toBe('/tmp/threads/t1');
     expect(sandbox.primaryKind).toBe('sandbox');
     expect(sandbox.activeWorktree).toBeUndefined();
     expect(sandbox.sharedSources).toBe(sharedSources);
@@ -24,6 +25,7 @@ describe('threadRuntimeContextOf', () => {
     const primary = threadRuntimeContextOf({
       hostId: 'host-1',
       runtime: 'host',
+      threadDir: '/tmp/threads/t1',
       threadSandbox: '/tmp/threads/t1/sandbox',
       primary: { directory: '/srv/project', kind: 'directory' },
       sharedSources: [],
@@ -42,6 +44,7 @@ describe('threadRuntimeContextOf', () => {
     const worktree = threadRuntimeContextOf({
       hostId: 'host-1',
       runtime: 'container',
+      threadDir: '/tmp/threads/t1',
       threadSandbox: '/tmp/threads/t1/sandbox',
       worktree: worktreeInput,
       sharedSources: [],
@@ -54,17 +57,19 @@ describe('threadRuntimeContextOf', () => {
     const fallback = threadRuntimeContextOf({
       hostId: 'host-1',
       runtime: 'host',
+      threadDir: '/tmp/threads/t1',
       threadSandbox: '/tmp/threads/t1/sandbox',
       sharedSources: [],
     });
     expect(fallback.primaryKind).toBe('sandbox');
-    expect(fallback.primaryDirectory).toBe('/tmp/threads/t1/sandbox');
+    expect(fallback.primaryDirectory).toBe('/tmp/threads/t1');
   });
 
   test('bound source material becomes source primary and keeps the context ref without root', () => {
     const source = threadRuntimeContextOf({
       hostId: 'host-1',
       runtime: 'host',
+      threadDir: '/tmp/threads/t1',
       threadSandbox: '/tmp/threads/t1/sandbox',
       primarySource: { sourceId: 'src-1', name: 'repo', kind: 'git', root: '/sources/repo' },
       sharedSources: [],

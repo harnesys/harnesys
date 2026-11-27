@@ -13,6 +13,12 @@ describe('resolveThreadEntryPath', () => {
     expect(resolveThreadEntryPath(THREAD_DIR, 'attachments/abc/file.png')).toBe(
       `${THREAD_DIR}${sep}attachments${sep}abc${sep}file.png`,
     );
+    expect(resolveThreadEntryPath(THREAD_DIR, 'tool-outputs')).toBe(
+      `${THREAD_DIR}${sep}tool-outputs`,
+    );
+    expect(resolveThreadEntryPath(THREAD_DIR, 'tool-outputs/read_file-c1.txt')).toBe(
+      `${THREAD_DIR}${sep}tool-outputs${sep}read_file-c1.txt`,
+    );
   });
 
   test('rejects traversal outside the thread dir', () => {

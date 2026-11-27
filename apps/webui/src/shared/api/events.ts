@@ -14,6 +14,7 @@ import type {
   EventsWatchThreadErrorEvent,
   EventsWatchThreadErrorFrame,
   EventsWatchThreadEventsFrame,
+  EventsWatchThreadFilesChangedFrame,
   EventsWatchThreadLogChangedFrame,
   KnowledgeIndexState,
   TerminalWatchEvent,
@@ -73,6 +74,27 @@ export function watchThreadLogChanged(
     (data) => {
       try {
         onFrame(JSON.parse(data) as EventsWatchThreadLogChangedFrame);
+      } catch {
+        // ignore malformed frames
+      }
+    },
+    { orgId },
+  );
+}
+
+export function watchThreadFilesChanged(
+  orgId: string,
+  onFrame: (frame: EventsWatchThreadFilesChangedFrame) => void,
+): () => void {
+  return watchEventSource(
+    eventsWatchUrl,
+    'thread-files-changed',
+    (data) => {
+      try {
+        const frame = JSON.parse(data) as EventsWatchThreadFilesChangedFrame;
+        if (frame.orgId === orgId && frame.threadId) {
+          onFrame(frame);
+        }
       } catch {
         // ignore malformed frames
       }

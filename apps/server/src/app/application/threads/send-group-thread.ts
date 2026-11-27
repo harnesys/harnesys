@@ -1,6 +1,7 @@
 import type { AcceptedRunResponse } from '@harnesys/contracts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { UserRepository } from '../../domain/identity/user-repository.port.ts';
+import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { AttachmentRepositoryPort } from '../../domain/thread/attachment-repository.port.ts';
 import { resolveResponders } from '../../domain/thread/responder-policy.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
@@ -15,6 +16,7 @@ export interface GroupSendDeps {
   agents: AgentRegistryPort;
   attachments: AttachmentRepositoryPort;
   users: UserRepository;
+  layout: HostFsLayoutPort;
   sendMessage: SendThreadMessageUseCase;
 }
 
@@ -40,6 +42,7 @@ export async function sendGroupThread(
     request.orgId,
     thread.id,
     request.body.attachmentIds,
+    deps.layout.threadDir(request.orgId, thread.id),
   );
   const actorId = request.attribution.startedByUserId;
   const author = actorId

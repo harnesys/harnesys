@@ -1,3 +1,5 @@
+import path from 'node:path';
+import { displayPath } from '../adapters/actions/path-resolve.ts';
 import { AUDIO_TYPES, IMAGE_TYPES, VIDEO_TYPES } from '../constants.ts';
 import type { Attachment, SendFile } from '../domain/attachment.ts';
 
@@ -33,9 +35,9 @@ function classify(mediaType?: string): 'image' | 'audio' | 'video' | 'file' {
 }
 export const MAX_INLINE_BYTES = 1_000_000;
 
-function displayName(file: SendFile): string {
+function displayName(file: SendFile, runRoot: string | undefined): string {
   if ('path' in file && file.path) {
-    return file.path;
+    return path.isAbsolute(file.path) ? displayPath(file.path, runRoot) : file.path;
   }
   if ('name' in file && file.name) {
     return file.name;
@@ -46,13 +48,14 @@ function displayName(file: SendFile): string {
 export async function foldAttachments(
   files: SendFile[],
   readFn: AttachmentReadFn,
+  runRoot?: string,
 ): Promise<FoldResult[]> {
   const results: FoldResult[] = [];
   for (const file of files) {
     const mediaType = file.mediaType;
     const kind = classify(mediaType);
     if (kind === 'file') {
-      results.push({ type: 'text', text: `[file: ${displayName(file)}]` });
+      results.push({ type: 'text', text: `[file: ${displayName(file, runRoot)}]` });
       continue;
     }
     let bytes: Uint8Array;
@@ -64,7 +67,7 @@ export async function foldAttachments(
       continue;
     }
     if (bytes.byteLength > MAX_INLINE_BYTES) {
-      results.push({ type: 'text', text: `[file: ${displayName(file)}]` });
+      results.push({ type: 'text', text: `[file: ${displayName(file, runRoot)}]` });
       continue;
     }
     results.push({ type: kind, data: bytes, mediaType });
@@ -74,6 +77,7 @@ export async function foldAttachments(
 export async function materializeMessageAttachments(
   messages: unknown[],
   readFn: AttachmentReadFn,
+  runRoot?: string,
 ): Promise<unknown[]> {
   const out: unknown[] = [];
   for (const raw of messages) {
@@ -92,7 +96,7 @@ export async function materializeMessageAttachments(
       name: a.name,
       mediaType: a.mediaType,
     }));
-    const folded = await foldAttachments(files, readFn);
+    const folded = await foldAttachments(files, readFn, runRoot);
     const parts: Record<string, unknown>[] = [];
     const text = typeof msg.content === 'string' ? msg.content : '';
     if (text) {

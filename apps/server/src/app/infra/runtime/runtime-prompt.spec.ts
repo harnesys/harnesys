@@ -224,8 +224,9 @@ function prepared(
     agent: { id: 'agent-1', sharedSourceIds: [SRC] },
     runtime: {
       hostId: preparedHost,
-      primaryDirectory: '/org/thread/sandbox',
+      primaryDirectory: '/org/thread',
       primaryKind: 'sandbox' as const,
+      threadDir: '/org/thread',
       threadSandbox: '/org/thread/sandbox',
       ...(activeWorktree ? { activeWorktree } : {}),
     },
@@ -239,6 +240,7 @@ function sourcePrepared(kind: 'git' | 'folder') {
       hostId: HOST_LOCAL,
       primaryDirectory: '/shared/harnesys',
       primaryKind: 'source' as const,
+      threadDir: '/org/thread',
       threadSandbox: '/org/thread/sandbox',
       primarySource: { sourceId: SRC, name: 'harnesys', kind },
     },

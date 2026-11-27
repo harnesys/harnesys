@@ -36,7 +36,7 @@ exports[`media insert wire shapes wire shape for openai: openai wire shape 1`] =
     {
       "content": [
         {
-          "text": "[image from file_read_image (call t1) thread:attachments/a/pic.png]",
+          "text": "[image from file_read_image (call t1) attachments/a/pic.png]",
           "type": "text",
         },
         {
@@ -87,7 +87,7 @@ exports[`media insert wire shapes wire shape for anthropic: anthropic wire shape
     {
       "content": [
         {
-          "text": "[image from file_read_image (call t1) thread:attachments/a/pic.png]",
+          "text": "[image from file_read_image (call t1) attachments/a/pic.png]",
           "type": "text",
         },
         {
@@ -138,7 +138,7 @@ exports[`media insert wire shapes wire shape for google: google wire shape 1`] =
     {
       "content": [
         {
-          "text": "[image from file_read_image (call t1) thread:attachments/a/pic.png]",
+          "text": "[image from file_read_image (call t1) attachments/a/pic.png]",
           "type": "text",
         },
         {
@@ -189,7 +189,7 @@ exports[`media insert wire shapes wire shape for minimax: minimax wire shape 1`]
     {
       "content": [
         {
-          "text": "[image from file_read_image (call t1) thread:attachments/a/pic.png]",
+          "text": "[image from file_read_image (call t1) attachments/a/pic.png]",
           "type": "text",
         },
         {
@@ -240,7 +240,7 @@ exports[`media insert wire shapes wire shape for openai-compatible: openai-compa
     {
       "content": [
         {
-          "text": "[image from file_read_image (call t1) thread:attachments/a/pic.png]",
+          "text": "[image from file_read_image (call t1) attachments/a/pic.png]",
           "type": "text",
         },
         {
@@ -291,7 +291,7 @@ exports[`media insert wire shapes wire shape for mistral: mistral wire shape 1`]
     {
       "content": [
         {
-          "text": "[image from file_read_image (call t1) thread:attachments/a/pic.png]",
+          "text": "[image from file_read_image (call t1) attachments/a/pic.png]",
           "type": "text",
         },
         {
@@ -342,7 +342,7 @@ exports[`media insert wire shapes wire shape for xai: xai wire shape 1`] = `
     {
       "content": [
         {
-          "text": "[image from file_read_image (call t1) thread:attachments/a/pic.png]",
+          "text": "[image from file_read_image (call t1) attachments/a/pic.png]",
           "type": "text",
         },
         {
@@ -393,7 +393,7 @@ exports[`media insert wire shapes wire shape for alibaba: alibaba wire shape 1`]
     {
       "content": [
         {
-          "text": "[image from file_read_image (call t1) thread:attachments/a/pic.png]",
+          "text": "[image from file_read_image (call t1) attachments/a/pic.png]",
           "type": "text",
         },
         {
@@ -444,7 +444,7 @@ exports[`media insert wire shapes wire shape for kimi: kimi wire shape 1`] = `
     {
       "content": [
         {
-          "text": "[image from file_read_image (call t1) thread:attachments/a/pic.png]",
+          "text": "[image from file_read_image (call t1) attachments/a/pic.png]",
           "type": "text",
         },
         {

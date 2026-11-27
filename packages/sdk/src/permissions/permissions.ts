@@ -59,6 +59,7 @@ export const KNOWN_PERMISSION_IDS = [
   'events.subscribe',
   'files.read',
   'files.write',
+  'files.locate',
   'bridge.inbound',
   'routes.public',
   'lifecycle.resident',

@@ -216,7 +216,7 @@ function DefaultWorkspaceField({
         <FieldLabel>Default workspace</FieldLabel>
         <Select items={items} value={workspaceValue} onValueChange={selectWorkspace}>
           <SelectTrigger data-testid="agent-default-workspace">
-            <SelectValue placeholder="Thread sandbox (default)" />
+            <SelectValue placeholder="Thread directory (default)" />
           </SelectTrigger>
           <SelectContent>
             {items.map((item) => (
@@ -326,7 +326,7 @@ function WorkspaceHint({
   }
   return (
     <p className="text-muted-foreground text-xs leading-snug">
-      New threads for this agent start in their private sandbox.
+      New threads for this agent start in their private thread directory.
     </p>
   );
 }
@@ -343,7 +343,7 @@ function workspaceValueOf(ref: WorkspaceRef | null): string {
 
 function workspaceItems(ref: WorkspaceRef | null, roots: SourceRootOption[]) {
   const items = [
-    { value: SANDBOX_VALUE, label: 'Thread sandbox' },
+    { value: SANDBOX_VALUE, label: 'Thread directory' },
     ...roots.map((option) => ({
       value: `${SOURCE_PREFIX}${option.sourceId}`,
       label: option.label,

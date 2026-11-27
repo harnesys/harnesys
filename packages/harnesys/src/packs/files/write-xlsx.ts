@@ -27,7 +27,7 @@ export function writeXlsxTool(options: FilesOptions = {}): ToolDefinition {
   return tool('write_xlsx', {
     group: 'files',
     description:
-      'Create an Excel (.xlsx) workbook with one or more sheets. Each sheet takes a 2D array of rows (strings, numbers, booleans or null); the first row is rendered bold as a header unless boldHeader is false, and optional columnWidths sets column widths in characters. Use for budgets, price lists, reports and any tabular data a human will open in Excel. Paths starting with `thread:` resolve inside the thread file directory.',
+      'Create an Excel (.xlsx) workbook with one or more sheets. Each sheet takes a 2D array of rows (strings, numbers, booleans or null); the first row is rendered bold as a header unless boldHeader is false, and optional columnWidths sets column widths in characters. Use for budgets, price lists, reports and any tabular data a human will open in Excel. Pass a path relative to the run root or absolute.',
     operations: ['fs.write'],
     sideEffect: 'write',
     input: {

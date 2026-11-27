@@ -41,7 +41,7 @@ export function resolveRunEnvironment(
   }
   const agent = deps.agents.findById(deps.orgId, input.agentId);
   if (!agent) {
-    throw new ThreadValidationException(`agent not found for thread: ${input.agentId}`);
+    throw new ThreadValidationException(`agent not found for thread ${input.agentId}`);
   }
   const layers: WorkspaceLayer[] = [
     { origin: 'run', ref: input.explicit ?? null },

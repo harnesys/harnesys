@@ -7,6 +7,7 @@ import {
   ThreadNotFoundException,
   ThreadValidationException,
 } from '../../domain/thread/thread.error.ts';
+import { ThreadEventsPort } from '../../domain/thread/thread-events.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 import { resolveThreadEntryPath } from './thread-files-paths.ts';
 
@@ -28,6 +29,7 @@ export class WriteThreadFileUseCase {
   constructor(
     private readonly threads: ThreadRepositoryPort,
     private readonly layout: HostFsLayoutPort,
+    private readonly events: ThreadEventsPort,
   ) {}
 
   async execute(input: WriteThreadFileInput): Promise<ThreadFileWritePayload> {
@@ -52,6 +54,11 @@ export class WriteThreadFileUseCase {
     await mkdir(dirname(abs), { recursive: true, mode: 0o700 });
     await writeFile(abs, bytes);
     const info = await stat(abs);
+    this.events.emit(input.orgId, {
+      type: 'files-changed',
+      threadId: input.threadId,
+      roots: ['sandbox'],
+    });
     return { path: input.path, etag: makeEtag(info.mtimeMs, info.size) };
   }
 }

@@ -67,7 +67,7 @@ export class RunCwdResolverAdapter extends RunCwdResolverPort {
       );
       if (primary.primaryKind === 'sandbox') {
         mkdirSync(primary.threadSandbox, { recursive: true, mode: 0o700 });
-        return primary.threadSandbox;
+        return primary.primaryDirectory;
       }
       if (
         environment.subpath !== undefined &&

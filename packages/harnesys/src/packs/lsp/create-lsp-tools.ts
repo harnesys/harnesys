@@ -18,7 +18,10 @@ export function createLspTools(lsp: LspPort): ToolDefinition[] {
       input: {
         type: 'object',
         properties: {
-          path: { type: 'string', description: 'File path relative to project cwd' },
+          path: {
+            type: 'string',
+            description: 'File path relative to the run root or absolute',
+          },
         },
         required: ['path'],
       },
@@ -27,8 +30,8 @@ export function createLspTools(lsp: LspPort): ToolDefinition[] {
         const parsed = input as {
           path: string;
         };
-        ensureFileAccess(ctx, parsed.path, 'read');
-        return lsp.diagnostics({ cwd: ctx.cwd, path: parsed.path, roots: lspRoots(ctx) });
+        const canonical = ensureFileAccess(ctx, parsed.path, 'read');
+        return lsp.diagnostics({ cwd: ctx.cwd, path: canonical, roots: lspRoots(ctx) });
       },
     }),
     tool('lsp_definition', {
@@ -52,10 +55,10 @@ export function createLspTools(lsp: LspPort): ToolDefinition[] {
           line: number;
           character: number;
         };
-        ensureFileAccess(ctx, parsed.path, 'read');
+        const canonical = ensureFileAccess(ctx, parsed.path, 'read');
         return lsp.definition({
           cwd: ctx.cwd,
-          path: parsed.path,
+          path: canonical,
           line: parsed.line,
           character: parsed.character,
           roots: lspRoots(ctx),
@@ -83,10 +86,10 @@ export function createLspTools(lsp: LspPort): ToolDefinition[] {
           line: number;
           character: number;
         };
-        ensureFileAccess(ctx, parsed.path, 'read');
+        const canonical = ensureFileAccess(ctx, parsed.path, 'read');
         return lsp.references({
           cwd: ctx.cwd,
-          path: parsed.path,
+          path: canonical,
           line: parsed.line,
           character: parsed.character,
           roots: lspRoots(ctx),
@@ -114,10 +117,10 @@ export function createLspTools(lsp: LspPort): ToolDefinition[] {
           line: number;
           character: number;
         };
-        ensureFileAccess(ctx, parsed.path, 'read');
+        const canonical = ensureFileAccess(ctx, parsed.path, 'read');
         return lsp.hover({
           cwd: ctx.cwd,
-          path: parsed.path,
+          path: canonical,
           line: parsed.line,
           character: parsed.character,
           roots: lspRoots(ctx),

@@ -40,6 +40,7 @@ function environment(partial: Partial<RunEnvironment>): RunEnvironment {
 }
 
 const SANDBOX = join(ROOT, 'org-1', 'thread-1', 'sandbox');
+const THREAD = join(ROOT, 'org-1', 'thread-1');
 
 describe('resolveRuntimePrimary', () => {
   test('chat thread with a folder environment runs in that directory', () => {
@@ -55,9 +56,9 @@ describe('resolveRuntimePrimary', () => {
     expect(primary.threadSandbox).toBe(SANDBOX);
   });
 
-  test('empty environment falls back to the thread sandbox', () => {
+  test('empty environment falls back to the thread dir', () => {
     expect(resolveRuntimePrimary(deps())).toEqual({
-      primaryDirectory: SANDBOX,
+      primaryDirectory: THREAD,
       primaryKind: 'sandbox',
       threadSandbox: SANDBOX,
     });
@@ -65,7 +66,7 @@ describe('resolveRuntimePrimary', () => {
       resolveRuntimePrimary(deps(), {
         environment: environment({ anchor: null, cwd: 'sandbox', provenance: 'agent' }),
       }),
-    ).toEqual({ primaryDirectory: SANDBOX, primaryKind: 'sandbox', threadSandbox: SANDBOX });
+    ).toEqual({ primaryDirectory: THREAD, primaryKind: 'sandbox', threadSandbox: SANDBOX });
   });
 
   test('issue worktree environment runs in the worktree root', () => {
@@ -111,16 +112,16 @@ describe('resolveRuntimePrimary', () => {
       }),
     });
     expect(primary.primaryKind).toBe('sandbox');
-    expect(primary.primaryDirectory).toBe(SANDBOX);
+    expect(primary.primaryDirectory).toBe(THREAD);
     expect(primary.primarySourceId).toBeUndefined();
   });
 
-  test('schedule sandbox environment runs in the thread sandbox', () => {
+  test('schedule sandbox environment runs inside the thread dir', () => {
     const primary = resolveRuntimePrimary(deps(), {
       environment: environment({ anchor: null, cwd: 'sandbox', provenance: 'run' }),
     });
     expect(primary.primaryKind).toBe('sandbox');
-    expect(primary.primaryDirectory).toBe(SANDBOX);
+    expect(primary.primaryDirectory).toBe(THREAD);
     expect(primary.threadSandbox).toBe(SANDBOX);
   });
 

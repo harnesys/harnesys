@@ -50,7 +50,7 @@ export class ListThreadRawModelRequestsUseCase {
     if (!this.threads.findById(orgId, threadId)) {
       throw new ThreadNotFoundException(threadId);
     }
-    const dir = join(this.layout.threadDir(orgId, threadId), 'raw-model-requests');
+    const dir = join(this.layout.threadDir(orgId, threadId), '.runtime', 'raw-model-requests');
     let names: string[];
     try {
       names = await readdir(dir);

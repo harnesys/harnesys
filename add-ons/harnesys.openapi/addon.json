@@ -24,11 +24,15 @@
     },
     {
       "id": "files.read",
-      "reason": "Read file content by absolute host path or thread-scoped path for the files parameter of multipart api_* calls (uploads to project APIs)"
+      "reason": "Read file content by absolute host path for the files parameter of multipart api_* calls (uploads to project APIs); thread files are passed by their absolute paths"
+    },
+    {
+      "id": "files.locate",
+      "reason": "Resolve the absolute thread directory to compose tool-outputs paths for saveToFile responses"
     },
     {
       "id": "files.write",
-      "reason": "Write full api_* response bodies to thread:tool-outputs/ when callers pass saveToFile; thread-scoped output files only"
+      "reason": "Write full api_* response bodies under the thread directory's tool-outputs/ when callers pass saveToFile; thread-scoped output files only"
     }
   ],
   "data": {
@@ -93,7 +97,7 @@
           },
           {
             "name": "get",
-            "description": "Execute a granted GET operation. params is one flat object with path, query and header parameters as named in api_docs; the addon routes them to the right place. Response shaping: fields projects array records to the listed keys; saveToFile stores the full body in thread:tool-outputs/ and returns path + counters + a preview of the first records instead of the raw body.",
+            "description": "Execute a granted GET operation. params is one flat object with path, query and header parameters as named in api_docs; the addon routes them to the right place. Response shaping: fields projects array records to the listed keys; saveToFile stores the full body under the thread directory's tool-outputs/ and returns the absolute savedTo path + counters + a preview of the first records instead of the raw body.",
             "effect": "read",
             "idempotent": true,
             "inputSchema": {
@@ -124,7 +128,7 @@
                 },
                 "saveToFile": {
                   "type": "boolean",
-                  "description": "Write the full raw response body to thread:tool-outputs/<operation>-<timestamp>.json and return savedTo path + bytes + record counters + preview instead of the inline body"
+                  "description": "Write the full raw response body to tool-outputs/<operation>-<timestamp>.json under the thread directory and return the absolute savedTo path + bytes + record counters + preview instead of the inline body"
                 },
                 "previewLimit": {
                   "type": "integer",
@@ -141,7 +145,7 @@
           },
           {
             "name": "post",
-            "description": "Execute a granted POST operation. params carries path/query/header parameters; body is the JSON request body when the operation declares one. Response shaping: fields projects array records to the listed keys; saveToFile stores the full body in thread:tool-outputs/ and returns path + counters + a preview of the first records instead of the raw body.",
+            "description": "Execute a granted POST operation. params carries path/query/header parameters; body is the JSON request body when the operation declares one. Response shaping: fields projects array records to the listed keys; saveToFile stores the full body under the thread directory's tool-outputs/ and returns the absolute savedTo path + counters + a preview of the first records instead of the raw body.",
             "effect": "write",
             "inputSchema": {
               "type": "object",
@@ -164,7 +168,7 @@
                 },
                 "files": {
                   "type": "array",
-                  "description": "Files for multipart/form-data operations: [{name, path | content (text) | contentBase64}]. path is an absolute host path (any file the host can read, including thread/issue attachments) or 'thread:sandbox/x.jpg' for a thread-sandbox file. Ignored for JSON operations.",
+                  "description": "Files for multipart/form-data operations: [{name, path | content (text) | contentBase64}]. path is an absolute host path (any file the host can read, including thread and issue files by their absolute paths). Ignored for JSON operations.",
                   "items": {
                     "type": "object",
                     "properties": {
@@ -174,7 +178,7 @@
                       },
                       "path": {
                         "type": "string",
-                        "description": "Absolute host path to the file, or 'thread:sandbox/x.jpg' / 'thread:attachments/<id>/x.jpg' for thread files"
+                        "description": "Absolute host path to the file; thread files are addressed by their absolute paths, e.g. /Users/.../threads/<id>/attachments/<attId>/photo.jpg or /Users/.../threads/<id>/sandbox/x.jpg"
                       },
                       "filename": {
                         "type": "string",
@@ -210,7 +214,7 @@
                 },
                 "saveToFile": {
                   "type": "boolean",
-                  "description": "Write the full raw response body to thread:tool-outputs/<operation>-<timestamp>.json and return savedTo path + bytes + record counters + preview instead of the inline body"
+                  "description": "Write the full raw response body to tool-outputs/<operation>-<timestamp>.json under the thread directory and return the absolute savedTo path + bytes + record counters + preview instead of the inline body"
                 },
                 "previewLimit": {
                   "type": "integer",
@@ -227,7 +231,7 @@
           },
           {
             "name": "put",
-            "description": "Execute a granted PUT operation. params carries path/query/header parameters; body is the JSON request body when the operation declares one. Response shaping: fields projects array records to the listed keys; saveToFile stores the full body in thread:tool-outputs/ and returns path + counters + a preview of the first records instead of the raw body.",
+            "description": "Execute a granted PUT operation. params carries path/query/header parameters; body is the JSON request body when the operation declares one. Response shaping: fields projects array records to the listed keys; saveToFile stores the full body under the thread directory's tool-outputs/ and returns the absolute savedTo path + counters + a preview of the first records instead of the raw body.",
             "effect": "write",
             "idempotent": true,
             "inputSchema": {
@@ -251,7 +255,7 @@
                 },
                 "files": {
                   "type": "array",
-                  "description": "Files for multipart/form-data operations: [{name, path | content (text) | contentBase64}]. path is an absolute host path (any file the host can read, including thread/issue attachments) or 'thread:sandbox/x.jpg' for a thread-sandbox file. Ignored for JSON operations.",
+                  "description": "Files for multipart/form-data operations: [{name, path | content (text) | contentBase64}]. path is an absolute host path (any file the host can read, including thread and issue files by their absolute paths). Ignored for JSON operations.",
                   "items": {
                     "type": "object",
                     "properties": {
@@ -261,7 +265,7 @@
                       },
                       "path": {
                         "type": "string",
-                        "description": "Absolute host path to the file, or 'thread:sandbox/x.jpg' / 'thread:attachments/<id>/x.jpg' for thread files"
+                        "description": "Absolute host path to the file; thread files are addressed by their absolute paths, e.g. /Users/.../threads/<id>/attachments/<attId>/photo.jpg or /Users/.../threads/<id>/sandbox/x.jpg"
                       },
                       "filename": {
                         "type": "string",
@@ -297,7 +301,7 @@
                 },
                 "saveToFile": {
                   "type": "boolean",
-                  "description": "Write the full raw response body to thread:tool-outputs/<operation>-<timestamp>.json and return savedTo path + bytes + record counters + preview instead of the inline body"
+                  "description": "Write the full raw response body to tool-outputs/<operation>-<timestamp>.json under the thread directory and return the absolute savedTo path + bytes + record counters + preview instead of the inline body"
                 },
                 "previewLimit": {
                   "type": "integer",
@@ -314,7 +318,7 @@
           },
           {
             "name": "patch",
-            "description": "Execute a granted PATCH operation. params carries path/query/header parameters; body is the JSON request body when the operation declares one. Response shaping: fields projects array records to the listed keys; saveToFile stores the full body in thread:tool-outputs/ and returns path + counters + a preview of the first records instead of the raw body.",
+            "description": "Execute a granted PATCH operation. params carries path/query/header parameters; body is the JSON request body when the operation declares one. Response shaping: fields projects array records to the listed keys; saveToFile stores the full body under the thread directory's tool-outputs/ and returns the absolute savedTo path + counters + a preview of the first records instead of the raw body.",
             "effect": "write",
             "inputSchema": {
               "type": "object",
@@ -337,7 +341,7 @@
                 },
                 "files": {
                   "type": "array",
-                  "description": "Files for multipart/form-data operations: [{name, path | content (text) | contentBase64}]. path is an absolute host path (any file the host can read, including thread/issue attachments) or 'thread:sandbox/x.jpg' for a thread-sandbox file. Ignored for JSON operations.",
+                  "description": "Files for multipart/form-data operations: [{name, path | content (text) | contentBase64}]. path is an absolute host path (any file the host can read, including thread and issue files by their absolute paths). Ignored for JSON operations.",
                   "items": {
                     "type": "object",
                     "properties": {
@@ -347,7 +351,7 @@
                       },
                       "path": {
                         "type": "string",
-                        "description": "Absolute host path to the file, or 'thread:sandbox/x.jpg' / 'thread:attachments/<id>/x.jpg' for thread files"
+                        "description": "Absolute host path to the file; thread files are addressed by their absolute paths, e.g. /Users/.../threads/<id>/attachments/<attId>/photo.jpg or /Users/.../threads/<id>/sandbox/x.jpg"
                       },
                       "filename": {
                         "type": "string",
@@ -383,7 +387,7 @@
                 },
                 "saveToFile": {
                   "type": "boolean",
-                  "description": "Write the full raw response body to thread:tool-outputs/<operation>-<timestamp>.json and return savedTo path + bytes + record counters + preview instead of the inline body"
+                  "description": "Write the full raw response body to tool-outputs/<operation>-<timestamp>.json under the thread directory and return the absolute savedTo path + bytes + record counters + preview instead of the inline body"
                 },
                 "previewLimit": {
                   "type": "integer",
@@ -400,7 +404,7 @@
           },
           {
             "name": "delete",
-            "description": "Execute a granted DELETE operation. This is a destructive call and may be subject to host approval. Response shaping: fields projects array records to the listed keys; saveToFile stores the full body in thread:tool-outputs/ and returns path + counters + a preview of the first records instead of the raw body.",
+            "description": "Execute a granted DELETE operation. This is a destructive call and may be subject to host approval. Response shaping: fields projects array records to the listed keys; saveToFile stores the full body under the thread directory's tool-outputs/ and returns the absolute savedTo path + counters + a preview of the first records instead of the raw body.",
             "effect": "destructive",
             "inputSchema": {
               "type": "object",
@@ -430,7 +434,7 @@
                 },
                 "saveToFile": {
                   "type": "boolean",
-                  "description": "Write the full raw response body to thread:tool-outputs/<operation>-<timestamp>.json and return savedTo path + bytes + record counters + preview instead of the inline body"
+                  "description": "Write the full raw response body to tool-outputs/<operation>-<timestamp>.json under the thread directory and return the absolute savedTo path + bytes + record counters + preview instead of the inline body"
                 },
                 "previewLimit": {
                   "type": "integer",

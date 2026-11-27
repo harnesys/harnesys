@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import type { ToolDefinition } from '../../ports/tools.ts';
+import type { ToolContext, ToolDefinition } from '../../ports/tools.ts';
 import { tool } from '../../ports/tools.ts';
 import { createLoadToolsTool } from './create-load-tools-tool.ts';
+
+const ctx = {} as ToolContext;
 
 function echoDef(name: string): ToolDefinition {
   return tool(name, {
@@ -18,7 +20,7 @@ describe('createLoadToolsTool', () => {
     const load = createLoadToolsTool(registry, {
       discover: (name) => (name === 'everything__echo' ? echoDef(name) : undefined),
     });
-    const result = load.execute({ names: ['everything__echo'] }) as {
+    const result = load.execute({ names: ['everything__echo'] }, ctx) as {
       loaded: string[];
       unknown: string[];
       tools: Array<{ name: string }>;
@@ -31,7 +33,10 @@ describe('createLoadToolsTool', () => {
   test('keeps names unknown when discover has no match', () => {
     const registry = new Map<string, ToolDefinition>();
     const load = createLoadToolsTool(registry, { discover: () => undefined });
-    const result = load.execute({ names: ['nope'] }) as { loaded: string[]; unknown: string[] };
+    const result = load.execute({ names: ['nope'] }, ctx) as {
+      loaded: string[];
+      unknown: string[];
+    };
     expect(result.unknown).toEqual(['nope']);
     expect(registry.has('nope')).toBe(false);
   });
@@ -40,7 +45,7 @@ describe('createLoadToolsTool', () => {
     const registry = new Map<string, ToolDefinition>();
     registry.set('known', echoDef('known'));
     const load = createLoadToolsTool(registry);
-    const result = load.execute({ names: ['known', 'ghost'] }) as {
+    const result = load.execute({ names: ['known', 'ghost'] }, ctx) as {
       loaded: string[];
       unknown: string[];
     };

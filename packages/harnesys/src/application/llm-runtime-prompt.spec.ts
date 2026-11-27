@@ -5,8 +5,9 @@ import { formatRuntimeSection } from './llm.ts';
 const chatSandbox: RuntimePromptInfo = {
   hostName: 'local',
   environment: 'host',
-  primaryDirectory: '/org/thread/sandbox',
+  primaryDirectory: '/org/thread',
   primaryKind: 'sandbox',
+  threadDir: '/org/thread',
   threadSandbox: '/org/thread/sandbox',
   sharedSources: [
     {
@@ -24,6 +25,7 @@ const directory: RuntimePromptInfo = {
   environment: 'host',
   primaryDirectory: '/srv/project',
   primaryKind: 'directory',
+  threadDir: '/org/thread',
   threadSandbox: '/org/thread/sandbox',
   sharedSources: [],
 };
@@ -33,6 +35,7 @@ const worktree: RuntimePromptInfo = {
   environment: 'host',
   primaryDirectory: '/worktrees/repo-feat-x',
   primaryKind: 'worktree',
+  threadDir: '/org/thread',
   threadSandbox: '/org/thread/sandbox',
   sharedSources: [],
   worktree: {
@@ -47,6 +50,7 @@ const sourceBase: RuntimePromptInfo = {
   environment: 'host',
   primaryDirectory: '/sources/repo',
   primaryKind: 'source',
+  threadDir: '/org/thread',
   threadSandbox: '/org/thread/sandbox',
   sharedSources: [],
 };
@@ -56,24 +60,31 @@ describe('formatRuntimeSection', () => {
     const text = formatRuntimeSection(chatSandbox);
     expect(text).toContain('Host: local');
     expect(text).toContain('Environment: Host');
-    expect(text).toContain('- Run root: /org/thread/sandbox (sandbox)');
+    expect(text).toContain('- You are working inside `/org/thread` (sandbox).');
     expect(text).toContain(
-      '- All file tools accept absolute paths; stay inside the run root — access outside it requires user approval.',
+      '- Prefer relative paths for files inside the run root; absolute paths only for files outside it. Access outside the run root requires user approval.',
+    );
+    expect(text).toContain(
+      "- This is this thread's directory: `attachments/` (uploaded files, read-only), `sandbox/` (scratch, writable), `tool-outputs/` (spill, read-only).",
     );
     expect(text).toContain('Temporary workspace: /org/thread/sandbox');
     expect(text).toContain('harnesys (entire-source): /shared/harnesys — monorepo');
     expect(text).toContain('docs (not-indexed): /shared/docs');
     expect(text).not.toContain('null');
+    expect(text).not.toContain('thread:');
   });
 
   test('directory primary renders the workspace line with scratch', () => {
     const text = formatRuntimeSection(directory);
-    expect(text).toContain('- Run root: /srv/project (directory)');
+    expect(text).toContain('- You are working inside `/srv/project` (directory).');
     expect(text).toContain(
       '- Workspace: /srv/project — directory bound to this thread (shared host state; changes are immediate)',
     );
     expect(text).toContain(
       '- Scratch: /org/thread/sandbox (private, temporary — keep only temp files here)',
+    );
+    expect(text).toContain(
+      '- Thread files: /org/thread — `attachments/` and `tool-outputs/` are read-only, `sandbox/` is writable; address thread files by absolute path. Files outside the run root require approval or access rules.',
     );
     expect(text).not.toContain('Temporary workspace');
   });

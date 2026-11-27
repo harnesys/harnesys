@@ -71,3 +71,15 @@ export function canonicalizePath(cwd: string, target: string): string {
   const absolute = path.isAbsolute(target) ? path.resolve(target) : path.resolve(workdir, target);
   return canonicalPath(absolute);
 }
+
+export function displayPath(absolute: string, runRoot: string | undefined): string {
+  const canonical = path.resolve(absolute);
+  if (runRoot === undefined) {
+    return canonical;
+  }
+  const root = path.resolve(runRoot);
+  if (canonical === root || !canonical.startsWith(`${root}${path.sep}`)) {
+    return canonical;
+  }
+  return path.relative(root, canonical).split(path.sep).join('/');
+}

@@ -51,7 +51,7 @@ export function workspaceOptions(input: {
 }): SelectOption[] {
   const options: SelectOption[] = [
     { value: WORKSPACE_INHERIT_VALUE, label: input.inheritLabel },
-    { value: SANDBOX_DIR_VALUE, label: 'Thread sandbox' },
+    { value: SANDBOX_DIR_VALUE, label: 'Thread directory' },
     ...input.sources.map((source) => ({
       value: `${WORKSPACE_SOURCE_PREFIX}${source.id}`,
       label: sourceLabel(source, input.workspaceRef),

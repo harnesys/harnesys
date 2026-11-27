@@ -33,7 +33,7 @@
     "sdk:build": "bun run --cwd packages/sdk build",
     "sdk:pack": "bun run --cwd packages/sdk pack",
     "test": "bun test",
-    "typecheck": "bun run --cwd packages/brix typecheck && bun run --cwd packages/contracts typecheck && bun run --cwd packages/sdk typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/webui typecheck && bun run --cwd apps/cli typecheck",
+    "typecheck": "bun run --cwd packages/brix typecheck && bun run --cwd packages/contracts typecheck && bun run --cwd packages/create-addon typecheck && bun run --cwd packages/harnesys typecheck && bun run --cwd packages/sdk typecheck && bun run --cwd packages/studio-shared typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/webui typecheck && bun run --cwd apps/cli typecheck && bun run --cwd add-ons/harnesys.drawio typecheck && bun run --cwd add-ons/harnesys.github typecheck && bun run --cwd add-ons/harnesys.google-calendar typecheck && bun run --cwd add-ons/harnesys.google-docs typecheck && bun run --cwd add-ons/harnesys.google-drive typecheck && bun run --cwd add-ons/harnesys.google-gmail typecheck && bun run --cwd add-ons/harnesys.google-search-console typecheck && bun run --cwd add-ons/harnesys.google-sheets typecheck && bun run --cwd add-ons/harnesys.google-youtube typecheck && bun run --cwd add-ons/harnesys.notion typecheck && bun run --cwd add-ons/harnesys.openapi typecheck && bun run --cwd add-ons/harnesys.scheduler typecheck && bun run --cwd add-ons/harnesys.telegram-account typecheck && bun run --cwd add-ons/harnesys.telegram-tools typecheck && bun run --cwd add-ons/harnesys.webhook typecheck",
     "check": "bun run typecheck && bun run lint:fix && bun run test"
   },
   "overrides": {

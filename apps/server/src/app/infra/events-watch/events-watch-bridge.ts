@@ -16,6 +16,7 @@ import type {
   EventsWatchTerminalFrame,
   EventsWatchThreadErrorFrame,
   EventsWatchThreadEventsFrame,
+  EventsWatchThreadFilesChangedFrame,
   EventsWatchThreadLogChangedFrame,
   KnowledgeIndexState,
   TerminalWatchEvent,
@@ -180,6 +181,15 @@ export class EventsWatchBridge implements ModuleInitHook, ModuleDestroyHook {
         serverMax: event.serverMax,
       };
       this.hub.publish(orgId, 'thread-log-changed', logFrame);
+      return;
+    }
+    if (event.type === 'files-changed') {
+      const filesFrame: EventsWatchThreadFilesChangedFrame = {
+        orgId,
+        threadId: event.threadId,
+        roots: event.roots,
+      };
+      this.hub.publish(orgId, 'thread-files-changed', filesFrame);
       return;
     }
     const frame: EventsWatchThreadErrorFrame = { orgId, event };

@@ -7,7 +7,7 @@ export function compactionFileName(iso: string): string {
   return `${iso.replaceAll(':', '-')}.md`;
 }
 export function compactionRelPath(sessionId: string, fileName: string): string {
-  return `.harnesys/threads/${sessionId}/compactions/${fileName}`;
+  return `.harnesys/threads/${sessionId}/.runtime/compactions/${fileName}`;
 }
 export function compactionFileBody(message: CompactionMessage, modelLabel: string): string {
   const header = [
@@ -30,6 +30,7 @@ export async function writeCompactionFile(input: {
   if (threadDir) {
     const absolute = path.join(
       threadDir,
+      '.runtime',
       'compactions',
       compactionFileName(input.message.createdAt),
     );

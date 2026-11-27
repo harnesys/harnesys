@@ -160,8 +160,7 @@ export async function fetchRunAttachments(input: {
     }
     const bytes = new Uint8Array(await response.arrayBuffer());
     const fileName = sanitizeFileName(meta.name);
-    const rel = attachmentRelPath(meta.id, fileName);
-    const abs = join(threadDir, rel);
+    const abs = join(threadDir, attachmentRelPath(meta.id, fileName));
     mkdirSync(join(threadDir, 'attachments', meta.id), { recursive: true, mode: 0o700 });
     writeFileSync(abs, bytes, { mode: 0o600 });
     out.push({

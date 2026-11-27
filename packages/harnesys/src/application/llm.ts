@@ -26,7 +26,12 @@ import { assembleNotes, type LlmNote } from './llm-notes.ts';
 import { buildRequestPlan } from './llm-request-plan.ts';
 import { effectiveSkillRegistry, type PackRunOutput } from './packs/pack-run.ts';
 import { formatSkillsCatalog, skillCatalogEntries } from './skills/skills-catalog.ts';
-import { type HistoryMessage, type MediaInsert, materializeToolMedia } from './tool-message.ts';
+import {
+  type HistoryMessage,
+  type MediaInsert,
+  type MediaMarker,
+  materializeToolMedia,
+} from './tool-message.ts';
 import { formatDeferredCatalog, loadedToolsOf, resolveProgressiveTools } from './tools/exposure.ts';
 export interface LlmNode {
   type: 'llm:generate';
@@ -59,7 +64,7 @@ export interface LlmContext {
   contextEntries?: ContextFileRunEntry[];
   runtime?: RuntimePromptInfo;
   fileAccess?: FileAccessPolicy;
-  excludedMediaRelPaths?: Map<string, { reason: string; untilTurn: number }>;
+  excludedMediaPaths?: Map<string, { reason: string; untilTurn: number }>;
   modelQuota?: ModelQuotaPort;
 }
 export function formatRuntimeSection(runtime: RuntimePromptInfo | undefined): string {
@@ -69,9 +74,9 @@ export function formatRuntimeSection(runtime: RuntimePromptInfo | undefined): st
   const lines = ['Runtime for this run:'];
   lines.push(`- Host: ${runtime.hostName}`);
   lines.push(`- Environment: ${runtime.environment === 'container' ? 'Container' : 'Host'}`);
-  lines.push(`- Run root: ${runtime.primaryDirectory} (${runtime.primaryKind})`);
+  lines.push(`- You are working inside \`${runtime.primaryDirectory}\` (${runtime.primaryKind}).`);
   lines.push(
-    '- All file tools accept absolute paths; stay inside the run root — access outside it requires user approval.',
+    '- Prefer relative paths for files inside the run root; absolute paths only for files outside it. Access outside the run root requires user approval.',
   );
   const workspace = workspaceLinesOf(runtime);
   if (workspace.length > 0) {
@@ -86,13 +91,24 @@ export function formatRuntimeSection(runtime: RuntimePromptInfo | undefined): st
       lines.push(`  - ${source.name} (${source.indexState}): ${source.path}${description}`);
     }
   }
+  lines.push(threadFilesLine(runtime));
   lines.push(
-    "- Thread files: `thread:`-prefixed paths address this conversation's storage (`attachments/`, `sandbox/`, `tool-outputs/`); pass them to tools verbatim; attachment and tool-output files are read-only.",
-  );
-  lines.push(
-    '- File links in user messages are real host paths (strip the `:line` suffix before tool calls); reads outside allowed roots request approval.',
+    '- File links in user messages are paths relative to the run root when the file is inside it and absolute otherwise (strip the `:line` suffix before tool calls); reads outside allowed roots request approval.',
   );
   return lines.join('\n');
+}
+
+function threadFilesLine(runtime: RuntimePromptInfo): string {
+  if (runtime.primaryKind === 'sandbox') {
+    return (
+      "- This is this thread's directory: `attachments/` (uploaded files, read-only), " +
+      '`sandbox/` (scratch, writable), `tool-outputs/` (spill, read-only).'
+    );
+  }
+  return (
+    `- Thread files: ${runtime.threadDir} — \`attachments/\` and \`tool-outputs/\` are read-only, ` +
+    '`sandbox/` is writable; address thread files by absolute path. Files outside the run root require approval or access rules.'
+  );
 }
 function workspaceLinesOf(runtime: RuntimePromptInfo): string[] {
   const scratch = `- Scratch: ${runtime.threadSandbox} (private, temporary — keep only temp files here)`;
@@ -154,20 +170,14 @@ export interface MediaExclusion {
 function activeExclusions(
   map: Map<string, MediaExclusion> | undefined,
   currentTurn: number,
-): Map<
-  string,
-  { afterToolCallId: string; relPath: string; reason: 'aged_out' | 'excluded' | 'overflow' }
-> {
-  const out = new Map<
-    string,
-    { afterToolCallId: string; relPath: string; reason: 'aged_out' | 'excluded' | 'overflow' }
-  >();
+): Map<string, MediaMarker> {
+  const out = new Map<string, MediaMarker>();
   if (!map) {
     return out;
   }
-  for (const [relPath, entry] of map) {
+  for (const [locator, entry] of map) {
     if (entry.untilTurn > currentTurn) {
-      out.set(relPath, { afterToolCallId: '', relPath, reason: 'excluded' });
+      out.set(locator, { afterToolCallId: '', path: locator, reason: 'excluded' });
     }
   }
   return out;
@@ -175,9 +185,9 @@ function activeExclusions(
 function gateClosedReason(model: ResolvedModel): string {
   return mediaDeliveryGates(model) ? '' : 'model has no image input';
 }
-function toolStatFn(paths: PathsConfig | undefined): (relPath: string) => { size: number } {
-  return (relPath) => {
-    const abs = resolveThreadPath(relPath, paths);
+function toolStatFn(paths: PathsConfig | undefined): (locator: string) => { size: number } {
+  return (locator) => {
+    const abs = resolveThreadPath(locator, paths);
     try {
       return { size: statSync(abs).size };
     } catch (error) {
@@ -201,7 +211,13 @@ function toolStatError(reason: ToolStatReason, message: string): ToolStatError {
   error.reason = reason;
   return error;
 }
-function materializedRelPathsOf(inserts: MediaInsert[]): string[] {
+const CAPTION_LOCATOR = /\[image from .* \(call [^\s)]*\) (\S+)\]$/;
+
+export function captionLocatorOf(caption: string): string | null {
+  return CAPTION_LOCATOR.exec(caption)?.[1] ?? null;
+}
+
+function materializedPathsOf(inserts: MediaInsert[], paths: PathsConfig | undefined): string[] {
   const out: string[] = [];
   for (const insert of inserts) {
     const content = insert.message.content;
@@ -215,9 +231,9 @@ function materializedRelPathsOf(inserts: MediaInsert[]): string[] {
         continue;
       }
       if (part.type === 'file') {
-        const match = /\[image from .* (thread:\S+)\]$/.exec(caption);
-        if (match?.[1]) {
-          out.push(match[1]);
+        const locator = captionLocatorOf(caption);
+        if (locator) {
+          out.push(resolveThreadPath(locator, paths));
         }
       }
     }
@@ -331,14 +347,14 @@ export async function* runLlmGenerate(
   }
   const tailText = allNotes.length > 0 ? assembleNotes(allNotes) : '';
   const reader = threadAttachmentReader({ paths: ctx.paths, fileAccess: ctx.fileAccess });
-  const history = await materializeMessageAttachments(projected.messages, reader);
+  const history = await materializeMessageAttachments(projected.messages, reader, ctx.paths?.cwd);
   const currentTurn = projected.messages.filter(
     (message) =>
       !!message &&
       typeof message === 'object' &&
       (message as Record<string, unknown>).role === 'user',
   ).length;
-  const exclusions = activeExclusions(ctx.excludedMediaRelPaths, currentTurn);
+  const exclusions = activeExclusions(ctx.excludedMediaPaths, currentTurn);
   const closedReason = gateClosedReason(ctx.modelBinding.model);
   const withMedia = await materializeToolMedia(
     history as HistoryMessage[],
@@ -347,6 +363,7 @@ export async function* runLlmGenerate(
     {
       ...(closedReason ? { textOnlyReason: closedReason } : {}),
       excluded: exclusions,
+      runRoot: ctx.paths?.cwd,
     },
   );
   const inserts = withMedia.inserts;
@@ -429,10 +446,10 @@ export async function* runLlmGenerate(
       throw error;
     }
     const mediaRetry = `media_retry_${status}`;
-    if (!contextLengthRejection(error) && ctx.excludedMediaRelPaths) {
+    if (!contextLengthRejection(error) && ctx.excludedMediaPaths) {
       const untilTurn = currentTurn + EXCLUSION_TTL_USER_TURNS;
-      for (const relPath of materializedRelPathsOf(inserts)) {
-        ctx.excludedMediaRelPaths.set(relPath, {
+      for (const locator of materializedPathsOf(inserts, ctx.paths)) {
+        ctx.excludedMediaPaths.set(locator, {
           reason: 'provider_rejected_media',
           untilTurn,
         });

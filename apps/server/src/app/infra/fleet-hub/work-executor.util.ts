@@ -72,7 +72,7 @@ export function prepareWorkerTarget(input: WorkerTargetInput) {
   const worktree = worktreeSelectionOf(input, anchor);
   const worktreeRoot =
     worktree === null ? undefined : resolveWorktreeRoot(input, localHostId, worktree);
-  const target = primaryTargetOf(input, sandboxDir, worktreeRoot);
+  const target = primaryTargetOf(input, threadDir, worktreeRoot);
   if (target.requireDirectory && !isDirectory(target.directory)) {
     throw new Error(`run directory not found on host: ${target.directory}`);
   }

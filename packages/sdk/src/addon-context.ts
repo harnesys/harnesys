@@ -97,10 +97,13 @@ export interface AddonFileWriteResult {
   size: number;
 }
 
+export type AddonFileScope = 'thread' | 'workspace';
+
 export interface AddonFiles {
   stat(path: string): Promise<AddonFileStat>;
   read(params: { path: string; offset?: number; length?: number }): Promise<AddonFileChunk>;
   write(params: { path: string; data: string; append?: boolean }): Promise<AddonFileWriteResult>;
+  locate(params: { scope: AddonFileScope }): Promise<{ path: string }>;
 }
 
 export interface AddonBindings {

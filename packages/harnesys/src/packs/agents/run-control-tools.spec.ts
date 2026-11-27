@@ -70,8 +70,8 @@ describe('agents_status board', () => {
     });
     expect(JSON.stringify(out)).not.toContain('final output');
     const failed = agents[2];
-    expect(failed.errorCode).toBe('spawn_aborted');
-    expect(failed.writes).toBe(5);
+    expect(failed?.errorCode).toBe('spawn_aborted');
+    expect(failed?.writes).toBe(5);
   });
 
   test('child detail keeps the full tail and omits output by default', async () => {

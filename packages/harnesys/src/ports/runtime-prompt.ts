@@ -24,6 +24,7 @@ export interface RuntimePromptInfo {
   environment: 'host' | 'container';
   primaryDirectory: string;
   primaryKind: 'sandbox' | 'directory' | 'worktree' | 'source';
+  threadDir: string;
   threadSandbox: string;
   sharedSources: RuntimePromptSource[];
   worktree?: RuntimePromptWorktree;

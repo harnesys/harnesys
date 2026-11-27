@@ -1,3 +1,4 @@
+import type { ThreadFileRoot } from '@harnesys/contracts';
 import type { SessionEvent } from 'harnesys';
 import type { ThreadLogDeletion } from './thread-history-page.port.ts';
 
@@ -7,6 +8,7 @@ export type ThreadRunEvent =
   | { type: 'parked'; threadId: string; runId: string; source: string }
   | { type: 'finished'; threadId: string; runId: string; status: 'completed' | 'cancelled' }
   | { type: 'events'; threadId: string; events: SessionEvent[] }
+  | { type: 'files-changed'; threadId: string; roots: ThreadFileRoot[] }
   | {
       type: 'log-changed';
       threadId: string;

@@ -37,7 +37,7 @@ export function writeDocxTool(options: FilesOptions = {}): ToolDefinition {
   return tool('write_docx', {
     group: 'files',
     description:
-      'Create a Word (.docx) document from an ordered list of blocks: headings (levels 1-6), paragraphs, bullet items, tables (first row bold as header unless headerRow is false, optional columnWidths) and page breaks. Use for proposals, reports, contracts and any document a human will open in Word. Paths starting with `thread:` resolve inside the thread file directory.',
+      'Create a Word (.docx) document from an ordered list of blocks: headings (levels 1-6), paragraphs, bullet items, tables (first row bold as header unless headerRow is false, optional columnWidths) and page breaks. Use for proposals, reports, contracts and any document a human will open in Word. Pass a path relative to the run root or absolute.',
     operations: ['fs.write'],
     sideEffect: 'write',
     input: {

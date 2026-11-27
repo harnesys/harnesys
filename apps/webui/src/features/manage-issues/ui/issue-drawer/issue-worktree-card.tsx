@@ -176,5 +176,5 @@ function nextFireTargetLabel(input: {
   if (environment.provenance === 'agent') {
     return `agent default (${describeEnvironment(environment, sourceNameOf)})`;
   }
-  return 'thread sandbox';
+  return 'thread directory';
 }

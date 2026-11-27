@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { toModelMessages } from './ai-llm-messages.ts';
 
-const CAPTION = '[image from file_read_image (call t1) thread:attachments/a/pic.png]';
+const CAPTION = '[image from file_read_image (call t1) attachments/a/pic.png]';
 const history = [
   { role: 'user', content: 'look at this' },
   {

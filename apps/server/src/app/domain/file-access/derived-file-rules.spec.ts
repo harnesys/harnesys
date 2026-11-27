@@ -96,6 +96,54 @@ describe('derivedFileRules', () => {
     });
   });
 
+  test('read-only thread zones stay denied when the thread dir is the run root', () => {
+    const threadDir = '/data/threads/t1';
+    const rules = derivedFileRules({
+      workspaceRoot: null,
+      sharedSources: [],
+      threadDir,
+      agentId: AGENT_ID,
+      hostId: HOST_ID,
+    });
+    const base = {
+      primaryDirectory: threadDir,
+      hostId: HOST_ID,
+      agentId: AGENT_ID,
+      rules,
+    };
+    const attachment = `${threadDir}/attachments/a-1/x.png`;
+    expect(resolveFileAccess({ ...base, canonicalPath: attachment, action: 'read' })).toEqual({
+      decision: 'allow',
+    });
+    expect(resolveFileAccess({ ...base, canonicalPath: attachment, action: 'edit' })).toEqual({
+      decision: 'deny',
+      reason: `denied by file rule ${threadDir}/attachments/**`,
+    });
+    const spill = `${threadDir}/tool-outputs/spawn-s1.json`;
+    expect(resolveFileAccess({ ...base, canonicalPath: spill, action: 'edit' })).toEqual({
+      decision: 'deny',
+      reason: `denied by file rule ${threadDir}/tool-outputs/**`,
+    });
+    const diagnostics: Array<{ target: string }> = [
+      { target: `${threadDir}/.runtime/raw-model-requests/run-1.json` },
+      { target: `${threadDir}/.runtime/compactions/2026-11-27.md` },
+    ];
+    for (const zone of diagnostics) {
+      expect(resolveFileAccess({ ...base, canonicalPath: zone.target, action: 'read' })).toEqual({
+        decision: 'deny',
+        reason: `denied by file rule ${threadDir}/.runtime/**`,
+      });
+      expect(resolveFileAccess({ ...base, canonicalPath: zone.target, action: 'edit' })).toEqual({
+        decision: 'deny',
+        reason: `denied by file rule ${threadDir}/.runtime/**`,
+      });
+    }
+    const scratch = `${threadDir}/sandbox/notes.md`;
+    expect(resolveFileAccess({ ...base, canonicalPath: scratch, action: 'edit' })).toEqual({
+      decision: 'allow',
+    });
+  });
+
   test('declared deny inside the workspace wins over the derived allow', () => {
     const derived = derivedFileRules({
       workspaceRoot: WORKSPACE_ROOT,

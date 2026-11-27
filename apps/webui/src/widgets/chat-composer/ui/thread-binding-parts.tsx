@@ -107,8 +107,8 @@ export function WorkspaceOptions({
       />
       <OptionRow
         icon={<FolderIcon className="size-4" />}
-        label="Sandbox"
-        detail="Private thread directory"
+        label="Thread directory"
+        detail="Private to this thread"
         selected={currentValue === SANDBOX_VALUE}
         onClick={onSandbox}
       />
@@ -237,7 +237,10 @@ export function provenanceLabelOf(
   if (issueWorkspace) {
     return 'issue';
   }
-  return resolved ? WORKSPACE_PROVENANCE_LABEL[environment.provenance] : null;
+  if (!resolved || environment.provenance === 'fallback') {
+    return null;
+  }
+  return WORKSPACE_PROVENANCE_LABEL[environment.provenance];
 }
 
 export function useIssueWorkspaceRef(

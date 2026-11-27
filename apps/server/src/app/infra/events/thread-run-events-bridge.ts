@@ -27,6 +27,8 @@ export class ThreadRunEventsBridge implements ModuleInitHook, ModuleDestroyHook 
         return;
       case 'log-changed':
         return;
+      case 'files-changed':
+        return;
       case 'failed':
         this.bus.publish(orgId, 'run.failed', {
           orgId,

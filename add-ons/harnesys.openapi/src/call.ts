@@ -218,7 +218,7 @@ async function resolveFileSources(
           });
         }
         throw new Error(
-          `cannot read file '${path}': ${messageOf(error)}; pass an absolute path on this host, or 'thread:sandbox/x.jpg' for a thread-sandbox file`,
+          `cannot read file '${path}': ${messageOf(error)}; pass an absolute host path or a file from the thread sandbox by its absolute path`,
         );
       }
     });

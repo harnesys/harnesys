@@ -8,7 +8,7 @@ import {
 } from './run-environment.ts';
 
 const ROOT = '/data/orgs/org-1/sources/src-1';
-const SANDBOX = '/data/orgs/org-1/threads/thread-1/sandbox';
+const THREAD_DIR = '/data/orgs/org-1/threads/thread-1';
 
 function environment(partial: Partial<RunEnvironment>): RunEnvironment {
   return { anchor: null, cwd: 'sandbox', provenance: 'fallback', ...partial };
@@ -58,12 +58,12 @@ describe('assertFolderAllowed', () => {
 });
 
 describe('materializePrimary', () => {
-  test('sandbox cwd keeps the thread sandbox', () => {
+  test('sandbox cwd runs inside the thread dir', () => {
     const primary = materializePrimary(environment({ cwd: 'sandbox' }), {
       anchorRoot: null,
-      threadSandbox: SANDBOX,
+      threadDir: THREAD_DIR,
     });
-    expect(primary).toEqual({ primaryDirectory: SANDBOX, primaryKind: 'sandbox' });
+    expect(primary).toEqual({ primaryDirectory: THREAD_DIR, primaryKind: 'sandbox' });
   });
 
   test('folder anchor maps to a directory primary', () => {
@@ -73,7 +73,7 @@ describe('materializePrimary', () => {
         cwd: 'anchor',
         provenance: 'run',
       }),
-      { anchorRoot: '/srv/project', threadSandbox: SANDBOX },
+      { anchorRoot: '/srv/project', threadDir: THREAD_DIR },
     );
     expect(primary).toEqual({ primaryDirectory: '/srv/project', primaryKind: 'directory' });
   });
@@ -86,7 +86,7 @@ describe('materializePrimary', () => {
         subpath: 'apps/web',
         provenance: 'thread',
       }),
-      { anchorRoot: ROOT, threadSandbox: SANDBOX },
+      { anchorRoot: ROOT, threadDir: THREAD_DIR },
     );
     expect(primary).toEqual({ primaryDirectory: join(ROOT, 'apps/web'), primaryKind: 'source' });
   });
@@ -98,20 +98,20 @@ describe('materializePrimary', () => {
         cwd: 'anchor',
         provenance: 'run',
       }),
-      { anchorRoot: ROOT, threadSandbox: SANDBOX },
+      { anchorRoot: ROOT, threadDir: THREAD_DIR },
     );
     expect(primary).toEqual({ primaryDirectory: ROOT, primaryKind: 'worktree' });
   });
 
-  test('container source anchor with sandbox cwd stays in the sandbox', () => {
+  test('container source anchor with sandbox cwd runs inside the thread dir', () => {
     const primary = materializePrimary(
       environment({
         anchor: { kind: 'source', sourceId: 'src-1' },
         cwd: 'sandbox',
         provenance: 'run',
       }),
-      { anchorRoot: ROOT, threadSandbox: SANDBOX },
+      { anchorRoot: ROOT, threadDir: THREAD_DIR },
     );
-    expect(primary).toEqual({ primaryDirectory: SANDBOX, primaryKind: 'sandbox' });
+    expect(primary).toEqual({ primaryDirectory: THREAD_DIR, primaryKind: 'sandbox' });
   });
 });

@@ -1,5 +1,6 @@
 import type { Logger } from '@harnesys/brix';
 import type { SessionEvent } from 'harnesys';
+import { threadFileRootsFromEvents } from '../../application/threads/thread-files-changed.ts';
 import type { ThreadEventsPort, ThreadRunEvent } from '../../domain/thread/thread-events.port.ts';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
 import { observeThreadErrors } from './observe-thread-errors.ts';
@@ -8,6 +9,7 @@ export interface OrgEventPublisherDeps {
   orgId: string;
   db: OrgSqliteDb;
   threadEvents?: ThreadEventsPort;
+  threadDirOf: (threadId: string) => string;
   logger?: Logger;
 }
 
@@ -61,6 +63,10 @@ export function createOrgEventPublisher(deps: OrgEventPublisherDeps): OrgEventPu
     }
     noteFrames(threadId, events);
     deps.threadEvents?.emit(deps.orgId, { type: 'events', threadId, events });
+    const roots = threadFileRootsFromEvents(events, deps.threadDirOf(threadId));
+    if (roots.length > 0) {
+      deps.threadEvents?.emit(deps.orgId, { type: 'files-changed', threadId, roots });
+    }
     let threadEvents: ThreadRunEvent[] = [];
     try {
       threadEvents = observeThreadErrors(deps.db, threadId, runId, events);

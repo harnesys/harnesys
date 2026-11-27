@@ -28,7 +28,7 @@ export async function persistRawRequest(
     if (requestMeta?.body === undefined) {
       return;
     }
-    const outDir = join(dir, 'raw-model-requests');
+    const outDir = join(dir, '.runtime', 'raw-model-requests');
     await mkdir(outDir, { recursive: true });
     if (opts.mode === 'full') {
       await sweepExpiredRawRequests(outDir);

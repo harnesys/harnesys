@@ -1,3 +1,4 @@
+import type { ThreadFileRoot } from '@harnesys/contracts';
 import type { SessionEvent } from 'harnesys';
 import type { DeskEvent } from './desk-events.ts';
 import type { GitFileStatusMap, GitSourceSummary } from './git.ts';
@@ -128,6 +129,12 @@ export interface EventsWatchThreadEventsFrame {
   orgId: OrgId;
   threadId: string;
   events: SessionEvent[];
+}
+
+export interface EventsWatchThreadFilesChangedFrame {
+  orgId: OrgId;
+  threadId: string;
+  roots: ThreadFileRoot[];
 }
 
 export interface EventsWatchThreadLogChangedFrame {

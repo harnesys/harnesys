@@ -54,7 +54,7 @@ export function createImageTools(deps: CreateImageToolsParams): ToolDefinition[]
     tool('image_generate', {
       group: 'image',
       description:
-        'Generate an image from a text prompt. Write a DETAILED ENGLISH prompt: subject, style, composition, lighting, mood. Returns a `thread:` locator (relPath) for the saved image artifact, which is also attached to the chat for the user.',
+        'Generate an image from a text prompt. Write a DETAILED ENGLISH prompt: subject, style, composition, lighting, mood. Returns the absolute path of the saved image artifact, which is also attached to the chat for the user.',
       input: {
         type: 'object',
         properties: {
@@ -64,12 +64,13 @@ export function createImageTools(deps: CreateImageToolsParams): ToolDefinition[]
         required: ['prompt'],
       },
       sideEffect: 'write',
-      execute: (input) =>
+      execute: (input, ctx) =>
         runGuard(async () => {
           const parsed = parseInput(input);
           const scope = deps.resolveScope();
           return attachmentToolResultOf(
             await deps.image.generate(scope, { ...parsed, ...selectionOf(deps.modelSelection) }),
+            { threadDir: ctx.paths.threadDir, runRoot: ctx.cwd },
           );
         }),
     }),

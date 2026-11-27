@@ -45,9 +45,11 @@ describing what is injected for the project.
   e.g. `/Users/me/pics/photo.jpg` — any file the host can read, including thread
   attachments (`.../threads/<id>/attachments/<id>/<file>`) and issue attachments.
   The host reads the bytes itself — never read a file into your context to paste
-  base64 into the call. `thread:sandbox/photo.jpg` addresses a thread-sandbox file
-  relatively. `content` is file text; `contentBase64` is inline base64 (small files
-  only). Form fields go in `body` as a flat object. JSON operations ignore `files`.
+  base64 into the call. Files inside the thread (sandbox scratch, attachments,
+  tool-outputs) are addressed the same way, by their absolute paths under the
+  thread directory shown in the runtime notes. `content` is file text;
+  `contentBase64` is inline base64 (small files only). Form fields go in `body` as
+  a flat object. JSON operations ignore `files`.
 - Unknown or missing parameters return `invalid_params` listing what is expected.
 
 ## Results and errors
@@ -69,8 +71,9 @@ Large directory reads should not go through your context. Every verb tool accept
   response to only these keys; envelope keys (`total`, `page`, nesting) stay intact.
   The inline `body` comes back already projected.
 - `saveToFile: true` — writes the full raw response body to
-  `thread:tool-outputs/<operation>-<timestamp>.json` and returns
-  `{savedTo, bytes, records, recordsAt, preview}` instead of the body: `preview` holds
+  `<threadDir>/tool-outputs/<operation>-<timestamp>.json` and returns
+  `{savedTo, bytes, records, recordsAt, preview}` (`savedTo` is the absolute path)
+  instead of the body: `preview` holds
   the first `previewLimit` records (default 3, max 10). `read_file`/`grep` the saved
   file afterwards when you need more. Requires a thread session.
 - Both together: the file keeps the full raw body, `preview` is projected — this is the

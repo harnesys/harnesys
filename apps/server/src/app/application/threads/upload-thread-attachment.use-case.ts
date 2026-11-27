@@ -12,6 +12,7 @@ import {
   ThreadNotFoundException,
   ThreadValidationException,
 } from '../../domain/thread/thread.error.ts';
+import { ThreadEventsPort } from '../../domain/thread/thread-events.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 
 export interface UploadThreadAttachmentRequest {
@@ -29,6 +30,7 @@ export class UploadThreadAttachmentUseCase {
     private readonly attachments: AttachmentRepositoryPort,
     private readonly storage: AttachmentStoragePort,
     private readonly layout: HostFsLayoutPort,
+    private readonly events?: ThreadEventsPort,
   ) {}
 
   async execute(request: UploadThreadAttachmentRequest): Promise<AttachmentRecord> {
@@ -46,7 +48,7 @@ export class UploadThreadAttachmentUseCase {
     const fileName = sanitizeFileName(request.name);
     const threadDir = this.layout.ensureThreadDir(request.orgId, request.threadId);
     const relPath = await this.storage.write(threadDir, id, fileName, request.bytes);
-    return this.attachments.insert(request.orgId, {
+    const record = await this.attachments.insert(request.orgId, {
       id,
       threadId: request.threadId,
       name: fileName,
@@ -56,5 +58,11 @@ export class UploadThreadAttachmentUseCase {
       path: relPath,
       createdAt: new Date().toISOString(),
     });
+    this.events?.emit(request.orgId, {
+      type: 'files-changed',
+      threadId: request.threadId,
+      roots: ['attachments'],
+    });
+    return record;
   }
 }

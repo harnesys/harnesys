@@ -20,9 +20,6 @@ export function resolveFileAccess(input: {
   agentId: string;
   rules: FileRuleInput[];
 }): ToolCallGate {
-  if (isInsidePrimary(input.canonicalPath, input.primaryDirectory)) {
-    return { decision: 'allow' };
-  }
   const matching = input.rules.filter(
     (rule) =>
       rule.action === input.action &&
@@ -33,6 +30,9 @@ export function resolveFileAccess(input: {
     if (rule.effect === 'deny') {
       return { decision: 'deny', reason: `denied by file rule ${rule.pathPattern}` };
     }
+  }
+  if (isInsidePrimary(input.canonicalPath, input.primaryDirectory)) {
+    return { decision: 'allow' };
   }
   if (matching.length > 0) {
     return { decision: 'allow' };

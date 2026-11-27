@@ -123,6 +123,8 @@ export class TransportSessionService {
           return;
         case 'log-changed':
           return;
+        case 'files-changed':
+          return;
       }
     } catch (error) {
       this.logger.warn(

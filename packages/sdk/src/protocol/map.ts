@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { EffectivePermissionSchema } from '../permissions/permissions.ts';
 import { CancelNotificationSchema, ProgressNotificationSchema } from './envelope.ts';
+import { filesMethods } from './files-methods.ts';
 import { InitializeParamsSchema, InitializeResultSchema } from './handshake.ts';
 import { CallMetaSchema } from './meta.ts';
 import type { MethodDirection, MethodSpec } from './method-spec.ts';
@@ -13,12 +14,6 @@ import {
   BindingWriteParamsSchema,
   BridgeInboundOutcomeSchema,
   DbRowSchema,
-  FileReadParamsSchema,
-  FileReadResultSchema,
-  FileStatParamsSchema,
-  FileStatResultSchema,
-  FileWriteParamsSchema,
-  FileWriteResultSchema,
   HttpFetchParamsSchema,
   HttpFetchResultSchema,
   InboundMessageSchema,
@@ -45,6 +40,7 @@ export const protocolMap = {
   ...sourceMethods,
   ...orgServiceMethods,
   ...threadServiceMethods,
+  ...filesMethods,
   initialize: hostMethod(InitializeParamsSchema, InitializeResultSchema),
   initialized: notificationSpec(empty, 'host'),
   shutdown: hostMethod(
@@ -183,9 +179,6 @@ export const protocolMap = {
   'log.write': addonMethod(LogWriteParamsSchema, empty, null),
   'events.emit': addonMethod(z.object({ name: str, payload: z.unknown() }), empty, null),
   'http.fetch': addonMethod(HttpFetchParamsSchema, HttpFetchResultSchema, 'http.fetch'),
-  'files.stat': addonMethod(FileStatParamsSchema, FileStatResultSchema, 'files.read'),
-  'files.read': addonMethod(FileReadParamsSchema, FileReadResultSchema, 'files.read'),
-  'files.write': addonMethod(FileWriteParamsSchema, FileWriteResultSchema, 'files.write'),
   'bindings.channels': addonMethod(
     z.object({ provider: str.optional() }),
     z.object({ channels: z.array(TransportBindingSummarySchema) }),

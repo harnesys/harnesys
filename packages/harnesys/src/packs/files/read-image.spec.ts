@@ -21,11 +21,14 @@ const allowAll: FileAccessPolicy = () => ({ decision: 'allow' });
 
 let root: string;
 let threadDir: string;
+let workspace: string;
 
 beforeAll(() => {
-  root = mkdtempSync(path.join(tmpdir(), 'harnesys-read-image-'));
+  root = realpathSync(mkdtempSync(path.join(tmpdir(), 'harnesys-read-image-')));
   threadDir = path.join(root, 'thread');
+  workspace = path.join(root, 'workspace');
   mkdirSync(path.join(threadDir, 'attachments'), { recursive: true });
+  mkdirSync(workspace, { recursive: true });
 });
 
 afterAll(() => {
@@ -113,21 +116,17 @@ describe('prepareImage', () => {
 });
 
 describe('file_read_image tool', () => {
-  test('returns the thread locator for a small thread file within caps', async () => {
+  test('persists the absolute path for a small thread file within caps', async () => {
     const abs = writeFixture(path.join(threadDir, 'attachments'), 'shot.png', makeNoisyPng(32, 32));
     const def = readImageTool();
-    const result = (await def.execute({ path: 'thread:attachments/shot.png' }, ctx(threadDir))) as {
+    const result = (await def.execute({ path: 'attachments/shot.png' }, ctx(threadDir))) as {
       ok: boolean;
-      relPath: string;
+      path: string;
       mediaType: string;
       kind: string;
     };
     expect(result.ok).toBe(true);
-    const expected = path
-      .relative(realpathSync(threadDir), realpathSync(abs))
-      .split(path.sep)
-      .join('/');
-    expect(result.relPath).toBe(`thread:${expected}`);
+    expect(result.path).toBe(abs);
     expect(result.mediaType).toBe('image/png');
     expect(result.kind).toBe('image');
   });
@@ -136,19 +135,28 @@ describe('file_read_image tool', () => {
     const bytes = makeNoisyPng(64, 64);
     const abs = writeFixture(root, 'outside.png', bytes);
     const def = readImageTool();
-    const result = (await def.execute({ path: abs }, ctx(root))) as {
+    const result = (await def.execute({ path: abs }, ctx(threadDir))) as {
       ok: boolean;
-      relPath: string;
+      path: string;
       mediaType: string;
     };
     expect(result.ok).toBe(true);
     const sha1 = createHash('sha1').update(bytes).digest('hex');
-    expect(result.relPath).toBe(`thread:sandbox/read-image/${sha1}.png`);
     const copy = path.join(threadDir, 'sandbox', 'read-image', `${sha1}.png`);
+    expect(result.path).toBe(copy);
     expect(existsSync(copy)).toBe(true);
     expect(readFileSync(abs).equals(Buffer.from(bytes))).toBe(true);
-    const repeat = (await def.execute({ path: abs }, ctx(root))) as { relPath: string };
-    expect(repeat.relPath).toBe(result.relPath);
+    const repeat = (await def.execute({ path: abs }, ctx(threadDir))) as { path: string };
+    expect(repeat.path).toBe(result.path);
+  });
+
+  test('anchored runs report the absolute path of the copy', async () => {
+    const bytes = makeNoisyPng(48, 48);
+    const abs = writeFixture(workspace, 'anchored.png', bytes);
+    const def = readImageTool();
+    const result = (await def.execute({ path: abs }, ctx(workspace))) as { path: string };
+    const sha1 = createHash('sha1').update(bytes).digest('hex');
+    expect(result.path).toBe(path.join(threadDir, 'sandbox', 'read-image', `${sha1}.png`));
   });
 
   test('rejects unsupported types and missing files', async () => {

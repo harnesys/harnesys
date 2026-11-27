@@ -2,7 +2,7 @@ import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { resolveAllowedPath, resolveWorkdirPath } from './path-resolve.ts';
+import { displayPath, resolveAllowedPath, resolveWorkdirPath } from './path-resolve.ts';
 
 describe('resolveWorkdirPath', () => {
   let home: string;
@@ -85,5 +85,20 @@ describe('resolveAllowedPath', () => {
     expect(() =>
       resolveAllowedPath(cwd, join(cwd, 'note.txt'), [workspace], join(cwd, 'inner')),
     ).toThrow('escapes workdir');
+  });
+});
+
+describe('displayPath', () => {
+  test('renders inside the run root as a POSIX relative path', () => {
+    expect(displayPath(join('/org/thread', 'sandbox/read-image/x.jpg'), '/org/thread')).toBe(
+      'sandbox/read-image/x.jpg',
+    );
+    expect(displayPath('/srv/project/../project/src/a.ts', '/srv/project')).toBe('src/a.ts');
+  });
+
+  test('renders outside the run root and without a root as an absolute path', () => {
+    expect(displayPath('/elsewhere/x.png', '/srv/project')).toBe('/elsewhere/x.png');
+    expect(displayPath('/elsewhere/x.png', undefined)).toBe('/elsewhere/x.png');
+    expect(displayPath('/srv/project', '/srv/project')).toBe('/srv/project');
   });
 });

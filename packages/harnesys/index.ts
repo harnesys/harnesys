@@ -1,6 +1,6 @@
 export { askUser, fetch, files, mapTool, shell, wait } from './src/adapters/actions/index.ts';
 export { isPathBlocked } from './src/adapters/actions/path-blocklist.ts';
-export { canonicalizePath } from './src/adapters/actions/path-resolve.ts';
+export { canonicalizePath, displayPath } from './src/adapters/actions/path-resolve.ts';
 export type { CallModelResult, StreamChunk } from './src/adapters/ai-llm-adapter.ts';
 export { callModel } from './src/adapters/ai-llm-adapter.ts';
 export { InMemoryModelQuota } from './src/adapters/in-memory-model-quota.ts';

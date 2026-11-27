@@ -108,7 +108,7 @@ function primaryCwd(override: WorkerTargetOverride): string {
   }).paths.cwd;
 }
 
-const SANDBOX = '/tmp/harnesys-test/org-1/threads/thread-1/sandbox';
+const THREAD = '/tmp/harnesys-test/org-1/threads/thread-1';
 
 describe('workspace envelope roundtrip', () => {
   test('worktree anchor keeps the same cwd on old nodes when no subpath is set', () => {
@@ -156,17 +156,17 @@ describe('workspace envelope roundtrip', () => {
       provenance: 'agent',
     };
     expect(primaryCwd({ environment })).toBe('/tmp/harnesys-test/org-1/sources/src-1/apps/web');
-    expect(primaryCwd({ ...legacyWorkspaceFieldsOf(environment) })).toBe(SANDBOX);
+    expect(primaryCwd({ ...legacyWorkspaceFieldsOf(environment) })).toBe(THREAD);
   });
 
-  test('sandbox anchor materializes in the thread sandbox for either envelope shape', () => {
+  test('sandbox anchor materializes in the thread dir for either envelope shape', () => {
     const environment: RunEnvironment = {
       anchor: null,
       cwd: 'sandbox',
       provenance: 'fallback',
     };
-    expect(primaryCwd({ environment })).toBe(SANDBOX);
-    expect(primaryCwd({ ...legacyWorkspaceFieldsOf(environment) })).toBe(SANDBOX);
+    expect(primaryCwd({ environment })).toBe(THREAD);
+    expect(primaryCwd({ ...legacyWorkspaceFieldsOf(environment) })).toBe(THREAD);
   });
 
   test('missing folder path fails with an actionable message', () => {

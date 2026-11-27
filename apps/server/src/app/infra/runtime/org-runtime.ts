@@ -57,6 +57,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     onPublish: createOrgEventPublisher({
       orgId: deps.orgId,
       db: session.db,
+      threadDirOf: (threadId) => deps.layout.threadDir(deps.orgId, threadId),
       ...(deps.threadEvents === undefined ? {} : { threadEvents: deps.threadEvents }),
       ...(deps.logger === undefined ? {} : { logger: deps.logger }),
     }),

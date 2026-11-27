@@ -51,7 +51,7 @@ export function extractFileTextTool(options: FilesOptions = {}): ToolDefinition 
   return tool('extract_file_text', {
     group: 'files',
     description:
-      'Extract text from a document file. Supports PDF (text layer), Word (.docx), Excel (.xlsx, .xls; every sheet as a Markdown table) and CSV. Returns plain text or Markdown. Fails with a clear error for scanned PDFs without a text layer and for unsupported formats. Use read_file for text/code files and file_read_image for images. Paths starting with `thread:` resolve inside the thread file directory, e.g. `thread:attachments/invoice.pdf` for a file uploaded to this thread.',
+      'Extract text from a document file. Supports PDF (text layer), Word (.docx), Excel (.xlsx, .xls; every sheet as a Markdown table) and CSV. Returns plain text or Markdown. Fails with a clear error for scanned PDFs without a text layer and for unsupported formats. Use read_file for text/code files and file_read_image for images. Pass a path relative to the run root or absolute.',
     operations: ['fs.read'],
     sideEffect: 'read',
     input: {

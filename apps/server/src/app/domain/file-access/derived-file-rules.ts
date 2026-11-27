@@ -29,6 +29,8 @@ export function derivedFileRules(input: DerivedFileRulesInput): FileRuleInput[] 
     rules.push(allowRule(input, `${input.threadDir}/sandbox/**`, 'edit'));
     rules.push(allowRule(input, `${input.threadDir}/tool-outputs/**`, 'read'));
     rules.push(denyRule(input, `${input.threadDir}/tool-outputs/**`, 'edit'));
+    rules.push(denyRule(input, `${input.threadDir}/.runtime/**`, 'read'));
+    rules.push(denyRule(input, `${input.threadDir}/.runtime/**`, 'edit'));
   }
   return rules;
 }

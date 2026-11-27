@@ -24,7 +24,7 @@ export const imageCapability = definePack<ImageCapabilityPorts, Record<string, u
       {
         name: 'image_generate',
         description:
-          'Generate an image from a text prompt. Write a DETAILED ENGLISH prompt: subject, style, composition, lighting, mood. Returns a `thread:` locator (relPath) for the saved image artifact, which is also attached to the chat for the user.',
+          'Generate an image from a text prompt. Write a DETAILED ENGLISH prompt: subject, style, composition, lighting, mood. Returns the path of the saved image artifact (relative to the run root when it is inside, absolute otherwise), which is also attached to the chat for the user.',
       },
     ],
     skills: [],

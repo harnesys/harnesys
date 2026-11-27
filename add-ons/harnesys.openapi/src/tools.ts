@@ -150,7 +150,7 @@ function docsBodyOf(spec: OperationSpec): unknown {
       kind: 'multipart',
       required: spec.bodyRequired,
       howTo:
-        'pass files via the files parameter of api_post: [{name, path}] where path is an absolute host path (e.g. "/Users/me/pics/photo.jpg" — any file the host can read, including thread and issue attachments) or a thread file like "thread:sandbox/photo.jpg"; simple form fields go in body as a flat object',
+        'pass files via the files parameter of api_post: [{name, path}] where path is an absolute host path (e.g. "/Users/me/pics/photo.jpg" — any file the host can read, including thread and issue attachments by their absolute paths); simple form fields go in body as a flat object',
     };
   }
   return spec.bodySchema === null ? null : { required: spec.bodyRequired, schema: spec.bodySchema };

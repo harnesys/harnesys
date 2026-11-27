@@ -104,8 +104,7 @@ export interface GoogleGmailAttachmentSaved extends ThreadAttachmentRecord {
 
 export interface GoogleGmailAttachmentSavedToFile {
   ok: true;
-
-  relPath: string;
+  path: string;
   name: string;
   mediaType: string;
   size: number;

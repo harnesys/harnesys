@@ -1,6 +1,5 @@
 import { basename, isAbsolute, resolve, sep } from 'node:path';
-
-export const THREAD_FILE_ROOTS = ['attachments', 'sandbox'] as const;
+import { THREAD_FILE_ROOTS } from '@harnesys/contracts';
 
 export function resolveThreadEntryPath(threadDir: string, relativePath: string): string | null {
   const trimmed = relativePath.replaceAll('\\', '/');

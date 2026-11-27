@@ -82,6 +82,7 @@ export function createFakeServices(context: FakeServiceContext): {
       case 'files.stat':
       case 'files.read':
       case 'files.write':
+      case 'files.locate':
         return executeFilesService(method, params, {
           options: context.options,
           writes: context.sinks.fileWrites,

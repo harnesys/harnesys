@@ -30,7 +30,7 @@ export const WORKSPACE_PROVENANCE_LABEL: Record<RunEnvironmentProvenance, string
   run: 'this run',
   thread: 'thread',
   agent: 'agent default',
-  fallback: 'sandbox',
+  fallback: 'thread directory',
 };
 
 export function resolveEnvironment(input: ResolveEnvironmentInput): RunEnvironment {
@@ -71,7 +71,7 @@ export function describeEnvironment(
 ): string {
   const anchor = environment.anchor;
   if (anchor === null) {
-    return 'Thread sandbox';
+    return 'Thread directory';
   }
   let label: string;
   if (anchor.kind === 'folder') {

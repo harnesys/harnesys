@@ -76,16 +76,12 @@ function extFor(mediaType: string): string {
   return mediaType === 'image/jpeg' ? '.jpg' : `.${mediaType.split('/')[1] ?? 'png'}`;
 }
 
-function threadLocator(absolute: string, threadDir: string): string {
-  return `thread:${path.relative(threadDir, absolute).split(path.sep).join('/')}`;
-}
-
 export function readImageTool(options: FilesOptions = {}): ToolDefinition {
   const blocklist = options.blocklist ?? DEFAULT_PATH_BLOCKLIST;
   return tool('file_read_image', {
     group: 'files',
     description:
-      'Read an image file (png, jpeg, webp) and attach it to the conversation so the model can see it in the next turn. Returns a `thread:` locator; files over 3.5 MB or with a long side over 1568 px are downscaled to JPEG, and files outside the thread directory are copied into `thread:sandbox/read-image/`. Use for screenshots, photos, diagrams and scans. Paths starting with `thread:` resolve inside the thread file directory, e.g. `thread:attachments/photo.png` for a file uploaded to this thread.',
+      'Read an image file (png, jpeg, webp) and attach it to the conversation so the model can see it in the next turn. Returns the absolute path of the resulting image; files over 3.5 MB or with a long side over 1568 px are downscaled to JPEG, and files outside the thread directory are copied into `sandbox/read-image/` under the thread dir. Use for screenshots, photos, diagrams and scans. Pass a path relative to the run root or absolute.',
     operations: ['fs.read'],
     sideEffect: 'read',
     input: {
@@ -132,14 +128,14 @@ async function imageResult(
   bytes: Uint8Array,
   mediaType: string,
   ctx: ImageResultContext,
-): Promise<{ ok: true; relPath: string; mediaType: string; kind: 'image' }> {
+): Promise<{ ok: true; path: string; mediaType: string; kind: 'image' }> {
   if (await withinCaps(bytes)) {
     const insideThread =
       ctx.absolute === ctx.threadRoot || ctx.absolute.startsWith(`${ctx.threadRoot}${path.sep}`);
     if (insideThread) {
       return {
         ok: true,
-        relPath: threadLocator(ctx.absolute, ctx.threadRoot),
+        path: ctx.absolute,
         mediaType,
         kind: 'image',
       };
@@ -154,7 +150,7 @@ async function imageResult(
   }
   return {
     ok: true,
-    relPath: threadLocator(copyAbs, ctx.threadDir),
+    path: copyAbs,
     mediaType: prepared.mediaType,
     kind: 'image',
   };

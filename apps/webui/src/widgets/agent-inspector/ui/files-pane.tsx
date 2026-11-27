@@ -4,10 +4,10 @@ import type {
   ThreadFileEntry,
   ThreadFilesTreeResponse,
 } from '@harnesys/contracts';
-import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { type ThreadWorktreeBinding, useThreadWorktreeStore } from '@/entities/thread';
-import { useSelectedThread } from '@/features/desk';
+import { syncThreadFiles, useSelectedThread } from '@/features/desk';
 import { useOpenFile } from '@/features/ide';
 import type { FileRef } from '@/features/open-file';
 import { getThreadArtifacts, listThreadAttachments, listThreadFiles } from '@/shared/api';
@@ -19,6 +19,14 @@ import { RowLeading } from './row-leading';
 export function FilesPane() {
   const thread = useSelectedThread();
   const openFile = useOpenFile();
+  const queryClient = useQueryClient();
+  const orgId = thread?.orgId;
+  useEffect(() => {
+    if (!orgId) {
+      return;
+    }
+    return syncThreadFiles(orgId, queryClient);
+  }, [orgId, queryClient]);
   if (!thread) {
     return <PaneHint text="Select a thread to see its files and workspace." />;
   }

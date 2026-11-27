@@ -6,11 +6,11 @@ const FIELDS_MAX_KEYS = 32;
 const PREVIEW_LIMIT_DEFAULT = 3;
 const PREVIEW_LIMIT_MAX = 10;
 const WRITE_CHUNK_BYTES = 2 * 1024 * 1024;
-const OUTPUT_DIR = 'thread:tool-outputs/';
 
 export interface ShapingContext {
   readonly meta: { threadId?: string };
   readonly files: {
+    locate(params: { scope: 'thread' | 'workspace' }): Promise<{ path: string }>;
     write(params: {
       path: string;
       data: string;
@@ -195,7 +195,8 @@ export async function saveBodyToFile(
       detail: 'saveToFile works only inside a thread session; retry without saveToFile',
     });
   }
-  const name = `${OUTPUT_DIR}${safeSegment(operationId)}-${Date.now()}.json`;
+  const dir = await ctx.files.locate({ scope: 'thread' });
+  const name = `${dir.path}/tool-outputs/${safeSegment(operationId)}-${Date.now()}.json`;
   const bytes = Buffer.from(rawBody, 'utf8');
   let written: { path: string; size: number } | null = null;
   for (let offset = 0; offset < bytes.length; offset += WRITE_CHUNK_BYTES) {
@@ -208,7 +209,7 @@ export async function saveBodyToFile(
   if (written === null) {
     throw new AddonError('invalid_params', { detail: 'response body is empty; nothing to save' });
   }
-  return `thread:${written.path}`;
+  return written.path;
 }
 
 export interface InlineBody {

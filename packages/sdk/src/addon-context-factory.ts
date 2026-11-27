@@ -25,6 +25,7 @@ export type {
   AddonDb,
   AddonEvents,
   AddonFileChunk,
+  AddonFileScope,
   AddonFileStat,
   AddonFiles,
   AddonFileWriteResult,
@@ -141,6 +142,7 @@ export function createAddonContext(
     stat: async (path: string) => client['files.stat']({ path }, { signal }),
     read: async (params) => client['files.read'](params, { signal }),
     write: async (params) => client['files.write'](params, { signal }),
+    locate: async (params) => client['files.locate'](params, { signal }),
   };
   const bindings = {
     channels: async (provider?: string) => {

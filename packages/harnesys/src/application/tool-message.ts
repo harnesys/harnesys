@@ -5,6 +5,8 @@ export interface ToolMessage {
   content: string;
 }
 
+import { isAbsolute } from 'node:path';
+import { displayPath } from '../adapters/actions/path-resolve.ts';
 import {
   MAX_IMAGE_BYTES,
   MAX_IMAGE_DIMENSION,
@@ -119,7 +121,7 @@ export interface HistoryMessage {
   toolCalls?: { id: string; name?: string; args?: unknown }[];
 }
 export interface FileToolPayload {
-  relPath: string;
+  path: string;
   mediaType: string;
   kind: AttachmentKind;
   attachmentId?: string;
@@ -158,16 +160,21 @@ export function parseFileToolResult(toolName: string, content: string): FileTool
     if (parsed.ok !== true) {
       return undefined;
     }
-    const relPath = parsed.relPath;
+    const locator = parsed.path;
     const mediaType = parsed.mediaType;
     const kind = parsed.kind;
-    if (typeof relPath !== 'string' || typeof mediaType !== 'string') {
+    if (typeof locator !== 'string' || typeof mediaType !== 'string') {
       return undefined;
     }
     if (typeof kind !== 'string' || !ATTACHMENT_KINDS.includes(kind as AttachmentKind)) {
       return undefined;
     }
-    const out: FileToolResult = { ok: true, relPath, mediaType, kind: kind as AttachmentKind };
+    const out: FileToolResult = {
+      ok: true,
+      path: locator,
+      mediaType,
+      kind: kind as AttachmentKind,
+    };
     if (typeof parsed.attachmentId === 'string') {
       out.attachmentId = parsed.attachmentId;
     }
@@ -290,7 +297,7 @@ export function sniffImageDimensions(
 export type MediaMarkerReason = 'aged_out' | 'excluded' | 'overflow';
 export interface MediaMarker {
   afterToolCallId: string;
-  relPath: string;
+  path: string;
   reason: MediaMarkerReason;
 }
 interface ToolGroup {
@@ -348,7 +355,7 @@ export function selectMaterializable(
   const eligible = groups.filter(
     (group) =>
       group.userTurnsAfter < MAX_MATERIALIZED_AGE_USER_TURNS &&
-      !group.members.some((member) => excluded?.has(member.payload.relPath)),
+      !group.members.some((member) => excluded?.has(member.payload.path)),
   );
   const selected = eligible.slice(-MAX_MATERIALIZED_IMAGES);
   const selectedKeys = new Set(selected.map((group) => group.anchor));
@@ -364,10 +371,10 @@ export function selectMaterializable(
     let reason: MediaMarkerReason = 'overflow';
     if (group.userTurnsAfter >= MAX_MATERIALIZED_AGE_USER_TURNS) {
       reason = 'aged_out';
-    } else if (group.members.some((m) => excluded?.has(m.payload.relPath))) {
+    } else if (group.members.some((m) => excluded?.has(m.payload.path))) {
       reason = 'excluded';
     }
-    markers.push({ afterToolCallId: group.anchor, relPath: member.payload.relPath, reason });
+    markers.push({ afterToolCallId: group.anchor, path: member.payload.path, reason });
   }
   let aggregate: { afterToolCallId: string; count: number } | undefined;
   if (markers.length > MAX_STUB_GROUPS) {
@@ -387,21 +394,32 @@ export interface ToolRead {
 export interface MaterializeOptions {
   textOnlyReason?: string;
   excluded?: ReadonlyMap<string, MediaMarker>;
+  runRoot?: string;
 }
-function noteText(reason: MaterializationReason, relPath: string, hint?: string): string {
+function displayLocator(locator: string, runRoot: string | undefined): string {
+  return isAbsolute(locator) ? displayPath(locator, runRoot) : locator;
+}
+function noteText(
+  reason: MaterializationReason,
+  locator: string,
+  runRoot: string | undefined,
+  hint?: string,
+): string {
+  const display = displayLocator(locator, runRoot);
   if (reason === 'too_large' && hint) {
-    return `[image ${relPath} not shown: ${reason} — ${hint}]`;
+    return `[image ${display} not shown: ${reason} — ${hint}]`;
   }
-  return `[image ${relPath} not shown: ${reason}]`;
+  return `[image ${display} not shown: ${reason}]`;
 }
-function stubText(marker: MediaMarker): string {
+function stubText(marker: MediaMarker, runRoot: string | undefined): string {
+  const display = displayLocator(marker.path, runRoot);
   if (marker.reason === 'aged_out') {
-    return `[image ${marker.relPath} no longer shown — re-read with file_read_image]`;
+    return `[image ${display} no longer shown — re-read with file_read_image]`;
   }
   if (marker.reason === 'excluded') {
-    return `[image ${marker.relPath} not delivered: provider rejected media — will retry next turns]`;
+    return `[image ${display} not delivered: provider rejected media — will retry next turns]`;
   }
-  return `[image ${marker.relPath} not shown]`;
+  return `[image ${display} not shown]`;
 }
 function textInsert(afterToolCallId: string, text: string): MediaInsert {
   return { afterToolCallId, message: { role: 'user', content: [{ type: 'text', text }] } };
@@ -422,32 +440,33 @@ function failureOf(error: unknown): CandidateFailure {
 }
 export async function materializeToolMedia(
   messages: HistoryMessage[],
-  statFn: (relPath: string) => ToolStat,
-  readFn: (relPath: string) => ToolRead | Promise<ToolRead>,
+  statFn: (locator: string) => ToolStat,
+  readFn: (locator: string) => ToolRead | Promise<ToolRead>,
   options?: MaterializeOptions,
 ): Promise<ToolMedia> {
   const { selected, markers, aggregate } = selectMaterializable(messages, options?.excluded);
   const inserts = new Map<string, MediaInsert>();
+  const runRoot = options?.runRoot;
   let materialized = 0;
   let failed = 0;
   let totalBase64 = 0;
   const markerTexts = markers.map((marker) => ({
     marker,
-    text: stubText(marker),
+    text: stubText(marker, runRoot),
   }));
   for (const group of selected) {
     const parts: MediaPart[] = [];
     for (const member of group.members) {
-      const relPath = member.payload.relPath;
+      const locator = member.payload.path;
       let failure: CandidateFailure | undefined;
       let bytes: Uint8Array | undefined;
       let sniffed: string | undefined;
       try {
-        const stat = statFn(relPath);
+        const stat = statFn(locator);
         if (stat.size > MAX_IMAGE_BYTES) {
           failure = { reason: 'too_large' };
         } else {
-          const read = await readFn(relPath);
+          const read = await readFn(locator);
           bytes = read.bytes;
           sniffed = sniffImageType(bytes);
           if (sniffed === undefined) {
@@ -469,29 +488,30 @@ export async function materializeToolMedia(
       if (failure !== undefined || bytes === undefined) {
         parts.push({
           type: 'text',
-          text: noteText(failure?.reason ?? 'read_error', relPath, failure?.hint),
+          text: noteText(failure?.reason ?? 'read_error', locator, runRoot, failure?.hint),
         });
         failed += 1;
         continue;
       }
       const base64 = Buffer.from(bytes).toString('base64');
       if (totalBase64 + base64.length > (MAX_MATERIALIZED_BYTES_TOTAL * 4) / 3) {
-        parts.push({ type: 'text', text: noteText('too_large', relPath) });
+        parts.push({ type: 'text', text: noteText('too_large', locator, runRoot) });
         failed += 1;
         continue;
       }
       totalBase64 += base64.length;
+      const display = displayLocator(locator, runRoot);
       if (options?.textOnlyReason !== undefined) {
         parts.push({
           type: 'text',
-          text: `[image ${relPath} not delivered: ${options.textOnlyReason}]`,
+          text: `[image ${display} not delivered: ${options.textOnlyReason}]`,
         });
         materialized += 1;
         continue;
       }
       parts.push({
         type: 'text',
-        text: `[image from ${member.message.name ?? 'tool'} (call ${member.message.toolCallId ?? ''}) ${relPath}]`,
+        text: `[image from ${member.message.name ?? 'tool'} (call ${member.message.toolCallId ?? ''}) ${display}]`,
       });
       parts.push({ type: 'file', mediaType: sniffed ?? member.payload.mediaType, data: base64 });
       materialized += 1;

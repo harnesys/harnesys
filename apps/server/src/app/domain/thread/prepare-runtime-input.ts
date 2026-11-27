@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import type { RunEnvironment } from '@harnesys/contracts';
+import type { RunEnvironment, RunEnvironmentAnchor } from '@harnesys/contracts';
 import type { AgentRecord } from '../agent/agent.ts';
 import { HostFsLayoutPort } from '../machine/host-fs-layout.port.ts';
 import { SourceLocationPort } from '../source/source-location.port.ts';
@@ -37,20 +37,27 @@ export interface RuntimePrimaryDeps {
   sourceLocation: SourceLocationPort;
 }
 
+export function isAnchoredEnvironment(
+  environment?: RunEnvironment,
+): environment is RunEnvironment & { anchor: RunEnvironmentAnchor } {
+  return environment !== undefined && environment.cwd === 'anchor' && environment.anchor !== null;
+}
+
 export function resolveRuntimePrimary(
   deps: RuntimePrimaryDeps,
   options?: PrepareTargetOptions,
 ): RuntimePrimary {
-  const threadSandbox = join(deps.layout.threadDir(deps.orgId, deps.threadId), 'sandbox');
+  const threadDir = deps.layout.threadDir(deps.orgId, deps.threadId);
+  const threadSandbox = join(threadDir, 'sandbox');
   const environment = options?.environment;
-  const anchor = environment?.anchor ?? null;
-  if (!environment || environment.cwd === 'sandbox' || anchor === null) {
-    return materializeSandbox(threadSandbox);
+  if (!isAnchoredEnvironment(environment)) {
+    return materializeSandbox(threadDir, threadSandbox);
   }
+  const anchor = environment.anchor;
   if (anchor.kind === 'folder') {
     const primary = materializePrimary(environment, {
       anchorRoot: anchor.path,
-      threadSandbox,
+      threadDir,
     });
     return { ...primary, threadSandbox };
   }
@@ -62,7 +69,7 @@ export function resolveRuntimePrimary(
   });
   const primary = materializePrimary(environment, {
     anchorRoot: location.absoluteRoot,
-    threadSandbox,
+    threadDir,
   });
   if (anchor.worktreeId !== undefined) {
     return {
@@ -85,8 +92,8 @@ export function resolveRuntimePrimary(
   };
 }
 
-function materializeSandbox(threadSandbox: string): RuntimePrimary {
-  return { primaryDirectory: threadSandbox, primaryKind: 'sandbox', threadSandbox };
+function materializeSandbox(threadDir: string, threadSandbox: string): RuntimePrimary {
+  return { primaryDirectory: threadDir, primaryKind: 'sandbox', threadSandbox };
 }
 
 export interface SharedSourcesDeps {

@@ -1,10 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type {
-  CapabilityScope,
-  McpHealthReport,
-  McpManagePort,
-  McpServerEntry,
-} from '../../ports/mcp-manage.ts';
+import type { CapabilityScope } from '../../domain/pack.ts';
+import type { McpHealthReport, McpManagePort, McpServerEntry } from '../../ports/mcp-manage.ts';
 import type { ToolContext } from '../../ports/tools.ts';
 import { createMcpTools } from './create-mcp-tools.ts';
 
@@ -33,11 +29,24 @@ function port(health: McpHealthReport, calls: { upserts: UpsertCall[] }): McpMan
 }
 
 function toolsOf(port: McpManagePort) {
-  const [list, connect, check, toggle, remove] = createMcpTools({
+  const tools = createMcpTools({
     mcp: port,
     resolveScope: scope,
   });
-  return { list, connect, check, toggle, remove };
+  const named = (name: string) => {
+    const def = tools.find((t) => t.name === name);
+    if (!def) {
+      throw new Error(`${name} tool missing`);
+    }
+    return def;
+  };
+  return {
+    list: named('mcp_list'),
+    connect: named('mcp_connect'),
+    check: named('mcp_check'),
+    toggle: named('mcp_toggle'),
+    remove: named('mcp_remove'),
+  };
 }
 
 describe('mcp pack tools', () => {

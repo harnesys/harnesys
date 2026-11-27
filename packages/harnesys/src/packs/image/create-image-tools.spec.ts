@@ -15,7 +15,11 @@ const scope: CapabilityScope = {
   threadId: 'thread-1',
 };
 
-const ctx = { cwd: '/tmp', paths: { allow: [] }, agentId: 'agent-1' };
+const ctx = {
+  cwd: '/data/thread',
+  paths: { allow: [], threadDir: '/data/thread' },
+  agentId: 'agent-1',
+};
 
 class FakeImageGenerationPort extends ImageGenerationPort {
   calls: Array<{ scope: CapabilityScope; request: ImageGenerationRequest }> = [];
@@ -40,13 +44,13 @@ class FakeImageGenerationPort extends ImageGenerationPort {
 }
 
 describe('createImageTools', () => {
-  test('generates image artifact with scope and prompt', async () => {
+  test('persists the absolute artifact path in a thread-rooted run', async () => {
     const port = new FakeImageGenerationPort();
     const tool = createImageTools({ image: port, resolveScope: () => scope })[0];
     const result = (await tool?.execute({ prompt: 'a cat' }, ctx)) as FileToolResult;
     expect(result).toEqual({
       ok: true,
-      relPath: 'thread:attachments/att-1/cat.png',
+      path: '/data/thread/attachments/att-1/cat.png',
       attachmentId: 'att-1',
       name: 'cat.png',
       mediaType: 'image/png',
@@ -55,6 +59,16 @@ describe('createImageTools', () => {
     expect(port.calls).toHaveLength(1);
     expect(port.calls[0]?.scope).toEqual(scope);
     expect(port.calls[0]?.request).toEqual({ prompt: 'a cat' });
+  });
+
+  test('persists the absolute artifact path in an anchored run', async () => {
+    const port = new FakeImageGenerationPort();
+    const tool = createImageTools({ image: port, resolveScope: () => scope })[0];
+    const result = (await tool?.execute(
+      { prompt: 'a cat' },
+      { ...ctx, cwd: '/srv/project' },
+    )) as FileToolResult;
+    expect(result.path).toBe('/data/thread/attachments/att-1/cat.png');
   });
 
   test('returns error when port throws', async () => {
