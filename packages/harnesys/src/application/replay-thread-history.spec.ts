@@ -56,6 +56,44 @@ test('synthetic repair results inherit the assistant source', () => {
   expect(sources[sources.length - 1]).toBe(1);
 });
 
+test('orphans of a user-stopped run are repaired as cancelled_by_user', () => {
+  const events = [
+    userEvent('hi', 'r1', 1),
+    {
+      type: 'model.usage',
+      text: '',
+      toolCalls: [{ id: 'lost', name: 'agents_wait' }],
+      usage: {},
+      runId: 'r1',
+      seq: 2,
+    } as SessionEvent,
+    { type: 'run.cancelled', reason: 'run cancelled', runId: 'r1', seq: 3 } as SessionEvent,
+  ];
+  const messages = rebuildThreadMessages(events);
+  const tool = messages[messages.length - 1] as { role: string; content: string };
+  expect(tool.role).toBe('tool');
+  expect(tool.content).toContain('"cancelled_by_user"');
+  expect(tool.content).not.toContain('before user decision');
+});
+
+test('orphans of a run closed without a stop stay on the abandoned wording', () => {
+  const events = [
+    userEvent('hi', 'r1', 1),
+    {
+      type: 'model.usage',
+      text: '',
+      toolCalls: [{ id: 'lost', name: 'agents_wait' }],
+      usage: {},
+      runId: 'r1',
+      seq: 2,
+    } as SessionEvent,
+    { type: 'run.cancelled', reason: 'budget_exceeded', runId: 'r1', seq: 3 } as SessionEvent,
+  ];
+  const messages = rebuildThreadMessages(events);
+  const tool = messages[messages.length - 1] as { role: string; content: string };
+  expect(tool.content).toContain('before user decision');
+});
+
 test('compaction anchor resets sources alongside messages', () => {
   const events = [
     userEvent('hi', 'r1', 1),

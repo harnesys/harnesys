@@ -4,6 +4,7 @@ import type { Event } from '../domain/snapshot.ts';
 import type { RequestPlan, RequestSection, RequestSectionId } from '../ports/llm-plan.ts';
 import type { PendingSessionEvent } from '../ports/run-event-store.ts';
 import type { ModelUsage, SessionEvent } from '../ports/session.ts';
+import { isSideEffect } from '../ports/tools.ts';
 
 function num(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
@@ -321,6 +322,7 @@ export function eventToSessionEvent(ev: Event): SessionEvent | null {
       name: String(m?.name ?? ''),
       input: m?.input,
       output: m?.output,
+      ...(isSideEffect(m?.sideEffect) ? { sideEffect: m.sideEffect } : {}),
     };
     return typeof m?.message === 'string' ? { ...tool, message: m.message } : tool;
   }
@@ -333,6 +335,7 @@ export function eventToSessionEvent(ev: Event): SessionEvent | null {
       name: String(m?.name ?? ''),
       input: m?.input,
       output: m?.output,
+      ...(isSideEffect(m?.sideEffect) ? { sideEffect: m.sideEffect } : {}),
     };
     return typeof m?.message === 'string' ? { ...tool, message: m.message } : tool;
   }

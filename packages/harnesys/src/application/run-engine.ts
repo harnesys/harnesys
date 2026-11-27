@@ -1,4 +1,9 @@
-import { DEFAULT_LEASE_RENEW_MS, DEFAULT_LEASE_TTL_MS, RUN_NON_TERMINAL } from '../constants.ts';
+import {
+  DEFAULT_LEASE_RENEW_MS,
+  DEFAULT_LEASE_TTL_MS,
+  RUN_NON_TERMINAL,
+  RUN_STOP_CANCEL_REASON,
+} from '../constants.ts';
 import { codedRunError } from '../domain/errors.ts';
 import type { Event } from '../domain/snapshot.ts';
 import { CONSOLE_LOGGER } from '../ports/logger.ts';
@@ -130,6 +135,9 @@ export function createBackgroundSpawnRegistry(): BackgroundSpawnRegistry {
             }
             if (item?.error !== undefined) {
               handle.error = item.error;
+            }
+            if (item?.effects !== undefined) {
+              handle.effects = item.effects;
             }
             handle.lastActivityAt = Date.now();
             return handle;
@@ -388,14 +396,14 @@ export function createRunEngine(deps: RunEngineDeps): RunEngine {
   function abort(runId: string): void {
     const run = byRun.get(runId);
     if (run !== undefined) {
-      run.abort.abort('run cancelled');
-      backgroundSpawns.abortRun(runId, 'run cancelled');
+      run.abort.abort(RUN_STOP_CANCEL_REASON);
+      backgroundSpawns.abortRun(runId, RUN_STOP_CANCEL_REASON);
       return;
     }
-    if (backgroundSpawns.abortSpawn(runId, 'run cancelled')) {
+    if (backgroundSpawns.abortSpawn(runId, RUN_STOP_CANCEL_REASON)) {
       return;
     }
-    childAborts.abort(runId, 'run cancelled');
+    childAborts.abort(runId, RUN_STOP_CANCEL_REASON);
   }
   function isActive(runId: string): boolean {
     return byRun.has(runId);

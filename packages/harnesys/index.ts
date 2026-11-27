@@ -204,6 +204,7 @@ export {
   buildToolMessage,
   collectUnansweredToolCalls,
   SYNTHETIC_TOOL_RESULT_ABANDONED,
+  SYNTHETIC_TOOL_RESULT_CANCELLED,
   SYNTHETIC_TOOL_RESULT_ENDED,
   serializeToolResult,
 } from './src/application/tool-message.ts';
@@ -864,6 +865,8 @@ export type {
   CustomNodeImpl,
   RunToolControl,
   SideEffect,
+  SpawnEffectEntry,
+  SpawnEffectsJournal,
   ToolCallGate,
   ToolCatalogEntry,
   ToolContext,

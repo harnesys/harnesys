@@ -47,7 +47,7 @@ export const agentsCapability = definePack<AgentsCapabilityPorts, AgentsPackSpec
       {
         name: 'agents_spawn',
         description:
-          'Queue one-shot subcontracts: the graph then runs control:spawn. calls is [{ agentId, input, budget?, permissions?, background? }]. input is usually { messages: [{ role: "user", content: "<task>" }] }. Children cannot ask questions back (permission/approval/input tools are denied in child context); pre-approve gates with per-call permissions, or provide everything upfront. background: true starts the child fire-and-forget — the call returns immediately and the child keeps running after this run ends; its report arrives as a message in this thread when it settles. Track with agents_status, wait with agents_wait, steer with agents_send, stop with agents_stop. agentId accepts an exact id, a unique id prefix (8+ chars), or a name — unknown/ambiguous targets fail here with the agent list. Prefer agents_list (reuse) before agents_create. This is not the tool name control:spawn.',
+          'Queue one-shot subcontracts: the graph then runs control:spawn. calls is [{ agentId, input, budget?, permissions?, background? }]. input is usually { messages: [{ role: "user", content: "<task>" }] }. Children cannot ask questions back (permission/approval/input tools are denied in child context); pre-approve gates with per-call permissions, or provide everything upfront. background: true starts the child fire-and-forget — the call returns immediately and the child keeps running after this run ends; its report arrives as a message in this thread when it settles. Track the fleet with agents_status (board), drill into one child by spawnId, collect outputs with agents_wait, steer with agents_send, stop with agents_stop. agentId accepts an exact id, a unique id prefix (8+ chars), or a name — unknown/ambiguous targets fail here with the agent list. Prefer agents_list (reuse) before agents_create. This is not the tool name control:spawn.',
       },
       {
         name: 'agents_wait',
@@ -57,7 +57,7 @@ export const agentsCapability = definePack<AgentsCapabilityPorts, AgentsPackSpec
       {
         name: 'agents_status',
         description:
-          'Inspect background subagents of this thread: status, idle time, recent activity tail, final output.',
+          'Board of background subagents: no spawnId = cheap dashboard (counts + one row per child), spawnId = one child detail (tail/error/effects), output: true adds its final output.',
       },
       {
         name: 'agents_send',

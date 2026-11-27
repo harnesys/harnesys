@@ -6,14 +6,17 @@ import type {
   RunEventStore,
   RunToolControl,
   SessionEvent,
+  SpawnEffectsJournal,
 } from 'harnesys';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
 import { enqueueThreadMessage } from '../org-sqlite/thread-message-queue.store.ts';
 
-const TAIL_EVENTS = 40;
+const TAIL_EVENTS = 240;
 const TAIL_MAX_CHARS = 600;
-const TAIL_PART_MAX_CHARS = 120;
+const TAIL_RUN_MAX_CHARS = 200;
 const REPORT_OUTPUT_MAX_CHARS = 4000;
+const REPORT_EFFECTS_MAX_LINES = 16;
+const REPORT_EFFECT_LINE_MAX_CHARS = 100;
 const NO_RUNNING_AGENT = 'no running background agent with this spawnId in this thread';
 
 interface OrgRunControlInput {
@@ -69,25 +72,68 @@ function safeJsonOf(output: unknown): string {
   }
 }
 
-function tailPartOf(event: SessionEvent): string | null {
-  if (event.type === 'tool' && typeof event.name === 'string') {
-    return `${event.name}:${String(event.phase ?? '')}`;
+interface TailStep {
+  kind: 'text' | 'reasoning' | 'marker';
+  text: string;
+}
+
+function tailStepOf(event: SessionEvent): TailStep | null {
+  if (event.type === 'text-delta') {
+    return { kind: 'text', text: typeof event.text === 'string' ? event.text : '' };
   }
-  if (event.type === 'text-delta' || event.type === 'reasoning-delta') {
-    const text = typeof event.text === 'string' ? event.text.trim() : '';
-    return text ? text.slice(0, TAIL_PART_MAX_CHARS) : null;
+  if (event.type === 'reasoning-delta') {
+    return { kind: 'reasoning', text: typeof event.text === 'string' ? event.text : '' };
+  }
+  if (event.type === 'tool' && typeof event.name === 'string') {
+    return { kind: 'marker', text: `${event.name}:${String(event.phase ?? '')}` };
   }
   if (event.type === 'done' || event.type === 'run.failed') {
-    return `[${event.type}]`;
+    return { kind: 'marker', text: `[${event.type}]` };
   }
   return null;
 }
 
-function tailTextOf(events: SessionEvent[]): string | undefined {
-  const parts = events
-    .slice(-TAIL_EVENTS)
-    .map(tailPartOf)
-    .filter((part): part is string => part !== null);
+function mergeTailSteps(steps: TailStep[]): TailStep[] {
+  const merged: TailStep[] = [];
+  for (const step of steps) {
+    const last = merged.at(-1);
+    if (last !== undefined && last.kind === step.kind && step.kind !== 'marker') {
+      last.text += step.text;
+    } else {
+      merged.push({ ...step });
+    }
+  }
+  return merged;
+}
+
+function tailPartText(step: TailStep): string {
+  if (step.kind === 'marker') {
+    return step.text;
+  }
+  const flat = step.text.replace(/\s+/g, ' ').trim();
+  const clipped = flat.length > TAIL_RUN_MAX_CHARS ? `…${flat.slice(-TAIL_RUN_MAX_CHARS)}` : flat;
+  return step.kind === 'reasoning' ? `thinking: ${clipped}` : clipped;
+}
+
+function tailPartsOf(events: SessionEvent[]): string[] {
+  const steps = mergeTailSteps(
+    events
+      .slice(-TAIL_EVENTS)
+      .map(tailStepOf)
+      .filter((step): step is TailStep => step !== null),
+  );
+  const parts: string[] = [];
+  for (const step of steps) {
+    const text = tailPartText(step);
+    if (text !== '') {
+      parts.push(text);
+    }
+  }
+  return parts;
+}
+
+export function tailTextOf(events: SessionEvent[]): string | undefined {
+  const parts = tailPartsOf(events);
   if (parts.length === 0) {
     return undefined;
   }
@@ -107,6 +153,7 @@ function statusOfHandle(
     status: handle.status,
     ...(handle.output !== undefined ? { output: handle.output } : {}),
     ...(handle.error !== undefined ? { error: handle.error } : {}),
+    ...(handle.effects !== undefined ? { effects: handle.effects } : {}),
     ...(handle.status === 'running'
       ? { idleMs: Math.max(0, Date.now() - handle.lastActivityAt) }
       : {}),
@@ -172,13 +219,39 @@ function runningHandleOf(
   return hit ?? null;
 }
 
+function clipEffectNote(note: string): string {
+  const flat = note.replace(/\s+/g, ' ').trim();
+  return flat.length > REPORT_EFFECT_LINE_MAX_CHARS
+    ? `${flat.slice(0, REPORT_EFFECT_LINE_MAX_CHARS)}…`
+    : flat;
+}
+
+function effectsTextOf(journal: SpawnEffectsJournal | undefined): string | null {
+  if (journal === undefined || journal.entries.length === 0) {
+    return null;
+  }
+  const shown = journal.entries.slice(0, REPORT_EFFECTS_MAX_LINES);
+  const lines = shown.map((entry) => {
+    const note = entry.note === undefined ? '' : ` ${clipEffectNote(entry.note)}`;
+    return entry.ok ? `- \`${entry.tool}\`${note}` : `- \`${entry.tool}\` → FAILED${note}`;
+  });
+  const hidden = journal.entries.length - shown.length + journal.omitted;
+  if (hidden > 0) {
+    lines.push(`… +${hidden} more write operations not shown`);
+  }
+  const total = journal.entries.length + journal.omitted;
+  return `Write effects performed (${total}):\n${lines.join('\n')}`;
+}
+
 interface BackgroundReportEnqueueInput {
   threadId: string;
   parentAgentId: string;
+  spawnId: string;
   agentName?: string;
   agentId: string;
   output?: unknown;
   error?: { code: string; message: string };
+  effects?: SpawnEffectsJournal;
 }
 
 export function createBackgroundReportFn(
@@ -197,22 +270,27 @@ export function createBackgroundReportFn(
 }
 
 export function backgroundReportTextOf(input: {
+  spawnId: string;
   agentName?: string;
   agentId: string;
   output?: unknown;
   error?: { code: string; message: string };
+  effects?: SpawnEffectsJournal;
 }): string {
-  const name = input.agentName ?? input.agentId;
+  const label = `**${input.agentName ?? input.agentId}** (\`${input.spawnId}\`)`;
   if (input.error !== undefined) {
+    const effects = effectsTextOf(input.effects);
     if (input.error.code === 'spawn_aborted') {
-      return `Background agent **${name}** was stopped.`;
+      const base = `Background agent ${label} was stopped.`;
+      return effects === null ? base : `${base}\n\n${effects}`;
     }
-    return `Background agent **${name}** failed.\n\n\`${input.error.code}\`: ${input.error.message}`;
+    const base = `Background agent ${label} failed.\n\n\`${input.error.code}\`: ${input.error.message}`;
+    return effects === null ? base : `${base}\n\n${effects}`;
   }
   const text = outputTextOf(input.output);
   const trimmed =
     text.length > REPORT_OUTPUT_MAX_CHARS ? `${text.slice(0, REPORT_OUTPUT_MAX_CHARS)}...` : text;
   return trimmed
-    ? `Background agent **${name}** finished.\n\n${trimmed}`
-    : `Background agent **${name}** finished.`;
+    ? `Background agent ${label} finished.\n\n${trimmed}`
+    : `Background agent ${label} finished.`;
 }

@@ -1700,9 +1700,9 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
       applyAgentControlToolResults(res.results, st);
       output = { results: res.results };
       for (const r of res.results) {
+        const toolDef = toolRegistry.get(r.name);
         if (!r.skipped && !r.cancelled) {
           recordToolCall(loopGuard, r.name, toolCallSignature(r.name, r.input));
-          const toolDef = toolRegistry.get(r.name);
           if (toolDef?.group === 'memory' && toolDef.sideEffect === 'write') {
             memoryWrites += 1;
           }
@@ -1713,6 +1713,9 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
           name: r.name,
           output: outputStr,
         };
+        if (toolDef?.sideEffect !== undefined) {
+          meta.sideEffect = toolDef.sideEffect;
+        }
         const presented = presentedToolMessage(st.messages, r.id);
         if (presented !== undefined) {
           meta.message = presented;

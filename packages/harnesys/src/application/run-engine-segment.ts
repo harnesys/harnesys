@@ -1,4 +1,4 @@
-import { RUN_NON_TERMINAL } from '../constants.ts';
+import { RUN_NON_TERMINAL, RUN_STOP_CANCEL_REASON } from '../constants.ts';
 import { AskUserInterrupt } from '../domain/errors.ts';
 import type { Event, Snapshot } from '../domain/snapshot.ts';
 import type { Logger } from '../ports/logger.ts';
@@ -387,7 +387,7 @@ async function settleTerminal(
     await guardedTransition(env, ctx.runId, ctx.epoch, {
       from: 'running',
       to: 'cancelled',
-      events: [runCancelledEvent(tail.cancelReason ?? 'run cancelled')],
+      events: [runCancelledEvent(tail.cancelReason ?? RUN_STOP_CANCEL_REASON)],
     });
     return;
   }
@@ -431,7 +431,9 @@ async function failSegment(
     await guardedTransition(env, ctx.runId, ctx.epoch, {
       from: 'running',
       to: 'cancelled',
-      events: [runCancelledEvent(typeof reason === 'string' && reason ? reason : 'run cancelled')],
+      events: [
+        runCancelledEvent(typeof reason === 'string' && reason ? reason : RUN_STOP_CANCEL_REASON),
+      ],
     });
     return;
   }

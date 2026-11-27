@@ -6,6 +6,7 @@ import type { RequestPlan } from './llm-plan.ts';
 import type { ModelUsage } from './model-usage.ts';
 import type { SessionEventScope } from './session-event-types.ts';
 import type { AgentSessionEvents } from './session-events-agent.ts';
+import type { SideEffect } from './tools.ts';
 
 export type { ModelUsage } from './model-usage.ts';
 export type { SessionEventScope, SessionEventType } from './session-event-types.ts';
@@ -59,6 +60,7 @@ export type SessionEvent = SessionEventScope &
         input?: unknown;
         output?: unknown;
         outputTruncated?: boolean;
+        sideEffect?: SideEffect;
         message?: string;
         delta?: string;
         seq?: number;

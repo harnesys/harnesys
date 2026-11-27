@@ -99,6 +99,7 @@ export const MEMORY_PROMOTE_CANDIDATES_LIMIT = 30;
 export const MEMORY_REMIND_DEFAULT =
   'Consider saving any meaningful information from this conversation with the memory_write tool: choose scope session or long and a short stable key. If nothing is worth saving, continue.';
 export const MEMORY_EXTRACTION_MAX_EVENTS = 200;
+export const RUN_STOP_CANCEL_REASON = 'run cancelled';
 export const EVENT_TYPES = {
   RUN_STARTED: 'run.started',
   RUN_COMPLETED: 'run.completed',

@@ -1,5 +1,6 @@
 import type { MessageQuote } from '@harnesys/contracts';
 import Ajv from 'ajv';
+import { RUN_STOP_CANCEL_REASON } from '../constants.ts';
 import type { AgentDefinition } from '../domain/agent-definition.ts';
 import type { Attachment, AttachmentKind, SendFile } from '../domain/attachment.ts';
 import { codedRunError } from '../domain/errors.ts';
@@ -275,7 +276,7 @@ export function createSession(
       }
       const cancelled = {
         type: 'run.cancelled',
-        reason: 'run cancelled',
+        reason: RUN_STOP_CANCEL_REASON,
       } as PendingSessionEvent;
       await ctx.lifecycle.transition(runId, rec.leaseEpoch, {
         from: rec.status,

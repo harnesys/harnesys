@@ -1,4 +1,5 @@
 import type { ToolCallRecord } from '../adapters/ai-llm-stream-parts.ts';
+import { RUN_STOP_CANCEL_REASON } from '../constants.ts';
 import type { CompactionMessage } from '../domain/compaction.ts';
 import { quoteBlockText } from '../domain/message-quote.ts';
 import type { SessionEvent } from '../ports/session.ts';
@@ -7,6 +8,7 @@ import { sourceOfEvent } from './message-source.ts';
 import {
   buildToolMessage,
   SYNTHETIC_TOOL_RESULT_ABANDONED,
+  SYNTHETIC_TOOL_RESULT_CANCELLED,
   serializeToolResult,
 } from './tool-message.ts';
 
@@ -81,6 +83,7 @@ export function rebuildThreadMessages(
     }
   }
   const buffers = new Map<string, RunBuffer>();
+  const cancelledRuns = new Set<string>();
   let heldUser: Extract<SessionEvent, { type: 'user' }> | null = null;
   const bufferOf = (runId: string): RunBuffer => {
     let buffer = buffers.get(runId);
@@ -146,6 +149,12 @@ export function rebuildThreadMessages(
       agentNames.set(runId, event.agentName);
     }
     if (runId && excluded.has(runId)) {
+      continue;
+    }
+    if (event.type === 'run.cancelled') {
+      if (runId && event.reason === RUN_STOP_CANCEL_REASON) {
+        cancelledRuns.add(runId);
+      }
       continue;
     }
     if (event.type === 'compaction') {
@@ -234,7 +243,7 @@ export function rebuildThreadMessages(
       flushDeltas(runId);
     }
   }
-  repairOrphanCalls(out, sources);
+  repairOrphanCalls(out, sources, events, cancelledRuns);
   if (externalSources) {
     externalSources.length = 0;
     externalSources.push(...sources);
@@ -398,7 +407,25 @@ function toAnchorMessage(
   };
 }
 
-function repairOrphanCalls(messages: unknown[], sources?: number[]): void {
+function orphanRepairContent(
+  index: number,
+  sources: number[] | undefined,
+  events: SessionEvent[],
+  cancelledRuns: Set<string>,
+): string {
+  const source = sources?.[index];
+  const runId = source === undefined ? undefined : events[source]?.runId;
+  return runId !== undefined && cancelledRuns.has(runId)
+    ? SYNTHETIC_TOOL_RESULT_CANCELLED
+    : SYNTHETIC_TOOL_RESULT_ABANDONED;
+}
+
+function repairOrphanCalls(
+  messages: unknown[],
+  sources: number[] | undefined,
+  events: SessionEvent[],
+  cancelledRuns: Set<string>,
+): void {
   const answered = new Set<string>();
   for (const item of messages) {
     if (!item || typeof item !== 'object') {
@@ -437,7 +464,7 @@ function repairOrphanCalls(messages: unknown[], sources?: number[]): void {
         buildToolMessage({
           toolCallId,
           name: typeof call.name === 'string' ? call.name : 'tool',
-          content: SYNTHETIC_TOOL_RESULT_ABANDONED,
+          content: orphanRepairContent(index, sources, events, cancelledRuns),
         }),
         sources?.[index],
       );

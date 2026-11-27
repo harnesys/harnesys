@@ -19,6 +19,8 @@ import type { AttachmentKind } from '../domain/attachment.ts';
 const ATTACHMENT_KINDS = ['image', 'audio', 'video', 'file'] as const;
 export const SYNTHETIC_TOOL_RESULT_ABANDONED =
   '{"ok":false,"error":"run closed before user decision; the call was never executed and its effect did not happen"}';
+export const SYNTHETIC_TOOL_RESULT_CANCELLED =
+  '{"ok":false,"code":"cancelled_by_user","error":"the run was stopped by the user while this call was in flight; the result was never recorded and effects before the stop may be partial"}';
 export const SYNTHETIC_TOOL_RESULT_ENDED = 'run ended before tool execution; no result recorded';
 export interface AbandonedCallContext {
   source?: string;

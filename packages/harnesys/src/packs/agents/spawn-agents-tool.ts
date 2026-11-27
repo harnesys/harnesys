@@ -181,7 +181,7 @@ export function spawnAgentTool(deps: CreateAgentsToolsParams): ToolDefinition {
               background: {
                 type: 'boolean',
                 description:
-                  'Start this child fire-and-forget: agents_spawn returns immediately and the child keeps running even after this run completes. When the child settles, its report is delivered to you as a thread message. Track with agents_status, wait with agents_wait, steer with agents_send, kill with agents_stop.',
+                  'Start this child fire-and-forget: agents_spawn returns immediately and the child keeps running even after this run completes. When the child settles, its report (with this spawnId) is delivered to you as a thread message. Watch the fleet with agents_status (board, cheap) and drill into this child by its spawnId; agents_wait collects outputs, agents_send steers, agents_stop kills.',
               },
             },
             required: ['agentId', 'budget'],

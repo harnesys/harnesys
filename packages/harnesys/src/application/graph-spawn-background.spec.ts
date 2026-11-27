@@ -60,6 +60,52 @@ const CHILD: AgentDefinition = {
   },
 };
 
+const CHILD_UPLOAD: ToolDefinition = {
+  name: 'upload',
+  description: 'mutating side effect',
+  input: { type: 'object', properties: {} },
+  sideEffect: 'write',
+  execute: async () => '201 Created id=42',
+};
+const CHILD_HOLD: ToolDefinition = {
+  name: 'hold',
+  description: 'blocks until the gate opens',
+  input: { type: 'object', properties: {} },
+  execute: async () => {
+    if (gate !== null) {
+      await gate;
+    }
+    return 'held';
+  },
+};
+const CHILD_WRITING: AgentDefinition = {
+  id: 'child',
+  prompts: {},
+  graph: {
+    nodes: {
+      start: { type: 'core:start' },
+      upload: { type: 'tool:call', name: 'upload', args: {} },
+      hold: { type: 'tool:call', name: 'hold', args: {} },
+      end: { type: 'core:end' },
+    },
+    edges: [
+      { from: 'start', to: 'upload' },
+      { from: 'upload', to: 'hold' },
+      { from: 'hold', to: 'end' },
+    ],
+  },
+};
+
+async function waitUntil(predicate: () => boolean, attempts = 100): Promise<void> {
+  for (let i = 0; i < attempts; i += 1) {
+    if (predicate()) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+  throw new Error('condition was not met in time');
+}
+
 function parentOf(spawnId: string, background: boolean): AgentDefinition {
   return {
     id: 'parent',
@@ -185,6 +231,40 @@ describe('background spawn calls', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(reports).toHaveLength(1);
     expect(reports[0]?.error?.code).toBe('spawn_aborted');
+  });
+
+  test('an aborted background child reports the write effects it already performed', async () => {
+    openGate();
+    let uploadJournaled = false;
+    const registry: BackgroundSpawnRegistry = createBackgroundSpawnRegistry();
+    const reports: BackgroundReportInput[] = [];
+    const state = new InMemoryRuntimeState('session-bg-effects');
+    await run(state, parentOf('spawn-bg-effects', true), {
+      backgroundSpawns: registry,
+      backgroundReport: (input) => reports.push(input),
+      toolRegistry: new Map([
+        [CHILD_UPLOAD.name, CHILD_UPLOAD],
+        [CHILD_HOLD.name, CHILD_HOLD],
+      ]),
+      agents: { resolve: (id) => (id === 'child' ? CHILD_WRITING : undefined) },
+      childJournal: (_spawnId, ev) => {
+        const meta = ev.metadata as Record<string, unknown> | undefined;
+        if (ev.type === 'tool.completed' && meta?.name === 'upload') {
+          uploadJournaled = true;
+        }
+      },
+    });
+    await waitUntil(() => uploadJournaled);
+    expect(registry.abortSpawn('spawn-bg-effects', 'run cancelled')).toBe(true);
+    closeGate();
+    const handles = await registry.awaitByThread('session-bg-effects');
+    expect(handles[0]?.error?.code).toBe('spawn_aborted');
+    expect(handles[0]?.effects?.entries).toEqual([
+      { tool: 'upload', ok: true, note: '201 Created id=42' },
+    ]);
+    expect(handles[0]?.effects?.omitted).toBe(0);
+    await waitUntil(() => reports.length > 0);
+    expect(reports[0]?.effects?.entries).toHaveLength(1);
   });
 
   test('blocking child keeps waiting for the node as before', async () => {

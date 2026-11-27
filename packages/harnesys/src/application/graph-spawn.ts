@@ -1,4 +1,4 @@
-import { SPAWN_ITEM_LIMIT, SPAWN_MAX_CONCURRENCY } from '../constants.ts';
+import { EVENT_TYPES, SPAWN_ITEM_LIMIT, SPAWN_MAX_CONCURRENCY } from '../constants.ts';
 import type { AgentBudget, AgentDefinition, NodePlacement } from '../domain/agent-definition.ts';
 import { codedRunError, DelegatedPermissionAsk } from '../domain/errors.ts';
 import type { Expr } from '../domain/expr.ts';
@@ -7,7 +7,13 @@ import type { Event, Snapshot } from '../domain/snapshot.ts';
 import type { AgentRosterEntry, AgentsResolve } from '../ports/create-runtime.ts';
 import type { PermissionMap } from '../ports/permissions.ts';
 import type { RuntimeState } from '../ports/runtime-state.ts';
-import type { ToolDefinition } from '../ports/tools.ts';
+import {
+  isSideEffect,
+  MUTATING_SIDE_EFFECTS,
+  type SpawnEffectEntry,
+  type SpawnEffectsJournal,
+  type ToolDefinition,
+} from '../ports/tools.ts';
 import { formatAgentTargets, resolveAgentTarget } from './agent-target-resolve.ts';
 import { resolveCapabilitySet, sandboxUniverse } from './capability-set.ts';
 import { compileOrThrow, type Plan } from './compile.ts';
@@ -55,6 +61,7 @@ export interface SpawnResultItem {
   budget?: SpawnBudgetHit;
   quota?: AgentBudget;
   usage?: SpawnUsage;
+  effects?: SpawnEffectsJournal;
 }
 export interface SpawnUsage {
   steps: number;
@@ -124,6 +131,7 @@ export interface BackgroundSpawnHandle {
   status: 'running' | 'done' | 'failed';
   output?: unknown;
   error?: SpawnCallError;
+  effects?: SpawnEffectsJournal;
   lastActivityAt: number;
 }
 export interface BackgroundSpawnRegistry {
@@ -155,6 +163,7 @@ export interface BackgroundReportInput {
   agentName?: string;
   output?: unknown;
   error?: SpawnCallError;
+  effects?: SpawnEffectsJournal;
 }
 function resolveConcurrency(
   c: Expr | 'parallel' | 'sequential',
@@ -419,6 +428,47 @@ function errorMessageOf(err: unknown): string {
   }
   return 'spawn child failed';
 }
+const EFFECTS_MAX_ENTRIES = 32;
+const EFFECT_NOTE_MAX_CHARS = 140;
+
+function effectNoteOf(output: unknown): string | undefined {
+  if (typeof output !== 'string' || output.trim() === '') {
+    return undefined;
+  }
+  const flat = output.replace(/\s+/g, ' ').trim();
+  return flat.length > EFFECT_NOTE_MAX_CHARS ? `${flat.slice(0, EFFECT_NOTE_MAX_CHARS)}…` : flat;
+}
+function createEffectCollector() {
+  const entries: SpawnEffectEntry[] = [];
+  let total = 0;
+  return {
+    add(ev: Event): void {
+      if (ev.type !== EVENT_TYPES.TOOL_COMPLETED && ev.type !== EVENT_TYPES.TOOL_FAILED) {
+        return;
+      }
+      const meta = ev.metadata as Record<string, unknown> | undefined;
+      const sideEffect = meta?.sideEffect;
+      if (!isSideEffect(sideEffect) || !MUTATING_SIDE_EFFECTS.includes(sideEffect)) {
+        return;
+      }
+      total += 1;
+      if (entries.length < EFFECTS_MAX_ENTRIES) {
+        const note = effectNoteOf(meta?.output);
+        entries.push({
+          tool: String(meta?.name ?? ''),
+          ok: ev.type === EVENT_TYPES.TOOL_COMPLETED,
+          ...(note !== undefined ? { note } : {}),
+        });
+      }
+    },
+    journal(): SpawnEffectsJournal | undefined {
+      if (total === 0) {
+        return undefined;
+      }
+      return { entries, omitted: total - entries.length };
+    },
+  };
+}
 export interface SpawnAbort {
   timedOut: boolean;
   timeoutMs?: number;
@@ -572,6 +622,13 @@ async function runOneChild(input: {
   const blockedProp = (): {
     blocked?: DeniedToolEntry[];
   } => (blocked.length > 0 ? { blocked } : {});
+  const effects = createEffectCollector();
+  const effectsProp = (): {
+    effects?: SpawnEffectsJournal;
+  } => {
+    const journal = effects.journal();
+    return journal === undefined ? {} : { effects: journal };
+  };
   parent.childJournal?.(target.spawnId, {
     eventId: crypto.randomUUID(),
     type: 'child.prepared',
@@ -587,6 +644,7 @@ async function runOneChild(input: {
         const meta = ev.metadata as Record<string, unknown> | undefined;
         remoteOutput = { output: meta?.output ?? null };
       }
+      effects.add(ev);
       parent.childJournal?.(target.spawnId, ev);
     }
   } catch (err) {
@@ -605,6 +663,7 @@ async function runOneChild(input: {
       output: null,
       error: signal.aborted ? abortError(abort) : { code, message },
       ...blockedProp(),
+      ...effectsProp(),
     };
   }
   if (remoteOutput !== undefined) {
@@ -635,6 +694,7 @@ async function runOneChild(input: {
           message: stopped.reason ?? 'stopped by hook',
         },
         ...blockedProp(),
+        ...effectsProp(),
       };
     }
     const over = spawnBudgetHit(snap, childBudget);
@@ -680,6 +740,7 @@ async function runOneChild(input: {
         message: `spawn child ended with status ${status}`,
       },
       ...blockedProp(),
+      ...effectsProp(),
     };
   }
   await stopEvent();
@@ -694,6 +755,7 @@ async function runOneChild(input: {
       output: null,
       error: abortError(abort),
       ...blockedProp(),
+      ...effectsProp(),
     };
   }
   return {
@@ -706,6 +768,7 @@ async function runOneChild(input: {
       message: `spawn child ended with status ${status}`,
     },
     ...blockedProp(),
+    ...effectsProp(),
   };
 }
 export function prepareSpawn(
@@ -881,6 +944,7 @@ export async function executeSpawn(
           ...(handle.agentName !== undefined ? { agentName: handle.agentName } : {}),
           ...(handle.output !== undefined ? { output: handle.output } : {}),
           ...(handle.error !== undefined ? { error: handle.error } : {}),
+          ...(handle.effects !== undefined ? { effects: handle.effects } : {}),
         });
       })
       .catch(() => {});

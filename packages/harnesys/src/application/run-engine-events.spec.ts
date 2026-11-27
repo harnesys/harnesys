@@ -66,6 +66,25 @@ describe('eventToSessionEvent replay fields', () => {
     expect(out).toMatchObject({ type: 'tool', phase: 'completed', message: 'shown' });
   });
 
+  test('carries the write side effect on tool events and drops unknown values', () => {
+    const out = eventToSessionEvent(
+      graphEvent('tool.completed', {
+        toolCallId: 'c1',
+        name: 'upload',
+        output: '201',
+        sideEffect: 'write',
+      }),
+    );
+    expect(out).toMatchObject({ type: 'tool', phase: 'completed', sideEffect: 'write' });
+    const bad = eventToSessionEvent(
+      graphEvent('tool.failed', { toolCallId: 'c2', name: 'sh', sideEffect: 'not-a-kind' }),
+    );
+    if (bad === null || bad.type !== 'tool') {
+      throw new Error('expected a tool session event');
+    }
+    expect(bad.sideEffect).toBeUndefined();
+  });
+
   test('keeps compaction summary', () => {
     const out = eventToSessionEvent(
       graphEvent('compaction.completed', { id: 'a1', reason: 'threshold', summary: 'old work' }),

@@ -2,14 +2,34 @@ import type { JsonSchema } from '../domain/json-schema.ts';
 import type { ProcessJobTarget } from '../domain/process-job.ts';
 import type { ToolAskSubject } from '../domain/tool-subject.ts';
 import type { FileAccessPolicy } from './file-access.ts';
-export type SideEffect =
-  | 'pure'
-  | 'read'
-  | 'write'
-  | 'destructive'
-  | 'financial'
-  | 'communication'
-  | 'credentialed';
+export const SIDE_EFFECTS = [
+  'pure',
+  'read',
+  'write',
+  'destructive',
+  'financial',
+  'communication',
+  'credentialed',
+] as const;
+export type SideEffect = (typeof SIDE_EFFECTS)[number];
+export function isSideEffect(value: unknown): value is SideEffect {
+  return (SIDE_EFFECTS as readonly unknown[]).includes(value);
+}
+export const MUTATING_SIDE_EFFECTS: readonly SideEffect[] = [
+  'write',
+  'destructive',
+  'financial',
+  'communication',
+];
+export interface SpawnEffectEntry {
+  tool: string;
+  ok: boolean;
+  note?: string;
+}
+export interface SpawnEffectsJournal {
+  entries: SpawnEffectEntry[];
+  omitted: number;
+}
 export interface BackgroundToolStatus {
   runId: string;
   threadId: string;
@@ -19,6 +39,7 @@ export interface BackgroundToolStatus {
   status: 'running' | 'done' | 'failed';
   output?: unknown;
   error?: { code: string; message: string };
+  effects?: SpawnEffectsJournal;
   tail?: string;
   idleMs?: number;
 }
