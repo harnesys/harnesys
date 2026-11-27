@@ -1,4 +1,4 @@
-import { DownloadIcon } from 'lucide-react';
+import { AlertCircleIcon, DownloadIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { fileExtLabel, formatBytes } from '@/shared/lib/file-meta';
 import { cn } from '@/shared/lib/utils';
@@ -39,6 +39,7 @@ export interface AttachmentTileProps {
   href?: string;
   load?: (signal: AbortSignal) => Promise<Blob>;
   onOpen?: () => void;
+  failed?: boolean;
 }
 
 export function AttachmentTile({
@@ -50,6 +51,7 @@ export function AttachmentTile({
   href,
   load,
   onOpen,
+  failed = false,
 }: AttachmentTileProps) {
   const meta = bytes && bytes > 0 ? formatBytes(bytes) : null;
   const ext = fileExtLabel(name, mediaType);
@@ -85,7 +87,11 @@ export function AttachmentTile({
         </span>
       </div>
       <div className="min-h-0 flex-1 overflow-hidden px-2 py-1">
-        {thumb ? (
+        {failed ? (
+          <div className="flex size-full items-center justify-center">
+            <AlertCircleIcon className="size-5 text-destructive" />
+          </div>
+        ) : thumb ? (
           <img src={thumb} alt="" className="size-full rounded-md object-cover" />
         ) : preview != null ? (
           <pre className="h-full overflow-hidden whitespace-pre-wrap break-words font-mono text-[8px] text-muted-foreground leading-3 [mask-image:linear-gradient(to_bottom,black_60%,transparent)]">
@@ -98,10 +104,15 @@ export function AttachmentTile({
         )}
       </div>
       <div className="pointer-events-none flex items-center px-2 pb-1.5">
-        <span className="rounded-full bg-foreground/10 px-1.5 py-0.5 font-semibold text-[8px] text-foreground/80">
-          {ext}
+        <span
+          className={cn(
+            'rounded-full px-1.5 py-0.5 font-semibold text-[8px]',
+            failed ? 'bg-destructive/15 text-destructive' : 'bg-foreground/10 text-foreground/80',
+          )}
+        >
+          {failed ? 'Failed' : ext}
         </span>
-        {meta || href || load ? (
+        {!failed && (meta || href || load) ? (
           <div className="relative ml-auto flex h-5 min-w-5 items-center justify-end">
             {meta ? (
               <span

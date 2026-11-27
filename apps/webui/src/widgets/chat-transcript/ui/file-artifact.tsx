@@ -116,9 +116,6 @@ export function FileArtifact({
     textLike ? backend.key : '',
   );
   const preview = useBlobTextPreview(url);
-  if (error) {
-    return <div className="text-muted-foreground text-xs">Failed to load file</div>;
-  }
   return (
     <AttachmentTile
       name={name}
@@ -127,6 +124,7 @@ export function FileArtifact({
       preview={textLike ? preview : null}
       href={url ?? undefined}
       load={backend.load}
+      failed={Boolean(error)}
       onOpen={() => openFile(fileRef)}
     />
   );
