@@ -24,6 +24,7 @@ const ctx = {
 class FakeImageGenerationPort extends ImageGenerationPort {
   calls: Array<{ scope: CapabilityScope; request: ImageGenerationRequest }> = [];
   failure?: Error;
+  sizes?: readonly string[];
 
   async generate(
     scope: CapabilityScope,
@@ -40,6 +41,10 @@ class FakeImageGenerationPort extends ImageGenerationPort {
       kind: 'image',
       path: 'attachments/att-1/cat.png',
     };
+  }
+
+  supportedSizes(): readonly string[] | undefined {
+    return this.sizes;
   }
 }
 
@@ -101,5 +106,22 @@ describe('createImageTools', () => {
       provider: 'openai',
       model: 'gpt-image-1',
     });
+  });
+
+  test('size parameter enumerates the sizes the port knows', () => {
+    const port = new FakeImageGenerationPort();
+    port.sizes = ['1024x1024', '1024x1536', '1536x1024', 'auto'];
+    const tool = createImageTools({ image: port, resolveScope: () => scope })[0];
+    expect(tool?.input.properties?.size?.description).toBe(
+      'Optional size, one of: 1024x1024 | 1024x1536 | 1536x1024 | auto',
+    );
+  });
+
+  test('size parameter falls back to provider-dependent wording when the port is silent', () => {
+    const port = new FakeImageGenerationPort();
+    const tool = createImageTools({ image: port, resolveScope: () => scope })[0];
+    expect(tool?.input.properties?.size?.description).toBe(
+      'Optional size as WIDTHxHEIGHT, e.g. 1024x1024 (provider-dependent; the error lists supported values)',
+    );
   });
 });

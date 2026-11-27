@@ -233,7 +233,11 @@ export function createMcpTools(deps: CreateMcpToolsParams): ToolDefinition[] {
       operations: ['mcp_manage'],
       sideEffect: 'read',
       description:
-        'Health-check a configured MCP server: fresh connection attempt, returns { connected, tools } or an error. ' +
+        'Health-check a configured MCP server: fresh connection attempt with vault placeholders resolved, ' +
+        'returns { connected, tools } or { connected: false, error } where the error is the underlying cause ' +
+        '(transport/spawn failure line, or "secret <KEY> not found in vault"). ' +
+        'Unresolved vault keys abort the check with that error — stricter than the runtime path, ' +
+        'which sends a missing key as an empty value and still connects. ' +
         'Read-only, does not touch running runtimes.',
       input: {
         type: 'object',

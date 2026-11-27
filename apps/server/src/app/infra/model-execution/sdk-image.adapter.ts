@@ -13,6 +13,39 @@ import { UnsupportedCapabilityException } from '../../domain/model-execution/mod
 
 type ImageSizeFormat = `${number}x${number}`;
 
+const GPT_IMAGE_SIZES: readonly string[] = ['1024x1024', '1024x1536', '1536x1024', 'auto'];
+const DALL_E_3_SIZES: readonly string[] = ['1024x1024', '1024x1792', '1792x1024'];
+
+export function supportedImageSizes(driver: string, model: string): readonly string[] | undefined {
+  if (driverMechanism(driver, 'image') !== 'sdk') {
+    return undefined;
+  }
+  if (model.startsWith('gpt-image')) {
+    return GPT_IMAGE_SIZES;
+  }
+  if (model === 'dall-e-3') {
+    return DALL_E_3_SIZES;
+  }
+  return undefined;
+}
+
+export function assertImageSizeSupported(
+  driver: string,
+  model: string,
+  size: string | undefined,
+): void {
+  if (size === undefined) {
+    return;
+  }
+  const supported = supportedImageSizes(driver, model);
+  if (supported === undefined || supported.includes(size)) {
+    return;
+  }
+  throw new Error(
+    `image model ${model} does not support size "${size}", supported sizes: ${supported.join(' | ')}`,
+  );
+}
+
 function sizeOption(size: string | undefined): { size?: ImageSizeFormat } {
   if (size === undefined) {
     return {};
@@ -27,6 +60,7 @@ export class SdkImageAdapter extends ImagePort {
     input: ImageGenerationInput,
   ): Promise<ImageGenerationResult> {
     const model = this.resolveImageModel(binding);
+    assertImageSizeSupported(binding.driver, binding.model.name, input.size);
     const result = await generateImage({
       model,
       prompt: input.prompt,

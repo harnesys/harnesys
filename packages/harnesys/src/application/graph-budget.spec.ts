@@ -190,6 +190,21 @@ describe('budget approval', () => {
     expect(meta(failed as Event).code).toBe('budget_exceeded');
   });
 
+  test('a sandboxed child closes with the report instead of a bare budget failure', async () => {
+    const state = new InMemoryRuntimeState('session-1');
+    const agent = agentOf({ maxSteps: 3 });
+    const events = await run(state, agent, { sandbox: true });
+    const failed = events.find((ev) => ev.type === 'run.failed');
+    expect(failed).toBeDefined();
+    expect(meta(failed as Event).code).toBe('budget_exceeded');
+    expect(String(meta(failed as Event).text ?? '')).not.toBe('');
+    const snap = await state.load();
+    expect(snap?.status).toBe('budget_exceeded');
+    const rec = (snap?.state ?? {}) as Record<string, unknown>;
+    const msgs = rec.messages as Record<string, unknown>[];
+    expect(msgs[msgs.length - 1]).toMatchObject({ role: 'assistant', content: 'hello' });
+  });
+
   test('a denied approval cancels the run', async () => {
     const state = new InMemoryRuntimeState('session-1');
     const agent = agentOf({ maxSteps: 2, policy: 'ask' });

@@ -15,4 +15,9 @@ export abstract class ImageGenerationPort {
     scope: CapabilityScope,
     request: ImageGenerationRequest,
   ): Promise<GeneratedImageArtifact>;
+
+  abstract supportedSizes(
+    scope: CapabilityScope,
+    selection?: Pick<ImageGenerationRequest, 'provider' | 'model'>,
+  ): readonly string[] | undefined;
 }

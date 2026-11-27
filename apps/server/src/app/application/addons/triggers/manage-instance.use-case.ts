@@ -20,7 +20,7 @@ import { TriggerWorkspacePort } from '../../../domain/thread/trigger-workspace.p
 import { occupiedTriggerInstanceThreadId } from '../../threads/trigger-thread-binding.ts';
 import { requirePackage } from '../orgs/org-addon.helpers.ts';
 import type { TriggerTarget } from './trigger-target.schema.ts';
-import { TriggerTargetSchema } from './trigger-target.schema.ts';
+import { scriptsIssueMessages, TriggerTargetSchema } from './trigger-target.schema.ts';
 
 export interface CreateTriggerInstanceInput {
   orgId: string;
@@ -224,13 +224,13 @@ export class ManageTriggerInstanceUseCase {
   private assertTarget(orgId: string, target: unknown, exceptInstanceId?: string): TriggerTarget {
     const parsed = TriggerTargetSchema.safeParse(target);
     if (!parsed.success) {
-      const scriptIssue = parsed.error.issues.find((issue) => issue.path[0] === 'scripts');
+      const scriptsIssues = scriptsIssueMessages(parsed.error);
       throw new AddonException(
         'invalid_params',
         422,
-        scriptIssue === undefined
+        scriptsIssues.length === 0
           ? 'target must be an object with threadId, agentId, optional modeId, workspace and scripts'
-          : `${scriptIssue.path.join('.')}: ${scriptIssue.message}`,
+          : scriptsIssues.join('; '),
       );
     }
     const thread = this.threads.findById(orgId, parsed.data.threadId);

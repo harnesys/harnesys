@@ -54,10 +54,12 @@ function parseMapToolInput(input: unknown): MapToolInput {
     ...(typeof rec.maxTokensPerItem === 'number' ? { maxTokensPerItem: rec.maxTokensPerItem } : {}),
   };
 }
+export const MAP_TOOL_DESCRIPTION =
+  'Queue a fan-out over items for the graph control:map node. items is a JSON array (max 32). Optional instruction is a per-item template with $item/$index; it overrides the node default. Optional maxTokensPerItem caps each worker text result. Each item is processed in the map body with $item/$index; results return as Map results in context. Prefer this for parallel same-graph work.';
+
 export function mapTool(): ToolDefinition {
   return tool(MAP_TOOL, {
-    description:
-      'Queue a fan-out over items for the graph control:map node. items is a JSON array (max 32). Optional instruction is a per-item template with $item/$index; it overrides the node default. Optional maxTokensPerItem caps each worker text result. Each item is processed in the map body with $item/$index; results return as Map results in context. Prefer this for parallel same-graph work; use agents_spawn when you need another agent definition.',
+    description: MAP_TOOL_DESCRIPTION,
     group: 'control',
     interactive: true,
     input: {
@@ -155,7 +157,7 @@ function waitResumeText(resume: unknown): string {
 export function wait(): ToolDefinition {
   return tool(WAIT_TOOL, {
     description:
-      "Park this run until a wall-clock delay elapses (delayMs, 1 ms–7 d) or until a signal settles (signal, e.g. 'issue:<issueId>' resumes when the issue's dispatched execution is no longer active; free-form keys like 'deploy:done' work with the signals pack and signal_fire; optional timeoutMs bounds a signal wait, default 30 min, resume payload timedOut: true on expiry). Does not replace ask_user.",
+      "Park this run until a wall-clock delay elapses (delayMs, 1 ms–7 d) or until a signal settles (signal, e.g. 'issue:<issueId>' resumes when the issue's dispatched execution is no longer active; optional timeoutMs bounds a signal wait, default 30 min, resume payload timedOut: true on expiry). Does not replace ask_user.",
     group: 'control',
     interactive: true,
     input: {

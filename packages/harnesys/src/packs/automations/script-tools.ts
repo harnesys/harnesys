@@ -3,6 +3,7 @@ import type { CapabilityScope } from '../../domain/pack.ts';
 import type { AutomationAdminPort } from '../../ports/automation-admin.ts';
 import { type ToolDefinition, tool } from '../../ports/tools.ts';
 import { runGuard } from '../issues/run-guard.ts';
+import { GATE_ARMS_SHAPE } from './gate-shape.ts';
 
 export interface ScriptToolsDeps {
   automations: AutomationAdminPort;
@@ -68,7 +69,13 @@ export function createScriptTools(deps: ScriptToolsDeps): ToolDefinition[] {
         properties: {
           instanceId: { type: 'string', minLength: 1 },
           script: SCRIPT_SCHEMA,
-          gate: { type: 'object' },
+          gate: {
+            type: 'object',
+            description:
+              'Gate evaluated against the script result, one arm: ' +
+              GATE_ARMS_SHAPE +
+              '. The verdict comes back as gateVerdict: passed|unmatched|not-applied.',
+          },
         },
         required: ['instanceId', 'script'],
         additionalProperties: false,

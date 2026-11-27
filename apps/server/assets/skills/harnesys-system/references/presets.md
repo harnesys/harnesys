@@ -6,7 +6,7 @@ Bundled agent presets live in `apps/server/assets/presets/agents/<name>/{config.
 
 | Preset id | Name / role | Packs | Skills | Budget | Purpose |
 |---|---|---|---|---|---|
-| `harnesys/genie` | Genie / chief-of-staff | files, shell, web, skills, issues, manager, lsp, mcp, plan, agents, threads, semantic-memory, knowledge-memory, pin-memory, core (plus two dead names, see below) | agent-creator, workspace-ops, find-skills, harnesys-system, addon-creator, widget-creator | 400 steps / 1h / ask | The owner's right hand: configures the workspace, grows the team, plans work. Widest grants. |
+| `harnesys/genie` | Genie / chief-of-staff | files, shell, web, skills, issues, manager, lsp, mcp, plan, agents, threads, semantic-memory, knowledge-memory, pin-memory, core, automations | agent-creator, workspace-ops, find-skills, harnesys-system, addon-creator, widget-creator, automations | 400 steps / 1h / ask | The owner's right hand: configures the workspace, grows the team, plans work. Widest grants. |
 | `harnesys/coder` | Coder / coder | files, shell (command blocklist), issues, lsp, plan, pin-memory, core, agents (`ownDelegatesOnly`, `agents_handoff` and `agents_create` disabled) | issue-ops, addon-creator | 300 steps / 45m / ask | Implementation work tracked through issues. |
 | `harnesys/reviewer` | Reviewer / reviewer | files, shell (command blocklist), issues, core | issue-ops | 120 steps / 20m / ask | Code review against issue criteria. |
 | `harnesys/tester` | Tester / tester | files, shell (command blocklist), plan, core | — | 150 steps / 30m / ask | Writes and runs the checks a change needs. |
@@ -18,7 +18,7 @@ Bundled agent presets live in `apps/server/assets/presets/agents/<name>/{config.
 
 `explorer` and `general` run with `policy: "error"` and are the usual spawn targets; all other presets use `ask`, so an exhausted run parks for the owner.
 
-**Known defect in the bundled Genie config:** its `capabilities` still list `scheduler` and `webhook`. No such packs exist in this build (the host pack list has 17 names, neither of them), so a Genie run logs `[capabilities] pack "scheduler" is not registered by the host` and gets no tools from those entries. Do not copy those two names into new agents.
+**No dead pack names ship today:** the bundled Genie config lists 16 packs, all registered (see `genie/config.json`). The host pack list (`apps/server/src/app/domain/runtime/org-pack-list.ts`) has 20 names; scheduling and webhooks are not among them — they are add-on capabilities surfaced through the `automations` pack, not core pack names. An unregistered name in any agent config logs `pack "x" is not registered by the host` and grants no tools; do not put invented pack names into `capabilities`.
 
 ## How presets become agents
 

@@ -81,7 +81,8 @@ export const issuesCapability = definePack<IssuesCapabilityPorts, Record<string,
       },
       {
         name: 'issue_attachment_add',
-        description: 'Attach a source file reference (sourceId + path) to an issue.',
+        description:
+          'Attach a file to an issue: source-root paths stay live pointers, run-root files are copied as snapshots.',
       },
       { name: 'label_list', description: 'List dispatch labels.' },
       { name: 'label_create', description: 'Create a dispatch label.' },

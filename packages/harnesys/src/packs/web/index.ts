@@ -1,5 +1,5 @@
 import { definePack } from '../../domain/pack.ts';
-import { browserFetchTool } from './browser/browser-fetch-tool.ts';
+import { BROWSER_FETCH_META_DESCRIPTION, browserFetchTool } from './browser/browser-fetch-tool.ts';
 import {
   agentBrowserResolvedPath,
   BrowserEngineMissingError,
@@ -70,8 +70,7 @@ export interface WebPackPorts extends BrowserLoginPorts {
 const BROWSER_TOOL_META = [
   {
     name: 'browser_fetch',
-    description:
-      'One-shot page scrape to markdown without a browser session; reports bytes and an empty-body note on unreadable pages.',
+    description: BROWSER_FETCH_META_DESCRIPTION,
   },
   {
     name: 'browser',

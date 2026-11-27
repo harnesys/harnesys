@@ -24,6 +24,11 @@ export interface ExecuteWorkerOrgOperationInput {
   body: WorkerOrgOperationBody;
 }
 
+export interface WorkerOperationRunContext {
+  actorAgentId: string;
+  threadId: string;
+}
+
 @Injectable()
 export class ExecuteWorkerOrgOperationUseCase {
   constructor(
@@ -60,15 +65,13 @@ export class ExecuteWorkerOrgOperationUseCase {
     if (existing !== null) {
       return { operationId: input.body.operationId, result: existing };
     }
-    const actorAgentId = await this.actorAgentId(input.orgId, input.body.runId);
-    const result = await Promise.resolve(
-      this.dispatch(input.orgId, actorAgentId, input.body.operation),
-    );
+    const context = await this.runContext(input.orgId, input.body.runId);
+    const result = await Promise.resolve(this.dispatch(input.orgId, context, input.body.operation));
     this.receipts.save(input.orgId, input.body.runId, input.body.operationId, result);
     return { operationId: input.body.operationId, result };
   }
 
-  private async actorAgentId(orgId: string, runId: string): Promise<string> {
+  private async runContext(orgId: string, runId: string): Promise<WorkerOperationRunContext> {
     const lifecycle = await this.executor.lifecycle(orgId);
     const run = await lifecycle.get(runId);
     if (!run) {
@@ -77,21 +80,26 @@ export class ExecuteWorkerOrgOperationUseCase {
     if (!run.agentId) {
       throw new HttpException(404, 'AGENT_NOT_FOUND', `run ${runId} has no agent`);
     }
-    return run.agentId;
+    return { actorAgentId: run.agentId, threadId: run.threadId };
   }
 
-  private dispatch(orgId: string, actorAgentId: string, operation: WorkerOrgOperation): unknown {
+  private dispatch(
+    orgId: string,
+    context: WorkerOperationRunContext,
+    operation: WorkerOrgOperation,
+  ): unknown {
     if (operation.kind.startsWith('issue.')) {
-      return this.dispatchIssue(orgId, actorAgentId, operation);
+      return this.dispatchIssue(orgId, context, operation);
     }
     throw new HttpException(400, 'ORG_OPERATION_UNKNOWN', 'unsupported operation');
   }
 
   private dispatchIssue(
     orgId: string,
-    actorAgentId: string,
+    context: WorkerOperationRunContext,
     operation: WorkerOrgOperation,
   ): unknown {
+    const actorAgentId = context.actorAgentId;
     const issues = issueToolsDeps();
     if (!issues) {
       throw new HttpException(503, 'ISSUE_TOOLS_UNAVAILABLE', 'issue tools are not wired');
@@ -150,6 +158,7 @@ export class ExecuteWorkerOrgOperationUseCase {
         return issues.addSourceAttachment.execute({
           orgId,
           issueId: operation.issueId,
+          threadId: context.threadId,
           body: operation.body,
         });
       case 'issue.listLabels':

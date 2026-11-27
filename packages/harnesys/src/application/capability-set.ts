@@ -34,7 +34,7 @@ export type {
   RunRegistry,
   RunToolEntry,
 } from './capability-explain.ts';
-export { projectToolRegistry } from './capability-explain.ts';
+export { isOn, PACK_PREFIX, projectToolRegistry } from './capability-explain.ts';
 export interface ModeCapabilityFields {
   id: string;
   packs?: Record<string, PackAssignment>;

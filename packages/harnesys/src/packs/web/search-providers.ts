@@ -34,6 +34,44 @@ const DUCKDUCKGO_MIN_DELAY_MS = 2000;
 const SEARXNG_MIN_DELAY_MS = 1000;
 const SEARXNG_TIMEOUT_MS = 10000;
 const FAILURE_HINT = 'Stop retrying and tell the user that web search is temporarily unavailable.';
+const UNREACHABLE_FALLBACK_HINT =
+  'In-pack fallbacks: fetch for a known URL, browser_fetch/browser when the web pack grants them.';
+
+export interface FailureGuidance {
+  url: string;
+  providers: readonly string[];
+}
+
+export function isConnectivityFailure(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) {
+    return false;
+  }
+  const failure = error as { name?: unknown; message?: unknown };
+  const label = `${String(failure.name ?? '')} ${String(failure.message ?? '')}`.toLowerCase();
+  return (
+    label.includes('timeouterror') ||
+    label.includes('timed out') ||
+    label.includes('etimedout') ||
+    label.includes('unable to connect') ||
+    label.includes('connection refused') ||
+    label.includes('econnrefused') ||
+    label.includes('enotfound')
+  );
+}
+
+export function describeFailure(
+  provider: string,
+  error: unknown,
+  guidance?: FailureGuidance,
+): Error {
+  const detail = error instanceof Error ? error.message : String(error);
+  if (guidance !== undefined && isConnectivityFailure(error)) {
+    return new Error(
+      `${provider} at ${guidance.url} is unreachable (${detail}): check that the instance is deployed and reachable, set a different searxngUrl in the web pack settings, or switch provider (supported: ${guidance.providers.join(', ')}). ${UNREACHABLE_FALLBACK_HINT} ${FAILURE_HINT}`,
+    );
+  }
+  return new Error(`${provider}: ${detail}. ${FAILURE_HINT}`);
+}
 function createLimiter(minDelayMs: number): <T>(task: () => Promise<T>) => Promise<T> {
   let lastRequestAt = 0;
   let tail: Promise<unknown> = Promise.resolve();
@@ -49,10 +87,6 @@ function createLimiter(minDelayMs: number): <T>(task: () => Promise<T>) => Promi
     tail = next.catch(() => undefined);
     return next;
   };
-}
-function describeFailure(provider: string, error: unknown): Error {
-  const detail = error instanceof Error ? error.message : String(error);
-  return new Error(`${provider}: ${detail}. ${FAILURE_HINT}`);
 }
 const duckduckgoLimiter = createLimiter(DUCKDUCKGO_MIN_DELAY_MS);
 const DUCKDUCKGO_HEADERS = {
@@ -134,6 +168,7 @@ function stripTags(html: string): string {
 }
 export interface SearxngOptions {
   url: string;
+  providers: readonly string[];
 }
 export function searxngSearch(options: SearxngOptions): SearchProvider {
   const limiter = createLimiter(SEARXNG_MIN_DELAY_MS);
@@ -152,7 +187,10 @@ export function searxngSearch(options: SearxngOptions): SearchProvider {
           }
           return parseSearxngResponse((await response.json()) as SearxngResponse);
         } catch (error) {
-          throw describeFailure('searxng', error);
+          throw describeFailure('searxng', error, {
+            url: options.url,
+            providers: options.providers,
+          });
         }
       }),
   };

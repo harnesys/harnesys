@@ -1,3 +1,4 @@
+import { MAP_TOOL_DESCRIPTION } from '../../adapters/actions/graph-control.ts';
 import { askUser, mapTool, wait } from '../../adapters/actions/index.ts';
 import { definePack } from '../../domain/pack.ts';
 export const coreCapability = definePack<Record<string, unknown>, Record<string, unknown>>({
@@ -14,8 +15,7 @@ export const coreCapability = definePack<Record<string, unknown>, Record<string,
       },
       {
         name: 'map',
-        description:
-          'Queue a fan-out over items for the graph control:map node. items is a JSON array (max 32). Optional instruction is a per-item template with $item/$index; it overrides the node default. Optional maxTokensPerItem caps each worker text result. Each item is processed in the map body with $item/$index; results return as Map results in context. Prefer this for parallel same-graph work; use agents_spawn when you need another agent definition.',
+        description: MAP_TOOL_DESCRIPTION,
       },
       {
         name: 'wait',
@@ -32,8 +32,8 @@ export const coreCapability = definePack<Record<string, unknown>, Record<string,
       {
         tag: 'core-tools',
         text:
-          'Use map to fan out independent items within this graph. Use agents_spawn when work needs a separate agent definition. ' +
-          'Use wait for a one-time pause in this run; use schedule tools for recurring or later-session work. ' +
+          'Use map to fan out independent items within this graph. ' +
+          'Use wait for a one-time pause in this run. ' +
           'Use ask_user only when a real user decision or missing information blocks progress.',
       },
     ],

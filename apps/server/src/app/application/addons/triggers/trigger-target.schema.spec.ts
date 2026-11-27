@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { TriggerTargetSchema } from './trigger-target.schema.ts';
+import { scriptsIssueMessages, TriggerTargetSchema } from './trigger-target.schema.ts';
 
 const BASE = {
   threadId: '11111111-1111-4111-8111-111111111111',
@@ -116,5 +116,32 @@ describe('TriggerTargetSchema agent mode', () => {
         },
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('scriptsIssueMessages', () => {
+  test('collapses every scripts issue into one path-prefixed line', () => {
+    const rejected = TriggerTargetSchema.safeParse({
+      ...BASE,
+      scripts: {
+        acknowledged: true,
+        pre: { ...PRE, gate: { on: 'stdout' } },
+        agent: 'sometimes',
+      },
+    });
+    const messages = rejected.success ? [] : scriptsIssueMessages(rejected.error);
+    expect(rejected.success).toBe(false);
+    expect(messages.length).toBeGreaterThan(1);
+    for (const message of messages) {
+      expect(message.startsWith('scripts.')).toBe(true);
+    }
+    expect(messages.some((message) => message.startsWith('scripts.agent:'))).toBe(true);
+    expect(messages.some((message) => message.startsWith('scripts.pre.gate.'))).toBe(true);
+  });
+
+  test('ignores issues outside the scripts field', () => {
+    const rejected = TriggerTargetSchema.safeParse({ threadId: 'nope', agentId: 'nope' });
+    const messages = rejected.success ? [] : scriptsIssueMessages(rejected.error);
+    expect(messages).toEqual([]);
   });
 });

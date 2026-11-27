@@ -9,6 +9,7 @@ import {
   remoteKillArgs,
   sshDestination,
   sshSocketPath,
+  UnknownPortForwardModeError,
 } from './ssh-argv.ts';
 
 describe('ssh argv builders', () => {
@@ -77,25 +78,77 @@ describe('ssh argv builders', () => {
     expect(script).toContain('kill -KILL -"$(cat /tmp/.harness-jobs/job-9.pid)"');
   });
 
-  test('remote copy pipes tar over ssh in both directions', () => {
+  test('remote copy pushes a directory as tar -C dir -cf - .', () => {
     const push = remoteCopyCommand({
       target,
       socketPath: sock,
       direction: 'push',
-      localPath: '/tmp/src',
+      local: { path: '/tmp/src', kind: 'directory' },
       remotePath: '/srv/app',
     });
     expect(push).toContain(`tar -C '/tmp/src' -cf - .`);
     expect(push).toContain(`-C '\\''/srv/app'\\'''`);
+  });
+
+  test('remote copy pushes a single file as tar -C dir -cf - base', () => {
+    const push = remoteCopyCommand({
+      target,
+      socketPath: sock,
+      direction: 'push',
+      local: { path: '/tmp/scratch/a.txt', kind: 'file' },
+      remotePath: '/srv/app',
+    });
+    expect(push.startsWith(`tar -C '/tmp/scratch' -cf - 'a.txt' |`)).toBe(true);
+    expect(push).not.toContain(`-cf - .`);
+  });
+
+  test('remote copy pushes nothing from a missing local path', () => {
+    expect(() =>
+      remoteCopyCommand({
+        target,
+        socketPath: sock,
+        direction: 'push',
+        local: { path: '/tmp/gone', kind: 'missing' },
+        remotePath: '/srv/app',
+      }),
+    ).toThrow(/requires an existing local path/);
+  });
+
+  test('remote copy pulls into an existing directory without mkdir', () => {
     const pull = remoteCopyCommand({
       target,
       socketPath: sock,
       direction: 'pull',
-      localPath: '/tmp/dst',
+      local: { path: '/tmp/dst', kind: 'directory' },
       remotePath: '/srv/app',
     });
     expect(pull.startsWith('ssh -S ')).toBe(true);
     expect(pull).toContain(`tar -C '/tmp/dst' -xf -`);
+    expect(pull).not.toContain('mkdir');
+  });
+
+  test('remote copy pull into a missing directory prepends mkdir -p', () => {
+    const pull = remoteCopyCommand({
+      target,
+      socketPath: sock,
+      direction: 'pull',
+      local: { path: '/tmp/dst', kind: 'missing' },
+      remotePath: '/srv/app',
+    });
+    expect(pull.startsWith(`mkdir -p '/tmp/dst' && ssh -S `)).toBe(true);
+    expect(pull).toContain(`tar -C '/tmp/dst' -xf -`);
+  });
+
+  test('remote copy pull rejects a file target', () => {
+    expect(() =>
+      remoteCopyCommand({
+        target,
+        socketPath: sock,
+        direction: 'pull',
+        local: { path: '/tmp/file.txt', kind: 'file' },
+        remotePath: '/srv/app',
+      }),
+    ).toThrow(/requires a directory target/);
   });
 
   test('port forward picks the right flag and never runs a command', () => {
@@ -109,6 +162,23 @@ describe('ssh argv builders', () => {
       '-D',
     );
     expect(portForwardArgs({ target, socketPath: sock, spec: 'x', mode: 'local' })).toContain('-N');
+  });
+
+  test('port forward rejects an unknown mode with a named error and no undefined leak', () => {
+    let thrown: unknown;
+    try {
+      portForwardArgs({ target, socketPath: sock, spec: '18080:localhost:80', mode: '-L' });
+    } catch (err) {
+      thrown = err;
+    }
+    expect(thrown).toBeInstanceOf(UnknownPortForwardModeError);
+    const error = thrown as UnknownPortForwardModeError;
+    expect(error.name).toBe('UnknownPortForwardModeError');
+    expect(error.message).toContain('-L');
+    expect(error.message).toContain('local, remote, dynamic');
+    expect(() =>
+      portForwardArgs({ target, socketPath: sock, spec: 'x', mode: 'toString' }),
+    ).toThrow(UnknownPortForwardModeError);
   });
 
   test('argvToShellCommand single-quotes every part', () => {

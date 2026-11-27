@@ -8,7 +8,7 @@ import {
 import { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-provider.port.ts';
 import { createOrgModelsPort } from '../../../domain/provider/org-models.ts';
 import { SecretStorePort } from '../../../domain/secret/secret-store.port.ts';
-import { SdkImageAdapter } from '../../model-execution/sdk-image.adapter.ts';
+import { SdkImageAdapter, supportedImageSizes } from '../../model-execution/sdk-image.adapter.ts';
 
 interface OrgImageGenerationPortDeps {
   orgId: string;
@@ -62,6 +62,26 @@ export class OrgImageGenerationPort extends ImageGenerationPort {
       mediaType: result.mimeType,
       bytes: Buffer.from(result.base64, 'base64'),
     });
+  }
+
+  supportedSizes(
+    scope: CapabilityScope,
+    selection?: Pick<ImageGenerationRequest, 'provider' | 'model'>,
+  ): readonly string[] | undefined {
+    const pinnedProvider = selection?.provider;
+    const pinnedModel = selection?.model;
+    const target =
+      pinnedProvider !== undefined && pinnedModel !== undefined
+        ? { providerName: pinnedProvider, modelName: pinnedModel }
+        : this.findImageModel(scope.orgId);
+    if (target === undefined) {
+      return undefined;
+    }
+    const provider = this.deps.providers.findByName(scope.orgId, target.providerName);
+    if (provider === undefined) {
+      return undefined;
+    }
+    return supportedImageSizes(provider.driver, target.modelName);
   }
 
   private findImageModel(orgId: string): { providerName: string; modelName: string } | undefined {

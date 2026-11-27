@@ -153,6 +153,7 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
       recordLoginResult: this.recordLoginResult,
     });
     const engineSnapshotDeps = engineSnapshotDepsOf(this.browserHost);
+    const vaultLookup = (key: string) => this.secrets.get(orgId, key);
     const pending = openOrgRuntime({
       orgId,
       logger: this.log.child('org-runtime'),
@@ -186,16 +187,14 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
         config: this.mcpConfig,
         listLive: () => this.listMcpServers(orgId),
         invalidateBundle: () => this.plugins.invalidate(orgId),
+        vaultLookup,
         apply: async (serverId, entry) => {
           const runtime = await this.ensure(orgId);
           const resolved =
             entry === null
               ? null
-              : await resolveMcpVaultEntry(
-                  serverId,
-                  entry,
-                  (key) => this.secrets.get(orgId, key),
-                  (message) => this.log.warn({}, message),
+              : await resolveMcpVaultEntry(serverId, entry, vaultLookup, (message) =>
+                  this.log.warn({}, message),
                 );
           await runtime.reloadMcp(serverId, resolved);
         },

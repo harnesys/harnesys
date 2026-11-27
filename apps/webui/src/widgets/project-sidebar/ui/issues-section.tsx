@@ -1,3 +1,4 @@
+import type { BoardStatus } from '@harnesys/studio-shared';
 import { CogIcon, PlusIcon, SquareKanbanIcon } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { useIssueBoardStore, useIssueStore } from '@/entities/issue';
@@ -10,6 +11,10 @@ import {
   openBoardSettingsDialog,
   resolveBoardIcon,
 } from '@/features/manage-issues';
+import {
+  countIssuesByCategory,
+  STATUS_CATEGORY_LABELS,
+} from '@/features/manage-issues/model/board-columns';
 import { useOrgId } from '@/shared/config/location';
 import { useStudioNavigation } from '@/shared/config/navigation';
 import { entityColorTintClass, entityColorTintStyle } from '@/shared/lib/entity-colors';
@@ -69,8 +74,16 @@ export function IssuesSection({
   );
 }
 
-function useIssueCountForBoard(boardId: string): number {
-  return useIssueStore((state) => state.items.filter((item) => item.boardId === boardId).length);
+const NO_STATUSES: BoardStatus[] = [];
+
+function useBoardCategoryStats(boardId: string) {
+  const statuses = useIssueBoardStore(
+    (state) => state.boards.find((board) => board.id === boardId)?.statuses ?? NO_STATUSES,
+  );
+  const issues = useIssueStore(
+    useShallow((state) => state.items.filter((item) => item.boardId === boardId)),
+  );
+  return countIssuesByCategory(statuses, issues);
 }
 
 function useBoardHasActiveIssue(boardId: string): boolean {
@@ -110,7 +123,7 @@ function IssueBoardRow({
   onSelect: () => void;
   onSettings: () => void;
 }) {
-  const count = useIssueCountForBoard(boardId);
+  const stats = useBoardCategoryStats(boardId);
   const active = useBoardHasActiveIssue(boardId);
   const BoardIcon = resolveBoardIcon(icon);
   return (
@@ -155,7 +168,14 @@ function IssueBoardRow({
           <span className="block truncate text-sm leading-4">{name}</span>
           <span className="mt-0.5 flex items-baseline justify-between gap-2">
             <span className="min-w-0 truncate font-mono text-[11px] text-muted-foreground leading-4">
-              {count} {count === 1 ? 'issue' : 'issues'}
+              {stats.length === 0
+                ? 'no issues'
+                : stats
+                    .map(
+                      (item) =>
+                        `${item.count} ${STATUS_CATEGORY_LABELS[item.category].toLowerCase()}`,
+                    )
+                    .join(' · ')}
             </span>
           </span>
         </span>

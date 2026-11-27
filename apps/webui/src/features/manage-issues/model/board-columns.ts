@@ -1,5 +1,41 @@
-import type { BoardRuleRecord, BoardStatus, IssueRecord } from '@harnesys/studio-shared';
+import type {
+  BoardRuleRecord,
+  BoardStatus,
+  IssueRecord,
+  StatusCategory,
+} from '@harnesys/studio-shared';
+import { STATUS_CATEGORIES } from '@harnesys/studio-shared';
 import { cn } from '@/shared/lib/utils';
+
+export const STATUS_CATEGORY_LABELS: Record<StatusCategory, string> = {
+  backlog: 'Backlog',
+  started: 'Started',
+  finished: 'Finished',
+  cancelled: 'Cancelled',
+};
+
+export interface BoardCategoryCount {
+  category: StatusCategory;
+  count: number;
+}
+
+export function countIssuesByCategory(
+  statuses: BoardStatus[],
+  issues: IssueRecord[],
+): BoardCategoryCount[] {
+  const counts = new Map<StatusCategory, number>();
+  for (const issue of issues) {
+    const status = statusOf(statuses, issue.statusKey);
+    if (!status) {
+      continue;
+    }
+    counts.set(status.category, (counts.get(status.category) ?? 0) + 1);
+  }
+  return STATUS_CATEGORIES.flatMap((category) => {
+    const count = counts.get(category) ?? 0;
+    return count > 0 ? [{ category, count }] : [];
+  });
+}
 
 export function isClosedCategory(status: BoardStatus): boolean {
   return status.category === 'finished' || status.category === 'cancelled';

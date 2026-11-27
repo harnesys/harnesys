@@ -25,6 +25,7 @@ export interface RunInterrupted {
 export interface RunFailed {
   status: 'failed' | 'budget_exceeded' | 'timed_out' | 'dead_lettered';
   runId: string;
+  output?: unknown;
   error: {
     code: string;
     message: string;

@@ -18,7 +18,13 @@ import {
 import { formatAgentTargets, resolveAgentTarget } from './agent-target-resolve.ts';
 import { capabilityDigest, createCapabilityLinesProvider } from './capability-digest.ts';
 import { deniedOpReason, INTERACTIVE_HIDDEN_REASON } from './capability-explain.ts';
-import { CORE_SERVICE_TOOLS, resolveCapabilitySet, sandboxUniverse } from './capability-set.ts';
+import type { CapabilitySet, CapabilityUniverse } from './capability-set.ts';
+import {
+  CORE_SERVICE_TOOLS,
+  projectToolRegistry,
+  resolveCapabilitySet,
+  sandboxUniverse,
+} from './capability-set.ts';
 import { compileOrThrow, type Plan } from './compile.ts';
 import { evalExpr } from './expr-eval.ts';
 import type { GraphOpts } from './graph.ts';
@@ -28,13 +34,16 @@ import {
   hookStopEffect,
   withHookContextPrefix,
 } from './hooks/emit-hook.ts';
+import { effectiveSkillRegistry } from './packs/pack-run.ts';
 import { childPermissions } from './permissions.ts';
 import { finalProviderMessage, isProviderError, providerErrorCode } from './provider-error.ts';
+import { createLoadSkillTool } from './skills/create-load-skill-tool.ts';
 import { type DeniedToolEntry, deniedToolsList } from './tool-approve-checkpoint.ts';
 import { runBatchWorkerPool } from './tool-pool.ts';
 import { subtractDeniedTools } from './tool-registry.ts';
 import { createLoadToolsTool } from './tools/create-load-tools-tool.ts';
 import { LOAD_TOOLS_NAME } from './tools/exposure.ts';
+import { aliasTool } from './tools/tool-alias.ts';
 export interface SpawnCall {
   agentId: string;
   spawnId?: string;
@@ -49,7 +58,7 @@ export interface SpawnBudgetHit {
   kind: 'steps' | 'tokens' | 'deadline';
   limit: number;
   used: number;
-  closingStep: true;
+  closingStep: boolean;
 }
 export interface SpawnCallError {
   code: string;
@@ -394,24 +403,40 @@ function resolveTargets(
 function spawnBudgetHit(
   snap: Snapshot | null | undefined,
   b: AgentBudget | undefined,
+  closingStep: boolean,
 ): SpawnBudgetHit | undefined {
   const cb = snap?.cursor.budget;
   if (b === undefined || cb === undefined) {
     return undefined;
   }
   if (b.maxSteps !== undefined && cb.steps >= b.maxSteps) {
-    return { kind: 'steps', limit: b.maxSteps, used: cb.steps, closingStep: true };
+    return { kind: 'steps', limit: b.maxSteps, used: cb.steps, closingStep };
   }
   if (b.maxTokens !== undefined && cb.tokens >= b.maxTokens) {
-    return { kind: 'tokens', limit: b.maxTokens, used: cb.tokens, closingStep: true };
+    return { kind: 'tokens', limit: b.maxTokens, used: cb.tokens, closingStep };
   }
   if (b.deadlineMs !== undefined) {
     const used = Date.now() - cb.startedAt;
     if (used >= b.deadlineMs) {
-      return { kind: 'deadline', limit: b.deadlineMs, used, closingStep: true };
+      return { kind: 'deadline', limit: b.deadlineMs, used, closingStep };
     }
   }
   return undefined;
+}
+export function composedReportOf(state: Record<string, unknown>): unknown {
+  const msgs = state.messages;
+  if (!Array.isArray(msgs) || msgs.length === 0) {
+    return undefined;
+  }
+  const last = msgs[msgs.length - 1];
+  if (last === null || typeof last !== 'object') {
+    return undefined;
+  }
+  const rec = last as { role?: unknown; content?: unknown };
+  if (rec.role !== 'assistant' || typeof rec.content !== 'string' || rec.content.trim() === '') {
+    return undefined;
+  }
+  return last;
 }
 function childOutputFromState(state: Record<string, unknown>): unknown {
   const msgs = state.messages;
@@ -504,6 +529,36 @@ interface QuotaProp {
 function quotaProp(target: SpawnTarget): QuotaProp {
   return target.quota === undefined ? {} : { quota: target.quota };
 }
+function spawnInheritedUniverse(
+  parent: GraphOpts,
+  childDef: AgentDefinition,
+  permissions: PermissionMap,
+): CapabilityUniverse {
+  const registrations = [...(parent.packOutputs?.values() ?? [])].map((entry) => entry.reg);
+  const mcpTools = new Map(
+    [...parent.toolRegistry].filter(([, def]) => def.operations?.includes('mcp') === true),
+  );
+  const fsSkills = parent.skills;
+  const parentDef = parent.agent;
+  return {
+    registrations,
+    baseRegistry: mcpTools,
+    roster: parent.agents.list?.(childDef) ?? [],
+    ...(fsSkills !== undefined ? { fsSkills } : {}),
+    makeLoadTools: (registry) => createLoadToolsTool(projectToolRegistry(registry)),
+    makeLoadSkill: (packOutputs) => {
+      const loadSkill = createLoadSkillTool(
+        effectiveSkillRegistry(parentDef, fsSkills, packOutputs),
+        {
+          ...(fsSkills === undefined ? {} : { installed: fsSkills }),
+        },
+      );
+      return [loadSkill, aliasTool(loadSkill, 'Skill')];
+    },
+    sandbox: true,
+    permissions,
+  };
+}
 async function runOneChild(input: {
   parent: GraphOpts;
   target: SpawnTarget;
@@ -555,21 +610,25 @@ async function runOneChild(input: {
   });
   const childCaps: string[] = [];
   let runRegistry: Map<string, ToolDefinition>;
+  const explicitPacks = Object.keys(childDef.packs ?? {}).length > 0;
+  let childSet: CapabilitySet | undefined;
   if (parent.universe !== undefined) {
-    const childSet = resolveCapabilitySet(childDef, sandboxUniverse(parent.universe, childPerms));
+    childSet = resolveCapabilitySet(childDef, sandboxUniverse(parent.universe, childPerms));
+  } else if (parent.packOutputs !== undefined && explicitPacks) {
+    childSet = resolveCapabilitySet(childDef, spawnInheritedUniverse(parent, childDef, childPerms));
+  }
+  if (childSet !== undefined) {
     if (childSet.fatal.length > 0) {
       parent.logger?.warn(
         `[capabilities] spawn ${target.call.agentId}: ${childSet.fatal.join('; ')}`,
       );
     }
-    runRegistry = new Map(
-      [...childSet.registry].map(([name, entry]) => [
-        name,
-        { ...entry.def, exposure: entry.exposure },
-      ]),
-    );
+    runRegistry = projectToolRegistry(childSet.registry);
     childCaps.push(...capabilityDigest(childSet.explain, new Set(childSet.registry.keys())));
     childPackOutputs = childSet.packOutputs;
+    if (parent.universe === undefined && !runRegistry.has(LOAD_TOOLS_NAME)) {
+      runRegistry.set(LOAD_TOOLS_NAME, createLoadToolsTool(runRegistry));
+    }
   } else {
     runRegistry = subtractDeniedTools(parent.toolRegistry, childDef);
     for (const [name, def] of runRegistry) {
@@ -752,7 +811,7 @@ async function runOneChild(input: {
         ...toolUseProp(),
       };
     }
-    const over = spawnBudgetHit(snap, childBudget);
+    const over = spawnBudgetHit(snap, childBudget, true);
     return {
       agentId: target.call.agentId,
       spawnId: target.spawnId,
@@ -813,6 +872,26 @@ async function runOneChild(input: {
       ...quotaProp(target),
       output: null,
       error: abortError(abort),
+      ...blockedProp(),
+      ...effectsProp(),
+      ...capsProp(),
+      ...toolUseProp(),
+    };
+  }
+  if (status === 'budget_exceeded') {
+    const report = composedReportOf(rec);
+    const over = spawnBudgetHit(snap, childBudget, report !== undefined);
+    return {
+      agentId: target.call.agentId,
+      spawnId: target.spawnId,
+      ...quotaProp(target),
+      output: report ?? null,
+      error: {
+        code: 'budget_exceeded',
+        message: `spawn child ended with status ${status}`,
+      },
+      ...(over !== undefined ? { budget: over } : {}),
+      usage: usageOf(snap),
       ...blockedProp(),
       ...effectsProp(),
       ...capsProp(),

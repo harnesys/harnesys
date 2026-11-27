@@ -74,6 +74,8 @@ export interface PackToolInfo {
 export interface PackInventoryGroup {
   source: string;
   tools: PackToolInfo[];
+  enabled?: boolean;
+  disabled?: string[];
 }
 export interface AgentsCatalogPort {
   list(
@@ -86,7 +88,7 @@ export interface AgentsCatalogPort {
   get(scope: CapabilityScope, id: string): Promise<AgentDefinition | null>;
   create(scope: CapabilityScope, input: AgentCatalogCreateInput): Promise<AgentCatalogCreated>;
   patch?(scope: CapabilityScope, id: string, patch: AgentCatalogPatch): Promise<void>;
-  packInventory?(): Promise<PackInventoryGroup[]>;
+  packInventory?(scope?: CapabilityScope): Promise<PackInventoryGroup[]>;
   remove?(
     scope: CapabilityScope,
     id: string,

@@ -195,12 +195,8 @@ export class RelayIssueTrackerPort implements IssueTrackerPort {
     const res = (await this.post({
       kind: 'issue.createLabel',
       body: { title: input.title, ...(input.color ? { color: input.color } : {}) },
-    })) as { items: IssueLabelRecord[] };
-    const last = res.items.at(-1);
-    if (!last) {
-      throw new Error('label was not persisted');
-    }
-    return last;
+    })) as { label: IssueLabelRecord };
+    return res.label;
   }
 
   async createBoard(

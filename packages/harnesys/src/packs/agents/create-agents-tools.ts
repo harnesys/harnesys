@@ -127,7 +127,7 @@ export function createAgentsTools(deps: CreateAgentsToolsParams): ToolDefinition
     tool('agents_list', {
       group: 'agents',
       description:
-        'List agents in this project with their full configuration: id, name, role, instructions, packs, skills, mcpServers, disallowedTools, enabledPlugins, budget, permissions, model, color, level top|delegate|plugin, parent?. Optional role/name filters; role is not unique. packs/skills/mcpServers list enabled sources per agent; tool availability derives from those sources. permissions are shown read-only here; patch them via agents_update (requires user approval) or the project UI. Prefer reuse via agents_list before agents_create. Spawned children are one-shot with no interactive user: judge fit by packs/model before agents_spawn. Call packs_tools to see the concrete tools a pack would grant before assigning it.',
+        "List agents in this project with their full configuration: id, name, role, instructions, packs, skills, mcpServers, disallowedTools, enabledPlugins, budget, permissions, model, color, level top|delegate|plugin, parent?. Optional role/name filters; role is not unique. packs/skills/mcpServers list enabled sources per agent; tool availability derives from those sources — a spawned child can call exactly its own enabled packs (with their disabledTools/exposure trims applied) and, through its own mcpServers, parent-side MCP tools; it never inherits the spawner's pack tools. Core service tools (load_tools/load_skill/Skill) are added when the child's core pack is on. Spawns from a thread's main run additionally carry host run-context tools (e.g. threads_history) that no pack manages; placed/fleet-run spawns never inherit those, and there load_tools is always available, even without core. permissions are shown read-only here; patch them via agents_update (requires user approval) or the project UI. Prefer reuse via agents_list before agents_create. Spawned children are one-shot with no interactive user: judge fit by packs/model before agents_spawn. Call packs_tools to see the concrete tools a pack would grant before assigning it.",
       input: {
         type: 'object',
         properties: {
@@ -185,7 +185,7 @@ export function createAgentsTools(deps: CreateAgentsToolsParams): ToolDefinition
           packs: {
             type: 'object',
             description:
-              'Pack map (name → true | { spec?, disabledTools?, exposure? } | null); sources, not tool names. Use { disabledTools: [...] } to drop individual tools a pack carries and { exposure: { tool: "deferred" } } to hide tools from the system prompt until load_tools; check contents with packs_tools.',
+              "Pack map (name → true | { spec?, disabledTools?, exposure? } | null); sources, not tool names. Use { disabledTools: [...] } to drop individual tools a pack carries and { exposure: { tool: \"deferred\" } } to hide tools from the system prompt until load_tools reveals them; check contents with packs_tools. For spawned (delegated) runs this map is the exact allowlist of pack tools — the child never inherits the spawner's pack tools. Outside the map: spawns from a thread's main run get core service tools (load_tools/load_skill/Skill) when the core pack is on, plus host run-context tools (e.g. threads_history) that no pack manages; placed/fleet-run spawns get no host run-context tools — there load_tools is always added and load_skill/Skill only when the core pack is on — and each spawn may only call parent-side MCP tools whose server is in the child's own mcpServers.",
           },
           capabilities: {
             type: 'object',
@@ -260,7 +260,7 @@ export function createAgentsTools(deps: CreateAgentsToolsParams): ToolDefinition
           packs: {
             type: 'object',
             description:
-              'Pack map (name → true | { spec?, disabledTools?, exposure? } | null); "agents" is rejected. disabledTools drops individual tools a pack would grant; exposure "deferred" hides a tool until load_tools. See packs_tools.',
+              'Pack map (name → true | { spec?, disabledTools?, exposure? } | null); "agents" is rejected. disabledTools drops individual tools a pack would grant; exposure "deferred" hides a tool until load_tools. This map is the exact allowlist of pack tools for the delegate: when spawned it can call only its enabled packs (trims applied) and parent-side MCP tools whose server is in its own mcpServers. Core service tools (load_tools/load_skill/Skill) come with the core pack; host run-context tools (e.g. threads_history) attach only to spawns from a thread\'s main run — placed/fleet-run spawns never inherit them, and there load_tools is available even without core. See packs_tools.',
           },
           budget: {
             type: 'object',

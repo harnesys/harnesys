@@ -175,7 +175,11 @@ export function createWidgetTools(deps: WidgetToolsDeps): ToolDefinition[] {
       input: {
         type: 'object',
         properties: {
-          doc: DOC_SCHEMA,
+          doc: {
+            type: 'object',
+            description:
+              'Candidate WidgetDoc, any shape. It is not pre-validated against the full contract schema: the tool runs the check itself and every violation comes back as a flat { path, message } issue.',
+          },
         },
         required: ['doc'],
         additionalProperties: false,

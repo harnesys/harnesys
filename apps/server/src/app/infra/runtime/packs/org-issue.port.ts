@@ -236,6 +236,7 @@ export class OrgIssuePort implements IssueTrackerPort {
     const res = this.deps.addSourceAttachment.execute({
       orgId: scope.orgId,
       issueId,
+      threadId: scope.threadId,
       body: {
         sourceId: input.sourceId,
         sourcePath: input.sourcePath,
@@ -249,19 +250,15 @@ export class OrgIssuePort implements IssueTrackerPort {
     return Promise.resolve(this.deps.listLabels.execute(scope.orgId).items);
   }
 
-  async createLabel(
+  createLabel(
     scope: CapabilityScope,
     input: { title: string; color?: string },
   ): Promise<IssueLabelRecord> {
-    const res = await this.deps.createLabel.execute({
+    const res = this.deps.createLabel.execute({
       orgId: scope.orgId,
       body: { title: input.title, ...(input.color ? { color: input.color } : {}) },
     });
-    const last = res.items.at(-1);
-    if (!last) {
-      throw new Error('label was not persisted');
-    }
-    return last;
+    return Promise.resolve(res.label);
   }
 
   createBoard(scope: CapabilityScope, input: IssueBoardCreateInput): Promise<IssueBoardRecord> {

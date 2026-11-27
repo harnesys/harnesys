@@ -1,12 +1,9 @@
 import { attachmentToolResultOf } from '../../application/attachment-result.ts';
 import type { CapabilityScope } from '../../domain/pack.ts';
-import type { ImageGenerationPort } from '../../ports/image-generation.ts';
+import type { ImageGenerationPort, ImageGenerationRequest } from '../../ports/image-generation.ts';
 import { type ToolDefinition, tool } from '../../ports/tools.ts';
 
-export interface ImageModelSelection {
-  provider?: string;
-  model?: string;
-}
+export type ImageModelSelection = Pick<ImageGenerationRequest, 'provider' | 'model'>;
 
 export interface CreateImageToolsParams {
   image: ImageGenerationPort;
@@ -50,6 +47,14 @@ function selectionOf(selection: ImageModelSelection | undefined): ImageModelSele
 }
 
 export function createImageTools(deps: CreateImageToolsParams): ToolDefinition[] {
+  const supportedSizes = deps.image.supportedSizes(
+    deps.resolveScope(),
+    selectionOf(deps.modelSelection),
+  );
+  const sizeDescription =
+    supportedSizes === undefined || supportedSizes.length === 0
+      ? 'Optional size as WIDTHxHEIGHT, e.g. 1024x1024 (provider-dependent; the error lists supported values)'
+      : `Optional size, one of: ${supportedSizes.join(' | ')}`;
   return [
     tool('image_generate', {
       group: 'image',
@@ -59,7 +64,7 @@ export function createImageTools(deps: CreateImageToolsParams): ToolDefinition[]
         type: 'object',
         properties: {
           prompt: { type: 'string', description: 'Detailed English image prompt' },
-          size: { type: 'string', description: 'Optional size as WIDTHxHEIGHT, e.g. 1024x1024' },
+          size: { type: 'string', description: sizeDescription },
         },
         required: ['prompt'],
       },

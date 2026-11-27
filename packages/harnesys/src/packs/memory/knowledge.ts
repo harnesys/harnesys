@@ -37,11 +37,16 @@ export const knowledgeMemoryCapability = definePack<KnowledgeMemoryPorts, Record
       resolveScope: () => ctx.scope,
       topK: topKOf(ctx.spec),
     }),
-    notes: () => [
-      {
-        tag: 'knowledge-memory',
-        text: 'Use knowledge_search to locate indexed documents, then knowledge_read for the matching document contents. Cite document identifiers when reporting findings.',
-      },
-    ],
+    notes: () => {
+      if (ctx.scope.sourceIds.length === 0) {
+        return [];
+      }
+      return [
+        {
+          tag: 'knowledge-memory',
+          text: 'Use knowledge_search to locate indexed documents, then knowledge_read for the matching document contents. Cite document identifiers when reporting findings.',
+        },
+      ];
+    },
   }),
 });

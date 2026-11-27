@@ -44,7 +44,10 @@ type WebSearchMetaFields = Omit<WebSearchEntry, 'query'>;
 export function webSearchTool(spec: WebSearchPackSpec): ToolDefinition {
   const provider =
     spec.provider === 'searxng'
-      ? searxngSearch({ url: spec.searxngUrl ?? DEFAULT_SEARXNG_URL })
+      ? searxngSearch({
+          url: spec.searxngUrl ?? DEFAULT_SEARXNG_URL,
+          providers: WEB_SEARCH_PROVIDERS,
+        })
       : duckduckgoSearch();
   const defaultMaxResults = clampMaxResults(spec.maxResults);
   return tool('web_search', {

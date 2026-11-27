@@ -20,12 +20,27 @@ export interface SkillsInstallSkillInput {
 
 export interface SkillsSearchResult {
   results: unknown[];
+  more?: number;
   degraded?: boolean;
   hint?: string;
 }
 
+export interface SkillsListEntry {
+  name: string;
+  origin: string;
+  installedFrom?: string;
+  updateAvailable?: boolean;
+}
+
+export interface SkillsDeleteSkillInput {
+  orgId: string;
+  name: string;
+}
+
 export interface SkillsPackPorts {
   createSkill(input: SkillsCreateSkillInput): Promise<{ name: string }>;
+  listSkills(orgId: string): Promise<{ skills: SkillsListEntry[] }>;
+  deleteSkill(input: SkillsDeleteSkillInput): Promise<void>;
   installSkill(input: SkillsInstallSkillInput): Promise<{
     installed: string[];
     candidates?: string[];

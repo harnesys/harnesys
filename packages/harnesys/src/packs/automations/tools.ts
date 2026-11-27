@@ -4,6 +4,7 @@ import type { AutomationAdminPort } from '../../ports/automation-admin.ts';
 import { type ToolDefinition, tool } from '../../ports/tools.ts';
 import { runGuard } from '../issues/run-guard.ts';
 import { createAutomationActionTool } from './action-tool.ts';
+import { GATE_ARMS_SHAPE } from './gate-shape.ts';
 import { createScriptTools } from './script-tools.ts';
 
 export interface AutomationToolsDeps {
@@ -14,13 +15,27 @@ export interface AutomationToolsDeps {
 const SCRIPTS_SCHEMA: JsonSchema = {
   type: 'object',
   description:
-    'Pre/post scripts with an optional gate. Shape: { pre?: { script, gate?, onError?: skip-run|run-with-note|ignore, injectStdout?, onWorkspaceMissing?: skip-run|fail }, post?: { script, when?: always|success|failure }, agent?: always|conditional|never, escalate?: { onFailure?, gate? } }. A pre script runs before the fire limits and can suppress the run (exit 2, unmatched gate, or a failed command under skip-run). A post script runs after the run reaches a terminal status. With agent=never the pre script is the whole job and no agent run starts (post still runs on the script result); with agent=conditional an agent run starts only when escalate matches (onFailure on a failed/timed-out script, or gate passed on the output). acknowledged is set to true automatically.',
+    'Pre/post scripts with an optional gate. Shape: { pre?: { script, gate?, onError?: skip-run|run-with-note|ignore, injectStdout?, onWorkspaceMissing?: skip-run|fail }, post?: { script, when?: always|success|failure }, agent?: always|conditional|never, escalate?: { onFailure?, gate? } }. A script is { command, args?, shell?: bash|zsh|sh|powershell, timeoutS?: 1..600 (default 30), env? }. A gate (pre.gate and escalate.gate) is one arm: ' +
+    GATE_ARMS_SHAPE +
+    '. A pre script runs before the fire limits and can suppress the run (exit 2, unmatched gate, or a failed command under skip-run). A post script runs after the run reaches a terminal status. With agent=never the pre script is the whole job and no agent run starts (post still runs on the script result); with agent=conditional an agent run starts only when escalate matches (onFailure on a failed/timed-out script, or gate passed on the output). acknowledged is set to true automatically.',
   properties: {
     acknowledged: { type: 'boolean' },
-    pre: { type: 'object' },
-    post: { type: 'object' },
-    agent: { type: 'string' },
-    escalate: { type: 'object' },
+    pre: {
+      type: 'object',
+      description:
+        '{ script, gate?, onError?: skip-run|run-with-note|ignore, injectStdout?, onWorkspaceMissing?: skip-run|fail } — runs before the fire limits, gate arms are documented on the scripts field',
+    },
+    post: { type: 'object', description: '{ script, when?: always|success|failure }' },
+    agent: {
+      type: 'string',
+      enum: ['always', 'conditional', 'never'],
+      description: 'always | conditional (needs escalate) | never (the pre script is the job)',
+    },
+    escalate: {
+      type: 'object',
+      description:
+        '{ onFailure?: boolean (default true), gate? } — agent=conditional needs at least one live rule; gate uses the same arms as the pre gate',
+    },
   },
 };
 

@@ -108,7 +108,7 @@ export function createThreadTools(deps: CreateThreadToolsParams): ToolDefinition
     tool('threads_tail', {
       group: 'thread',
       description:
-        'Last events of a thread (run journal: runId, kind, timestamp, preview). threadId comes from threads_list rows or manager_pulse failedThreads; load missing tools via load_tools. limit 1..100, default 20.',
+        'Last events of a thread (run journal: runId, kind, timestamp, preview). Journal kinds are user, tool, model.usage and run lifecycle events; per-chunk text-delta/reasoning-delta fragments are excluded. threadId comes from threads_list rows or manager_pulse failedThreads; load missing tools via load_tools. limit 1..100, default 20.',
       input: {
         type: 'object',
         properties: {

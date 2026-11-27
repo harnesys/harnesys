@@ -20,3 +20,9 @@ export const TriggerTargetSchema = z
   });
 
 export type TriggerTarget = z.infer<typeof TriggerTargetSchema>;
+
+export function scriptsIssueMessages(error: z.ZodError): string[] {
+  return error.issues
+    .filter((issue) => issue.path[0] === 'scripts')
+    .map((issue) => `${issue.path.join('.')}: ${issue.message}`);
+}

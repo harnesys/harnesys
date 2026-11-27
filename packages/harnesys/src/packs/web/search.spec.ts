@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import { resolveQueries } from './search.ts';
-import { buildSearxngParams, parseSearxngResponse } from './search-providers.ts';
+import {
+  buildSearxngParams,
+  describeFailure,
+  isConnectivityFailure,
+  parseSearxngResponse,
+} from './search-providers.ts';
 
 describe('buildSearxngParams', () => {
   test('defaults to general category and all languages', () => {
@@ -64,5 +69,34 @@ describe('resolveQueries', () => {
   test('requires at least one non-blank query', () => {
     expect(resolveQueries({ queries: ['  '] })).toEqual({ error: 'query is required' });
     expect(resolveQueries({})).toEqual({ error: 'query is required' });
+  });
+});
+
+describe('describeFailure', () => {
+  const guidance = { url: 'http://searxng:8080', providers: ['duckduckgo', 'searxng'] };
+
+  test('connectivity failures name the configured url, settings and fallbacks', () => {
+    const failure = describeFailure('searxng', new TypeError('Unable to connect'), guidance);
+    expect(isConnectivityFailure(new TypeError('Unable to connect'))).toBe(true);
+    expect(
+      isConnectivityFailure({ name: 'TimeoutError', message: 'The operation was aborted' }),
+    ).toBe(true);
+    expect(failure.message).toContain('searxng at http://searxng:8080 is unreachable');
+    expect(failure.message).toContain('set a different searxngUrl in the web pack settings');
+    expect(failure.message).toContain('supported: duckduckgo, searxng');
+    expect(failure.message).toContain('fetch for a known URL, browser_fetch/browser');
+    expect(failure.message).toContain(
+      'Stop retrying and tell the user that web search is temporarily unavailable.',
+    );
+  });
+
+  test('non-connectivity failures keep the plain composition', () => {
+    const failure = describeFailure('searxng', new Error('HTTP 500'), guidance);
+    expect(failure.message).toBe(
+      'searxng: HTTP 500. Stop retrying and tell the user that web search is temporarily unavailable.',
+    );
+    expect(describeFailure('duckduckgo', new Error('HTTP 500')).message).toBe(
+      'duckduckgo: HTTP 500. Stop retrying and tell the user that web search is temporarily unavailable.',
+    );
   });
 });

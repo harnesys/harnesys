@@ -1,7 +1,15 @@
 import { describe, expect, test } from 'bun:test';
-import type { CapabilityScope, McpHealthReport, McpServerEntry, McpServerInfo } from 'harnesys';
+import type {
+  CapabilityScope,
+  McpConnection,
+  McpConnector,
+  McpHealthReport,
+  McpServerConfig,
+  McpServerEntry,
+  McpServerInfo,
+} from 'harnesys';
 import { OrgMcpPort } from '../../../domain/mcp/org-mcp.port.ts';
-import { OrgMcpManagePort } from './org-mcp-manage.port.ts';
+import { type OrgMcpManageDeps, OrgMcpManagePort } from './org-mcp-manage.port.ts';
 
 const scope: CapabilityScope = {
   orgId: 'org-1',
@@ -71,6 +79,42 @@ const okProbe = (serverId: string): McpHealthReport => ({
   connected: true,
   tools: [{ name: `${serverId}__ping`, description: 'ping' }],
 });
+
+function probeConnection(): McpConnection {
+  return {
+    serverId: 'probe',
+    listTools: async () => [],
+    callTool: async () => ({}),
+    listResources: async () => ({ resources: [] }),
+    readResource: async () => ({ contents: [] }),
+    close: async () => {},
+  };
+}
+
+function storedDeps(serverId: string, env: Record<string, string>): Deps {
+  return deps([
+    {
+      serverId,
+      enabled: true,
+      transport: 'stdio',
+      command: 'npx',
+      env,
+      connected: false,
+      toolCount: 0,
+    },
+  ]);
+}
+
+function probePort(state: Deps, extra: Partial<OrgMcpManageDeps>) {
+  return new OrgMcpManagePort({
+    orgId: 'org-1',
+    config: state.config,
+    listLive: () => Promise.resolve(state.live),
+    invalidateBundle: () => {},
+    apply: () => Promise.resolve(),
+    ...extra,
+  });
+}
 
 describe('OrgMcpManagePort', () => {
   test('upsert probes first, stores only on success, hot-applies to the live runtime', async () => {
@@ -203,5 +247,62 @@ describe('OrgMcpManagePort', () => {
     expect(docs).toMatchObject({ managed: true, enabled: true, connected: true, toolCount: 1 });
     const plugin = overview.find((row) => row.serverId === 'plugin:x');
     expect(plugin).toMatchObject({ managed: false, connected: true });
+  });
+
+  test('health resolves vault placeholders before the probe connector sees them', async () => {
+    const seen: McpServerConfig[] = [];
+    const connector: McpConnector = {
+      connect: (config) => {
+        seen.push(config);
+        return Promise.resolve(probeConnection());
+      },
+    };
+    const manage = probePort(
+      storedDeps('gh', { GITHUB_TOKEN: '$'.concat('{secret:GITHUB_TOKEN}') }),
+      {
+        vaultLookup: (key) => Promise.resolve(key === 'secret:GITHUB_TOKEN' ? 'gh_xxx' : null),
+        connector,
+      },
+    );
+    const health = await manage.health(scope, 'gh');
+    expect(health.connected).toBe(true);
+    expect(seen[0]?.transport).toMatchObject({ type: 'stdio', env: { GITHUB_TOKEN: 'gh_xxx' } });
+  });
+
+  test('health names a missing vault key instead of probing with an unresolved placeholder', async () => {
+    let connects = 0;
+    const connector: McpConnector = {
+      connect: () => {
+        connects += 1;
+        return Promise.resolve(probeConnection());
+      },
+    };
+    const manage = probePort(
+      storedDeps('proxy', { BRIGHTDATA_API_TOKEN: '$'.concat('{secret:BRIGHTDATA_TOKEN}') }),
+      {
+        vaultLookup: () => Promise.resolve(null),
+        connector,
+      },
+    );
+    expect(await manage.health(scope, 'proxy')).toEqual({
+      serverId: 'proxy',
+      connected: false,
+      tools: [],
+      error: 'secret BRIGHTDATA_TOKEN not found in vault',
+    });
+    expect(connects).toBe(0);
+  });
+
+  test('a failed probe reports the underlying connect error, not a generic one', async () => {
+    const manage = probePort(storedDeps('gh', { GITHUB_TOKEN: 'plain' }), {
+      vaultLookup: () => Promise.resolve('x'),
+      connector: { connect: () => Promise.reject(new Error('spawn npx ENOENT')) },
+    });
+    expect(await manage.health(scope, 'gh')).toEqual({
+      serverId: 'gh',
+      connected: false,
+      tools: [],
+      error: 'spawn npx ENOENT',
+    });
   });
 });

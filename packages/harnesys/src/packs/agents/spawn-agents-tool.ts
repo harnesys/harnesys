@@ -111,7 +111,7 @@ export function spawnAgentTool(deps: CreateAgentsToolsParams): ToolDefinition {
     group: 'agents',
     sideEffect: 'write',
     description:
-      'Queue one-shot subcontracts: the graph then runs control:spawn. calls is [{ agentId, input, budget, permissions?, background? }] — budget {maxSteps?, maxTokens?, deadlineMs?} is required per call: the child gets exactly these caps, nothing is inherited from you and nothing is split between siblings; each result echoes the granted quota and usage. input is required: { messages: [{ role: "user", content: "<task>" }] } or a plain string (one user message). Children cannot ask questions back — `ask`-gated calls, approvals and `ask_user` are denied in child context (pre-approve a delegate by passing permissions per call, e.g. {"fs.write":"allow"}; a grant may lift your own ask gate but never a gate you hold as deny — otherwise provide everything upfront). On budget exhaustion a child never fails: it closes with a report and the result carries budget { kind, limit, used, closingStep: true } (used may exceed limit by that closing report step). agentId accepts an exact id, a unique id prefix (8+ chars), or a name — unknown/ambiguous targets fail here with the agent list. Prefer agents_list (reuse) before agents_create. This is not the tool name control:spawn. Blocking children run with bounded concurrency; a spawn timeout aborts the remaining blocking calls and returns a partial result, so read every entry.',
+      'Queue one-shot subcontracts: the graph then runs control:spawn. calls is [{ agentId, input, budget, permissions?, background? }] — budget {maxSteps?, maxTokens?, deadlineMs?} is required per call: the child gets exactly these caps, nothing is inherited from you and nothing is split between siblings; each result echoes the granted quota and usage. input is required: { messages: [{ role: "user", content: "<task>" }] } or a plain string (one user message). The child can offer only what its own agent row grants: its packs map is the exact allowlist plus core service tools (load_tools/load_skill/Skill when its core pack is on; from a placed or fleet run load_tools is always there and load_skill/Skill only with core) and, through its own mcpServers, parent-side MCP tools — your extra pack tools are never inherited, and host run-context tools (e.g. threads_history) attach only to spawns from a main-thread run. Children cannot ask questions back — `ask`-gated calls, approvals and `ask_user` are denied in child context (pre-approve a delegate by passing permissions per call, e.g. {"fs.write":"allow"}; a grant may lift your own ask gate but never a gate you hold as deny — otherwise provide everything upfront). On budget exhaustion a sandboxed child gets a final toolless closing step: its result carries the closing report in output, budget { kind, limit, used, closingStep: true } (used may exceed limit by that closing report step) and error.code budget_exceeded; if the child died before composing a report, output is null and closingStep is false — read budget and output together instead of treating the child as broken. agentId accepts an exact id, a unique id prefix (8+ chars), or a name — unknown/ambiguous targets fail here with the agent list. Prefer agents_list (reuse) before agents_create. This is not the tool name control:spawn. Blocking children run with bounded concurrency; a spawn timeout aborts the remaining blocking calls and returns a partial result, so read every entry.',
     input: {
       type: 'object',
       properties: {
@@ -156,7 +156,7 @@ export function spawnAgentTool(deps: CreateAgentsToolsParams): ToolDefinition {
               budget: {
                 type: 'object',
                 description:
-                  'Required child quota (maxSteps, maxTokens, deadlineMs >= 0), at least one limit. The child gets exactly these caps: nothing is inherited from you and nothing is split between children; this replaces any budget in the child agent definition. deadlineMs counts from the child start. policy is ignored: a sandboxed child never asks and always closes with a report.',
+                  'Required child quota (maxSteps, maxTokens, deadlineMs >= 0), at least one limit. The child gets exactly these caps: nothing is inherited from you and nothing is split between children; this replaces any budget in the child agent definition. deadlineMs counts from the child start. policy is accepted and ignored: a sandboxed child never asks; on exhaustion it gets one final toolless step to write its report.',
                 properties: {
                   maxSteps: {
                     type: 'number',
@@ -168,7 +168,7 @@ export function spawnAgentTool(deps: CreateAgentsToolsParams): ToolDefinition {
                     type: 'string',
                     enum: ['ask', 'error'],
                     description:
-                      'Accepted and ignored: a sandboxed child never asks and always closes with a report.',
+                      'Accepted and ignored: a sandboxed child never asks; on budget exhaustion it gets one final toolless step to write its report.',
                   },
                 },
                 additionalProperties: false,

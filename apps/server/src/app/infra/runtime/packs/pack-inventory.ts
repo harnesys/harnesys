@@ -1,5 +1,12 @@
-import type { PackInventoryGroup, PackRegistration, PackToolInfo, ToolDefinition } from 'harnesys';
-import { CORE_SERVICE_TOOLS, resolveCapabilitySet } from 'harnesys';
+import type {
+  AgentDefinition,
+  AgentPacks,
+  CapabilitySet,
+  PackInventoryGroup,
+  PackRegistration,
+  ToolDefinition,
+} from 'harnesys';
+import { CORE_SERVICE_TOOLS, isOn, PACK_PREFIX, resolveCapabilitySet } from 'harnesys';
 
 const INVENTORY_STUB_TOOL: ToolDefinition = {
   name: 'load_tools',
@@ -13,17 +20,30 @@ export interface PackInventoryDeps {
   baseRegistry?: () => Map<string, ToolDefinition>;
 }
 
-export async function packInventoryOf(deps: PackInventoryDeps): Promise<PackInventoryGroup[]> {
-  const registrations = deps.packRegistrations?.() ?? [];
-  const baseRegistry = deps.baseRegistry?.() ?? new Map<string, ToolDefinition>();
-  const packs: Record<string, true> = {};
+function inventoryPacks(
+  registrations: PackRegistration[],
+  agent: AgentDefinition | undefined,
+): AgentPacks {
+  const packs: AgentPacks = {};
   for (const registration of registrations) {
-    packs[registration.pack.name] = true;
+    const name = registration.pack.name;
+    const assignment = agent?.packs?.[name];
+    packs[name] =
+      assignment === undefined || assignment === null || assignment === false ? true : assignment;
   }
-  const def = {
+  return packs;
+}
+
+function inventoryDef(
+  registrations: PackRegistration[],
+  agent: AgentDefinition | undefined,
+): AgentDefinition {
+  return {
     id: 'pack-inventory',
     prompts: {},
-    packs,
+    packs: inventoryPacks(registrations, agent),
+    ...(agent?.mcpServers !== undefined ? { mcpServers: agent.mcpServers } : {}),
+    ...(agent?.disallowedTools !== undefined ? { disallowedTools: agent.disallowedTools } : {}),
     graph: {
       nodes: {
         start: { type: 'core:start' as const },
@@ -32,19 +52,16 @@ export async function packInventoryOf(deps: PackInventoryDeps): Promise<PackInve
       edges: [{ from: 'start', to: 'end' }],
     },
   };
-  const set = resolveCapabilitySet(def, {
-    registrations,
-    baseRegistry,
-    roster: [],
-    makeLoadTools: () => INVENTORY_STUB_TOOL,
-  });
-  const groups = new Map<string, PackToolInfo[]>();
+}
+
+function collectGroups(set: CapabilitySet): Map<string, PackInventoryGroup> {
+  const groups = new Map<string, PackInventoryGroup>();
   for (const [name, entry] of set.registry) {
     if (CORE_SERVICE_TOOLS.includes(name)) {
       continue;
     }
-    const tools = groups.get(entry.source) ?? [];
-    tools.push({
+    const group = groups.get(entry.source) ?? { source: entry.source, tools: [] };
+    group.tools.push({
       name,
       description: entry.def.description,
       ...(entry.def.sideEffect !== undefined ? { sideEffect: entry.def.sideEffect } : {}),
@@ -53,7 +70,47 @@ export async function packInventoryOf(deps: PackInventoryDeps): Promise<PackInve
         : {}),
       ...(entry.def.interactive === true ? { interactive: true } : {}),
     });
-    groups.set(entry.source, tools);
+    groups.set(entry.source, group);
   }
-  return [...groups].map(([source, tools]) => ({ source, tools }));
+  return groups;
+}
+
+function annotateAgentView(
+  groups: Map<string, PackInventoryGroup>,
+  set: CapabilitySet,
+  agent: AgentDefinition,
+): void {
+  for (const entry of set.explain) {
+    if (entry.kind !== 'tool' || entry.status !== 'disabled') {
+      continue;
+    }
+    const group = groups.get(entry.source) ?? { source: entry.source, tools: [] };
+    group.disabled = [...(group.disabled ?? []), entry.item];
+    groups.set(entry.source, group);
+  }
+  for (const group of groups.values()) {
+    if (!group.source.startsWith(PACK_PREFIX)) {
+      continue;
+    }
+    const assignment = agent.packs?.[group.source.slice(PACK_PREFIX.length)];
+    group.enabled = isOn(assignment);
+  }
+}
+
+export async function packInventoryOf(
+  deps: PackInventoryDeps,
+  agent?: AgentDefinition,
+): Promise<PackInventoryGroup[]> {
+  const registrations = deps.packRegistrations?.() ?? [];
+  const set = resolveCapabilitySet(inventoryDef(registrations, agent), {
+    registrations,
+    baseRegistry: deps.baseRegistry?.() ?? new Map<string, ToolDefinition>(),
+    roster: [],
+    makeLoadTools: () => INVENTORY_STUB_TOOL,
+  });
+  const groups = collectGroups(set);
+  if (agent !== undefined) {
+    annotateAgentView(groups, set, agent);
+  }
+  return [...groups.values()];
 }

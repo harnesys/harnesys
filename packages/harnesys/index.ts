@@ -41,6 +41,8 @@ export type {
 } from './src/application/capability-set.ts';
 export {
   CORE_SERVICE_TOOLS,
+  isOn,
+  PACK_PREFIX,
   projectToolRegistry,
   resolveCapabilitySet,
 } from './src/application/capability-set.ts';
@@ -98,6 +100,7 @@ export {
   projectedForEstimate,
 } from './src/application/llm.ts';
 export type { LlmNote, LlmNoteContext, LlmNoteProvider } from './src/application/llm-notes.ts';
+export type { McpConnection, McpConnector } from './src/application/mcp/mcp-connector.port.ts';
 export type { MessageSource, SourcedMessage } from './src/application/message-source.ts';
 export {
   messageSourceOf,

@@ -112,11 +112,10 @@ describe('IssueBoardRepositoryAdapter statuses (sqlite)', () => {
   });
 
   test('removeStatus that would break invariants throws BoardValidation', () => {
-    boardId = insertTestBoard(
-      adapter,
-      orgId,
-      BOARD_TEMPLATES.blank.statuses.map((status) => ({ ...status })),
-    );
+    boardId = insertTestBoard(adapter, orgId, [
+      { key: 'backlog', label: 'Backlog', category: 'backlog', order: 0, isEntry: true },
+      { key: 'done', label: 'Done', category: 'finished', order: 1, isEntry: false },
+    ]);
     expect(() => adapter.removeStatus(orgId, boardId, 'backlog')).toThrow(BoardValidationException);
     expect(() => adapter.removeStatus(orgId, boardId, 'done')).toThrow(BoardValidationException);
   });

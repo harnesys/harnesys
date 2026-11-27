@@ -1,4 +1,5 @@
 import type { BoardStatus, StatusCategory } from '@harnesys/contracts';
+import { STATUS_CATEGORIES } from '@harnesys/studio-shared';
 import { ArrowDownIcon, ArrowUpIcon, PlusIcon, TrashIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useIssueBoardStore, useIssueStore } from '@/entities/issue';
@@ -17,16 +18,14 @@ import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Switch } from '@/shared/ui/switch';
 import { toast } from '@/shared/ui/toast';
-import { sortedStatuses } from '../model/board-columns';
+import { STATUS_CATEGORY_LABELS, sortedStatuses } from '../model/board-columns';
 import { errorMessage } from '../model/issue-errors';
 import { BoardStatusMoveDialog } from './board-status-move-dialog';
 
-const CATEGORIES: { value: StatusCategory; label: string }[] = [
-  { value: 'backlog', label: 'Backlog' },
-  { value: 'started', label: 'Started' },
-  { value: 'finished', label: 'Finished' },
-  { value: 'cancelled', label: 'Cancelled' },
-];
+const CATEGORIES: { value: StatusCategory; label: string }[] = STATUS_CATEGORIES.map((value) => ({
+  value,
+  label: STATUS_CATEGORY_LABELS[value],
+}));
 
 interface StatusConflict {
   statusKey: string;

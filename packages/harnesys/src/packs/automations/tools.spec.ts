@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { TriggerScriptRunList, TriggerScriptTestResponse } from '@harnesys/contracts';
+import type { LlmNote, LlmNoteProvider } from '../../application/llm-notes.ts';
 import type { CapabilityScope } from '../../domain/pack.ts';
 import type {
   AutomationCreateInput,
@@ -9,6 +10,7 @@ import type {
 } from '../../ports/automation-admin.ts';
 import { AutomationAdminPort } from '../../ports/automation-admin.ts';
 import type { ToolContext, ToolDefinition } from '../../ports/tools.ts';
+import { GATE_ARMS_SHAPE } from './gate-shape.ts';
 import { automationsCapability } from './index.ts';
 import { createAutomationTools } from './tools.ts';
 
@@ -112,6 +114,27 @@ function toolsOf(port: AutomationAdminPort): Map<string, ToolDefinition> {
   );
 }
 
+const NOTE_CTX = {
+  agentId: 'agent-1',
+  runId: 'run-1',
+  sessionId: 'session-1',
+  nodeId: 'node-1',
+  steps: 0,
+  state: {},
+};
+
+function providersOf(notes: LlmNoteProvider | LlmNoteProvider[] | undefined): LlmNoteProvider[] {
+  if (notes === undefined) {
+    return [];
+  }
+  return Array.isArray(notes) ? notes : [notes];
+}
+
+function propertyDescription(def: ToolDefinition | undefined, name: string): string | undefined {
+  const input = def?.input as { properties?: Record<string, { description?: string }> } | undefined;
+  return input?.properties?.[name]?.description;
+}
+
 describe('automations pack tools', () => {
   test('declared meta tools match the created tools', () => {
     const created = createAutomationTools({
@@ -183,5 +206,32 @@ describe('automations pack tools', () => {
     };
     expect(out.error).toContain('confirm=true');
     expect(port.removed).toEqual([]);
+  });
+
+  test('scripts schema documents the gate arms and agent modes', () => {
+    const tools = toolsOf(new FakeAutomations());
+    for (const name of ['automation_create', 'automation_update']) {
+      const description = propertyDescription(tools.get(name), 'scripts');
+      expect(description).toContain(GATE_ARMS_SHAPE);
+      expect(description).toContain('always|conditional|never');
+    }
+    const gate = propertyDescription(tools.get('automation_script_test'), 'gate');
+    expect(gate).toContain(GATE_ARMS_SHAPE);
+    expect(gate).toContain('passed|unmatched|not-applied');
+  });
+
+  test('the automations note gates the load_skill hint on the skills catalog', async () => {
+    const output = automationsCapability.create({
+      ports: { automations: new FakeAutomations() },
+      spec: {},
+      scope: scope(),
+    });
+    const lists = await Promise.all(providersOf(output.notes).map((entry) => entry(NOTE_CTX)));
+    const text = lists
+      .flat()
+      .map((note: LlmNote) => note.text)
+      .join('\n');
+    expect(text).toContain('When "automations" is listed in your available-skills catalog');
+    expect(text).not.toContain('When the automations skill is enabled for you');
   });
 });

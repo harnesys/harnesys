@@ -1,5 +1,5 @@
 import { Injectable } from '@harnesys/brix';
-import type { CreateIssueLabelBody, ListIssueLabelsResponse } from '@harnesys/contracts';
+import type { CreateIssueLabelBody, CreateIssueLabelResponse } from '@harnesys/contracts';
 import { IssueValidationException } from '../../domain/issue/issue.error.ts';
 import { IssueEventsPort } from '../../domain/issue/issue-events.port.ts';
 import type { IssueLabelRecord } from '../../domain/issue/label.ts';
@@ -19,7 +19,7 @@ export class CreateIssueLabelUseCase {
     private readonly events: IssueEventsPort,
   ) {}
 
-  execute(request: CreateIssueLabelRequest): ListIssueLabelsResponse {
+  execute(request: CreateIssueLabelRequest): CreateIssueLabelResponse {
     const title = request.body.title;
     const duplicate = this.labels
       .listByOrg(request.orgId)
@@ -37,8 +37,11 @@ export class CreateIssueLabelUseCase {
       createdAt: now,
       updatedAt: now,
     };
-    this.labels.insert(record);
-    this.events.emit(request.orgId, { type: 'label', label: record });
-    return { items: this.labels.listByOrg(request.orgId).map(toLabelPublic) };
+    const created = this.labels.insert(record);
+    this.events.emit(request.orgId, { type: 'label', label: created });
+    return {
+      items: this.labels.listByOrg(request.orgId).map(toLabelPublic),
+      label: toLabelPublic(created),
+    };
   }
 }

@@ -2,6 +2,7 @@ import {
   DEFAULT_SHELL_TIMEOUT_MS,
   MAX_SHELL_TIMEOUT_MS,
 } from '../../adapters/actions/constants.ts';
+import { waitForJobExit } from '../../application/process-jobs/job-wait.ts';
 import type {
   ProcessJobMode,
   ProcessJobRecord,
@@ -169,47 +170,6 @@ function requireJobs(jobs: ProcessJobRegistry | undefined): ProcessJobRegistry {
     throw new Error('shell background jobs unavailable: ProcessJobRegistry not wired');
   }
   return jobs;
-}
-function waitForJobExit(
-  jobs: ProcessJobRegistry,
-  id: string,
-  waitMs: number,
-  signal?: AbortSignal,
-): Promise<void> {
-  return new Promise((resolve) => {
-    let settled = false;
-    let unsub: (() => void) | null = null;
-    const finish = (): void => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      clearTimeout(timer);
-      unsub?.();
-      signal?.removeEventListener('abort', onAbort);
-      resolve();
-    };
-    const onAbort = (): void => {
-      finish();
-    };
-    const timer = setTimeout(finish, Math.max(0, waitMs));
-    unsub = jobs.subscribe(
-      id,
-      () => undefined,
-      () => {
-        finish();
-      },
-    );
-    if (unsub === null) {
-      finish();
-      return;
-    }
-    if (signal?.aborted === true) {
-      finish();
-      return;
-    }
-    signal?.addEventListener('abort', onAbort, { once: true });
-  });
 }
 async function runBlocking(
   args: ShellBlockingArgs,

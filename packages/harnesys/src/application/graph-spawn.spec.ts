@@ -2,12 +2,17 @@ import { describe, expect, test } from 'bun:test';
 import { APICallError } from 'ai';
 import { SPAWN_ITEM_LIMIT, SPAWN_MAX_CONCURRENCY } from '../constants.ts';
 import type { AgentDefinition } from '../domain/agent-definition.ts';
+import type { PackRegistration } from '../domain/pack.ts';
+import { definePack, registerPack } from '../domain/pack.ts';
 import type { Event, Snapshot } from '../domain/snapshot.ts';
 import type { AgentsResolve } from '../ports/create-runtime.ts';
 import { PermissionGrantsPort } from '../ports/permission-grants-port.ts';
 import type { RuntimeState } from '../ports/runtime-state.ts';
+import type { SkillRegistry } from '../ports/skills.ts';
+import type { ToolDefinition } from '../ports/tools.ts';
 import type { GraphOpts } from './graph.ts';
 import { executeSpawn, prepareSpawn, type SpawnNodeSpec } from './graph-spawn.ts';
+import { fallbackScope, type PackRunOutput } from './packs/pack-run.ts';
 
 const CHILD: AgentDefinition = {
   id: 'child',
@@ -541,5 +546,200 @@ describe('spawn permissions', () => {
         },
       }),
     ).toThrow(/calls\[0\]\.permissions\.fs.write must be allow\|ask\|deny/);
+  });
+});
+
+describe('executeSpawn child result collection', () => {
+  function budgetSnapshot(steps: number, messages: unknown[]): Snapshot {
+    return {
+      ...snapshot('budget_exceeded', { messages }),
+      cursor: { nodes: {}, budget: { steps, tokens: 1200, startedAt: Date.now() - 5000 } },
+    };
+  }
+
+  const budgetedCall = [
+    { agentId: CHILD.id, input: 'task', budget: { maxSteps: 6, maxTokens: 2000 } },
+  ];
+
+  test('salvages a composed report from a budget-exceeded child', async () => {
+    const report = { role: 'assistant', content: 'closing report' };
+    const parent = parentOpts(fakeState(() => budgetSnapshot(7, [report])));
+    const prepared = prepareSpawn(node(), parent, {
+      ...SLOTS,
+      state: { spawns: budgetedCall },
+    });
+    const outcome = await executeSpawn(prepared, parent, captureRunner([]));
+    const item = outcome.results[0];
+    expect(item?.error?.code).toBe('budget_exceeded');
+    expect(item?.output).toMatchObject(report);
+    expect(item?.budget).toEqual({ kind: 'steps', limit: 6, used: 7, closingStep: true });
+  });
+
+  test('keeps the budget hit visible when the child composed no report', async () => {
+    const parent = parentOpts(
+      fakeState(() => budgetSnapshot(7, [{ role: 'user', content: 'ok' }])),
+    );
+    const prepared = prepareSpawn(node(), parent, {
+      ...SLOTS,
+      state: { spawns: budgetedCall },
+    });
+    const outcome = await executeSpawn(prepared, parent, captureRunner([]));
+    const item = outcome.results[0];
+    expect(item?.error?.code).toBe('budget_exceeded');
+    expect(item?.output).toBeNull();
+    expect(item?.budget).toEqual({ kind: 'steps', limit: 6, used: 7, closingStep: false });
+  });
+});
+
+function toolOf(name: string, extra: Partial<ToolDefinition> = {}): ToolDefinition {
+  return {
+    name,
+    description: `${name} tool`,
+    input: { type: 'object', properties: {} },
+    execute: () => 'done',
+    ...extra,
+  };
+}
+
+function packOf(name: string, tools: string[]): PackRegistration {
+  return registerPack(
+    definePack({
+      name,
+      version: '1.0.0',
+      description: `${name} pack`,
+      meta: {
+        tools: tools.map((tool) => ({ name: tool, description: tool })),
+        skills: [],
+        hasSettings: false,
+      },
+      create: () => ({ tools: tools.map((tool) => toolOf(tool)) }),
+    }),
+  );
+}
+
+function packOutput(reg: PackRegistration): PackRunOutput {
+  const created = reg.pack.create({ ports: reg.ports ?? {}, spec: {}, scope: fallbackScope() });
+  return {
+    reg,
+    config: {},
+    tools: created.tools ?? [],
+    skills: created.skills ?? [],
+    notes: [],
+  };
+}
+
+function fakeSkills(docs: Record<string, string>): SkillRegistry {
+  return {
+    list: () => Object.entries(docs).map(([name, description]) => ({ name, description })),
+    load: (name: string) => {
+      const instructions = docs[name];
+      if (instructions === undefined) {
+        throw new Error(`unknown skill: ${name}`);
+      }
+      return { name, description: name, instructions, files: [] };
+    },
+    loadFile: (name: string) => {
+      throw new Error(`no files for skill: ${name}`);
+    },
+    reload: () => {},
+  };
+}
+
+describe('spawn capability allowlists', () => {
+  test('an explicit child packs map is an exact allowlist in a no-universe run', async () => {
+    const filesReg = packOf('files', ['read_file', 'write_file']);
+    const shellReg = packOf('shell', ['shell', 'terminal_open', 'port_forward', 'remote_copy']);
+    const child: AgentDefinition = {
+      ...CHILD,
+      packs: { files: { disabledTools: ['write_file'] } },
+    };
+    const agents: AgentsResolve = {
+      resolve: (id) => (id === child.id ? child : undefined),
+      list: () => [{ id: child.id, name: child.id }],
+    };
+    const parent: GraphOpts = {
+      ...parentOpts(
+        fakeState(() => snapshot('completed')),
+        undefined,
+        agents,
+      ),
+      toolRegistry: new Map<string, ToolDefinition>([
+        ['shell', toolOf('shell')],
+        ['terminal_open', toolOf('terminal_open')],
+        ['port_forward', toolOf('port_forward')],
+        ['remote_copy', toolOf('remote_copy')],
+        ['threads_history', toolOf('threads_history')],
+        ['read_file', toolOf('read_file')],
+        ['write_file', toolOf('write_file')],
+      ]),
+      packOutputs: new Map([
+        [filesReg.pack.name, packOutput(filesReg)],
+        [shellReg.pack.name, packOutput(shellReg)],
+      ]),
+    };
+    const prepared = prepareSpawn(node(), parent, {
+      ...SLOTS,
+      state: { spawns: [{ agentId: child.id, input: 'task', budget: { maxSteps: 10 } }] },
+    });
+    const captured: GraphOpts[] = [];
+    await executeSpawn(prepared, parent, captureRunner(captured));
+    const registry = captured[0]?.toolRegistry;
+    expect(registry?.has('read_file')).toBe(true);
+    expect(registry?.has('load_tools')).toBe(true);
+    expect(registry?.has('write_file')).toBe(false);
+    expect(registry?.has('shell')).toBe(false);
+    expect(registry?.has('terminal_open')).toBe(false);
+    expect(registry?.has('port_forward')).toBe(false);
+    expect(registry?.has('remote_copy')).toBe(false);
+    expect(registry?.has('threads_history')).toBe(false);
+    expect(registry?.has('load_skill')).toBe(false);
+    expect(registry?.has('Skill')).toBe(false);
+  });
+
+  test('a core child in a no-universe run gets the core service trio', async () => {
+    const coreReg = packOf('core', []);
+    const filesReg = packOf('files', ['read_file']);
+    const child: AgentDefinition = {
+      ...CHILD,
+      packs: { core: true, files: true },
+    };
+    const agents: AgentsResolve = {
+      resolve: (id) => (id === child.id ? child : undefined),
+      list: () => [{ id: child.id, name: child.id }],
+    };
+    const parent: GraphOpts = {
+      ...parentOpts(
+        fakeState(() => snapshot('completed')),
+        undefined,
+        agents,
+      ),
+      agent: { ...PARENT, skills: ['guide-a'] },
+      skills: fakeSkills({ 'guide-a': 'GUIDE A BODY', hidden: 'HIDDEN BODY' }),
+      toolRegistry: new Map<string, ToolDefinition>([
+        ['read_file', toolOf('read_file')],
+        ['threads_history', toolOf('threads_history')],
+      ]),
+      packOutputs: new Map([
+        [coreReg.pack.name, packOutput(coreReg)],
+        [filesReg.pack.name, packOutput(filesReg)],
+      ]),
+    };
+    const prepared = prepareSpawn(node(), parent, {
+      ...SLOTS,
+      state: { spawns: [{ agentId: child.id, input: 'task', budget: { maxSteps: 10 } }] },
+    });
+    const captured: GraphOpts[] = [];
+    await executeSpawn(prepared, parent, captureRunner(captured));
+    const registry = captured[0]?.toolRegistry;
+    expect(registry?.has('load_tools')).toBe(true);
+    expect(registry?.has('load_skill')).toBe(true);
+    expect(registry?.has('Skill')).toBe(true);
+    expect(registry?.has('read_file')).toBe(true);
+    expect(registry?.has('threads_history')).toBe(false);
+    const load = registry?.get('load_skill');
+    const allowed = await load?.execute({ name: 'guide-a' }, { cwd: '/', paths: { allow: [] } });
+    expect(allowed).toEqual({ instructions: 'GUIDE A BODY', files: [] });
+    const outside = await load?.execute({ name: 'hidden' }, { cwd: '/', paths: { allow: [] } });
+    expect(outside).toMatchObject({ error: true, code: 'SKILL_NOT_ENABLED' });
   });
 });

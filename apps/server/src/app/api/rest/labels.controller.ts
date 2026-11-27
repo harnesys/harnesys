@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@harnesys/brix';
 import type {
   CreateIssueLabelBody,
+  CreateIssueLabelResponse,
   ListIssueLabelsResponse,
   UpdateIssueLabelBody,
 } from '@harnesys/contracts';
@@ -29,7 +30,7 @@ export class LabelsController {
   create(
     @Param('orgId') orgId: string,
     @Body(CreateIssueLabelBodySchema) body: CreateIssueLabelBody,
-  ): ListIssueLabelsResponse {
+  ): CreateIssueLabelResponse {
     return this.createLabel.execute({ orgId, body });
   }
 

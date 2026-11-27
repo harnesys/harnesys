@@ -1,4 +1,5 @@
 import type { SessionEvent } from 'harnesys';
+import { STREAM_DELTA_EVENT_TYPES } from '../../domain/events/stream-delta-event-types.ts';
 
 const TOOL_OUTPUT_LIMIT = 2048;
 
@@ -7,7 +8,7 @@ type ToolEvent = SessionEvent & { type: 'tool' };
 type ModelUsageEvent = SessionEvent & { type: 'model.usage' };
 
 function isStreamDelta(event: SessionEvent): event is StreamDelta {
-  return event.type === 'text-delta' || event.type === 'reasoning-delta';
+  return STREAM_DELTA_EVENT_TYPES.includes(event.type);
 }
 
 function continuesDelta(left: StreamDelta, right: StreamDelta): boolean {

@@ -8,6 +8,7 @@ import type {
   RuleTrigger,
 } from '@harnesys/contracts';
 import { BoardRuleInputSchema } from '@harnesys/contracts';
+import type { z } from 'zod';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { ExecutionProfilePort } from '../../domain/execution-profile/execution-profile.port.ts';
 import { LOCAL_EXECUTION_PROFILE_ID } from '../../domain/execution-profile/execution-profile.ts';
@@ -40,7 +41,7 @@ export class SaveBoardRuleUseCase {
 
   execute(request: SaveBoardRuleRequest): GetIssueBoardResponse {
     const { orgId } = request;
-    const input: BoardRuleInput = BoardRuleInputSchema.parse(request.input);
+    const input = this.parseInput(request.input);
     const board = loadEditableBoard(this.boards, orgId, request.boardId);
     this.validateReferences(orgId, board, input);
     const write: BoardRuleWrite = {
@@ -131,4 +132,25 @@ export class SaveBoardRuleUseCase {
       throw new RuleValidationException(`unknown execution profile: ${profileId}`);
     }
   }
+
+  private parseInput(raw: BoardRuleInput): BoardRuleInput {
+    const parsed = BoardRuleInputSchema.safeParse(raw);
+    if (parsed.success) {
+      return parsed.data;
+    }
+    throw new RuleValidationException(describeRuleInputIssues(parsed.error.issues));
+  }
 }
+
+function describeRuleInputIssues(issues: z.core.$ZodIssue[]): string {
+  const parts = issues.map((issue) => {
+    const path = issue.path.length > 0 ? issue.path.map(String).join('.') : 'input';
+    const value = typeof issue.input === 'string' ? ` ("${issue.input}")` : '';
+    const hint = path.endsWith('labelId') ? LABEL_ID_HINT : '';
+    return `${path}${value}: ${issue.message}${hint}`;
+  });
+  return `invalid rule input — ${parts.join('; ')}`;
+}
+
+const LABEL_ID_HINT =
+  '; labelId must be a label id from label_list (or a label created with label_create), exact label titles work in issue_update but rules take ids';

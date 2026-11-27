@@ -5,12 +5,24 @@ import type { BrowserEngineRuntime } from './browser-tools.ts';
 const FETCH_TIMEOUT_MS = 60_000;
 const EMPTY_BODY_NOTE =
   'empty body — the page rendered no readable content even after waiting for network idle. Treat as unreadable (JS shell or WAF block), not as an empty page; try the browser tool or another source.';
+const ONE_SHOT_DESCRIPTION =
+  'One-shot page scrape to markdown WITHOUT a browser session. No engine sidecar needed. Use for reading content only (read-only). For interaction (click/fill/open) use browser tool instead. Returns bytes and an empty-body note when a page yields no content: an empty markdown is a read failure signal, not proof the page is empty.';
+
+export const BROWSER_FETCH_META_DESCRIPTION =
+  'One-shot page scrape to markdown without a browser session; requires an engine with a markdown dump (not system browsers such as chrome: use the browser tool there); reports bytes and an empty-body note on unreadable pages.';
+
+export function browserFetchDescription(engineId: string, markdownDump: boolean): string {
+  if (markdownDump) {
+    return ONE_SHOT_DESCRIPTION;
+  }
+  return `browser_fetch is not available on engine ${engineId}: it has no markdown dump, so one-shot scraping without a browser session is impossible. Use the browser tool to open the page and read it.`;
+}
 
 export function browserFetchTool(runtime: BrowserEngineRuntime): ToolDefinition {
+  const markdownDump = runtime.spec.capabilities.markdown === true;
   return tool('browser_fetch', {
     group: 'browser',
-    description:
-      'One-shot page scrape to markdown WITHOUT a browser session. No engine sidecar needed. Use for reading content only (read-only). For interaction (click/fill/open) use browser tool instead. Returns bytes and an empty-body note when a page yields no content: an empty markdown is a read failure signal, not proof the page is empty.',
+    description: browserFetchDescription(runtime.engineId, markdownDump),
     operations: ['network'],
     sideEffect: 'read',
     input: {
@@ -24,9 +36,9 @@ export function browserFetchTool(runtime: BrowserEngineRuntime): ToolDefinition 
     async execute(raw) {
       const input = (raw ?? {}) as { url?: string; max_bytes?: number };
       const url = String(input.url ?? '');
-      if (runtime.spec.capabilities.markdown !== true) {
+      if (!markdownDump) {
         throw new Error(
-          `engine ${runtime.engineId} has no one-shot fetch; use the browser tool for this page`,
+          `engine ${runtime.engineId} has no one-shot fetch (no markdown dump): use the browser tool to open and read this page`,
         );
       }
       const baseArgs = buildFetchArgs(runtime, url, input.max_bytes);

@@ -23,6 +23,7 @@ export class McpRegistry implements McpRegistryPort {
   readonly #logger: Logger;
   readonly #enabled = new Map<string, EnabledEntry>();
   readonly #configs = new Map<string, McpServerConfig>();
+  readonly #startFailures = new Map<string, string>();
   constructor(connector?: McpConnector, logger: Logger = CONSOLE_LOGGER) {
     this.#connector = connector ?? new AiSdkMcpConnector();
     this.#logger = logger;
@@ -60,6 +61,7 @@ export class McpRegistry implements McpRegistryPort {
       });
       assertNoCollisions(this.#enabled, config.serverId, tools);
       this.#enabled.set(config.serverId, { config, connection, tools });
+      this.#startFailures.delete(config.serverId);
     } catch (error) {
       await connection.close().catch(() => undefined);
       throw error;
@@ -79,6 +81,7 @@ export class McpRegistry implements McpRegistryPort {
   }
   async forget(id: string): Promise<void> {
     this.#configs.delete(id);
+    this.#startFailures.delete(id);
     await this.disable(id);
   }
   async reload(id?: string): Promise<void> {
@@ -99,11 +102,13 @@ export class McpRegistry implements McpRegistryPort {
     try {
       await this.enable(id);
     } catch (error) {
-      this.#logger.warn(
-        `MCP server ${id} failed to start`,
-        error instanceof Error ? error.message : error,
-      );
+      const message = error instanceof Error ? error.message : String(error);
+      this.#startFailures.set(id, message);
+      this.#logger.warn(`MCP server ${id} failed to start`, message);
     }
+  }
+  lastStartFailures(): Record<string, string> {
+    return Object.fromEntries(this.#startFailures);
   }
   async list(): Promise<McpServerInfo[]> {
     const out: McpServerInfo[] = [];

@@ -221,12 +221,12 @@ export class IssuesController {
 
   @Post(':issueId/attachments/source')
   @HttpCode(201)
-  addSource(
+  async addSource(
     @Param('orgId') orgId: string,
     @Param('issueId') issueId: string,
     @Body(AddIssueSourceAttachmentBodySchema) body: AddIssueSourceAttachmentBody,
-  ): IssueAttachmentPublic {
-    return this.addSourceAttachment.execute({ orgId, issueId, body });
+  ): Promise<IssueAttachmentPublic> {
+    return await this.addSourceAttachment.execute({ orgId, issueId, body });
   }
 
   @Get(':issueId/attachments/:attachmentId')

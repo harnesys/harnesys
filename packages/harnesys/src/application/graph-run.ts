@@ -8,6 +8,7 @@ import type { RunResult } from '../domain/run-result.ts';
 import type { PendingSessionEvent } from '../ports/run-event-store.ts';
 import type { RuntimeState } from '../ports/runtime-state.ts';
 import type { GraphOpts } from './graph.ts';
+import { composedReportOf } from './graph-spawn.ts';
 import { createRunEngine } from './run-engine.ts';
 
 function inputToUserEvent(input: unknown): PendingSessionEvent {
@@ -102,9 +103,11 @@ export async function resultFromState(state: RuntimeState, runId: string): Promi
     };
   }
   if (status === 'budget_exceeded') {
+    const report = composedReportOf(rec);
     return {
       status: 'budget_exceeded',
       runId: id,
+      ...(report !== undefined ? { output: report } : {}),
       error: { code: 'budget_exceeded', message: 'budget exceeded' },
       state: rec,
       usage,

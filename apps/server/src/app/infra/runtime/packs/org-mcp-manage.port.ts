@@ -1,6 +1,7 @@
 import type { UpsertOrgMcpServerBody } from '@harnesys/contracts';
 import type {
   CapabilityScope,
+  McpConnector,
   McpHealthReport,
   McpManagePort,
   McpServerEntry,
@@ -8,6 +9,8 @@ import type {
   McpServerOverview,
 } from 'harnesys';
 import { CONSOLE_LOGGER, McpRegistry } from 'harnesys';
+import type { McpVaultLookup } from '../../../application/mcp/resolve-mcp-vault-placeholders.ts';
+import { resolveMcpVaultEntry } from '../../../application/mcp/resolve-mcp-vault-placeholders.ts';
 import { OrgMcpPort } from '../../../domain/mcp/org-mcp.port.ts';
 
 export interface OrgMcpManageDeps {
@@ -19,6 +22,8 @@ export interface OrgMcpManageDeps {
 
   apply: (serverId: string, entry: McpServerEntry | null) => Promise<void>;
   probe?: (serverId: string, entry: McpServerEntry) => Promise<McpHealthReport>;
+  vaultLookup?: McpVaultLookup;
+  connector?: McpConnector;
 }
 
 export class OrgMcpManagePort implements McpManagePort {
@@ -125,12 +130,32 @@ export class OrgMcpManagePort implements McpManagePort {
     };
   }
 
-  private probeOf(serverId: string, entry: McpServerEntry): Promise<McpHealthReport> {
+  private async probeOf(serverId: string, entry: McpServerEntry): Promise<McpHealthReport> {
     const probe = this.deps.probe;
     if (probe !== undefined) {
       return probe(serverId, entry);
     }
-    return probeServer(serverId, entry);
+    const lookup = this.deps.vaultLookup;
+    if (lookup === undefined) {
+      return probeEntry(serverId, entry, this.deps.connector);
+    }
+    const missing: string[] = [];
+    const resolved = await resolveMcpVaultEntry(
+      serverId,
+      entry,
+      async (key) => {
+        const value = await lookup(key);
+        if (value === null) {
+          missing.push(key);
+        }
+        return value;
+      },
+      () => undefined,
+    );
+    if (missing.length > 0) {
+      return { serverId, connected: false, tools: [], error: vaultMissingError(missing) };
+    }
+    return probeEntry(serverId, resolved, this.deps.connector);
   }
 }
 
@@ -158,13 +183,23 @@ function toOverview(
   };
 }
 
-async function probeServer(serverId: string, entry: McpServerEntry): Promise<McpHealthReport> {
-  const registry = new McpRegistry(undefined, CONSOLE_LOGGER);
+function vaultMissingError(keys: string[]): string {
+  const names = keys.map((key) => key.replace(':', ' '));
+  return `${names.join(', ')} not found in vault`;
+}
+
+async function probeEntry(
+  serverId: string,
+  entry: McpServerEntry,
+  connector?: McpConnector,
+): Promise<McpHealthReport> {
+  const registry = new McpRegistry(connector, CONSOLE_LOGGER);
   try {
     await registry.loadJson({ mcpServers: { [serverId]: entry } });
     const live = (await registry.list()).find((row) => row.serverId === serverId);
     if (!live) {
-      return { serverId, connected: false, tools: [], error: 'server failed to start' };
+      const failure = registry.lastStartFailures()[serverId];
+      return { serverId, connected: false, tools: [], error: failure ?? 'server failed to start' };
     }
     return { serverId, connected: true, tools: live.tools };
   } finally {

@@ -74,7 +74,7 @@ Fields: `maxSteps` (node executions), `maxTokens`, `deadlineMs`, `policy` (`ask`
 
 - Any cycle in the graph requires `maxSteps` or `deadlineMs` (`graph has cycle but no budget.maxSteps/deadlineMs`). The default ReAct loop is cyclic.
 - `policy: "ask"` means: when the budget runs out, the run pauses and asks the user to extend. Correct for top-level agents. A delegate has no user, so `ask` is unreachable for it; give delegates `policy: "error"` (or rely on closing reports, below).
-- On budget exhaustion a spawned child never fails: it closes with a report and the result carries `budget: { kind, limit, used, closingStep: true }`. `used` may exceed `limit` by the closing report step. Read that field instead of treating the child as broken.
+- On budget exhaustion a sandboxed child gets a final toolless closing step: its result carries the closing report in `output`, `budget: { kind, limit, used, closingStep: true }` (`used` may exceed `limit` by that closing report step) and `error.code budget_exceeded`. If the child died before composing a report, `output` is null and `closingStep` is false — read `budget` and `output` together instead of treating the child as broken.
 - Every spawned child must be capped explicitly: nothing is inherited from or split out of the parent's budget. Size each child to its task instead of guessing a share.
 
 ## 5. Spawning children (`agents_spawn`)
@@ -212,7 +212,8 @@ Reference examples live in `apps/server/assets/presets/agents/*.json` (researche
 | `prompt "verify" not found` | Custom graph references another prompt | Only `"main"` exists via creation tools |
 | `sandbox_blocked` / `needs_input` | Child tried to ask | Complete the input, grant permissions, set `policy: "error"` |
 | `provider_unavailable` on a child | Transient provider 5xx | Host already retries (3s/8s/20s); re-spawn if persistent |
-| result `budget.closingStep: true` | Child ran out of budget | Not an error: read its closing report, re-spawn for the remainder |
+| `budget_exceeded` with `budget.closingStep: true` | Child ran out of budget, closing report composed | Not a crash: read its closing report in `output`, re-spawn for the remainder |
+| `budget_exceeded` with `output: null`, `closingStep: false` | Child died before composing a report | Read `budget` and `output` together; re-spawn for the remainder |
 
 ## 10. Verify after creating or spawning
 

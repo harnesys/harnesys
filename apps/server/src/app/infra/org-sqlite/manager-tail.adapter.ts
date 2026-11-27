@@ -1,6 +1,7 @@
 import { Injectable } from '@harnesys/brix';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, notInArray } from 'drizzle-orm';
 import type { ManagerThreadTailItem, SessionEvent } from 'harnesys';
+import { STREAM_DELTA_EVENT_TYPES } from '../../domain/events/stream-delta-event-types.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { ManagerTailPort } from '../../domain/manager/manager-tail.port.ts';
 import { rowToEvent } from '../runtime/sqlite-thread-truncate.ts';
@@ -22,7 +23,12 @@ export class ManagerTailAdapter extends ManagerTailPort {
       const rows = db
         .select()
         .from(runEventsTable)
-        .where(eq(runEventsTable.threadId, threadId))
+        .where(
+          and(
+            eq(runEventsTable.threadId, threadId),
+            notInArray(runEventsTable.type, [...STREAM_DELTA_EVENT_TYPES]),
+          ),
+        )
         .orderBy(desc(runEventsTable.timestamp), desc(runEventsTable.seq))
         .limit(limit)
         .all();

@@ -115,8 +115,12 @@ export class OrgAgentsCatalogPort implements AgentsCatalogPort {
     };
   }
 
-  async packInventory(): Promise<PackInventoryGroup[]> {
-    return packInventoryOf(this.deps);
+  async packInventory(scope?: CapabilityScope): Promise<PackInventoryGroup[]> {
+    const orgId = scope?.orgId ?? this.deps.orgId;
+    const agent =
+      scope?.agentId !== undefined ? this.deps.agents.findById(orgId, scope.agentId) : undefined;
+    const def = agent === undefined ? undefined : definitionOf(this.deps, agent);
+    return packInventoryOf(this.deps, def);
   }
 
   async patch(scope: CapabilityScope, id: string, patch: AgentCatalogPatch): Promise<void> {

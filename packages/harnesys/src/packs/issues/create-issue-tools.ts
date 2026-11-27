@@ -202,7 +202,7 @@ export function createIssueTools(deps: CreateIssueToolsParams): ToolDefinition[]
     tool('issue_attachment_add', {
       group: 'issues',
       description:
-        'Attach a source file reference to an issue: sourceId + sourcePath from file tools (e.g. from file_search). Use issue_get to list attachments.',
+        'Attach a file to an issue: sourceId + sourcePath. sourcePath resolves against the source root first (find files with grep/glob from the files pack) and stays a live pointer there; a path inside the current run root, the thread directory your file tools write to (relative, e.g. report.md), is attached as a copied snapshot that outlives the run. Use issue_get to list attachments.',
       input: {
         type: 'object',
         properties: {

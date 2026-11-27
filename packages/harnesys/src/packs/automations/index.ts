@@ -83,7 +83,7 @@ export const automationsCapability = definePack<
           'A pre script with a gate is the way to build "fire only when there is work": the script runs before the fire limits and an unmatched gate or exit 2 suppresses the run. ' +
           'When the agent is not needed at all, set scripts.agent to "never" (the pre script is the whole job, the fire returns script-only) or "conditional" with an escalate rule (the agent starts only when the script fails or its gate passes, carrying the script diagnostics) so a healthy run costs no tokens. Debug with automation_script_runs and automation_script_test. ' +
           'Client-side polling is not a substitute for a trigger: arm a trigger and let the host fire it. ' +
-          'When the automations skill is enabled for you, load_skill { name: "automations" } carries the config field types, the gate matrix and the action table.',
+          'When "automations" is listed in your available-skills catalog, load_skill { name: "automations" } carries the config field types, the gate matrix and the action table; when it is not listed, do not call it — the scripts parameter schema of automation_create and automation_update already documents the gate arms inline.',
       },
     ],
   }),

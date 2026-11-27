@@ -1494,7 +1494,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
               (typeof u.outputTokens === 'number' ? u.outputTokens : 0);
         tokens += total;
       }
-      if (closingPhase === 'pending') {
+      if (closingPhase === 'pending' || (closingPhase === 'none' && closingArmed)) {
         closingPhase = 'done';
         closingReport = res.text ?? '';
       }

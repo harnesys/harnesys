@@ -272,6 +272,11 @@ export const ListIssueLabelsResponseSchema = z.object({
 });
 export type ListIssueLabelsResponse = z.infer<typeof ListIssueLabelsResponseSchema>;
 
+export const CreateIssueLabelResponseSchema = ListIssueLabelsResponseSchema.extend({
+  label: IssueLabelPublicSchema,
+});
+export type CreateIssueLabelResponse = z.infer<typeof CreateIssueLabelResponseSchema>;
+
 export const ListIssueCommentsResponseSchema = z.object({
   items: z.array(IssueCommentPublicSchema),
 });

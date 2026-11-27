@@ -78,6 +78,7 @@ export const signalsCapability = definePack<SignalsCapabilityPorts, Record<strin
         tag: 'signals-usage',
         text:
           "Coordinate with other agents through free-form signals: agree on a key (e.g. 'deploy:done'), the waiting agent parks with wait({ signal: key, timeoutMs? }), the finishing agent calls signal_fire({ key }). " +
+          "A parked wait resumes as soon as signal_fire or an issue-settle wake routed to the same key arrives (parking on 'issue:<issueId>' resumes when that issue's dispatched execution is no longer active); timeoutMs is only the fallback. " +
           'Fires are sticky per org: a later park on an already-fired key resumes on the next reconcile tick. Unknown keys simply wait for the timeout.',
       },
     ],
