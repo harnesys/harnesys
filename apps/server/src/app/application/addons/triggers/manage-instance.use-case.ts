@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@harnesys/brix';
-import type { JsonObject } from '@harnesys/sdk';
+import { type JsonObject } from '@harnesys/sdk';
 import { AddonException } from '../../../domain/addons/errors.ts';
 import type { TriggerStopReason } from '../../../domain/addons/ports/addon-call.port.ts';
 import { AddonCallPort } from '../../../domain/addons/ports/addon-call.port.ts';
@@ -13,12 +13,14 @@ import type {
 } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { TriggerInstanceRepositoryPort } from '../../../domain/addons/ports/trigger-instance-repository.port.ts';
 import { TriggerScriptRunRepositoryPort } from '../../../domain/addons/ports/trigger-script-run-repository.port.ts';
+import { mergeTriggerConfig } from '../../../domain/addons/trigger-config.ts';
 import { AutomationEventsPort } from '../../../domain/automations/automation-events.port.ts';
 import { ThreadAgentRepositoryPort } from '../../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadRepositoryPort } from '../../../domain/thread/thread-repository.port.ts';
 import { TriggerWorkspacePort } from '../../../domain/thread/trigger-workspace.port.ts';
 import { occupiedTriggerInstanceThreadId } from '../../threads/trigger-thread-binding.ts';
 import { requirePackage } from '../orgs/org-addon.helpers.ts';
+import { parseTriggerConfigJson, triggerDescriptorOf } from './trigger-descriptor.ts';
 import type { TriggerTarget } from './trigger-target.schema.ts';
 import { scriptsIssueMessages, TriggerTargetSchema } from './trigger-target.schema.ts';
 
@@ -66,9 +68,10 @@ export class ManageTriggerInstanceUseCase {
       throw new AddonException('conflict', 409, `Addon is not enabled: ${input.addonId}`);
     }
     const pkg = requirePackage(this.catalog, input.addonId, row.version);
-    this.assertTriggerDeclared(pkg.manifest, input.triggerId);
+    const descriptor = triggerDescriptorOf(pkg.manifest, input.triggerId);
     const target = this.assertTarget(input.orgId, input.target);
     this.applyTargetWorkspace(input.orgId, target);
+    const config = mergeTriggerConfig(descriptor, {}, input.config);
     const now = new Date().toISOString();
     const created = this.triggers.create({
       id: randomUUID(),
@@ -76,7 +79,7 @@ export class ManageTriggerInstanceUseCase {
       addonId: input.addonId,
       triggerId: input.triggerId,
       label: input.label,
-      configJson: JSON.stringify(input.config),
+      configJson: JSON.stringify(config),
       instructions: input.instructions ?? '',
       targetJson: JSON.stringify(target),
       enabled: input.enabled ?? true,
@@ -85,7 +88,13 @@ export class ManageTriggerInstanceUseCase {
       updatedAt: now,
     });
     if (created.enabled) {
-      await this.start(created);
+      try {
+        await this.start(created);
+      } catch (error) {
+        await this.stop(created.id, input.orgId, input.addonId, 'removed');
+        this.triggers.remove(input.orgId, created.id);
+        throw error;
+      }
     }
     this.audit.append(input.orgId, {
       at: now,
@@ -102,7 +111,13 @@ export class ManageTriggerInstanceUseCase {
   async enable(input: TriggerInstanceActionInput): Promise<void> {
     const instance = this.require(input.orgId, input.instanceId);
     this.triggers.update(input.orgId, input.instanceId, { enabled: true });
-    await this.start({ ...instance, enabled: true });
+    try {
+      await this.start({ ...instance, enabled: true });
+    } catch (error) {
+      this.triggers.update(input.orgId, input.instanceId, { enabled: false });
+      this.emitChanged(input.orgId, instance.addonId, instance.triggerId, 'changed');
+      throw error;
+    }
     this.emitChanged(input.orgId, instance.addonId, instance.triggerId, 'changed');
   }
 
@@ -123,31 +138,44 @@ export class ManageTriggerInstanceUseCase {
 
   async patch(orgId: string, instanceId: string, patch: TriggerInstancePatch): Promise<void> {
     const current = this.require(orgId, instanceId);
+    const effective: TriggerInstancePatch =
+      patch.configJson === undefined
+        ? patch
+        : { ...patch, configJson: this.mergedConfigJson(orgId, current, patch.configJson) };
     const patchedTarget =
-      patch.targetJson === undefined
+      effective.targetJson === undefined
         ? undefined
-        : this.assertTarget(orgId, this.parseTarget(patch.targetJson), instanceId);
+        : this.assertTarget(orgId, this.parseTarget(effective.targetJson), instanceId);
     if (
       patchedTarget !== undefined &&
       !sameWorkspace(workspaceOf(current.targetJson), patchedTarget.workspace)
     ) {
       this.applyTargetWorkspace(orgId, patchedTarget);
     }
-    const disabling = patch.enabled === false && current.enabled;
-    const enabling = patch.enabled === true && !current.enabled;
+    const disabling = effective.enabled === false && current.enabled;
+    const enabling = effective.enabled === true && !current.enabled;
     if (disabling) {
       await this.stop(instanceId, orgId, current.addonId, 'paused');
     }
     const nextPatch =
-      patchedTarget === undefined ? patch : { ...patch, targetJson: JSON.stringify(patchedTarget) };
+      patchedTarget === undefined
+        ? effective
+        : { ...effective, targetJson: JSON.stringify(patchedTarget) };
     this.triggers.update(orgId, instanceId, nextPatch);
     const resynced = this.require(orgId, instanceId);
     const contentChanged =
-      patch.label !== undefined ||
-      patch.configJson !== undefined ||
-      patch.instructions !== undefined;
+      effective.label !== undefined ||
+      effective.configJson !== undefined ||
+      effective.instructions !== undefined;
     if (resynced.enabled && (contentChanged || enabling)) {
-      await this.start(resynced);
+      try {
+        await this.start(resynced);
+      } catch (error) {
+        this.triggers.update(orgId, instanceId, { enabled: false });
+        await this.stop(instanceId, orgId, current.addonId, 'paused');
+        this.emitChanged(orgId, current.addonId, current.triggerId, 'changed');
+        throw error;
+      }
     }
     this.emitChanged(orgId, current.addonId, current.triggerId, 'changed');
   }
@@ -212,13 +240,20 @@ export class ManageTriggerInstanceUseCase {
     this.automationEvents.publish(orgId, { kind: `${addonId}.${triggerId}`, action });
   }
 
-  private assertTriggerDeclared(manifest: AddonManifestLike, triggerId: string): void {
-    const declared = manifest.contributions.some(
-      (entry) => entry.family === 'trigger' && descriptorKind(entry.descriptor) === triggerId,
-    );
-    if (!declared) {
-      throw new AddonException('not_found', 404, `Trigger kind is not declared: ${triggerId}`);
+  private mergedConfigJson(
+    orgId: string,
+    instance: TriggerInstanceRow,
+    configJson: string,
+  ): string {
+    const parsed = parseTriggerConfigJson(configJson);
+    const addon = this.orgAddons.find(orgId, instance.addonId);
+    if (!addon) {
+      throw new AddonException('conflict', 409, `Addon is not installed: ${instance.addonId}`);
     }
+    const pkg = requirePackage(this.catalog, instance.addonId, addon.version);
+    const descriptor = triggerDescriptorOf(pkg.manifest, instance.triggerId);
+    const config = mergeTriggerConfig(descriptor, this.configOf(instance), parsed);
+    return JSON.stringify(config);
   }
 
   private assertTarget(orgId: string, target: unknown, exceptInstanceId?: string): TriggerTarget {
@@ -300,13 +335,4 @@ function workspaceOf(targetJson: string): unknown {
 
 function sameWorkspace(left: unknown, right: unknown): boolean {
   return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
-}
-
-interface AddonManifestLike {
-  contributions: Array<{ family: string; descriptor: JsonObject }>;
-}
-
-function descriptorKind(descriptor: JsonObject): string | undefined {
-  const kind = descriptor.kind;
-  return typeof kind === 'string' ? kind : undefined;
 }

@@ -171,4 +171,92 @@ describe('ManagerTailAdapter', () => {
     const items = adapter.tail(ORG_ID, THREAD_ID, 3);
     expect(items.map((item) => item.kind)).toEqual(['tool', 'model.usage', 'run.completed']);
   });
+
+  test('settled tool calls collapse to one row, an in-flight call keeps its request', () => {
+    withOrgSqlite(layout, ORG_ID, (db) => {
+      db.insert(threadsTable)
+        .values({
+          id: 'thread-2',
+          orgId: ORG_ID,
+          title: 'phases',
+          createdAt: new Date(BASE).toISOString(),
+          updatedAt: new Date(BASE).toISOString(),
+          lastReadAt: new Date(BASE).toISOString(),
+        })
+        .run();
+      db.insert(runsTable)
+        .values({
+          runId: 'run-2',
+          threadId: 'thread-2',
+          agentName: 'coder',
+          status: 'running',
+          createdAt: new Date(BASE).toISOString(),
+          updatedAt: new Date(BASE).toISOString(),
+        })
+        .run();
+      db.insert(runEventsTable)
+        .values([
+          {
+            threadId: 'thread-2',
+            threadSeq: 1,
+            runId: 'run-2',
+            seq: 1,
+            type: 'tool',
+            timestamp: BASE + 20,
+            metadata: JSON.stringify({
+              phase: 'requested',
+              toolCallId: 'call-a',
+              name: 'edit_file',
+              input: { path: 'a' },
+            }),
+          },
+          {
+            threadId: 'thread-2',
+            threadSeq: 2,
+            runId: 'run-2',
+            seq: 2,
+            type: 'tool',
+            timestamp: BASE + 21,
+            metadata: JSON.stringify({
+              phase: 'streaming',
+              toolCallId: 'call-a',
+              name: 'edit_file',
+              delta: 'partial',
+            }),
+          },
+          {
+            threadId: 'thread-2',
+            threadSeq: 3,
+            runId: 'run-2',
+            seq: 3,
+            type: 'tool',
+            timestamp: BASE + 22,
+            metadata: JSON.stringify({
+              phase: 'completed',
+              toolCallId: 'call-a',
+              name: 'edit_file',
+              output: { ok: true },
+              message: 'done it',
+            }),
+          },
+          {
+            threadId: 'thread-2',
+            threadSeq: 4,
+            runId: 'run-2',
+            seq: 4,
+            type: 'tool',
+            timestamp: BASE + 23,
+            metadata: JSON.stringify({
+              phase: 'requested',
+              toolCallId: 'call-b',
+              name: 'shell',
+              input: { command: 'sleep 30' },
+            }),
+          },
+        ])
+        .run();
+    });
+    const items = adapter.tail(ORG_ID, 'thread-2', 10);
+    expect(items.map((item) => item.preview)).toEqual(['done it', 'shell']);
+  });
 });

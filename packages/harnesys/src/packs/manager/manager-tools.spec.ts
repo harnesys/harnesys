@@ -62,7 +62,16 @@ class FakeObservation extends ManagerObservationPort {
       throw this.failure;
     }
     return {
-      rows: [{ key: '2026-10-18', inputTokens: 10, outputTokens: 20, costUsd: 0.5, runs: 2 }],
+      rows: [
+        {
+          key: '2026-10-18',
+          inputTokens: 10,
+          outputTokens: 20,
+          costUsd: 0.5,
+          unpriced: 0,
+          runs: 2,
+        },
+      ],
       totalCostUsd: 0.5,
       totalRuns: 2,
     };
@@ -131,7 +140,16 @@ describe('manager pack tools', () => {
       { scope, query: { from: '2026-10-01', to: '2026-10-18', groupBy: 'agent' } },
     ]);
     expect(result).toEqual({
-      rows: [{ key: '2026-10-18', inputTokens: 10, outputTokens: 20, costUsd: 0.5, runs: 2 }],
+      rows: [
+        {
+          key: '2026-10-18',
+          inputTokens: 10,
+          outputTokens: 20,
+          costUsd: 0.5,
+          unpriced: 0,
+          runs: 2,
+        },
+      ],
       totalCostUsd: 0.5,
       totalRuns: 2,
     });

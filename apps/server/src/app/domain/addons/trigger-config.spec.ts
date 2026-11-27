@@ -4,7 +4,7 @@ import {
   assertScriptsAllowed,
   mergeTriggerConfig,
   normalizeTargetScripts,
-} from './automation-config.ts';
+} from './trigger-config.ts';
 
 const fields: FieldSpec[] = [
   { key: 'query', label: 'Query', type: 'text', required: true },

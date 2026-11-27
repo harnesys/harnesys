@@ -170,6 +170,7 @@ function optionalInputs(deps: OrgRuntimeDeps): Partial<WireOrgPacksDeps> {
     ...(deps.skills ? { skills: deps.skills } : {}),
     ...(deps.sourcesPack ? { sourcesPack: deps.sourcesPack } : {}),
     ...(deps.lsp ? { lsp: deps.lsp } : {}),
+    ...(deps.signals ? { signals: deps.signals } : {}),
   };
 }
 

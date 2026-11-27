@@ -20,6 +20,7 @@ export interface SearchMeta {
   numberOfResults?: number;
   enginesUsed?: string[];
   unresponsiveEngines?: string[];
+  droppedUnusableLinks?: number;
   answers?: string[];
   infoboxes?: SearchInfobox[];
 }
@@ -185,7 +186,7 @@ export function searxngSearch(options: SearxngOptions): SearchProvider {
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
           }
-          return parseSearxngResponse((await response.json()) as SearxngResponse);
+          return parseSearxngResponse((await response.json()) as SearxngResponse, base);
         } catch (error) {
           throw describeFailure('searxng', error, {
             url: options.url,
@@ -213,13 +214,12 @@ export function buildSearxngParams(query: string, options: SearchOptions): URLSe
   }
   return params;
 }
-export function parseSearxngResponse(data: SearxngResponse): SearchResponse {
-  const results: SearchResult[] = (data.results ?? []).map((item) => ({
-    title: item.title ?? '',
-    url: item.url ?? '',
-    snippet: item.content ?? '',
-  }));
+export function parseSearxngResponse(data: SearxngResponse, baseUrl?: string): SearchResponse {
+  const { results, dropped } = searxngResults(data, baseUrl);
   const meta: SearchMeta = {};
+  if (dropped > 0) {
+    meta.droppedUnusableLinks = dropped;
+  }
   if (typeof data.number_of_results === 'number') {
     meta.numberOfResults = data.number_of_results;
   }
@@ -239,6 +239,55 @@ export function parseSearxngResponse(data: SearxngResponse): SearchResponse {
     meta.infoboxes = infoboxes;
   }
   return { results, ...(Object.keys(meta).length > 0 ? { meta } : {}) };
+}
+
+const EMPTY_AUTHORITY_RE = /^https?:\/\/(?=[/?#]|$)/i;
+
+function searxngResults(
+  data: SearxngResponse,
+  baseUrl: string | undefined,
+): { results: SearchResult[]; dropped: number } {
+  const results: SearchResult[] = [];
+  let dropped = 0;
+  for (const item of data.results ?? []) {
+    const usable = usableResultUrl(item.url ?? '', baseUrl);
+    if (usable === null) {
+      dropped += 1;
+      continue;
+    }
+    results.push({ title: item.title ?? '', url: usable, snippet: item.content ?? '' });
+  }
+  return { results, dropped };
+}
+
+function usableResultUrl(raw: string, baseUrl?: string): string | null {
+  if (raw === '') {
+    return null;
+  }
+  if (EMPTY_AUTHORITY_RE.test(raw)) {
+    return resolveRelativeResult(raw.slice(raw.indexOf('//') + 2), baseUrl);
+  }
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return resolveRelativeResult(raw, baseUrl);
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    return null;
+  }
+  return url.host === '' ? null : raw;
+}
+
+function resolveRelativeResult(path: string, baseUrl?: string): string | null {
+  if (baseUrl === undefined || !path.startsWith('/') || path.startsWith('//')) {
+    return null;
+  }
+  try {
+    return new URL(path, baseUrl).href;
+  } catch {
+    return null;
+  }
 }
 function describeUnresponsiveEngines(raw: SearxngUnresponsiveEngines | undefined): string[] {
   if (Array.isArray(raw)) {

@@ -71,14 +71,22 @@ export function createKnowledgeTools(params: CreateKnowledgeToolsParams): ToolDe
       return { error: NOT_CONFIGURED };
     }
     const wanted = explicit !== undefined && explicit.length > 0 ? explicit : undefined;
-    if (wanted !== undefined && !shared.includes(wanted)) {
+    return wanted === undefined ? pickFirstIndexed(shared) : pickExplicit(shared, wanted);
+  }
+  async function pickExplicit(
+    shared: readonly string[],
+    wanted: string,
+  ): Promise<{ sourceId: string } | { error: KnowledgeToolError }> {
+    if (!shared.includes(wanted)) {
       return { error: sourceNotShared(wanted) };
     }
-    const candidates = wanted === undefined ? [...shared] : [wanted];
-    const indexed = [...(await port.indexedSources(candidates))];
-    if (wanted !== undefined) {
-      return indexed.includes(wanted) ? { sourceId: wanted } : { error: sourceNotIndexed(wanted) };
-    }
+    const indexed = await port.indexedSources([wanted]);
+    return indexed.includes(wanted) ? { sourceId: wanted } : { error: sourceNotIndexed(wanted) };
+  }
+  async function pickFirstIndexed(
+    shared: readonly string[],
+  ): Promise<{ sourceId: string } | { error: KnowledgeToolError }> {
+    const indexed = [...(await port.indexedSources(shared))];
     const first = shared.find((id) => indexed.includes(id));
     return first === undefined ? { error: noSharedSourceIndexed(shared) } : { sourceId: first };
   }

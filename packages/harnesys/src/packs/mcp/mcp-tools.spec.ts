@@ -115,4 +115,28 @@ describe('mcp pack tools', () => {
     expect(await check.execute({ serverId: 's1' }, ctx)).toMatchObject({ connected: true });
     expect(await check.execute({}, ctx)).toEqual({ error: 'serverId must be a non-empty string' });
   });
+
+  test('check is compact by default and full on verbose', async () => {
+    const health: McpHealthReport = {
+      serverId: 's1',
+      connected: true,
+      tools: [
+        { name: 'a__one', description: 'long description '.repeat(10) },
+        { name: 'a__two', description: 'long description '.repeat(10) },
+      ],
+    };
+    const { check } = toolsOf(port(health, { upserts: [] }));
+    const compact = (await check.execute({ serverId: 's1' }, ctx)) as Record<string, unknown>;
+    expect(compact.toolCount).toBe(2);
+    expect(compact.toolNames).toEqual(['a__one', 'a__two']);
+    expect(compact.tools).toBeUndefined();
+    const verbose = (await check.execute({ serverId: 's1', verbose: true }, ctx)) as Record<
+      string,
+      unknown
+    >;
+    expect((verbose.tools as Array<{ name: string }>).map((tool) => tool.name)).toEqual([
+      'a__one',
+      'a__two',
+    ]);
+  });
 });

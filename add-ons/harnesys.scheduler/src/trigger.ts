@@ -29,6 +29,12 @@ export async function orgTimezone(ctx: AddonContext): Promise<string> {
 export const schedulerTrigger: TriggerPair = {
   start: async (params, ctx: AddonContext) => {
     const cron = cronOf(params.config);
+    const timezone = await orgTimezone(ctx);
+    if (!isValidCron(cron, timezone)) {
+      throw new AddonError('invalid_params', {
+        detail: `invalid cron: "${cron}" — expected 5-6 fields matching a future date in timezone ${timezone}`,
+      });
+    }
     await upsertInstance(ctx, {
       instanceId: params.instanceId,
       label: typeof params.label === 'string' ? params.label : '',
@@ -36,21 +42,6 @@ export const schedulerTrigger: TriggerPair = {
       config: params.config,
       target: params.target,
     });
-    const timezone = await orgTimezone(ctx);
-    if (!isValidCron(cron, timezone)) {
-      await saveState(ctx, {
-        instanceId: params.instanceId,
-        cron,
-        status: 'failed',
-        nextRunAt: null,
-        error: `invalid cron: ${cron}`,
-      });
-      await ctx.log.warn('scheduler instance started with an invalid cron', {
-        instanceId: params.instanceId,
-        cron,
-      });
-      return;
-    }
     try {
       const nextRunAt = nextCronRunAt(cron, new Date(), timezone);
       await saveState(ctx, {

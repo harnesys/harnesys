@@ -152,7 +152,7 @@ export function createWidgetTools(deps: WidgetToolsDeps): ToolDefinition[] {
     tool('dashboard_widgets_test', {
       group: 'dashboards',
       description:
-        'Dry-run a widget source definition (orgApi or external) without persisting it: validates the url, headers and vault secret resolution and returns the fetched payload. Use before embedding the source into a widget doc.',
+        'Dry-run a widget source definition without persisting it. External sources: validates the url, headers and vault secret resolution and returns the fetched payload. orgApi sources: the server cannot fetch them (the dashboard client runs them with the viewer session), so this statically checks the path against the org guard and the served catalog — ok:true returns { validated, catalogId }; compare paths with dashboard_catalog_get. Use before embedding the source into a widget doc.',
       input: {
         type: 'object',
         properties: {

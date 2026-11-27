@@ -77,7 +77,8 @@ function issueUpdatePatch(input: IssueUpdateToolInput): IssueUpdateInput {
 const issueCreateProperties = {
   boardId: {
     type: 'string',
-    description: 'Board id from issue_board_list; the board must already exist (board_create)',
+    description:
+      'Board id from issue_board_list; the board must already exist (board_create). In an issues batch it is also the default board for entries without their own boardId',
   },
   title: { type: 'string' },
   description: { type: 'string' },
@@ -184,7 +185,7 @@ export function createIssueWorkspaceTools(deps: CreateIssueWorkspaceToolsParams)
     tool('issue_create', {
       group: 'issues',
       description:
-        'Create an issue on a board (boardId from issue_board_list). Creating in a work column with an assignee fires that agent. dependencies adds blockers at creation. The issue location belongs to the issue, not to the agent: every run on it, by any agent it is handed to, uses the same source. Pass sourceId (source_list) and optional branch; without sourceId the issue runs in the organization Workspace (the isWorkspace entry in source_list). With a branch, a worktree for that branch is used when it exists, otherwise a checkout on that branch, otherwise the run is held until a worktree exists — create one on the issue card (Create now / auto on status). One issue or an issues batch; a batch reports { created, issues, failed }.',
+        'Create an issue on a board (boardId from issue_board_list). Creating in a work column with an assignee fires that agent. dependencies adds blockers at creation. The issue location belongs to the issue, not to the agent: every run on it, by any agent it is handed to, uses the same source. Pass sourceId (source_list) and optional branch; without sourceId the issue runs in the organization Workspace (the isWorkspace entry in source_list). With a branch, a worktree for that branch is used when it exists, otherwise a checkout on that branch, otherwise the run is held until a worktree exists — create one on the issue card (Create now / auto on status). One issue or an issues batch; in a batch a top-level boardId is the default for entries without their own; a batch reports { created, issues, failed }.',
       input: {
         type: 'object',
         properties: {
@@ -194,7 +195,7 @@ export function createIssueWorkspaceTools(deps: CreateIssueWorkspaceToolsParams)
             items: {
               type: 'object',
               properties: issueCreateProperties,
-              required: ['boardId', 'title'],
+              required: ['title'],
             },
           },
         },
@@ -204,13 +205,21 @@ export function createIssueWorkspaceTools(deps: CreateIssueWorkspaceToolsParams)
           const scope = deps.resolveScope();
           const input = raw as IssueCreateToolInput;
           if (input.issues !== undefined) {
-            if (input.boardId !== undefined || input.title !== undefined) {
-              throw new Error('Provide either boardId/title or issues, not both');
+            if (input.title !== undefined) {
+              throw new Error('Provide either title or issues, not both');
             }
             const outcome = await runBatch(
               input.issues,
               'issues',
-              (entry) => createEntry(scope, entry),
+              (entry) => {
+                const boardId = entry.boardId ?? input.boardId;
+                if (boardId === undefined) {
+                  throw new Error(
+                    'entry needs boardId, or pass a top-level boardId as the batch default',
+                  );
+                }
+                return createEntry(scope, { ...entry, boardId });
+              },
               (entry, error) => ({ title: entry.title, error }),
             );
             return { created: outcome.done, issues: outcome.items, failed: outcome.failed };

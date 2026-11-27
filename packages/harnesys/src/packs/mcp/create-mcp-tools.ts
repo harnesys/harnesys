@@ -110,7 +110,7 @@ async function applyConnect(
         serverId,
         connected: true,
         toolCount: health.tools.length,
-        tools: health.tools,
+        toolNames: health.tools.map((entry) => entry.name),
         note:
           'Stored at ORG level (all agents can be granted it); this run does not get the tools. ' +
           'To use them yourself: agents_update { agentId: <your id>, mcpServers: [.., "' +
@@ -127,12 +127,17 @@ async function applyCheck(
   deps: CreateMcpToolsParams,
   raw: unknown,
 ): Promise<Record<string, unknown>> {
-  const serverId = stringOf((raw as { serverId?: unknown })?.serverId);
+  const input = (raw ?? {}) as { serverId?: unknown; verbose?: unknown };
+  const serverId = stringOf(input.serverId);
   if (serverId === undefined) {
     return { error: 'serverId must be a non-empty string' };
   }
   const health = await deps.mcp.health(deps.resolveScope(), serverId);
-  return { ...health };
+  if (input.verbose === true) {
+    return { ...health };
+  }
+  const { tools, ...compact } = health;
+  return { ...compact, toolCount: tools.length, toolNames: tools.map((entry) => entry.name) };
 }
 
 async function applyToggle(
@@ -234,14 +239,22 @@ export function createMcpTools(deps: CreateMcpToolsParams): ToolDefinition[] {
       sideEffect: 'read',
       description:
         'Health-check a configured MCP server: fresh connection attempt with vault placeholders resolved, ' +
-        'returns { connected, tools } or { connected: false, error } where the error is the underlying cause ' +
-        '(transport/spawn failure line, or "secret <KEY> not found in vault"). ' +
+        'returns { connected, toolCount, toolNames } (no per-tool descriptions) or { connected: false, error } ' +
+        'where the error is the underlying cause ' +
+        '(transport/spawn failure line, or "secret <KEY> not found in vault"). Pass verbose: true to get the ' +
+        'full tool list with descriptions — costs a lot of context, prefer mcp_list for names. ' +
         'Unresolved vault keys abort the check with that error — stricter than the runtime path, ' +
         'which sends a missing key as an empty value and still connects. ' +
         'Read-only, does not touch running runtimes.',
       input: {
         type: 'object',
-        properties: { serverId: SERVER_ID_PROPERTY },
+        properties: {
+          serverId: SERVER_ID_PROPERTY,
+          verbose: {
+            type: 'boolean',
+            description: 'Include full tool descriptions (expensive). Default false.',
+          },
+        },
         required: ['serverId'],
       },
       execute: (raw) => runGuard(() => applyCheck(deps, raw)),

@@ -11,19 +11,34 @@ const ABSENT_STATUSES: readonly ExplainStatus[] = [
 
 export function capabilityDigest(explain: ExplainEntry[], present?: ReadonlySet<string>): string[] {
   const lines: string[] = [];
-  const seen = new Set<string>();
-  for (const entry of explain) {
-    if (entry.kind !== 'tool' || !ABSENT_STATUSES.includes(entry.status)) {
-      continue;
-    }
-    if (present?.has(entry.item) === true) {
+  const emitted = new Set<string>();
+  const absent = explain.filter(
+    (entry) =>
+      entry.kind === 'tool' &&
+      ABSENT_STATUSES.includes(entry.status) &&
+      present?.has(entry.item) !== true,
+  );
+  const groupCounts = new Map<string, number>();
+  for (const entry of absent) {
+    const key = `${entry.source} ${entry.reason}`;
+    groupCounts.set(key, (groupCounts.get(key) ?? 0) + 1);
+  }
+  for (const entry of absent) {
+    const key = `${entry.source} ${entry.reason}`;
+    const groupSize = groupCounts.get(key) ?? 1;
+    if (groupSize >= 3) {
+      if (emitted.has(key)) {
+        continue;
+      }
+      emitted.add(key);
+      lines.push(`${entry.source} — ${groupSize} tools: ${entry.reason}`);
       continue;
     }
     const line = `${entry.item} — ${entry.reason}`;
-    if (seen.has(line)) {
+    if (emitted.has(line)) {
       continue;
     }
-    seen.add(line);
+    emitted.add(line);
     lines.push(line);
   }
   const overflow = lines.length - DIGEST_MAX_LINES;

@@ -1,3 +1,5 @@
+import type { AgentBudget } from 'harnesys';
+
 export interface ReactGraph {
   nodes: Record<string, unknown>;
   edges: Array<Record<string, unknown>>;
@@ -45,6 +47,11 @@ const REACT_EDGES: Array<Record<string, unknown>> = [
 ];
 
 export const DEFAULT_REACT_BUDGET = { maxSteps: 50, policy: 'ask' as const };
+
+export function resolveReactBudget(isDelegate: boolean, budget?: AgentBudget): AgentBudget {
+  const effective: AgentBudget = budget ?? DEFAULT_REACT_BUDGET;
+  return isDelegate && effective.policy === 'ask' ? { ...effective, policy: 'error' } : effective;
+}
 
 export function buildReactGraph(): ReactGraph {
   return {

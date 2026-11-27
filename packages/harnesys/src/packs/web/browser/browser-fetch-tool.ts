@@ -9,17 +9,17 @@ const ONE_SHOT_DESCRIPTION =
   'One-shot page scrape to markdown WITHOUT a browser session. No engine sidecar needed. Use for reading content only (read-only). For interaction (click/fill/open) use browser tool instead. Returns bytes and an empty-body note when a page yields no content: an empty markdown is a read failure signal, not proof the page is empty.';
 
 export const BROWSER_FETCH_META_DESCRIPTION =
-  'One-shot page scrape to markdown without a browser session; requires an engine with a markdown dump (not system browsers such as chrome: use the browser tool there); reports bytes and an empty-body note on unreadable pages.';
+  'One-shot page scrape to markdown without a browser session; requires an engine with a one-shot markdown dump (obscura, lightpanda — not system browsers such as chrome or chromium: use the browser tool there); reports bytes and an empty-body note on unreadable pages.';
 
 export function browserFetchDescription(engineId: string, markdownDump: boolean): string {
   if (markdownDump) {
     return ONE_SHOT_DESCRIPTION;
   }
-  return `browser_fetch is not available on engine ${engineId}: it has no markdown dump, so one-shot scraping without a browser session is impossible. Use the browser tool to open the page and read it.`;
+  return `browser_fetch is not available on engine ${engineId}: it has no one-shot markdown dump, so one-shot scraping without a browser session is impossible. Use the browser tool to open the page and read it.`;
 }
 
 export function browserFetchTool(runtime: BrowserEngineRuntime): ToolDefinition {
-  const markdownDump = runtime.spec.capabilities.markdown === true;
+  const markdownDump = runtime.spec.capabilities.oneShotFetch === true;
   return tool('browser_fetch', {
     group: 'browser',
     description: browserFetchDescription(runtime.engineId, markdownDump),

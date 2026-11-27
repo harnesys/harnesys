@@ -88,8 +88,8 @@ async function scanDir(
       }
       out.push(path.relative(workdir, canonical).split(path.sep).join('/'));
     }
-  } catch {
-    return [];
+  } catch (error) {
+    throw new Error(`glob scan failed for "${pattern}" in ${dir}: ${String(error)}`);
   }
   return out;
 }

@@ -167,6 +167,9 @@ function toMetaFields(meta: SearchMeta | undefined): WebSearchMetaFields {
     ...(meta.unresponsiveEngines === undefined
       ? {}
       : { unresponsive_engines: meta.unresponsiveEngines }),
+    ...(meta.droppedUnusableLinks === undefined
+      ? {}
+      : { dropped_unusable_links: meta.droppedUnusableLinks }),
     ...(meta.answers === undefined ? {} : { answers: meta.answers }),
     ...(meta.infoboxes === undefined ? {} : { infoboxes: meta.infoboxes }),
   };

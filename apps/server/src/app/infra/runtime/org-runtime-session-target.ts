@@ -25,7 +25,11 @@ export function prepareSessionTarget(
       { threadId, agentId, issue: false },
     );
     return prepareTarget(deps, threadId, agentId, targetCache, { environment });
-  } catch {
+  } catch (error) {
+    deps.logger?.warn(
+      { error, threadId, agentId },
+      'run environment unresolved; falling back to the thread dir, tools that read/write files may see a different root than an anchored run',
+    );
     return prepareTarget(deps, threadId, agentId, targetCache);
   }
 }

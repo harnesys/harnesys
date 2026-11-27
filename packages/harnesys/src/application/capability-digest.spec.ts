@@ -29,12 +29,45 @@ describe('capabilityDigest', () => {
 
   test('deduplicates lines and caps with an overflow marker', () => {
     const base = Array.from({ length: 14 }, (_, i) =>
-      entry({ item: `t${i}`, status: 'disabled', reason: 'gone' }),
+      entry({ item: `t${i}`, status: 'disabled', reason: `gone-${i}` }),
     );
     const lines = capabilityDigest([...base, base[0] as ExplainEntry]);
     expect(lines.filter((line) => line.startsWith('t0 —'))).toHaveLength(1);
     expect(lines).toHaveLength(13);
     expect(lines.at(-1)).toBe('… +2 more unavailable capabilities');
+  });
+
+  test('groups absent tools sharing one source and reason into a single line', () => {
+    const lines = capabilityDigest([
+      entry({
+        item: 'brightdata__scrape',
+        source: 'mcp:brightdata',
+        status: 'denied-by-universe',
+        reason: 'server not in agent mcpServers',
+      }),
+      entry({
+        item: 'brightdata__extract',
+        source: 'mcp:brightdata',
+        status: 'denied-by-universe',
+        reason: 'server not in agent mcpServers',
+      }),
+      entry({
+        item: 'brightdata__search',
+        source: 'mcp:brightdata',
+        status: 'denied-by-universe',
+        reason: 'server not in agent mcpServers',
+      }),
+      entry({
+        item: 'tiny__one',
+        source: 'mcp:tiny',
+        status: 'denied-by-universe',
+        reason: 'server not in agent mcpServers',
+      }),
+    ]);
+    expect(lines).toEqual([
+      'mcp:brightdata — 3 tools: server not in agent mcpServers',
+      'tiny__one — server not in agent mcpServers',
+    ]);
   });
 
   test('note is null when nothing is absent', () => {

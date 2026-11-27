@@ -4,7 +4,7 @@ import {
   type PermissionMap,
   packsShapeError,
 } from 'harnesys';
-import { buildReactGraph, DEFAULT_REACT_BUDGET } from '../../../application/agents/react-preset.ts';
+import { buildReactGraph, resolveReactBudget } from '../../../application/agents/react-preset.ts';
 import type { AgentRecord } from '../../../domain/agent/agent.ts';
 import { AgentRegistryPort } from '../../../domain/agent/agent-registry.port.ts';
 import { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-provider.port.ts';
@@ -38,7 +38,7 @@ function createAgentFromCatalog(
   const modelId = resolveModelId(deps, input, creator?.modelId);
   const config: Record<string, unknown> = {
     graphJson: input.graph ?? buildReactGraph(),
-    budgetJson: input.budget ?? DEFAULT_REACT_BUDGET,
+    budgetJson: resolveReactBudget(input.parentId !== undefined, input.budget),
   };
   if (input.packs !== undefined) {
     assertPacksShape(input.packs);

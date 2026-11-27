@@ -115,11 +115,70 @@ describe('OrgManagerPort', () => {
     const report: ManagerUsageReport = await port.usage(SCOPE, { groupBy: 'day' });
     expect(report).toEqual({
       rows: [
-        { key: '2026-10-18', inputTokens: 100, outputTokens: 20, costUsd: 1.5, runs: 3 },
-        { key: '2026-10-17', inputTokens: 50, outputTokens: 10, costUsd: 0.5, runs: 2 },
+        {
+          key: '2026-10-18',
+          inputTokens: 100,
+          outputTokens: 20,
+          costUsd: 1.5,
+          unpriced: 0,
+          runs: 3,
+        },
+        {
+          key: '2026-10-17',
+          inputTokens: 50,
+          outputTokens: 10,
+          costUsd: 0.5,
+          unpriced: 1,
+          runs: 2,
+        },
       ],
       totalCostUsd: 2,
       totalRuns: 5,
     });
+  });
+
+  test('groupBy agent resolves names and keeps unpriced', async () => {
+    const agents = new MemoryAgents();
+    insertAgent(agents);
+    const usage = new FakeUsage();
+    usage.reportResult = {
+      rows: [
+        {
+          key: 'a1',
+          inputTokens: 10,
+          outputTokens: 1,
+          cacheReadTokens: 0,
+          cacheWriteTokens: 0,
+          reasoningTokens: 0,
+          costUsd: 0,
+          unpriced: 4,
+          runs: 1,
+        },
+        {
+          key: 'ghost-agent',
+          inputTokens: 5,
+          outputTokens: 1,
+          cacheReadTokens: 0,
+          cacheWriteTokens: 0,
+          reasoningTokens: 0,
+          costUsd: 0,
+          unpriced: 0,
+          runs: 1,
+        },
+      ],
+      totals: {
+        inputTokens: 15,
+        outputTokens: 2,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        reasoningTokens: 0,
+        costUsd: 0,
+      },
+      byMember: [],
+    };
+    const { port } = managerPort({ agents, usage });
+    const report = await port.usage(SCOPE, { groupBy: 'agent' });
+    expect(report.rows[0]).toMatchObject({ key: 'a1', name: 'coder', level: 'top', unpriced: 4 });
+    expect(report.rows[1]).toMatchObject({ key: 'ghost-agent', name: null, unpriced: 0 });
   });
 });

@@ -42,11 +42,14 @@ export function resolveGitSource(source: string): string {
   return trimmed;
 }
 
+const GITHUB_CLONE_RE = /^https:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?$/i;
+
 export async function clonePlugin(request: ClonePluginRequest): Promise<PluginRevision> {
   const dest = request.dest;
   if (existsSync(dest)) {
     throw new PluginConflictException(`plugin path exists: ${dest}`);
   }
+  await assertGithubRepoVisible(request.source);
   await mkdir(dirname(dest), { recursive: true });
   await runGit(dirname(dest), ['clone', '--depth', '1', '--', request.source, dest]);
   if (request.ref !== undefined && request.ref.length > 0) {
@@ -56,6 +59,29 @@ export async function clonePlugin(request: ClonePluginRequest): Promise<PluginRe
   }
   const revision = await runGit(dest, ['rev-parse', 'HEAD']);
   return { revision };
+}
+
+async function assertGithubRepoVisible(source: string): Promise<void> {
+  const match = GITHUB_CLONE_RE.exec(source);
+  if (match === null) {
+    return;
+  }
+  const owner = match[1] as string;
+  const repo = match[2] as string;
+  let response: Response;
+  try {
+    response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+      headers: { accept: 'application/vnd.github+json' },
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch {
+    return;
+  }
+  if (response.status === 404) {
+    throw new PluginValidationException(
+      `repository not found (or private): ${owner}/${repo} — GitHub hides private and missing repos behind the same 404 for anonymous access`,
+    );
+  }
 }
 
 export function isMarketplaceJsonUrl(source: string): boolean {

@@ -1,5 +1,5 @@
 import { defaultConfigValues, type FieldSpec, type TriggerDescriptor } from '@harnesys/sdk';
-import { AddonException } from '../../../domain/addons/errors.ts';
+import { AddonException } from './errors.ts';
 
 export function mergeTriggerConfig(
   descriptor: TriggerDescriptor,

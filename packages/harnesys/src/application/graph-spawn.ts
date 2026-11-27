@@ -502,6 +502,13 @@ function createEffectCollector() {
     usedTools(): string[] {
       return [...used];
     },
+    absorb(names: Iterable<string>): void {
+      for (const name of names) {
+        if (name !== '') {
+          used.add(name);
+        }
+      }
+    },
     journal(): SpawnEffectsJournal | undefined {
       if (total === 0) {
         return undefined;
@@ -513,6 +520,22 @@ function createEffectCollector() {
 export interface SpawnAbort {
   timedOut: boolean;
   timeoutMs?: number;
+}
+function usedNamesFromState(state: Record<string, unknown> | undefined): string[] {
+  const messages = Array.isArray(state?.messages) ? (state?.messages as readonly unknown[]) : [];
+  const names = new Set<string>();
+  for (const item of messages) {
+    const msg = item as { role?: string; name?: string; toolCalls?: readonly { name?: string }[] };
+    if (msg.role === 'tool' && typeof msg.name === 'string') {
+      names.add(msg.name);
+    }
+    for (const call of msg.toolCalls ?? []) {
+      if (typeof call.name === 'string') {
+        names.add(call.name);
+      }
+    }
+  }
+  return [...names];
 }
 function abortError(abort: SpawnAbort): SpawnCallError {
   if (abort.timedOut) {
@@ -779,12 +802,15 @@ async function runOneChild(input: {
   if (remoteOutput !== undefined) {
     await readBlocked();
     await stopEvent();
+    const remoteSnap = await childState.load();
+    effects.absorb(usedNamesFromState(remoteSnap?.state as Record<string, unknown> | undefined));
     return {
       agentId: target.call.agentId,
       spawnId: target.spawnId,
       ...quotaProp(target),
       output: remoteOutput.output,
       ...blockedProp(),
+      ...effectsProp(),
       ...capsProp(),
       ...toolUseProp(),
     };
@@ -793,6 +819,7 @@ async function runOneChild(input: {
   const status = snap?.status ?? 'failed';
   const rec = (snap?.state as Record<string, unknown>) ?? {};
   blocked = deniedToolsList(rec);
+  effects.absorb(usedNamesFromState(rec));
   if (status === 'completed') {
     const stopped = await stopEvent();
     if (stopped !== undefined) {

@@ -9,6 +9,7 @@ import type { PathsConfig } from '../ports/paths.ts';
 import type { PermissionGrantsPort } from '../ports/permission-grants-port.ts';
 import type { PermissionMap } from '../ports/permissions.ts';
 import type { RunToolControl, ToolDefinition } from '../ports/tools.ts';
+import { MUTATING_SIDE_EFFECTS } from '../ports/tools.ts';
 import { presentCallOutput } from './clip-tool-output.ts';
 import { evalExpr } from './expr-eval.ts';
 import { stateKeyOf } from './graph-helpers.ts';
@@ -231,11 +232,19 @@ export async function executeToolCall(
       }
     }
   } else {
-    await runBatchWorkerPool({
-      indexes: calls.map((_, i) => i),
-      width: maxConcurrency,
-      run: runOne,
-    });
+    const all = calls.map((_, i) => i);
+    const isMutation = (name: string): boolean => {
+      const sideEffect = ctx.toolRegistry.get(name)?.sideEffect;
+      return sideEffect !== undefined && MUTATING_SIDE_EFFECTS.includes(sideEffect);
+    };
+    const mutations = all.filter((i) => isMutation(calls[i]?.name ?? ''));
+    const reads = all.filter((i) => !mutations.includes(i));
+    if (mutations.length === 0 || reads.length === 0) {
+      await runBatchWorkerPool({ indexes: all, width: maxConcurrency, run: runOne });
+    } else {
+      await runBatchWorkerPool({ indexes: mutations, width: maxConcurrency, run: runOne });
+      await runBatchWorkerPool({ indexes: reads, width: maxConcurrency, run: runOne });
+    }
   }
   if (ctx.toolMessages !== 'ordered') {
     const arr = getStateMessages(ctx.state, ctx.messagesPath);

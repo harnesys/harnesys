@@ -34,7 +34,7 @@ import {
   assertScriptsAllowed,
   mergeTriggerConfig,
   normalizeTargetScripts,
-} from './automation-config.ts';
+} from '../../../domain/addons/trigger-config.ts';
 
 @Injectable()
 export class AutomationAdminAdapter extends AutomationAdminPort {

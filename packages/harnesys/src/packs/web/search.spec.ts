@@ -58,6 +58,36 @@ describe('parseSearxngResponse', () => {
     const parsed = parseSearxngResponse({ results: [] });
     expect(parsed).toEqual({ results: [] });
   });
+  test('repairs hostless and relative proxy links against the instance base', () => {
+    const parsed = parseSearxngResponse(
+      {
+        results: [
+          { title: 'A', url: 'http:///go/v1/AQ9w', content: 's', engine: 'brave' },
+          { title: 'B', url: '/go/v1/B', engine: 'google' },
+          { title: 'C', url: 'https://real.example/page', engine: 'brave' },
+        ],
+      },
+      'https://search.internal',
+    );
+    expect(parsed.results.map((result) => result.url)).toEqual([
+      'https://search.internal/go/v1/AQ9w',
+      'https://search.internal/go/v1/B',
+      'https://real.example/page',
+    ]);
+    expect(parsed.meta?.droppedUnusableLinks).toBeUndefined();
+    expect(parsed.meta?.enginesUsed).toEqual(['brave', 'google']);
+  });
+  test('drops links that cannot be made fetchable and counts them', () => {
+    const parsed = parseSearxngResponse({
+      results: [
+        { title: 'A', url: 'http:///go/v1/AQ9w', engine: 'brave' },
+        { title: 'B', url: '', engine: 'google' },
+        { title: 'C', url: 'ftp:///x', engine: 'google' },
+      ],
+    });
+    expect(parsed.results).toEqual([]);
+    expect(parsed.meta?.droppedUnusableLinks).toBe(3);
+  });
 });
 
 describe('resolveQueries', () => {

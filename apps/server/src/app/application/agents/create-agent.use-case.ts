@@ -1,5 +1,6 @@
 import { Injectable } from '@harnesys/brix';
 import type { AgentHook, AgentPublic, CreateAgentBody, WorkspaceRef } from '@harnesys/contracts';
+import type { AgentBudget } from 'harnesys';
 import {
   AgentConflictException,
   AgentValidationException,
@@ -23,7 +24,7 @@ import {
 } from './agent.helpers.ts';
 import { validateAgentHooks } from './agent-hooks.validation.ts';
 import { validateAgentWorkspaceRef } from './agent-workspace-ref.ts';
-import { buildReactGraph, DEFAULT_REACT_BUDGET } from './react-preset.ts';
+import { buildReactGraph, resolveReactBudget } from './react-preset.ts';
 
 export interface CreateAgentRequest {
   orgId: string;
@@ -150,20 +151,29 @@ function buildCreateRecord(input: BuildCreateRecordInput): AgentRecord {
     defaultModeId: input.defaultModeId,
     defaultRunDirectory: input.defaultRunDirectory,
     defaultWorkspaceRef: input.defaultWorkspaceRef,
-    config: withDefaultReactConfig(stripHookConfig(body.config ?? {})),
+    config: withDefaultReactConfig(
+      stripHookConfig(body.config ?? {}),
+      (body.level ?? 'top') === 'delegate',
+    ),
     hooks: input.hooks,
     createdAt: now,
     updatedAt: now,
   };
 }
 
-function withDefaultReactConfig(config: Record<string, unknown>): Record<string, unknown> {
+function withDefaultReactConfig(
+  config: Record<string, unknown>,
+  isDelegate: boolean,
+): Record<string, unknown> {
+  const provided = config.budgetJson as AgentBudget | undefined;
   if (config.graphJson !== undefined) {
-    return config;
+    return isDelegate && provided?.policy === 'ask'
+      ? { ...config, budgetJson: resolveReactBudget(true, provided) }
+      : config;
   }
   return {
     ...config,
     graphJson: buildReactGraph(),
-    budgetJson: config.budgetJson ?? DEFAULT_REACT_BUDGET,
+    budgetJson: resolveReactBudget(isDelegate, provided),
   };
 }

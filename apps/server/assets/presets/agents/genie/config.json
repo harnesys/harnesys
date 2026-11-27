@@ -154,6 +154,11 @@
       },
       {
         "from": "spawn",
+        "to": "map",
+        "when": "exists($state.mapItems) && length($state.mapItems) > 0"
+      },
+      {
+        "from": "spawn",
         "to": "think"
       },
       {

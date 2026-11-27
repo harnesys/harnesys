@@ -55,6 +55,10 @@
             "type": "text",
             "required": true,
             "default": "0 9 * * *",
+            "pattern": {
+              "regex": "^(\\S+\\s+){4,5}\\S+$",
+              "hint": "expected 5 or 6 whitespace-separated cron fields, e.g. \"0 9 * * 1-5\""
+            },
             "widget": {
               "kind": "cron"
             },

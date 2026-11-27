@@ -30,11 +30,61 @@ export class ManagerTailAdapter extends ManagerTailPort {
           ),
         )
         .orderBy(desc(runEventsTable.timestamp), desc(runEventsTable.seq))
-        .limit(limit)
+        .limit(Math.min(4 * limit, 2000))
         .all();
-      return rows.map(rowToItem).reverse();
+      const collapsed = collapseSettledToolRequests(rows).map(rowToItem).reverse();
+      return collapsed.slice(Math.max(0, collapsed.length - limit));
     });
   }
+}
+
+const TOOL_EVENT_TYPE = 'tool';
+const SETTLED_TOOL_PHASES: readonly string[] = ['completed', 'failed'];
+
+function collapseSettledToolRequests(rows: RunEventRow[]): RunEventRow[] {
+  const settled = new Set<string>();
+  for (const row of rows) {
+    if (row.type !== TOOL_EVENT_TYPE) {
+      continue;
+    }
+    const meta = metaOf(row);
+    const phase = typeof meta?.phase === 'string' ? meta.phase : '';
+    const key = meta === null ? null : toolCallKey(row.runId, meta);
+    if (key !== null && SETTLED_TOOL_PHASES.includes(phase)) {
+      settled.add(key);
+    }
+  }
+  return rows.filter((row) => {
+    if (row.type !== TOOL_EVENT_TYPE) {
+      return true;
+    }
+    const meta = metaOf(row);
+    const phase = typeof meta?.phase === 'string' ? meta.phase : '';
+    if (phase === 'streaming') {
+      return false;
+    }
+    if (phase === '') {
+      return true;
+    }
+    if (SETTLED_TOOL_PHASES.includes(phase)) {
+      return true;
+    }
+    const key = meta === null ? null : toolCallKey(row.runId, meta);
+    return key === null || !settled.has(key);
+  });
+}
+
+function metaOf(row: RunEventRow): Record<string, unknown> | null {
+  try {
+    return row.metadata ? (JSON.parse(row.metadata) as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+function toolCallKey(runId: string | null, meta: Record<string, unknown>): string | null {
+  const id = meta.toolCallId;
+  return typeof id === 'string' && id !== '' ? `${runId ?? ''}:${id}` : null;
 }
 
 function rowToItem(row: RunEventRow): ManagerThreadTailItem {

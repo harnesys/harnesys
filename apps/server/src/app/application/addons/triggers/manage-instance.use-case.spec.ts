@@ -1,100 +1,15 @@
 import { describe, expect, test } from 'bun:test';
 import { AddonException } from '../../../domain/addons/errors.ts';
-import { AutomationEventsPort } from '../../../domain/automations/automation-events.port.ts';
-import { FakeThreadAgents, FakeThreads } from '../../threads/thread.fakes.ts';
 import {
-  FakeAudit,
-  FakeTriggerWorkspace,
-  InMemoryCatalog,
-  InMemoryOrgAddons,
-  InMemoryTriggers,
-  NoopCalls,
-  NullLogger,
-  testManifest,
-} from '../addons.fakes.ts';
-import { buildTriggerScripts } from '../trigger-script.fakes.ts';
-import { ManageTriggerInstanceUseCase } from './manage-instance.use-case.ts';
-
-const ACTOR = { kind: 'user' as const, id: 'admin' };
-const ORG = 'org1';
-const THREAD_ID = '11111111-1111-4111-8111-111111111111';
-const AGENT_ID = '22222222-2222-4222-8222-222222222222';
-const STRANGER_AGENT_ID = '33333333-3333-4333-8333-333333333333';
-const OTHER_THREAD_ID = '44444444-4444-4444-8444-444444444444';
-
-class FakeAutomationEvents extends AutomationEventsPort {
-  published: Array<{ orgId: string; kind: string; action: string }> = [];
-  publish(orgId: string, event: { kind: string; action: 'changed' | 'removed' }): void {
-    this.published.push({ orgId, kind: event.kind, action: event.action });
-  }
-  subscribe(): () => void {
-    return () => {};
-  }
-}
-
-function build(enabled = true) {
-  const { pkg } = testManifest({
-    contributions: [
-      {
-        id: 'feed',
-        family: 'trigger',
-        descriptor: { kind: 'feed', configFields: [] },
-      },
-    ],
-  });
-  const catalog = new InMemoryCatalog();
-  catalog.packages.set(`acme.tool@1.0.0`, pkg);
-  const orgAddons = new InMemoryOrgAddons();
-  orgAddons.upsert({
-    orgId: ORG,
-    addonId: 'acme.tool',
-    version: '1.0.0',
-    enabled,
-    grantsJson: '[]',
-    grantsDigest: 'd',
-    configJson: '{}',
-    health: 'stopped',
-    lastError: null,
-    createdAt: 't0',
-    updatedAt: 't0',
-  });
-  const triggers = new InMemoryTriggers();
-  const calls = new NoopCalls();
-  const threads = new FakeThreads();
-  const threadAgents = new FakeThreadAgents();
-  threads.insert({
-    id: THREAD_ID,
-    orgId: ORG,
-    title: 'Feed thread',
-    kind: 'chat',
-    parentThreadId: null,
-    forkAt: null,
-    inheritedEventCount: 0,
-    metadata: {},
-    runProfileId: null,
-    runDirectory: null,
-    createdAt: 't0',
-    updatedAt: 't0',
-    lastReadAt: 't0',
-  });
-  threadAgents.ensure(ORG, THREAD_ID, AGENT_ID);
-  const useCase = new ManageTriggerInstanceUseCase(
-    orgAddons,
-    catalog,
-    triggers,
-    calls,
-    new FakeAudit(),
-    threads,
-    threadAgents,
-    new FakeAutomationEvents(),
-    new FakeTriggerWorkspace(),
-    buildTriggerScripts(triggers).runs,
-    new NullLogger(),
-  );
-  return { useCase, triggers, calls, threads, threadAgents };
-}
-
-const TARGET = { threadId: THREAD_ID, agentId: AGENT_ID, modeId: 'plan' };
+  ACTOR,
+  AGENT_ID,
+  build,
+  ORG,
+  OTHER_THREAD_ID,
+  STRANGER_AGENT_ID,
+  TARGET,
+  THREAD_ID,
+} from './manage-instance.fakes.ts';
 
 describe('ManageTriggerInstanceUseCase', () => {
   test('creates instance and starts it when enabled', async () => {

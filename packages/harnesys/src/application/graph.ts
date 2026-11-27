@@ -68,6 +68,7 @@ import {
   clearQueuedMap,
   clearQueuedSpawns,
   collectPlanNodeTypes,
+  droppedControlQueueNote,
 } from './graph-agent-controls.ts';
 import { isSkippedEntry, matchOutgoing } from './graph-edges.ts';
 import { type HandoffNodeSpec, prepareHandoff } from './graph-handoff.ts';
@@ -1061,6 +1062,13 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
           yield ev;
           stampToolSource(st.messages, dangling.toolCallId, toolSourceOf(ev));
         }
+      }
+      const droppedNote = droppedControlQueueNote(st);
+      if (droppedNote !== null) {
+        appendAssistantNote(st, undefined, droppedNote);
+        clearQueuedMap(st);
+        clearQueuedSpawns(st);
+        yield await commit('running', 'control.dropped', 'recorded', { note: droppedNote });
       }
       const stopOutcome = await emitHook(hooks, 'Stop', {});
       const stopEffect = hookStopEffect(stopOutcome);

@@ -35,7 +35,7 @@ export function listDirTool(options: FilesOptions = {}): ToolDefinition {
         path?: string;
         depth?: number;
       };
-      const relative = parsed.path ?? '.';
+      const relative = (parsed.path ?? '.').replace(/\/+$/, '') || '.';
       const depth = parsed.depth ?? 1;
       const absolute = resolveFileTarget(ctx, relative, 'read', options);
       const info = await stat(absolute).catch(() => {

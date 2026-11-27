@@ -96,11 +96,26 @@ export class OrgManagerPort extends ManagerObservationPort {
       ...(query.from ? { from: query.from } : {}),
       ...(query.to ? { to: query.to } : {}),
     });
+    const agentNames =
+      query.groupBy === 'agent'
+        ? new Map(
+            this.deps.agents
+              .list(scope.orgId)
+              .map((agent) => [agent.id, { name: agent.name, level: agent.level }]),
+          )
+        : undefined;
     const rows: ManagerUsageRow[] = report.rows.map((row) => ({
       key: row.key,
+      ...(agentNames && row.key !== null
+        ? {
+            name: agentNames.get(row.key)?.name ?? null,
+            level: agentNames.get(row.key)?.level,
+          }
+        : {}),
       inputTokens: row.inputTokens,
       outputTokens: row.outputTokens,
       costUsd: row.costUsd,
+      unpriced: row.unpriced,
       runs: row.runs,
     }));
     let totalRuns = 0;

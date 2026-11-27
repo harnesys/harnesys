@@ -55,7 +55,7 @@ export function createThreadTools(deps: CreateThreadToolsParams): ToolDefinition
     tool('threads_history', {
       group: 'thread',
       description:
-        'Read older conversational messages of a thread before the current window. Defaults to this thread; pass threadId to read another thread in this project. People messages and final answers are returned in thread order; pass beforeSeq to page further back. If the channel note says the whole conversation is already in your context, there is nothing older to read. Use threads_search to find a specific phrase.',
+        'Read older conversational messages of a thread before the current window. Defaults to this thread; pass threadId to read another thread in this project. Only people messages and final answers of completed runs are returned — intermediate assistant text and tool outputs are journal-only (threads_tail); an active run has no final answer yet. Pass beforeSeq to page further back. If the channel note says the whole conversation is already in your context, there is nothing older to read. Use threads_search to find a specific phrase.',
       operations: ['read'],
       sideEffect: 'read',
       input: {
@@ -79,7 +79,7 @@ export function createThreadTools(deps: CreateThreadToolsParams): ToolDefinition
     tool('threads_search', {
       group: 'thread',
       description:
-        'Keyword search over thread transcripts. scope=thread (default) searches this thread; scope=org searches every thread in the project, optionally narrowed by threadId. Returns matching snippets with threadId and threadSeq, newest first; pass them to threads_history to read the surrounding messages.',
+        'Keyword search over thread transcripts. scope=thread (default) searches this thread; scope=org searches every thread in the project, optionally narrowed by threadId. Matches people messages and final answers of completed runs only — tool outputs and the current run are not searchable (use threads_tail for this run). Returns matching snippets with threadId and threadSeq, newest first; pass them to threads_history to read the surrounding messages.',
       operations: ['read'],
       sideEffect: 'read',
       input: {
@@ -108,7 +108,7 @@ export function createThreadTools(deps: CreateThreadToolsParams): ToolDefinition
     tool('threads_tail', {
       group: 'thread',
       description:
-        'Last events of a thread (run journal: runId, kind, timestamp, preview). Journal kinds are user, tool, model.usage and run lifecycle events; per-chunk text-delta/reasoning-delta fragments are excluded. threadId comes from threads_list rows or manager_pulse failedThreads; load missing tools via load_tools. limit 1..100, default 20.',
+        'Last events of a thread (run journal: runId, kind, timestamp, preview). Journal kinds are user, tool, model.usage and run lifecycle events; per-chunk text-delta/reasoning-delta fragments are excluded. Settled tool calls appear once (their completion row); a tool call still without a result appears as its request row. This is the way to recall your own tool activity of the current run — threads_history only holds people messages and final answers. threadId comes from threads_list rows or manager_pulse failedThreads; load missing tools via load_tools. limit 1..100, default 20.',
       input: {
         type: 'object',
         properties: {

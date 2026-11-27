@@ -185,6 +185,23 @@ export function clearQueuedMap(state: Record<string, unknown>): void {
   delete state[STATE_MAP_INSTRUCTION_KEY];
   delete state[STATE_MAP_MAX_TOKENS_KEY];
 }
+export function droppedControlQueueNote(state: Record<string, unknown>): string | null {
+  const mapItems = state[STATE_MAP_ITEMS_KEY];
+  const spawns = state[STATE_SPAWNS_KEY];
+  const mapCount = Array.isArray(mapItems) ? mapItems.length : 0;
+  const spawnCount = Array.isArray(spawns) ? spawns.length : 0;
+  if (mapCount === 0 && spawnCount === 0) {
+    return null;
+  }
+  const parts: string[] = [];
+  if (mapCount > 0) {
+    parts.push(`${mapCount} queued map items`);
+  }
+  if (spawnCount > 0) {
+    parts.push(`${spawnCount} queued spawns`);
+  }
+  return `Control queues dropped at run end: ${parts.join(' and ')} were never executed — the graph routed to end before the matching control node drained them. Parallel fan-out needs control:map / control:spawn edges ordered before the end edge in the agent graph.`;
+}
 export function appendAssistantNote(
   state: Record<string, unknown>,
   messagesExpr: string | undefined,

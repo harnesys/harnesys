@@ -1,3 +1,5 @@
+import type { AgentLevel } from '@harnesys/contracts';
+
 export interface ManagerPulseAgent {
   agentId: string;
   name: string;
@@ -24,6 +26,11 @@ export interface ManagerPulse {
 }
 export interface ManagerUsageRow {
   key: string | null;
+  /** Display name resolved for groupBy=agent; null when the agent row is gone (deleted). */
+  name?: string | null;
+  level?: AgentLevel;
+  /** Usage rows counted with pricingSource 'none': costUsd 0 may mean free or unpriced. */
+  unpriced: number;
   inputTokens: number;
   outputTokens: number;
   costUsd: number;
