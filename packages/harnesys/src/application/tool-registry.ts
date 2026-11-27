@@ -95,7 +95,7 @@ export function formatAjvErrors(errors: readonly ErrorObject[]): string[] {
     }
     lines.push(
       collapsed.get(error) ??
-        `${error.message ?? 'failed a schema constraint'} — at ${pathOf(error)}`,
+        `${error.message ?? 'failed a schema constraint'}${enumAllowedValues(error)} — at ${pathOf(error)}`,
     );
   }
   if (lines.length <= MAX_ERROR_LINES) {
@@ -105,6 +105,16 @@ export function formatAjvErrors(errors: readonly ErrorObject[]): string[] {
 }
 function isCombinator(error: ErrorObject): boolean {
   return error.keyword === 'oneOf' || error.keyword === 'anyOf';
+}
+function enumAllowedValues(error: ErrorObject): string {
+  if (error.keyword !== 'enum') {
+    return '';
+  }
+  const allowed = (error.params as { allowedValues?: unknown }).allowedValues;
+  if (!Array.isArray(allowed) || allowed.length === 0) {
+    return '';
+  }
+  return ` (allowed: ${allowed.map((value) => JSON.stringify(value)).join(', ')})`;
 }
 function collectArms(
   parent: ErrorObject,

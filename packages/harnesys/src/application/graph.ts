@@ -760,6 +760,7 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
     return {
       event: await commit('budget_exceeded', 'run.failed', 'recorded', {
         code: 'budget_exceeded',
+        message: `budget exhausted: ${over.kind} limit ${over.limit}, used ${over.used}`,
         kind: over.kind,
         limit: over.limit,
         used: over.used,
@@ -2368,6 +2369,9 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
       const byLength = closingReason === 'length';
       const e = await commit(byLength ? 'failed' : 'budget_exceeded', 'run.failed', 'recorded', {
         code: byLength ? 'output_limit_exceeded' : 'budget_exceeded',
+        message: byLength
+          ? 'output limit exceeded: the answer was cut off'
+          : 'budget exhausted: the closing report is in the final answer',
         ...(closingReport === '' ? {} : { text: closingReport }),
       });
       yield e;

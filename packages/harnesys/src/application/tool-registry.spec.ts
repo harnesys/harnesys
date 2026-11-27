@@ -47,6 +47,17 @@ describe('formatAjvErrors', () => {
     expect(lines).toContain('must be string — at /list/0');
   });
 
+  test('enum errors list the allowed values', () => {
+    const schema = {
+      type: 'object',
+      properties: { mode: { type: 'string', enum: ['local', 'remote', 'dynamic'] } },
+    };
+    const lines = formatAjvErrors(errorsFor(schema, { mode: '-L' }));
+    expect(lines).toEqual([
+      'must be equal to one of the allowed values (allowed: "local", "remote", "dynamic") — at /mode',
+    ]);
+  });
+
   test('oneOf arms collapse to one summary line per instance path', () => {
     const schema = {
       type: 'object',

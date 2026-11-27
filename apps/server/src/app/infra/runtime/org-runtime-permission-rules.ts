@@ -1,5 +1,5 @@
 import type { AgentDefinition } from 'harnesys';
-import { PermissionGrantsPort } from 'harnesys';
+import { isOn, PermissionGrantsPort } from 'harnesys';
 import type {
   PermissionRuleStorePort,
   ShellRulePatterns,
@@ -31,6 +31,8 @@ export function runTargetPermissionGrants(
 /**
  * Replaces the shell pack spec allowlist/blocklist with the durable rule store
  * values (agent-scoped + org-wide). Keeps timeout from the existing spec.
+ * Agents without the shell pack enabled are returned unchanged: durable rules
+ * constrain a capability, they never grant one.
  */
 export function applyShellRulePatterns(
   agentDef: AgentDefinition,
@@ -38,7 +40,10 @@ export function applyShellRulePatterns(
 ): AgentDefinition {
   const packs = agentDef.packs ?? {};
   const shell = packs.shell;
-  const base = shell !== undefined && shell !== null && typeof shell === 'object' ? shell : {};
+  if (!isOn(shell)) {
+    return agentDef;
+  }
+  const base = shell !== true && typeof shell === 'object' ? shell : {};
   const currentSpec = (base as { spec?: Record<string, unknown> }).spec;
   const spec: Record<string, unknown> = {};
   if (currentSpec !== undefined && typeof currentSpec.timeout === 'number') {
