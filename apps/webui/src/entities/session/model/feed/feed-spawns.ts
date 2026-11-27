@@ -111,6 +111,7 @@ export function spawnProcess(
         recentTools: [],
         steps: 0,
         tokens: 0,
+        ...(ev.quotaSteps !== undefined ? { quotaSteps: ev.quotaSteps } : {}),
         ...(seen !== undefined ? { spawnedAt: seen, lastSeenAt: seen } : {}),
       },
       deltaId: undefined,

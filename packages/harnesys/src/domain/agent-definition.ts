@@ -81,7 +81,6 @@ export interface AgentGraph {
 }
 export type BudgetPolicy = 'ask' | 'error';
 export type BudgetLimitKind = 'steps' | 'tokens' | 'deadline';
-export type SpawnBudgetMode = 'pool' | 'inherit';
 export interface AgentBudget {
   maxSteps?: number;
   maxTokens?: number;
@@ -90,7 +89,6 @@ export interface AgentBudget {
   warnAtSteps?: number;
   closeOnExhaustion?: boolean;
   extendDefaultPct?: number;
-  spawnBudget?: SpawnBudgetMode;
 }
 export interface BudgetExtension {
   steps?: number;

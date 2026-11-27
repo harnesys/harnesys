@@ -66,7 +66,9 @@ function parentOf(spawnId: string, background: boolean): AgentDefinition {
     prompts: { main: { instructions: 'work' } },
     model: { provider: 'test', model: 'test' },
     state: {
-      initial: { spawns: [{ agentId: 'child', input: 'go', spawnId, background }] },
+      initial: {
+        spawns: [{ agentId: 'child', input: 'go', spawnId, background, budget: { maxSteps: 10 } }],
+      },
     },
     graph: {
       nodes: {

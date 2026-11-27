@@ -246,11 +246,11 @@ function parentAgent(budget: AgentBudget, spawns: unknown[]): AgentDefinition {
 }
 
 describe('tree budget', () => {
-  test('children share the remaining budget and the parent absorbs their spend', async () => {
+  test('children run under the explicit per-call quota and the parent absorbs their spend', async () => {
     const state = new InMemoryRuntimeState('session-1');
     const agent = parentAgent({ maxSteps: 20, policy: 'ask' }, [
-      { agentId: 'child-1', input: 'a' },
-      { agentId: 'child-1', input: 'b' },
+      { agentId: 'child-1', input: 'a', budget: { maxSteps: 12 } },
+      { agentId: 'child-1', input: 'b', budget: { maxSteps: 30 } },
     ]);
     const events: Event[] = [];
     for await (const ev of startGraph({
@@ -267,8 +267,26 @@ describe('tree budget', () => {
     }
     const spawned = events.filter((ev) => ev.type === 'agent.spawned');
     expect(spawned).toHaveLength(2);
-    expect(meta(spawned[0] as Event).quotaSteps).toBe(9);
+    expect(meta(spawned[0] as Event).quotaSteps).toBe(12);
+    expect(meta(spawned[1] as Event).quotaSteps).toBe(30);
     const snap = await state.load();
     expect(snap?.cursor.budget?.steps ?? 0).toBeGreaterThan(5);
+  });
+
+  test('a spawn call without a budget fails the node with spawn_budget_required', async () => {
+    const state = new InMemoryRuntimeState('session-1');
+    const agent = parentAgent({ maxSteps: 20, policy: 'ask' }, [
+      { agentId: 'child-1', input: 'a' },
+    ]);
+    let thrown: unknown;
+    try {
+      await run(state, agent, {
+        agents: { resolve: (id) => (id === 'child-1' ? CHILD : undefined) },
+      });
+    } catch (err) {
+      thrown = err;
+    }
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as { code?: string }).code).toBe('spawn_budget_required');
   });
 });

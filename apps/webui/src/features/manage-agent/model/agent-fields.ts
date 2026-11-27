@@ -68,7 +68,6 @@ export const agentFieldsSchema = z.object({
   budgetWarnAtSteps: optionalNonNegativeInt,
   budgetCloseOnExhaustion: z.boolean(),
   budgetExtendPercent: optionalPositiveInt,
-  budgetSpawnMode: z.enum(['pool', 'inherit']),
   departmentId: z.string().nullable(),
   defaultModeId: z.string().nullable(),
   defaultRunDirectory: z.string().nullable(),
@@ -131,7 +130,6 @@ export function emptyAgentFields(): AgentFieldsInput {
     budgetWarnAtSteps: '',
     budgetCloseOnExhaustion: false,
     budgetExtendPercent: '',
-    budgetSpawnMode: 'pool',
     departmentId: null,
     defaultModeId: null,
     defaultRunDirectory: null,
@@ -212,7 +210,6 @@ export function agentFieldsFrom(agent: {
     budgetWarnAtSteps: stringify(agent.budget?.warnAtSteps ?? 3),
     budgetCloseOnExhaustion: agent.budget?.closeOnExhaustion ?? false,
     budgetExtendPercent: stringify(agent.budget?.extendDefaultPct ?? 25),
-    budgetSpawnMode: agent.budget?.spawnBudget ?? 'pool',
   };
 }
 function reasoningModeOf(
@@ -267,7 +264,6 @@ export function toAgentDraft(values: AgentFieldsOutput): {
         ...(values.budgetExtendPercent !== undefined
           ? { extendDefaultPct: values.budgetExtendPercent }
           : {}),
-        ...(values.budgetSpawnMode === 'inherit' ? { spawnBudget: 'inherit' as const } : {}),
       }
     : null;
   return {

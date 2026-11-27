@@ -63,20 +63,20 @@ Gotchas that bite most often:
 
 ## 4. Budget
 
-Fields: `maxSteps` (node executions), `maxTokens`, `deadlineMs`, `policy` (`ask` | `error`), plus tuning: `warnAtSteps` (default 3), `closeOnExhaustion`, `extendDefaultPct` (default 25), `spawnBudget` (`pool` | `inherit`).
+Fields: `maxSteps` (node executions), `maxTokens`, `deadlineMs`, `policy` (`ask` | `error`), plus tuning: `warnAtSteps` (default 3), `closeOnExhaustion`, `extendDefaultPct` (default 25).
 
 - Any cycle in the graph requires `maxSteps` or `deadlineMs` (`graph has cycle but no budget.maxSteps/deadlineMs`). The default ReAct loop is cyclic.
 - `policy: "ask"` means: when the budget runs out, the run pauses and asks the user to extend. Correct for top-level agents. A delegate has no user, so `ask` is unreachable for it; give delegates `policy: "error"` (or rely on closing reports, below).
 - On budget exhaustion a spawned child never fails: it closes with a report and the result carries `budget: { kind, limit, used, closingStep: true }`. `used` may exceed `limit` by the closing report step. Read that field instead of treating the child as broken.
-- Spawn fan-out pools by default: the parent's remaining budget is split in equal parts (`floor(remainder / N)`), and each child gets at most `min(requested, share)`. Set `spawnBudget: "inherit"` on the parent to give every child the full inherited budget instead.
+- Every spawned child must be capped explicitly: nothing is inherited from or split out of the parent's budget. Size each child to its task instead of guessing a share.
 
 ## 5. Spawning children (`agents_spawn`)
 
-Call shape: `calls: [{ agentId, input, budget?, permissions? }]`, max 32 calls. The parent waits at a barrier; children run with bounded concurrency (default width 4).
+Call shape: `calls: [{ agentId, input, budget, permissions? }]`, max 32 calls. The parent waits at a barrier; children run with bounded concurrency (default width 4).
 
 - `agentId` resolves as exact id, unique id prefix (8+ chars), or name. Unknown or ambiguous fails at call time with the roster listed: `unknown spawn target "X". Available agents: ...`.
 - `input` is required: a plain string (wrapped into one user message) or `{ messages: [{ role: "user", content: "..." }] }`. Anything else is rejected: `input must be a string or { messages: [{ role, content }] }`.
-- `budget` replaces the child budget entirely for this run (a partial object means the missing limits are unlimited). `policy` in it is accepted and ignored.
+- `budget` is required per call: `{ maxSteps?, maxTokens?, deadlineMs? }`, at least one limit. It is the child's full quota for the run — independent of the parent's budget and of sibling children; a missing limit is unlimited. `policy` in it is accepted and ignored.
 - `permissions` pre-approves gates for this child (see §6).
 - Node-level `timeoutMs` / `onTimeout` (`partial` | `fail`) are graph-config concerns; default is no timeout. On timeout the remaining children abort and come back as `spawn_timeout` / `spawn_aborted` errors, so read every result entry.
 
@@ -87,7 +87,7 @@ A child run is sandboxed:
 - All `agents` tools are removed from its registry; further spawning is impossible.
 - If a child still ends with `needs_input` you get `sandbox_blocked` (`spawn child ended with status needs_input`): you under-specified the task or under-granted permissions.
 
-Result item anatomy: `{ agentId, spawnId, output, error?, blocked?, budget?, usage? }`. `output` is the child's last message; `blocked` lists denied tool calls (diagnose permission gaps from it); `error.code` is one of `spawn_target_missing`, `agent_invalid` (broken child definition), `sandbox_blocked`, `spawn_timeout`, `spawn_aborted`, `stopped_by_hook`, `provider_rate_limited` / `provider_unavailable` / `provider_unauthorized` / `provider_error`, or the raw run status. A provider 5xx or 429 is retried by the host automatically; a persistent `provider_unavailable` means re-spawn later or use another model.
+Result item anatomy: `{ agentId, spawnId, output, error?, blocked?, budget?, quota?, usage? }`. `quota` echoes the caps the child actually ran under; `output` is the child's last message; `blocked` lists denied tool calls (diagnose permission gaps from it); `error.code` is one of `spawn_target_missing`, `spawn_budget_required` (no per-call budget), `spawn_budget_invalid`, `agent_invalid` (broken child definition), `sandbox_blocked`, `spawn_timeout`, `spawn_aborted`, `stopped_by_hook`, `provider_rate_limited` / `provider_unavailable` / `provider_unauthorized` / `provider_error`, or the raw run status. A provider 5xx or 429 is retried by the host automatically; a persistent `provider_unavailable` means re-spawn later or use another model.
 
 Write input as a complete subcontract: goal, constraints, file paths, expected output format. The child sees nothing but its instructions and this input.
 

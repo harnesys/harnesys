@@ -34,7 +34,13 @@ export function loopNote(tool: string, repeats: number): LlmNote {
       'Switch to a different tool, change the arguments meaningfully, or finish with the data you already have.',
   };
 }
-export function budgetNote(left: BudgetLeft, closing = false): LlmNote {
+export type BudgetSource = 'own' | 'parent';
+
+export function budgetNote(
+  left: BudgetLeft,
+  closing = false,
+  source: BudgetSource = 'own',
+): LlmNote {
   const parts: string[] = [];
   if (left.stepsLeft !== undefined) {
     parts.push(
@@ -42,17 +48,23 @@ export function budgetNote(left: BudgetLeft, closing = false): LlmNote {
     );
   }
   if (left.tokensLeft !== undefined) {
-    parts.push(`tokens remaining: ~${left.tokensLeft}`);
+    parts.push(
+      `tokens remaining: ~${left.tokensLeft}${left.tokensTotal !== undefined ? `/${left.tokensTotal}` : ''}`,
+    );
   }
   if (left.msLeft !== undefined) {
     parts.push(`time remaining: ~${Math.max(1, Math.ceil(left.msLeft / 60000))} min`);
   }
+  const origin =
+    source === 'parent'
+      ? 'Budget was set by your parent agent for this run; it is independent of the parent budget and cannot be extended. '
+      : '';
   if (closing) {
     const counter = parts.length > 0 ? `${parts.join(' · ')}. ` : '';
     return {
       tag: 'budget',
       text:
-        `${counter}This is your last step and no tools are available. ` +
+        `${origin}${counter}This is your last step and no tools are available. ` +
         'Do not attempt tool calls. Write your final report now: what you did, ' +
         'what you found, and what is left unfinished.',
     };
@@ -61,17 +73,17 @@ export function budgetNote(left: BudgetLeft, closing = false): LlmNote {
   if (left.warn === 'last') {
     return {
       tag: 'budget',
-      text: `${counter} — this is your last step: write your final report now.`,
+      text: `${origin}${counter} — this is your last step: write your final report now.`,
     };
   }
   if (left.warn === 'soon') {
     return {
       tag: 'budget',
-      text: `${counter} — finish the current work, update the plan, summarize what remains.`,
+      text: `${origin}${counter} — finish the current work, update the plan, summarize what remains.`,
     };
   }
   return {
     tag: 'budget',
-    text: `${counter} (per run; resets on new user message). Wrap up the task within the remaining budget.`,
+    text: `${origin}${counter}. This budget is fixed for the whole run — no more steps are granted after it. Plan the work to fit and wrap up before the last step.`,
   };
 }

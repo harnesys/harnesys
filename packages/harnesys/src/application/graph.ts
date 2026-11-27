@@ -43,7 +43,6 @@ import {
   budgetLimitOf,
   budgetOver,
   budgetReason,
-  budgetRemainder,
   budgetUsedOf,
   defaultExtension,
   extendState,
@@ -1321,9 +1320,9 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
           const wrap = wrapDue();
           const left = budgetLeftForPrompt();
           if (left) {
-            notes.push(budgetNote(left, wrap));
+            notes.push(budgetNote(left, wrap, opts.sandbox === true ? 'parent' : 'own'));
           } else if (wrap) {
-            notes.push(budgetNote({}, true));
+            notes.push(budgetNote({}, true, opts.sandbox === true ? 'parent' : 'own'));
           }
           if (hooks) {
             for (const eff of hooks.bus.drainDeferred()) {
@@ -1967,7 +1966,6 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
           { ...opts, agent, plan, input, toolRegistry },
           slots,
           checkpoint,
-          budgetRemainder(budgetState(), Date.now()),
         );
         for (const d of prepared.denied) {
           const e = await commit('running', 'agent.failed', 'recorded', {

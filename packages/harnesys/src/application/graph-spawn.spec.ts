@@ -168,10 +168,17 @@ function waitOrAbort(delayMs: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
-function calls(count: number): { agentId: string; input: unknown }[] {
+interface SpawnCallSeed {
+  agentId: string;
+  input: unknown;
+  budget?: { maxSteps?: number };
+}
+
+function calls(count: number): SpawnCallSeed[] {
   return Array.from({ length: count }, (_, i) => ({
     agentId: CHILD.id,
     input: `task ${i}`,
+    budget: { maxSteps: 10 },
   }));
 }
 
@@ -349,8 +356,8 @@ describe('executeSpawn child isolation', () => {
       ...SLOTS,
       state: {
         spawns: [
-          { agentId: BROKEN.id, input: 'broken' },
-          { agentId: CHILD.id, input: 'fine' },
+          { agentId: BROKEN.id, input: 'broken', budget: { maxSteps: 10 } },
+          { agentId: CHILD.id, input: 'fine', budget: { maxSteps: 10 } },
         ],
       },
     });
@@ -410,7 +417,14 @@ describe('spawn permissions', () => {
     const prepared = prepareSpawn(node(), parent, {
       ...SLOTS,
       state: {
-        spawns: [{ agentId: CHILD.id, input: 'task', permissions: { 'fs.write': 'allow' } }],
+        spawns: [
+          {
+            agentId: CHILD.id,
+            input: 'task',
+            budget: { maxSteps: 10 },
+            permissions: { 'fs.write': 'allow' },
+          },
+        ],
       },
     });
     const captured: GraphOpts[] = [];
@@ -426,7 +440,14 @@ describe('spawn permissions', () => {
     const prepared = prepareSpawn(node(), parent, {
       ...SLOTS,
       state: {
-        spawns: [{ agentId: CHILD.id, input: 'task', permissions: { 'fs.write': 'allow' } }],
+        spawns: [
+          {
+            agentId: CHILD.id,
+            input: 'task',
+            budget: { maxSteps: 10 },
+            permissions: { 'fs.write': 'allow' },
+          },
+        ],
       },
     });
     const captured: GraphOpts[] = [];
@@ -443,7 +464,14 @@ describe('spawn permissions', () => {
     const prepared = prepareSpawn(node(), parent, {
       ...SLOTS,
       state: {
-        spawns: [{ agentId: CHILD.id, input: 'task', permissions: { 'fs.write': 'allow' } }],
+        spawns: [
+          {
+            agentId: CHILD.id,
+            input: 'task',
+            budget: { maxSteps: 10 },
+            permissions: { 'fs.write': 'allow' },
+          },
+        ],
       },
     });
     const captured: GraphOpts[] = [];
@@ -458,7 +486,7 @@ describe('spawn permissions', () => {
     };
     const prepared = prepareSpawn(node(), parent, {
       ...SLOTS,
-      state: { spawns: [{ agentId: CHILD.id, input: 'task' }] },
+      state: { spawns: [{ agentId: CHILD.id, input: 'task', budget: { maxSteps: 10 } }] },
     });
     const captured: GraphOpts[] = [];
     await executeSpawn(prepared, parent, captureRunner(captured));
@@ -474,7 +502,7 @@ describe('spawn permissions', () => {
     };
     const prepared = prepareSpawn(node(), parent, {
       ...SLOTS,
-      state: { spawns: [{ agentId: CHILD.id, input: 'task' }] },
+      state: { spawns: [{ agentId: CHILD.id, input: 'task', budget: { maxSteps: 10 } }] },
     });
     const captured: GraphOpts[] = [];
     await executeSpawn(prepared, parent, captureRunner(captured));
@@ -488,7 +516,7 @@ describe('spawn permissions', () => {
     };
     const prepared = prepareSpawn(node(), parent, {
       ...SLOTS,
-      state: { spawns: [{ agentId: CHILD.id, input: 'task' }] },
+      state: { spawns: [{ agentId: CHILD.id, input: 'task', budget: { maxSteps: 10 } }] },
     });
     const captured: GraphOpts[] = [];
     await executeSpawn(prepared, parent, captureRunner(captured));
@@ -502,7 +530,14 @@ describe('spawn permissions', () => {
       prepareSpawn(node(), parent, {
         ...SLOTS,
         state: {
-          spawns: [{ agentId: CHILD.id, input: 'task', permissions: { 'fs.write': 'maybe' } }],
+          spawns: [
+            {
+              agentId: CHILD.id,
+              input: 'task',
+              budget: { maxSteps: 10 },
+              permissions: { 'fs.write': 'maybe' },
+            },
+          ],
         },
       }),
     ).toThrow(/calls\[0\]\.permissions\.fs.write must be allow\|ask\|deny/);

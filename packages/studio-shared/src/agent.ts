@@ -3,7 +3,6 @@ import type { Edge, Node, PackAssignment, PermissionMap } from 'harnesys';
 import type { AgentGenerationSettings, PortRef, ToolOutputSettings } from './harnesys-bridge.ts';
 import type { AgentMode } from './modes.ts';
 export type BudgetPolicy = 'ask' | 'error';
-export type SpawnBudgetMode = 'pool' | 'inherit';
 export interface AgentBudget {
   maxSteps?: number;
   maxTokens?: number;
@@ -12,7 +11,6 @@ export interface AgentBudget {
   warnAtSteps?: number;
   closeOnExhaustion?: boolean;
   extendDefaultPct?: number;
-  spawnBudget?: SpawnBudgetMode;
 }
 export type AgentGraphRankdir = 'TB' | 'LR';
 export interface AgentGraphPosition {

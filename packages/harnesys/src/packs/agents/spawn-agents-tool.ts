@@ -73,6 +73,9 @@ function spawnCallsShapeError(calls: unknown[]): string | null {
     if (parsed.error !== undefined) {
       return `calls[${idx}].${parsed.error}`;
     }
+    if (parsed.budget === undefined) {
+      return `calls[${idx}].budget is required (maxSteps/maxTokens/deadlineMs, at least one): children never inherit and never divide the parent's budget, so every child run must be capped explicitly — an uncapped child could outlive the delegation`;
+    }
     const parsedPermissions = parseSpawnPermissions(rec?.permissions);
     if (parsedPermissions.error !== undefined) {
       return `calls[${idx}].${parsedPermissions.error}`;
@@ -108,7 +111,7 @@ export function spawnAgentTool(deps: CreateAgentsToolsParams): ToolDefinition {
     group: 'agents',
     sideEffect: 'write',
     description:
-      'Queue one-shot subcontracts: the graph then runs control:spawn. calls is [{ agentId, input, budget?, permissions?, background? }] — budget {maxSteps?, maxTokens?, deadlineMs?} caps this child only; omit to inherit your own budget. input is required: { messages: [{ role: "user", content: "<task>" }] } or a plain string (one user message). Children cannot ask questions back — `ask`-gated calls, approvals and `ask_user` are denied in child context (pre-approve a delegate by passing permissions per call, e.g. {"fs.write":"allow"}; a grant may lift your own ask gate but never a gate you hold as deny — otherwise provide everything upfront). On budget exhaustion a child never fails: it closes with a report and the result carries budget { kind, limit, used, closingStep: true } (used may exceed limit by that closing report step). agentId accepts an exact id, a unique id prefix (8+ chars), or a name — unknown/ambiguous targets fail here with the agent list. Prefer agents_list (reuse) before agents_create. This is not the tool name control:spawn. Blocking children run with bounded concurrency; a spawn timeout aborts the remaining blocking calls and returns a partial result, so read every entry.',
+      'Queue one-shot subcontracts: the graph then runs control:spawn. calls is [{ agentId, input, budget, permissions?, background? }] — budget {maxSteps?, maxTokens?, deadlineMs?} is required per call: the child gets exactly these caps, nothing is inherited from you and nothing is split between siblings; each result echoes the granted quota and usage. input is required: { messages: [{ role: "user", content: "<task>" }] } or a plain string (one user message). Children cannot ask questions back — `ask`-gated calls, approvals and `ask_user` are denied in child context (pre-approve a delegate by passing permissions per call, e.g. {"fs.write":"allow"}; a grant may lift your own ask gate but never a gate you hold as deny — otherwise provide everything upfront). On budget exhaustion a child never fails: it closes with a report and the result carries budget { kind, limit, used, closingStep: true } (used may exceed limit by that closing report step). agentId accepts an exact id, a unique id prefix (8+ chars), or a name — unknown/ambiguous targets fail here with the agent list. Prefer agents_list (reuse) before agents_create. This is not the tool name control:spawn. Blocking children run with bounded concurrency; a spawn timeout aborts the remaining blocking calls and returns a partial result, so read every entry.',
     input: {
       type: 'object',
       properties: {
@@ -153,7 +156,7 @@ export function spawnAgentTool(deps: CreateAgentsToolsParams): ToolDefinition {
               budget: {
                 type: 'object',
                 description:
-                  'Optional child quota (maxSteps, maxTokens, deadlineMs >= 0), replaces the child budget entirely; defaults to inheriting yours. policy is ignored: a sandboxed child never asks and always closes with a report.',
+                  'Required child quota (maxSteps, maxTokens, deadlineMs >= 0), at least one limit. The child gets exactly these caps: nothing is inherited from you and nothing is split between children; this replaces any budget in the child agent definition. deadlineMs counts from the child start. policy is ignored: a sandboxed child never asks and always closes with a report.',
                 properties: {
                   maxSteps: {
                     type: 'number',
@@ -181,7 +184,7 @@ export function spawnAgentTool(deps: CreateAgentsToolsParams): ToolDefinition {
                   'Start this child fire-and-forget: agents_spawn returns immediately and the child keeps running even after this run completes. When the child settles, its report is delivered to you as a thread message. Track with agents_status, wait with agents_wait, steer with agents_send, kill with agents_stop.',
               },
             },
-            required: ['agentId'],
+            required: ['agentId', 'budget'],
           },
         },
       },

@@ -6,8 +6,18 @@ describe('budgetNote', () => {
     const note = budgetNote({ stepsLeft: 6, stepsTotal: 10, msLeft: 600000 });
     expect(note.tag).toBe('budget');
     expect(note.text).toBe(
-      'steps remaining: 6/10 · time remaining: ~10 min (per run; resets on new user message). Wrap up the task within the remaining budget.',
+      'steps remaining: 6/10 · time remaining: ~10 min. This budget is fixed for the whole run — no more steps are granted after it. Plan the work to fit and wrap up before the last step.',
     );
+  });
+
+  test('shows token totals against the quota', () => {
+    const note = budgetNote({ stepsLeft: 6, stepsTotal: 10, tokensLeft: 800, tokensTotal: 1000 });
+    expect(note.text).toContain('tokens remaining: ~800/1000');
+  });
+
+  test('names the parent as the source for sandboxed children', () => {
+    const note = budgetNote({ stepsLeft: 19, stepsTotal: 20 }, false, 'parent');
+    expect(note.text.startsWith('Budget was set by your parent agent for this run')).toBe(true);
   });
 
   test('warns the model when the run is close to the limit', () => {

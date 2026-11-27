@@ -5,9 +5,11 @@ import type { AskBudget, ToolAskSubject } from '../domain/tool-subject.ts';
 import type { RequestPlan } from './llm-plan.ts';
 import type { ModelUsage } from './model-usage.ts';
 import type { SessionEventScope } from './session-event-types.ts';
+import type { AgentSessionEvents } from './session-events-agent.ts';
 
 export type { ModelUsage } from './model-usage.ts';
 export type { SessionEventScope, SessionEventType } from './session-event-types.ts';
+export type { AgentSessionEvents } from './session-events-agent.ts';
 
 export type SessionEvent = SessionEventScope &
   (
@@ -223,36 +225,7 @@ export type SessionEvent = SessionEventScope &
         seq?: number;
         runId?: string;
       }
-    | {
-        type: 'agent.handoff';
-        agentId: string;
-        seq?: number;
-        runId?: string;
-      }
-    | {
-        type: 'agent.spawned';
-        agentId: string;
-        spawnId: string;
-        taskInput?: unknown;
-        seq?: number;
-        runId?: string;
-      }
-    | {
-        type: 'agent.completed';
-        agentId: string;
-        spawnId: string;
-        seq?: number;
-        runId?: string;
-      }
-    | {
-        type: 'agent.failed';
-        agentId: string;
-        spawnId: string;
-        code?: string;
-        message?: string;
-        seq?: number;
-        runId?: string;
-      }
+    | AgentSessionEvents
     | {
         type: 'map.started';
         nodeId: string;

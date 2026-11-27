@@ -205,32 +205,14 @@ export function AgentBudgetFields({
               </Field>
             )}
           />
-          <Controller
-            control={control}
-            name="budgetSpawnMode"
-            render={({ field }) => (
-              <Field className="gap-1.5">
-                <FieldLabel>Children budget</FieldLabel>
-                <ToggleGroup
-                  variant="segment"
-                  value={[field.value]}
-                  onValueChange={(value) => {
-                    const next = value[0];
-                    if (next === 'pool' || next === 'inherit') {
-                      field.onChange(next);
-                    }
-                  }}
-                >
-                  <ToggleGroupItem value="pool">Shared</ToggleGroupItem>
-                  <ToggleGroupItem value="inherit">Inherit</ToggleGroupItem>
-                </ToggleGroup>
-                <FieldDescription className={HINT_CLASS}>
-                  Shared pools one budget across all subagents; Inherit gives each child its own
-                  full budget.
-                </FieldDescription>
-              </Field>
-            )}
-          />
+          <Field className="gap-1.5">
+            <FieldLabel>Children budget</FieldLabel>
+            <FieldDescription className={HINT_CLASS}>
+              Subagents are capped per spawn call: agents_spawn requires an explicit budget
+              (maxSteps / maxTokens / deadlineMs) for every child. Child budgets are independent of
+              this agent&apos;s budget.
+            </FieldDescription>
+          </Field>
         </FieldGroup>
       </FieldSet>
     </>

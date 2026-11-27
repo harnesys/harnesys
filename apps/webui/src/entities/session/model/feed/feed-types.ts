@@ -23,6 +23,7 @@ export interface SpawnInfo {
   recentTools: SpawnToolChip[];
   steps: number;
   tokens: number;
+  quotaSteps?: number;
   preview?: string;
   spawnedAt?: number;
   lastSeenAt?: number;

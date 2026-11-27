@@ -21,8 +21,8 @@ const deps = {
 
 const ctx = {} as ToolContext;
 
-function call(agentId: string): { agentId: string; input: string } {
-  return { agentId, input: 'do it' };
+function call(agentId: string): { agentId: string; input: string; budget: { maxSteps: number } } {
+  return { agentId, input: 'do it', budget: { maxSteps: 10 } };
 }
 
 describe('agents_spawn tool', () => {
@@ -53,7 +53,13 @@ describe('agents_spawn tool', () => {
   test('accepts the messages form of the child input', async () => {
     const tool = spawnAgentTool(deps);
     const raw = {
-      calls: [{ agentId: 'child', input: { messages: [{ role: 'user', content: 'do it' }] } }],
+      calls: [
+        {
+          agentId: 'child',
+          input: { messages: [{ role: 'user', content: 'do it' }] },
+          budget: { maxSteps: 10 },
+        },
+      ],
     };
     const out = await tool.execute(raw, ctx);
     expect(out).toEqual({ calls: raw.calls });
@@ -89,7 +95,14 @@ describe('agents_spawn tool', () => {
   test('accepts a permissions grant and echoes it in the calls', async () => {
     const tool = spawnAgentTool(deps);
     const raw = {
-      calls: [{ agentId: 'child', input: 'do it', permissions: { 'fs.write': 'allow' } }],
+      calls: [
+        {
+          agentId: 'child',
+          input: 'do it',
+          budget: { maxSteps: 10 },
+          permissions: { 'fs.write': 'allow' },
+        },
+      ],
     };
     const out = await tool.execute(raw, ctx);
     expect(out).toEqual({ calls: raw.calls });
@@ -98,7 +111,14 @@ describe('agents_spawn tool', () => {
   test('rejects an invalid permission gate value', async () => {
     const tool = spawnAgentTool(deps);
     const raw = {
-      calls: [{ agentId: 'child', input: 'do it', permissions: { 'fs.write': 'maybe' } }],
+      calls: [
+        {
+          agentId: 'child',
+          input: 'do it',
+          budget: { maxSteps: 10 },
+          permissions: { 'fs.write': 'maybe' },
+        },
+      ],
     };
     const out = await tool.execute(raw, ctx);
     expect(out).toEqual({ error: 'calls[0].permissions.fs.write must be allow|ask|deny' });
@@ -106,8 +126,19 @@ describe('agents_spawn tool', () => {
 
   test('rejects non-object permissions', async () => {
     const tool = spawnAgentTool(deps);
-    const raw = { calls: [{ agentId: 'child', input: 'do it', permissions: 'allow' }] };
+    const raw = {
+      calls: [{ agentId: 'child', input: 'do it', budget: { maxSteps: 10 }, permissions: 'allow' }],
+    };
     const out = await tool.execute(raw, ctx);
     expect(out).toEqual({ error: 'calls[0].permissions must be an object' });
+  });
+
+  test('rejects a call without an explicit budget', async () => {
+    const tool = spawnAgentTool(deps);
+    const raw = { calls: [{ agentId: 'child', input: 'do it' }] };
+    const out = await tool.execute(raw, ctx);
+    expect(String((out as { error?: string }).error ?? '')).toContain(
+      'calls[0].budget is required',
+    );
   });
 });

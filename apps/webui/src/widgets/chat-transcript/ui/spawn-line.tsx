@@ -46,8 +46,9 @@ export function SpawnLine({
       badges.push({ text: `idle ${Math.floor(stalledMs / 1000)}s`, tone: 'live' });
     }
   } else {
-    if (spawn.steps > 0) {
-      badges.push({ text: `${spawn.steps} steps` });
+    const stepsText = stepsBadgeText(spawn.steps, spawn.quotaSteps);
+    if (stepsText !== undefined) {
+      badges.push({ text: stepsText });
     }
     if (spawn.tokens > 0) {
       badges.push({ text: `${formatTokenCount(spawn.tokens)} tok` });
@@ -108,6 +109,12 @@ export function SpawnLine({
       </div>
     </ActivityLine>
   );
+}
+function stepsBadgeText(steps: number, quotaSteps: number | undefined): string | undefined {
+  if (steps <= 0) {
+    return undefined;
+  }
+  return quotaSteps !== undefined ? `${steps}/${quotaSteps} steps` : `${steps} steps`;
 }
 function formatToolStat(stat: SpawnToolStat): string {
   const parts: string[] = [];

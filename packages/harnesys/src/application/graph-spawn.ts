@@ -9,7 +9,6 @@ import type { PermissionMap } from '../ports/permissions.ts';
 import type { RuntimeState } from '../ports/runtime-state.ts';
 import type { ToolDefinition } from '../ports/tools.ts';
 import { formatAgentTargets, resolveAgentTarget } from './agent-target-resolve.ts';
-import { type BudgetRemainder, childBudgetInPool } from './budget.ts';
 import { resolveCapabilitySet, sandboxUniverse } from './capability-set.ts';
 import { compileOrThrow, type Plan } from './compile.ts';
 import { evalExpr } from './expr-eval.ts';
@@ -54,6 +53,7 @@ export interface SpawnResultItem {
   error?: SpawnCallError;
   blocked?: DeniedToolEntry[];
   budget?: SpawnBudgetHit;
+  quota?: AgentBudget;
   usage?: SpawnUsage;
 }
 export interface SpawnUsage {
@@ -299,7 +299,13 @@ function parseCalls(raw: unknown): SpawnCall[] {
     }
     const parsed = parseSpawnBudget(rec.budget);
     if (parsed.error !== undefined) {
-      throw codedRunError('spawn_calls_shape', `calls[${idx}].${parsed.error}`);
+      throw codedRunError('spawn_budget_invalid', `calls[${idx}].${parsed.error}`);
+    }
+    if (parsed.budget === undefined) {
+      throw codedRunError(
+        'spawn_budget_required',
+        `calls[${idx}].budget is required: children run in a sandbox, never ask, and their budgets are set per call (maxSteps/maxTokens/deadlineMs), independent of the parent's own budget — an uncapped child could outlive the delegation. Set explicit caps for this child.`,
+      );
     }
     const parsedPermissions = parseSpawnPermissions(rec.permissions);
     if (parsedPermissions.error !== undefined) {
@@ -426,6 +432,12 @@ function abortError(abort: SpawnAbort): SpawnCallError {
   }
   return { code: 'spawn_aborted', message: 'spawn aborted before the child finished' };
 }
+interface QuotaProp {
+  quota?: AgentBudget;
+}
+function quotaProp(target: SpawnTarget): QuotaProp {
+  return target.quota === undefined ? {} : { quota: target.quota };
+}
 async function runOneChild(input: {
   parent: GraphOpts;
   target: SpawnTarget;
@@ -450,13 +462,9 @@ async function runOneChild(input: {
     target.def.model === undefined && parent.agent.model !== undefined
       ? { ...target.def, model: parent.agent.model }
       : target.def;
-  const childBudget = target.quota
-    ? { ...(target.call.budget ?? modelInherited.budget ?? parent.agent.budget), ...target.quota }
-    : (target.call.budget ?? modelInherited.budget ?? parent.agent.budget);
+  const childBudget = target.quota;
   const childDef =
-    childBudget === modelInherited.budget
-      ? modelInherited
-      : { ...modelInherited, budget: childBudget };
+    childBudget === undefined ? modelInherited : { ...modelInherited, budget: childBudget };
   let plan: Plan;
   try {
     plan = compileOrThrow(childDef);
@@ -465,6 +473,7 @@ async function runOneChild(input: {
     return {
       agentId: target.call.agentId,
       spawnId: target.spawnId,
+      ...quotaProp(target),
       output: null,
       error: {
         code: 'agent_invalid',
@@ -592,6 +601,7 @@ async function runOneChild(input: {
     return {
       agentId: target.call.agentId,
       spawnId: target.spawnId,
+      ...quotaProp(target),
       output: null,
       error: signal.aborted ? abortError(abort) : { code, message },
       ...blockedProp(),
@@ -603,6 +613,7 @@ async function runOneChild(input: {
     return {
       agentId: target.call.agentId,
       spawnId: target.spawnId,
+      ...quotaProp(target),
       output: remoteOutput.output,
       ...blockedProp(),
     };
@@ -617,6 +628,7 @@ async function runOneChild(input: {
       return {
         agentId: target.call.agentId,
         spawnId: target.spawnId,
+        ...quotaProp(target),
         output: null,
         error: {
           code: 'stopped_by_hook',
@@ -629,6 +641,7 @@ async function runOneChild(input: {
     return {
       agentId: target.call.agentId,
       spawnId: target.spawnId,
+      ...quotaProp(target),
       output: childOutputFromState(rec),
       ...(over !== undefined ? { budget: over } : {}),
       usage: usageOf(snap),
@@ -660,6 +673,7 @@ async function runOneChild(input: {
     return {
       agentId: target.call.agentId,
       spawnId: target.spawnId,
+      ...quotaProp(target),
       output: null,
       error: {
         code: 'sandbox_blocked',
@@ -676,6 +690,7 @@ async function runOneChild(input: {
     return {
       agentId: target.call.agentId,
       spawnId: target.spawnId,
+      ...quotaProp(target),
       output: null,
       error: abortError(abort),
       ...blockedProp(),
@@ -684,6 +699,7 @@ async function runOneChild(input: {
   return {
     agentId: target.call.agentId,
     spawnId: target.spawnId,
+    ...quotaProp(target),
     output: null,
     error: {
       code: status,
@@ -697,7 +713,6 @@ export function prepareSpawn(
   parent: GraphOpts,
   slots: SpawnSlots,
   done?: SpawnResultItem[],
-  remainder?: BudgetRemainder,
 ): PreparedSpawn {
   if (parent.sandbox) {
     throw codedRunError('spawn_in_sandbox', 'spawn is not allowed in a sandboxed run');
@@ -717,11 +732,8 @@ export function prepareSpawn(
   const timeoutMs = resolveTimeoutMs(node);
   const onTimeout = resolveOnTimeout(node);
   const { targets, denied } = resolveTargets(pendingCalls, parent.agents, parent.agent);
-  const pooled = parent.agent.budget?.spawnBudget !== 'inherit';
-  if (pooled && remainder !== undefined && targets.length > 0) {
-    for (const target of targets) {
-      target.quota = childBudgetInPool(remainder, target.call.budget, targets.length);
-    }
+  for (const target of targets) {
+    target.quota = target.call.budget;
   }
   return {
     targets,

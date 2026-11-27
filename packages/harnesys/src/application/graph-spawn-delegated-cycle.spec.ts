@@ -52,7 +52,9 @@ function parentOf(spawnId: string): AgentDefinition {
     id: 'parent',
     prompts: { main: { instructions: 'work' } },
     model: { provider: 'test', model: 'test' },
-    state: { initial: { spawns: [{ agentId: 'child', input: 'go', spawnId }] } },
+    state: {
+      initial: { spawns: [{ agentId: 'child', input: 'go', spawnId, budget: { maxSteps: 10 } }] },
+    },
     graph: {
       nodes: {
         start: { type: 'core:start' },
