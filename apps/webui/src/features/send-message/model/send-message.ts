@@ -112,6 +112,7 @@ function appendUserEvent(queued: QueuedSend): void {
           name: item.name,
           mediaType: item.mediaType,
           path: item.path,
+          sizeBytes: item.sizeBytes,
         }))
       : undefined,
     clientEventId,

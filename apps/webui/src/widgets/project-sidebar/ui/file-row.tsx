@@ -29,12 +29,12 @@ function EntryTypeIcon({
   addonIcon?: string;
 }) {
   if (isDir) {
-    return <FolderTypeIcon open={isExpanded} size="sm" />;
+    return <FolderTypeIcon open={isExpanded} size="md" />;
   }
   if (addonIcon !== undefined) {
-    return <IconRef icon={addonIcon} className="size-4" />;
+    return <IconRef icon={addonIcon} className="size-[18px]" />;
   }
-  return <FileTypeIcon name={name} size="sm" />;
+  return <FileTypeIcon name={name} size="md" />;
 }
 
 function FileRowLabel({
@@ -73,7 +73,7 @@ function FileRowLabel({
       ) : (
         <span className="flex size-4 shrink-0 items-center justify-center" />
       )}
-      <span className="flex size-4 shrink-0 items-center justify-center [&>svg]:size-4">
+      <span className="flex size-[18px] shrink-0 items-center justify-center [&>svg]:size-[18px]">
         <EntryTypeIcon
           isDir={isDir}
           isExpanded={isExpanded}

@@ -62,6 +62,7 @@ export function resolveAttachmentsOf(
       name: row.name,
       mediaType: row.mediaType,
       path: join(threadDir, row.path),
+      sizeBytes: row.sizeBytes,
     });
   }
   return out;

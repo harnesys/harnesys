@@ -16,4 +16,5 @@ export interface Attachment {
   name: string;
   mediaType: string;
   path: string;
+  sizeBytes?: number;
 }

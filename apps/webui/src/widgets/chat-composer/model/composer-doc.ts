@@ -3,8 +3,14 @@ import { inlineEntityKind, inlineEntityText, isInlineEntityNode } from './inline
 export interface ComposerPayload {
   text: string;
   skills: string[];
+  attachments: string[];
 }
-function appendInlineEntity(child: ProseMirrorNode, text: string, skills: string[]): string {
+function appendInlineEntity(
+  child: ProseMirrorNode,
+  text: string,
+  skills: string[],
+  attachments: string[],
+): string {
   const kind = inlineEntityKind(child);
   const ref = child.attrs.ref as string;
   if (!kind) {
@@ -16,11 +22,22 @@ function appendInlineEntity(child: ProseMirrorNode, text: string, skills: string
     }
     return text;
   }
+  if (kind === 'file') {
+    const token = (child.attrs.token as string | undefined) ?? '';
+    if (token.length > 0 && !attachments.includes(token)) {
+      attachments.push(token);
+    }
+  }
   const href = child.attrs.href as string;
   const gap = text.length > 0 && !text.endsWith(' ') ? ' ' : '';
   return `${text}${gap}${inlineEntityText(kind, ref, href)} `;
 }
-function appendInlineChild(child: ProseMirrorNode, text: string, skills: string[]): string {
+function appendInlineChild(
+  child: ProseMirrorNode,
+  text: string,
+  skills: string[],
+  attachments: string[],
+): string {
   if (child.isText) {
     return text + (child.text ?? '');
   }
@@ -28,20 +45,21 @@ function appendInlineChild(child: ProseMirrorNode, text: string, skills: string[
     return `${text}\n`;
   }
   if (isInlineEntityNode(child)) {
-    return appendInlineEntity(child, text, skills);
+    return appendInlineEntity(child, text, skills, attachments);
   }
   return text;
 }
 export function serializeComposerDoc(doc: ProseMirrorNode): ComposerPayload {
   const skills: string[] = [];
+  const attachments: string[] = [];
   const blocks: string[] = [];
   doc.forEach((block) => {
     let text = '';
     block.forEach((child) => {
-      text = appendInlineChild(child, text, skills);
+      text = appendInlineChild(child, text, skills, attachments);
     });
     blocks.push(text);
   });
   const text = blocks.join('\n').replace(/ {2,}/g, ' ').trim();
-  return { text, skills };
+  return { text, skills, attachments };
 }

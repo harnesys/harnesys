@@ -1,7 +1,18 @@
 import { openFile } from '@/features/ide';
+import type { FileRef } from '@/features/open-file';
 import { loadThreadAttachment } from '@/shared/api';
 import { useAuthedBlobUrl } from '@/shared/api/blob-url';
-import { FileChip } from '@/shared/ui/file-chip';
+import { isTextLike } from '@/shared/lib/file-meta';
+import { AttachmentTile, useBlobTextPreview } from '@/shared/ui/attachment-tile';
+
+export interface AttachmentPreviewItem {
+  id: string;
+  kind: string;
+  name: string;
+  mediaType: string;
+  path: string;
+  sizeBytes?: number;
+}
 
 export function uniqueAttachments<
   T extends {
@@ -22,51 +33,71 @@ export function uniqueAttachments<
   return out;
 }
 
+function attachmentFileRef(threadId: string, item: AttachmentPreviewItem): FileRef {
+  return {
+    source: 'thread-attachment',
+    threadId,
+    attachmentId: item.id,
+    name: item.name,
+    mediaType: item.mediaType ?? '',
+  };
+}
+
+function ImageTile({ threadId, item }: { threadId: string; item: AttachmentPreviewItem }) {
+  const { url } = useAuthedBlobUrl(() => loadThreadAttachment(threadId, item.id), item.id);
+  return (
+    <AttachmentTile
+      name={item.name}
+      mediaType={item.mediaType ?? ''}
+      bytes={item.sizeBytes}
+      thumb={url}
+      href={url ?? undefined}
+      load={() => loadThreadAttachment(threadId, item.id)}
+      onOpen={() => openFile(attachmentFileRef(threadId, item))}
+    />
+  );
+}
+
+function TextTile({ threadId, item }: { threadId: string; item: AttachmentPreviewItem }) {
+  const { url } = useAuthedBlobUrl(() => loadThreadAttachment(threadId, item.id), item.id);
+  const preview = useBlobTextPreview(url);
+  return (
+    <AttachmentTile
+      name={item.name}
+      mediaType={item.mediaType ?? ''}
+      bytes={item.sizeBytes}
+      preview={preview}
+      href={url ?? undefined}
+      load={() => loadThreadAttachment(threadId, item.id)}
+      onOpen={() => openFile(attachmentFileRef(threadId, item))}
+    />
+  );
+}
+
+function PlainTile({ threadId, item }: { threadId: string; item: AttachmentPreviewItem }) {
+  return (
+    <AttachmentTile
+      name={item.name}
+      mediaType={item.mediaType ?? ''}
+      bytes={item.sizeBytes}
+      load={() => loadThreadAttachment(threadId, item.id)}
+      onOpen={() => openFile(attachmentFileRef(threadId, item))}
+    />
+  );
+}
+
 export function AttachmentPreview({
   threadId,
   item,
 }: {
   threadId: string;
-  item: {
-    id: string;
-    kind: string;
-    name: string;
-    mediaType: string;
-    path: string;
-  };
+  item: AttachmentPreviewItem;
 }) {
-  const { url } = useAuthedBlobUrl(() => loadThreadAttachment(threadId, item.id), item.id);
-  if (item.kind === 'audio') {
-    return (
-      <audio controls src={url ?? undefined} className="h-9 max-w-64">
-        <track kind="captions" />
-      </audio>
-    );
+  if (item.kind === 'image') {
+    return <ImageTile threadId={threadId} item={item} />;
   }
-  if (item.kind === 'video') {
-    return (
-      <video controls src={url ?? undefined} className="max-h-48 max-w-64 rounded-xl">
-        <track kind="captions" />
-      </video>
-    );
+  if (isTextLike(item.name, item.mediaType ?? '')) {
+    return <TextTile threadId={threadId} item={item} />;
   }
-  return (
-    <FileChip
-      name={item.name}
-      mediaType={item.mediaType ?? ''}
-      href={url ?? undefined}
-      onOpen={
-        threadId
-          ? () =>
-              openFile({
-                source: 'thread-attachment',
-                threadId,
-                attachmentId: item.id,
-                name: item.name,
-                mediaType: item.mediaType ?? '',
-              })
-          : undefined
-      }
-    />
-  );
+  return <PlainTile threadId={threadId} item={item} />;
 }

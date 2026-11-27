@@ -8,7 +8,7 @@ import { runSlashCommand } from './run-slash-command';
 import type { SlashCommand } from './slash-commands';
 export interface ComposerSubmitOptions {
   payload: ComposerPayload;
-  pending: File[];
+  files: File[];
   threadId: string;
   quote?: MessageQuote;
   effort: string | undefined;
@@ -16,19 +16,16 @@ export interface ComposerSubmitOptions {
   disabled: boolean;
   setSending(value: boolean): void;
   clear(): void;
-  setPending(update: File[] | ((list: File[]) => File[])): void;
   clearQuote?: () => void;
   restoreQuote?: () => void;
 }
 export function submitComposer(options: ComposerSubmitOptions): void {
   const content = options.payload.text;
-  if ((!content && options.pending.length === 0) || options.disabled) {
+  if ((!content && options.files.length === 0) || options.disabled) {
     return;
   }
-  const files = options.pending;
+  const files = options.files;
   options.setSending(true);
-  options.clear();
-  options.setPending([]);
   options.clearQuote?.();
   void uploadAndSend({
     threadId: options.threadId,
@@ -39,10 +36,12 @@ export function submitComposer(options: ComposerSubmitOptions): void {
     mode: options.mode,
     skills: options.payload.skills,
   })
+    .then(() => {
+      options.clear();
+    })
     .catch((error) => {
       const message = error instanceof ApiError ? error.message : 'Send failed';
       toast.add({ title: 'Could not send', description: message });
-      options.setPending((list) => (list.length === 0 ? files : list));
       options.restoreQuote?.();
     })
     .finally(() => {

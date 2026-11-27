@@ -15,7 +15,7 @@ export type AttachmentInsert = Omit<AttachmentRecord, 'path'> & { path?: string 
 
 export const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 
-const UNSAFE_FILE_NAME = /[^\w.\- ()[\]]/g;
+const UNSAFE_FILE_NAME = /[^\p{L}\p{N}._\- ()[\]]/gu;
 
 export function kindFromMediaType(mediaType: string): AttachmentKind {
   if (mediaType.startsWith('image/')) {

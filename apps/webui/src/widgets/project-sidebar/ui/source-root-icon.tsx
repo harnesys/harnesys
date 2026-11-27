@@ -68,7 +68,7 @@ export function SourceRootIcon({
       )}
       aria-hidden
     >
-      <FolderTypeIcon open={open} size="sm" />
+      <FolderTypeIcon open={open} size="md" />
       <DistributionBadge
         hasGit={hasGit}
         hasRemote={hasRemote}

@@ -34,6 +34,10 @@ describe('sanitizeFileName', () => {
     expect(sanitizeFileName('a:b*c?.txt')).toBe('a_b_c_.txt');
   });
 
+  test('keeps unicode letters', () => {
+    expect(sanitizeFileName('бэклог_отчет 2026-11-27.md')).toBe('бэклог_отчет 2026-11-27.md');
+  });
+
   test('strips leading dots and falls back for empty names', () => {
     expect(sanitizeFileName('.hidden')).toBe('hidden');
     expect(sanitizeFileName('..')).toBe('file');

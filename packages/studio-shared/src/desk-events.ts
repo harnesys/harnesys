@@ -10,6 +10,7 @@ export interface ThreadAttachment {
   name: string;
   mediaType: string;
   path: string;
+  sizeBytes?: number;
 }
 export interface HumanEntry {
   id: string;

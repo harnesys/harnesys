@@ -155,7 +155,7 @@ export function UserSegment({
             />
           ) : null}
           {atts?.length ? (
-            <div className={cn('flex max-w-[80%] flex-wrap gap-2', ATTACHMENT_JUSTIFY[side])}>
+            <div className={cn('flex flex-wrap gap-2', ATTACHMENT_JUSTIFY[side])}>
               {uniqueAttachments(atts).map((item) => (
                 <AttachmentPreview key={item.id} threadId={threadId ?? ''} item={item} />
               ))}

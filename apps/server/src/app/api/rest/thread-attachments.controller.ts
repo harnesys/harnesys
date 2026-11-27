@@ -7,6 +7,7 @@ import { UploadThreadAttachmentUseCase } from '../../application/threads/upload-
 import type { AttachmentRecord } from '../../domain/thread/attachment.ts';
 import { ThreadValidationException } from '../../domain/thread/thread.error.ts';
 import { OrgIdFromRequest, OrgIdHeader } from '../org-id.ts';
+import { contentDisposition } from './content-disposition.ts';
 
 @Controller('threads')
 export class ThreadAttachmentsController {
@@ -54,7 +55,10 @@ export class ThreadAttachmentsController {
     @Param('attachmentId') attachmentId: string,
   ): Promise<Response> {
     const { meta, fileName, bytes } = await this.get.execute({ orgId, threadId, attachmentId });
-    const disposition = meta.kind === 'file' ? `attachment; filename="${fileName}"` : 'inline';
+    const disposition = contentDisposition(
+      meta.kind === 'file' ? 'attachment' : 'inline',
+      fileName,
+    );
     return new Response(new Uint8Array(bytes), {
       headers: {
         'Content-Type': meta.mediaType || 'application/octet-stream',

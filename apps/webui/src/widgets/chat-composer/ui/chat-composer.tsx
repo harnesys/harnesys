@@ -1,6 +1,6 @@
 import { DEFAULT_MODE_ID } from '@harnesys/studio-shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Agent } from '@/entities/agent';
 import { useAgentStore } from '@/entities/agent';
 import { useSessionStore } from '@/entities/session';
@@ -42,9 +42,9 @@ import { useComposerFileOptions } from '../model/file-source';
 import { threadMentionOptions } from '../model/mention-source';
 import { modelContextWindow } from '../model/model-context';
 import { allowedAttachKinds, modelInputModalities } from '../model/model-input';
+import { getPendingFile, prunePendingFiles, putPendingFile } from '../model/pending-files';
 import type { SlashCommand } from '../model/slash-commands';
 import { useReplyQuote } from '../model/use-reply-quote';
-import { AttachDraft } from './attach-draft';
 import { AutoReadButton } from './auto-read-button';
 import { BackgroundAgentsStrip } from './background-agents-strip';
 import {
@@ -91,7 +91,7 @@ export function ChatComposer({
     null;
   const hitl = pendingHitl(events);
   const [hasText, setHasText] = useState(false);
-  const [pending, setPending] = useState<File[]>([]);
+  const [pendingTokens, setPendingTokens] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
   const [dropPrompt, setDropPrompt] = useState<ComposerDropPrompt | null>(null);
   const [mode, setMode] = useState<ComposerMode>(DEFAULT_MODE_ID);
@@ -110,9 +110,12 @@ export function ChatComposer({
   const usage = composerUsage(events, contextWindow);
   const inputModalities = modelInputModalities(modelId, providers);
   const allowed = allowedAttachKinds(inputModalities);
-  const pendingNames = useMemo(() => pending.map((file) => file.name), [pending]);
+  const pendingNames = pendingTokens.flatMap((token) => {
+    const file = getPendingFile(token);
+    return file ? [file.name] : [];
+  });
   const fileOptions = useComposerFileOptions(thread?.id ?? null, agent, pendingNames);
-  const canSend = hasText || pending.length > 0;
+  const canSend = hasText || pendingTokens.length > 0;
   const isGroupThread = thread?.kind === 'group';
   const agents = useAgentStore((state) => state.items);
   const mentionOptions = threadMentionOptions(thread, agents);
@@ -170,10 +173,6 @@ export function ChatComposer({
             consumeComposerPaste(event, pendingNames, addFiles);
           }}
         >
-          <AttachDraft
-            files={pending}
-            onRemove={(index) => setPending((list) => list.filter((_, i) => i !== index))}
-          />
           <BackgroundAgentsStrip
             threadId={thread.id}
             projectId={agent.orgId}
@@ -250,6 +249,8 @@ export function ChatComposer({
   function handleDraftChange(next: ComposerPayload) {
     const nextHasText = next.text.trim().length > 0;
     setHasText((prev) => (prev === nextHasText ? prev : nextHasText));
+    setPendingTokens((prev) => (sameTokens(prev, next.attachments) ? prev : [...next.attachments]));
+    prunePendingFiles(next.attachments);
   }
   function handleComposerDrop(event: React.DragEvent<HTMLDivElement>) {
     event.preventDefault();
@@ -321,9 +322,11 @@ export function ChatComposer({
     setDropPrompt(null);
   }
   function addFiles(files: File[]) {
-    const accepted = addComposerFiles(files, inputModalities, setPending);
+    const accepted = addComposerFiles(files, inputModalities);
     for (const file of accepted) {
-      editorRef.current?.insertFileMention(file.name);
+      const token = crypto.randomUUID();
+      putPendingFile(token, file);
+      editorRef.current?.insertFileMention(file.name, undefined, token);
     }
   }
   function insertVoiceText(text: string) {
@@ -334,16 +337,20 @@ export function ChatComposer({
     if (!thread) {
       return;
     }
+    const payload = editorRef.current?.getPayload() ?? { text: '', skills: [], attachments: [] };
+    const files = payload.attachments.flatMap((token) => {
+      const file = getPendingFile(token);
+      return file ? [file] : [];
+    });
     submitComposer({
-      payload: editorRef.current?.getPayload() ?? { text: '', skills: [] },
-      pending,
+      payload,
+      files,
       threadId: thread.id,
       effort: isGroupThread ? undefined : currentEffort,
       mode,
       disabled,
       setSending,
       clear: () => editorRef.current?.clear(),
-      setPending,
       ...replyOptions,
     });
   }
@@ -357,4 +364,7 @@ export function ChatComposer({
       setSending,
     });
   }
+}
+function sameTokens(current: readonly string[], next: readonly string[]): boolean {
+  return current.length === next.length && current.every((token, index) => token === next[index]);
 }

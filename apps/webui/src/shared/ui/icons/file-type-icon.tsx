@@ -33,29 +33,28 @@ export function FileTypeIcon({
       aria-label={`${name} file`}
     >
       <defs>
-        <linearGradient id={paperId} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={paperId} x1="0.1" y1="0" x2="0.55" y2="1">
           <stop offset="0" stopColor={style.from} />
-          <stop offset="0.55" stopColor={style.to} />
           <stop offset="1" stopColor={style.to} />
         </linearGradient>
         <linearGradient id={paperShadeId} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#000000" stopOpacity="0" />
-          <stop offset="1" stopColor="#000000" stopOpacity="0.18" />
+          <stop offset="1" stopColor="#000000" stopOpacity="0.12" />
         </linearGradient>
         <filter id={blurId} x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="0.45" />
+          <feGaussianBlur stdDeviation="0.35" />
         </filter>
       </defs>
-      <g transform="translate(-2.417 -2.298) scale(1.19149)">
+      <g transform="translate(-0.705 -0.6) scale(1.05)">
         <path d={BODY_PATH} fill={`url(#${paperId})`} />
         <path d={BODY_PATH} fill={`url(#${paperShadeId})`} />
         <path
-          d="M13.7 3.2 V6.3 C13.7 7.51 14.68 8.5 15.9 8.5 H19.0 Z"
+          d="M13.7 3.4 V6.3 C13.7 7.51 14.68 8.5 15.9 8.5 H18.8 Z"
           fill="#0a0a0c"
-          opacity="0.35"
+          opacity="0.16"
           filter={`url(#${blurId})`}
         />
-        <path d={FOLD_PATH} fill="#ffffff" opacity="0.32" />
+        <path d={FOLD_PATH} fill="#ffffff" opacity="0.35" />
         {style.glyph === 'text' ? (
           <text
             x="12.1"

@@ -56,6 +56,7 @@ import { UpdateIssueUseCase } from '../../application/issues/update-issue.use-ca
 import { UpdateIssueStatusUseCase } from '../../application/issues/update-issue-status.use-case.ts';
 import { UploadIssueAttachmentUseCase } from '../../application/issues/upload-issue-attachment.use-case.ts';
 import { IssueValidationException } from '../../domain/issue/issue.error.ts';
+import { contentDisposition } from './content-disposition.ts';
 
 @Controller('orgs/:orgId/issues')
 export class IssuesController {
@@ -236,11 +237,13 @@ export class IssuesController {
     @Param('attachmentId') attachmentId: string,
   ): Promise<Response> {
     const content = await this.getAttachment.execute({ orgId, issueId, attachmentId });
-    const fileName = content.name.replaceAll('"', '');
     return new Response(new Uint8Array(content.bytes), {
       headers: {
         'Content-Type': content.mediaType || 'application/octet-stream',
-        'Content-Disposition': content.inline ? 'inline' : `attachment; filename="${fileName}"`,
+        'Content-Disposition': contentDisposition(
+          content.inline ? 'inline' : 'attachment',
+          content.name,
+        ),
       },
     });
   }

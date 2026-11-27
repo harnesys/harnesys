@@ -46,7 +46,7 @@ export interface ComposerEditorHandle {
   getPayload(): ComposerPayload;
   clear(): void;
   focus(): void;
-  insertFileMention(ref: string, href?: string): void;
+  insertFileMention(ref: string, href?: string, token?: string): void;
   insertEntity(entity: DraggedEntity, at?: number | null): void;
   insertPlainText(text: string): void;
   posAtPoint(x: number, y: number): number | null;
@@ -222,11 +222,11 @@ export const ComposerEditor = forwardRef<ComposerEditorHandle, ComposerEditorPro
       closePicker();
     }, [editor, closePicker]);
     const insertFileMention = useCallback(
-      (mentionRef: string, href?: string) => {
+      (mentionRef: string, href?: string, token?: string) => {
         if (latest.current.disabled || !isValidEntityRef('file', mentionRef)) {
           return;
         }
-        insertFileChips(editor, editor.state.selection.from, [{ ref: mentionRef, href }]);
+        insertFileChips(editor, editor.state.selection.from, [{ ref: mentionRef, href, token }]);
       },
       [editor],
     );

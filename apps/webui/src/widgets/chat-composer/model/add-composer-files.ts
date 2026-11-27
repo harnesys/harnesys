@@ -1,14 +1,7 @@
 import type { Modality } from '@harnesys/studio-shared';
 import { toast } from '@/shared/ui/toast';
 import { canAttachFile } from './model-input';
-export function addComposerFiles(
-  files: File[],
-  inputModalities: Modality[] | undefined,
-  setPending: (update: (list: File[]) => File[]) => void,
-): File[] {
-  if (files.length === 0) {
-    return [];
-  }
+export function addComposerFiles(files: File[], inputModalities: Modality[] | undefined): File[] {
   const next: File[] = [];
   for (const file of files) {
     if (!canAttachFile(file, inputModalities)) {
@@ -16,9 +9,6 @@ export function addComposerFiles(
       continue;
     }
     next.push(file);
-  }
-  if (next.length > 0) {
-    setPending((list) => [...list, ...next]);
   }
   return next;
 }

@@ -7,8 +7,8 @@ export interface FileIconStyle {
   text?: string;
 }
 
-const IMAGE_STYLE: FileIconStyle = { from: '#3aa8c9', to: '#155e75', glyph: 'image' };
-const GENERIC_STYLE: FileIconStyle = { from: '#7c7c84', to: '#3d3d43', glyph: 'doc' };
+const IMAGE_STYLE: FileIconStyle = { from: '#58a5c0', to: '#2a657d', glyph: 'image' };
+const GENERIC_STYLE: FileIconStyle = { from: '#8a8a92', to: '#4e4e56', glyph: 'doc' };
 
 const IMAGE_EXTS = new Set([
   'png',
@@ -26,40 +26,40 @@ const ARCHIVE_EXTS = new Set(['zip', 'tar', 'gz', 'tgz', 'rar', '7z', 'bz2', 'xz
 const SHELL_EXTS = new Set(['sh', 'bash', 'zsh']);
 
 export const FILE_ICON_STYLES: Record<string, FileIconStyle> = {
-  ts: { from: '#5b8def', to: '#27509c', glyph: 'text', text: 'TS' },
-  tsx: { from: '#5b8def', to: '#27509c', glyph: 'text', text: 'TS' },
-  js: { from: '#d9a923', to: '#8a6410', glyph: 'text', text: 'JS' },
-  jsx: { from: '#d9a923', to: '#8a6410', glyph: 'text', text: 'JS' },
-  mjs: { from: '#d9a923', to: '#8a6410', glyph: 'text', text: 'JS' },
-  cjs: { from: '#d9a923', to: '#8a6410', glyph: 'text', text: 'JS' },
-  json: { from: '#6e7bd9', to: '#36418f', glyph: 'text', text: '{}' },
-  jsonc: { from: '#6e7bd9', to: '#36418f', glyph: 'text', text: '{}' },
-  md: { from: '#8b7cf0', to: '#4636a8', glyph: 'text', text: 'M↓' },
-  dxf: { from: '#e0b34a', to: '#a8791c', glyph: 'doc', text: 'DXF' },
-  mdx: { from: '#8b7cf0', to: '#4636a8', glyph: 'text', text: 'M↓' },
-  html: { from: '#e0823c', to: '#8f4212', glyph: 'text', text: '</>' },
-  css: { from: '#4fa8e8', to: '#1c5f96', glyph: 'text', text: '#' },
-  scss: { from: '#d16a9e', to: '#8c2f5e', glyph: 'text', text: '#' },
-  less: { from: '#d16a9e', to: '#8c2f5e', glyph: 'text', text: '#' },
-  vue: { from: '#4db874', to: '#1f6b3d', glyph: 'text', text: 'VUE' },
-  svelte: { from: '#e0655f', to: '#8a2a26', glyph: 'text', text: 'SV' },
-  py: { from: '#4a8ac9', to: '#23517f', glyph: 'text', text: 'PY' },
-  go: { from: '#4fc3d9', to: '#17606e', glyph: 'text', text: 'GO' },
-  rs: { from: '#d97b3f', to: '#8a3c12', glyph: 'text', text: 'RS' },
-  php: { from: '#7b83c9', to: '#3d4480', glyph: 'text', text: 'PHP' },
-  sql: { from: '#a86bc9', to: '#5c2f7a', glyph: 'text', text: 'SQL' },
-  xml: { from: '#9aa53c', to: '#4f5a12', glyph: 'text', text: 'XML' },
-  yml: { from: '#7d93a8', to: '#3c4f60', glyph: 'text', text: 'YML' },
-  yaml: { from: '#7d93a8', to: '#3c4f60', glyph: 'text', text: 'YML' },
-  toml: { from: '#7d93a8', to: '#3c4f60', glyph: 'text', text: 'TOML' },
-  env: { from: '#7d93a8', to: '#3c4f60', glyph: 'text', text: 'ENV' },
-  docx: { from: '#4f8bd9', to: '#1c4f96', glyph: 'text', text: 'W' },
-  doc: { from: '#4f8bd9', to: '#1c4f96', glyph: 'text', text: 'W' },
-  xlsx: { from: '#4faf6e', to: '#1c6b38', glyph: 'text', text: 'X' },
-  xls: { from: '#4faf6e', to: '#1c6b38', glyph: 'text', text: 'X' },
-  csv: { from: '#4faf6e', to: '#1c6b38', glyph: 'text', text: 'CSV' },
-  pptx: { from: '#e08a55', to: '#96431a', glyph: 'text', text: 'P' },
-  pdf: { from: '#c25454', to: '#7a2724', glyph: 'doc' },
+  ts: { from: '#6b9fd8', to: '#3b6ba6', glyph: 'text', text: 'TS' },
+  tsx: { from: '#6b9fd8', to: '#3b6ba6', glyph: 'text', text: 'TS' },
+  js: { from: '#d8b45a', to: '#96762a', glyph: 'text', text: 'JS' },
+  jsx: { from: '#d8b45a', to: '#96762a', glyph: 'text', text: 'JS' },
+  mjs: { from: '#d8b45a', to: '#96762a', glyph: 'text', text: 'JS' },
+  cjs: { from: '#d8b45a', to: '#96762a', glyph: 'text', text: 'JS' },
+  json: { from: '#8590d8', to: '#525d9e', glyph: 'text', text: '{}' },
+  jsonc: { from: '#8590d8', to: '#525d9e', glyph: 'text', text: '{}' },
+  md: { from: '#9d8fe0', to: '#5f4fb0', glyph: 'text', text: 'M↓' },
+  mdx: { from: '#9d8fe0', to: '#5f4fb0', glyph: 'text', text: 'M↓' },
+  dxf: { from: '#d0a855', to: '#8f6e28', glyph: 'doc', text: 'DXF' },
+  html: { from: '#dd8a52', to: '#9c5a2a', glyph: 'text', text: '</>' },
+  css: { from: '#6aa5dd', to: '#35709e', glyph: 'text', text: '#' },
+  scss: { from: '#cc7aa6', to: '#8a4a6e', glyph: 'text', text: '#' },
+  less: { from: '#cc7aa6', to: '#8a4a6e', glyph: 'text', text: '#' },
+  vue: { from: '#5fae7e', to: '#2f704a', glyph: 'text', text: 'VUE' },
+  svelte: { from: '#d97570', to: '#94403c', glyph: 'text', text: 'SV' },
+  py: { from: '#5b91cc', to: '#356091', glyph: 'text', text: 'PY' },
+  go: { from: '#5fb2c9', to: '#2f7285', glyph: 'text', text: 'GO' },
+  rs: { from: '#cc8050', to: '#8a4e28', glyph: 'text', text: 'RS' },
+  php: { from: '#8890cc', to: '#4f568e', glyph: 'text', text: 'PHP' },
+  sql: { from: '#a37cc9', to: '#66448a', glyph: 'text', text: 'SQL' },
+  xml: { from: '#a3ac52', to: '#62681f', glyph: 'text', text: 'XML' },
+  yml: { from: '#8598ab', to: '#4c5f70', glyph: 'text', text: 'YML' },
+  yaml: { from: '#8598ab', to: '#4c5f70', glyph: 'text', text: 'YML' },
+  toml: { from: '#8598ab', to: '#4c5f70', glyph: 'text', text: 'TOML' },
+  env: { from: '#8598ab', to: '#4c5f70', glyph: 'text', text: 'ENV' },
+  docx: { from: '#5f8ec9', to: '#315d91', glyph: 'text', text: 'W' },
+  doc: { from: '#5f8ec9', to: '#315d91', glyph: 'text', text: 'W' },
+  xlsx: { from: '#5fa878', to: '#2f6b45', glyph: 'text', text: 'X' },
+  xls: { from: '#5fa878', to: '#2f6b45', glyph: 'text', text: 'X' },
+  csv: { from: '#5fa878', to: '#2f6b45', glyph: 'text', text: 'CSV' },
+  pptx: { from: '#cc8258', to: '#8a4e2c', glyph: 'text', text: 'P' },
+  pdf: { from: '#c26565', to: '#853a3a', glyph: 'doc' },
 };
 
 function fileExt(name: string): string {
@@ -87,10 +87,10 @@ export function iconStyleForFile(
     return IMAGE_STYLE;
   }
   if (ARCHIVE_EXTS.has(ext)) {
-    return { from: '#c9853d', to: '#7c4512', glyph: 'text', text: 'ZIP' };
+    return { from: '#c08a4a', to: '#7d5525', glyph: 'text', text: 'ZIP' };
   }
   if (SHELL_EXTS.has(ext)) {
-    return { from: '#57a05c', to: '#245c28', glyph: 'text', text: '$' };
+    return { from: '#63a868', to: '#33703a', glyph: 'text', text: '$' };
   }
   return GENERIC_STYLE;
 }

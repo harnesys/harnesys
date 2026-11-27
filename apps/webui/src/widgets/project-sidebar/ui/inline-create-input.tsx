@@ -35,8 +35,8 @@ export function InlineCreateInput({
       }}
     >
       <span className="flex size-4 shrink-0 items-center justify-center" />
-      <span className="flex size-4 shrink-0 items-center justify-center">
-        {kind === 'dir' ? <FolderTypeIcon size="sm" /> : <FileTypeIcon name={value} size="sm" />}
+      <span className="flex size-[18px] shrink-0 items-center justify-center">
+        {kind === 'dir' ? <FolderTypeIcon size="md" /> : <FileTypeIcon name={value} size="md" />}
       </span>
       <input
         ref={inputRef}

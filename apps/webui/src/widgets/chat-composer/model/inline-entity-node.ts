@@ -8,6 +8,7 @@ export interface InlineEntityAttrs {
   kind: EntityKind;
   ref: string;
   href: string;
+  token?: string;
 }
 export const INLINE_ENTITY_TYPE = 'inlineEntity';
 export function inlineEntityText(kind: EntityKind, ref: string, href: string): string {
@@ -62,6 +63,16 @@ export const InlineEntityNode = Node.create<InlineEntityAttrs>({
         },
         rendered: false,
       },
+      token: {
+        default: '',
+        parseHTML: (element) => element.getAttribute('data-entity-token') ?? '',
+        validate: (value): void => {
+          if (typeof value !== 'string') {
+            throw new Error('inlineEntity: invalid entity token');
+          }
+        },
+        rendered: false,
+      },
     };
   },
   parseHTML() {
@@ -74,6 +85,7 @@ export const InlineEntityNode = Node.create<InlineEntityAttrs>({
         'data-inline-entity': node.attrs.kind,
         'data-entity-ref': node.attrs.ref,
         'data-entity-href': node.attrs.href,
+        'data-entity-token': node.attrs.token,
       },
     ];
   },

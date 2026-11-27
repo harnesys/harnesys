@@ -55,11 +55,17 @@ export function createFileSuggestion(options: FileSuggestionOptions) {
 export interface FileChipInput {
   ref: string;
   href?: string;
+  token?: string;
 }
 export function insertFileChips(editor: Editor, at: number, chips: FileChipInput[]): void {
   let cursor = at;
   for (const chip of chips) {
-    $insertInlineEntity(editor, cursor, { kind: 'file', ref: chip.ref, href: chip.href ?? '' });
+    $insertInlineEntity(editor, cursor, {
+      kind: 'file',
+      ref: chip.ref,
+      href: chip.href ?? '',
+      token: chip.token ?? '',
+    });
     cursor += 1;
     editor.chain().insertContentAt(cursor, ' ').run();
     cursor += 1;
