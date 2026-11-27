@@ -8,7 +8,6 @@ const chatSandbox: RuntimePromptInfo = {
   primaryDirectory: '/org/thread',
   primaryKind: 'sandbox',
   threadDir: '/org/thread',
-  threadSandbox: '/org/thread/sandbox',
   sharedSources: [
     {
       name: 'harnesys',
@@ -26,7 +25,6 @@ const directory: RuntimePromptInfo = {
   primaryDirectory: '/srv/project',
   primaryKind: 'directory',
   threadDir: '/org/thread',
-  threadSandbox: '/org/thread/sandbox',
   sharedSources: [],
 };
 
@@ -36,7 +34,6 @@ const worktree: RuntimePromptInfo = {
   primaryDirectory: '/worktrees/repo-feat-x',
   primaryKind: 'worktree',
   threadDir: '/org/thread',
-  threadSandbox: '/org/thread/sandbox',
   sharedSources: [],
   worktree: {
     repository: 'https://github.com/org/repo',
@@ -51,7 +48,6 @@ const sourceBase: RuntimePromptInfo = {
   primaryDirectory: '/sources/repo',
   primaryKind: 'source',
   threadDir: '/org/thread',
-  threadSandbox: '/org/thread/sandbox',
   sharedSources: [],
 };
 
@@ -65,9 +61,9 @@ describe('formatRuntimeSection', () => {
       '- Prefer relative paths for files inside the run root; absolute paths only for files outside it. Access outside the run root requires user approval.',
     );
     expect(text).toContain(
-      "- This is this thread's directory: `attachments/` (uploaded files, read-only), `sandbox/` (scratch, writable), `tool-outputs/` (spill, read-only).",
+      "- This is this thread's directory: everything in it is yours, except `attachments/` and `tool-outputs/` (read-only).",
     );
-    expect(text).toContain('Temporary workspace: /org/thread/sandbox');
+    expect(text).toContain('Temporary workspace: /org/thread');
     expect(text).toContain('harnesys (entire-source): /shared/harnesys — monorepo');
     expect(text).toContain('docs (not-indexed): /shared/docs');
     expect(text).not.toContain('null');
@@ -81,10 +77,10 @@ describe('formatRuntimeSection', () => {
       '- Workspace: /srv/project — directory bound to this thread (shared host state; changes are immediate)',
     );
     expect(text).toContain(
-      '- Scratch: /org/thread/sandbox (private, temporary — keep only temp files here)',
+      '- Scratch: /org/thread (private, temporary — keep only temp files here)',
     );
     expect(text).toContain(
-      '- Thread files: /org/thread — `attachments/` and `tool-outputs/` are read-only, `sandbox/` is writable; address thread files by absolute path. Files outside the run root require approval or access rules.',
+      '- Thread files: /org/thread — everything there is yours except `attachments/` and `tool-outputs/` (read-only); address thread files by absolute path. Files outside the run root require approval or access rules.',
     );
     expect(text).not.toContain('Temporary workspace');
   });
@@ -95,7 +91,7 @@ describe('formatRuntimeSection', () => {
       '- Workspace: /worktrees/repo-feat-x — git worktree of "https://github.com/org/repo" @ feat/x (isolated; deliver via the branch)',
     );
     expect(text).toContain(
-      '- Scratch: /org/thread/sandbox (private, temporary — keep only temp files here)',
+      '- Scratch: /org/thread (private, temporary — keep only temp files here)',
     );
     expect(text).not.toContain('Temporary workspace');
   });
@@ -117,7 +113,7 @@ describe('formatRuntimeSection', () => {
       '- Workspace: /sources/repo — active checkout of "repo" on main (shared state; check git status before editing; never run parallel issues here)',
     );
     expect(folder).toContain(
-      '- Scratch: /org/thread/sandbox (private, temporary — keep only temp files here)',
+      '- Scratch: /org/thread (private, temporary — keep only temp files here)',
     );
     expect(git).not.toContain('Temporary workspace');
   });

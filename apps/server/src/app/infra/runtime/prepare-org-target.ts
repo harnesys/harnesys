@@ -141,8 +141,8 @@ export function prepareTarget(
   ) {
     mkdirSync(primary.primaryDirectory, { recursive: true });
   }
-  mkdirSync(primary.threadSandbox, { recursive: true, mode: 0o700 });
   const threadDir = deps.layout.threadDir(deps.orgId, threadId);
+  mkdirSync(threadDir, { recursive: true, mode: 0o700 });
   const paths: PreparedPaths = {
     allow: [join(threadDir, 'attachments'), primary.primaryDirectory],
     write: [primary.primaryDirectory],
@@ -170,7 +170,6 @@ export function prepareTarget(
     hostId,
     runtime: 'host',
     threadDir,
-    threadSandbox: primary.threadSandbox,
     primary: { directory: primary.primaryDirectory, kind: primary.primaryKind },
     ...(primary.activeWorktree !== undefined ? { worktree: primary.activeWorktree } : {}),
     ...(primarySource !== undefined ? { primarySource } : {}),

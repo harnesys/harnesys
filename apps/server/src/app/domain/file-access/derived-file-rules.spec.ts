@@ -138,8 +138,14 @@ describe('derivedFileRules', () => {
         reason: `denied by file rule ${threadDir}/.runtime/**`,
       });
     }
-    const scratch = `${threadDir}/sandbox/notes.md`;
-    expect(resolveFileAccess({ ...base, canonicalPath: scratch, action: 'edit' })).toEqual({
+    const rootFile = `${threadDir}/root-check.md`;
+    expect(resolveFileAccess({ ...base, canonicalPath: rootFile, action: 'edit' })).toEqual({
+      decision: 'allow',
+    });
+    const legacyScratchFolder = `${threadDir}/sandbox/notes.md`;
+    expect(
+      resolveFileAccess({ ...base, canonicalPath: legacyScratchFolder, action: 'edit' }),
+    ).toEqual({
       decision: 'allow',
     });
   });

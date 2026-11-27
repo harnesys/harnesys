@@ -39,7 +39,6 @@ function environment(partial: Partial<RunEnvironment>): RunEnvironment {
   return { anchor: null, cwd: 'sandbox', provenance: 'fallback', ...partial };
 }
 
-const SANDBOX = join(ROOT, 'org-1', 'thread-1', 'sandbox');
 const THREAD = join(ROOT, 'org-1', 'thread-1');
 
 describe('resolveRuntimePrimary', () => {
@@ -53,20 +52,18 @@ describe('resolveRuntimePrimary', () => {
     });
     expect(primary.primaryKind).toBe('directory');
     expect(primary.primaryDirectory).toBe('/srv/project');
-    expect(primary.threadSandbox).toBe(SANDBOX);
   });
 
   test('empty environment falls back to the thread dir', () => {
     expect(resolveRuntimePrimary(deps())).toEqual({
       primaryDirectory: THREAD,
       primaryKind: 'sandbox',
-      threadSandbox: SANDBOX,
     });
     expect(
       resolveRuntimePrimary(deps(), {
         environment: environment({ anchor: null, cwd: 'sandbox', provenance: 'agent' }),
       }),
-    ).toEqual({ primaryDirectory: THREAD, primaryKind: 'sandbox', threadSandbox: SANDBOX });
+    ).toEqual({ primaryDirectory: THREAD, primaryKind: 'sandbox' });
   });
 
   test('issue worktree environment runs in the worktree root', () => {
@@ -122,7 +119,6 @@ describe('resolveRuntimePrimary', () => {
     });
     expect(primary.primaryKind).toBe('sandbox');
     expect(primary.primaryDirectory).toBe(THREAD);
-    expect(primary.threadSandbox).toBe(SANDBOX);
   });
 
   test('source subpath is joined onto the source root', () => {

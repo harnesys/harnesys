@@ -131,7 +131,7 @@ describe('file_read_image tool', () => {
     expect(result.kind).toBe('image');
   });
 
-  test('copies a workspace file into sandbox/read-image with a sha1 name, original untouched', async () => {
+  test('copies a workspace file into read-image with a sha1 name, original untouched', async () => {
     const bytes = makeNoisyPng(64, 64);
     const abs = writeFixture(root, 'outside.png', bytes);
     const def = readImageTool();
@@ -142,7 +142,7 @@ describe('file_read_image tool', () => {
     };
     expect(result.ok).toBe(true);
     const sha1 = createHash('sha1').update(bytes).digest('hex');
-    const copy = path.join(threadDir, 'sandbox', 'read-image', `${sha1}.png`);
+    const copy = path.join(threadDir, 'read-image', `${sha1}.png`);
     expect(result.path).toBe(copy);
     expect(existsSync(copy)).toBe(true);
     expect(readFileSync(abs).equals(Buffer.from(bytes))).toBe(true);
@@ -156,7 +156,7 @@ describe('file_read_image tool', () => {
     const def = readImageTool();
     const result = (await def.execute({ path: abs }, ctx(workspace))) as { path: string };
     const sha1 = createHash('sha1').update(bytes).digest('hex');
-    expect(result.path).toBe(path.join(threadDir, 'sandbox', 'read-image', `${sha1}.png`));
+    expect(result.path).toBe(path.join(threadDir, 'read-image', `${sha1}.png`));
   });
 
   test('rejects unsupported types and missing files', async () => {

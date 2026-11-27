@@ -340,7 +340,7 @@ export const ThreadFilesTreeResponseSchema = z.object({
 export type ThreadFilesTreeResponse = z.infer<typeof ThreadFilesTreeResponseSchema>;
 
 export const ThreadFilesQuerySchema = z.object({
-  subPath: z.string().default('sandbox'),
+  subPath: z.string().default(''),
 });
 export type ThreadFilesQuery = z.infer<typeof ThreadFilesQuerySchema>;
 

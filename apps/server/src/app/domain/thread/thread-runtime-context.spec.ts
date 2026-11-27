@@ -12,7 +12,6 @@ describe('threadRuntimeContextOf', () => {
       hostId: 'host-1',
       runtime: 'host',
       threadDir: '/tmp/threads/t1',
-      threadSandbox: '/tmp/threads/t1/sandbox',
       sharedSources,
     });
     expect(sandbox.primaryDirectory).toBe('/tmp/threads/t1');
@@ -26,13 +25,11 @@ describe('threadRuntimeContextOf', () => {
       hostId: 'host-1',
       runtime: 'host',
       threadDir: '/tmp/threads/t1',
-      threadSandbox: '/tmp/threads/t1/sandbox',
       primary: { directory: '/srv/project', kind: 'directory' },
       sharedSources: [],
     });
     expect(primary.primaryDirectory).toBe('/srv/project');
     expect(primary.primaryKind).toBe('directory');
-    expect(primary.threadSandbox).toBe('/tmp/threads/t1/sandbox');
     expect(primary.activeWorktree).toBeUndefined();
 
     const worktreeInput = {
@@ -45,7 +42,6 @@ describe('threadRuntimeContextOf', () => {
       hostId: 'host-1',
       runtime: 'container',
       threadDir: '/tmp/threads/t1',
-      threadSandbox: '/tmp/threads/t1/sandbox',
       worktree: worktreeInput,
       sharedSources: [],
     });
@@ -58,7 +54,6 @@ describe('threadRuntimeContextOf', () => {
       hostId: 'host-1',
       runtime: 'host',
       threadDir: '/tmp/threads/t1',
-      threadSandbox: '/tmp/threads/t1/sandbox',
       sharedSources: [],
     });
     expect(fallback.primaryKind).toBe('sandbox');
@@ -70,7 +65,6 @@ describe('threadRuntimeContextOf', () => {
       hostId: 'host-1',
       runtime: 'host',
       threadDir: '/tmp/threads/t1',
-      threadSandbox: '/tmp/threads/t1/sandbox',
       primarySource: { sourceId: 'src-1', name: 'repo', kind: 'git', root: '/sources/repo' },
       sharedSources: [],
     });

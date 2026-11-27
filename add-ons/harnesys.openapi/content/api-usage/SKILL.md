@@ -45,7 +45,7 @@ describing what is injected for the project.
   e.g. `/Users/me/pics/photo.jpg` — any file the host can read, including thread
   attachments (`.../threads/<id>/attachments/<id>/<file>`) and issue attachments.
   The host reads the bytes itself — never read a file into your context to paste
-  base64 into the call. Files inside the thread (sandbox scratch, attachments,
+  base64 into the call. Files inside the thread (working files, attachments,
   tool-outputs) are addressed the same way, by their absolute paths under the
   thread directory shown in the runtime notes. `content` is file text;
   `contentBase64` is inline base64 (small files only). Form fields go in `body` as

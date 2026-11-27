@@ -41,11 +41,20 @@ describe('threadFileRootsFromEvents', () => {
     expect(threadFileRootsFromEvents(events, THREAD_DIR)).toEqual(['sandbox']);
   });
 
-  test('paths outside thread roots and outside the thread dir produce no roots', () => {
+  test('root-level and legacy folder writes map to the writable root', () => {
     const events = [
-      toolEvent({ sideEffect: 'write', input: { path: 'src/index.ts' } }),
+      toolEvent({ sideEffect: 'write', input: { path: 'root-check.md' } }),
+      toolEvent({ sideEffect: 'write', input: { path: 'notes/todo.md' } }),
+    ];
+    expect(threadFileRootsFromEvents(events, THREAD_DIR)).toEqual(['sandbox']);
+  });
+
+  test('paths outside the thread dir and dot segments produce no roots', () => {
+    const events = [
       toolEvent({ sideEffect: 'write', input: { path: '/elsewhere/sandbox/notes.md' } }),
       toolEvent({ sideEffect: 'write', input: { path: '../outside/sandbox/notes.md' } }),
+      toolEvent({ sideEffect: 'write', input: { path: '.runtime/raw-model-requests/x.json' } }),
+      toolEvent({ sideEffect: 'write', input: { path: '.env' } }),
     ];
     expect(threadFileRootsFromEvents(events, THREAD_DIR)).toEqual([]);
   });
@@ -73,7 +82,10 @@ describe('threadFileRootsFromEvents', () => {
       'attachments',
       'sandbox',
     ]);
-    expect(threadFileRootsFromEvents([stringOutput], THREAD_DIR)).toEqual(['attachments']);
+    expect(threadFileRootsFromEvents([stringOutput], THREAD_DIR)).toEqual([
+      'attachments',
+      'sandbox',
+    ]);
   });
 
   test('read-only, non-completed, and non-tool events produce no roots', () => {

@@ -81,7 +81,7 @@ export function readImageTool(options: FilesOptions = {}): ToolDefinition {
   return tool('file_read_image', {
     group: 'files',
     description:
-      'Read an image file (png, jpeg, webp) and attach it to the conversation so the model can see it in the next turn. Returns the absolute path of the resulting image; files over 3.5 MB or with a long side over 1568 px are downscaled to JPEG, and files outside the thread directory are copied into `sandbox/read-image/` under the thread dir. Use for screenshots, photos, diagrams and scans. Pass a path relative to the run root or absolute.',
+      'Read an image file (png, jpeg, webp) and attach it to the conversation so the model can see it in the next turn. Returns the absolute path of the resulting image; files over 3.5 MB or with a long side over 1568 px are downscaled to JPEG, and files outside the thread directory are copied into `read-image/` under the thread dir. Use for screenshots, photos, diagrams and scans. Pass a path relative to the run root or absolute.',
     operations: ['fs.read'],
     sideEffect: 'read',
     input: {
@@ -143,7 +143,7 @@ async function imageResult(
   }
   const prepared = await prepareImage(bytes, mediaType);
   const name = `${createHash('sha1').update(bytes).digest('hex')}${extFor(prepared.mediaType)}`;
-  const copyAbs = path.join(ctx.threadDir, 'sandbox', 'read-image', name);
+  const copyAbs = path.join(ctx.threadDir, 'read-image', name);
   if (!existsSyncSafe(copyAbs)) {
     mkdirSync(path.dirname(copyAbs), { recursive: true });
     writeFileSync(copyAbs, prepared.bytes);

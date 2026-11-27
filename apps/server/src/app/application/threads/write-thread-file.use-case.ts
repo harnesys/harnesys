@@ -36,7 +36,11 @@ export class WriteThreadFileUseCase {
     if (!this.threads.findById(input.orgId, input.threadId)) {
       throw new ThreadNotFoundException(input.threadId);
     }
-    if (!input.path.replaceAll('\\', '/').startsWith('sandbox/')) {
+    const [firstSegment] = input.path
+      .replaceAll('\\', '/')
+      .split('/')
+      .filter((segment) => segment.length > 0);
+    if (firstSegment === 'attachments' || firstSegment === 'tool-outputs') {
       throw new ThreadValidationException(`path is not writable: ${input.path}`);
     }
     const threadDir = this.layout.threadDir(input.orgId, input.threadId);

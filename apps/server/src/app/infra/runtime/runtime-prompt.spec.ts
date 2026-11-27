@@ -227,7 +227,6 @@ function prepared(
       primaryDirectory: '/org/thread',
       primaryKind: 'sandbox' as const,
       threadDir: '/org/thread',
-      threadSandbox: '/org/thread/sandbox',
       ...(activeWorktree ? { activeWorktree } : {}),
     },
   };
@@ -241,7 +240,6 @@ function sourcePrepared(kind: 'git' | 'folder') {
       primaryDirectory: '/shared/harnesys',
       primaryKind: 'source' as const,
       threadDir: '/org/thread',
-      threadSandbox: '/org/thread/sandbox',
       primarySource: { sourceId: SRC, name: 'harnesys', kind },
     },
   };

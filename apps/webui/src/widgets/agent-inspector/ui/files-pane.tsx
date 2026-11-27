@@ -1,20 +1,16 @@
-import type {
-  RunArtifact,
-  ThreadAttachment,
-  ThreadFileEntry,
-  ThreadFilesTreeResponse,
-} from '@harnesys/contracts';
+import type { RunArtifact, ThreadAttachment } from '@harnesys/contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { type ThreadWorktreeBinding, useThreadWorktreeStore } from '@/entities/thread';
 import { syncThreadFiles, useSelectedThread } from '@/features/desk';
 import { useOpenFile } from '@/features/ide';
 import type { FileRef } from '@/features/open-file';
-import { getThreadArtifacts, listThreadAttachments, listThreadFiles } from '@/shared/api';
+import { getThreadArtifacts, listThreadAttachments } from '@/shared/api';
 import { type ContentEntry, type ContentTreeResponse, listContentTree } from '@/shared/api/content';
-import { FolderTypeIcon } from '@/shared/ui/icons';
 import { FileCard, fileCardStat } from './file-card';
+import { EntryIcon, PaneHint, SectionLabel } from './pane-parts';
 import { RowLeading } from './row-leading';
+import { ThreadTreeSection } from './thread-file-tree';
 
 export function FilesPane() {
   const thread = useSelectedThread();
@@ -32,8 +28,21 @@ export function FilesPane() {
   }
   return (
     <div className="flex flex-col gap-5">
-      <ThreadFilesSection threadId={thread.id} />
-      <ThreadSandboxSection orgId={thread.orgId} threadId={thread.id} />
+      <ThreadTreeSection
+        orgId={thread.orgId}
+        threadId={thread.id}
+        label="Files"
+        subPath=""
+        emptyText="No files in this thread's working directory yet."
+      />
+      <ThreadAttachmentsSection threadId={thread.id} />
+      <ThreadTreeSection
+        orgId={thread.orgId}
+        threadId={thread.id}
+        label="Tool Outputs"
+        subPath="tool-outputs"
+        emptyText="No tool outputs spilled yet."
+      />
       <WorkspaceSection orgId={thread.orgId} threadId={thread.id} onOpenFile={openFile} />
     </div>
   );
@@ -73,7 +82,7 @@ function mergeThreadFiles(
   return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function ThreadFilesSection({ threadId }: { threadId: string }) {
+function ThreadAttachmentsSection({ threadId }: { threadId: string }) {
   const openFile = useOpenFile();
   const uploadsQuery = useQuery({
     queryKey: ['thread-attachments', threadId],
@@ -88,7 +97,7 @@ function ThreadFilesSection({ threadId }: { threadId: string }) {
     <section className="flex flex-col gap-2">
       <SectionLabel>Attachments</SectionLabel>
       {files.length === 0 ? (
-        <PaneHint text="No files in this thread yet." />
+        <PaneHint text="No attachments in this thread yet." />
       ) : (
         <div className="flex flex-col gap-1.5">
           {files.map((file) => (
@@ -119,105 +128,6 @@ function ThreadFilesSection({ threadId }: { threadId: string }) {
         </div>
       )}
     </section>
-  );
-}
-
-function ThreadSandboxSection({ orgId, threadId }: { orgId?: string; threadId: string }) {
-  const treeQuery = useQuery({
-    queryKey: ['thread-files', orgId, threadId, 'sandbox'],
-    queryFn: () => listThreadFiles(orgId, threadId, 'sandbox'),
-    enabled: Boolean(orgId),
-  });
-  return (
-    <section className="flex flex-col gap-2">
-      <SectionLabel>Sandbox</SectionLabel>
-      {sandboxBody(orgId, threadId, treeQuery)}
-    </section>
-  );
-}
-
-function sandboxBody(
-  orgId: string | undefined,
-  threadId: string,
-  query: { isPending: boolean; isError: boolean; data?: ThreadFilesTreeResponse },
-) {
-  if (!orgId || query.isPending) {
-    return <PaneHint text="Loading files…" />;
-  }
-  if (query.isError) {
-    return <PaneHint text="Could not list sandbox files." />;
-  }
-  if (!query.data) {
-    return <PaneHint text="Loading files…" />;
-  }
-  if (query.data.entries.length === 0) {
-    return <PaneHint text="Sandbox is empty." />;
-  }
-  return (
-    <div className="flex flex-col gap-1.5">
-      {query.data.entries.map((entry) => (
-        <ThreadSandboxEntry
-          key={entry.path}
-          orgId={orgId}
-          threadId={threadId}
-          entry={entry}
-          depth={0}
-        />
-      ))}
-    </div>
-  );
-}
-
-function ThreadSandboxEntry({
-  orgId,
-  threadId,
-  entry,
-  depth,
-}: {
-  orgId: string;
-  threadId: string;
-  entry: ThreadFileEntry;
-  depth: number;
-}) {
-  const openFile = useOpenFile();
-  const [open, setOpen] = useState(false);
-  const isDir = entry.type === 'dir';
-  const childrenQuery = useQuery({
-    queryKey: ['thread-files', orgId, threadId, entry.path],
-    queryFn: () => listThreadFiles(orgId, threadId, entry.path),
-    enabled: isDir && open,
-  });
-  return (
-    <div>
-      <FileCard
-        name={entry.name}
-        stat={isDir ? dirCardStat(entry.count) : fileCardStat(entry.name, undefined, entry.size)}
-        depth={depth}
-        leading={
-          isDir ? (
-            <EntryIcon open={open} />
-          ) : (
-            <RowLeading threadId={threadId} name={entry.name} path={entry.path} />
-          )
-        }
-        onClick={() =>
-          isDir
-            ? setOpen((value) => !value)
-            : openFile({ source: 'thread-sandbox', threadId, path: entry.path })
-        }
-      />
-      {isDir && open
-        ? (childrenQuery.data?.entries ?? []).map((child) => (
-            <ThreadSandboxEntry
-              key={child.path}
-              orgId={orgId}
-              threadId={threadId}
-              entry={child}
-              depth={depth + 1}
-            />
-          ))
-        : null}
-    </div>
   );
 }
 
@@ -349,27 +259,4 @@ function WorkspaceEntry({
         : null}
     </div>
   );
-}
-
-function EntryIcon({ open }: { open: boolean }) {
-  return <FolderTypeIcon open={open} size="xl" />;
-}
-
-function dirCardStat(count: number | undefined): string {
-  if (count === undefined) {
-    return '';
-  }
-  return count === 1 ? '1 item' : `${count} items`;
-}
-
-function SectionLabel({ children }: { children: string }) {
-  return (
-    <div className="font-medium text-[10px] text-muted-foreground/70 uppercase tracking-wider">
-      {children}
-    </div>
-  );
-}
-
-function PaneHint({ text }: { text: string }) {
-  return <div className="text-muted-foreground/70 text-xs">{text}</div>;
 }

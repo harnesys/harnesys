@@ -1,5 +1,5 @@
 import { isAbsolute, relative, resolve, sep } from 'node:path';
-import { THREAD_FILE_ROOTS, type ThreadFileRoot } from '@harnesys/contracts';
+import type { ThreadFileRoot } from '@harnesys/contracts';
 import { asObject, parseJson, str } from '@harnesys/studio-shared';
 import type { SessionEvent } from 'harnesys';
 
@@ -17,10 +17,13 @@ export function threadFileRootOfPath(raw: string, threadDir: string): ThreadFile
     return null;
   }
   const [root] = rel.replaceAll('\\', '/').split('/');
-  if (!root || !THREAD_FILE_ROOTS.includes(root as ThreadFileRoot)) {
+  if (!root || root.startsWith('.')) {
     return null;
   }
-  return root as ThreadFileRoot;
+  if (root === 'attachments' || root === 'tool-outputs') {
+    return root;
+  }
+  return 'sandbox';
 }
 
 export function threadFileRootsFromEvents(

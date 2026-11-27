@@ -17,11 +17,9 @@ describe('prepareTarget runtime context', () => {
   test('derives cwd and primaryKind per environment and keeps shared sources out of paths.allow', () => {
     const chat = build(undefined, undefined, ['src-1']);
     const chatThreadDir = join(currentBaseDir(), 'org-1', 'thread-1');
-    const chatSandbox = join(chatThreadDir, 'sandbox');
     const chatPrepared = prepareTarget(chat.deps, 'thread-1', 'agent-1', chat.cache);
     expect(chatPrepared?.runtime.primaryKind).toBe('sandbox');
     expect(chatPrepared?.runtime.primaryDirectory).toBe(chatThreadDir);
-    expect(chatPrepared?.runtime.threadSandbox).toBe(chatSandbox);
     expect(chatPrepared?.paths.cwd).toBe(chatThreadDir);
     expect(chatPrepared?.paths.threadDir).toBe(chatThreadDir);
     expect(chatPrepared?.paths.allow).toEqual([join(chatThreadDir, 'attachments'), chatThreadDir]);

@@ -23,7 +23,6 @@ interface PreparedPromptTarget {
     primaryDirectory: string;
     primaryKind: 'sandbox' | 'directory' | 'worktree' | 'source';
     threadDir: string;
-    threadSandbox: string;
     activeWorktree?: { worktreeId: string; sourceId: string; root: string };
     primarySource?: PrimarySourceRef;
   };
@@ -51,7 +50,6 @@ export function runRuntimePromptInfo(
     primaryDirectory: prepared.runtime.primaryDirectory,
     primaryKind: prepared.runtime.primaryKind,
     threadDir: prepared.runtime.threadDir,
-    threadSandbox: prepared.runtime.threadSandbox,
     sharedSources: promptSourcesOf(deps, prepared),
     ...(worktree ? { worktree } : {}),
     ...(primarySource ? { primarySource } : {}),

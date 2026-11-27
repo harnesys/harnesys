@@ -82,7 +82,7 @@ export function formatRuntimeSection(runtime: RuntimePromptInfo | undefined): st
   if (workspace.length > 0) {
     lines.push(...workspace);
   } else {
-    lines.push(`- Temporary workspace: ${runtime.threadSandbox}`);
+    lines.push(`- Temporary workspace: ${runtime.threadDir}`);
   }
   if (runtime.sharedSources.length > 0) {
     lines.push('- Shared sources available to this run:');
@@ -101,17 +101,18 @@ export function formatRuntimeSection(runtime: RuntimePromptInfo | undefined): st
 function threadFilesLine(runtime: RuntimePromptInfo): string {
   if (runtime.primaryKind === 'sandbox') {
     return (
-      "- This is this thread's directory: `attachments/` (uploaded files, read-only), " +
-      '`sandbox/` (scratch, writable), `tool-outputs/` (spill, read-only).'
+      "- This is this thread's directory: everything in it is yours, except " +
+      '`attachments/` and `tool-outputs/` (read-only).'
     );
   }
   return (
-    `- Thread files: ${runtime.threadDir} — \`attachments/\` and \`tool-outputs/\` are read-only, ` +
-    '`sandbox/` is writable; address thread files by absolute path. Files outside the run root require approval or access rules.'
+    `- Thread files: ${runtime.threadDir} — everything there is yours except ` +
+    '`attachments/` and `tool-outputs/` (read-only); address thread files by absolute path. ' +
+    'Files outside the run root require approval or access rules.'
   );
 }
 function workspaceLinesOf(runtime: RuntimePromptInfo): string[] {
-  const scratch = `- Scratch: ${runtime.threadSandbox} (private, temporary — keep only temp files here)`;
+  const scratch = `- Scratch: ${runtime.threadDir} (private, temporary — keep only temp files here)`;
   const source = runtime.primarySource;
   if (runtime.primaryKind === 'source' && source) {
     const workspace =

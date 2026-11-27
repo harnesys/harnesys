@@ -178,7 +178,7 @@
                       },
                       "path": {
                         "type": "string",
-                        "description": "Absolute host path to the file; thread files are addressed by their absolute paths, e.g. /Users/.../threads/<id>/attachments/<attId>/photo.jpg or /Users/.../threads/<id>/sandbox/x.jpg"
+                        "description": "Absolute host path to the file; thread files are addressed by their absolute paths, e.g. /Users/.../threads/<id>/attachments/<attId>/photo.jpg or /Users/.../threads/<id>/drafts/x.jpg"
                       },
                       "filename": {
                         "type": "string",
@@ -265,7 +265,7 @@
                       },
                       "path": {
                         "type": "string",
-                        "description": "Absolute host path to the file; thread files are addressed by their absolute paths, e.g. /Users/.../threads/<id>/attachments/<attId>/photo.jpg or /Users/.../threads/<id>/sandbox/x.jpg"
+                        "description": "Absolute host path to the file; thread files are addressed by their absolute paths, e.g. /Users/.../threads/<id>/attachments/<attId>/photo.jpg or /Users/.../threads/<id>/drafts/x.jpg"
                       },
                       "filename": {
                         "type": "string",
@@ -351,7 +351,7 @@
                       },
                       "path": {
                         "type": "string",
-                        "description": "Absolute host path to the file; thread files are addressed by their absolute paths, e.g. /Users/.../threads/<id>/attachments/<attId>/photo.jpg or /Users/.../threads/<id>/sandbox/x.jpg"
+                        "description": "Absolute host path to the file; thread files are addressed by their absolute paths, e.g. /Users/.../threads/<id>/attachments/<attId>/photo.jpg or /Users/.../threads/<id>/drafts/x.jpg"
                       },
                       "filename": {
                         "type": "string",

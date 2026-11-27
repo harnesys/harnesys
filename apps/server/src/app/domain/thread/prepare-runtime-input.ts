@@ -1,4 +1,3 @@
-import { join } from 'node:path';
 import type { RunEnvironment, RunEnvironmentAnchor } from '@harnesys/contracts';
 import type { AgentRecord } from '../agent/agent.ts';
 import { HostFsLayoutPort } from '../machine/host-fs-layout.port.ts';
@@ -24,7 +23,6 @@ export interface PrepareTargetOptions {
 export interface RuntimePrimary {
   primaryDirectory: string;
   primaryKind: PrimaryKind;
-  threadSandbox: string;
   activeWorktree?: ActiveWorktreeRef;
   primarySourceId?: string;
 }
@@ -48,18 +46,16 @@ export function resolveRuntimePrimary(
   options?: PrepareTargetOptions,
 ): RuntimePrimary {
   const threadDir = deps.layout.threadDir(deps.orgId, deps.threadId);
-  const threadSandbox = join(threadDir, 'sandbox');
   const environment = options?.environment;
   if (!isAnchoredEnvironment(environment)) {
-    return materializeSandbox(threadDir, threadSandbox);
+    return { primaryDirectory: threadDir, primaryKind: 'sandbox' };
   }
   const anchor = environment.anchor;
   if (anchor.kind === 'folder') {
-    const primary = materializePrimary(environment, {
+    return materializePrimary(environment, {
       anchorRoot: anchor.path,
       threadDir,
     });
-    return { ...primary, threadSandbox };
   }
   const location = deps.sourceLocation.resolve({
     orgId: deps.orgId,
@@ -75,7 +71,6 @@ export function resolveRuntimePrimary(
     return {
       ...primary,
       primaryKind: 'worktree',
-      threadSandbox,
       activeWorktree: {
         worktreeId: anchor.worktreeId,
         sourceId: anchor.sourceId,
@@ -87,13 +82,8 @@ export function resolveRuntimePrimary(
   return {
     ...primary,
     primaryKind: 'source',
-    threadSandbox,
     primarySourceId: anchor.sourceId,
   };
-}
-
-function materializeSandbox(threadDir: string, threadSandbox: string): RuntimePrimary {
-  return { primaryDirectory: threadDir, primaryKind: 'sandbox', threadSandbox };
 }
 
 export interface SharedSourcesDeps {

@@ -1,18 +1,17 @@
 import { basename, isAbsolute, resolve, sep } from 'node:path';
-import { THREAD_FILE_ROOTS } from '@harnesys/contracts';
 
 export function resolveThreadEntryPath(threadDir: string, relativePath: string): string | null {
   const trimmed = relativePath.replaceAll('\\', '/');
-  if (!trimmed || isAbsolute(trimmed) || trimmed.includes('\0')) {
+  if (isAbsolute(trimmed) || trimmed.includes('\0')) {
+    return null;
+  }
+  const segments = trimmed.split('/').filter((segment) => segment.length > 0);
+  if (segments.some((segment) => segment.startsWith('.'))) {
     return null;
   }
   const base = resolve(threadDir);
-  const abs = resolve(base, trimmed);
+  const abs = resolve(base, ...segments);
   if (abs !== base && !abs.startsWith(`${base}${sep}`)) {
-    return null;
-  }
-  const [root] = trimmed.split('/');
-  if (!root || !THREAD_FILE_ROOTS.includes(root as (typeof THREAD_FILE_ROOTS)[number])) {
     return null;
   }
   return abs;

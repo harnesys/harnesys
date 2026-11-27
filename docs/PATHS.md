@@ -22,22 +22,29 @@ A relative path never changes meaning based on which files exist on disk.
 |---|---|---|
 | Runtime tools + shell (`packages/harnesys` packs, `file-guard`) | run `cwd` (= `primaryDirectory`) | canonicalized, gated by `FileAccessPolicy` (allow-roots, deny rules, ask) |
 | Add-on host `files.stat/read/write` (server) | org workspace (`HostFsLayout.ensureOrgWorkspace`) | accepted, canonicalized + blocklist-checked; no policy jail (add-on host RPC is a host-side capability, documented) |
-| REST thread-files (`/orgs/:orgId/threads/:threadId/files`, WebUI) | thread dir; roots whitelisted `attachments`, `sandbox`, `tool-outputs` | rejected |
+| REST thread-files (`/orgs/:orgId/threads/:threadId/files`, WebUI) | thread dir; any dot-free path under it (default `subPath` = root) | rejected |
 | Source content REST (`/orgs/:orgId/sources/:sourceId/content`) | source root | rejected (path-jail) |
 | DB storage columns (`attachments.path`, `issue_attachments.path`) | thread/issue dir, internal only — never handed to the model verbatim | n/a |
 
-## 3. Sandbox mode root change (the B decision)
+## 3. Sandbox mode: the thread dir is the run root
 
-In sandbox mode (no workspace anchor, `cwd: 'sandbox'`), the run root is **the thread dir itself**:
+In sandbox mode (no workspace anchor, `cwd: 'sandbox'`), the run root is **the thread dir itself**
+and the `threadDir/sandbox/` subdirectory concept is removed — the agent works directly in
+`threadDir`:
 
-- `primaryDirectory = threadDir` (was `threadDir/sandbox`), for host and fleet workers.
-- `threadDir/sandbox/` stays the conventional writable scratch subdirectory; the runtime notes
-  describe it as the relative path `sandbox/` under the run root.
+- `primaryDirectory = threadDir`, for host and fleet workers. Writability of the working space
+  comes from the primary-directory shortcut, not from a per-directory allow rule.
+- Zones inside the thread dir: `attachments/` (read-only), `tool-outputs/` (read-only),
+  `.runtime/` (invisible, denied); everything else is the agent's writable space.
 - `threadDir/attachments/` and `threadDir/tool-outputs/` are inside the run root but **read-only**:
   `resolveFileAccess` must evaluate deny rules *before* the "inside primaryDirectory → allow"
-  shortcut (deny wins), otherwise moving `primaryDirectory` up silently makes uploads editable.
-- Derived rules keep their exact patterns (`${threadDir}/attachments/**`, `${threadDir}/sandbox/**`,
-  `${threadDir}/tool-outputs/**`); only the precedence changes.
+  shortcut (deny wins), otherwise the primary-directory shortcut silently makes uploads editable.
+- Derived rules carry only the zone pairs (`${threadDir}/attachments/**`,
+  `${threadDir}/tool-outputs/**`, `${threadDir}/.runtime/**`); the former `${threadDir}/sandbox/**`
+  allow pair is gone.
+- The WorkspaceRef kind value `sandbox` stays as the internal mode name (contract, DB, enum);
+  user-facing surfaces say "Thread directory". Old threads' `sandbox/` directories stay on disk
+  and appear as ordinary folders — no migration.
 - Thread `policy.contextFiles` paths resolve against the run root (they moved with it); files
   under an old thread's `sandbox/AGENTS.md` are not migrated (user decision).
 - Runtime debug artifacts (raw model request logs, compaction logs) live under
@@ -60,7 +67,7 @@ Two layers, one rule each:
   to the model — history sections rebuilt at call time (`fold-attachments` `[file: ...]`, image
   captions, runtime notes) rewrite an absolute path that is inside the current run root into a
   run-root-relative string via the single helper `displayPath(absolute, runRoot)`:
-  `attachments/a1/x.png`, `sandbox/read-image/y.jpg`, `tool-outputs/z.txt` in sandbox mode,
+  `attachments/a1/x.png`, `read-image/y.jpg`, `tool-outputs/z.txt` in sandbox mode,
   absolute otherwise; and (b) the agent's own tool/shell calls, which the prompt teaches to use
   relative paths inside the run root (their echoes are the model's words, not system-produced
   locators). This is the token-saving mechanism; stored history stays unambiguous.
@@ -108,9 +115,15 @@ deleted.
 
 ## 7. REST thread files
 
-- `THREAD_FILE_ROOTS = ['attachments', 'sandbox', 'tool-outputs']` (was missing `tool-outputs`,
-  which the prompt promised the model).
-- Writes remain restricted to `sandbox/**` (unchanged rule, now reads also cover tool-outputs).
+- Anchoring is the whole thread dir: `resolveThreadEntryPath` accepts any `..`-free relative path
+  under `threadDir` whose every segment avoids a leading dot (dot-segment rejection covers
+  `.runtime/` and dotfiles); absolute paths and NUL bytes are rejected. The default `subPath` is
+  the thread root (`''`).
+- Writes are allowed anywhere under the thread dir except first segments `attachments` and
+  `tool-outputs` (read-only zones). `sandbox/`-prefixed paths are legal ordinary folders.
+- `THREAD_FILE_ROOTS = ['attachments', 'sandbox', 'tool-outputs']` remains the wire enum for
+  `files-changed` root markers: `attachments`/`tool-outputs` map by first segment, `sandbox` is
+  the internal marker for the writable thread space (unchanged enum values).
 
 ## 8. Canonical surface text
 
@@ -118,9 +131,10 @@ deleted.
   - "You are working inside `<run root>` (absolute)." — the run root is named once, prominently.
   - "Prefer relative paths for files inside the run root; absolute paths only for files outside
     it." (AX rule: shorter paths, fewer tokens, no ambiguity.)
-  - Sandbox mode: "This is this thread's directory: `attachments/` (uploaded files, read-only),
-    `sandbox/` (scratch, writable), `tool-outputs/` (spill, read-only)."
-  - Anchored runs: the thread dir is shown as an absolute path; thread files are addressed by
+  - Sandbox mode: "This is this thread's directory: everything in it is yours, except
+    `attachments/` and `tool-outputs/` (read-only)."
+  - Anchored runs: the thread dir is shown as an absolute path; everything in it is writable
+    except `attachments/` and `tool-outputs/` (read-only); thread files are addressed by
     absolute path; outside the run root requires approval/rules.
 - Tool descriptions drop "Paths starting with `thread:` ..." sentences entirely and, where a path
   param is described, mention "relative to the run root or absolute".
@@ -142,12 +156,14 @@ deleted.
 A thread run on the dev stand must show: the runtime notes print the run root once plus the
 "prefer relative paths" rule; `read_file` on an uploaded attachment via the short relative path
 rendered in the live prompt (`attachments/<attId>/<name>`) works; `edit_file` on `attachments/...`
-is denied by policy while `sandbox/...` is writable; `file_read_image` persisted result payload
+is denied by policy while a root-level file (`root-check.md`) is writable; `file_read_image`
+persisted result payload
 `path` is absolute and contains no `thread:` substring, while the per-request rebuilt image
 caption shows the run-root-relative form; a copied `thread:sandbox/...` string from old history
 fails to resolve instead of opening; the persisted spill line ("Full output ... saved to") shows
 an absolute path; the same attachment in an anchored run is rendered absolute already in the prompt;
-`GET .../files?subPath=tool-outputs` returns the spill tree; `ls` at the run root shows only
-`attachments/`, `sandbox/`, `tool-outputs/` (no `.runtime`); `read_file` on
+`GET .../files?subPath=tool-outputs` returns the spill tree; `ls` at the run root shows
+`attachments/`, `tool-outputs/` and the user's files (no `.runtime`); a `sandbox/`-prefixed path
+stays a legal ordinary folder with nothing special about it; `read_file` on
 `.runtime/raw-model-requests/<file>` is denied by policy; and nothing newly persisted into
 run_events holds a relative system-produced locator.

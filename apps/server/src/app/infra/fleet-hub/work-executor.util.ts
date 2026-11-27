@@ -64,8 +64,7 @@ export interface WorkerTargetInput {
 
 export function prepareWorkerTarget(input: WorkerTargetInput) {
   const threadDir = input.layout.threadDir(input.orgId, input.threadId);
-  const sandboxDir = join(threadDir, 'sandbox');
-  mkdirSync(sandboxDir, { recursive: true, mode: 0o700 });
+  mkdirSync(threadDir, { recursive: true, mode: 0o700 });
   const attachmentsDir = join(threadDir, 'attachments');
   const localHostId = input.machineConfig.get().id;
   const anchor = input.environment?.anchor ?? null;

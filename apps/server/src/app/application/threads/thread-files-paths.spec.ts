@@ -5,10 +5,10 @@ import { resolveThreadEntryPath, threadFileContentType } from './thread-files-pa
 const THREAD_DIR = resolve('/data/harnesys/orgs/org-1/threads/thread-1');
 
 describe('resolveThreadEntryPath', () => {
-  test('resolves paths inside allowed thread roots', () => {
-    expect(resolveThreadEntryPath(THREAD_DIR, 'sandbox')).toBe(`${THREAD_DIR}${sep}sandbox`);
-    expect(resolveThreadEntryPath(THREAD_DIR, 'sandbox/sub/../report.txt')).toBe(
-      `${THREAD_DIR}${sep}sandbox${sep}report.txt`,
+  test('resolves any dot-free path under the thread dir', () => {
+    expect(resolveThreadEntryPath(THREAD_DIR, '')).toBe(THREAD_DIR);
+    expect(resolveThreadEntryPath(THREAD_DIR, 'root-check.md')).toBe(
+      `${THREAD_DIR}${sep}root-check.md`,
     );
     expect(resolveThreadEntryPath(THREAD_DIR, 'attachments/abc/file.png')).toBe(
       `${THREAD_DIR}${sep}attachments${sep}abc${sep}file.png`,
@@ -21,15 +21,24 @@ describe('resolveThreadEntryPath', () => {
     );
   });
 
+  test('legacy sandbox-prefixed paths stay legal as ordinary folders', () => {
+    expect(resolveThreadEntryPath(THREAD_DIR, 'sandbox')).toBe(`${THREAD_DIR}${sep}sandbox`);
+    expect(resolveThreadEntryPath(THREAD_DIR, 'sandbox/report.txt')).toBe(
+      `${THREAD_DIR}${sep}sandbox${sep}report.txt`,
+    );
+  });
+
   test('rejects traversal outside the thread dir', () => {
     expect(resolveThreadEntryPath(THREAD_DIR, '../org-2/threads/thread-2/secret.txt')).toBeNull();
     expect(resolveThreadEntryPath(THREAD_DIR, 'sandbox/../../../../etc/passwd')).toBeNull();
+    expect(resolveThreadEntryPath(THREAD_DIR, 'sandbox/sub/../report.txt')).toBeNull();
     expect(resolveThreadEntryPath(THREAD_DIR, '/etc/passwd')).toBeNull();
   });
 
-  test('rejects paths outside the known thread roots', () => {
-    expect(resolveThreadEntryPath(THREAD_DIR, 'runs/run-1/out.bin')).toBeNull();
-    expect(resolveThreadEntryPath(THREAD_DIR, '')).toBeNull();
+  test('rejects dot segments, covering .runtime and dotfiles', () => {
+    expect(resolveThreadEntryPath(THREAD_DIR, '.runtime/raw-model-requests/run-1.json')).toBeNull();
+    expect(resolveThreadEntryPath(THREAD_DIR, '.env')).toBeNull();
+    expect(resolveThreadEntryPath(THREAD_DIR, 'notes/.hidden.md')).toBeNull();
     expect(resolveThreadEntryPath(THREAD_DIR, '.')).toBeNull();
   });
 });
