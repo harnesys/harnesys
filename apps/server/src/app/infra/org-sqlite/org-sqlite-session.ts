@@ -24,25 +24,31 @@ export function configureOrgSqlite(sqlite: Database): void {
   sqlite.exec('PRAGMA foreign_keys = ON;');
 }
 
-const ensuredOrgs = new Set<string>();
+const ensuredOrgPaths = new Set<string>();
+
+function ensureOrgSchemaOnce(sqlite: Database, path: string): void {
+  if (ensuredOrgPaths.has(path)) {
+    return;
+  }
+  ensureOrgSchema(
+    (sql) => {
+      sqlite.exec(sql);
+    },
+    (sql) => sqlite.query(sql).all() as { name: string }[],
+  );
+  ensuredOrgPaths.add(path);
+}
 
 export function openOrgSqlite(layout: HostFsLayoutPort, orgId: string): OrgSqliteSession {
   layout.ensureOrgDir(orgId);
   const path = layout.orgDbPath(orgId);
-  const existed = existsSync(path);
-  if (!existed) {
-    ensuredOrgs.delete(orgId);
+  if (!existsSync(path)) {
+    ensuredOrgPaths.delete(path);
+    cachedOrgDbs.delete(path);
   }
   const sqlite = new Database(path, { create: true });
   configureOrgSqlite(sqlite);
-  if (!ensuredOrgs.has(orgId)) {
-    const exec = (sql: string) => {
-      sqlite.exec(sql);
-    };
-    const all = (sql: string) => sqlite.query(sql).all() as { name: string }[];
-    ensureOrgSchema(exec, all);
-    ensuredOrgs.add(orgId);
-  }
+  ensureOrgSchemaOnce(sqlite, path);
   const db = drizzle(sqlite, { schema: knowledgeSchema });
   return {
     sqlite,
@@ -53,17 +59,33 @@ export function openOrgSqlite(layout: HostFsLayoutPort, orgId: string): OrgSqlit
   };
 }
 
+const cachedOrgDbs = new Map<string, OrgSqliteDb>();
+
+function cachedOrgDb(layout: HostFsLayoutPort, orgId: string): OrgSqliteDb {
+  layout.ensureOrgDir(orgId);
+  const path = layout.orgDbPath(orgId);
+  if (!existsSync(path)) {
+    ensuredOrgPaths.delete(path);
+    cachedOrgDbs.delete(path);
+  }
+  const existing = cachedOrgDbs.get(path);
+  if (existing) {
+    return existing;
+  }
+  const sqlite = new Database(path, { create: true });
+  configureOrgSqlite(sqlite);
+  ensureOrgSchemaOnce(sqlite, path);
+  const db = drizzle(sqlite, { schema: knowledgeSchema });
+  cachedOrgDbs.set(path, db);
+  return db;
+}
+
 export function withOrgSqlite<T>(
   layout: HostFsLayoutPort,
   orgId: string,
   fn: (db: OrgSqliteDb) => T,
 ): T {
-  const session = openOrgSqlite(layout, orgId);
-  try {
-    return fn(session.db);
-  } finally {
-    session.close();
-  }
+  return fn(cachedOrgDb(layout, orgId));
 }
 
 export async function withOrgSqliteAsync<T>(
