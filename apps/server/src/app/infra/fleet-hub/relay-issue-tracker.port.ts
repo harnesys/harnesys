@@ -11,12 +11,14 @@ import {
   type IssueCreateInput,
   type IssueDependencyType,
   type IssueDetail,
+  type IssueFireSuppression,
   type IssueLabelRecord,
   type IssueListFilter,
   type IssueRecord,
   type IssueSourceAttachmentInput,
   type IssueSourceSummary,
   type IssueTrackerPort,
+  type IssueTransitionResult,
   type IssueUpdateInput,
   issueSourceSummaryOf,
 } from 'harnesys';
@@ -59,7 +61,7 @@ export class RelayIssueTrackerPort implements IssueTrackerPort {
     return this.post({ kind: 'issue.get', issueId }) as Promise<IssueDetail>;
   }
 
-  async create(_scope: CapabilityScope, input: IssueCreateInput): Promise<IssueRecord> {
+  async create(_scope: CapabilityScope, input: IssueCreateInput): Promise<IssueTransitionResult> {
     const res = (await this.post({
       kind: 'issue.create',
       body: {
@@ -80,8 +82,11 @@ export class RelayIssueTrackerPort implements IssueTrackerPort {
           ? { worktreeOnStatus: input.worktreeOnStatus }
           : {}),
       },
-    })) as { issue: IssueRecord };
-    return res.issue;
+    })) as { issue: IssueRecord; fireSuppressed?: IssueFireSuppression };
+    return {
+      ...res.issue,
+      ...(res.fireSuppressed !== undefined ? { fireSuppressed: res.fireSuppressed } : {}),
+    };
   }
 
   update(_scope: CapabilityScope, issueId: string, patch: IssueUpdateInput): Promise<IssueRecord> {
@@ -110,7 +115,7 @@ export class RelayIssueTrackerPort implements IssueTrackerPort {
     scope: CapabilityScope,
     issueId: string,
     input: { to: string; assigneeAgentId?: string | null; comment?: string },
-  ): Promise<IssueRecord> {
+  ): Promise<IssueTransitionResult> {
     const moved = (await this.post({
       kind: 'issue.status',
       issueId,
@@ -118,7 +123,7 @@ export class RelayIssueTrackerPort implements IssueTrackerPort {
         statusKey: input.to,
         ...(input.assigneeAgentId !== undefined ? { assigneeAgentId: input.assigneeAgentId } : {}),
       },
-    })) as IssueRecord;
+    })) as IssueTransitionResult;
     if (input.comment) {
       await this.comment(scope, issueId, input.comment);
     }
@@ -277,9 +282,28 @@ export class RelayIssueTrackerPort implements IssueTrackerPort {
       signal: AbortSignal.timeout(30_000),
     });
     if (!response.ok) {
-      throw new Error(`worker org operation failed: HTTP ${response.status}`);
+      throw new Error(await this.failureMessage(response));
     }
     const body = (await response.json()) as WorkerOrgOperationResponse;
     return body.result;
+  }
+
+  private async failureMessage(response: Response): Promise<string> {
+    const statusLine = `worker org operation failed: HTTP ${response.status}`;
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      return statusLine;
+    }
+    if (typeof payload !== 'object' || payload === null) {
+      return statusLine;
+    }
+    const error = payload as { errorCode?: unknown; message?: unknown };
+    const code =
+      typeof error.errorCode === 'string' && error.errorCode !== '' ? `${error.errorCode}: ` : '';
+    const message =
+      typeof error.message === 'string' && error.message !== '' ? error.message : null;
+    return message === null ? statusLine : `${statusLine} ${code}${message}`;
   }
 }

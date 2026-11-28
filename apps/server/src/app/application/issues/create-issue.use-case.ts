@@ -1,12 +1,15 @@
 import { Injectable, Logger } from '@harnesys/brix';
-import type { CreateIssueBody, CreateIssueResponse } from '@harnesys/contracts';
+import type {
+  CreateIssueBody,
+  CreateIssueResponse,
+  IssueFireSuppression,
+} from '@harnesys/contracts';
 import { SignalWakePort } from 'harnesys';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { ExecutionProfilePort } from '../../domain/execution-profile/execution-profile.port.ts';
-import { BoardValidationException } from '../../domain/issue/board.error.ts';
+import { UnknownBoardStatusException } from '../../domain/issue/board.error.ts';
 import type { IssueBoardRecord } from '../../domain/issue/board.ts';
 import { IssueBoardRepositoryPort } from '../../domain/issue/board-repository.port.ts';
-import type { BoardValidationIssue } from '../../domain/issue/board-validation.ts';
 import { createsBlocksCycle } from '../../domain/issue/dependency-cycle.ts';
 import {
   IssueBoardArchivedException,
@@ -30,7 +33,7 @@ import { SourceDriverPort } from '../../domain/source/source-driver.port.ts';
 import { SourceMaterializationPort } from '../../domain/source/source-materialization.port.ts';
 import { SourceRegistryPort } from '../../domain/source/source-registry.port.ts';
 import { toIssuePublic } from './issue-mappers.ts';
-import { fireIssueRules } from './issue-rule-fire.ts';
+import { fireIssueRules, type IssueFireResult } from './issue-rule-fire.ts';
 import { validateWorkspaceSubpath } from './issue-subpath.ts';
 import { resolveIssueLabels } from './resolve-issue-labels.ts';
 
@@ -103,14 +106,14 @@ export class CreateIssueUseCase {
       createdAt: now,
       updatedAt: now,
     };
-    let issue = this.issues.insert(record);
+    const issue = this.issues.insert(record);
     this.insertDependencies(request, issue);
     if (body.deferRules === true) {
       return this.publicIssue(issue);
     }
-    issue = await this.fireRules(orgId, issue, board, body.assigneeAgentId ?? null);
-    this.events.emit(orgId, { type: 'issue', issue });
-    return this.publicIssue(issue);
+    const fired = await this.fireRules(orgId, issue, board, body.assigneeAgentId ?? null);
+    this.events.emit(orgId, { type: 'issue', issue: fired.issue });
+    return this.publicIssue(fired.issue, fired.fireSuppressed);
   }
 
   async commit(request: {
@@ -128,9 +131,9 @@ export class CreateIssueUseCase {
       throw new IssueBoardNotFoundException(found.boardId);
     }
     const issue = this.applyCommitStatus(orgId, found, board, request.statusKey);
-    const updated = await this.fireRules(orgId, issue, board, issue.assigneeAgentId);
-    this.events.emit(orgId, { type: 'issue', issue: updated });
-    return this.publicIssue(updated);
+    const fired = await this.fireRules(orgId, issue, board, issue.assigneeAgentId);
+    this.events.emit(orgId, { type: 'issue', issue: fired.issue });
+    return this.publicIssue(fired.issue, fired.fireSuppressed);
   }
 
   private applyCommitStatus(
@@ -142,11 +145,9 @@ export class CreateIssueUseCase {
     if (statusKey === undefined || statusKey === issue.statusKey) {
       return issue;
     }
-    if (!board.statuses.some((status) => status.key === statusKey)) {
-      const issues: BoardValidationIssue[] = [
-        { field: 'statuses', code: 'unknown-key', key: statusKey },
-      ];
-      throw new BoardValidationException(issues);
+    const keys = board.statuses.map((status) => status.key);
+    if (!keys.includes(statusKey)) {
+      throw new UnknownBoardStatusException(statusKey, keys);
     }
     const category = board.statuses.find((status) => status.key === statusKey)?.category;
     const closed = category === 'finished' || category === 'cancelled';
@@ -157,23 +158,25 @@ export class CreateIssueUseCase {
     });
   }
 
-  private publicIssue(issue: IssueRecord): CreateIssueResponse {
+  private publicIssue(
+    issue: IssueRecord,
+    fireSuppressed: IssueFireSuppression | null = null,
+  ): CreateIssueResponse {
     return {
       issue: toIssuePublic(issue, {
         worktrees: this.worktrees,
         layout: this.layout,
         hostId: this.machineConfig.get().id,
       }),
+      ...(fireSuppressed !== null ? { fireSuppressed } : {}),
     };
   }
 
   private initialStatusKey(board: IssueBoardRecord, body: CreateIssueBody): string {
     if (body.statusKey !== undefined) {
-      if (!board.statuses.some((status) => status.key === body.statusKey)) {
-        const issues: BoardValidationIssue[] = [
-          { field: 'statuses', code: 'unknown-key', key: body.statusKey },
-        ];
-        throw new BoardValidationException(issues);
+      const keys = board.statuses.map((status) => status.key);
+      if (!keys.includes(body.statusKey)) {
+        throw new UnknownBoardStatusException(body.statusKey, keys);
       }
       return body.statusKey;
     }
@@ -213,7 +216,7 @@ export class CreateIssueUseCase {
     issue: IssueRecord,
     board: IssueBoardRecord,
     explicitAssignee: string | null,
-  ): Promise<IssueRecord> {
+  ): Promise<IssueFireResult> {
     return fireIssueRules(
       {
         issues: this.issues,

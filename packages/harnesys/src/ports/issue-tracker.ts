@@ -2,6 +2,7 @@ import type {
   BoardRuleInput,
   BoardRule as BoardRuleRecord,
   BoardStatus,
+  IssueFireSuppression,
   RuleAction,
   RuleCondition,
   RuleTrigger,
@@ -13,6 +14,7 @@ export type {
   BoardRuleInput,
   BoardRuleRecord,
   BoardStatus,
+  IssueFireSuppression,
   RuleAction,
   RuleCondition,
   RuleTrigger,
@@ -145,6 +147,9 @@ export interface IssueMoveInput {
   assigneeAgentId?: string | null;
   comment?: string;
 }
+export interface IssueTransitionResult extends IssueRecord {
+  fireSuppressed?: IssueFireSuppression;
+}
 export interface IssueListFilter {
   boardId?: string;
   statusKey?: string;
@@ -182,9 +187,13 @@ export interface IssueTrackerPort {
   listSources(scope: CapabilityScope): Promise<IssueSourceSummary[]>;
   list(scope: CapabilityScope, filter?: IssueListFilter): Promise<IssueRecord[]>;
   get(scope: CapabilityScope, issueId: string): Promise<IssueDetail>;
-  create(scope: CapabilityScope, input: IssueCreateInput): Promise<IssueRecord>;
+  create(scope: CapabilityScope, input: IssueCreateInput): Promise<IssueTransitionResult>;
   update(scope: CapabilityScope, issueId: string, patch: IssueUpdateInput): Promise<IssueRecord>;
-  move(scope: CapabilityScope, issueId: string, input: IssueMoveInput): Promise<IssueRecord>;
+  move(
+    scope: CapabilityScope,
+    issueId: string,
+    input: IssueMoveInput,
+  ): Promise<IssueTransitionResult>;
   nudge(scope: CapabilityScope, issueId: string): Promise<IssueRecord>;
   comment(scope: CapabilityScope, issueId: string, body: string): Promise<IssueCommentRecord>;
   addDependency(

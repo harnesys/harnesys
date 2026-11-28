@@ -1,15 +1,13 @@
 import { Injectable, Logger } from '@harnesys/brix';
-import type { IssuePublic, UpdateIssueStatusBody } from '@harnesys/contracts';
+import type { UpdateIssueStatusBody, UpdateIssueStatusResponse } from '@harnesys/contracts';
 import { SignalWakePort } from 'harnesys';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { ExecutionProfilePort } from '../../domain/execution-profile/execution-profile.port.ts';
 import { LOCAL_EXECUTION_PROFILE_ID } from '../../domain/execution-profile/execution-profile.ts';
 import { FleetContentProxyPort } from '../../domain/fleet/fleet-content-proxy.port.ts';
-import { BoardValidationException } from '../../domain/issue/board.error.ts';
+import { UnknownBoardStatusException } from '../../domain/issue/board.error.ts';
 import type { IssueBoardRecord } from '../../domain/issue/board.ts';
 import { IssueBoardRepositoryPort } from '../../domain/issue/board-repository.port.ts';
-import type { BoardValidationIssue } from '../../domain/issue/board-validation.ts';
-import { hasOpenBlockers } from '../../domain/issue/dependency-cycle.ts';
 import { IssueValidationException } from '../../domain/issue/issue.error.ts';
 import type { IssuePatch, IssueRecord } from '../../domain/issue/issue.ts';
 import { IssueDependencyRepositoryPort } from '../../domain/issue/issue-dependency-repository.port.ts';
@@ -41,7 +39,8 @@ import {
 } from './issue-dispatch-support.ts';
 import { loadActiveIssueAndBoard } from './issue-guards.ts';
 import { toIssuePublic } from './issue-mappers.ts';
-import { engineRefs, issueClosedChecker } from './issue-rule-support.ts';
+import { fireSuppressionForBlockers, openBlockerRefs } from './issue-rule-fire.ts';
+import { engineRefs } from './issue-rule-support.ts';
 
 export interface UpdateIssueStatusRequest {
   orgId: string;
@@ -78,7 +77,7 @@ export class UpdateIssueStatusUseCase {
     this.log = logger.child('update-issue-status');
   }
 
-  async execute(request: UpdateIssueStatusRequest): Promise<IssuePublic> {
+  async execute(request: UpdateIssueStatusRequest): Promise<UpdateIssueStatusResponse> {
     const { orgId, body } = request;
     const { issue, board } = loadActiveIssueAndBoard(
       this.issues,
@@ -88,8 +87,11 @@ export class UpdateIssueStatusUseCase {
     );
     this.assertStatusOnBoard(board, body.statusKey);
     const explicit = this.explicitAssignee(orgId, body);
-    const isClosed = issueClosedChecker({ orgId, issues: this.issues, boards: this.boards });
-    const openBlockers = hasOpenBlockers(this.dependencies.listAll(orgId), issue.id, isClosed);
+    const blockers = openBlockerRefs({
+      orgId,
+      issueId: issue.id,
+      ports: { issues: this.issues, dependencies: this.dependencies, boards: this.boards },
+    });
     const resolved = resolveFire({
       rules: board.rules,
       event: { type: 'status_entered', statusKey: body.statusKey },
@@ -98,11 +100,11 @@ export class UpdateIssueStatusUseCase {
         labels: issue.labels,
         priority: issue.priority,
         type: issue.type,
-        hasOpenBlockers: openBlockers,
+        hasOpenBlockers: blockers.length > 0,
       },
       refs: engineRefs({ board, labels: this.labels, agents: this.agents, orgId }),
       explicitAssignee: explicit ?? null,
-      hasOpenBlockers: openBlockers,
+      hasOpenBlockers: blockers.length > 0,
     });
     this.warnOutcome(orgId, board.id, resolved);
     const now = new Date().toISOString();
@@ -127,11 +129,13 @@ export class UpdateIssueStatusUseCase {
         text,
       });
     }
-    return toIssuePublic(finalIssue, {
+    const suppressed = fireSuppressionForBlockers({ blockers, resolved, board });
+    const result = toIssuePublic(finalIssue, {
       worktrees: this.worktrees,
       layout: this.layout,
       hostId: this.machineConfig.get().id,
     });
+    return suppressed === null ? result : { ...result, fireSuppressed: suppressed };
   }
 
   private async applyResolvedFire(input: {
@@ -282,11 +286,9 @@ export class UpdateIssueStatusUseCase {
   }
 
   private assertStatusOnBoard(board: IssueBoardRecord, statusKey: string): void {
-    if (!board.statuses.some((status) => status.key === statusKey)) {
-      const issues: BoardValidationIssue[] = [
-        { field: 'statuses', code: 'unknown-key', key: statusKey },
-      ];
-      throw new BoardValidationException(issues);
+    const keys = board.statuses.map((status) => status.key);
+    if (!keys.includes(statusKey)) {
+      throw new UnknownBoardStatusException(statusKey, keys);
     }
   }
 

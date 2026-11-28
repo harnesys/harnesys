@@ -67,7 +67,7 @@ export function createIssueLinkTools(deps: CreateIssueLinkToolsParams): ToolDefi
     tool('issue_dependency', {
       group: 'issues',
       description:
-        'Link issues: action=add|remove a dependency of this issue on another (type blocks|relates|duplicate, default blocks). blocks dependencies gate moving into work columns. One issueId/dependsOnIssueId or a links batch; a batch applies one by one and reports { linked, failed }.',
+        'Link issues: action=add|remove a dependency of this issue on another (type blocks|relates|duplicate, default blocks). Open blocks dependencies suppress agent firing when an issue enters a started column (the move itself is allowed). One issueId/dependsOnIssueId or a links batch; a batch applies one by one and reports { linked, failed }.',
       input: {
         type: 'object',
         properties: {

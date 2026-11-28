@@ -1,4 +1,4 @@
-import { ENTITY_COLOR_NAMES } from '@harnesys/contracts';
+import { ENTITY_COLOR_NAMES, RULE_CONDITION_TYPES } from '@harnesys/contracts';
 import type { CapabilityScope } from '../../domain/pack.ts';
 import type {
   BoardRuleInput,
@@ -11,6 +11,7 @@ import type {
 } from '../../ports/issue-tracker.ts';
 import { type ToolDefinition, tool } from '../../ports/tools.ts';
 import { runBatch } from './batch.ts';
+import { ISSUE_TYPES } from './create-issue-tools.ts';
 import { runGuard } from './run-guard.ts';
 export interface CreateIssueMetaToolsParams {
   issues: IssueTrackerPort;
@@ -226,7 +227,7 @@ export function createIssueMetaTools(deps: CreateIssueMetaToolsParams): ToolDefi
     tool('board_rule_save', {
       group: 'issues',
       description:
-        'Create or update a board automation rule (trigger -> conditions -> actions). Omit ruleId to create a new rule (appended last); pass ruleId to update an existing rule of that board. position orders rules; when several matching rules assign an agent, the last one by position wins. List labels with label_list; list agents and statuses with issue_board_list.',
+        'Create or update a board automation rule (trigger -> conditions -> actions). Omit ruleId to create a new rule (appended last); pass ruleId to update an existing rule of that board. position orders rules; when several matching rules assign an agent, the last one by position wins. Conditions are ANDed: has_label / has_not_label (labelId), has_priority (priority), has_type (issueType), has_open_blockers (value: true matches an issue with open blocks dependencies, false one without). List labels with label_list; list agents and statuses with issue_board_list.',
       input: {
         type: 'object',
         properties: {
@@ -245,10 +246,13 @@ export function createIssueMetaTools(deps: CreateIssueMetaToolsParams): ToolDefi
             items: {
               type: 'object',
               properties: {
-                type: { type: 'string', enum: ['has_label'] },
+                type: { type: 'string', enum: [...RULE_CONDITION_TYPES] },
                 labelId: { type: 'string' },
+                priority: { type: 'integer', minimum: 1, maximum: 4 },
+                issueType: { type: 'string', enum: ISSUE_TYPES },
+                value: { type: 'boolean' },
               },
-              required: ['type', 'labelId'],
+              required: ['type'],
             },
           },
           actions: {

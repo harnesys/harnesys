@@ -15,6 +15,7 @@ import {
   type IssueSourceAttachmentInput,
   type IssueSourceSummary,
   type IssueTrackerPort,
+  type IssueTransitionResult,
   type IssueUpdateInput,
   issueSourceSummaryOf,
 } from 'harnesys';
@@ -100,7 +101,7 @@ export class OrgIssuePort implements IssueTrackerPort {
     return Promise.resolve(this.deps.getIssue.execute({ orgId: scope.orgId, issueId }));
   }
 
-  async create(scope: CapabilityScope, input: IssueCreateInput): Promise<IssueRecord> {
+  async create(scope: CapabilityScope, input: IssueCreateInput): Promise<IssueTransitionResult> {
     const res = await this.deps.createIssue.execute({
       orgId: scope.orgId,
       actorAgentId: scope.agentId,
@@ -126,7 +127,10 @@ export class OrgIssuePort implements IssueTrackerPort {
           : {}),
       },
     });
-    return res.issue;
+    return {
+      ...res.issue,
+      ...(res.fireSuppressed !== undefined ? { fireSuppressed: res.fireSuppressed } : {}),
+    };
   }
 
   update(scope: CapabilityScope, issueId: string, patch: IssueUpdateInput): Promise<IssueRecord> {
@@ -160,7 +164,7 @@ export class OrgIssuePort implements IssueTrackerPort {
     scope: CapabilityScope,
     issueId: string,
     input: { to: string; assigneeAgentId?: string | null; comment?: string },
-  ): Promise<IssueRecord> {
+  ): Promise<IssueTransitionResult> {
     const moved = await this.deps.updateStatus.execute({
       orgId: scope.orgId,
       issueId,

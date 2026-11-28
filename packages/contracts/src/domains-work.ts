@@ -106,6 +106,7 @@ export type {
   GetIssueBoardResponse,
   IssueAttachmentKind,
   IssueAttachmentPublic,
+  IssueBlockerRef,
   IssueBoardPublic,
   IssueBoardStatus,
   IssueCommentAuthorType,
@@ -114,6 +115,7 @@ export type {
   IssueDependencyType,
   IssueFireOutcome,
   IssueFireReason,
+  IssueFireSuppression,
   IssueFireTrailEntry,
   IssueLabelPublic,
   IssueListItem,
@@ -131,6 +133,7 @@ export type {
   UpdateIssueBody,
   UpdateIssueLabelBody,
   UpdateIssueStatusBody,
+  UpdateIssueStatusResponse,
 } from './issues.ts';
 export {
   AddIssueCommentBodySchema,
@@ -147,6 +150,7 @@ export {
   GetIssueBoardResponseSchema,
   IssueAttachmentKindSchema,
   IssueAttachmentPublicSchema,
+  IssueBlockerRefSchema,
   IssueBoardPublicSchema,
   IssueBoardStatusSchema,
   IssueCommentAuthorTypeSchema,
@@ -155,6 +159,7 @@ export {
   IssueDependencyTypeSchema,
   IssueFireOutcomeSchema,
   IssueFireReasonSchema,
+  IssueFireSuppressionSchema,
   IssueFireTrailEntrySchema,
   IssueLabelPublicSchema,
   IssuePrioritySchema,
@@ -169,6 +174,7 @@ export {
   UpdateIssueBodySchema,
   UpdateIssueLabelBodySchema,
   UpdateIssueStatusBodySchema,
+  UpdateIssueStatusResponseSchema,
 } from './issues.ts';
 export {
   type AddPluginRegistryBody,

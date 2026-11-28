@@ -3,6 +3,7 @@ import type {
   IssueDependencyType,
   IssueListFilter,
   IssueTrackerPort,
+  IssueTransitionResult,
   IssueType,
 } from '../../ports/issue-tracker.ts';
 import { type ToolDefinition, tool } from '../../ports/tools.ts';
@@ -55,6 +56,13 @@ interface IssueCommentToolInput {
   body?: string;
   comments?: IssueCommentEntry[];
 }
+function suppressedMoves(items: IssueTransitionResult[]) {
+  return items.flatMap((moved) =>
+    moved.fireSuppressed === undefined
+      ? []
+      : [{ issueId: moved.id, fireSuppressed: moved.fireSuppressed }],
+  );
+}
 const issueMoveProperties = {
   issueId: { type: 'string' },
   to: { type: 'string', description: 'Target board status key (free transition)' },
@@ -76,7 +84,7 @@ export function createIssueTools(deps: CreateIssueToolsParams): ToolDefinition[]
     tool('issue_move', {
       group: 'issues',
       description:
-        'Move issues to another column by status key (transitions are free within the board): one issueId/to or a moves batch. Optional assignee override per entry (fires the new agent in a started column; omit to keep the current assignee) and optional comment per entry. A batch applies entries one by one and reports { moved, failed }.',
+        'Move issues to another column by status key (transitions are free within the board): one issueId/to or a moves batch. Optional assignee override per entry (fires the new agent in a started column; omit to keep the current assignee) and optional comment per entry. A move onto a started column with open blocks dependencies succeeds but fires no agent: the result then carries fireSuppressed naming the open blocker issues. A batch applies entries one by one and reports { moved, failed, suppressed }, suppressed listing entries that fired no agent.',
       input: {
         type: 'object',
         properties: {
@@ -105,7 +113,8 @@ export function createIssueTools(deps: CreateIssueToolsParams): ToolDefinition[]
               (entry) => moveEntry(scope, entry),
               (entry, error) => ({ issueId: entry.issueId, to: entry.to, error }),
             );
-            return { moved: outcome.done, failed: outcome.failed };
+            const suppressed = suppressedMoves(outcome.items);
+            return { moved: outcome.done, failed: outcome.failed, suppressed };
           }
           if (input.issueId === undefined || input.to === undefined) {
             throw new Error('Provide issueId and to, or a moves array');

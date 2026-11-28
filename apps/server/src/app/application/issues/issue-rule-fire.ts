@@ -1,4 +1,5 @@
 import type { Logger } from '@harnesys/brix';
+import type { IssueBlockerRef, IssueFireSuppression } from '@harnesys/contracts';
 import type { SignalWakePort } from 'harnesys';
 import type { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import type { ExecutionProfilePort } from '../../domain/execution-profile/execution-profile.port.ts';
@@ -50,6 +51,46 @@ export interface IssueRuleFireDeps {
   log: Logger;
 }
 
+export interface IssueFireResult {
+  issue: IssueRecord;
+  fireSuppressed: IssueFireSuppression | null;
+}
+
+const FIRE_SUPPRESSION_MESSAGE =
+  'no agent was fired: open blockers suppress agent firing (an explicit assignee included); the status change itself was applied';
+
+export function openBlockerRefs(input: {
+  orgId: string;
+  issueId: string;
+  ports: Pick<IssueRuleFireDeps, 'issues' | 'dependencies' | 'boards'>;
+}): IssueBlockerRef[] {
+  const isClosed = issueClosedChecker({
+    orgId: input.orgId,
+    issues: input.ports.issues,
+    boards: input.ports.boards,
+  });
+  return input.ports.dependencies
+    .listAll(input.orgId)
+    .filter((dependency) => hasOpenBlockers([dependency], input.issueId, isClosed))
+    .map((dependency) => input.ports.issues.findById(input.orgId, dependency.dependsOnIssueId))
+    .filter((blocker): blocker is IssueRecord => blocker !== undefined)
+    .map((blocker) => ({ id: blocker.id, title: blocker.title }));
+}
+
+export function fireSuppressionForBlockers(input: {
+  blockers: IssueBlockerRef[];
+  resolved: ResolvedFire;
+  board: IssueBoardRecord;
+}): IssueFireSuppression | null {
+  const landedCategory = input.board.statuses.find(
+    (status) => status.key === input.resolved.finalStatusKey,
+  )?.category;
+  if (!input.resolved.fireBlockedByBlockers || landedCategory !== 'started') {
+    return null;
+  }
+  return { blockers: input.blockers, message: FIRE_SUPPRESSION_MESSAGE };
+}
+
 export async function fireIssueRules(
   deps: IssueRuleFireDeps,
   input: {
@@ -58,10 +99,9 @@ export async function fireIssueRules(
     board: IssueBoardRecord;
     explicitAssignee: string | null;
   },
-): Promise<IssueRecord> {
+): Promise<IssueFireResult> {
   const { orgId, issue, board, explicitAssignee } = input;
-  const isClosed = issueClosedChecker({ orgId, issues: deps.issues, boards: deps.boards });
-  const openBlockers = hasOpenBlockers(deps.dependencies.listAll(orgId), issue.id, isClosed);
+  const blockers = openBlockerRefs({ orgId, issueId: issue.id, ports: deps });
   const resolved = resolveFire({
     rules: board.rules,
     event: [{ type: 'issue_created' }, { type: 'status_entered', statusKey: issue.statusKey }],
@@ -70,12 +110,13 @@ export async function fireIssueRules(
       labels: issue.labels,
       priority: issue.priority,
       type: issue.type,
-      hasOpenBlockers: openBlockers,
+      hasOpenBlockers: blockers.length > 0,
     },
     refs: engineRefs({ board, labels: deps.labels, agents: deps.agents, orgId }),
     explicitAssignee,
-    hasOpenBlockers: openBlockers,
+    hasOpenBlockers: blockers.length > 0,
   });
+  const fireSuppressed = fireSuppressionForBlockers({ blockers, resolved, board });
   warnStop(deps.log, orgId, board.id, resolved);
   const labelIds = applyLabelMutations(issue.labels, resolved);
   if (resolved.agentId === null) {
@@ -89,7 +130,7 @@ export async function fireIssueRules(
       unassign: resolved.unassign,
     });
     await applyResolvedWakes(deps, orgId, issue.id, resolved);
-    return persisted;
+    return { issue: persisted, fireSuppressed };
   }
   const finalCategory = board.statuses.find(
     (status) => status.key === resolved.finalStatusKey,
@@ -105,7 +146,7 @@ export async function fireIssueRules(
       unassign: resolved.unassign,
     });
     await applyResolvedWakes(deps, orgId, issue.id, resolved);
-    return persisted;
+    return { issue: persisted, fireSuppressed };
   }
   const agent = deps.agents.findById(orgId, resolved.agentId);
   const effective = resolveEffectiveProfile({
@@ -160,7 +201,7 @@ export async function fireIssueRules(
   emitNotifications(deps, orgId, board.id, issue.id, resolved);
   const result = updated ?? deps.issues.findById(orgId, issue.id) ?? issue;
   await applyResolvedWakes(deps, orgId, issue.id, resolved);
-  return result;
+  return { issue: result, fireSuppressed };
 }
 
 function emitNotifications(

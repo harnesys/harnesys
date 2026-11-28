@@ -80,6 +80,18 @@ export const IssuePublicSchema = z.object({
 });
 export type IssuePublic = z.infer<typeof IssuePublicSchema>;
 
+export const IssueBlockerRefSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string().min(1),
+});
+export type IssueBlockerRef = z.infer<typeof IssueBlockerRefSchema>;
+
+export const IssueFireSuppressionSchema = z.object({
+  blockers: z.array(IssueBlockerRefSchema).min(1),
+  message: z.string().min(1),
+});
+export type IssueFireSuppression = z.infer<typeof IssueFireSuppressionSchema>;
+
 export const IssueCommentPublicSchema = z.object({
   id: z.string().uuid(),
   issueId: z.string().uuid(),
@@ -199,6 +211,11 @@ export const UpdateIssueStatusBodySchema = z.object({
 });
 export type UpdateIssueStatusBody = z.infer<typeof UpdateIssueStatusBodySchema>;
 
+export const UpdateIssueStatusResponseSchema = IssuePublicSchema.extend({
+  fireSuppressed: IssueFireSuppressionSchema.optional(),
+});
+export type UpdateIssueStatusResponse = z.infer<typeof UpdateIssueStatusResponseSchema>;
+
 export const AddIssueCommentBodySchema = z.object({
   body: z.string().trim().min(1),
 });
@@ -259,6 +276,7 @@ export type ListIssuesResponse = z.infer<typeof ListIssuesResponseSchema>;
 
 export const CreateIssueResponseSchema = z.object({
   issue: IssuePublicSchema,
+  fireSuppressed: IssueFireSuppressionSchema.optional(),
 });
 export type CreateIssueResponse = z.infer<typeof CreateIssueResponseSchema>;
 

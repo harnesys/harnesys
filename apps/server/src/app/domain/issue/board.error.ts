@@ -21,3 +21,14 @@ export class RuleValidationException extends DomainException {
     super('RULE_VALIDATION', message, details);
   }
 }
+
+export class UnknownBoardStatusException extends DomainException {
+  constructor(statusKey: string, availableKeys: string[]) {
+    super(
+      'UNKNOWN_BOARD_STATUS',
+      `unknown statusKey: ${statusKey} (board statuses: ${availableKeys.join(', ')}; see issue_board_list)`,
+      { statusKey, availableKeys },
+      400,
+    );
+  }
+}

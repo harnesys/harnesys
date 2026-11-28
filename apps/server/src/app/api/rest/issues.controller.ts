@@ -26,6 +26,7 @@ import type {
   RepositoryWorktree,
   UpdateIssueBody,
   UpdateIssueStatusBody,
+  UpdateIssueStatusResponse,
 } from '@harnesys/contracts';
 import {
   AddIssueCommentBodySchema,
@@ -124,7 +125,7 @@ export class IssuesController {
     @Param('orgId') orgId: string,
     @Param('issueId') issueId: string,
     @Body(UpdateIssueStatusBodySchema) body: UpdateIssueStatusBody,
-  ): Promise<{ issue: IssuePublic }> {
+  ): Promise<{ issue: UpdateIssueStatusResponse }> {
     return { issue: await this.updateStatus.execute({ orgId, issueId, body }) };
   }
 

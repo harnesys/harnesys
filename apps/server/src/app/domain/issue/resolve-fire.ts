@@ -12,6 +12,7 @@ import {
 
 export interface ResolvedFire {
   agentId: string | null;
+  fireBlockedByBlockers: boolean;
   executionProfileId: string | null;
   ruleId: string | null;
   reason: IssueFireReason;
@@ -61,8 +62,10 @@ export function applyLabelMutations(labels: string[], resolved: ResolvedFire): s
 function toResolvedFire(outcome: EngineOutcome, input: ResolveFireInput): ResolvedFire {
   const explicit = input.explicitAssignee;
   const assign = outcome.assigns[0] ?? null;
+  const intent = explicit ?? assign?.agentId ?? null;
   return {
-    agentId: input.hasOpenBlockers ? null : (explicit ?? assign?.agentId ?? null),
+    agentId: input.hasOpenBlockers ? null : intent,
+    fireBlockedByBlockers: input.hasOpenBlockers && intent !== null,
     executionProfileId: explicit ? null : (assign?.executionProfileId ?? null),
     ruleId: explicit ? null : (assign?.ruleId ?? null),
     reason: explicit ? 'override' : 'rule',

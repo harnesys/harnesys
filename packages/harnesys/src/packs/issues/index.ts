@@ -37,7 +37,7 @@ export const issuesCapability = definePack<IssuesCapabilityPorts, Record<string,
       {
         name: 'board_rule_save',
         description:
-          'Create or update a board automation rule (trigger -> conditions -> actions). Omit ruleId to append a new rule; pass ruleId to update.',
+          'Create or update a board automation rule (trigger -> conditions -> actions; conditions: has_label, has_not_label, has_priority, has_type, has_open_blockers). Omit ruleId to append a new rule; pass ruleId to update.',
       },
       {
         name: 'board_rule_delete',
@@ -50,12 +50,12 @@ export const issuesCapability = definePack<IssuesCapabilityPorts, Record<string,
       {
         name: 'issue_create',
         description:
-          'Create issues on a board (created in the board entry status unless statusKey is given); accepts an issues batch. Board rules for the entered status fire on creation. Optional sourceId/branch bind the run workspace.',
+          'Create issues on a board (created in the board entry status unless statusKey is given); accepts an issues batch. Board rules for the entered status fire on creation; open blockers suppress the firing and the result carries fireSuppressed. Optional sourceId/branch bind the run workspace.',
       },
       {
         name: 'issue_move',
         description:
-          'Move issues to any status of their board (transitions are free); accepts a moves batch. Optional assignee override fires the new agent in a started status; optional comment.',
+          'Move issues to any status of their board (transitions are free); accepts a moves batch. Optional assignee override fires the new agent in a started status; optional comment. Open blockers suppress the firing (explicit assignee included) without blocking the move; the result then names the blockers in fireSuppressed.',
       },
       {
         name: 'issue_update',
