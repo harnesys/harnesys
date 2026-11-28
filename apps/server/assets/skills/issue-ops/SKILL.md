@@ -15,14 +15,14 @@ Rules evaluate on `issue_created` and `status_entered` events, in `position` ord
 | Aspect | Behavior |
 |---|---|
 | Trigger | `issue_created`, `status_entered` with a `statusKey`, or `run_settled` (the issue's execution finished or failed) |
-| Conditions | AND of `has_label`; all must match |
+| Conditions | AND of `has_label` / `has_not_label` (labelId), `has_priority` (priority), `has_type` (issueType), `has_open_blockers` (value); all must match |
 | `assign_agent` | Last matching rule wins; rejected on `run_settled` rules (a settled execution must not re-dispatch itself) |
 | `wake_agent` | Resume runs of that agent parked on this issue via `wait` with `signal: 'issue:<id>'` |
 | `set_status` | Cascades; cap 5 transitions, repeats blocked within one cascade |
 | `notify_owner` | UI toast to the owner |
 | Fire condition | A run fires only when the entered status category is `started` |
-| Blockers | Open blockers suppress firing |
-| Override | Explicit `assigneeAgentId` on the move overrides rules |
+| Blockers | Open blockers suppress agent firing on entry to started columns, including an explicit assignee; the move itself is allowed and the result carries `fireSuppressed` naming the open blocker issues |
+| Override | Explicit `assigneeAgentId` on the move overrides rules for who is assigned — but that agent still does not fire while open blockers remain; the result carries `fireSuppressed` with the blocker ids/titles and states that no agent was fired |
 | No match | Unassigned + no matching rule = no run |
 
 ## Worktree binding

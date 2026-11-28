@@ -37,7 +37,7 @@ No settings. No permission gate. Always required for a functioning agent.
 | Tool | Does |
 |---|---|
 | `ask_user` | Ask the human a question and park the run until the reply. |
-| `map` | Queue a fan-out over a JSON array (max 32) for the graph `control:map` node; per-item template with `$item`/`$index`. |
+| `map` | Queue a fan-out over a JSON array (max 32) for the graph `control:map` node; per-item template with `$item`/`$index`. A worker sees only its item text plus the shared `instruction` — no thread history, no fan-out goal. Items must be self-contained tasks; shared goal/context belongs in `instruction`. |
 | `wait` | Park the run until a wall-clock delay (1 ms–7 d) or until a signal settles (`signal: 'issue:<id>'`); optional `timeoutMs` bounds a signal wait (default 30 min). |
 
 `core` also adds the `core-tools` tail note explaining when to use `map`, `wait`, `ask_user`.
@@ -71,7 +71,7 @@ Settings: `timeout` (1–600000 ms), `allowlist`, `blocklist` (string[]). Gate: 
 | `shell` | Run a shell command; optional background, terminal or remote target. |
 | `terminal_spawn` | Start a named terminal session (host, ssh or REPL) kept across calls and shared in the sidebar. |
 | `terminal_write` | Write to a session stdin; `0x03` = Ctrl+C, `0x04` = EOF. |
-| `terminal_read` | Read session output (non-destructive), optional until-regex (max 30 s). |
+| `terminal_read` | Read session output (non-destructive); until-regex matches the raw PTY stream since `since`, incl. echoed input and ANSI — anchor patterns to output-only text (max 30 s). |
 | `terminal_kill` | Kill a session or background job, including a user-opened shell. |
 | `terminal_list` | List sessions and background jobs, including user-opened ones. |
 | `port_forward` | Open an SSH port forward as a background job. |
@@ -107,18 +107,19 @@ No settings. Gate: `fs.read`.
 | `lsp_hover` | Hover / type info. |
 
 ### agents — fleet management
-Settings: `ownDelegatesOnly` (boolean, limits `agents_update` to the caller's own delegates; delete is always own-delegates only). Gate: `agents` on create, spawn, handoff, update, delete; a permissions change on create/update asks the user even when `agents` is allowed.
+Settings: `ownDelegatesOnly` (boolean, narrows `agents_update` from its default whole-org scope to the caller's own delegates; delete is always own-delegates only). Gate: `agents` on create, spawn, handoff, update, delete; a permissions change on create/update asks the user even when `agents` is allowed.
 Forbidden on subagents.
 
 | Tool | Does |
 |---|---|
-| `agents_list` | List agents with id, name, role, instructions, packs, skills, budget, permissions, model, level, parent. |
-| `agents_create` | Create a standalone top-level agent; omitted graph → default ReAct graph, omitted budget → `{ maxSteps: 50, policy: "ask" }`. |
+| `packs_tools` | Per-source tool inventory (pack/host/mcp). Default result is compact: pack/source identity and tool names, no description prose; full descriptions via the `pack` filter or `detail: true`. |
+| `agents_list` | List agents with id, name, role, packs, skills, budget, permissions, model (`{ provider, model, effort? }`), level, parent. Rows omit instructions by default; the full instructions arrive when the filter isolates one agent or with `verbose: true`. |
+| `agents_create` | Create a standalone top-level agent; omitted graph → default ReAct graph, omitted budget → `{ maxSteps: 50, policy: "ask" }`. Echoes `model` as `{ provider, model, effort? }`. |
 | `agents_create_subagent` | Create a one-shot delegate under the caller (no user, no `agents` pack). |
 | `agents_spawn` | Queue one-shot subcontracts for the graph `control:spawn` node; per-call `budget` and `permissions`. |
 | `agents_handoff` | Transfer this thread to another top-level agent (`control:handoff`). |
-| `agents_update` | Patch name/role/instructions/budget/permissions; setting `permissions` always parks an approval ask (also under `agents: allow`); `permissionsJson`/`permissions` inside `config` fails with an error; graph and packs stay owner-only. |
-| `agents_delete` | Remove a delegate that is not running anywhere. |
+| `agents_update` | Whole-org by default, narrowed to own delegates with the `ownDelegatesOnly` spec. Patch name/role/instructions, model `{ provider, model, effort? }`, budget (limits, policy, plus tuning `warnAtSteps`/`closeOnExhaustion`/`extendDefaultPct`), budgetUsdDaily, status, parentId, executionProfileId, defaultModeId, skills, mcpServers, sharedSourceIds, sourceLevels, secretNames, enabledPlugins, hooks, config, permissions; setting `permissions` always parks an approval ask (also under `agents: allow`); `permissionsJson`/`permissions` inside `config` fails with an error; graph and packs stay owner-only. |
+| `agents_delete` | Remove your own delegate that is not running anywhere (always own-delegates-only). |
 
 ### automations — trigger management
 No settings. No permission gate. Manages trigger instances of every installed add-on without per-add-on tools. Trigger kinds are read from installed manifests; config is validated against the kind's `configFields` (required, type, select options, pattern, `visibleWhen`, groups). Kind-specific operations are declared as actions and invoked with `automation_action`.
@@ -143,14 +144,14 @@ No settings. Gate: `mcp_manage`.
 
 | Tool | Does |
 |---|---|
-| `mcp_list` | List MCP servers with config and cached connection status (`connectedAt` handshake time; not re-probed). |
+| `mcp_list` | List MCP servers with config, cached connection status (`connectedAt` handshake time; not re-probed) and `lastCheck` `{at, connected, error?}` of the last probe. |
 | `mcp_connect` | Register or replace a server, probe it, return its tools. |
 | `mcp_check` | Health-check a server with a fresh probe; the source of truth when `mcp_list` status may be stale. |
 | `mcp_toggle` | Enable or disable a server. |
 | `mcp_remove` | Remove a server entry. |
 
 ### plan — this thread's execution plan
-No settings. No permission gate. Adds the `active-plan` tail note while a plan has pending work.
+No settings. No permission gate. Adds the `active-plan` tail note while a plan has pending work. Plan-level status is derived from item states (draft / in_progress / completed).
 
 | Tool | Does |
 |---|---|
@@ -181,8 +182,8 @@ No settings. No permission gate. Adds the `issue-workflow` tail note.
 | `board_rule_save` | Create or update a rule (trigger → conditions → actions). |
 | `board_rule_delete` | Delete a rule; requires `confirm=true`. |
 | `board_delete` | Delete a board and all its issues; requires `confirm=true`. |
-| `issue_create` | Create an issue in the entry status unless `statusKey` is given; entry rules fire. |
-| `issue_move` | Move to any status; optional assignee override and comment. |
+| `issue_create` | Create an issue in the entry status unless `statusKey` is given; entry rules fire; open blockers suppress firing and the result carries `fireSuppressed`. |
+| `issue_move` | Move to any status; optional assignee override and comment; open blockers suppress firing and the result carries `fireSuppressed`. |
 | `issue_update` | Edit fields, labels, assignee (`unassign`), due date (`clear`), or board. |
 | `issue_nudge` | Re-fire the assignee on an issue in a started status. |
 | `issue_get` | Full issue view: comments, subtasks, dependencies, attachments, board rules. |

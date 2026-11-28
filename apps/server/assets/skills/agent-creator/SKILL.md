@@ -21,10 +21,10 @@ Workspace-level concerns (schedules, memory roots, project layout) are covered b
 
 Hard rules:
 
-- Call `agents_list` before creating. Creating a duplicate name fails (`agent name taken in org: X`).
+- Call `agents_list` before creating. Default rows omit instructions; full instructions come when a filter isolates one agent or with `verbose: true`. Creating a duplicate name fails (`agent name taken in org: X`).
 - Delegates (children) can never enable the `agents` pack: `packs.agents is forbidden for subagents (nesting ban)`. Children cannot spawn (a nested `agents_spawn` fails with `spawn is not allowed in a sandboxed run`).
 - `agents_handoff` only accepts top-level agents; handing off to a delegate is rejected.
-- `agents_update` / `agents_delete` work only on your own delegates; top-level agents are managed in the project UI. `agents_update` patches name/role/instructions/budget/permissions (graph and packs are owner-only); budget replaces the stored value, omitted fields drop out. A permissions change always asks the user for approval; pass rights via `permissions`, not via `config`.
+- `agents_update` is org-wide by default — any agent, top-level or delegate; only the caller's `agents` pack spec `ownDelegatesOnly` narrows it to delegates you created (the Coder preset runs narrowed, Genie does not). `agents_delete` is always own-delegates-only. Top-level agents are also managed in the project UI. `agents_update` patches name, role, instructions, model, budget, budgetUsdDaily, status, parentId, executionProfileId, defaultModeId, skills, mcpServers, sharedSourceIds, sourceLevels, secretNames, enabledPlugins, hooks, config, permissions (graph and packs are owner-only); budget replaces the stored value, omitted fields drop out. A permissions change always asks the user for approval; pass rights via `permissions`, not via `config`.
 
 ## 2. Anatomy of a created agent
 
@@ -63,14 +63,14 @@ Gotchas that bite most often:
 
 ### Composing the toolset (applies to `agents_create` team members and `agents_create_subagent` delegates alike)
 
-1. Before assigning any pack, call `packs_tools` (optionally `pack: "files"`) — it returns the concrete tools the pack grants with `sideEffect` and `operations`. A pack is all-or-nothing unless you trim it.
+1. Before assigning any pack, call `packs_tools` — the default result is compact: per source, the pack identity and tool names, no description prose. Pass `pack: "files"` (or `detail: true`) for the concrete tools with full descriptions, `sideEffect` and `operations`. A pack is all-or-nothing unless you trim it.
 2. Trim per role with the object form. Read-only analyst: `packs: { core: true, files: { disabledTools: ["write_file", "edit_file", "delete_file", "move_file", "write_docx", "write_xlsx"] } }`. Noisy pack: `{ shell: { exposure: { terminal_spawn: "deferred", terminal_kill: "deferred" } } }` keeps the tool reachable via `load_tools` but out of every prompt.
 3. After children settle, `agents_wait`/`agents_status` returns `toolUse: { total, used[], unused[] }` — the child's real tool footprint. If `unused` dominates (roughly more than half of `total`), recreate the agent with those tools trimmed; unused tools are paid tokens on every step and wrong-call bait.
 4. `agents_update` cannot change packs (owner-only field): to re-trim, create a fresh agent/delegate with the corrected map and delete the old one.
 
 ## 4. Budget
 
-Fields: `maxSteps` (node executions; the start node counts and the last allowed step is reserved as the toolless closing call — below 3 a child never gets a tool turn, 3 buys exactly one), `maxTokens`, `deadlineMs`, `policy` (`ask` | `error`), plus tuning: `warnAtSteps` (default 3), `closeOnExhaustion`, `extendDefaultPct` (default 25).
+Fields: `maxSteps` (node executions; the start node counts and the last allowed step is reserved as the toolless closing call — below 3 a child never gets a tool turn, 3 buys exactly one), `maxTokens`, `deadlineMs`, `policy` (`ask` | `error`), plus tuning: `warnAtSteps` (default 3), `closeOnExhaustion`, `extendDefaultPct` (default 25). `agents_update` accepts this same budget shape, tuning fields included. Listings and create echoes return `model` as the object `{ provider, model, effort? }`, and `agents_update` accepts the same object — copying a `model` or `budget` value from `agents_list` straight into an update patch is valid.
 
 - Any cycle in the graph requires `maxSteps` or `deadlineMs` (`graph has cycle but no budget.maxSteps/deadlineMs`). The default ReAct loop is cyclic.
 - `policy: "ask"` means: when the budget runs out, the run pauses and asks the user to extend. Correct for top-level agents. A delegate has no user, so `ask` is unreachable for it; give delegates `policy: "error"` (or rely on closing reports, below).
@@ -217,7 +217,7 @@ Reference examples live in `apps/server/assets/presets/agents/*.json` (researche
 
 ## 10. Verify after creating or spawning
 
-1. `agents_list` shows the agent with the intended packs, model, and level.
+1. `agents_list` shows the agent with the intended packs, model object (`{ provider, model, effort? }`), and level; rows omit instructions unless a filter isolates that single agent or `verbose: true` is passed.
 2. Smoke-test a new delegate with a read-only task before giving it write grants.
 3. Read every spawn result entry: `error`, `blocked`, `budget` - not just `output`.
 4. `manager_pulse` / `usage_report` after fan-outs to confirm the runs and their cost.
