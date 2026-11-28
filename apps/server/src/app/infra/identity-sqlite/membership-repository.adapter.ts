@@ -5,7 +5,7 @@ import { MembershipRepository } from '../../domain/identity/membership-repositor
 import type { UpsertMembershipInput } from '../../domain/identity/user-repository.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { memberships } from './identity.schema.ts';
-import { openIdentitySqlite } from './identity-sqlite-session.ts';
+import { withIdentitySqlite } from './identity-sqlite-session.ts';
 
 @Injectable()
 export class MembershipRepositoryAdapter extends MembershipRepository {
@@ -14,11 +14,9 @@ export class MembershipRepositoryAdapter extends MembershipRepository {
   }
 
   upsert(membership: UpsertMembershipInput): void {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
+    withIdentitySqlite(this.layout, (db) => {
       const capabilities = JSON.stringify(membership.capabilities);
-      sqlite.db
-        .insert(memberships)
+      db.insert(memberships)
         .values({
           userId: membership.userId,
           orgId: membership.orgId,
@@ -30,71 +28,53 @@ export class MembershipRepositoryAdapter extends MembershipRepository {
           set: { capabilitiesJson: capabilities, updatedAt: membership.updatedAt },
         })
         .run();
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 
   findByUserAndOrg(userId: string, orgId: string): MembershipRecord | null {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      const row = sqlite.db
+    return withIdentitySqlite(this.layout, (db) => {
+      const row = db
         .select()
         .from(memberships)
         .where(and(eq(memberships.userId, userId), eq(memberships.orgId, orgId)))
         .get();
       return row ? mapMembership(row) : null;
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
   listByUser(userId: string): MembershipRecord[] {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      const rows = sqlite.db.select().from(memberships).where(eq(memberships.userId, userId)).all();
+    return withIdentitySqlite(this.layout, (db) => {
+      const rows = db.select().from(memberships).where(eq(memberships.userId, userId)).all();
       return rows.map(mapMembership);
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 
   listByOrg(orgId: string): MembershipRecord[] {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      const rows = sqlite.db.select().from(memberships).where(eq(memberships.orgId, orgId)).all();
+    return withIdentitySqlite(this.layout, (db) => {
+      const rows = db.select().from(memberships).where(eq(memberships.orgId, orgId)).all();
       return rows.map(mapMembership);
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 
   remove(userId: string, orgId: string): void {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      sqlite.db
-        .delete(memberships)
+    withIdentitySqlite(this.layout, (db) => {
+      db.delete(memberships)
         .where(and(eq(memberships.userId, userId), eq(memberships.orgId, orgId)))
         .run();
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 
   upsertSync(membership: MembershipRecord): void {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      const existing = sqlite.db
+    const existing = withIdentitySqlite(this.layout, (db) =>
+      db
         .select()
         .from(memberships)
         .where(
           and(eq(memberships.userId, membership.userId), eq(memberships.orgId, membership.orgId)),
         )
-        .get();
-      if (existing && existing.updatedAt >= membership.updatedAt) {
-        return;
-      }
-    } finally {
-      sqlite.sqlite.close();
+        .get(),
+    );
+    if (existing && existing.updatedAt >= membership.updatedAt) {
+      return;
     }
     this.upsert(membership);
   }

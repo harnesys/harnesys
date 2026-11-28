@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
+import type { SessionEvent } from 'harnesys';
 import { waitingForProfileIdFromEvents } from '../../application/threads/thread.helpers.ts';
 import type { ThreadHistorySlice } from '../../domain/thread/thread-history-page.port.ts';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
@@ -58,6 +59,75 @@ export function minMaxThreadSeqOf(rows: readonly ThreadEventRow[]): {
     max = Math.max(max, row.event.threadSeq);
   }
   return { minThreadSeq: min, maxThreadSeq: max };
+}
+
+export function minMaxEventSeqOf(events: readonly SessionEvent[]): {
+  minThreadSeq: number;
+  maxThreadSeq: number;
+} {
+  if (events.length === 0) {
+    return { minThreadSeq: 0, maxThreadSeq: 0 };
+  }
+  let min = Number.POSITIVE_INFINITY;
+  let max = 0;
+  for (const event of events) {
+    const seq = event.threadSeq ?? 0;
+    min = Math.min(min, seq);
+    max = Math.max(max, seq);
+  }
+  return { minThreadSeq: min, maxThreadSeq: max };
+}
+
+interface SizedEvent {
+  event: SessionEvent;
+  size: number;
+}
+
+export interface TrimmedEvents {
+  events: SessionEvent[];
+  trimmed: boolean;
+}
+
+function arrayBytes(sizes: readonly number[]): number {
+  let total = 2;
+  for (const size of sizes) {
+    total += size + 1;
+  }
+  return sizes.length > 0 ? total - 1 : total;
+}
+
+export function trimEventsToBytes(events: SessionEvent[], maxBytes: number): TrimmedEvents {
+  const sized: SizedEvent[] = events.map((event) => ({
+    event,
+    size: Buffer.byteLength(JSON.stringify(event)),
+  }));
+  if (arrayBytes(sized.map((item) => item.size)) <= maxBytes) {
+    return { events, trimmed: false };
+  }
+  const groups = new Map<string, SizedEvent[]>();
+  for (const item of sized) {
+    const key = item.event.runId ?? `threadSeq:${item.event.threadSeq ?? 0}`;
+    const group = groups.get(key) ?? [];
+    group.push(item);
+    groups.set(key, group);
+  }
+  const groupList = [...groups.values()];
+  let kept = [...sized];
+  let total = arrayBytes(kept.map((item) => item.size));
+  let groupAt = 0;
+  while (total > maxBytes && groupList.length - groupAt > 1) {
+    const removed = new Set(groupList[groupAt] ?? []);
+    kept = kept.filter((item) => !removed.has(item));
+    total = arrayBytes(kept.map((item) => item.size));
+    groupAt += 1;
+  }
+  let cut = 0;
+  while (total > maxBytes && kept.length - cut > 1) {
+    total -= (kept[cut]?.size ?? 0) + 1;
+    cut += 1;
+  }
+  const keptEvents = kept.slice(cut).map((item) => item.event);
+  return { events: keptEvents, trimmed: keptEvents.length < sized.length };
 }
 
 export function emptySlice(db: OrgSqliteDb, threadId: string): ThreadHistorySlice {

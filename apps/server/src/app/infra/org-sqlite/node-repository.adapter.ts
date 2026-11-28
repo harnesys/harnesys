@@ -1,10 +1,8 @@
-import { Database } from 'bun:sqlite';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { ConflictException, Injectable } from '@harnesys/brix';
 import type { NodeStatus } from '@harnesys/contracts';
 import { eq } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/bun-sqlite';
 import {
   type InsertNodeInput,
   type NodeRecord,
@@ -12,8 +10,7 @@ import {
 } from '../../domain/fleet/node-repository.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { nodes, orgs } from './org.schema.ts';
-import { ensureOrgSchema } from './org-sql-ensure.ts';
-import { configureOrgSqlite } from './org-sqlite-session.ts';
+import { invalidateOrgSqliteCache, withOrgSqlite } from './org-sqlite-session.ts';
 
 @Injectable()
 export class NodeRepositoryAdapter extends NodeRepository {
@@ -22,9 +19,7 @@ export class NodeRepositoryAdapter extends NodeRepository {
   }
 
   insert(orgId: string, node: InsertNodeInput): void {
-    const sqlite = this.open(orgId);
-    try {
-      const db = drizzle(sqlite, { schema: { nodes } });
+    withOrgSqlite(this.layout, orgId, (db) => {
       try {
         db.insert(nodes)
           .values({
@@ -46,52 +41,32 @@ export class NodeRepositoryAdapter extends NodeRepository {
         }
         throw err;
       }
-    } finally {
-      sqlite.close();
-    }
+    });
   }
 
   findById(orgId: string, nodeId: string): NodeRecord | null {
-    const sqlite = this.open(orgId);
-    try {
-      const db = drizzle(sqlite, { schema: { nodes } });
+    return withOrgSqlite(this.layout, orgId, (db) => {
       const row = db.select().from(nodes).where(eq(nodes.id, nodeId)).get();
       return row ? mapNode(row) : null;
-    } finally {
-      sqlite.close();
-    }
+    });
   }
 
   findByName(orgId: string, name: string): NodeRecord | null {
-    const sqlite = this.open(orgId);
-    try {
-      const db = drizzle(sqlite, { schema: { nodes } });
+    return withOrgSqlite(this.layout, orgId, (db) => {
       const row = db.select().from(nodes).where(eq(nodes.name, name)).get();
       return row ? mapNode(row) : null;
-    } finally {
-      sqlite.close();
-    }
+    });
   }
 
   findByTokenHash(orgId: string, tokenHash: string): NodeRecord | null {
-    const sqlite = this.open(orgId);
-    try {
-      const db = drizzle(sqlite, { schema: { nodes } });
+    return withOrgSqlite(this.layout, orgId, (db) => {
       const row = db.select().from(nodes).where(eq(nodes.tokenHash, tokenHash)).get();
       return row ? mapNode(row) : null;
-    } finally {
-      sqlite.close();
-    }
+    });
   }
 
   list(orgId: string): NodeRecord[] {
-    const sqlite = this.open(orgId);
-    try {
-      const db = drizzle(sqlite, { schema: { nodes } });
-      return db.select().from(nodes).all().map(mapNode);
-    } finally {
-      sqlite.close();
-    }
+    return withOrgSqlite(this.layout, orgId, (db) => db.select().from(nodes).all().map(mapNode));
   }
 
   updatePresence(
@@ -105,9 +80,7 @@ export class NodeRepositoryAdapter extends NodeRepository {
       dockerAvailable?: boolean | null;
     },
   ): void {
-    const sqlite = this.open(orgId);
-    try {
-      const db = drizzle(sqlite, { schema: { nodes } });
+    withOrgSqlite(this.layout, orgId, (db) => {
       const values: {
         lastSeenAt: string;
         status: string;
@@ -128,19 +101,13 @@ export class NodeRepositoryAdapter extends NodeRepository {
         values.dockerAvailable = patch.dockerAvailable;
       }
       db.update(nodes).set(values).where(eq(nodes.id, nodeId)).run();
-    } finally {
-      sqlite.close();
-    }
+    });
   }
 
   setStatus(orgId: string, nodeId: string, status: NodeStatus): void {
-    const sqlite = this.open(orgId);
-    try {
-      const db = drizzle(sqlite, { schema: { nodes } });
+    withOrgSqlite(this.layout, orgId, (db) => {
       db.update(nodes).set({ status }).where(eq(nodes.id, nodeId)).run();
-    } finally {
-      sqlite.close();
-    }
+    });
   }
 
   updateRoleAndToken(
@@ -148,37 +115,25 @@ export class NodeRepositoryAdapter extends NodeRepository {
     nodeId: string,
     patch: { role: 'relay' | 'worker'; tokenHash: string | null },
   ): void {
-    const sqlite = this.open(orgId);
-    try {
-      const db = drizzle(sqlite, { schema: { nodes } });
+    withOrgSqlite(this.layout, orgId, (db) => {
       db.update(nodes)
         .set({ role: patch.role, tokenHash: patch.tokenHash })
         .where(eq(nodes.id, nodeId))
         .run();
-    } finally {
-      sqlite.close();
-    }
+    });
   }
 
   remove(orgId: string, nodeId: string): void {
-    const sqlite = this.open(orgId);
-    try {
-      const db = drizzle(sqlite, { schema: { nodes } });
+    withOrgSqlite(this.layout, orgId, (db) => {
       db.delete(nodes).where(eq(nodes.id, nodeId)).run();
-    } finally {
-      sqlite.close();
-    }
+    });
   }
 
   readOrgName(orgId: string): string | null {
-    const sqlite = this.open(orgId);
-    try {
-      const db = drizzle(sqlite, { schema: { orgs } });
+    return withOrgSqlite(this.layout, orgId, (db) => {
       const row = db.select({ name: orgs.name }).from(orgs).where(eq(orgs.id, orgId)).get();
       return row?.name ?? null;
-    } finally {
-      sqlite.close();
-    }
+    });
   }
 
   exportDbBytes(orgId: string): Uint8Array {
@@ -196,22 +151,7 @@ export class NodeRepositoryAdapter extends NodeRepository {
     mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
     writeFileSync(tmp, bytes);
     renameSync(tmp, path);
-  }
-
-  private open(orgId: string): Database {
-    const path = this.layout.orgDbPath(orgId);
-    if (!existsSync(path) && !existsSync(dirname(path))) {
-      this.layout.ensureOrgDir(orgId);
-    }
-    const sqlite = new Database(path, { create: true });
-    configureOrgSqlite(sqlite);
-    ensureOrgSchema(
-      (sql) => {
-        sqlite.exec(sql);
-      },
-      (sql) => sqlite.query(sql).all() as { name: string }[],
-    );
-    return sqlite;
+    invalidateOrgSqliteCache(this.layout, orgId);
   }
 }
 

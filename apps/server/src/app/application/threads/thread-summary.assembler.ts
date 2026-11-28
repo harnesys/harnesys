@@ -3,7 +3,6 @@ import type { ThreadSummary } from '@harnesys/contracts';
 import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { NodeRepository } from '../../domain/fleet/node-repository.port.ts';
 import { UserRepository } from '../../domain/identity/user-repository.port.ts';
-import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import type { ThreadRecord } from '../../domain/thread/thread.ts';
 import { ThreadAgentRepositoryPort } from '../../domain/thread/thread-agent-repository.port.ts';
 import { ThreadParticipantRepositoryPort } from '../../domain/thread/thread-participant-repository.port.ts';
@@ -27,7 +26,6 @@ export class ThreadSummaryAssembler {
     private readonly agents: AgentRegistryPort,
     private readonly users: UserRepository,
     private readonly nodes: NodeRepository,
-    private readonly executor: LocalExecutorPort,
   ) {}
 
   async execute(input: ThreadSummaryAssemblyInput): Promise<ThreadSummary> {
@@ -37,8 +35,7 @@ export class ThreadSummaryAssembler {
       participants: this.participants,
       agents: this.agents,
     };
-    const lifecycle = await this.executor.lifecycle(orgId);
-    const active = await lifecycle.activeByThread(thread.id);
+    const active = this.threads.findActiveRun(orgId, thread.id) ?? null;
     return toThreadSummary({
       thread,
       members: membersOf(deps, orgId, thread.id),

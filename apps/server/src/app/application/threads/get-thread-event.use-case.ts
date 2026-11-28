@@ -1,7 +1,7 @@
 import { Injectable } from '@harnesys/brix';
 import type { SessionEvent } from 'harnesys';
-import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import { ThreadNotFoundException } from '../../domain/thread/thread.error.ts';
+import { ThreadHistoryPagePort } from '../../domain/thread/thread-history-page.port.ts';
 import { ThreadRepositoryPort } from '../../domain/thread/thread-repository.port.ts';
 
 export interface GetThreadEventRequest {
@@ -18,15 +18,20 @@ export interface GetThreadEventResponse {
 export class GetThreadEventUseCase {
   constructor(
     private readonly threads: ThreadRepositoryPort,
-    private readonly executor: LocalExecutorPort,
+    private readonly history: ThreadHistoryPagePort,
   ) {}
 
   async execute(request: GetThreadEventRequest): Promise<GetThreadEventResponse> {
     if (!this.threads.findById(request.orgId, request.threadId)) {
       throw new ThreadNotFoundException(request.threadId);
     }
-    const events = await this.executor.events(request.orgId);
-    const event = await events.eventAt(request.threadId, request.threadSeq);
+    const slice = await this.history.syncSlice(
+      request.orgId,
+      request.threadId,
+      request.threadSeq - 1,
+      1,
+    );
+    const event = slice.rows.find((row) => row.threadSeq === request.threadSeq);
     if (!event) {
       throw new ThreadNotFoundException(request.threadId);
     }

@@ -1,10 +1,6 @@
-import { Database } from 'bun:sqlite';
-import { existsSync } from 'node:fs';
-import { dirname } from 'node:path';
 import { Injectable } from '@harnesys/brix';
 import type { BrowserCredentialStatus } from '@harnesys/contracts';
 import { and, eq, ne } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { BrowserCredentialValidationException } from '../../domain/browser/browser-credential.error.ts';
 import {
   type BrowserCredentialRecord,
@@ -15,8 +11,7 @@ import { isLockedOut, nextLockoutState } from '../../domain/browser/lockout.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
 import { BROWSER_LOGIN_PREFIX } from '../../domain/secret/vault-keys.ts';
-import { ensureOrgSchema } from '../org-sqlite/org-sql-ensure.ts';
-import { configureOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
+import { type OrgSqliteDb, withOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 import {
   type BrowserCredentialRow,
   browserCredentialsTable,
@@ -178,39 +173,12 @@ export class BrowserCredentialRepositoryAdapter extends BrowserCredentialReposit
     });
   }
 
-  private withDb<T>(orgId: string, fn: (db: ReturnType<typeof openDb>) => T): T {
-    const sqlite = this.open(orgId);
-    try {
-      return fn(openDb(sqlite));
-    } finally {
-      sqlite.close();
-    }
-  }
-
-  private open(orgId: string): Database {
-    const path = this.layout.orgDbPath(orgId);
-    if (!existsSync(path) && !existsSync(dirname(path))) {
-      this.layout.ensureOrgDir(orgId);
-    }
-    const sqlite = new Database(path, { create: true });
-    configureOrgSqlite(sqlite);
-    ensureOrgSchema(
-      (sql) => {
-        sqlite.exec(sql);
-      },
-      (sql) => sqlite.query(sql).all() as { name: string }[],
-    );
-    return sqlite;
+  private withDb<T>(orgId: string, fn: (db: OrgSqliteDb) => T): T {
+    return withOrgSqlite(this.layout, orgId, fn);
   }
 }
 
-function openDb(sqlite: Database) {
-  return drizzle(sqlite, { schema: { browserCredentialsTable } });
-}
-
-type CredentialsDb = ReturnType<typeof openDb>;
-
-function readRow(db: CredentialsDb, id: string): BrowserCredentialRecord {
+function readRow(db: OrgSqliteDb, id: string): BrowserCredentialRecord {
   const row = db
     .select()
     .from(browserCredentialsTable)

@@ -9,7 +9,7 @@ import {
   SessionStore,
 } from '../../domain/identity/session-store.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
-import { openIdentitySqlite } from './identity-sqlite-session.ts';
+import { type IdentitySqliteDb, withIdentitySqlite } from './identity-sqlite-session.ts';
 
 const SQL_INSERT_SESSION = `
 INSERT INTO sessions
@@ -216,32 +216,33 @@ export class SessionStoreAdapter extends SessionStore {
   }
 
   private read<T>(sql: string, params: SQLQueryBindings[]): T | null {
-    const session = openIdentitySqlite(this.layout);
-    try {
-      const row = session.sqlite.query(sql).get(...params) as T | null;
+    return withIdentitySqlite(this.layout, (db) => {
+      const row = identityClient(db)
+        .query(sql)
+        .get(...params) as T | null;
       return row ?? null;
-    } finally {
-      session.sqlite.close();
-    }
+    });
   }
 
   private readAll<T>(sql: string, params: SQLQueryBindings[]): T[] {
-    const session = openIdentitySqlite(this.layout);
-    try {
-      return session.sqlite.query(sql).all(...params) as T[];
-    } finally {
-      session.sqlite.close();
-    }
+    return withIdentitySqlite(
+      this.layout,
+      (db) =>
+        identityClient(db)
+          .query(sql)
+          .all(...params) as T[],
+    );
   }
 
   private write(fn: (sqlite: Database) => void): void {
-    const session = openIdentitySqlite(this.layout);
-    try {
-      fn(session.sqlite);
-    } finally {
-      session.sqlite.close();
-    }
+    withIdentitySqlite(this.layout, (db) => {
+      fn(identityClient(db));
+    });
   }
+}
+
+function identityClient(db: IdentitySqliteDb): Database {
+  return (db as IdentitySqliteDb & { $client: Database }).$client;
 }
 
 export function mapSession(row: SessionRow): SessionRecord {

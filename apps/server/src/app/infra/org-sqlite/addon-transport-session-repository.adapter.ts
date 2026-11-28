@@ -6,8 +6,9 @@ import type {
 } from '../../domain/addons/transport-session.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { OrgMachineStore } from '../../domain/machine/org-machine-store.port.ts';
+import { sqliteClient } from '../knowledge/sqlite-client.ts';
 import { AddonTransportSessionStore } from './addon-transport-session.store.ts';
-import { openOrgSqlite } from './org-sqlite-session.ts';
+import { withOrgSqlite } from './org-sqlite-session.ts';
 
 @Injectable()
 export class AddonTransportSessionRepositoryAdapter extends AddonTransportSessionRepositoryPort {
@@ -70,11 +71,8 @@ export class AddonTransportSessionRepositoryAdapter extends AddonTransportSessio
   }
 
   private withStore<T>(orgId: string, fn: (store: AddonTransportSessionStore) => T): T {
-    const session = openOrgSqlite(this.layout, orgId);
-    try {
-      return fn(new AddonTransportSessionStore(session.sqlite));
-    } finally {
-      session.close();
-    }
+    return withOrgSqlite(this.layout, orgId, (db) =>
+      fn(new AddonTransportSessionStore(sqliteClient(db))),
+    );
   }
 }

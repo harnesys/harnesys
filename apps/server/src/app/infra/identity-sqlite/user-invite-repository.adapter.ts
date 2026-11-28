@@ -7,7 +7,7 @@ import {
 } from '../../domain/identity/user-invite-repository.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { userInvites } from './identity.schema.ts';
-import { openIdentitySqlite } from './identity-sqlite-session.ts';
+import { withIdentitySqlite } from './identity-sqlite-session.ts';
 
 @Injectable()
 export class UserInviteRepositoryAdapter extends UserInviteStore {
@@ -16,10 +16,8 @@ export class UserInviteRepositoryAdapter extends UserInviteStore {
   }
 
   insert(invite: InsertUserInviteInput): void {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      sqlite.db
-        .insert(userInvites)
+    withIdentitySqlite(this.layout, (db) => {
+      db.insert(userInvites)
         .values({
           id: invite.id,
           orgId: invite.orgId,
@@ -32,53 +30,37 @@ export class UserInviteRepositoryAdapter extends UserInviteStore {
           createdBy: invite.createdBy,
         })
         .run();
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 
   findByCodeHash(codeHash: string): UserInviteRecord | null {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      const row = sqlite.db
-        .select()
-        .from(userInvites)
-        .where(eq(userInvites.codeHash, codeHash))
-        .get();
+    return withIdentitySqlite(this.layout, (db) => {
+      const row = db.select().from(userInvites).where(eq(userInvites.codeHash, codeHash)).get();
       return row ? mapInvite(row) : null;
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 
   markUsed(id: string, usedAt: string): void {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      sqlite.db.update(userInvites).set({ usedAt }).where(eq(userInvites.id, id)).run();
-    } finally {
-      sqlite.sqlite.close();
-    }
+    withIdentitySqlite(this.layout, (db) => {
+      db.update(userInvites).set({ usedAt }).where(eq(userInvites.id, id)).run();
+    });
   }
 
   listByOrg(orgId: string): UserInviteRecord[] {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      const rows = sqlite.db
+    return withIdentitySqlite(this.layout, (db) => {
+      const rows = db
         .select()
         .from(userInvites)
         .where(eq(userInvites.orgId, orgId))
         .orderBy(desc(userInvites.createdAt))
         .all();
       return rows.map(mapInvite);
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 
   remove(orgId: string, inviteId: string): boolean {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      const removed = sqlite.db
+    return withIdentitySqlite(this.layout, (db) => {
+      const removed = db
         .delete(userInvites)
         .where(
           and(
@@ -90,9 +72,7 @@ export class UserInviteRepositoryAdapter extends UserInviteStore {
         .returning({ id: userInvites.id })
         .all();
       return removed.length > 0;
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 }
 

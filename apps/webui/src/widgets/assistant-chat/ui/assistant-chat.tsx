@@ -227,7 +227,7 @@ function AssistantChatSurface() {
           ) : null}
         </button>
       )}
-      <AssistantChatBody open={open} />
+      {open ? <AssistantChatBody open={open} /> : null}
       {open
         ? RESIZE_HANDLES.map((handle) => (
             <span

@@ -1,6 +1,5 @@
 import { Injectable } from '@harnesys/brix';
 import {
-  THREAD_HISTORY_PAGE_MAX_BYTES,
   THREAD_HISTORY_PAGE_RUNS,
   THREAD_HISTORY_RANGE_MAX_EVENTS,
   type ThreadHistoryPage,
@@ -40,10 +39,6 @@ function boundsOf(events: SessionEvent[]): { minThreadSeq: number; maxThreadSeq:
   return { minThreadSeq: min, maxThreadSeq: max };
 }
 
-function pageBytes(events: unknown[]): number {
-  return Buffer.byteLength(JSON.stringify(events));
-}
-
 @Injectable()
 export class GetThreadHistoryUseCase {
   constructor(
@@ -81,28 +76,17 @@ export class GetThreadHistoryUseCase {
     request: GetThreadHistoryRequest,
     kind: 'tail' | 'before',
   ): Promise<ThreadHistoryPage> {
-    const limitRuns = request.limitRuns ?? THREAD_HISTORY_PAGE_RUNS;
-    let slice = await this.history.listPage(request.orgId, thread.id, {
+    const slice = await this.history.listPage(request.orgId, thread.id, {
       ...(request.beforeThreadSeq === undefined
         ? {}
         : { beforeThreadSeq: request.beforeThreadSeq }),
-      limitRuns,
+      limitRuns: request.limitRuns ?? THREAD_HISTORY_PAGE_RUNS,
     });
-    let events = projectThreadEvents(slice.events);
-    if (pageBytes(events) > THREAD_HISTORY_PAGE_MAX_BYTES && limitRuns > 1) {
-      slice = await this.history.listPage(request.orgId, thread.id, {
-        ...(request.beforeThreadSeq === undefined
-          ? {}
-          : { beforeThreadSeq: request.beforeThreadSeq }),
-        limitRuns: Math.max(1, Math.floor(limitRuns / 2)),
-      });
-      events = projectThreadEvents(slice.events);
-    }
     const summary = await this.summaryOf(thread, request, slice.waitingForProfileId);
     return {
       kind,
       summary,
-      events,
+      events: projectThreadEvents(slice.events),
       minThreadSeq: slice.minThreadSeq,
       maxThreadSeq: slice.maxThreadSeq,
       hasMoreBefore: slice.hasMoreBefore,

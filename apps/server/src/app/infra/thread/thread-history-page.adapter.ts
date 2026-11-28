@@ -1,7 +1,12 @@
 import { Injectable } from '@harnesys/brix';
-import { THREAD_HISTORY_PAGE_RUNS, THREAD_HISTORY_RANGE_MAX_EVENTS } from '@harnesys/contracts';
+import {
+  THREAD_HISTORY_PAGE_MAX_BYTES,
+  THREAD_HISTORY_PAGE_RUNS,
+  THREAD_HISTORY_RANGE_MAX_EVENTS,
+} from '@harnesys/contracts';
 import { and, eq, gt, gte, inArray, lt, or, sql } from 'drizzle-orm';
 import type { SessionEvent } from 'harnesys';
+import { projectThreadEvents } from '../../application/threads/thread-events-projection.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import {
   ThreadHistoryPagePort,
@@ -25,12 +30,14 @@ import {
   looseSeqsAfterOf,
   looseSeqsInRangeOf,
   maxThreadSeqOf,
+  minMaxEventSeqOf,
   minMaxThreadSeqOf,
   pageRowsOf,
   rootRunIdOf,
   rootStartSeqOf,
   runIdAtOrAfterOf,
   subtreeRunIdsOf,
+  trimEventsToBytes,
   waitingForProfileIdOf,
 } from './thread-history-page-selection.ts';
 
@@ -122,9 +129,16 @@ export class ThreadHistoryPageAdapter extends ThreadHistoryPagePort {
           ...(before === null ? looseSeqsAfterOf(db, threadId, baseMax) : []),
         ];
         const rows = loose.length > 0 ? pageRowsOf(db, threadId, runIds, dedupe(loose)) : baseRows;
-        const { minThreadSeq, maxThreadSeq } = minMaxThreadSeqOf(rows);
+        const rawEvents = rowsToEvents(rows);
+        const { events, trimmed } = trimEventsToBytes(
+          projectThreadEvents(rawEvents) as SessionEvent[],
+          THREAD_HISTORY_PAGE_MAX_BYTES,
+        );
+        const { minThreadSeq, maxThreadSeq } = trimmed
+          ? minMaxEventSeqOf(events)
+          : minMaxThreadSeqOf(rows);
         return {
-          events: rowsToEvents(rows),
+          events: trimmed ? events : rawEvents,
           minThreadSeq,
           maxThreadSeq,
           hasMoreBefore: roots.length > limit || hasEventsBeforeOf(db, threadId, minThreadSeq),
@@ -285,12 +299,19 @@ function loosePageSlice(
     return emptySlice(db, threadId);
   }
   const rows = pageRowsOf(db, threadId, [], seqs);
-  const { minThreadSeq, maxThreadSeq } = minMaxThreadSeqOf(rows);
+  const rawEvents = rowsToEvents(rows);
+  const { events, trimmed } = trimEventsToBytes(
+    projectThreadEvents(rawEvents) as SessionEvent[],
+    THREAD_HISTORY_PAGE_MAX_BYTES,
+  );
+  const { minThreadSeq, maxThreadSeq } = trimmed
+    ? minMaxEventSeqOf(events)
+    : minMaxThreadSeqOf(rows);
   return {
-    events: rowsToEvents(rows),
+    events: trimmed ? events : rawEvents,
     minThreadSeq,
     maxThreadSeq,
-    hasMoreBefore: hasMore,
+    hasMoreBefore: hasMore || trimmed,
     hasMoreAfter: false,
     hiddenRunsBefore: 0,
     firstUserThreadSeq: firstUserThreadSeqOf(db, threadId),

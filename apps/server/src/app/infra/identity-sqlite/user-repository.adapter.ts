@@ -11,7 +11,7 @@ import {
 } from '../../domain/identity/user-repository.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { loginAttempts, users } from './identity.schema.ts';
-import { openIdentitySqlite } from './identity-sqlite-session.ts';
+import { withIdentitySqlite } from './identity-sqlite-session.ts';
 
 @Injectable()
 export class UserRepositoryAdapter extends UserRepository {
@@ -20,10 +20,8 @@ export class UserRepositoryAdapter extends UserRepository {
   }
 
   insert(user: InsertUserInput): void {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      sqlite.db
-        .insert(users)
+    withIdentitySqlite(this.layout, (db) => {
+      db.insert(users)
         .values({
           id: user.id,
           login: user.login,
@@ -33,45 +31,32 @@ export class UserRepositoryAdapter extends UserRepository {
           updatedAt: user.createdAt,
         })
         .run();
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 
   findByLogin(login: string): UserRecord | null {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      const row = sqlite.db.select().from(users).where(eq(users.login, login)).get();
+    return withIdentitySqlite(this.layout, (db) => {
+      const row = db.select().from(users).where(eq(users.login, login)).get();
       return row ? mapUser(row) : null;
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 
   findById(id: string): UserRecord | null {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      const row = sqlite.db.select().from(users).where(eq(users.id, id)).get();
+    return withIdentitySqlite(this.layout, (db) => {
+      const row = db.select().from(users).where(eq(users.id, id)).get();
       return row ? mapUser(row) : null;
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 
   updatePasswordHash(id: string, passwordHash: string, updatedAt: string): void {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      sqlite.db.update(users).set({ passwordHash, updatedAt }).where(eq(users.id, id)).run();
-    } finally {
-      sqlite.sqlite.close();
-    }
+    withIdentitySqlite(this.layout, (db) => {
+      db.update(users).set({ passwordHash, updatedAt }).where(eq(users.id, id)).run();
+    });
   }
 
   updateProfile(input: UpdateUserProfileInput): void {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      sqlite.db
-        .update(users)
+    withIdentitySqlite(this.layout, (db) => {
+      db.update(users)
         .set({
           name: input.name,
           avatar: input.avatar,
@@ -80,31 +65,24 @@ export class UserRepositoryAdapter extends UserRepository {
         })
         .where(eq(users.id, input.id))
         .run();
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 
   count(): number {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      const rows = sqlite.db.select({ id: users.id }).from(users).all();
+    return withIdentitySqlite(this.layout, (db) => {
+      const rows = db.select({ id: users.id }).from(users).all();
       return rows.length;
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 
   upsertSync(user: UserRecord): void {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      const existing = sqlite.db.select().from(users).where(eq(users.id, user.id)).get();
+    withIdentitySqlite(this.layout, (db) => {
+      const existing = db.select().from(users).where(eq(users.id, user.id)).get();
       if (existing && existing.updatedAt >= user.updatedAt) {
         return;
       }
       if (existing) {
-        sqlite.db
-          .update(users)
+        db.update(users)
           .set({
             login: user.login,
             name: user.name,
@@ -118,8 +96,7 @@ export class UserRepositoryAdapter extends UserRepository {
           .run();
         return;
       }
-      sqlite.db
-        .insert(users)
+      db.insert(users)
         .values({
           id: user.id,
           login: user.login,
@@ -131,9 +108,7 @@ export class UserRepositoryAdapter extends UserRepository {
           updatedAt: user.updatedAt,
         })
         .run();
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 }
 
@@ -144,36 +119,27 @@ export class LoginAttemptStoreAdapter extends LoginAttemptStore {
   }
 
   record(login: string, at: string): void {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      sqlite.db.insert(loginAttempts).values({ login, at }).run();
-    } finally {
-      sqlite.sqlite.close();
-    }
+    withIdentitySqlite(this.layout, (db) => {
+      db.insert(loginAttempts).values({ login, at }).run();
+    });
   }
 
   listSince(login: string, sinceIso: string): LoginAttemptRow[] {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      const rows = sqlite.db
+    return withIdentitySqlite(this.layout, (db) => {
+      const rows = db
         .select()
         .from(loginAttempts)
         .where(and(eq(loginAttempts.login, login), gt(loginAttempts.at, sinceIso)))
         .orderBy(asc(loginAttempts.at))
         .all();
       return rows.map((row) => ({ login: row.login, at: row.at }));
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 
   clear(login: string): void {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      sqlite.db.delete(loginAttempts).where(eq(loginAttempts.login, login)).run();
-    } finally {
-      sqlite.sqlite.close();
-    }
+    withIdentitySqlite(this.layout, (db) => {
+      db.delete(loginAttempts).where(eq(loginAttempts.login, login)).run();
+    });
   }
 }
 

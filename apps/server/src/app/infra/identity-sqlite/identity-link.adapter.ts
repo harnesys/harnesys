@@ -11,7 +11,7 @@ import {
 } from '../../domain/identity/identity-link.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { identityLinkCodes, identityLinks } from './identity.schema.ts';
-import { openIdentitySqlite } from './identity-sqlite-session.ts';
+import { withIdentitySqlite } from './identity-sqlite-session.ts';
 
 @Injectable()
 export class IdentityLinkAdapter extends IdentityLinkRepository {
@@ -20,9 +20,8 @@ export class IdentityLinkAdapter extends IdentityLinkRepository {
   }
 
   link(input: LinkIdentityInput): IdentityLinkRecord {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      return sqlite.db.transaction((tx) => {
+    return withIdentitySqlite(this.layout, (db) =>
+      db.transaction((tx) => {
         const byIdentity = tx
           .select()
           .from(identityLinks)
@@ -88,16 +87,13 @@ export class IdentityLinkAdapter extends IdentityLinkRepository {
           createdAt: input.at,
           updatedAt: input.at,
         };
-      });
-    } finally {
-      sqlite.sqlite.close();
-    }
+      }),
+    );
   }
 
   findByIdentity(provider: string, providerUserId: string): IdentityLinkRecord | null {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      const row = sqlite.db
+    return withIdentitySqlite(this.layout, (db) => {
+      const row = db
         .select()
         .from(identityLinks)
         .where(
@@ -108,55 +104,42 @@ export class IdentityLinkAdapter extends IdentityLinkRepository {
         )
         .get();
       return row ? { ...row } : null;
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 
   findForUser(userId: string, provider: string): IdentityLinkRecord | null {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      const row = sqlite.db
+    return withIdentitySqlite(this.layout, (db) => {
+      const row = db
         .select()
         .from(identityLinks)
         .where(and(eq(identityLinks.userId, userId), eq(identityLinks.provider, provider)))
         .get();
       return row ? { ...row } : null;
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 
   listByUser(userId: string): IdentityLinkRecord[] {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      return sqlite.db
+    return withIdentitySqlite(this.layout, (db) =>
+      db
         .select()
         .from(identityLinks)
         .where(eq(identityLinks.userId, userId))
         .all()
-        .map((row) => ({ ...row }));
-    } finally {
-      sqlite.sqlite.close();
-    }
+        .map((row) => ({ ...row })),
+    );
   }
 
   unlink(userId: string, provider: string): void {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      sqlite.db
-        .delete(identityLinks)
+    withIdentitySqlite(this.layout, (db) => {
+      db.delete(identityLinks)
         .where(and(eq(identityLinks.userId, userId), eq(identityLinks.provider, provider)))
         .run();
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 
   issueCode(input: IssueIdentityLinkCodeInput): void {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      sqlite.db.transaction((tx) => {
+    withIdentitySqlite(this.layout, (db) => {
+      db.transaction((tx) => {
         tx.delete(identityLinkCodes).where(lte(identityLinkCodes.expiresAt, input.at)).run();
         tx.delete(identityLinkCodes)
           .where(
@@ -176,15 +159,12 @@ export class IdentityLinkAdapter extends IdentityLinkRepository {
           })
           .run();
       });
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 
   consumeCode(input: ConsumeIdentityLinkCodeInput): ConsumedIdentityLinkCode | null {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      const row = sqlite.db
+    return withIdentitySqlite(this.layout, (db) => {
+      const row = db
         .delete(identityLinkCodes)
         .where(
           and(
@@ -196,8 +176,6 @@ export class IdentityLinkAdapter extends IdentityLinkRepository {
         .returning({ userId: identityLinkCodes.userId })
         .get();
       return row ?? null;
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 }

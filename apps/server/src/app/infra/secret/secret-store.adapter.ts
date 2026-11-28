@@ -1,9 +1,5 @@
-import { Database } from 'bun:sqlite';
-import { existsSync } from 'node:fs';
-import { dirname } from 'node:path';
 import { Configuration, Injectable } from '@harnesys/brix';
 import { eq } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/bun-sqlite';
 import type { AppConfig } from '../../../config.schema.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import {
@@ -11,8 +7,7 @@ import {
   SecretValueTooLargeException,
 } from '../../domain/secret/secret.error.ts';
 import { SecretStorePort } from '../../domain/secret/secret-store.port.ts';
-import { ensureOrgSchema } from '../org-sqlite/org-sql-ensure.ts';
-import { configureOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
+import { withOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 import { secrets } from '../org-sqlite/secrets.schema.ts';
 import { loadOrCreateMasterKey, type SecretKeyMaterial } from './master-key.ts';
 
@@ -33,26 +28,22 @@ export class SecretStoreAdapter extends SecretStorePort {
 
   async get(orgId: string, key: string): Promise<string | null> {
     const raw = this.requireKey();
-    const sqlite = this.open(orgId);
+    const row = withOrgSqlite(this.layout, orgId, (db) =>
+      db.select().from(secrets).where(eq(secrets.key, key)).get(),
+    );
+    if (!row) {
+      return null;
+    }
+    const cryptoKey = await importKey(raw);
     try {
-      const db = drizzle(sqlite, { schema: { secrets } });
-      const row = db.select().from(secrets).where(eq(secrets.key, key)).get();
-      if (!row) {
-        return null;
-      }
-      const cryptoKey = await importKey(raw);
-      try {
-        const plain = await crypto.subtle.decrypt(
-          { name: 'AES-GCM', iv: asBuffer(row.iv), additionalData: Buffer.from(key) },
-          cryptoKey,
-          concat(asBuffer(row.ciphertext), asBuffer(row.tag)),
-        );
-        return new TextDecoder().decode(plain);
-      } catch {
-        throw new SecretLockedException();
-      }
-    } finally {
-      sqlite.close();
+      const plain = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: asBuffer(row.iv), additionalData: Buffer.from(key) },
+        cryptoKey,
+        concat(asBuffer(row.ciphertext), asBuffer(row.tag)),
+      );
+      return new TextDecoder().decode(plain);
+    } catch {
+      throw new SecretLockedException();
     }
   }
 
@@ -72,9 +63,7 @@ export class SecretStoreAdapter extends SecretStorePort {
     const ciphertext = bytes.slice(0, bytes.length - 16);
     const tag = bytes.slice(bytes.length - 16);
     const now = new Date().toISOString();
-    const sqlite = this.open(orgId);
-    try {
-      const db = drizzle(sqlite, { schema: { secrets } });
+    withOrgSqlite(this.layout, orgId, (db) => {
       const existing = db
         .select({ key: secrets.key })
         .from(secrets)
@@ -103,35 +92,25 @@ export class SecretStoreAdapter extends SecretStorePort {
           updatedAt: now,
         })
         .run();
-    } finally {
-      sqlite.close();
-    }
+    });
   }
 
   async delete(orgId: string, key: string): Promise<void> {
     this.requireKey();
-    const sqlite = this.open(orgId);
-    try {
-      const db = drizzle(sqlite, { schema: { secrets } });
+    withOrgSqlite(this.layout, orgId, (db) => {
       db.delete(secrets).where(eq(secrets.key, key)).run();
-    } finally {
-      sqlite.close();
-    }
+    });
   }
 
   async listKeys(orgId: string): Promise<string[]> {
     this.requireKey();
-    const sqlite = this.open(orgId);
-    try {
-      const db = drizzle(sqlite, { schema: { secrets } });
-      return db
+    return withOrgSqlite(this.layout, orgId, (db) =>
+      db
         .select({ key: secrets.key })
         .from(secrets)
         .all()
-        .map((row) => row.key);
-    } finally {
-      sqlite.close();
-    }
+        .map((row) => row.key),
+    );
   }
 
   private requireKey(): SecretKeyMaterial {
@@ -142,22 +121,6 @@ export class SecretStoreAdapter extends SecretStorePort {
       });
     }
     return this.masterKey;
-  }
-
-  private open(orgId: string): Database {
-    const path = this.layout.orgDbPath(orgId);
-    if (!existsSync(path) && !existsSync(dirname(path))) {
-      this.layout.ensureOrgDir(orgId);
-    }
-    const sqlite = new Database(path, { create: true });
-    configureOrgSqlite(sqlite);
-    ensureOrgSchema(
-      (sql) => {
-        sqlite.exec(sql);
-      },
-      (sql) => sqlite.query(sql).all() as { name: string }[],
-    );
-    return sqlite;
   }
 }
 

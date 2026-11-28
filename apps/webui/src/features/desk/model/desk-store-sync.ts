@@ -37,7 +37,7 @@ function useDeskSlices(scopeId: string) {
       deskDepartmentsQuery(scopeId),
     ],
     combine: (results) => ({
-      ready: results.every((result) => result.isSuccess),
+      ready: results.every((result) => result.isSuccess || result.isError),
       agents: results[0]?.data,
       threads: results[1]?.data,
       boards: results[2]?.data,

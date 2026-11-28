@@ -1,4 +1,4 @@
-import { Database } from 'bun:sqlite';
+import type { Database } from 'bun:sqlite';
 import type { ModelQuotaPort, ModelRateLimits, QuotaAdmission } from 'harnesys';
 import {
   admitQuota,
@@ -9,8 +9,7 @@ import {
   settleQuota,
 } from 'harnesys';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
-import { CREATE_MODEL_QUOTA_WINDOWS_SQL } from '../org-sqlite/org-sql.ts';
-import { configureOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
+import { openOrgSqlite } from '../org-sqlite/org-sqlite-session.ts';
 
 const LOAD_WINDOWS_SQL =
   'SELECT bucket, window_start, requests, tokens FROM model_quota_windows WHERE model_key = ?';
@@ -44,9 +43,7 @@ export class SqliteModelQuota implements ModelQuotaPort {
     private readonly orgId: string,
     layout: HostFsLayoutPort,
   ) {
-    this.sqlite = new Database(layout.orgDbPath(this.orgId), { create: true });
-    configureOrgSqlite(this.sqlite);
-    this.sqlite.exec(CREATE_MODEL_QUOTA_WINDOWS_SQL);
+    this.sqlite = openOrgSqlite(layout, orgId).sqlite;
   }
 
   admit(key: string, limits: ModelRateLimits, estTokens: number): QuotaAdmission {

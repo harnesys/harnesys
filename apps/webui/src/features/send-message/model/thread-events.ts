@@ -3,13 +3,11 @@ import { useAgentStore } from '@/entities/agent';
 import { useActiveOrgStore, useOrgActivityStore } from '@/entities/org-machine';
 import { hasPendingAppend, useSessionStore } from '@/entities/session';
 import { useThreadStore } from '@/entities/thread';
-import { refreshThread } from '@/features/desk/model/refresh-thread';
+import { type RefreshThreadOptions, refreshThread } from '@/features/desk/model/refresh-thread';
 import { useThreadQueueStore } from '@/features/message-queue';
-import { getThreadHistory } from '@/shared/api';
 import { playNotifySound } from '@/shared/lib/notification-sound';
 import { trace } from '@/shared/lib/trace';
 import { duplicateDelivery } from './delivery';
-import { syncRunStateFromThread } from './sync-run-state';
 
 export function dispatchThreadEvents(frame: EventsWatchThreadEventsFrame): void {
   const threadId = frame.threadId;
@@ -31,31 +29,7 @@ export async function resyncThreadEvents(orgId: string): Promise<void> {
     .getState()
     .items.filter((thread) => thread.orgId === orgId && session.history[thread.id] !== undefined)
     .map((thread) => thread.id);
-  await Promise.all(threadIds.map((threadId) => resyncThreadRange(threadId)));
-}
-
-export async function resyncThreadRange(threadId: string): Promise<void> {
-  const window = useSessionStore.getState().history[threadId];
-  if (window === undefined || window.maxThreadSeq <= 0) {
-    await reconcileThread(threadId);
-    return;
-  }
-  const expectVersion = window.windowVersion;
-  const toThreadSeq = window.maxThreadSeq;
-  let fromThreadSeq = Math.max(1, window.minThreadSeq);
-  for (;;) {
-    const page = await getThreadHistory(threadId, { fromThreadSeq, toThreadSeq });
-    syncRunStateFromThread(page.summary.id, page.summary.activeRun ?? null);
-    const applied = useSessionStore.getState().applyHistoryPage(threadId, page, {
-      expectVersion,
-      rangeFrom: fromThreadSeq,
-      rangeTo: toThreadSeq,
-    });
-    if (!applied || !page.hasMoreAfter || page.maxThreadSeq <= fromThreadSeq) {
-      return;
-    }
-    fromThreadSeq = page.maxThreadSeq;
-  }
+  await Promise.all(threadIds.map((threadId) => reconcileThread(threadId, { force: true })));
 }
 
 function isDuplicate(threadId: string, event: SessionEvent): boolean {
@@ -153,9 +127,12 @@ function setError(threadId: string, message: string): void {
   });
 }
 
-export async function reconcileThread(threadId: string): Promise<void> {
+export async function reconcileThread(
+  threadId: string,
+  options?: RefreshThreadOptions,
+): Promise<void> {
   try {
-    await refreshThread(threadId);
+    await refreshThread(threadId, options);
   } catch (error) {
     trace('thread-events', 'reconcile failed', error instanceof Error ? error.message : error);
   }

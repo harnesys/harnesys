@@ -88,6 +88,12 @@ export function withOrgSqlite<T>(
   return fn(cachedOrgDb(layout, orgId));
 }
 
+export function invalidateOrgSqliteCache(layout: HostFsLayoutPort, orgId: string): void {
+  const path = layout.orgDbPath(orgId);
+  cachedOrgDbs.delete(path);
+  ensuredOrgPaths.delete(path);
+}
+
 export async function withOrgSqliteAsync<T>(
   layout: HostFsLayoutPort,
   orgId: string,

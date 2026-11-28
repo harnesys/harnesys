@@ -705,6 +705,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS run_events_client_idx
   WHERE conversational = 1 AND client_event_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS run_events_conversation_idx
   ON run_events(thread_id, thread_seq) WHERE conversational = 1;
+CREATE INDEX IF NOT EXISTS run_events_thread_run_idx
+  ON run_events(thread_id, run_id, thread_seq);
 `;
 
 export const CREATE_RUN_SNAPSHOTS_SQL = `

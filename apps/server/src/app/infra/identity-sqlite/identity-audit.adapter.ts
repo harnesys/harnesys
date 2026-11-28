@@ -2,7 +2,7 @@ import { Injectable } from '@harnesys/brix';
 import { IdentityAudit, type IdentityAuditRow } from '../../domain/identity/identity-audit.port.ts';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
 import { identityAudit } from './identity.schema.ts';
-import { openIdentitySqlite } from './identity-sqlite-session.ts';
+import { withIdentitySqlite } from './identity-sqlite-session.ts';
 
 @Injectable()
 export class IdentityAuditAdapter extends IdentityAudit {
@@ -11,10 +11,8 @@ export class IdentityAuditAdapter extends IdentityAudit {
   }
 
   append(row: IdentityAuditRow): void {
-    const sqlite = openIdentitySqlite(this.layout);
-    try {
-      sqlite.db
-        .insert(identityAudit)
+    withIdentitySqlite(this.layout, (db) => {
+      db.insert(identityAudit)
         .values({
           id: row.id,
           at: row.at,
@@ -25,8 +23,6 @@ export class IdentityAuditAdapter extends IdentityAudit {
           reason: row.reason,
         })
         .run();
-    } finally {
-      sqlite.sqlite.close();
-    }
+    });
   }
 }
