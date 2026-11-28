@@ -1,5 +1,5 @@
 import '@xyflow/react/dist/style.css';
-import { ReactFlowProvider } from '@xyflow/react';
+import { ReactFlowProvider, useReactFlow } from '@xyflow/react';
 import type { Diagnostic, Edge, Node } from 'harnesys';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { nextNodeId, specByType } from '../model/agent-graph-catalog';
@@ -7,21 +7,23 @@ import {
   type AgentGraphFlowEdge,
   type AgentGraphFlowNode,
   defaultReactGraph,
+  ensurePositions,
   fromFlow,
   type GraphRankdir,
-  ROUTE_DEFAULT_HANDLE,
   type StudioGraphDocument,
   toFlow,
+  withDefaultEdges,
 } from '../model/agent-graph-document';
-import { layoutGraph } from '../model/agent-graph-layout';
 import { AgentGraphCanvas } from './agent-graph-canvas';
 import { AgentGraphInspector, type AgentGraphSelection } from './agent-graph-inspector';
 import { AgentGraphPalette } from './agent-graph-palette';
+import { AgentGraphTransferBar } from './agent-graph-transfer-bar';
 export interface AgentGraphPaneProps {
   value?: StudioGraphDocument | null;
   onChange?: (doc: StudioGraphDocument) => void;
   diagnostics?: Diagnostic[];
   agentModelId?: string | null;
+  agentName?: string;
 }
 export function AgentGraphPane(props: AgentGraphPaneProps) {
   return (
@@ -35,13 +37,16 @@ function AgentGraphPaneInner({
   onChange,
   diagnostics = [],
   agentModelId,
+  agentName,
 }: AgentGraphPaneProps) {
   const [initialDoc] = useState(() => ensurePositions(value ?? defaultReactGraph()));
   const [nodes, setNodes] = useState<AgentGraphFlowNode[]>(() => toFlow(initialDoc).nodes);
   const [edges, setEdges] = useState<AgentGraphFlowEdge[]>(() => toFlow(initialDoc).edges);
   const [rankdir, setRankdir] = useState<GraphRankdir>(initialDoc.layout?.rankdir ?? 'TB');
   const [primaryId, setPrimaryId] = useState<string | undefined>(initialDoc.primary);
+  const [toolPolicy, setToolPolicy] = useState<'explicit' | undefined>(initialDoc.toolPolicy);
   const [selection, setSelection] = useState<AgentGraphSelection>(null);
+  const { fitView } = useReactFlow();
   const seeded = useRef(false);
   useEffect(() => {
     if (seeded.current) {
@@ -57,11 +62,16 @@ function AgentGraphPaneInner({
       nextEdges: AgentGraphFlowEdge[],
       nextRankdir: GraphRankdir,
       nextPrimary: string | undefined = primaryId,
+      nextToolPolicy: 'explicit' | undefined = toolPolicy,
     ) => {
       const doc = fromFlow(nextNodes, nextEdges, nextRankdir);
-      onChange?.(nextPrimary !== undefined ? { ...doc, primary: nextPrimary } : doc);
+      onChange?.({
+        ...doc,
+        ...(nextPrimary !== undefined ? { primary: nextPrimary } : {}),
+        ...(nextToolPolicy !== undefined ? { toolPolicy: nextToolPolicy } : {}),
+      });
     },
-    [onChange, primaryId],
+    [onChange, primaryId, toolPolicy],
   );
   const replaceNodes = useCallback(
     (next: AgentGraphFlowNode[]) => {
@@ -209,6 +219,37 @@ function AgentGraphPaneInner({
     },
     [edges, emit, nodes, rankdir],
   );
+  const buildDocument = useCallback(
+    (): StudioGraphDocument => ({
+      ...fromFlow(nodes, edges, rankdir),
+      ...(primaryId !== undefined ? { primary: primaryId } : {}),
+      ...(toolPolicy !== undefined ? { toolPolicy } : {}),
+    }),
+    [edges, nodes, primaryId, rankdir, toolPolicy],
+  );
+  const applyImportedGraph = useCallback(
+    (doc: StudioGraphDocument) => {
+      const prepared = ensurePositions(doc);
+      const flow = toFlow(prepared);
+      setNodes(flow.nodes);
+      setEdges(flow.edges);
+      setRankdir(prepared.layout?.rankdir ?? 'TB');
+      setPrimaryId(prepared.primary);
+      setToolPolicy(prepared.toolPolicy);
+      setSelection(null);
+      emit(
+        flow.nodes,
+        flow.edges,
+        prepared.layout?.rankdir ?? 'TB',
+        prepared.primary,
+        prepared.toolPolicy,
+      );
+      requestAnimationFrame(() => {
+        void fitView({ padding: 0.2, duration: 200 });
+      });
+    },
+    [emit, fitView],
+  );
   return (
     <div className="relative min-h-0 w-full min-w-0 flex-1 overflow-hidden rounded-md border border-border">
       <AgentGraphCanvas
@@ -222,6 +263,11 @@ function AgentGraphPaneInner({
         onSelectionChange={onSelectionChange}
       />
       <div className="pointer-events-none absolute inset-0 z-10">
+        <AgentGraphTransferBar
+          agentName={agentName}
+          getDocument={buildDocument}
+          onImported={applyImportedGraph}
+        />
         <div className="pointer-events-auto absolute top-1/2 left-2 z-10 w-10 -translate-y-1/2">
           <AgentGraphPalette onAdd={(type) => addNode(type)} />
         </div>
@@ -240,74 +286,4 @@ function AgentGraphPaneInner({
       </div>
     </div>
   );
-}
-function withDefaultEdges(
-  nodes: AgentGraphFlowNode[],
-  edges: AgentGraphFlowEdge[],
-  added: AgentGraphFlowNode,
-): AgentGraphFlowEdge[] {
-  const type = added.data.spec.type;
-  if (type === 'core:start') {
-    return edges;
-  }
-  const source =
-    nodes.find((node) => node.data.spec.type === 'core:start') ??
-    nodes.find((node) => node.data.spec.type !== 'core:end');
-  if (!source) {
-    return edges;
-  }
-  const defaultOut = edges.find(
-    (edge) => edge.source === source.id && (edge.data?.when === undefined || edge.data.when === ''),
-  );
-  const stamp = Date.now();
-  if (defaultOut && type !== 'core:end') {
-    return [
-      ...edges.filter((edge) => edge.id !== defaultOut.id),
-      {
-        id: `e-${stamp}-${source.id}-${added.id}`,
-        source: source.id,
-        target: added.id,
-        ...(defaultOut.sourceHandle ? { sourceHandle: defaultOut.sourceHandle } : {}),
-        ...(defaultOut.targetHandle ? { targetHandle: defaultOut.targetHandle } : {}),
-        data: {},
-      },
-      {
-        id: `e-${stamp}-${added.id}-${defaultOut.target}`,
-        source: added.id,
-        target: defaultOut.target,
-        ...(type === 'control:route' ? { sourceHandle: ROUTE_DEFAULT_HANDLE } : {}),
-        data: defaultOut.data ?? {},
-      },
-    ];
-  }
-  return [
-    ...edges,
-    {
-      id: `e-${stamp}-${source.id}-${added.id}`,
-      source: source.id,
-      target: added.id,
-      data: {},
-    },
-  ];
-}
-function ensurePositions(doc: StudioGraphDocument): StudioGraphDocument {
-  const rankdir = doc.layout?.rankdir ?? 'TB';
-  const positions = doc.layout?.positions;
-  const nodeIds = Object.keys(doc.nodes);
-  const hasAll = positions !== undefined && nodeIds.every((id) => positions[id] !== undefined);
-  if (hasAll && positions) {
-    return {
-      ...doc,
-      layout: { rankdir, positions },
-    };
-  }
-  const laidOut = layoutGraph(
-    nodeIds.map((id) => ({ id })),
-    doc.edges.map((edge) => ({ source: edge.from, target: edge.to })),
-    rankdir,
-  );
-  return {
-    ...doc,
-    layout: { rankdir, positions: laidOut },
-  };
 }

@@ -1,5 +1,6 @@
 import type { Edge as FlowEdge, Node as FlowNode } from '@xyflow/react';
 import type { Edge, Expr, Node } from 'harnesys';
+import { layoutGraph } from './agent-graph-layout';
 export type GraphRankdir = 'TB' | 'LR';
 export interface GraphNodePosition {
   x: number;
@@ -15,6 +16,7 @@ export interface StudioGraphDocument {
   layout?: StudioGraphLayout;
   /** Node id of the default (primary) llm:generate node; its model follows the agent default. */
   primary?: string;
+  toolPolicy?: 'explicit';
 }
 export interface HarnesysGraph {
   nodes: Record<string, Node>;
@@ -126,4 +128,74 @@ export function fromFlow(
     edges: graphEdges,
     layout: { rankdir, positions },
   };
+}
+export function ensurePositions(doc: StudioGraphDocument): StudioGraphDocument {
+  const rankdir = doc.layout?.rankdir ?? 'TB';
+  const positions = doc.layout?.positions;
+  const nodeIds = Object.keys(doc.nodes);
+  const hasAll = positions !== undefined && nodeIds.every((id) => positions[id] !== undefined);
+  if (hasAll && positions) {
+    return {
+      ...doc,
+      layout: { rankdir, positions },
+    };
+  }
+  const laidOut = layoutGraph(
+    nodeIds.map((id) => ({ id })),
+    doc.edges.map((edge) => ({ source: edge.from, target: edge.to })),
+    rankdir,
+  );
+  return {
+    ...doc,
+    layout: { rankdir, positions: laidOut },
+  };
+}
+export function withDefaultEdges(
+  nodes: AgentGraphFlowNode[],
+  edges: AgentGraphFlowEdge[],
+  added: AgentGraphFlowNode,
+): AgentGraphFlowEdge[] {
+  const type = added.data.spec.type;
+  if (type === 'core:start') {
+    return edges;
+  }
+  const source =
+    nodes.find((node) => node.data.spec.type === 'core:start') ??
+    nodes.find((node) => node.data.spec.type !== 'core:end');
+  if (!source) {
+    return edges;
+  }
+  const defaultOut = edges.find(
+    (edge) => edge.source === source.id && (edge.data?.when === undefined || edge.data.when === ''),
+  );
+  const stamp = Date.now();
+  if (defaultOut && type !== 'core:end') {
+    return [
+      ...edges.filter((edge) => edge.id !== defaultOut.id),
+      {
+        id: `e-${stamp}-${source.id}-${added.id}`,
+        source: source.id,
+        target: added.id,
+        ...(defaultOut.sourceHandle ? { sourceHandle: defaultOut.sourceHandle } : {}),
+        ...(defaultOut.targetHandle ? { targetHandle: defaultOut.targetHandle } : {}),
+        data: {},
+      },
+      {
+        id: `e-${stamp}-${added.id}-${defaultOut.target}`,
+        source: added.id,
+        target: defaultOut.target,
+        ...(type === 'control:route' ? { sourceHandle: ROUTE_DEFAULT_HANDLE } : {}),
+        data: defaultOut.data ?? {},
+      },
+    ];
+  }
+  return [
+    ...edges,
+    {
+      id: `e-${stamp}-${source.id}-${added.id}`,
+      source: source.id,
+      target: added.id,
+      data: {},
+    },
+  ];
 }

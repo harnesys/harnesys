@@ -125,10 +125,12 @@ function parseGraph(value: unknown): AgentGraph {
   const nodes = (asObject(parsed.nodes) ?? {}) as Record<string, Node>;
   const edges = (Array.isArray(parsed.edges) ? parsed.edges : []) as Edge[];
   const layout = asObject(parsed.layout) as AgentGraphLayout | null;
+  const primary = typeof parsed.primary === 'string' ? parsed.primary : undefined;
   return {
     nodes,
     edges,
     ...(layout ? { layout } : {}),
+    ...(primary !== undefined ? { primary } : {}),
     ...(parsed.toolPolicy === 'explicit' ? { toolPolicy: 'explicit' as const } : {}),
   };
 }

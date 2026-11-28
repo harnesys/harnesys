@@ -228,6 +228,7 @@ export function AgentConfigCategoryPanes({
           <AgentGraphPane
             value={graphDoc}
             agentModelId={agentModelId}
+            agentName={activeAgent?.name}
             onChange={(next) => {
               graphTouchedRef.current = true;
               graphDocRef.current = next;

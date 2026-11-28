@@ -25,6 +25,7 @@ export interface AgentGraph {
   nodes: Record<string, Node>;
   edges: Edge[];
   layout?: AgentGraphLayout;
+  primary?: string;
   toolPolicy?: 'explicit';
 }
 export interface AgentRecord {
