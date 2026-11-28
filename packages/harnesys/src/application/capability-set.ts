@@ -314,14 +314,21 @@ function grantCoreServices(
   universe: CapabilityUniverse,
   packOutputs: PackRunOutput[],
 ): void {
-  if (!isOn(def.packs?.[CORE_PACK])) {
+  const coreOn = isOn(def.packs?.[CORE_PACK]);
+  const hasDeferred = [...asm.registry.values()].some((entry) => entry.exposure === 'deferred');
+  const hasSkills =
+    (def.skills?.length ?? 0) > 0 || packOutputs.some((out) => out.skills.length > 0);
+  const services: ToolDefinition[] = [];
+  if (coreOn || hasDeferred) {
+    services.push(universe.makeLoadTools(asm.registry));
+  }
+  if ((coreOn || hasSkills) && universe.makeLoadSkill !== undefined) {
+    services.push(...universe.makeLoadSkill(packOutputs));
+  }
+  if (services.length === 0) {
     return;
   }
   const source: CapabilitySource = `${PACK_PREFIX}${CORE_PACK}`;
-  const services = [universe.makeLoadTools(asm.registry)];
-  if (universe.makeLoadSkill !== undefined) {
-    services.push(...universe.makeLoadSkill(packOutputs));
-  }
   for (const service of services) {
     asm.registry.set(service.name, {
       def: service,

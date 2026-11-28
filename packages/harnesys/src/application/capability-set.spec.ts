@@ -157,6 +157,32 @@ describe('resolveCapabilitySet pack skills', () => {
   });
 });
 
+describe('core services without the core pack', () => {
+  test('a deferred tool grants the child load_tools even with core off', () => {
+    const set = resolveCapabilitySet(
+      defWith({ core: false, alpha: { exposure: { alpha_a: 'deferred' } } }),
+      universe(undefined),
+    );
+    expect(set.registry.has('load_tools')).toBe(true);
+    expect(set.registry.get('alpha_a')?.exposure).toBe('deferred');
+  });
+
+  test('nothing to reveal and core off keeps the service list empty', () => {
+    const set = resolveCapabilitySet(defWith({ core: false, alpha: true }), universe(undefined));
+    expect(set.registry.has('load_tools')).toBe(false);
+  });
+
+  test('a declared skill list grants load_skill even with core off', () => {
+    const def: AgentDefinition = { ...defWith({ core: false }), skills: ['some-skill'] };
+    const set = resolveCapabilitySet(def, {
+      ...universe(undefined),
+      makeLoadSkill: () => [toolOf('load_skill')],
+    });
+    expect(set.registry.has('load_skill')).toBe(true);
+    expect(set.registry.has('load_tools')).toBe(false);
+  });
+});
+
 function opTool(name: string, operations: string[]): ToolDefinition {
   return { ...toolOf(name), operations };
 }

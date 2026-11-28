@@ -202,7 +202,10 @@ export class StdioLspSession {
         }
       }
     }
-    throw new Error(`path outside project: ${filePath}`);
+    throw new Error(
+      `path outside project: ${filePath} (this language server is rooted at ${this.projectRoot}; ` +
+        "for a file in another project or a shared source, run that project's own checker from its directory instead, e.g. shell `cd <that dir> && npx tsc --noEmit`)",
+    );
   }
   private request(method: string, params: unknown, timeoutMs?: number): Promise<unknown> {
     const id = this.nextId;
