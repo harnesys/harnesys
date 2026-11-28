@@ -1,4 +1,4 @@
-import type { ModelPricing, ModelPricingOverride } from '@harnesys/studio-shared';
+import type { ModelPricingOverride } from '@harnesys/studio-shared';
 import type { ManualPrice } from '../../domain/usage/usage-port.ts';
 
 export type PricingSource = 'provider' | 'manual' | 'catalog' | 'none';
@@ -13,8 +13,18 @@ export interface PriceResolution {
   source: PricingSource;
 }
 
+export interface CatalogPricingFields {
+  prompt?: string;
+  completion?: string;
+  input_cache_read?: string;
+  input_cache_write?: string;
+  image?: string;
+  request?: string;
+  overrides?: ModelPricingOverride[];
+}
+
 export interface ResolvePricingInput {
-  catalogPricing?: ModelPricing | null;
+  catalogPricing?: CatalogPricingFields | null;
   override?: ManualPrice | null;
   promptTokens?: number | null;
 }
@@ -123,7 +133,7 @@ export function costUsd(
 
 export function priceUsage(input: {
   usage: NormalizedUsage;
-  catalogPricing?: ModelPricing | null;
+  catalogPricing?: CatalogPricingFields | null;
   override?: ManualPrice | null;
 }): UsageCost {
   const providerCost = input.usage.providerReportedCostUsd;
@@ -180,7 +190,7 @@ export function normalizeUsage(raw: unknown): NormalizedUsage {
 }
 
 function catalogPricesOf(
-  pricing: ModelPricing | null | undefined,
+  pricing: CatalogPricingFields | null | undefined,
   promptTokens: number | null,
 ): Omit<PriceResolution, 'source'> | null {
   if (!pricing || typeof pricing !== 'object') {
@@ -189,27 +199,16 @@ function catalogPricesOf(
   const effective = effectivePrices(pricing, promptTokens);
   const inputPer1M = per1M(effective.prompt);
   const outputPer1M = per1M(effective.completion);
-  const cacheReadPer1M = per1M(effective.input_cache_read);
-  const cacheWritePer1M = per1M(effective.input_cache_write);
-  const perImageUsd = parsePrice(effective.image);
-  const perRequestUsd = parsePrice(effective.request);
-  if (
-    inputPer1M === null &&
-    outputPer1M === null &&
-    cacheReadPer1M === null &&
-    cacheWritePer1M === null &&
-    perImageUsd === null &&
-    perRequestUsd === null
-  ) {
+  if (inputPer1M === null || outputPer1M === null) {
     return null;
   }
   return {
     inputPer1M,
     outputPer1M,
-    cacheReadPer1M,
-    cacheWritePer1M,
-    perImageUsd,
-    perRequestUsd,
+    cacheReadPer1M: per1M(effective.input_cache_read),
+    cacheWritePer1M: per1M(effective.input_cache_write),
+    perImageUsd: parsePrice(effective.image),
+    perRequestUsd: parsePrice(effective.request),
   };
 }
 
@@ -222,7 +221,10 @@ interface EffectivePrices {
   request: string | undefined;
 }
 
-function effectivePrices(pricing: ModelPricing, promptTokens: number | null): EffectivePrices {
+function effectivePrices(
+  pricing: CatalogPricingFields,
+  promptTokens: number | null,
+): EffectivePrices {
   const applicable = applicableOverrides(pricing.overrides, promptTokens);
   return {
     prompt: overriddenPrice(applicable, 'prompt') ?? pricing.prompt,

@@ -65,6 +65,7 @@ export class UsageAdapter implements UsagePort {
           reasoningTokens: sql<number>`sum(coalesce(${usageTable.reasoningTokens}, 0))`,
           costUsd: sql<number>`sum(${usageTable.costUsd})`,
           unpriced: sql<number>`sum(case when ${usageTable.pricingSource} = 'none' then 1 else 0 end)`,
+          zeroPriced: sql<number>`sum(case when ${usageTable.costUsd} = 0 and ${usageTable.pricingSource} != 'none' then 1 else 0 end)`,
           runs: sql<number>`count(*)`,
         })
         .from(usageTable)

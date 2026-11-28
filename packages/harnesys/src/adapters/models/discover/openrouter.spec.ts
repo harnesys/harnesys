@@ -65,6 +65,30 @@ describe('parseOpenRouterList', () => {
     expect(model?.pricing?.overrides).toBeUndefined();
   });
 
+  test('drops pricing without prompt and completion rates instead of zeroing it', () => {
+    const [model] = parseOpenRouterList({
+      data: [
+        {
+          id: 'vendor/image-model',
+          pricing: { image: '0.003', request: '0.01' },
+        },
+      ],
+    });
+    expect(model?.pricing).toBeUndefined();
+  });
+
+  test('keeps explicit zero rates as priced free', () => {
+    const [model] = parseOpenRouterList({
+      data: [
+        {
+          id: 'vendor/model:free',
+          pricing: { prompt: '0', completion: '0' },
+        },
+      ],
+    });
+    expect(model?.pricing).toMatchObject({ prompt: '0', completion: '0' });
+  });
+
   test('derives embed kind from output_modalities', () => {
     const [model] = parseOpenRouterList({
       data: [

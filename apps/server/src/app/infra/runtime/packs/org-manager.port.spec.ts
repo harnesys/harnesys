@@ -85,6 +85,7 @@ describe('OrgManagerPort', () => {
         reasoningTokens: 0,
         costUsd: 1.5,
         unpriced: 0,
+        zeroPriced: 1,
         runs: 3,
       },
       {
@@ -96,6 +97,7 @@ describe('OrgManagerPort', () => {
         reasoningTokens: 0,
         costUsd: 0.5,
         unpriced: 1,
+        zeroPriced: 0,
         runs: 2,
       },
     ];
@@ -121,6 +123,7 @@ describe('OrgManagerPort', () => {
           outputTokens: 20,
           costUsd: 1.5,
           unpriced: 0,
+          zeroPriced: 1,
           runs: 3,
         },
         {
@@ -129,6 +132,7 @@ describe('OrgManagerPort', () => {
           outputTokens: 10,
           costUsd: 0.5,
           unpriced: 1,
+          zeroPriced: 0,
           runs: 2,
         },
       ],
@@ -137,7 +141,7 @@ describe('OrgManagerPort', () => {
     });
   });
 
-  test('groupBy agent resolves names and keeps unpriced', async () => {
+  test('groupBy agent resolves names and keeps unpriced and zeroPriced', async () => {
     const agents = new MemoryAgents();
     insertAgent(agents);
     const usage = new FakeUsage();
@@ -152,6 +156,7 @@ describe('OrgManagerPort', () => {
           reasoningTokens: 0,
           costUsd: 0,
           unpriced: 4,
+          zeroPriced: 0,
           runs: 1,
         },
         {
@@ -163,6 +168,7 @@ describe('OrgManagerPort', () => {
           reasoningTokens: 0,
           costUsd: 0,
           unpriced: 0,
+          zeroPriced: 1,
           runs: 1,
         },
       ],
@@ -178,7 +184,18 @@ describe('OrgManagerPort', () => {
     };
     const { port } = managerPort({ agents, usage });
     const report = await port.usage(SCOPE, { groupBy: 'agent' });
-    expect(report.rows[0]).toMatchObject({ key: 'a1', name: 'coder', level: 'top', unpriced: 4 });
-    expect(report.rows[1]).toMatchObject({ key: 'ghost-agent', name: null, unpriced: 0 });
+    expect(report.rows[0]).toMatchObject({
+      key: 'a1',
+      name: 'coder',
+      level: 'top',
+      unpriced: 4,
+      zeroPriced: 0,
+    });
+    expect(report.rows[1]).toMatchObject({
+      key: 'ghost-agent',
+      name: null,
+      unpriced: 0,
+      zeroPriced: 1,
+    });
   });
 });

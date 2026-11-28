@@ -41,7 +41,7 @@ export function createManagerTools(deps: CreateManagerToolsParams): ToolDefiniti
     tool('usage_report', {
       group: 'manager',
       description:
-        'Token and cost usage aggregated by day or by agent (groupBy day|agent) over an optional from/to window. Rows carry input/output tokens, cost in USD and run count; by agent they also carry name (null when the agent was deleted) and level. unpriced counts usage rows with no price match: costUsd 0 together with unpriced > 0 means "not priced", not "free".',
+        'Token and cost usage aggregated by day or by agent (groupBy day|agent) over an optional from/to window. Rows carry input/output tokens, cost in USD and run count; by agent they also carry name (null when the agent was deleted) and level. unpriced counts usage rows with no price match: costUsd 0 together with unpriced > 0 means "not priced", not "free". zeroPriced counts usage rows matched to a confirmed zero rate: costUsd 0 with unpriced 0 and zeroPriced > 0 means every row was priced and genuinely free (local, free-tier or subscription).',
       input: {
         type: 'object',
         properties: {

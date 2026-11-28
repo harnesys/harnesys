@@ -116,6 +116,7 @@ export class OrgManagerPort extends ManagerObservationPort {
       outputTokens: row.outputTokens,
       costUsd: row.costUsd,
       unpriced: row.unpriced,
+      zeroPriced: row.zeroPriced,
       runs: row.runs,
     }));
     let totalRuns = 0;

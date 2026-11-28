@@ -25,6 +25,23 @@ describe('resolvePricing', () => {
     expect(resolvePricing({}).source).toBe('none');
     expect(resolvePricing({ catalogPricing: { prompt: '', completion: '' } }).source).toBe('none');
   });
+
+  test('image and request rates alone do not price token usage', () => {
+    const resolution = resolvePricing({ catalogPricing: { image: '0.003', request: '0.01' } });
+    expect(resolution.source).toBe('none');
+  });
+
+  test('a single token rate leaves the model unpriced', () => {
+    const resolution = resolvePricing({ catalogPricing: { prompt: '0.0000025' } });
+    expect(resolution.source).toBe('none');
+  });
+
+  test('explicit zero token rates stay catalog-priced at zero', () => {
+    const resolution = resolvePricing({ catalogPricing: { prompt: '0', completion: '0' } });
+    expect(resolution.source).toBe('catalog');
+    expect(resolution.inputPer1M).toBe(0);
+    expect(resolution.outputPer1M).toBe(0);
+  });
 });
 
 describe('priceUsage', () => {
@@ -259,5 +276,32 @@ describe('priceUsage', () => {
   test('image_count is used when images is missing', () => {
     const usage = normalizeUsage({ image_count: 2 });
     expect(usage.images).toBe(2);
+  });
+
+  test('image and request metadata without token rates leaves token usage unpriced', () => {
+    const priced = priceUsage({
+      usage: normalizeUsage({ promptTokens: 1000, generatedTokens: 500 }),
+      catalogPricing: { image: '0.003', request: '0.01' },
+    });
+    expect(priced.pricingSource).toBe('none');
+    expect(priced.costUsd).toBe(0);
+  });
+
+  test('explicit zero rates price the call at zero, not unpriced', () => {
+    const priced = priceUsage({
+      usage: normalizeUsage({ promptTokens: 10_000_000, generatedTokens: 1_000_000 }),
+      catalogPricing: { prompt: '0', completion: '0' },
+    });
+    expect(priced.pricingSource).toBe('catalog');
+    expect(priced.costUsd).toBe(0);
+  });
+
+  test('complete metadata computes the real cost', () => {
+    const priced = priceUsage({
+      usage: normalizeUsage({ promptTokens: 1_000_000, generatedTokens: 500_000 }),
+      catalogPricing: { prompt: '0.0000025', completion: '0.00001', request: '0.01' },
+    });
+    expect(priced.pricingSource).toBe('catalog');
+    expect(priced.costUsd).toBeCloseTo(2.5 + 5 + 0.01, 10);
   });
 });

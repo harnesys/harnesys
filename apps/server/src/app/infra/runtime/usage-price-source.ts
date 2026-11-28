@@ -1,13 +1,14 @@
-import type { ModelPricing, ModelPricingOverride } from '@harnesys/studio-shared';
+import type { ModelPricingOverride } from '@harnesys/studio-shared';
 import { eq } from 'drizzle-orm';
 import { resolveModel } from 'harnesys';
+import type { CatalogPricingFields } from '../../application/usage/pricing.ts';
 import type { ManualPrice } from '../../domain/usage/usage-port.ts';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
 import { llmModelsTable } from '../org-sqlite/schema/llm-models.ts';
 import { priceOverridesTable } from '../org-sqlite/schema/usage.ts';
 
 export interface UsagePriceSources {
-  catalogPricing: ModelPricing | null;
+  catalogPricing: CatalogPricingFields | null;
   override: ManualPrice | null;
 }
 
@@ -21,7 +22,7 @@ export function usagePriceSources(
   };
 }
 
-function catalogPricingOf(tx: OrgSqliteDb, modelId: string | null): ModelPricing | null {
+function catalogPricingOf(tx: OrgSqliteDb, modelId: string | null): CatalogPricingFields | null {
   if (!modelId) {
     return null;
   }
@@ -51,7 +52,7 @@ function overrideOf(tx: OrgSqliteDb, modelId: string | null): ManualPrice | null
   return { inputPer1M: row.inputPer1M, outputPer1M: row.outputPer1M };
 }
 
-function pricingOf(raw: unknown): ModelPricing | null {
+function pricingOf(raw: unknown): CatalogPricingFields | null {
   const record = asRecord(raw);
   if (!record) {
     return null;
@@ -74,8 +75,8 @@ function pricingOf(raw: unknown): ModelPricing | null {
   }
   const overrides = pricingOverridesOf(record.overrides);
   return {
-    prompt: prompt ?? '0',
-    completion: completion ?? '0',
+    prompt,
+    completion,
     input_cache_read: inputCacheRead,
     input_cache_write: inputCacheWrite,
     image,

@@ -80,8 +80,8 @@ function mapOpenRouterModel(item: unknown): DiscoveredModel | undefined {
     architecture: architectureOf(architecture),
     pricing: pricing
       ? pricingOf({
-          prompt: formatPriceString(pricing.prompt) ?? '0',
-          completion: formatPriceString(pricing.completion) ?? '0',
+          prompt: formatPriceString(pricing.prompt),
+          completion: formatPriceString(pricing.completion),
           input_cache_read: formatPriceString(pricing.input_cache_read),
           input_cache_write: formatPriceString(pricing.input_cache_write),
           image: formatPriceString(pricing.image),

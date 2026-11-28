@@ -24,6 +24,7 @@ export const UsageGroupRowSchema = z.object({
   reasoningTokens: z.number(),
   costUsd: z.number(),
   unpriced: z.number(),
+  zeroPriced: z.number(),
   runs: z.number(),
 });
 export type UsageGroupRow = z.infer<typeof UsageGroupRowSchema>;

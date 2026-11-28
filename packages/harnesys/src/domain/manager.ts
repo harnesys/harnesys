@@ -29,8 +29,10 @@ export interface ManagerUsageRow {
   /** Display name resolved for groupBy=agent; null when the agent row is gone (deleted). */
   name?: string | null;
   level?: AgentLevel;
-  /** Usage rows counted with pricingSource 'none': costUsd 0 may mean free or unpriced. */
+  /** Usage rows with no price match: their cost is missing from costUsd, not free. */
   unpriced: number;
+  /** Usage rows matched to a confirmed zero rate (free tier, local, subscription): $0 is real spend. */
+  zeroPriced: number;
   inputTokens: number;
   outputTokens: number;
   costUsd: number;

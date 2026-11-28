@@ -380,6 +380,7 @@ Query:
 | `rows[].reasoningTokens` | number |
 | `rows[].costUsd` | number |
 | `rows[].unpriced` | number |
+| `rows[].zeroPriced` | number |
 | `rows[].runs` | number |
 | `totals` | object |
 | `totals.inputTokens` | number |
