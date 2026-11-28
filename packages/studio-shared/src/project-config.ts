@@ -24,6 +24,11 @@ export interface ProjectMcpServer {
   tools: ProjectTool[];
   resources: ProjectMcpResource[];
 }
+export interface ProjectMcpLastCheck {
+  at: number;
+  connected: boolean;
+  error?: string;
+}
 export interface ProjectMcpConfigServer {
   serverId: string;
   enabled: boolean;
@@ -35,6 +40,7 @@ export interface ProjectMcpConfigServer {
   headers?: Record<string, string>;
   connected: boolean;
   toolCount: number;
+  lastCheck?: ProjectMcpLastCheck;
   origin: ComponentOrigin;
   disabledByUser?: boolean;
   requiredGrant?: GrantClass;

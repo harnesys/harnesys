@@ -1,11 +1,13 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { Injectable } from '@harnesys/brix';
-import type {
-  ListOrgMcpConfigResponse,
-  McpConfigServer,
-  McpTransportKind,
-  UpsertOrgMcpServerBody,
+import {
+  type ListOrgMcpConfigResponse,
+  type McpConfigServer,
+  type McpLastCheck,
+  McpLastCheckSchema,
+  type McpTransportKind,
+  type UpsertOrgMcpServerBody,
 } from '@harnesys/contracts';
 import { z } from 'zod';
 import { HostFsLayoutPort } from '../../domain/machine/host-fs-layout.port.ts';
@@ -17,6 +19,7 @@ interface StdioEntry {
   args?: string[];
   env?: Record<string, string>;
   enabled?: boolean;
+  lastCheck?: McpLastCheck;
 }
 
 interface UrlEntry {
@@ -24,6 +27,7 @@ interface UrlEntry {
   type?: string;
   headers?: Record<string, string>;
   enabled?: boolean;
+  lastCheck?: McpLastCheck;
 }
 
 type McpEntry = StdioEntry | UrlEntry;
@@ -37,6 +41,7 @@ const mcpEntrySchema = z
     type: z.string().optional(),
     headers: z.record(z.string(), z.string()).optional(),
     enabled: z.boolean().optional(),
+    lastCheck: McpLastCheckSchema.optional(),
   })
   .refine(
     (entry) => entry.enabled === false || entry.command !== undefined || entry.url !== undefined,
@@ -94,6 +99,16 @@ export class OrgMcpJsonAdapter extends OrgMcpPort {
     }
     this.writeMap(orgId, map);
     return this.listConfig(orgId);
+  }
+
+  setLastCheck(orgId: string, serverId: string, check: McpLastCheck): void {
+    const map = this.readMap(orgId);
+    const entry = map[serverId];
+    if (!entry) {
+      throw new McpServerNotFoundException(serverId);
+    }
+    map[serverId] = { ...entry, lastCheck: check };
+    this.writeMap(orgId, map);
   }
 
   private readMap(orgId: string): Record<string, McpEntry> {
@@ -161,6 +176,7 @@ function toConfigServer(serverId: string, entry: McpEntry): McpConfigServer {
       ...(entry.env !== undefined ? { env: entry.env } : {}),
       connected: false,
       toolCount: 0,
+      ...(entry.lastCheck !== undefined ? { lastCheck: entry.lastCheck } : {}),
       origin: { kind: 'org' },
     };
   }
@@ -172,6 +188,7 @@ function toConfigServer(serverId: string, entry: McpEntry): McpConfigServer {
     ...(entry.headers !== undefined ? { headers: entry.headers } : {}),
     connected: false,
     toolCount: 0,
+    ...(entry.lastCheck !== undefined ? { lastCheck: entry.lastCheck } : {}),
     origin: { kind: 'org' },
   };
 }

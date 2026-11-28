@@ -176,8 +176,10 @@ async function applyList(deps: CreateMcpToolsParams): Promise<Record<string, unk
       'managed=true entries come from the org mcp config and can be edited with mcp_connect/mcp_toggle/mcp_remove. ' +
       'Grant servers to an agent via agents_update mcpServers. ' +
       'connected reflects the live client connection established at connectedAt (epoch ms); ' +
-      'it is not re-probed per call, so a server that died or lost credentials after that still shows connected:true. ' +
-      'Before routing work through a server, confirm it with mcp_check (fresh probe).',
+      'it is live-session data, not re-probed per call, so a server that died or lost credentials after that still shows connected:true. ' +
+      'lastCheck is the persisted outcome of the last health probe { at: epoch ms, connected, error? } — ' +
+      'its error text is the freshest reason a server was unreachable. ' +
+      'Before routing work through a server, confirm it with mcp_check (fresh probe, also persisted as lastCheck).',
   };
 }
 
@@ -195,8 +197,9 @@ export function createMcpTools(deps: CreateMcpToolsParams): ToolDefinition[] {
       sideEffect: 'read',
       description:
         'List MCP servers of this org: config entry (transport, command/url, enabled), connection status ' +
-        'with the connectedAt handshake time (cached, not re-probed — use mcp_check for a fresh probe) and their tools. ' +
-        'Read-only.',
+        'with the connectedAt handshake time (live-session data, cached, not re-probed), their tools, ' +
+        'and lastCheck — the outcome of the last health probe persisted on the server entry { at, connected, error? }. ' +
+        'Use mcp_check for a fresh probe. Read-only.',
       input: { type: 'object', properties: {} },
       execute: () => runGuard(() => applyList(deps)),
     }),
@@ -247,11 +250,15 @@ export function createMcpTools(deps: CreateMcpToolsParams): ToolDefinition[] {
         'Health-check a configured MCP server: fresh connection attempt with vault placeholders resolved, ' +
         'returns { connected, toolCount, toolNames } (no per-tool descriptions) or { connected: false, error } ' +
         'where the error is the underlying cause ' +
-        '(transport/spawn failure line, or "secret <KEY> not found in vault"). Pass verbose: true to get the ' +
+        '(transport/spawn failure line, or vault key "<KEY>" not found for server <id>). ' +
+        'The outcome is persisted on the server entry as lastCheck and exposed by mcp_list; ' +
+        'a failed mcp_connect probe before the entry is stored does not overwrite the previous lastCheck. ' +
+        'Pass verbose: true to get the ' +
         'full tool list with descriptions — costs a lot of context, prefer mcp_list for names. ' +
-        'Unresolved vault keys abort the check with that error — stricter than the runtime path, ' +
-        'which sends a missing key as an empty value and still connects. ' +
-        'Read-only, does not touch running runtimes.',
+        'Unresolved vault keys abort the check with that error. The runtime never connects such a server ' +
+        'unauthenticated: org-config connects abort with the same named-key error, and plugin-origin ' +
+        'servers are skipped from the runtime bundle with an mcp_vault_key_missing plugin diagnostic. ' +
+        'Read-only apart from the persisted lastCheck, does not touch running runtimes.',
       input: {
         type: 'object',
         properties: {

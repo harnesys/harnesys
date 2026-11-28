@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import type { CapabilityScope } from '../../domain/pack.ts';
-import type { McpHealthReport, McpManagePort, McpServerEntry } from '../../ports/mcp-manage.ts';
+import type {
+  McpHealthReport,
+  McpManagePort,
+  McpServerEntry,
+  McpServerOverview,
+} from '../../ports/mcp-manage.ts';
 import type { ToolContext } from '../../ports/tools.ts';
 import { createMcpTools } from './create-mcp-tools.ts';
 
@@ -15,9 +20,13 @@ interface UpsertCall {
   entry: McpServerEntry;
 }
 
-function port(health: McpHealthReport, calls: { upserts: UpsertCall[] }): McpManagePort {
+function port(
+  health: McpHealthReport,
+  calls: { upserts: UpsertCall[] },
+  overviews: McpServerOverview[] = [],
+): McpManagePort {
   return {
-    list: async () => [],
+    list: async () => overviews,
     upsert: async (_scope, serverId, entry) => {
       calls.upserts.push({ serverId, entry });
       return health;
@@ -114,6 +123,31 @@ describe('mcp pack tools', () => {
     expect(await remove.execute({ serverId: 's1' }, ctx)).toEqual({ removed: 's1' });
     expect(await check.execute({ serverId: 's1' }, ctx)).toMatchObject({ connected: true });
     expect(await check.execute({}, ctx)).toEqual({ error: 'serverId must be a non-empty string' });
+  });
+
+  test('list reports lastCheck from the persisted probe outcome and the note explains it', async () => {
+    const overview: McpServerOverview = {
+      serverId: 'brightdata',
+      transport: 'http',
+      managed: true,
+      enabled: true,
+      connected: false,
+      toolCount: 0,
+      tools: [],
+      lastCheck: {
+        at: 1732759200000,
+        connected: false,
+        error: 'vault key "secret:BRIGHTDATA_TOKEN" not found for server brightdata',
+      },
+    };
+    const { list } = toolsOf(
+      port({ serverId: 'brightdata', connected: false, tools: [] }, { upserts: [] }, [overview]),
+    );
+    const out = (await list.execute({}, ctx)) as Record<string, unknown>;
+    const servers = out.servers as Array<{ lastCheck?: { at: number; error?: string } }>;
+    expect(servers[0]?.lastCheck?.at).toBe(1732759200000);
+    expect(servers[0]?.lastCheck?.error).toContain('secret:BRIGHTDATA_TOKEN');
+    expect(String(out.note)).toContain('lastCheck');
   });
 
   test('check is compact by default and full on verbose', async () => {

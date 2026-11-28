@@ -36,6 +36,13 @@ export const ListOrgMcpResponseSchema = z.object({
 });
 export type ListOrgMcpResponse = z.infer<typeof ListOrgMcpResponseSchema>;
 
+export const McpLastCheckSchema = z.object({
+  at: z.number().int(),
+  connected: z.boolean(),
+  error: z.string().optional(),
+});
+export type McpLastCheck = z.infer<typeof McpLastCheckSchema>;
+
 export const McpConfigServerSchema = z.object({
   serverId: z.string().min(1),
   enabled: z.boolean(),
@@ -47,6 +54,7 @@ export const McpConfigServerSchema = z.object({
   headers: z.record(z.string(), z.string()).optional(),
   connected: z.boolean(),
   toolCount: z.number().int().nonnegative(),
+  lastCheck: McpLastCheckSchema.optional(),
   origin: McpOriginSchema,
   disabledByUser: z.boolean().optional(),
   requiredGrant: z.string().optional(),

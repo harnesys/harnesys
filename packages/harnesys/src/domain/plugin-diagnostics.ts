@@ -16,6 +16,7 @@ export type PluginDiagnosticCode =
   | 'claude_tool_unmapped'
   | 'unresolved_model'
   | 'server_config_invalid'
+  | 'mcp_vault_key_missing'
   | 'dependency_unsatisfied'
   | 'dependency_cycle'
   | 'blocked_by_grant'

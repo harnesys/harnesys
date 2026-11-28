@@ -52,13 +52,12 @@ describe('resolveMcpVaultEntry', () => {
     expect(result.args).toEqual(['--region=eu-1', '--plain']);
   });
 
-  test('missing vault key resolves to empty and warns', async () => {
+  test('missing vault key aborts naming the key and server, never an empty substitution', async () => {
     const warnings: string[] = [];
     const entry: StdioEntry = { command: 'node', env: { TOKEN: ph('secret:MISSING') } };
-    const result = (await resolveMcpVaultEntry('srv', entry, LOOKUP, (m) =>
-      warnings.push(m),
-    )) as StdioEntry;
-    expect(result.env).toEqual({ TOKEN: '' });
+    await expect(
+      resolveMcpVaultEntry('srv', entry, LOOKUP, (m) => warnings.push(m)),
+    ).rejects.toThrow(/vault key "secret:MISSING" not found for server srv/);
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain('secret:MISSING');
   });
@@ -104,7 +103,27 @@ describe('resolveMcpVaultJson', () => {
       LOOKUP,
       () => {},
     );
-    expect(result.mcpServers.a).toEqual({ command: 'n', env: { T: 'gh_xxx' } });
-    expect(result.mcpServers.b).toEqual({ url: 'https://x', headers: { H: 'eu-1' } });
+    expect(result.skipped).toEqual([]);
+    expect(result.mcpJson.mcpServers.a).toEqual({ command: 'n', env: { T: 'gh_xxx' } });
+    expect(result.mcpJson.mcpServers.b).toEqual({ url: 'https://x', headers: { H: 'eu-1' } });
+  });
+
+  test('skips a server with a missing vault key and reports it', async () => {
+    const warnings: string[] = [];
+    const result = await resolveMcpVaultJson(
+      {
+        mcpServers: {
+          good: { command: 'n', env: { T: ph('secret:GITHUB_TOKEN') } },
+          bad: { url: 'https://x', headers: { H: ph('secret:MISSING') } },
+        },
+      },
+      LOOKUP,
+      (m) => warnings.push(m),
+    );
+    expect(Object.keys(result.mcpJson.mcpServers)).toEqual(['good']);
+    expect(result.skipped).toEqual([
+      { serverId: 'bad', error: expect.stringContaining('secret:MISSING') },
+    ]);
+    expect(warnings.some((m) => m.includes('bad') && m.includes('secret:MISSING'))).toBe(true);
   });
 });

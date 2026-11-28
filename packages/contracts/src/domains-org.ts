@@ -149,6 +149,8 @@ export {
   ListOrgMcpResponseSchema,
   type McpConfigServer,
   McpConfigServerSchema,
+  type McpLastCheck,
+  McpLastCheckSchema,
   type McpLiveServer,
   McpLiveServerSchema,
   type McpOrigin,

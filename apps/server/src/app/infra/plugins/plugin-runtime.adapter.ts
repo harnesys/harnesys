@@ -119,15 +119,22 @@ export class PluginRuntimeAdapter extends PluginRuntimePort {
     for (const diagnostic of merged.diagnostics) {
       onDiagnostic(diagnostic);
     }
-    const mcpJson = await resolveMcpVaultJson(
+    const resolvedVault = await resolveMcpVaultJson(
       merged.mcp,
       (key) => this.secrets.get(orgId, key),
       (message) => CONSOLE_LOGGER.warn(`[mcp] ${message}`),
     );
+    for (const skip of resolvedVault.skipped) {
+      onDiagnostic({
+        level: 'error',
+        code: 'mcp_vault_key_missing',
+        message: `MCP server "${skip.serverId}" was skipped from this runtime: ${skip.error}`,
+      });
+    }
     return {
       entries,
       skills: await composeSkills(this.layout.skillsDir(orgId), entries, this.tiers),
-      mcpJson,
+      mcpJson: resolvedVault.mcpJson,
       agents: composeAgents(orgId, entries, onDiagnostic, this.providers, this.models),
       lspServers: collectLspServers(entries, disabled),
     };

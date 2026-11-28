@@ -6,16 +6,45 @@ export type McpVaultLookup = (key: string) => Promise<string | null>;
 
 export type McpResolveWarn = (message: string) => void;
 
+export function vaultKeyMissingMessage(serverId: string, key: string): string {
+  return `vault key "${key}" not found for server ${serverId} — set it in the vault or fix the \${${key}} reference`;
+}
+
+export class McpVaultKeyNotFoundError extends Error {
+  constructor(serverId: string, key: string) {
+    super(vaultKeyMissingMessage(serverId, key));
+    this.name = 'McpVaultKeyNotFoundError';
+  }
+}
+
+export interface McpVaultSkip {
+  serverId: string;
+  error: string;
+}
+
+export interface ResolvedMcpVault {
+  mcpJson: CursorMcpJson;
+  skipped: McpVaultSkip[];
+}
+
 export async function resolveMcpVaultJson(
   mcpJson: CursorMcpJson,
   lookup: McpVaultLookup,
   warn: McpResolveWarn,
-): Promise<CursorMcpJson> {
+): Promise<ResolvedMcpVault> {
   const servers: McpServerEntries = {};
+  const skipped: McpVaultSkip[] = [];
   for (const [serverId, entry] of Object.entries(mcpJson.mcpServers)) {
-    servers[serverId] = await resolveMcpVaultEntry(serverId, entry, lookup, warn);
+    try {
+      servers[serverId] = await resolveMcpVaultEntry(serverId, entry, lookup, warn);
+    } catch (err) {
+      if (!(err instanceof McpVaultKeyNotFoundError)) {
+        throw err;
+      }
+      skipped.push({ serverId, error: err.message });
+    }
   }
-  return { mcpServers: servers };
+  return { mcpJson: { mcpServers: servers }, skipped };
 }
 
 export async function resolveMcpVaultEntry(
@@ -103,8 +132,9 @@ async function resolvePlaceholder(
 ): Promise<string> {
   const stored = await lookup(key);
   if (stored === null) {
-    warn(`${serverId}: ${field}: vault key "${key}" not found, resolved to empty`);
-    return '';
+    const error = new McpVaultKeyNotFoundError(serverId, key);
+    warn(`${serverId}: ${field}: ${error.message}`);
+    throw error;
   }
   return stored;
 }

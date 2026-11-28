@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import type { McpLastCheck } from '@harnesys/contracts';
 import type {
   CapabilityScope,
   McpConnection,
@@ -25,6 +26,8 @@ interface Deps {
   removed: string[];
   toggles: Array<{ serverId: string; enabled: boolean }>;
   applies: Array<{ serverId: string; entry: McpServerEntry | null }>;
+  lastChecks: Array<{ serverId: string; check: unknown }>;
+  lastCheckFails: boolean;
   bundleInvalidations: number;
 }
 
@@ -36,6 +39,8 @@ function deps(servers: Array<Record<string, unknown>>, live: McpServerInfo[] = [
     removed: [],
     toggles: [],
     applies: [],
+    lastChecks: [],
+    lastCheckFails: false,
     bundleInvalidations: 0,
   };
   state.config = {
@@ -50,6 +55,12 @@ function deps(servers: Array<Record<string, unknown>>, live: McpServerInfo[] = [
     setEnabled: (_orgId, serverId, enabled) => {
       state.toggles.push({ serverId, enabled });
       return { servers: servers as never };
+    },
+    setLastCheck: (_orgId, serverId, check) => {
+      if (state.lastCheckFails) {
+        throw new Error('disk full');
+      }
+      state.lastChecks.push({ serverId, check });
     },
   } as OrgMcpPort;
   return state;
@@ -277,20 +288,21 @@ describe('OrgMcpManagePort', () => {
         return Promise.resolve(probeConnection());
       },
     };
-    const manage = probePort(
-      storedDeps('proxy', { BRIGHTDATA_API_TOKEN: '$'.concat('{secret:BRIGHTDATA_TOKEN}') }),
-      {
-        vaultLookup: () => Promise.resolve(null),
-        connector,
-      },
-    );
-    expect(await manage.health(scope, 'proxy')).toEqual({
-      serverId: 'proxy',
-      connected: false,
-      tools: [],
-      error: 'secret BRIGHTDATA_TOKEN not found in vault',
+    const state = storedDeps('proxy', {
+      BRIGHTDATA_API_TOKEN: '$'.concat('{secret:BRIGHTDATA_TOKEN}'),
     });
+    const manage = probePort(state, {
+      vaultLookup: () => Promise.resolve(null),
+      connector,
+    });
+    const health = await manage.health(scope, 'proxy');
+    expect(health.connected).toBe(false);
+    expect(health.tools).toEqual([]);
+    expect(health.error).toContain(
+      'vault key "secret:BRIGHTDATA_TOKEN" not found for server proxy',
+    );
     expect(connects).toBe(0);
+    expect(state.lastChecks).toHaveLength(1);
   });
 
   test('a failed probe reports the underlying connect error, not a generic one', async () => {
@@ -304,5 +316,32 @@ describe('OrgMcpManagePort', () => {
       tools: [],
       error: 'spawn npx ENOENT',
     });
+  });
+
+  test('health persists the probe outcome as lastCheck; a write failure never breaks it', async () => {
+    const state = storedDeps('gh', { GITHUB_TOKEN: 'plain' });
+    const passing = probePort(state, {
+      probe: async (serverId) => okProbe(serverId),
+    });
+    await passing.health(scope, 'gh');
+    expect(state.lastChecks).toHaveLength(1);
+    const okCheck = state.lastChecks[0]?.check as McpLastCheck;
+    expect(okCheck.at).toBeGreaterThan(0);
+    expect(okCheck.connected).toBe(true);
+    expect(okCheck.error).toBeUndefined();
+    const failing = probePort(state, {
+      probe: async (serverId): Promise<McpHealthReport> => ({
+        serverId,
+        connected: false,
+        tools: [],
+        error: 'HTTP 403',
+      }),
+    });
+    await failing.health(scope, 'gh');
+    const lastCheck = state.lastChecks.at(-1)?.check as McpLastCheck;
+    expect(lastCheck.connected).toBe(false);
+    expect(lastCheck.error).toBe('HTTP 403');
+    state.lastCheckFails = true;
+    expect((await failing.health(scope, 'gh')).error).toBe('HTTP 403');
   });
 });

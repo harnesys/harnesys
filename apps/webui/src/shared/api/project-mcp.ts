@@ -81,6 +81,7 @@ function toProjectMcpConfigServer(server: McpConfigServer): ProjectMcpConfigServ
     ...(server.headers !== undefined ? { headers: server.headers } : {}),
     connected: server.connected,
     toolCount: server.toolCount,
+    ...(server.lastCheck !== undefined ? { lastCheck: server.lastCheck } : {}),
     origin:
       server.origin.kind === 'plugin'
         ? {

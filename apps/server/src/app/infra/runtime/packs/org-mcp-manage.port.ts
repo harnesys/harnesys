@@ -1,4 +1,4 @@
-import type { UpsertOrgMcpServerBody } from '@harnesys/contracts';
+import type { McpLastCheck, UpsertOrgMcpServerBody } from '@harnesys/contracts';
 import type {
   CapabilityScope,
   McpConnector,
@@ -10,7 +10,10 @@ import type {
 } from 'harnesys';
 import { CONSOLE_LOGGER, McpRegistry } from 'harnesys';
 import type { McpVaultLookup } from '../../../application/mcp/resolve-mcp-vault-placeholders.ts';
-import { resolveMcpVaultEntry } from '../../../application/mcp/resolve-mcp-vault-placeholders.ts';
+import {
+  McpVaultKeyNotFoundError,
+  resolveMcpVaultEntry,
+} from '../../../application/mcp/resolve-mcp-vault-placeholders.ts';
 import { OrgMcpPort } from '../../../domain/mcp/org-mcp.port.ts';
 
 export interface OrgMcpManageDeps {
@@ -70,6 +73,7 @@ export class OrgMcpManagePort implements McpManagePort {
       );
     }
     this.deps.config.upsert(this.deps.orgId, serverId, toUpsertBody(entry));
+    this.rememberCheck(serverId, health);
     await this.deps.invalidateBundle();
     await this.deps.apply(serverId, entry);
     return health;
@@ -94,7 +98,7 @@ export class OrgMcpManagePort implements McpManagePort {
     }
     const entry = this.storedEntry(serverId);
     await this.deps.apply(serverId, entry);
-    return this.probeOf(serverId, entry);
+    return this.probeAndRemember(serverId, entry);
   }
 
   async health(_scope: CapabilityScope, serverId: string): Promise<McpHealthReport> {
@@ -102,7 +106,7 @@ export class OrgMcpManagePort implements McpManagePort {
     if (entry.enabled === false) {
       return { serverId, connected: false, tools: [], error: 'disabled' };
     }
-    return this.probeOf(serverId, entry);
+    return this.probeAndRemember(serverId, entry);
   }
 
   private storedEntry(serverId: string): McpServerEntry {
@@ -131,6 +135,30 @@ export class OrgMcpManagePort implements McpManagePort {
     };
   }
 
+  private async probeAndRemember(
+    serverId: string,
+    entry: McpServerEntry,
+  ): Promise<McpHealthReport> {
+    const report = await this.probeOf(serverId, entry);
+    this.rememberCheck(serverId, report);
+    return report;
+  }
+
+  private rememberCheck(serverId: string, report: McpHealthReport): void {
+    const check: McpLastCheck = {
+      at: Date.now(),
+      connected: report.connected,
+      ...(report.error !== undefined ? { error: report.error } : {}),
+    };
+    try {
+      this.deps.config.setLastCheck(this.deps.orgId, serverId, check);
+    } catch (err) {
+      CONSOLE_LOGGER.warn(
+        `mcp lastCheck persist failed for ${serverId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
   private async probeOf(serverId: string, entry: McpServerEntry): Promise<McpHealthReport> {
     const probe = this.deps.probe;
     if (probe !== undefined) {
@@ -140,23 +168,15 @@ export class OrgMcpManagePort implements McpManagePort {
     if (lookup === undefined) {
       return probeEntry(serverId, entry, this.deps.connector);
     }
-    const missing: string[] = [];
-    const resolved = await resolveMcpVaultEntry(
-      serverId,
-      entry,
-      async (key) => {
-        const value = await lookup(key);
-        if (value === null) {
-          missing.push(key);
-        }
-        return value;
-      },
-      () => undefined,
-    );
-    if (missing.length > 0) {
-      return { serverId, connected: false, tools: [], error: vaultMissingError(missing) };
+    try {
+      const resolved = await resolveMcpVaultEntry(serverId, entry, lookup, () => undefined);
+      return probeEntry(serverId, resolved, this.deps.connector);
+    } catch (err) {
+      if (err instanceof McpVaultKeyNotFoundError) {
+        return { serverId, connected: false, tools: [], error: err.message };
+      }
+      throw err;
     }
-    return probeEntry(serverId, resolved, this.deps.connector);
   }
 }
 
@@ -167,6 +187,7 @@ function toOverview(
     transport: string;
     command?: string;
     url?: string;
+    lastCheck?: McpLastCheck;
   },
   live: McpServerInfo | undefined,
   managed: boolean,
@@ -182,12 +203,8 @@ function toOverview(
     ...(row.url !== undefined ? { url: row.url } : {}),
     toolCount: live?.tools.length ?? 0,
     tools: live?.tools ?? [],
+    ...(row.lastCheck !== undefined ? { lastCheck: row.lastCheck } : {}),
   };
-}
-
-function vaultMissingError(keys: string[]): string {
-  const names = keys.map((key) => key.replace(':', ' '));
-  return `${names.join(', ')} not found in vault`;
 }
 
 async function probeEntry(

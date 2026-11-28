@@ -15,7 +15,7 @@ export const mcpCapability = definePack<McpCapabilityPorts, Record<string, unkno
       {
         name: 'mcp_list',
         description:
-          'List MCP servers with config and cached connection status (connectedAt; mcp_check probes fresh).',
+          'List MCP servers with config, cached connection status (connectedAt) and lastCheck { at, connected, error? } of the last probe (mcp_check refreshes it).',
       },
       {
         name: 'mcp_connect',

@@ -1,3 +1,4 @@
+import type { McpLastCheck } from '@harnesys/contracts';
 import type { CapabilityScope } from '../domain/pack.ts';
 import type { McpServerInfo, StdioEntry, UrlEntry } from './mcp.ts';
 
@@ -26,6 +27,7 @@ export interface McpServerOverview {
   url?: string;
   toolCount: number;
   tools: McpToolInfo[];
+  lastCheck?: McpLastCheck;
 }
 
 export interface McpManagePort {

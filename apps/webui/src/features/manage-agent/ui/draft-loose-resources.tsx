@@ -3,6 +3,7 @@ import type { ProjectMcpConfigServer, ProjectMcpServer } from '@harnesys/studio-
 import { useQuery } from '@tanstack/react-query';
 import { PuzzleIcon, ServerIcon, WrenchIcon } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
+import { lastCheckFailureReason } from '@/features/manage-project-mcp/model/mcp-server-status';
 import { projectMcpConfigQuery, projectMcpQuery } from '@/shared/api';
 import { effectiveSkillsQuery, orgSkillsQuery } from '@/shared/api/org-skills';
 import { Row, RowChip, RowItem, RowList, RowSection } from '@/shared/ui/capability-rows';
@@ -237,6 +238,7 @@ function DraftMcpServerRow({
   onCheckedChange: (value: boolean) => void;
 }) {
   const status = mcpRowStatus(server);
+  const offlineReason = lastCheckFailureReason(server);
   return (
     <Row
       testId={`draft-mcp-${server.serverId}`}
@@ -245,7 +247,7 @@ function DraftMcpServerRow({
       meta={server.transport}
       status={status}
       muted={!checked || !server.enabled}
-      summary={`${server.toolCount} ${server.toolCount === 1 ? 'tool' : 'tools'}`}
+      summary={`${server.toolCount} ${server.toolCount === 1 ? 'tool' : 'tools'}${offlineReason !== undefined ? ` · ${offlineReason}` : ''}`}
       onToggle={onToggle}
       expanded={expanded}
       actions={<Switch size="sm" checked={checked} onCheckedChange={onCheckedChange} />}
@@ -254,9 +256,7 @@ function DraftMcpServerRow({
       <RowSection label="Tools" count={live?.tools.length ?? 0}>
         {!live || live.tools.length === 0 ? (
           <p className="px-1 text-muted-foreground text-xs">
-            {server.enabled
-              ? 'No tools on this server.'
-              : 'Server is disabled, start it in org MCP settings.'}
+            {draftToolsEmptyText(server.enabled, offlineReason)}
           </p>
         ) : (
           live.tools.map((tool) => (
@@ -288,6 +288,15 @@ function DraftMcpServerRow({
 }
 function shortToolName(name: string): string {
   return name.includes('__') ? name.split('__').slice(1).join('__') : name;
+}
+function draftToolsEmptyText(enabled: boolean, offlineReason: string | undefined): string {
+  if (!enabled) {
+    return 'Server is disabled, start it in org MCP settings.';
+  }
+  if (offlineReason !== undefined) {
+    return `Offline — ${offlineReason}.`;
+  }
+  return 'No tools on this server.';
 }
 function mcpRowStatus(server: ProjectMcpConfigServer): {
   tone: StatusDotTone;
