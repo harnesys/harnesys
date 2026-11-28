@@ -211,6 +211,7 @@ export const CreateThreadBodySchema = z.object({
     .regex(/^#[0-9a-fA-F]{6}$/)
     .optional(),
   kind: ThreadKindSchema.optional(),
+  issueId: z.string().uuid().optional(),
   parentThreadId: z.string().uuid().optional(),
   forkAt: z.string().trim().min(1).optional(),
   policy: z
@@ -343,8 +344,3 @@ export const ThreadFilesQuerySchema = z.object({
   subPath: z.string().default(''),
 });
 export type ThreadFilesQuery = z.infer<typeof ThreadFilesQuerySchema>;
-
-export const ThreadFilePathQuerySchema = z.object({
-  path: z.string().min(1),
-});
-export type ThreadFilePathQuery = z.infer<typeof ThreadFilePathQuerySchema>;

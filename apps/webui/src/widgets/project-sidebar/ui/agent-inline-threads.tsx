@@ -10,15 +10,20 @@ import {
 import { Fragment, type ReactNode, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { Agent } from '@/entities/agent';
+import { useIssueBoardStore, useIssueStore } from '@/entities/issue';
 import { useSessionStore } from '@/entities/session';
 import type { Thread } from '@/entities/thread';
 import { useAgentThreads, useThreadWaiting } from '@/features/desk';
-import { AGENT_THREAD_KINDS } from '@/features/desk/model/agents-display.store';
+import {
+  AGENT_THREAD_KINDS,
+  useAgentsDisplayStore,
+} from '@/features/desk/model/agents-display.store';
 import { useOrgTimeZone } from '@/features/switch-org/org-time-zone';
 import { formatDayTime } from '@/shared/lib/format-clock';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { SidebarRow } from '@/shared/ui/sidebar-row';
+import { finishedIssueThreadIds } from '../model/finished-issue-threads';
 import { rowStatusDot, runStatus } from '../model/row-status';
 import { useThreadActions } from '../model/thread-actions';
 import {
@@ -47,13 +52,24 @@ export function AgentInlineThreads({
   onResetKinds?: () => void;
 }) {
   const [showAll, setShowAll] = useState(false);
+  const showFinished = useAgentsDisplayStore(
+    (state) => state.showFinishedThreads[agent.id] === true,
+  );
+  const toggleShowFinished = useAgentsDisplayStore((state) => state.toggleShowFinished);
+  const issues = useIssueStore((state) => state.items);
+  const boards = useIssueBoardStore((state) => state.boards);
   const threads = useAgentThreads(agent.id).filter((thread) => kinds.includes(thread.kind));
   const filtered = kinds.length < AGENT_THREAD_KINDS.length;
+  const finishedIds = finishedIssueThreadIds(threads, { issues, boards });
+  const shownThreads = showFinished
+    ? threads
+    : threads.filter((thread) => !finishedIds.has(thread.id) || thread.id === activeThreadId);
+  const hiddenFinished = threads.length - shownThreads.length;
   const activeRunIds = useSessionStore(useShallow((s) => Object.keys(s.activeRuns)));
   const isActive = (thread: Thread): boolean =>
     activeRunIds.includes(thread.id) || isLiveRunStatus(thread.activeRun?.status);
   const actions = useThreadActions(projectId);
-  const roots = buildThreadTree(threads, isActive);
+  const roots = buildThreadTree(shownThreads, isActive);
   const total = roots.reduce((sum, node) => sum + countSubtree(node), 0);
   const activeRoot = activeThreadId
     ? (roots.find((node) => subtreeHas(node, activeThreadId)) ?? null)
@@ -76,7 +92,27 @@ export function AgentInlineThreads({
       title="No threads yet"
     />
   );
-  if (filtered) {
+  if (hiddenFinished > 0) {
+    emptyHint = (
+      <div className="flex items-center justify-between gap-1 px-1.5 py-1 group-data-[collapsible=icon]:hidden">
+        <SidebarEmpty
+          variant="inline"
+          className="p-0"
+          hint="Threads for closed issues are hidden by default."
+          icon={FilterIcon}
+          title="Finished threads hidden"
+        />
+        <button
+          type="button"
+          className="shrink-0 rounded-md text-[11px] text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
+          data-testid={`agent-threads-show-finished-${agent.id}`}
+          onClick={() => toggleShowFinished(agent.id)}
+        >
+          Show
+        </button>
+      </div>
+    );
+  } else if (filtered) {
     emptyHint = (
       <div className="flex items-center justify-between gap-1 px-1.5 py-1 group-data-[collapsible=icon]:hidden">
         <SidebarEmpty
@@ -123,6 +159,16 @@ export function AgentInlineThreads({
       ) : (
         <>
           <InlineNodes nodes={visible} renderRow={renderRow} />
+          {hiddenFinished > 0 && !showFinished ? (
+            <button
+              type="button"
+              className="rounded-md px-1.5 py-0.5 text-left text-[11px] text-muted-foreground transition-colors hover:bg-sidebar-accent/70 hover:text-foreground group-data-[collapsible=icon]:hidden"
+              data-testid={`agent-threads-show-finished-${agent.id}`}
+              onClick={() => toggleShowFinished(agent.id)}
+            >
+              {hiddenFinished} finished hidden
+            </button>
+          ) : null}
           {hiddenCount > 0 ? (
             <button
               type="button"
@@ -257,7 +303,7 @@ function InlineThreadRow({
           {thread.title}
         </span>
       </span>
-      <span className="mt-1.5 flex items-center justify-between gap-2">
+      <span className="mt-1 flex items-center justify-between gap-2">
         <span className="block truncate font-mono text-[10px] text-muted-foreground/60 leading-snug">
           {formatDayTime(thread.updatedAt, timeZone)}
         </span>

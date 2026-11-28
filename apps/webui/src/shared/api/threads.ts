@@ -26,6 +26,7 @@ export interface CreateThreadInput {
   agentIds?: string[];
   participantUserIds?: string[];
   kind?: 'chat' | 'group' | 'schedule' | 'webhook' | 'issue';
+  issueId?: string;
   parentThreadId?: string;
   forkAt?: string;
   policy?: {
@@ -121,6 +122,7 @@ export function createThreadRecord(body: CreateThreadInput): Promise<ThreadRecor
     ...(body.icon ? { icon: body.icon } : {}),
     ...(body.color ? { color: body.color } : {}),
     ...(body.kind ? { kind: body.kind } : {}),
+    ...(body.issueId ? { issueId: body.issueId } : {}),
     ...(body.parentThreadId ? { parentThreadId: body.parentThreadId } : {}),
     ...(body.forkAt ? { forkAt: body.forkAt } : {}),
     ...(body.policy ? { policy: body.policy } : {}),
@@ -314,6 +316,17 @@ export function updateThreadBinding(
   return apiJson<ContractThreadSummary>(
     `${threadsBase(orgId)}/${encodeURIComponent(threadId)}/binding`,
     { method: 'PATCH', body: JSON.stringify(body) },
+  ).then(toStudioSummary);
+}
+
+export function updateThreadIssue(
+  threadId: string,
+  issueId: string | null,
+): Promise<ThreadSummary> {
+  const orgId = requireOrgId();
+  return apiJson<ContractThreadSummary>(
+    `${threadsBase(orgId)}/${encodeURIComponent(threadId)}/issue`,
+    { method: 'PATCH', body: JSON.stringify({ issueId }) },
   ).then(toStudioSummary);
 }
 

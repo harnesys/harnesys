@@ -41,5 +41,6 @@ export {
   UpdateThreadPolicyBodySchema,
 } from './thread.ts';
 export * from './thread-files.ts';
+export * from './thread-issue.ts';
 export * from './trigger-scripts.ts';
 export * from './usage.ts';

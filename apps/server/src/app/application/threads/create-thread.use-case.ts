@@ -6,6 +6,8 @@ import { AgentRegistryPort } from '../../domain/agent/agent-registry.port.ts';
 import { EventBusPort } from '../../domain/events/event-bus.port.ts';
 import { UserNotFoundException } from '../../domain/identity/identity.error.ts';
 import { UserRepository } from '../../domain/identity/user-repository.port.ts';
+import { IssueNotFoundException } from '../../domain/issue/issue.error.ts';
+import { IssueRepositoryPort } from '../../domain/issue/issue-repository.port.ts';
 import { collectInheritedEvents } from '../../domain/thread/fork-logs.ts';
 import { LocalExecutorPort } from '../../domain/thread/local-executor.port.ts';
 import {
@@ -45,10 +47,12 @@ export class CreateThreadUseCase {
     private readonly users: UserRepository,
     private readonly executor: LocalExecutorPort,
     private readonly events: EventBusPort,
+    private readonly issues: IssueRepositoryPort,
   ) {}
 
   async execute(request: CreateThreadRequest): Promise<ThreadPublic> {
     const { agent, agentIds, kind } = this.resolveAgents(request);
+    const issueId = this.resolveIssue(request, kind);
     const fork = await this.resolveFork(request, kind);
     const now = new Date().toISOString();
     const threadId = crypto.randomUUID();
@@ -82,6 +86,7 @@ export class CreateThreadUseCase {
       runProfileId: null,
       runDirectory: null,
       workspaceRef: null,
+      ...(issueId !== null ? { issueId } : {}),
       createdAt: now,
       updatedAt: now,
       lastReadAt: now,
@@ -130,11 +135,33 @@ export class CreateThreadUseCase {
         throw new AgentNotFoundException(agentId);
       }
     }
-    const requestedKind = request.body.kind ?? (agentIds.length > 1 ? 'group' : 'chat');
+    let defaultKind: ThreadKind = 'chat';
+    if (agentIds.length > 1) {
+      defaultKind = 'group';
+    } else if (request.body.issueId) {
+      defaultKind = 'issue';
+    }
+    const requestedKind = request.body.kind ?? defaultKind;
     if (agentIds.length > 1 && requestedKind === 'chat') {
       throw new ThreadValidationException('a chat thread has exactly one agent');
     }
+    if (request.body.issueId && agentIds.length > 1) {
+      throw new ThreadValidationException('an issue thread has exactly one agent');
+    }
     return { agent, agentIds, kind: agentIds.length > 1 ? 'group' : requestedKind };
+  }
+
+  private resolveIssue(request: CreateThreadRequest, kind: ThreadKind): string | null {
+    if (!request.body.issueId) {
+      return null;
+    }
+    if (kind !== 'issue') {
+      throw new ThreadValidationException('issueId requires kind "issue"');
+    }
+    if (!this.issues.findById(request.orgId, request.body.issueId)) {
+      throw new IssueNotFoundException(request.body.issueId);
+    }
+    return request.body.issueId;
   }
 
   private async resolveFork(request: CreateThreadRequest, kind: ThreadKind): Promise<ForkInfo> {

@@ -270,6 +270,7 @@ export {
   toStudioSummary,
   type UpdateThreadBindingInput,
   updateThreadBinding,
+  updateThreadIssue,
 } from './threads';
 export {
   deleteVaultEntry,

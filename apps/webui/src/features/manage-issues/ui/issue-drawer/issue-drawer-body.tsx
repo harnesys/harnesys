@@ -147,10 +147,12 @@ export function DrawerBody({
           agents={agents}
           boards={boards.filter((item) => item.status === 'active')}
           statuses={statuses}
+          readOnly={archived}
           onDraftChange={setDraft}
           onStatusChange={onStatusChange}
           onAssigneeChange={onAssigneeChange}
           onBoardChange={onBoardChange}
+          onClose={onClose}
         />
       </div>
       <DrawerFooter

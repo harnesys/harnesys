@@ -38,6 +38,10 @@ export function AgentThreadsFilterMenu({ agentId }: { agentId: string }) {
   );
   const toggleKind = useAgentsDisplayStore((state) => state.toggleKind);
   const resetKinds = useAgentsDisplayStore((state) => state.resetKinds);
+  const showFinished = useAgentsDisplayStore(
+    (state) => state.showFinishedThreads[agentId] === true,
+  );
+  const toggleShowFinished = useAgentsDisplayStore((state) => state.toggleShowFinished);
   const filtered = kinds.length < AGENT_THREAD_KINDS.length;
   return (
     <DropdownMenu>
@@ -83,18 +87,26 @@ export function AgentThreadsFilterMenu({ agentId }: { agentId: string }) {
             </DropdownMenuCheckboxItem>
           ))}
         </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Finished</DropdownMenuLabel>
+          <DropdownMenuCheckboxItem
+            checked={showFinished}
+            onCheckedChange={() => toggleShowFinished(agentId)}
+            data-testid={`agent-threads-filter-${agentId}-show-finished`}
+          >
+            Show finished
+          </DropdownMenuCheckboxItem>
+        </DropdownMenuGroup>
         {filtered ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem
-                onClick={() => resetKinds(agentId)}
-                data-testid={`agent-threads-filter-${agentId}-reset`}
-              >
-                Show all
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-          </>
+          <DropdownMenuGroup>
+            <DropdownMenuItem
+              onClick={() => resetKinds(agentId)}
+              data-testid={`agent-threads-filter-${agentId}-reset`}
+            >
+              Show all
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
         ) : null}
       </DropdownMenuContent>
     </DropdownMenu>

@@ -22,6 +22,7 @@ import {
 import { IssueDueDate } from './issue-due-date';
 import { IssueFireTrail } from './issue-fire-trail';
 import { IssueLabelField } from './issue-label-input';
+import { IssueThreadField } from './issue-thread-field';
 
 const NONE = '__none__';
 
@@ -32,10 +33,12 @@ export interface MetadataPanelProps {
   agents: Agent[];
   boards: IssueBoardRecord[];
   statuses: BoardStatus[];
+  readOnly: boolean;
   onDraftChange: (draft: IssueFormDraft) => void;
   onStatusChange: (statusKey: string) => void;
   onAssigneeChange: (agentId: string | null) => void;
   onBoardChange: (boardId: string) => void;
+  onClose: () => void;
 }
 
 function MetaField({ title, children }: { title: string; children: React.ReactNode }) {
@@ -54,10 +57,12 @@ export function IssueMetadataPanel({
   agents,
   boards,
   statuses,
+  readOnly,
   onDraftChange,
   onStatusChange,
   onAssigneeChange,
   onBoardChange,
+  onClose,
 }: MetadataPanelProps) {
   const timeZone = useOrgTimeZone();
   const statusValue: string = draft.statusKey;
@@ -149,6 +154,13 @@ export function IssueMetadataPanel({
           </SelectContent>
         </Select>
       </MetaField>
+
+      <IssueThreadField
+        issue={issue}
+        assigneeAgentId={draft.assigneeAgentId}
+        readOnly={readOnly}
+        onOpened={onClose}
+      />
 
       <MetaField title="Board">
         <Select

@@ -38,6 +38,7 @@ import { ThreadSummaryAssembler } from './thread-summary.assembler.ts';
 import { TickWaitTimersUseCase } from './tick-wait-timers.use-case.ts';
 import { UndoThreadCompactUseCase } from './undo-thread-compact.use-case.ts';
 import { UpdateThreadBindingUseCase } from './update-thread-binding.use-case.ts';
+import { UpdateThreadIssueUseCase } from './update-thread-issue.use-case.ts';
 import { UpdateThreadMetaUseCase } from './update-thread-meta.use-case.ts';
 import { UpdateThreadPolicyUseCase } from './update-thread-policy.use-case.ts';
 import { UploadThreadAttachmentUseCase } from './upload-thread-attachment.use-case.ts';
@@ -67,6 +68,7 @@ const useCases = [
   DeleteThreadUseCase,
   DeleteThreadEventUseCase,
   UpdateThreadBindingUseCase,
+  UpdateThreadIssueUseCase,
   UpdateThreadMetaUseCase,
   UpdateThreadPolicyUseCase,
   AddThreadAgentUseCase,
