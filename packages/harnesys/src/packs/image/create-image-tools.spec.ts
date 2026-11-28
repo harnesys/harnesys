@@ -112,6 +112,17 @@ describe('createImageTools', () => {
     expect(result.path).toBe('/data/thread/attachments/att-1/cat.png');
   });
 
+  test('an upstream endpoint failure carries the image-model next step', async () => {
+    const port = new FakeImageGenerationPort();
+    port.failure = new Error('No endpoint found for model text-only/slug');
+    const tool = createImageTools({ image: port, resolveScope: () => scope })[0];
+    const result = (await tool?.execute({ prompt: 'a cat' }, ctx)) as { error: string };
+    expect(result.error).toContain('No endpoint found for model text-only/slug');
+    expect(result.error).toContain("switch the Image model in this agent's Image pack settings");
+    expect(result.error).toContain('attach a provider model of kind Image on the Models page');
+    expect(result.error).toContain('then retry');
+  });
+
   test('returns error when port throws', async () => {
     const port = new FakeImageGenerationPort();
     port.failure = new Error('provider down');
