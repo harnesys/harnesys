@@ -2,6 +2,7 @@ import type { AgentHook } from '@harnesys/contracts';
 import type {
   AgentCatalogCreated,
   AgentCatalogCreateInput,
+  AgentCatalogDefinition,
   AgentCatalogPatch,
   AgentCatalogSummary,
   AgentDefinition,
@@ -92,6 +93,17 @@ export class OrgAgentsCatalogPort implements AgentsCatalogPort {
     return entry === undefined ? null : entry.definition;
   }
 
+  async listDefinitions(scope: CapabilityScope): Promise<AgentCatalogDefinition[]> {
+    const visible = this.deps.agents
+      .list(scope.orgId)
+      .filter((row) => row.parentId === null || row.parentId === scope.agentId);
+    const plugin = await this.enabledPluginAgents(scope);
+    return [
+      ...visible.map((row) => ({ id: row.id, definition: definitionOf(this.deps, row) })),
+      ...plugin.map((entry) => ({ id: entry.id, definition: entry.definition })),
+    ];
+  }
+
   async create(
     scope: CapabilityScope,
     input: AgentCatalogCreateInput,
@@ -109,7 +121,7 @@ export class OrgAgentsCatalogPort implements AgentsCatalogPort {
       parentId: created.parentId,
       packs: Object.keys(def.packs ?? {}).filter((name) => def.packs?.[name]),
       ...(Object.keys(packsConfig).length > 0 ? { packsConfig } : {}),
-      ...(def.model ? { model: `${def.model.provider}/${def.model.model}` } : {}),
+      ...(def.model ? { model: def.model } : {}),
       ...(def.budget ? { budget: def.budget } : {}),
       ...(def.permissions ? { permissions: def.permissions } : {}),
     };
@@ -191,8 +203,16 @@ export class OrgAgentsCatalogPort implements AgentsCatalogPort {
     patch: AgentCatalogPatch,
   ): Record<string, unknown> | undefined {
     let config: Record<string, unknown> | undefined;
+    if (patch.model !== undefined) {
+      config = { ...agent.config };
+      if (patch.model.effort !== undefined) {
+        config.effort = patch.model.effort;
+      } else {
+        delete config.effort;
+      }
+    }
     if (patch.budget !== undefined) {
-      config = { ...agent.config, budgetJson: patch.budget };
+      config = { ...(config ?? agent.config), budgetJson: patch.budget };
     }
     if (patch.permissions !== undefined) {
       config = { ...(config ?? agent.config), permissionsJson: patch.permissions };

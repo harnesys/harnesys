@@ -567,6 +567,8 @@ export type { WebSearchPackSpec } from './src/packs/web/search.ts';
 export type {
   AgentCatalogCreated,
   AgentCatalogCreateInput,
+  AgentCatalogDefinition,
+  AgentCatalogModel,
   AgentCatalogPatch,
   AgentCatalogSummary,
   AgentsCatalogPort,

@@ -1,7 +1,8 @@
 import { parseSpawnBudget } from '../../application/graph-spawn.ts';
-import type { AgentBudget, AgentModelRef, BudgetPolicy } from '../../domain/agent-definition.ts';
-import type { AgentCatalogPatch } from '../../ports/agents-catalog.ts';
+import type { AgentBudget, BudgetPolicy } from '../../domain/agent-definition.ts';
+import type { AgentCatalogModel, AgentCatalogPatch } from '../../ports/agents-catalog.ts';
 import type { PermissionMap } from '../../ports/permissions.ts';
+import { BUDGET_LIMIT_FIELDS, validateBudgetTuning } from './budget-json-schema.ts';
 
 export interface AgentsUpdateInput {
   agentId?: unknown;
@@ -27,7 +28,6 @@ export interface AgentsUpdateInput {
 }
 
 const PATCH_STRING_FIELDS = ['name', 'role', 'instructions'] as const;
-const BUDGET_LIMIT_FIELDS = ['maxSteps', 'maxTokens', 'deadlineMs'] as const;
 const PATCH_PASSTHROUGH_FIELDS = [
   'sharedSourceIds',
   'sourceLevels',
@@ -54,19 +54,25 @@ function collectBudget(raw: unknown): { budget: AgentBudget } | { error: string 
     typeof raw === 'object' && raw !== null && !Array.isArray(raw)
       ? (raw as Record<string, unknown>)
       : null;
+  const tuning = rec === null ? { fields: {} as AgentBudget } : validateBudgetTuning(rec);
+  if ('error' in tuning) {
+    return tuning;
+  }
   const policy = rec?.policy;
   if (policy !== undefined && !isBudgetPolicy(policy)) {
     return { error: 'budget.policy must be ask or error' };
   }
   const hasLimit = rec !== null && BUDGET_LIMIT_FIELDS.some((key) => rec[key] !== undefined);
   if (rec && policy !== undefined && !hasLimit) {
-    return { budget: { policy } };
+    return { budget: { policy, ...tuning.fields } };
   }
   const parsed = parseSpawnBudget(raw);
   if (parsed.error !== undefined) {
     return { error: parsed.error };
   }
-  return { budget: { ...parsed.budget, ...(policy !== undefined ? { policy } : {}) } };
+  return {
+    budget: { ...parsed.budget, ...tuning.fields, ...(policy !== undefined ? { policy } : {}) },
+  };
 }
 
 function collectPermissions(
@@ -87,7 +93,7 @@ function collectPermissions(
   return null;
 }
 
-function collectModel(raw: unknown): { ref?: AgentModelRef } | { error: string } {
+function collectModel(raw: unknown): { ref?: AgentCatalogModel } | { error: string } {
   if (raw === undefined) {
     return {};
   }
@@ -98,7 +104,14 @@ function collectModel(raw: unknown): { ref?: AgentModelRef } | { error: string }
   if (typeof rec.provider !== 'string' || typeof rec.model !== 'string') {
     return { error: 'model must be an object { provider, model }' };
   }
-  return { ref: { provider: rec.provider, model: rec.model } };
+  const ref: AgentCatalogModel = { provider: rec.provider, model: rec.model };
+  if (rec.effort !== undefined) {
+    if (typeof rec.effort !== 'string' || !rec.effort) {
+      return { error: 'model.effort must be a non-empty string' };
+    }
+    ref.effort = rec.effort;
+  }
+  return { ref };
 }
 
 function collectPassthrough(

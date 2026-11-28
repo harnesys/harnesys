@@ -3,12 +3,13 @@ import type { AgentCatalogSummary } from '../../ports/agents-catalog.ts';
 import { type ToolDefinition, tool } from '../../ports/tools.ts';
 import { permissionsAskGate } from './agent-permissions.ts';
 import { type AgentsUpdateInput, collectPatch } from './agent-update-collect.ts';
+import { BUDGET_TUNING_TEXT, budgetJsonSchema } from './budget-json-schema.ts';
 import type { CreateAgentsToolsParams } from './create-agents-tools.ts';
 import { runGuard } from './run-guard.ts';
 import { scopeFor } from './scope-for.ts';
 
 export const AGENT_ID_INPUT = {
-  agentId: { type: 'string', description: 'Delegate id or name from agents_list' },
+  agentId: { type: 'string', description: 'Agent id or name from agents_list' },
 };
 
 type PatchTarget =
@@ -76,25 +77,23 @@ async function applyUpdate(
 }
 
 export function agentUpdateTool(deps: CreateAgentsToolsParams): ToolDefinition {
-  const scopeSuffix =
-    deps.ownDelegatesOnly === true
-      ? ' This host limits updates to delegates created by you; top-level agents are managed in the project UI.'
-      : '';
   return tool('agents_update', {
     group: 'agents',
     operations: ['agents'],
     sideEffect: 'write',
     description:
-      'Patch any agent in the org (top-level and delegates; full parity with the project UI config): ' +
-      'name/role/instructions, model {provider, model}, runtime budget (replaces stored; omitted fields drop out), ' +
+      (deps.ownDelegatesOnly === true
+        ? 'Patch delegates created by you (this host limits agents_update to them; top-level agents are managed in the project UI): '
+        : 'Patch any agent in the org (top-level and delegates; full parity with the project UI config): ') +
+      'name/role/instructions, model {provider, model, effort?} (replaces the stored ref), ' +
+      'runtime budget (replaces stored; omitted fields drop out), ' +
       'budgetUsdDaily, status active|archived, parentId (null promotes to top level), skills, mcpServers, ' +
       'sharedSourceIds, sourceLevels {sourceId: read|edit}, secretNames, enabledPlugins, executionProfileId, ' +
       'defaultModeId, hooks, config, permissions (replaces the stored op → allow|ask|deny map; always asks ' +
       'the user for approval; passing permissions inside config fails with an error). ' +
       'Unknown targets, plugin agents and ambiguous names fail with an error. ' +
       'agentId accepts an exact id, a unique id prefix (8+ chars), or a name. ' +
-      'At least one field besides agentId is required. Returns { agentId }.' +
-      scopeSuffix,
+      'At least one field besides agentId is required. Returns { agentId }.',
     input: {
       type: 'object',
       properties: {
@@ -107,30 +106,22 @@ export function agentUpdateTool(deps: CreateAgentsToolsParams): ToolDefinition {
         },
         model: {
           type: 'object',
-          description: 'Model ref, same shape as agents_create',
+          description:
+            'Model ref {provider, model, effort?} (replaces the stored ref; generation is a create-only field)',
           properties: {
             provider: { type: 'string' },
             model: { type: 'string' },
+            effort: { type: 'string' },
           },
           required: ['provider', 'model'],
           additionalProperties: false,
         },
-        budget: {
-          type: 'object',
+        budget: budgetJsonSchema({
+          policyEnum: ['ask', 'error'],
           description:
-            'Run budget; replaces the stored budget (omitted fields drop out). At least one of maxSteps/maxTokens/deadlineMs/policy. Same shape as agents_create.',
-          properties: {
-            maxSteps: { type: 'integer', minimum: 1 },
-            maxTokens: { type: 'integer', minimum: 1 },
-            deadlineMs: { type: 'integer', minimum: 1 },
-            policy: {
-              type: 'string',
-              enum: ['ask', 'error'],
-              description: 'Budget stop behavior; mirrors agents_create',
-            },
-          },
-          additionalProperties: false,
-        },
+            'Run budget; replaces the stored budget (omitted fields drop out). At least one of maxSteps/maxTokens/deadlineMs/policy. ' +
+            BUDGET_TUNING_TEXT,
+        }),
         budgetUsdDaily: { type: 'number', nullable: true },
         status: { type: 'string', enum: ['active', 'archived'] },
         parentId: { type: 'string', nullable: true },

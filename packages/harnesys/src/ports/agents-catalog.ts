@@ -17,6 +17,10 @@ export interface AgentCatalogSummary {
   color?: string;
   plugin?: boolean;
 }
+export interface AgentCatalogDefinition {
+  id: string;
+  definition: AgentDefinition;
+}
 export interface AgentCatalogCreateInput {
   name: string;
   role: string;
@@ -31,12 +35,17 @@ export interface AgentCatalogCreateInput {
   permissions?: PermissionMap;
   color?: string;
 }
+export interface AgentCatalogModel {
+  provider: string;
+  model: string;
+  effort?: string;
+}
 export interface AgentCatalogPatch {
   name?: string;
   role?: string;
   instructions?: string;
   budget?: AgentBudget;
-  model?: AgentModelRef;
+  model?: AgentCatalogModel;
   budgetUsdDaily?: number | null;
   status?: 'active' | 'archived';
   parentId?: string | null;
@@ -60,7 +69,7 @@ export interface AgentCatalogCreated {
   parentId?: string | null;
   packs: string[];
   packsConfig?: Record<string, PackAssignment>;
-  model?: string;
+  model?: AgentCatalogModel;
   budget?: AgentBudget;
   permissions?: PermissionMap;
 }
@@ -86,6 +95,7 @@ export interface AgentsCatalogPort {
     },
   ): Promise<AgentCatalogSummary[]>;
   get(scope: CapabilityScope, id: string): Promise<AgentDefinition | null>;
+  listDefinitions?(scope: CapabilityScope): Promise<AgentCatalogDefinition[]>;
   create(scope: CapabilityScope, input: AgentCatalogCreateInput): Promise<AgentCatalogCreated>;
   patch?(scope: CapabilityScope, id: string, patch: AgentCatalogPatch): Promise<void>;
   packInventory?(scope?: CapabilityScope): Promise<PackInventoryGroup[]>;

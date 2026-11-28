@@ -11,7 +11,8 @@ export function createPacksToolsTool(deps: CreateAgentsToolsParams): ToolDefinit
     operations: ['agents'],
     sideEffect: 'read',
     description:
-      'What each tool source actually grants: [{source: "pack:<name>" | "host" | "mcp:<server>", tools: [{name, description, sideEffect, operations, interactive}], enabled?, disabled?}]. ' +
+      'What each tool source actually grants. Default is compact: [{source: "pack:<name>" | "host" | "mcp:<server>", tools: ["<tool name>", ...], enabled?, disabled?}] — tool names only. ' +
+      'Pass a pack filter or detail: true for the full tool objects [{name, description, sideEffect, operations, interactive}]. ' +
       'Read it before composing packs for agents_create / agents_create_subagent: enabling a pack grants ALL tools it carries, so trim per task with the object assignment — ' +
       'packs: { files: { disabledTools: ["write_file"] } } removes single tools, ' +
       'packs: { files: { exposure: { edit_file: "deferred" } } } hides tools from the system prompt until load_tools reveals them. ' +
@@ -23,7 +24,12 @@ export function createPacksToolsTool(deps: CreateAgentsToolsParams): ToolDefinit
         pack: {
           type: 'string',
           description:
-            'Optional filter: pack name ("files"), "host", or an exact source ("mcp:<server>").',
+            'Optional filter: pack name ("files"), "host", or an exact source ("mcp:<server>"). A filter always returns full tool objects.',
+        },
+        detail: {
+          type: 'boolean',
+          description:
+            'Return full tool objects (description, sideEffect, operations, interactive) for every source. Default false returns tool names only.',
         },
         agentId: {
           type: 'string',
@@ -38,7 +44,7 @@ export function createPacksToolsTool(deps: CreateAgentsToolsParams): ToolDefinit
         if (port.packInventory === undefined) {
           return { error: 'pack inventory is not available in this deployment' };
         }
-        const rec = (raw ?? {}) as { pack?: string; agentId?: string };
+        const rec = (raw ?? {}) as { pack?: string; agentId?: string; detail?: boolean };
         const scope = scopeFor(deps, execCtx);
         const target =
           rec.agentId !== undefined && rec.agentId !== scope.agentId
@@ -51,12 +57,23 @@ export function createPacksToolsTool(deps: CreateAgentsToolsParams): ToolDefinit
             : groups.filter(
                 (g) => g.source === rec.pack || g.source === `${PACK_PREFIX}${rec.pack}`,
               );
+        const detailed = rec.pack !== undefined || rec.detail === true;
         return {
-          sources: filtered,
+          sources: filtered.map((g) => ({
+            source: g.source,
+            tools: detailed ? g.tools : g.tools.map((t) => t.name),
+            ...(g.enabled !== undefined ? { enabled: g.enabled } : {}),
+            ...(g.disabled !== undefined ? { disabled: g.disabled } : {}),
+          })),
           totals: {
             sources: filtered.length,
             tools: filtered.reduce((sum, g) => sum + g.tools.length, 0),
           },
+          ...(detailed
+            ? {}
+            : {
+                note: 'Compact mode: tool names only. Re-run with pack:"<source>" (single pack, full details) or detail:true (everything) for descriptions and side-effect flags.',
+              }),
         };
       }),
   });

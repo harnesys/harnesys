@@ -167,11 +167,13 @@ describe('agents_update ownDelegatesOnly', () => {
     expect(calls).toEqual([]);
   });
 
-  test('description carries the scope restriction', () => {
+  test('description states the scope without contradicting itself', () => {
     const calls: Array<{ id: string; patch: AgentCatalogPatch }> = [];
     const scoped = updateTool(depsWith([], calls, { ownDelegatesOnly: true }));
     const unscoped = updateTool(depsWith([], calls));
-    expect(scoped.description).toContain('limits updates to delegates created by you');
-    expect(unscoped.description).not.toContain('limits updates to delegates created by you');
+    expect(scoped.description).toContain('Patch delegates created by you');
+    expect(scoped.description).not.toContain('Patch any agent in the org');
+    expect(unscoped.description).toContain('Patch any agent in the org (top-level and delegates');
+    expect(unscoped.description).not.toContain('limits agents_update');
   });
 });

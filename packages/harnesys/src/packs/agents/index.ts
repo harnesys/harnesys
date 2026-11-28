@@ -32,22 +32,22 @@ export const agentsCapability = definePack<AgentsCapabilityPorts, AgentsPackSpec
       {
         name: 'packs_tools',
         description:
-          'Per-source tool inventory (pack/host/mcp) with sideEffect and operations, for composing minimal pack sets; pack assignments support { spec?, disabledTools?, exposure? }.',
+          'Per-source tool inventory (pack/host/mcp) for composing minimal pack sets: compact by default ({source, tools: [names], enabled?, disabled?}); pass a pack filter or detail: true for full tool objects (description, sideEffect, operations). Pack assignments support { spec?, disabledTools?, exposure? }.',
       },
       {
         name: 'agents_list',
         description:
-          'List agents in this project (id, name, role, instructions, packs, model). Optional role/name filters; role is not unique. packs lists enabled source assignments per agent; tool availability derives from those sources, not from a stored tool-name list. Prefer reuse via agents_list before agents_create. Spawned children are one-shot with no interactive user: judge fit by packs/model before agents_spawn.',
+          'List agents in this project (id, name, role, packs, model {provider, model, effort?}, budget, level, parent). Optional role/name filters; role is not unique. instructions are omitted by default — a role/name filter that isolates a single agent, or verbose: true, returns them in full. packs lists enabled source assignments per agent; tool availability derives from those sources, not from a stored tool-name list. Prefer reuse via agents_list before agents_create. Spawned children are one-shot with no interactive user: judge fit by packs/model before agents_spawn.',
       },
       {
         name: 'agents_create',
         description:
-          'Create an agent in this project. Returns { id, name }. Before creating, load_skill("agent-creator") for graphs, packs, budget, and HITL. Omit graph to let the host build a default ReAct graph; when budget is omitted the host stores { maxSteps: 50, policy: "ask" }. budget.policy is ask|error. Call agents_list first to reuse an existing agent when possible.',
+          'Create an agent in this project. Returns the created row { id, name, role, instructions, parentId, packs, packsConfig?, model? {provider, model, effort?}, budget?, permissions? }. Before creating, load_skill("agent-creator") for graphs, packs, budget, and HITL. Omit graph to let the host build a default ReAct graph; when budget is omitted the host stores { maxSteps: 50, policy: "ask" }. budget.policy is ask|error; budget also accepts warnAtSteps/closeOnExhaustion/extendDefaultPct and rejects unknown fields. Call agents_list first to reuse an existing agent when possible.',
       },
       {
         name: 'agents_create_subagent',
         description:
-          'Create a one-shot delegate under the calling agent. Returns { id, name }. The delegate is a spawn target, cannot ask the user, and cannot enable the agents pack; use agents_create for a standalone project agent.',
+          'Create a one-shot delegate under the calling agent. Returns the created row { id, name, role, instructions, parentId, packs, packsConfig?, model? {provider, model, effort?}, budget?, permissions? }. The delegate is a spawn target, cannot ask the user, and cannot enable the agents pack; use agents_create for a standalone project agent.',
       },
       {
         name: 'agents_spawn',
@@ -81,7 +81,7 @@ export const agentsCapability = definePack<AgentsCapabilityPorts, AgentsPackSpec
       {
         name: 'agents_update',
         description:
-          'Patch name/role/instructions/budget/permissions of an agent (scope: whole org by default, own delegates only with pack spec ownDelegatesOnly); graph and packs are owner-only (tools removed; use sources). permissions replaces the stored op → allow|ask|deny map and always asks the user for approval; passing it inside config fails. budget replaces the stored budget (omitted fields drop out): maxSteps/maxTokens/deadlineMs (integers >= 1) and policy ask|error, same shape as agents_create, at least one field required. Returns { agentId }. agentId accepts an exact id, a unique id prefix (8+ chars), or a name.',
+          'Patch name/role/instructions/model/budget/permissions of an agent (scope: whole org by default, own delegates only with pack spec ownDelegatesOnly); graph and packs are owner-only (tools removed; use sources). permissions replaces the stored op → allow|ask|deny map and always asks the user for approval; passing it inside config fails. model replaces the stored ref {provider, model, effort?}. budget replaces the stored budget (omitted fields drop out): maxSteps/maxTokens/deadlineMs (integers >= 1), policy ask|error, tuning warnAtSteps/closeOnExhaustion/extendDefaultPct — same shape as agents_create, at least one field required. Returns { agentId }. agentId accepts an exact id, a unique id prefix (8+ chars), or a name.',
       },
       {
         name: 'agents_delete',
