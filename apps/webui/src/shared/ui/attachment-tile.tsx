@@ -71,6 +71,30 @@ export function AttachmentTile({
       })
       .catch(() => {});
   }
+  function body() {
+    if (failed) {
+      return (
+        <div className="flex size-full items-center justify-center">
+          <AlertCircleIcon className="size-5 text-destructive" />
+        </div>
+      );
+    }
+    if (thumb) {
+      return <img src={thumb} alt="" className="size-full rounded-md object-cover" />;
+    }
+    if (preview != null) {
+      return (
+        <pre className="h-full overflow-hidden whitespace-pre-wrap break-words font-mono text-[8px] text-muted-foreground leading-3 [mask-image:linear-gradient(to_bottom,black_60%,transparent)]">
+          {preview}
+        </pre>
+      );
+    }
+    return (
+      <div className="flex size-full items-center justify-center">
+        <FileTypeIcon name={name} mediaType={mediaType} size="lg" />
+      </div>
+    );
+  }
   return (
     <div
       className={cn(
@@ -86,23 +110,7 @@ export function AttachmentTile({
           {name}
         </span>
       </div>
-      <div className="min-h-0 flex-1 overflow-hidden px-2 py-1">
-        {failed ? (
-          <div className="flex size-full items-center justify-center">
-            <AlertCircleIcon className="size-5 text-destructive" />
-          </div>
-        ) : thumb ? (
-          <img src={thumb} alt="" className="size-full rounded-md object-cover" />
-        ) : preview != null ? (
-          <pre className="h-full overflow-hidden whitespace-pre-wrap break-words font-mono text-[8px] text-muted-foreground leading-3 [mask-image:linear-gradient(to_bottom,black_60%,transparent)]">
-            {preview}
-          </pre>
-        ) : (
-          <div className="flex size-full items-center justify-center">
-            <FileTypeIcon name={name} mediaType={mediaType} size="lg" />
-          </div>
-        )}
-      </div>
+      <div className="min-h-0 flex-1 overflow-hidden px-2 py-1">{body()}</div>
       <div className="pointer-events-none flex items-center px-2 pb-1.5">
         <span
           className={cn(
