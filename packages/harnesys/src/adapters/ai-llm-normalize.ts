@@ -1,3 +1,5 @@
+import type { JsonSchema } from '../domain/json-schema.ts';
+
 export interface NormalizeReport {
   droppedOrphanIds?: string[];
   droppedDuplicateIds?: string[];
@@ -228,4 +230,82 @@ export function normalizeToolSequence(messages: MessageRecord[]): {
   }
   releaseHeld();
   return { messages: out, report };
+}
+
+const REF_PREFIX = '#/$defs/';
+
+interface HoistState {
+  defs: Record<string, unknown>;
+  embedded: boolean;
+}
+
+function slugFromId(id: string): string {
+  return id.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function hoistDefs(defs: Record<string, unknown>, scope: string, state: HoistState): void {
+  for (const [name, def] of Object.entries(defs)) {
+    state.defs[`${scope}__${name}`] = hoistNode(def, scope, state);
+  }
+}
+
+function hoistEntries(
+  record: Record<string, unknown>,
+  embedded: boolean,
+  scope: string | null,
+  state: HoistState,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(record)) {
+    if (embedded && (key === '$id' || key === '$schema')) {
+      continue;
+    }
+    if (embedded && key === '$defs' && isRecord(value)) {
+      hoistDefs(value, scope as string, state);
+      continue;
+    }
+    if (
+      key === '$ref' &&
+      scope !== null &&
+      typeof value === 'string' &&
+      value.startsWith(REF_PREFIX)
+    ) {
+      out.$ref = `${REF_PREFIX}${scope}__${value.slice(REF_PREFIX.length)}`;
+      continue;
+    }
+    out[key] = hoistNode(value, scope, state);
+  }
+  return out;
+}
+
+function hoistNode(node: unknown, scope: string | null, state: HoistState): unknown {
+  if (Array.isArray(node)) {
+    return node.map((item) => hoistNode(item, scope, state));
+  }
+  if (!isRecord(node)) {
+    return node;
+  }
+  const embedded = typeof node.$id === 'string';
+  if (embedded) {
+    state.embedded = true;
+  }
+  return hoistEntries(node, embedded, embedded ? slugFromId(node.$id as string) : scope, state);
+}
+
+export function hoistEmbeddedSchemaDefs(schema: JsonSchema): JsonSchema {
+  const state: HoistState = { defs: {}, embedded: false };
+  const walked = hoistNode(schema, null, state) as JsonSchema;
+  if (!state.embedded) {
+    return schema;
+  }
+  const hoisted = Object.keys(state.defs);
+  if (hoisted.length === 0) {
+    return walked;
+  }
+  const rootDefs = (walked.$defs ?? {}) as Record<string, unknown>;
+  return { ...walked, $defs: { ...rootDefs, ...state.defs } };
 }

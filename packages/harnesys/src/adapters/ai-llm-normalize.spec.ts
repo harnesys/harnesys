@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { normalizeToolSequence } from './ai-llm-normalize.ts';
+import { hoistEmbeddedSchemaDefs, normalizeToolSequence } from './ai-llm-normalize.ts';
 
 type Rec = Record<string, unknown>;
 
@@ -152,5 +152,93 @@ describe('normalizeToolSequence', () => {
     const { messages, report } = normalizeToolSequence(history as never[]);
     expect(messages).toEqual(history);
     expect(report).toEqual({});
+  });
+});
+
+const contractDoc = (id: string, defName: string): Rec => ({
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  $id: `urn:harnesys:contracts:dashboards:${id}`,
+  type: 'object',
+  properties: {
+    value: { $ref: `#/$defs/${defName}` },
+    nested: { oneOf: [{ $ref: `#/$defs/${defName}` }, { type: 'string' }] },
+  },
+  $defs: { [defName]: { type: 'object', properties: { inner: { $ref: `#/$defs/${defName}` } } } },
+});
+
+describe('hoistEmbeddedSchemaDefs', () => {
+  test('plain schema passes through untouched', () => {
+    const schema: Rec = { type: 'object', properties: { a: { type: 'string' } } };
+    expect(hoistEmbeddedSchemaDefs(schema as never)).toBe(schema);
+  });
+
+  test('embedded doc refs resolve from the root after hoisting', () => {
+    const schema: Rec = {
+      type: 'object',
+      properties: { doc: contractDoc('widget-doc', '__schema0') },
+    };
+    const out = hoistEmbeddedSchemaDefs(schema as never) as Rec;
+    const doc = out.properties as Rec;
+    const embedded = doc.doc as Rec;
+    expect(embedded.$id).toBeUndefined();
+    expect(embedded.$schema).toBeUndefined();
+    expect(embedded.$defs).toBeUndefined();
+    const slug = 'urn_harnesys_contracts_dashboards_widget_doc';
+    const defs = out.$defs as Record<string, Rec>;
+    expect(Object.keys(defs)).toEqual([`${slug}____schema0`]);
+    const value = (embedded.properties as Rec).value as Rec;
+    expect(value.$ref).toBe(`#/$defs/${slug}____schema0`);
+    const hoisted = defs[`${slug}____schema0`] as Rec;
+    const inner = ((hoisted.properties as Rec).inner as Rec).$ref;
+    expect(inner).toBe(`#/$defs/${slug}____schema0`);
+  });
+
+  test('two docs with same def names do not collide', () => {
+    const schema: Rec = {
+      type: 'object',
+      properties: {
+        a: contractDoc('widget-rect', '__schema0'),
+        b: contractDoc('widget-doc', '__schema0'),
+      },
+    };
+    const out = hoistEmbeddedSchemaDefs(schema as never) as Rec;
+    const defs = Object.keys(out.$defs as Record<string, unknown>);
+    expect(defs).toEqual([
+      'urn_harnesys_contracts_dashboards_widget_rect____schema0',
+      'urn_harnesys_contracts_dashboards_widget_doc____schema0',
+    ]);
+  });
+
+  test('root $defs stay in place and refs without an enclosing $id are untouched', () => {
+    const schema: Rec = {
+      type: 'object',
+      properties: { a: { $ref: '#/$defs/rootOne' } },
+      $defs: { rootOne: { type: 'string' } },
+    };
+    const out = hoistEmbeddedSchemaDefs(schema as never) as Rec;
+    expect(out).toEqual(schema);
+  });
+
+  test('innermost $id scope wins for refs inside hoisted defs', () => {
+    const inner = contractDoc('inner', '__schema0');
+    const outer: Rec = {
+      $id: 'urn:harnesys:contracts:dashboards:outer',
+      type: 'object',
+      properties: { child: inner },
+      $defs: { __schema1: { type: 'number' } },
+    };
+    const out = hoistEmbeddedSchemaDefs({
+      type: 'object',
+      properties: { doc: outer },
+    } as never) as Rec;
+    const defs = out.$defs as Record<string, Rec>;
+    const outerDef = defs.urn_harnesys_contracts_dashboards_outer____schema1;
+    expect(outerDef).toEqual({ type: 'number' });
+    const innerDoc = (out.properties as Rec).doc as Rec;
+    const innerValue = ((innerDoc.properties as Rec).child as Rec).properties as Rec;
+    expect((innerValue.value as Rec).$ref).toBe(
+      '#/$defs/urn_harnesys_contracts_dashboards_inner____schema0',
+    );
+    expect(defs.urn_harnesys_contracts_dashboards_inner____schema0).toBeDefined();
   });
 });

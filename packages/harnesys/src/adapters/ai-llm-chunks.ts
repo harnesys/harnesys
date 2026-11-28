@@ -1,5 +1,6 @@
 import { jsonSchema, tool } from 'ai';
 import type { ToolDefinition } from '../ports/tools.ts';
+import { hoistEmbeddedSchemaDefs } from './ai-llm-normalize.ts';
 
 export { STREAM_CHUNK_SIZE } from '../constants.ts';
 export interface CallModelResult {
@@ -115,7 +116,7 @@ export function toAiTools(
     }
     out[n] = tool({
       description: def.description,
-      inputSchema: jsonSchema(def.input as never),
+      inputSchema: jsonSchema(hoistEmbeddedSchemaDefs(def.input) as never),
     });
   }
   return Object.keys(out).length > 0 ? out : undefined;
