@@ -14,7 +14,11 @@ import type { ToolContext, ToolDefinition } from '../../ports/tools.ts';
 import { tool } from '../../ports/tools.ts';
 import { gateShellCommand } from './shell-gate.ts';
 import { runOnHost } from './shell-host.ts';
-import { type ToolTargetInput, tryToRegistryTarget } from './terminal-targets.ts';
+import {
+  TOOL_TARGET_SCHEMA,
+  type ToolTargetInput,
+  tryToRegistryTarget,
+} from './terminal-targets.ts';
 export interface ShellOptions {
   timeout?: number;
   allowlist?: readonly string[];
@@ -102,17 +106,7 @@ export function shell(options: ShellOptions = {}, ports: ShellPorts = {}): ToolD
         run_in_background: { type: 'boolean' },
         block_until_ms: { type: 'integer', minimum: 0 },
         open_in_terminal: { type: 'boolean' },
-        target: {
-          type: 'object',
-          properties: {
-            kind: { type: 'string' },
-            host: { type: 'string' },
-            user: { type: 'string' },
-            port: { type: 'integer' },
-            containerId: { type: 'string' },
-          },
-          required: ['kind'],
-        },
+        target: TOOL_TARGET_SCHEMA,
       },
       required: ['command'],
     },

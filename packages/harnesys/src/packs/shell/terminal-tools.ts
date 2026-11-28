@@ -16,6 +16,7 @@ import {
   sshAskGate,
   sshHostOf,
   type TerminalSessionPorts,
+  TOOL_TARGET_SCHEMA,
   type ToolTargetInput,
   tryToRegistryTarget,
 } from './terminal-targets.ts';
@@ -157,17 +158,7 @@ export function terminalTools(ports: TerminalSessionPorts): ToolDefinition[] {
         properties: {
           name: { type: 'string' },
           command: { type: 'string' },
-          target: {
-            type: 'object',
-            properties: {
-              kind: { type: 'string' },
-              host: { type: 'string' },
-              user: { type: 'string' },
-              port: { type: 'integer' },
-              containerId: { type: 'string' },
-            },
-            required: ['kind'],
-          },
+          target: TOOL_TARGET_SCHEMA,
           mode: { type: 'string' },
           sticky: { type: 'boolean' },
         },

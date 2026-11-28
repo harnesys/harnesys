@@ -143,9 +143,9 @@ No settings. Gate: `mcp_manage`.
 
 | Tool | Does |
 |---|---|
-| `mcp_list` | List MCP servers with config and live connection status. |
+| `mcp_list` | List MCP servers with config and cached connection status (`connectedAt` handshake time; not re-probed). |
 | `mcp_connect` | Register or replace a server, probe it, return its tools. |
-| `mcp_check` | Health-check a server. |
+| `mcp_check` | Health-check a server with a fresh probe; the source of truth when `mcp_list` status may be stale. |
 | `mcp_toggle` | Enable or disable a server. |
 | `mcp_remove` | Remove a server entry. |
 

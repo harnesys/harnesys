@@ -17,6 +17,7 @@ interface EnabledEntry {
   config: McpServerConfig;
   connection: McpConnection;
   tools: ToolDefinition[];
+  connectedAt: number;
 }
 export class McpRegistry implements McpRegistryPort {
   readonly #connector: McpConnector;
@@ -60,7 +61,12 @@ export class McpRegistry implements McpRegistryPort {
         conn: connection,
       });
       assertNoCollisions(this.#enabled, config.serverId, tools);
-      this.#enabled.set(config.serverId, { config, connection, tools });
+      this.#enabled.set(config.serverId, {
+        config,
+        connection,
+        tools,
+        connectedAt: Date.now(),
+      });
       this.#startFailures.delete(config.serverId);
     } catch (error) {
       await connection.close().catch(() => undefined);
@@ -128,6 +134,7 @@ export class McpRegistry implements McpRegistryPort {
         serverId: id,
         transport: entry.config.transport.type,
         connected: true,
+        connectedAt: entry.connectedAt,
         tools: entry.tools.map((t) => ({ name: t.name, description: t.description })),
         resources,
       });

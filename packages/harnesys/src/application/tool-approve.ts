@@ -23,6 +23,7 @@ import {
 import { ensureAskInterruptId, isAskResumeForCall, isWaitResumeForCall } from './tool-ask.ts';
 import type { ToolCallContext, ToolCallResult } from './tool-call.ts';
 import { buildToolMessage, type ToolMessage } from './tool-message.ts';
+import { nearestToolNames } from './tool-name-suggest.ts';
 import {
   applyPermissionGate,
   PERMISSION_RESUME_SCHEMA,
@@ -122,7 +123,11 @@ export async function runSingleToolCall(
   }
   const def = ctx.toolRegistry.get(call.name);
   if (!def) {
-    const content = `tool not found ${call.name}`;
+    const suggest = nearestToolNames(call.name, ctx.toolRegistry.keys());
+    const content =
+      suggest.length === 0
+        ? `tool not found ${call.name}`
+        : `tool not found ${call.name}; did you mean: ${suggest.join(', ')}?`;
     return {
       result: { id: call.id, name: call.name, result: content, isError: true },
       message: message(content),

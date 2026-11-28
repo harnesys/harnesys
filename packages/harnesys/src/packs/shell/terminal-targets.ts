@@ -1,15 +1,49 @@
+import type { JsonSchema } from '../../domain/json-schema.ts';
 import type {
   ProcessJobRecord,
   ProcessJobRegistry,
   ProcessJobTarget,
 } from '../../domain/process-job.ts';
+export type ToolTargetKind = 'host' | 'container' | 'ssh';
+export const TOOL_TARGET_KINDS: readonly ToolTargetKind[] = ['host', 'container', 'ssh'];
 export interface ToolTargetInput {
-  kind: 'host' | 'container' | 'ssh';
+  kind: ToolTargetKind;
   host?: string;
   user?: string;
   port?: number;
   containerId?: string;
 }
+export const TOOL_TARGET_SCHEMA: JsonSchema = {
+  type: 'object',
+  properties: {
+    kind: {
+      type: 'string',
+      enum: [...TOOL_TARGET_KINDS],
+      description:
+        'host = run on the local machine; ssh = remote host (requires host); container = run inside a container (requires containerId)',
+    },
+    host: { type: 'string' },
+    user: { type: 'string' },
+    port: { type: 'integer' },
+    containerId: { type: 'string' },
+  },
+  required: ['kind'],
+};
+export const SSH_TARGET_SCHEMA: JsonSchema = {
+  type: 'object',
+  properties: {
+    kind: {
+      type: 'string',
+      enum: ['ssh'],
+      description:
+        'only "ssh" is supported — this operation requires a remote host, there is no local mode',
+    },
+    host: { type: 'string' },
+    user: { type: 'string' },
+    port: { type: 'integer' },
+  },
+  required: ['kind', 'host'],
+};
 export interface TerminalSessionPorts {
   jobs: ProcessJobRegistry;
   resolveOrgId?: () => string | undefined;
@@ -40,6 +74,11 @@ export function toRegistryTarget(input: ToolTargetInput | undefined): ProcessJob
       throw new Error('container target requires containerId');
     }
     return { kind: 'container', containerId: input.containerId, orgId: '', workspaceKey: '' };
+  }
+  if (input.kind !== 'ssh') {
+    throw new Error(
+      `unknown target kind "${String(input.kind)}", valid kinds: ${TOOL_TARGET_KINDS.join(' | ')}`,
+    );
   }
   if (typeof input.host !== 'string' || input.host.length === 0) {
     throw new Error('ssh target requires host');

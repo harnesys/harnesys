@@ -21,6 +21,7 @@ export interface McpServerOverview {
   managed: boolean;
   enabled: boolean;
   connected: boolean;
+  connectedAt?: number;
   command?: string;
   url?: string;
   toolCount: number;

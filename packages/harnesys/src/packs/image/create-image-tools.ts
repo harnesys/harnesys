@@ -46,6 +46,13 @@ function selectionOf(selection: ImageModelSelection | undefined): ImageModelSele
     : {};
 }
 
+function sizeErrorHint(err: string, size: string | undefined): string {
+  if (size === undefined || !/\bsize\b/i.test(err)) {
+    return err;
+  }
+  return `${err}; size "${size}" was rejected by the provider — omit size entirely to use the model default`;
+}
+
 export function createImageTools(deps: CreateImageToolsParams): ToolDefinition[] {
   const supportedSizes = deps.image.supportedSizes(
     deps.resolveScope(),
@@ -73,10 +80,17 @@ export function createImageTools(deps: CreateImageToolsParams): ToolDefinition[]
         runGuard(async () => {
           const parsed = parseInput(input);
           const scope = deps.resolveScope();
-          return attachmentToolResultOf(
-            await deps.image.generate(scope, { ...parsed, ...selectionOf(deps.modelSelection) }),
-            { threadDir: ctx.paths.threadDir, runRoot: ctx.cwd },
-          );
+          const generated = await deps.image
+            .generate(scope, { ...parsed, ...selectionOf(deps.modelSelection) })
+            .catch((err: unknown) => {
+              throw new Error(
+                sizeErrorHint(err instanceof Error ? err.message : String(err), parsed.size),
+              );
+            });
+          return attachmentToolResultOf(generated, {
+            threadDir: ctx.paths.threadDir,
+            runRoot: ctx.cwd,
+          });
         }),
     }),
   ];

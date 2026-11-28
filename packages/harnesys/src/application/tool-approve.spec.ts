@@ -116,3 +116,21 @@ describe('tool failure details', () => {
     expect(text).toContain('"path":"items[0].bindings.value"');
   });
 });
+
+describe('unknown tool name', () => {
+  test('suggests the nearest registered tool', async () => {
+    const echo: ToolDefinition = {
+      name: 'echo',
+      description: 'echo',
+      input: { type: 'object', properties: {} },
+      execute: () => 'done',
+    };
+    const done = await runSingleToolCall(
+      { id: 'call-1', name: 'echos', args: {} },
+      ctx({ hooks: undefined, toolRegistry: new Map([['echo', echo]]) }),
+      0,
+    );
+    expect(done.result.isError).toBe(true);
+    expect(String(done.result.result)).toBe('tool not found echos; did you mean: echo?');
+  });
+});

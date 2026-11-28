@@ -27,6 +27,7 @@ export interface McpServerInfo {
   serverId: string;
   transport: string;
   connected: boolean;
+  connectedAt?: number;
   tools: McpServerToolInfo[];
   resources: McpResourceInfo[];
 }

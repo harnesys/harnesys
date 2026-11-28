@@ -20,6 +20,7 @@ import { tool } from '../../ports/tools.ts';
 import type { TerminalSessionPorts } from './terminal-targets.ts';
 import {
   describeTarget,
+  SSH_TARGET_SCHEMA,
   sshAskGate,
   sshHostOf,
   type ToolTargetInput,
@@ -119,7 +120,7 @@ export function forwardTools(
     tool('port_forward', {
       group: 'core',
       description:
-        'Open an SSH port forward as a background job: mode local (-L), remote (-R) or dynamic (-D), spec is an ssh forward spec like "18080:localhost:80". While the tunnel stays up the result reports status running; if ssh exits within the first seconds (bad host, auth failure, connect refused) the result reports status failed with exitCode and an output tail. Kill it with terminal_kill.',
+        'Open an SSH port forward as a background job against an ssh target (kind "ssh" with host; there is no local/container forwarding mode). mode local (-L), remote (-R) or dynamic (-D); spec is an ssh forward spec like "18080:localhost:80". While the tunnel stays up the result reports status running; if ssh exits within the first seconds (bad host, auth failure, connect refused) the result reports status failed with exitCode and an output tail. Kill it with terminal_kill.',
       operations: ['process'],
       sideEffect: 'write',
       input: {
@@ -127,16 +128,7 @@ export function forwardTools(
         properties: {
           mode: { type: 'string', enum: ['local', 'remote', 'dynamic'] },
           spec: { type: 'string' },
-          target: {
-            type: 'object',
-            properties: {
-              kind: { type: 'string' },
-              host: { type: 'string' },
-              user: { type: 'string' },
-              port: { type: 'integer' },
-            },
-            required: ['kind'],
-          },
+          target: SSH_TARGET_SCHEMA,
         },
         required: ['mode', 'spec', 'target'],
       },

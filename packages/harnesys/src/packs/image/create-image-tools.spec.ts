@@ -68,6 +68,16 @@ describe('createImageTools', () => {
     expect(port.calls[0]?.request).toEqual({ prompt: 'a cat' });
   });
 
+  test('a provider size rejection carries the omit-size escape hatch', async () => {
+    const port = new FakeImageGenerationPort();
+    port.failure = new Error("Image size '512x512' is not supported");
+    const tool = createImageTools({ image: port, resolveScope: () => scope })[0];
+    const result = (await tool?.execute({ prompt: 'a cat', size: '512x512' }, ctx)) as {
+      error: string;
+    };
+    expect(result.error).toContain('omit size entirely to use the model default');
+  });
+
   test('persists the absolute artifact path in an anchored run', async () => {
     const port = new FakeImageGenerationPort();
     const tool = createImageTools({ image: port, resolveScope: () => scope })[0];

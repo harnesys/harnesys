@@ -47,6 +47,7 @@ export class OrgMcpManagePort implements McpManagePort {
         managed: false,
         enabled: true,
         connected: row.connected,
+        ...(row.connectedAt === undefined ? {} : { connectedAt: row.connectedAt }),
         toolCount: row.tools.length,
         tools: row.tools,
       });
@@ -176,6 +177,7 @@ function toOverview(
     managed,
     enabled: row.enabled,
     connected: live?.connected ?? false,
+    ...(live?.connectedAt === undefined ? {} : { connectedAt: live.connectedAt }),
     ...(row.command !== undefined ? { command: row.command } : {}),
     ...(row.url !== undefined ? { url: row.url } : {}),
     toolCount: live?.tools.length ?? 0,

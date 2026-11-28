@@ -84,7 +84,7 @@ export const HOOK_EVENT_CATALOG: readonly HookEventCatalogEntry[] = [
     event: 'PostToolBatch',
     label: 'After tool batch',
     phase: 'tool',
-    description: 'Runs after a batch of parallel tool calls finished.',
+    description: 'Runs after a batch of tool calls finished.',
     matcherSubject: 'tool name',
     canBlock: false,
     canContext: false,

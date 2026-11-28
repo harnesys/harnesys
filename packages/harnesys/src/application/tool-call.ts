@@ -218,7 +218,18 @@ export async function executeToolCall(
     toolMessages[idx] = done.message;
     recordCompleted(ctx.state, ctx.nodeId, idx, done.result);
   }
-  if (concurrency === 'sequential' || maxConcurrency === 1) {
+  const isMutation = (name: string): boolean => {
+    const sideEffect = ctx.toolRegistry.get(name)?.sideEffect;
+    return sideEffect !== undefined && MUTATING_SIDE_EFFECTS.includes(sideEffect);
+  };
+  const hasMutation = calls.some((call) => isMutation(call.name));
+  // A step that touches state runs its calls in the exact order the model emitted them:
+  // an agent or file created at index 0 is visible to the call at index 1. A pure-read step
+  // cannot change shared state, so it fans out at full width. This removes the data race
+  // where independent-looking calls in one batch (create+spawn, move+delete) observed each
+  // other's effects in nondeterministic order.
+  const runSequentially = concurrency === 'sequential' || maxConcurrency === 1 || hasMutation;
+  if (runSequentially) {
     for (let i = 0; i < calls.length; i += 1) {
       await runOne(i);
       if (ctx.toolMessages === 'ordered') {
@@ -232,19 +243,11 @@ export async function executeToolCall(
       }
     }
   } else {
-    const all = calls.map((_, i) => i);
-    const isMutation = (name: string): boolean => {
-      const sideEffect = ctx.toolRegistry.get(name)?.sideEffect;
-      return sideEffect !== undefined && MUTATING_SIDE_EFFECTS.includes(sideEffect);
-    };
-    const mutations = all.filter((i) => isMutation(calls[i]?.name ?? ''));
-    const reads = all.filter((i) => !mutations.includes(i));
-    if (mutations.length === 0 || reads.length === 0) {
-      await runBatchWorkerPool({ indexes: all, width: maxConcurrency, run: runOne });
-    } else {
-      await runBatchWorkerPool({ indexes: mutations, width: maxConcurrency, run: runOne });
-      await runBatchWorkerPool({ indexes: reads, width: maxConcurrency, run: runOne });
-    }
+    await runBatchWorkerPool({
+      indexes: calls.map((_, i) => i),
+      width: maxConcurrency,
+      run: runOne,
+    });
   }
   if (ctx.toolMessages !== 'ordered') {
     const arr = getStateMessages(ctx.state, ctx.messagesPath);
@@ -255,7 +258,7 @@ export async function executeToolCall(
         }
       }
     }
-  } else if (concurrency !== 'sequential') {
+  } else if (!runSequentially) {
     const arr = getStateMessages(ctx.state, ctx.messagesPath);
     if (arr) {
       for (const m of toolMessages) {

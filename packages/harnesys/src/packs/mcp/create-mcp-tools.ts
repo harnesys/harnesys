@@ -172,7 +172,12 @@ async function applyList(deps: CreateMcpToolsParams): Promise<Record<string, unk
   const servers = await deps.mcp.list(deps.resolveScope());
   return {
     servers,
-    note: 'managed=true entries come from the org mcp config and can be edited with mcp_connect/mcp_toggle/mcp_remove. Grant servers to an agent via agents_update mcpServers.',
+    note:
+      'managed=true entries come from the org mcp config and can be edited with mcp_connect/mcp_toggle/mcp_remove. ' +
+      'Grant servers to an agent via agents_update mcpServers. ' +
+      'connected reflects the live client connection established at connectedAt (epoch ms); ' +
+      'it is not re-probed per call, so a server that died or lost credentials after that still shows connected:true. ' +
+      'Before routing work through a server, confirm it with mcp_check (fresh probe).',
   };
 }
 
@@ -189,7 +194,8 @@ export function createMcpTools(deps: CreateMcpToolsParams): ToolDefinition[] {
       operations: ['mcp_manage'],
       sideEffect: 'read',
       description:
-        'List MCP servers of this org: config entry (transport, command/url, enabled), live connection status and their tools. ' +
+        'List MCP servers of this org: config entry (transport, command/url, enabled), connection status ' +
+        'with the connectedAt handshake time (cached, not re-probed — use mcp_check for a fresh probe) and their tools. ' +
         'Read-only.',
       input: { type: 'object', properties: {} },
       execute: () => runGuard(() => applyList(deps)),
