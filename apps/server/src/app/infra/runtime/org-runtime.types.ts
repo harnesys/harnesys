@@ -92,7 +92,11 @@ export interface OrgRuntime {
     agentId: string;
     triggerThreadSeq?: number;
   }): Promise<RunAcceptedResponse>;
-  compact(threadId: string, signal?: AbortSignal): Promise<CompactThreadResult>;
+  compact(
+    threadId: string,
+    signal?: AbortSignal,
+    onRun?: (runId: string) => void,
+  ): Promise<CompactThreadResult>;
   cancelCompact(threadId: string): Promise<boolean>;
   undoThreadCompact(threadId: string): Promise<SessionEvent>;
   drainMessageQueue(threadId: string): Promise<ThreadQueueDrainResult>;

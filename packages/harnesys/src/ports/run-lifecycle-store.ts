@@ -10,6 +10,7 @@ export type RunLifecycleStatus =
   | 'dead_lettered';
 export { RUN_NON_TERMINAL } from '../constants.ts';
 export type RunVia = 'direct' | 'agent';
+export type RunPurpose = 'compact';
 export interface RunAttribution {
   startedByUserId?: string;
   via: RunVia;
@@ -34,6 +35,7 @@ export interface RunRecord {
   updatedAt: string;
   attribution?: RunAttribution;
   environmentJson?: string;
+  purpose?: RunPurpose;
 }
 export interface RunCreateInput {
   runId: string;
@@ -43,6 +45,7 @@ export interface RunCreateInput {
   parentRunId?: string;
   attribution?: RunAttribution;
   environmentJson?: string;
+  purpose?: RunPurpose;
 }
 export interface RunTransitionPatch {
   from: RunLifecycleStatus;

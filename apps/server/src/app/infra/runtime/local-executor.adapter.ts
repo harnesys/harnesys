@@ -264,8 +264,9 @@ export class LocalExecutorAdapter extends LocalExecutorPort implements ModuleDes
     orgId: string,
     threadId: string,
     signal?: AbortSignal,
+    onRun?: (runId: string) => void,
   ): Promise<CompactThreadResult> {
-    return (await this.ensure(orgId)).compact(threadId, signal);
+    return (await this.ensure(orgId)).compact(threadId, signal, onRun);
   }
 
   cancelCompact = (orgId: string, threadId: string): Promise<boolean> =>

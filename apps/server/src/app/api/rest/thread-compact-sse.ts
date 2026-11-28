@@ -1,4 +1,4 @@
-import { SSE_KEEP_ALIVE_MS } from '@harnesys/studio-shared';
+import { COMPACT_FAILED_FALLBACK, SSE_KEEP_ALIVE_MS } from '@harnesys/studio-shared';
 import type { CompactThreadResult } from '../../domain/thread/local-executor.port.ts';
 
 function writeFrame(
@@ -14,15 +14,20 @@ function writeFrame(
   }
 }
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error && error.message ? error.message : 'Compact failed';
+function errorPayload(error: unknown): { message: string; errorCode?: string } {
+  const message = error instanceof Error && error.message ? error.message : COMPACT_FAILED_FALLBACK;
+  const errorCode = (error as { errorCode?: unknown }).errorCode;
+  return typeof errorCode === 'string' ? { message, errorCode } : { message };
 }
 
-export function streamCompactSse(run: () => Promise<CompactThreadResult>): Response {
+export function streamCompactSse(
+  run: (emit: (event: string, data: string) => void) => Promise<CompactThreadResult>,
+): Response {
   let keepAlive: ReturnType<typeof setInterval> | undefined;
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       const encoder = new TextEncoder();
+      const emit = (event: string, data: string) => writeFrame(controller, encoder, event, data);
       keepAlive = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(':\n\n'));
@@ -32,15 +37,10 @@ export function streamCompactSse(run: () => Promise<CompactThreadResult>): Respo
       }, SSE_KEEP_ALIVE_MS);
       void (async () => {
         try {
-          const result = await run();
+          const result = await run(emit);
           writeFrame(controller, encoder, 'compact.result', JSON.stringify(result));
         } catch (error) {
-          writeFrame(
-            controller,
-            encoder,
-            'error',
-            JSON.stringify({ message: errorMessage(error) }),
-          );
+          writeFrame(controller, encoder, 'error', JSON.stringify(errorPayload(error)));
         } finally {
           if (keepAlive) {
             clearInterval(keepAlive);

@@ -21,8 +21,9 @@ import { wireOrgPlugins } from './org-plugin-wiring.ts';
 import { createOrgRunStores } from './org-run-stores.ts';
 import type { OrgRuntime, OrgRuntimeDeps } from './org-runtime.types.ts';
 import { createAgentsResolve } from './org-runtime-agents.ts';
-import { runOrgCompact } from './org-runtime-compact-deps.ts';
 import { createOrgCompactGuard } from './org-runtime-compact-guard.ts';
+import { compactRequestDepsOf, requestThreadCompact } from './org-runtime-compact-request.ts';
+import { createCompactionChannel } from './org-runtime-compaction-channel.ts';
 import { createOrgEventPublisher } from './org-runtime-publish.ts';
 import {
   createSteeringChannel,
@@ -135,6 +136,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
   });
 
   const steering = createSteeringChannel(session.db);
+  const compaction = createCompactionChannel({ db: session.db, lifecycle: runLifecycle, feed });
   const resolveRunTarget = createRunTargetResolver({
     deps,
     plugin,
@@ -147,6 +149,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     lifecycle: runLifecycle,
     feed,
     steering,
+    compaction,
     runControl: agentRunControl,
   });
 
@@ -266,20 +269,12 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     kick: runControl.kick,
   });
   const compactGuard = createOrgCompactGuard({
-    runCompact: (threadId, guardSignal) =>
-      runOrgCompact(
-        {
-          models: modelsPort,
-          events: runEvents,
-          lifecycle: runLifecycle,
-          threadAgentIds: (id) =>
-            deps.threadAgents.listByThread(deps.orgId, id).map((row) => row.agentId),
-          findThreadRecord: (id) => deps.threads.findById(deps.orgId, id),
-          seededThreadState: (id) => branchSeed.seededThreadState(id),
-          resolveRunTarget,
-        },
+    runCompact: (threadId, guardSignal, onRun) =>
+      requestThreadCompact(
+        compactRequestDepsOf(deps, compaction, runLifecycle, runControl.kick),
         threadId,
         guardSignal,
+        onRun,
       ),
     undo: (threadId) =>
       undoThreadCompaction(
@@ -294,7 +289,7 @@ export async function openOrgRuntime(deps: OrgRuntimeDeps): Promise<OrgRuntime> 
     feed,
     sessionFor,
     send: (input) => sendThreadMessage(runControl, input),
-    compact: (threadId, signal) => compactGuard.compact(threadId, signal),
+    compact: (threadId, signal, onRun) => compactGuard.compact(threadId, signal, onRun),
     cancelCompact: (threadId) => compactGuard.cancelCompact(threadId),
     undoThreadCompact: (threadId) => compactGuard.undoThreadCompact(threadId),
     drainMessageQueue,

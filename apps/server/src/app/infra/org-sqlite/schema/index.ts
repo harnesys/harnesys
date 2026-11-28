@@ -71,6 +71,7 @@ export {
   type BrowserLoginAttemptRow,
   browserLoginAttemptsTable,
 } from './browser-login-attempts.ts';
+export { compactionRequestsTable } from './compaction-requests.ts';
 export {
   type DashboardInsertRow,
   type DashboardRow,

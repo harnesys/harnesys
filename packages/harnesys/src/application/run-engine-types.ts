@@ -19,6 +19,7 @@ import type { RuntimeState } from '../ports/runtime-state.ts';
 import type { SkillRegistry } from '../ports/skills.ts';
 import type { RunToolControl, ToolDefinition } from '../ports/tools.ts';
 import type { CapabilitySet, CapabilityUniverse } from './capability-set.ts';
+import type { CompactionRequestChannel, CompactionRequestSettle } from './compaction/request.ts';
 import type { BackgroundReportInput, BackgroundSpawnHandle, ChildRunner } from './graph-spawn.ts';
 import type { SteerMessage } from './graph-steer.ts';
 import type { HookRunReport } from './hooks/bus.ts';
@@ -79,6 +80,8 @@ export interface RunTargetOpts {
   steerFor?: (runId: string) => Promise<SteerMessage[]>;
   ackSteerMessages?: (itemIds: string[]) => Promise<void>;
   runControl?: RunToolControl;
+  compactionRequest?: CompactionRequestChannel;
+  settleCompactionRequest?: CompactionRequestSettle;
 }
 export interface RunEngine {
   execute(runId: string, opts: RunTargetOpts): Promise<void>;

@@ -7,6 +7,8 @@ import type {
 } from '@harnesys/contracts';
 import type {
   Attachment,
+  CompactionCompleted,
+  CompactionSkipReason,
   McpServerInfo,
   RunAttribution,
   RunEventStore,
@@ -43,28 +45,13 @@ export interface SendLocalRunInput {
 }
 
 export type CompactSkipReason =
-  | 'invalid-output-reserve'
-  | 'near-threshold'
-  | 'empty-history'
-  | 'resume-pending'
-  | 'already-covered'
-  | 'no-cut-plan'
-  | 'hook-blocked'
-  | 'empty-window'
-  | 'breaker-open'
-  | 'rapid-refill'
+  | CompactionSkipReason
   | 'compaction-in-progress'
+  | 'run-paused'
   | 'cancelled';
 
 export type CompactThreadResult =
-  | {
-      compacted: true;
-      id: string;
-      coveredFrom: number;
-      coveredUntil: number;
-      tokensBefore: number;
-      tokensAfter: number;
-    }
+  | ({ compacted: true } & CompactionCompleted)
   | { compacted: false; reason?: CompactSkipReason };
 
 export abstract class LocalExecutorPort {
@@ -76,6 +63,7 @@ export abstract class LocalExecutorPort {
     orgId: string,
     threadId: string,
     signal?: AbortSignal,
+    onRun?: (runId: string) => void,
   ): Promise<CompactThreadResult>;
   abstract cancelCompact(orgId: string, threadId: string): Promise<boolean>;
   abstract undoThreadCompact(orgId: string, threadId: string): Promise<SessionEvent>;

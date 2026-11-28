@@ -229,6 +229,7 @@ export type {
 export type {
   AcceptedRunResponse,
   CompactThreadResponse,
+  CompactThreadSkipReason,
   Event,
   RequestPlan,
   RequestSection,
@@ -245,7 +246,12 @@ export type {
   ThreadRecord,
   ThreadSummary,
 } from './src/thread.ts';
-export { DEFAULT_CONTEXT_FILES, THREAD_KINDS, threadsForAgent } from './src/thread.ts';
+export {
+  COMPACT_FAILED_FALLBACK,
+  DEFAULT_CONTEXT_FILES,
+  THREAD_KINDS,
+  threadsForAgent,
+} from './src/thread.ts';
 export type { TranscriptItem } from './src/transcript.ts';
 export { toTranscript } from './src/transcript.ts';
 export type {

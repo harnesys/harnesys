@@ -5,6 +5,7 @@ import {
   type PendingSessionEvent,
   type RunCreateInput,
   type RunLifecycleStatus,
+  type RunPurpose,
   type RunRecord,
   type RunTransitionPatch,
   type SessionEvent,
@@ -38,6 +39,7 @@ export function rowToRecord(row: RunRow): RunRecord {
     updatedAt: row.updatedAt,
     attribution: runAttributionOf(row),
     ...(row.environment !== null ? { environmentJson: row.environment } : {}),
+    ...(row.purpose !== null ? { purpose: row.purpose as RunPurpose } : {}),
   };
 }
 
@@ -124,6 +126,7 @@ function insertQueuedRun(tx: OrgSqliteDb, run: RunCreateInput): void {
         leaseEpoch: 0,
         lastSeq: 0,
         environment: run.environmentJson ?? null,
+        purpose: run.purpose ?? null,
         ...runAttributionValues(run.attribution),
         createdAt: now,
         updatedAt: now,

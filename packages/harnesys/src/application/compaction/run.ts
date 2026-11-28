@@ -552,13 +552,15 @@ async function* pressureEventIfDue(
   }
 }
 
+export const COMPACTION_NOT_CONFIGURED_CODE = 'compaction_not_configured';
+
 export async function* compactForced(
   ctx: CompactionPassContext,
 ): AsyncGenerator<CompactionPassEvent> {
   const ref: PortRef | undefined = ctx.agent.compaction;
   if (!ref || ref.name !== THRESHOLD_SUMMARY_NAME) {
     throw Object.assign(new Error('compaction is not configured'), {
-      code: 'compaction_not_configured',
+      code: COMPACTION_NOT_CONFIGURED_CODE,
     });
   }
   yield* passIfDue(ctx, parseThresholdSpec(ref.spec), 'manual');

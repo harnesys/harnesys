@@ -9,6 +9,7 @@ import {
   CREATE_BOARD_STATUSES_SQL,
   CREATE_BROWSER_CREDENTIALS_SQL,
   CREATE_BROWSER_LOGIN_ATTEMPTS_SQL,
+  CREATE_COMPACTION_REQUESTS_SQL,
   CREATE_DEPARTMENTS_SQL,
   CREATE_EXECUTION_PROFILE_NODES_SQL,
   CREATE_EXECUTION_PROFILES_SQL,
@@ -104,6 +105,7 @@ import {
   migratePendingPlacementsEnvironmentColumn,
   migrateRunsAttributionColumns,
   migrateRunsEnvironmentColumn,
+  migrateRunsPurposeColumn,
   migrateRunsWakeKeyColumn,
   migrateThreadMessageQueueModeColumn,
   migrateThreadMessageQueueQuoteColumn,
@@ -255,6 +257,7 @@ export function ensureOrgSchema(
   if (all) {
     migrateRunsAttributionColumns(exec, all);
     migrateRunsEnvironmentColumn(exec, all);
+    migrateRunsPurposeColumn(exec, all);
   }
   exec(CREATE_RUN_EVENTS_SQL);
   assertRunEventsThreadScoped(all);
@@ -263,6 +266,7 @@ export function ensureOrgSchema(
   exec(CREATE_RUN_SNAPSHOTS_SQL);
   exec(CREATE_ATTACHMENTS_SQL);
   exec(CREATE_THREAD_MESSAGE_QUEUE_SQL);
+  exec(CREATE_COMPACTION_REQUESTS_SQL);
   exec(CREATE_BROWSER_CREDENTIALS_SQL);
   migrateBrowserCredentialPreLoginColumn(exec, all);
   exec(CREATE_BROWSER_LOGIN_ATTEMPTS_SQL);

@@ -23,6 +23,7 @@ import { runInHostToolScope } from './host-tool-scope.ts';
 import type { OrgPluginWiring } from './org-plugin-wiring.ts';
 import type { OrgRuntimeDeps } from './org-runtime.types.ts';
 import { createAgentsResolve } from './org-runtime-agents.ts';
+import type { CompactionChannel } from './org-runtime-compaction-channel.ts';
 import { runTargetFileAccess, runTargetFileAccessForAgent } from './org-runtime-file-access.ts';
 import { resolveTargetHooks, targetHookReport } from './org-runtime-hooks.ts';
 import {
@@ -47,6 +48,7 @@ export interface RunTargetResolverContext {
   lifecycle: RunLifecycleStore;
   feed: ReturnType<typeof createRunEventFeed>;
   steering: SteeringChannel;
+  compaction: CompactionChannel;
   runControl: RunToolControl;
 }
 
@@ -140,6 +142,11 @@ export function createRunTargetResolver(ctx: RunTargetResolverContext) {
       steerMessages: () => ctx.steering.steer(threadId),
       steerFor: (spawnId: string) => ctx.steering.steerRun(threadId, spawnId),
       ackSteerMessages: (itemIds: string[]) => ctx.steering.ack(itemIds),
+      compactionRequest: () =>
+        selector?.runId === undefined
+          ? Promise.resolve(null)
+          : ctx.compaction.request(threadId, selector.runId),
+      settleCompactionRequest: ctx.compaction.settle,
       runControl: ctx.runControl,
       ...(process ? { process } : {}),
       ...(prepared.channelNote ? { channelNote: prepared.channelNote } : {}),

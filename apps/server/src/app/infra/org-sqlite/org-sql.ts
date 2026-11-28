@@ -661,6 +661,7 @@ CREATE TABLE IF NOT EXISTS runs (
   via TEXT NOT NULL DEFAULT 'direct',
   on_node_id TEXT,
   environment TEXT,
+  purpose TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -744,6 +745,20 @@ CREATE INDEX IF NOT EXISTS thread_message_queue_thread_idx
 CREATE UNIQUE INDEX IF NOT EXISTS thread_message_queue_target_idx
   ON thread_message_queue(thread_id, thread_seq, target_agent_id)
   WHERE thread_seq IS NOT NULL AND target_agent_id IS NOT NULL;
+`;
+
+export const CREATE_COMPACTION_REQUESTS_SQL = `
+CREATE TABLE IF NOT EXISTS compaction_requests (
+  request_id TEXT PRIMARY KEY NOT NULL,
+  thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+  target_run_id TEXT NOT NULL,
+  status TEXT NOT NULL,
+  outcome_json TEXT,
+  queued_at TEXT NOT NULL,
+  settled_at TEXT
+);
+CREATE INDEX IF NOT EXISTS compaction_requests_thread_idx
+  ON compaction_requests(thread_id, status);
 `;
 
 export const CREATE_ATTACHMENTS_SQL = `

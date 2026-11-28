@@ -160,6 +160,7 @@ export async function prepareExecuteGraphOpts(
   }
   const cwd = opts.paths?.cwd ?? '';
   const runEnv = composeRunEnv(opts.binDirs);
+  const record = await deps.lifecycle.get(runId);
   const graphOpts: GraphOpts = {
     agent,
     runId,
@@ -189,6 +190,11 @@ export async function prepareExecuteGraphOpts(
     runtime: opts.runtime,
     ...(opts.steerMessages ? { steerMessages: opts.steerMessages } : {}),
     ...(opts.ackSteerMessages ? { ackSteerMessages: opts.ackSteerMessages } : {}),
+    ...(opts.compactionRequest ? { compactionRequest: opts.compactionRequest } : {}),
+    ...(opts.settleCompactionRequest
+      ? { settleCompactionRequest: opts.settleCompactionRequest }
+      : {}),
+    ...(record?.purpose === 'compact' ? { compactOnly: true } : {}),
     agents: deps.agents,
     outputHint: startNodeId === undefined ? undefined : (snap?.cursor.interrupt?.output ?? null),
     rejected: answer?.rejected === true,

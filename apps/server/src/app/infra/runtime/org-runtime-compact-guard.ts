@@ -3,13 +3,21 @@ import type { CompactThreadResult } from '../../domain/thread/local-executor.por
 import { ThreadValidationException } from '../../domain/thread/thread.error.ts';
 
 export interface OrgCompactGuard {
-  compact(threadId: string, signal?: AbortSignal): Promise<CompactThreadResult>;
+  compact(
+    threadId: string,
+    signal?: AbortSignal,
+    onRun?: (runId: string) => void,
+  ): Promise<CompactThreadResult>;
   cancelCompact(threadId: string): Promise<boolean>;
   undoThreadCompact(threadId: string): Promise<SessionEvent>;
 }
 
 export interface OrgCompactGuardDeps {
-  runCompact(threadId: string, signal: AbortSignal): Promise<CompactThreadResult>;
+  runCompact(
+    threadId: string,
+    signal: AbortSignal,
+    onRun?: (runId: string) => void,
+  ): Promise<CompactThreadResult>;
   undo(threadId: string): Promise<SessionEvent>;
 }
 
@@ -17,7 +25,7 @@ export interface OrgCompactGuardDeps {
 export function createOrgCompactGuard(deps: OrgCompactGuardDeps): OrgCompactGuard {
   const inflight = new Map<string, AbortController>();
   return {
-    async compact(threadId, signal) {
+    async compact(threadId, signal, onRun) {
       const existing = inflight.get(threadId);
       if (existing && !existing.signal.aborted) {
         return { compacted: false, reason: 'compaction-in-progress' };
@@ -28,9 +36,11 @@ export function createOrgCompactGuard(deps: OrgCompactGuardDeps): OrgCompactGuar
         if (signal) {
           pipeAbort(signal, controller);
         }
-        return await deps.runCompact(threadId, controller.signal);
+        return await deps.runCompact(threadId, controller.signal, onRun);
       } finally {
-        inflight.delete(threadId);
+        if (inflight.get(threadId) === controller) {
+          inflight.delete(threadId);
+        }
       }
     },
     cancelCompact: async (threadId) => {

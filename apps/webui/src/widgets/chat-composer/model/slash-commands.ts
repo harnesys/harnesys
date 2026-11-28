@@ -34,6 +34,9 @@ export const SLASH_COMMANDS: SlashCommand[] = [
         if (result.reason === 'resume-pending') {
           return 'Compaction unavailable: a run is still in progress';
         }
+        if (result.reason === 'run-paused') {
+          return 'Compaction unavailable: the run is paused waiting for input';
+        }
         if (result.reason === 'already-covered') {
           return 'History is already fully compacted';
         }

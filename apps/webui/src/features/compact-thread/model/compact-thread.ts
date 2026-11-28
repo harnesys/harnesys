@@ -1,4 +1,8 @@
-import type { CompactThreadResponse } from '@harnesys/studio-shared';
+import {
+  COMPACT_FAILED_FALLBACK,
+  type CompactThreadResponse,
+  type CompactThreadSkipReason,
+} from '@harnesys/studio-shared';
 import { useThreadStore } from '@/entities/thread';
 import { refreshThread } from '@/features/desk/model/refresh-thread';
 import { compactThreadStream, readSse } from '@/shared/api';
@@ -8,18 +12,7 @@ export interface CompactThreadOptions {
 }
 export interface CompactThreadResult {
   compacted: boolean;
-  reason?:
-    | 'invalid-output-reserve'
-    | 'empty-history'
-    | 'resume-pending'
-    | 'already-covered'
-    | 'no-cut-plan'
-    | 'hook-blocked'
-    | 'empty-window'
-    | 'breaker-open'
-    | 'rapid-refill'
-    | 'compaction-in-progress'
-    | 'cancelled';
+  reason?: CompactThreadSkipReason;
 }
 export async function compactThread(options: CompactThreadOptions): Promise<CompactThreadResult> {
   const { threadId } = options;
@@ -31,6 +24,10 @@ export async function compactThread(options: CompactThreadOptions): Promise<Comp
   try {
     const response = await compactThreadStream(threadId, controller.signal);
     for await (const frame of readSse(response)) {
+      if (frame.event === 'compact.accepted') {
+        void refreshThread(threadId, { force: true });
+        continue;
+      }
       if (frame.event === 'compact.result') {
         result = JSON.parse(frame.data) as CompactThreadResponse;
         continue;
@@ -39,7 +36,7 @@ export async function compactThread(options: CompactThreadOptions): Promise<Comp
         const body = JSON.parse(frame.data) as {
           message?: string;
         };
-        throw new Error(body.message || 'Compact failed');
+        throw new Error(body.message || COMPACT_FAILED_FALLBACK);
       }
     }
     useThreadStore.getState().touch(threadId);

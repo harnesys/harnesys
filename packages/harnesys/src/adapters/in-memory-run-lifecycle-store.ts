@@ -92,6 +92,9 @@ export class InMemoryRunLifecycleStore implements RunLifecycleStore {
     if (run.attribution !== undefined) {
       record.attribution = run.attribution;
     }
+    if (run.purpose !== undefined) {
+      record.purpose = run.purpose;
+    }
     this.runs.set(run.runId, record);
     if (events.length > 0) {
       this.eventStore.appendLocked(run.runId, events, run.threadId);

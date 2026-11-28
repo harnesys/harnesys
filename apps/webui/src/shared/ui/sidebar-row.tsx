@@ -64,22 +64,33 @@ export function SidebarRow({
         {trailing ? (
           <span
             className={cn(
-              'flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground tabular-nums leading-4',
-              actions && 'min-w-11 justify-end transition-opacity group-hover/row:opacity-0',
+              'grid shrink-0 grid-cols-[1fr] text-[11px] text-muted-foreground tabular-nums leading-4',
+              actions && 'transition-[grid-template-columns] group-hover/row:grid-cols-[0fr]',
             )}
           >
-            {trailing}
+            <span
+              className={cn(
+                'flex min-w-0 items-center justify-end gap-1 overflow-hidden',
+                actions && 'transition-opacity group-hover/row:opacity-0',
+              )}
+            >
+              {trailing}
+            </span>
           </span>
         ) : null}
       </button>
       {actions ? (
-        <div
-          className={cn(
-            'absolute inset-y-0 right-1 flex gap-0.5 opacity-0 transition-opacity group-hover/row:opacity-100 has-[:focus-visible]:opacity-100',
-            variant === 'card' ? 'items-start pt-1' : 'items-center',
-          )}
-        >
-          {actions}
+        <div className="grid shrink-0 grid-cols-[0fr] transition-[grid-template-columns] group-hover/row:grid-cols-[1fr] has-[:focus-visible]:grid-cols-[1fr]">
+          <div className="overflow-hidden">
+            <div
+              className={cn(
+                'flex h-full gap-0.5 pr-1 opacity-0 transition-opacity group-hover/row:opacity-100 has-[:focus-visible]:opacity-100',
+                variant === 'card' ? 'items-start pt-1' : 'items-center',
+              )}
+            >
+              {actions}
+            </div>
+          </div>
         </div>
       ) : null}
     </div>

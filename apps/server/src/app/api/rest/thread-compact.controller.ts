@@ -18,11 +18,12 @@ export class ThreadCompactController {
     @Param('threadId') threadId: string,
     @Req() request: CompatRequest,
   ): Response {
-    return streamCompactSse(() =>
+    return streamCompactSse((emit) =>
       this.compactThread.execute({
         orgId,
         threadId,
         signal: request.req.raw.signal,
+        onRun: (runId) => emit('compact.accepted', JSON.stringify({ runId })),
       }),
     );
   }

@@ -50,8 +50,18 @@ export type { CheckOptions } from './src/application/check.ts';
 export { check } from './src/application/check.ts';
 export { serializeToolOutput } from './src/application/clip-tool-output.ts';
 export { estimateTokens } from './src/application/compaction/estimate.ts';
-export type { CompactionPassEvent } from './src/application/compaction/run.ts';
-export { compactForced } from './src/application/compaction/run.ts';
+export type {
+  CompactionCompleted,
+  CompactionOutcome,
+  CompactionRequest,
+  CompactionRequestChannel,
+  CompactionRequestSettle,
+} from './src/application/compaction/request.ts';
+export type {
+  CompactionPassEvent,
+  CompactionSkipReason,
+} from './src/application/compaction/run.ts';
+export { COMPACTION_NOT_CONFIGURED_CODE } from './src/application/compaction/run.ts';
 export type { Plan } from './src/application/compile.ts';
 export { compile } from './src/application/compile.ts';
 export { createRuntime } from './src/application/create-runtime.ts';
@@ -821,6 +831,7 @@ export type {
   RunCreateInput,
   RunLifecycleStatus,
   RunLifecycleStore,
+  RunPurpose,
   RunRecord,
   RunTransitionPatch,
   RunVia,

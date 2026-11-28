@@ -49,10 +49,17 @@ import {
 } from './budget.ts';
 import type { CapabilitySet, CapabilityUniverse } from './capability-set.ts';
 import {
+  type CompactionOutcome,
+  type CompactionRequestChannel,
+  type CompactionRequestSettle,
+  teeCompactionOutcome,
+} from './compaction/request.ts';
+import {
   type CompactionGuard,
   type CompactionPassContext,
   type CompactionPassEvent,
   type CompactionSkipReason,
+  compactForced,
   runForcedCompaction,
   runSummaryPassIfDue,
 } from './compaction/run.ts';
@@ -478,6 +485,9 @@ export interface GraphOpts {
   backgroundReport?: (input: BackgroundReportInput) => void;
   runControl?: RunToolControl;
   steerFor?: (runId: string) => Promise<SteerMessage[]>;
+  compactionRequest?: CompactionRequestChannel;
+  settleCompactionRequest?: CompactionRequestSettle;
+  compactOnly?: boolean;
   placement?: NodePlacement;
   sandbox?: boolean;
   mapContext?: {
@@ -1302,8 +1312,37 @@ export async function* startGraph(opts: GraphOpts): AsyncIterable<Event> {
           }
         }
       }
-      for await (const ev of drainCompaction(runSummaryPassIfDue(compactionCtx(binding)))) {
-        yield ev;
+      const manualRequest = await opts.compactionRequest?.();
+      if (manualRequest) {
+        let outcome: CompactionOutcome = { compacted: false };
+        try {
+          const pass = teeCompactionOutcome(compactForced(compactionCtx(binding)), (captured) => {
+            outcome = captured;
+          });
+          for await (const ev of drainCompaction(pass)) {
+            yield ev;
+          }
+        } catch (err) {
+          const code = (err as { code?: unknown }).code;
+          outcome = {
+            compacted: false,
+            error: err instanceof Error ? err.message : String(err),
+            ...(typeof code === 'string' ? { code } : {}),
+          };
+        }
+        if (opts.signal?.aborted && !outcome.compacted) {
+          outcome = { compacted: false, reason: 'cancelled' };
+        }
+        await opts.settleCompactionRequest?.(manualRequest.requestId, outcome);
+      } else if (!opts.compactOnly) {
+        for await (const ev of drainCompaction(runSummaryPassIfDue(compactionCtx(binding)))) {
+          yield ev;
+        }
+      }
+      if (opts.compactOnly) {
+        const e = await commit('completed', 'run.completed', 'recorded');
+        yield e;
+        break;
       }
       const bindingsToTry = [binding, ...fallbackBindings];
       let lastError: unknown;

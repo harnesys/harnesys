@@ -40,6 +40,16 @@ export function migrateRunsEnvironmentColumn(
   }
 }
 
+export function migrateRunsPurposeColumn(
+  exec: (sql: string) => void,
+  all: (sql: string) => ColumnInfo[],
+): void {
+  const present = new Set(all('PRAGMA table_info(runs)').map((col) => col.name));
+  if (present.size > 0 && !present.has('purpose')) {
+    exec('ALTER TABLE runs ADD COLUMN purpose TEXT');
+  }
+}
+
 export function migratePendingPlacementsEnvironmentColumn(
   exec: (sql: string) => void,
   all: (sql: string) => ColumnInfo[],

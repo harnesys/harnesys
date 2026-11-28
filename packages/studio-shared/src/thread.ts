@@ -157,6 +157,20 @@ export interface StoredMessageResponse {
   threadSeq: number;
 }
 export type AcceptedRunResponse = RunAcceptedResponse | StoredMessageResponse;
+export type CompactThreadSkipReason =
+  | 'invalid-output-reserve'
+  | 'near-threshold'
+  | 'empty-history'
+  | 'resume-pending'
+  | 'run-paused'
+  | 'already-covered'
+  | 'no-cut-plan'
+  | 'hook-blocked'
+  | 'empty-window'
+  | 'breaker-open'
+  | 'rapid-refill'
+  | 'compaction-in-progress'
+  | 'cancelled';
 export type CompactThreadResponse =
   | {
       compacted: true;
@@ -168,16 +182,6 @@ export type CompactThreadResponse =
     }
   | {
       compacted: false;
-      reason?:
-        | 'invalid-output-reserve'
-        | 'empty-history'
-        | 'resume-pending'
-        | 'already-covered'
-        | 'no-cut-plan'
-        | 'hook-blocked'
-        | 'empty-window'
-        | 'breaker-open'
-        | 'rapid-refill'
-        | 'compaction-in-progress'
-        | 'cancelled';
+      reason?: CompactThreadSkipReason;
     };
+export const COMPACT_FAILED_FALLBACK = 'Compact failed';
