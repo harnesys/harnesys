@@ -25,9 +25,9 @@ export function FileCard({
       style={{ marginLeft: depth * 12 }}
       title={name}
     >
-      <span className="flex size-10 shrink-0 items-center justify-center gap-0.5">{leading}</span>
+      <span className="flex size-8 shrink-0 items-center justify-center gap-0.5">{leading}</span>
       <span className="flex min-w-0 flex-1 flex-col gap-0">
-        <span className="truncate font-medium text-foreground text-xs">{name}</span>
+        <span className="truncate font-medium text-foreground text-sm">{name}</span>
         {stat ? <span className="truncate text-muted-foreground text-xs">{stat}</span> : null}
       </span>
     </button>
