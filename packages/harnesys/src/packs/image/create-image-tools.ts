@@ -46,11 +46,18 @@ function selectionOf(selection: ImageModelSelection | undefined): ImageModelSele
     : {};
 }
 
-function sizeErrorHint(err: string, size: string | undefined): string {
+function sizeErrorHint(
+  err: string,
+  size: string | undefined,
+  supportedSizes: readonly string[] | undefined,
+): string {
   if (size === undefined || !/\bsize\b/i.test(err)) {
     return err;
   }
-  return `${err}; size "${size}" was rejected by the provider — omit size entirely to use the model default`;
+  const known = supportedSizes !== undefined && supportedSizes.length > 0;
+  return `${err}; size "${size}" was rejected by the provider${
+    known ? `; supported sizes: ${supportedSizes.join(' | ')}` : ''
+  } — omit size entirely to use the model default`;
 }
 
 export function createImageTools(deps: CreateImageToolsParams): ToolDefinition[] {
@@ -58,10 +65,10 @@ export function createImageTools(deps: CreateImageToolsParams): ToolDefinition[]
     deps.resolveScope(),
     selectionOf(deps.modelSelection),
   );
-  const sizeDescription =
-    supportedSizes === undefined || supportedSizes.length === 0
-      ? 'Optional size as WIDTHxHEIGHT, e.g. 1024x1024 (provider-dependent; an unsupported size fails with the provider error — omit it to use the model default)'
-      : `Optional size, one of: ${supportedSizes.join(' | ')}`;
+  const known = supportedSizes !== undefined && supportedSizes.length > 0;
+  const sizeDescription = known
+    ? `Optional size, one of: ${supportedSizes.join(' | ')}`
+    : 'Optional size as WIDTHxHEIGHT, e.g. 1024x1024 (provider-dependent; an unsupported size fails with the provider error — omit it to use the model default)';
   return [
     tool('image_generate', {
       group: 'image',
@@ -71,7 +78,11 @@ export function createImageTools(deps: CreateImageToolsParams): ToolDefinition[]
         type: 'object',
         properties: {
           prompt: { type: 'string', description: 'Detailed English image prompt' },
-          size: { type: 'string', description: sizeDescription },
+          size: {
+            type: 'string',
+            ...(known ? { enum: [...(supportedSizes ?? [])] } : {}),
+            description: sizeDescription,
+          },
         },
         required: ['prompt'],
       },
@@ -84,7 +95,11 @@ export function createImageTools(deps: CreateImageToolsParams): ToolDefinition[]
             .generate(scope, { ...parsed, ...selectionOf(deps.modelSelection) })
             .catch((err: unknown) => {
               throw new Error(
-                sizeErrorHint(err instanceof Error ? err.message : String(err), parsed.size),
+                sizeErrorHint(
+                  err instanceof Error ? err.message : String(err),
+                  parsed.size,
+                  supportedSizes,
+                ),
               );
             });
           return attachmentToolResultOf(generated, {

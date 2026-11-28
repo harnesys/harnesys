@@ -76,6 +76,19 @@ describe('createImageTools', () => {
       error: string;
     };
     expect(result.error).toContain('omit size entirely to use the model default');
+    expect(result.error).not.toContain('supported sizes:');
+  });
+
+  test('a provider size rejection lists the sizes the port knows', async () => {
+    const port = new FakeImageGenerationPort();
+    port.sizes = ['1024x1024', '1024x1536', '1536x1024', 'auto'];
+    port.failure = new Error("Image size '512x512' is not supported");
+    const tool = createImageTools({ image: port, resolveScope: () => scope })[0];
+    const result = (await tool?.execute({ prompt: 'a cat', size: '512x512' }, ctx)) as {
+      error: string;
+    };
+    expect(result.error).toContain('supported sizes: 1024x1024 | 1024x1536 | 1536x1024 | auto');
+    expect(result.error).toContain('omit size entirely to use the model default');
   });
 
   test('persists the absolute artifact path in an anchored run', async () => {
@@ -127,6 +140,12 @@ describe('createImageTools', () => {
     expect(tool?.input.properties?.size?.description).toBe(
       'Optional size, one of: 1024x1024 | 1024x1536 | 1536x1024 | auto',
     );
+    expect(tool?.input.properties?.size?.enum).toEqual([
+      '1024x1024',
+      '1024x1536',
+      '1536x1024',
+      'auto',
+    ]);
   });
 
   test('size parameter falls back to provider-dependent wording when the port is silent', () => {
@@ -135,5 +154,6 @@ describe('createImageTools', () => {
     expect(tool?.input.properties?.size?.description).toBe(
       'Optional size as WIDTHxHEIGHT, e.g. 1024x1024 (provider-dependent; an unsupported size fails with the provider error — omit it to use the model default)',
     );
+    expect(tool?.input.properties?.size?.enum).toBeUndefined();
   });
 });
