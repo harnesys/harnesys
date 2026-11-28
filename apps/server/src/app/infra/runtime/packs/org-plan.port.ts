@@ -22,14 +22,15 @@ export class OrgPlanPort implements PlanPort {
 
   save(
     scope: CapabilityScope,
-    input: { overview: string; items: PlanSaveItemInput[]; status?: PlanStatus },
+    input: { overview: string; items: PlanSaveItemInput[] },
   ): Promise<PlanSnapshot> {
     const now = new Date().toISOString();
+    const items = input.items.map((item, index) => toPlanItem(item, index));
     const snapshot: PlanSnapshot = {
       id: crypto.randomUUID(),
-      status: input.status ?? 'draft',
+      status: derivePlanStatus(items),
       overview: input.overview,
-      items: input.items.map((item, index) => toPlanItem(item, index)),
+      items,
     };
     const snapshotJson = JSON.stringify(snapshot);
     this.db
@@ -62,17 +63,19 @@ export class OrgPlanPort implements PlanPort {
     if (!target) {
       throw new Error(`plan item ${input.itemId} not found for thread ${scope.threadId}`);
     }
+    const items = current.items.map((item) =>
+      item.id === target.id
+        ? {
+            ...item,
+            status: input.status,
+            resultNote: input.resultNote === undefined ? item.resultNote : input.resultNote,
+          }
+        : item,
+    );
     const next: PlanSnapshot = {
       ...current,
-      items: current.items.map((item) =>
-        item.id === target.id
-          ? {
-              ...item,
-              status: input.status,
-              resultNote: input.resultNote === undefined ? item.resultNote : input.resultNote,
-            }
-          : item,
-      ),
+      items,
+      status: derivePlanStatus(items),
     };
     this.db
       .update(threadPlansTable)
@@ -146,4 +149,14 @@ function toPlanItem(item: PlanSaveItemInput, index: number): PlanItem {
     subagentRole: item.subagentRole ?? null,
     resultNote: null,
   };
+}
+
+export function derivePlanStatus(items: readonly { status: PlanItemStatus }[]): PlanStatus {
+  if (items.length === 0 || items.every((item) => item.status === 'pending')) {
+    return 'draft';
+  }
+  if (items.every((item) => item.status === 'completed' || item.status === 'cancelled')) {
+    return 'completed';
+  }
+  return 'in_progress';
 }

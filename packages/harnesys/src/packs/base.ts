@@ -180,7 +180,8 @@ export const shellCapability = definePack<ShellPackPorts, ShellPackSpec>({
       },
       {
         name: 'terminal_read',
-        description: 'Read session output (non-destructive); optional until-regex (max 30s).',
+        description:
+          'Read session output (non-destructive); until-regex matches the raw PTY stream since `since`, incl. echoed input and ANSI — anchor patterns to output-only text (max 30s).',
       },
       {
         name: 'terminal_kill',

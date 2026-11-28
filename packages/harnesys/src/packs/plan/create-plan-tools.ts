@@ -120,7 +120,7 @@ export function createPlanTools(deps: CreatePlanToolsParams): ToolDefinition[] {
     tool('plan_save', {
       group: 'plan',
       description:
-        'Create or overwrite the execution plan for this thread. One plan per thread: saving again replaces it. Write the plan before starting multi-step work, then track progress with plan_item_update. Call plan_save alone and wait for its result before calling plan_item_update: parallel calls in one batch read a stale plan.',
+        'Create or overwrite the execution plan for this thread. One plan per thread: saving again replaces it. Write the plan before starting multi-step work, then track progress with plan_item_update. Call plan_save alone and wait for its result before calling plan_item_update: parallel calls in one batch read a stale plan. Plan-level status is derived from item states: draft while all items are pending, completed when all are completed or cancelled, in_progress otherwise.',
       input: PLAN_BODY_INPUT,
       execute: async (raw) =>
         runGuard(async () => {
@@ -147,7 +147,7 @@ export function createPlanTools(deps: CreatePlanToolsParams): ToolDefinition[] {
     tool('plan_item_update', {
       group: 'plan',
       description:
-        'Update status of a specific task item in the thread plan. Accepts the id, a unique id prefix (8+ chars), or the order number from plan_get output. Pass the bare id without id: prefix, quotes, or trailing punctuation. Always update status as you progress!',
+        'Update status of a specific task item in the thread plan. Accepts the id, a unique id prefix (8+ chars), or the order number from plan_get output. Pass the bare id without id: prefix, quotes, or trailing punctuation. Always update status as you progress! The returned planStatus is derived from item states: draft while all items are pending, completed when all are completed or cancelled, in_progress otherwise.',
       input: {
         type: 'object',
         properties: {
@@ -218,7 +218,8 @@ export function createPlanTools(deps: CreatePlanToolsParams): ToolDefinition[] {
     }),
     tool('plan_get', {
       group: 'plan',
-      description: 'Get current execution plan and tasks status for this thread.',
+      description:
+        'Get current execution plan and tasks status for this thread. The plan-level status is derived from item states: draft while all items are pending, completed when all are completed or cancelled, in_progress otherwise.',
       input: { type: 'object' },
       execute: async () =>
         runGuard(async () => {

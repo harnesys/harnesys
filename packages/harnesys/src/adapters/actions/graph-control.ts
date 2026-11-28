@@ -55,7 +55,7 @@ function parseMapToolInput(input: unknown): MapToolInput {
   };
 }
 export const MAP_TOOL_DESCRIPTION =
-  "Queue a fan-out over items for the graph control:map node. items is a JSON array (max 32). Optional instruction is a per-item template with $item/$index; it overrides the node default. Optional maxTokensPerItem caps each worker text result. Each item is processed in the map body with $item/$index; results return as Map results in context. Requires a control:map node in this agent's graph — if the graph has none the call fails with that reason (it does not run the fan-out); if the graph has one but the run ends before it drains, a Map results-dropped note is posted. Prefer this for parallel same-graph work.";
+  "Queue a fan-out over items for the graph control:map node. items is a JSON array (max 32). A worker sees only its item text — no thread history, no fan-out goal — so every item must be a self-contained task; put the shared goal and context in instruction. Optional instruction is a per-item template with $item/$index; it overrides the node default. Optional maxTokensPerItem caps each worker text result. Each item is processed in the map body with $item/$index; results return as Map results in context. Requires a control:map node in this agent's graph — if the graph has none the call fails with that reason (it does not run the fan-out); if the graph has one but the run ends before it drains, a Map results-dropped note is posted. Prefer this for parallel same-graph work.";
 
 export function mapTool(): ToolDefinition {
   return tool(MAP_TOOL, {
@@ -67,9 +67,10 @@ export function mapTool(): ToolDefinition {
       properties: {
         items: {
           type: 'array',
-          description: 'Items to map (strings or objects). Max 32.',
+          description:
+            'Items to map (strings or objects). Max 32. Each must be a self-contained task: a worker sees only its item, no thread history or fan-out goal.',
           items: {
-            description: 'Single item to process in the map body: string or object.',
+            description: 'Single self-contained task for one worker: string or object.',
           },
           maxItems: MAP_ITEM_LIMIT,
         },

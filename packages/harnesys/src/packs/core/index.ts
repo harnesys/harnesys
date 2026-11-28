@@ -32,7 +32,7 @@ export const coreCapability = definePack<Record<string, unknown>, Record<string,
       {
         tag: 'core-tools',
         text:
-          'Use map to fan out independent items within this graph. ' +
+          'Use map to fan out independent items within this graph; workers see only their item, so keep items self-contained and shared context in instruction. ' +
           'Use wait for a one-time pause in this run. ' +
           'Use ask_user only when a real user decision or missing information blocks progress.',
       },

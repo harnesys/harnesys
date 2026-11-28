@@ -26,7 +26,6 @@ export interface PlanPort {
     input: {
       overview: string;
       items: PlanSaveItemInput[];
-      status?: PlanStatus;
     },
   ): Promise<PlanSnapshot>;
   updateItem(

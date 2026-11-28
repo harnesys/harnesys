@@ -220,7 +220,7 @@ export function terminalTools(ports: TerminalSessionPorts): ToolDefinition[] {
     tool('terminal_read', {
       group: 'core',
       description:
-        'Read output of a terminal session or background job. Non-destructive and shared: reading does not consume output and may interleave with the user typing in the same session; page with `since` from the previous `nextSince`. Optional `until` regex blocks (max 30s) until output matches, the session exits, or timeout.',
+        'Read output of a terminal session or background job. Non-destructive and shared: reading does not consume output and may interleave with the user typing in the same session; page with `since` from the previous `nextSince`. Optional `until` regex blocks (max 30s) until the raw PTY stream since `since` matches, the session exits, or timeout; the matched buffer includes echoed typed input and ANSI sequences, so anchor patterns to output-only text.',
       operations: ['process'],
       sideEffect: 'read',
       input: {
