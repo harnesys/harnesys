@@ -71,6 +71,7 @@ async function runDelete(
       kind: outcome.kind,
       deleted: outcome.dryRun ? 0 : 1,
       dry_run: outcome.dryRun,
+      ...(outcome.dryRun ? { next: dryRunNext(1) } : {}),
     };
   }
   if (parsed.paths !== undefined) {
@@ -104,7 +105,13 @@ async function deleteBatch(
       failed.push({ path: target, error: failureMessage(error) });
     }
   }
-  return { paths: targets, deleted, failed, dry_run: dryRun };
+  return {
+    paths: targets,
+    deleted,
+    failed,
+    dry_run: dryRun,
+    ...(dryRun ? { next: dryRunNext(targets.length - failed.length) } : {}),
+  };
 }
 
 async function deletePattern(
@@ -116,7 +123,7 @@ async function deletePattern(
 ): Promise<unknown> {
   const matches = await globMatches(ctx, pattern, options, 'edit');
   if (parsed.dry_run !== false) {
-    return { pattern, matches, deleted: 0, dry_run: true };
+    return { pattern, matches, deleted: 0, dry_run: true, next: dryRunNext(matches.length) };
   }
   const failed: DeleteFailure[] = [];
   let deleted = 0;
@@ -157,6 +164,12 @@ async function deleteOneTarget(
     await rm(absolute, { recursive: parsed.recursive === true });
     return { kind, dryRun: false };
   });
+}
+
+function dryRunNext(count: number): string {
+  return count === 0
+    ? 'Dry run — no targets matched; nothing would be deleted.'
+    : `Dry run — nothing was deleted. Re-run with dry_run: false to delete ${count} match${count === 1 ? '' : 'es'}.`;
 }
 
 function deleteTargets(parsed: DeleteFileInput): string | string[] | undefined {

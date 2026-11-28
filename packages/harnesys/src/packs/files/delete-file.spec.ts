@@ -124,11 +124,19 @@ describe('delete_file pattern mode', () => {
       matches: string[];
       deleted: number;
       dry_run: boolean;
+      next: string;
     };
     expect(result.dry_run).toBe(true);
     expect(result.matches).toEqual(['dry/a.log', 'dry/b.log']);
     expect(result.deleted).toBe(0);
+    expect(result.next).toContain('dry_run: false to delete 2 matches');
     expect(existsSync(join(root, 'dry/a.log'))).toBe(true);
+  });
+
+  test('dry-run with no matches says nothing would be deleted', async () => {
+    const def = deleteFileTool();
+    const result = (await def.execute({ pattern: 'none/*.log' }, ctx())) as { next: string };
+    expect(result.next).toContain('no targets matched');
   });
 
   test('dry_run: false deletes matches, skips files without write access', async () => {
