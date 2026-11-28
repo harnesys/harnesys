@@ -265,9 +265,13 @@ export type {
   ParsedCompactionSpec,
 } from './src/domain/compaction.ts';
 export { THRESHOLD_SUMMARY_NAME } from './src/domain/compaction.ts';
-export type { CapabilityMechanism } from './src/domain/driver-capabilities.ts';
+export type {
+  CapabilityMechanism,
+  ImageParameterCapabilities,
+} from './src/domain/driver-capabilities.ts';
 export {
   driverMechanism,
+  imageCapabilities,
   resolveApiBaseUrl,
 } from './src/domain/driver-capabilities.ts';
 export type { Diagnostic } from './src/domain/errors.ts';

@@ -39,6 +39,7 @@ const DEFAULT_RESPONSE_FORMAT: Record<CapabilityMechanism, SpeechResponseFormat 
   sdk: undefined,
   oai: undefined,
   mistral: 'wav',
+  dashscope: undefined,
   none: undefined,
 };
 
@@ -46,6 +47,7 @@ const DEFAULT_VOICE_PARAM: Record<CapabilityMechanism, string> = {
   sdk: 'voice',
   oai: DEFAULT_SPEECH_VOICE_PARAM,
   mistral: 'voice_id',
+  dashscope: DEFAULT_SPEECH_VOICE_PARAM,
   none: DEFAULT_SPEECH_VOICE_PARAM,
 };
 

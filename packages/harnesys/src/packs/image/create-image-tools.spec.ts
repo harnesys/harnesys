@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { FileToolResult } from '../../application/tool-message.ts';
+import type { ImageParameterCapabilities } from '../../domain/driver-capabilities.ts';
 import type { CapabilityScope } from '../../domain/pack.ts';
 import type {
   GeneratedImageArtifact,
@@ -21,10 +22,16 @@ const ctx = {
   agentId: 'agent-1',
 };
 
+const BARE_CAPABILITIES: ImageParameterCapabilities = {
+  sizes: [],
+  negativePrompt: false,
+  seed: false,
+};
+
 class FakeImageGenerationPort extends ImageGenerationPort {
   calls: Array<{ scope: CapabilityScope; request: ImageGenerationRequest }> = [];
   failure?: Error;
-  sizes?: readonly string[];
+  caps: ImageParameterCapabilities = BARE_CAPABILITIES;
 
   async generate(
     scope: CapabilityScope,
@@ -44,8 +51,8 @@ class FakeImageGenerationPort extends ImageGenerationPort {
     };
   }
 
-  supportedSizes(): readonly string[] | undefined {
-    return this.sizes;
+  capabilities(): ImageParameterCapabilities {
+    return this.caps;
   }
 }
 
@@ -81,7 +88,11 @@ describe('createImageTools', () => {
 
   test('a provider size rejection lists the sizes the port knows', async () => {
     const port = new FakeImageGenerationPort();
-    port.sizes = ['1024x1024', '1024x1536', '1536x1024', 'auto'];
+    port.caps = {
+      sizes: ['1024x1024', '1024x1536', '1536x1024', 'auto'],
+      negativePrompt: false,
+      seed: false,
+    };
     port.failure = new Error("Image size '512x512' is not supported");
     const tool = createImageTools({ image: port, resolveScope: () => scope })[0];
     const result = (await tool?.execute({ prompt: 'a cat', size: '512x512' }, ctx)) as {
@@ -135,7 +146,11 @@ describe('createImageTools', () => {
 
   test('size parameter enumerates the sizes the port knows', () => {
     const port = new FakeImageGenerationPort();
-    port.sizes = ['1024x1024', '1024x1536', '1536x1024', 'auto'];
+    port.caps = {
+      sizes: ['1024x1024', '1024x1536', '1536x1024', 'auto'],
+      negativePrompt: false,
+      seed: false,
+    };
     const tool = createImageTools({ image: port, resolveScope: () => scope })[0];
     expect(tool?.input.properties?.size?.description).toBe(
       'Optional size, one of: 1024x1024 | 1024x1536 | 1536x1024 | auto',
@@ -155,5 +170,26 @@ describe('createImageTools', () => {
       'Optional size as WIDTHxHEIGHT, e.g. 1024x1024 (provider-dependent; an unsupported size fails with the provider error — omit it to use the model default)',
     );
     expect(tool?.input.properties?.size?.enum).toBeUndefined();
+  });
+
+  test('mechanism-carried parameters appear in the schema and reach the port', async () => {
+    const port = new FakeImageGenerationPort();
+    port.caps = { sizes: [], negativePrompt: true, seed: true };
+    const tool = createImageTools({ image: port, resolveScope: () => scope })[0];
+    expect(tool?.input.properties?.negativePrompt?.type).toBe('string');
+    expect(tool?.input.properties?.seed?.type).toBe('integer');
+    await tool?.execute({ prompt: 'a cat', negativePrompt: 'blurry', seed: 7 }, ctx);
+    expect(port.calls[0]?.request).toEqual({
+      prompt: 'a cat',
+      negativePrompt: 'blurry',
+      seed: 7,
+    });
+  });
+
+  test('parameters the mechanism does not carry stay out of the schema', () => {
+    const port = new FakeImageGenerationPort();
+    const tool = createImageTools({ image: port, resolveScope: () => scope })[0];
+    expect(tool?.input.properties?.negativePrompt).toBeUndefined();
+    expect(tool?.input.properties?.seed).toBeUndefined();
   });
 });

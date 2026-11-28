@@ -13,6 +13,8 @@ export interface GenerateImageInput {
   model: string;
   prompt: string;
   size?: string;
+  negativePrompt?: string;
+  seed?: number;
 }
 
 @Injectable()
@@ -34,6 +36,11 @@ export class GenerateImageUseCase {
     if (driverMechanism(binding.driver, 'image') === 'none') {
       throw new UnsupportedCapabilityException('image', binding.driver);
     }
-    return this.image.generate(binding, { prompt: input.prompt, size: input.size });
+    return this.image.generate(binding, {
+      prompt: input.prompt,
+      size: input.size,
+      negativePrompt: input.negativePrompt,
+      seed: input.seed,
+    });
   }
 }

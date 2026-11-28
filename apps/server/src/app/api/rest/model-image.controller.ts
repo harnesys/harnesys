@@ -20,6 +20,8 @@ export class ModelImageController {
       model: body.model,
       prompt: body.prompt,
       size: body.size,
+      negativePrompt: body.negativePrompt,
+      seed: body.seed,
     });
   }
 }

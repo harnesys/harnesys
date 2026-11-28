@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { driverMechanism, resolveApiBaseUrl } from './driver-capabilities.ts';
+import { driverMechanism, imageCapabilities, resolveApiBaseUrl } from './driver-capabilities.ts';
 
 describe('driver capabilities', () => {
   test('sdk and oai cells resolve their mechanism', () => {
@@ -17,6 +17,28 @@ describe('driver capabilities', () => {
     expect(driverMechanism('anthropic', 'image')).toBe('none');
     expect(driverMechanism('mistral', 'image')).toBe('none');
     expect(driverMechanism('google', 'image')).toBe('none');
+  });
+
+  test('dashscope image mechanism carries negativePrompt and seed, no pinned sizes', () => {
+    expect(driverMechanism('alibaba', 'image')).toBe('dashscope');
+    expect(imageCapabilities('alibaba', 'qwen-image-3.0-pro')).toEqual({
+      sizes: [],
+      negativePrompt: true,
+      seed: true,
+    });
+  });
+
+  test('image capabilities do not leak provider quirks across mechanisms', () => {
+    expect(imageCapabilities('openai', 'gpt-image-1')).toEqual({
+      sizes: ['1024x1024', '1024x1536', '1536x1024', 'auto'],
+      negativePrompt: false,
+      seed: false,
+    });
+    expect(imageCapabilities('openrouter', 'flux-pro')).toEqual({
+      sizes: [],
+      negativePrompt: false,
+      seed: false,
+    });
   });
 
   test('unknown driver resolves to none', () => {

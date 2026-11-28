@@ -3,12 +3,14 @@ import {
   type GeneratedImageArtifact,
   ImageGenerationPort,
   type ImageGenerationRequest,
+  type ImageParameterCapabilities,
+  imageCapabilities,
   type ThreadAttachmentPort,
 } from 'harnesys';
 import { LlmModelPort, LlmProviderPort } from '../../../domain/provider/llm-provider.port.ts';
 import { createOrgModelsPort } from '../../../domain/provider/org-models.ts';
 import { SecretStorePort } from '../../../domain/secret/secret-store.port.ts';
-import { SdkImageAdapter, supportedImageSizes } from '../../model-execution/sdk-image.adapter.ts';
+import { SdkImageAdapter } from '../../model-execution/sdk-image.adapter.ts';
 
 interface OrgImageGenerationPortDeps {
   orgId: string;
@@ -56,6 +58,8 @@ export class OrgImageGenerationPort extends ImageGenerationPort {
     const result = await new SdkImageAdapter().generate(binding, {
       prompt: request.prompt,
       ...(request.size ? { size: request.size } : {}),
+      ...(request.negativePrompt ? { negativePrompt: request.negativePrompt } : {}),
+      ...(request.seed === undefined ? {} : { seed: request.seed }),
     });
     return this.deps.attachments.put(scope, {
       name: `image-${Date.now()}.${fileExtensionOf(result.mimeType)}`,
@@ -64,10 +68,10 @@ export class OrgImageGenerationPort extends ImageGenerationPort {
     });
   }
 
-  supportedSizes(
+  capabilities(
     scope: CapabilityScope,
     selection?: Pick<ImageGenerationRequest, 'provider' | 'model'>,
-  ): readonly string[] | undefined {
+  ): ImageParameterCapabilities {
     const pinnedProvider = selection?.provider;
     const pinnedModel = selection?.model;
     const target =
@@ -75,13 +79,13 @@ export class OrgImageGenerationPort extends ImageGenerationPort {
         ? { providerName: pinnedProvider, modelName: pinnedModel }
         : this.findImageModel(scope.orgId);
     if (target === undefined) {
-      return undefined;
+      return imageCapabilities('', '');
     }
     const provider = this.deps.providers.findByName(scope.orgId, target.providerName);
     if (provider === undefined) {
-      return undefined;
+      return imageCapabilities('', '');
     }
-    return supportedImageSizes(provider.driver, target.modelName);
+    return imageCapabilities(provider.driver, target.modelName);
   }
 
   private findImageModel(orgId: string): { providerName: string; modelName: string } | undefined {
