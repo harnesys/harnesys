@@ -1,4 +1,4 @@
-import type { WidgetRect, WidgetSource } from '@harnesys/contracts';
+import type { WidgetRect } from '@harnesys/contracts';
 import type { CapabilityScope } from '../../domain/pack.ts';
 import { type ToolDefinition, tool } from '../../ports/tools.ts';
 import type { DashboardsPackPort } from './port.ts';
@@ -30,10 +30,6 @@ interface WidgetUpdateInput extends WidgetIdInput {
 
 interface LayoutMoveInput extends DashboardIdInput {
   items: { widgetId: string; rect: WidgetRect }[];
-}
-
-interface SourceTestInput {
-  source: WidgetSource;
 }
 
 interface WidgetValidateInput {
@@ -152,7 +148,7 @@ export function createWidgetTools(deps: WidgetToolsDeps): ToolDefinition[] {
     tool('dashboard_widgets_test', {
       group: 'dashboards',
       description:
-        'Dry-run a widget source definition without persisting it. External sources: validates the url, headers and vault secret resolution and returns the fetched payload. orgApi sources: the server cannot fetch them (the dashboard client runs them with the viewer session), so this statically checks the path against the org guard and the served catalog — ok:true returns { validated, catalogId }; compare paths with dashboard_catalog_get. Use before embedding the source into a widget doc.',
+        'Dry-run a widget source definition without persisting it. External sources: validates the url, headers and vault secret resolution and returns the fetched payload. orgApi sources: the server cannot fetch them (the dashboard client runs them with the viewer session), so this statically checks the path against the org guard and the served catalog — ok:true returns { validated, catalogId }; compare paths with dashboard_catalog_get. On an orgApi source `method` may be omitted: the test applies the contract default GET, exactly like create. Use before embedding the source into a widget doc.',
       input: {
         type: 'object',
         properties: {
@@ -164,7 +160,7 @@ export function createWidgetTools(deps: WidgetToolsDeps): ToolDefinition[] {
       sideEffect: 'read',
       execute: async (raw) => {
         const scope = deps.resolveScope();
-        const { source } = raw as SourceTestInput;
+        const { source } = raw as { source: unknown };
         return await deps.dashboards.testSource(scope.orgId, source);
       },
     }),

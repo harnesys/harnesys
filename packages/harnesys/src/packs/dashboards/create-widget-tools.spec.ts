@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { WidgetSourceTestBodySchema } from '@harnesys/contracts';
 import { validateToolInput } from '../../application/tool-registry.ts';
 import type { CapabilityScope } from '../../domain/pack.ts';
 import type { ToolContext, ToolDefinition } from '../../ports/tools.ts';
@@ -111,5 +112,41 @@ describe('dashboard_widgets_validate tool input', () => {
         doc: validDoc(),
       }).ok,
     ).toBe(true);
+  });
+});
+
+function methodlessOrgApiSource(): Record<string, unknown> {
+  return { kind: 'orgApi', id: 'approvals', path: '/orgs/acme/approvals' };
+}
+
+describe('dashboard_widgets_test source contract seam', () => {
+  test('the tool input accepts a method-less orgApi source without pre-rejection', () => {
+    const testTool = named('dashboard_widgets_test');
+    expect(validateToolInput(testTool.input, { source: methodlessOrgApiSource() }).ok).toBe(true);
+  });
+
+  test('a method-less orgApi source is forwarded untouched and the entry schema tests it as GET', async () => {
+    const forwarded: unknown[] = [];
+    const def = createWidgetTools({
+      dashboards: {
+        testSource: async (_orgId: string, source: unknown) => {
+          forwarded.push(source);
+          return { ok: true };
+        },
+      } as DashboardsPackPort,
+      resolveScope: scope,
+    }).find((item) => item.name === 'dashboard_widgets_test');
+    if (def === undefined) {
+      throw new Error('dashboard_widgets_test tool missing');
+    }
+    await def.execute({ source: methodlessOrgApiSource() }, ctx);
+    expect(forwarded.length).toBe(1);
+    expect(forwarded[0]).toEqual(methodlessOrgApiSource());
+    const withoutMethod = WidgetSourceTestBodySchema.parse({ source: forwarded[0] });
+    const withGet = WidgetSourceTestBodySchema.parse({
+      source: { ...methodlessOrgApiSource(), method: 'GET' },
+    });
+    expect(withoutMethod.source.method).toBe('GET');
+    expect(withoutMethod).toEqual(withGet);
   });
 });

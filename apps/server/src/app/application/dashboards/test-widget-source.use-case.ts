@@ -1,12 +1,17 @@
 import { Injectable } from '@harnesys/brix';
-import type { WidgetSource, WidgetSourceTestBody } from '@harnesys/contracts';
-import { dashboardCatalogResponse, parseOrgApiPathShape } from '@harnesys/contracts';
+import type { WidgetSource } from '@harnesys/contracts';
+import {
+  dashboardCatalogResponse,
+  parseOrgApiPathShape,
+  WidgetSourceTestBodySchema,
+  zodIssues,
+} from '@harnesys/contracts';
 import type { SourceRunResult } from '../../domain/dashboards/source-runner.port.ts';
 import { SourceRunnerPort } from '../../domain/dashboards/source-runner.port.ts';
 
 export interface TestWidgetSourceRequest {
   orgId: string;
-  body: WidgetSourceTestBody;
+  body: unknown;
 }
 
 @Injectable()
@@ -14,7 +19,16 @@ export class TestWidgetSourceUseCase {
   constructor(private readonly runner: SourceRunnerPort) {}
 
   execute(request: TestWidgetSourceRequest): Promise<SourceRunResult> {
-    const { source } = request.body;
+    const parsed = WidgetSourceTestBodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      return Promise.resolve({
+        ok: false,
+        error: `invalid widget source — ${zodIssues(parsed.error, '')
+          .map((issue) => `${issue.path}: ${issue.message}`)
+          .join('; ')}`,
+      });
+    }
+    const { source } = parsed.data;
     if (source.kind === 'orgApi') {
       return Promise.resolve(validateOrgApiSource(source));
     }

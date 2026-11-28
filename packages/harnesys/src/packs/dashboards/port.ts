@@ -4,7 +4,6 @@ import type {
   UpdateLayoutBody,
   WidgetDoc,
   WidgetRect,
-  WidgetSource,
 } from '@harnesys/contracts';
 
 export interface WidgetSourceTestResult {
@@ -39,5 +38,5 @@ export interface DashboardsPackPort {
   deleteWidget(orgId: string, dashboardId: string, widgetId: string): Promise<void>;
   updateLayout(orgId: string, dashboardId: string, body: UpdateLayoutBody): Promise<void>;
   activateWidget(orgId: string, dashboardId: string, widgetId: string): Promise<void>;
-  testSource(orgId: string, source: WidgetSource): Promise<WidgetSourceTestResult>;
+  testSource(orgId: string, source: unknown): Promise<WidgetSourceTestResult>;
 }

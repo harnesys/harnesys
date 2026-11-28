@@ -7,7 +7,6 @@ import type {
   UpsertWidgetBody,
   WidgetDoc,
   WidgetRect,
-  WidgetSource,
 } from '@harnesys/contracts';
 import type { DashboardsPackPort, WidgetSourceTestResult } from 'harnesys';
 import type { OrgDashboardsDeps } from '../../../application/dashboards/dashboard-tools.holder.ts';
@@ -84,7 +83,7 @@ export class OrgDashboardsPackPort implements DashboardsPackPort {
     await this.deps.activateWidget.execute({ orgId, dashboardId, widgetId });
   }
 
-  async testSource(orgId: string, source: WidgetSource): Promise<WidgetSourceTestResult> {
+  async testSource(orgId: string, source: unknown): Promise<WidgetSourceTestResult> {
     const result: SourceRunResult = await this.deps.testSource.execute({
       orgId,
       body: { source },
