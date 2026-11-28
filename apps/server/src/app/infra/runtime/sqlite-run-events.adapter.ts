@@ -12,6 +12,7 @@ import { runEventsTable, runsTable } from '../org-sqlite/schema/index.ts';
 import { appendOneEvent, joinedRows, rowsToEvents } from './run-events-append.ts';
 import { stampFinalAnswer } from './run-events-final-answer.ts';
 import {
+  removeThreadEventRange,
   removeThreadEventRow,
   rowToEvent,
   truncateThreadEvents,
@@ -237,6 +238,34 @@ export class SqliteRunEventStore implements RunEventStore {
             const result = removeThreadEventRow(tx as OrgSqliteDb, threadId, threadSeq);
             if (result.runDeleted && result.removed?.runId) {
               this.seqByRun.delete(result.removed.runId);
+            }
+            return result.removed;
+          },
+          { behavior: 'immediate' },
+        ),
+      );
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  }
+
+  removeEventRange(
+    threadId: string,
+    fromThreadSeq: number,
+    toThreadSeq: number,
+  ): Promise<SessionEvent | null> {
+    try {
+      return Promise.resolve(
+        this.db.transaction(
+          (tx): SessionEvent | null => {
+            const result = removeThreadEventRange(
+              tx as OrgSqliteDb,
+              threadId,
+              fromThreadSeq,
+              toThreadSeq,
+            );
+            for (const runId of result.removedRunIds) {
+              this.seqByRun.delete(runId);
             }
             return result.removed;
           },

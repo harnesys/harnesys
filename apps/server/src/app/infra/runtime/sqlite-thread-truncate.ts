@@ -1,4 +1,4 @@
-import { and, eq, gte } from 'drizzle-orm';
+import { and, eq, gte, lte } from 'drizzle-orm';
 import { codedRunError, type SessionEvent, type TruncateThreadResult } from 'harnesys';
 import type { OrgSqliteDb } from '../org-sqlite/org-sqlite-session.ts';
 import {
@@ -111,6 +111,48 @@ export function removeThreadEventRow(
     .values({ threadId, fromThreadSeq: threadSeq, toThreadSeq: threadSeq, deletedAt: Date.now() })
     .run();
   return { removed, runDeleted: deleted };
+}
+
+export function removeThreadEventRange(
+  tx: OrgSqliteDb,
+  threadId: string,
+  fromThreadSeq: number,
+  toThreadSeq: number,
+): { removed: SessionEvent | null; removedRunIds: string[] } {
+  const rows = tx
+    .select()
+    .from(runEventsTable)
+    .where(
+      and(
+        eq(runEventsTable.threadId, threadId),
+        gte(runEventsTable.threadSeq, fromThreadSeq),
+        lte(runEventsTable.threadSeq, toThreadSeq),
+      ),
+    )
+    .all();
+  if (rows.length === 0) {
+    return { removed: null, removedRunIds: [] };
+  }
+  const cutoffRow = rows.find((row) => row.threadSeq === toThreadSeq) ?? rows[rows.length - 1];
+  const removed = cutoffRow ? rowToEvent(cutoffRow) : null;
+  for (const row of rows) {
+    tx.delete(runEventsTable)
+      .where(
+        and(eq(runEventsTable.threadId, threadId), eq(runEventsTable.threadSeq, row.threadSeq)),
+      )
+      .run();
+  }
+  const conversational = rows.filter((row) => row.conversational === 1).length;
+  bumpConversationCount(tx, threadId, -conversational);
+  const runIds = new Set(
+    rows.map((row) => row.runId).filter((runId): runId is string => runId !== null),
+  );
+  const removedRunIds = deleteEmptiedRuns(tx, runIds);
+  clearThreadLastErrorForRuns(tx, threadId, runIds);
+  tx.insert(threadLogDeletionsTable)
+    .values({ threadId, fromThreadSeq, toThreadSeq, deletedAt: Date.now() })
+    .run();
+  return { removed, removedRunIds };
 }
 
 function deleteEmptiedRuns(tx: OrgSqliteDb, runIds: Set<string>): string[] {

@@ -107,6 +107,9 @@ export class FakeStore implements RunEventStore {
   removeEvent(): Promise<SessionEvent | null> {
     return Promise.reject(new Error('not used'));
   }
+  removeEventRange(): Promise<SessionEvent | null> {
+    return Promise.reject(new Error('not used'));
+  }
 }
 
 export class FakeExecutor extends LocalExecutorPort {

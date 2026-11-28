@@ -34,17 +34,36 @@ export async function undoThreadCompaction(
 ): Promise<SessionEvent> {
   await cancelActiveForTruncate(deps, threadId);
   const events = await deps.events.listByThread(threadId);
-  let target: SessionEvent | undefined;
+  let anchorSeq: number | undefined;
+  let anchorId: string | undefined;
   for (let index = events.length - 1; index >= 0; index--) {
-    if (events[index]?.type === 'compaction') {
-      target = events[index];
+    const event = events[index];
+    if (event?.type === 'compaction' && typeof event.threadSeq === 'number') {
+      anchorSeq = event.threadSeq;
+      anchorId = event.id;
       break;
     }
   }
-  if (!target || typeof target.threadSeq !== 'number') {
+  if (anchorSeq === undefined || anchorId === undefined) {
     throw new ThreadValidationException('no compaction to undo');
   }
-  return removeThreadHistoryEvent(deps, threadId, target.threadSeq);
+  let fromSeq = anchorSeq;
+  for (const event of events) {
+    if (
+      event.type === 'compaction.progress' &&
+      event.id === anchorId &&
+      typeof event.threadSeq === 'number' &&
+      event.threadSeq < fromSeq
+    ) {
+      fromSeq = event.threadSeq;
+    }
+  }
+  const removed = await deps.events.removeEventRange(threadId, fromSeq, anchorSeq);
+  if (!removed) {
+    throw new ThreadValidationException(`event not found: ${threadId}:${anchorSeq}`);
+  }
+  forgetThreadSessions(deps.sessions, threadId);
+  return removed;
 }
 
 export async function removeThreadHistoryEvent(

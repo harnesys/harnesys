@@ -119,6 +119,9 @@ class FakeEvents implements RunEventStore {
   removeEvent(): Promise<never> {
     throw new Error('not used');
   }
+  removeEventRange(): Promise<never> {
+    throw new Error('not used');
+  }
 
   next(): number {
     throw new Error('not used');

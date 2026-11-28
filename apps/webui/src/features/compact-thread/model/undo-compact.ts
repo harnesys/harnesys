@@ -1,5 +1,6 @@
 import { useSessionStore } from '@/entities/session';
 import { toClientThread, useThreadStore } from '@/entities/thread';
+import { refreshThread } from '@/features/desk/model/refresh-thread';
 import { toStudioSummary, undoThreadCompact } from '@/shared/api';
 
 export interface UndoCompactOptions {
@@ -19,6 +20,7 @@ export async function undoCompact(options: UndoCompactOptions): Promise<void> {
     session.applyDeletions(threadId, [
       { from: response.removedThreadSeq, to: response.removedThreadSeq },
     ]);
+    await refreshThread(threadId, { force: true });
     options.onDone?.();
   } catch (error) {
     options.onError?.(error);

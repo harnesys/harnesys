@@ -93,6 +93,9 @@ class StubEvents implements RunEventStore {
   async removeEvent(): Promise<SessionEvent | null> {
     return null;
   }
+  async removeEventRange(): Promise<SessionEvent | null> {
+    return null;
+  }
 }
 
 function threadRecord(): ThreadRecord {

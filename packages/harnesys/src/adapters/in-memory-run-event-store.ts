@@ -190,6 +190,29 @@ export class InMemoryRunEventStore implements RunEventStore {
     }
     return Promise.resolve(deleted ? { ...deleted } : null);
   }
+  async removeEventRange(
+    threadId: string,
+    fromThreadSeq: number,
+    toThreadSeq: number,
+  ): Promise<SessionEvent | null> {
+    const seqs = this.insertion
+      .filter(
+        (entry) =>
+          entry.threadId === threadId &&
+          threadSeqOf(entry.event) >= fromThreadSeq &&
+          threadSeqOf(entry.event) <= toThreadSeq,
+      )
+      .map((entry) => threadSeqOf(entry.event))
+      .sort((a, b) => b - a);
+    let cutoff: SessionEvent | null = null;
+    for (const seq of seqs) {
+      const removed = await this.removeEvent(threadId, seq);
+      if (seq === toThreadSeq && removed) {
+        cutoff = removed;
+      }
+    }
+    return cutoff;
+  }
   dropEmptiedThreadRuns(threadId: string): string[] {
     const removed: string[] = [];
     if (!this.runs) {
