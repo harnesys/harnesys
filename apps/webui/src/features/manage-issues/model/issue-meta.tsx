@@ -1,4 +1,5 @@
 import type { IssueDependencyType, IssueType } from '@harnesys/studio-shared';
+import type { LucideIcon } from 'lucide-react';
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -15,34 +16,24 @@ import {
   TrendingUpIcon,
 } from 'lucide-react';
 import { isDateOnlyValue } from '@/shared/lib/time-zone';
+import { cn } from '@/shared/lib/utils';
 
 interface PriorityMeta {
   label: string;
   dot: string;
+  text: string;
   icon: React.ReactNode;
 }
 
+function priorityEntry(label: string, dot: string, text: string, Icon: LucideIcon): PriorityMeta {
+  return { label, dot, text, icon: <Icon className={cn('size-3.5', text)} /> };
+}
+
 export const ISSUE_PRIORITY_META: Record<number, PriorityMeta> = {
-  1: {
-    label: 'Critical',
-    dot: 'bg-destructive',
-    icon: <FlameIcon className="size-3.5 text-destructive" />,
-  },
-  2: {
-    label: 'High',
-    dot: 'bg-destructive/70',
-    icon: <ArrowUpIcon className="size-3.5 text-destructive" />,
-  },
-  3: {
-    label: 'Medium',
-    dot: 'bg-status-warn',
-    icon: <MinusIcon className="size-3.5 text-status-warn" />,
-  },
-  4: {
-    label: 'Low',
-    dot: 'bg-status-ok',
-    icon: <ArrowDownIcon className="size-3.5 text-status-ok" />,
-  },
+  1: priorityEntry('Critical', 'bg-destructive', 'text-destructive', FlameIcon),
+  2: priorityEntry('High', 'bg-destructive/70', 'text-destructive/70', ArrowUpIcon),
+  3: priorityEntry('Medium', 'bg-status-warn', 'text-status-warn', MinusIcon),
+  4: priorityEntry('Low', 'bg-status-ok', 'text-status-ok', ArrowDownIcon),
 };
 
 import type { IssuePriority } from '@harnesys/studio-shared';

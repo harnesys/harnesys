@@ -2,12 +2,14 @@ import type { BoardStatus, IssueLabelRecord, IssueRecord } from '@harnesys/studi
 import {
   CalendarIcon,
   CircleSlashIcon,
+  FlagIcon,
   FolderIcon,
   MessageSquareIcon,
-  MoreHorizontalIcon,
   PaperclipIcon,
   SquareKanbanIcon,
+  Trash2Icon,
 } from 'lucide-react';
+import { useState } from 'react';
 import type { Agent } from '@/entities/agent';
 import { AgentRecordAvatar } from '@/entities/agent';
 import { useSessionStore } from '@/entities/session';
@@ -17,16 +19,7 @@ import { formatShortDate } from '@/shared/lib/format-clock';
 import { cn } from '@/shared/lib/utils';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from '@/shared/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { issueCode, statusOf } from '../model/board-columns';
 import { confirmDeleteIssue } from '../model/issue-dialogs';
 import { useIssueDrawerStore } from '../model/issue-drawer.store';
@@ -212,8 +205,26 @@ export function IssueCard({
           </span>
         </span>
       </button>
-      <span className="absolute top-1.5 right-1.5 z-10 flex items-center gap-1.5 opacity-0 transition-opacity group-focus-within/card:opacity-100 group-hover/card:opacity-100 has-[[data-open]]:opacity-100">
-        <CardMenu issue={issue} orgId={orgId} />
+      <span className="absolute top-1.5 right-1.5 z-10 flex items-center gap-0.5 opacity-0 transition-opacity group-focus-within/card:opacity-100 group-hover/card:opacity-100 has-[[data-open]]:opacity-100">
+        <PriorityQuickPick issue={issue} orgId={orgId} />
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          className="text-muted-foreground hover:text-destructive"
+          title="Delete issue"
+          data-testid={`issue-card-delete-${issue.id}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            void confirmDeleteIssue(issue).then((confirmed) => {
+              if (confirmed) {
+                void deleteIssue(orgId, issue.id);
+              }
+            });
+          }}
+        >
+          <Trash2Icon className="size-3.5" />
+          <span className="sr-only">Delete issue</span>
+        </Button>
       </span>
     </li>
   );
@@ -233,58 +244,54 @@ function AssigneeMark({ assignee }: { assignee: Agent | null }) {
   );
 }
 
-function CardMenu({ issue, orgId }: { issue: IssueRecord; orgId: string }) {
+function PriorityQuickPick({ issue, orgId }: { issue: IssueRecord; orgId: string }) {
+  const [open, setOpen] = useState(false);
+  const priority = priorityMeta(issue.priority);
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
         render={
           <Button
             variant="ghost"
             size="icon-xs"
             className="text-muted-foreground hover:text-foreground"
+            title={`Priority: ${priority.label}`}
+            data-testid={`issue-card-priority-${issue.id}`}
           />
         }
         onClick={(event) => event.stopPropagation()}
       >
-        <MoreHorizontalIcon className="size-3.5" />
-        <span className="sr-only">Issue actions</span>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger className="text-xs">Priority</DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            {ISSUE_PRIORITY_OPTIONS.map((value) => {
-              const meta = priorityMeta(value);
-              return (
-                <DropdownMenuItem
-                  key={value}
-                  className="flex items-center gap-2 text-xs"
-                  onClick={() => {
-                    void setIssuePriority(orgId, issue.id, value);
-                  }}
-                >
-                  {meta.icon}
-                  {meta.label}
-                </DropdownMenuItem>
-              );
-            })}
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          variant="destructive"
-          className="text-xs"
-          onClick={() => {
-            void confirmDeleteIssue(issue).then((confirmed) => {
-              if (confirmed) {
-                void deleteIssue(orgId, issue.id);
-              }
-            });
-          }}
-        >
-          Delete
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <FlagIcon className={cn('size-3.5', priority.text)} />
+        <span className="sr-only">Change priority</span>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        className="w-44 space-y-0.5"
+        onClick={(event) => event.stopPropagation()}
+      >
+        {ISSUE_PRIORITY_OPTIONS.map((value) => {
+          const meta = priorityMeta(value);
+          return (
+            <Button
+              key={value}
+              type="button"
+              variant="ghost"
+              size="sm"
+              className={cn(
+                'w-full justify-start gap-2 font-normal text-xs',
+                issue.priority === value && 'bg-accent text-foreground',
+              )}
+              onClick={() => {
+                setOpen(false);
+                void setIssuePriority(orgId, issue.id, value);
+              }}
+            >
+              {meta.icon}
+              {meta.label}
+            </Button>
+          );
+        })}
+      </PopoverContent>
+    </Popover>
   );
 }
