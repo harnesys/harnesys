@@ -11,18 +11,14 @@ const ONE_SHOT_DESCRIPTION =
 export const BROWSER_FETCH_META_DESCRIPTION =
   'One-shot page scrape to markdown without a browser session; requires an engine with a one-shot markdown dump (obscura, lightpanda — not system browsers such as chrome or chromium: use the browser tool there); reports bytes and an empty-body note on unreadable pages.';
 
-export function browserFetchDescription(engineId: string, markdownDump: boolean): string {
-  if (markdownDump) {
-    return ONE_SHOT_DESCRIPTION;
-  }
-  return `browser_fetch is not available on engine ${engineId}: it has no one-shot markdown dump, so one-shot scraping without a browser session is impossible. Use the browser tool to open the page and read it.`;
+export function supportsOneShotFetch(runtime: BrowserEngineRuntime): boolean {
+  return runtime.spec.capabilities.oneShotFetch === true;
 }
 
 export function browserFetchTool(runtime: BrowserEngineRuntime): ToolDefinition {
-  const markdownDump = runtime.spec.capabilities.oneShotFetch === true;
   return tool('browser_fetch', {
     group: 'browser',
-    description: browserFetchDescription(runtime.engineId, markdownDump),
+    description: ONE_SHOT_DESCRIPTION,
     operations: ['network'],
     sideEffect: 'read',
     input: {
@@ -36,15 +32,9 @@ export function browserFetchTool(runtime: BrowserEngineRuntime): ToolDefinition 
     async execute(raw) {
       const input = (raw ?? {}) as { url?: string; max_bytes?: number };
       const url = String(input.url ?? '');
-      if (!markdownDump) {
-        throw new Error(
-          `engine ${runtime.engineId} has no one-shot fetch (no markdown dump): use the browser tool to open and read this page`,
-        );
-      }
       const baseArgs = buildFetchArgs(runtime, url, input.max_bytes);
       const attempt = await runFetch(runtime, baseArgs);
-      const canWaitForIdle =
-        runtime.spec.capabilities.oneShotFetch === true && runtime.engineId !== 'lightpanda';
+      const canWaitForIdle = runtime.engineId !== 'lightpanda';
       const shouldRetry = attempt.code === 0 && attempt.stdout.trim() === '' && canWaitForIdle;
       const retry = shouldRetry
         ? await runFetch(runtime, [...baseArgs, '--wait-until', 'networkidle0'])

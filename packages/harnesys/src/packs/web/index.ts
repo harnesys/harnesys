@@ -1,5 +1,9 @@
 import { definePack } from '../../domain/pack.ts';
-import { BROWSER_FETCH_META_DESCRIPTION, browserFetchTool } from './browser/browser-fetch-tool.ts';
+import {
+  BROWSER_FETCH_META_DESCRIPTION,
+  browserFetchTool,
+  supportsOneShotFetch,
+} from './browser/browser-fetch-tool.ts';
 import {
   agentBrowserResolvedPath,
   BrowserEngineMissingError,
@@ -193,7 +197,11 @@ export const webCapability = definePack<WebPackPorts, WebPackSpec>({
       };
     }
     return {
-      tools: [...tools, browserFetchTool(runtime), ...browserSessionTools(runtime)],
+      tools: [
+        ...tools,
+        ...(supportsOneShotFetch(runtime) ? [browserFetchTool(runtime)] : []),
+        ...browserSessionTools(runtime),
+      ],
     };
   },
 });

@@ -17,6 +17,7 @@ import {
   assertBrowserCommandAllowed,
   hardenedActionPolicyPath,
 } from './browser-command-allowlist.ts';
+import { supportsOneShotFetch } from './browser-fetch-tool.ts';
 import { credentialedSessionOf, releaseCredentialedSession } from './browser-session-registry.ts';
 import { type EngineSpec, engineSpecOf } from './engine-catalog.ts';
 import { releaseEngineSidecar } from './engine-sidecar.ts';
@@ -192,14 +193,17 @@ async function cliRun(args: string[], runtime: BrowserEngineRuntime): Promise<un
   return { output: result.output, engine: runtime.engineId };
 }
 
-const BROWSER_DESCRIPTION_FULL =
-  'Full agent-browser CLI surface (command, args). KEY: commands are version-matched to the installed CLI — do NOT guess. ARGS CONTRACT: one token per element, never a shell line, never repeat the command word — click → args:["@e129"], fill → args:["@e130","Test User"], press → args:["Enter"], open → args:["https://example.com"], tab → args:["new","https://example.com"] or args:["1"] (positional tab index 1,2,... works, as does tab close 2). Output files: relative screenshot/pdf paths are redirected to ~/.harnesys/browser-artifacts/<session> (auto-deleted after 7 days); pass an absolute path to keep a file elsewhere. Load full reference with: browser { command: "skills", args: ["get", "core", "--full"] }. Quick list: skills list. The CLI does NOT accept "help" as a command (use skills get core). Base loop: open <url> → snapshot (accessibility tree with @eN refs) → click @eN / fill @eN / type @eN / press <key> → get title/text/url → close (stops page session). Waiting: prefer wait 1500 / wait @eN / wait --text "..." over repeated snapshots when the page needs time. Other working commands: snapshot, click, dblclick, fill, type, press, get, eval, screenshot, pdf, read [url] (fetch agent-readable text without a session; for a markdown scrape prefer browser_fetch), tab, scroll, hover, select, upload, download, wait, navigate, back, forward. Always call browser_close when done; engine sidecar releases after timeout (10 min) otherwise.';
+const SCRAPE_HINT = '; for a markdown scrape prefer browser_fetch';
 
 const BROWSER_DESCRIPTION_HARDENED =
   'Credentialed browser (restricted). Allowed commands: open, snapshot, click, dblclick, type, fill, press, hover, focus, select, check, uncheck, scroll, scrollintoview, wait, back, forward, reload, tab, get title|text|url|count, is visible|enabled|checked, screenshot, close. eval, cookies, storage, state, har, network, upload, download, auth, flow, set and batch are unavailable by design (the session holds a live login). Call browser_login first for an authenticated site. Traffic is limited to the hosts of that credential; a host blocked by the egress proxy fails the command. ARGS CONTRACT: one token per element, never a shell line. Base loop: open <url> → snapshot → click @eN / fill @eN → get text → close.';
 
 function browserDescription(runtime: BrowserEngineRuntime): string {
-  return runtime.hardened ? BROWSER_DESCRIPTION_HARDENED : BROWSER_DESCRIPTION_FULL;
+  if (runtime.hardened) {
+    return BROWSER_DESCRIPTION_HARDENED;
+  }
+  const hint = supportsOneShotFetch(runtime) ? SCRAPE_HINT : '';
+  return `Full agent-browser CLI surface (command, args). KEY: commands are version-matched to the installed CLI — do NOT guess. ARGS CONTRACT: one token per element, never a shell line, never repeat the command word — click → args:["@e129"], fill → args:["@e130","Test User"], press → args:["Enter"], open → args:["https://example.com"], tab → args:["new","https://example.com"] or args:["1"] (positional tab index 1,2,... works, as does tab close 2). Output files: relative screenshot/pdf paths are redirected to ~/.harnesys/browser-artifacts/<session> (auto-deleted after 7 days); pass an absolute path to keep a file elsewhere. Load full reference with: browser { command: "skills", args: ["get", "core", "--full"] }. Quick list: skills list. The CLI does NOT accept "help" as a command (use skills get core). Base loop: open <url> → snapshot (accessibility tree with @eN refs) → click @eN / fill @eN / type @eN / press <key> → get title/text/url → close (stops page session). Waiting: prefer wait 1500 / wait @eN / wait --text "..." over repeated snapshots when the page needs time. Other working commands: snapshot, click, dblclick, fill, type, press, get, eval, screenshot, pdf, read [url] (fetch agent-readable text without a session${hint}), tab, scroll, hover, select, upload, download, wait, navigate, back, forward. Always call browser_close when done; engine sidecar releases after timeout (10 min) otherwise.`;
 }
 
 export function browserSessionTools(runtime: BrowserEngineRuntime): ToolDefinition[] {
