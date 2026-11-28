@@ -31,25 +31,32 @@ const NOT_CONFIGURED: KnowledgeToolError = {
   message:
     'no knowledge source is shared with this run. Steps for the user: open the Sources page → add the documents (repository or folder) → share the source with this agent (agent settings → Sources) → in Sources → the source → enable indexing (pick paths or "index entire source") → run reindex. knowledge_search answers once the first chunk is indexed; report these steps instead of retrying.',
 };
-function sourceNotShared(sourceId: string): KnowledgeToolError {
+function sourceRef(sourceId: string, names: Record<string, string>): string {
+  const name = names[sourceId];
+  return name === undefined ? `"${sourceId}"` : `"${name}" (${sourceId})`;
+}
+function sourceNotShared(sourceId: string, names: Record<string, string>): KnowledgeToolError {
   return {
     error: true,
     code: 'KNOWLEDGE_SOURCE_NOT_SHARED',
-    message: `source "${sourceId}" is not among the knowledge sources shared with this run. Ask the user to share it: Sources page → ${sourceId} → share to this agent, then index it (select paths or "index entire source").`,
+    message: `source ${sourceRef(sourceId, names)} is not among the knowledge sources shared with this run. Ask the user to share it: Sources page → ${sourceId} → share to this agent, then index it (select paths or "index entire source").`,
   };
 }
-function sourceNotIndexed(sourceId: string): KnowledgeToolError {
+function sourceNotIndexed(sourceId: string, names: Record<string, string>): KnowledgeToolError {
   return {
     error: true,
     code: 'KNOWLEDGE_SOURCE_NOT_INDEXED',
-    message: `source "${sourceId}" is shared with this run but nothing is indexed in it yet, so a search cannot match anything. Ask the user: Sources page → ${sourceId} → add paths to the knowledge index (or switch it to "index entire source") → start reindex; then search again.`,
+    message: `source ${sourceRef(sourceId, names)} is shared with this run but nothing is indexed in it yet, so a search cannot match anything. Ask the user: Sources page → ${sourceId} → add paths to the knowledge index (or switch it to "index entire source") → start reindex; then search again.`,
   };
 }
-function noSharedSourceIndexed(sourceIds: readonly string[]): KnowledgeToolError {
+function noSharedSourceIndexed(
+  sourceIds: readonly string[],
+  names: Record<string, string>,
+): KnowledgeToolError {
   return {
     error: true,
     code: 'KNOWLEDGE_SOURCE_NOT_INDEXED',
-    message: `none of the knowledge sources shared with this run (${sourceIds.join(', ')}) has an indexed corpus yet, so a search cannot match anything. Ask the user: Sources page → pick a source → add paths to the knowledge index (or "index entire source") → start reindex; then search again.`,
+    message: `none of the knowledge sources shared with this run (${sourceIds.map((id) => sourceRef(id, names)).join(', ')}) has an indexed corpus yet, so a search cannot match anything. Ask the user: Sources page → pick a source → add paths to the knowledge index (or "index entire source") → start reindex; then search again.`,
   };
 }
 
@@ -78,17 +85,23 @@ export function createKnowledgeTools(params: CreateKnowledgeToolsParams): ToolDe
     wanted: string,
   ): Promise<{ sourceId: string } | { error: KnowledgeToolError }> {
     if (!shared.includes(wanted)) {
-      return { error: sourceNotShared(wanted) };
+      return { error: sourceNotShared(wanted, await port.sourceNames([wanted])) };
     }
     const indexed = await port.indexedSources([wanted]);
-    return indexed.includes(wanted) ? { sourceId: wanted } : { error: sourceNotIndexed(wanted) };
+    if (indexed.includes(wanted)) {
+      return { sourceId: wanted };
+    }
+    return { error: sourceNotIndexed(wanted, await port.sourceNames([wanted])) };
   }
   async function pickFirstIndexed(
     shared: readonly string[],
   ): Promise<{ sourceId: string } | { error: KnowledgeToolError }> {
     const indexed = [...(await port.indexedSources(shared))];
     const first = shared.find((id) => indexed.includes(id));
-    return first === undefined ? { error: noSharedSourceIndexed(shared) } : { sourceId: first };
+    if (first !== undefined) {
+      return { sourceId: first };
+    }
+    return { error: noSharedSourceIndexed(shared, await port.sourceNames(shared)) };
   }
   return [
     tool('knowledge_search', {

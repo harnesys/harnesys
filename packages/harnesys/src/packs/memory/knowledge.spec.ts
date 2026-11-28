@@ -12,6 +12,7 @@ function portWith(indexed: readonly string[]): KnowledgePort {
   return {
     search: () => Promise.resolve([]),
     indexedSources: (sourceIds) => Promise.resolve(sourceIds.filter((id) => indexed.includes(id))),
+    sourceNames: () => Promise.resolve({}),
   };
 }
 

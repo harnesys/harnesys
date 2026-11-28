@@ -34,6 +34,17 @@ export class OrgKnowledgePort implements KnowledgePort {
     );
   }
 
+  async sourceNames(sourceIds: readonly string[]): Promise<Record<string, string>> {
+    const names: Record<string, string> = {};
+    for (const sourceId of sourceIds) {
+      const record = this.deps.sources.findById(this.deps.orgId, sourceId);
+      if (record) {
+        names[sourceId] = record.name;
+      }
+    }
+    return names;
+  }
+
   search(input: KnowledgeSearchInput): Promise<KnowledgeHit[]> {
     const sourceId = this.requireSource(input.sourceId);
     return this.deps.search.search(this.deps.orgId, sourceId, input.query, input.limit);

@@ -12,11 +12,21 @@ const scope: CapabilityScope = {
 
 function fakePort(
   indexed: readonly string[] = [],
+  names: Record<string, string> = {},
 ): KnowledgePort & { calls: { sourceId?: string }[] } {
   const calls: { sourceId?: string }[] = [];
   return {
     calls,
     indexedSources: (sourceIds) => Promise.resolve(sourceIds.filter((id) => indexed.includes(id))),
+    sourceNames: (sourceIds) =>
+      Promise.resolve(
+        Object.fromEntries(
+          sourceIds.flatMap((id) => {
+            const name = names[id];
+            return name === undefined ? [] : [[id, name]];
+          }),
+        ),
+      ),
     search: (input) => {
       calls.push({ sourceId: input.sourceId });
       return Promise.resolve([]);
@@ -36,6 +46,7 @@ describe('knowledge tools source scope', () => {
       message?: string;
     };
     expect(result.code).toBe('KNOWLEDGE_SOURCE_NOT_SHARED');
+    expect(result.message).toContain('"src-external"');
     expect(result.message).toContain('share it: Sources page');
     expect(port.calls).toEqual([]);
   });
@@ -65,7 +76,7 @@ describe('knowledge tools source scope', () => {
   });
 
   test('shared but not indexed answers with reindex steps instead of []', async () => {
-    const port = fakePort([]);
+    const port = fakePort([], { 'src-shared': 'Design Docs' });
     const tools = createKnowledgeTools({ port, resolveScope: () => scope });
     const search = tools.find((tool) => tool.name === 'knowledge_search');
     const result = (await search?.execute({ query: 'q' }, ctx)) as {
@@ -73,12 +84,14 @@ describe('knowledge tools source scope', () => {
       message?: string;
     };
     expect(result.code).toBe('KNOWLEDGE_SOURCE_NOT_INDEXED');
+    expect(result.message).toContain('"Design Docs" (src-shared)');
+    expect(result.message).toContain('"src-other"');
     expect(result.message).toContain('reindex');
     expect(port.calls).toEqual([]);
   });
 
   test('explicit shared source without an index names that source', async () => {
-    const port = fakePort(['src-other']);
+    const port = fakePort(['src-other'], { 'src-shared': 'Design Docs' });
     const tools = createKnowledgeTools({ port, resolveScope: () => scope });
     const search = tools.find((tool) => tool.name === 'knowledge_search');
     const result = (await search?.execute({ query: 'q', sourceId: 'src-shared' }, ctx)) as {
@@ -86,7 +99,7 @@ describe('knowledge tools source scope', () => {
       message?: string;
     };
     expect(result.code).toBe('KNOWLEDGE_SOURCE_NOT_INDEXED');
-    expect(result.message).toContain('"src-shared"');
+    expect(result.message).toContain('"Design Docs" (src-shared)');
     expect(port.calls).toEqual([]);
   });
 

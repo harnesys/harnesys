@@ -130,4 +130,6 @@ export interface KnowledgePort {
   reindex?(input: KnowledgeReindexInput): Promise<void>;
   /** Subset of sourceIds that currently have a non-empty indexed corpus. */
   indexedSources(sourceIds: readonly string[]): Promise<readonly string[]>;
+  /** Human-readable names of the known sourceIds; unknown ids are absent from the record. */
+  sourceNames(sourceIds: readonly string[]): Promise<Record<string, string>>;
 }
