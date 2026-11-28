@@ -75,7 +75,7 @@ function artifactBodyOf(
   if (image) {
     return (
       <div className="pb-1">
-        <ImageArtifact fileRef={image.ref} name={image.name} />
+        <ImageArtifact fileRef={image.ref} name={image.name} size={image.size} />
       </div>
     );
   }
@@ -94,7 +94,7 @@ function artifactBodyOf(
   if (linkImage) {
     return (
       <div className="pb-1">
-        <ImageArtifact fileRef={linkImage.ref} name={linkImage.name} />
+        <ImageArtifact fileRef={linkImage.ref} name={linkImage.name} size={linkImage.size} />
       </div>
     );
   }

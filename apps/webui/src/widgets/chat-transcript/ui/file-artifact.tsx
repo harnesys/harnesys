@@ -95,7 +95,7 @@ export function parseLinkImageArtifact(pair: ToolEventPair): ImageArtifactInfo |
     return null;
   }
   const info = linkInfo(artifact);
-  return info === null ? null : { key: info.key, ref: info.ref, name: info.name };
+  return info === null ? null : { key: info.key, ref: info.ref, name: info.name, size: info.size };
 }
 
 export function FileArtifact({

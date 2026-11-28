@@ -67,6 +67,7 @@ function renderAttachment(attachment: RunAttachment) {
         key={attachment.info.key}
         fileRef={attachment.info.ref}
         name={attachment.info.name}
+        size={attachment.info.size}
       />
     );
   }

@@ -9,6 +9,7 @@ export interface ImageArtifactInfo {
   key: string;
   ref: FileRef;
   name: string;
+  size: number;
 }
 
 export function parseImageArtifact(
@@ -29,16 +30,25 @@ export function parseImageArtifact(
     name: artifact.name,
     mediaType: artifact.mediaType,
   };
-  return { key: fileRefKey(ref), ref, name: artifact.name };
+  return { key: fileRefKey(ref), ref, name: artifact.name, size: artifact.sizeBytes ?? 0 };
 }
 
-export function ImageArtifact({ fileRef, name }: { fileRef: FileRef; name: string }) {
+export function ImageArtifact({
+  fileRef,
+  name,
+  size,
+}: {
+  fileRef: FileRef;
+  name: string;
+  size: number;
+}) {
   const backend = blobContentBackend(fileRef);
   const { url, error } = useAuthedBlobUrl(backend.load, backend.key);
   return (
     <AttachmentTile
       name={name}
       mediaType="image/*"
+      bytes={size > 0 ? size : undefined}
       thumb={url}
       href={url ?? undefined}
       load={backend.load}
